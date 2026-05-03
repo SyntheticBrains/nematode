@@ -59,9 +59,10 @@ def test_weight_init_scale_default_is_deterministic() -> None:
 
     Sanity check that the constructor's RNG path is deterministic under
     the default scale: same seed in, byte-identical tensors out.  This
-    is necessary-but-not-sufficient for M3 equivalence — the
-    ``test_weight_init_scale_default_matches_m3_orthogonal_init`` test
-    below proves the actual M3-byte-equivalence claim.
+    is necessary-but-not-sufficient for the standard-PPO-init equivalence
+    claim — the ``test_weight_init_scale_default_matches_orthogonal_init``
+    test below proves the bit-equivalence against
+    ``orthogonal_(gain=sqrt(2))`` directly.
     """
     brain_default = _make_brain(weight_init_scale=1.0, seed=42)
     brain_ref = _make_brain(weight_init_scale=1.0, seed=42)
@@ -85,16 +86,17 @@ def test_weight_init_scale_default_is_deterministic() -> None:
     assert torch.equal(output_a.weight, output_b.weight)
 
 
-def test_weight_init_scale_default_matches_m3_orthogonal_init() -> None:
+def test_weight_init_scale_default_matches_orthogonal_init() -> None:
     """``weight_init_scale=1.0`` matches a direct ``orthogonal_(gain=sqrt(2))`` call.
 
-    The M3-byte-equivalence claim: when scale=1.0, the brain computes
-    ``hidden_gain = sqrt(2) * 1.0 = sqrt(2)``, which is what M3's init
-    used directly.  This test re-initialises a clone of each hidden
-    Linear's weight tensor by calling ``nn.init.orthogonal_`` directly
-    with ``gain=np.sqrt(2)`` against the same seeded torch RNG state
-    that the brain consumed, and asserts the result equals the brain's
-    actually-initialised tensor bit-for-bit.
+    Bit-equivalence claim: when scale=1.0, the brain computes
+    ``hidden_gain = sqrt(2) * 1.0 = sqrt(2)``, which is what the
+    standard PPO init uses directly.  This test re-initialises a clone
+    of each hidden Linear's weight tensor by calling
+    ``nn.init.orthogonal_`` directly with ``gain=np.sqrt(2)`` against
+    the same seeded torch RNG state that the brain consumed, and
+    asserts the result equals the brain's actually-initialised tensor
+    bit-for-bit.
 
     This protects against future drift: if anyone changes the gain
     formula (e.g. renames the multiplier or swaps the init function),
@@ -105,9 +107,10 @@ def test_weight_init_scale_default_matches_m3_orthogonal_init() -> None:
 
     for layer in _hidden_actor_linears(brain):
         # Clone the brain's weight tensor (preserves shape, device,
-        # dtype) and re-initialise it using the M3-equivalent direct
-        # call.  Re-seeding torch.manual_seed before each draw makes
-        # the orthogonal sampling deterministic and independent of any
+        # dtype) and re-initialise it via the same direct orthogonal_
+        # call the production init path uses internally at scale=1.0.
+        # Re-seeding torch.manual_seed before each draw makes the
+        # orthogonal sampling deterministic and independent of any
         # prior RNG consumption inside the brain constructor.
         clone = layer.weight.detach().clone()
         torch.manual_seed(0)
@@ -118,8 +121,8 @@ def test_weight_init_scale_default_matches_m3_orthogonal_init() -> None:
         torch.manual_seed(0)
         torch.nn.init.orthogonal_(clone, gain=expected_gain)
         assert torch.equal(clone, recomputed), (
-            "Direct orthogonal_(gain=sqrt(2)) and the brain's M4 init "
-            "path must produce bit-identical tensors at scale=1.0"
+            "Direct orthogonal_(gain=sqrt(2)) and the brain's "
+            "weight_init_scale=1.0 path must produce bit-identical tensors"
         )
 
     for layer in _critic_linears(brain):
@@ -241,7 +244,7 @@ def test_weight_init_scale_validator_accepts_bounds() -> None:
 
 
 def test_weight_init_scale_default_value() -> None:
-    """The default ``weight_init_scale`` SHALL be 1.0 (byte-equivalent to M3)."""
+    """The default ``weight_init_scale`` SHALL be 1.0 (no scaling vs standard PPO init)."""
     config = LSTMPPOBrainConfig(sensory_modules=SENSORY_MODULES)
     assert config.weight_init_scale == pytest.approx(1.0)
 

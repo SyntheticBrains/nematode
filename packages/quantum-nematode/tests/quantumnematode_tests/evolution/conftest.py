@@ -14,11 +14,10 @@ immediately.  Confirmed via local profiling: without this fixture,
 ``test_loop_smoke.py``'s 15 tests; with this fixture, it stays at 0
 between tests.
 
-This is the root cause of the M4 PR's CI flakiness: under
-pytest-xdist parallelism, multiple xdist workers each accumulating
-stale evolution loops created enough memory pressure to starve the
-GitHub Actions runner agent and trigger control-plane heartbeat
-timeouts ("operation was canceled").
+Without this fixture, under pytest-xdist parallelism multiple xdist
+workers each accumulating stale evolution loops can produce enough
+memory pressure to starve the GitHub Actions runner agent and
+trigger control-plane heartbeat timeouts ("operation was canceled").
 """
 
 from __future__ import annotations
