@@ -1,0 +1,258 @@
+# Baldwin Inheritance RETRY Pilot — LSTMPPO + klinotaxis + pursuit predators
+# ============================================================================
+#
+# Trait-only inheritance: the hyperparameter genome flows, the weights
+# do NOT.  The prior generation's elite genome ID is recorded as
+# ``inherited_from`` for every child of the next generation (so the
+# lineage CSV captures the evolutionary trace), but no per-genome
+# weight checkpoints are written.  Mechanically equivalent to
+# ``inheritance: none`` on the weight-IO path; differs only by
+# populating lineage rows from gen 1 onwards.
+#
+# This is the M4.5 retry of the original Baldwin pilot (logbook 014).
+# The original pilot shipped INCONCLUSIVE because three audit findings
+# (A1 schema-shift confounder; A2 F1 biologically incoherent; A3 F1
+# baseline apples-to-oranges) meant the gates compared confounded
+# populations.  M4.5 fixes all five audit findings (A1-A5) and is the
+# first valid attempt to measure the Baldwin Effect on this testbed.
+#
+# This config differs from the original Baldwin pilot
+# (baldwin_lstmppo_klinotaxis_predator_pilot.yml) in two ways:
+#
+# 1. ``hyperparam_schema`` is the 8-field "head-to-head" schema per
+#    add-baldwin-retry design Decision 1 (option b):
+#      - 4 hyperparam knobs from M4 control: actor_lr, critic_lr, gamma,
+#        entropy_coef
+#      - 2 innate-bias knobs from M4 Baldwin: weight_init_scale,
+#        entropy_decay_episodes
+#      - 2 NEW arch knobs: actor_hidden_dim, actor_num_layers
+#    The 8-field schema lets us learn — in a SINGLE pilot — whether
+#    M4's knobs were the right choice or whether the audit's A5
+#    hypothesis (arch knobs have larger effects within K=50) was
+#    correct.  TPE's posterior across n=8 seeds will reveal which
+#    fields it preferred.
+#
+# 2. The matching control config
+#    (control_lstmppo_klinotaxis_predator_retry_pilot.yml) uses the
+#    SAME 8-field schema with ``inheritance: none``.  Identical schemas
+#    + same TPE seed → byte-identical gen-0 starting populations across
+#    arms (audit A1 closure).  The aggregator's first output is a
+#    schema-equalisation pre-flight check that forces verdict to
+#    INCONCLUSIVE if gen-0 |Δ| > 0.05.
+#
+# Decision gate (per add-baldwin-retry design Decision 5):
+#   - GO if all three:
+#       (a) Speed (Baldwin vs control): mean_gen_baldwin_to_092 + 2 ≤
+#           mean_gen_control_to_092 (Baldwin reaches 0.92 ≥2 gens
+#           earlier than the from-scratch control).
+#       (b) F1 learning-acceleration (Baldwin elite vs schema-prior
+#           baseline at K' = 10): mean_f1_baldwin_signal > 0.05 (the
+#           Baldwin elite's hyperparams produce a brain that learns
+#           faster than a schema-prior baseline genome with the same
+#           K' = 10 train budget).  Tighter than M4's +0.10 because
+#           both arms now include K' training (within-test comparison
+#           with symmetric noise per design Decision 5).
+#       (c) Comparative (Baldwin vs Lamarckian):
+#           mean_gen_baldwin_to_092 ≤ mean_gen_lamarckian_to_092 + 4.
+#   - PIVOT if speed only.
+#   - STOP otherwise.
+#
+# Pre-registered STOP semantic (Decision 6): if M4.5's gates STOP,
+# the Baldwin Effect is NOT exhibited on this testbed.  M5 (co-
+# evolution) proceeds without Baldwin in its substrate; M6
+# (transgenerational memory) uses Lamarckian as substrate.  No
+# further Baldwin pilot in this Phase.
+#
+# Wall-time per seed: comparable to M4 control (~12-15 min/seed at
+# parallel=4) — Baldwin has no save_weights/load_weights overhead.
+# Doubling n from 4 to 8 ~doubles the per-arm wall (~2.5-3 hours
+# per arm).  Total pilot wall ~3-4 hours with 3 arms in parallel +
+# F1 post-pilot.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    # rnn_type / lstm_hidden_dim / critic_hidden_dim / critic_num_layers
+    # are FIXED here (not in the schema).  The schema evolves
+    # actor_hidden_dim and actor_num_layers per design Decision 1 — the
+    # actor is the policy head whose innate bias most directly shapes
+    # learnability under K=50.  Critic-side arch is held constant to
+    # keep the search space focused.
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    # actor_hidden_dim and actor_num_layers are moved into the schema
+    # below; these defaults are the brain-config fallback used only if
+    # the schema doesn't include them (it does, per Decision 1).
+    actor_hidden_dim: 64
+    actor_num_layers: 2
+
+    critic_hidden_dim: 128
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    # entropy_decay_episodes is moved into the schema below; this default
+    # is the brain-config fallback used only if the schema doesn't include
+    # it (it does).
+    entropy_decay_episodes: 500
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    # weight_init_scale is moved into the schema below; this default
+    # of 1.0 is byte-equivalent to the standard PPO init (gain=sqrt(2)
+    # for hidden Linears).  The schema-evolved value overrides this
+    # at brain construction.
+    weight_init_scale: 1.0
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 12
+  # 20 generations — gen budget pinned by smoke (task group 6).  If smoke
+  # shows TPE still climbing at gen 20, full pilot uses 30 per Risk 1.
+  generations: 20
+  # Both episodes_per_eval and eval_episodes_per_eval set to 25 so the
+  # YAML is diff-comparable field-for-field with the matching control
+  # config.  eval_episodes_per_eval wins (per the Learned-Performance
+  # Fitness scenario in evolution-framework/spec.md).
+  episodes_per_eval: 25
+  learn_episodes_per_eval: 50
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 4
+  checkpoint_every: 2
+  cma_diagonal: false
+  # Trait-only Baldwin inheritance.  Each child trains from-scratch
+  # (no warm-start), but the prior generation's elite genome ID is
+  # recorded in the lineage CSV's `inherited_from` column for every
+  # child of gen 1+.  inheritance_elite_count is ignored under
+  # Baldwin (single-elite by construction).
+  inheritance: baldwin
+  # Exit if best_fitness plateaus for 5 consecutive generations.
+  # Saves compute when the run saturates (M4 Baldwin saturated at
+  # gens 7-15; M4.5's 8-field TPE may take longer per Risk 1).
+  early_stop_on_saturation: 5
+
+hyperparam_schema:
+  # Eight fields per add-baldwin-retry design Decision 1 (option b
+  # head-to-head).  Identical schema to the matching control config
+  # so audit finding A1 (schema-shift confounder) is closed: same
+  # TPE seed → byte-identical gen-0 starting populations.
+
+  # 4 hyperparam knobs (carried from M4 control).
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
+
+  # 2 innate-bias knobs (carried from M4 Baldwin).
+  # NEW: scales orthogonal-init `gain` for actor hidden + critic Linears.
+  - name: weight_init_scale
+    type: float
+    bounds: [0.5, 2.0]
+  # NEW (existing field, newly exposed): controls the explorer→exploiter
+  # transition schedule shape, not just the endpoint.
+  - name: entropy_decay_episodes
+    type: int
+    bounds: [200, 2000]
+
+  # 2 NEW arch knobs (audit A5 hypothesis: arch knobs may have larger
+  # effects within K=50 than M4's innate-bias knobs).  Permitted under
+  # Baldwin per the framework's "Baldwin permits architecture-changing
+  # schema entries" scenario — Baldwin doesn't load weights, so shape
+  # mismatches between parents and children are fine.
+  - name: actor_hidden_dim
+    type: int
+    bounds: [64, 256]
+  - name: actor_num_layers
+    type: int
+    bounds: [1, 3]

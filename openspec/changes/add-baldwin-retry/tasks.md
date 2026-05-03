@@ -19,11 +19,11 @@
 
 ## 3. Pilot configs (8-field schema, n = 8 seeds)
 
-- [ ] 3.1 Create `configs/evolution/baldwin_lstmppo_klinotaxis_predator_retry_pilot.yml`. Base on the existing `configs/evolution/baldwin_lstmppo_klinotaxis_predator_pilot.yml` (M4) with these diffs: extend `hyperparam_schema` from 6 to 8 fields per Decision 1's table (add `actor_hidden_dim ∈ [64, 256]` and `actor_num_layers ∈ [1, 3]`); keep `inheritance: baldwin` + `early_stop_on_saturation: 5`. Document the schema diff inline as a comment.
-- [ ] 3.2 Create `configs/evolution/control_lstmppo_klinotaxis_predator_retry_pilot.yml`. Identical to the Baldwin config except `inheritance: none`. Schema is the SAME 8 fields per Decision 2 (audit A1 closure).
-- [ ] 3.3 The Lamarckian rerun reuses the existing `configs/evolution/lamarckian_lstmppo_klinotaxis_predator_pilot.yml` (4-field schema). Primary purpose: provide the comparative-gate baseline at n=8 (Baldwin vs Lamarckian per design Decision 5 — `mean_gen_baldwin_to_092 ≤ mean_gen_lamarckian_to_092 + 4`). Secondary purpose: reproducibility check on the n=4 subset (seeds 42-45) — Lamarckian numbers should match M3's published `[3, 4, 4, 7]` mean 4.50, confirming the M4.5 code revision is byte-equivalent for the M3 path. No new YAML needed.
-- [ ] 3.4 The hand-tuned baseline reuses M2.11's existing artefacts (no re-run needed; reproducible per logbook 013 § 9.6).
-- [ ] 3.5 Validate both new YAMLs parse cleanly: `uv run python -c "from quantumnematode.utils.config_loader import load_simulation_config; load_simulation_config('configs/evolution/baldwin_lstmppo_klinotaxis_predator_retry_pilot.yml')"` (and same for control). Confirm the schema-equalisation property at YAML level: both YAMLs SHALL have identical `hyperparam_schema` blocks (modulo the `inheritance` field).
+- [x] 3.1 Created `configs/evolution/baldwin_lstmppo_klinotaxis_predator_retry_pilot.yml` with the 8-field schema per Decision 1: 4 hyperparam knobs (actor_lr, critic_lr, gamma, entropy_coef) + 2 innate-bias knobs (weight_init_scale, entropy_decay_episodes) + 2 NEW arch knobs (actor_hidden_dim ∈ [64, 256], actor_num_layers ∈ [1, 3]). Inheritance: baldwin + early_stop_on_saturation: 5. Documented the audit findings + design decisions inline.
+- [x] 3.2 Created `configs/evolution/control_lstmppo_klinotaxis_predator_retry_pilot.yml`. Identical to Baldwin config except `inheritance: none`. Schema is byte-identical (same 8 fields, same bounds, same order — verified at YAML load via the schema-equalisation check below).
+- [x] 3.3 Lamarckian rerun reuses the existing `configs/evolution/lamarckian_lstmppo_klinotaxis_predator_pilot.yml` (4-field schema) — no new YAML needed. Primary purpose: comparative-gate baseline at n=8; secondary: M3 reproducibility on the n=4 subset.
+- [x] 3.4 Hand-tuned baseline reuses M2.11's existing artefacts (4 seeds, 42-45). Note for logbook 015 + aggregator: baseline horizontal line on the convergence plot SHALL be annotated `(n=4 seeds 42-45)` so the n-asymmetry vs the n=8 pilot arms is explicit.
+- [x] 3.5 Both new YAMLs parse cleanly via `load_simulation_config`. Verified the schema-equalisation property at YAML level: both YAMLs have IDENTICAL `hyperparam_schema` blocks (8 fields, byte-identical name/type/bounds/log_scale tuples in the same order). Inheritance field is the only diff.
 
 ## 4. Campaign scripts
 
