@@ -97,6 +97,33 @@ def test_schema_equalisation_check_fails_above_threshold() -> None:
     assert abs_delta == pytest.approx(0.15)
 
 
+def test_first_gen_mean_fitness_raises_on_empty_history() -> None:
+    """Empty history.csv (crashed seed) SHALL raise a clear ValueError naming the seed."""
+    module = _load_script_module()
+    seeds = [42, 43, 44]
+    histories = {
+        42: _make_history(0.5),
+        43: [],  # this seed crashed before gen-0 finished
+        44: _make_history(0.5),
+    }
+    with pytest.raises(ValueError, match=r"history\.csv is empty for seed\(s\) \[43\]"):
+        module._first_gen_mean_fitness(histories, seeds)  # type: ignore[attr-defined]
+
+
+def test_first_gen_mean_fitness_lists_all_empty_seeds() -> None:
+    """Multiple empty seeds SHALL all be reported in one error message."""
+    module = _load_script_module()
+    seeds = [42, 43, 44, 45]
+    histories = {
+        42: _make_history(0.5),
+        43: [],
+        44: _make_history(0.5),
+        45: [],
+    }
+    with pytest.raises(ValueError, match=r"history\.csv is empty for seed\(s\) \[43, 45\]"):
+        module._first_gen_mean_fitness(histories, seeds)  # type: ignore[attr-defined]
+
+
 def test_schema_equalisation_check_fires_at_exact_threshold() -> None:
     """|Δ| at the threshold SHALL pass (≤ is inclusive per Decision 2 wording).
 

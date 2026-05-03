@@ -228,7 +228,24 @@ def _first_gen_mean_fitness(
     because lineage.csv is 0-indexed — both refer to the same set of
     evaluations per the framework's existing convention).  Used for
     the audit A1 schema-equalisation pre-flight check.
+
+    Raises ``ValueError`` with a clear seed-specific message if any
+    seed's history is empty (would otherwise raise a cryptic
+    ``IndexError`` from ``[0]`` on an empty list).  An empty history
+    typically means the seed's run crashed before completing gen-0
+    evaluation — the campaign log for that seed should be inspected.
     """
+    empty_seeds = [s for s in seeds if not histories[s]]
+    if empty_seeds:
+        msg = (
+            f"history.csv is empty for seed(s) {empty_seeds}.  This "
+            "typically means the run crashed before completing the "
+            "first-generation evaluation.  Inspect the campaign log "
+            "for the affected seed(s) under the arm's output directory; "
+            "if the crash is transient, re-run the affected seed and "
+            "re-aggregate."
+        )
+        raise ValueError(msg)
     values = [histories[s][0]["best_fitness"] for s in seeds]
     return float(np.mean(values))
 
