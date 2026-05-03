@@ -663,7 +663,7 @@ The `BaldwinInheritance` constructor SHALL take no required arguments. The `inhe
 
 `BaldwinInheritance.select_parents()` SHALL return a single-element list `[best_genome_id]` containing the prior generation's elite genome ID (top fitness, lex-tie-broken on `genome_id` — the same selection rule as `LamarckianInheritance` with `elite_count=1`). The loop reuses this ID to populate the lineage CSV's `inherited_from` column for every child of the next generation, even though no on-disk checkpoint is created. `BaldwinInheritance.assign_parent()` SHALL return `None` (no per-child parent assignment for warm-start). `BaldwinInheritance.checkpoint_path()` SHALL return `None` (no on-disk checkpoint substrate).
 
-The genetic-assimilation question Baldwin tests is whether evolution under TPE produces a hyperparameter genome that biases the brain to learn fast from random init. The post-pilot script `scripts/campaigns/baldwin_f1_postpilot_eval.py` (NOT part of the loop's runtime contract — a forensic script) SHALL re-evaluate the elite genome with K=0 to test whether the bias has been encoded into the genome itself.
+The genetic-assimilation question Baldwin tests is whether evolution under TPE produces a hyperparameter genome that biases the brain to learn fast from random init. The post-pilot script `scripts/campaigns/baldwin_f1_postpilot_eval.py` (NOT part of the loop's runtime contract — a forensic script) SHALL re-evaluate the elite genome via a **learning-acceleration test**: train the elite genome's brain for K' episodes (K' < K, where K is the pilot's `learn_episodes_per_eval`), measure success rate over L frozen-eval episodes, then repeat for a synthetic baseline genome whose params come from the encoder's `initial_genome()` defaults. Baldwin signal is the elite's L-eval success rate minus the baseline's L-eval success rate after equal K' training. Both arms include K'-train + L-eval; the comparison is apples-to-apples by construction. The script SHALL accept `--k-prime` (default `10`) and `--episodes` (default `25`, the L value) as CLI overrides so the evaluator can be re-run with different K' / L budgets without code changes.
 
 #### Scenario: Baldwin is selectable via config and CLI
 
@@ -716,6 +716,22 @@ The genetic-assimilation question Baldwin tests is whether evolution under TPE p
 - **THEN** loading SHALL succeed (no `ValidationError` raised)
 - **AND** the loop SHALL run normally; each child constructs a fresh brain at the genome's evolved architecture (no weight checkpoints to load means no shape-mismatch concern)
 - **AND** this is the documented difference between Baldwin and Lamarckian validators
+
+#### Scenario: F1 evaluator runs a paired K'-train learning-acceleration test
+
+- **GIVEN** a Baldwin pilot's session output directory with a valid `best_params.json` (containing the elite genome's params; birth metadata for schema reconstruction is rebuilt at re-eval time from the pilot YAML via `build_birth_metadata(sim_config)`, since `best_params.json` does not persist birth metadata)
+- **WHEN** the operator runs `scripts/campaigns/baldwin_f1_postpilot_eval.py --baldwin-root <pilot_root> --config <pilot_yaml> --k-prime 10 --episodes 25 --output-dir <out>`
+- **THEN** the script SHALL, for each seed in the pilot:
+  - Load the seed's `best_params.json` and reconstruct the elite genome via `HyperparameterEncoder.decode` (birth metadata is rebuilt from the pilot YAML at re-eval time via `build_birth_metadata(sim_config)` — `best_params.json` itself does not persist birth metadata)
+  - Construct a schema-prior baseline genome via `HyperparameterEncoder.initial_genome(sim_config, rng=np.random.default_rng(seed))` (a deterministic per-seed random sample from the schema's prior distribution)
+  - Build a per-evaluation `sim_config` copy whose `evolution.learn_episodes_per_eval` is set to K' and whose `evolution.eval_episodes_per_eval` is set to L (`LearnedPerformanceFitness.evaluate` reads K from `sim_config.evolution.learn_episodes_per_eval` directly; L resolves from `sim_config.evolution.eval_episodes_per_eval` if set, else falls back to the protocol's `episodes` kwarg)
+  - Run `LearnedPerformanceFitness.evaluate(elite_genome, sim_config_for_kprime, encoder, episodes=L, seed=seed)`; record the elite's success rate
+  - Run `LearnedPerformanceFitness.evaluate(baseline_genome, sim_config_for_kprime, encoder, episodes=L, seed=seed)`; record the baseline's success rate
+  - Both runs SHALL use the same per-seed RNG seed so the only difference between them is the genome
+- **AND** the script SHALL write `f1_learning_acceleration.csv` to the output directory with columns `seed, k_prime, episodes, elite_success_rate, baseline_success_rate, signal_delta` (where `signal_delta = elite − baseline`). The `k_prime` and `episodes` columns SHALL record the K' and L values used for that row's evaluation so multiple K' / L runs can coexist in the same CSV via append-mode.
+- **AND** if `--k-prime` is omitted it SHALL default to `10`; if `--episodes` is omitted it SHALL default to `25` (matches the pilot's default L)
+- **AND** the script SHALL reject `--k-prime <= 0` and `--episodes <= 0` at argparse-time with a clear error message
+- **AND** the script SHALL be safe to re-run with different K' / L budgets without re-running the pilot — re-runs append rows to the existing CSV (creating it if absent), so an operator can run K' = 10 first then K' = 25 (or any other budget) and have both sets of measurements available for analysis without losing the prior data
 
 ### Requirement: Evolvable LSTMPPO weight_init_scale
 
