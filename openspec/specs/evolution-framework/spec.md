@@ -192,14 +192,14 @@ The `EvolutionLoop` SHALL pickle optimiser state at a configurable interval and 
 
 ### Requirement: Evolution Configuration Block
 
-The `SimulationConfig` SHALL accept an optional `evolution` block; existing scenario configs without an `evolution` block SHALL load unchanged. The `evolution` block SHALL include `inheritance: Literal["none", "lamarckian"]` (default `"none"`) and `inheritance_elite_count: int >= 1` (default 1). Validators SHALL reject the following invalid combinations at YAML load time, before any optimiser code runs:
+The `SimulationConfig` SHALL accept an optional `evolution` block; existing scenario configs without an `evolution` block SHALL load unchanged. The `evolution` block SHALL include `inheritance: Literal["none", "lamarckian", "baldwin"]` (default `"none"`) and `inheritance_elite_count: int >= 1` (default 1). The full inheritance contract — including the per-strategy semantics of `inheritance_elite_count` and the CLI override via `--inheritance` on `scripts/run_evolution.py` — is defined in the "Inheritance Strategy" requirement below. Validators SHALL reject the following invalid combinations at YAML load time, before any optimiser code runs:
 
 1. `inheritance != "none"` AND `learn_episodes_per_eval == 0`.
 2. `inheritance != "none"` AND `warm_start_path is not None`.
 3. `inheritance != "none"` AND `hyperparam_schema is None`.
-4. `inheritance != "none"` AND `hyperparam_schema` contains any field in `_ARCHITECTURE_CHANGING_FIELDS` (the existing denylist that M2.10's static warm-start uses).
-5. `inheritance_elite_count > population_size`.
-6. `inheritance != "none"` AND `inheritance_elite_count != 1` (M3-only restriction; multi-elite parent selection is M4-or-later scope, see "Multi-elite inheritance is rejected in this milestone" scenario).
+4. `inheritance == "lamarckian"` AND `hyperparam_schema` contains any field in `_ARCHITECTURE_CHANGING_FIELDS` (the existing denylist the static warm-start validator uses). The rule applies to Lamarckian only — Baldwin doesn't load weights, so architecture-changing schema entries SHALL be permitted under `inheritance: baldwin`.
+5. `inheritance_elite_count > population_size` (applies to all inheritance settings).
+6. `inheritance == "lamarckian"` AND `inheritance_elite_count != 1`. Single-elite-broadcast is the only currently-supported parent-selection rule for Lamarckian. Under `inheritance: baldwin` the field has no runtime effect (Baldwin is single-elite by construction; the field is silently ignored), and rule 5 above is the only structural check that still applies.
 
 #### Scenario: Existing scenario config loads without evolution block
 
@@ -221,7 +221,7 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 - **WHEN** the user invokes `scripts/run_evolution.py --config <yaml> --generations 10`
 - **THEN** the loop SHALL run for 10 generations
 - **AND** the YAML value SHALL be ignored for that field only
-- **AND** the same override pattern SHALL apply to `--inheritance {none,lamarckian}` against `evolution.inheritance`
+- **AND** the same override pattern SHALL apply to `--inheritance {none,lamarckian,baldwin}` against `evolution.inheritance`
 
 #### Scenario: Inheritance fields default to no-op
 
@@ -229,7 +229,7 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 - **WHEN** the config is loaded
 - **THEN** `EvolutionConfig.inheritance` SHALL equal `"none"`
 - **AND** `EvolutionConfig.inheritance_elite_count` SHALL equal `1`
-- **AND** the run SHALL be byte-equivalent to a pre-M3 run with the same other fields
+- **AND** the run SHALL be byte-equivalent to a frozen-weight evolution baseline (no `inheritance/` directory, no per-genome checkpoints, empty `inherited_from` in lineage)
 
 ### Requirement: Optimiser Portfolio
 
@@ -523,7 +523,7 @@ The system SHALL provide an `InheritanceStrategy` Protocol in `quantumnematode/e
 
 The `kind()` method SHALL return one of three string literals so the loop can branch on intent rather than `isinstance` checks: `"none"` (no inheritance configured — `NoInheritance`), `"weights"` (per-genome trained-weight checkpoints flow between generations — `LamarckianInheritance`), or `"trait"` (per-genome elite-parent ID flows in lineage but no weight checkpoints are captured — `BaldwinInheritance`). The loop SHALL gate weight-IO code paths (capture, GC, warm-start) on `kind() == "weights"` and SHALL gate elite-ID lineage tracking on `kind() != "none"`.
 
-When `kind() == "weights"` is active, the `EvolutionLoop` SHALL: (1) capture each genome's post-K-train brain weights to a per-genome `.pt` file via `LearnedPerformanceFitness`'s `weight_capture_path` kwarg; (2) after each generation completes its `optimizer.tell` call, ask the strategy to select parents from the prior generation's `(genome, fitness)` pairs; (3) before the next generation's fitness evaluation, warm-start each child's brain from its assigned parent's checkpoint via `LearnedPerformanceFitness`'s `warm_start_path_override` kwarg; (4) garbage-collect any per-genome checkpoint that is not selected as a parent for the next generation. Steady-state disk usage SHALL be at most `2 * inheritance_elite_count` `.pt` files across the entire run.
+When `kind() == "weights"` is active, the `EvolutionLoop` SHALL: (1) capture each genome's post-K-train brain weights to a per-genome `.pt` file via `LearnedPerformanceFitness`'s `weight_capture_path` kwarg; (2) after each generation completes its `optimizer.tell` call, ask the strategy to select parents from the prior generation's `(genome, fitness)` pairs; (3) before the next generation's fitness evaluation, warm-start each child's brain from its assigned parent's checkpoint via `LearnedPerformanceFitness`'s `warm_start_path_override` kwarg; (4) garbage-collect any per-genome checkpoint that is not selected as a parent for the next generation. Disk usage retained **after** step (4)'s GC pass SHALL be at most `2 * inheritance_elite_count` `.pt` files (the surviving parents from the just-finished generation plus the about-to-evaluate generation's surviving parent). The transient peak between step (1) and step (4) reaches `population_size` files for the in-flight generation; that's expected and is not bounded by this rule.
 
 The `EvolutionLoop` SHALL persist the resolved `inheritance` value (the literal `"none"` / `"lamarckian"` / `"baldwin"` string, not the strategy instance) and the selected parent IDs in its checkpoint pickle dict, so that resume-time validation can reject mismatched inheritance settings (see "Resume rejects mismatched inheritance setting" scenario below).
 
