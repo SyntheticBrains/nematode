@@ -1,5 +1,38 @@
 # Design: Baldwin Effect first valid measurement
 
+## Post-pilot status (added at PR-time)
+
+**Status: IN PROGRESS — iteration step 1 of N.**
+
+The pilot ran cleanly, all five audit findings were addressed, and
+the schema-equalisation closed audit A1 perfectly (`|Δ| = 0.0000`).
+But the results revealed that the framework's *current* Baldwin
+abstraction is mechanically null vs Control under matched conditions:
+identical schema + identical seed + deterministic fitness function +
+metadata-only `inherited_from` ⇒ Baldwin and Control evolve
+bit-identical genome populations across all 8 seeds.
+
+**Decision 6 reinterpretation** (post-pilot): the pre-registered STOP
+semantic was scoped to "Baldwin's *redesigned gates* STOP after
+fixing the audit findings." M4.5 closed all five audit findings
+cleanly; the finding is that the framework *abstraction itself* is
+the wrong substrate for the test, not that the Baldwin Effect
+doesn't exhibit on this testbed. Decision 6 doesn't preclude
+iterating on a different abstraction that addresses a structural
+finding from a clean evaluation.
+
+**M4.6 (next PR) follow-up**: implement a Baldwin abstraction where
+selection explicitly uses the lineage signal — likely
+`BaldwinGeneticInheritance` (children sampled as Gaussian
+perturbations of the prior generation's elite genome, analogous to
+`LamarckianInheritance` for weights but applied to the hyperparam
+genome). M4.6 will reuse this PR's F1 evaluator + 4-way aggregator +
+8-field pilot configs + n=8 seeds + smoke + review-checkpoint
+infrastructure.
+
+See [logbook 015](../../../docs/experiments/logbooks/015-baldwin-iterative-evaluation.md)
+for the M4.5 results + M4.6 follow-up plan + the bit-identity proof.
+
 ## Context
 
 The prior Baldwin pilot (logbook 014) shipped INCONCLUSIVE because three blocking design flaws (audit findings A1-A3) meant the gates measured the wrong thing. The framework deliverables — `BaldwinInheritance`, `kind()` Protocol method, two-guard loop split, `weight_init_scale`, `early_stop_on_saturation` — are sound and verified. This change is the first valid attempt to measure the Baldwin Effect on the LSTMPPO + klinotaxis + pursuit-predator testbed.

@@ -1,5 +1,58 @@
 # Proposal: Baldwin Effect first valid measurement on the LSTMPPO + klinotaxis + pursuit-predator testbed
 
+## Post-pilot status (added at PR-time)
+
+**Status: IN PROGRESS — iteration step 1 of N.** M4.5 ran the pilot
+cleanly with all five audit findings (A1-A5) addressed, but the
+results revealed a **structural finding** that requires an iterative
+follow-up rather than a final verdict:
+
+Under matched 8-field schemas + matched seeds + identical fitness
+functions, Baldwin and Control evolve **bit-identical** genome
+populations across all 8 seeds — same per-seed best fitness at every
+generation, same elite hyperparameters in `best_params.json`. The
+schema-equalisation closed audit A1 perfectly (`|Δ| = 0.0000`),
+proving the audit fix works.
+
+**Why this happens** (proven structurally):
+
+1. Identical schema → TPE samples the same parameter vectors at
+   each generation
+2. Deterministic fitness function → identical fitness for identical
+   genomes
+3. Baldwin's `inherited_from` lineage trace is metadata-only — never
+   feeds back into `optimizer.tell()` or any child's brain
+   construction
+4. Therefore Baldwin and Control evolve identical populations
+
+The framework's *current* Baldwin abstraction is mechanically null
+vs Control. **M4.6 (next PR) will implement an abstraction where
+selection explicitly uses the lineage signal** (likely a
+`BaldwinGeneticInheritance` strategy where children are sampled as
+Gaussian perturbations of the prior generation's elite genome —
+analogous to `LamarckianInheritance` for weights, but applied to the
+hyperparam genome instead of trained weights).
+
+This PR ships the audit closures + the redesigned F1 evaluator + the
+4-way aggregator with schema-equalisation pre-flight + the 8-field
+pilot configs + the Lamarckian rerun (which dramatically outperforms,
+mean gen-to-0.92 = 2.75 across n=8 — confirms framework integrity).
+Logbook 015 captures M4.5 as iteration step 1; M4.6 will extend it
+with iteration step 2 once a valid abstraction is implemented and
+re-tested.
+
+The pre-registered STOP semantic in design Decision 6 was scoped to
+"Baldwin's redesigned gates STOP after fixing the audit findings."
+M4.5 closed all five audit findings cleanly; what we found is that
+the framework *abstraction* itself was the wrong substrate for the
+test, not that the Baldwin Effect doesn't exhibit on this testbed.
+Decision 6 doesn't preclude iterating on a different abstraction
+that addresses a structural finding from a clean evaluation. M5/M6
+dependencies stay deferred until M4.6 closes the Baldwin question.
+
+See [logbook 015](../../../docs/experiments/logbooks/015-baldwin-iterative-evaluation.md)
+for the full M4.5 results + the M4.6 follow-up plan.
+
 ## Why
 
 The Baldwin Effect — whether evolution under TPE produces a hyperparameter genome that biases the brain to learn fast from random init — is **unanswered** in this framework. The prior Baldwin pilot (logbook 014) shipped INCONCLUSIVE because three blocking design flaws meant the gates measured the wrong thing:
