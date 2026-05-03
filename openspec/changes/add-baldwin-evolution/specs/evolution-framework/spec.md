@@ -103,7 +103,7 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 
 #### Scenario: Checkpoint version compatibility
 
-- **GIVEN** a checkpoint pickle file whose `version` field is older than the current `CHECKPOINT_VERSION`
+- **GIVEN** a checkpoint pickle file whose `checkpoint_version` field is older than the current `CHECKPOINT_VERSION`
 - **WHEN** the loop attempts to load it via `--resume`
 - **THEN** loading SHALL raise the existing version-mismatch error
 - **AND** the user SHALL be advised to start the run fresh (no automated converter is provided)
@@ -242,7 +242,12 @@ When the field is `None` (the default), the loop SHALL run for the full `generat
 
 When the field is set to a positive integer N, the loop SHALL track the previous generation's `best_fitness` after each `optimizer.tell` call. If the current generation's `best_fitness` is strictly greater than the prior generation's, the counter SHALL reset to 0; otherwise the counter SHALL increment. When the counter reaches N, the loop SHALL log "Early-stop: best_fitness has not improved for N generations (last improvement at gen X)" and break out of the main loop. The `lineage.csv`, `history.csv`, and final `best_params.json` SHALL reflect the truncated run (no padding); the aggregator handles cross-arm length normalisation at analysis time.
 
-The early-stop counter SHALL be persisted in the checkpoint pickle as `gens_without_improvement: int` so resume preserves the saturation-tracking state. The `CHECKPOINT_VERSION` SHALL be bumped to reflect the new pickle field; older checkpoints SHALL be rejected with a clear error per the existing version-mismatch scenario.
+The early-stop state SHALL be persisted in the checkpoint pickle as **two** fields so resume preserves the saturation-tracking state byte-equivalently:
+
+- `gens_without_improvement: int` — the consecutive non-improving-generation counter.
+- `last_best_fitness: float | None` — the previous generation's recorded best (`None` until generation 1 completes its bootstrap).
+
+The `CHECKPOINT_VERSION` SHALL be bumped (currently to `3`) to reflect the new pickle fields; older checkpoints (any `checkpoint_version` ≠ the current value) SHALL be rejected with a clear error per the existing version-mismatch scenario. On resume, the loader SHALL validate that BOTH `gens_without_improvement` and `last_best_fitness` are present in the payload (a v3 payload missing either is structurally inconsistent — possibly hand-edited or written by a buggy older revision claiming to be v3) and SHALL raise a descriptive `ValueError` naming the missing key rather than silently defaulting to `0` / `None`. Only after both keys are validated SHALL the loader assign them to `self._gens_without_improvement` and `self._last_best_fitness`.
 
 #### Scenario: Default behaviour preserves full-budget runs
 

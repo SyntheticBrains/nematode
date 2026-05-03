@@ -323,10 +323,47 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
+        # Validate ALL resume-critical keys are present in the payload
+        # BEFORE assigning any of them.  ``_save_checkpoint`` writes
+        # every key in this list unconditionally for any v3 payload, so
+        # a payload that passed the version check but is missing any of
+        # them is structurally inconsistent (probably hand-edited or
+        # written by a buggy older revision claiming to be v3).  Fail
+        # fast with a descriptive message naming the missing key rather
+        # than silently defaulting to "none" / [] / 0 / None — those
+        # defaults would corrupt resume semantics in subtle ways:
+        # ``inheritance`` defaulting to "none" would mask a Lamarckian
+        # checkpoint; ``selected_parent_ids`` defaulting to [] would
+        # silently drop the next generation's warm-start parent assignment;
+        # the early-stop fields defaulting to 0 / None would falsify the
+        # saturation-tracking history.  Listed in the same order as the
+        # save-side ``payload`` dict for grep-discoverability.
+        required_keys = (
+            "optimizer",
+            "generation",
+            "prev_generation_ids",
+            "selected_parent_ids",
+            "inheritance",
+            "gens_without_improvement",
+            "last_best_fitness",
+            "rng_state",
+        )
+        for required_key in required_keys:
+            if required_key not in payload:
+                msg = (
+                    f"Checkpoint claims version {CHECKPOINT_VERSION} but is "
+                    f"missing required key {required_key!r}. All v3 payloads "
+                    "MUST contain every key written by ``_save_checkpoint`` "
+                    "(the value may be None / [] / 0 where appropriate; the "
+                    "key itself must exist). Refusing to resume from a "
+                    "structurally inconsistent checkpoint."
+                )
+                raise ValueError(msg)
+
         # Reject mid-run inheritance changes.  Fires BEFORE any optimiser
         # state is restored so an inadvertent --inheritance override
         # doesn't waste compute on a corrupted run.
-        checkpoint_inheritance = payload.get("inheritance", "none")
+        checkpoint_inheritance = payload["inheritance"]
         current_inheritance = self.evolution_config.inheritance
         if checkpoint_inheritance != current_inheritance:
             msg = (
@@ -338,29 +375,10 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
-        # Validate v3-required early-stop fields are present.  CHECKPOINT_VERSION
-        # was bumped to 3 specifically to add ``gens_without_improvement`` +
-        # ``last_best_fitness``; a payload that passed the version check but is
-        # missing either key is internally inconsistent (probably hand-edited
-        # or written by a buggy older revision claiming to be v3).  Fail fast
-        # rather than silently defaulting to 0/None, which would let the loop
-        # resume with a falsified saturation history.
-        for required_key in ("gens_without_improvement", "last_best_fitness"):
-            if required_key not in payload:
-                msg = (
-                    f"Checkpoint claims version {CHECKPOINT_VERSION} but is "
-                    f"missing required key {required_key!r}. The early-stop "
-                    "fields were added in CHECKPOINT_VERSION 3 and MUST be "
-                    "present in any v3 payload (the value may be None or 0; "
-                    "the key itself must exist). Refusing to resume from a "
-                    "structurally inconsistent checkpoint."
-                )
-                raise ValueError(msg)
-
         self.optimizer = payload["optimizer"]
         self._generation = payload["generation"]
         self._prev_generation_ids = payload["prev_generation_ids"]
-        self._selected_parent_ids = payload.get("selected_parent_ids", [])
+        self._selected_parent_ids = payload["selected_parent_ids"]
         self._gens_without_improvement = payload["gens_without_improvement"]
         self._last_best_fitness = payload["last_best_fitness"]
         self.rng.bit_generator.state = payload["rng_state"]
