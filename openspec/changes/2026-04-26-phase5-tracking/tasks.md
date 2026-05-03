@@ -144,7 +144,7 @@ The M4 audit (task M4.10 above) identified three blocking design flaws in the or
 - [ ] M4.5.3 Increase n to ≥8 seeds. With per-seed gen-to-092 standard deviation around ±2 generations, n=4 gives standard error ≈ 1 gen — a ±2 threshold is roughly 1 sigma. n=8 halves the SE → roughly 2-sigma sensitivity. Eliminates audit finding A4
 - [ ] M4.5.4 Reconsider innate-bias knobs. Baldwin's design Decision 3 explicitly permits arch-changing schema fields (the validator's `_ARCHITECTURE_CHANGING_FIELDS` rejection applies only to Lamarckian). M4.5 should try `actor_hidden_dim` + `actor_num_layers` (or `entropy_coef_start`, `value_loss_coef`, `lr_warmup_episodes`) instead of (or alongside) the M4 knobs. Addresses audit finding A5
 - [ ] M4.5.5 Calibrate gates against the M4 reruns, not M3 published numbers. M4 control = 8.50, not 9.75. Adjust the speed-gate threshold accordingly
-- [ ] M4.5.6 Run the redesigned 4-arm pilot (Baldwin + 6-field control + Lamarckian rerun + new F1 evaluator), aggregate, publish logbook 015 (or supplement to 014), and emit a definitive GO/PIVOT/STOP verdict
+- [ ] M4.5.6 Run the redesigned 4-arm pilot (Baldwin + 6-field control + Lamarckian rerun + new F1 evaluator), aggregate, publish **logbook 015** (one experiment per logbook is the established pattern; logbook 014 stays as the M4 INCONCLUSIVE record). Logbook 015 forward-references audit findings A1-A5 from logbook 014. Emit a definitive GO/PIVOT/STOP verdict
 - [ ] M4.5.7 Update tracker + roadmap with the M4.5 verdict; flip M4 from INCONCLUSIVE to whichever the data supports
 
 ## M5: Co-Evolution Arms Race

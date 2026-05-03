@@ -250,12 +250,13 @@ The framework changes (kind() Protocol method, BaldwinInheritance, two-guard spl
 
 ## Next Steps
 
-- **M4.5 (Baldwin retry, follow-up PR)** is the proper Baldwin re-evaluation. Scope:
+- **M4.5 (Baldwin retry, follow-up PR)** is the proper Baldwin re-evaluation. M4.5 will publish its results as a new **logbook 015** — one experiment per logbook is the established pattern in this repo (logbooks 012, 013, 014 each cover one Phase 5 milestone). Logbook 014 stays as the M4 INCONCLUSIVE record; logbook 015 will forward-reference audit findings A1-A5 above. Scope:
   1. **Equalise schemas.** Run a 6-field control alongside the Baldwin pilot (matching schemas → identical TPE prior at gen 0 → same starting populations across arms). This eliminates audit finding A1.
   2. **Redesign F1 to test learning-speed.** Replace the K=0 frozen-eval pass with a "K=10 with elite genome vs K=10 with random/baseline genome" comparison — the textbook Baldwin signature. This eliminates audit finding A2 + A3.
   3. **Increase n to ≥8 seeds.** Standard error on per-seed gen-to-092 ≈ ±2 across 4 seeds; doubling n halves the sd → enough power to detect a ±2 gen difference. This eliminates audit finding A4.
   4. **Reconsider innate-bias knobs.** Baldwin's design Decision 3 explicitly permits arch-changing schema fields (`actor_hidden_dim`, `actor_num_layers`). M4.5 should try those instead of (or alongside) `weight_init_scale` and `entropy_decay_episodes`. This addresses audit finding A5.
   5. **Calibrate gates against the M4 reruns**, not the M3 published numbers. M4 control = 8.50, not 9.75.
+  6. When M4.5 lands, append a one-line **Update** at the top of this logbook pointing forward to logbook 015's verdict (the only edit the M4.5 PR makes to this file).
 - **M5 (Co-evolution arms race)** is **unblocked independently**. M5's dependencies are M0 + M1 (per the Phase 5 tracker), neither of which depends on M4's outcome. The framework's evolution loop, hyperparam encoder, lineage tracking, and the new kind()-based Protocol substrate are reused unchanged. M5 can proceed in parallel with M4.5.
 - **M6 (transgenerational memory)** is **deferred until M4.5 settles the Baldwin question**. If M4.5 produces a clean GO, M6 can use Baldwin as a substrate. If M4.5 confirms STOP, M6 needs Lamarckian (or a new mechanism). Don't pick the M6 substrate on M4's INCONCLUSIVE data.
 - **The framework deliverables** (kind() Protocol method + BaldwinInheritance + two-guard split + weight_init_scale + --early-stop-on-saturation + the F1 evaluator script + the 4-way aggregator) ship as-is in this PR. The OpenSpec change (`add-baldwin-evolution`) is **NOT archived**: it stays open as the substrate for M4.5 and as the historical record of the audit findings + redesign plan.
