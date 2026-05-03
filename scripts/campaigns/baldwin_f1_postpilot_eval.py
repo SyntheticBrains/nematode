@@ -143,6 +143,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.episodes <= 0:
+        parser.error(
+            f"--episodes must be a positive integer; got {args.episodes}. "
+            "F1 innate-only requires at least 1 frozen-eval episode per seed.",
+        )
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     rows: list[tuple[int, float, str]] = []

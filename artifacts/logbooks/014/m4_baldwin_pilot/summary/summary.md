@@ -1,5 +1,14 @@
 ## Baldwin Inheritance Pilot — Summary
 
+> **⚠️ Pre-audit verdict.** This summary reflects the aggregator's mechanical
+> gate evaluation. A post-pilot audit (see logbook 014 §Decision) downgraded
+> the M4 verdict from STOP to **INCONCLUSIVE** because the pilot design
+> (schema-shift confounder between 6-field Baldwin and 4-field control,
+> biologically incoherent F1 test, n=4) cannot distinguish "Baldwin failed"
+> from "the test was unfit." Treat the gate outcomes below as bookkeeping
+> only. The corrective re-test (M4.5) is captured in
+> `openspec/changes/2026-04-26-phase5-tracking/tasks.md`.
+
 **Seeds**: [42, 43, 44, 45]
 **Hand-tuned baseline mean**: 0.170
 

@@ -223,6 +223,31 @@ class EvolutionLoop:
             inheritance if inheritance is not None else NoInheritance()
         )
 
+        # Reject silent divergence between the supplied inheritance instance
+        # and ``evolution_config.inheritance``.  Without this guard the
+        # checkpoint would record one value while runtime behaviour follows
+        # the other (lineage rows + selected_parent_ids derive from the
+        # instance via ``kind()``; the literal stored on disk derives from
+        # the config string).  Resume would then load with the config-side
+        # literal but operate under whatever new instance the caller hands
+        # ``EvolutionLoop`` next time, hiding the mismatch.
+        _expected_kind = {
+            "none": "none",
+            "lamarckian": "weights",
+            "baldwin": "trait",
+        }[self.evolution_config.inheritance]
+        if self.inheritance.kind() != _expected_kind:
+            msg = (
+                f"Inheritance instance mismatch: evolution_config.inheritance="
+                f"{self.evolution_config.inheritance!r} expects "
+                f"kind()={_expected_kind!r}, but the supplied strategy reports "
+                f"kind()={self.inheritance.kind()!r}.  Pass an instance whose "
+                "kind() matches the config string (or omit the argument so "
+                "the loop defaults to NoInheritance and set "
+                "evolution.inheritance: none in the YAML)."
+            )
+            raise ValueError(msg)
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._lineage_path = self.output_dir / "lineage.csv"
         self._checkpoint_path = self.output_dir / "checkpoint.pkl"
@@ -249,9 +274,12 @@ class EvolutionLoop:
 
     def _save_checkpoint(self) -> None:
         """Pickle optimiser + RNG + generation + lineage path + version."""
-        # ``inheritance`` is persisted as the literal "none"/"lamarckian"
-        # string (not the strategy instance) so resume can compare against
-        # the resolved current value and reject mismatches.
+        # ``inheritance`` is persisted as the literal "none"/"lamarckian"/
+        # "baldwin" string (not the strategy instance) so resume can
+        # compare against the resolved current value and reject
+        # mismatches.  The constructor's kind()-vs-config guard above
+        # ensures this string is always consistent with
+        # ``self.inheritance.kind()`` at the moment we write it.
         inheritance_value = self.evolution_config.inheritance
         payload = {
             "checkpoint_version": CHECKPOINT_VERSION,

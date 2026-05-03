@@ -146,7 +146,7 @@ The system SHALL provide a `BaldwinInheritance` implementation in `quantumnemato
 
 The `BaldwinInheritance` constructor SHALL take no required arguments. The `inheritance_elite_count` config field SHALL be ignored under Baldwin (the field exists for forward-compatibility with future multi-elite Baldwin variants but is unused in this milestone).
 
-`BaldwinInheritance.select_parents()` SHALL return an empty list (no per-genome checkpoints to track). `BaldwinInheritance.assign_parent()` SHALL return `None` (no per-child parent assignment for warm-start). `BaldwinInheritance.checkpoint_path()` SHALL return `None` (no on-disk checkpoint substrate).
+`BaldwinInheritance.select_parents()` SHALL return a single-element list `[best_genome_id]` containing the prior generation's elite genome ID (top fitness, lex-tie-broken on `genome_id` — the same selection rule as `LamarckianInheritance` with `elite_count=1`). The loop reuses this ID to populate the lineage CSV's `inherited_from` column for every child of the next generation, even though no on-disk checkpoint is created. `BaldwinInheritance.assign_parent()` SHALL return `None` (no per-child parent assignment for warm-start). `BaldwinInheritance.checkpoint_path()` SHALL return `None` (no on-disk checkpoint substrate).
 
 The genetic-assimilation question Baldwin tests is whether evolution under TPE produces a hyperparameter genome that biases the brain to learn fast from random init. The post-pilot script `scripts/campaigns/baldwin_f1_postpilot_eval.py` (NOT part of the loop's runtime contract — a forensic script) SHALL re-evaluate the elite genome with K=0 to test whether the bias has been encoded into the genome itself.
 
@@ -201,6 +201,38 @@ The genetic-assimilation question Baldwin tests is whether evolution under TPE p
 - **THEN** loading SHALL succeed (no `ValidationError` raised)
 - **AND** the loop SHALL run normally; each child constructs a fresh brain at the genome's evolved architecture (no weight checkpoints to load means no shape-mismatch concern)
 - **AND** this is the documented difference between Baldwin and Lamarckian validators
+
+### Requirement: Evolvable LSTMPPO weight_init_scale
+
+The system SHALL expose a `weight_init_scale: float` field on `LSTMPPOBrainConfig` (default `1.0`, validator-bounded to `[0.1, 5.0]`) that scales the orthogonal-init `gain` for the actor's hidden Linear layers and ALL of the critic's Linear layers. The brain's `_initialize_weights` method SHALL compute `hidden_gain = sqrt(2) * weight_init_scale` and pass that gain to `nn.init.orthogonal_` for each in-scope layer. The actor's output Linear layer SHALL be initialised with a fixed `gain=0.01` (the standard PPO small-init trick for stable initial policy) regardless of `weight_init_scale`. The LSTM/GRU module (`self.rnn`) SHALL NOT be touched by `_initialize_weights`; it uses PyTorch's default initialisation.
+
+The default `weight_init_scale=1.0` SHALL be byte-equivalent to the pre-existing M3 init under the same seed (i.e. `hidden_gain = sqrt(2) * 1.0 = sqrt(2)`, matching the prior fixed `gain=np.sqrt(2)` call). The field SHALL be addable to a Baldwin pilot's `hyperparam_schema` so TPE can evolve it within the schema-bounded range (typically a tighter sub-range of the validator bounds, e.g. `[0.5, 2.0]`).
+
+The companion existing field `entropy_decay_episodes` (already on `LSTMPPOBrainConfig`, default 500) SHALL be likewise eligible for inclusion in a Baldwin pilot's `hyperparam_schema` without any brain-side changes — it is exposed for evolution by virtue of being a tagged config field, no new initialisation logic required.
+
+#### Scenario: Default scale produces M3-equivalent init
+
+- **GIVEN** an `LSTMPPOBrainConfig` with `weight_init_scale=1.0` (the default) and a fixed seed
+- **WHEN** the brain is constructed
+- **THEN** the actor's hidden Linear and critic Linear weight tensors SHALL be bit-identical to a direct call to `nn.init.orthogonal_(weight, gain=np.sqrt(2))` against the same seeded RNG state
+- **AND** the actor's output Linear weight tensor SHALL be initialised with `gain=0.01` (small-init PPO trick) — its sample standard deviation SHALL be far below the hidden-layer std
+
+#### Scenario: Larger scale doubles hidden-layer std without affecting output layer or RNN
+
+- **GIVEN** two `LSTMPPOBrainConfig` instances under the same seed, one with `weight_init_scale=1.0` and one with `weight_init_scale=2.0`
+- **WHEN** both brains are constructed
+- **THEN** the ratio of the actor's hidden Linear weight std (2.0-config / 1.0-config) SHALL equal 2.0 within numerical tolerance for every hidden layer
+- **AND** the ratio for the critic's Linear weights SHALL also equal 2.0
+- **AND** the actor's output Linear weight tensors SHALL have approximately equal std (ratio ≈ 1.0) — the output layer is independent of `weight_init_scale`
+- **AND** the LSTM/GRU module's parameter tensors SHALL be bit-identical between the two configs (the RNN module is outside the `_initialize_weights` scope)
+
+#### Scenario: Validator rejects out-of-range scales
+
+- **GIVEN** an `LSTMPPOBrainConfig` definition with `weight_init_scale=0.05` (below the 0.1 lower bound)
+- **WHEN** the config is loaded
+- **THEN** Pydantic SHALL raise a `ValidationError` mentioning `weight_init_scale`
+- **AND** the same SHALL hold for `weight_init_scale=5.1` (above the 5.0 upper bound)
+- **AND** the boundary values 0.1 and 5.0 SHALL be accepted (inclusive bounds)
 
 ### Requirement: Early Stop on Saturation
 

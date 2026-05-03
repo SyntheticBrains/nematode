@@ -54,11 +54,13 @@ seed,baldwin_gen_to_092,lamarckian_gen_to_092,control_gen_to_092,f1_innate_only_
 45,3,7,8,0.000000
 ```
 
-Aggregator's gen-to-092 means use a `max_gens + 1` fallback for seeds that never reach the threshold:
+Aggregator's gen-to-092 means use a `max_gens + 1` fallback for seeds that never reach the threshold, where `max_gens` is the longest `history.csv` row count across **all** arms × seeds in the pilot. For this pilot, baldwin seed-43's history has 15 rows (the longest of any arm-seed), so `max_gens = 15` and `fallback_gen = 16`.
 
-- Baldwin: [16 (fallback for seed 42), 8, 7, 3] → mean 8.50
-- Lamarckian: [3, 4, 4, 7] → mean 4.50
-- Control: [16 (fallback for seed 42), 5, 5, 8] → mean 8.50
+- Baldwin: [16 (fallback for seed 42), 8, 7, 3] → mean (16 + 8 + 7 + 3) / 4 = 8.50
+- Lamarckian: [3, 4, 4, 7] → mean (3 + 4 + 4 + 7) / 4 = 4.50
+- Control: [16 (fallback for seed 42), 5, 5, 8] → mean (16 + 5 + 5 + 8) / 4 = 8.50
+
+The fallback inflates the never-reached cell to one beyond the longest observed run, so an arm that never converges gets penalised relative to one that converges late but does converge. This is conservative for the speed gate (it favours the convergent arm) but it means seed 42's "—" entries above are NOT zero-weighted in the mean.
 
 ## Evolved-hyperparameter distributions
 

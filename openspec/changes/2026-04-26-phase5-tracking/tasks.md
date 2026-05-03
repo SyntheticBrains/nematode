@@ -162,7 +162,7 @@ The M4 audit (task M4.10 above) identified three blocking design flaws in the or
 - [ ] M5.4 Create `configs/evolution/coevolution_full.yml`
 - [ ] M5.5 Run 50+ gen × 4 seed campaign
 - [ ] M5.6 Multi-cluster vs single-cluster transfer evaluation
-- [ ] M5.7 Publish `artifacts/logbooks/014/` with Red Queen findings
+- [ ] M5.7 Publish `artifacts/logbooks/016/` with Red Queen findings
 - [ ] M5.8 Update this checklist + roadmap milestone tracker
 
 ## M6: Transgenerational Memory
@@ -179,7 +179,7 @@ The M4 audit (task M4.10 above) identified three blocking design flaws in the or
 - [ ] M6.3 Implement `inherit_from(parents, decay_factor)` transmission
 - [ ] M6.4 Create `configs/evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml`
 - [ ] M6.5 Run F0/F1/F2/F3 pathogen avoidance experiment (Posner replication design)
-- [ ] M6.6 Publish `artifacts/logbooks/015/` with transgenerational findings
+- [ ] M6.6 Publish `artifacts/logbooks/017/` with transgenerational findings
 - [ ] M6.7 Update this checklist + roadmap milestone tracker
 
 ## M6.5: NEAT Architecture Evolution (OPTIONAL)
@@ -204,7 +204,7 @@ The M4 audit (task M4.10 above) identified three blocking design flaws in the or
 - [ ] M7.2 Walk through each Phase 5 exit criterion with evidence
 - [ ] M7.3 Document negative findings honestly (Phase 4 precedent)
 - [ ] M7.4 Phase 6 quantum re-evaluation trigger recommendation
-- [ ] M7.5 Publish `artifacts/logbooks/016/synthesis.md`
+- [ ] M7.5 Publish `artifacts/logbooks/018/synthesis.md`
 - [ ] M7.6 Update `docs/roadmap.md` Phase 5 status → COMPLETE; record exit criterion outcomes
 - [ ] M7.7 Archive `2026-04-26-phase5-tracking` alongside `2026-07-21-add-phase5-evaluation`
 

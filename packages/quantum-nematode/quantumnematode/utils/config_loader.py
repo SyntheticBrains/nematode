@@ -1015,11 +1015,14 @@ class EvolutionConfig(BaseModel):
     # 1 is currently accepted when inheritance is "lamarckian"; the
     # field accepts >=1 in the schema so multi-elite parent-selection
     # strategies (round-robin, tournament, soft-elite top-k) can be
-    # added later without a config-schema migration.  IGNORED when
-    # inheritance is "baldwin": Baldwin is conceptually single-elite
-    # by construction (trait inheritance flows through TPE's posterior,
-    # which biases sampling toward the prior elite); the field exists
-    # for forward-compatibility with future multi-elite Baldwin variants.
+    # added later without a config-schema migration.  Under
+    # inheritance: baldwin the field has no runtime effect (Baldwin is
+    # single-elite by construction — trait inheritance flows through
+    # TPE's posterior, which biases sampling toward the prior elite —
+    # and ``BaldwinInheritance`` ignores the field entirely), but the
+    # structural ``inheritance_elite_count <= population_size`` check
+    # in ``_validate_inheritance`` (rule 4) is still enforced for all
+    # inheritance modes to keep the schema invariant uniform.
     inheritance_elite_count: int = Field(default=1, ge=1)
     # Optional early-stop on saturation: when set to a positive integer
     # N, the loop exits if best_fitness has not strictly improved for N

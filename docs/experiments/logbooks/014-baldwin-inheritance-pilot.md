@@ -123,11 +123,11 @@ Lamarckian rerun reproduces M3's published numbers exactly: all 4 seeds reach 1.
 | Phase | Wall-time |
 |---|---|
 | Hand-tuned baseline (4 seeds × 100 episodes) | ~2 min (reused from M2.11) |
-| Baldwin pilot (4 seeds × 7-15 gens × pop 12 × K=50/L=25) | ~50 min total wall (3 arms in parallel) |
-| Lamarckian rerun | (parallel with Baldwin) |
-| Control rerun | (parallel with Baldwin) |
+| Control rerun (4 seeds × 6-12 gens) | ~57 min |
+| Baldwin pilot (4 seeds × 7-15 gens × pop 12 × K=50/L=25) | ~63 min |
+| Lamarckian rerun (4 seeds × 7-11 gens) | ~67 min |
 | F1 post-pilot (4 seeds × 25 episodes × K=0) | ~3 min |
-| Total | **~55 min wall** with 3 arms in parallel + 1 F1 post-hoc |
+| Total wall (all 3 arms in parallel + F1) | **~71 min** (longest arm + F1; see appendix for per-arm start/end) |
 
 `early_stop_on_saturation: 5` fired across most arm-seed combos: Baldwin saturated at gens 7-15; Lamarckian at 7-11; control at 6-12. None reached the 20-gen budget — early-stop saved roughly half the per-seed wall-time on the saturating arms.
 
