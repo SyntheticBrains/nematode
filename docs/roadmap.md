@@ -506,7 +506,7 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 | M1 | Predator-as-brain refactor | MEDIUM | 🔲 not started |
 | M2 | Hyperparameter evolution pilot | LOW | ✅ complete (4 arms GO; predator arm under CMA-ES +47pp, under TPE +79pp with seed 43 rescued; RQ1 closed — TPE is M3's default optimiser; see logbook 012) |
 | M3 | Lamarckian evolution pilot | MEDIUM | ✅ complete (GO; predator arm + TPE + Lamarckian inheritance accelerates convergence by +5.25 gens; all 4 seeds reach best fitness 1.00 vs control's 0.88-0.96; inheritance rescues TPE-unlucky seed 42 — direct analogue to M2.12 rescuing M2.11's seed 43; see logbook 013) |
-| M4 | Baldwin effect demonstration (gated on M3 GO) | MEDIUM | 🟢 unblocked (M3 GO — starts on M3 predator config + TPE + new Baldwin strategy) |
+| M4 | Baldwin effect demonstration | MEDIUM | ✅ complete — STOP. Baldwin's mean gen-to-0.92 (8.50) exactly matches the M3-control rerun (8.50, margin +0.00 vs need ≥2); F1 innate-only is 0.000 across all 4 seeds (vs need >baseline +0.10pp). Lamarckian rerun reproduces M3 exactly (mean 4.50, all 4 seeds at 1.00). M3's +5.25-gen acceleration is causally trained-weight transfer, not elite-ID lineage flow. M5 unblocked independently; M6 needs Lamarckian (or new mechanism) as substrate. See logbook 014 |
 | M5 | Co-evolution arms race | HIGH | 🔲 not started |
 | M6 | Transgenerational memory (gated on M3 + M4/M5) | HIGH | 🔲 not started |
 | M6.5 | NEAT topology evolution (optional) | LOW | 🔲 not started |

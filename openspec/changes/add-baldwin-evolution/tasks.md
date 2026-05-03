@@ -65,8 +65,8 @@
 
 ## 10. Run pilot
 
-- [ ] 10.1 Run all three campaign scripts in parallel. Wall-time estimate: ~3 hours total when sequential, ~50-60 min when fully parallelised (each script uses 4 internal workers; user's machine should have ≥8-12 cores available for full parallel; otherwise stagger). Early-stop should reduce per-arm wall-time on saturating arms.
-- [ ] 10.2 Verify each seed's `lineage.csv` has 20 generations (or fewer if early-stop fired) and the Baldwin arm's output directory does NOT contain an `inheritance/` subdirectory.
+- [x] 10.1 Ran all three campaign scripts in parallel. Total wall-time ~67 min (3 arms × 4 seeds, with internal parallel=4 + 3 scripts in background → ~12 worker procs against 10 cores). Early-stop fired on every arm-seed combo (none reached the 20-gen budget); saved roughly half the per-seed wall.
+- [x] 10.2 Verified per-seed `lineage.csv` row counts match early-stop generation counts; Baldwin arm's output directory does NOT contain an `inheritance/` subdirectory across any seed (Baldwin is mechanically a no-op on weight IO).
 
 ## 11. F1 post-pilot evaluator
 
@@ -86,15 +86,15 @@
 
 ## 13. Logbook 014
 
-- [ ] 13.1 Create `docs/experiments/logbooks/014-baldwin-inheritance-pilot.md` with the standard logbook structure (Status / Background / Hypothesis / Method / Results / Analysis / Conclusions / Next Steps / Data References). Mirrors logbook 013's style. Include the M3-vs-M4 framing (weight-flow vs trait-flow) and the genetic-assimilation discussion.
-- [ ] 13.2 Create `docs/experiments/logbooks/supporting/014/baldwin-inheritance-pilot-details.md` with per-seed tables, per-arm fitness curves, evolved-hyperparameter distributions, and the F1 innate-only forensic discussion.
-- [ ] 13.3 Copy pilot artefacts to `artifacts/logbooks/014/m4_baldwin_pilot/{baldwin,lamarckian,control,baseline,summary}/` mirroring the M3 layout. Include each seed's `best_params.json`, `history.csv`, `lineage.csv`, `checkpoint.pkl`, and (for Lamarckian) the surviving final-gen elite under `inheritance/`.
-- [ ] 13.4 Update `docs/experiments/README.md` to add the M4 logbook to the active-experiments table.
+- [x] 13.1 Created `docs/experiments/logbooks/014-baldwin-inheritance-pilot.md` with full structure (Status / Background / Hypothesis / Method / Results / Analysis / Decision / Conclusions / Next Steps / Data References). Verdict STOP documented with all three gate margins; analysis discusses why Baldwin failed (weight transfer is what causally drives M3's acceleration; trait flow alone doesn't replicate it).
+- [x] 13.2 Created `docs/experiments/logbooks/supporting/014/baldwin-inheritance-pilot-details.md` with per-seed final-fitness tables, per-arm gen-to-0.92 trajectories, decoded evolved-hyperparameter values per seed (showing TPE genuinely explored `weight_init_scale` 0.57-1.33 + `entropy_decay_episodes` 1022-1562), F1 innate-only forensic discussion (why 0.0 across all seeds), wall-time breakdown, schema confounder check, cross-arm code-revision check.
+- [x] 13.3 Copied pilot artefacts to `artifacts/logbooks/014/m4_baldwin_pilot/{baldwin,lamarckian,control,baseline,summary}/` mirroring the M3 layout. 60 files total: per-seed `best_params.json` + `history.csv` + `lineage.csv` + `checkpoint.pkl` for all three arms; Lamarckian's surviving final-gen elite under `inheritance/`; baseline `seed-N.log` files; aggregator's `summary.md` + `convergence.png` + `convergence_speed.csv` + `f1_innate_only.csv`.
+- [x] 13.4 Added M4 logbook entry to `docs/experiments/README.md` active-experiments table with the STOP verdict + key per-arm numbers + the "negative result isolates source of M3's lift to weight transfer" framing.
 
 ## 14. Tracker + roadmap
 
-- [ ] 14.1 Tick M4.1-M4.7 in `openspec/changes/2026-04-26-phase5-tracking/tasks.md`. Flip M4 status from `not started` to `complete` with the same detail-level summary M3's status got. M4.2's original scope ("learning-blocked F1 control cohort with `control_cohort_interval` / `control_cohort_fraction` config fields") changed during planning to a post-hoc evaluator (per design Decision 6) — tick M4.2 with a note in the same style M3.4 used for its DROPPED entry: `~~Implement learning-blocked F1 control cohort (config fields: control_cohort_interval, control_cohort_fraction)~~ — SCOPE CHANGED during planning. Replaced with post-hoc evaluator at scripts/campaigns/baldwin_f1_postpilot_eval.py (per design Decision 6). Keeps the loop unchanged and makes F1 a clean forensic step.`
-- [ ] 14.2 Flip M4 row in `docs/roadmap.md` from 🟢 unblocked to ✅ complete with a one-sentence summary of the verdict.
+- [x] 14.1 Ticked M4.1-M4.9 in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (M4.8 + M4.9 added during planning). Flipped M4 status from `not started` to `complete` with the STOP verdict + per-gate margins. M4.2's scope-change note used the M3.4-style strikethrough pattern.
+- [x] 14.2 Flipped M4 row in `docs/roadmap.md` from 🟢 unblocked to ✅ complete with the STOP verdict summary.
 
 ## 15. PR + archive
 
