@@ -1009,14 +1009,29 @@ class EvolutionConfig(BaseModel):
     # = no weights to inherit); and incompatible with
     # architecture-changing schema fields.  All checks enforced by the
     # model validators below + ``SimulationConfig._validate_hyperparam_schema``.
-    inheritance: Literal["none", "lamarckian"] = "none"
+    inheritance: Literal["none", "lamarckian", "baldwin"] = "none"
     # Number of prior-generation elites whose checkpoints survive into
     # the next generation.  Default 1 (single-elite-broadcast).  Only
-    # 1 is currently accepted when inheritance is active; the field
-    # accepts >=1 in the schema so multi-elite parent-selection
+    # 1 is currently accepted when inheritance is "lamarckian"; the
+    # field accepts >=1 in the schema so multi-elite parent-selection
     # strategies (round-robin, tournament, soft-elite top-k) can be
-    # added later without a config-schema migration.
+    # added later without a config-schema migration.  Under
+    # inheritance: baldwin the field has no runtime effect (Baldwin is
+    # single-elite by construction — trait inheritance flows through
+    # TPE's posterior, which biases sampling toward the prior elite —
+    # and ``BaldwinInheritance`` ignores the field entirely), but the
+    # structural ``inheritance_elite_count <= population_size`` check
+    # in ``_validate_inheritance`` (rule 4) is still enforced for all
+    # inheritance modes to keep the schema invariant uniform.
     inheritance_elite_count: int = Field(default=1, ge=1)
+    # Optional early-stop on saturation: when set to a positive integer
+    # N, the loop exits if best_fitness has not strictly improved for N
+    # consecutive generations.  Default None preserves existing
+    # full-budget behaviour byte-equivalently.  CLI override:
+    # --early-stop-on-saturation N on scripts/run_evolution.py.
+    # Persisted in the checkpoint pickle (CHECKPOINT_VERSION 3) so
+    # resume preserves the saturation-tracking state.
+    early_stop_on_saturation: int | None = Field(default=None, ge=1)
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":
@@ -1025,13 +1040,18 @@ class EvolutionConfig(BaseModel):
         Four rules:
 
         1. ``inheritance != "none"`` AND ``learn_episodes_per_eval == 0``
-           — no train phase means no weights to inherit.
+           — no train phase means no weights to inherit (Lamarckian) or
+           no learned-elite signal to propagate (Baldwin).
         2. ``inheritance != "none"`` AND ``warm_start_path is not None``
-           — both load weights into the same brain slot before the K
-           train phase; exactly one may be set.
-        3. ``inheritance != "none"`` AND ``inheritance_elite_count != 1``
-           — single-elite-broadcast is the only currently-supported
-           parent-selection rule for Lamarckian inheritance.
+           — Lamarckian and warm_start both load weights into the same
+           brain slot; Baldwin under static warm-start would mean every
+           child starts from the same fixed checkpoint, collapsing the
+           Baldwin signal.  Exactly one may be set.
+        3. ``inheritance == "lamarckian"`` AND ``inheritance_elite_count
+           != 1`` — single-elite-broadcast is the only currently-supported
+           parent-selection rule for Lamarckian inheritance.  The rule
+           does NOT apply under ``inheritance: baldwin`` since Baldwin
+           ignores the field.
         4. ``inheritance_elite_count > population_size`` — trivially
            impossible to keep more elites than there are genomes.
            Independent of rule 3 so the multi-elite restriction can
@@ -1041,33 +1061,37 @@ class EvolutionConfig(BaseModel):
             if self.learn_episodes_per_eval == 0:
                 msg = (
                     f"evolution.inheritance is {self.inheritance!r} but "
-                    "evolution.learn_episodes_per_eval is 0. Lamarckian "
-                    "inheritance requires a non-zero train phase to produce "
-                    "weights to inherit. Either set learn_episodes_per_eval > 0 "
-                    "or set inheritance: none."
+                    "evolution.learn_episodes_per_eval is 0. Inheritance "
+                    "requires a non-zero train phase: Lamarckian needs "
+                    "weights to inherit; Baldwin's whole premise is that "
+                    "lifetime learning shapes the gen-N elite that becomes "
+                    "the prior for gen-N+1. Either set "
+                    "learn_episodes_per_eval > 0 or set inheritance: none."
                 )
                 raise ValueError(msg)
             if self.warm_start_path is not None:
                 msg = (
                     "evolution.warm_start_path and evolution.inheritance "
                     f"({self.inheritance!r}) are mutually exclusive. "
-                    "warm_start_path (run-wide static checkpoint) and "
-                    "inheritance (per-genome dynamic checkpoint) both load "
-                    "weights into the same brain slot before the K train "
-                    "phase. Exactly one may be set; drop one of the two."
+                    "Under Lamarckian, both load weights into the same "
+                    "brain slot before the K train phase. Under Baldwin, "
+                    "static warm-start would collapse the Baldwin signal "
+                    "(every child starts from the same checkpoint regardless "
+                    "of the elite's evolved hyperparameters). Drop one of "
+                    "the two."
                 )
                 raise ValueError(msg)
-            if self.inheritance_elite_count != 1:
-                msg = (
-                    f"evolution.inheritance_elite_count={self.inheritance_elite_count} "
-                    f"but evolution.inheritance is {self.inheritance!r}. "
-                    "inheritance_elite_count MUST be 1 when inheritance: lamarckian. "
-                    "Multi-elite parent selection (round-robin or tournament) "
-                    "is not currently supported; the field exists structurally "
-                    "so future strategies can populate it without a "
-                    "config-schema migration."
-                )
-                raise ValueError(msg)
+        if self.inheritance == "lamarckian" and self.inheritance_elite_count != 1:
+            msg = (
+                f"evolution.inheritance_elite_count={self.inheritance_elite_count} "
+                f"but evolution.inheritance is {self.inheritance!r}. "
+                "inheritance_elite_count MUST be 1 when inheritance: lamarckian. "
+                "Multi-elite parent selection (round-robin or tournament) "
+                "is not currently supported; the field exists structurally "
+                "so future strategies can populate it without a "
+                "config-schema migration."
+            )
+            raise ValueError(msg)
         if self.inheritance_elite_count > self.population_size:
             msg = (
                 f"evolution.inheritance_elite_count ({self.inheritance_elite_count}) "
@@ -1280,7 +1304,9 @@ class SimulationConfig(BaseModel):
         """
         # Inheritance requires hyperparam_schema: weight encoders evolve
         # weights, and Lamarckian on top would double-count weights as
-        # both genome and substrate.  Caught here (rather than only in
+        # both genome and substrate; Baldwin needs a hyperparameter
+        # genome to evolve — without one there is no trait substrate to
+        # inherit.  Caught here (rather than only in
         # EvolutionConfig._validate_inheritance) because the
         # hyperparam_schema field lives on SimulationConfig, not
         # EvolutionConfig.
@@ -1293,9 +1319,11 @@ class SimulationConfig(BaseModel):
                 f"evolution.inheritance is {self.evolution.inheritance!r} but "
                 "no hyperparam_schema is set.  Lamarckian inheritance over "
                 "weight encoders would double-count weights as both genome "
-                "and substrate. Either drop inheritance (returning to weight "
-                "evolution) or add a hyperparam_schema (switching to "
-                "hyperparameter evolution + Lamarckian)."
+                "and substrate; Baldwin needs a hyperparameter genome to "
+                "evolve — without one there is no trait substrate to inherit. "
+                "Either drop inheritance (returning to weight evolution) "
+                "or add a hyperparam_schema (switching to hyperparameter "
+                "evolution + inheritance)."
             )
             raise ValueError(msg)
 
@@ -1388,8 +1416,10 @@ class SimulationConfig(BaseModel):
         # Inheritance arch-fields incompatibility: same shape-mismatch
         # reasoning as warm-start above, applied to per-genome dynamic
         # checkpoints.  Single source of truth via the same
-        # _ARCHITECTURE_CHANGING_FIELDS denylist.
-        if self.evolution is not None and self.evolution.inheritance != "none":
+        # _ARCHITECTURE_CHANGING_FIELDS denylist.  Applies to Lamarckian
+        # ONLY: Baldwin doesn't load weights, so shape mismatches are
+        # fine — a future Baldwin arm can evolve actor_hidden_dim etc.
+        if self.evolution is not None and self.evolution.inheritance == "lamarckian":
             offenders = sorted(
                 {entry.name for entry in self.hyperparam_schema} & _ARCHITECTURE_CHANGING_FIELDS,
             )

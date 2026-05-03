@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from quantumnematode.evolution.inheritance import (
+    BaldwinInheritance,
     LamarckianInheritance,
     NoInheritance,
 )
@@ -137,3 +138,95 @@ def test_lamarckian_rejects_zero_or_negative_elite_count() -> None:
         LamarckianInheritance(elite_count=0)
     with pytest.raises(ValueError, match="elite_count must be >= 1"):
         LamarckianInheritance(elite_count=-1)
+
+
+# ---------------------------------------------------------------------------
+# kind() Protocol method
+# ---------------------------------------------------------------------------
+
+
+def test_no_inheritance_kind() -> None:
+    """``NoInheritance.kind`` SHALL return the literal ``"none"``."""
+    assert NoInheritance().kind() == "none"
+
+
+def test_lamarckian_kind() -> None:
+    """``LamarckianInheritance.kind`` SHALL return the literal ``"weights"``."""
+    assert LamarckianInheritance().kind() == "weights"
+    assert LamarckianInheritance(elite_count=3).kind() == "weights"
+
+
+def test_kind_values_are_in_known_set() -> None:
+    """All shipped strategies SHALL return a value from the known kind set.
+
+    Guards against future strategies leaking new literals without
+    updating the loop's branching logic.
+    """
+    known = {"none", "weights", "trait"}
+    assert NoInheritance().kind() in known
+    assert LamarckianInheritance().kind() in known
+    assert BaldwinInheritance().kind() in known
+
+
+# ---------------------------------------------------------------------------
+# BaldwinInheritance
+# ---------------------------------------------------------------------------
+
+
+def test_baldwin_kind() -> None:
+    """``BaldwinInheritance.kind`` SHALL return the literal ``"trait"``."""
+    assert BaldwinInheritance().kind() == "trait"
+
+
+def test_baldwin_checkpoint_path_returns_none(tmp_path: Path) -> None:
+    """``BaldwinInheritance.checkpoint_path`` SHALL return ``None`` (no on-disk substrate)."""
+    b = BaldwinInheritance()
+    assert b.checkpoint_path(tmp_path, 0, "gid") is None
+    assert b.checkpoint_path(tmp_path, 7, "abc-123") is None
+
+
+def test_baldwin_assign_parent_returns_none() -> None:
+    """``BaldwinInheritance.assign_parent`` SHALL return ``None`` (no warm-start)."""
+    b = BaldwinInheritance()
+    assert b.assign_parent(0, []) is None
+    assert b.assign_parent(0, ["a", "b"]) is None
+    assert b.assign_parent(99, ["a"]) is None
+
+
+def test_baldwin_select_parents_returns_single_elite() -> None:
+    """``BaldwinInheritance.select_parents`` SHALL return ``[best_genome_id]`` (single-element)."""
+    b = BaldwinInheritance()
+    assert b.select_parents(["a", "b", "c"], [0.1, 0.9, 0.5], 0) == ["b"]
+    assert b.select_parents(["x", "y", "z"], [0.7, 0.7, 0.3], 5) == ["x"]  # tie-break
+
+
+def test_baldwin_select_parents_matches_lamarckian_single_elite() -> None:
+    """Baldwin's selection rule SHALL match Lamarckian(elite_count=1) byte-for-byte.
+
+    Both strategies select the prior generation's top-fitness genome
+    with lex-tie-break on ``genome_id``.  Asserting equivalence here
+    pins the shared selection rule and guards against drift if either
+    implementation changes.
+    """
+    b = BaldwinInheritance()
+    lam1 = LamarckianInheritance(elite_count=1)
+    cases = [
+        (["a", "b", "c"], [0.1, 0.9, 0.5]),
+        (["x", "y", "z"], [0.7, 0.7, 0.3]),
+        (["c", "a", "b"], [0.5, 0.5, 0.5]),
+        (["only"], [0.42]),
+    ]
+    for ids, fits in cases:
+        assert b.select_parents(ids, fits, 0) == lam1.select_parents(ids, fits, 0)
+
+
+def test_baldwin_select_parents_empty_input_returns_empty() -> None:
+    """Gen-0 case: empty prior generation → empty selection."""
+    assert BaldwinInheritance().select_parents([], [], 0) == []
+
+
+def test_baldwin_select_parents_length_mismatch_raises() -> None:
+    """``select_parents`` SHALL raise on mismatched ``gen_ids``/``fitnesses``."""
+    b = BaldwinInheritance()
+    with pytest.raises(ValueError, match="len\\(gen_ids\\) == len\\(fitnesses\\)"):
+        b.select_parents(["a", "b"], [0.5], 0)

@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from torch import nn
 
 if TYPE_CHECKING:
@@ -100,6 +100,17 @@ class LSTMPPOBrainConfig(BrainConfig):
     entropy_coef: float = 0.02
     entropy_coef_end: float = 0.008
     entropy_decay_episodes: int = 500
+
+    # Weight initialisation scale.  Multiplies the orthogonal-init
+    # ``gain`` for the actor's hidden Linear layers and the critic's
+    # Linear layers (the actor's output-layer ``gain=0.01`` is preserved
+    # as a stable-initial-policy PPO trick; the LSTM/GRU module is
+    # unaffected and uses PyTorch's default init).  Default 1.0 is
+    # byte-equivalent to existing init.  Evolvable innate-bias knob
+    # for Baldwin/hyperparameter evolution arms; bounds picked so
+    # extreme values can be set explicitly while excluding pathological
+    # cases that would prevent the brain from training at all.
+    weight_init_scale: float = Field(default=1.0, ge=0.1, le=5.0)
 
     # LR scheduling
     lr_warmup_episodes: int = 0
@@ -469,18 +480,32 @@ class LSTMPPOBrain(ClassicalBrain):
         )
 
     def _initialize_weights(self) -> None:
-        """Initialize network weights with orthogonal initialization."""
+        """Initialize network weights with orthogonal initialization.
+
+        The actor's hidden Linears and the critic's Linears use
+        ``orthogonal_`` with ``gain=sqrt(2) * weight_init_scale`` —
+        the multiplicative ``weight_init_scale`` knob defaults to 1.0
+        (byte-equivalent to standard PPO init) and is evolvable for
+        Baldwin/hyperparameter-evolution arms.  The actor's output
+        layer keeps a fixed ``gain=0.01`` (deliberate small init for
+        stable initial policy — the standard PPO trick) regardless
+        of ``weight_init_scale``.  The LSTM/GRU module (``self.rnn``)
+        is not touched here; it uses PyTorch's default init.
+        """
+        scale = self.config.weight_init_scale
+        hidden_gain = float(np.sqrt(2)) * scale
 
         def init_linear(module: nn.Module) -> None:
             if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
+                nn.init.orthogonal_(module.weight, gain=hidden_gain)
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0.0)
 
         self.actor.apply(init_linear)
         self.critic.net.apply(init_linear)
 
-        # Actor output layer: small init for stable initial policy
+        # Actor output layer: small init for stable initial policy.
+        # NOTE: gain=0.01 is intentionally NOT scaled by weight_init_scale.
         last_layer = self.actor[-1]
         if isinstance(last_layer, nn.Linear):
             nn.init.orthogonal_(last_layer.weight, gain=0.01)

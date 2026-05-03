@@ -57,7 +57,11 @@ logger = logging.getLogger(__name__)
 # (list of genome IDs whose Lamarckian checkpoints survive into the next
 # generation) and ``inheritance`` (the literal "none"/"lamarckian" string
 # the run was launched with — used to reject mismatched-setting resumes).
-CHECKPOINT_VERSION = 2
+# v3 adds ``gens_without_improvement`` (int counter for the early-stop
+# check) and ``last_best_fitness`` (float | None — the previous
+# generation's best, used by the counter to detect strict improvement on
+# resume) and extends the ``inheritance`` literal to include "baldwin".
+CHECKPOINT_VERSION = 3
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +223,31 @@ class EvolutionLoop:
             inheritance if inheritance is not None else NoInheritance()
         )
 
+        # Reject silent divergence between the supplied inheritance instance
+        # and ``evolution_config.inheritance``.  Without this guard the
+        # checkpoint would record one value while runtime behaviour follows
+        # the other (lineage rows + selected_parent_ids derive from the
+        # instance via ``kind()``; the literal stored on disk derives from
+        # the config string).  Resume would then load with the config-side
+        # literal but operate under whatever new instance the caller hands
+        # ``EvolutionLoop`` next time, hiding the mismatch.
+        _expected_kind = {
+            "none": "none",
+            "lamarckian": "weights",
+            "baldwin": "trait",
+        }[self.evolution_config.inheritance]
+        if self.inheritance.kind() != _expected_kind:
+            msg = (
+                f"Inheritance instance mismatch: evolution_config.inheritance="
+                f"{self.evolution_config.inheritance!r} expects "
+                f"kind()={_expected_kind!r}, but the supplied strategy reports "
+                f"kind()={self.inheritance.kind()!r}.  Pass an instance whose "
+                "kind() matches the config string (or omit the argument so "
+                "the loop defaults to NoInheritance and set "
+                "evolution.inheritance: none in the YAML)."
+            )
+            raise ValueError(msg)
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._lineage_path = self.output_dir / "lineage.csv"
         self._checkpoint_path = self.output_dir / "checkpoint.pkl"
@@ -231,14 +260,26 @@ class EvolutionLoop:
         # are about to be inherited by the next generation's children.
         # Empty until the first generation completes select_parents().
         self._selected_parent_ids: list[str] = []
+        # Early-stop bookkeeping: counter incremented each generation in
+        # which best_fitness fails to strictly improve over the previous
+        # generation's best.  Reset to 0 on any strict improvement.
+        # ``_last_best_fitness`` is None until gen 1 completes (gen-1
+        # bootstrap branch in the counter-update logic treats the first
+        # generation as an "improvement").  Both persisted in the
+        # checkpoint pickle so resume preserves the saturation state.
+        self._gens_without_improvement: int = 0
+        self._last_best_fitness: float | None = None
 
     # ---- Checkpoint / Resume ---------------------------------------------
 
     def _save_checkpoint(self) -> None:
         """Pickle optimiser + RNG + generation + lineage path + version."""
-        # ``inheritance`` is persisted as the literal "none"/"lamarckian"
-        # string (not the strategy instance) so resume can compare against
-        # the resolved current value and reject mismatches.
+        # ``inheritance`` is persisted as the literal "none"/"lamarckian"/
+        # "baldwin" string (not the strategy instance) so resume can
+        # compare against the resolved current value and reject
+        # mismatches.  The constructor's kind()-vs-config guard above
+        # ensures this string is always consistent with
+        # ``self.inheritance.kind()`` at the moment we write it.
         inheritance_value = self.evolution_config.inheritance
         payload = {
             "checkpoint_version": CHECKPOINT_VERSION,
@@ -247,6 +288,8 @@ class EvolutionLoop:
             "prev_generation_ids": self._prev_generation_ids,
             "selected_parent_ids": self._selected_parent_ids,
             "inheritance": inheritance_value,
+            "gens_without_improvement": self._gens_without_improvement,
+            "last_best_fitness": self._last_best_fitness,
             "rng_state": self.rng.bit_generator.state,
             "lineage_path": str(self._lineage_path),
         }
@@ -280,10 +323,47 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
+        # Validate ALL resume-critical keys are present in the payload
+        # BEFORE assigning any of them.  ``_save_checkpoint`` writes
+        # every key in this list unconditionally for any v3 payload, so
+        # a payload that passed the version check but is missing any of
+        # them is structurally inconsistent (probably hand-edited or
+        # written by a buggy older revision claiming to be v3).  Fail
+        # fast with a descriptive message naming the missing key rather
+        # than silently defaulting to "none" / [] / 0 / None — those
+        # defaults would corrupt resume semantics in subtle ways:
+        # ``inheritance`` defaulting to "none" would mask a Lamarckian
+        # checkpoint; ``selected_parent_ids`` defaulting to [] would
+        # silently drop the next generation's warm-start parent assignment;
+        # the early-stop fields defaulting to 0 / None would falsify the
+        # saturation-tracking history.  Listed in the same order as the
+        # save-side ``payload`` dict for grep-discoverability.
+        required_keys = (
+            "optimizer",
+            "generation",
+            "prev_generation_ids",
+            "selected_parent_ids",
+            "inheritance",
+            "gens_without_improvement",
+            "last_best_fitness",
+            "rng_state",
+        )
+        for required_key in required_keys:
+            if required_key not in payload:
+                msg = (
+                    f"Checkpoint claims version {CHECKPOINT_VERSION} but is "
+                    f"missing required key {required_key!r}. All v3 payloads "
+                    "MUST contain every key written by ``_save_checkpoint`` "
+                    "(the value may be None / [] / 0 where appropriate; the "
+                    "key itself must exist). Refusing to resume from a "
+                    "structurally inconsistent checkpoint."
+                )
+                raise ValueError(msg)
+
         # Reject mid-run inheritance changes.  Fires BEFORE any optimiser
         # state is restored so an inadvertent --inheritance override
         # doesn't waste compute on a corrupted run.
-        checkpoint_inheritance = payload.get("inheritance", "none")
+        checkpoint_inheritance = payload["inheritance"]
         current_inheritance = self.evolution_config.inheritance
         if checkpoint_inheritance != current_inheritance:
             msg = (
@@ -298,14 +378,32 @@ class EvolutionLoop:
         self.optimizer = payload["optimizer"]
         self._generation = payload["generation"]
         self._prev_generation_ids = payload["prev_generation_ids"]
-        self._selected_parent_ids = payload.get("selected_parent_ids", [])
+        self._selected_parent_ids = payload["selected_parent_ids"]
+        self._gens_without_improvement = payload["gens_without_improvement"]
+        self._last_best_fitness = payload["last_best_fitness"]
         self.rng.bit_generator.state = payload["rng_state"]
 
     # ---- Inheritance helpers --------------------------------------------
 
     def _inheritance_active(self) -> bool:
-        """Return True iff the active strategy uses per-genome checkpoints."""
-        return not isinstance(self.inheritance, NoInheritance)
+        """Return True iff the active strategy uses per-genome weight checkpoints.
+
+        Gates the weight-IO code paths in the loop: per-genome
+        ``checkpoint_path`` computation, the GC step, and the
+        warm-start lookup.  Currently only :class:`LamarckianInheritance`
+        returns ``"weights"`` from ``kind()``.
+        """
+        return self.inheritance.kind() == "weights"
+
+    def _inheritance_records_lineage(self) -> bool:
+        """Return True iff the active strategy populates the lineage CSV's `inherited_from`.
+
+        Gates the per-generation ``select_parents`` call and the
+        ``_selected_parent_ids`` update.  Both :class:`LamarckianInheritance`
+        and :class:`BaldwinInheritance` return ``True`` here; only
+        :class:`NoInheritance` returns ``False``.
+        """
+        return self.inheritance.kind() != "none"
 
     def _gc_inheritance_dir(self, generation: int, keep_ids: list[str]) -> None:
         """Garbage-collect non-survivor checkpoints in one inheritance directory.
@@ -344,23 +442,31 @@ class EvolutionLoop:
     ) -> tuple[Path | None, Path | None, str]:
         """Compute one child's (parent_warm_start, child_capture_path, inherited_from).
 
-        Returns ``(None, None, "")`` when the active strategy is no-op
-        — the loop's per-child step then short-circuits to from-scratch
-        evaluation identically to a frozen-weight evolution run.
+        Three-branch switch on the strategy's ``kind()``:
 
-        For active strategies, returns:
-
-        - ``parent_warm_start``: ``Path`` to the parent's pre-saved
-          checkpoint, or ``None`` if (a) gen 0, (b) ``assign_parent``
-          returned ``None``, or (c) the parent file is unexpectedly
-          missing on disk (defensive fallback with a ``logger.warning``).
-        - ``child_capture_path``: ``Path`` where THIS child writes its
-          post-K-train weights (always populated when inheritance is on).
-        - ``inherited_from``: parent ``genome_id`` for the lineage CSV,
-          or ``""`` for the from-scratch cases above.
+        - ``"none"`` → returns ``(None, None, "")``.  The loop's
+          per-child step short-circuits to from-scratch evaluation
+          identically to a frozen-weight evolution run.
+        - ``"trait"`` (Baldwin) → returns ``(None, None, parent_id)``
+          where ``parent_id`` is the prior generation's elite
+          (``self._selected_parent_ids[0]`` if set, else ``""`` for
+          gen 0).  No checkpoint paths are computed; the child trains
+          from-scratch but its lineage row records the elite ID.
+        - ``"weights"`` (Lamarckian) → returns the full
+          ``(parent_warm_start, child_capture_path, parent_id)``
+          tuple.  ``parent_warm_start`` is the ``Path`` to the parent's
+          pre-saved checkpoint, or ``None`` if (a) gen 0, (b)
+          ``assign_parent`` returned ``None``, or (c) the parent file
+          is unexpectedly missing on disk (defensive fallback with a
+          ``logger.warning``).
         """
-        if not self._inheritance_active():
+        kind = self.inheritance.kind()
+        if kind == "none":
             return None, None, ""
+        if kind == "trait":
+            parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""
+            return None, None, parent_id
+        # The remaining branch handles ``kind == "weights"`` (Lamarckian).
         child_capture_path = self.inheritance.checkpoint_path(self.output_dir, gen, gid)
         parent_id = self.inheritance.assign_parent(child_idx, self._selected_parent_ids)
         if parent_id is None:
@@ -389,7 +495,7 @@ class EvolutionLoop:
     # active inheritance branching); inline statements keep the
     # per-genome data flow that downstream readers (and the spec)
     # reason about visible at one read.
-    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: PLR0915
+    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: C901, PLR0912, PLR0915
         """Run the evolution loop, optionally resuming from a checkpoint.
 
         Parameters
@@ -450,7 +556,6 @@ class EvolutionLoop:
                 # Empty string means "from-scratch" (no-inheritance, gen 0,
                 # or fallback when the parent file is missing).
                 inherited_from_per_child: list[str] = []
-                inheritance_on = self._inheritance_active()
                 for idx, params in enumerate(solutions):
                     gid = genome_id_for(gen, idx, parent_ids)
                     gen_ids.append(gid)
@@ -510,29 +615,66 @@ class EvolutionLoop:
                 neg_fitnesses = [-f for f in fitnesses]
                 self.optimizer.tell(list(solutions), neg_fitnesses)
 
-                # Inheritance step: select the next generation's parents
-                # from the just-evaluated population, then garbage-collect
-                # in two phases.  Phase one clears all remaining files in
-                # the previous-generation directory (keep=[]) because the
-                # gen-N children that inherited from them have just
-                # finished evaluating, so those checkpoints are no longer
-                # needed; no-op when gen is zero.  Phase two keeps only
-                # ``next_selected`` in the current-generation directory
-                # so the about-to-evaluate gen-(N+1) children can read
-                # their parent file.  Steady-state disk usage after this
-                # step is at most ``inheritance_elite_count`` files (the
-                # next_selected set in gen-N), bounded over the whole run.
-                if inheritance_on:
+                # Early-stop counter update.  Placed BEFORE the inheritance
+                # guards so the counter reflects the just-evaluated
+                # generation by the time the early-stop check fires at the
+                # end of the body.
+                #
+                # Compare ``current_best`` against the **previous
+                # generation's** best (``prev``), not against a running
+                # maximum.  A noisy regression-then-recovery trajectory like
+                # ``[0.3, 0.5, 0.4, 0.45, 0.46]`` should reset the counter
+                # at gen 4 (0.45 > 0.4 = prev gen) instead of penalising
+                # every gen that fails to surpass the all-time peak — the
+                # spec says "strictly greater than the prior generation's"
+                # and we honour that literally.
+                #
+                # ``prev is None`` is the gen-1 bootstrap branch: no
+                # previous to compare against, treat as an "improvement"
+                # (counter stays 0).
+                #
+                # ``_last_best_fitness`` is assigned UNCONDITIONALLY at the
+                # end so the next generation's ``prev`` is the actual prior
+                # value, regardless of whether this generation improved
+                # over its prior or not.
+                prev = self._last_best_fitness
+                current_best = max(fitnesses)
+                if prev is None or current_best > prev:
+                    self._gens_without_improvement = 0
+                else:
+                    self._gens_without_improvement += 1
+                self._last_best_fitness = current_best
+
+                # Inheritance step (two-guard split):
+                #
+                # 1. Lineage-tracking guard: any non-no-op strategy
+                #    (Lamarckian OR Baldwin) updates ``_selected_parent_ids``
+                #    so the next generation's children can populate the
+                #    lineage CSV's ``inherited_from`` column.
+                # 2. Weight-IO GC guard: only weight-flow strategies
+                #    (Lamarckian) write per-genome checkpoints, so only
+                #    they need GC.  Phase one clears all remaining files
+                #    in the previous-generation directory (keep=[]) because
+                #    the gen-N children that inherited from them have just
+                #    finished evaluating, so those checkpoints are no
+                #    longer needed; no-op when gen is zero.  Phase two
+                #    keeps only ``next_selected`` in the current-generation
+                #    directory so the about-to-evaluate gen-(N+1) children
+                #    can read their parent file.  Steady-state disk usage
+                #    after this step is at most ``inheritance_elite_count``
+                #    files, bounded over the whole run.
+                if self._inheritance_records_lineage():
                     next_selected = self.inheritance.select_parents(
                         gen_ids,
                         list(fitnesses),
                         gen,
                     )
-                    # Drop the previous-gen elites whose children just ran.
-                    self._gc_inheritance_dir(gen - 1, [])
-                    # Keep only the about-to-be-parents in current gen.
-                    self._gc_inheritance_dir(gen, next_selected)
                     self._selected_parent_ids = next_selected
+                    if self._inheritance_active():
+                        # Drop the previous-gen elites whose children just ran.
+                        self._gc_inheritance_dir(gen - 1, [])
+                        # Keep only the about-to-be-parents in current gen.
+                        self._gc_inheritance_dir(gen, next_selected)
 
                 # Bookkeeping: prev gen for next iteration's parent_ids.
                 self._prev_generation_ids = gen_ids
@@ -541,6 +683,40 @@ class EvolutionLoop:
                 if self._generation % cfg.checkpoint_every == 0:
                     self._save_checkpoint()
                     logger.info("Checkpoint saved at generation %d", self._generation)
+
+                # Early-stop check at the END of the body, AFTER both
+                # inheritance guards (so Baldwin's _selected_parent_ids
+                # is populated for resume invariants and Lamarckian's GC
+                # has preserved the surviving elite checkpoint), AFTER
+                # _generation += 1 (so the saved checkpoint records the
+                # post-evaluation increment value), and AFTER the
+                # checkpoint_every save.  The existing post-loop final
+                # _save_checkpoint() handles persistence of the
+                # early-stopped state — control flows out of `while` via
+                # break and through the existing post-loop save site.
+                # On resume, _generation < cfg.generations re-enters the
+                # loop with the saturation counter intact.
+                if (
+                    cfg.early_stop_on_saturation is not None
+                    and self._gens_without_improvement >= cfg.early_stop_on_saturation
+                ):
+                    # 1-indexed gen labels for human readability (matches
+                    # the spec scenarios + the aggregator's gen-to-0.92
+                    # convention).  ``last_improvement_gen`` is the gen
+                    # index at which _last_best_fitness was last updated.
+                    last_improvement_gen = self._generation - self._gens_without_improvement
+                    last_improvement_label = (
+                        str(last_improvement_gen)
+                        if self._last_best_fitness is not None
+                        else "no improvement observed"
+                    )
+                    logger.info(
+                        "Early-stop: best_fitness has not improved for %d "
+                        "generations (last improvement at gen %s)",
+                        cfg.early_stop_on_saturation,
+                        last_improvement_label,
+                    )
+                    break
         finally:
             if pool is not None:
                 pool.close()

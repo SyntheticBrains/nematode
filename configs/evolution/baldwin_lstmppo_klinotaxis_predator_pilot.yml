@@ -1,0 +1,220 @@
+# Baldwin Inheritance Pilot — LSTMPPO + klinotaxis + pursuit predators
+# ============================================================================
+#
+# Trait-only inheritance: the hyperparameter genome flows, the weights
+# do NOT.  The prior generation's elite genome ID is recorded as
+# ``inherited_from`` for every child of the next generation (so the
+# lineage CSV captures the evolutionary trace), but no per-genome
+# weight checkpoints are written.  Mechanically equivalent to
+# ``inheritance: none`` on the weight-IO path; differs only by
+# populating lineage rows from gen 1 onwards.
+#
+# The Baldwin Effect (in evolutionary biology): lifetime learning
+# guides genetic evolution toward genomes that learn fast, *without*
+# the genome ever encoding the learned policy directly.  Tested here
+# by evolving a richer learnability schema than the Lamarckian or
+# from-scratch arms.
+#
+# This config is structurally identical to
+# lamarckian_lstmppo_klinotaxis_predator_control.yml (the M3 control)
+# with three diffs:
+#
+# 1. ``evolution.inheritance: baldwin`` (instead of ``none``).
+# 2. ``hyperparam_schema`` adds two new evolvable fields the M3 control
+#    did not evolve:
+#      - ``weight_init_scale`` (NEW brain field, default 1.0): scales
+#        the orthogonal-init `gain` for the actor's hidden Linears
+#        and the critic's Linears.  Innate-bias knob — changes the
+#        prior over what behaviours the brain finds easy to learn.
+#      - ``entropy_decay_episodes`` (existing brain field, default
+#        500, fixed in M3): controls how fast the brain transitions
+#        from explorer to exploiter.  The M3 control evolved
+#        ``entropy_coef`` (the start value) but not the schedule
+#        shape.
+# 3. ``evolution.early_stop_on_saturation: 5``: Baldwin's saturation
+#    behaviour is unknown; allow the loop to exit when best_fitness
+#    plateaus to avoid wasting compute.  The same flag is added to
+#    the M4 reruns of the Lamarckian and control YAMLs at runtime
+#    (via --early-stop-on-saturation 5) so all three arms benefit
+#    equally without requiring config-level edits to the M3 YAMLs.
+#
+# Wall-time per seed: comparable to M3 control (~12-15 min/seed at
+# parallel=4) — Baldwin has no save_weights/load_weights overhead.
+# Early-stop should reduce wall-time on saturating arms.
+#
+# Decision gate (per the M4 OpenSpec change):
+#   - GO if all three:
+#       (a) Speed (Baldwin vs control): mean_gen_baldwin_to_092 + 2 ≤
+#           mean_gen_control_to_092 (Baldwin reaches 0.92 ≥2 gens
+#           earlier than the from-scratch control).
+#       (b) Genetic-assimilation (F1 vs hand-tuned baseline):
+#           mean_f1_baldwin > mean_baseline + 0.10 (the Baldwin elite's
+#           hyperparams produce children that beat the hand-tuned
+#           baseline by ≥10pp even WITHOUT the K=50 train phase).
+#       (c) Comparative (Baldwin vs Lamarckian):
+#           mean_gen_baldwin_to_092 ≤ mean_gen_lamarckian_to_092 + 4.
+#   - PIVOT if speed only.
+#   - STOP otherwise.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    # rnn_type / lstm_hidden_dim are FIXED here (architecture-changing
+    # fields; not evolved in this pilot for fair comparison with the
+    # M3 control + Lamarckian arms).  Baldwin technically permits
+    # arch-changing schema entries since it doesn't load weights —
+    # future Baldwin arms can evolve these if desired.
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    # entropy_decay_episodes is moved into the schema below; this default
+    # is the brain-config fallback used only if the schema doesn't include
+    # it (it does).
+    entropy_decay_episodes: 500
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    # weight_init_scale is moved into the schema below; this default
+    # of 1.0 is byte-equivalent to the standard PPO init (gain=sqrt(2)
+    # for hidden Linears).  The schema-evolved value overrides this
+    # at brain construction.
+    weight_init_scale: 1.0
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 12
+  generations: 20
+  # episodes_per_eval is the protocol fallback when
+  # eval_episodes_per_eval is None.  Both are set to 25 here so the
+  # YAML is diff-comparable field-for-field with the M3 control
+  # config.  eval_episodes_per_eval wins (per the Learned-Performance
+  # Fitness scenario in evolution-framework/spec.md).
+  episodes_per_eval: 25
+  learn_episodes_per_eval: 50
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 4
+  checkpoint_every: 2
+  cma_diagonal: false
+  # Trait-only Baldwin inheritance.  Each child trains from-scratch
+  # (no warm-start), but the prior generation's elite genome ID is
+  # recorded in the lineage CSV's `inherited_from` column for every
+  # child of gen 1+.  inheritance_elite_count is ignored under
+  # Baldwin (single-elite by construction).
+  inheritance: baldwin
+  # Exit if best_fitness plateaus for 5 consecutive generations.
+  # Saves compute when the run saturates (M3 lamarckian seeds
+  # saturated at gen 3-7; Baldwin's saturation behaviour is unknown).
+  early_stop_on_saturation: 5
+
+hyperparam_schema:
+  # Six fields — the M3 control's 4 + 2 new innate-bias knobs.
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
+  # NEW: scales orthogonal-init `gain` for actor hidden + critic Linears.
+  - name: weight_init_scale
+    type: float
+    bounds: [0.5, 2.0]
+  # NEW (existing field, newly exposed): controls the explorer→exploiter
+  # transition schedule shape, not just the endpoint.
+  - name: entropy_decay_episodes
+    type: int
+    bounds: [200, 2000]
