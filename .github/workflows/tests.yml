@@ -15,6 +15,21 @@ jobs:
     name: Python 3.12
     runs-on: ubuntu-latest
 
+    # Pin BLAS thread pools to 1 across both pytest steps to prevent
+    # CPU oversubscription under pytest-xdist parallelism.  The
+    # default torch BLAS pool sizes itself to the runner's vCPU count
+    # (4 on the public-repo runner), so without this 4 xdist workers
+    # each spawning 4+ BLAS threads = ~16+ contended threads on 4
+    # cores, starving the runner agent and triggering control-plane
+    # heartbeat timeouts ("operation was canceled" cancellations and
+    # exit-code-143 SIGTERM kills).  Single-threaded BLAS leaves all
+    # parallelism to xdist.
+    env:
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,33 +66,24 @@ jobs:
         run: |
           uv sync --extra cpu --extra pixel --extra torch --dev
 
-      - name: Run tests
-        env:
-          # Pin BLAS thread pools to 1 to prevent CPU oversubscription
-          # under pytest-xdist parallelism.  The default torch BLAS pool
-          # is sized to the runner's vCPU count, which on a 4-core
-          # ubuntu-latest runner means 4 xdist workers each spawning 4+
-          # BLAS threads under load — ~16+ contended threads on 4 cores.
-          # That oversubscription was triggering runner-agent timeouts
-          # (cancellations + exit-code-143 SIGTERM kills) on this repo's
-          # heavier evolution-loop test suite.  Single-threaded BLAS
-          # leaves all parallelism to xdist.
-          OMP_NUM_THREADS: "1"
-          MKL_NUM_THREADS: "1"
-          OPENBLAS_NUM_THREADS: "1"
-          NUMEXPR_NUM_THREADS: "1"
-        # ``-n 2`` overrides pyproject's ``addopts = "-n auto"`` (xdist
-        # picks the LAST -n on the command line).  ``-n auto`` would
-        # spawn 4 xdist workers on a 4-vCPU runner; the smoke tests in
-        # ``test_smoke.py`` then ``subprocess.run(...)`` ``run_simulation.py``,
-        # forking a 5th heavy Python process under load that intermittently
-        # tipped the runner over (one in three CI runs canceled with
-        # "operation was canceled" right when ``test_run_simulation_smoke``
-        # launched, even with BLAS pinned to 1).  ``-n 2`` keeps total
-        # Python processes ≤ 4 even when a worker forks a subprocess,
-        # eliminating the contention without serialising the suite.
+      # Unit tests run in parallel via pytest-xdist.  ``-n 2``
+      # overrides pyproject's ``-n auto`` to leave memory headroom
+      # for any subprocess a test might fork.
+      - name: Run unit tests (parallel, no smoke)
         run: |
-          uv run pytest -n 2 -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -n 2 -m "not nightly and not smoke" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
+
+      # Smoke tests are split into a separate serial step because
+      # they ``subprocess.run(run_simulation.py)`` — running them
+      # under xdist parallelism would mean 2+ xdist workers plus
+      # forked subprocesses all importing torch simultaneously,
+      # which intermittently starved the runner agent and triggered
+      # mid-stream cancellations.  ``-n0`` overrides pyproject's
+      # ``-n auto``; ``--cov-append`` merges this step's coverage
+      # data into the unit-test ``.coverage`` from the prior step.
+      - name: Run smoke tests (serial)
+        run: |
+          uv run pytest -n0 -m "smoke" --cov --cov-branch --cov-append --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
