@@ -86,12 +86,17 @@ If `|Δ| > 0.05` the aggregator emits a clear warning and the verdict is forced 
 
 1. Take Baldwin's elite genome (top fitness, lex-tie-broken on genome ID).
 2. Instantiate a fresh brain at the elite's evolved hyperparameters (including the arch fields).
-3. Train K' = 10 episodes via `LearnedPerformanceFitness`'s K-train phase.
-4. Measure success rate over L = 25 frozen-eval episodes (same L as M4).
-5. Repeat with a synthetic baseline genome whose params are the encoder's `initial_genome()` defaults (i.e. brain-config defaults under the same encoder).
+3. Train K' = 10 episodes via `LearnedPerformanceFitness.evaluate` (which reads K from `sim_config.evolution.learn_episodes_per_eval` — the script copies/mutates `sim_config` to set this to K' before invoking).
+4. Measure success rate over L = 25 frozen-eval episodes (same L as M4); L is plumbed via `sim_config.evolution.eval_episodes_per_eval = L` (or via the protocol's `episodes` kwarg as a fallback per [fitness.py:478-482](packages/quantum-nematode/quantumnematode/evolution/fitness.py#L478-L482)).
+5. Repeat with a **schema-prior baseline genome**: sample one float per schema slot via `HyperparameterEncoder.initial_genome(sim_config, rng=np.random.default_rng(seed))` — a deterministic per-seed random sample from each schema entry's prior distribution (uniform-in-bounds for floats; log-uniform for log-scale floats; uniform-int for ints; etc., per [encoders.py:658-692](packages/quantum-nematode/quantumnematode/evolution/encoders.py#L658-L692)).
 6. Baldwin signal = elite's L-eval success rate − baseline's L-eval success rate.
 
-**Alternative considered**: K' = 5 (more aggressive — small test budget) or K' = 25 (closer to K). Sweep all three.
+**Alternative considered**:
+
+- **K' values**: K' = 5 (more aggressive — small test budget) or K' = 25 (closer to K). Sweep all three.
+- **Baseline construction**: Two alternatives to the schema-prior approach:
+  - *Brain-config defaults* (encode the LSTMPPOBrainConfig field defaults like `actor_lr=0.0005` into a Genome). Most faithful to "what the brain would do without any evolution," but `HyperparameterEncoder` has no `encode()` method — only `decode()`. Would need ~30 LOC of inverse-encoder helper to map defaults to genome params per slot.
+  - *Schema-mid baseline* (mean of each schema entry's prior — geometric mean for log-scale, arithmetic mean otherwise). Cleanest statistical baseline (no per-seed randomness in the baseline) but requires a new helper on the encoder.
 
 **Rationale**: K' = 10 sits at the sweet spot between two failure modes:
 
@@ -99,6 +104,8 @@ If `|Δ| > 0.05` the aggregator emits a clear warning and the verdict is forced 
 - **Too large (K' > 25)**: brute-force training catches up. The test reverts to "trained-policy quality" which K=50 already measures — no new information about innate bias.
 
 K' = 10 is 1/5 of K = 50 — the elite genome must show its advantage with one-fifth the training budget for the "innate prior" claim to hold. A sweep is out of scope per the Non-Goals (reserved for follow-up if signal is positive but ambiguous).
+
+For the baseline, the schema-prior approach was chosen over brain-config-defaults and schema-mid alternatives because: (a) it uses an existing encoder method (no new code), (b) the per-seed deterministic random sample is a defensible statistical baseline ("what would a generic genome from this schema do"), and (c) seeding with the per-seed seed makes the comparison reproducible and isolated from any other RNG state.
 
 **Symmetry**: both elite and baseline genomes go through the same K' train + L eval harness, eliminating audit findings A2 (test now measures learning-acceleration, not random-LSTM behaviour) and A3 (both arms include learning).
 

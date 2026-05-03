@@ -64,13 +64,14 @@ The genetic-assimilation question Baldwin tests is whether evolution under TPE p
 
 #### Scenario: F1 evaluator runs a paired K'-train learning-acceleration test
 
-- **GIVEN** a Baldwin pilot's session output directory with a valid `best_params.json` (containing the elite genome's params + the encoder's birth metadata for schema reconstruction)
+- **GIVEN** a Baldwin pilot's session output directory with a valid `best_params.json` (containing the elite genome's params; birth metadata for schema reconstruction is rebuilt at re-eval time from the pilot YAML via `build_birth_metadata(sim_config)`, since `best_params.json` does not persist birth metadata)
 - **WHEN** the operator runs `scripts/campaigns/baldwin_f1_postpilot_eval.py --baldwin-root <pilot_root> --config <pilot_yaml> --k-prime 10 --episodes 25 --output-dir <out>`
 - **THEN** the script SHALL, for each seed in the pilot:
-  - Load the seed's `best_params.json` and reconstruct the elite genome via `HyperparameterEncoder.decode`
-  - Construct a synthetic baseline genome whose params equal `HyperparameterEncoder.initial_genome(sim_config).params` (i.e. brain-config defaults)
-  - Run `LearnedPerformanceFitness.evaluate` on the elite genome with `learn_episodes_per_eval=K'` and `episodes=L` (the eval count); record the elite's success rate
-  - Run `LearnedPerformanceFitness.evaluate` on the baseline genome with the same K' and L; record the baseline's success rate
+  - Load the seed's `best_params.json` and reconstruct the elite genome via `HyperparameterEncoder.decode` (birth metadata is rebuilt from the pilot YAML at re-eval time via `build_birth_metadata(sim_config)` — `best_params.json` itself does not persist birth metadata)
+  - Construct a schema-prior baseline genome via `HyperparameterEncoder.initial_genome(sim_config, rng=np.random.default_rng(seed))` (a deterministic per-seed random sample from the schema's prior distribution)
+  - Build a per-evaluation `sim_config` copy whose `evolution.learn_episodes_per_eval` is set to K' and whose `evolution.eval_episodes_per_eval` is set to L (`LearnedPerformanceFitness.evaluate` reads K from `sim_config.evolution.learn_episodes_per_eval` directly; L resolves from `sim_config.evolution.eval_episodes_per_eval` if set, else falls back to the protocol's `episodes` kwarg)
+  - Run `LearnedPerformanceFitness.evaluate(elite_genome, sim_config_for_kprime, encoder, episodes=L, seed=seed)`; record the elite's success rate
+  - Run `LearnedPerformanceFitness.evaluate(baseline_genome, sim_config_for_kprime, encoder, episodes=L, seed=seed)`; record the baseline's success rate
   - Both runs SHALL use the same per-seed RNG seed so the only difference between them is the genome
 - **AND** the script SHALL write `f1_learning_acceleration.csv` to the output directory with columns `seed, k_prime, episodes, elite_success_rate, baseline_success_rate, signal_delta` (where `signal_delta = elite − baseline`). The `k_prime` and `episodes` columns SHALL record the K' and L values used for that row's evaluation so multiple K' / L runs can coexist in the same CSV via append-mode.
 - **AND** if `--k-prime` is omitted it SHALL default to `10`; if `--episodes` is omitted it SHALL default to `25` (matches the pilot's default L)
