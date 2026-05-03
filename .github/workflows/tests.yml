@@ -15,21 +15,6 @@ jobs:
     name: Python 3.12
     runs-on: ubuntu-latest
 
-    # Pin BLAS thread pools to 1 across both pytest steps to prevent
-    # CPU oversubscription under pytest-xdist parallelism.  The
-    # default torch BLAS pool sizes itself to the runner's vCPU count
-    # (4 on the public-repo runner), so without this 4 xdist workers
-    # each spawning 4+ BLAS threads = ~16+ contended threads on 4
-    # cores, starving the runner agent and triggering control-plane
-    # heartbeat timeouts ("operation was canceled" cancellations and
-    # exit-code-143 SIGTERM kills).  Single-threaded BLAS leaves all
-    # parallelism to xdist.
-    env:
-      OMP_NUM_THREADS: "1"
-      MKL_NUM_THREADS: "1"
-      OPENBLAS_NUM_THREADS: "1"
-      NUMEXPR_NUM_THREADS: "1"
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,24 +51,30 @@ jobs:
         run: |
           uv sync --extra cpu --extra pixel --extra torch --dev
 
-      # Unit tests run in parallel via pytest-xdist.  ``-n 2``
-      # overrides pyproject's ``-n auto`` to leave memory headroom
-      # for any subprocess a test might fork.
-      - name: Run unit tests (parallel, no smoke)
+      # Heavy evolution-loop and smoke tests construct LSTMPPO brains
+      # and (for smoke) ``subprocess.run(...)`` ``run_simulation.py`` /
+      # ``run_evolution.py``.  Running multiple of these in parallel
+      # under pytest-xdist saturates the runner's vCPU budget enough
+      # to starve the runner agent and trigger control-plane heartbeat
+      # timeouts ("operation was canceled" mid-stream).  Splitting them
+      # off and running them serially eliminates the contention without
+      # losing coverage.
+      - name: Run unit tests (parallel — excludes evolution + smoke)
         run: |
-          uv run pytest -n 2 -m "not nightly and not smoke" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -m "not nightly" \
+            --ignore=packages/quantum-nematode/tests/quantumnematode_tests/evolution \
+            --ignore=packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py \
+            --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
-      # Smoke tests are split into a separate serial step because
-      # they ``subprocess.run(run_simulation.py)`` — running them
-      # under xdist parallelism would mean 2+ xdist workers plus
-      # forked subprocesses all importing torch simultaneously,
-      # which intermittently starved the runner agent and triggered
-      # mid-stream cancellations.  ``-n0`` overrides pyproject's
-      # ``-n auto``; ``--cov-append`` merges this step's coverage
-      # data into the unit-test ``.coverage`` from the prior step.
-      - name: Run smoke tests (serial)
+      # Serial run for the heavy tests.  ``-n0`` overrides pyproject's
+      # ``-n auto``; ``--cov-append`` merges this step's coverage data
+      # into the unit-test ``.coverage`` from the prior step.
+      - name: Run evolution + smoke tests (serial)
         run: |
-          uv run pytest -n0 -m "smoke" --cov --cov-branch --cov-append --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -n0 -m "not nightly" \
+            packages/quantum-nematode/tests/quantumnematode_tests/evolution \
+            packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py \
+            --cov --cov-branch --cov-append --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
