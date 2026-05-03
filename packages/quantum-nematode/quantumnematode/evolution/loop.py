@@ -338,12 +338,31 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
+        # Validate v3-required early-stop fields are present.  CHECKPOINT_VERSION
+        # was bumped to 3 specifically to add ``gens_without_improvement`` +
+        # ``last_best_fitness``; a payload that passed the version check but is
+        # missing either key is internally inconsistent (probably hand-edited
+        # or written by a buggy older revision claiming to be v3).  Fail fast
+        # rather than silently defaulting to 0/None, which would let the loop
+        # resume with a falsified saturation history.
+        for required_key in ("gens_without_improvement", "last_best_fitness"):
+            if required_key not in payload:
+                msg = (
+                    f"Checkpoint claims version {CHECKPOINT_VERSION} but is "
+                    f"missing required key {required_key!r}. The early-stop "
+                    "fields were added in CHECKPOINT_VERSION 3 and MUST be "
+                    "present in any v3 payload (the value may be None or 0; "
+                    "the key itself must exist). Refusing to resume from a "
+                    "structurally inconsistent checkpoint."
+                )
+                raise ValueError(msg)
+
         self.optimizer = payload["optimizer"]
         self._generation = payload["generation"]
         self._prev_generation_ids = payload["prev_generation_ids"]
         self._selected_parent_ids = payload.get("selected_parent_ids", [])
-        self._gens_without_improvement = payload.get("gens_without_improvement", 0)
-        self._last_best_fitness = payload.get("last_best_fitness")
+        self._gens_without_improvement = payload["gens_without_improvement"]
+        self._last_best_fitness = payload["last_best_fitness"]
         self.rng.bit_generator.state = payload["rng_state"]
 
     # ---- Inheritance helpers --------------------------------------------
