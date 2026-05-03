@@ -51,30 +51,9 @@ jobs:
         run: |
           uv sync --extra cpu --extra pixel --extra torch --dev
 
-      # Heavy evolution-loop and smoke tests construct LSTMPPO brains
-      # and (for smoke) ``subprocess.run(...)`` ``run_simulation.py`` /
-      # ``run_evolution.py``.  Running multiple of these in parallel
-      # under pytest-xdist saturates the runner's vCPU budget enough
-      # to starve the runner agent and trigger control-plane heartbeat
-      # timeouts ("operation was canceled" mid-stream).  Splitting them
-      # off and running them serially eliminates the contention without
-      # losing coverage.
-      - name: Run unit tests (parallel — excludes evolution + smoke)
+      - name: Run tests
         run: |
-          uv run pytest -m "not nightly" \
-            --ignore=packages/quantum-nematode/tests/quantumnematode_tests/evolution \
-            --ignore=packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py \
-            --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
-
-      # Serial run for the heavy tests.  ``-n0`` overrides pyproject's
-      # ``-n auto``; ``--cov-append`` merges this step's coverage data
-      # into the unit-test ``.coverage`` from the prior step.
-      - name: Run evolution + smoke tests (serial)
-        run: |
-          uv run pytest -n0 -m "not nightly" \
-            packages/quantum-nematode/tests/quantumnematode_tests/evolution \
-            packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py \
-            --cov --cov-branch --cov-append --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
