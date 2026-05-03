@@ -68,17 +68,17 @@ The work is pilot-shaped: configs + scripts + an F1 evaluator redesign + a logbo
 
 **Rationale**: Audit finding A1 — schema-shift confounder — is the binding constraint. Identical schemas across compared arms means TPE samples the same parameter vectors at gen-0 under the same seed → identical starting populations. A separate narrow control is interesting for cross-version comparison but doesn't advance the Baldwin question and doubles compute. Skip.
 
-**Pre-flight verification (audit-A1 closure check)**: The aggregator's first output line is the gen-0 fitness convergence check:
+**Pre-flight verification (audit-A1 closure check)**: The aggregator's first output line is the **first-evaluated generation** fitness convergence check (the from-scratch generation in which gen-0 children are evaluated). Note that the framework's two CSVs use different generation-indexing conventions: `lineage.csv` is 0-indexed (the first-evaluated generation has `generation == 0` rows), but `history.csv` is 1-indexed (the first-evaluated generation is the file's first data row, labelled `generation = 1`). The aggregator SHALL pull from `history.csv`'s first data row (or equivalently `lineage.csv`'s `generation == 0` rows) — both refer to the same set of evaluations. The output line is labelled "gen-0" for shorthand throughout the rest of this design + spec, but the implementation reads from whichever CSV is convenient:
 
 ```text
 Schema-equalisation check (audit A1):
-  Baldwin gen-0 mean fitness:  X.XXX
-  Control gen-0 mean fitness:  Y.YYY
-  Δ:                            ±Z.ZZZ
-  Status:                       PASS (|Δ| ≤ 0.05) | FAIL (|Δ| > 0.05)
+  Baldwin first-gen mean best_fitness:  X.XXX
+  Control first-gen mean best_fitness:  Y.YYY
+  Δ:                                     ±Z.ZZZ
+  Status:                                PASS (|Δ| ≤ 0.05) | FAIL (|Δ| > 0.05)
 ```
 
-If `|Δ| > 0.05` the aggregator emits a clear warning and the verdict is forced to INCONCLUSIVE regardless of the gates' outcomes — A1 is unresolved and no Baldwin-vs-Control claim can be made. The 0.05 threshold is the largest cross-arm gen-0 deviation we'd accept as "schema-equalisation worked"; it's tighter than M4's measured |Δ| = 0.14.
+If `|Δ| > 0.05` the aggregator emits a clear warning and the verdict is forced to INCONCLUSIVE regardless of the gates' outcomes — A1 is unresolved and no Baldwin-vs-Control claim can be made. The 0.05 threshold is the largest cross-arm first-evaluated-generation deviation we'd accept as "schema-equalisation worked"; it's tighter than M4's measured |Δ| = 0.14.
 
 ### Decision 3: F1 redesign — K'-train learning-acceleration test
 
