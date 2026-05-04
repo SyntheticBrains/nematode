@@ -129,23 +129,51 @@ Scope changed from the original 7 sub-tasks (which assumed an interleaved learni
 
 The "M4 wishlist before kickoff" item from the original tracker (`--early-stop-on-saturation N` flag) was UPGRADED from optional to shipped: `EvolutionConfig.early_stop_on_saturation: int | None = None`, CLI override `--early-stop-on-saturation N`, persisted in the checkpoint pickle (CHECKPOINT_VERSION 2 → 3) so resume preserves the saturation counter. 4 unit tests in `test_early_stop.py` cover the gen-1 bootstrap, monotonic improvement, counter reset on strict improvement, and resume preservation. Saved roughly half the per-seed wall on saturating arms (none of the 12 arm-seed combos reached the 20-gen budget).
 
-## M4.5: Baldwin Effect Demonstration (proper retry)
+## M4.5: Baldwin Effect Demonstration (proper retry — iteration step 1)
 
-**OpenSpec change**: TBD (will branch from `add-baldwin-evolution` once M4 PR lands)
-**Status**: not started (gated on M4 PR landing)
+**OpenSpec change**: `add-baldwin-retry` (archived in this PR as `2026-05-03-add-baldwin-retry`)
+**Status**: complete (audit closures + structural finding) — **iteration step 1 of N** (M4.6 is the follow-up)
 **Bio fidelity**: MEDIUM
 **Brain target**: LSTMPPO+klinotaxis (same as M4)
 **Dependencies**: M4 framework changes shipped
 
-The M4 audit (task M4.10 above) identified three blocking design flaws in the original Baldwin evaluation. M4.5 redesigns the comparison to fix all three:
+The M4 audit (task M4.10 above) identified three blocking design flaws + two significant issues in the original Baldwin evaluation. M4.5 redesigned the comparison to fix all five — and the clean run revealed a structural finding requiring an additional iteration (M4.6, see below).
 
-- [ ] M4.5.1 Equalise Baldwin vs Control schemas. Run a 6-field control alongside the 6-field Baldwin pilot — same TPE prior at gen 0 → identical starting populations across arms. Eliminates audit finding A1
-- [ ] M4.5.2 Redesign F1 as a learning-acceleration test. For each pilot seed: take the elite genome → instantiate brain → train K' = 10 episodes → measure success rate; compare to the same with a synthetic baseline genome (brain-config-defaults). Eliminates audit findings A2 + A3 (now testing learning speed, not innate behaviour; both arms include learning, so the comparison is apples-to-apples)
-- [ ] M4.5.3 Increase n to ≥8 seeds. With per-seed gen-to-092 standard deviation around ±2 generations, n=4 gives standard error ≈ 1 gen — a ±2 threshold is roughly 1 sigma. n=8 halves the SE → roughly 2-sigma sensitivity. Eliminates audit finding A4
-- [ ] M4.5.4 Reconsider innate-bias knobs. Baldwin's design Decision 3 explicitly permits arch-changing schema fields (the validator's `_ARCHITECTURE_CHANGING_FIELDS` rejection applies only to Lamarckian). M4.5 should try `actor_hidden_dim` + `actor_num_layers` (or `entropy_coef_start`, `value_loss_coef`, `lr_warmup_episodes`) instead of (or alongside) the M4 knobs. Addresses audit finding A5
-- [ ] M4.5.5 Calibrate gates against the M4 reruns, not M3 published numbers. M4 control = 8.50, not 9.75. Adjust the speed-gate threshold accordingly
-- [ ] M4.5.6 Run the redesigned 4-arm pilot (Baldwin + 6-field control + Lamarckian rerun + new F1 evaluator), aggregate, publish **logbook 015** (one experiment per logbook is the established pattern; logbook 014 stays as the M4 INCONCLUSIVE record). Logbook 015 forward-references audit findings A1-A5 from logbook 014. Emit a definitive GO/PIVOT/STOP verdict
-- [ ] M4.5.7 Update tracker + roadmap with the M4.5 verdict; flip M4 from INCONCLUSIVE to whichever the data supports
+- [x] M4.5.1 Equalised Baldwin vs Control schemas: ran an 8-field control alongside the 8-field Baldwin pilot (M4's 4 hyperparam knobs + M4's 2 innate-bias knobs + 2 NEW arch knobs per add-baldwin-retry design Decision 1) — same TPE prior at gen 0 → identical starting populations across arms. **Audit A1 closed PERFECTLY: |Δ| = 0.0000** (gen-0 mean best_fitness 0.715 for both arms; verified bit-identical lineage CSV rows). The aggregator's pre-flight check at the 0.05 tolerance trivially passed.
+- [x] M4.5.2 F1 redesigned as a learning-acceleration test. Per pilot seed: elite genome from `best_params.json` → train K' = 10 episodes → measure success rate; compare to a schema-prior baseline genome (deterministic per-seed sample from each schema entry's prior via `HyperparameterEncoder.initial_genome(sim_config, rng=np.random.default_rng(seed))`) trained the same way. Both arms go through `LearnedPerformanceFitness.evaluate` with the same per-seed seed (identical env trajectory; only genome differs). **Audit A2 + A3 addressed.** K'=10 produced all-zeros across all 8 seeds (too small a budget for this task); K'=25 (Risk 4 fallback per design) produced a real signal (mean elite 0.110 vs baseline 0.000) but the elites are bit-identical to Control's elites, so the F1 signal isn't a Baldwin-vs-Control comparison.
+- [x] M4.5.3 Increased n to 8 seeds (42-49). SE on gen-to-092 dropped from ~1.0-1.3 gens (n=4) to ~0.6-0.9 gens (n=8) — sufficient for the speed-gate ±2 threshold to be 2-3σ. **Audit A4 addressed.**
+- [x] M4.5.4 Added `actor_hidden_dim` + `actor_num_layers` ALONGSIDE M4's `weight_init_scale` + `entropy_decay_episodes` (head-to-head 8-field schema per M4.5.1). Forensic: TPE explored ALL 8 fields broadly; `actor_hidden_dim` consistently lands at 149-251 (above the default 64) — supports M4 audit A5's hypothesis that arch knobs matter under K=50. But this exploration happens IDENTICALLY in Baldwin and Control, so it's verdict-orthogonal. **Audit A5 partially addressed** (arch knobs ARE explored, NOT pinned at defaults).
+- [x] M4.5.5 Gate thresholds calibrated against M4.5's own arm reruns rather than M4's published numbers (since M4.5 uses an 8-field schema, M4's 8.50 reference doesn't apply directly). Speed gate `+2`, F1 gate `+0.05` (tightened from M4's `+0.10` because both arms now include K' training — within-test comparison with symmetric noise), comparative gate `+4` retained.
+- [x] M4.5.6 Ran the redesigned 4-arm pilot (Baldwin + 8-field Control + Lamarckian rerun (4-field, n=8) + F1 post-pilot eval at K'=10 and K'=25). Aggregator emitted STOP per its 3-gate logic (Speed FAIL margin +0.00; F1 FAIL signal_delta +0.000 at K'=10; Comparative PASS margin +0.38). Published **logbook 015** (this logbook spans the iteration: M4.5 documented as iteration step 1; M4.6 will append step 2). Total pilot wall ~4h 6min (3 arms in parallel + F1 + aggregator).
+- [ ] M4.5.7 Update tracker + roadmap with the M4.5 verdict; flip M4 from INCONCLUSIVE to whichever the data supports — **DEFERRED** to M4.6.7. M4.5 produced a structural finding (the framework's current Baldwin abstraction is mechanically null vs Control under matched conditions: `inherited_from` is metadata-only and doesn't feed back into selection). A final verdict-flip from M4.5 alone would either over-claim ("Baldwin doesn't exhibit on this testbed" — too strong from one design attempt) or require Decision 6's STOP semantic — but Decision 6 was scoped to "redesigned gates STOP after audit fixes," and what M4.5 found is that the framework abstraction itself is the wrong substrate. M5/M6 dependencies stay deferred until M4.6 closes the iteration.
+
+**Iteration step 1 verdict** (logbook 015): Audit A1-A5 all addressed; framework's current Baldwin abstraction proven structurally null vs Control (5 conditions ⇒ bit-identical genome populations, verified empirically). M4.6 will implement an abstraction with selection feedback and re-evaluate.
+
+**Reusable infrastructure shipped** (consumable by M4.6 and beyond):
+
+- Redesigned F1 evaluator (`scripts/campaigns/baldwin_f1_postpilot_eval.py`) — paired K'-train + L-eval, schema-prior baseline, append-mode CSV
+- 4-way aggregator (`scripts/campaigns/aggregate_baldwin_retry_pilot.py`) — schema-equalisation pre-flight + 3 gates + INCONCLUSIVE override
+- 8-field pilot configs (Baldwin + matching Control)
+- Campaign scripts at n=8 seeds (42-49)
+- 22 unit tests covering F1 evaluator + aggregator gate logic
+
+## M4.6: Baldwin Effect Demonstration (iteration step 2 — abstraction redesign)
+
+**OpenSpec change**: TBD (scaffold at M4.6 kickoff; likely `add-baldwin-iterative-redesign` or similar)
+**Status**: not started (gated on M4.5 PR landing)
+**Bio fidelity**: MEDIUM-HIGH (a valid Baldwin Effect test)
+**Brain target**: LSTMPPO+klinotaxis (same as M4.5)
+**Dependencies**: M4.5 ships (this PR)
+
+M4.5's structural finding (logbook 015 § Iteration step 1): the framework's current Baldwin abstraction (`inherited_from` as metadata-only lineage trace) is mechanically null vs Control under matched conditions because the optimiser's selection mechanism (TPE's posterior over `(genome, fitness)` pairs) doesn't see the lineage signal. For a valid Baldwin Effect test, **selection must explicitly favour children of high-performing parents**.
+
+- [ ] M4.6.1 Choose abstraction: B1 augmented fitness (child's effective fitness = raw fitness + bonus for being a descendant of a previous elite; existing `GeneticAlgorithmOptimizer`'s tournament selection then preferentially samples elite-descendant lineage) OR B2 genome-level Lamarckian (children sampled as Gaussian perturbations of the prior generation's elite genome — analogous to `LamarckianInheritance` for weights, but applied to the hyperparam genome instead of trained weights). Decide in M4.6 design after a fresh proposal/design pass.
+- [ ] M4.6.2 Implement the chosen abstraction as a new `InheritanceStrategy` (likely `BaldwinGeneticInheritance` returning `kind() == "trait"` like the existing `BaldwinInheritance` but with selection feedback wired into the loop's `ask()`). Spec delta + tests.
+- [ ] M4.6.3 Run the redesigned 4-arm pilot under the new abstraction. Reuse M4.5's 8-field configs (likely with one config field flipped to use the new strategy) + F1 evaluator + 4-way aggregator + n=8 seeds + smoke + review-checkpoint infrastructure.
+- [ ] M4.6.4 Append iteration step 2 results to **logbook 015** (NOT a new logbook — the iteration belongs together; one logbook can span multiple related experiments per the established pattern from logbooks 002-008 etc.).
+- [ ] M4.6.5 Re-run audit A1-A5 closure verification under the new abstraction (the schema-equalisation pre-flight check should still pass at |Δ| ≤ 0.05; F1 evaluator should still produce non-zero elite signal at K'=25 if the new abstraction biases selection toward elite genomes).
+- [ ] M4.6.6 Emit a definitive GO/PIVOT/STOP verdict for the Baldwin Effect on this testbed under the new abstraction. If GO, document the lift attributable to the abstraction. If STOP, the conclusion is "Baldwin Effect doesn't exhibit on this testbed under this abstraction — final" (defensible from a clean evaluation under a valid abstraction).
+- [ ] M4.6.7 Flip M4 row in this checklist + roadmap from INCONCLUSIVE to whatever the M4.6 data supports. Update M5/M6 dependencies (currently deferred; if M4.6 STOPs cleanly, re-apply Decision 6's pre-registered semantic — M5 proceeds without Baldwin, M6 uses Lamarckian).
 
 ## M5: Co-Evolution Arms Race
 
