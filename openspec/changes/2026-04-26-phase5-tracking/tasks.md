@@ -47,10 +47,10 @@ to mark sub-tasks complete as part of its diff.
 ## M1: Predator-as-Brain Refactor
 
 **OpenSpec change**: `2026-05-05-add-learning-predators` (not yet created)
-**Status**: not started
+**Status**: **next milestone** (post-M4 replan: re-sequenced ahead of original M2/M3/M4 ordering since those are now complete; M1 is M5's prerequisite)
 **Bio fidelity**: MEDIUM
 **Brain target**: MLPPPO predator
-**Dependencies**: M0
+**Dependencies**: M0 ✅
 
 - [ ] M1.1 Create `env/predator_brain.py`: `PredatorBrain` protocol, `HeuristicPredatorBrain` adapter, `PredatorBrainParams` dataclass
 - [ ] M1.2 Modify `Predator.update_position` to delegate to `self.brain.run_brain(params)` if brain set, else fall back to current behaviour
@@ -198,11 +198,13 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 ## M5: Co-Evolution Arms Race
 
 **OpenSpec change**: `2026-06-16-add-coevolution` (not yet created)
-**Status**: not started
+**Status**: next (post-M1) — headline scientific milestone post-M4
 **Bio fidelity**: HIGH
 **Brain target**: LSTMPPO+klinotaxis prey, MLPPPO predator
-**Dependencies**: M0, M1
-**Decision gate**: GO if phenotypic cycling visible AND trait escalation monotonic over ≥30 gens
+**Dependencies**: M0 ✅, M1
+**Decision gate (softened, disjunctive)**: GO if **(a) phenotypic cycling visible OR (b) measurable trait escalation in at least one trait dim** over ≥30 gens. (Original conjunctive "cycling AND monotonic escalation" softened post-M4 replan: [Sci Reports 2026 — apparent decoupling of dual-trait predator-prey dynamics](https://www.nature.com/articles/s41598-026-50762-1) finds that "rapid prey evolution in multidimensional trait space can stabilize population dynamics and yield stable ecological equilibrium, even as traits continue to undergo persistent coevolutionary cycles" — i.e. stable populations and cycling traits can coexist, so requiring monotonic escalation rules out a known-realistic regime.)
+
+**Literature grounding**: [Sakana Digital Red Queen 2025](https://pub.sakana.ai/drq/) (self-play Red Queen via continual adaptation to changing objective), [Entropy 2021 MARL co-evolution](https://www.mdpi.com/1099-4300/23/4/461) (equilibrium-policy MARL replicates real predator-prey trait oscillations), [Entropy 2019 deep-RL co-evolution](https://www.mdpi.com/1099-4300/21/8/773) (predator RL ability stabilises ecosystem coexistence). Our LSTMPPO+klinotaxis prey + MLPPPO predator setup is more biologically grounded than the cited published work because the prey side carries Phase 4's validated bilateral-sensing + recurrent-state machinery.
 
 - [ ] M5.1 Create `evolution/coevolution.py` with `CoevolutionLoop`
 - [ ] M5.2 Create `evolution/redqueen_metrics.py` with phenotypic cycling, trait escalation, fitness lag, coupled rate
@@ -210,34 +212,49 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 - [ ] M5.4 Create `configs/evolution/coevolution_full.yml`
 - [ ] M5.5 Run 50+ gen × 4 seed campaign
 - [ ] M5.6 Multi-cluster vs single-cluster transfer evaluation
-- [ ] M5.7 Publish `artifacts/logbooks/016/` with Red Queen findings
-- [ ] M5.8 Update this checklist + roadmap milestone tracker
+- [ ] M5.7 **Secondary Baldwin instrumentation** (added during post-M4 replan): per-generation prey hyperparameter spread (does selection narrow on "fast learners" as predator pressure changes?) + F1-style elite-vs-schema-prior baseline at K'-train, run periodically against the current predator population. Reuses M4.5's F1 evaluator. **Readout criterion**: Baldwin signal observed if per-gen elite-vs-prior signal-delta exceeds +0.05 at K'=10 across ≥2 of the 4 seeds AND the prey hyperparam spread on `actor_lr` / `entropy_coef` (the M4.5 schema's two most explored knobs) tightens by ≥30% from gen 5 to gen 30. Null result if neither condition holds across the campaign — would confirm that co-evolutionary task non-stationarity alone doesn't reproduce the Fernando 2018 / Chiu 2024 multi-task setup, and the M4.7 deferred-retry trigger condition stays armed. ~1 day aggregator work, estimate-not-budget; near-zero pilot wall-time cost beyond what M5.5/M5.6 already incur
+- [ ] M5.8 Publish `artifacts/logbooks/016/` with Red Queen findings (and the secondary Baldwin observation)
+- [ ] M5.9 Update this checklist + roadmap milestone tracker
 
 ## M6: Transgenerational Memory
 
 **OpenSpec change**: `2026-06-30-add-transgenerational-memory` (not yet created)
-**Status**: not started (gated on M3 GO + M4-or-M5)
+**Status**: pending (gated on M3 GO ✅ + M4-or-M5; M3 already cleared, M4 closed STOP, M5 pending). Recommend beginning design once M5's pilot is launched and stable
 **Bio fidelity**: HIGH
 **Brain target**: LSTMPPO+klinotaxis
-**Dependencies**: M3 GO + (M4 or M5) complete
+**Dependencies**: M3 GO ✅ + (M4 closed STOP / M5 pending — gate satisfied once M5 ships, or partially overlap once M5 pilot is launched and stable)
 **Decision gate**: GO if F1 retains ≥40% of F0 avoidance, F3 ≤10%
+
+**Highest-novelty remaining Phase 5 milestone.** Post-M4-replan elevation: 2025 mechanism literature converges on the project's deliverable-5 design with multiple new papers in the year since the original roadmap was drafted. **Recommend beginning design once M5's pilot is launched and stable** (M5 pilots run for hours; M6 design + spec scaffolding can happen in that window) rather than serial-after-M5-completes — but committing M6 implementation only after M5's verdict so design choices can incorporate any M5 findings.
+
+**Literature grounding (2023-2025, all post-Posner-2023)**:
+
+- [Posner et al. 2023 — Inheritance of associative memories and acquired cellular changes in C. elegans (Nat Commun)](https://www.nature.com/articles/s41467-023-39804-8) — original deliverable-5 inspiration; small-RNA-mediated transmission of behavioural associations across generations
+- [SET-24 + HCF-1 maintain transgenerational epigenetic memory (Nat Commun 2025)](https://www.nature.com/articles/s41467-025-68200-7) — SET domain protein essential for germline immortality + small-RNA-mediated silencing
+- [Molecular Requirements for C. elegans TEI of Pathogen Avoidance (bioRxiv Jan 2025)](https://www.biorxiv.org/content/10.1101/2025.01.21.634111v1) — Pv1 + Pfs1 small RNAs → maco-1 silencing → daf-7 in ASI neuron → avoidance behaviour. **Maps directly onto the F0/F1/F2/F3 pathogen avoidance experiment in M6.5**
+- [Nucleus-independent transgenerational small-RNA inheritance (Sci Adv)](https://www.science.org/doi/10.1126/sciadv.adj8618) — cytoplasmic inheritance independent of nuclear factors; suggests the heritable substrate doesn't need a nucleus-equivalent in our model
+- [eLife 2025 review — Transgenerational Epigenetic Inheritance: twists and turns of learned avoidance](https://elifesciences.org/articles/109427)
+
+**Substrate readiness**: M3's `WeightPersistence` + `LamarckianInheritance` (heritable substrate proven bit-exact across 18 LSTMPPO trained tensors) + Phase 1's predator/pathogen-avoidance reward machinery + Phase 4's multi-agent infrastructure → most building blocks already shipped.
 
 - [ ] M6.1 Create `agent/transgenerational_memory.py` with `TransgenerationalMemory` class
 - [ ] M6.2 Hook into `prepare_episode()` as a prior on response distribution
 - [ ] M6.3 Implement `inherit_from(parents, decay_factor)` transmission
 - [ ] M6.4 Create `configs/evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml`
-- [ ] M6.5 Run F0/F1/F2/F3 pathogen avoidance experiment (Posner replication design)
+- [ ] M6.5 Run F0/F1/F2/F3 pathogen avoidance experiment (Posner 2023 replication design; cross-reference 2025 mechanism literature for biological plausibility checks on the inheritance decay schedule)
 - [ ] M6.6 Publish `artifacts/logbooks/017/` with transgenerational findings
 - [ ] M6.7 Update this checklist + roadmap milestone tracker
 
 ## M6.5: NEAT Architecture Evolution (OPTIONAL)
 
 **OpenSpec change**: `2026-07-14-add-neat-evolution` (only if scheduled)
-**Status**: not started (compute-budget dependent)
+**Status**: not started (compute-budget dependent; cost has dropped, see below)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO
 
-- [ ] M6.5.1 Integrate `neat-python` via `NeatEncoder` + `NeatGenome`
+**Cost note (post-M4 replan)**: [TensorNEAT (GPU-accelerated NEAT, 2024-2025)](https://arxiv.org/pdf/2504.08339) materially lowers M6.5's cost vs the original `neat-python` plan — TensorNEAT manages a range of neural networks and simultaneously optimises topology + weights on GPU. A 2025 NEAT-vs-PPO comparison ([Engineering Journal](https://engj.org/index.php/ej/article/view/4615)) reported NEAT +25% over PPO on inventory tasks at 1k generations, suggesting NEAT is competitive for our scale. Switching the integration target from `neat-python` to TensorNEAT is recommended if M6.5 is scheduled.
+
+- [ ] M6.5.1 Integrate **TensorNEAT** (preferred; falls back to `neat-python` if GPU unavailable) via `NeatEncoder` + `NeatGenome`
 - [ ] M6.5.2 30-gen pilot, single environment
 - [ ] M6.5.3 Logbook supplement to whichever logbook is current
 - [ ] M6.5.4 Update this checklist + roadmap milestone tracker
