@@ -1,0 +1,45 @@
+Recovering gen-0 population for seed 42...
+  → 12 genomes recovered
+K values: [10, 25, 50]
+L (eval): 25
+Total evaluations: 12 × 3 = 36
+
+  genome  0/12, K= 10: fit=0.000  (2.3s, total elapsed=2s)
+  genome  0/12, K= 25: fit=0.000  (4.8s, total elapsed=7s)
+  genome  0/12, K= 50: fit=0.000  (8.5s, total elapsed=16s)
+  genome  1/12, K= 10: fit=0.000  (1.5s, total elapsed=17s)
+  genome  1/12, K= 25: fit=0.000  (3.7s, total elapsed=21s)
+  genome  1/12, K= 50: fit=0.000  (6.8s, total elapsed=28s)
+  genome  2/12, K= 10: fit=0.000  (1.9s, total elapsed=29s)
+  genome  2/12, K= 25: fit=0.000  (3.5s, total elapsed=33s)
+  genome  2/12, K= 50: fit=0.000  (7.1s, total elapsed=40s)
+  genome  3/12, K= 10: fit=0.000  (1.5s, total elapsed=42s)
+  genome  3/12, K= 25: fit=0.000  (3.6s, total elapsed=45s)
+  genome  3/12, K= 50: fit=0.000  (7.5s, total elapsed=53s)
+  genome  4/12, K= 10: fit=0.000  (2.0s, total elapsed=55s)
+  genome  4/12, K= 25: fit=0.000  (3.9s, total elapsed=58s)
+  genome  4/12, K= 50: fit=0.000  (9.2s, total elapsed=68s)
+  genome  5/12, K= 10: fit=0.000  (1.7s, total elapsed=69s)
+  genome  5/12, K= 25: fit=0.000  (4.9s, total elapsed=74s)
+  genome  5/12, K= 50: fit=0.000  (7.6s, total elapsed=82s)
+  genome  6/12, K= 10: fit=0.000  (2.1s, total elapsed=84s)
+  genome  6/12, K= 25: fit=0.000  (4.2s, total elapsed=88s)
+  genome  6/12, K= 50: fit=0.080  (11.9s, total elapsed=100s)
+  genome  7/12, K= 10: fit=0.000  (1.7s, total elapsed=102s)
+  genome  7/12, K= 25: fit=0.000  (3.8s, total elapsed=106s)
+  genome  7/12, K= 50: fit=0.000  (7.6s, total elapsed=113s)
+  genome  8/12, K= 10: fit=0.000  (1.5s, total elapsed=115s)
+  genome  8/12, K= 25: fit=0.000  (3.7s, total elapsed=118s)
+  genome  8/12, K= 50: fit=0.000  (6.4s, total elapsed=125s)
+  genome  9/12, K= 10: fit=0.000  (1.7s, total elapsed=127s)
+  genome  9/12, K= 25: fit=0.000  (3.2s, total elapsed=130s)
+  genome  9/12, K= 50: fit=0.000  (6.9s, total elapsed=137s)
+  genome 10/12, K= 10: fit=0.000  (1.7s, total elapsed=138s)
+  genome 10/12, K= 25: fit=0.000  (4.2s, total elapsed=143s)
+  genome 10/12, K= 50: fit=0.440  (12.1s, total elapsed=155s)
+  genome 11/12, K= 10: fit=0.000  (1.9s, total elapsed=157s)
+  genome 11/12, K= 25: fit=0.080  (5.7s, total elapsed=162s)
+  genome 11/12, K= 50: fit=0.840  (14.0s, total elapsed=176s)
+
+Wrote tmp/m4_6_b3_smoke.csv
+Total wall time: 176s

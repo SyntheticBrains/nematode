@@ -1,14 +1,14 @@
 # 015: Baldwin Effect — iterative evaluation (M4.5 + follow-ups)
 
-**Status**: `IN PROGRESS — iteration step 1 of N`. M4.5 closed all five M4 audit findings (A1-A5) cleanly and ran a clean evaluation, but the results revealed a **structural finding**: the framework's *current* Baldwin abstraction is mechanically null vs Control under matched conditions. M4.6 (next PR) will implement an abstraction where selection explicitly uses the lineage signal and re-evaluate. This logbook spans the iteration: M4.5 below documents step 1; M4.6 will append step 2 once it lands.
+**Status**: `CLOSED — STOP after iteration step 2 (M4.6)`. The Baldwin Effect question is closed for Phase 5 after three iterations (M4 → M4.5 → M4.6). M4.6 ran a pre-flight smoke that ruled out the candidate selection-feedback abstractions (B3, B6, truncated-K) and identified the **substrate constraint** as the real blocker: a single fixed task with K=50 PPO training cannot demonstrate the Baldwin Effect because the substrate has no Baldwin axis (the optimal strategy on a single task is "innate good behaviour for THIS task," which is the opposite of what Baldwin selects for). The published mechanism (Fernando 2018, Chiu 2024) requires task distribution — a ~7-day infrastructure investment (~5 days impl + ~9-14h pilot wall + ~1 day overhead) Phase 5 deferred in favour of M5 (co-evolution), which intrinsically introduces task variation via co-evolving predators and may demonstrate Baldwin as a side-effect.
 
-**Branch**: `feat/baldwin-retry` (M4.5 PR pending; M4.6 will be a separate PR)
+**Branch**: `feat/m4-6-baldwin-selection-feedback` (M4.6 STOP PR; M4.5 already merged)
 
 **Date Started**: 2026-05-03
 
-**Date Last Updated**: 2026-05-04 — M4.5 pilot complete; structural finding identified; M4.6 follow-up scoped. This logbook stays IN PROGRESS until M4.6 closes the iteration.
+**Date Last Updated**: 2026-05-04 — M4.6 STOP verdict committed; logbook closed; Baldwin question deferred to potential M4.7 post-M5 if M5's co-evolution doesn't surface a Baldwin signal serendipitously.
 
-This logbook covers the **iterative refinement of the Baldwin Effect evaluation** in this framework. M4 (logbook 014) shipped INCONCLUSIVE because three audit blockers prevented a clean test. M4.5 fixed all five audit findings and ran cleanly — and that clean run revealed a different problem: the framework's `BaldwinInheritance` abstraction records lineage but doesn't feed it back into selection. The fix isn't another design tweak; it's a different abstraction. M4.6 will implement it.
+This logbook covers the **iterative refinement of the Baldwin Effect evaluation** in this framework. M4 (logbook 014) shipped INCONCLUSIVE because three audit blockers prevented a clean test. M4.5 fixed all five audit findings and ran cleanly — and that clean run revealed a different problem: the framework's `BaldwinInheritance` abstraction records lineage but doesn't feed it back into selection. M4.6 explored selection-feedback abstractions, ran a pre-flight smoke, and discovered the deeper issue is substrate-level, not abstraction-level. The Baldwin question is closed in Phase 5 with a STOP verdict that's defensible by reference to published methodology.
 
 ## Objective
 
@@ -247,41 +247,94 @@ A final STOP from this iteration alone would be too strong a claim. We can't con
 
 **Decision 6 reinterpretation**: the pre-registered STOP semantic was scoped to "Baldwin's *redesigned gates* STOP after fixing the audit findings". M4.5 closed all five audit findings; what we found is that the framework *abstraction itself* is the wrong substrate for the test. Decision 6 doesn't preclude iterating on a different abstraction.
 
-### Iteration step 2 — M4.6 (planned, separate PR)
+## Iteration step 2 — M4.6 (LSTMPPO + klinotaxis + pursuit predators, TPE)
 
-Implement a Baldwin abstraction where selection explicitly uses the lineage signal. Two design candidates:
+### Hypothesis
 
-- **B1 — Augmented fitness**: child's effective fitness = raw fitness + bonus for being a descendant of a previous elite. Tournament selection (via `GeneticAlgorithmOptimizer`'s existing elite + tournament) preferentially samples the elite-descendant lineage. Lighter — reuses the existing GA.
-- **B2 — Genome-level Lamarckian**: children sampled as Gaussian perturbations of the prior generation's elite genome (analogous to `LamarckianInheritance` for weights, but applied to the hyperparam genome). Cleanest — makes the Lamarckian/Baldwin asymmetry sharp: Lamarckian inherits weights+hyperparams; Baldwin inherits hyperparams only; Control inherits nothing.
+A Baldwin abstraction with explicit selection feedback (i.e. the optimiser's `tell()` receives a different scalar in Baldwin vs Control rather than just a different `inherited_from` metadata column) will break M4.5's bit-identity result and produce a measurable Baldwin signal at n=8 seeds on the same predator-arm testbed.
 
-M4.6 will choose B1 vs B2 in a separate design discussion. Reuses M4.5's F1 evaluator + 4-way aggregator + 8-field configs + n=8 seeds + smoke + review-checkpoint infrastructure.
+### Method (planning + smoke phase only — no full pilot ran)
 
-When M4.6 lands, this logbook gets a new "## Iteration step 2 — M4.6" section with the same Hypothesis / Method / Results / Analysis / Verdict structure. The iteration terminates when one step produces a verdict that's defensible against all known design flaws.
+Three abstraction candidates were enumerated (informed by Fernando 2018 + Chiu 2024 literature search and a structured options-comparison sub-agent pass):
 
-### What this PR (M4.5) ships
+- **B3 — Learning-gain composite fitness**: Baldwin's effective fitness = `fit_K=50 + α · (fit_K=50 − fit_K=25)` with α ≈ 0.5. Selects on "improved during lifetime" not just "ended high." Direct continuous analogue of the Hinton-Nowlan 1987 mechanism.
+- **B6 — Cost-of-learning fitness penalty**: `effective_fit = final_fit − α · episodes_to_threshold`. Selects on "needed fewer episodes to reach success." Same Baldwin spirit, less noisy on small K.
+- **Truncated-K hybrid**: Baldwin selects on `fit_K=25` while Control selects on `fit_K=50`. Cleanest single-difference design — no composite weighting decision, no intermediate-checkpoint surgery.
 
-1. **Audit closures**: A1 closed perfectly (`|Δ| = 0.0000`); A2/A3 addressed via paired K'-train F1 test; A4 (n=8) delivered; A5 partially answered (arch knobs explored but verdict-orthogonal).
-2. **Reusable infrastructure**: redesigned F1 evaluator, 4-way aggregator with schema-equalisation pre-flight, 8-field pilot configs, campaign scripts at n=8. All ready for M4.6 to reuse.
-3. **Structural finding documented**: `inherited_from` is metadata-only; doesn't feed back into selection. The proof (5 conditions ⇒ bit-identity) generalises beyond this pilot.
-4. **Lamarckian rerun (n=8)**: extends M3 cleanly. Mean gen-to-0.92 = 2.75 (was 4.5 at n=4); all 8 seeds reach 1.00.
-5. **No framework code changes** (per add-baldwin-retry design Decision 0). All work is pilot configs + scripts + an evaluator/aggregator redesign.
+### Pre-flight smoke (gen-0 population at seed 42, K=10/25/50)
 
-## Conclusions (iteration step 1)
+Before committing to a 5-day implementation + ~9-14h pilot wall-time investment, ran a 3-minute smoke (`tmp/m4_6_b3_smoke.py`) measuring per-genome (fit_K=10, fit_K=25, fit_K=50) triples for the 12-genome gen-0 population deterministically reproduced from the M4.5 Baldwin pilot's seed 42. The smoke uses fresh-brain measurements at each K (cross-brain Δ rather than within-trajectory Δ), consistent with the existing F1 evaluator's pattern.
 
-1. The framework's existing `BaldwinInheritance` abstraction is mechanically a no-op vs Control under matched 8-field schemas. Bit-identity verified empirically across all 8 seeds and explained structurally (5 conditions ⇒ identical genome populations).
-2. Audit A1 closure mechanism (matched schemas + matched seeds + the aggregator's |Δ| ≤ 0.05 pre-flight check) works perfectly — the schema-shift confounder is fully eliminable.
-3. The redesigned F1 evaluator (paired K'-train + L-eval, schema-prior baseline) is a clean apples-to-apples comparison and provides a reusable measurement tool for any future Baldwin design.
-4. n=8 doubles statistical power vs M4's n=4; SE on gen-to-092 drops from ~1.0-1.3 gens to ~0.6-0.9 gens — sufficient for the speed-gate's ±2 threshold to be 2-3σ.
-5. TPE actively explores all 8 fields including the new arch knobs; `actor_hidden_dim` consistently lands above the default 64 across all seeds, supporting M4's audit A5 hypothesis that arch knobs matter under K=50.
-6. Lamarckian rerun extends M3's published numbers cleanly to n=8 — framework integrity confirmed across the M3 → M4 → M4.5 code revisions.
-7. The Baldwin Effect question is **unanswered, not negated**. M4.5 closed M4's design issues; M4.6 will close the abstraction issue.
+| genome_idx | fit_K=10 | fit_K=25 | fit_K=50 | Δ_25→50 | Δ_10→25 |
+|---|---|---|---|---|---|
+| 0-5, 7-9 | 0.000 | 0.000 | 0.000 | +0.000 | +0.000 |
+| 6 | 0.000 | 0.000 | 0.080 | +0.080 | +0.000 |
+| 10 | 0.000 | 0.000 | 0.440 | +0.440 | +0.000 |
+| 11 | 0.000 | 0.080 | 0.840 | +0.760 | +0.080 |
+
+**Decision-rule statistics:**
+
+- Spearman(fit_K=50, Δ_25→50): **r = 1.000** → B3 is provably rank-preserving on this gen-0 population. Composite reorders nothing relative to raw fit_K=50; TPE's quantile splits identical → bit-identity at α-any.
+- Non-zero genomes by K: K=10: **0/12**; K=25: **1/12**; K=50: **3/12**. Truncated-K hybrid loses TPE bootstrap (11/12 genomes at fitness 0 at K=25 → no posterior signal). B6's "episodes-to-first-non-zero" distribution: only 3 distinct values across 12 genomes (25, 50, 999) → poor selection gradient.
+- Mean fitness: K=10: 0.000; K=25: 0.007; K=50: 0.113. **Random gen-0 hyperparameter genomes mostly produce un-trainable PPO configurations** — only 3/12 show any post-K=50 signal.
+
+### Analysis — why all three abstractions failed at the smoke stage
+
+The smoke didn't refute B3/B6/truncated-K via implementation flaws; it refuted them via the **substrate's fitness landscape**. Three findings:
+
+1. **Δ_learn collapses to genome quality on a single task.** With 11/12 genomes at fitness 0 across K=10 → K=25, the "learning gain" signal Δ_25→50 is mathematically `fit_K=50 - 0 = fit_K=50` for those genomes. Spearman r=1.000 between Δ and raw fitness is structural, not coincidental. Any abstraction selecting on "learning rate" in this regime selects on genome quality in disguise.
+2. **TPE bootstrap requires non-zero fitness variance.** 1/12 non-zero at K=25 is too sparse for TPE's KDE to update meaningfully. Truncated-K and B6 both fail here — the selection gradient collapses.
+3. **The substrate has no Baldwin axis.** A single fixed task's optimal strategy is "innate good behaviour for THIS task" — exactly the opposite of what Baldwin selects for. Plasticity is a cost, not a benefit, in a single deterministic environment. Fernando 2018 and Chiu 2024 (the only published successful Baldwin demonstrations on hyperparameter/initial-weight evolution) both use **task distributions**, not single tasks. Our setup omits the literature's required ingredient.
+
+### What it would take to fix the substrate
+
+Fernando/Chiu requirements vs our framework status:
+
+| Pre-requisite | Fernando/Chiu | Our framework | Cost to add |
+|---|---|---|---|
+| Variable environment / task distribution | Required | ❌ Single task | ~3-4 days (multi-task aggregation wrapper + env-variant configs + validator + tests) |
+| Genome encodes innate behaviour | Initial weights + hyperparams | ⚠️ Just `weight_init_scale` (1 scalar magnitude knob) | ~1-5 days depending on depth (per-layer init scales → 3D Baldwin axis is ~2 days; full initial-weight evolution would re-open RQ1's TPE-vs-CMA-ES decision) |
+| Lifetime learning that uses innate bias | PPO/SGD | ✅ Have it | 0 |
+| Selection on outcome of learning across tasks | Mean fitness over distribution | ❌ Single-task fitness | (Same as #1) |
+| Baldwin vs Lamarckian arm comparability | Same task distribution per arm | ✅ Existing strategies fine | 0 |
+
+Total Path A-minimal investment: ~5 days impl + ~9-14h pilot wall + ~1 day overhead = **~7 days for a multi-task Baldwin retry**.
+
+### Decision — STOP
+
+After three iterations (M4 → M4.5 → M4.6) totalling significant project time, the Baldwin question is closed with a **STOP verdict** for Phase 5. Reasoning:
+
+1. **Marginal scientific value is incremental, not novel.** A successful Baldwin demonstration would reproduce Fernando 2018's published result on a TPE substrate. Useful confirmation, not a new contribution.
+2. **No technical blocker.** The `BaldwinInheritance` strategy code, F1 evaluator, 4-way aggregator, and 8-field pilot configs are all shipped and tested. M5 and M6 don't depend on a Baldwin GO verdict.
+3. **M5 (co-evolution) intrinsically introduces task variation** via co-evolving predators — the same multi-task pressure Fernando/Chiu rely on, but emerging naturally from the ecological dynamics rather than via a hand-designed multi-task harness. M5 may demonstrate Baldwin as a side-effect without a dedicated milestone.
+4. **The 7-day Path A-minimal investment is better spent on M5 directly.** Co-evolution dynamics are richer biological research than reproducing Hinton-Nowlan on a modern substrate.
+5. **The 3-iteration arc produces a defensible STOP**: M4 (audit), M4.5 (audit closures + structural finding), M4.6 (substrate-constraint diagnosis). Each iteration narrowed the diagnosis. Closing now is honest scientific output, not a punt.
+
+### What this PR (M4.6) ships
+
+1. **Three abstraction candidates enumerated and ruled out** (B3, B6, truncated-K) via pre-flight smoke
+2. **Smoke evidence** (`artifacts/logbooks/015/m4_6_smoke/`) demonstrating per-genome (fit_K=10, fit_K=25, fit_K=50) triples + Spearman analysis
+3. **Substrate constraint diagnosis** (single fixed task → no Baldwin axis → all selection-feedback abstractions collapse to genome quality) cross-referenced to published literature (Fernando 2018, Chiu 2024)
+4. **STOP verdict + iteration closure** in this logbook + tracker + roadmap
+5. **No framework code changes** — same as M4.5, all work is investigation + analysis + documentation
+6. **Deferred follow-up**: optional M4.7 to revisit Baldwin with multi-task infrastructure, gated on M5's co-evolution either (a) demonstrating Baldwin serendipitously or (b) producing infrastructure that makes M4.7 cheap to scaffold
+
+## Conclusions
+
+1. **(M4.5)** The framework's `BaldwinInheritance` abstraction is mechanically a no-op vs Control under matched 8-field schemas + matched seeds. Bit-identity verified empirically across all 8 seeds and explained structurally (5 conditions ⇒ identical genome populations).
+2. **(M4.5)** Audit A1 closure mechanism (matched schemas + matched seeds + the aggregator's |Δ| ≤ 0.05 pre-flight check) works perfectly — the schema-shift confounder is fully eliminable.
+3. **(M4.5)** The redesigned F1 evaluator (paired K'-train + L-eval, schema-prior baseline) is a clean apples-to-apples comparison and provides a reusable measurement tool for any future Baldwin design.
+4. **(M4.5)** Lamarckian rerun extends M3's published numbers cleanly to n=8 — framework integrity confirmed across the M3 → M4 → M4.5 code revisions.
+5. **(M4.6)** Three selection-feedback abstractions (B3 learning-gain composite, B6 cost-of-learning, truncated-K hybrid) ruled out via pre-flight smoke. All collapse to "rank by genome quality" in a single-task K=50 substrate because gen-0 fitness is mostly zero — the learning-rate signal cannot exceed the genome-quality signal when 11/12 random hyperparameter genomes don't train at all at K=25.
+6. **(M4.6)** The substrate, not the abstraction, is the constraint. Single-task K=50 PPO has no Baldwin axis (optimal strategy = innate-task-specific behaviour). Published Baldwin demonstrations on hyperparameter evolution (Fernando 2018, Chiu 2024) use task distributions to create the selection pressure for general learners.
+7. **(M4.6)** The Baldwin Effect question is **closed for Phase 5 with a STOP verdict**. Reproducing Fernando 2018's result on a TPE substrate is incremental rather than novel; M5 (co-evolution) will likely produce richer scientific results in the same project time.
 
 ## Next Steps
 
-- **M4.6 (next PR)**: Implement a Baldwin abstraction with selection feedback (B1 augmented fitness OR B2 genome-level Lamarckian — choice deferred to M4.6 design). Re-run the same 4-arm pilot under the new abstraction. Append iteration step 2 results to this logbook.
-- **Phase 5 tracker**: M4.5.1-M4.5.6 ticked; M4.5.7 (verdict-flip) deferred until M4.6 closes the iteration. New M4.6 row added with the abstraction-redesign scope.
-- **M5/M6 dependencies**: stay deferred. NOT "M5 proceeds without Baldwin" yet — that was Decision 6's STOP-only conclusion, and M4.5 didn't STOP cleanly.
-- **OpenSpec change `add-baldwin-retry`**: archived in this PR (M4.5 work is complete; the iterative follow-up gets its own change `add-baldwin-iterative-redesign` or similar, scaffolded at M4.6 time).
+- **M5 (co-evolution arms race)** proceeds. Co-evolving predators intrinsically introduce environmental non-stationarity for prey — the same multi-task pressure Fernando/Chiu rely on. Watch for Baldwin signal as a side-effect (genome-encodes-learning-bias signature in M5 logbooks) — if it appears, the question is answered for free.
+- **M6 (transgenerational memory)** uses Lamarckian inheritance (M3) as its substrate; not gated on M4.
+- **Optional M4.7 (deferred)**: Revisit Baldwin with explicit multi-task infrastructure, gated on M5's outcome. Triggered if M5 produces multi-task aggregation infrastructure that makes M4.7 a small marginal investment, OR if M5 doesn't surface a Baldwin signal serendipitously and the question's marginal value rises. Estimated cost: ~5-7 days (~3-4 days impl reusing M5's varying-env machinery + ~9-14h pilot + ~1 day overhead).
+- **Phase 5 tracker**: M4.6.1-M4.6.7 ticked with STOP verdict; M4 row in tracker + roadmap reframed to closed.
 
 ## Data References
 
@@ -309,11 +362,23 @@ When M4.6 lands, this logbook gets a new "## Iteration step 2 — M4.6" section 
 - Aggregator: [scripts/campaigns/aggregate_baldwin_retry_pilot.py](../../scripts/campaigns/aggregate_baldwin_retry_pilot.py)
 - Campaign scripts: [scripts/campaigns/phase5_baldwin_retry_baldwin.sh](../../scripts/campaigns/phase5_baldwin_retry_baldwin.sh), [phase5_baldwin_retry_control.sh](../../scripts/campaigns/phase5_baldwin_retry_control.sh), [phase5_baldwin_retry_lamarckian_rerun.sh](../../scripts/campaigns/phase5_baldwin_retry_lamarckian_rerun.sh)
 
-### OpenSpec change
+### M4.6 smoke artefacts (this PR)
 
-- [openspec/changes/archive/2026-05-03-add-baldwin-retry/](../../openspec/changes/archive/2026-05-03-add-baldwin-retry/) (archived in this PR)
+- Smoke output: [artifacts/logbooks/015/m4_6_smoke/](../../artifacts/logbooks/015/m4_6_smoke/)
+  - `m4_6_b3_smoke.csv` — per-genome (fit_K=10, fit_K=25, fit_K=50) triples for the 12-genome gen-0 population at seed 42
+  - `m4_6_b3_smoke.out.txt` — full smoke output with per-genome timings (~3min wall on local machine)
+
+The smoke script itself (~150 LOC of throwaway investigation code) is not version-controlled. It deterministically reproduces the M4.5 Baldwin pilot's gen-0 12-genome population at seed 42 by re-instantiating `OptunaTPEOptimizer` with the same `(seed, bounds, population_size)` and calling `ask()` once — TPE is seeded so this is bit-deterministic. For each recovered genome, it calls `LearnedPerformanceFitness.evaluate` three times with K=10/25/50 (fresh brain each time, same per-seed RNG seed), recording the resulting fitness. Fully reproducible from this description — see `LearnedPerformanceFitness.evaluate` at [packages/quantum-nematode/quantumnematode/evolution/fitness.py](../../packages/quantum-nematode/quantumnematode/evolution/fitness.py) and `OptunaTPEOptimizer.ask` at [packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py](../../packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py).
+
+### OpenSpec change (M4.5)
+
+- [openspec/changes/archive/2026-05-03-add-baldwin-retry/](../../openspec/changes/archive/2026-05-03-add-baldwin-retry/) (M4.5 work, merged)
+
+### M4.6 OpenSpec change
+
+M4.6 ships as a STOP closure with no framework code changes — investigation + analysis + documentation only. No new OpenSpec change is opened (the M4.6 plan + smoke evidence + STOP rationale lives in this logbook + the phase5 tracker). The "scaffold OpenSpec change for M4.6" task from the M4.5 tracker is explicitly cancelled in favour of this minimal-overhead closure.
 
 ### Forward-references
 
 - Audit findings A1-A5 are documented in detail in [logbook 014 § Audit](014-baldwin-inheritance-pilot.md)
-- M4.6 (when implemented) will append iteration step 2 to this logbook + reference its own OpenSpec change
+- Optional M4.7 (deferred Baldwin retry with multi-task infrastructure) is scoped in the phase5 tracker M4.7 row, gated on M5's outcome

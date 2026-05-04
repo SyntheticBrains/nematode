@@ -145,7 +145,7 @@ The M4 audit (task M4.10 above) identified three blocking design flaws + two sig
 - [x] M4.5.4 Added `actor_hidden_dim` + `actor_num_layers` ALONGSIDE M4's `weight_init_scale` + `entropy_decay_episodes` (head-to-head 8-field schema per M4.5.1). Forensic: TPE explored ALL 8 fields broadly; `actor_hidden_dim` consistently lands at 149-251 (above the default 64) — supports M4 audit A5's hypothesis that arch knobs matter under K=50. But this exploration happens IDENTICALLY in Baldwin and Control, so it's verdict-orthogonal. **Audit A5 partially addressed** (arch knobs ARE explored, NOT pinned at defaults).
 - [x] M4.5.5 Gate thresholds calibrated against M4.5's own arm reruns rather than M4's published numbers (since M4.5 uses an 8-field schema, M4's 8.50 reference doesn't apply directly). Speed gate `+2`, F1 gate `+0.05` (tightened from M4's `+0.10` because both arms now include K' training — within-test comparison with symmetric noise), comparative gate `+4` retained.
 - [x] M4.5.6 Ran the redesigned 4-arm pilot (Baldwin + 8-field Control + Lamarckian rerun (4-field, n=8) + F1 post-pilot eval at K'=10 and K'=25). Aggregator emitted STOP per its 3-gate logic (Speed FAIL margin +0.00; F1 FAIL signal_delta +0.000 at K'=10; Comparative PASS margin +0.38). Published **logbook 015** (this logbook spans the iteration: M4.5 documented as iteration step 1; M4.6 will append step 2). Total pilot wall ~4h 6min (3 arms in parallel + F1 + aggregator).
-- [ ] M4.5.7 Update tracker + roadmap with the M4.5 verdict; flip M4 from INCONCLUSIVE to whichever the data supports — **DEFERRED** to M4.6.7. M4.5 produced a structural finding (the framework's current Baldwin abstraction is mechanically null vs Control under matched conditions: `inherited_from` is metadata-only and doesn't feed back into selection). A final verdict-flip from M4.5 alone would either over-claim ("Baldwin doesn't exhibit on this testbed" — too strong from one design attempt) or require Decision 6's STOP semantic — but Decision 6 was scoped to "redesigned gates STOP after audit fixes," and what M4.5 found is that the framework abstraction itself is the wrong substrate. M5/M6 dependencies stay deferred until M4.6 closes the iteration.
+- [x] M4.5.7 Update tracker + roadmap with the M4.5 verdict; flip M4 from INCONCLUSIVE to whichever the data supports — **resolved by M4.6.7** (M4 row reframed to "✅ closed (3 iterations) — STOP verdict; substrate constraint identified per Fernando 2018 / Chiu 2024 literature; M5 may surface Baldwin signal serendipitously via co-evolving predator non-stationarity").
 
 **Iteration step 1 verdict** (logbook 015): Audit A1-A5 all addressed; framework's current Baldwin abstraction proven structurally null vs Control (5 conditions ⇒ bit-identical genome populations, verified empirically). M4.6 will implement an abstraction with selection feedback and re-evaluate.
 
@@ -157,23 +157,43 @@ The M4 audit (task M4.10 above) identified three blocking design flaws + two sig
 - Campaign scripts at n=8 seeds (42-49)
 - 22 unit tests covering F1 evaluator + aggregator gate logic
 
-## M4.6: Baldwin Effect Demonstration (iteration step 2 — abstraction redesign)
+## M4.6: Baldwin Effect Demonstration (iteration step 2 — STOP closure)
 
-**OpenSpec change**: TBD (scaffold at M4.6 kickoff; likely `add-baldwin-iterative-redesign` or similar)
-**Status**: not started (gated on M4.5 PR landing)
-**Bio fidelity**: MEDIUM-HIGH (a valid Baldwin Effect test)
-**Brain target**: LSTMPPO+klinotaxis (same as M4.5)
-**Dependencies**: M4.5 ships (this PR)
+**OpenSpec change**: none (M4.6 ships as STOP closure with no framework code changes — investigation + analysis + documentation only)
+**Status**: ✅ closed — STOP verdict (3-iteration arc concluded)
+**Bio fidelity**: n/a (closed iteration)
+**Brain target**: n/a
+**Dependencies**: M4.5 ships ✅
 
-M4.5's structural finding (logbook 015 § Iteration step 1): the framework's current Baldwin abstraction (`inherited_from` as metadata-only lineage trace) is mechanically null vs Control under matched conditions because the optimiser's selection mechanism (TPE's posterior over `(genome, fitness)` pairs) doesn't see the lineage signal. For a valid Baldwin Effect test, **selection must explicitly favour children of high-performing parents**.
+After M4.5's structural finding (the framework's `inherited_from` is metadata-only and doesn't feed back into TPE's selection), M4.6 was scoped as "implement an abstraction with selection feedback and re-evaluate." A planning + smoke phase ruled out the candidate abstractions on substrate grounds — the constraint isn't the abstraction, it's the single-task fitness landscape. M4.6 closes the Baldwin question for Phase 5.
 
-- [ ] M4.6.1 Choose abstraction: B1 augmented fitness (child's effective fitness = raw fitness + bonus for being a descendant of a previous elite; existing `GeneticAlgorithmOptimizer`'s tournament selection then preferentially samples elite-descendant lineage) OR B2 genome-level Lamarckian (children sampled as Gaussian perturbations of the prior generation's elite genome — analogous to `LamarckianInheritance` for weights, but applied to the hyperparam genome instead of trained weights). Decide in M4.6 design after a fresh proposal/design pass.
-- [ ] M4.6.2 Implement the chosen abstraction as a new `InheritanceStrategy` (likely `BaldwinGeneticInheritance` returning `kind() == "trait"` like the existing `BaldwinInheritance` but with selection feedback wired into the loop's `ask()`). Spec delta + tests.
-- [ ] M4.6.3 Run the redesigned 4-arm pilot under the new abstraction. Reuse M4.5's 8-field configs (likely with one config field flipped to use the new strategy) + F1 evaluator + 4-way aggregator + n=8 seeds + smoke + review-checkpoint infrastructure.
-- [ ] M4.6.4 Append iteration step 2 results to **logbook 015** (NOT a new logbook — the iteration belongs together; one logbook can span multiple related experiments per the established pattern from logbooks 002-008 etc.).
-- [ ] M4.6.5 Re-run audit A1-A5 closure verification under the new abstraction (the schema-equalisation pre-flight check should still pass at |Δ| ≤ 0.05; F1 evaluator should still produce non-zero elite signal at K'=25 if the new abstraction biases selection toward elite genomes).
-- [ ] M4.6.6 Emit a definitive GO/PIVOT/STOP verdict for the Baldwin Effect on this testbed under the new abstraction. If GO, document the lift attributable to the abstraction. If STOP, the conclusion is "Baldwin Effect doesn't exhibit on this testbed under this abstraction — final" (defensible from a clean evaluation under a valid abstraction).
-- [ ] M4.6.7 Flip M4 row in this checklist + roadmap from INCONCLUSIVE to whatever the M4.6 data supports. Update M5/M6 dependencies (currently deferred; if M4.6 STOPs cleanly, re-apply Decision 6's pre-registered semantic — M5 proceeds without Baldwin, M6 uses Lamarckian).
+- [x] M4.6.1 Enumerate abstraction candidates (informed by Fernando 2018 + Chiu 2024 literature search and a structured options-comparison sub-agent pass). Three candidates surfaced: **B3** learning-gain composite fitness (`fit_K=50 + α · (fit_K=50 - fit_K=25)`), **B6** cost-of-learning penalty (`fit - α · episodes_to_threshold`), and **truncated-K hybrid** (Baldwin selects on `fit_K=25`, Control on `fit_K=50`). All three change the scalar handed to TPE's `tell()`, which would mechanically break M4.5's bit-identity result.
+- [x] M4.6.2 Pre-flight smoke (`tmp/m4_6_b3_smoke.py` → `artifacts/logbooks/015/m4_6_smoke/`). Measured per-genome (fit_K=10, fit_K=25, fit_K=50) triples for the 12-genome gen-0 population deterministically reproduced from the M4.5 Baldwin pilot's seed 42 (~3min wall). Result: **Spearman(fit_K=50, Δ_25→50) = 1.000** → B3 is provably rank-preserving, composite is a near-no-op for TPE. Non-zero genomes by K: K=10: 0/12, K=25: 1/12, K=50: 3/12 → truncated-K and B6 both lose TPE bootstrap (selection gradient collapses on near-zero variance).
+- [x] M4.6.3 Substrate diagnosis: smoke evidence + literature converge on the **substrate** being the constraint, not the abstraction. Single-task K=50 PPO has no Baldwin axis — optimal strategy is "innate-task-specific behaviour," opposite of what Baldwin selects for. Published Baldwin demonstrations on hyperparameter/initial-weight evolution (Fernando 2018 *Meta-Learning by the Baldwin Effect*, Chiu 2024 *Baldwinian PINN*) **both use task distributions** to create the selection pressure for general learners.
+- [x] M4.6.4 Cost-of-fix assessment: Path A-minimal (multi-task aggregation wrapper + env-variant configs + validator + tests) is ~5 days impl + ~9-14h pilot wall. Path A-proper (per-layer init scales for richer Baldwin axis) adds ~2 more days. Path A-Fernando-faithful (full initial-weight evolution) adds ~5 more days and re-opens RQ1 (TPE-vs-CMA-ES). All paths yield an incremental scientific contribution (reproducing Fernando 2018's published result on a TPE substrate) rather than novel research.
+- [x] M4.6.5 STOP decision: Baldwin question closed for Phase 5. Reasoning documented in logbook 015 § Iteration step 2 § Decision: (a) marginal scientific value is incremental not novel; (b) no technical blocker (M5/M6 don't depend on a Baldwin GO); (c) M5's co-evolving predators intrinsically introduce task variation, may surface Baldwin serendipitously; (d) the 5-day Path A-minimal investment is better spent on M5 directly; (e) the 3-iteration arc produces a defensible STOP rather than an open-ended punt.
+- [x] M4.6.6 Logbook 015 updated with iteration step 2 (smoke evidence + substrate diagnosis + STOP decision + Conclusions/Next Steps reframed to span both iterations); status flipped from `IN PROGRESS` to `CLOSED — STOP after iteration step 2 (M4.6)`.
+- [x] M4.6.7 M4 row in this checklist + roadmap reframed from "iterative IN PROGRESS" to "✅ closed (3 iterations) — STOP verdict; substrate constraint identified". M5/M6 dependencies un-deferred (M5 proceeds without Baldwin; M6 uses Lamarckian per the original roadmap dependency text). Optional **M4.7** added below as deferred follow-up.
+
+**Iteration step 2 verdict** (logbook 015 § Iteration step 2 § Decision): STOP. The Baldwin question is closed for Phase 5 after three iterations (M4 audit → M4.5 audit closures + structural finding → M4.6 substrate-constraint diagnosis). Each iteration narrowed the diagnosis. Future revisit gated on M5's outcome (see M4.7 below).
+
+## M4.7 (deferred): Multi-task Baldwin Effect retry
+
+**OpenSpec change**: none (deferred milestone; scaffold only if/when triggered)
+**Status**: 🔲 deferred — gated on M5's outcome
+**Bio fidelity**: HIGH (would address the substrate constraint identified in M4.6)
+**Brain target**: LSTMPPO+klinotaxis or whatever M5 settles on
+**Dependencies**: M5 ships
+
+Optional follow-up that revisits the Baldwin Effect with **task-distribution selection pressure** (the published mechanism from Fernando 2018, Chiu 2024). Would require a multi-task fitness aggregation wrapper + env-variant configs (~5-7 days impl + pilot + overhead).
+
+**Trigger conditions** (any one is sufficient):
+
+- M5 (co-evolution) produces multi-task aggregation infrastructure that makes M4.7 a small marginal investment (≤2 days incremental work)
+- M5 doesn't surface a Baldwin signal serendipitously AND demonstrating Baldwin rises in priority for a future Phase 5/6 narrative
+- A separate research question (e.g. M6 transgenerational memory) requires multi-task pressure infrastructure that M4.7 could share
+
+**Non-trigger**: do NOT scaffold M4.7 just to "complete" the Baldwin question. The 3-iteration STOP verdict is scientifically defensible by reference to published literature; reopening should be motivated by either infrastructure savings or a new research question.
 
 ## M5: Co-Evolution Arms Race
 
