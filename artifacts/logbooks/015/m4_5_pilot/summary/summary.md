@@ -1,5 +1,14 @@
 ## Baldwin Retry Pilot — Summary (M4.5)
 
+> **NOTE**: This is the literal aggregator output. The verdict text below
+> reflects pre-registered Decision-6 STOP semantics. Logbook
+> [015](../../../../docs/experiments/logbooks/015-baldwin-iterative-evaluation.md)
+> reinterprets this run as **iteration step 1 of N** with a structural
+> finding (Baldwin and Control evolved bit-identical genome populations
+> because the framework's `inherited_from` is metadata-only). M4.6 is the
+> planned follow-up; M5/M6 dependencies stay deferred. Read the logbook
+> for the authoritative interpretation.
+
 **Seeds**: [42, 43, 44, 45, 46, 47, 48, 49] (n=8)
 **Hand-tuned baseline mean**: 0.170 (n=4 seeds 42-45 from M2.11)
 **F1 K' (training budget)**: 10

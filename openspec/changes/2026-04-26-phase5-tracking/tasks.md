@@ -131,7 +131,7 @@ The "M4 wishlist before kickoff" item from the original tracker (`--early-stop-o
 
 ## M4.5: Baldwin Effect Demonstration (proper retry — iteration step 1)
 
-**OpenSpec change**: `add-baldwin-retry` (archived in this PR as `2026-05-04-add-baldwin-retry`)
+**OpenSpec change**: `add-baldwin-retry` (archived in this PR as `2026-05-03-add-baldwin-retry`)
 **Status**: complete (audit closures + structural finding) — **iteration step 1 of N** (M4.6 is the follow-up)
 **Bio fidelity**: MEDIUM
 **Brain target**: LSTMPPO+klinotaxis (same as M4)

@@ -311,7 +311,7 @@ When M4.6 lands, this logbook gets a new "## Iteration step 2 — M4.6" section 
 
 ### OpenSpec change
 
-- [openspec/changes/archive/2026-05-04-add-baldwin-retry/](../../openspec/changes/archive/2026-05-04-add-baldwin-retry/) (archived in this PR)
+- [openspec/changes/archive/2026-05-03-add-baldwin-retry/](../../openspec/changes/archive/2026-05-03-add-baldwin-retry/) (archived in this PR)
 
 ### Forward-references
 
