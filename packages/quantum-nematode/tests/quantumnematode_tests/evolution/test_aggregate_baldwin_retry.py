@@ -10,12 +10,16 @@ need a sys.path hack).  Tests cover:
     output for each gate combination.
 (c) The K' filter on the F1 CSV reads the right rows when multiple
     K' values are present.
+(d) The CLI rejects non-positive ``--k-prime`` values via
+    ``parser.error`` (mirroring the F1 evaluator's pattern).
 """
 
 from __future__ import annotations
 
 import csv
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -292,3 +296,54 @@ def test_script_module_exposes_helpers() -> None:
     assert callable(module._compute_verdict)  # type: ignore[attr-defined]
     assert callable(module._read_f1_csv)  # type: ignore[attr-defined]
     assert callable(module.main)
+
+
+# ---------------------------------------------------------------------------
+# (d) CLI rejects non-positive --k-prime
+# ---------------------------------------------------------------------------
+
+
+def _required_cli_args(tmp_path: Path) -> list[str]:
+    """Build the minimum required-argument set for the aggregator CLI.
+
+    Paths don't need to exist — argparse rejection fires before the
+    aggregator touches the filesystem.
+    """
+    return [
+        "--baldwin-root",
+        str(tmp_path / "baldwin"),
+        "--lamarckian-root",
+        str(tmp_path / "lamarckian"),
+        "--control-root",
+        str(tmp_path / "control"),
+        "--baseline-root",
+        str(tmp_path / "baseline"),
+        "--f1-csv",
+        str(tmp_path / "f1.csv"),
+        "--output-dir",
+        str(tmp_path / "out"),
+    ]
+
+
+def test_cli_rejects_kprime_zero(tmp_path: Path) -> None:
+    """``--k-prime 0`` SHALL exit non-zero with a clear error message."""
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, str(SCRIPT_PATH), *_required_cli_args(tmp_path), "--k-prime", "0"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "--k-prime must be a positive integer" in result.stderr
+
+
+def test_cli_rejects_kprime_negative(tmp_path: Path) -> None:
+    """``--k-prime -5`` SHALL exit non-zero with a clear error message."""
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, str(SCRIPT_PATH), *_required_cli_args(tmp_path), "--k-prime", "-5"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "--k-prime must be a positive integer" in result.stderr

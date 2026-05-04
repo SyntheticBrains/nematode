@@ -684,6 +684,13 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.k_prime <= 0:
+        parser.error(
+            f"--k-prime must be a positive integer; got {args.k_prime}.  "
+            "F1-row filtering by k_prime would otherwise exclude every row "
+            "and produce a confusing missing-row error.",
+        )
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     baldwin_history: dict[int, list[dict[str, float]]] = {}

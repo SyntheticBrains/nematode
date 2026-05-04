@@ -304,6 +304,8 @@ def test_build_sim_config_for_kprime_sets_k_and_l() -> None:
     sim_config = load_simulation_config(str(M4_PILOT_YAML))
     if sim_config.evolution is None:
         pytest.skip("M4 pilot YAML lacks evolution block")
+    original_k = sim_config.evolution.learn_episodes_per_eval
+    original_l = sim_config.evolution.eval_episodes_per_eval
     new_config = module._build_sim_config_for_kprime(  # type: ignore[attr-defined]
         sim_config,
         k_prime=7,
@@ -312,7 +314,8 @@ def test_build_sim_config_for_kprime_sets_k_and_l() -> None:
     assert new_config.evolution.learn_episodes_per_eval == 7
     assert new_config.evolution.eval_episodes_per_eval == 13
     # Original SHALL be unchanged (model_copy returns a new instance)
-    assert sim_config.evolution.learn_episodes_per_eval != 7
+    assert sim_config.evolution.learn_episodes_per_eval == original_k
+    assert sim_config.evolution.eval_episodes_per_eval == original_l
 
 
 def test_build_sim_config_for_kprime_rejects_no_evolution_block() -> None:

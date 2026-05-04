@@ -58,9 +58,12 @@ def _resolve_session(seed_dir: Path) -> Path:
     direct = seed_dir / "best_params.json"
     if direct.exists():
         return seed_dir
-    sessions = [p for p in seed_dir.iterdir() if p.is_dir()]
+    sessions = [p for p in seed_dir.iterdir() if p.is_dir() and (p / "best_params.json").is_file()]
     if not sessions:
-        msg = f"No best_params.json at {direct} and no session subdirectories under {seed_dir}."
+        msg = (
+            f"No best_params.json at {direct} and no session subdirectory "
+            f"under {seed_dir} contains best_params.json."
+        )
         raise FileNotFoundError(msg)
     return max(sessions, key=lambda p: p.stat().st_mtime)
 
