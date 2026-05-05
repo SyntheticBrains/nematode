@@ -27,12 +27,17 @@
 - **GIVEN** a `MultiAgentEpisodeResult`
 - **WHEN** the episode ends
 - **THEN** it SHALL include `per_predator_kills: dict[str, int]`
-- **AND** each value SHALL be the count of step-events where this predator's damage application brought an agent's HP to 0
-- **AND** the sum of all values SHALL equal the total agent deaths attributable to predator damage in the episode (no double-counting, no missing kills)
+- **AND** each value SHALL be the count of step-events where this predator was the **attributed** killer per the "Multi-Predator Kill Attribution Rule" requirement (closest covering predator, lex tie-break on `predator_id`; defensive global-closest fallback when no predator covers)
+- **AND** the sum of all values SHALL equal the total agent deaths attributable to predator damage in the episode (no double-counting, no missing kills — exactly one predator credited per kill event)
 
 ### Requirement: Multi-Predator Kill Attribution Rule
 
-When `apply_predator_damage_for(aid)` brings an agent's HP to 0 and multiple predators have the agent inside their `damage_radius` simultaneously, the simulation (NOT the env) SHALL credit the kill to exactly one predator using the closest-by-Manhattan rule with lexicographic tie-break on `predator_id`. The env-side `apply_predator_damage_for` applies a fixed damage tick without identifying the responsible predator; per-predator attribution is therefore performed by `MultiAgentSimulation` after each damage call by iterating the predator list and applying the rule.
+When `apply_predator_damage_for(aid)` brings an agent's HP to 0, the simulation (NOT the env) SHALL credit the kill to exactly one predator using a two-phase rule:
+
+1. **Phase 1 — covering predators (primary)**: among predators whose Manhattan distance to the agent is `≤ predator.damage_radius`, select the closest by Manhattan distance. Tie-break on lexicographic `predator_id` (so `predator_0` beats `predator_1`).
+2. **Phase 2 — defensive fallback**: if no covering predator is found (residual-HP edge case where the predator that originally caused the damage has since moved out of range), select the predator with smallest Manhattan distance among ALL predators (no `damage_radius` constraint), with the same lex tie-break. The simulation SHALL emit a debug-level log warning so the case is visible in forensic logs.
+
+The env-side `apply_predator_damage_for` applies a fixed damage tick without identifying the responsible predator; per-predator attribution is therefore performed by `MultiAgentSimulation._attribute_kill_to_predator(agent_position)` after each damage call by iterating the predator list and applying the rule above.
 
 #### Scenario: Single Predator Damage
 

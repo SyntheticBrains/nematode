@@ -30,9 +30,12 @@ The change ships under feature branch `feat/m1-predator-brain-refactor`. The reg
 
 ### Decision 1: Movement-mechanics decoupling — brain returns intent, harness owns kinematics
 
-The brain's `run_brain` returns one of `PredatorAction.{STAY, UP, DOWN, LEFT, RIGHT}`. A new `Predator._apply_action(action, grid_size, rng)` helper owns: (a) advancing `movement_accumulator` by `self.speed`, (b) the multi-step-per-update loop (capped at 10 steps, matching the legacy code), (c) the `max(0, ...)` / `min(grid_size-1, ...)` grid clamp.
+The brain's `run_brain` returns one of `PredatorAction.{STAY, UP, DOWN, LEFT, RIGHT}`. The harness layer is split into two helpers:
 
-**Why:** Brain logic stays testable without env state. Future learnable brains don't need to re-derive the accumulator dance. The action enum is small, exhaustive for cardinal-grid movement, and trivially serialisable for evolution-framework genome encoders later.
+- `Predator._apply_action_loop(...)` owns: (a) advancing `movement_accumulator` by `self.speed`, (b) the multi-step-per-update loop (capped at 10 steps, matching the legacy code), (c) building `PredatorBrainParams` per accumulator-step with FROZEN `chase_target` + `is_pursuing` fields and the CURRENT `predator_position`, (d) calling `self.brain.run_brain(params)` once per step.
+- `Predator._apply_action(action, grid_size)` owns: per-step kinematics — translates the brain's `PredatorAction` into a position delta, applies the `max(0, ...)` / `min(grid_size-1, ...)` grid clamp, and increments `self.distance_traveled` only when post-clamp position differs from pre-action position.
+
+**Why:** Brain logic stays testable without env state. Future learnable brains don't need to re-derive the accumulator dance. The action enum is small, exhaustive for cardinal-grid movement, and trivially serialisable for evolution-framework genome encoders later. The split between the loop and the per-step kinematics keeps each helper's responsibility focused (loop owns control flow + params construction; per-step owns position + distance counter).
 
 **Alternative considered:** brain returns `(dx, dy)` deltas. Rejected — couples the brain to grid mechanics (must know `grid_size` to avoid out-of-bounds) and re-introduces the validation logic the harness already does.
 
@@ -46,9 +49,11 @@ The brain's `run_brain` returns one of `PredatorAction.{STAY, UP, DOWN, LEFT, RI
 
 ### Decision 3: `PredatorBrainParams` is minimal
 
-Frozen dataclass with: `predator_id`, `predator_position`, `predator_type`, `detection_radius`, `damage_radius`, `agent_positions: tuple[tuple[int, int], ...]`, `grid_size`, `rng`, `step_index`. NOT a Pydantic clone of agent `BrainParams`'s ~90-field surface.
+Frozen dataclass with 11 fields: `predator_id`, `predator_position`, `predator_type`, `detection_radius`, `damage_radius`, `agent_positions: tuple[tuple[int, int], ...]`, `chase_target: tuple[int, int] | None`, `is_pursuing: bool`, `grid_size`, `rng`, `step_index`. NOT a Pydantic clone of agent `BrainParams`'s ~90-field surface.
 
-**Why:** Predators don't sense food gradients, oxygen, temperature, pheromones, or any of the agent-specific channels. Future M5 learnable predator brains can derive whatever sensory features they want from these primitives without committing M1 to a heavy schema.
+The two non-obvious fields — `chase_target` and `is_pursuing` — encode the **frozen-branch invariant** (Decision 7 below): pre-resolved by `Predator.update_position` ONCE per call and passed unchanged across every accumulator-loop iteration in that call. Only `predator_position` varies per accumulator-step within a single `update_position` call.
+
+**Why:** Predators don't sense food gradients, oxygen, temperature, pheromones, or any of the agent-specific channels. Future M5 learnable predator brains can derive whatever sensory features they want from these primitives without committing M1 to a heavy schema. The frozen-branch fields are necessary for byte-equivalence (see Decision 7).
 
 ### Decision 4: `HeuristicPredatorBrain` is the single source of truth from day one
 
@@ -82,7 +87,7 @@ The legacy random branch calls `rng.integers(4)` once per accumulator-step. The 
 
 ## Risks / Trade-offs
 
-**[R1] Heuristic non-equivalence (RNG ordering)** → Biggest risk; would tank the regression gate. **Mitigation**: brain calls `rng.integers(4)` inside `run_brain` (not in the harness); accumulator loop in `_apply_action` calls `brain.run_brain` once per accumulated step. The `test_legacy_path_byte_equivalent_to_new_path` parametrised test is the gate — it must pass before M1.2 lands. If the regression baseline (M1.6) shows mismatches, re-derive byte-equivalence from a `git stash` of the legacy code.
+**[R1] Heuristic non-equivalence (RNG ordering)** → Biggest risk; would tank the regression gate. **Mitigation**: brain calls `rng.integers(4)` inside `run_brain` (not in the harness); accumulator loop in `Predator._apply_action_loop` calls `brain.run_brain` once per accumulated step (the loop is split from `_apply_action` per Decision 1). The `test_predator_brain_byte_equivalence.py` parametrised tests are the gate — must pass before delegation lands. If the regression baseline shows mismatches, re-derive byte-equivalence from `_legacy_predator_reference._LegacyPredatorReference` (the frozen pre-M1 reference fixture committed alongside the byte-equivalence tests).
 
 **[R2] Multi-agent target tie-breaking** → Python `min(iterable, key=...)` returns the first equal-key element. Legacy `min(agent_positions, key=...)` ([env.py:558](../../../packages/quantum-nematode/quantumnematode/env/env.py)) iterates `self.agents.values()` (insertion-stable since Python 3.7). **Mitigation**: pass `agent_positions` as an ordered tuple through `PredatorBrainParams` — do not sort or rebuild. Add a unit test for stable ordering.
 
@@ -94,10 +99,32 @@ The legacy random branch calls `rng.integers(4)` once per accumulator-step. The 
 
 ### Decision 8: Extract `_make_predator` factory to centralise Predator construction
 
-There are three `Predator(...)` construction sites in env.py: the safe-spawn branch of `_initialize_predators` (line 1505), its fallback branch (line 1526), and `copy_environment` (line 3564). Adding `predator_id` + `brain` to the constructor signature in M1 means all three sites must thread the new fields consistently. To prevent drift, M1 extracts a private `DynamicForagingEnvironment._make_predator(self, predator_id, position, *, movement_accumulator=0.0) -> Predator` factory that owns: (a) reading predator config defaults from `self.predator`, (b) building the brain via `_build_predator_brain`, (c) constructing the `Predator` with all fields populated.
+There are three `Predator(...)` construction sites in env.py: the safe-spawn branch of `_initialize_predators`, its fallback branch (when Poisson sampling fails to find a valid spawn), and `DynamicForagingEnvironment.copy()` (the env-copy path). Adding `predator_id` + `brain` to the constructor signature means all three sites must thread the new fields consistently. To prevent drift, M1 extracts a private `_make_predator` factory.
 
-**Why:** Single source of truth for predator construction. Future M5 work (learnable predator brains, brain swapping mid-episode) gets a stable seam to extend. The two `_initialize_predators` branches and `copy_environment` collapse to one-liner calls.
+**Final signature** (extended mid-implementation; see "Per-predator field overrides" below):
 
-**Why not a public factory:** `_make_predator` is private to `DynamicForagingEnvironment` because it depends on `self.predator` (the `PredatorParams` instance). Making it public would force callers to pass `PredatorParams` redundantly. M5 will revisit this if external construction surfaces become necessary.
+```python
+def _make_predator(
+    self,
+    predator_id: str,
+    position: tuple[int, int],
+    *,
+    movement_accumulator: float = 0.0,
+    brain: PredatorBrain | None = None,
+    predator_type: PredatorType | None = None,
+    speed: float | None = None,
+    detection_radius: int | None = None,
+    damage_radius: int | None = None,
+) -> Predator
+```
 
-**Note on `copy_environment`:** the copy path must preserve the *source* env's `predator_id`s exactly (not synthesise new ones), so `_make_predator` accepts `predator_id` as an explicit argument rather than computing it internally. The copy site iterates `enumerate(self.predators)` and passes each source predator's `predator_id` through verbatim.
+Behaviour:
+
+- When `brain is None`, the factory builds a fresh brain via `self._build_predator_brain()`. When `brain` is provided (e.g. `pred.brain.copy()` from `env.copy()`), the factory uses it unchanged — preserving stateful brains across env-copy boundaries (M5 forward-compat).
+- Each per-predator field override (`predator_type`/`speed`/`detection_radius`/`damage_radius`) defaults to `None` and falls back to the corresponding `self.predator.*` value from the env-level `PredatorParams`. `_initialize_predators` uses the `None` defaults; `env.copy()` passes the source predator's actual field values explicitly.
+
+**Why the per-predator overrides matter:** the existing legacy test `test_damage_radius_copied_in_env_copy` mutates `env.predators[0].damage_radius = 7` post-init, then asserts `env.copy()` preserves the mutated value. Without per-field threading through the factory, the copy would read `damage_radius` from `self.predator` (the env-level config, unchanged at 5), losing the mutation. The override params solve this without breaking the centralisation invariant. (Surfaced as a real regression mid-implementation; documented in the M1.3 commit message.)
+
+**Why not a public factory:** `_make_predator` is private to `DynamicForagingEnvironment` because it depends on `self.predator`. Making it public would force callers to pass `PredatorParams` redundantly. M5 will revisit this if external construction surfaces become necessary.
+
+**Note on `env.copy()`:** the copy path preserves the *source* env's `predator_id`s exactly (not re-synthesising) and the source brain via `pred.brain.copy()`. Method name is `copy()`, not `copy_environment()` (an earlier draft of the tasks doc had the wrong name; corrected during implementation).

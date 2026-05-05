@@ -18,7 +18,8 @@ The system SHALL expose a pluggable policy seam for predators via a `PredatorBra
 - **GIVEN** a `PredatorBrain.run_brain` invocation
 - **WHEN** the brain returns its decision
 - **THEN** the return value SHALL be one of `PredatorAction.{STAY, UP, DOWN, LEFT, RIGHT}`
-- **AND** the harness (`Predator._apply_action`) SHALL own the `movement_accumulator` advance, the multi-step-per-update loop (capped at 10), and the `max(0, ...)` / `min(grid_size-1, ...)` grid clamp
+- **AND** the harness `Predator._apply_action_loop` SHALL own the `movement_accumulator` advance and the multi-step-per-update loop (capped at 10)
+- **AND** the harness `Predator._apply_action(action, grid_size)` SHALL own the per-step kinematics: action-to-delta translation, the `max(0, ...)` / `min(grid_size-1, ...)` grid clamp, and the `distance_traveled` counter increment (only when post-clamp position differs from pre-action position)
 - **AND** the brain SHALL NOT mutate the predator's `position` directly
 
 #### Scenario: PredatorBrainParams Surface
@@ -108,7 +109,7 @@ The system SHALL support configurable predator entities in dynamic foraging envi
 - **WHEN** the simulation advances
 - **THEN** the predator SHALL move at half the rate of the agent
 - **AND** this SHALL be implemented via accumulator-based movement (moves every 2 steps)
-- **AND** the accumulator advancement SHALL happen in `Predator._apply_action`, not in the brain
+- **AND** the accumulator advancement SHALL happen in `Predator._apply_action_loop`, not in the brain
 
 #### Scenario: Multiple Predators Independence
 

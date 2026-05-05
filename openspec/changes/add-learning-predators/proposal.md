@@ -13,7 +13,10 @@ This change is the prerequisite for M5; it ships only the substrate (Protocol + 
 - `PredatorConfig` (YAML schema, `config_loader.py`) gains an optional `brain_config` block. Only `kind: "heuristic"` is honoured in this change; M5 will extend the dispatcher with learnable brain kinds.
 - `MultiAgentEpisodeResult` gains three per-predator metric dicts: `per_predator_kills`, `per_predator_prey_proximity_steps`, `per_predator_distance_traveled`, mirroring the existing `per_agent_food` / `per_agent_reward` pattern. Kill attribution under multi-predator damage uses the closest-by-Manhattan predator; ties broken by lexicographic `predator_id`.
 
-Not breaking. Every existing scenario YAML produces identical agent-survival rates within ±2pp on the M1 regression-baseline campaign (4 seeds × 200 episodes × 3 multi-agent pursuit scenarios).
+Not breaking. Verified at two regression-gate levels:
+
+- **Byte-equivalence unit tests** (the primary gate): 23 tests across `{STATIONARY, PURSUIT} × speed ∈ {0.5, 1.0, 2.0} × {static-agent, moving-agent, multi-agent-target}` parametrisations show step-by-step position equality + RNG-state equality vs. the frozen pre-M1 reference over 1000-step horizons.
+- **Multi-metric campaign baseline** (secondary cross-check): 4 seeds × 200 episodes × 3 multi-agent pursuit scenarios + 4 seeds × 100 episodes × 2 single-agent pursuit scenarios = 20 (config, seed) cells × 4 metrics (mean_success, mean_total_food, mean_steps, mean_predator_engagement) = **80 metric-cells with all deltas exactly 0.0** between the pre-M1 base commit and the M1 head commit.
 
 ## Capabilities
 
@@ -38,9 +41,16 @@ Not breaking. Every existing scenario YAML produces identical agent-survival rat
 
 **Configs:** No existing scenario YAML touched. Existing predator configs continue to instantiate `HeuristicPredatorBrain` by default.
 
-**Tests:** Adds `tests/env/test_predator_brain.py` with Protocol conformance, heuristic byte-equivalence parametrised across `PredatorType ∈ {STATIONARY, PURSUIT}` × `speed ∈ {0.5, 1.0, 2.0}`, YAML dispatch tests, and per-predator-metric tests in the multi-agent test module.
+**Tests:** 65 net new tests across four files:
 
-**Regression gate:** 4 seeds × 200 episodes × 3 multi-agent pursuit scenarios; per-cell `|post − pre| ≤ 0.02` agent-survival rate, per-scenario mean delta ≤ 2pp. Recorded in logbook 016.
+- `tests/env/test_predator_brain.py` (21 tests) — Protocol conformance, copy independence, heuristic semantics (stationary STAY, pursuit greedy axis selection with horizontal-first tie-break, RNG-draw count, direction mapping).
+- `tests/env/test_predator_brain_byte_equivalence.py` (23 tests) — **the primary regression gate**. Position trajectory + env RNG-state equality vs. `_legacy_predator_reference._LegacyPredatorReference` (frozen pre-M1 implementation) parametrised across `{STATIONARY, PURSUIT} × speed ∈ {0.5, 1.0, 2.0} × {static-agent, moving-agent, multi-agent-target}` over 1000-step horizons.
+- `tests/env/test_predator_brain_config.py` (15 tests) — default brain dispatch, explicit `kind: heuristic`, `predator_id` synthesis + lex ordering, ID stability across `update_predators()` calls within an env, ID reproducibility across env instances, unknown-kind rejection (Pydantic + runtime), `env.copy()` preserves IDs + per-predator field values + brain copy independence, YAML schema dispatch.
+- `tests/agent/test_multi_agent.py::TestPerPredatorMetrics` (6 tests) — distance/proximity/kill counter semantics, kill attribution at distinct + equal distances, defensive fallback when no predator covers.
+
+Full suite: 2425 non-nightly + 22 smoke = 2447 tests passing post-M1 (was ~2380 pre-M1).
+
+**Regression gate:** Multi-metric two-arm campaign on commits `73684213` (pre-M1.1) and `3d45e75c` (M1 head). 20 (arm, config, seed) cells × 4 metrics = 80 metric-cells; all deltas exactly 0.0. Recorded in logbook 016 + artefacts at `artifacts/logbooks/016-predator-brain-refactor/`.
 
 **Out of scope (M5+):** `MLPPPOPredatorBrain` / any learnable predator brain, `PredatorBrainEncoder` for the evolution loop, predator-specific reward/fitness functions, multi-predator coordination (predator-side pheromones), heuristic improvements (smarter pursuit, A\* pathfinding), per-predator visualisation badges in the renderer, and per-predator metrics in the single-agent `EpisodeResult` (existing per-agent metric pattern lives entirely in `MultiAgentEpisodeResult`).
 
