@@ -10,6 +10,7 @@ __all__ = [
     "DynamicForagingEnvironment",
     "ForagingParams",
     "HealthParams",
+    "HeuristicPredatorBrain",
     "OxygenField",
     "OxygenZone",
     "OxygenZoneThresholds",
@@ -17,6 +18,10 @@ __all__ = [
     "PheromoneParams",
     "PheromoneSource",
     "PheromoneType",
+    "PredatorAction",
+    "PredatorBrain",
+    "PredatorBrainConfig",
+    "PredatorBrainParams",
     "PredatorParams",
     "PredatorType",
     "SocialFeedingParams",
@@ -46,6 +51,13 @@ from quantumnematode.env.oxygen import (
     OxygenField,
     OxygenZone,
     OxygenZoneThresholds,
+)
+from quantumnematode.env.predator_brain import (
+    HeuristicPredatorBrain,
+    PredatorAction,
+    PredatorBrain,
+    PredatorBrainConfig,
+    PredatorBrainParams,
 )
 from quantumnematode.env.pheromone import (
     PheromoneField,
