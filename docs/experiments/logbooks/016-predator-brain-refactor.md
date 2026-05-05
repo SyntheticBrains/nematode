@@ -4,7 +4,7 @@
 
 **Branch**: `feat/m1-predator-brain-refactor` (PR pending).
 
-**OpenSpec change**: `add-learning-predators` (archive pending merge).
+**OpenSpec change**: archived as `2026-05-06-add-learning-predators` (deltas synced to main specs in this PR).
 
 **Date Started**: 2026-05-05.
 
@@ -43,7 +43,7 @@ Hypothesis 5 → confirmed empirically; **80/80 metric-cells show exactly 0.0 de
 
 ### Architecture changes
 
-Five layers shipped under [`openspec/changes/add-learning-predators/`](../../../openspec/changes/add-learning-predators/):
+Five layers shipped under [`openspec/changes/archive/2026-05-06-add-learning-predators/`](../../../openspec/changes/archive/2026-05-06-add-learning-predators/):
 
 1. **[`env/predator_brain.py`](../../../packages/quantum-nematode/quantumnematode/env/predator_brain.py)** (NEW): `PredatorAction` enum (cardinal-direction action), `PredatorBrainParams` frozen dataclass (predator state + frozen branch context + env RNG), `PredatorBrain` Protocol (`@runtime_checkable`), `PredatorBrainConfig` runtime dataclass, `HeuristicPredatorBrain` adapter encapsulating the legacy heuristic byte-for-byte.
 2. **[`env/env.py`](../../../packages/quantum-nematode/quantumnematode/env/env.py)**: `Predator.__init__` extended with `predator_id: str` + `brain: PredatorBrain | None = None` + per-instance counters (`kills`, `prey_proximity_steps`, `distance_traveled`). `Predator.update_position` rewritten to (a) STATIONARY early-return, (b) resolve `chase_target` ONCE, (c) resolve `is_pursuing` ONCE, (d) advance accumulator loop calling `brain.run_brain` per step. Legacy `_update_random` and `_update_pursuit` deleted. New `_apply_action(action, grid_size)` helper owns the position-delta + grid clamp + distance-counter increment. `DynamicForagingEnvironment` gains `_build_predator_brain()` dispatcher (heuristic-only in M1; `NotImplementedError` for unknown kinds) and `_make_predator(...)` factory centralising all three Predator construction sites (safe-spawn, fallback-spawn, env-copy). `PredatorParams.brain_config` field added. `_initialize_predators` synthesises `predator_id = f"predator_{i}"`. `copy()` preserves source predator_id, brain (via `brain.copy()`), AND per-predator field values (predator_type/speed/detection_radius/damage_radius — needed for the existing `test_damage_radius_copied_in_env_copy` test to keep passing).
@@ -89,7 +89,7 @@ Both runs use `--theme headless` (no rendering). Wall-time ~30 min per arm (~60 
 
 23/23 byte-equivalence tests pass. Position trajectories step-by-step identical to legacy across all parametrisations; env RNG state matches one-for-one after every step.
 
-```
+```text
 TestByteEquivalence::test_static_agent_byte_equivalent[predator_type0-speed0]            PASSED  (STATIONARY, 0.5)
 TestByteEquivalence::test_static_agent_byte_equivalent[predator_type0-speed1]            PASSED  (STATIONARY, 1.0)
 TestByteEquivalence::test_static_agent_byte_equivalent[predator_type0-speed2]            PASSED  (STATIONARY, 2.0)
@@ -109,7 +109,7 @@ TestUpdatePredatorsOrderingInvariant::test_agent_positions_match_alive_values_or
 
 **Result: every single delta is exactly 0.0.** Per-metric stats:
 
-| Metric | max\|Δ\| | mean\|Δ\| | any non-zero |
+| Metric | max|Δ| | mean|Δ| | any non-zero |
 |---|---|---|---|
 | `mean_success` | 0.000000 | 0.000000 | False |
 | `mean_total_food` | 0.000000 | 0.000000 | False |
@@ -170,7 +170,7 @@ Mid-implementation, while reading the legacy `_update_pursuit` carefully, I disc
 
 Fix: extend `PredatorBrainParams` with `chase_target` (frozen target) and `is_pursuing` (frozen branch flag) — both pre-resolved by `update_position` once per call and passed unchanged across every brain invocation in the accumulator loop. Only `predator_position` varies between iterations. The byte-equivalence test parametrisation on `speed ∈ {0.5, 1.0, 2.0}` is exactly what catches this: `speed=2.0` exercises the multi-step regime, and the random-direction branch (which IS RNG-consuming) would diverge if branching happened per accumulator-step.
 
-Documented as Decision 7 in [`design.md`](../../../openspec/changes/add-learning-predators/design.md) and as scenario "PredatorBrainParams Surface" in the modified `environment-simulation/spec.md`.
+Documented as Decision 7 in [`design.md`](../../../openspec/changes/archive/2026-05-06-add-learning-predators/design.md) and as scenario "PredatorBrainParams Surface" in the modified `environment-simulation/spec.md`.
 
 ### `_make_predator` factory — caught a regression mid-implementation
 
@@ -198,15 +198,15 @@ M5 (co-evolution arms race) starts with this substrate fully in place:
 
 ## Conclusions
 
-01. **Predator-brain seam shipped with zero behavioural cost.** Byte-equivalence proven at two levels (predator-trajectory unit tests + campaign metric deltas), both at floor 0.0 across the full parameter grid and all 20 (config, seed) cells.
-02. **Frozen-branch invariant** is the load-bearing design decision. `chase_target` + `is_pursuing` pre-resolved per-call and passed frozen across the accumulator loop preserves legacy semantics on multi-step movement at `speed > 1.0`. Without it, the random-branch RNG draws would have desynchronised silently.
-03. **`_make_predator` factory is the right abstraction** — caught a real regression mid-implementation (`test_damage_radius_copied_in_env_copy`) and centralises the three current Predator construction sites for M5.
-04. **Per-predator metrics fit the existing per-agent dict pattern cleanly.** `MultiAgentEpisodeResult.{per_predator_kills, per_predator_prey_proximity_steps, per_predator_distance_traveled}` mirror `per_agent_food` / `per_agent_reward` exactly. Kill attribution sim-side (closest-by-Manhattan, lex tie-break) is principled and testable.
-05. **Pluggable YAML config + Pydantic Literal validation** rejects unknown brain kinds at YAML load (M5 forward-compat). No existing scenario YAML touched.
-06. **Test count went from 305 to 376** — 71 net new tests across Protocol conformance, byte-equivalence, config plumbing, and per-predator metrics. Full env + multi_agent suite green; smoke clean.
-07. **The campaign-baseline approach was vindicated** — earlier session notes worried about `mean_alive_rate` saturation, but the four-metric extraction (success, food, steps, predator_engagement) discriminates real behavioural change. Both pre and post baselines show meaningful per-config variation; the 0.0 delta isn't vacuous.
-08. **Wall-time impact**: post-refactor baseline ran ~10 min slower than pre-refactor (~40 min vs ~30 min) due to extra per-predator counter increments in the sim step loop. Negligible in absolute terms; not a concern for M5 evolution loops where sim-time is tiny vs PPO training overhead.
-09. **M5 unblocked.** Predator-as-brain refactor is complete; co-evolution can proceed on this substrate.
+1. **Predator-brain seam shipped with zero behavioural cost.** Byte-equivalence proven at two levels (predator-trajectory unit tests + campaign metric deltas), both at floor 0.0 across the full parameter grid and all 20 (config, seed) cells.
+2. **Frozen-branch invariant** is the load-bearing design decision. `chase_target` + `is_pursuing` pre-resolved per-call and passed frozen across the accumulator loop preserves legacy semantics on multi-step movement at `speed > 1.0`. Without it, the random-branch RNG draws would have desynchronised silently.
+3. **`_make_predator` factory is the right abstraction** — caught a real regression mid-implementation (`test_damage_radius_copied_in_env_copy`) and centralises the three current Predator construction sites for M5.
+4. **Per-predator metrics fit the existing per-agent dict pattern cleanly.** `MultiAgentEpisodeResult.{per_predator_kills, per_predator_prey_proximity_steps, per_predator_distance_traveled}` mirror `per_agent_food` / `per_agent_reward` exactly. Kill attribution sim-side (closest-by-Manhattan, lex tie-break) is principled and testable.
+5. **Pluggable YAML config + Pydantic Literal validation** rejects unknown brain kinds at YAML load (M5 forward-compat). No existing scenario YAML touched.
+6. **Test count went from 305 to 376** — 71 net new tests across Protocol conformance, byte-equivalence, config plumbing, and per-predator metrics. Full env + multi_agent suite green; smoke clean.
+7. **The campaign-baseline approach was vindicated** — earlier session notes worried about `mean_alive_rate` saturation, but the four-metric extraction (success, food, steps, predator_engagement) discriminates real behavioural change. Both pre and post baselines show meaningful per-config variation; the 0.0 delta isn't vacuous.
+8. **Wall-time impact**: post-refactor baseline ran ~10 min slower than pre-refactor (~40 min vs ~30 min) due to extra per-predator counter increments in the sim step loop. Negligible in absolute terms; not a concern for M5 evolution loops where sim-time is tiny vs PPO training overhead.
+9. **M5 unblocked.** Predator-as-brain refactor is complete; co-evolution can proceed on this substrate.
 
 ## Next Steps
 
@@ -226,7 +226,7 @@ M5 (co-evolution arms race) starts with this substrate fully in place:
 
 ### Framework artefacts
 
-- **OpenSpec change** (archived on PR merge): [`openspec/changes/add-learning-predators/`](../../../openspec/changes/add-learning-predators/)
+- **OpenSpec change** (archived in this PR with deltas synced to main specs): [`openspec/changes/archive/2026-05-06-add-learning-predators/`](../../../openspec/changes/archive/2026-05-06-add-learning-predators/)
 - **Spec deltas** synced into:
   - [`openspec/specs/environment-simulation/spec.md`](../../../openspec/specs/environment-simulation/spec.md) — adds "Predator Brain Abstraction" + "Predator ID Synthesis" requirements; modifies "Predator Entities in Dynamic Environments" with brain seam + ID synthesis scenarios
   - [`openspec/specs/multi-agent/spec.md`](../../../openspec/specs/multi-agent/spec.md) — adds "Per-Predator Metrics in MultiAgentEpisodeResult" + "Multi-Predator Kill Attribution Rule" requirements; modifies "Multi-Agent Metrics and Results" with per-predator scenario
