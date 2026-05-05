@@ -32,7 +32,7 @@
 
 ### Requirement: Multi-Predator Kill Attribution Rule
 
-When `apply_predator_damage_for(aid)` brings an agent's HP to 0 and multiple predators have the agent inside their `damage_radius` simultaneously, the system SHALL credit the kill to exactly one predator using the closest-by-Manhattan rule with lexicographic tie-break on `predator_id`.
+When `apply_predator_damage_for(aid)` brings an agent's HP to 0 and multiple predators have the agent inside their `damage_radius` simultaneously, the simulation (NOT the env) SHALL credit the kill to exactly one predator using the closest-by-Manhattan rule with lexicographic tie-break on `predator_id`. The env-side `apply_predator_damage_for` applies a fixed damage tick without identifying the responsible predator; per-predator attribution is therefore performed by `MultiAgentSimulation` after each damage call by iterating the predator list and applying the rule.
 
 #### Scenario: Single Predator Damage
 

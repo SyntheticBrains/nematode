@@ -91,3 +91,13 @@ The legacy random branch calls `rng.integers(4)` once per accumulator-step. The 
 **[R4] Spec creep into M5** → Temptation to add `MLPPPOPredatorBrain` skeletons "while we're here". **Mitigation**: explicit non-goal in this design doc; reviewer checklist line in the PR description; the `PredatorBrain` Protocol surface accommodates learnable brains without M1 needing to ship one.
 
 **[R5] Kill attribution challenges in logbook review** → Reviewers may ask why `predator_0` got a contested kill. **Mitigation**: closest-then-lex rule documented in this design doc + in the modified `multi-agent` spec scenario; a unit test covers the contested-damage case explicitly.
+
+### Decision 8: Extract `_make_predator` factory to centralise Predator construction
+
+There are three `Predator(...)` construction sites in env.py: the safe-spawn branch of `_initialize_predators` (line 1505), its fallback branch (line 1526), and `copy_environment` (line 3564). Adding `predator_id` + `brain` to the constructor signature in M1 means all three sites must thread the new fields consistently. To prevent drift, M1 extracts a private `DynamicForagingEnvironment._make_predator(self, predator_id, position, *, movement_accumulator=0.0) -> Predator` factory that owns: (a) reading predator config defaults from `self.predator`, (b) building the brain via `_build_predator_brain`, (c) constructing the `Predator` with all fields populated.
+
+**Why:** Single source of truth for predator construction. Future M5 work (learnable predator brains, brain swapping mid-episode) gets a stable seam to extend. The two `_initialize_predators` branches and `copy_environment` collapse to one-liner calls.
+
+**Why not a public factory:** `_make_predator` is private to `DynamicForagingEnvironment` because it depends on `self.predator` (the `PredatorParams` instance). Making it public would force callers to pass `PredatorParams` redundantly. M5 will revisit this if external construction surfaces become necessary.
+
+**Note on `copy_environment`:** the copy path must preserve the *source* env's `predator_id`s exactly (not synthesise new ones), so `_make_predator` accepts `predator_id` as an explicit argument rather than computing it internally. The copy site iterates `enumerate(self.predators)` and passes each source predator's `predator_id` through verbatim.

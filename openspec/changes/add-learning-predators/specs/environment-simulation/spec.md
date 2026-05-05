@@ -62,11 +62,18 @@ The system SHALL assign a stable, deterministic `predator_id` to each spawned pr
 - **AND** IDs SHALL be lexicographically ordered (so `predator_0 < predator_1 < ... < predator_{N-1}`)
 - **AND** ID assignment SHALL be deterministic given the same env config and seed
 
-#### Scenario: ID Stability Across Episodes
+#### Scenario: ID Stability Within Env Instance
 
-- **GIVEN** the same env config and same seed
-- **WHEN** the env is reset between episodes
-- **THEN** each predator's `predator_id` SHALL remain unchanged across resets
+- **GIVEN** a single `DynamicForagingEnvironment` instance
+- **WHEN** the env is reset between episodes via `reset()` (which does NOT re-spawn predators)
+- **THEN** each predator's `predator_id` SHALL remain unchanged across resets (the same `Predator` instances persist; IDs are stable by object identity)
+
+#### Scenario: ID Reproducibility Across Env Instances
+
+- **GIVEN** two `DynamicForagingEnvironment` instances constructed with the same env config and the same `seed`
+- **WHEN** `_initialize_predators` runs on both
+- **THEN** they SHALL produce predators with identical `predator_id` values in identical spawn order (`predator_0`, `predator_1`, ..., `predator_{N-1}`)
+- **AND** this guarantee SHALL hold regardless of host machine, process, or wall-time (so seed-stamped artefacts and replay sessions reproduce predator identities correctly)
 
 ## MODIFIED Requirements
 
