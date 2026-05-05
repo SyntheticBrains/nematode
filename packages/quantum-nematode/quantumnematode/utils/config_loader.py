@@ -4,7 +4,7 @@
 import math
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -60,6 +60,7 @@ from quantumnematode.env.env import (
     SocialFeedingParams,
     ThermotaxisParams,
 )
+from quantumnematode.env.predator_brain import PredatorBrainConfig
 from quantumnematode.initializers import (
     ManualParameterInitializer,
     RandomPiUniformInitializer,
@@ -308,6 +309,26 @@ class ForagingConfig(BaseModel):
         )
 
 
+class PredatorBrainConfigSchema(BaseModel):
+    """YAML schema for the optional predator-brain config block.
+
+    Two-type pattern: this Pydantic model handles YAML validation; the
+    runtime `PredatorBrainConfig` dataclass (in env/predator_brain.py)
+    is what `PredatorParams` carries. Mirrors the existing
+    `PredatorConfig` (Pydantic) ↔ `PredatorParams` (dataclass) split.
+
+    M1 honours only `kind: "heuristic"`. M5 will extend the literal
+    type with learnable kinds (e.g. `"mlpppo"`, `"lstmppo"`).
+    """
+
+    kind: Literal["heuristic"] = "heuristic"
+    extra: dict[str, Any] | None = None
+
+    def to_params(self) -> PredatorBrainConfig:
+        """Convert to runtime PredatorBrainConfig dataclass."""
+        return PredatorBrainConfig(kind=self.kind, extra=self.extra)
+
+
 class PredatorConfig(BaseModel):
     """Configuration for predator mechanics in dynamic environment.
 
@@ -330,6 +351,11 @@ class PredatorConfig(BaseModel):
         Controls how quickly predator gradient signal decays with distance.
     gradient_strength : float
         Multiplier for predator gradient signal strength.
+    brain_config : PredatorBrainConfigSchema | None
+        Optional pluggable-brain configuration. When omitted from YAML,
+        predators use the default `HeuristicPredatorBrain` (byte-equivalent
+        to pre-M1 heuristic behaviour). M5 will extend the dispatcher
+        with learnable kinds.
     """
 
     enabled: bool = False
@@ -343,6 +369,7 @@ class PredatorConfig(BaseModel):
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
     gradient_strength: float = 1.0
+    brain_config: PredatorBrainConfigSchema | None = None
 
     def to_params(self) -> PredatorParams:
         """Convert to PredatorParams for environment initialization."""
@@ -362,6 +389,9 @@ class PredatorConfig(BaseModel):
             damage_radius=self.damage_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
+            brain_config=(
+                self.brain_config.to_params() if self.brain_config is not None else None
+            ),
         )
 
 

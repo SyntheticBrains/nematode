@@ -185,6 +185,11 @@ class PredatorParams:
         Controls how quickly predator gradient signal decays with distance.
     gradient_strength : float
         Multiplier for predator gradient signal strength.
+    brain_config : PredatorBrainConfig | None
+        Optional pluggable-brain configuration. When None, predators are
+        constructed with a default `HeuristicPredatorBrain` (byte-equivalent
+        to pre-M1 heuristic behaviour). M5 will extend the dispatcher with
+        learnable kinds (e.g. `kind: "mlpppo"`).
     """
 
     enabled: bool = False
@@ -195,6 +200,7 @@ class PredatorParams:
     damage_radius: int = 0
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
+    brain_config: PredatorBrainConfig | None = None
 
 
 @dataclass
@@ -1494,6 +1500,89 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return True
 
+    def _build_predator_brain(self) -> PredatorBrain:
+        """Construct a PredatorBrain instance from `self.predator.brain_config`.
+
+        Dispatcher for the M1 brain seam. M5 will extend this with learnable
+        kinds (e.g. `kind: "mlpppo"`); for M1, only `"heuristic"` is honoured.
+        `brain_config is None` is treated as the default heuristic.
+        """
+        config = self.predator.brain_config
+        if config is None or config.kind == "heuristic":
+            return HeuristicPredatorBrain()
+        # M5 extends with additional kinds. For now, anything else raises.
+        msg = (
+            f"Unknown predator brain kind: {config.kind!r}. "
+            "M1 only honours 'heuristic'; M5 will extend the dispatcher."
+        )
+        raise NotImplementedError(msg)
+
+    def _make_predator(  # noqa: PLR0913
+        self,
+        predator_id: str,
+        position: tuple[int, int],
+        *,
+        movement_accumulator: float = 0.0,
+        brain: PredatorBrain | None = None,
+        predator_type: PredatorType | None = None,
+        speed: float | None = None,
+        detection_radius: int | None = None,
+        damage_radius: int | None = None,
+    ) -> Predator:
+        """Centralised Predator construction factory.
+
+        All Predator instantiation in this module flows through this method
+        so the brain-attachment + ID-stamping logic is in exactly one place.
+        Used by `_initialize_predators` (synthesised IDs, fresh brain, all
+        defaults from `self.predator`) and `copy()` (preserved IDs, copied
+        brain, all per-predator field values explicitly threaded so post-
+        init mutations to individual predator fields survive env copies).
+
+        Parameters
+        ----------
+        predator_id : str
+            Stable identifier. `_initialize_predators` synthesises
+            `f"predator_{i}"`; `copy()` passes the source predator's
+            ID unchanged.
+        position : tuple[int, int]
+            Spawn position (or the source position for env-copy).
+        movement_accumulator : float
+            Initial accumulator state. Defaults to 0.0 (fresh spawn);
+            `copy()` passes the source predator's accumulator so multi-
+            step movement state is preserved across env copies.
+        brain : PredatorBrain | None
+            When provided (e.g. `pred.brain.copy()` from `copy()`),
+            the factory uses it unchanged. When `None`, the factory builds
+            a fresh brain via `_build_predator_brain`.
+        predator_type, speed, detection_radius, damage_radius
+            Per-predator overrides for env-level defaults. Each defaults
+            to the corresponding `self.predator.*` value when not provided
+            (the typical `_initialize_predators` flow). `copy()` passes
+            the source predator's actual field values so post-init
+            mutations (e.g. `predator.damage_radius = 7` in tests or
+            future runtime adjustments) survive env-copy boundaries.
+        """
+        return Predator(
+            position=position,
+            predator_type=(
+                predator_type if predator_type is not None else self.predator.predator_type
+            ),
+            speed=speed if speed is not None else self.predator.speed,
+            movement_accumulator=movement_accumulator,
+            detection_radius=(
+                detection_radius
+                if detection_radius is not None
+                else self.predator.detection_radius
+            ),
+            damage_radius=(
+                damage_radius
+                if damage_radius is not None
+                else self.predator.damage_radius
+            ),
+            predator_id=predator_id,
+            brain=brain if brain is not None else self._build_predator_brain(),
+        )
+
     def _initialize_predators(self) -> None:
         """Initialize predators at random positions outside damage radius of agent."""
         self.predators = []
@@ -1503,7 +1592,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             self.predator.detection_radius,
             self.predator.damage_radius,
         )
-        for _ in range(self.predator.count):
+        for i in range(self.predator.count):
+            predator_id = f"predator_{i}"
             # Spawn predators outside danger zone to avoid immediate damage
             candidate = (0, 0)  # Default position in case loop never runs
             for _ in range(MAX_POISSON_ATTEMPTS):
@@ -1518,33 +1608,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 )
                 # Ensure predator spawns outside both detection and damage radius
                 if distance_to_agent > min_spawn_distance:
-                    predator = Predator(
+                    predator = self._make_predator(
+                        predator_id=predator_id,
                         position=candidate,
-                        predator_type=self.predator.predator_type,
-                        speed=self.predator.speed,
-                        detection_radius=self.predator.detection_radius,
-                        damage_radius=self.predator.damage_radius,
                     )
                     self.predators.append(predator)
                     logger.debug(
                         f"Initialized {self.predator.predator_type.value} predator "
-                        f"at {candidate} (euclidean distance to agent: {distance_to_agent:.2f})",
+                        f"{predator_id} at {candidate} "
+                        f"(euclidean distance to agent: {distance_to_agent:.2f})",
                     )
                     break
             else:
                 # If we couldn't find a valid position after max attempts, log warning
                 # but still spawn the predator (edge case for very small grids)
                 logger.warning(
-                    "Could not find safe spawn position for predator "
+                    f"Could not find safe spawn position for predator {predator_id} "
                     f"after {MAX_POISSON_ATTEMPTS} attempts. "
                     f"Spawning at {candidate} anyway.",
                 )
-                predator = Predator(
+                predator = self._make_predator(
+                    predator_id=predator_id,
                     position=candidate,
-                    predator_type=self.predator.predator_type,
-                    speed=self.predator.speed,
-                    detection_radius=self.predator.detection_radius,
-                    damage_radius=self.predator.damage_radius,
                 )
                 self.predators.append(predator)
 
@@ -3576,12 +3661,25 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 total_aerotaxis_steps=state.total_aerotaxis_steps,
             )
         if self.predator.enabled:
+            # Preserve source predator_id, brain state, AND per-predator
+            # field values (predator_type, speed, detection_radius,
+            # damage_radius) across env copies. Per-field threading
+            # matters because tests + future runtime code may mutate
+            # individual predator fields post-init; the copy must
+            # reflect the source predator's current state, not the
+            # env-level config defaults. Brain.copy() returns a fresh
+            # independent instance; the factory uses the provided brain
+            # unchanged so future stateful brains (e.g. learnable RL
+            # predators in M5) keep their per-instance state across
+            # env-copy boundaries (env-snapshot, evolution-loop replay).
             new_env.predators = [
-                Predator(
+                new_env._make_predator(
+                    predator_id=p.predator_id,
                     position=p.position,
+                    movement_accumulator=p.movement_accumulator,
+                    brain=p.brain.copy(),
                     predator_type=p.predator_type,
                     speed=p.speed,
-                    movement_accumulator=p.movement_accumulator,
                     detection_radius=p.detection_radius,
                     damage_radius=p.damage_radius,
                 )
