@@ -60,7 +60,7 @@ Five layers shipped under [`openspec/changes/archive/2026-05-06-add-learning-pre
 | [`test_predator_brain_config.py`](../../../packages/quantum-nematode/tests/quantumnematode_tests/env/test_predator_brain_config.py) | 15 | Default brain → heuristic; explicit `kind: heuristic` matches default; predator_id format + lex ordering; ID stability across `update_predators()` calls; ID reproducibility across env instances; unknown-kind rejection (runtime + Pydantic Literal); YAML dispatch (omitted block, explicit block, unknown kind); `env.copy()` preserves IDs + positions + brain copy independence. |
 | [`test_multi_agent.py::TestPerPredatorMetrics`](../../../packages/quantum-nematode/tests/quantumnematode_tests/agent/test_multi_agent.py) | 6 | Distance accumulation bounds, proximity-step semantics, dict-keys-match-predator-ids, kill attribution at distinct distances (closest wins), kill attribution at equal distances (lex tie-break), defensive fallback when no predator covers. |
 
-**Total**: 65 new tests. Full env + multi_agent regression: **376 tests pass** post-M1.4 (was 305 pre-M1, +71 net new). Smoke suite: 22 tests pass.
+**Total**: 65 new tests across the four files. Full env + multi_agent regression: **369 tests pass** post-M1 (was 305 pre-M1, +64 net new — one redundant test in `test_predator_brain.py` was dropped during the M1 lint cleanup, so net is 65 new − 1 dropped = +64). Full non-nightly suite: 2425 tests pass. Smoke suite: 22 tests pass.
 
 ### Regression baseline
 
@@ -203,7 +203,7 @@ M5 (co-evolution arms race) starts with this substrate fully in place:
 3. **`_make_predator` factory is the right abstraction** — caught a real regression mid-implementation (`test_damage_radius_copied_in_env_copy`) and centralises the three current Predator construction sites for M5.
 4. **Per-predator metrics fit the existing per-agent dict pattern cleanly.** `MultiAgentEpisodeResult.{per_predator_kills, per_predator_prey_proximity_steps, per_predator_distance_traveled}` mirror `per_agent_food` / `per_agent_reward` exactly. Kill attribution sim-side (closest-by-Manhattan, lex tie-break) is principled and testable.
 5. **Pluggable YAML config + Pydantic Literal validation** rejects unknown brain kinds at YAML load (M5 forward-compat). No existing scenario YAML touched.
-6. **Test count went from 305 to 376** — 71 net new tests across Protocol conformance, byte-equivalence, config plumbing, and per-predator metrics. Full env + multi_agent suite green; smoke clean.
+6. **Test count went from 305 to 369** — 64 net new tests (65 added across 4 new test files − 1 redundant test dropped during lint cleanup). Coverage: Protocol conformance, byte-equivalence, config plumbing, per-predator metrics. Full env + multi_agent suite green; full non-nightly suite (2425) green; smoke clean.
 7. **The campaign-baseline approach was vindicated** — earlier session notes worried about `mean_alive_rate` saturation, but the four-metric extraction (success, food, steps, predator_engagement) discriminates real behavioural change. Both pre and post baselines show meaningful per-config variation; the 0.0 delta isn't vacuous.
 8. **Wall-time impact**: post-refactor baseline ran ~10 min slower than pre-refactor (~40 min vs ~30 min) due to extra per-predator counter increments in the sim step loop. Negligible in absolute terms; not a concern for M5 evolution loops where sim-time is tiny vs PPO training overhead.
 9. **M5 unblocked.** Predator-as-brain refactor is complete; co-evolution can proceed on this substrate.
@@ -231,7 +231,7 @@ M5 (co-evolution arms race) starts with this substrate fully in place:
   - [`openspec/specs/environment-simulation/spec.md`](../../../openspec/specs/environment-simulation/spec.md) — adds "Predator Brain Abstraction" + "Predator ID Synthesis" requirements; modifies "Predator Entities in Dynamic Environments" with brain seam + ID synthesis scenarios
   - [`openspec/specs/multi-agent/spec.md`](../../../openspec/specs/multi-agent/spec.md) — adds "Per-Predator Metrics in MultiAgentEpisodeResult" + "Multi-Predator Kill Attribution Rule" requirements; modifies "Multi-Agent Metrics and Results" with per-predator scenario
 - **Predator brain module**: [`packages/quantum-nematode/quantumnematode/env/predator_brain.py`](../../../packages/quantum-nematode/quantumnematode/env/predator_brain.py)
-- **Tests** (65 new; full suite 376 passing):
+- **Tests** (65 new across 4 files; full env+multi_agent suite 369 passing post-M1, was 305 pre-M1; full non-nightly suite 2425):
   - [`test_predator_brain.py`](../../../packages/quantum-nematode/tests/quantumnematode_tests/env/test_predator_brain.py) — 21 tests
   - [`test_predator_brain_byte_equivalence.py`](../../../packages/quantum-nematode/tests/quantumnematode_tests/env/test_predator_brain_byte_equivalence.py) — 23 tests (the gate)
   - [`test_predator_brain_config.py`](../../../packages/quantum-nematode/tests/quantumnematode_tests/env/test_predator_brain_config.py) — 15 tests

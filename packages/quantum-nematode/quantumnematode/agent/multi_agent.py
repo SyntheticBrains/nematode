@@ -562,6 +562,9 @@ class MultiAgentSimulation:
             predator.kills = 0
             predator.prey_proximity_steps = 0
             predator.distance_traveled = 0
+            # Lifecycle hook for stateful predator brains (no-op for the
+            # heuristic; M5 RL predators reset hidden state here).
+            predator.brain.prepare_episode()
 
         # Episode preparation for each agent
         for agent in self.agents:
@@ -906,6 +909,15 @@ class MultiAgentSimulation:
                 termination,
                 nearby_agents_count=nearby_per_agent.get(agent.agent_id, 0),
             )
+
+        # Predator lifecycle hook — once per episode at the end.
+        # Predators don't terminate per-step the way agents do, so the
+        # post_process_episode hook fires once for each predator at the
+        # final step. No "episode_success" notion applies to predators
+        # (their per-fitness signal is the per_predator_kills /
+        # _prey_proximity_steps / _distance_traveled triple); pass None.
+        for predator in self.env.predators:
+            predator.brain.post_process_episode(episode_success=None)
 
         return self._build_result()
 
