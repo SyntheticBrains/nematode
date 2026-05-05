@@ -24,8 +24,10 @@ The system SHALL expose a pluggable policy seam for predators via a `PredatorBra
 #### Scenario: PredatorBrainParams Surface
 
 - **GIVEN** a `PredatorBrainParams` instance passed to `run_brain`
-- **THEN** it SHALL be a frozen dataclass with fields: `predator_id`, `predator_position`, `predator_type`, `detection_radius`, `damage_radius`, `agent_positions`, `grid_size`, `rng`, `step_index`
+- **THEN** it SHALL be a frozen dataclass with fields: `predator_id`, `predator_position`, `predator_type`, `detection_radius`, `damage_radius`, `agent_positions`, `chase_target`, `is_pursuing`, `grid_size`, `rng`, `step_index`
 - **AND** `agent_positions` SHALL be a tuple ordered by env's `agents.values()` insertion order so target tie-breaking is deterministic
+- **AND** `chase_target` SHALL be the resolved nearest-by-Manhattan agent position from `agent_positions` (or `None` if `agent_positions` is empty) — computed ONCE per `update_position` call and passed to every `run_brain` invocation in the per-call accumulator loop, so multi-step movement at `speed > 1.0` does not retarget mid-call
+- **AND** `is_pursuing` SHALL be `True` iff the predator is `PURSUIT` type and `chase_target` is within `detection_radius` (Manhattan) of `predator_position` *at the start of the call* — frozen for the duration of the accumulator loop so multi-step movement does not switch between random and greedy branches mid-call (matches legacy `update_position` branching semantics)
 - **AND** `rng` SHALL be the env's RNG so RNG-state advancement is shared with downstream consumers (food spawning, agent decisions)
 
 #### Scenario: HeuristicPredatorBrain Byte-Equivalence
