@@ -11,7 +11,6 @@ Covers task 3.7 of add-learning-predators OpenSpec change:
 
 import pytest
 import yaml
-
 from quantumnematode.brain.actions import Action
 from quantumnematode.env import (
     DynamicForagingEnvironment,
@@ -57,22 +56,27 @@ class TestDefaultBrainIsHeuristic:
     """When brain_config=None, every spawned predator gets HeuristicPredatorBrain."""
 
     def test_default_none_yields_heuristic(self) -> None:
+        """Verify default none yields heuristic."""
         env = _make_env(brain_config=None)
         assert len(env.predators) == 2
         for pred in env.predators:
             assert isinstance(pred.brain, HeuristicPredatorBrain)
 
     def test_explicit_heuristic_kind_yields_heuristic(self) -> None:
+        """Verify explicit heuristic kind yields heuristic."""
         env = _make_env(brain_config=PredatorBrainConfig(kind="heuristic"))
         for pred in env.predators:
             assert isinstance(pred.brain, HeuristicPredatorBrain)
 
     def test_default_and_explicit_produce_same_brain_type(self) -> None:
+        """Verify default and explicit produce same brain type."""
         # Same brain type → behavioural equivalence under matching seeds.
         env_default = _make_env(brain_config=None)
         env_explicit = _make_env(brain_config=PredatorBrainConfig(kind="heuristic"))
         for p_default, p_explicit in zip(
-            env_default.predators, env_explicit.predators, strict=True
+            env_default.predators,
+            env_explicit.predators,
+            strict=True,
         ):
             assert type(p_default.brain) is type(p_explicit.brain)
 
@@ -81,11 +85,13 @@ class TestPredatorIdSynthesis:
     """predator_id synthesis matches f"predator_{i}" for spawn loop index."""
 
     def test_id_format_matches_index(self) -> None:
+        """Verify id format matches index."""
         env = _make_env()
         for i, pred in enumerate(env.predators):
             assert pred.predator_id == f"predator_{i}"
 
     def test_ids_lexicographically_ordered(self) -> None:
+        """Verify ids lexicographically ordered."""
         env = _make_env()
         ids = [p.predator_id for p in env.predators]
         assert ids == sorted(ids)
@@ -95,6 +101,7 @@ class TestIdStabilityWithinInstance:
     """Within a single env instance, IDs remain unchanged across update calls."""
 
     def test_update_predators_preserves_ids(self) -> None:
+        """Verify update predators preserves ids."""
         # The env doesn't have a top-level reset() that re-spawns predators;
         # _initialize_predators runs ONCE in __init__. The same Predator
         # instances persist across update_predators() calls, so IDs are
@@ -111,6 +118,7 @@ class TestIdReproducibilityAcrossInstances:
     """Same config + seed → same predator IDs (and ordering)."""
 
     def test_two_envs_same_seed_yield_same_ids(self) -> None:
+        """Verify two envs same seed yield same ids."""
         env1 = _make_env(seed=42)
         env2 = _make_env(seed=42)
         ids1 = [p.predator_id for p in env1.predators]
@@ -118,6 +126,7 @@ class TestIdReproducibilityAcrossInstances:
         assert ids1 == ids2
 
     def test_two_envs_same_seed_yield_same_positions(self) -> None:
+        """Verify two envs same seed yield same positions."""
         # Spawn positions depend on the env's RNG; if seeds are equal,
         # positions must be identical too.
         env1 = _make_env(seed=42)
@@ -131,6 +140,7 @@ class TestUnknownKindRejection:
     """Unknown brain kinds SHALL raise NotImplementedError (M5 forward-compat)."""
 
     def test_unknown_kind_raises(self) -> None:
+        """Verify unknown kind raises."""
         # Bypass Pydantic validation by constructing the dataclass directly
         # (Pydantic schema only allows Literal["heuristic"], so YAML rejects
         # unknown kinds at load time; runtime constructions might still bypass).
@@ -145,6 +155,7 @@ class TestYamlBrainConfigDispatch:
     """YAML PredatorConfig.brain_config translates to runtime PredatorBrainConfig."""
 
     def test_yaml_no_brain_config_block_yields_none(self) -> None:
+        """Verify yaml no brain config block yields none."""
         yaml_str = """
         enabled: true
         count: 2
@@ -158,6 +169,7 @@ class TestYamlBrainConfigDispatch:
         assert params.brain_config is None
 
     def test_yaml_explicit_heuristic_block(self) -> None:
+        """Verify yaml explicit heuristic block."""
         yaml_str = """
         enabled: true
         count: 2
@@ -174,6 +186,7 @@ class TestYamlBrainConfigDispatch:
         assert params.brain_config.kind == "heuristic"
 
     def test_yaml_unknown_kind_rejected_by_pydantic(self) -> None:
+        """Verify yaml unknown kind rejected by pydantic."""
         # Pydantic Literal["heuristic"] should reject "mlpppo" at validation
         # time (M5 will extend the literal type).
         yaml_str = """
@@ -191,20 +204,19 @@ class TestCopyEnvironmentPreservesPredators:
     """copy_environment preserves predator_id + brain (via brain.copy)."""
 
     def test_copy_preserves_ids(self) -> None:
+        """Verify copy preserves ids."""
         env = _make_env()
         new_env = env.copy()
-        assert [p.predator_id for p in env.predators] == [
-            p.predator_id for p in new_env.predators
-        ]
+        assert [p.predator_id for p in env.predators] == [p.predator_id for p in new_env.predators]
 
     def test_copy_preserves_positions(self) -> None:
+        """Verify copy preserves positions."""
         env = _make_env()
         new_env = env.copy()
-        assert [p.position for p in env.predators] == [
-            p.position for p in new_env.predators
-        ]
+        assert [p.position for p in env.predators] == [p.position for p in new_env.predators]
 
     def test_copy_yields_independent_brain_instances(self) -> None:
+        """Verify copy yields independent brain instances."""
         env = _make_env()
         new_env = env.copy()
         # Brain copies should be functionally equivalent but independent

@@ -46,20 +46,20 @@ to mark sub-tasks complete as part of its diff.
 
 ## M1: Predator-as-Brain Refactor
 
-**OpenSpec change**: `2026-05-05-add-learning-predators` (not yet created)
-**Status**: **next milestone** (post-M4 replan: re-sequenced ahead of original M2/M3/M4 ordering since those are now complete; M1 is M5's prerequisite)
+**OpenSpec change**: `add-learning-predators` (archived on PR merge)
+**Status**: ✅ complete. PredatorBrain Protocol + HeuristicPredatorBrain adapter + per-predator metrics shipped with **zero behavioural change** verified at two levels: 23 byte-equivalence unit tests over the `{STATIONARY, PURSUIT} × speed ∈ {0.5, 1.0, 2.0}` parameter grid (step-by-step position equality + RNG-state equality across 1000-step horizons), AND 80/80 metric-cell pre/post deltas exactly 0.0 across the regression-baseline campaign (20 (config, seed) cells × 4 metrics; multi-agent + single-agent arms × MLPPPO + LSTMPPO scenarios). M5 unblocked. See logbook 016
 **Bio fidelity**: MEDIUM
-**Brain target**: MLPPPO predator
+**Brain target**: heuristic predator (M5 will introduce learnable predator brains via the PredatorBrain Protocol seam)
 **Dependencies**: M0 ✅
 
-- [ ] M1.1 Create `env/predator_brain.py`: `PredatorBrain` protocol, `HeuristicPredatorBrain` adapter, `PredatorBrainParams` dataclass
-- [ ] M1.2 Modify `Predator.update_position` to delegate to `self.brain.run_brain(params)` if brain set, else fall back to current behaviour
-- [ ] M1.3 Extend `PredatorParams` with optional `brain_config`; `create_predators()` defaults to `HeuristicPredatorBrain`
-- [ ] M1.4 Modify `MultiAgentSimulation` to expose per-predator metrics (`kills`, `prey_proximity_steps`, `distance_traveled`) in `EpisodeResult`
-- [ ] M1.5 Tests: `tests/env/test_predator_brain.py`
-- [ ] M1.6 Regression: 4-seed × 200-episode run on existing predator scenarios, agent survival rate within ±2pp of pre-refactor baseline
-- [ ] M1.7 `uv run pytest -m smoke -v` passes
-- [ ] M1.8 Update this checklist + roadmap milestone tracker
+- [x] M1.1 Created `env/predator_brain.py`: `PredatorBrain` Protocol, `HeuristicPredatorBrain` adapter, `PredatorBrainParams` frozen dataclass, `PredatorAction` enum, `PredatorBrainConfig` runtime dataclass
+- [x] M1.2 `Predator.update_position` delegates to `self.brain.run_brain(params)`; legacy `_update_pursuit` / `_update_random` deleted; new `_apply_action` helper owns kinematics. Frozen-branch invariant (`chase_target` + `is_pursuing` resolved once per call) preserves byte-equivalence on multi-step movement at speed > 1.0
+- [x] M1.3 `PredatorParams.brain_config` field; `_initialize_predators` defaults to `HeuristicPredatorBrain` via `_build_predator_brain` dispatcher; `_make_predator` factory centralises construction at all three sites; YAML schema rejects unknown kinds at load time
+- [x] M1.4 `MultiAgentEpisodeResult` exposes `per_predator_kills` / `per_predator_prey_proximity_steps` / `per_predator_distance_traveled`. Kill attribution: closest covering predator (Manhattan) with lex tie-break on `predator_id`; defensive global-closest fallback for residual-HP edge cases
+- [x] M1.5 Tests at `tests/env/test_predator_brain.py` (21) + `test_predator_brain_byte_equivalence.py` (23) + `test_predator_brain_config.py` (15) + `test_multi_agent.py::TestPerPredatorMetrics` (6) = **65 new tests**; full env + multi_agent suite passes 376 (was 305, +71 net new)
+- [x] M1.6 Regression: 4-seed × 200-episode multi-agent + 4-seed × 100-episode single-agent campaigns × 4 metrics on commits `73684213` (pre-M1) and `3d45e75c` (M1 head). All 80 metric-cells show exactly 0.0 delta. See `artifacts/logbooks/016-predator-brain-refactor/{baseline_pre,baseline_post}.csv`
+- [x] M1.7 `uv run pytest -m smoke -v` clean (22 tests pass)
+- [x] M1.8 This checklist updated; `docs/roadmap.md` Phase 5 milestone tracker M1 row flipped to ✅ complete
 
 ## M2: Hyperparameter Evolution Pilot
 

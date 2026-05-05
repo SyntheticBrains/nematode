@@ -16,7 +16,6 @@ is replaced. These tests verify the heuristic's standalone semantics.
 
 import numpy as np
 import pytest
-
 from quantumnematode.env import (
     HeuristicPredatorBrain,
     PredatorAction,
@@ -60,10 +59,12 @@ class TestProtocolConformance:
     """HeuristicPredatorBrain SHALL satisfy the PredatorBrain Protocol."""
 
     def test_isinstance_via_runtime_checkable(self) -> None:
+        """Verify isinstance via runtime checkable."""
         brain = HeuristicPredatorBrain()
         assert isinstance(brain, PredatorBrain)
 
     def test_protocol_methods_exist(self) -> None:
+        """Verify protocol methods exist."""
         brain = HeuristicPredatorBrain()
         # All four required Protocol methods must be callable.
         assert callable(brain.run_brain)
@@ -72,6 +73,7 @@ class TestProtocolConformance:
         assert callable(brain.copy)
 
     def test_copy_returns_independent_instance(self) -> None:
+        """Verify copy returns independent instance."""
         original = HeuristicPredatorBrain()
         clone = original.copy()
         assert clone is not original
@@ -85,6 +87,7 @@ class TestStationaryAlwaysStays:
     """STATIONARY predators SHALL return STAY regardless of other params."""
 
     def test_returns_stay_when_pursuing_in_range(self) -> None:
+        """Verify returns stay when pursuing in range."""
         brain = HeuristicPredatorBrain()
         params = _make_params(
             predator_type=PredatorType.STATIONARY,
@@ -94,6 +97,7 @@ class TestStationaryAlwaysStays:
         assert brain.run_brain(params) == PredatorAction.STAY
 
     def test_returns_stay_when_no_target(self) -> None:
+        """Verify returns stay when no target."""
         brain = HeuristicPredatorBrain()
         params = _make_params(
             predator_type=PredatorType.STATIONARY,
@@ -108,6 +112,7 @@ class TestPursuitGreedyAxisSelection:
     """In-range PURSUIT predators SHALL move greedy on the larger-delta axis."""
 
     def test_greedy_horizontal_when_dx_larger(self) -> None:
+        """Verify greedy horizontal when dx larger."""
         brain = HeuristicPredatorBrain()
         # predator at (5,5), agent at (8,5): dx=3, dy=0 → RIGHT
         params = _make_params(
@@ -118,6 +123,7 @@ class TestPursuitGreedyAxisSelection:
         assert brain.run_brain(params) == PredatorAction.RIGHT
 
     def test_greedy_horizontal_when_dx_negative(self) -> None:
+        """Verify greedy horizontal when dx negative."""
         brain = HeuristicPredatorBrain()
         params = _make_params(
             predator_position=(5, 5),
@@ -127,6 +133,7 @@ class TestPursuitGreedyAxisSelection:
         assert brain.run_brain(params) == PredatorAction.LEFT
 
     def test_greedy_vertical_when_dy_larger(self) -> None:
+        """Verify greedy vertical when dy larger."""
         brain = HeuristicPredatorBrain()
         # predator at (5,5), agent at (5,8): dx=0, dy=3 → DOWN
         params = _make_params(
@@ -137,6 +144,7 @@ class TestPursuitGreedyAxisSelection:
         assert brain.run_brain(params) == PredatorAction.DOWN
 
     def test_greedy_vertical_when_dy_negative(self) -> None:
+        """Verify greedy vertical when dy negative."""
         brain = HeuristicPredatorBrain()
         params = _make_params(
             predator_position=(5, 5),
@@ -146,6 +154,7 @@ class TestPursuitGreedyAxisSelection:
         assert brain.run_brain(params) == PredatorAction.UP
 
     def test_horizontal_first_tiebreak_when_dx_equals_dy(self) -> None:
+        """Verify horizontal first tiebreak when dx equals dy."""
         brain = HeuristicPredatorBrain()
         # predator at (5,5), agent at (8,8): abs(dx)=3 == abs(dy)=3 → RIGHT
         # (legacy `if abs(dx) >= abs(dy)` precedence at env.py:669)
@@ -157,6 +166,7 @@ class TestPursuitGreedyAxisSelection:
         assert brain.run_brain(params) == PredatorAction.RIGHT
 
     def test_returns_stay_when_already_at_target(self) -> None:
+        """Verify returns stay when already at target."""
         brain = HeuristicPredatorBrain()
         params = _make_params(
             predator_position=(5, 5),
@@ -166,6 +176,7 @@ class TestPursuitGreedyAxisSelection:
         assert brain.run_brain(params) == PredatorAction.STAY
 
     def test_pursuit_does_not_consume_rng(self) -> None:
+        """Verify pursuit does not consume rng."""
         brain = HeuristicPredatorBrain()
         rng = np.random.default_rng(42)
         # Capture state BEFORE the call
@@ -185,6 +196,7 @@ class TestRandomBranch:
     """Out-of-range / no-target SHALL trigger random branch with one RNG draw."""
 
     def test_random_branch_uses_one_rng_draw(self) -> None:
+        """Verify random branch uses one rng draw."""
         brain = HeuristicPredatorBrain()
         rng = np.random.default_rng(42)
         # Sister rng: same seed, used to verify draw count
@@ -195,22 +207,6 @@ class TestRandomBranch:
         # Sister rng draws once; both should now match.
         sister.integers(4)
         assert rng.bit_generator.state == sister.bit_generator.state
-
-    def test_random_direction_mapping_zero_is_up(self) -> None:
-        # Find a seed where rng.integers(4) returns 0.
-        rng = np.random.default_rng(0)
-        # default_rng(0).integers(4) returns 3 first; iterate to find a 0.
-        # Cheaper: drive with explicit numpy state.
-        # Use a fixture rng where we KNOW the first draw.
-        brain = HeuristicPredatorBrain()
-        for seed in range(100):
-            r = np.random.default_rng(seed)
-            r2 = np.random.default_rng(seed)
-            if int(r2.integers(4)) == 0:
-                params = _make_params(is_pursuing=False, rng=r)
-                assert brain.run_brain(params) == PredatorAction.UP
-                return
-        pytest.fail("could not find seed producing integers(4) == 0 within 100")
 
     @pytest.mark.parametrize(
         ("draw_value", "expected"),
@@ -266,10 +262,12 @@ class TestLifecycleHooks:
     """prepare_episode and post_process_episode SHALL be no-op for heuristic."""
 
     def test_prepare_episode_returns_none(self) -> None:
+        """Verify prepare episode returns none."""
         brain = HeuristicPredatorBrain()
         assert brain.prepare_episode() is None
 
     def test_post_process_episode_returns_none(self) -> None:
+        """Verify post process episode returns none."""
         brain = HeuristicPredatorBrain()
         assert brain.post_process_episode() is None
         assert brain.post_process_episode(episode_success=True) is None

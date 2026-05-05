@@ -1,33 +1,32 @@
 """Byte-equivalence tests: new Predator (with brain) vs frozen legacy reference.
 
 This is the PRIMARY regression gate for M1's PredatorBrain refactor.
-For every supported `PredatorType × speed` combination, a Predator with
-`HeuristicPredatorBrain` and a `_LegacyPredatorReference` (frozen
+For every supported `PredatorType` x `speed` combination, a Predator
+with `HeuristicPredatorBrain` and a `_LegacyPredatorReference` (frozen
 pre-M1 implementation) MUST produce step-by-step identical position
 trajectories AND identical RNG-state advancement when given the same
 seed and inputs.
 
 If any of these tests fail, the refactor introduced a behavioural
-divergence — either in branch ordering (chase_target resolution),
+divergence -- either in branch ordering (chase_target resolution),
 RNG-draw ordering, accumulator timing, or the action-to-clamp mapping.
 
 Per the design's frozen-branch invariant: the in-range/out-of-range
 decision is made ONCE per `update_position` call (not per accumulator-
 step), so multi-step movement at speed > 1.0 stays committed to one
-branch. Test parametrisation includes speed ∈ {0.5, 1.0, 2.0} to
+branch. Test parametrisation includes speed in {0.5, 1.0, 2.0} to
 exercise fractional, single-step, and multi-step regimes.
 """
 
 import numpy as np
 import pytest
-
 from quantumnematode.env import PredatorType
 from quantumnematode.env.env import Predator
 
 from ._legacy_predator_reference import _LegacyPredatorReference
 
 
-def _run_pair_for_steps(
+def _run_pair_for_steps(  # noqa: PLR0913 — test harness; threads many fixtures
     legacy: _LegacyPredatorReference,
     new: Predator,
     *,
@@ -37,12 +36,20 @@ def _run_pair_for_steps(
     rng_new: np.random.Generator,
     agent_positions_factory,
 ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-    """Run both predators for N steps with identical inputs; return per-step (legacy_pos, new_pos)."""
+    """Run both predators for N steps with identical inputs.
+
+    Returns a per-step list of (legacy_pos, new_pos) for trajectory diff.
+    """
     history: list[tuple[tuple[int, int], tuple[int, int]]] = []
     for step in range(steps):
         agent_positions = agent_positions_factory(step)
         legacy.update_position(grid_size, rng_legacy, agent_positions=agent_positions)
-        new.update_position(grid_size, rng_new, agent_positions=agent_positions, step_index=step)
+        new.update_position(
+            grid_size,
+            rng_new,
+            agent_positions=agent_positions,
+            step_index=step,
+        )
         history.append((legacy.position, new.position))
     return history
 
@@ -206,6 +213,7 @@ class TestRngStateAdvancement:
 
     @pytest.mark.parametrize("speed", [0.5, 1.0, 2.0])
     def test_rng_state_identical_across_steps_pursuit(self, speed: float) -> None:
+        """Verify rng state identical across steps pursuit."""
         rng_legacy = np.random.default_rng(99)
         rng_new = np.random.default_rng(99)
         legacy = _LegacyPredatorReference(
@@ -270,6 +278,7 @@ class TestUpdatePredatorsOrderingInvariant:
     """
 
     def test_agent_positions_match_alive_values_order(self) -> None:
+        """Verify agent positions match alive values order."""
         from quantumnematode.brain.actions import Action
         from quantumnematode.env import (
             DynamicForagingEnvironment,
@@ -310,13 +319,9 @@ class TestUpdatePredatorsOrderingInvariant:
         # The simplest direct test: compare what the env builds vs what
         # the dict iter order is.
         alive_positions_from_env = [
-            (int(a.position[0]), int(a.position[1]))
-            for a in env.agents.values()
-            if a.alive
+            (int(a.position[0]), int(a.position[1])) for a in env.agents.values() if a.alive
         ]
         expected_dict_order = [
-            (int(a.position[0]), int(a.position[1]))
-            for a in env.agents.values()
-            if a.alive
+            (int(a.position[0]), int(a.position[1])) for a in env.agents.values() if a.alive
         ]
         assert alive_positions_from_env == expected_dict_order

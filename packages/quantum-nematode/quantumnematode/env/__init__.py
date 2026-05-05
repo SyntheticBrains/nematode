@@ -52,17 +52,17 @@ from quantumnematode.env.oxygen import (
     OxygenZone,
     OxygenZoneThresholds,
 )
+from quantumnematode.env.pheromone import (
+    PheromoneField,
+    PheromoneSource,
+    PheromoneType,
+)
 from quantumnematode.env.predator_brain import (
     HeuristicPredatorBrain,
     PredatorAction,
     PredatorBrain,
     PredatorBrainConfig,
     PredatorBrainParams,
-)
-from quantumnematode.env.pheromone import (
-    PheromoneField,
-    PheromoneSource,
-    PheromoneType,
 )
 from quantumnematode.env.temperature import (
     TemperatureField,

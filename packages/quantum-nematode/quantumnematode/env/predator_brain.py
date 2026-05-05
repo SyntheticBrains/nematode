@@ -128,15 +128,25 @@ class PredatorBrain(Protocol):
     that need to reset hidden state at episode start).
     """
 
-    def run_brain(self, params: PredatorBrainParams) -> PredatorAction: ...
+    def run_brain(self, params: PredatorBrainParams) -> PredatorAction:
+        """Decide one cardinal action given the predator's current params."""
+        ...
 
-    def prepare_episode(self) -> None: ...
+    def prepare_episode(self) -> None:
+        """Reset per-episode state (no-op for stateless brains)."""
+        ...
 
     def post_process_episode(
-        self, *, episode_success: bool | None = None
-    ) -> None: ...
+        self,
+        *,
+        episode_success: bool | None = None,
+    ) -> None:
+        """Finalise per-episode state (no-op for stateless brains)."""
+        ...
 
-    def copy(self) -> PredatorBrain: ...
+    def copy(self) -> PredatorBrain:
+        """Return an independent copy with the same logical state."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -185,6 +195,11 @@ class HeuristicPredatorBrain:
         pass
 
     def run_brain(self, params: PredatorBrainParams) -> PredatorAction:
+        """Return one cardinal action per accumulator-step (pure of self).
+
+        STATIONARY → STAY. is_pursuing=True → greedy axis selection.
+        Else → single rng.integers(4) draw mapped to a cardinal direction.
+        """
         # STATIONARY predators never move (matches legacy update_position
         # early-return at env.py STATIONARY check).
         if params.predator_type.value == "stationary":
@@ -198,22 +213,39 @@ class HeuristicPredatorBrain:
         return _random_action(params.rng)
 
     def prepare_episode(self) -> None:
-        return  # No-op; no episode-level state.
+        """No-op (stateless brain has no per-episode state to reset)."""
+        return
 
     def post_process_episode(
-        self, *, episode_success: bool | None = None
+        self,
+        *,
+        episode_success: bool | None = None,
     ) -> None:
-        del episode_success  # No-op; no episode-level state.
+        """No-op (stateless brain has no per-episode state to finalise)."""
+        del episode_success
 
     def copy(self) -> HeuristicPredatorBrain:
-        # Stateless brain — fresh instance is independent of self.
-        # Future stateful brains override copy() to deep-copy their state.
+        """Return a fresh independent HeuristicPredatorBrain instance.
+
+        Stateless brain — fresh instance is independent of self. Future
+        stateful brains override copy() to deep-copy their state.
+        """
         return HeuristicPredatorBrain()
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers — pure functions kept module-private.
 # ---------------------------------------------------------------------------
+
+# Index → direction mapping for the random branch. Ordering MUST match the
+# legacy env.py:600-615 mapping (0=UP, 1=DOWN, 2=LEFT, 3=RIGHT) so RNG-state
+# advancement stays one-for-one with pre-M1 code.
+_RANDOM_DIRECTION_BY_INDEX = (
+    PredatorAction.UP,
+    PredatorAction.DOWN,
+    PredatorAction.LEFT,
+    PredatorAction.RIGHT,
+)
 
 
 def _greedy_action(
@@ -256,10 +288,4 @@ def _random_action(rng: np.random.Generator) -> PredatorAction:
     the env's RNG state advancement must match the legacy code one-for-one.
     """
     direction_choice = int(rng.integers(4))
-    if direction_choice == 0:
-        return PredatorAction.UP
-    if direction_choice == 1:
-        return PredatorAction.DOWN
-    if direction_choice == 2:
-        return PredatorAction.LEFT
-    return PredatorAction.RIGHT
+    return _RANDOM_DIRECTION_BY_INDEX[direction_choice]

@@ -607,17 +607,14 @@ class Predator:
             self.predator_type == PredatorType.PURSUIT
             and chase_target is not None
             and (
-                abs(self.position[0] - chase_target[0])
-                + abs(self.position[1] - chase_target[1])
+                abs(self.position[0] - chase_target[0]) + abs(self.position[1] - chase_target[1])
                 <= self.detection_radius
             )
         )
 
         # Pre-compute the agent_positions tuple ONCE so brain receives the
         # same value across accumulator-steps (frozen branch invariant).
-        frozen_agent_positions = (
-            tuple(agent_positions) if agent_positions is not None else ()
-        )
+        frozen_agent_positions = tuple(agent_positions) if agent_positions is not None else ()
 
         # Run the accumulator loop, calling brain.run_brain once per step.
         self._apply_action_loop(
@@ -1570,14 +1567,10 @@ class DynamicForagingEnvironment(BaseEnvironment):
             speed=speed if speed is not None else self.predator.speed,
             movement_accumulator=movement_accumulator,
             detection_radius=(
-                detection_radius
-                if detection_radius is not None
-                else self.predator.detection_radius
+                detection_radius if detection_radius is not None else self.predator.detection_radius
             ),
             damage_radius=(
-                damage_radius
-                if damage_radius is not None
-                else self.predator.damage_radius
+                damage_radius if damage_radius is not None else self.predator.damage_radius
             ),
             predator_id=predator_id,
             brain=brain if brain is not None else self._build_predator_brain(),

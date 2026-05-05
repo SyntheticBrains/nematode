@@ -20,9 +20,12 @@ the env module's state.
 
 from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
 
 from quantumnematode.env import PredatorType
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class _LegacyPredatorReference:

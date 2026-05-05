@@ -389,9 +389,7 @@ class PredatorConfig(BaseModel):
             damage_radius=self.damage_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
-            brain_config=(
-                self.brain_config.to_params() if self.brain_config is not None else None
-            ),
+            brain_config=(self.brain_config.to_params() if self.brain_config is not None else None),
         )
 
 

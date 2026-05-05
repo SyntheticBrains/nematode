@@ -647,9 +647,7 @@ class MultiAgentSimulation:
             # Per-predator prey-proximity counter: increment by 1 per
             # step iff at least one alive agent is within this predator's
             # detection_radius (Manhattan). NOT scaled by prey count.
-            alive_positions = [
-                self.env.agents[a.agent_id].position for a in alive
-            ]
+            alive_positions = [self.env.agents[a.agent_id].position for a in alive]
             for predator in self.env.predators:
                 px, py = predator.position
                 for agent_pos_tuple in alive_positions:

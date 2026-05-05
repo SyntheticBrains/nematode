@@ -352,8 +352,9 @@ class TestPerPredatorMetrics:
         env = _make_env(grid_size=20, seed=42, predators=False)
         # Override predator config + manually spawn two predators with
         # known IDs and positions for deterministic attribution test.
-        from quantumnematode.env.env import Predator
         from quantumnematode.env import HeuristicPredatorBrain
+        from quantumnematode.env.env import Predator
+
         env.predator.enabled = True
         env.predator.count = 2
         env.predator.damage_radius = 2
@@ -383,8 +384,9 @@ class TestPerPredatorMetrics:
     def test_kill_attribution_lex_tiebreak(self) -> None:
         """When predators are equidistant, predator_id lex order wins."""
         env = _make_env(grid_size=20, seed=42, predators=False)
-        from quantumnematode.env.env import Predator
         from quantumnematode.env import HeuristicPredatorBrain
+        from quantumnematode.env.env import Predator
+
         env.predator.enabled = True
         env.predator.count = 2
         env.predator.damage_radius = 2
@@ -413,8 +415,9 @@ class TestPerPredatorMetrics:
     def test_kill_attribution_fallback_no_covering_predator(self) -> None:
         """Defensive: if no predator covers, credit global-closest (lex tie-break)."""
         env = _make_env(grid_size=20, seed=42, predators=False)
-        from quantumnematode.env.env import Predator
         from quantumnematode.env import HeuristicPredatorBrain
+        from quantumnematode.env.env import Predator
+
         env.predator.enabled = True
         env.predator.count = 2
         env.predator.damage_radius = 1
