@@ -38,6 +38,13 @@ from quantumnematode.env.pheromone import (
     PheromoneSource,
     PheromoneType,
 )
+from quantumnematode.env.predator_brain import (
+    HeuristicPredatorBrain,
+    PredatorAction,
+    PredatorBrain,
+    PredatorBrainConfig,
+    PredatorBrainParams,
+)
 from quantumnematode.env.temperature import (
     TemperatureField,
     TemperatureZone,
@@ -500,6 +507,8 @@ class Predator:
         movement_accumulator: float = 0.0,
         detection_radius: int = 8,
         damage_radius: int = 0,
+        predator_id: str = "predator_0",
+        brain: PredatorBrain | None = None,
     ) -> None:
         """
         Initialize a predator.
@@ -518,6 +527,13 @@ class Predator:
             Detection radius for pursuit predators (default 8).
         damage_radius : int
             Distance at which this predator deals damage (default 0).
+        predator_id : str
+            Stable identifier for the predator (default "predator_0").
+            See `DynamicForagingEnvironment._make_predator` for synthesis.
+        brain : PredatorBrain | None
+            Pluggable policy. When `None`, a fresh `HeuristicPredatorBrain`
+            is constructed inline. The default `HeuristicPredatorBrain`
+            preserves byte-equivalent legacy heuristic behaviour.
         """
         self.position = position
         self.predator_type = predator_type
@@ -525,6 +541,13 @@ class Predator:
         self.movement_accumulator = movement_accumulator
         self.detection_radius = detection_radius
         self.damage_radius = damage_radius
+        self.predator_id = predator_id
+        self.brain: PredatorBrain = brain if brain is not None else HeuristicPredatorBrain()
+        # Per-predator metric counters (populated by the harness; surfaced
+        # in MultiAgentEpisodeResult per task 4.x).
+        self.kills: int = 0
+        self.prey_proximity_steps: int = 0
+        self.distance_traveled: int = 0
 
     def update_position(
         self,
@@ -532,8 +555,15 @@ class Predator:
         rng: np.random.Generator,
         agent_pos: tuple[int, int] | None = None,
         agent_positions: list[tuple[int, int]] | None = None,
+        step_index: int = 0,
     ) -> None:
-        """Update predator position based on its type.
+        """Update predator position by delegating to the brain.
+
+        Resolves the per-call branch context (chase_target + is_pursuing)
+        ONCE at the top of the call, then runs the accumulator loop with
+        a frozen branch (matches legacy semantics where multi-step movement
+        at speed > 1.0 stays committed to greedy or random for the duration
+        of the call).
 
         Parameters
         ----------
@@ -546,14 +576,18 @@ class Predator:
         agent_positions : list[tuple[int, int]] | None
             Multiple agent positions (multi-agent mode). Pursuit predators chase
             the nearest position. Takes precedence over agent_pos.
+        step_index : int
+            Episode-level step counter at the start of this call.
+            Frozen across the accumulator loop. Available to time-aware brains.
         """
+        # STATIONARY predators never move (early exit, no accumulator advance).
         if self.predator_type == PredatorType.STATIONARY:
-            return  # Stationary predators don't move
+            return
 
-        # Determine chase target: nearest agent from multi-agent list, or single agent
+        # Resolve chase_target ONCE (env owns agent_positions ordering;
+        # we just thread it through). Same `min(... key=Manhattan)` as legacy.
         chase_target: tuple[int, int] | None = None
         if agent_positions is not None and len(agent_positions) > 0:
-            # Chase nearest agent (Manhattan distance)
             px, py = self.position
             chase_target = min(
                 agent_positions,
@@ -562,95 +596,54 @@ class Predator:
         elif agent_pos is not None:
             chase_target = agent_pos
 
-        if self.predator_type == PredatorType.PURSUIT and chase_target is not None:
-            self._update_pursuit(grid_size, rng, chase_target)
-        else:
-            self._update_random(grid_size, rng)
+        # Resolve is_pursuing ONCE — frozen for the duration of this call.
+        is_pursuing = (
+            self.predator_type == PredatorType.PURSUIT
+            and chase_target is not None
+            and (
+                abs(self.position[0] - chase_target[0])
+                + abs(self.position[1] - chase_target[1])
+                <= self.detection_radius
+            )
+        )
 
-    def _update_random(self, grid_size: int, rng: np.random.Generator) -> None:
-        """
-        Update predator position with random movement.
+        # Pre-compute the agent_positions tuple ONCE so brain receives the
+        # same value across accumulator-steps (frozen branch invariant).
+        frozen_agent_positions = (
+            tuple(agent_positions) if agent_positions is not None else ()
+        )
 
-        Supports speeds > 1.0 for multiple steps per update.
-        For safety, caps maximum steps per update at 10 to prevent
-        pathological behavior with very high speeds.
+        # Run the accumulator loop, calling brain.run_brain once per step.
+        self._apply_action_loop(
+            grid_size=grid_size,
+            rng=rng,
+            chase_target=chase_target,
+            is_pursuing=is_pursuing,
+            agent_positions=frozen_agent_positions,
+            step_index=step_index,
+        )
 
-        Parameters
-        ----------
-        grid_size : int
-            Size of the grid (for boundary checking).
-        rng : np.random.Generator
-            Random number generator for reproducible movement.
-        """
-        # Handle fractional and multi-step movement
-        self.movement_accumulator += self.speed
-        if self.movement_accumulator < 1.0:
-            return  # Don't move yet
-
-        # Take multiple steps if speed > 1.0
-        # Cap at 10 steps per update for safety
-        max_steps_per_update = 10
-        steps_taken = 0
-
-        while self.movement_accumulator >= 1.0 and steps_taken < max_steps_per_update:
-            self.movement_accumulator -= 1.0
-            steps_taken += 1
-
-            # Random movement in one of four directions
-            up = 0
-            down = 1
-            left = 2
-            right = 3
-
-            direction_choice = rng.integers(4)
-            x, y = self.position
-
-            if direction_choice == up:
-                y = max(0, y - 1)
-            elif direction_choice == down:
-                y = min(grid_size - 1, y + 1)
-            elif direction_choice == left:
-                x = max(0, x - 1)
-            elif direction_choice == right:
-                x = min(grid_size - 1, x + 1)
-
-            self.position = (x, y)
-
-    def _update_pursuit(
+    def _apply_action_loop(  # noqa: PLR0913
         self,
+        *,
         grid_size: int,
         rng: np.random.Generator,
-        agent_pos: tuple[int, int],
+        chase_target: tuple[int, int] | None,
+        is_pursuing: bool,
+        agent_positions: tuple[tuple[int, int], ...],
+        step_index: int,
     ) -> None:
+        """Accumulator-loop harness: call brain once per step, apply action.
+
+        Mirrors legacy `_update_random` / `_update_pursuit` accumulator logic
+        (env.py:585-617 and 651-681 pre-M1) but factored out so brains stay
+        kinematics-agnostic. The `chase_target` and `is_pursuing` args are
+        the FROZEN per-call branch context.
         """
-        Update predator position with pursuit behavior.
-
-        When within detection radius, moves toward the agent.
-        When outside detection radius, moves randomly.
-
-        Parameters
-        ----------
-        grid_size : int
-            Size of the grid (for boundary checking).
-        rng : np.random.Generator
-            Random number generator for reproducible movement.
-        agent_pos : tuple[int, int]
-            Current agent position.
-        """
-        # Calculate Manhattan distance to agent
-        px, py = self.position
-        ax, ay = agent_pos
-        distance = abs(px - ax) + abs(py - ay)
-
-        # If outside detection radius, move randomly
-        if distance > self.detection_radius:
-            self._update_random(grid_size, rng)
-            return
-
-        # Inside detection radius: pursue the agent
+        # Accumulator advance + early-return below threshold (matches legacy).
         self.movement_accumulator += self.speed
         if self.movement_accumulator < 1.0:
-            return  # Don't move yet
+            return
 
         max_steps_per_update = 10
         steps_taken = 0
@@ -659,26 +652,49 @@ class Predator:
             self.movement_accumulator -= 1.0
             steps_taken += 1
 
-            x, y = self.position
+            # Build params with CURRENT predator_position; chase_target +
+            # is_pursuing are frozen across iterations.
+            params = PredatorBrainParams(
+                predator_id=self.predator_id,
+                predator_position=self.position,
+                predator_type=self.predator_type,
+                detection_radius=self.detection_radius,
+                damage_radius=self.damage_radius,
+                agent_positions=agent_positions,
+                chase_target=chase_target,
+                is_pursuing=is_pursuing,
+                grid_size=grid_size,
+                rng=rng,
+                step_index=step_index,
+            )
+            action = self.brain.run_brain(params)
+            self._apply_action(action, grid_size)
 
-            # Calculate direction toward agent
-            dx = ax - x
-            dy = ay - y
+    def _apply_action(self, action: PredatorAction, grid_size: int) -> None:
+        """Apply a single cardinal action to `self.position` with grid clamp.
 
-            # Move in the direction with larger distance first (greedy pursuit)
-            if abs(dx) >= abs(dy):
-                # Move horizontally
-                if dx > 0:
-                    x = min(grid_size - 1, x + 1)
-                elif dx < 0:
-                    x = max(0, x - 1)
-            # Move vertically
-            elif dy > 0:
-                y = min(grid_size - 1, y + 1)
-            elif dy < 0:
-                y = max(0, y - 1)
+        STAY leaves position unchanged. UP/DOWN/LEFT/RIGHT shift one cell on
+        the relevant axis, clamped to `[0, grid_size - 1]` exactly as legacy
+        (env.py:608-615 and 671-679 pre-M1).
 
-            self.position = (x, y)
+        Increments `self.distance_traveled` only when the post-clamp position
+        differs from the pre-action position (so STAY actions and wall-blocked
+        moves contribute 0).
+        """
+        old_position = self.position
+        x, y = self.position
+        if action == PredatorAction.UP:
+            y = max(0, y - 1)
+        elif action == PredatorAction.DOWN:
+            y = min(grid_size - 1, y + 1)
+        elif action == PredatorAction.LEFT:
+            x = max(0, x - 1)
+        elif action == PredatorAction.RIGHT:
+            x = min(grid_size - 1, x + 1)
+        # PredatorAction.STAY: x, y unchanged.
+        self.position = (x, y)
+        if self.position != old_position:
+            self.distance_traveled += 1
 
 
 class BaseEnvironment(ABC):
