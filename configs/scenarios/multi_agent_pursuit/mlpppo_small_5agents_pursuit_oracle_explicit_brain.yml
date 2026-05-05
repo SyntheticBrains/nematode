@@ -2,13 +2,13 @@
 #
 # Identical to mlpppo_small_5agents_pursuit_oracle.yml in every respect
 # EXCEPT for the explicit predators.brain_config block at the bottom.
-# Demonstrates the pluggable-brain seam introduced in M1: existing
-# scenarios continue to work with an implicit default brain (omitting
-# brain_config), and new scenarios can opt into explicit brain selection.
+# Demonstrates the pluggable-brain seam: existing scenarios continue to
+# work with an implicit default brain (omitting brain_config), and new
+# scenarios can opt into explicit brain selection.
 #
-# In M1, only `kind: heuristic` is honoured (byte-equivalent to the
-# default). M5 (co-evolution arms race) will extend the kind enum with
-# learnable predator brains (e.g. `kind: mlpppo`); this file is the
+# Currently only `kind: heuristic` is honoured (byte-equivalent to the
+# default). The kind enum can be extended with learnable predator brains
+# (e.g. `kind: mlpppo`) when those are introduced; this file is the
 # extension point reviewers can grep for.
 
 max_steps: 300
@@ -83,7 +83,8 @@ environment:
     detection_radius: 8
     damage_radius: 1
     # Explicit brain config — runtime equivalent to omitting this block.
-    # M5 will extend `kind` with learnable values (e.g. "mlpppo").
+    # `kind` can be extended with learnable values (e.g. "mlpppo")
+    # when learnable predator brains are introduced.
     brain_config:
       kind: heuristic
 

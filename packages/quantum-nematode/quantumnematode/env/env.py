@@ -188,8 +188,9 @@ class PredatorParams:
     brain_config : PredatorBrainConfig | None
         Optional pluggable-brain configuration. When None, predators are
         constructed with a default `HeuristicPredatorBrain` (byte-equivalent
-        to pre-M1 heuristic behaviour). M5 will extend the dispatcher with
-        learnable kinds (e.g. `kind: "mlpppo"`).
+        to the pre-refactor heuristic behaviour). The dispatcher can be
+        extended with learnable kinds (e.g. `kind: "mlpppo"`) once
+        learnable predator brains are introduced.
     """
 
     enabled: bool = False
@@ -638,8 +639,9 @@ class Predator:
     ) -> None:
         """Accumulator-loop harness: call brain once per step, apply action.
 
-        Mirrors legacy `_update_random` / `_update_pursuit` accumulator logic
-        (env.py:585-617 and 651-681 pre-M1) but factored out so brains stay
+        Mirrors the legacy `_update_random` / `_update_pursuit` accumulator
+        logic (preserved verbatim in `_legacy_predator_reference.py` for
+        byte-equivalence testing) but factored out so brains stay
         kinematics-agnostic. The `chase_target` and `is_pursuing` args are
         the FROZEN per-call branch context.
         """
@@ -677,8 +679,8 @@ class Predator:
         """Apply a single cardinal action to `self.position` with grid clamp.
 
         STAY leaves position unchanged. UP/DOWN/LEFT/RIGHT shift one cell on
-        the relevant axis, clamped to `[0, grid_size - 1]` exactly as legacy
-        (env.py:608-615 and 671-679 pre-M1).
+        the relevant axis, clamped to `[0, grid_size - 1]` exactly as the
+        legacy heuristic (preserved in `_legacy_predator_reference.py`).
 
         Increments `self.distance_traveled` only when the post-clamp position
         differs from the pre-action position (so STAY actions and wall-blocked
@@ -1500,17 +1502,20 @@ class DynamicForagingEnvironment(BaseEnvironment):
     def _build_predator_brain(self) -> PredatorBrain:
         """Construct a PredatorBrain instance from `self.predator.brain_config`.
 
-        Dispatcher for the M1 brain seam. M5 will extend this with learnable
-        kinds (e.g. `kind: "mlpppo"`); for M1, only `"heuristic"` is honoured.
-        `brain_config is None` is treated as the default heuristic.
+        Dispatcher for the pluggable brain seam. Currently only
+        `"heuristic"` is honoured; the dispatcher can be extended with
+        learnable kinds (e.g. `kind: "mlpppo"`) once learnable predator
+        brains are introduced. `brain_config is None` is treated as the
+        default heuristic.
         """
         config = self.predator.brain_config
         if config is None or config.kind == "heuristic":
             return HeuristicPredatorBrain()
-        # M5 extends with additional kinds. For now, anything else raises.
+        # Currently only "heuristic" is supported; additional kinds can
+        # be added here when learnable predator brains are introduced.
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "
-            "M1 only honours 'heuristic'; M5 will extend the dispatcher."
+            "Only 'heuristic' is currently supported."
         )
         raise NotImplementedError(msg)
 
@@ -3663,8 +3668,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             # env-level config defaults. Brain.copy() returns a fresh
             # independent instance; the factory uses the provided brain
             # unchanged so future stateful brains (e.g. learnable RL
-            # predators in M5) keep their per-instance state across
-            # env-copy boundaries (env-snapshot, evolution-loop replay).
+            # predators) keep their per-instance state across env-copy
+            # boundaries (env-snapshot, evolution-loop replay).
             new_env.predators = [
                 new_env._make_predator(
                     predator_id=p.predator_id,

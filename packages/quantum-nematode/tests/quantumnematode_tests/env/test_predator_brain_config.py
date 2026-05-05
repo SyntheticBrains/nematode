@@ -1,12 +1,14 @@
 """Tests for predator brain-config plumbing through PredatorParams + YAML.
 
-Covers task 3.7 of add-learning-predators OpenSpec change:
+Covers:
+
 - Default brain_config=None → HeuristicPredatorBrain instance
 - Explicit kind: "heuristic" produces same brain type
 - predator_id synthesis matches f"predator_{i}" for spawn loop index
 - ID stability across env reset() calls within the same env instance
 - ID reproducibility across two env instances with the same config + seed
-- Unknown kind raises NotImplementedError (forward-compat for M5)
+- Unknown kind raises NotImplementedError (forward-compat for future
+  learnable brain kinds)
 """
 
 import pytest
@@ -137,7 +139,12 @@ class TestIdReproducibilityAcrossInstances:
 
 
 class TestUnknownKindRejection:
-    """Unknown brain kinds SHALL raise NotImplementedError (M5 forward-compat)."""
+    """Unknown brain kinds SHALL raise NotImplementedError.
+
+    Forward-compat for future learnable brain kinds — when a new kind
+    is added to the dispatcher, this test confirms the dispatcher
+    correctly rejects unknown values rather than silently falling back.
+    """
 
     def test_unknown_kind_raises(self) -> None:
         """Verify unknown kind raises."""
@@ -188,7 +195,7 @@ class TestYamlBrainConfigDispatch:
     def test_yaml_unknown_kind_rejected_by_pydantic(self) -> None:
         """Verify yaml unknown kind rejected by pydantic."""
         # Pydantic Literal["heuristic"] should reject "mlpppo" at validation
-        # time (M5 will extend the literal type).
+        # time (future learnable brain kinds would extend the literal type).
         yaml_str = """
         enabled: true
         count: 2

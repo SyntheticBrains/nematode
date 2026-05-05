@@ -1,21 +1,21 @@
-"""Frozen reference of the pre-M1 Predator movement logic.
+"""Frozen reference of the original Predator movement logic.
 
 This module preserves a byte-faithful copy of the legacy
 `Predator._update_pursuit`, `Predator._update_random`, and the
 branching logic in `Predator.update_position` exactly as they
-existed in env.py before M1's PredatorBrain refactor. It exists
-ONLY for the byte-equivalence parametrised test in
-`test_predator_brain_byte_equivalence.py` — never imported by
-production code.
+existed before the PredatorBrain refactor introduced the brain-
+delegation seam. It exists ONLY for the byte-equivalence
+parametrised test in `test_predator_brain_byte_equivalence.py`
+— never imported by production code.
 
-If the legacy logic is ever re-derived (e.g. for a future M5
-audit), this file is the canonical reference. Do NOT modify the
-movement semantics here under any circumstances; the whole point
-is that this is a frozen snapshot.
+If the legacy logic is ever re-derived (e.g. for a future audit
+of the heuristic semantics), this file is the canonical reference.
+Do NOT modify the movement semantics here under any circumstances;
+the whole point is that this is a frozen snapshot.
 
-Lines below mirror env.py:529-681 (pre-M1) verbatim, with only
-the class extraction so it can run independently of the rest of
-the env module's state.
+The class methods below mirror the original env.py implementation
+verbatim, with only the class extraction so it can run independently
+of the rest of the env module's state.
 """
 
 from __future__ import annotations
@@ -29,11 +29,14 @@ if TYPE_CHECKING:
 
 
 class _LegacyPredatorReference:
-    """Frozen pre-M1 Predator implementation for byte-equivalence testing.
+    """Frozen pre-refactor Predator implementation for byte-equivalence testing.
 
-    Constructed identically to the new Predator (without brain or
-    predator_id fields, since those were added in M1.2). The legacy
-    code path used inline helpers for movement.
+    Constructed identically to the original Predator (without `brain` or
+    `predator_id` fields — those were added by the brain-delegation
+    refactor). The original code path used inline `_update_pursuit` and
+    `_update_random` helpers for movement; this class preserves them
+    verbatim so the new brain-delegated path can be checked for trajectory
+    + RNG-state equality.
     """
 
     def __init__(  # noqa: PLR0913
@@ -59,7 +62,7 @@ class _LegacyPredatorReference:
         agent_pos: tuple[int, int] | None = None,
         agent_positions: list[tuple[int, int]] | None = None,
     ) -> None:
-        """Verbatim copy of pre-M1 Predator.update_position (env.py:529-568)."""
+        """Verbatim copy of the original Predator.update_position."""
         if self.predator_type == PredatorType.STATIONARY:
             return
 
@@ -79,7 +82,7 @@ class _LegacyPredatorReference:
             self._update_random(grid_size, rng)
 
     def _update_random(self, grid_size: int, rng: np.random.Generator) -> None:
-        """Verbatim copy of pre-M1 Predator._update_random (env.py:570-617)."""
+        """Verbatim copy of the original Predator._update_random."""
         self.movement_accumulator += self.speed
         if self.movement_accumulator < 1.0:
             return
@@ -116,7 +119,7 @@ class _LegacyPredatorReference:
         rng: np.random.Generator,
         agent_pos: tuple[int, int],
     ) -> None:
-        """Verbatim copy of pre-M1 Predator._update_pursuit (env.py:619-681)."""
+        """Verbatim copy of the original Predator._update_pursuit."""
         px, py = self.position
         ax, ay = agent_pos
         distance = abs(px - ax) + abs(py - ay)

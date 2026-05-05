@@ -300,13 +300,15 @@ class TestMultiAgentSimulation:
 
 
 class TestPerPredatorMetrics:
-    """Per-predator metrics in MultiAgentEpisodeResult (M1.4 of add-learning-predators).
+    """Per-predator metrics in MultiAgentEpisodeResult.
 
-    Covers task 4.6 sub-tasks:
+    Covers:
+
     - per_predator_distance_traveled records movements
     - per_predator_prey_proximity_steps increments when agent in range
     - per_predator_kills attribution under distinct distances (closest wins)
     - per_predator_kills attribution under equal distances (lex tie-break)
+    - defensive global-closest fallback when no predator covers the agent
     """
 
     def test_per_predator_distance_traveled_records_movements(self) -> None:

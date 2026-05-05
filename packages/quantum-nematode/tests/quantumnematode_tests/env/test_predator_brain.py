@@ -1,6 +1,7 @@
 """Tests for the predator brain abstraction (Protocol + heuristic adapter).
 
-Covers task 1.6 from add-learning-predators OpenSpec change:
+Covers:
+
 - Protocol conformance via @runtime_checkable isinstance
 - HeuristicPredatorBrain.copy() returns independent instance
 - Stationary predator returns STAY regardless of params
@@ -9,9 +10,10 @@ Covers task 1.6 from add-learning-predators OpenSpec change:
 - Random branch consumes exactly one rng.integers(4) draw per call
 - No-op prepare_episode / post_process_episode (lifecycle hooks)
 
-The byte-equivalence parametrised test against the legacy `_update_pursuit` /
-`_update_random` helpers lives in M1.2 (task 2.6) — once the legacy code
-is replaced. These tests verify the heuristic's standalone semantics.
+The byte-equivalence test against the original `_update_pursuit` /
+`_update_random` helpers lives in `test_predator_brain_byte_equivalence.py`
+(uses the frozen reference at `_legacy_predator_reference.py`). These
+tests verify the heuristic's standalone semantics.
 """
 
 import numpy as np

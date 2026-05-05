@@ -1,11 +1,11 @@
 """Byte-equivalence tests: new Predator (with brain) vs frozen legacy reference.
 
-This is the PRIMARY regression gate for M1's PredatorBrain refactor.
+This is the PRIMARY regression gate for the PredatorBrain refactor.
 For every supported `PredatorType` x `speed` combination, a Predator
 with `HeuristicPredatorBrain` and a `_LegacyPredatorReference` (frozen
-pre-M1 implementation) MUST produce step-by-step identical position
-trajectories AND identical RNG-state advancement when given the same
-seed and inputs.
+pre-refactor implementation) MUST produce step-by-step identical
+position trajectories AND identical RNG-state advancement when given
+the same seed and inputs.
 
 If any of these tests fail, the refactor introduced a behavioural
 divergence -- either in branch ordering (chase_target resolution),
@@ -270,10 +270,10 @@ class TestRngStateAdvancement:
 class TestUpdatePredatorsOrderingInvariant:
     """update_predators MUST pass agent_positions in agents.values() insertion order.
 
-    Direct test of task 2.7 — guards against future refactors that might
-    sort, reverse, or otherwise reorder the agent_positions tuple before
-    passing to predator brains. Ordering matters because nearest-target
-    tie-breaking on equal Manhattan distances uses Python's stable `min()`
+    Guards against future refactors that might sort, reverse, or
+    otherwise reorder the agent_positions tuple before passing to
+    predator brains. Ordering matters because nearest-target tie-
+    breaking on equal Manhattan distances uses Python's stable `min()`
     which returns the first element with the minimum value.
     """
 

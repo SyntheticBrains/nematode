@@ -563,7 +563,7 @@ class MultiAgentSimulation:
             predator.prey_proximity_steps = 0
             predator.distance_traveled = 0
             # Lifecycle hook for stateful predator brains (no-op for the
-            # heuristic; M5 RL predators reset hidden state here).
+            # heuristic; learnable predator brains reset hidden state here).
             predator.brain.prepare_episode()
 
         # Episode preparation for each agent

@@ -317,8 +317,9 @@ class PredatorBrainConfigSchema(BaseModel):
     is what `PredatorParams` carries. Mirrors the existing
     `PredatorConfig` (Pydantic) ↔ `PredatorParams` (dataclass) split.
 
-    M1 honours only `kind: "heuristic"`. M5 will extend the literal
-    type with learnable kinds (e.g. `"mlpppo"`, `"lstmppo"`).
+    Currently only `kind: "heuristic"` is honoured; the literal type
+    can be extended with learnable kinds (e.g. `"mlpppo"`, `"lstmppo"`)
+    when learnable predator brains are introduced.
     """
 
     kind: Literal["heuristic"] = "heuristic"
@@ -354,8 +355,9 @@ class PredatorConfig(BaseModel):
     brain_config : PredatorBrainConfigSchema | None
         Optional pluggable-brain configuration. When omitted from YAML,
         predators use the default `HeuristicPredatorBrain` (byte-equivalent
-        to pre-M1 heuristic behaviour). M5 will extend the dispatcher
-        with learnable kinds.
+        to the pre-refactor heuristic behaviour). The dispatcher can be
+        extended with learnable kinds when learnable predator brains are
+        introduced.
     """
 
     enabled: bool = False

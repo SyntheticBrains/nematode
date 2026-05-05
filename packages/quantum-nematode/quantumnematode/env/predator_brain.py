@@ -159,8 +159,9 @@ class PredatorBrainConfig:
     `PredatorParams` (dataclass) ↔ `PredatorConfig` (Pydantic) split.
 
     `kind` selects which brain implementation `_build_predator_brain`
-    constructs. M1 honours only `"heuristic"`; M5 will extend the
-    dispatcher with learnable kinds (e.g. `"mlpppo"`).
+    constructs. Currently only `"heuristic"` is honoured; the literal
+    type can be extended with learnable kinds (e.g. `"mlpppo"`) when
+    learnable predator brains are introduced.
     """
 
     kind: Literal["heuristic"] = "heuristic"
@@ -238,8 +239,9 @@ class HeuristicPredatorBrain:
 # ---------------------------------------------------------------------------
 
 # Index → direction mapping for the random branch. Ordering MUST match the
-# legacy env.py:600-615 mapping (0=UP, 1=DOWN, 2=LEFT, 3=RIGHT) so RNG-state
-# advancement stays one-for-one with pre-M1 code.
+# legacy random-direction mapping (0=UP, 1=DOWN, 2=LEFT, 3=RIGHT) preserved
+# in `_legacy_predator_reference.py`, so RNG-state advancement stays one-
+# for-one with the original heuristic.
 _RANDOM_DIRECTION_BY_INDEX = (
     PredatorAction.UP,
     PredatorAction.DOWN,
