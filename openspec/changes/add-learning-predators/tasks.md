@@ -71,13 +71,13 @@ The byte-equivalence parametrised test (task 2.6) is the **primary** regression 
 
 ## 6. Smoke + final checks
 
-- [ ] 6.1 `uv run pytest -m smoke -v` clean
-- [ ] 6.2 `uv run pytest -m "not nightly"` clean (full unit test suite, including the byte-equivalence and per-predator-metric tests)
-- [ ] 6.3 `uv run pre-commit run -a` clean
-- [ ] 6.4 `openspec validate add-learning-predators --strict` clean
+- [x] 6.1 `uv run pytest -m smoke -v` clean (22 tests pass, 73s)
+- [x] 6.2 `uv run pytest -m "not nightly"` clean (2425 tests pass, 2m22s — includes the byte-equivalence and per-predator-metric tests)
+- [x] 6.3 `uv run pre-commit run -a` clean (mdformat + markdownlint + ruff check + ruff format + pyright + tests all green)
+- [x] 6.4 `openspec validate add-learning-predators --strict` clean
 
 ## 7. Tracker + roadmap update
 
-- [ ] 7.1 Tick M1.1-M1.8 sub-tasks in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (M1 section, lines 47-65)
-- [ ] 7.2 Flip M1 row in `docs/roadmap.md` Phase 5 milestone tracker table from 🟡 next to ✅ complete
-- [ ] 7.3 Add brief result summary to the M1 row referencing logbook 016 and the regression-gate outcome
+- [x] 7.1 Ticked M1.1-M1.8 sub-tasks in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (M1 section)
+- [x] 7.2 Flipped M1 row in `docs/roadmap.md` Phase 5 milestone tracker table from 🟡 next to ✅ complete
+- [x] 7.3 Added detailed result summary to the M1 row referencing logbook 016, byte-equivalence gate, and 80/80 zero-delta regression-baseline outcome
