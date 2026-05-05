@@ -41,11 +41,27 @@
 
 ## 5. Regression baseline + logbook
 
-- [ ] 5.1 Pre-refactor baseline campaign: 4 seeds (42, 43, 44, 45) × 200 episodes × 3 multi-agent pursuit scenarios (`mlpppo_small_5agents_pursuit_oracle.yml`, `mlpppo_small_5agents_pursuit_no_alarm_oracle.yml`, `lstmppo_small_5agents_pursuit_alarm_klinotaxis.yml`) on the M1 base commit (before delegation refactor lands). Run with `--theme headless`. Output: `tmp/m1_regression_baseline/baseline_pre.csv` with columns `config, seed, mean_alive_rate, std_alive_rate, n_episodes, session_id`
+The byte-equivalence parametrised test (task 2.6) is the **primary** regression gate (catches RNG-ordering and trajectory-drift bugs at the predator level). The campaign runs below are the **secondary** sanity-check layer that exercise the predator code through both `MultiAgentSimulation` and the single-agent `Simulation` call paths under real training dynamics.
+
+- [ ] 5.1 Pre-refactor baseline campaign: 4 seeds (42, 43, 44, 45) on the M1 base commit (before delegation refactor lands). Run with `--theme headless`. Two arms covering both simulation-orchestration paths:
+  - **Multi-agent arm**: 200 episodes × 3 multi-agent pursuit scenarios (`mlpppo_small_5agents_pursuit_oracle.yml`, `mlpppo_small_5agents_pursuit_no_alarm_oracle.yml`, `lstmppo_small_5agents_pursuit_alarm_klinotaxis.yml`)
+  - **Single-agent arm**: 100 episodes × 2 single-agent pursuit scenarios (`pursuit/mlpppo_small_oracle.yml`, `pursuit/lstmppo_small_klinotaxis.yml`) — closes the gap that the multi-agent arm leaves: single-agent `Simulation` invokes `env.update_predators()` from a different orchestration path
+
+  The two arms write different CSVs with different schemas: multi-agent path emits `multi_agent_summary.csv` (cols include `agents_alive_at_end`, `total_food`, `proximity_events`, `mean_success`); single-agent path emits `simulation_results.csv` (cols include `success`, `foods_collected`, `steps`, `predator_encounters`, `died_to_health_depletion`, `successful_evasions`). Metrics extracted in 5.3 below are reconciled across both schemas
+
+  Output: `tmp/m1_regression_baseline/baseline_pre.csv` with columns `arm, config, seed, mean_success, mean_total_food, mean_steps, mean_predator_engagement, n_episodes, session_id`. `mean_predator_engagement` aliases differently per arm — multi-agent reads `proximity_events / num_episodes` (already in summary CSV); single-agent reads `(predator_encounters + successful_evasions) / num_episodes` (composite signal of predator-trajectory effects). `mean_success` will saturate at 0.0 on the multi-agent pursuit arm (heuristic predators kill all 5 agents reliably under default config); single-agent arm is non-saturated and provides discriminating signal
 - [ ] 5.2 Post-refactor baseline campaign: identical protocol on the M1 head commit (after all M1.1-M1.4 tasks land). Output: `tmp/m1_regression_baseline/baseline_post.csv`
-- [ ] 5.3 Compute deltas: per-cell `|post − pre| ≤ 0.02`; per-scenario mean delta ≤ 0.02. Strict-equivalence cross-check (50 episodes seed 42, single config) byte-identical predator trajectories — write as `test_predator_byte_equivalence_against_legacy_baseline` if needed
-- [ ] 5.4 Write `docs/experiments/logbooks/016-predator-brain-refactor.md` documenting: framework changes, baseline pre/post numbers, regression-gate verdict, logbook 016 conventions match logbooks 012-015
-- [ ] 5.5 Stash baseline CSVs under `artifacts/logbooks/016-predator-brain-refactor/baseline_pre.csv` and `baseline_post.csv`; copy `tmp/m1_regression_baseline/run_baseline.sh` for archival
+- [ ] 5.3 Compute deltas across all four metrics, per-cell. Tolerances:
+  - `mean_success`: per-cell `|post − pre| ≤ 0.02` (vacuous-pass on saturated cells; flagged in logbook 016 narrative)
+  - `mean_total_food`: per-cell `|post − pre| ≤ 0.5 food units` (discriminates predator-induced foraging-path changes; non-saturated on both arms because agents collect food before dying)
+  - `mean_steps`: per-cell `|post − pre| ≤ 5 steps` (discriminates predator-trajectory timing — when predators reach agents earlier or later, step counts shift)
+  - `mean_predator_engagement`: per-cell tolerance arm-specific — multi-agent `|post − pre| ≤ 5 events` (proximity-events scale); single-agent `|post − pre| ≤ 0.5 encounters/episode` (encounter-count scale)
+
+  Per-scenario means use the same per-cell tolerances. Any per-cell metric exceeding tolerance triggers a forensic step-by-step trajectory diff against `git stash`-able legacy reference for the failing (config, seed) cell. The byte-equivalence test (2.6) is expected to flag any drift before this stage; multi-metric campaign serves as cross-check.
+
+  **The byte-equivalence test (2.6) is the PRIMARY regression gate**; the multi-metric campaign here is a secondary cross-check that exercises both `MultiAgentSimulation` and single-agent `Simulation` code paths under real training dynamics
+- [ ] 5.4 Write `docs/experiments/logbooks/016-predator-brain-refactor.md` documenting: framework changes, baseline pre/post numbers across both arms, four-metric regression-gate verdict (including the saturated-metric finding for the multi-agent pursuit arm), logbook 016 conventions match logbooks 012-015
+- [ ] 5.5 Stash baseline CSVs under `artifacts/logbooks/016-predator-brain-refactor/baseline_pre.csv` and `baseline_post.csv`; copy `tmp/m1_regression_baseline/run_baseline.sh` for archival. Forensic notes (saturation finding, raw per-cell numbers) live in `tmp/evaluations/evolution/evolution_scratchpad.md` for cross-session reference
 
 ## 6. Smoke + final checks
 
