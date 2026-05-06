@@ -593,13 +593,25 @@ class Predator:
 
         # Resolve chase_target ONCE (env owns agent_positions ordering;
         # we just thread it through). Same `min(... key=Manhattan)` as legacy.
+        # Resolve chase_target. An explicit `agent_positions` (even if
+        # empty) is authoritative — empty list means "no agents alive,
+        # no target". The legacy `agent_pos` fallback only fires when
+        # the multi-agent path wasn't taken at all (i.e. `agent_positions`
+        # is None). This differs from the legacy reference, which fell
+        # back to `agent_pos` on empty list too; the byte-equivalence
+        # tests don't exercise the empty-list-with-agent_pos case (the
+        # only production caller `env.update_predators` never sets
+        # `agent_pos`), so this is a semantic improvement without
+        # affecting the regression gate.
         chase_target: tuple[int, int] | None = None
-        if agent_positions is not None and len(agent_positions) > 0:
-            px, py = self.position
-            chase_target = min(
-                agent_positions,
-                key=lambda ap: abs(px - ap[0]) + abs(py - ap[1]),
-            )
+        if agent_positions is not None:
+            if agent_positions:
+                px, py = self.position
+                chase_target = min(
+                    agent_positions,
+                    key=lambda ap: abs(px - ap[0]) + abs(py - ap[1]),
+                )
+            # else: explicit empty list → chase_target stays None
         elif agent_pos is not None:
             chase_target = agent_pos
 
@@ -690,6 +702,12 @@ class Predator:
         STAY leaves position unchanged. UP/DOWN/LEFT/RIGHT shift one cell on
         the relevant axis, clamped to `[0, grid_size - 1]` exactly as the
         legacy heuristic (preserved in `_legacy_predator_reference.py`).
+
+        Note on axis convention: the y-deltas here are INVERTED relative to
+        the env's `Direction.UP/DOWN` convention — `PredatorAction.UP`
+        decrements y and `PredatorAction.DOWN` increments y, matching the
+        legacy `_update_random` mapping. See `PredatorAction` docstring for
+        the rationale (byte-equivalence with the pre-refactor heuristic).
 
         Increments `self.distance_traveled` only when the post-clamp position
         differs from the pre-action position (so STAY actions and wall-blocked

@@ -30,6 +30,18 @@ class PredatorAction(Enum):
     The harness (`Predator._apply_action`) translates the action into a
     position delta, advances the movement accumulator, and applies the
     grid clamp. Brains never mutate `Predator.position` directly.
+
+    Axis convention (legacy, preserved for byte-equivalence):
+    `PredatorAction.UP` decrements `y` (`y -= 1`) and `PredatorAction.DOWN`
+    increments `y` (`y += 1`). This is INVERTED relative to the env's
+    agent-side `Direction.UP` / `Direction.DOWN` convention (where
+    `Direction.UP` means `y += 1`). The inversion comes from the original
+    pre-refactor `_update_random` mapping (preserved verbatim in
+    `_legacy_predator_reference._LegacyPredatorReference`); changing it
+    would break the byte-equivalence regression gate. Future learnable
+    predator brains that want world-axis semantics should map their
+    output through the legacy convention here, e.g. treat the "y +=1"
+    action as `PredatorAction.DOWN`.
     """
 
     STAY = "stay"
