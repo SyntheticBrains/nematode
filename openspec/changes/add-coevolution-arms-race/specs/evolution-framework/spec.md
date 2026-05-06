@@ -26,28 +26,32 @@ The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predat
 
 ### Requirement: Predator Fitness Functions
 
-The system SHALL provide predator-specific fitness functions that consume `MultiAgentEpisodeResult.per_predator_kills` and `per_predator_prey_proximity_steps` (from the M1 multi-agent capability) to evaluate predator genomes during co-evolution.
-
-#### Scenario: PredatorEpisodicKillRate Evaluation
-
-- **GIVEN** a `PredatorEpisodicKillRate` fitness instance and a list of `MultiAgentEpisodeResult` instances containing per-predator kill counts for a specific `predator_id`
-- **WHEN** `evaluate(results, predator_id)` runs
-- **THEN** the returned fitness SHALL be the mean kills per episode for that `predator_id` across the result list
-- **AND** when the result list is empty the fitness SHALL be `0.0`
-
-#### Scenario: Secondary Proximity Signal When Kill Count Is Zero
-
-- **GIVEN** a `PredatorEpisodicKillRate` fitness instance with `secondary_signal=True`
-- **AND** a result list where the predator has zero kills across all episodes
-- **WHEN** `evaluate` runs
-- **THEN** the returned fitness SHALL fall back to the mean `per_predator_prey_proximity_steps` divided by `max_steps` (a normalised proximity ratio in [0, 1])
-- **AND** the secondary signal SHALL be strictly less than the smallest kill-rate fitness (so a predator with one kill always beats a predator with zero kills, regardless of proximity)
+The system SHALL provide predator-specific fitness functions that conform to the existing `FitnessFunction` Protocol surface (`evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`) from `quantumnematode.evolution.fitness`. Internally, predator fitness drives the multi-agent runner against frozen prey opponents (configured via `sim_config` patching at the call site) and aggregates per-predator metrics from the resulting `MultiAgentEpisodeResult` instances (`per_predator_kills` for the primary signal, `per_predator_prey_proximity_steps` for the secondary fallback).
 
 #### Scenario: FitnessFunction Protocol Conformance
 
-- **GIVEN** any predator fitness implementation
+- **GIVEN** any predator fitness implementation (`PredatorEpisodicKillRate`, `PredatorLearnedPerformanceFitness`)
 - **THEN** it SHALL satisfy the existing `FitnessFunction` Protocol from `quantumnematode.evolution.fitness`
-- **AND** it SHALL be `isinstance`-compatible via the Protocol's `@runtime_checkable` decorator
+- **AND** it SHALL be `isinstance(impl, FitnessFunction)` via the Protocol's `@runtime_checkable` decorator
+- **AND** its `evaluate` method SHALL accept the canonical signature `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float` (no diverging signature)
+- **AND** it SHALL be picklable so it can flow through the existing `EvolutionLoop._evaluate_in_worker` 11-tuple worker
+
+#### Scenario: PredatorEpisodicKillRate Mean Kills Calculation
+
+- **GIVEN** a `PredatorEpisodicKillRate` fitness evaluating a predator genome over `episodes` multi-agent runs against frozen prey opponents (configured in the patched `sim_config`)
+- **WHEN** `evaluate(genome, sim_config, encoder, episodes=N, seed=S)` runs
+- **THEN** the predator brain SHALL be decoded from the genome via `encoder.decode(genome, ..., seed=S)`
+- **AND** N multi-agent episodes SHALL run with that brain occupying the predator slots
+- **AND** the returned fitness SHALL be the mean of `MultiAgentEpisodeResult.per_predator_kills[predator_id]` across the N episodes for the predator slot under evaluation
+- **AND** when N is 0 the fitness SHALL be `0.0`
+
+#### Scenario: Secondary Proximity Signal When Kill Count Is Zero
+
+- **GIVEN** a `PredatorEpisodicKillRate` fitness with `secondary_signal=True`
+- **AND** N episodes complete where the predator under evaluation has zero kills across ALL episodes
+- **WHEN** `evaluate` aggregates the results
+- **THEN** the returned fitness SHALL fall back to the mean `per_predator_prey_proximity_steps` divided by `max_steps` for that predator slot, scaled to a sub-unity range
+- **AND** the secondary fallback SHALL be strictly less than the smallest non-zero kill-rate fitness (so a predator with one kill always beats a predator with zero kills, regardless of proximity); concretely the fallback range SHALL be `[0, 1/N)` while any non-zero kill-rate is `>= 1/N`
 
 ### Requirement: Hall-of-Fame Buffer
 

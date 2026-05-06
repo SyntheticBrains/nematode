@@ -2,20 +2,23 @@
 
 ### Requirement: CoevolutionLoop Orchestrator
 
-The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population) and SHALL reuse the existing `EvolutionLoop._evaluate_in_worker` multiprocessing worker pattern per side.
+The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population) and SHALL reuse the existing `EvolutionLoop._evaluate_in_worker` multiprocessing worker pattern per side, with opponent brain weights injected via `sim_config` patching following the M2 idiom.
 
 #### Scenario: Side State Surface
 
 - **GIVEN** a `CoevolutionLoop` instance
-- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: OptunaTPEOptimizer`, `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
+- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: OptunaTPEOptimizer` (imported from `quantumnematode.optimizers.evolutionary`), `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
 - **AND** the prey side state SHALL be configured for the prey-side encoder/fitness (e.g. LSTMPPO, LearnedPerformanceFitness)
 - **AND** the predator side state SHALL be configured for the predator-side encoder/fitness (e.g. MLPPPOPredatorEncoder, PredatorEpisodicKillRate)
+- **AND** `champion_history` SHALL contain exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), distinct from per-generation lineage rows
 
 #### Scenario: Composition Over Inheritance
 
 - **GIVEN** the `CoevolutionLoop` class
 - **THEN** it SHALL NOT subclass `EvolutionLoop`
-- **AND** it SHALL invoke worker evaluation via `EvolutionLoop._evaluate_in_worker` (or an equivalent reusable worker) so the existing 11-tuple worker pattern is preserved
+- **AND** it SHALL invoke worker evaluation via `EvolutionLoop._evaluate_in_worker` so the existing 11-tuple worker pattern (`(params, sim_config, encoder, fitness, episodes, seed, generation, index, parent_ids, warm_start_path_override, weight_capture_path)`) is preserved verbatim
+- **AND** the opposing-side opponent brain weights SHALL be injected at evaluation time via `sim_config` patching at the call site (the worker tuple ABI is unchanged)
+- **AND** each side's `fitness.evaluate` SHALL conform to the existing `FitnessFunction` Protocol surface `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`
 
 ### Requirement: Alternating Training Schedule
 
@@ -36,12 +39,13 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 - **AND** Y's optimizer SHALL NOT receive new trial results during X's block
 - **AND** Y's HoF SHALL NOT receive any new pushes during X's block
 
-#### Scenario: TPE Study Reset At K-Block Start
+#### Scenario: Fresh TPE Optimizer At K-Block Start
 
 - **GIVEN** a side that is about to begin a new K-block (the opposing side just finished its block)
 - **WHEN** the loop transitions to this side
-- **THEN** this side's optimizer SHALL reset its TPE study (clear prior trials and re-seed)
-- **AND** the reset SHALL happen exactly once per K-block transition
+- **THEN** this side's `OptunaTPEOptimizer` SHALL be re-constructed as a fresh instance with a new `TPESampler` seed (the underlying optimizer has no public reset method; re-construction is the equivalent operation)
+- **AND** the re-construction SHALL happen exactly once per K-block transition
+- **AND** the seed for the new instance SHALL be deterministic given the run's master seed and the K-block index, so checkpoint resume reproduces the same optimizer state
 
 #### Scenario: Block Elite Pushed To HoF
 
@@ -74,12 +78,13 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 
 #### Scenario: Held-Out Set Construction
 
-- **GIVEN** a `CoevolutionLoop` configured with a `held_out_size=8`
+- **GIVEN** a `CoevolutionLoop` configured with `held_out_size=8`
 - **WHEN** the loop initialises
-- **THEN** a held-out opponent set of size 8 SHALL be constructed for each side
-- **AND** the prey-side held-out set SHALL be drawn from external champions (e.g. M3 Lamarckian baseline elites)
-- **AND** the predator-side held-out set SHALL be drawn from heuristic-predator variants spanning a configured range of `detection_radius` and `damage_radius` values
+- **THEN** a held-out opponent set of size `held_out_size` SHALL be constructed for each side
+- **AND** the prey-side held-out set SHALL be loaded from a committed in-repo bundle at `configs/evolution/coevolution_held_out_prey/*.json` (one genome per file, ~tens of KB each); the bundle SHALL contain at least `held_out_size` genomes drawn from prior M3-Lamarckian-style runs
+- **AND** the predator-side held-out set SHALL be drawn from a heuristic-predator Cartesian grid `detection_radius × damage_radius`, with a deterministic widen-or-sub-sample strategy (`held_out_rng.choice` with a fixed seed) when the natural grid size differs from `held_out_size`
 - **AND** held-out opponents SHALL NEVER be used in training evaluations
+- **AND** held-out genome bundles SHALL be committed to the repo (NOT stored only in `artifacts/`) so a fresh checkout can run the campaign reproducibly
 
 #### Scenario: Probe Cadence
 

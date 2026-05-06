@@ -39,6 +39,8 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Rationale:** Entropy 2021 review favours alternating over simultaneous for stability. Simultaneous co-evolution makes both objectives non-stationary every generation, which TPE handles poorly (TPE's KDE assumes a stationary objective). Alternating gives each side ~K stationary gens before the opponent flips. K=10 is short enough that within-block PPO has time to train (each gen runs K=50 train + L=25 eval episodes per evaluated genome), and long enough to amortise per-block TPE-restart overhead.
 
+**Asymmetric start-side note:** with `start_side="prey"` (default), prey trains first against gen-0 predators. When predators are bootstrapped from heuristic-imitation pretrain (D7 arm A), gen-0 prey trains against bootstrapped predators rather than random-init ones — meaningful asymmetry. With cold-start predators (D7 arm B) gen-0 prey trains against random-policy predators, which is gentle bootstrap. Pilot ablation reveals which setup yields the cleaner Red Queen signal; full run's `start_side` choice flips if pilot evidence suggests predator-first works better.
+
 **Alternatives:**
 
 - Simultaneous (rejected: TPE-stationarity violation; literature warns against it).
@@ -47,17 +49,18 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Confirmed by user (Phase 3 question).**
 
-### D2. Optimiser: TPE for both sides, with per-K-block study reset
+### D2. Optimiser: TPE for both sides, with per-K-block fresh-instance construction
 
-**Decision:** TPE per side, mirroring the M3+ default. At the start of each K-block, the just-flipped side's TPE study is reset (cleared and re-seeded) so its prior doesn't carry stale opposition-conditioned posterior. The frozen side's study is unaffected.
+**Decision:** `OptunaTPEOptimizer` (canonical import path `quantumnematode.optimizers.evolutionary.OptunaTPEOptimizer`) per side, mirroring the M3+ default. At the start of each K-block, the just-flipped side's optimizer is **re-constructed as a fresh instance** with a new `TPESampler` seed so its prior doesn't carry stale opposition-conditioned posterior. (The existing `OptunaTPEOptimizer` has no public `reset` method — re-construction avoids enlarging the optimizer base-class surface mid-milestone.) The frozen side's optimizer is unaffected.
 
-**Rationale:** M2.12 RQ1 closed TPE +32pp over CMA-ES on the predator-arm hyperparameter schema; switching optimisers requires re-validating that result for *this* schema. Within a K-block under alternating training the objective is approximately stationary (the opponent is frozen), so TPE applies. Per-block reset costs ~6 gens of cold-restart exploration per seed (3 K-block swaps × 2 sides), negligible against the ~30-gen pilot budget.
+**Rationale:** M2.12 RQ1 closed TPE +32pp over CMA-ES on the predator-arm hyperparameter schema; switching optimisers requires re-validating that result for *this* schema. Within a K-block under alternating training the objective is approximately stationary (the opponent is frozen), so TPE applies. Per-block fresh construction costs ~6 gens of cold-restart exploration per seed (3 K-block swaps × 2 sides), negligible against the ~30-gen pilot budget. Re-constructing rather than reset-in-place keeps the optimizer base-class surface unchanged and means resume-from-checkpoint code only needs to serialise the *seed sequence* used per K-block, not the in-flight TPE study state.
 
 **Alternatives:**
 
 - GA both sides (rejected: re-validation cost mid-milestone; reserved as follow-up if cycling stalls).
 - Hybrid TPE prey + GA predator (rejected: asymmetric optimiser would confound the RQ1 closure if either side fails).
-- TPE without reset (rejected: prior pollution from stale opposition would degrade exploration; per-block reset is cheap insurance).
+- TPE without reset (rejected: prior pollution from stale opposition would degrade exploration; per-block fresh construction is cheap insurance).
+- Add a `restart(seed)` method to `EvolutionaryOptimizer` and reset in-place (rejected: enlarges base-class surface mid-milestone for one consumer).
 
 **Confirmed by user (Phase 3 question).**
 
@@ -95,7 +98,10 @@ Compute envelope: ~40 evaluations per generation pair × ~24 episodes/eval × ~K
 
 ### D5. Generality probe: every 10 gens against 8 frozen held-out opponents
 
-**Decision:** Every 10 generations, evaluate the current population's elite (top-1) on each side against a *held-out* opponent set — 8 opponents pre-built at run start that have NEVER been used in training. Held-out set sources: prey side draws from M3 Lamarckian baseline elites (8 random samples across 4 seeds × 2 each); predator side draws from heuristic-radius variants (mix of detection_radius ∈ {4, 6, 8, 10} × damage_radius ∈ {0, 1}).
+**Decision:** Every 10 generations, evaluate the current population's elite (top-1) on each side against a *held-out* opponent set — `held_out_size` opponents (default 8) pre-built at run start that have NEVER been used in training. Held-out set sources:
+
+- **Prey side:** drawn from a small bundle of pre-trained M3-Lamarckian-style prey elite genomes committed to the repo at `configs/evolution/coevolution_held_out_prey/*.json` (8 genomes × ~tens of KB each). Committing the bundle keeps the probe reproducible on a fresh checkout — gitignored `artifacts/` paths cannot be relied on.
+- **Predator side:** drawn from heuristic-radius variants spanning a configurable Cartesian grid `detection_radius × damage_radius`. Default grid is `detection_radius ∈ {4, 6, 8, 10} × damage_radius ∈ {0, 1}` (8 combos = `held_out_size=8`); when `held_out_size` differs, the loop SHALL widen or sub-sample the grid deterministically (e.g. via `held_out_rng.choice` with a fixed seed) so the held-out set count always matches `held_out_size`.
 
 **Rationale:** Sakana 2025 — generality probe is the discriminator between "escalation" (real progress generalising to held-out opposition) and "self-play overfitting" (training fitness climbs while held-out flat or drops). The probe is reported alongside the verdict gate but is not itself a verdict input — softened-disjunctive (cycling OR escalation in ≥2 of 4 seeds) is the gate, generality is the *interpretation guide*.
 
@@ -113,7 +119,7 @@ Compute envelope: ~40 evaluations per generation pair × ~24 episodes/eval × ~K
 - **(a) Phenotypic cycling**: Lomb-Scargle / autocorrelation peak at lag ∈ [3, 15] gens with p < 0.05, OR dominant FFT bin (excluding DC) has power > 2× median bin power. Applied to per-gen mean of the four Red Queen metrics.
 - **(b) Trait escalation**: linear regression of mean trait value over gens 5–30 (skip TPE bootstrap noise) has |slope|/SE > 2.0 (p < 0.05) AND sign aligned with directional expectation per trait.
 
-…fires in **≥2 of 4 full-run seeds**. STOP if neither fires in any seed. PIVOT if exactly 1/4. Concrete thresholds locked from pilot before full run starts.
+…fires in **≥2 of 4 full-run seeds**. STOP if neither fires in any seed. PIVOT if exactly 1/4. The thresholds above are the spec's default falsification gate; pilot results may motivate revising them, in which case **the OpenSpec change SHALL be amended (and re-validated `--strict`) BEFORE the full run launches**. The spec is the contract; we don't run the full campaign with thresholds different from what's written here. A pilot-revision PR (small, limited to spec + design rewording) is acceptable mid-flight if the change `add-coevolution-arms-race` has not yet been archived.
 
 **Rationale:** Sci Reports 2026 study cited in tracker — stable populations and persistent trait cycling can coexist; demanding monotone escalation alone rules out a known-realistic regime. Disjunctive lowers false-STOP risk on a substrate that has only been validated for trait-evolution viability via M1's predator-brain refactor. ≥2 of 4 seeds is the same stability threshold M3 / M4 used.
 
@@ -148,6 +154,8 @@ Compute envelope: ~40 evaluations per generation pair × ~24 episodes/eval × ~K
 - Total input dim: **11 floats**.
 
 Output: 5-way categorical over `PredatorAction.{STAY, UP, DOWN, LEFT, RIGHT}` (matches the Protocol-defined action space from M1).
+
+**MLP architecture:** the network mirrors the agent-side MLPPPO via the existing `DEFAULT_ACTOR_HIDDEN_DIM`, `DEFAULT_CRITIC_HIDDEN_DIM`, and `DEFAULT_NUM_HIDDEN_LAYERS` constants in `quantumnematode.brain.arch.mlpppo` (currently 64 / 64 / 2; spec stays correct even if defaults change). Pilot YAML may override these via the `extra` block on `PredatorBrainConfig` if a smaller predator network is desired post-pilot.
 
 **Rationale:** Fixed input dim is required for MLP. k_nearest=2 covers multi-prey observation cleanly without exploding input dim; predators in pilot scenarios face 5-prey populations, so the nearest 2 are sufficient observation surface for greedy chase. Normalised positions / radii / step keep the network input range bounded for stable training.
 
@@ -188,22 +196,24 @@ class HallOfFame:
 **Decision:** `CoevolutionLoop` is a new orchestrator class that *composes* two side-state objects (one per population). It does NOT subclass `EvolutionLoop`. Each side carries:
 
 - `encoder: GenomeEncoder` (MLPPPO for prey, MLPPPOPredatorEncoder for predator)
-- `fitness: FitnessFunction` (LearnedPerformanceFitness for prey, PredatorEpisodicKillRate for predator)
-- `optimizer: OptunaTPEOptimizer` (with per-K-block reset hook)
+- `fitness: FitnessFunction` (LearnedPerformanceFitness for prey, PredatorEpisodicKillRate for predator); both implement the existing `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float` Protocol surface
+- `optimizer: OptunaTPEOptimizer` from `quantumnematode.optimizers.evolutionary` (re-constructed fresh at each K-block start per D2)
 - `inheritance: InheritanceStrategy` (Lamarckian for prey, NoInheritance for predator gen-0; configurable)
 - `hof: HallOfFame`
 - `population: list[Genome]` (current generation)
-- `champion_history: list[Genome]` (per-K-block elites, written to lineage CSV)
+- `champion_history: list[Genome]` — exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), distinct from per-generation lineage rows. Used by aggregator + HoF push.
 
 `CoevolutionLoop.run(*, generation_pairs, K_per_block, generality_probe_every)` drives:
 
 1. Smoke gen 0: evaluate both sides against random-init opponents to populate gen-0 lineage.
 2. For each K-block in alternating order (prey first, then predator):
-   - Reset training side's optimizer (fresh TPE study per D2).
+   - Re-construct training side's `OptunaTPEOptimizer` with a fresh `TPESampler` seed (per D2).
    - For K generations: ask training-side optimizer for trial params → evaluate against frozen-side population (HoF-mixed per D3) → tell.
-   - Push training-side block elite to its HoF.
+   - Append training-side block elite to `champion_history` AND push it to its HoF (single source of truth: the K-block's elite genome).
 3. Every `generality_probe_every` generations, evaluate both elites against the held-out set and write a probe row.
 4. Checkpoint to JSON every K-block (resume support).
+
+**Worker reuse:** `EvolutionLoop._evaluate_in_worker` ([loop.py:104-162](packages/quantum-nematode/quantumnematode/evolution/loop.py#L104-L162)) takes an 11-tuple `(params, sim_config, encoder, fitness, episodes, seed, generation, index, parent_ids, warm_start_path_override, weight_capture_path)`. The tuple ABI does NOT change for co-evolution — instead, the **opponent brain weights are injected via `sim_config` patching** before the worker is invoked, following the M2 idiom for sim-config patching at evaluation time. The fitness function then drives the multi-agent runner internally with both brains decoded and reads `MultiAgentEpisodeResult.per_predator_kills` (or per-agent metrics for prey).
 
 **Rationale:** Inheritance from `EvolutionLoop` would force its single-population checkpoint shape and its single-side-evaluator design; composition keeps the existing `_evaluate_in_worker` 11-tuple worker reusable while adding the alternating-schedule controller as a thin layer. Each side's lineage CSV stays in the same shape as M3's lineage.csv, so existing analysis scripts work.
 

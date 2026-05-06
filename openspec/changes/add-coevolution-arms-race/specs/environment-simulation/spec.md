@@ -4,6 +4,8 @@
 
 The system SHALL register `MLPPPOPredatorBrain` as a learnable implementation of the existing `PredatorBrain` Protocol (see "Predator Brain Abstraction") and dispatch it via the `PredatorBrainConfig.kind` Literal extension. When `kind: "mlpppo_predator"` is specified in YAML, the runtime SHALL construct a `MLPPPOPredatorBrain` with predator-specific I/O wrapping; when `kind: "heuristic"` (or `brain_config` omitted), the runtime SHALL continue to construct a `HeuristicPredatorBrain` byte-for-byte equivalent to the legacy heuristic behaviour.
 
+**Import boundary (no env→evolution circular dep):** `_build_predator_brain` in `quantumnematode/env/env.py` SHALL import `MLPPPOPredatorBrain` directly from `quantumnematode/env/mlpppo_predator_brain.py`. The dispatcher SHALL NOT consult the `PREDATOR_ENCODER_REGISTRY` (which lives in `quantumnematode/evolution/predator_encoders.py` and is reserved for `CoevolutionLoop` and other evolution-time consumers). This separation prevents an `env` → `evolution` import dependency.
+
 #### Scenario: PredatorBrainConfig kind extension
 
 - **GIVEN** the runtime `PredatorBrainConfig` dataclass and the YAML `PredatorBrainConfigSchema` Pydantic model
@@ -73,8 +75,9 @@ The system SHALL provide a behavioural-cloning pretrain helper that trains a `ML
 
 - **GIVEN** a fresh `MLPPPOPredatorBrain` with random-init weights and a `HeuristicPredatorBrain` teacher
 - **WHEN** the pretrain helper runs for 50 episodes against a representative env config
-- **THEN** the cross-entropy imitation loss SHALL decrease monotonically in a windowed sense (final-window mean < initial-window mean)
+- **THEN** the final-window mean cross-entropy imitation loss (last 10 episodes) SHALL be strictly less than the initial-window mean (first 10 episodes)
 - **AND** the trained brain SHALL match the teacher's action on more than 70% of held-out test states
+- **AND** monotonicity is NOT required (SGD on noisy episode batches naturally non-monotonic; the windowed-mean comparison is the falsifiable claim)
 
 #### Scenario: Pretrained Weights Round-Trip Through Encoder
 
