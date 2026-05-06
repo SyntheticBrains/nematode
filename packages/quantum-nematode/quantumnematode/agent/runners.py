@@ -396,8 +396,16 @@ class StandardEpisodeRunner(EpisodeRunner):
         reward_config: RewardConfig,
         params: Any,  # noqa: ANN401
         reward: float,
+        step_index: int = 0,
     ) -> tuple[EpisodeResult | None, float]:
         """Handle predator checks before and after predator movement.
+
+        Parameters
+        ----------
+        step_index : int
+            Episode-level step counter at the start of this phase. Forwarded
+            into `env.update_predators` -> `PredatorBrainParams.step_index`
+            so time-aware predator brains receive the live counter.
 
         Returns
         -------
@@ -419,7 +427,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             return result, reward
 
         # Move predators after agent moves
-        agent.env.update_predators()
+        agent.env.update_predators(step_index=step_index)
 
         # Check danger status at end of step (after both agent and predators moved)
         is_in_danger_at_step_end = agent.env.is_agent_in_danger()
@@ -653,7 +661,7 @@ class StandardEpisodeRunner(EpisodeRunner):
         stuck_position_count = 0
         previous_position = None
 
-        for _ in range(max_steps):
+        for step_index in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, _gradient_direction = agent.env.get_state(agent.path[-1])
 
@@ -708,7 +716,13 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return result
 
             # Predator checks (before and after predator movement)
-            result, reward = self._handle_predator_phase(agent, reward_config, params, reward)
+            result, reward = self._handle_predator_phase(
+                agent,
+                reward_config,
+                params,
+                reward,
+                step_index=step_index,
+            )
             if result is not None:
                 return result
 

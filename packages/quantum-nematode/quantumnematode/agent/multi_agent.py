@@ -645,7 +645,7 @@ class MultiAgentSimulation:
             self._resolve_food_step(alive, current_step)
 
             # ── 4. PREDATORS ─────────────────────────────────────
-            self.env.update_predators()
+            self.env.update_predators(step_index=current_step)
 
             # Per-predator prey-proximity counter: increment by 1 per
             # step iff at least one alive agent is within this predator's
@@ -1014,7 +1014,8 @@ class MultiAgentSimulation:
         this is called, but covers edge cases like residual-HP ticks
         where the predator has since moved out of range), credit the
         global-closest predator with the same tie-break and emit a
-        debug-level log warning.
+        debug-level log message via `logger.debug(...)` so the fallback
+        case is visible in forensic logs.
         """
         if not self.env.predators:
             return  # No predators configured; nothing to attribute.

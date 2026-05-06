@@ -148,7 +148,7 @@ The system SHALL expose per-agent, aggregate, collective-behavior, and per-preda
 When `apply_predator_damage_for(aid)` brings an agent's HP to 0, the simulation (NOT the env) SHALL credit the kill to exactly one predator using a two-phase rule:
 
 1. **Phase 1 — covering predators (primary)**: among predators whose Manhattan distance to the agent is `≤ predator.damage_radius`, select the closest by Manhattan distance. Tie-break on lexicographic `predator_id` (so `predator_0` beats `predator_1`).
-2. **Phase 2 — defensive fallback**: if no covering predator is found (residual-HP edge case where the predator that originally caused the damage has since moved out of range), select the predator with smallest Manhattan distance among ALL predators (no `damage_radius` constraint), with the same lex tie-break. The simulation SHALL emit a debug-level log warning so the case is visible in forensic logs.
+2. **Phase 2 — defensive fallback**: if no covering predator is found (residual-HP edge case where the predator that originally caused the damage has since moved out of range), select the predator with smallest Manhattan distance among ALL predators (no `damage_radius` constraint), with the same lex tie-break. The simulation SHALL emit a debug-level log message (i.e. `logger.debug(...)`) so the fallback case is visible in forensic logs without raising the level on routine episodes.
 
 The env-side `apply_predator_damage_for` applies a fixed damage tick without identifying the responsible predator; per-predator attribution is therefore performed by `MultiAgentSimulation._attribute_kill_to_predator(agent_position)` after each damage call by iterating the predator list and applying the rule above.
 

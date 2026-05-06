@@ -2062,10 +2062,20 @@ class DynamicForagingEnvironment(BaseEnvironment):
         distances = [abs(pos[0] - food[0]) + abs(pos[1] - food[1]) for food in self.foods]
         return min(distances)
 
-    def update_predators(self) -> None:
+    def update_predators(self, step_index: int = 0) -> None:
         """Update all predator positions.
 
         In multi-agent mode, pursuit predators chase the nearest alive agent.
+
+        Parameters
+        ----------
+        step_index : int
+            Episode-level step counter at the start of this update. Forwarded
+            into `Predator.update_position` -> `PredatorBrainParams.step_index`
+            so time-aware brains (e.g. learning-rate schedules, decay
+            curricula) can read the live step counter instead of always 0.
+            Defaults to 0 for backward compatibility with callers that
+            don't track a step counter.
         """
         if not self.predator.enabled:
             return
@@ -2078,6 +2088,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 self.grid_size,
                 self.rng,
                 agent_positions=alive_positions,
+                step_index=step_index,
             )
 
     def is_agent_in_danger(self) -> bool:
@@ -3670,8 +3681,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             # unchanged so future stateful brains (e.g. learnable RL
             # predators) keep their per-instance state across env-copy
             # boundaries (env-snapshot, evolution-loop replay).
-            new_env.predators = [
-                new_env._make_predator(
+            new_env.predators = []
+            for p in self.predators:
+                cloned = new_env._make_predator(
                     predator_id=p.predator_id,
                     position=p.position,
                     movement_accumulator=p.movement_accumulator,
@@ -3681,8 +3693,15 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     detection_radius=p.detection_radius,
                     damage_radius=p.damage_radius,
                 )
-                for p in self.predators
-            ]
+                # Preserve per-predator runtime metrics so mid-episode
+                # snapshots survive env.copy() with their counters intact.
+                # (`_make_predator` constructs with these zeroed; the
+                # factory-arg surface stays focused on configuration
+                # fields and we overwrite the runtime counters here.)
+                cloned.kills = p.kills
+                cloned.prey_proximity_steps = p.prey_proximity_steps
+                cloned.distance_traveled = p.distance_traveled
+                new_env.predators.append(cloned)
         return new_env
 
 

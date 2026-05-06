@@ -21,9 +21,19 @@
 set -euo pipefail
 
 LABEL="${1:?missing label arg (pre|post)}"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUT_CSV="${REPO_ROOT}/tmp/m1_regression_baseline/baseline_${LABEL}.csv"
-SUMMARY_LOG="${REPO_ROOT}/tmp/m1_regression_baseline/run_${LABEL}.log"
+# Use git to resolve the repo root regardless of where this script lives.
+# (After archival the script moved from tmp/m1_regression_baseline/ to
+# artifacts/logbooks/016-predator-brain-refactor/, so a relative ../.. walk
+# is fragile.) Falls back to a path-relative resolution if not in a git tree.
+if REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+else
+  REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+fi
+OUT_DIR="${REPO_ROOT}/tmp/m1_regression_baseline"
+mkdir -p "${OUT_DIR}"
+OUT_CSV="${OUT_DIR}/baseline_${LABEL}.csv"
+SUMMARY_LOG="${OUT_DIR}/run_${LABEL}.log"
 
 # Multi-agent arm: (arm_name, config_path, runs_per_seed)
 MULTI_CONFIGS=(
@@ -66,7 +76,7 @@ run_one() {
   local label="${arm}_${cfg_name}_seed${seed}"
   echo "[$(date -u +%FT%TZ)] start ${label}" | tee -a "${SUMMARY_LOG}"
 
-  local sim_log="${REPO_ROOT}/tmp/m1_regression_baseline/sim_${LABEL}_${label}.log"
+  local sim_log="${OUT_DIR}/sim_${LABEL}_${label}.log"
   uv run scripts/run_simulation.py \
     --config "${cfg}" \
     --seed "${seed}" \
@@ -108,8 +118,10 @@ run_one() {
   #   as a saturation tell.
   # Single-agent (simulation_results.csv): success (0/1), foods_collected,
   #   steps, predator_encounters, successful_evasions per run.
-  stats="$(uv run python -c "
-import csv, statistics
+  # If the metric extraction fails (parse error, empty CSV), abort the
+  # whole baseline rather than silently writing zeros for this cell.
+  if ! stats="$(uv run python -c "
+import csv, statistics, sys
 import yaml
 from pathlib import Path
 arm = '${arm}'
@@ -129,9 +141,9 @@ with open(csv_path) as f:
                 # multi-agent summary: mean_success is per-run already
                 succ.append(float(row.get('mean_success', 0) or 0))
                 food.append(float(row.get('total_food', 0) or 0))
-                # No per-run aggregate steps in summary; use 0 as placeholder
-                # to signal 'not measured for this arm'. Logbook reads from
-                # per-agent CSV if needed.
+                # No per-run aggregate steps column in this CSV; emit 0 so
+                # the field stays in the per-cell schema. Logbook calls out
+                # this is a known data-availability gap, not a real metric.
                 steps.append(0.0)
                 eng.append(float(row.get('proximity_events', 0) or 0))
             else:
@@ -143,14 +155,31 @@ with open(csv_path) as f:
                 pe = float(row.get('predator_encounters', 0) or 0)
                 ev = float(row.get('successful_evasions', 0) or 0)
                 eng.append(pe + ev)
-        except (KeyError, ValueError):
-            pass
+        except (KeyError, ValueError) as e:
+            print(f'parse error in row {row}: {e}', file=sys.stderr)
+            sys.exit(1)
+
+# Fail loudly on missing or empty metric series — silent zero-rows
+# defeat the point of the regression baseline.
+if not succ or not food or not eng:
+    print(
+        f'no rows parsed from {csv_path} (succ={len(succ)} food={len(food)} eng={len(eng)})',
+        file=sys.stderr,
+    )
+    sys.exit(1)
+# Single-agent arm should also have non-empty steps; multi-agent intentionally fills 0.
+if arm != 'multi' and not steps:
+    print(f'no steps rows parsed from {csv_path}', file=sys.stderr)
+    sys.exit(1)
 
 def s(xs):
     return statistics.fmean(xs) if xs else 0.0
 
 print(f'{s(succ):.6f},{s(food):.6f},{s(steps):.6f},{s(eng):.6f},{len(succ)}', end='')
-")"
+")"; then
+    echo "[$(date -u +%FT%TZ)] FAILED metric extraction for ${label}" | tee -a "${SUMMARY_LOG}"
+    return 1
+  fi
   echo "${arm},${cfg_name},${seed},${stats},${session_id}" >>"${OUT_CSV}"
   echo "[$(date -u +%FT%TZ)] done ${label} -> ${stats}" | tee -a "${SUMMARY_LOG}"
 }

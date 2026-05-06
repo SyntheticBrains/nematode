@@ -317,25 +317,43 @@ class TestPerPredatorMetrics:
         a0 = _make_agent(env, "agent_0", position=(5, 5))
         sim = MultiAgentSimulation(env=env, agents=[a0])
         result = sim.run_episode(RewardConfig(), max_steps=30)
-        # Predator with speed=0.5 over 30 steps could move at most 15 cells
-        # (one cardinal step every 2 sim steps); distance_traveled should
-        # be in [0, 15] for the single PURSUIT predator.
+        # _make_env spawns predators with speed=0.5, so over 30 sim steps
+        # a single predator advances its accumulator 30 x 0.5 = 15 times,
+        # firing at most 15 cardinal steps. distance_traveled is the count
+        # of post-clamp position changes, bounded above by the firing count.
+        # Tightening the upper bound to 15 (vs a loose <= 30) catches
+        # double-counting bugs where a single accumulator-step might
+        # increment distance more than once.
+        max_distance = 15
         n_predators = len(env.predators)
         assert n_predators >= 1
         for pid, dist in result.per_predator_distance_traveled.items():
-            assert 0 <= dist <= 30, f"{pid}: distance {dist} out of plausible range"
+            assert 0 <= dist <= max_distance, (
+                f"{pid}: distance {dist} exceeds physical max {max_distance} (speed=0.5 x 30 steps)"
+            )
 
     def test_per_predator_prey_proximity_steps_increments_when_in_range(self) -> None:
-        """Predator near agent → prey_proximity_steps > 0; far → can be 0."""
+        """With predator pinned next to the agent, proximity counter > 0."""
         env = _make_env(grid_size=20, seed=42, predators=True)
         a0 = _make_agent(env, "agent_0", position=(5, 5))
+        # Pin every predator within detection_radius (5) of the agent at (5, 5)
+        # so that the proximity counter is guaranteed to fire on every step.
+        # Without this pinning, _make_env's default Poisson-disk spawn could
+        # place predators outside detection range, leaving the assertion
+        # trivially satisfied at total == 0.
+        for pred in env.predators:
+            pred.position = (6, 5)  # Manhattan distance 1 from agent
         sim = MultiAgentSimulation(env=env, agents=[a0])
-        result = sim.run_episode(RewardConfig(), max_steps=20)
-        # At least one step should have an agent in detection range of
-        # the predator, given typical grid positions (predator detection_
-        # radius=5; small grid = high probability of in-range).
+        max_steps = 20
+        result = sim.run_episode(RewardConfig(), max_steps=max_steps)
         total_proximity = sum(result.per_predator_prey_proximity_steps.values())
-        assert total_proximity >= 0  # Sanity: no negative counts
+        # Each predator should register proximity on every step where the
+        # agent is alive. The agent may die mid-episode (default predator
+        # damage), so the lower bound is "at least one step in range".
+        assert total_proximity >= 1, (
+            f"expected ≥1 proximity-step, got {total_proximity} "
+            f"(predator detection_radius=5; agent pinned at (5,5); predators at (6,5))"
+        )
 
     def test_per_predator_metric_keys_match_predator_ids(self) -> None:
         """All three per-predator dicts use the synthesised predator_id keys."""

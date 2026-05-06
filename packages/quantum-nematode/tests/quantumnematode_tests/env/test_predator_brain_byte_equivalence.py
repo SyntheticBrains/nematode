@@ -277,8 +277,19 @@ class TestUpdatePredatorsOrderingInvariant:
     which returns the first element with the minimum value.
     """
 
-    def test_agent_positions_match_alive_values_order(self) -> None:
-        """Verify agent positions match alive values order."""
+    def test_predator_targets_lex_first_equidistant_agent(self) -> None:
+        """With two equidistant agents, the predator chases the one inserted first.
+
+        Verifies the ordering invariant indirectly but meaningfully:
+        the env's `update_predators` builds `agent_positions` from
+        `self.agents.values()` (insertion-stable since Python 3.7) and
+        passes it to `Predator.update_position`, which uses Python's
+        stable `min(... key=Manhattan)` to resolve `chase_target`. With
+        two agents equidistant from the predator, the lex-first inserted
+        agent wins — proving the env passed the positions in insertion
+        order, not (e.g.) a sorted or reversed order which would change
+        which agent gets targeted on a tie.
+        """
         from quantumnematode.brain.actions import Action
         from quantumnematode.env import (
             DynamicForagingEnvironment,
@@ -305,23 +316,36 @@ class TestUpdatePredatorsOrderingInvariant:
                 count=1,
                 predator_type=PredatorType.PURSUIT,
                 speed=1.0,
-                detection_radius=8,
+                detection_radius=20,  # large enough to cover both
                 damage_radius=0,
             ),
             seed=42,
         )
 
-        # The env builds alive_positions inline at env.py:1974 from
-        # `self.agents.values()`. Verify update_predators passes the same
-        # order by extending the env with a known-multi-agent state.
-        # Simulate by calling update_predators and reading the predator's
-        # internal chase_target derivation indirectly via behavioural test.
-        # The simplest direct test: compare what the env builds vs what
-        # the dict iter order is.
-        alive_positions_from_env = [
-            (int(a.position[0]), int(a.position[1])) for a in env.agents.values() if a.alive
-        ]
-        expected_dict_order = [
-            (int(a.position[0]), int(a.position[1])) for a in env.agents.values() if a.alive
-        ]
-        assert alive_positions_from_env == expected_dict_order
+        # The env auto-creates a default agent at start_pos (10, 10) which
+        # would coincide with the predator and get auto-targeted at distance
+        # 0; mark it not-alive so it's excluded from `agents.values() if alive`.
+        from quantumnematode.env import DEFAULT_AGENT_ID
+
+        env.agents[DEFAULT_AGENT_ID].alive = False
+
+        # Add two agents at positions equidistant (Manhattan) from the
+        # predator. Ordering: first_agent inserted before second_agent,
+        # so insertion-order dict iteration yields first_agent first.
+        # If the env ever sorts, reverses, or otherwise reorders the
+        # agent_positions tuple, the predator will chase the wrong agent
+        # and this test will fail.
+        env.add_agent("first_agent", position=(2, 10))
+        env.add_agent("second_agent", position=(18, 10))
+        # Pin the predator at (10, 10): Manhattan distance 8 to each.
+        env.predators[0].position = (10, 10)
+
+        # Step the predator once. Greedy chase of the lex-first inserted
+        # agent (at (2, 10)) means the predator should move LEFT (x-1).
+        env.update_predators(step_index=0)
+        assert env.predators[0].position == (9, 10), (
+            "predator chased wrong agent: insertion order is "
+            "[first_agent (2,10), second_agent (18,10)], so equidistant "
+            "min() should pick first_agent and the predator should move "
+            f"LEFT to (9,10), but went to {env.predators[0].position}"
+        )
