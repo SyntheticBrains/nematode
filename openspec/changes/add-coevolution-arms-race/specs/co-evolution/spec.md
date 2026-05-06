@@ -1,0 +1,149 @@
+## ADDED Requirements
+
+### Requirement: CoevolutionLoop Orchestrator
+
+The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population) and SHALL reuse the existing `EvolutionLoop._evaluate_in_worker` multiprocessing worker pattern per side.
+
+#### Scenario: Side State Surface
+
+- **GIVEN** a `CoevolutionLoop` instance
+- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: OptunaTPEOptimizer`, `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
+- **AND** the prey side state SHALL be configured for the prey-side encoder/fitness (e.g. LSTMPPO, LearnedPerformanceFitness)
+- **AND** the predator side state SHALL be configured for the predator-side encoder/fitness (e.g. MLPPPOPredatorEncoder, PredatorEpisodicKillRate)
+
+#### Scenario: Composition Over Inheritance
+
+- **GIVEN** the `CoevolutionLoop` class
+- **THEN** it SHALL NOT subclass `EvolutionLoop`
+- **AND** it SHALL invoke worker evaluation via `EvolutionLoop._evaluate_in_worker` (or an equivalent reusable worker) so the existing 11-tuple worker pattern is preserved
+
+### Requirement: Alternating Training Schedule
+
+The system SHALL drive the co-evolution loop under an alternating schedule with a configurable block size K (default K=10 generations per side). Within a K-block, only one side trains; the opposing side is frozen.
+
+#### Scenario: K-Block Boundary
+
+- **GIVEN** a `CoevolutionLoop` configured with `K_per_block=10` and `generation_pairs=3`
+- **WHEN** `run` executes
+- **THEN** the loop SHALL execute 3 prey K-blocks of 10 generations each interleaved with 3 predator K-blocks of 10 generations each (total 60 per-side generations, 6 K-blocks)
+- **AND** the order SHALL be: prey K-block 1 → predator K-block 1 → prey K-block 2 → predator K-block 2 → ... (configurable starting side via a `start_side` parameter; default = prey)
+
+#### Scenario: Opposing Side Frozen During Off-Block
+
+- **GIVEN** an active K-block training side X
+- **WHEN** the loop evaluates a candidate genome from side X
+- **THEN** the opposing side Y's population SHALL NOT change for the duration of the K-block
+- **AND** Y's optimizer SHALL NOT receive new trial results during X's block
+- **AND** Y's HoF SHALL NOT receive any new pushes during X's block
+
+#### Scenario: TPE Study Reset At K-Block Start
+
+- **GIVEN** a side that is about to begin a new K-block (the opposing side just finished its block)
+- **WHEN** the loop transitions to this side
+- **THEN** this side's optimizer SHALL reset its TPE study (clear prior trials and re-seed)
+- **AND** the reset SHALL happen exactly once per K-block transition
+
+#### Scenario: Block Elite Pushed To HoF
+
+- **GIVEN** a side that has just completed its K-block (K generations evaluated)
+- **WHEN** the K-block ends
+- **THEN** the side's top-fitness genome from the block SHALL be pushed to its HoF
+- **AND** the HoF push SHALL respect the configured eviction policy (default quality-based)
+
+### Requirement: Hall-of-Fame Opposition Sampling
+
+When evaluating a candidate's fitness, the system SHALL draw the opposing side's evaluation pool from a 70% / 30% mixture of the current opposing population and the opposing-side hall-of-fame.
+
+#### Scenario: 70/30 Mixture During Evaluation
+
+- **GIVEN** an active K-block on side X with opposing side Y having a non-empty HoF
+- **WHEN** a candidate genome on side X is evaluated against Y
+- **THEN** approximately 70% of the evaluation episodes SHALL use opponents drawn from Y's current population
+- **AND** approximately 30% SHALL use opponents drawn from Y's HoF
+- **AND** sampling SHALL be deterministic given a seeded RNG
+
+#### Scenario: Empty HoF Fallback
+
+- **GIVEN** the opposing side Y has an empty HoF (e.g. at the start of the run before any K-block has completed)
+- **WHEN** a candidate on side X is evaluated against Y
+- **THEN** all evaluation episodes SHALL use opponents drawn from Y's current population
+
+### Requirement: Generality Probe
+
+The system SHALL evaluate the elite genome of each side against a held-out frozen opponent set every N generations (default N=10) to detect self-play overfitting versus real generalising progress.
+
+#### Scenario: Held-Out Set Construction
+
+- **GIVEN** a `CoevolutionLoop` configured with a `held_out_size=8`
+- **WHEN** the loop initialises
+- **THEN** a held-out opponent set of size 8 SHALL be constructed for each side
+- **AND** the prey-side held-out set SHALL be drawn from external champions (e.g. M3 Lamarckian baseline elites)
+- **AND** the predator-side held-out set SHALL be drawn from heuristic-predator variants spanning a configured range of `detection_radius` and `damage_radius` values
+- **AND** held-out opponents SHALL NEVER be used in training evaluations
+
+#### Scenario: Probe Cadence
+
+- **GIVEN** `generality_probe_every=10`
+- **WHEN** generation index G is reached such that `G % 10 == 0`
+- **THEN** the loop SHALL evaluate each side's elite against the full held-out opponent set
+- **AND** results SHALL be written to a `generality_probe.csv` file with columns `(generation, side, opponent_index, fitness)`
+
+#### Scenario: Probe Does Not Mutate Population State
+
+- **GIVEN** a generality probe in progress
+- **WHEN** probe evaluations execute
+- **THEN** they SHALL NOT alter either side's `population`, `optimizer` state, or `hof`
+- **AND** they SHALL NOT advance the generation counter
+
+### Requirement: Co-Evolution Decision Gate
+
+The system SHALL evaluate full-run results against a softened-disjunctive decision gate: the M5 verdict GO requires either phenotypic cycling OR trait escalation to fire in at least 2 of 4 full-run seeds.
+
+#### Scenario: Cycling Criterion
+
+- **GIVEN** a per-generation Red Queen metric series for a single seed
+- **WHEN** the verdict aggregator evaluates the cycling criterion
+- **THEN** the criterion SHALL fire if either:
+  - The Lomb-Scargle / autocorrelation peak for the series occurs at lag ∈ [3, 15] generations with significance p < 0.05, OR
+  - The dominant FFT bin (excluding DC) has power greater than 2× the median bin power
+
+#### Scenario: Escalation Criterion
+
+- **GIVEN** a per-generation trait-mean series for a single seed
+- **WHEN** the verdict aggregator evaluates the escalation criterion
+- **THEN** the criterion SHALL fire if the linear regression of the series over generations 5..30 (skipping bootstrap noise) yields `|slope| / SE > 2.0` (significant non-zero slope, p < 0.05)
+- **AND** the slope sign SHALL match the directional expectation declared for the trait in the aggregator's trait-spec table
+
+#### Scenario: Verdict Aggregation Across Seeds
+
+- **GIVEN** four full-run seeds with computed cycling/escalation results
+- **WHEN** the aggregator emits the verdict
+- **THEN** the verdict SHALL be `GO` iff (cycling fires OR escalation fires) in at least 2 of 4 seeds
+- **AND** the verdict SHALL be `STOP` iff neither criterion fires in any seed
+- **AND** the verdict SHALL be `PIVOT` iff exactly 1 of 4 seeds has a firing criterion
+
+#### Scenario: Generality Probe Is Reported But Not A Verdict Input
+
+- **GIVEN** a full-run aggregation
+- **WHEN** the aggregator emits `summary.md`
+- **THEN** the generality-probe trajectory SHALL be reported alongside the verdict
+- **AND** the probe results SHALL NOT alter the GO/STOP/PIVOT decision
+
+### Requirement: Pilot-First Sequencing
+
+The system SHALL gate the full M5 campaign on a pilot run; pilot thresholds SHALL be locked into the OpenSpec change before the full run starts.
+
+#### Scenario: Pilot Configuration
+
+- **GIVEN** the pilot scenario (`coevolution_pilot.yml`)
+- **THEN** it SHALL configure 30 generations × 2 seeds × prey-pop 24 × predator-pop 16
+- **AND** seed 42 SHALL run the heuristic-imitation pretrain bootstrap arm
+- **AND** seed 43 SHALL run the cold-start bootstrap arm
+
+#### Scenario: Pilot Decision Gate
+
+- **GIVEN** completed pilot results
+- **WHEN** the pilot aggregator evaluates the pilot signal
+- **THEN** if cycling OR escalation fires in at least 1 of the 2 pilot seeds, the pilot SHALL pass and the full run SHALL proceed
+- **AND** if the signal is ambiguous (zero seeds firing), one additional seed SHALL run before committing to the full run
+- **AND** if no signal is detected after the additional seed, the M5 verdict SHALL be STOP without running the full campaign
