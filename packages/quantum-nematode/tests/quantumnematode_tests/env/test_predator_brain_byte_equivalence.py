@@ -331,23 +331,29 @@ class TestUpdatePredatorsOrderingInvariant:
 
         env.agents[DEFAULT_AGENT_ID].alive = False
 
-        # Add two agents at positions equidistant (Manhattan) from the
-        # predator. Ordering: first_agent inserted before second_agent,
-        # so insertion-order dict iteration yields first_agent first.
-        # If the env ever sorts, reverses, or otherwise reorders the
-        # agent_positions tuple, the predator will chase the wrong agent
-        # and this test will fail.
-        env.add_agent("first_agent", position=(2, 10))
-        env.add_agent("second_agent", position=(18, 10))
+        # Add two agents whose IDs are non-lexical relative to spatial
+        # order: insert "b_agent" (spatially RIGHT, x=18) FIRST, then
+        # "a_agent" (spatially LEFT, x=2) SECOND. This decouples ID lex
+        # order from insertion order so the test catches both:
+        # (a) a hypothetical "sort by agent_id" implementation (which
+        #     would target a_agent on the left and move LEFT), AND
+        # (b) a hypothetical "reverse insertion order" implementation
+        #     (which would target a_agent on the left).
+        # Insertion order means b_agent comes first; equidistant min()
+        # picks b_agent → predator moves RIGHT.
+        env.add_agent("b_agent", position=(18, 10))
+        env.add_agent("a_agent", position=(2, 10))
         # Pin the predator at (10, 10): Manhattan distance 8 to each.
         env.predators[0].position = (10, 10)
 
-        # Step the predator once. Greedy chase of the lex-first inserted
-        # agent (at (2, 10)) means the predator should move LEFT (x-1).
+        # Step the predator once. Greedy chase of the insertion-first
+        # agent (b_agent at (18, 10)) means the predator should move
+        # RIGHT (x+1).
         env.update_predators(step_index=0)
-        assert env.predators[0].position == (9, 10), (
+        assert env.predators[0].position == (11, 10), (
             "predator chased wrong agent: insertion order is "
-            "[first_agent (2,10), second_agent (18,10)], so equidistant "
-            "min() should pick first_agent and the predator should move "
-            f"LEFT to (9,10), but went to {env.predators[0].position}"
+            "[b_agent (18,10), a_agent (2,10)] (IDs deliberately non-lex "
+            "relative to spatial order), so equidistant min() should pick "
+            "b_agent and the predator should move RIGHT to (11,10), but "
+            f"went to {env.predators[0].position}"
         )

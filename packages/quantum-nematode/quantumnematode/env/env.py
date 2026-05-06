@@ -3668,8 +3668,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
             social_feeding=self.social_feeding,
         )
         new_env.foods = self.foods.copy()
-        # Copy RNG state for reproducibility
+        # Copy RNG state for reproducibility. We construct a fresh
+        # Generator from the same seed and then transfer the source
+        # generator's bit_generator state, so the clone resumes from
+        # the source's *current* point in the stream rather than
+        # restarting from the seed-zero state. This matters for mid-
+        # episode snapshot/replay where the source RNG has already
+        # advanced (food spawning, agent decisions, predator random
+        # draws); without the state transfer, downstream consumers on
+        # the cloned env would silently see a different draw sequence.
         new_env.rng = get_rng(self.seed)
+        new_env.rng.bit_generator.state = self.rng.bit_generator.state
         # Copy all agents (not just default)
         new_env.agents = {}
         for aid, state in self.agents.items():

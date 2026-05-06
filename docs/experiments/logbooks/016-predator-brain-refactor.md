@@ -81,7 +81,7 @@ Total: 20 cells. Pre-refactor measurement on commit `73684213` (pre-M1.1); post-
 - `mean_steps`: episode length (single-agent only; the multi-agent CSV has no per-run steps column)
 - `mean_predator_engagement`: arm-specific composite (multi-agent: `proximity_events / num_episodes`; single-agent: `(predator_encounters + successful_evasions) / num_episodes`)
 
-Both runs use `--theme headless` (no rendering). Wall-time ~30 min per arm (~60 min total per pre/post round, ~2 hours for the full pre+post regression budget).
+Both runs use `--theme headless` (no rendering). Measured wall-time: pre-refactor 20-cell run ~30 min; post-refactor 20-cell run ~40 min (small per-cell overhead from the extra brain-dispatch + per-predator counter increments). Full pre+post regression budget therefore ~70 min total — see the wall-time table in the Results section for per-phase breakdown.
 
 ## Results
 
