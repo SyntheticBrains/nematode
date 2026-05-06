@@ -615,7 +615,16 @@ class Predator:
 
         # Pre-compute the agent_positions tuple ONCE so brain receives the
         # same value across accumulator-steps (frozen branch invariant).
-        frozen_agent_positions = tuple(agent_positions) if agent_positions is not None else ()
+        # When the legacy single-agent path is used (agent_positions=None +
+        # agent_pos provided), wrap agent_pos as a 1-tuple so the brain's
+        # agent_positions field stays consistent with chase_target — both
+        # populated, neither empty.
+        if agent_positions is not None:
+            frozen_agent_positions: tuple[tuple[int, int], ...] = tuple(agent_positions)
+        elif agent_pos is not None:
+            frozen_agent_positions = (agent_pos,)
+        else:
+            frozen_agent_positions = ()
 
         # Run the accumulator loop, calling brain.run_brain once per step.
         self._apply_action_loop(
@@ -686,6 +695,15 @@ class Predator:
         differs from the pre-action position (so STAY actions and wall-blocked
         moves contribute 0).
         """
+        # Fail fast on buggy/custom brains that return non-PredatorAction
+        # values (e.g. raw strings, None) — without this guard the if/elif
+        # chain silently treats unknown values as STAY, masking the bug.
+        if not isinstance(action, PredatorAction):
+            msg = (
+                f"PredatorBrain.run_brain returned {action!r} of type "
+                f"{type(action).__name__}; expected a PredatorAction enum value."
+            )
+            raise TypeError(msg)
         old_position = self.position
         x, y = self.position
         if action == PredatorAction.UP:

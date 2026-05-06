@@ -186,6 +186,12 @@ class StandardEpisodeRunner(EpisodeRunner):
             agent.brain.update_memory(reward)
 
         agent.brain.post_process_episode(episode_success=success)
+        # Predator lifecycle hook — once per episode at termination.
+        # Mirrors MultiAgentSimulation.run_episode. Predators don't have
+        # an agent-style success notion (their fitness signal is the
+        # per-predator counters); pass None.
+        for predator in agent.env.predators:
+            predator.brain.post_process_episode(episode_success=None)
         agent._metrics_tracker.track_episode_completion(
             success=success,
             steps=agent._episode_tracker.steps,
@@ -646,6 +652,12 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         # Prepare brain for new episode (e.g., save parameters for potential rollback)
         agent.brain.prepare_episode()
+        # Lifecycle hook for stateful predator brains (no-op for the
+        # heuristic; learnable predator brains reset hidden state here).
+        # Mirrors MultiAgentSimulation.run_episode which fires the same
+        # hook so single-agent and multi-agent paths stay symmetric.
+        for predator in agent.env.predators:
+            predator.brain.prepare_episode()
 
         # Reset STAM buffer for new episode (no cross-episode memory)
         if agent._stam is not None:

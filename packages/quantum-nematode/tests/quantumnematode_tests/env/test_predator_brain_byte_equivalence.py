@@ -18,6 +18,8 @@ branch. Test parametrisation includes speed in {0.5, 1.0, 2.0} to
 exercise fractional, single-step, and multi-step regimes.
 """
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 from quantumnematode.env import PredatorType
@@ -34,7 +36,7 @@ def _run_pair_for_steps(  # noqa: PLR0913 — test harness; threads many fixture
     steps: int,
     rng_legacy: np.random.Generator,
     rng_new: np.random.Generator,
-    agent_positions_factory,
+    agent_positions_factory: Callable[[int], list[tuple[int, int]]],
 ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
     """Run both predators for N steps with identical inputs.
 

@@ -100,7 +100,7 @@ TestByteEquivalence::test_moving_agent_byte_equivalent          [6 combinations]
 TestByteEquivalence::test_multi_agent_targeting_byte_equivalent [6 combinations]         PASSED  (all)
 TestRngStateAdvancement::test_rng_state_identical_across_steps_pursuit[0.5/1.0/2.0]      PASSED
 TestRngStateAdvancement::test_rng_state_identical_across_steps_random                    PASSED
-TestUpdatePredatorsOrderingInvariant::test_agent_positions_match_alive_values_order      PASSED
+TestUpdatePredatorsOrderingInvariant::test_predator_targets_lex_first_equidistant_agent  PASSED
 ```
 
 ### Regression-baseline gate (SECONDARY)
