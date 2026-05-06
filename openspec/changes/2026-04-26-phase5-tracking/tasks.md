@@ -46,20 +46,20 @@ to mark sub-tasks complete as part of its diff.
 
 ## M1: Predator-as-Brain Refactor
 
-**OpenSpec change**: `2026-05-05-add-learning-predators` (not yet created)
-**Status**: **next milestone** (post-M4 replan: re-sequenced ahead of original M2/M3/M4 ordering since those are now complete; M1 is M5's prerequisite)
+**OpenSpec change**: `add-learning-predators` (archived on PR merge)
+**Status**: ✅ complete. PredatorBrain Protocol + HeuristicPredatorBrain adapter + per-predator metrics shipped with **zero behavioural change** verified at two levels: 23 byte-equivalence unit tests over the `{STATIONARY, PURSUIT} × speed ∈ {0.5, 1.0, 2.0}` parameter grid (step-by-step position equality + RNG-state equality across 1000-step horizons), AND 80/80 metric-cell pre/post deltas exactly 0.0 across the regression-baseline campaign (20 (config, seed) cells × 4 metrics; multi-agent + single-agent arms × MLPPPO + LSTMPPO scenarios). M5 unblocked. See logbook 016
 **Bio fidelity**: MEDIUM
-**Brain target**: MLPPPO predator
+**Brain target**: heuristic predator (M5 will introduce learnable predator brains via the PredatorBrain Protocol seam)
 **Dependencies**: M0 ✅
 
-- [ ] M1.1 Create `env/predator_brain.py`: `PredatorBrain` protocol, `HeuristicPredatorBrain` adapter, `PredatorBrainParams` dataclass
-- [ ] M1.2 Modify `Predator.update_position` to delegate to `self.brain.run_brain(params)` if brain set, else fall back to current behaviour
-- [ ] M1.3 Extend `PredatorParams` with optional `brain_config`; `create_predators()` defaults to `HeuristicPredatorBrain`
-- [ ] M1.4 Modify `MultiAgentSimulation` to expose per-predator metrics (`kills`, `prey_proximity_steps`, `distance_traveled`) in `EpisodeResult`
-- [ ] M1.5 Tests: `tests/env/test_predator_brain.py`
-- [ ] M1.6 Regression: 4-seed × 200-episode run on existing predator scenarios, agent survival rate within ±2pp of pre-refactor baseline
-- [ ] M1.7 `uv run pytest -m smoke -v` passes
-- [ ] M1.8 Update this checklist + roadmap milestone tracker
+- [x] M1.1 Created `env/predator_brain.py`: `PredatorBrain` Protocol, `HeuristicPredatorBrain` adapter, `PredatorBrainParams` frozen dataclass, `PredatorAction` enum, `PredatorBrainConfig` runtime dataclass
+- [x] M1.2 `Predator.update_position` delegates to `self.brain.run_brain(params)`; legacy `_update_pursuit` / `_update_random` deleted; new `_apply_action` helper owns kinematics. Frozen-branch invariant (`chase_target` + `is_pursuing` resolved once per call) preserves byte-equivalence on multi-step movement at speed > 1.0
+- [x] M1.3 `PredatorParams.brain_config` field; `_initialize_predators` defaults to `HeuristicPredatorBrain` via `_build_predator_brain` dispatcher; `_make_predator` factory centralises construction at all three sites; YAML schema rejects unknown kinds at load time
+- [x] M1.4 `MultiAgentEpisodeResult` exposes `per_predator_kills` / `per_predator_prey_proximity_steps` / `per_predator_distance_traveled`. Kill attribution: closest covering predator (Manhattan) with lex tie-break on `predator_id`; defensive global-closest fallback for residual-HP edge cases
+- [x] M1.5 Tests at `tests/env/test_predator_brain.py` (21) + `test_predator_brain_byte_equivalence.py` (23) + `test_predator_brain_config.py` (15) + `test_multi_agent.py::TestPerPredatorMetrics` (6) = **65 new tests**; full env + multi_agent suite passes 369 (was 305, +64 net new — one redundant test in `test_predator_brain.py` dropped during lint cleanup)
+- [x] M1.6 Regression: 4-seed × 200-episode multi-agent + 4-seed × 100-episode single-agent campaigns × 4 metrics on commits `73684213` (pre-M1) and `3d45e75c` (M1 head). All 80 metric-cells show exactly 0.0 delta. See `artifacts/logbooks/016-predator-brain-refactor/{baseline_pre,baseline_post}.csv`
+- [x] M1.7 `uv run pytest -m smoke -v` clean (22 tests pass)
+- [x] M1.8 This checklist updated; `docs/roadmap.md` Phase 5 milestone tracker M1 row flipped to ✅ complete
 
 ## M2: Hyperparameter Evolution Pilot
 
@@ -213,7 +213,7 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 - [ ] M5.5 Run 50+ gen × 4 seed campaign
 - [ ] M5.6 Multi-cluster vs single-cluster transfer evaluation
 - [ ] M5.7 **Secondary Baldwin instrumentation** (added during post-M4 replan): per-generation prey hyperparameter spread (does selection narrow on "fast learners" as predator pressure changes?) + F1-style elite-vs-schema-prior baseline at K'-train, run periodically against the current predator population. Reuses M4.5's F1 evaluator. **Readout criterion**: Baldwin signal observed if per-gen elite-vs-prior signal-delta exceeds +0.05 at K'=10 across ≥2 of the 4 seeds AND the prey hyperparam spread on `actor_lr` / `entropy_coef` (the M4.5 schema's two most explored knobs) tightens by ≥30% from gen 5 to gen 30. Null result if neither condition holds across the campaign — would confirm that co-evolutionary task non-stationarity alone doesn't reproduce the Fernando 2018 / Chiu 2024 multi-task setup, and the M4.7 deferred-retry trigger condition stays armed. ~1 day aggregator work, estimate-not-budget; near-zero pilot wall-time cost beyond what M5.5/M5.6 already incur
-- [ ] M5.8 Publish `artifacts/logbooks/016/` with Red Queen findings (and the secondary Baldwin observation)
+- [ ] M5.8 Publish `artifacts/logbooks/017/` with Red Queen findings (and the secondary Baldwin observation). Note: logbook 016 is taken by M1's predator-brain refactor (logbook 016 = `016-predator-brain-refactor.md`); M5 ships as logbook 017
 - [ ] M5.9 Update this checklist + roadmap milestone tracker
 
 ## M6: Transgenerational Memory
@@ -242,7 +242,7 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 - [ ] M6.3 Implement `inherit_from(parents, decay_factor)` transmission
 - [ ] M6.4 Create `configs/evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml`
 - [ ] M6.5 Run F0/F1/F2/F3 pathogen avoidance experiment (Posner 2023 replication design; cross-reference 2025 mechanism literature for biological plausibility checks on the inheritance decay schedule)
-- [ ] M6.6 Publish `artifacts/logbooks/017/` with transgenerational findings
+- [ ] M6.6 Publish `artifacts/logbooks/018/` with transgenerational findings (017 is M5's; 016 is M1's predator-brain refactor)
 - [ ] M6.7 Update this checklist + roadmap milestone tracker
 
 ## M6.5: NEAT Architecture Evolution (OPTIONAL)
@@ -269,7 +269,7 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 - [ ] M7.2 Walk through each Phase 5 exit criterion with evidence
 - [ ] M7.3 Document negative findings honestly (Phase 4 precedent)
 - [ ] M7.4 Phase 6 quantum re-evaluation trigger recommendation
-- [ ] M7.5 Publish `artifacts/logbooks/018/synthesis.md`
+- [ ] M7.5 Publish `artifacts/logbooks/019/synthesis.md` (016 = M1 predator-brain; 017 = M5 co-evolution; 018 = M6 transgenerational; 019 = M7 phase synthesis)
 - [ ] M7.6 Update `docs/roadmap.md` Phase 5 status → COMPLETE; record exit criterion outcomes
 - [ ] M7.7 Archive `2026-04-26-phase5-tracking` alongside `2026-07-21-add-phase5-evaluation`
 

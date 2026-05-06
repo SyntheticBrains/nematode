@@ -186,6 +186,12 @@ class StandardEpisodeRunner(EpisodeRunner):
             agent.brain.update_memory(reward)
 
         agent.brain.post_process_episode(episode_success=success)
+        # Predator lifecycle hook — once per episode at termination.
+        # Mirrors MultiAgentSimulation.run_episode. Predators don't have
+        # an agent-style success notion (their fitness signal is the
+        # per-predator counters); pass None.
+        for predator in agent.env.predators:
+            predator.brain.post_process_episode(episode_success=None)
         agent._metrics_tracker.track_episode_completion(
             success=success,
             steps=agent._episode_tracker.steps,
@@ -396,8 +402,16 @@ class StandardEpisodeRunner(EpisodeRunner):
         reward_config: RewardConfig,
         params: Any,  # noqa: ANN401
         reward: float,
+        step_index: int = 0,
     ) -> tuple[EpisodeResult | None, float]:
         """Handle predator checks before and after predator movement.
+
+        Parameters
+        ----------
+        step_index : int
+            Episode-level step counter at the start of this phase. Forwarded
+            into `env.update_predators` -> `PredatorBrainParams.step_index`
+            so time-aware predator brains receive the live counter.
 
         Returns
         -------
@@ -419,7 +433,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             return result, reward
 
         # Move predators after agent moves
-        agent.env.update_predators()
+        agent.env.update_predators(step_index=step_index)
 
         # Check danger status at end of step (after both agent and predators moved)
         is_in_danger_at_step_end = agent.env.is_agent_in_danger()
@@ -638,6 +652,12 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         # Prepare brain for new episode (e.g., save parameters for potential rollback)
         agent.brain.prepare_episode()
+        # Lifecycle hook for stateful predator brains (no-op for the
+        # heuristic; learnable predator brains reset hidden state here).
+        # Mirrors MultiAgentSimulation.run_episode which fires the same
+        # hook so single-agent and multi-agent paths stay symmetric.
+        for predator in agent.env.predators:
+            predator.brain.prepare_episode()
 
         # Reset STAM buffer for new episode (no cross-episode memory)
         if agent._stam is not None:
@@ -653,7 +673,7 @@ class StandardEpisodeRunner(EpisodeRunner):
         stuck_position_count = 0
         previous_position = None
 
-        for _ in range(max_steps):
+        for step_index in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, _gradient_direction = agent.env.get_state(agent.path[-1])
 
@@ -708,7 +728,13 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return result
 
             # Predator checks (before and after predator movement)
-            result, reward = self._handle_predator_phase(agent, reward_config, params, reward)
+            result, reward = self._handle_predator_phase(
+                agent,
+                reward_config,
+                params,
+                reward,
+                step_index=step_index,
+            )
             if result is not None:
                 return result
 

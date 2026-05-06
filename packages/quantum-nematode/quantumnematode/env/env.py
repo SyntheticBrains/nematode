@@ -38,6 +38,13 @@ from quantumnematode.env.pheromone import (
     PheromoneSource,
     PheromoneType,
 )
+from quantumnematode.env.predator_brain import (
+    HeuristicPredatorBrain,
+    PredatorAction,
+    PredatorBrain,
+    PredatorBrainConfig,
+    PredatorBrainParams,
+)
 from quantumnematode.env.temperature import (
     TemperatureField,
     TemperatureZone,
@@ -178,6 +185,12 @@ class PredatorParams:
         Controls how quickly predator gradient signal decays with distance.
     gradient_strength : float
         Multiplier for predator gradient signal strength.
+    brain_config : PredatorBrainConfig | None
+        Optional pluggable-brain configuration. When None, predators are
+        constructed with a default `HeuristicPredatorBrain` (byte-equivalent
+        to the pre-refactor heuristic behaviour). The dispatcher can be
+        extended with learnable kinds (e.g. `kind: "mlpppo"`) once
+        learnable predator brains are introduced.
     """
 
     enabled: bool = False
@@ -188,6 +201,7 @@ class PredatorParams:
     damage_radius: int = 0
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
+    brain_config: PredatorBrainConfig | None = None
 
 
 @dataclass
@@ -500,6 +514,8 @@ class Predator:
         movement_accumulator: float = 0.0,
         detection_radius: int = 8,
         damage_radius: int = 0,
+        predator_id: str = "predator_0",
+        brain: PredatorBrain | None = None,
     ) -> None:
         """
         Initialize a predator.
@@ -518,6 +534,13 @@ class Predator:
             Detection radius for pursuit predators (default 8).
         damage_radius : int
             Distance at which this predator deals damage (default 0).
+        predator_id : str
+            Stable identifier for the predator (default "predator_0").
+            See `DynamicForagingEnvironment._make_predator` for synthesis.
+        brain : PredatorBrain | None
+            Pluggable policy. When `None`, a fresh `HeuristicPredatorBrain`
+            is constructed inline. The default `HeuristicPredatorBrain`
+            preserves byte-equivalent legacy heuristic behaviour.
         """
         self.position = position
         self.predator_type = predator_type
@@ -525,6 +548,13 @@ class Predator:
         self.movement_accumulator = movement_accumulator
         self.detection_radius = detection_radius
         self.damage_radius = damage_radius
+        self.predator_id = predator_id
+        self.brain: PredatorBrain = brain if brain is not None else HeuristicPredatorBrain()
+        # Per-predator metric counters (populated by the harness; surfaced
+        # in MultiAgentEpisodeResult per task 4.x).
+        self.kills: int = 0
+        self.prey_proximity_steps: int = 0
+        self.distance_traveled: int = 0
 
     def update_position(
         self,
@@ -532,8 +562,15 @@ class Predator:
         rng: np.random.Generator,
         agent_pos: tuple[int, int] | None = None,
         agent_positions: list[tuple[int, int]] | None = None,
+        step_index: int = 0,
     ) -> None:
-        """Update predator position based on its type.
+        """Update predator position by delegating to the brain.
+
+        Resolves the per-call branch context (chase_target + is_pursuing)
+        ONCE at the top of the call, then runs the accumulator loop with
+        a frozen branch (matches legacy semantics where multi-step movement
+        at speed > 1.0 stays committed to greedy or random for the duration
+        of the call).
 
         Parameters
         ----------
@@ -546,111 +583,93 @@ class Predator:
         agent_positions : list[tuple[int, int]] | None
             Multiple agent positions (multi-agent mode). Pursuit predators chase
             the nearest position. Takes precedence over agent_pos.
+        step_index : int
+            Episode-level step counter at the start of this call.
+            Frozen across the accumulator loop. Available to time-aware brains.
         """
+        # STATIONARY predators never move (early exit, no accumulator advance).
         if self.predator_type == PredatorType.STATIONARY:
-            return  # Stationary predators don't move
+            return
 
-        # Determine chase target: nearest agent from multi-agent list, or single agent
+        # Resolve chase_target ONCE (env owns agent_positions ordering;
+        # we just thread it through). Same `min(... key=Manhattan)` as legacy.
+        # Resolve chase_target. An explicit `agent_positions` (even if
+        # empty) is authoritative — empty list means "no agents alive,
+        # no target". The legacy `agent_pos` fallback only fires when
+        # the multi-agent path wasn't taken at all (i.e. `agent_positions`
+        # is None). This differs from the legacy reference, which fell
+        # back to `agent_pos` on empty list too; the byte-equivalence
+        # tests don't exercise the empty-list-with-agent_pos case (the
+        # only production caller `env.update_predators` never sets
+        # `agent_pos`), so this is a semantic improvement without
+        # affecting the regression gate.
         chase_target: tuple[int, int] | None = None
-        if agent_positions is not None and len(agent_positions) > 0:
-            # Chase nearest agent (Manhattan distance)
-            px, py = self.position
-            chase_target = min(
-                agent_positions,
-                key=lambda ap: abs(px - ap[0]) + abs(py - ap[1]),
-            )
+        if agent_positions is not None:
+            if agent_positions:
+                px, py = self.position
+                chase_target = min(
+                    agent_positions,
+                    key=lambda ap: abs(px - ap[0]) + abs(py - ap[1]),
+                )
+            # else: explicit empty list → chase_target stays None
         elif agent_pos is not None:
             chase_target = agent_pos
 
-        if self.predator_type == PredatorType.PURSUIT and chase_target is not None:
-            self._update_pursuit(grid_size, rng, chase_target)
+        # Resolve is_pursuing ONCE — frozen for the duration of this call.
+        is_pursuing = (
+            self.predator_type == PredatorType.PURSUIT
+            and chase_target is not None
+            and (
+                abs(self.position[0] - chase_target[0]) + abs(self.position[1] - chase_target[1])
+                <= self.detection_radius
+            )
+        )
+
+        # Pre-compute the agent_positions tuple ONCE so brain receives the
+        # same value across accumulator-steps (frozen branch invariant).
+        # When the legacy single-agent path is used (agent_positions=None +
+        # agent_pos provided), wrap agent_pos as a 1-tuple so the brain's
+        # agent_positions field stays consistent with chase_target — both
+        # populated, neither empty.
+        if agent_positions is not None:
+            frozen_agent_positions: tuple[tuple[int, int], ...] = tuple(agent_positions)
+        elif agent_pos is not None:
+            frozen_agent_positions = (agent_pos,)
         else:
-            self._update_random(grid_size, rng)
+            frozen_agent_positions = ()
 
-    def _update_random(self, grid_size: int, rng: np.random.Generator) -> None:
-        """
-        Update predator position with random movement.
+        # Run the accumulator loop, calling brain.run_brain once per step.
+        self._apply_action_loop(
+            grid_size=grid_size,
+            rng=rng,
+            chase_target=chase_target,
+            is_pursuing=is_pursuing,
+            agent_positions=frozen_agent_positions,
+            step_index=step_index,
+        )
 
-        Supports speeds > 1.0 for multiple steps per update.
-        For safety, caps maximum steps per update at 10 to prevent
-        pathological behavior with very high speeds.
-
-        Parameters
-        ----------
-        grid_size : int
-            Size of the grid (for boundary checking).
-        rng : np.random.Generator
-            Random number generator for reproducible movement.
-        """
-        # Handle fractional and multi-step movement
-        self.movement_accumulator += self.speed
-        if self.movement_accumulator < 1.0:
-            return  # Don't move yet
-
-        # Take multiple steps if speed > 1.0
-        # Cap at 10 steps per update for safety
-        max_steps_per_update = 10
-        steps_taken = 0
-
-        while self.movement_accumulator >= 1.0 and steps_taken < max_steps_per_update:
-            self.movement_accumulator -= 1.0
-            steps_taken += 1
-
-            # Random movement in one of four directions
-            up = 0
-            down = 1
-            left = 2
-            right = 3
-
-            direction_choice = rng.integers(4)
-            x, y = self.position
-
-            if direction_choice == up:
-                y = max(0, y - 1)
-            elif direction_choice == down:
-                y = min(grid_size - 1, y + 1)
-            elif direction_choice == left:
-                x = max(0, x - 1)
-            elif direction_choice == right:
-                x = min(grid_size - 1, x + 1)
-
-            self.position = (x, y)
-
-    def _update_pursuit(
+    def _apply_action_loop(  # noqa: PLR0913
         self,
+        *,
         grid_size: int,
         rng: np.random.Generator,
-        agent_pos: tuple[int, int],
+        chase_target: tuple[int, int] | None,
+        is_pursuing: bool,
+        agent_positions: tuple[tuple[int, int], ...],
+        step_index: int,
     ) -> None:
+        """Accumulator-loop harness: call brain once per step, apply action.
+
+        Mirrors the legacy `_update_random` / `_update_pursuit` accumulator
+        logic (preserved verbatim in `_legacy_predator_reference.py` for
+        byte-equivalence testing) but factored out so brains stay
+        kinematics-agnostic. The `chase_target` and `is_pursuing` args are
+        the FROZEN per-call branch context.
         """
-        Update predator position with pursuit behavior.
-
-        When within detection radius, moves toward the agent.
-        When outside detection radius, moves randomly.
-
-        Parameters
-        ----------
-        grid_size : int
-            Size of the grid (for boundary checking).
-        rng : np.random.Generator
-            Random number generator for reproducible movement.
-        agent_pos : tuple[int, int]
-            Current agent position.
-        """
-        # Calculate Manhattan distance to agent
-        px, py = self.position
-        ax, ay = agent_pos
-        distance = abs(px - ax) + abs(py - ay)
-
-        # If outside detection radius, move randomly
-        if distance > self.detection_radius:
-            self._update_random(grid_size, rng)
-            return
-
-        # Inside detection radius: pursue the agent
+        # Accumulator advance + early-return below threshold (matches legacy).
         self.movement_accumulator += self.speed
         if self.movement_accumulator < 1.0:
-            return  # Don't move yet
+            return
 
         max_steps_per_update = 10
         steps_taken = 0
@@ -659,26 +678,64 @@ class Predator:
             self.movement_accumulator -= 1.0
             steps_taken += 1
 
-            x, y = self.position
+            # Build params with CURRENT predator_position; chase_target +
+            # is_pursuing are frozen across iterations.
+            params = PredatorBrainParams(
+                predator_id=self.predator_id,
+                predator_position=self.position,
+                predator_type=self.predator_type,
+                detection_radius=self.detection_radius,
+                damage_radius=self.damage_radius,
+                agent_positions=agent_positions,
+                chase_target=chase_target,
+                is_pursuing=is_pursuing,
+                grid_size=grid_size,
+                rng=rng,
+                step_index=step_index,
+            )
+            action = self.brain.run_brain(params)
+            self._apply_action(action, grid_size)
 
-            # Calculate direction toward agent
-            dx = ax - x
-            dy = ay - y
+    def _apply_action(self, action: PredatorAction, grid_size: int) -> None:
+        """Apply a single cardinal action to `self.position` with grid clamp.
 
-            # Move in the direction with larger distance first (greedy pursuit)
-            if abs(dx) >= abs(dy):
-                # Move horizontally
-                if dx > 0:
-                    x = min(grid_size - 1, x + 1)
-                elif dx < 0:
-                    x = max(0, x - 1)
-            # Move vertically
-            elif dy > 0:
-                y = min(grid_size - 1, y + 1)
-            elif dy < 0:
-                y = max(0, y - 1)
+        STAY leaves position unchanged. UP/DOWN/LEFT/RIGHT shift one cell on
+        the relevant axis, clamped to `[0, grid_size - 1]` exactly as the
+        legacy heuristic (preserved in `_legacy_predator_reference.py`).
 
-            self.position = (x, y)
+        Note on axis convention: the y-deltas here are INVERTED relative to
+        the env's `Direction.UP/DOWN` convention — `PredatorAction.UP`
+        decrements y and `PredatorAction.DOWN` increments y, matching the
+        legacy `_update_random` mapping. See `PredatorAction` docstring for
+        the rationale (byte-equivalence with the pre-refactor heuristic).
+
+        Increments `self.distance_traveled` only when the post-clamp position
+        differs from the pre-action position (so STAY actions and wall-blocked
+        moves contribute 0).
+        """
+        # Fail fast on buggy/custom brains that return non-PredatorAction
+        # values (e.g. raw strings, None) — without this guard the if/elif
+        # chain silently treats unknown values as STAY, masking the bug.
+        if not isinstance(action, PredatorAction):
+            msg = (
+                f"PredatorBrain.run_brain returned {action!r} of type "
+                f"{type(action).__name__}; expected a PredatorAction enum value."
+            )
+            raise TypeError(msg)
+        old_position = self.position
+        x, y = self.position
+        if action == PredatorAction.UP:
+            y = max(0, y - 1)
+        elif action == PredatorAction.DOWN:
+            y = min(grid_size - 1, y + 1)
+        elif action == PredatorAction.LEFT:
+            x = max(0, x - 1)
+        elif action == PredatorAction.RIGHT:
+            x = min(grid_size - 1, x + 1)
+        # PredatorAction.STAY: x, y unchanged.
+        self.position = (x, y)
+        if self.position != old_position:
+            self.distance_traveled += 1
 
 
 class BaseEnvironment(ABC):
@@ -1478,6 +1535,88 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return True
 
+    def _build_predator_brain(self) -> PredatorBrain:
+        """Construct a PredatorBrain instance from `self.predator.brain_config`.
+
+        Dispatcher for the pluggable brain seam. Currently only
+        `"heuristic"` is honoured; the dispatcher can be extended with
+        learnable kinds (e.g. `kind: "mlpppo"`) once learnable predator
+        brains are introduced. `brain_config is None` is treated as the
+        default heuristic.
+        """
+        config = self.predator.brain_config
+        if config is None or config.kind == "heuristic":
+            return HeuristicPredatorBrain()
+        # Currently only "heuristic" is supported; additional kinds can
+        # be added here when learnable predator brains are introduced.
+        msg = (
+            f"Unknown predator brain kind: {config.kind!r}. "
+            "Only 'heuristic' is currently supported."
+        )
+        raise NotImplementedError(msg)
+
+    def _make_predator(  # noqa: PLR0913
+        self,
+        predator_id: str,
+        position: tuple[int, int],
+        *,
+        movement_accumulator: float = 0.0,
+        brain: PredatorBrain | None = None,
+        predator_type: PredatorType | None = None,
+        speed: float | None = None,
+        detection_radius: int | None = None,
+        damage_radius: int | None = None,
+    ) -> Predator:
+        """Centralised Predator construction factory.
+
+        All Predator instantiation in this module flows through this method
+        so the brain-attachment + ID-stamping logic is in exactly one place.
+        Used by `_initialize_predators` (synthesised IDs, fresh brain, all
+        defaults from `self.predator`) and `copy()` (preserved IDs, copied
+        brain, all per-predator field values explicitly threaded so post-
+        init mutations to individual predator fields survive env copies).
+
+        Parameters
+        ----------
+        predator_id : str
+            Stable identifier. `_initialize_predators` synthesises
+            `f"predator_{i}"`; `copy()` passes the source predator's
+            ID unchanged.
+        position : tuple[int, int]
+            Spawn position (or the source position for env-copy).
+        movement_accumulator : float
+            Initial accumulator state. Defaults to 0.0 (fresh spawn);
+            `copy()` passes the source predator's accumulator so multi-
+            step movement state is preserved across env copies.
+        brain : PredatorBrain | None
+            When provided (e.g. `pred.brain.copy()` from `copy()`),
+            the factory uses it unchanged. When `None`, the factory builds
+            a fresh brain via `_build_predator_brain`.
+        predator_type, speed, detection_radius, damage_radius
+            Per-predator overrides for env-level defaults. Each defaults
+            to the corresponding `self.predator.*` value when not provided
+            (the typical `_initialize_predators` flow). `copy()` passes
+            the source predator's actual field values so post-init
+            mutations (e.g. `predator.damage_radius = 7` in tests or
+            future runtime adjustments) survive env-copy boundaries.
+        """
+        return Predator(
+            position=position,
+            predator_type=(
+                predator_type if predator_type is not None else self.predator.predator_type
+            ),
+            speed=speed if speed is not None else self.predator.speed,
+            movement_accumulator=movement_accumulator,
+            detection_radius=(
+                detection_radius if detection_radius is not None else self.predator.detection_radius
+            ),
+            damage_radius=(
+                damage_radius if damage_radius is not None else self.predator.damage_radius
+            ),
+            predator_id=predator_id,
+            brain=brain if brain is not None else self._build_predator_brain(),
+        )
+
     def _initialize_predators(self) -> None:
         """Initialize predators at random positions outside damage radius of agent."""
         self.predators = []
@@ -1487,7 +1626,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             self.predator.detection_radius,
             self.predator.damage_radius,
         )
-        for _ in range(self.predator.count):
+        for i in range(self.predator.count):
+            predator_id = f"predator_{i}"
             # Spawn predators outside danger zone to avoid immediate damage
             candidate = (0, 0)  # Default position in case loop never runs
             for _ in range(MAX_POISSON_ATTEMPTS):
@@ -1502,33 +1642,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 )
                 # Ensure predator spawns outside both detection and damage radius
                 if distance_to_agent > min_spawn_distance:
-                    predator = Predator(
+                    predator = self._make_predator(
+                        predator_id=predator_id,
                         position=candidate,
-                        predator_type=self.predator.predator_type,
-                        speed=self.predator.speed,
-                        detection_radius=self.predator.detection_radius,
-                        damage_radius=self.predator.damage_radius,
                     )
                     self.predators.append(predator)
                     logger.debug(
                         f"Initialized {self.predator.predator_type.value} predator "
-                        f"at {candidate} (euclidean distance to agent: {distance_to_agent:.2f})",
+                        f"{predator_id} at {candidate} "
+                        f"(euclidean distance to agent: {distance_to_agent:.2f})",
                     )
                     break
             else:
                 # If we couldn't find a valid position after max attempts, log warning
                 # but still spawn the predator (edge case for very small grids)
                 logger.warning(
-                    "Could not find safe spawn position for predator "
+                    f"Could not find safe spawn position for predator {predator_id} "
                     f"after {MAX_POISSON_ATTEMPTS} attempts. "
                     f"Spawning at {candidate} anyway.",
                 )
-                predator = Predator(
+                predator = self._make_predator(
+                    predator_id=predator_id,
                     position=candidate,
-                    predator_type=self.predator.predator_type,
-                    speed=self.predator.speed,
-                    detection_radius=self.predator.detection_radius,
-                    damage_radius=self.predator.damage_radius,
                 )
                 self.predators.append(predator)
 
@@ -1963,10 +2098,20 @@ class DynamicForagingEnvironment(BaseEnvironment):
         distances = [abs(pos[0] - food[0]) + abs(pos[1] - food[1]) for food in self.foods]
         return min(distances)
 
-    def update_predators(self) -> None:
+    def update_predators(self, step_index: int = 0) -> None:
         """Update all predator positions.
 
         In multi-agent mode, pursuit predators chase the nearest alive agent.
+
+        Parameters
+        ----------
+        step_index : int
+            Episode-level step counter at the start of this update. Forwarded
+            into `Predator.update_position` -> `PredatorBrainParams.step_index`
+            so time-aware brains (e.g. learning-rate schedules, decay
+            curricula) can read the live step counter instead of always 0.
+            Defaults to 0 for backward compatibility with callers that
+            don't track a step counter.
         """
         if not self.predator.enabled:
             return
@@ -1979,6 +2124,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 self.grid_size,
                 self.rng,
                 agent_positions=alive_positions,
+                step_index=step_index,
             )
 
     def is_agent_in_danger(self) -> bool:
@@ -3540,8 +3686,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
             social_feeding=self.social_feeding,
         )
         new_env.foods = self.foods.copy()
-        # Copy RNG state for reproducibility
+        # Copy RNG state for reproducibility. We construct a fresh
+        # Generator from the same seed and then transfer the source
+        # generator's bit_generator state, so the clone resumes from
+        # the source's *current* point in the stream rather than
+        # restarting from the seed-zero state. This matters for mid-
+        # episode snapshot/replay where the source RNG has already
+        # advanced (food spawning, agent decisions, predator random
+        # draws); without the state transfer, downstream consumers on
+        # the cloned env would silently see a different draw sequence.
         new_env.rng = get_rng(self.seed)
+        new_env.rng.bit_generator.state = self.rng.bit_generator.state
         # Copy all agents (not just default)
         new_env.agents = {}
         for aid, state in self.agents.items():
@@ -3560,17 +3715,38 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 total_aerotaxis_steps=state.total_aerotaxis_steps,
             )
         if self.predator.enabled:
-            new_env.predators = [
-                Predator(
+            # Preserve source predator_id, brain state, AND per-predator
+            # field values (predator_type, speed, detection_radius,
+            # damage_radius) across env copies. Per-field threading
+            # matters because tests + future runtime code may mutate
+            # individual predator fields post-init; the copy must
+            # reflect the source predator's current state, not the
+            # env-level config defaults. Brain.copy() returns a fresh
+            # independent instance; the factory uses the provided brain
+            # unchanged so future stateful brains (e.g. learnable RL
+            # predators) keep their per-instance state across env-copy
+            # boundaries (env-snapshot, evolution-loop replay).
+            new_env.predators = []
+            for p in self.predators:
+                cloned = new_env._make_predator(
+                    predator_id=p.predator_id,
                     position=p.position,
+                    movement_accumulator=p.movement_accumulator,
+                    brain=p.brain.copy(),
                     predator_type=p.predator_type,
                     speed=p.speed,
-                    movement_accumulator=p.movement_accumulator,
                     detection_radius=p.detection_radius,
                     damage_radius=p.damage_radius,
                 )
-                for p in self.predators
-            ]
+                # Preserve per-predator runtime metrics so mid-episode
+                # snapshots survive env.copy() with their counters intact.
+                # (`_make_predator` constructs with these zeroed; the
+                # factory-arg surface stays focused on configuration
+                # fields and we overwrite the runtime counters here.)
+                cloned.kills = p.kills
+                cloned.prey_proximity_steps = p.prey_proximity_steps
+                cloned.distance_traveled = p.distance_traveled
+                new_env.predators.append(cloned)
         return new_env
 
 

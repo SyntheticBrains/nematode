@@ -297,3 +297,169 @@ class TestMultiAgentSimulation:
         # Should complete without KeyError even when agents are removed
         result = sim.run_episode(RewardConfig(), max_steps=20)
         assert isinstance(result, MultiAgentEpisodeResult)
+
+
+class TestPerPredatorMetrics:
+    """Per-predator metrics in MultiAgentEpisodeResult.
+
+    Covers:
+
+    - per_predator_distance_traveled records movements
+    - per_predator_prey_proximity_steps increments when agent in range
+    - per_predator_kills attribution under distinct distances (closest wins)
+    - per_predator_kills attribution under equal distances (lex tie-break)
+    - defensive global-closest fallback when no predator covers the agent
+    """
+
+    def test_per_predator_distance_traveled_records_movements(self) -> None:
+        """After an episode, distance_traveled is a sum of cardinal moves."""
+        env = _make_env(grid_size=20, seed=42, predators=True)
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        sim = MultiAgentSimulation(env=env, agents=[a0])
+        result = sim.run_episode(RewardConfig(), max_steps=30)
+        # _make_env spawns predators with speed=0.5, so over 30 sim steps
+        # a single predator advances its accumulator 30 x 0.5 = 15 times,
+        # firing at most 15 cardinal steps. distance_traveled is the count
+        # of post-clamp position changes, bounded above by the firing count.
+        # Tightening the upper bound to 15 (vs a loose <= 30) catches
+        # double-counting bugs where a single accumulator-step might
+        # increment distance more than once.
+        max_distance = 15
+        n_predators = len(env.predators)
+        assert n_predators >= 1
+        for pid, dist in result.per_predator_distance_traveled.items():
+            assert 0 <= dist <= max_distance, (
+                f"{pid}: distance {dist} exceeds physical max {max_distance} (speed=0.5 x 30 steps)"
+            )
+
+    def test_per_predator_prey_proximity_steps_increments_when_in_range(self) -> None:
+        """With predator pinned next to the agent, proximity counter > 0."""
+        env = _make_env(grid_size=20, seed=42, predators=True)
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        # Pin every predator within detection_radius (5) of the agent at (5, 5)
+        # so that the proximity counter is guaranteed to fire on every step.
+        # Without this pinning, _make_env's default Poisson-disk spawn could
+        # place predators outside detection range, leaving the assertion
+        # trivially satisfied at total == 0.
+        for pred in env.predators:
+            pred.position = (6, 5)  # Manhattan distance 1 from agent
+        sim = MultiAgentSimulation(env=env, agents=[a0])
+        max_steps = 20
+        result = sim.run_episode(RewardConfig(), max_steps=max_steps)
+        total_proximity = sum(result.per_predator_prey_proximity_steps.values())
+        # Each predator should register proximity on every step where the
+        # agent is alive. The agent may die mid-episode (default predator
+        # damage), so the lower bound is "at least one step in range".
+        assert total_proximity >= 1, (
+            f"expected ≥1 proximity-step, got {total_proximity} "
+            f"(predator detection_radius=5; agent pinned at (5,5); predators at (6,5))"
+        )
+
+    def test_per_predator_metric_keys_match_predator_ids(self) -> None:
+        """All three per-predator dicts use the synthesised predator_id keys."""
+        env = _make_env(grid_size=20, seed=42, predators=True)
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        sim = MultiAgentSimulation(env=env, agents=[a0])
+        result = sim.run_episode(RewardConfig(), max_steps=10)
+        expected_ids = {p.predator_id for p in env.predators}
+        assert set(result.per_predator_kills.keys()) == expected_ids
+        assert set(result.per_predator_prey_proximity_steps.keys()) == expected_ids
+        assert set(result.per_predator_distance_traveled.keys()) == expected_ids
+
+    def test_kill_attribution_distinct_distances(self) -> None:
+        """When 2 predators cover an agent at different distances, closest gets the kill."""
+        # Build a synthetic env with 2 predators at known positions.
+        env = _make_env(grid_size=20, seed=42, predators=False)
+        # Override predator config + manually spawn two predators with
+        # known IDs and positions for deterministic attribution test.
+        from quantumnematode.env import HeuristicPredatorBrain
+        from quantumnematode.env.env import Predator
+
+        env.predator.enabled = True
+        env.predator.count = 2
+        env.predator.damage_radius = 2
+        env.predators = [
+            Predator(
+                position=(10, 10),
+                predator_id="predator_0",
+                damage_radius=2,
+                brain=HeuristicPredatorBrain(),
+            ),
+            Predator(
+                position=(12, 10),
+                predator_id="predator_1",
+                damage_radius=2,
+                brain=HeuristicPredatorBrain(),
+            ),
+        ]
+        sim = MultiAgentSimulation(env=env, agents=[_make_agent(env, "agent_0", position=(5, 5))])
+        # Manually init the per-predator metric counters (normally done
+        # in run_episode).
+        sim._kills_by_predator = {p.predator_id: 0 for p in env.predators}
+        # Agent at (10, 11): predator_0 distance 1, predator_1 distance 3.
+        sim._attribute_kill_to_predator((10, 11))
+        assert sim._kills_by_predator["predator_0"] == 1
+        assert sim._kills_by_predator["predator_1"] == 0
+
+    def test_kill_attribution_lex_tiebreak(self) -> None:
+        """When predators are equidistant, predator_id lex order wins."""
+        env = _make_env(grid_size=20, seed=42, predators=False)
+        from quantumnematode.env import HeuristicPredatorBrain
+        from quantumnematode.env.env import Predator
+
+        env.predator.enabled = True
+        env.predator.count = 2
+        env.predator.damage_radius = 2
+        # Both predators 1 cell from agent at (10, 11).
+        env.predators = [
+            Predator(
+                position=(10, 10),
+                predator_id="predator_0",
+                damage_radius=2,
+                brain=HeuristicPredatorBrain(),
+            ),
+            Predator(
+                position=(10, 12),
+                predator_id="predator_1",
+                damage_radius=2,
+                brain=HeuristicPredatorBrain(),
+            ),
+        ]
+        sim = MultiAgentSimulation(env=env, agents=[_make_agent(env, "agent_0", position=(5, 5))])
+        sim._kills_by_predator = {p.predator_id: 0 for p in env.predators}
+        # Both are dist 1; lex tie-break gives predator_0.
+        sim._attribute_kill_to_predator((10, 11))
+        assert sim._kills_by_predator["predator_0"] == 1
+        assert sim._kills_by_predator["predator_1"] == 0
+
+    def test_kill_attribution_fallback_no_covering_predator(self) -> None:
+        """Defensive: if no predator covers, credit global-closest (lex tie-break)."""
+        env = _make_env(grid_size=20, seed=42, predators=False)
+        from quantumnematode.env import HeuristicPredatorBrain
+        from quantumnematode.env.env import Predator
+
+        env.predator.enabled = True
+        env.predator.count = 2
+        env.predator.damage_radius = 1
+        # Both predators OUT of damage radius (Manhattan > 1) for the
+        # agent at (10, 10). predator_0 is closer (3) than predator_1 (5).
+        env.predators = [
+            Predator(
+                position=(10, 13),
+                predator_id="predator_0",
+                damage_radius=1,
+                brain=HeuristicPredatorBrain(),
+            ),
+            Predator(
+                position=(10, 15),
+                predator_id="predator_1",
+                damage_radius=1,
+                brain=HeuristicPredatorBrain(),
+            ),
+        ]
+        sim = MultiAgentSimulation(env=env, agents=[_make_agent(env, "agent_0", position=(5, 5))])
+        sim._kills_by_predator = {p.predator_id: 0 for p in env.predators}
+        sim._attribute_kill_to_predator((10, 10))
+        # Fallback: global-closest — predator_0 at dist 3.
+        assert sim._kills_by_predator["predator_0"] == 1
+        assert sim._kills_by_predator["predator_1"] == 0

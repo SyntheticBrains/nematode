@@ -16,6 +16,7 @@ import numpy as np  # noqa: TC002 - needed at runtime for np.random.Generator
 
 from quantumnematode.brain.arch import ClassicalBrain
 from quantumnematode.env.env import DEFAULT_AGENT_ID
+from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import TerminationReason
 
 if TYPE_CHECKING:
@@ -161,6 +162,19 @@ class MultiAgentEpisodeResult:
         Total accumulated reward per agent over the episode.
     per_agent_satiety : dict[str, float]
         Satiety remaining per agent at episode end.
+    per_predator_kills : dict[str, int]
+        Per-predator count of step-events where this predator's damage
+        application brought an agent's HP to 0. Multi-predator tie-break:
+        closest-by-Manhattan, lex on `predator_id`. Sum equals total agent
+        deaths attributable to predator damage (no double-counting).
+    per_predator_prey_proximity_steps : dict[str, int]
+        Per-predator count of simulation steps where ≥1 alive agent was
+        within this predator's `detection_radius` (Manhattan). Increments
+        by 1 per step regardless of how many alive agents are in range
+        (NOT scaled by prey count). Stationary predators still accumulate.
+    per_predator_distance_traveled : dict[str, int]
+        Per-predator sum of cardinal-direction position changes over the
+        episode. Stationary predators: 0. Wall-blocked / STAY moves: 0.
     """
 
     agent_results: dict[str, EpisodeResult]
@@ -179,6 +193,9 @@ class MultiAgentEpisodeResult:
     alarm_response_rate: float = 0.0
     per_agent_reward: dict[str, float] = field(default_factory=dict)
     per_agent_satiety: dict[str, float] = field(default_factory=dict)
+    per_predator_kills: dict[str, int] = field(default_factory=dict)
+    per_predator_prey_proximity_steps: dict[str, int] = field(default_factory=dict)
+    per_predator_distance_traveled: dict[str, int] = field(default_factory=dict)
 
 
 def _compute_gini_values(values: list[float]) -> float:
@@ -354,6 +371,13 @@ class MultiAgentSimulation:
         default_factory=dict,
         init=False,
     )
+    # Per-predator kill attribution counter — populated when an
+    # apply_predator_damage_for(aid) brings HP to 0; the responsible
+    # predator is the closest covering one (Manhattan), with lex
+    # tie-break on predator_id. Distance/proximity counters live on
+    # the Predator instances themselves (env.predators[i]) and are
+    # copied into the result in _build_result.
+    _kills_by_predator: dict[str, int] = field(default_factory=dict, init=False)
 
     _VALID_TERMINATION_POLICIES: ClassVar[frozenset[str]] = frozenset(
         {"freeze", "remove", "end_all"},
@@ -529,6 +553,18 @@ class MultiAgentSimulation:
         self._alarm_response_successes = 0
         self._alarm_response_buffer = []
         self._agent_terminations = {}
+        # Initialize per-predator kill counter and reset per-predator
+        # instance counters (distance_traveled, prey_proximity_steps).
+        # The Predator instances persist across episodes (no env reset
+        # re-spawns them), so we explicitly zero their counters here.
+        self._kills_by_predator = {p.predator_id: 0 for p in self.env.predators}
+        for predator in self.env.predators:
+            predator.kills = 0
+            predator.prey_proximity_steps = 0
+            predator.distance_traveled = 0
+            # Lifecycle hook for stateful predator brains (no-op for the
+            # heuristic; learnable predator brains reset hidden state here).
+            predator.brain.prepare_episode()
 
         # Episode preparation for each agent
         for agent in self.agents:
@@ -609,7 +645,21 @@ class MultiAgentSimulation:
             self._resolve_food_step(alive, current_step)
 
             # ── 4. PREDATORS ─────────────────────────────────────
-            self.env.update_predators()
+            self.env.update_predators(step_index=current_step)
+
+            # Per-predator prey-proximity counter: increment by 1 per
+            # step iff at least one alive agent is within this predator's
+            # detection_radius (Manhattan). NOT scaled by prey count.
+            alive_positions = [self.env.agents[a.agent_id].position for a in alive]
+            for predator in self.env.predators:
+                px, py = predator.position
+                for agent_pos_tuple in alive_positions:
+                    if (
+                        abs(px - agent_pos_tuple[0]) + abs(py - agent_pos_tuple[1])
+                        <= predator.detection_radius
+                    ):
+                        predator.prey_proximity_steps += 1
+                        break
 
             # Per-agent predator damage (copy list — terminations modify alive set)
             for agent in list(alive):
@@ -617,11 +667,18 @@ class MultiAgentSimulation:
                 if aid not in self.env.agents:
                     continue  # Removed by policy
                 if self.env.is_agent_in_damage_radius_for(aid):
+                    # Capture pre-damage position for kill attribution
+                    # (the env doesn't move the agent on damage, but
+                    # capturing is cheap and makes the rule explicit).
+                    agent_pos_pre_damage = self.env.agents[aid].position
                     actual_damage = self.env.apply_predator_damage_for(aid)
                     # Emit alarm pheromone when agent takes damage
                     if actual_damage > 0 and pheromones_enabled:
-                        agent_pos = self.env.agents[aid].position
-                        self.env.emit_alarm_pheromone(agent_pos, current_step, aid)
+                        self.env.emit_alarm_pheromone(
+                            agent_pos_pre_damage,
+                            current_step,
+                            aid,
+                        )
                         # Record nearby agents' directions for alarm response tracking
                         nearby_dirs: dict[str, str] = {}
                         for other in alive:
@@ -631,8 +688,8 @@ class MultiAgentSimulation:
                             if not self.env.agents[oid].alive:
                                 continue
                             opos = self.env.agents[oid].position
-                            dist = abs(opos[0] - agent_pos[0]) + abs(
-                                opos[1] - agent_pos[1],
+                            dist = abs(opos[0] - agent_pos_pre_damage[0]) + abs(
+                                opos[1] - agent_pos_pre_damage[1],
                             )
                             if dist <= self.social_detection_radius:
                                 nearby_dirs[oid] = str(self.env.agents[oid].direction)
@@ -641,6 +698,12 @@ class MultiAgentSimulation:
                                 (current_step, aid, nearby_dirs),
                             )
                     if self.env.agents[aid].hp <= 0:
+                        # Kill attribution: closest covering predator,
+                        # lex tie-break on predator_id. Defensive fallback:
+                        # if no predator covers (shouldn't happen since
+                        # is_agent_in_damage_radius_for returned True), use
+                        # global-closest with the same tie-break.
+                        self._attribute_kill_to_predator(agent_pos_pre_damage)
                         self._handle_termination(
                             agent,
                             TerminationReason.HEALTH_DEPLETED,
@@ -847,6 +910,15 @@ class MultiAgentSimulation:
                 nearby_agents_count=nearby_per_agent.get(agent.agent_id, 0),
             )
 
+        # Predator lifecycle hook — once per episode at the end.
+        # Predators don't terminate per-step the way agents do, so the
+        # post_process_episode hook fires once for each predator at the
+        # final step. No "episode_success" notion applies to predators
+        # (their per-fitness signal is the per_predator_kills /
+        # _prey_proximity_steps / _distance_traveled triple); pass None.
+        for predator in self.env.predators:
+            predator.brain.post_process_episode(episode_success=None)
+
         return self._build_result()
 
     def _is_agent_sated(self, agent: QuantumNematodeAgent) -> bool:
@@ -925,6 +997,52 @@ class MultiAgentSimulation:
                     # Track for food-sharing metric (only when pheromones active)
                     if self.env.pheromones.enabled:
                         self._food_marking_buffer.append((consumed, current_step, aid))
+
+    def _attribute_kill_to_predator(
+        self,
+        agent_position: tuple[int, int],
+    ) -> None:
+        """Credit a kill to one predator using closest-by-Manhattan + lex tie-break.
+
+        Iterates `self.env.predators`, finds those whose `damage_radius`
+        covers the agent (Manhattan), picks the closest by Manhattan
+        distance with lex tie-break on `predator_id`, and increments
+        `self._kills_by_predator[predator_id]`.
+
+        Defensive fallback: if no predator covers the agent (shouldn't
+        happen since `is_agent_in_damage_radius_for` returned True before
+        this is called, but covers edge cases like residual-HP ticks
+        where the predator has since moved out of range), credit the
+        global-closest predator with the same tie-break and emit a
+        debug-level log message via `logger.debug(...)` so the fallback
+        case is visible in forensic logs.
+        """
+        if not self.env.predators:
+            return  # No predators configured; nothing to attribute.
+
+        ax, ay = agent_position
+
+        def manhattan(predator) -> int:  # noqa: ANN001 — local helper
+            return abs(predator.position[0] - ax) + abs(predator.position[1] - ay)
+
+        # Phase 1: covering predators (those whose damage_radius covers the agent).
+        covering = [p for p in self.env.predators if manhattan(p) <= p.damage_radius]
+        if covering:
+            # Closest by Manhattan; lex tie-break on predator_id.
+            chosen = min(covering, key=lambda p: (manhattan(p), p.predator_id))
+        else:
+            # Defensive fallback: no covering predator. Use global-closest.
+            chosen = min(self.env.predators, key=lambda p: (manhattan(p), p.predator_id))
+            logger.debug(
+                "Kill attribution fallback: no covering predator for agent at "
+                f"{agent_position}; crediting global-closest {chosen.predator_id} "
+                f"at {chosen.position}",
+            )
+
+        self._kills_by_predator[chosen.predator_id] = (
+            self._kills_by_predator.get(chosen.predator_id, 0) + 1
+        )
+        chosen.kills += 1
 
     def _handle_termination(
         self,
@@ -1071,4 +1189,11 @@ class MultiAgentSimulation:
             ),
             per_agent_reward=dict(self._per_agent_total_reward),
             per_agent_satiety={a.agent_id: a._satiety_manager.current_satiety for a in self.agents},
+            per_predator_kills=dict(self._kills_by_predator),
+            per_predator_prey_proximity_steps={
+                p.predator_id: p.prey_proximity_steps for p in self.env.predators
+            },
+            per_predator_distance_traveled={
+                p.predator_id: p.distance_traveled for p in self.env.predators
+            },
         )
