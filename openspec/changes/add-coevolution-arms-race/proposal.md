@@ -27,7 +27,7 @@ Not a behaviour change for any existing scenario YAML — `PredatorBrainConfig.k
 
 ### New Capabilities
 
-- `co-evolution`: covers the `CoevolutionLoop` orchestrator (alternating schedule, per-block TPE reset, dual-population worker dispatch), hall-of-fame buffer semantics (quality-based eviction, mix-with-pop sampling), generality probe (held-out opponent set semantics + cadence), and the softened-disjunctive decision gate. Distinct from `evolution-framework` which covers single-population evolution; the co-evolution capability layers on top.
+- `co-evolution`: covers the `CoevolutionLoop` orchestrator (alternating schedule, per-block fresh CMA-ES instance construction, dual-population worker dispatch), hall-of-fame buffer semantics (quality-based eviction, mix-with-pop sampling), generality probe (held-out opponent set semantics + cadence), and the softened-disjunctive decision gate. Distinct from `evolution-framework` which covers single-population evolution; the co-evolution capability layers on top.
 - `red-queen-analysis`: covers the Red Queen metrics module (phenotypic cycling, trait escalation, fitness lag, coupled rate, generality) and the aggregator's verdict logic. Distinct concern from the loop itself: any future predator-prey dynamics analysis (e.g. for transfer learning experiments) reuses these primitives.
 
 ### Modified Capabilities
@@ -76,9 +76,9 @@ Not a behaviour change for any existing scenario YAML — `PredatorBrainConfig.k
 - `tests/evolution/test_coevolution.py` (~15 cases) — alternating-schedule K-block boundaries, opposing pop frozen during off-block, HoF push timing, probe cadence.
 - `tests/evolution/test_redqueen_metrics.py` (~12 cases) — synthetic series with known answers (sine → cycling, ramp → escalation, anti-correlated → fitness lag).
 
-**Compute:** Pilot ~8 wall-hours total (2 seeds × ~4h); full campaign ~30-40 wall-hours total (4 seeds × ~7-10h). Pilot-first sequencing gates the full run.
+**Compute:** Pilot ~66k episodes per seed (asymmetric per D13: ~80% prey side under `LearnedPerformanceFitness` K_train=50 + L_eval=25; ~20% predator side under `PredatorEpisodicKillRate` N_eval=25 frozen-weight). At parallel_workers=4 and per-episode wall ~0.75–1.5 sec (from M3 lamarckian calibration), pilot wall is ~3.5–7 hours/seed → ~7–14 hours total for 2 seeds (sequential). Full campaign extrapolates to ~30–60 wall-hours total for 4 seeds; estimate uncertainty ±50% pending pilot calibration. Pilot-first sequencing gates the full run.
 
-**Out of scope (deferred or future work):** GA optimiser ablation (deferred — TPE for both sides per M3+ default; ablate if cycling stalls), predator-side pheromones / signalling, multi-predator cooperation, transfer to single-agent runners (M5.6 covers transfer eval as post-pilot ablation), quantum predator brains, architecture-changing schema knobs for predator (only weights co-evolve), Baldwin VERDICT under M5 (M5.7 is observation only — M4 STOP is unchanged unless readout fires, in which case M4.7 follow-up).
+**Out of scope (deferred or future work):** GA optimiser ablation (deferred — CMA-ES (sep-CMA-ES, `diagonal=True`) for both sides per M0/M3 weight-evolution canonical; ablate if CMA-ES diversity collapses), predator-side pheromones / signalling, multi-predator cooperation, transfer to single-agent runners (M5.6 covers transfer eval as post-pilot ablation), quantum predator brains, architecture-changing schema knobs for predator (only weights co-evolve), Baldwin VERDICT under M5 (M5.7 is observation only — M4 STOP is unchanged unless readout fires, in which case M4.7 follow-up).
 
 **Dependencies:** No new external dependencies. Uses existing torch (MLPPPO), numpy, optuna (TPE) stack.
 

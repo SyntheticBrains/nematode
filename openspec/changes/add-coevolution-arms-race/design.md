@@ -18,7 +18,7 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 - Provide a generality probe (every 10 gens against 8 frozen held-out opponents) to flag self-play overfitting.
 - Provide Red Queen analysis primitives (cycling, escalation, fitness lag, coupled rate, generality) and a softened-disjunctive verdict gate (cycling OR escalation in ≥2 of 4 full-run seeds → GO).
 - Ship M5.7 secondary Baldwin instrumentation (reduced under CMA-ES weight evolution: signal-delta only, hyperparam-spread criterion dropped per D11) that reuses M4.5's F1 evaluator wholesale; observation only (does NOT alter M5 verdict).
-- Pilot-first sequencing: 30 gens × 2 seeds (~8 wall-hours) calibrates Red Queen thresholds + chooses pretrain on/off; full 50–70 gens × 4 seeds (~30–40 wall-hours) delivers the verdict.
+- Pilot-first sequencing: 30 gens × 2 seeds (~7–14 wall-hours, ±50% pending pilot calibration; see D4 compute envelope) calibrates Red Queen thresholds + chooses pretrain on/off; full 50–70 gens × 4 seeds (~30–60 wall-hours) delivers the verdict.
 
 **Non-Goals:**
 
@@ -37,15 +37,17 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Decision:** For 10 generations, freeze predator pop at the prior K-block elite (HoF-mix sample) and evolve prey; then swap. K=10, 3 swap pairs across a 30-gen pilot, 5–7 across a 50–70-gen full run.
 
-**Rationale:** Entropy 2021 review favours alternating over simultaneous for stability. Simultaneous co-evolution makes both objectives non-stationary every generation, which TPE handles poorly (TPE's KDE assumes a stationary objective). Alternating gives each side ~K stationary gens before the opponent flips. K=10 is short enough that within-block PPO has time to train (each gen runs K=50 train + L=25 eval episodes per evaluated genome), and long enough to amortise per-block TPE-restart overhead.
+**Rationale:** Entropy 2021 review favours alternating over simultaneous for stability. Simultaneous co-evolution makes both objectives non-stationary every generation, which CMA-ES handles poorly (covariance adaptation assumes a stationary objective; rapid drift destabilises the search distribution). Alternating gives each side ~K stationary gens before the opponent flips. K=10 is short enough for the prey side's within-block PPO inner-loop training to make meaningful progress (each prey eval runs K_train=50 + L_eval=25 per `LearnedPerformanceFitness`; see B11 in round-3 review for the asymmetry between prey trained-eval and predator frozen-eval), and long enough for CMA-ES covariance adaptation to converge meaningfully (per Hansen et al., CMA-ES needs ~10–20 generations for covariance to settle on a stationary objective; K=10 is at the low end but predator eval is cheap so we tolerate slight under-converged covariance per K-block).
 
 **Asymmetric start-side note:** with `start_side="prey"` (default), prey trains first against gen-0 predators. When predators are bootstrapped from heuristic-imitation pretrain (D7 arm A), gen-0 prey trains against bootstrapped predators rather than random-init ones — meaningful asymmetry. With cold-start predators (D7 arm B) gen-0 prey trains against random-policy predators, which is gentle bootstrap. Pilot ablation reveals which setup yields the cleaner Red Queen signal; full run's `start_side` choice flips if pilot evidence suggests predator-first works better.
 
+**Asymmetric K rationale (per side):** prey K=10 is justified by within-block PPO inner-loop training convergence (the prey side runs `LearnedPerformanceFitness` with K_train=50). Predator K=10 is justified differently — CMA-ES needs ≥~10 generations of weight evolution for covariance adaptation to make meaningful progress on the frozen-prey opposition. Both sides land on K=10 by coincidence, NOT because the same constraint applies; pilot may motivate splitting the K knob per side (e.g. `K_prey=10`, `K_pred=15`) if predator covariance under-converges within K=10 (see Risk register row "Predator within-K-block PPO instability" — wording remains apt even though predator does not actually run PPO inner-loop).
+
 **Alternatives:**
 
-- Simultaneous (rejected: TPE-stationarity violation; literature warns against it).
+- Simultaneous (rejected: CMA-ES stationarity violation on both sides; literature warns against it).
 - Alternating K=20 (rejected: coarser co-evolution signal — only 1–2 swaps in a 30-gen pilot, harder to detect cycling).
-- Alternating K=5 (rejected: too short for within-block PPO convergence; TPE-restart overhead dominates).
+- Alternating K=5 (rejected: predator CMA-ES covariance never converges; prey within-block PPO training is too short).
 
 **Confirmed by user (Phase 3 question).**
 
@@ -93,7 +95,16 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Rationale:** Prey have richer phenotype surface (LSTMPPO+klinotaxis carries Phase-4's bilateral-sensing + recurrent-state machinery — substantially more degrees of freedom than the predator's MLPPPO with limited perception). Asymmetric pops are a standard co-evolution heuristic — the side with more phenotypic variety needs more samples to explore.
 
-Compute envelope: ~40 evaluations per generation pair × ~24 episodes/eval × ~K=50 train + L=25 eval = ~96k episode-equivalents per K-block ≈ ~40 min/K-block × 6 K-blocks = ~4 wall-hours/seed at parallel_workers=4.
+**Compute envelope (per pilot seed, asymmetric per D13):**
+
+- **Prey K-block** (10 generations × 24 genomes × `LearnedPerformanceFitness` with K_train=50 + L_eval=25 = 75 episodes/eval) = **18,000 episodes per prey K-block**.
+- **Predator K-block** (10 generations × 16 genomes × `PredatorEpisodicKillRate` with N_eval=25, frozen-weight) = **4,000 episodes per predator K-block**.
+- **Pilot total** (3 K-pairs = 3 prey K-blocks + 3 predator K-blocks) = **3 × (18,000 + 4,000) = ~66,000 episodes per seed**.
+- **Wall-time estimate** at parallel_workers=4 + per-episode wall ~0.75–1.5 sec (calibrated from M3 lamarckian artifacts): **~3.5–7 wall-hours/seed**. Pilot total (2 seeds, sequential) = **~7–14 wall-hours**.
+
+**Episode budget is dominated by prey side** (~80% of pilot episodes, ~5x more expensive per K-block than predator). Predator K-blocks complete ~5x faster than prey K-blocks at parallel_workers=4 — opens room for the pilot ablation knob "should predator use longer K (e.g. K_pred=15) since it's cheaper?" Reserved for pilot calibration if predator covariance under-converges within K=10.
+
+**Estimate uncertainty:** ±50% on wall-time pending pilot calibration. Pilot logbook (task 9.5) MUST record actual per-episode wall and reconcile with this estimate.
 
 **Alternatives:**
 
@@ -125,7 +136,7 @@ Compute envelope: ~40 evaluations per generation pair × ~24 episodes/eval × ~K
 **Decision:** Full-run GO if at least one of:
 
 - **(a) Phenotypic cycling**: Lomb-Scargle / autocorrelation peak at lag ∈ [3, 15] gens with p < 0.05, OR dominant FFT bin (excluding DC) has power > 2× median bin power. Applied to per-gen mean of the four Red Queen metrics.
-- **(b) Trait escalation**: linear regression of mean trait value over gens 5–30 (skip TPE bootstrap noise) has |slope|/SE > 2.0 (p < 0.05) AND sign aligned with directional expectation per trait.
+- **(b) Trait escalation**: linear regression of mean trait value over gens 5–30 (skip CMA-ES bootstrap noise — covariance hasn't settled in the first ~5 gens) has |slope|/SE > 2.0 (p < 0.05) AND sign aligned with directional expectation per trait.
 
 …fires in **≥2 of 4 full-run seeds**. STOP if neither fires in any seed. PIVOT if exactly 1/4. The thresholds above are the spec's default falsification gate; pilot results may motivate revising them, in which case **the OpenSpec change SHALL be amended (and re-validated `--strict`) BEFORE the full run launches**. The spec is the contract; we don't run the full campaign with thresholds different from what's written here. A pilot-revision PR (small, limited to spec + design rewording) is acceptable mid-flight if the change `add-coevolution-arms-race` has not yet been archived.
 
@@ -248,6 +259,47 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 
 **Confirmed by user (Phase 3 — ship in M5; second-pass review — accept reduced readout under CMA-ES weight evolution).**
 
+### D12. Prey gen-0 initialisation: warm-start from M3 lamarckian elite
+
+**Decision:** The prey population at gen 0 is **warm-started from a single M3 lamarckian-LSTMPPO elite genome** (one of the 4 M3 full-run seeds' generation-final elites — chosen deterministically by run seed). The elite weights become the CMA-ES `x0` parameter (initial mean of the search distribution); the optimizer samples gen-0 candidates around this seed via its `sigma0`-scaled covariance.
+
+**Rationale:**
+
+- **Continuity with M3.** M3 closed GO with these weights; they're the canonical "trained prey" baseline carrying forward into M5 as the substrate Red Queen evolution acts on top of. Starting prey from random-init weights would re-litigate the M3 result and waste compute on prey re-converging to baseline behaviour.
+- **Same provenance as held-out bundle.** Task 7.0 already curates `configs/evolution/coevolution_held_out_prey/` from M3 lamarckian elites. The gen-0 seed is one additional genome from the same source — different role (training seed vs held-out probe), same provenance file format.
+- **Symmetric with predator pretrain (D7).** Predator gen-0 = pretrained against `HeuristicPredatorBrain` (arm A) or random-init (arm B). Prey gen-0 = warm-started from M3 elite. Both sides start from a meaningful prior policy rather than random behaviour; this gives CMA-ES a useful initial mean to perturb.
+
+**Implementation surface:** the pilot YAML sets `prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_42.json` (etc.); `CoevolutionLoop.__init__` loads the genome, decodes its weights, and passes them as `CMAESOptimizer(x0=...)`. The 4 full-run seeds use 4 different M3 elite genomes (one per run seed) so each seed's gen-0 prey is independent.
+
+**Alternatives:**
+
+- CMA-ES `x0=zeros` (rejected: re-litigates M3; wastes ~5–10 generations on prey re-convergence).
+- Pretrain prey via heuristic-imitation against a random-policy predator (rejected: more code; prey doesn't have a clean heuristic-prey teacher available like predator does).
+- Random-init from CMA-ES default (rejected: same as `x0=zeros` issue).
+
+### D13. Prey/predator fitness asymmetry: prey trains per evaluation, predator evaluates frozen
+
+**Decision:** The two sides use **structurally different fitness functions** matched to their evolution scope:
+
+- **Prey side:** `LearnedPerformanceFitness` (the M3 lamarckian winner). Each evaluation runs `K_train=50` PPO inner-loop training episodes (where `brain.learn()` fires), followed by `L_eval=25` frozen-weight evaluation episodes. Captures *what the genome learned* (Lamarckian: trained weights flow back via inheritance to the next generation's children). Maps to existing config fields `learn_episodes_per_eval=50`, `eval_episodes_per_eval=25`.
+- **Predator side:** `PredatorEpisodicKillRate` (new, this change). Each evaluation runs `N_eval=25` frozen-weight multi-agent episodes only. No inner-loop PPO training, no `brain.learn()` calls, no weight capture for inheritance. The predator brain's CMA-ES weight evolution operates directly on the frozen-policy fitness gradient. Maps to existing config field `episodes_per_eval=25` (no `learn_episodes_per_eval` set).
+
+**Rationale for the asymmetry:**
+
+- **Prey policy space is large.** LSTMPPO + klinotaxis sensing has ~30k+ parameters and a recurrent-state machinery. CMA-ES + Lamarckian inner-loop training is what made M3 close GO; it's the validated path. Frozen-weight prey would lose the M3 substrate.
+- **Predator policy space is small.** MLPPPO at 11→64→64→5 + value head ≈ 5k parameters. Direct CMA-ES weight evolution suffices — the policy is shallow enough that weight gradient (via fitness samples) reaches good policies without an inner-loop training stage.
+- **Compute envelope.** Adding K_train=50 inner-loop training to the predator side would multiply per-evaluation cost by 3x for ~the same fitness signal (CMA-ES already finds the gradient via the outer loop). Wasted compute.
+- **Inheritance asymmetry.** Prey side uses `LamarckianInheritance` (M3 stack); predator side uses `NoInheritance` (D10). The fitness asymmetry matches the inheritance asymmetry — Lamarckian requires per-genome weight capture, which `LearnedPerformanceFitness` provides; `PredatorEpisodicKillRate` doesn't capture weights because predator doesn't use them via inheritance.
+
+**Implementation note:** the worker's 11-tuple already supports both shapes — the `(warm_start_path_override, weight_capture_path)` trailing fields are populated for prey side (Lamarckian flow) and left as `None` for predator side (frozen-weight flow). See [evolution/loop.py:104-162](packages/quantum-nematode/quantumnematode/evolution/loop.py#L104-L162). No new worker shape needed.
+
+**Why state this explicitly:** without this design note the spec language ("each side carries its own fitness") could be read as "both sides have the same fitness shape", and an implementer might wire predator to also do K=50 inner-loop training out of consistency, blowing the compute budget. D13 pins the asymmetry so that ambiguity is closed.
+
+**Alternatives:**
+
+- Symmetric `LearnedPerformanceFitness` for both sides (rejected: blows compute budget; predator policy space doesn't justify inner-loop training).
+- Symmetric `EpisodicSuccessRate` (frozen-weight) for both sides (rejected: prey side loses M3 Lamarckian substrate, would re-litigate the M3 GO closure).
+
 ## Risks / Trade-offs
 
 \[**Cycling without progress**\] → Mitigation: HoF (D3) + generality probe (D5). Disjunctive gate accepts cycling alone but probe surfaces if cycling co-occurs with held-out skill loss (overfitting) — flagged in verdict.
@@ -258,7 +310,7 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 
 \[**Bootstrap mismatch — predator pretraining biases initial behaviour**\] → Mitigation: pilot ablation (D7); empirical answer chooses full-run config.
 
-\[**M5.7 readout noise**\] → Mitigation: observation only (D11); does NOT alter M5's GO/STOP. Aggregator emits readout in `summary.md` with the explicit note "primary observation, not a verdict input."
+\[**M5.7 readout noise**\] → Mitigation: observation only (D11); does NOT alter M5's GO/STOP. Aggregator emits readout in `summary.md` with the explicit note "secondary observation, not a verdict input."
 
 \[**CMA-ES covariance pollution across K-blocks**\] → Mitigation: per-block fresh-instance construction (D2). Risk if cold-restart exploration noise dominates — fall back to "warm" CMA-ES state across K-blocks (carry covariance forward) and document.
 
@@ -272,25 +324,26 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 
 No data migration. Behaviour change is opt-in via `PredatorBrainConfig.kind: "mlpppo_predator"`. Existing scenario YAMLs default to `"heuristic"` and continue to instantiate `HeuristicPredatorBrain`.
 
-**Deployment steps:**
+**Deployment steps** (mirror tasks.md "PR Splitting" — see tasks.md for canonical PR-numbering and per-PR LoC estimates):
 
-1. Land predator brain + dispatcher (PR 1).
-2. Land predator encoder + fitness (PR 2).
-3. Land HoF + Red Queen metrics + CoevolutionLoop (PR 3).
-4. Land configs + driver + aggregator (PR 4).
-5. Run pilot, land logbook section (PR 5).
-6. Run full, land verdict logbook + tracker flips (PR 6).
-7. Land M5.7 Baldwin readout + observation logbook (PR 7).
-8. (After M5 verdict GO) Sync OpenSpec deltas to main specs and archive change.
+1. Land predator brain + dispatcher (PR 1, tasks 1.1–2.4).
+2. Land predator brain factory + encoder + fitness (PR 2, tasks 3.0–3.6).
+3. Land HoF + Red Queen metrics + CoevolutionLoop (PR 3, tasks 4.1–6.10).
+4. Land configs + held-out bundle + driver + smoke (PR 4, tasks 7.0–7.6).
+5. Land aggregator + plots (PR 5, tasks 8.1–8.5; can develop in parallel with PR 4).
+6. Run pilot, land logbook section (PR 6, tasks 9.1–9.6).
+7. Run full, land verdict logbook (PR 7, tasks 10.1–10.6).
+8. Land M5.7 Baldwin readout — reduced (PR 8, tasks 11.1–11.5; runs regardless of M5 verdict).
+9. Tracker + roadmap + spec sync (if GO) + archive (PR 9, tasks 12.1–12.5).
 
 **Rollback:** Each PR is independently revertable. The predator-brain dispatcher's `mlpppo_predator` branch can be removed without affecting heuristic-brain behaviour. The `CoevolutionLoop` is gated behind its own driver script — no impact on the existing single-population `EvolutionLoop`.
 
 ## Open Questions
 
-1. **Should the rebalancing knob (D2 risk row) ship in M5 or be deferred?** It's optional code — `CoevolutionLoop` works without it as long as no side collapses. Recommend ship-as-disabled-default with a feature flag, enable in pilot if domination is observed. *(Resolved as Phase-3 follow-up — design decision punted to pilot.)*
+1. **Should the rebalancing knob (Risk register row "One side dominates") ship in M5 or be deferred?** *(Resolved per round-3 review S17 — ship as disabled-default in task 6.11; pilot may enable via config if domination is observed.)*
 
 2. **Held-out predator opponent pool composition for generality probe (D5).** Mix of detection_radius ∈ {4, 6, 8, 10} × damage_radius ∈ {0, 1} gives 8 combinations; or sample from a wider distribution? Recommend the {4,6,8,10} × {0,1} grid for reproducibility; pilot inspects probe range.
 
 3. **Pilot threshold calibration cadence.** Lock thresholds *before* full-run starts, or refine after seeing more data? Recommend lock-before — prevents post-hoc selection bias; thresholds documented in pilot logbook section.
 
-4. **Predator inheritance strategy (D10).** Default to `NoInheritance` for predator gen-0 (cleaner — predator side starts fresh each generation). Lamarckian for predator is an ablation that could surface differential learning advantages between sides. Reserved for follow-up.
+4. **Predator inheritance strategy (D10).** *(Resolved per D10 + D13 — `NoInheritance` for predator side under `PredatorEpisodicKillRate` frozen-weight evaluation; Lamarckian-for-predator ablation reserved for follow-up if pilot shows predator-side weight evolution stalls.)*

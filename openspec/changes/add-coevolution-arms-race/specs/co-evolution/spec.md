@@ -8,8 +8,9 @@ The system SHALL provide a `CoevolutionLoop` orchestrator that drives two popula
 
 - **GIVEN** a `CoevolutionLoop` instance
 - **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: CMAESOptimizer` constructed with `diagonal=True` (sep-CMA-ES, imported from `quantumnematode.optimizers.evolutionary`), `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
-- **AND** the prey side state SHALL be configured for the prey-side encoder/fitness (e.g. LSTMPPO, LearnedPerformanceFitness)
-- **AND** the predator side state SHALL be configured for the predator-side encoder/fitness (e.g. MLPPPOPredatorEncoder, PredatorEpisodicKillRate)
+- **AND** the prey side state SHALL be configured with `LearnedPerformanceFitness` (Lamarckian-style: K_train=50 inner-loop training + L_eval=25 frozen evaluation episodes per genome) plus `LamarckianInheritance`, mirroring the M3 Lamarckian-LSTMPPO winner stack
+- **AND** the predator side state SHALL be configured with `PredatorEpisodicKillRate` (frozen-weight evaluation only: N_eval=25 multi-agent episodes per genome, NO inner-loop PPO training, NO weight capture) plus `NoInheritance`
+- **AND** the asymmetric fitness shapes are intentional per design.md D13 — prey trains per evaluation (large policy space, M3 substrate); predator evaluates frozen (small policy space, direct CMA-ES weight gradient suffices)
 - **AND** `hof` SHALL be a bounded buffer with eviction policy (the runtime opposition-sampling pool)
 - **AND** `champion_history` SHALL be unbounded — exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), never evicted; the time-ordered audit log walked by aggregator-time analysis (cycling, escalation). Distinct from per-generation lineage rows AND distinct from `hof`. A K-block's elite genome lands in BOTH `hof` (subject to eviction) and `champion_history` (unbounded)
 
@@ -55,6 +56,22 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 - **WHEN** the K-block ends
 - **THEN** the side's top-fitness genome from the block SHALL be pushed to its HoF
 - **AND** the HoF push SHALL respect the configured eviction policy (default quality-based)
+
+#### Scenario: Prey Gen-0 Warm-Start From M3 Lamarckian Elite
+
+- **GIVEN** a `CoevolutionLoop` instance and a YAML config specifying `prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_<run_seed>.json`
+- **WHEN** the loop initialises
+- **THEN** the prey-side `CMAESOptimizer` SHALL be constructed with `x0` set to the loaded elite genome's weight vector (NOT zeros)
+- **AND** the elite genome SHALL be sourced from prior M3-Lamarckian-LSTMPPO full-run elites (one elite per full-run seed, deterministic mapping)
+- **AND** the warmstart bundle SHALL be committed in-repo at `configs/evolution/coevolution_warmstart_prey/` so a fresh checkout can run the campaign reproducibly (matching the held-out bundle convention from "Held-Out Set Construction")
+
+#### Scenario: Predator Gen-0 Bootstrap Per D7 Pilot Ablation Arms
+
+- **GIVEN** a `CoevolutionLoop` instance and a YAML config specifying `predator_gen0_bootstrap: "heuristic_imitation_pretrain"` (D7 arm A) or `"cold_start"` (D7 arm B)
+- **WHEN** the loop initialises
+- **THEN** for arm A, the predator-side `CMAESOptimizer` SHALL be constructed with `x0` set to the result of `instantiate_predator_brain_from_sim_config` followed by 50-episode `pretrain_against_heuristic` (per task 1.4)
+- **AND** for arm B, the predator-side `CMAESOptimizer` SHALL be constructed with `x0=zeros` (random-init MLPPPO weights via the brain's own constructor)
+- **AND** seed 42 of the pilot SHALL use arm A; seed 43 SHALL use arm B (per "Pilot Configuration" scenario)
 
 ### Requirement: Hall-of-Fame Opposition Sampling
 
