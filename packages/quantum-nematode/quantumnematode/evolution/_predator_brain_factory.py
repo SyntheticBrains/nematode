@@ -41,11 +41,23 @@ def instantiate_predator_brain_from_sim_config(
 
     Reads predator brain config from
     ``sim_config.environment.predators.brain_config`` (a Pydantic
-    `PredatorBrainConfigSchema`). Honours the ``extra`` overrides that the
-    env-side dispatcher already understands (`actor_hidden_dim`,
-    `critic_hidden_dim`, `num_hidden_layers`, `sample`); the genome
-    encoder overwrites weights via `WeightPersistence` after construction
-    so the brain's orthogonal-init is throwaway.
+    `PredatorBrainConfigSchema`). Honours the architectural ``extra``
+    overrides — `actor_hidden_dim`, `critic_hidden_dim`,
+    `num_hidden_layers` — so a YAML-tuned predator brain shape flows
+    through the encoder unchanged. The genome encoder overwrites weights
+    via `WeightPersistence` after construction so the brain's
+    orthogonal-init is throwaway.
+
+    The ``extra["sample"]`` flag is intentionally IGNORED here and the
+    constructor pins ``sample=False``: this factory is exclusively used
+    by the genome encoder, which decodes a genome's weights into a
+    fresh brain that the fitness function then evaluates with argmax
+    actions (no sampling — frozen-weight per design.md D13). Sampling-
+    mode is reachable via the env-side dispatcher
+    (``DynamicForagingEnvironment._build_predator_brain``) for
+    standalone scenarios and via the pretrain helper for exploration
+    noise during behavioural cloning, but neither path passes through
+    this factory.
 
     Parameters
     ----------
