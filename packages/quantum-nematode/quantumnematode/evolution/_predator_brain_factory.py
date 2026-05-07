@@ -5,7 +5,7 @@ the predator stack. Required because `_ClassicalPPOEncoder.decode` calls
 `instantiate_brain_from_sim_config`, which only knows the agent-side
 `setup_brain_model` dispatch (19 registered agent brains, no predator brain).
 A predator-side encoder must call THIS factory to construct an
-`MLPPPOPredatorBrain` from `sim_config.environment.predator.brain_config`.
+`MLPPPOPredatorBrain` from `sim_config.environment.predators.brain_config`.
 
 Why a separate factory rather than registering the predator brain in
 `setup_brain_model`?
@@ -14,7 +14,7 @@ Why a separate factory rather than registering the predator brain in
   parameter_initializer_config, etc.) — none of which apply to the predator
   brain. Forcing `MLPPPOPredatorBrain` through that dispatch would either
   bloat its constructor surface or require null-shaped agent fields.
-- Predator config lives at `sim_config.environment.predator.brain_config`,
+- Predator config lives at `sim_config.environment.predators.brain_config`,
   NOT `sim_config.brain` (which is the AGENT brain). Re-using the agent
   factory would require passing the wrong sub-tree of the config.
 - Keeping the two factories separate makes the agent-side / predator-side
@@ -40,7 +40,7 @@ def instantiate_predator_brain_from_sim_config(
     """Build a fresh `MLPPPOPredatorBrain` for evolution from a sim config.
 
     Reads predator brain config from
-    ``sim_config.environment.predator.brain_config`` (a Pydantic
+    ``sim_config.environment.predators.brain_config`` (a Pydantic
     `PredatorBrainConfigSchema`). Honours the ``extra`` overrides that the
     env-side dispatcher already understands (`actor_hidden_dim`,
     `critic_hidden_dim`, `num_hidden_layers`, `sample`); the genome
@@ -51,7 +51,7 @@ def instantiate_predator_brain_from_sim_config(
     ----------
     sim_config
         Parsed simulation config. Must have
-        ``sim_config.environment.predator.brain_config`` set with
+        ``sim_config.environment.predators.brain_config`` set with
         ``kind == "mlpppo_predator"``.
     seed
         Per-evaluation seed. When provided, seeds numpy + torch globals
