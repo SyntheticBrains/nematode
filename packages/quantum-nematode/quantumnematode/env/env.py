@@ -1575,11 +1575,23 @@ class DynamicForagingEnvironment(BaseEnvironment):
             from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
 
             extra = config.extra or {}
+            # Seed precedence: explicit `extra["seed"]` overrides; otherwise
+            # derive from the env's RNG so two `DynamicForagingEnvironment`
+            # instances constructed with the same `seed=` produce
+            # bit-identical predator brain weights. Drawing one
+            # `rng.integers` here advances env RNG state by exactly one
+            # call per predator brain construction (deterministic given
+            # `seed=`); this keeps multi-predator scenarios reproducible.
+            explicit_seed = extra.get("seed")
+            if explicit_seed is None:
+                derived_seed = int(self.rng.integers(0, 2**31 - 1))
+            else:
+                derived_seed = int(explicit_seed)
             return MLPPPOPredatorBrain(
                 actor_hidden_dim=extra.get("actor_hidden_dim", 64),
                 critic_hidden_dim=extra.get("critic_hidden_dim", 64),
                 num_hidden_layers=extra.get("num_hidden_layers", 2),
-                seed=extra.get("seed"),
+                seed=derived_seed,
                 sample=extra.get("sample", False),
             )
         msg = (

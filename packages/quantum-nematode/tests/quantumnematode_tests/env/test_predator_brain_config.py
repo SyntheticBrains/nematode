@@ -25,7 +25,11 @@ from quantumnematode.env import (
 from quantumnematode.utils.config_loader import PredatorConfig
 
 
-def _make_env(brain_config: PredatorBrainConfig | None = None, *, seed: int = 42):
+def _make_env(
+    brain_config: PredatorBrainConfig | None = None,
+    *,
+    seed: int = 42,
+) -> DynamicForagingEnvironment:
     """Construct a small DynamicForagingEnvironment with 2 predators."""
     return DynamicForagingEnvironment(
         grid_size=20,
@@ -225,6 +229,74 @@ class TestMLPPPOPredatorDispatch:
                 strict=True,
             ):
                 assert torch.allclose(p_a, p_b)
+
+    def test_mlpppo_predator_seed_derived_from_env_when_extra_omits_seed(self) -> None:
+        """Same env seed without extra['seed'] yields identical predator weights.
+
+        Verifies the env-derived seed fallback in `_build_predator_brain`:
+        when `extra` lacks a `seed` key, the brain's seed is drawn from
+        `self.rng.integers` deterministically. Two envs with the same env
+        `seed=` therefore produce bit-identical predator weights even
+        without explicit predator-side seed configuration.
+        """
+        import torch
+
+        env_a = _make_env(
+            brain_config=PredatorBrainConfig(kind="mlpppo_predator"),  # no extra
+            seed=2026,
+        )
+        env_b = _make_env(
+            brain_config=PredatorBrainConfig(kind="mlpppo_predator"),
+            seed=2026,
+        )
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        for pred_a, pred_b in zip(env_a.predators, env_b.predators, strict=True):
+            assert isinstance(pred_a.brain, MLPPPOPredatorBrain)
+            assert isinstance(pred_b.brain, MLPPPOPredatorBrain)
+            for p_a, p_b in zip(
+                pred_a.brain.actor.parameters(),
+                pred_b.brain.actor.parameters(),
+                strict=True,
+            ):
+                assert torch.allclose(p_a, p_b)
+
+    def test_mlpppo_predator_different_env_seeds_produce_different_weights(self) -> None:
+        """Two envs with different env seeds (no extra['seed']) produce different predator weights.
+
+        Confirms the derived seed actually flows from the env RNG —
+        without this test, a bug that ignored the env seed entirely
+        (e.g. seed=0 hardcoded) would silently pass the
+        same-seed-same-weights test above.
+        """
+        import torch
+
+        env_a = _make_env(
+            brain_config=PredatorBrainConfig(kind="mlpppo_predator"),
+            seed=2026,
+        )
+        env_b = _make_env(
+            brain_config=PredatorBrainConfig(kind="mlpppo_predator"),
+            seed=9999,
+        )
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        # At least one predator's weights SHALL differ between the two envs.
+        any_differ = False
+        for pred_a, pred_b in zip(env_a.predators, env_b.predators, strict=True):
+            assert isinstance(pred_a.brain, MLPPPOPredatorBrain)
+            assert isinstance(pred_b.brain, MLPPPOPredatorBrain)
+            if any(
+                not torch.allclose(p_a, p_b)
+                for p_a, p_b in zip(
+                    pred_a.brain.actor.parameters(),
+                    pred_b.brain.actor.parameters(),
+                    strict=True,
+                )
+            ):
+                any_differ = True
+                break
+        assert any_differ, "different env seeds should produce different predator weights"
 
 
 class TestYamlMLPPPOPredatorKind:

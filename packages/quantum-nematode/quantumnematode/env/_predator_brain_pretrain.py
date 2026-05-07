@@ -33,6 +33,7 @@ from quantumnematode.env.mlpppo_predator_brain import (
 if TYPE_CHECKING:
     from quantumnematode.env.predator_brain import (
         HeuristicPredatorBrain,
+        PredatorAction,
         PredatorBrainParams,
     )
 
@@ -105,20 +106,15 @@ def pretrain_against_heuristic(  # noqa: PLR0913 — public helper with several 
     # import time of this file. Note: `PredatorType` lives in `env.env`,
     # NOT `env.predator_brain` (the latter only re-references it via
     # TYPE_CHECKING).
-    from quantumnematode.env.predator_brain import (
-        PredatorAction,
-    )
+    from quantumnematode.env.mlpppo_predator_brain import _ACTION_BY_INDEX
 
-    # Build PredatorAction → index mapping inverse to brain's
-    # `_ACTION_BY_INDEX`. Mapping must match the brain's output ordering
-    # `0=STAY, 1=UP, 2=DOWN, 3=LEFT, 4=RIGHT` per spec "Output Action
-    # Mapping".
+    # Derive PredatorAction → index inverse from the brain's canonical
+    # `_ACTION_BY_INDEX` ordering (`0=STAY, 1=UP, 2=DOWN, 3=LEFT, 4=RIGHT`
+    # per spec "Output Action Mapping"). Single source of truth: the
+    # brain owns the mapping, pretrain reuses it via inversion. Prevents
+    # silent drift if a future PR re-orders `_ACTION_BY_INDEX`.
     action_to_index: dict[PredatorAction, int] = {
-        PredatorAction.STAY: 0,
-        PredatorAction.UP: 1,
-        PredatorAction.DOWN: 2,
-        PredatorAction.LEFT: 3,
-        PredatorAction.RIGHT: 4,
+        action: idx for idx, action in enumerate(_ACTION_BY_INDEX)
     }
 
     rng = np.random.default_rng(seed)
