@@ -50,7 +50,7 @@ Not a behaviour change for any existing scenario YAML — `PredatorBrainConfig.k
 **Code (modified):**
 
 - `packages/quantum-nematode/quantumnematode/env/predator_brain.py` — `PredatorBrainConfig.kind` Literal extension.
-- `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — `PredatorBrainConfigSchema.kind` Literal extension matching above.
+- `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — `PredatorBrainConfigSchema.kind` Literal extension matching above; **new `CoevolutionConfig(BaseModel)` Pydantic class** with co-evolution-only fields (per-side `EvolutionConfig` sub-blocks, K_per_block, generation_pairs, generality_probe_every, start_side, held_out_size, prey_gen0_seed_path, predator_gen0_bootstrap, rebalance_threshold) plus a new `coevolution: CoevolutionConfig | None = None` sub-block on `SimulationConfig`. Existing top-level `evolution: EvolutionConfig` block remains valid for non-co-evolution scenarios.
 - `packages/quantum-nematode/quantumnematode/env/env.py` — `_build_predator_brain` dispatcher gains the `mlpppo_predator` branch.
 
 **Configs (new):**

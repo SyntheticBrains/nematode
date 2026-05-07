@@ -48,7 +48,7 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 - **THEN** this side's `CMAESOptimizer(diagonal=True)` SHALL be re-constructed as a fresh instance with a new seed (the underlying optimizer has no public reset method; re-construction is the equivalent operation, clearing the covariance state from the prior K-block's opposition)
 - **AND** the re-construction SHALL happen exactly once per K-block transition
 - **AND** the seed for the new instance SHALL be deterministic given the run's master seed and the K-block index, so checkpoint resume reproduces the same optimizer state
-- **AND** `diagonal=True` (sep-CMA-ES) SHALL be set unconditionally for both sides since predator/prey weight counts (~5k for MLPPPO predator, ~30k+ for LSTMPPO prey) are above the n>~100 tractability threshold for full-covariance CMA-ES
+- **AND** `diagonal=True` (sep-CMA-ES) SHALL be set unconditionally for both sides since predator/prey weight counts (~10k for MLPPPO predator actor + value head, ~30k+ for LSTMPPO prey) are above the n>~100 tractability threshold for full-covariance CMA-ES
 
 #### Scenario: Block Elite Pushed To HoF
 
@@ -69,7 +69,7 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 
 - **GIVEN** a `CoevolutionLoop` instance and a YAML config specifying `predator_gen0_bootstrap: "heuristic_imitation_pretrain"` (D7 arm A) or `"cold_start"` (D7 arm B)
 - **WHEN** the loop initialises
-- **THEN** for arm A, the predator-side `CMAESOptimizer` SHALL be constructed with `x0` set to the result of `instantiate_predator_brain_from_sim_config` followed by 50-episode `pretrain_against_heuristic` (per task 1.4)
+- **THEN** for arm A, the predator-side `CMAESOptimizer` SHALL be constructed with `x0` set to the result of `instantiate_predator_brain_from_sim_config` followed by 50-episode `pretrain_against_heuristic` (via the helper at `quantumnematode/env/_predator_brain_pretrain.py`)
 - **AND** for arm B, the predator-side `CMAESOptimizer` SHALL be constructed with `x0=zeros` (random-init MLPPPO weights via the brain's own constructor)
 - **AND** seed 42 of the pilot SHALL use arm A; seed 43 SHALL use arm B (per "Pilot Configuration" scenario)
 
@@ -105,12 +105,14 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 - **AND** held-out opponents SHALL NEVER be used in training evaluations
 - **AND** held-out genome bundles SHALL be committed to the repo (NOT stored only in `artifacts/`) so a fresh checkout can run the campaign reproducibly
 
-#### Scenario: Probe Cadence
+#### Scenario: Probe Cadence and Output Layout
 
-- **GIVEN** `generality_probe_every=10`
+- **GIVEN** `generality_probe_every=10` and a `CoevolutionLoop` configured with `output_dir`
 - **WHEN** generation index G is reached such that `G % 10 == 0`
 - **THEN** the loop SHALL evaluate each side's elite against the full held-out opponent set
-- **AND** results SHALL be written to a `generality_probe.csv` file with columns `(generation, side, opponent_index, fitness)`
+- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`
+- **AND** per-side lineage CSVs SHALL live at `{output_dir}/prey/lineage.csv` and `{output_dir}/predator/lineage.csv` (per-side subdirs match the existing `EvolutionLoop` output shape — M3 single-population analysis tooling reuses unchanged)
+- **AND** champion_history SHALL live at `{output_dir}/champion_history.json` (top-level, single file with `prey` + `predator` dict keys)
 
 #### Scenario: Probe Does Not Mutate Population State
 
@@ -159,10 +161,11 @@ The system SHALL gate the full M5 campaign on a pilot run; pilot thresholds SHAL
 
 #### Scenario: Pilot Configuration
 
-- **GIVEN** the pilot scenario (`coevolution_pilot.yml`)
-- **THEN** it SHALL configure 30 generations × 2 seeds × prey-pop 24 × predator-pop 16
-- **AND** seed 42 SHALL run the heuristic-imitation pretrain bootstrap arm
-- **AND** seed 43 SHALL run the cold-start bootstrap arm
+- **GIVEN** the two pilot arm YAML files (`coevolution_pilot_arm_a.yml` and `coevolution_pilot_arm_b.yml`)
+- **THEN** each SHALL configure 30 generations × prey-pop 24 × predator-pop 16 × K=10 × HoF=8 × probe every 10 gens
+- **AND** arm A SHALL run with seed=42 and `predator_gen0_bootstrap: "heuristic_imitation_pretrain"` (D7 arm A)
+- **AND** arm B SHALL run with seed=43 and `predator_gen0_bootstrap: "cold_start"` (D7 arm B)
+- **AND** the bash wrapper `phase5_m5_coevolution_pilot.sh` SHALL run both arms sequentially with distinct output directories
 
 #### Scenario: Pilot Decision Gate
 

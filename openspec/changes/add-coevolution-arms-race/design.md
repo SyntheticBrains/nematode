@@ -53,7 +53,7 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 ### D2. Optimiser: CMA-ES (sep-CMA-ES, `diagonal=True`) for both sides, with per-K-block fresh-instance construction
 
-**Decision:** `CMAESOptimizer` (canonical import path `quantumnematode.optimizers.evolutionary.CMAESOptimizer`, [evolutionary.py:105](packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py#L105)) per side with `diagonal=True` (sep-CMA-ES — drops `tell()` cost from O(n²) to O(n), tractability requirement for neuroevolution at n > ~100; full MLPPPO predator weight count is ~5k params at the input dim of 11 → 64 → 64 → 5 + value head). At the start of each K-block, the just-flipped side's optimizer is **re-constructed as a fresh instance** with a new seed so the covariance matrix doesn't carry stale opposition-conditioned adaptation. The frozen side's optimizer is unaffected.
+**Decision:** `CMAESOptimizer` (canonical import path `quantumnematode.optimizers.evolutionary.CMAESOptimizer`, [evolutionary.py:105](packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py#L105)) per side with `diagonal=True` (sep-CMA-ES — drops `tell()` cost from O(n²) to O(n), tractability requirement for neuroevolution at n > ~100; predator MLPPPO actor + value-head weight count is ~10k params at 11 → 64 → 64 → 5 actor and 11 → 64 → 64 → 1 critic, plus prey LSTMPPO is ~30k+ params — both well above the diagonal threshold). At the start of each K-block, the just-flipped side's optimizer is **re-constructed as a fresh instance** with a new seed so the covariance matrix doesn't carry stale opposition-conditioned adaptation. The frozen side's optimizer is unaffected.
 
 **Rationale (revised from earlier TPE decision — see "Why this changed" below):**
 
@@ -287,7 +287,7 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 **Rationale for the asymmetry:**
 
 - **Prey policy space is large.** LSTMPPO + klinotaxis sensing has ~30k+ parameters and a recurrent-state machinery. CMA-ES + Lamarckian inner-loop training is what made M3 close GO; it's the validated path. Frozen-weight prey would lose the M3 substrate.
-- **Predator policy space is small.** MLPPPO at 11→64→64→5 + value head ≈ 5k parameters. Direct CMA-ES weight evolution suffices — the policy is shallow enough that weight gradient (via fitness samples) reaches good policies without an inner-loop training stage.
+- **Predator policy space is small.** MLPPPO actor (11→64→64→5) + value head (11→64→64→1) ≈ 10k parameters total. Direct CMA-ES weight evolution suffices — the policy is shallow enough that weight gradient (via fitness samples) reaches good policies without an inner-loop training stage. (Compare prey LSTMPPO ~30k+ params with recurrent state + bilateral klinotaxis sensing, which justifies the inner-loop PPO training that `LearnedPerformanceFitness` provides.)
 - **Compute envelope.** Adding K_train=50 inner-loop training to the predator side would multiply per-evaluation cost by 3x for ~the same fitness signal (CMA-ES already finds the gradient via the outer loop). Wasted compute.
 - **Inheritance asymmetry.** Prey side uses `LamarckianInheritance` (M3 stack); predator side uses `NoInheritance` (D10). The fitness asymmetry matches the inheritance asymmetry — Lamarckian requires per-genome weight capture, which `LearnedPerformanceFitness` provides; `PredatorEpisodicKillRate` doesn't capture weights because predator doesn't use them via inheritance.
 
@@ -299,6 +299,66 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 
 - Symmetric `LearnedPerformanceFitness` for both sides (rejected: blows compute budget; predator policy space doesn't justify inner-loop training).
 - Symmetric `EpisodicSuccessRate` (frozen-weight) for both sides (rejected: prey side loses M3 Lamarckian substrate, would re-litigate the M3 GO closure).
+
+### D14. Pydantic schema layout: new `CoevolutionConfig` with per-side `EvolutionConfig` sub-blocks
+
+**Decision:** A new `CoevolutionConfig(BaseModel)` class in [`config_loader.py`](packages/quantum-nematode/quantumnematode/utils/config_loader.py) owns all co-evolution-only fields, including two side-specific `EvolutionConfig` sub-blocks. `SimulationConfig` gains an optional `coevolution: CoevolutionConfig | None = None` sub-block (parallel to the existing `evolution: EvolutionConfig | None = None`). Co-evolution scenarios use the new sub-block; single-population scenarios keep the existing top-level `evolution` block unchanged.
+
+**Schema sketch:**
+
+```python
+class CoevolutionConfig(BaseModel):
+    # Per-side evolution configs (each carries its own population_size,
+    # sigma0, cma_diagonal, episodes_per_eval, learn_episodes_per_eval).
+    prey_evolution: EvolutionConfig  # Lamarckian + LearnedPerformanceFitness
+    predator_evolution: EvolutionConfig  # NoInheritance + PredatorEpisodicKillRate
+
+    # Alternating-schedule controller knobs.
+    K_per_block: int = Field(default=10, ge=1)
+    generation_pairs: int = Field(default=3, ge=1)  # 3 = 30-gen pilot, 5-7 = full
+    generality_probe_every: int = Field(default=10, ge=1)
+    start_side: Literal["prey", "predator"] = "prey"
+
+    # Held-out opponent set semantics.
+    held_out_size: int = Field(default=8, ge=1)
+
+    # Gen-0 init (D12 + D7).
+    prey_gen0_seed_path: Path | None = None  # warmstart from M3 lamarckian elite
+    predator_gen0_bootstrap: Literal["heuristic_imitation_pretrain", "cold_start"] = "heuristic_imitation_pretrain"
+
+    # Rebalancing knob (S17, disabled-default).
+    rebalance_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def _validate_optimisers(self) -> "CoevolutionConfig":
+        # Both sides MUST use CMA-ES per D2 (TPE incompatible with weight encoders).
+        for side, ev in [("prey", self.prey_evolution), ("predator", self.predator_evolution)]:
+            if ev.algorithm != "cmaes":
+                raise ValueError(
+                    f"CoevolutionConfig.{side}_evolution.algorithm must be 'cmaes' "
+                    f"(got {ev.algorithm!r}); TPE is incompatible with weight encoders, "
+                    "GA is reserved as ablation. See design.md D2."
+                )
+            if not ev.cma_diagonal:
+                raise ValueError(
+                    f"CoevolutionConfig.{side}_evolution.cma_diagonal must be True "
+                    "(sep-CMA-ES required for neuroevolution at n>~100). See design.md D2."
+                )
+        return self
+```
+
+**Rationale for a separate class (vs extending `EvolutionConfig`):**
+
+- **Clean separation.** `EvolutionConfig` already has 25+ fields for single-population evolution; adding 8+ co-evolution-only fields would bloat the class for non-co-evolution scenarios.
+- **Per-side asymmetry.** D4 specifies asymmetric pop sizes (24/16); D13 specifies asymmetric fitness (LearnedPerformanceFitness vs PredatorEpisodicKillRate). Each side's `EvolutionConfig` carries its own `population_size`, `learn_episodes_per_eval`, etc. — natural per-side encapsulation.
+- **Backward compatibility.** Existing scenarios that use `evolution: EvolutionConfig` are unchanged. Only co-evolution scenarios use the new `coevolution: CoevolutionConfig` sub-block.
+- **Validation.** The `@model_validator` rejects misconfigurations (TPE on either side, missing cma_diagonal) at YAML load time rather than at run time — surfacing the B8 / D2 invariant as a hard check.
+
+**Alternatives:**
+
+- Extend `EvolutionConfig` with the new fields (rejected: bloats single-population scenarios with co-evolution-only knobs).
+- Two separate top-level configs (`prey_evolution: EvolutionConfig` + `predator_evolution: EvolutionConfig` directly on `SimulationConfig`) without a wrapping `CoevolutionConfig` (rejected: loses the K_per_block + generation_pairs + generality_probe_every controller knobs, which need a per-run home).
+- Use `EvolutionConfig` for both sides with an `is_coevolution: bool` flag and side-specific overrides (rejected: confusing, doesn't model the controller knobs cleanly).
 
 ## Risks / Trade-offs
 
@@ -314,7 +374,7 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 
 \[**CMA-ES covariance pollution across K-blocks**\] → Mitigation: per-block fresh-instance construction (D2). Risk if cold-restart exploration noise dominates — fall back to "warm" CMA-ES state across K-blocks (carry covariance forward) and document.
 
-\[**Predator within-K-block PPO instability**\] → Pilot sanity check; if predator fails to train within K=10, raise K to 15 in full run. The K=10 default is calibrated for prey (M3 evidence) — predator may need different K.
+\[**Predator within-K-block CMA-ES under-convergence**\] → Pilot sanity check; if predator covariance fails to settle within K=10 (no measurable fitness improvement across the K-block), raise `K_per_block` to 15 in the full run, OR split the per-side K knob into `K_prey=10` + `K_pred=15`. The K=10 default is justified differently per side (D1 — prey from PPO inner-loop training convergence; predator from CMA-ES covariance settling) — predator may need a longer K to make covariance meaningful.
 
 \[**Generality-probe held-out set saturated**\] → Pilot inspects the held-out fitness range; if all probes saturated at 0.0 or 1.0, re-sample held-out from a wider pool (mix in random-policy or heuristic-radius variants).
 
