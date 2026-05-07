@@ -294,7 +294,11 @@ def trait_escalation(
     # is close to normal for verdict-gate purposes; the aggregator can
     # report the t statistic itself if a reviewer wants tighter inference).
     if slope_se <= 0.0 or not np.isfinite(slope_se):
-        p_value = 1.0
+        # Zero-residual perfectly-linear fit: the slope is *exactly*
+        # known, so p_value = 0 if slope is non-zero and 1 if slope is
+        # zero (no signal). Anything else is the degenerate insignificant
+        # case (we have no inference available).
+        p_value = 0.0 if slope != 0.0 else 1.0
     else:
         t_stat = slope / slope_se
         # Two-sided p-value via the standard normal CDF (asymptotic).
@@ -331,6 +335,12 @@ def fitness_lag(
     is the matched-up version). Scanned over
     ``[-max_lag, +max_lag]``.
 
+    Tracks peak POSITIVE correlation (where the two series align in
+    phase). Anti-phase coupling is reported by :func:`coupled_rate`,
+    not here — for periodic inputs the |correlation| would peak at
+    half-period whether or not the series actually align, which would
+    confuse "where do they line up?" with "where are they anti-aligned?".
+
     Parameters
     ----------
     series_a, series_b
@@ -366,6 +376,14 @@ def fitness_lag(
     if norm <= 0.0:
         return float("nan")
 
+    # Track peak POSITIVE correlation (where the two series align in
+    # phase), NOT peak |correlation|. For periodic series the
+    # anti-phase peak at half-period would otherwise dominate the true
+    # alignment lag — e.g. two sines at period 12 with shift 4: peak
+    # +corr is at lag +4 (the actual shift), but |corr| also peaks at
+    # lag +/-2 (half-period anti-phase). Anti-phase coupling is a
+    # separate concept captured by `coupled_rate` (returns -1 for
+    # anti-coupled deltas); `fitness_lag` reports the in-phase shift.
     best_lag = 0
     best_corr = -np.inf
     for lag in range(-max_lag, max_lag + 1):
@@ -374,8 +392,8 @@ def fitness_lag(
         else:
             shift = -lag
             corr = float((a_centered[shift:] * b_centered[: n - shift]).sum() / norm)
-        if abs(corr) > best_corr:
-            best_corr = abs(corr)
+        if corr > best_corr:
+            best_corr = corr
             best_lag = lag
     return float(best_lag)
 
