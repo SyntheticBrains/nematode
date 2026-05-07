@@ -1553,7 +1553,18 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         - `actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers`:
           override the agent-MLPPPO defaults (currently 64 / 64 / 2).
-        - `seed`: per-instance seed for parameter initialisation.
+        - `seed`: parameter-initialisation seed. **Note:** this method
+          is invoked once per predator from `_make_predator`, so an
+          explicit `extra["seed"]` value is applied IDENTICALLY to every
+          predator in the env — all N predators will start with
+          bit-identical weights. This is rarely what you want for a
+          standalone multi-predator scenario but is harmless for M5
+          co-evolution where the genome encoder overwrites these weights
+          via `WeightPersistence` before the first eval episode. When
+          `extra["seed"]` is omitted (the default), each predator is
+          seeded from a fresh `self.rng.integers` draw, so the N
+          predators get distinct initial weights deterministic given the
+          env's `seed=`.
         - `sample`: when True, `run_brain` samples from the action
           distribution; when False (default), returns argmax.
 

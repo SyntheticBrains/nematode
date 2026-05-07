@@ -12,6 +12,7 @@ Covers:
 """
 
 import pytest
+import torch
 import yaml
 from quantumnematode.brain.actions import Action
 from quantumnematode.env import (
@@ -195,8 +196,6 @@ class TestMLPPPOPredatorDispatch:
             assert isinstance(pred.brain, MLPPPOPredatorBrain)
             # Verify the override took effect by checking actor's first
             # Linear layer's out_features.
-            import torch
-
             first_linear = next(m for m in pred.brain.actor if isinstance(m, torch.nn.Linear))
             assert first_linear.out_features == 32
 
@@ -223,16 +222,12 @@ class TestMLPPPOPredatorDispatch:
         )
         for pred in env.predators:
             assert isinstance(pred.brain, MLPPPOPredatorBrain)
-            import torch
-
             first_linear = next(m for m in pred.brain.actor if isinstance(m, torch.nn.Linear))
             assert first_linear.out_features == 32
             # Construction succeeded → coercion held.
 
     def test_mlpppo_predator_seed_reproducibility(self) -> None:
         """Verify that two envs with the same mlpppo seed produce identical predator weights."""
-        import torch
-
         env_a = _make_env(
             brain_config=PredatorBrainConfig(
                 kind="mlpppo_predator",
@@ -268,8 +263,6 @@ class TestMLPPPOPredatorDispatch:
         `seed=` therefore produce bit-identical predator weights even
         without explicit predator-side seed configuration.
         """
-        import torch
-
         env_a = _make_env(
             brain_config=PredatorBrainConfig(kind="mlpppo_predator"),  # no extra
             seed=2026,
@@ -298,8 +291,6 @@ class TestMLPPPOPredatorDispatch:
         (e.g. seed=0 hardcoded) would silently pass the
         same-seed-same-weights test above.
         """
-        import torch
-
         env_a = _make_env(
             brain_config=PredatorBrainConfig(kind="mlpppo_predator"),
             seed=2026,
