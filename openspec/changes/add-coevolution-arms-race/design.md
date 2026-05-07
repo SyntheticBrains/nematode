@@ -2,7 +2,7 @@
 
 M5 is the headline scientific milestone for Phase 5 — a Red Queen arms race between learnable prey (LSTMPPO+klinotaxis, the M3 Lamarckian winner) and learnable predators (MLPPPO with predator-specific I/O). M1 (just merged) shipped the substrate: `PredatorBrain` Protocol + `HeuristicPredatorBrain` adapter + per-predator metrics in `MultiAgentEpisodeResult`. The substrate is byte-equivalent against the legacy `_update_pursuit` / `_update_random` heuristic (23 byte-equivalence tests + 80 metric-cells with 0.0 delta in the M1 regression baseline). What's missing is everything *above* the substrate: a learnable predator brain, predator-side encoder + fitness, a two-population co-evolution loop, hall-of-fame opposition, generality probe, and Red Queen analysis primitives.
 
-The codebase already provides a single-population evolution stack (M2/M3): `EvolutionLoop` with multiprocessing 11-tuple worker, `GenomeEncoder` Protocol + `ENCODER_REGISTRY`, `FitnessFunction` Protocol, `InheritanceStrategy` Protocol with `LamarckianInheritance` (M3 GO winner), and `OptunaTPEOptimizer` (M2.12 RQ1 winner). The design challenge is to **layer a co-evolution orchestrator on top** rather than fork the loop — reuse `_evaluate_in_worker` per side, with each side carrying its own encoder + fitness + (optional) inheritance strategy.
+The codebase already provides a single-population evolution stack (M2/M3): `EvolutionLoop` with multiprocessing 11-tuple worker, `GenomeEncoder` Protocol + `ENCODER_REGISTRY`, `FitnessFunction` Protocol, `InheritanceStrategy` Protocol with `LamarckianInheritance` (M3 GO winner), `CMAESOptimizer` (M0/M3 weight-evolution canonical) and `OptunaTPEOptimizer` (M2.12 RQ1 winner for hyperparameter evolution). The design challenge is to **layer a co-evolution orchestrator on top** rather than fork the loop — reuse `_evaluate_in_worker` per side, with each side carrying its own encoder + fitness + (optional) inheritance strategy. M5 evolves predator/prey **weights** (not hyperparameters), so `CMAESOptimizer(diagonal=True)` is the optimiser of choice; TPE is structurally incompatible with weight encoders (see D2).
 
 A second design constraint comes from M4's STOP closure: single-task K=50 PPO has no Baldwin axis. M5 doesn't gate on Baldwin (the verdict is purely Red Queen dynamics), but co-evolution intrinsically introduces task variation — the prey's "task" is to survive the *current* predator pop, which shifts every K predator generations. M5.7 ships secondary Baldwin instrumentation that observes this naturally varying task distribution; if the readout fires it triggers M4.7 follow-up rather than re-opening M4.
 
@@ -13,16 +13,16 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 **Goals:**
 
 - Ship a learnable `MLPPPOPredatorBrain` that satisfies the M1 `PredatorBrain` Protocol byte-for-byte (no substrate breakage; `HeuristicPredatorBrain` remains the default for any scenario YAML that doesn't opt in to `kind: mlpppo_predator`).
-- Build a `CoevolutionLoop` that orchestrates two populations under an alternating training schedule (K=10 gens per side, opposing pop frozen during off-block, per-K-block TPE study reset to clear stale opposition-conditioned posterior).
+- Build a `CoevolutionLoop` that orchestrates two populations under an alternating training schedule (K=10 gens per side, opposing pop frozen during off-block, per-K-block fresh `CMAESOptimizer(diagonal=True)` instance to clear stale opposition-conditioned covariance).
 - Provide hall-of-fame opposition (70%/30% current-pop / HoF mixture, HoF size 8, quality-based eviction) to prevent cycling-without-progress.
 - Provide a generality probe (every 10 gens against 8 frozen held-out opponents) to flag self-play overfitting.
 - Provide Red Queen analysis primitives (cycling, escalation, fitness lag, coupled rate, generality) and a softened-disjunctive verdict gate (cycling OR escalation in ≥2 of 4 full-run seeds → GO).
-- Ship M5.7 secondary Baldwin instrumentation that reuses M4.5's F1 evaluator wholesale; observation only (does NOT alter M5 verdict).
+- Ship M5.7 secondary Baldwin instrumentation (reduced under CMA-ES weight evolution: signal-delta only, hyperparam-spread criterion dropped per D11) that reuses M4.5's F1 evaluator wholesale; observation only (does NOT alter M5 verdict).
 - Pilot-first sequencing: 30 gens × 2 seeds (~8 wall-hours) calibrates Red Queen thresholds + chooses pretrain on/off; full 50–70 gens × 4 seeds (~30–40 wall-hours) delivers the verdict.
 
 **Non-Goals:**
 
-- GA optimiser ablation. Literature recommends GA for primary co-evolution because of objective drift, but the alternating schedule flattens drift within K-blocks and TPE is locally optimal among shipped optimisers (RQ1 closed +32pp over CMA-ES). Switching introduces re-validation cost mid-milestone. Reserved as follow-up if cycling stalls.
+- GA optimiser ablation. Literature recommends GA for primary co-evolution because of objective drift, but the alternating schedule flattens drift within K-blocks and CMA-ES (sep-CMA-ES with `diagonal=True`) is M0/M3's canonical optimiser for unbounded weight evolution. Switching introduces re-validation cost mid-milestone. Reserved as follow-up if CMA-ES diversity collapses.
 - Predator-side pheromones / signalling. Predators stay solitary; coordination would muddle the trait-escalation signal.
 - Multi-predator cooperation (intra-pop predator-vs-predator dynamics).
 - Transfer to single-agent runners. M5 verdict is purely an evolution-loop result; transfer evaluation lives in M5.6 as post-pilot ablation.
@@ -49,20 +49,28 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Confirmed by user (Phase 3 question).**
 
-### D2. Optimiser: TPE for both sides, with per-K-block fresh-instance construction
+### D2. Optimiser: CMA-ES (sep-CMA-ES, `diagonal=True`) for both sides, with per-K-block fresh-instance construction
 
-**Decision:** `OptunaTPEOptimizer` (canonical import path `quantumnematode.optimizers.evolutionary.OptunaTPEOptimizer`) per side, mirroring the M3+ default. At the start of each K-block, the just-flipped side's optimizer is **re-constructed as a fresh instance** with a new `TPESampler` seed so its prior doesn't carry stale opposition-conditioned posterior. (The existing `OptunaTPEOptimizer` has no public `reset` method — re-construction avoids enlarging the optimizer base-class surface mid-milestone.) The frozen side's optimizer is unaffected.
+**Decision:** `CMAESOptimizer` (canonical import path `quantumnematode.optimizers.evolutionary.CMAESOptimizer`, [evolutionary.py:105](packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py#L105)) per side with `diagonal=True` (sep-CMA-ES — drops `tell()` cost from O(n²) to O(n), tractability requirement for neuroevolution at n > ~100; full MLPPPO predator weight count is ~5k params at the input dim of 11 → 64 → 64 → 5 + value head). At the start of each K-block, the just-flipped side's optimizer is **re-constructed as a fresh instance** with a new seed so the covariance matrix doesn't carry stale opposition-conditioned adaptation. The frozen side's optimizer is unaffected.
 
-**Rationale:** M2.12 RQ1 closed TPE +32pp over CMA-ES on the predator-arm hyperparameter schema; switching optimisers requires re-validating that result for *this* schema. Within a K-block under alternating training the objective is approximately stationary (the opponent is frozen), so TPE applies. Per-block fresh construction costs ~6 gens of cold-restart exploration per seed (3 K-block swaps × 2 sides), negligible against the ~30-gen pilot budget. Re-constructing rather than reset-in-place keeps the optimizer base-class surface unchanged and means resume-from-checkpoint code only needs to serialise the *seed sequence* used per K-block, not the in-flight TPE study state.
+**Rationale (revised from earlier TPE decision — see "Why this changed" below):**
+
+- **TPE is incompatible with weight encoders.** `OptunaTPEOptimizer.__init__` requires `bounds: list[tuple[float, float]]` ([evolutionary.py:519-577](packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py#L519-L577)) and rejects construction without them. `_ClassicalPPOEncoder.genome_bounds` returns `None` with the explicit comment *"TPE-based optimisers can't be used with weight encoders for this reason; CMA-ES handles unbounded search natively."* ([encoders.py:330-342](packages/quantum-nematode/quantumnematode/evolution/encoders.py#L330-L342)). The earlier "TPE for both sides" decision was based on the M2.12 RQ1 closure, but that closure was for **hyperparameter** evolution (bounded schema), not weight evolution (unbounded). For M5 the predator/prey are evolving weights, so TPE is structurally incompatible — construction would fail at run start.
+- **CMA-ES handles unbounded weights natively** and is M0/M3's canonical optimiser for weight evolution. M3's Lamarckian-LSTMPPO closed GO using CMA-ES; the pattern is proven at the scale we need.
+- **`diagonal=True` (sep-CMA-ES) is the neuroevolution-scale knob.** Full-covariance CMA-ES becomes minutes per `tell()` at n > ~1000 and won't fit the K=10 / K-block budget. Sep-CMA-ES gives up off-diagonal covariance adaptation (~2-10x more generations to converge per Ros & Hansen 2008) but each generation is O(n) instead of O(n²). Net wall-clock is dramatically faster at large n.
+- **Per-block fresh construction** still applies — covariance state should reset when the opponent flips. Costs ~6 gens of cold-restart exploration per seed (3 K-block swaps × 2 sides), negligible against the ~30-gen pilot budget.
+- **Re-construction rather than reset-in-place** keeps the optimizer base-class surface unchanged. Resume-from-checkpoint code only needs to serialise the *seed sequence* used per K-block, not the in-flight CMA-ES state.
+
+**Why this changed (vs the earlier TPE decision):** the earlier Phase-3-confirmed answer of "TPE for both sides with per-block reset" was based on an incorrect premise: that TPE could evolve weights. Code review revealed `_ClassicalPPOEncoder.genome_bounds = None` rejects bounded sampling, and `OptunaTPEOptimizer` requires bounds at construction. The B8 finding in the second-pass review forced a re-decision. CMA-ES is the correct fit for weight evolution; the fix doesn't compromise the M5 verdict gate (Red Queen dynamics are agnostic to which optimiser produces the weights). One downstream effect: M5.7's "hyperparam spread tightens by ≥30%" condition is dropped because there is no hyperparam spread under weight evolution (see D11 + tracker M5.7 update).
 
 **Alternatives:**
 
-- GA both sides (rejected: re-validation cost mid-milestone; reserved as follow-up if cycling stalls).
-- Hybrid TPE prey + GA predator (rejected: asymmetric optimiser would confound the RQ1 closure if either side fails).
-- TPE without reset (rejected: prior pollution from stale opposition would degrade exploration; per-block fresh construction is cheap insurance).
+- TPE for both sides (REJECTED — structurally incompatible with weight encoders, see rationale above).
+- GA both sides (rejected: CMA-ES outperforms GA at neural-network weight evolution per M0/M3 calibration; reserved as ablation if CMA-ES diversity collapses).
+- Hyperparameter evolution + TPE for prey, weight evolution + CMA-ES for predator (rejected: asymmetric substrate confounds Red Queen dynamics interpretation; pilot wall blows past budget because hyperparameter evaluation requires K=50 inner-loop training per genome; reserved as M4.7 follow-up under a dedicated hyperparameter-evolution milestone).
 - Add a `restart(seed)` method to `EvolutionaryOptimizer` and reset in-place (rejected: enlarges base-class surface mid-milestone for one consumer).
 
-**Confirmed by user (Phase 3 question).**
+**User confirmation:** revised in second-pass review after B8 finding — user accepted CMA-ES switch with awareness that M5.7 reduces to a single (signal-delta) Baldwin readout.
 
 ### D3. Hall-of-fame opposition: 70% current pop / 30% HoF, HoF size 8, quality-based eviction
 
@@ -197,21 +205,25 @@ class HallOfFame:
 
 - `encoder: GenomeEncoder` (MLPPPO for prey, MLPPPOPredatorEncoder for predator)
 - `fitness: FitnessFunction` (LearnedPerformanceFitness for prey, PredatorEpisodicKillRate for predator); both implement the existing `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float` Protocol surface
-- `optimizer: OptunaTPEOptimizer` from `quantumnematode.optimizers.evolutionary` (re-constructed fresh at each K-block start per D2)
+- `optimizer: CMAESOptimizer(diagonal=True)` from `quantumnematode.optimizers.evolutionary` (re-constructed fresh at each K-block start per D2)
 - `inheritance: InheritanceStrategy` (Lamarckian for prey, NoInheritance for predator gen-0; configurable)
-- `hof: HallOfFame`
+- `hof: HallOfFame` — bounded buffer with eviction policy; the runtime opposition-sampling pool. Loses entries when capacity is exceeded.
 - `population: list[Genome]` (current generation)
-- `champion_history: list[Genome]` — exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), distinct from per-generation lineage rows. Used by aggregator + HoF push.
+- `champion_history: list[Genome]` — **unbounded** time-ordered audit log; one entry per completed K-block (the K-block's top-fitness genome at K-block end). Never evicted. Distinct from `hof` (which is the bounded sample-from set) and from per-generation lineage rows (which include all genomes per gen, not just K-block elites). Aggregator-time analysis (cycling, escalation) walks `champion_history`.
+
+A K-block's elite genome is appended to **both** `hof` (subject to eviction) and `champion_history` (unbounded log) — they share content but serve different purposes: HoF is for runtime sampling, champion_history is for post-hoc analysis.
 
 `CoevolutionLoop.run(*, generation_pairs, K_per_block, generality_probe_every)` drives:
 
 1. Smoke gen 0: evaluate both sides against random-init opponents to populate gen-0 lineage.
 2. For each K-block in alternating order (prey first, then predator):
-   - Re-construct training side's `OptunaTPEOptimizer` with a fresh `TPESampler` seed (per D2).
+   - Re-construct training side's `CMAESOptimizer(diagonal=True)` with a fresh seed (per D2).
    - For K generations: ask training-side optimizer for trial params → evaluate against frozen-side population (HoF-mixed per D3) → tell.
-   - Append training-side block elite to `champion_history` AND push it to its HoF (single source of truth: the K-block's elite genome).
+   - Append training-side block elite to `champion_history` AND push it to its HoF (the K-block's elite genome lands in both — HoF is bounded with eviction; champion_history is unbounded log).
 3. Every `generality_probe_every` generations, evaluate both elites against the held-out set and write a probe row.
 4. Checkpoint to JSON every K-block (resume support).
+
+**Inheritance bookkeeping inside `CoevolutionLoop`:** because we use `_evaluate_in_worker` directly (not `EvolutionLoop.run`), `CoevolutionLoop` must replicate per-side inheritance bookkeeping (parent_ids, warm_start_path_override, weight_capture_path) as it walks K-blocks, mirroring `EvolutionLoop.run`'s logic at [loop.py:498-700+](packages/quantum-nematode/quantumnematode/evolution/loop.py#L498). This is implementation overhead (~100 LoC) but avoids the alternative: forcing single-population checkpoint shape via `EvolutionLoop` subclassing.
 
 **Worker reuse:** `EvolutionLoop._evaluate_in_worker` ([loop.py:104-162](packages/quantum-nematode/quantumnematode/evolution/loop.py#L104-L162)) takes an 11-tuple `(params, sim_config, encoder, fitness, episodes, seed, generation, index, parent_ids, warm_start_path_override, weight_capture_path)`. The tuple ABI does NOT change for co-evolution — instead, the **opponent brain weights are injected via `sim_config` patching** before the worker is invoked, following the M2 idiom for sim-config patching at evaluation time. The fitness function then drives the multi-agent runner internally with both brains decoded and reads `MultiAgentEpisodeResult.per_predator_kills` (or per-agent metrics for prey).
 
@@ -222,13 +234,19 @@ class HallOfFame:
 - Subclass `EvolutionLoop` (rejected: forces single-population shape; would require deep changes to `EvolutionLoop`).
 - Two parallel `EvolutionLoop` instances + a thin coordinator (rejected: each `EvolutionLoop` owns its own multiprocessing pool; we want a single pool with the alternating-schedule controller orchestrating workers).
 
-### D11. M5.7 Baldwin instrumentation: reuse M4.5 F1 evaluator wholesale
+### D11. M5.7 Baldwin instrumentation (reduced): reuse M4.5 F1 evaluator, signal-delta only
 
-**Decision:** `scripts/campaigns/baldwin_m5_secondary_eval.py` invokes `baldwin_f1_postpilot_eval.py` (319 LoC, currently used for M4.5 F1 readout) with M5-specific inputs: per-gen elite snapshots from prey lineage CSV, current-gen predator pop as the "task" axis, K′ ∈ {10, 25} paired-train comparison. Observation only; readout (signal-delta > +0.05 at K′=10 across ≥2 of 4 seeds AND prey hyperparam spread on actor_lr/entropy_coef tightens by ≥30% from gen 5 → 30) does NOT alter M5 verdict — if it fires, triggers M4.7 follow-up.
+**Decision:** `scripts/campaigns/baldwin_m5_secondary_eval.py` invokes `baldwin_f1_postpilot_eval.py` (319 LoC, currently used for M4.5 F1 readout) with M5-specific inputs: per-gen elite snapshots from prey lineage CSV, current-gen predator pop as the "task" axis, K′ ∈ {10, 25} paired-train comparison. Observation only; **single readout: signal-delta > +0.05 at K′=10 across ≥2 of 4 seeds**. If it fires, M5.7 *suggests* a Baldwin signal but cannot be definitive without a hyperparameter axis; it arms M4.7's deferred-retry trigger but does NOT close the Baldwin question.
 
-**Rationale:** Confirmed by user as Phase 3 question; reuses M4.5 substrate. Marginal cost ~1 day of script glue + aggregator integration. Defer-to-M4.7 alternative would require re-running M5 to capture per-gen elite snapshots, a much larger cost.
+**Why reduced (vs original two-readout tracker entry):** the original tracker M5.7 (per [openspec/changes/2026-04-26-phase5-tracking/tasks.md:215](openspec/changes/2026-04-26-phase5-tracking/tasks.md#L215)) specified a conjunctive readout: signal-delta AND hyperparam spread tightening. The hyperparam-spread criterion required prey to evolve hyperparameters (e.g. `actor_lr` / `entropy_coef`); under D2's CMA-ES weight evolution, prey have a single fixed hyperparameter set across all genomes, so per-generation hyperparam spread is undefined. The criterion is structurally inapplicable. Dropping it is honest about what M5's substrate can measure.
 
-**Confirmed by user (Phase 3 — ship in M5).**
+**What remains observable under weight evolution:** condition 1 (signal-delta) measures whether the elite genome's brain has learned more than a fresh schema-prior brain at K′=10 episodes. Under weight evolution + Lamarckian inheritance, this *is* a meaningful Baldwin proxy: if elite's weight inheritance gives it a head start on K′-train compared to schema-prior, that's evidence the evolved weight init encodes faster learning. Less direct than hyperparameter-axis evidence but not zero.
+
+**Rationale (unchanged):** reuses M4.5 substrate (`baldwin_f1_postpilot_eval.py`). Marginal cost ~1 day of script glue + aggregator integration. Defer-to-M4.7 alternative would require re-running M5 to capture per-gen elite snapshots, a much larger cost. Runs regardless of M5 verdict (per task 11.4) — informative even on STOP.
+
+**M4.7 trigger condition (revised under reduced M5.7):** if M5.7's signal-delta fires across ≥2 of 4 seeds, M4.7 stays armed and motivated by *suggestive* M5 evidence; if it stays silent, M4.7 stays armed but without M5 motivation. M4.7 itself would run with proper hyperparameter-evolution substrate (M2.12 / M3 stack) where both signal-delta AND hyperparam-spread are observable, and would be the definitive Baldwin closure.
+
+**Confirmed by user (Phase 3 — ship in M5; second-pass review — accept reduced readout under CMA-ES weight evolution).**
 
 ## Risks / Trade-offs
 
@@ -242,7 +260,7 @@ class HallOfFame:
 
 \[**M5.7 readout noise**\] → Mitigation: observation only (D11); does NOT alter M5's GO/STOP. Aggregator emits readout in `summary.md` with the explicit note "primary observation, not a verdict input."
 
-\[**TPE prior pollution across K-blocks**\] → Mitigation: per-block study reset (D2). Risk if reset noise dominates — fall back to "warm" TPE state and document.
+\[**CMA-ES covariance pollution across K-blocks**\] → Mitigation: per-block fresh-instance construction (D2). Risk if cold-restart exploration noise dominates — fall back to "warm" CMA-ES state across K-blocks (carry covariance forward) and document.
 
 \[**Predator within-K-block PPO instability**\] → Pilot sanity check; if predator fails to train within K=10, raise K to 15 in full run. The K=10 default is calibrated for prey (M3 evidence) — predator may need different K.
 

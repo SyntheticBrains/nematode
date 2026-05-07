@@ -1,8 +1,20 @@
 ## ADDED Requirements
 
+### Requirement: Predator Brain Factory
+
+The system SHALL provide a predator-side equivalent of `instantiate_brain_from_sim_config` (the existing agent-side helper at [`evolution/brain_factory.py:38`](packages/quantum-nematode/quantumnematode/evolution/brain_factory.py#L38)) so that genome encoders + fitness functions on the predator side can construct brains without depending on the agent-side `setup_brain_model` dispatch (which only knows the 19 registered agent brains).
+
+#### Scenario: Predator Brain Factory Surface
+
+- **GIVEN** the `quantumnematode.evolution._predator_brain_factory` module
+- **THEN** it SHALL expose `instantiate_predator_brain_from_sim_config(sim_config: SimulationConfig, *, seed: int | None = None) -> MLPPPOPredatorBrain`
+- **AND** it SHALL read predator config from `sim_config.environment.predator.brain_config` (NOT `sim_config.brain` which is agent-side)
+- **AND** it SHALL seed the brain's RNG sources at construction (matching `set_global_seed(seed)` semantics from the agent factory)
+- **AND** when no predator config is present, it SHALL raise `ValueError` with a clear diagnostic
+
 ### Requirement: Predator Genome Encoder Registry
 
-The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predator-brain kind strings to `GenomeEncoder` implementations, parallel to the existing `ENCODER_REGISTRY` for agent brains. This separation keeps predator-side dispatch isolated from the agent-side registry so neither side accidentally selects the other's encoder.
+The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predator-brain kind strings to `GenomeEncoder` implementations, parallel to the existing `ENCODER_REGISTRY` for agent brains. This separation keeps predator-side dispatch isolated from the agent-side registry so neither side accidentally selects the other's encoder. **`MLPPPOPredatorEncoder` overrides `initial_genome`, `decode`, and `genome_dim` from the `_ClassicalPPOEncoder` parent** to call `instantiate_predator_brain_from_sim_config` rather than the agent-side `instantiate_brain_from_sim_config`; plain subclassing wouldn't suffice (the parent's three methods all dispatch through agent-side `setup_brain_model`).
 
 #### Scenario: Registry Surface
 
@@ -11,12 +23,20 @@ The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predat
 - **AND** it SHALL include the entry `"mlpppo_predator" -> MLPPPOPredatorEncoder`
 - **AND** the registry SHALL be lookup-only (no fallback to `ENCODER_REGISTRY`)
 
+#### Scenario: MLPPPOPredatorEncoder Brain Factory Override
+
+- **GIVEN** a `MLPPPOPredatorEncoder` instance
+- **THEN** its `initial_genome`, `decode`, and `genome_dim` methods SHALL call `instantiate_predator_brain_from_sim_config` (NOT the agent-side `instantiate_brain_from_sim_config`)
+- **AND** the brain returned by `decode` SHALL be an `MLPPPOPredatorBrain` instance, NOT an agent MLPPPO brain
+- **AND** the encoder SHALL pin `brain_name = "mlpppo_predator"` (used for genome birth_metadata + registry lookup)
+
 #### Scenario: MLPPPOPredatorEncoder Round-Trip
 
 - **GIVEN** a `MLPPPOPredatorEncoder` instance and a `MLPPPOPredatorBrain` with arbitrary weights
 - **WHEN** the encoder produces a genome via the encoder's flatten round-trip and decodes it back into a fresh brain
 - **THEN** the decoded brain SHALL produce the same action as the original on a fixed test set of `PredatorBrainParams`
 - **AND** the genome dimension SHALL match the brain's total `WeightPersistence` parameter count
+- **AND** the round-trip SHALL succeed under `CMAESOptimizer(diagonal=True)` (verifies that unbounded weight encoding + sep-CMA-ES sampling produces a valid genome)
 
 #### Scenario: Initial Genome Reproducibility
 
@@ -41,17 +61,18 @@ The system SHALL provide predator-specific fitness functions that conform to the
 - **GIVEN** a `PredatorEpisodicKillRate` fitness evaluating a predator genome over `episodes` multi-agent runs against frozen prey opponents (configured in the patched `sim_config`)
 - **WHEN** `evaluate(genome, sim_config, encoder, episodes=N, seed=S)` runs
 - **THEN** the predator brain SHALL be decoded from the genome via `encoder.decode(genome, ..., seed=S)`
-- **AND** N multi-agent episodes SHALL run with that brain occupying the predator slots
-- **AND** the returned fitness SHALL be the mean of `MultiAgentEpisodeResult.per_predator_kills[predator_id]` across the N episodes for the predator slot under evaluation
+- **AND** N multi-agent episodes SHALL run with **all predator slots in the env using the same decoded brain** (the genome under evaluation is the strategy being measured, not just slot 0)
+- **AND** the returned fitness SHALL be the per-episode mean of `sum(MultiAgentEpisodeResult.per_predator_kills.values())` across the N episodes (summing across all predator slots within each episode, then averaging across episodes)
 - **AND** when N is 0 the fitness SHALL be `0.0`
+- **Rationale:** all predator slots run the same decoded brain (the genome's *strategy*); fitness measures the *strategy*'s effectiveness, not the slot. Summing kills across slots within each episode is correct because each prey kill is one event regardless of which slot delivered the damage.
 
 #### Scenario: Secondary Proximity Signal When Kill Count Is Zero
 
 - **GIVEN** a `PredatorEpisodicKillRate` fitness with `secondary_signal=True`
-- **AND** N episodes complete where the predator under evaluation has zero kills across ALL episodes
+- **AND** N episodes complete where `sum(per_predator_kills.values())` is zero across ALL episodes (no slot in any episode killed any prey)
 - **WHEN** `evaluate` aggregates the results
-- **THEN** the returned fitness SHALL fall back to the mean `per_predator_prey_proximity_steps` divided by `max_steps` for that predator slot, scaled to a sub-unity range
-- **AND** the secondary fallback SHALL be strictly less than the smallest non-zero kill-rate fitness (so a predator with one kill always beats a predator with zero kills, regardless of proximity); concretely the fallback range SHALL be `[0, 1/N)` while any non-zero kill-rate is `>= 1/N`
+- **THEN** the returned fitness SHALL fall back to the per-episode mean of `sum(per_predator_prey_proximity_steps.values()) / (max_steps * num_predator_slots)` (a normalised cross-slot proximity ratio in [0, 1])
+- **AND** the secondary fallback SHALL be strictly less than the smallest non-zero kill-rate fitness (so a predator strategy with even one kill in any episode always beats a strategy with zero kills, regardless of proximity); concretely the fallback range SHALL be `[0, 1/N)` while the lowest non-zero kill-rate fitness is `>= 1/N`
 
 ### Requirement: Hall-of-Fame Buffer
 

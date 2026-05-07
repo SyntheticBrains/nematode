@@ -7,10 +7,11 @@ The system SHALL provide a `CoevolutionLoop` orchestrator that drives two popula
 #### Scenario: Side State Surface
 
 - **GIVEN** a `CoevolutionLoop` instance
-- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: OptunaTPEOptimizer` (imported from `quantumnematode.optimizers.evolutionary`), `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
+- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: CMAESOptimizer` constructed with `diagonal=True` (sep-CMA-ES, imported from `quantumnematode.optimizers.evolutionary`), `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
 - **AND** the prey side state SHALL be configured for the prey-side encoder/fitness (e.g. LSTMPPO, LearnedPerformanceFitness)
 - **AND** the predator side state SHALL be configured for the predator-side encoder/fitness (e.g. MLPPPOPredatorEncoder, PredatorEpisodicKillRate)
-- **AND** `champion_history` SHALL contain exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), distinct from per-generation lineage rows
+- **AND** `hof` SHALL be a bounded buffer with eviction policy (the runtime opposition-sampling pool)
+- **AND** `champion_history` SHALL be unbounded — exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), never evicted; the time-ordered audit log walked by aggregator-time analysis (cycling, escalation). Distinct from per-generation lineage rows AND distinct from `hof`. A K-block's elite genome lands in BOTH `hof` (subject to eviction) and `champion_history` (unbounded)
 
 #### Scenario: Composition Over Inheritance
 
@@ -39,13 +40,14 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 - **AND** Y's optimizer SHALL NOT receive new trial results during X's block
 - **AND** Y's HoF SHALL NOT receive any new pushes during X's block
 
-#### Scenario: Fresh TPE Optimizer At K-Block Start
+#### Scenario: Fresh CMA-ES Optimizer At K-Block Start
 
 - **GIVEN** a side that is about to begin a new K-block (the opposing side just finished its block)
 - **WHEN** the loop transitions to this side
-- **THEN** this side's `OptunaTPEOptimizer` SHALL be re-constructed as a fresh instance with a new `TPESampler` seed (the underlying optimizer has no public reset method; re-construction is the equivalent operation)
+- **THEN** this side's `CMAESOptimizer(diagonal=True)` SHALL be re-constructed as a fresh instance with a new seed (the underlying optimizer has no public reset method; re-construction is the equivalent operation, clearing the covariance state from the prior K-block's opposition)
 - **AND** the re-construction SHALL happen exactly once per K-block transition
 - **AND** the seed for the new instance SHALL be deterministic given the run's master seed and the K-block index, so checkpoint resume reproduces the same optimizer state
+- **AND** `diagonal=True` (sep-CMA-ES) SHALL be set unconditionally for both sides since predator/prey weight counts (~5k for MLPPPO predator, ~30k+ for LSTMPPO prey) are above the n>~100 tractability threshold for full-covariance CMA-ES
 
 #### Scenario: Block Elite Pushed To HoF
 
@@ -152,3 +154,5 @@ The system SHALL gate the full M5 campaign on a pilot run; pilot thresholds SHAL
 - **THEN** if cycling OR escalation fires in at least 1 of the 2 pilot seeds, the pilot SHALL pass and the full run SHALL proceed
 - **AND** if the signal is ambiguous (zero seeds firing), one additional seed SHALL run before committing to the full run
 - **AND** if no signal is detected after the additional seed, the M5 verdict SHALL be STOP without running the full campaign
+
+**Note on asymmetric pilot vs full thresholds:** the pilot uses a more permissive ≥1 of 2 bar (50%) because pilot is *calibration* (lock thresholds + choose pretrain on/off), not *verdict*. The stricter ≥2 of 4 bar (also 50% but stable across more seeds) applies only to the full run. A single-seed signal is sufficient to greenlight the full campaign for further investigation, but not sufficient to declare M5 GO.

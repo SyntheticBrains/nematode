@@ -6,6 +6,8 @@ The system SHALL register `MLPPPOPredatorBrain` as a learnable implementation of
 
 **Import boundary (no env→evolution circular dep):** `_build_predator_brain` in `quantumnematode/env/env.py` SHALL import `MLPPPOPredatorBrain` directly from `quantumnematode/env/mlpppo_predator_brain.py`. The dispatcher SHALL NOT consult the `PREDATOR_ENCODER_REGISTRY` (which lives in `quantumnematode/evolution/predator_encoders.py` and is reserved for `CoevolutionLoop` and other evolution-time consumers). This separation prevents an `env` → `evolution` import dependency.
 
+**Seed propagation:** `_build_predator_brain` SHALL accept an optional `seed: int | None` parameter passed through from the env config or evolution worker. When provided, the seed is forwarded to `MLPPPOPredatorBrain.__init__` which calls `set_global_seed(seed)` on construction (matching the agent-side `BrainConfig.seed` semantics from [`evolution/brain_factory.py:74-78`](packages/quantum-nematode/quantumnematode/evolution/brain_factory.py#L74-L78)). No new field on `PredatorBrainConfig` is required — seed flows as a function argument, not a config field.
+
 #### Scenario: PredatorBrainConfig kind extension
 
 - **GIVEN** the runtime `PredatorBrainConfig` dataclass and the YAML `PredatorBrainConfigSchema` Pydantic model
