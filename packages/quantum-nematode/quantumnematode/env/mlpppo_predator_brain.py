@@ -46,6 +46,7 @@ from quantumnematode.env.predator_brain import PredatorAction
 
 if TYPE_CHECKING:
     from quantumnematode.brain.weights import WeightComponent
+    from quantumnematode.env.predator_brain import PredatorBrainParams
 
 # Architectural defaults are mirrored from `quantumnematode.brain.arch.mlpppo`
 # (`DEFAULT_ACTOR_HIDDEN_DIM=64`, `DEFAULT_CRITIC_HIDDEN_DIM=64`,
@@ -58,9 +59,6 @@ if TYPE_CHECKING:
 DEFAULT_ACTOR_HIDDEN_DIM = 64
 DEFAULT_CRITIC_HIDDEN_DIM = 64
 DEFAULT_NUM_HIDDEN_LAYERS = 2
-
-if TYPE_CHECKING:
-    from quantumnematode.env.predator_brain import PredatorBrainParams
 
 
 # Fixed input dimension per spec "Input Encoding Components".
@@ -135,12 +133,11 @@ class MLPPPOPredatorBrain:
         self._sample = sample
 
         if seed is not None:
-            # Seed torch for orthogonal-init reproducibility. We also seed
-            # numpy's legacy global generator because torch.nn.init internals
-            # may consume it (defensive — no-op if torch doesn't). Modern
-            # numpy.random.Generator instances created by the brain are
-            # initialised separately by `np.random.default_rng(seed)` at
-            # the call sites that need them.
+            # Seed torch's global generator so `nn.init.orthogonal_` (called
+            # in `_initialize_parameters` below) produces reproducible weights.
+            # Modern `np.random.Generator` instances created at call sites
+            # (e.g. inside `pretrain_against_heuristic`) are seeded
+            # independently via `np.random.default_rng(...)`.
             torch.manual_seed(seed)
 
         self.actor = self._build_network(actor_hidden_dim, num_hidden_layers, NUM_ACTIONS)
@@ -263,7 +260,17 @@ class MLPPPOPredatorBrain:
     def copy(self) -> MLPPPOPredatorBrain:
         """Return an independent copy with the same weights.
 
-        Shape-only ctor first (no torch state), then state_dict copy.
+        Construction order: build a fresh brain (no `seed` passed — the
+        clone's orthogonal-init values are about to be overwritten anyway),
+        then `state_dict` copy from `self` for both networks.
+
+        Note on torch global RNG: this method does NOT seed the clone's
+        torch generator. If a downstream caller invokes `run_brain` with
+        `sample=True`, the clone consumes the env-supplied `params.rng`
+        for the action draw (per `run_brain` implementation), so torch's
+        global state is irrelevant to action determinism. If a future
+        method ever consumes torch's global RNG directly, this docstring
+        will need revision.
         """
         clone = MLPPPOPredatorBrain(
             actor_hidden_dim=self._actor_hidden_dim,

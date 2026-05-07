@@ -1554,11 +1554,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
         - `actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers`:
           override the agent-MLPPPO defaults (currently 64 / 64 / 2).
         - `seed`: per-instance seed for parameter initialisation.
-        - `weights_path`: optional path to a saved-weights JSON or .pt
-          file to load via `WeightPersistence`. (Reserved hook; M5
-          co-evolution loads weights via the encoder, not via
-          `_build_predator_brain` — but this hook lets standalone runs
-          spawn the predator with pre-trained weights.)
+        - `sample`: when True, `run_brain` samples from the action
+          distribution; when False (default), returns argmax.
+
+        (M5 co-evolution loads pre-trained weights via the genome
+        encoder, not via `_build_predator_brain`. A `weights_path`
+        load-from-disk hook may be added to `extra` in a future PR if
+        standalone scenarios need to spawn pre-trained predators
+        outside the co-evolution loop.)
         """
         config = self.predator.brain_config
         if config is None or config.kind == "heuristic":

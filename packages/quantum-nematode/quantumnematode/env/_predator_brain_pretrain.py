@@ -65,7 +65,10 @@ def pretrain_against_heuristic(  # noqa: PLR0913 — public helper with several 
 ) -> list[float]:
     """Run behavioural-cloning pretrain to imitate `teacher` decisions.
 
-    Side effect: `brain.actor` and `brain.critic` are updated in place.
+    Side effect: `brain.actor` weights are updated in place. The critic
+    head is NOT trained (no value targets in the synthesis pipeline);
+    its weights remain at their orthogonal-init values until CMA-ES
+    outer-loop evolution updates them via `WeightPersistence`.
 
     Parameters
     ----------
@@ -119,10 +122,12 @@ def pretrain_against_heuristic(  # noqa: PLR0913 — public helper with several 
     }
 
     rng = np.random.default_rng(seed)
-    optimizer = optim.Adam(
-        list(brain.actor.parameters()) + list(brain.critic.parameters()),
-        lr=learning_rate,
-    )
+    # Actor-only optimizer. The critic head has no supervisory signal in
+    # this synthesis pipeline (we only have action labels from the
+    # heuristic teacher, not value targets), so including critic params
+    # would just allocate unused Adam state. CMA-ES outer-loop evolution
+    # handles critic weights at the genome level via WeightPersistence.
+    optimizer = optim.Adam(brain.actor.parameters(), lr=learning_rate)
     loss_fn = nn.CrossEntropyLoss()
 
     losses: list[float] = []

@@ -36,7 +36,19 @@ class TestLossDecreases:
     """Spec scenario "Imitation Loss Decreases" — windowed mean comparison."""
 
     def test_loss_decrease_at_default_50_batches(self) -> None:
-        """Verify final-window mean < initial-window mean by ≥0.05 at 50 batches."""
+        """Verify final-window mean < initial-window mean by ≥0.05 at 50 batches.
+
+        Threshold calibration: the 0.05 absolute-reduction floor was set
+        based on observed deltas of ~0.13-0.15 on torch CPU at the time
+        of authoring (initial window ~1.57, final window ~1.43). The
+        threshold leaves substantial safety margin for cross-platform
+        variation (CUDA / MPS / different torch versions can shift the
+        curve by ~10-20%). If this test starts flaking on a future torch
+        upgrade, prefer scaling the threshold to a fraction of the
+        initial loss (e.g. `delta >= 0.03 * initial_window`) over
+        loosening the absolute floor — that way the falsifiable claim
+        scales with whatever output range torch produces.
+        """
         brain = MLPPPOPredatorBrain(seed=42)
         teacher = HeuristicPredatorBrain()
         losses = pretrain_against_heuristic(brain, teacher, num_batches=50, seed=42)
