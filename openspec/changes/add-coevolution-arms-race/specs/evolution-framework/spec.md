@@ -8,9 +8,10 @@ The system SHALL provide a predator-side equivalent of `instantiate_brain_from_s
 
 - **GIVEN** the `quantumnematode.evolution._predator_brain_factory` module
 - **THEN** it SHALL expose `instantiate_predator_brain_from_sim_config(sim_config: SimulationConfig, *, seed: int | None = None) -> MLPPPOPredatorBrain`
-- **AND** it SHALL read predator config from `sim_config.environment.predator.brain_config` (NOT `sim_config.brain` which is agent-side)
-- **AND** it SHALL seed the brain's RNG sources at construction (matching `set_global_seed(seed)` semantics from the agent factory)
+- **AND** it SHALL read predator config from `sim_config.environment.predators.brain_config` (NOT `sim_config.brain` which is agent-side; the `predators` field on `EnvironmentConfig` is plural per [`config_loader.py:872`](packages/quantum-nematode/quantumnematode/utils/config_loader.py#L872))
+- **AND** it SHALL seed the brain's RNG sources at construction by calling `set_global_seed(seed)` BEFORE constructing the brain (covers numpy + torch globals; the brain's `__init__` separately calls `torch.manual_seed(seed)` for orthogonal-init reproducibility — belt-and-braces). This matches the agent-side factory's seeding semantics; distinct from the env-side dispatcher (`_build_predator_brain`) which uses `torch.manual_seed` only because it has no `BrainConfig`-shaped seed plumbing
 - **AND** when no predator config is present, it SHALL raise `ValueError` with a clear diagnostic
+- **AND** when `kind` is anything other than `"mlpppo_predator"` (e.g. `"heuristic"`, which has no encoder counterpart), it SHALL raise `ValueError` with a clear diagnostic
 
 ### Requirement: Predator Genome Encoder Registry
 
@@ -23,11 +24,19 @@ The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predat
 - **AND** it SHALL include the entry `"mlpppo_predator" -> MLPPPOPredatorEncoder`
 - **AND** the registry SHALL be lookup-only (no fallback to `ENCODER_REGISTRY`)
 
+#### Scenario: Registry Lookup Helper
+
+- **GIVEN** the `quantumnematode.evolution.predator_encoders` module
+- **THEN** it SHALL expose `get_predator_encoder(brain_name: str) -> GenomeEncoder` parallel to the agent-side `get_encoder` helper
+- **AND** when `brain_name` is in `PREDATOR_ENCODER_REGISTRY`, it SHALL return a fresh encoder instance
+- **AND** when `brain_name` is unknown (including agent-side names like `"mlpppo"`), it SHALL raise `ValueError` listing the registered predator-side keys; the helper SHALL NOT consult `ENCODER_REGISTRY` as a fallback
+
 #### Scenario: MLPPPOPredatorEncoder Brain Factory Override
 
 - **GIVEN** a `MLPPPOPredatorEncoder` instance
 - **THEN** its `initial_genome`, `decode`, and `genome_dim` methods SHALL call `instantiate_predator_brain_from_sim_config` (NOT the agent-side `instantiate_brain_from_sim_config`)
-- **AND** the brain returned by `decode` SHALL be an `MLPPPOPredatorBrain` instance, NOT an agent MLPPPO brain
+- **AND** the brain returned by `decode` at runtime SHALL be an `MLPPPOPredatorBrain` instance, NOT an agent MLPPPO brain
+- **AND** `decode`'s static return type SHALL be annotated `Any` (rather than `Brain` from the parent `_ClassicalPPOEncoder` signature) because `MLPPPOPredatorBrain` satisfies the *separate* `PredatorBrain` Protocol — not the agent-side `Brain` Protocol — and forcing the annotation back to `Brain` would lie about the runtime type. Callers that need to assign the return value to a `PredatorBrain`-typed slot (e.g. `Predator.brain`) SHOULD `cast("PredatorBrain", encoder.decode(...))` at the assignment boundary; the predator fitness module does this internally
 - **AND** the encoder SHALL pin `brain_name = "mlpppo_predator"` (used for genome birth_metadata + registry lookup)
 
 #### Scenario: MLPPPOPredatorEncoder Round-Trip
@@ -48,6 +57,10 @@ The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predat
 
 The system SHALL provide predator-specific fitness functions that conform to the existing `FitnessFunction` Protocol surface (`evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`) from `quantumnematode.evolution.fitness`. Internally, predator fitness drives the multi-agent runner against frozen prey opponents (configured via `sim_config` patching at the call site) and aggregates per-predator metrics from the resulting `MultiAgentEpisodeResult` instances (`per_predator_kills` for the primary signal, `per_predator_prey_proximity_steps` for the secondary fallback).
 
+`PredatorEpisodicKillRate` is the production fitness used by `CoevolutionLoop` per design.md D13. `PredatorLearnedPerformanceFitness` is shipped as a stub raising `NotImplementedError` — wiring an inner-loop PPO training stage onto the predator brain is out of scope for the M5 substrate (the predator brain has no `optimizer` / `training_state` weight components, no `.learn()` hook, and CMA-ES outer-loop weight evolution is sufficient for the predator's small policy space per D13). The stub class still satisfies the `FitnessFunction` Protocol via `runtime_checkable` so type-driven dispatch keeps working; calling `evaluate` on it raises clearly. A future ablation milestone may replace the stub with a working implementation if pilot evidence motivates it.
+
+`PredatorEpisodicKillRate.__init__(*, secondary_signal: bool = True)` exposes one configuration knob: when `True` (default), the proximity fallback below applies on all-zero-kills evaluations; when `False`, all-zero-kills evaluations score exactly `0.0` (matching the literal kill-rate definition; useful for ablations that disable the proximity assist).
+
 #### Scenario: FitnessFunction Protocol Conformance
 
 - **GIVEN** any predator fitness implementation (`PredatorEpisodicKillRate`, `PredatorLearnedPerformanceFitness`)
@@ -55,6 +68,13 @@ The system SHALL provide predator-specific fitness functions that conform to the
 - **AND** it SHALL be `isinstance(impl, FitnessFunction)` via the Protocol's `@runtime_checkable` decorator
 - **AND** its `evaluate` method SHALL accept the canonical signature `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float` (no diverging signature)
 - **AND** it SHALL be picklable so it can flow through the existing `EvolutionLoop._evaluate_in_worker` 11-tuple worker
+
+#### Scenario: PredatorLearnedPerformanceFitness Is A Deferred Stub
+
+- **GIVEN** a `PredatorLearnedPerformanceFitness` instance
+- **THEN** it SHALL satisfy the `FitnessFunction` Protocol via `runtime_checkable` (so type-driven dispatch and Protocol-conformance checks pass)
+- **AND** `evaluate(...)` SHALL raise `NotImplementedError` with a clear diagnostic pointing at `PredatorEpisodicKillRate` as the production alternative and design.md D13 as the rationale
+- **AND** the stub SHALL NOT be wired into `CoevolutionLoop.__init__` — `CoevolutionLoop` hardcodes `PredatorEpisodicKillRate` per D13 + B20
 
 #### Scenario: PredatorEpisodicKillRate Mean Kills Calculation
 
@@ -68,11 +88,20 @@ The system SHALL provide predator-specific fitness functions that conform to the
 
 #### Scenario: Secondary Proximity Signal When Kill Count Is Zero
 
-- **GIVEN** a `PredatorEpisodicKillRate` fitness with `secondary_signal=True`
+- **GIVEN** a `PredatorEpisodicKillRate` fitness with `secondary_signal=True` (the constructor default)
 - **AND** N episodes complete where `sum(per_predator_kills.values())` is zero across ALL episodes (no slot in any episode killed any prey)
 - **WHEN** `evaluate` aggregates the results
 - **THEN** the returned fitness SHALL fall back to the per-episode mean of `sum(per_predator_prey_proximity_steps.values()) / (max_steps * num_predator_slots)` (a normalised cross-slot proximity ratio in [0, 1])
 - **AND** the secondary fallback SHALL be strictly less than the smallest non-zero kill-rate fitness (so a predator strategy with even one kill in any episode always beats a strategy with zero kills, regardless of proximity); concretely the fallback range SHALL be `[0, 1/N)` while the lowest non-zero kill-rate fitness is `>= 1/N`
+- **Implementation note (non-normative):** the strict-less-than bound is enforced by multiplying the proximity ratio by a headroom factor `< 1.0` before dividing by `N`. The shipped value is `_PROXIMITY_FALLBACK_HEADROOM = 0.99` in `predator_fitness.py`, producing fallback values in `[0, 0.99/N)` — comfortably below the `1/N` floor without distorting the proximity ranking among zero-kill strategies. The exact constant is a free parameter; only the strict-less-than invariant is normative.
+
+#### Scenario: Secondary Signal Disabled Returns Zero On All-Zero Kills
+
+- **GIVEN** a `PredatorEpisodicKillRate` fitness constructed with `secondary_signal=False`
+- **AND** N episodes complete where `sum(per_predator_kills.values())` is zero across ALL episodes
+- **WHEN** `evaluate` aggregates the results
+- **THEN** the returned fitness SHALL be exactly `0.0` (matching the literal kill-rate definition; the proximity fallback is not applied)
+- **AND** this knob exists for ablations that disable the proximity assist; it is NOT used in the M5 production run
 
 ### Requirement: Hall-of-Fame Buffer
 

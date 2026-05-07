@@ -6,15 +6,21 @@ The system SHALL register `MLPPPOPredatorBrain` as a learnable implementation of
 
 **Import boundary (no env→evolution circular dep):** `_build_predator_brain` in `quantumnematode/env/env.py` SHALL import `MLPPPOPredatorBrain` directly from `quantumnematode/env/mlpppo_predator_brain.py`. The dispatcher SHALL NOT consult the `PREDATOR_ENCODER_REGISTRY` (which lives in `quantumnematode/evolution/predator_encoders.py` and is reserved for `CoevolutionLoop` and other evolution-time consumers). This separation prevents an `env` → `evolution` import dependency.
 
-**Seed propagation:** `_build_predator_brain` is a method on `DynamicForagingEnvironment` and takes no explicit seed argument. Seed flows through the `PredatorBrainConfig.extra` dict via the optional `seed` key (a `dict[str, Any]` carried on the `PredatorBrainConfig` dataclass and the `PredatorBrainConfigSchema` Pydantic model). When `extra["seed"]` is set, the dispatcher passes it as the `seed` constructor argument to `MLPPPOPredatorBrain.__init__`, which then calls `torch.manual_seed(seed)` to make orthogonal-init reproducible. (Note: `torch.manual_seed` rather than the agent-side helper `set_global_seed`, because the predator brain has no `BrainConfig`-shaped seed plumbing — it's a leaner Protocol-based brain with direct `torch` setup. Effect is equivalent for orthogonal-init reproducibility.)
+**Seed propagation:** `_build_predator_brain` is a method on `DynamicForagingEnvironment` and takes no explicit seed argument. Seed flows through the `PredatorBrainConfig.extra` dict via the optional `seed` key (a `dict[str, Any]` carried on the `PredatorBrainConfig` dataclass and the `PredatorBrainConfigSchema` Pydantic model). When `extra["seed"]` is set, the dispatcher passes that value as the `seed` constructor argument to `MLPPPOPredatorBrain.__init__`, which then calls `torch.manual_seed(seed)` to make orthogonal-init reproducible. When `extra["seed"]` is OMITTED, the dispatcher derives a per-predator seed by drawing one `int(self.rng.integers(0, 2**31 - 1))` from the env's own RNG, advancing env RNG state by exactly one call per predator brain construction. The derivation is deterministic given the env's `seed=` so two `DynamicForagingEnvironment` instances constructed with the same seed produce bit-identical predator-brain orthogonal-init values across all N predators. (Note: `torch.manual_seed` rather than the agent-side helper `set_global_seed`, because the predator brain has no `BrainConfig`-shaped seed plumbing — it's a leaner Protocol-based brain with direct `torch` setup. The evolution-side `_predator_brain_factory.instantiate_predator_brain_from_sim_config` does call `set_global_seed` for belt-and-braces global-RNG coverage; the env-side dispatcher does not.)
+
+**Type coercion for `extra` knobs:** YAML / JSON loaders may produce values whose types do not match the brain's constructor signature exactly:
+
+- `actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers` SHALL be coerced to `int` (e.g. a YAML `64.0` would otherwise crash inside `nn.Linear(11, 64.0)` with a cryptic `TypeError`).
+- `seed` SHALL be coerced to `int` when set.
+- `sample` SHALL be coerced via explicit type-aware normalisation: native `bool` passes through, `int` / `float` go through `bool(...)`, and case-insensitive string tokens are accepted (`"true"`, `"1"`, `"yes"`, `"on"` → `True`; `"false"`, `"0"`, `"no"`, `"off"` → `False`). Naive `bool(extra.get("sample", False))` would silently mis-parse YAML-quoted strings since `bool("false") is True`. Unrecognised string tokens or non-bool/int/float/str values SHALL raise `ValueError` so config typos fail fast at brain construction.
 
 **Optional `extra` config keys honoured by the `mlpppo_predator` dispatcher:**
 
 - `actor_hidden_dim: int` — overrides `DEFAULT_ACTOR_HIDDEN_DIM` (default 64).
 - `critic_hidden_dim: int` — overrides `DEFAULT_CRITIC_HIDDEN_DIM` (default 64).
 - `num_hidden_layers: int` — overrides `DEFAULT_NUM_HIDDEN_LAYERS` (default 2; must be >= 1).
-- `seed: int` — torch RNG seed for orthogonal-init reproducibility.
-- `sample: bool` — when True, `run_brain` samples from the action distribution via `np.searchsorted` on cumulative softmax (consuming one `params.rng.random()` draw per call); when False (default), `run_brain` returns the deterministic argmax action without consuming any RNG state.
+- `seed: int` — torch RNG seed for orthogonal-init reproducibility. When omitted, derived from the env's own RNG (see "Seed propagation" above).
+- `sample: bool` — when True, `run_brain` samples from the action distribution via `np.searchsorted` on cumulative softmax (consuming one `params.rng.random()` draw per call); when False (default), `run_brain` returns the deterministic argmax action without consuming any RNG state. Accepts the case-insensitive string tokens listed under "Type coercion" above.
 
 A `weights_path` load-from-disk hook is intentionally NOT included in PR 1 — M5 co-evolution loads pre-trained weights via the genome encoder (PR 2 / PR 3), not via this dispatcher. The hook may be added to `extra` in a future PR if standalone scenarios need to spawn pre-trained predators outside the co-evolution loop.
 
@@ -118,3 +124,21 @@ The system SHALL provide a behavioural-cloning pretrain helper at `quantumnemato
 - **WHEN** the brain's weights are extracted via `WeightPersistence` (yielding `policy` and `value` components), encoded as a genome, and decoded back into a fresh brain (using a different init seed to verify the load actually overwrites the orthogonal init)
 - **THEN** the decoded brain SHALL produce the same action as the original on a fixed test set of `PredatorBrainParams`
 - **AND** both `policy` (actor) and `value` (critic) component weights SHALL round-trip — even though pretrain only updates the actor, both heads are part of the genome surface (CMA-ES evolves both during co-evolution)
+
+#### Scenario: Pretrain Helper Fail-Fast Input Validation
+
+- **GIVEN** a call to `pretrain_against_heuristic(brain, teacher, ...)` with one or more invalid configuration values
+- **THEN** the helper SHALL raise `ValueError` with a clear diagnostic at the top of the function body (BEFORE any synthesis or training begins) for each of:
+  - `num_batches` not a positive `int`
+  - `batch_size` not a positive `int`
+  - `learning_rate` not a `float` in `(0.0, 1.0]` (catches typos like `lr=10`)
+  - `grid_size` not an `int >= 3` (synthesis draws `rng.integers(2, grid_size // 2)` for `detection_radius`; smaller grids cannot fit predator + agents)
+  - `seed` provided but not an `int` (e.g. `seed="42"` as a string)
+- **AND** these checks SHALL surface bad values as `ValueError` rather than letting them fail mid-loop with cryptic numpy / torch errors
+
+#### Scenario: Pretrain Synthesis Attempt Cap
+
+- **GIVEN** `pretrain_against_heuristic` is filling a batch of in-pursuit `PredatorBrainParams` via `_synthesize_params`
+- **THEN** synthesis SHALL be bounded to `batch_size * 50` attempts per batch
+- **AND** if the cap is exhausted before `batch_size` in-pursuit states have been gathered, the helper SHALL raise `RuntimeError` with a diagnostic suggesting lowering `batch_size` or checking the synthesis distribution
+- **Rationale:** at default config the in-pursuit rate is ~20%, so `50x` headroom is conservative. Without the cap, a pathological config (e.g. `detection_radius` always 0) would make in-pursuit states unreachable and the loop would hang silently.
