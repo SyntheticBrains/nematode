@@ -317,12 +317,15 @@ class PredatorBrainConfigSchema(BaseModel):
     is what `PredatorParams` carries. Mirrors the existing
     `PredatorConfig` (Pydantic) ↔ `PredatorParams` (dataclass) split.
 
-    Currently only `kind: "heuristic"` is honoured; the literal type
-    can be extended with learnable kinds (e.g. `"mlpppo"`, `"lstmppo"`)
-    when learnable predator brains are introduced.
+    `kind: "heuristic"` (default) constructs a `HeuristicPredatorBrain`
+    byte-equivalent to the legacy `_update_pursuit` / `_update_random`
+    logic; `kind: "mlpppo_predator"` (M5+) constructs a learnable
+    `MLPPPOPredatorBrain` whose weights are evolved by the M5 co-evolution
+    loop. The literal type can be extended further when additional learnable
+    kinds are introduced.
     """
 
-    kind: Literal["heuristic"] = "heuristic"
+    kind: Literal["heuristic", "mlpppo_predator"] = "heuristic"
     extra: dict[str, Any] | None = None
 
     def to_params(self) -> PredatorBrainConfig:

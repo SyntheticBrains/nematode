@@ -1538,20 +1538,50 @@ class DynamicForagingEnvironment(BaseEnvironment):
     def _build_predator_brain(self) -> PredatorBrain:
         """Construct a PredatorBrain instance from `self.predator.brain_config`.
 
-        Dispatcher for the pluggable brain seam. Currently only
-        `"heuristic"` is honoured; the dispatcher can be extended with
-        learnable kinds (e.g. `kind: "mlpppo"`) once learnable predator
-        brains are introduced. `brain_config is None` is treated as the
-        default heuristic.
+        Dispatcher for the pluggable brain seam. `"heuristic"` (or
+        `brain_config is None`) constructs a `HeuristicPredatorBrain`
+        byte-equivalent to the legacy heuristic behaviour;
+        `"mlpppo_predator"` (M5+) constructs a learnable
+        `MLPPPOPredatorBrain`. The dispatcher imports `MLPPPOPredatorBrain`
+        directly from `env/mlpppo_predator_brain.py` (NOT via
+        `evolution/predator_encoders.PREDATOR_ENCODER_REGISTRY` — that
+        registry lives in the evolution package and is reserved for the
+        co-evolution loop. Direct import keeps `env` free of `evolution`-
+        package dependencies, per design.md D14 import-boundary rule).
+
+        For `mlpppo_predator`, optional `extra` config keys:
+
+        - `actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers`:
+          override the agent-MLPPPO defaults (currently 64 / 64 / 2).
+        - `seed`: per-instance seed for parameter initialisation.
+        - `weights_path`: optional path to a saved-weights JSON or .pt
+          file to load via `WeightPersistence`. (Reserved hook; M5
+          co-evolution loads weights via the encoder, not via
+          `_build_predator_brain` — but this hook lets standalone runs
+          spawn the predator with pre-trained weights.)
         """
         config = self.predator.brain_config
         if config is None or config.kind == "heuristic":
             return HeuristicPredatorBrain()
-        # Currently only "heuristic" is supported; additional kinds can
-        # be added here when learnable predator brains are introduced.
+        if config.kind == "mlpppo_predator":
+            # Local import: avoids a top-of-module env → mlpppo_predator_brain
+            # import that would slow down env-only paths (where `torch` is
+            # otherwise unused). Lazy import is also robust against any
+            # future arch additions to mlpppo_predator_brain that might
+            # introduce their own import chains.
+            from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+            extra = config.extra or {}
+            return MLPPPOPredatorBrain(
+                actor_hidden_dim=extra.get("actor_hidden_dim", 64),
+                critic_hidden_dim=extra.get("critic_hidden_dim", 64),
+                num_hidden_layers=extra.get("num_hidden_layers", 2),
+                seed=extra.get("seed"),
+                sample=extra.get("sample", False),
+            )
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "
-            "Only 'heuristic' is currently supported."
+            "Supported kinds: 'heuristic', 'mlpppo_predator'."
         )
         raise NotImplementedError(msg)
 

@@ -149,13 +149,124 @@ class TestUnknownKindRejection:
     def test_unknown_kind_raises(self) -> None:
         """Verify unknown kind raises."""
         # Bypass Pydantic validation by constructing the dataclass directly
-        # (Pydantic schema only allows Literal["heuristic"], so YAML rejects
-        # unknown kinds at load time; runtime constructions might still bypass).
+        # (Pydantic schema only allows Literal["heuristic", "mlpppo_predator"],
+        # so YAML rejects unknown kinds at load time; runtime constructions
+        # might still bypass).
         bad_config = PredatorBrainConfig(kind="heuristic")
         # Manually mutate (frozen=True so use object.__setattr__ for the test).
-        object.__setattr__(bad_config, "kind", "mlpppo")
+        # Use "qsnnppo" — clearly a brain name that is NOT a registered
+        # predator kind, future-proof against the literal type expanding.
+        object.__setattr__(bad_config, "kind", "qsnnppo")
         with pytest.raises(NotImplementedError, match="Unknown predator brain kind"):
             _make_env(brain_config=bad_config)
+
+
+class TestMLPPPOPredatorDispatch:
+    """`kind: "mlpppo_predator"` constructs a `MLPPPOPredatorBrain` instance."""
+
+    def test_explicit_mlpppo_predator_yields_mlpppo_brain(self) -> None:
+        """Verify mlpppo_predator dispatch produces MLPPPOPredatorBrain."""
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        env = _make_env(brain_config=PredatorBrainConfig(kind="mlpppo_predator"))
+        for pred in env.predators:
+            assert isinstance(pred.brain, MLPPPOPredatorBrain)
+            # AND it SHALL also be `isinstance(brain, PredatorBrain)`
+            # via the @runtime_checkable Protocol from M1.
+            from quantumnematode.env import PredatorBrain
+
+            assert isinstance(pred.brain, PredatorBrain)
+
+    def test_mlpppo_predator_with_extra_overrides(self) -> None:
+        """Verify `extra` config keys override the default architecture."""
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        env = _make_env(
+            brain_config=PredatorBrainConfig(
+                kind="mlpppo_predator",
+                extra={"actor_hidden_dim": 32, "critic_hidden_dim": 32, "seed": 123},
+            ),
+        )
+        for pred in env.predators:
+            assert isinstance(pred.brain, MLPPPOPredatorBrain)
+            # Verify the override took effect by checking actor's first
+            # Linear layer's out_features.
+            import torch
+
+            first_linear = next(m for m in pred.brain.actor if isinstance(m, torch.nn.Linear))
+            assert first_linear.out_features == 32
+
+    def test_mlpppo_predator_seed_reproducibility(self) -> None:
+        """Verify that two envs with the same mlpppo seed produce identical predator weights."""
+        import torch
+
+        env_a = _make_env(
+            brain_config=PredatorBrainConfig(
+                kind="mlpppo_predator",
+                extra={"seed": 42},
+            ),
+            seed=100,  # env seed; predator seed is from extra.seed
+        )
+        env_b = _make_env(
+            brain_config=PredatorBrainConfig(
+                kind="mlpppo_predator",
+                extra={"seed": 42},
+            ),
+            seed=100,
+        )
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        for pred_a, pred_b in zip(env_a.predators, env_b.predators, strict=True):
+            assert isinstance(pred_a.brain, MLPPPOPredatorBrain)
+            assert isinstance(pred_b.brain, MLPPPOPredatorBrain)
+            for p_a, p_b in zip(
+                pred_a.brain.actor.parameters(),
+                pred_b.brain.actor.parameters(),
+                strict=True,
+            ):
+                assert torch.allclose(p_a, p_b)
+
+
+class TestYamlMLPPPOPredatorKind:
+    """YAML schema accepts `kind: mlpppo_predator`."""
+
+    def test_yaml_mlpppo_predator_kind_accepted(self) -> None:
+        """Verify yaml mlpppo_predator kind accepted."""
+        yaml_str = """
+        enabled: true
+        count: 2
+        movement_pattern: pursuit
+        speed: 1.0
+        detection_radius: 8
+        damage_radius: 1
+        brain_config:
+            kind: mlpppo_predator
+        """
+        cfg = PredatorConfig.model_validate(yaml.safe_load(yaml_str))
+        params = cfg.to_params()
+        assert params.brain_config is not None
+        assert params.brain_config.kind == "mlpppo_predator"
+
+    def test_yaml_mlpppo_predator_with_extra(self) -> None:
+        """Verify yaml mlpppo_predator with extra config is accepted."""
+        yaml_str = """
+        enabled: true
+        count: 2
+        movement_pattern: pursuit
+        speed: 1.0
+        detection_radius: 8
+        damage_radius: 1
+        brain_config:
+            kind: mlpppo_predator
+            extra:
+                actor_hidden_dim: 32
+                seed: 7
+        """
+        cfg = PredatorConfig.model_validate(yaml.safe_load(yaml_str))
+        params = cfg.to_params()
+        assert params.brain_config is not None
+        assert params.brain_config.kind == "mlpppo_predator"
+        assert params.brain_config.extra == {"actor_hidden_dim": 32, "seed": 7}
 
 
 class TestYamlBrainConfigDispatch:
