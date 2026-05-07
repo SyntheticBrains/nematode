@@ -1587,12 +1587,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 derived_seed = int(self.rng.integers(0, 2**31 - 1))
             else:
                 derived_seed = int(explicit_seed)
+            # Coerce dim/layer-count knobs to int — YAML / JSON can produce
+            # floats (e.g. `64.0`) which would fail mid-construction inside
+            # `nn.Linear(in, 64.0)` with `TypeError: 'float' object cannot
+            # be interpreted as an integer`. Matches the `int(explicit_seed)`
+            # coercion style above.
             return MLPPPOPredatorBrain(
-                actor_hidden_dim=extra.get("actor_hidden_dim", 64),
-                critic_hidden_dim=extra.get("critic_hidden_dim", 64),
-                num_hidden_layers=extra.get("num_hidden_layers", 2),
+                actor_hidden_dim=int(extra.get("actor_hidden_dim", 64)),
+                critic_hidden_dim=int(extra.get("critic_hidden_dim", 64)),
+                num_hidden_layers=int(extra.get("num_hidden_layers", 2)),
                 seed=derived_seed,
-                sample=extra.get("sample", False),
+                sample=bool(extra.get("sample", False)),
             )
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "

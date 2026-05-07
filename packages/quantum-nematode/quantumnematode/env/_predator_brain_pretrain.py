@@ -99,7 +99,36 @@ def pretrain_against_heuristic(  # noqa: PLR0913 — public helper with several 
         Per-batch mean cross-entropy loss values, length `num_batches`.
         Used by tests to assert the windowed loss-decrease invariant
         (final-window mean < initial-window mean per spec).
+
+    Raises
+    ------
+    ValueError
+        If any tunable knob is outside its valid range (see "fail-fast"
+        validation block at the top of the function body).
     """
+    # Fail-fast validation: surface bad config values as ValueError rather
+    # than letting them fail mid-loop with cryptic errors (e.g.
+    # `np.zeros((-1, 11))` would only blow up inside the train loop).
+    if not isinstance(num_batches, int) or num_batches <= 0:
+        msg = f"num_batches must be a positive int, got {num_batches!r}"
+        raise ValueError(msg)
+    if not isinstance(batch_size, int) or batch_size <= 0:
+        msg = f"batch_size must be a positive int, got {batch_size!r}"
+        raise ValueError(msg)
+    if not isinstance(learning_rate, (int, float)) or not (0.0 < learning_rate <= 1.0):
+        msg = f"learning_rate must be a positive float in (0, 1], got {learning_rate!r}"
+        raise ValueError(msg)
+    if not isinstance(grid_size, int) or grid_size < 3:  # noqa: PLR2004
+        # grid_size >= 3 is needed because synthesis draws
+        # `rng.integers(2, grid_size // 2)` for detection_radius — a
+        # grid_size < 3 would either short-circuit (low == high) or
+        # produce a degenerate grid that can't fit predator + agents.
+        msg = f"grid_size must be an int >= 3, got {grid_size!r}"
+        raise ValueError(msg)
+    if seed is not None and not isinstance(seed, int):
+        msg = f"seed must be None or int, got {seed!r}"
+        raise ValueError(msg)
+
     # Deferred import: see note in mlpppo_predator_brain.py — top-level
     # `quantumnematode.brain` package eagerly loads arch modules that
     # import from env, which would trigger a cycle if loaded at module

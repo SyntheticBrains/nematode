@@ -200,6 +200,35 @@ class TestMLPPPOPredatorDispatch:
             first_linear = next(m for m in pred.brain.actor if isinstance(m, torch.nn.Linear))
             assert first_linear.out_features == 32
 
+    def test_mlpppo_predator_extra_dim_floats_coerced_to_int(self) -> None:
+        """Verify dim/layer-count keys accept float values (YAML may produce 32.0).
+
+        Without the dispatcher's `int(...)` coercion, passing `32.0` for
+        `actor_hidden_dim` would fail mid-construction inside `nn.Linear`
+        with `TypeError: 'float' object cannot be interpreted as an
+        integer`. This test confirms the coercion holds.
+        """
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        env = _make_env(
+            brain_config=PredatorBrainConfig(
+                kind="mlpppo_predator",
+                extra={
+                    "actor_hidden_dim": 32.0,
+                    "critic_hidden_dim": 32.0,
+                    "num_hidden_layers": 2.0,
+                    "seed": 123,
+                },
+            ),
+        )
+        for pred in env.predators:
+            assert isinstance(pred.brain, MLPPPOPredatorBrain)
+            import torch
+
+            first_linear = next(m for m in pred.brain.actor if isinstance(m, torch.nn.Linear))
+            assert first_linear.out_features == 32
+            # Construction succeeded → coercion held.
+
     def test_mlpppo_predator_seed_reproducibility(self) -> None:
         """Verify that two envs with the same mlpppo seed produce identical predator weights."""
         import torch

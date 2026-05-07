@@ -160,3 +160,68 @@ class TestSmallBatchEdge:
         losses = pretrain_against_heuristic(brain, teacher, num_batches=1, seed=42)
         assert len(losses) == 1
         assert losses[0] > 0.0  # cross-entropy loss is positive
+
+
+class TestInputValidation:
+    """Fail-fast validation: invalid knobs raise ValueError with a clear message."""
+
+    @pytest.fixture
+    def brain_and_teacher(
+        self,
+    ) -> tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain]:
+        """Construct a fresh brain + teacher for each validation case."""
+        return MLPPPOPredatorBrain(seed=42), HeuristicPredatorBrain()
+
+    def test_num_batches_zero_raises(
+        self,
+        brain_and_teacher: tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain],
+    ) -> None:
+        """Verify num_batches=0 is rejected at the top of the function."""
+        brain, teacher = brain_and_teacher
+        with pytest.raises(ValueError, match="num_batches"):
+            pretrain_against_heuristic(brain, teacher, num_batches=0, seed=42)
+
+    def test_batch_size_negative_raises(
+        self,
+        brain_and_teacher: tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain],
+    ) -> None:
+        """Verify batch_size=-1 is rejected."""
+        brain, teacher = brain_and_teacher
+        with pytest.raises(ValueError, match="batch_size"):
+            pretrain_against_heuristic(brain, teacher, batch_size=-1, seed=42)
+
+    def test_learning_rate_zero_raises(
+        self,
+        brain_and_teacher: tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain],
+    ) -> None:
+        """Verify learning_rate=0 is rejected (must be > 0)."""
+        brain, teacher = brain_and_teacher
+        with pytest.raises(ValueError, match="learning_rate"):
+            pretrain_against_heuristic(brain, teacher, learning_rate=0.0, seed=42)
+
+    def test_learning_rate_too_large_raises(
+        self,
+        brain_and_teacher: tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain],
+    ) -> None:
+        """Verify learning_rate > 1 is rejected (catches `lr=10` typos)."""
+        brain, teacher = brain_and_teacher
+        with pytest.raises(ValueError, match="learning_rate"):
+            pretrain_against_heuristic(brain, teacher, learning_rate=2.0, seed=42)
+
+    def test_grid_size_too_small_raises(
+        self,
+        brain_and_teacher: tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain],
+    ) -> None:
+        """Verify grid_size < 3 is rejected (synthesis can't fit predator + agents)."""
+        brain, teacher = brain_and_teacher
+        with pytest.raises(ValueError, match="grid_size"):
+            pretrain_against_heuristic(brain, teacher, grid_size=2, seed=42)
+
+    def test_seed_wrong_type_raises(
+        self,
+        brain_and_teacher: tuple[MLPPPOPredatorBrain, HeuristicPredatorBrain],
+    ) -> None:
+        """Verify seed='42' (string) is rejected."""
+        brain, teacher = brain_and_teacher
+        with pytest.raises(ValueError, match="seed"):
+            pretrain_against_heuristic(brain, teacher, seed="42")  # type: ignore[arg-type]
