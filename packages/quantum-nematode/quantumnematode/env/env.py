@@ -1603,12 +1603,44 @@ class DynamicForagingEnvironment(BaseEnvironment):
             # `nn.Linear(in, 64.0)` with `TypeError: 'float' object cannot
             # be interpreted as an integer`. Matches the `int(explicit_seed)`
             # coercion style above.
+            #
+            # Coerce `sample` explicitly (NOT `bool(...)`) because
+            # `bool("false") == True` (any non-empty string is truthy).
+            # Quoted YAML strings (e.g. `sample: "false"`) would silently
+            # flip semantics under naive bool coercion. Accept the
+            # canonical truthy/falsy string tokens, native bool, and
+            # numeric 0/non-zero; raise on anything else so typos fail
+            # fast at config load.
+            sample_raw = extra.get("sample", False)
+            if isinstance(sample_raw, bool):
+                sample_value = sample_raw
+            elif isinstance(sample_raw, (int, float)):
+                sample_value = bool(sample_raw)
+            elif isinstance(sample_raw, str):
+                token = sample_raw.strip().lower()
+                if token in {"true", "1", "yes", "on"}:
+                    sample_value = True
+                elif token in {"false", "0", "no", "off"}:
+                    sample_value = False
+                else:
+                    msg = (
+                        f"PredatorBrainConfig.extra['sample'] string "
+                        f"{sample_raw!r} is not a recognised boolean; "
+                        "use one of true/false/1/0/yes/no/on/off (case-insensitive)."
+                    )
+                    raise ValueError(msg)
+            else:
+                msg = (
+                    f"PredatorBrainConfig.extra['sample'] must be bool, "
+                    f"int, float, or str; got {type(sample_raw).__name__}"
+                )
+                raise ValueError(msg)
             return MLPPPOPredatorBrain(
                 actor_hidden_dim=int(extra.get("actor_hidden_dim", 64)),
                 critic_hidden_dim=int(extra.get("critic_hidden_dim", 64)),
                 num_hidden_layers=int(extra.get("num_hidden_layers", 2)),
                 seed=derived_seed,
-                sample=bool(extra.get("sample", False)),
+                sample=sample_value,
             )
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "

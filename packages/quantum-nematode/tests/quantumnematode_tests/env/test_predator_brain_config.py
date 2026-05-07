@@ -226,6 +226,81 @@ class TestMLPPPOPredatorDispatch:
             assert first_linear.out_features == 32
             # Construction succeeded → coercion held.
 
+    @pytest.mark.parametrize(
+        ("sample_value", "expected"),
+        [
+            # Native bool — direct passthrough.
+            (True, True),
+            (False, False),
+            # Native numeric — 0 is False, non-zero is True.
+            (1, True),
+            (0, False),
+            (1.0, True),
+            (0.0, False),
+            # Truthy string tokens (case-insensitive, whitespace-tolerant).
+            ("true", True),
+            ("True", True),
+            ("TRUE", True),
+            (" true ", True),
+            ("1", True),
+            ("yes", True),
+            ("on", True),
+            # Falsy string tokens — including the bug case `"false"` which
+            # `bool("false") == True` would have incorrectly flipped.
+            ("false", False),
+            ("False", False),
+            ("FALSE", False),
+            ("0", False),
+            ("no", False),
+            ("off", False),
+        ],
+    )
+    def test_mlpppo_predator_sample_string_normalisation(
+        self,
+        sample_value: bool | float | str,  # noqa: FBT001 — pytest parametrize requires positional
+        expected: bool,  # noqa: FBT001 — pytest parametrize requires positional
+    ) -> None:
+        """Verify `extra['sample']` accepts bool/int/float/string truthy/falsy tokens.
+
+        Regression test for the bug where `bool("false")` evaluated to
+        `True` (any non-empty string is truthy in Python). YAML quoted
+        strings (`sample: "false"`) would silently flip semantics under
+        naive bool coercion.
+        """
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        env = _make_env(
+            brain_config=PredatorBrainConfig(
+                kind="mlpppo_predator",
+                extra={"sample": sample_value, "seed": 42},
+            ),
+        )
+        for pred in env.predators:
+            assert isinstance(pred.brain, MLPPPOPredatorBrain)
+            assert pred.brain._sample is expected, (
+                f"sample={sample_value!r} → expected {expected}, got {pred.brain._sample}"
+            )
+
+    def test_mlpppo_predator_sample_unknown_string_raises(self) -> None:
+        """Verify unrecognised string tokens raise ValueError instead of silent fallback."""
+        with pytest.raises(ValueError, match="not a recognised boolean"):
+            _make_env(
+                brain_config=PredatorBrainConfig(
+                    kind="mlpppo_predator",
+                    extra={"sample": "maybe", "seed": 42},
+                ),
+            )
+
+    def test_mlpppo_predator_sample_wrong_type_raises(self) -> None:
+        """Verify non-bool/int/float/str values raise ValueError."""
+        with pytest.raises(ValueError, match="must be bool, int, float, or str"):
+            _make_env(
+                brain_config=PredatorBrainConfig(
+                    kind="mlpppo_predator",
+                    extra={"sample": ["yes"], "seed": 42},
+                ),
+            )
+
     def test_mlpppo_predator_seed_reproducibility(self) -> None:
         """Verify that two envs with the same mlpppo seed produce identical predator weights."""
         env_a = _make_env(
