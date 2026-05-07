@@ -103,6 +103,21 @@ def _build_env_with_genome_predators(
         max_body_length=sim_config.body_length,
     )
 
+    # Fail fast on a misconfigured env. With `predators.enabled=False` (or
+    # `count=0`) the env builds an empty `predators` list — every episode
+    # then yields zero kills + zero proximity, and fitness silently
+    # collapses to 0.0 with no diagnostic. Co-evolution YAMLs always
+    # enable predators, but a programmatic caller that patches the
+    # sim_config wrong (or a typo in a config) would otherwise see a
+    # flat-zero gradient with no signal as to why.
+    if not env.predators:
+        msg = (
+            "Predator fitness requires at least one predator slot in the env. "
+            "Got 0 — check that sim_config.environment.predators.enabled is "
+            "True and count >= 1."
+        )
+        raise ValueError(msg)
+
     # One fresh brain per predator slot — same weights, independent
     # tensors. A single shared `brain` would also satisfy the spec, but
     # independent instances guard against future hooks that might
@@ -286,8 +301,11 @@ class PredatorEpisodicKillRate:
             run_seed = derive_run_seed(seed, ep_idx)
             set_global_seed(run_seed)
             env = _build_env_with_genome_predators(sim_config, encoder, genome, run_seed)
+            # `_build_env_with_genome_predators` raises ValueError when
+            # the env has no predator slots, so `len(env.predators) >= 1`
+            # is guaranteed here.
             if num_predator_slots is None:
-                num_predator_slots = max(len(env.predators), 1)
+                num_predator_slots = len(env.predators)
             agents = _build_prey_agents(env, sim_config)
             sim = MultiAgentSimulation(env=env, agents=agents)
             result = sim.run_episode(sim_config.reward, max_steps)

@@ -24,6 +24,9 @@ import torch
 from quantumnematode.env.env import PredatorType
 from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
 from quantumnematode.env.predator_brain import PredatorBrainParams
+from quantumnematode.evolution._predator_brain_factory import (
+    instantiate_predator_brain_from_sim_config,
+)
 from quantumnematode.evolution.encoders import GenomeEncoder
 from quantumnematode.evolution.predator_encoders import (
     PREDATOR_ENCODER_REGISTRY,
@@ -91,6 +94,62 @@ class TestRegistry:
         """Looking up an unknown predator kind SHALL raise ValueError."""
         with pytest.raises(ValueError, match="No predator encoder"):
             get_predator_encoder("nonexistent_predator_kind")
+
+
+class TestPredatorBrainFactoryErrors:
+    """Spec scenario "Predator Brain Factory Surface" — direct error-path coverage.
+
+    The encoder tests below exercise the factory's success path indirectly.
+    These tests pin the three explicit `raise ValueError` arms in
+    :func:`instantiate_predator_brain_from_sim_config` so a future refactor
+    that swallows or reorders them fails loudly.
+    """
+
+    def test_missing_environment_raises(self) -> None:
+        """`sim_config.environment is None` SHALL raise `ValueError`."""
+        sim_config = SimulationConfig()  # environment defaults to None
+        with pytest.raises(ValueError, match="environment"):
+            instantiate_predator_brain_from_sim_config(sim_config)
+
+    def test_missing_predator_brain_config_raises(self) -> None:
+        """`environment.predators is None` (or `brain_config is None`) SHALL raise `ValueError`."""
+        # No `predators` block at all.
+        sim_config_no_predators = SimulationConfig(
+            environment=EnvironmentConfig(grid_size=20),
+        )
+        with pytest.raises(ValueError, match="brain_config"):
+            instantiate_predator_brain_from_sim_config(sim_config_no_predators)
+
+        # `predators` block present but `brain_config` omitted (the default).
+        sim_config_no_brain = SimulationConfig(
+            environment=EnvironmentConfig(
+                grid_size=20,
+                predators=PredatorConfig(enabled=True, count=1),
+            ),
+        )
+        with pytest.raises(ValueError, match="brain_config"):
+            instantiate_predator_brain_from_sim_config(sim_config_no_brain)
+
+    def test_unsupported_kind_raises(self) -> None:
+        """`kind` other than `"mlpppo_predator"` SHALL raise `ValueError`.
+
+        The heuristic kind has no encoder counterpart — there is nothing
+        to evolve. The factory is an evolution-side helper; the env-side
+        dispatcher (`_build_predator_brain`) is what handles `"heuristic"`
+        for the env path.
+        """
+        sim_config = SimulationConfig(
+            environment=EnvironmentConfig(
+                grid_size=20,
+                predators=PredatorConfig(
+                    enabled=True,
+                    count=1,
+                    brain_config=PredatorBrainConfigSchema(kind="heuristic"),
+                ),
+            ),
+        )
+        with pytest.raises(ValueError, match="mlpppo_predator"):
+            instantiate_predator_brain_from_sim_config(sim_config)
 
 
 class TestEncoderProtocolConformance:

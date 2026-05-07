@@ -567,6 +567,99 @@ class TestLearnedPerformanceFitnessStub:
             )
 
 
+class TestEmptyPredatorsGuard:
+    """Fail-fast on misconfigured envs that disable predators.
+
+    Without the guard, `_build_env_with_genome_predators` would silently
+    return an env with zero predator slots; every episode would then
+    yield zero kills + zero proximity, and fitness would collapse to 0.0
+    with no diagnostic. Programmatic callers that patch sim_config wrong
+    deserve a loud failure.
+    """
+
+    def test_disabled_predators_raises(self) -> None:
+        """`predators.enabled=False` SHALL raise `ValueError` from the env builder."""
+        from quantumnematode.evolution.predator_fitness import (
+            _build_env_with_genome_predators,
+        )
+        from quantumnematode.utils.config_loader import (
+            EnvironmentConfig,
+            PredatorBrainConfigSchema,
+            PredatorConfig,
+            SimulationConfig,
+        )
+
+        # Config has the `mlpppo_predator` brain block (so the encoder
+        # path is exercised) but predators are disabled at the env
+        # level — the env builds an empty `predators` list.
+        sim_config = SimulationConfig(
+            environment=EnvironmentConfig(
+                grid_size=20,
+                predators=PredatorConfig(
+                    enabled=False,  # the misconfiguration under test
+                    count=2,
+                    brain_config=PredatorBrainConfigSchema(kind="mlpppo_predator"),
+                ),
+            ),
+        )
+        encoder = _FakeEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        with pytest.raises(ValueError, match="at least one predator slot"):
+            _build_env_with_genome_predators(
+                sim_config,
+                cast("GenomeEncoder", encoder),
+                genome,
+                seed=42,
+            )
+
+    def test_zero_count_raises(self) -> None:
+        """`predators.count=0` SHALL raise `ValueError` from the env builder.
+
+        Even with `enabled=True`, `count=0` produces an empty
+        `predators` list. Distinct misconfiguration from
+        `enabled=False`; both should surface the same diagnostic.
+        """
+        from quantumnematode.evolution.predator_fitness import (
+            _build_env_with_genome_predators,
+        )
+        from quantumnematode.utils.config_loader import (
+            EnvironmentConfig,
+            PredatorBrainConfigSchema,
+            PredatorConfig,
+            SimulationConfig,
+        )
+
+        sim_config = SimulationConfig(
+            environment=EnvironmentConfig(
+                grid_size=20,
+                predators=PredatorConfig(
+                    enabled=True,
+                    count=0,  # the misconfiguration under test
+                    brain_config=PredatorBrainConfigSchema(kind="mlpppo_predator"),
+                ),
+            ),
+        )
+        encoder = _FakeEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        with pytest.raises(ValueError, match="at least one predator slot"):
+            _build_env_with_genome_predators(
+                sim_config,
+                cast("GenomeEncoder", encoder),
+                genome,
+                seed=42,
+            )
+
+
 # ---------------------------------------------------------------------------
 # GenomeEncoder Protocol-conformance for FakeEncoder (sanity check)
 # ---------------------------------------------------------------------------
