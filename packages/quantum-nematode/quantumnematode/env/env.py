@@ -1538,20 +1538,113 @@ class DynamicForagingEnvironment(BaseEnvironment):
     def _build_predator_brain(self) -> PredatorBrain:
         """Construct a PredatorBrain instance from `self.predator.brain_config`.
 
-        Dispatcher for the pluggable brain seam. Currently only
-        `"heuristic"` is honoured; the dispatcher can be extended with
-        learnable kinds (e.g. `kind: "mlpppo"`) once learnable predator
-        brains are introduced. `brain_config is None` is treated as the
-        default heuristic.
+        Dispatcher for the pluggable brain seam. `"heuristic"` (or
+        `brain_config is None`) constructs a `HeuristicPredatorBrain`
+        byte-equivalent to the legacy heuristic behaviour;
+        `"mlpppo_predator"` (M5+) constructs a learnable
+        `MLPPPOPredatorBrain`. The dispatcher imports `MLPPPOPredatorBrain`
+        directly from `env/mlpppo_predator_brain.py` (NOT via
+        `evolution/predator_encoders.PREDATOR_ENCODER_REGISTRY` — that
+        registry lives in the evolution package and is reserved for the
+        co-evolution loop. Direct import keeps `env` free of `evolution`-
+        package dependencies, per design.md D14 import-boundary rule).
+
+        For `mlpppo_predator`, optional `extra` config keys:
+
+        - `actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers`:
+          override the agent-MLPPPO defaults (currently 64 / 64 / 2).
+        - `seed`: parameter-initialisation seed. **Note:** this method
+          is invoked once per predator from `_make_predator`, so an
+          explicit `extra["seed"]` value is applied IDENTICALLY to every
+          predator in the env — all N predators will start with
+          bit-identical weights. This is rarely what you want for a
+          standalone multi-predator scenario but is harmless for M5
+          co-evolution where the genome encoder overwrites these weights
+          via `WeightPersistence` before the first eval episode. When
+          `extra["seed"]` is omitted (the default), each predator is
+          seeded from a fresh `self.rng.integers` draw, so the N
+          predators get distinct initial weights deterministic given the
+          env's `seed=`.
+        - `sample`: when True, `run_brain` samples from the action
+          distribution; when False (default), returns argmax.
+
+        (M5 co-evolution loads pre-trained weights via the genome
+        encoder, not via `_build_predator_brain`. A `weights_path`
+        load-from-disk hook may be added to `extra` in a future PR if
+        standalone scenarios need to spawn pre-trained predators
+        outside the co-evolution loop.)
         """
         config = self.predator.brain_config
         if config is None or config.kind == "heuristic":
             return HeuristicPredatorBrain()
-        # Currently only "heuristic" is supported; additional kinds can
-        # be added here when learnable predator brains are introduced.
+        if config.kind == "mlpppo_predator":
+            # Local import: avoids a top-of-module env → mlpppo_predator_brain
+            # import that would slow down env-only paths (where `torch` is
+            # otherwise unused). Lazy import is also robust against any
+            # future arch additions to mlpppo_predator_brain that might
+            # introduce their own import chains.
+            from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+            extra = config.extra or {}
+            # Seed precedence: explicit `extra["seed"]` overrides; otherwise
+            # derive from the env's RNG so two `DynamicForagingEnvironment`
+            # instances constructed with the same `seed=` produce
+            # bit-identical predator brain weights. Drawing one
+            # `rng.integers` here advances env RNG state by exactly one
+            # call per predator brain construction (deterministic given
+            # `seed=`); this keeps multi-predator scenarios reproducible.
+            explicit_seed = extra.get("seed")
+            if explicit_seed is None:
+                derived_seed = int(self.rng.integers(0, 2**31 - 1))
+            else:
+                derived_seed = int(explicit_seed)
+            # Coerce dim/layer-count knobs to int — YAML / JSON can produce
+            # floats (e.g. `64.0`) which would fail mid-construction inside
+            # `nn.Linear(in, 64.0)` with `TypeError: 'float' object cannot
+            # be interpreted as an integer`. Matches the `int(explicit_seed)`
+            # coercion style above.
+            #
+            # Coerce `sample` explicitly (NOT `bool(...)`) because
+            # `bool("false") == True` (any non-empty string is truthy).
+            # Quoted YAML strings (e.g. `sample: "false"`) would silently
+            # flip semantics under naive bool coercion. Accept the
+            # canonical truthy/falsy string tokens, native bool, and
+            # numeric 0/non-zero; raise on anything else so typos fail
+            # fast at config load.
+            sample_raw = extra.get("sample", False)
+            if isinstance(sample_raw, bool):
+                sample_value = sample_raw
+            elif isinstance(sample_raw, (int, float)):
+                sample_value = bool(sample_raw)
+            elif isinstance(sample_raw, str):
+                token = sample_raw.strip().lower()
+                if token in {"true", "1", "yes", "on"}:
+                    sample_value = True
+                elif token in {"false", "0", "no", "off"}:
+                    sample_value = False
+                else:
+                    msg = (
+                        f"PredatorBrainConfig.extra['sample'] string "
+                        f"{sample_raw!r} is not a recognised boolean; "
+                        "use one of true/false/1/0/yes/no/on/off (case-insensitive)."
+                    )
+                    raise ValueError(msg)
+            else:
+                msg = (
+                    f"PredatorBrainConfig.extra['sample'] must be bool, "
+                    f"int, float, or str; got {type(sample_raw).__name__}"
+                )
+                raise ValueError(msg)
+            return MLPPPOPredatorBrain(
+                actor_hidden_dim=int(extra.get("actor_hidden_dim", 64)),
+                critic_hidden_dim=int(extra.get("critic_hidden_dim", 64)),
+                num_hidden_layers=int(extra.get("num_hidden_layers", 2)),
+                seed=derived_seed,
+                sample=sample_value,
+            )
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "
-            "Only 'heuristic' is currently supported."
+            "Supported kinds: 'heuristic', 'mlpppo_predator'."
         )
         raise NotImplementedError(msg)
 
