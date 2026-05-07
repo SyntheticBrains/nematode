@@ -150,7 +150,7 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 ### D7. Predator brain bootstrapping: pilot ablation (heuristic-imitation pretrain on one seed, cold-start on the other)
 
-**Decision:** Pilot pop runs both bootstrap arms — pilot seed 42 uses 50-episode behavioural-cloning pretrain against `HeuristicPredatorBrain`, pilot seed 43 starts cold (random-init MLPPPO weights). Pilot result chooses pretrain on/off for the full run.
+**Decision:** Pilot pop runs both bootstrap arms — pilot seed 42 uses 50-batch behavioural-cloning pretrain against `HeuristicPredatorBrain` (each batch is 64 synthesised in-pursuit `PredatorBrainParams`; teacher-action labels via cross-entropy SGD on actor weights only — see "Predator Brain Pretraining" requirement in `specs/environment-simulation/spec.md` for details), pilot seed 43 starts cold (random-init MLPPPO weights). Pilot result chooses pretrain on/off for the full run.
 
 **Rationale:** Cold-start gen-0 risks zero fitness gradient — untrained MLPPPO predators will lose every episode against trained-prey baselines. But heuristic-imitation pretraining biases initial behaviour toward heuristic dynamics, which could constrain the policy space the predator can later explore. Costs nothing extra to run both arms in pilot (2 seeds either way) and gives the empirical answer for the full run.
 
@@ -169,12 +169,12 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 - `predator_position[0] / grid_size`, `predator_position[1] / grid_size` (2 floats)
 - For each of `agent_positions[:k_nearest=2]`: `(x / grid_size, y / grid_size, present_flag)` where `present_flag ∈ {0, 1}` (3 floats × 2 = 6 floats; padded with zeros if fewer than k_nearest agents alive).
 - `detection_radius / grid_size`, `damage_radius / grid_size` (2 floats).
-- `step_index / max_steps` (1 float).
+- `step_index / max_steps` (1 float; `max_steps` is currently a hardcoded module constant of 1000 in `mlpppo_predator_brain.py` matching the M3 lamarckian / pilot scenario default. Future scenarios with `max_steps != 1000` would need to pass the value via `extra` config or extend `PredatorBrainParams`; deferred until a non-1000 scenario is needed).
 - Total input dim: **11 floats**.
 
 Output: 5-way categorical over `PredatorAction.{STAY, UP, DOWN, LEFT, RIGHT}` (matches the Protocol-defined action space from M1).
 
-**MLP architecture:** the network mirrors the agent-side MLPPPO via the existing `DEFAULT_ACTOR_HIDDEN_DIM`, `DEFAULT_CRITIC_HIDDEN_DIM`, and `DEFAULT_NUM_HIDDEN_LAYERS` constants in `quantumnematode.brain.arch.mlpppo` (currently 64 / 64 / 2; spec stays correct even if defaults change). Pilot YAML may override these via the `extra` block on `PredatorBrainConfig` if a smaller predator network is desired post-pilot.
+**MLP architecture:** the network mirrors the agent-side MLPPPO defaults — `DEFAULT_ACTOR_HIDDEN_DIM = DEFAULT_CRITIC_HIDDEN_DIM = 64`, `DEFAULT_NUM_HIDDEN_LAYERS = 2`. The constants are **pinned as module-level literals in `mlpppo_predator_brain.py`** rather than imported from `quantumnematode.brain.arch.mlpppo`; importing the agent-side constants triggers a circular import (`env → brain.arch._brain → env.Direction`) because `brain.arch._brain` imports from `env` at module load. Values are kept in sync by construction (a comment at the top of the constants block flags the divergence risk). Pilot YAML may override these via the `extra` block on `PredatorBrainConfig` if a smaller predator network is desired post-pilot.
 
 **Rationale:** Fixed input dim is required for MLP. k_nearest=2 covers multi-prey observation cleanly without exploding input dim; predators in pilot scenarios face 5-prey populations, so the nearest 2 are sufficient observation surface for greedy chase. Normalised positions / radii / step keep the network input range bounded for stable training.
 
