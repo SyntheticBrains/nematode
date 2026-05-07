@@ -1,0 +1,14 @@
+{
+  "genome_id": "test-warmstart-seed-0",
+  "generation": 49,
+  "fitness": 0.95,
+  "params": [
+    0.1, -0.2, 0.3, -0.4, 0.5, -0.6, 0.7, -0.8,
+    0.05, -0.05, 0.15, -0.15, 0.25, -0.25, 0.35, -0.35,
+    0.0, 0.0, 0.0, 0.0
+  ],
+  "brain_config": {
+    "name": "test-stub-brain",
+    "comment": "Synthetic 20-float weight vector used by test_coevolution.py to exercise the warmstart-loader path. Production warmstart bundle (PR 4 task 7.0b) replaces this with real M3 lamarckian-LSTMPPO elite genomes from logbook 013."
+  }
+}
