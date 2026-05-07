@@ -1131,6 +1131,13 @@ Beyond the current roadmap phases, potential research directions include:
 - Apply findings to broader quantum ML research
 - Contribute to theoretical understanding of quantum computational advantage
 
+### 6. Ecological Co-Evolution
+
+- Add state to predators (HP, satiety, death-by-starvation, kill-replenishes-energy) so the Phase 5 frozen-weight Red Queen substrate gains coupled population dynamics
+- Lotka-Volterra-style oscillations: study whether predator-prey populations stabilise, oscillate, or collapse under learned policies
+- Phase 5's `PredatorBrain` Protocol (M1) and `MLPPPOPredatorBrain` (M5) already supply the policy substrate; the new work is env-side state machinery + reward shaping
+- Selection pressure shifts from "maximise kill-rate" to "maintain a viable population against prey escape velocity" — natural follow-up if Phase 5's co-evolution verdict motivates richer eco-dynamics
+
 ______________________________________________________________________
 
 ## Technical Debt & Maintenance
