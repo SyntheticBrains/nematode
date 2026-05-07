@@ -41,7 +41,7 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Asymmetric start-side note:** with `start_side="prey"` (default), prey trains first against gen-0 predators. When predators are bootstrapped from heuristic-imitation pretrain (D7 arm A), gen-0 prey trains against bootstrapped predators rather than random-init ones — meaningful asymmetry. With cold-start predators (D7 arm B) gen-0 prey trains against random-policy predators, which is gentle bootstrap. Pilot ablation reveals which setup yields the cleaner Red Queen signal; full run's `start_side` choice flips if pilot evidence suggests predator-first works better.
 
-**Asymmetric K rationale (per side):** prey K=10 is justified by within-block PPO inner-loop training convergence (the prey side runs `LearnedPerformanceFitness` with K_train=50). Predator K=10 is justified differently — CMA-ES needs ≥~10 generations of weight evolution for covariance adaptation to make meaningful progress on the frozen-prey opposition. Both sides land on K=10 by coincidence, NOT because the same constraint applies; pilot may motivate splitting the K knob per side (e.g. `K_prey=10`, `K_pred=15`) if predator covariance under-converges within K=10 (see Risk register row "Predator within-K-block PPO instability" — wording remains apt even though predator does not actually run PPO inner-loop).
+**Asymmetric K rationale (per side):** prey K=10 is justified by within-block PPO inner-loop training convergence (the prey side runs `LearnedPerformanceFitness` with K_train=50). Predator K=10 is justified differently — CMA-ES needs ≥~10 generations of weight evolution for covariance adaptation to make meaningful progress on the frozen-prey opposition. Both sides land on K=10 by coincidence, NOT because the same constraint applies; pilot may motivate splitting the K knob per side (e.g. `K_prey=10`, `K_pred=15`) if predator covariance under-converges within K=10 (see Risk register row "Predator within-K-block CMA-ES under-convergence").
 
 **Alternatives:**
 
@@ -307,11 +307,20 @@ A K-block's elite genome is appended to **both** `hof` (subject to eviction) and
 **Schema sketch:**
 
 ```python
+from pathlib import Path
+from typing import Literal
+from pydantic import BaseModel, Field, model_validator
+
 class CoevolutionConfig(BaseModel):
     # Per-side evolution configs (each carries its own population_size,
-    # sigma0, cma_diagonal, episodes_per_eval, learn_episodes_per_eval).
-    prey_evolution: EvolutionConfig  # Lamarckian + LearnedPerformanceFitness
-    predator_evolution: EvolutionConfig  # NoInheritance + PredatorEpisodicKillRate
+    # sigma0, cma_diagonal, episodes_per_eval, learn_episodes_per_eval,
+    # inheritance). The fitness function is NOT a YAML field — it's
+    # hardcoded in CoevolutionLoop.__init__ per D13 (prey →
+    # LearnedPerformanceFitness, predator → PredatorEpisodicKillRate)
+    # to prevent footguns (e.g. predator using LearnedPerformanceFitness
+    # blowing the compute budget).
+    prey_evolution: EvolutionConfig
+    predator_evolution: EvolutionConfig
 
     # Alternating-schedule controller knobs.
     K_per_block: int = Field(default=10, ge=1)
@@ -330,9 +339,10 @@ class CoevolutionConfig(BaseModel):
     rebalance_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @model_validator(mode="after")
-    def _validate_optimisers(self) -> "CoevolutionConfig":
-        # Both sides MUST use CMA-ES per D2 (TPE incompatible with weight encoders).
+    def _validate_invariants(self) -> "CoevolutionConfig":
+        # Enforce M5 invariants at YAML load time (per D2/D13/B8/B20/B21).
         for side, ev in [("prey", self.prey_evolution), ("predator", self.predator_evolution)]:
+            # D2/B8: weight evolution requires CMA-ES; TPE rejects unbounded weights.
             if ev.algorithm != "cmaes":
                 raise ValueError(
                     f"CoevolutionConfig.{side}_evolution.algorithm must be 'cmaes' "
@@ -344,15 +354,46 @@ class CoevolutionConfig(BaseModel):
                     f"CoevolutionConfig.{side}_evolution.cma_diagonal must be True "
                     "(sep-CMA-ES required for neuroevolution at n>~100). See design.md D2."
                 )
+
+        # D13/B21: prey side runs LearnedPerformanceFitness (Lamarckian);
+        # predator side runs PredatorEpisodicKillRate (frozen-weight, NoInheritance).
+        if self.prey_evolution.inheritance != "lamarckian":
+            raise ValueError(
+                f"CoevolutionConfig.prey_evolution.inheritance must be 'lamarckian' "
+                f"(got {self.prey_evolution.inheritance!r}); prey side is the M3 "
+                "Lamarckian-LSTMPPO substrate. See design.md D10 + D13."
+            )
+        if self.predator_evolution.inheritance != "none":
+            raise ValueError(
+                f"CoevolutionConfig.predator_evolution.inheritance must be 'none' "
+                f"(got {self.predator_evolution.inheritance!r}); predator side runs "
+                "frozen-weight CMA-ES evolution per D13 (no per-genome weight inheritance)."
+            )
+
+        # D13/S27: prey runs K_train=50 inner-loop PPO; predator does not.
+        if self.prey_evolution.learn_episodes_per_eval <= 0:
+            raise ValueError(
+                f"CoevolutionConfig.prey_evolution.learn_episodes_per_eval must be > 0 "
+                f"(got {self.prey_evolution.learn_episodes_per_eval}); prey side uses "
+                "LearnedPerformanceFitness which requires K_train > 0. See design.md D13."
+            )
+        if self.predator_evolution.learn_episodes_per_eval != 0:
+            raise ValueError(
+                f"CoevolutionConfig.predator_evolution.learn_episodes_per_eval must be 0 "
+                f"(got {self.predator_evolution.learn_episodes_per_eval}); predator side "
+                "evaluates frozen-weight per D13 (no inner-loop training)."
+            )
         return self
 ```
 
 **Rationale for a separate class (vs extending `EvolutionConfig`):**
 
 - **Clean separation.** `EvolutionConfig` already has 25+ fields for single-population evolution; adding 8+ co-evolution-only fields would bloat the class for non-co-evolution scenarios.
-- **Per-side asymmetry.** D4 specifies asymmetric pop sizes (24/16); D13 specifies asymmetric fitness (LearnedPerformanceFitness vs PredatorEpisodicKillRate). Each side's `EvolutionConfig` carries its own `population_size`, `learn_episodes_per_eval`, etc. — natural per-side encapsulation.
+- **Per-side asymmetry.** D4 specifies asymmetric pop sizes (24/16). Each side's `EvolutionConfig` carries its own `population_size`, `learn_episodes_per_eval`, `inheritance`, etc. — natural per-side encapsulation.
 - **Backward compatibility.** Existing scenarios that use `evolution: EvolutionConfig` are unchanged. Only co-evolution scenarios use the new `coevolution: CoevolutionConfig` sub-block.
-- **Validation.** The `@model_validator` rejects misconfigurations (TPE on either side, missing cma_diagonal) at YAML load time rather than at run time — surfacing the B8 / D2 invariant as a hard check.
+- **Validation.** The `@model_validator` rejects misconfigurations at YAML load time rather than at run time — surfaces D2/D13/B8/B20/B21 invariants as hard checks: TPE rejected, non-diagonal CMA-ES rejected, prey side must use Lamarckian + learn_episodes>0, predator side must use NoInheritance + learn_episodes=0.
+
+**Fitness is NOT a YAML field (B20):** `LearnedPerformanceFitness` (prey) and `PredatorEpisodicKillRate` (predator) are hardcoded in `CoevolutionLoop.__init__` per D13. Making fitness YAML-configurable invites footguns (e.g. predator accidentally configured with `LearnedPerformanceFitness` would multiply per-evaluation cost by ~3x and blow the compute budget). The asymmetry is per-design and not user-tunable in M5.
 
 **Alternatives:**
 
@@ -400,7 +441,7 @@ No data migration. Behaviour change is opt-in via `PredatorBrainConfig.kind: "ml
 
 ## Open Questions
 
-1. **Should the rebalancing knob (Risk register row "One side dominates") ship in M5 or be deferred?** *(Resolved per round-3 review S17 — ship as disabled-default in task 6.11; pilot may enable via config if domination is observed.)*
+1. **Should the rebalancing knob (Risk register row "One side dominates") ship in M5 or be deferred?** *(Resolved per round-3 review S17 — ship as disabled-default in task 6.14; pilot may enable via config if domination is observed.)*
 
 2. **Held-out predator opponent pool composition for generality probe (D5).** Mix of detection_radius ∈ {4, 6, 8, 10} × damage_radius ∈ {0, 1} gives 8 combinations; or sample from a wider distribution? Recommend the {4,6,8,10} × {0,1} grid for reproducibility; pilot inspects probe range.
 

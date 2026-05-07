@@ -59,7 +59,7 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 
 #### Scenario: Prey Gen-0 Warm-Start From M3 Lamarckian Elite
 
-- **GIVEN** a `CoevolutionLoop` instance and a YAML config specifying `prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_<run_seed>.json`
+- **GIVEN** a `CoevolutionLoop` instance and a YAML config specifying `prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_<run_seed>.json` (where `<run_seed>` is a template variable substituted by the campaign driver — `run_coevolution.py` — based on the `--seed` CLI argument before the path is passed to `CoevolutionLoop.__init__`)
 - **WHEN** the loop initialises
 - **THEN** the prey-side `CMAESOptimizer` SHALL be constructed with `x0` set to the loaded elite genome's weight vector (NOT zeros)
 - **AND** the elite genome SHALL be sourced from prior M3-Lamarckian-LSTMPPO full-run elites (one elite per full-run seed, deterministic mapping)
@@ -101,7 +101,7 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 - **WHEN** the loop initialises
 - **THEN** a held-out opponent set of size `held_out_size` SHALL be constructed for each side
 - **AND** the prey-side held-out set SHALL be loaded from a committed in-repo bundle at `configs/evolution/coevolution_held_out_prey/*.json` (one genome per file, ~tens of KB each); the bundle SHALL contain at least `held_out_size` genomes drawn from prior M3-Lamarckian-style runs
-- **AND** the predator-side held-out set SHALL be drawn from a heuristic-predator Cartesian grid `detection_radius × damage_radius`, with a deterministic widen-or-sub-sample strategy (`held_out_rng.choice` with a fixed seed) when the natural grid size differs from `held_out_size`
+- **AND** the predator-side held-out set SHALL be drawn from a heuristic-predator Cartesian grid `detection_radius × damage_radius` (default `{4, 6, 8, 10} × {0, 1}` = 8 combos at default `held_out_size=8`); when `held_out_size > grid_size` the rng samples WITH replacement; when `held_out_size < grid_size` the rng samples WITHOUT replacement; both via `held_out_rng.choice` with a fixed seed
 - **AND** held-out opponents SHALL NEVER be used in training evaluations
 - **AND** held-out genome bundles SHALL be committed to the repo (NOT stored only in `artifacts/`) so a fresh checkout can run the campaign reproducibly
 
@@ -162,7 +162,7 @@ The system SHALL gate the full M5 campaign on a pilot run; pilot thresholds SHAL
 #### Scenario: Pilot Configuration
 
 - **GIVEN** the two pilot arm YAML files (`coevolution_pilot_arm_a.yml` and `coevolution_pilot_arm_b.yml`)
-- **THEN** each SHALL configure 30 generations × prey-pop 24 × predator-pop 16 × K=10 × HoF=8 × probe every 10 gens
+- **THEN** each SHALL configure **30 per-side generations** (3 K-pairs × K_per_block=10 = 30 gens per side; total wall-clock loop generations = 60) × prey-pop 24 × predator-pop 16 × K=10 × HoF=8 × probe every 10 gens. Specifically, `generation_pairs=3`, `K_per_block=10`, `prey_evolution.population_size=24`, `predator_evolution.population_size=16`, `held_out_size=8`, `generality_probe_every=10`.
 - **AND** arm A SHALL run with seed=42 and `predator_gen0_bootstrap: "heuristic_imitation_pretrain"` (D7 arm A)
 - **AND** arm B SHALL run with seed=43 and `predator_gen0_bootstrap: "cold_start"` (D7 arm B)
 - **AND** the bash wrapper `phase5_m5_coevolution_pilot.sh` SHALL run both arms sequentially with distinct output directories
