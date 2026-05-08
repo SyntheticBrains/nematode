@@ -1,12 +1,13 @@
 """Learnable MLP-PPO predator brain.
 
-Implements the `PredatorBrain` Protocol from M1 with a small actor + value
+Implements the `PredatorBrain` Protocol with a small actor + value
 network operating on a fixed-dimensional observation derived from
-`PredatorBrainParams`. Designed for M5 co-evolution: the network's weights
-are evolved by `CMAESOptimizer(diagonal=True)` via the
-`MLPPPOPredatorEncoder`'s `WeightPersistence` round-trip; the brain itself
-runs frozen-weight at evaluation time (no inner-loop PPO training inside
-`run_brain` — fitness is `PredatorEpisodicKillRate` per design.md D13).
+`PredatorBrainParams`. Designed for co-evolution: the network's
+weights are evolved by `CMAESOptimizer(diagonal=True)` via the
+`MLPPPOPredatorEncoder`'s `WeightPersistence` round-trip; the brain
+itself runs frozen-weight at evaluation time (no inner-loop PPO
+training inside `run_brain` — fitness is the outer-loop kill-rate
+metric `PredatorEpisodicKillRate`).
 
 The architecture mirrors the agent-side MLPPPO defaults
 (`DEFAULT_ACTOR_HIDDEN_DIM`, `DEFAULT_CRITIC_HIDDEN_DIM`,
@@ -16,8 +17,7 @@ is coupled to `BrainParams`/`BrainData`/sensory modules and would force a
 heavyweight inheritance chain on the predator. This module composes raw
 `torch.nn` instead.
 
-Input encoding (per design.md D8 / spec "MLPPPO Predator I/O Encoding
-Contract"): an 11-float vector built from `PredatorBrainParams`:
+Input encoding: an 11-float vector built from `PredatorBrainParams`:
 
 - `predator_position[0] / grid_size`, `predator_position[1] / grid_size`
 - For each of `agent_positions[:k_nearest=2]`:
@@ -64,7 +64,7 @@ DEFAULT_NUM_HIDDEN_LAYERS = 2
 # Fixed input dimension per spec "Input Encoding Components".
 INPUT_DIM = 11
 
-# k_nearest agent positions encoded into the input vector. Per design.md D8:
+# k_nearest agent positions encoded into the input vector. Choice of
 # k_nearest=2 covers multi-prey observation cleanly without exploding input
 # dim.
 K_NEAREST = 2
@@ -93,8 +93,7 @@ class MLPPPOPredatorBrain:
     Hidden dims + layer count default to the agent-MLPPPO constants
     (`DEFAULT_ACTOR_HIDDEN_DIM=64`, `DEFAULT_CRITIC_HIDDEN_DIM=64`,
     `DEFAULT_NUM_HIDDEN_LAYERS=2`) but can be overridden at construction
-    for ablation. Total parameter count at defaults: ~10k (per design.md D2
-    estimate).
+    for ablation. Total parameter count at defaults: ~10k.
 
     Parameters
     ----------
@@ -184,10 +183,9 @@ class MLPPPOPredatorBrain:
 
         max_steps is currently NOT carried on `PredatorBrainParams`; the
         last component normalises `step_index` by a fixed conventional
-        upper bound (1000 — matches the M3 lamarckian config's
-        `max_steps`). If a future scenario uses a different `max_steps`,
-        the normalisation factor can be passed through `extra` config; for
-        M5 pilot/full all scenarios use 1000.
+        upper bound (1000 — matches the canonical scenario default).
+        If a future scenario uses a different `max_steps`, the
+        normalisation factor can be passed through `extra` config.
         """
         grid_size = float(params.grid_size)
         out = np.zeros(INPUT_DIM, dtype=np.float32)
@@ -225,7 +223,7 @@ class MLPPPOPredatorBrain:
         actor, then returns either the argmax action (default) or a
         sampled action (when `sample=True`). The critic is forwarded too
         but its output is unused at inference time — kept attached for
-        weight-persistence symmetry with M3 LearnedPerformanceFitness's
+        weight-persistence symmetry with the agent-side LearnedPerformanceFitness's
         actor + critic round-trip.
         """
         obs = self.encode_observation(params)
@@ -234,7 +232,7 @@ class MLPPPOPredatorBrain:
             logits = self.actor(obs_tensor).squeeze(0)  # (NUM_ACTIONS,)
             if self._sample:
                 # Sample using the env's RNG for determinism. We draw a
-                # uniform via numpy (env-RNG-shared invariant from M1) and
+                # uniform via numpy (env-RNG-shared invariant) and
                 # invert the categorical via cumulative softmax.
                 probs = torch.softmax(logits, dim=-1).cpu().numpy()
                 cumulative = np.cumsum(probs)

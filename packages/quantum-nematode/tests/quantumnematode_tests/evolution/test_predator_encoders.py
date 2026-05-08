@@ -1,6 +1,6 @@
-"""Tests for :mod:`quantumnematode.evolution.predator_encoders` (task 3.5).
+"""Tests for :mod:`quantumnematode.evolution.predator_encoders`.
 
-Covers spec scenarios from `evolution-framework/spec.md`:
+Covers:
 
 - Registry surface: `PREDATOR_ENCODER_REGISTRY` exposes the
   `mlpppo_predator` entry; lookup-only (no agent-side fallback).

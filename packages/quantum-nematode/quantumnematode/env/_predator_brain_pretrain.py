@@ -1,8 +1,9 @@
 """Behavioural-cloning pretrain helper for `MLPPPOPredatorBrain`.
 
-Module-private helper used by `CoevolutionLoop.__init__` (per design.md D7
-arm A) to bootstrap gen-0 predator weights from `HeuristicPredatorBrain`'s
-decisions before CMA-ES outer-loop weight evolution begins.
+Module-private helper used by `CoevolutionLoop.__init__` on the
+heuristic-imitation bootstrap arm to seed gen-0 predator weights
+from `HeuristicPredatorBrain`'s decisions before CMA-ES outer-loop
+weight evolution begins.
 
 Synthesises training pairs `(PredatorBrainParams, heuristic_action)` from
 random states (the heuristic teacher is deterministic given params, so the
@@ -12,9 +13,8 @@ predator brain's actor logits to match the teacher's action distribution.
 
 The helper does NOT interact with `DynamicForagingEnvironment` directly —
 it uses synthesised params to keep the pretrain fast, deterministic, and
-free of env-side coupling. The 50-"episode" budget per spec
-"Imitation Loss Decreases" is interpreted as 50 batches of synthesised
-samples.
+free of env-side coupling. The 50-"episode" budget is interpreted as
+50 batches of synthesised samples.
 """
 
 from __future__ import annotations
@@ -86,8 +86,8 @@ def pretrain_against_heuristic(  # noqa: PLR0913 — public helper with several 
     learning_rate
         Adam learning rate.
     grid_size
-        Conventional grid size for synthesising params (matches the M3
-        lamarckian / pilot scenario default of 20x20).
+        Conventional grid size for synthesising params (matches the
+        canonical pilot scenario default of 20x20).
     seed
         Optional seed for the synthesis RNG (separate from any RNG inside
         the brain). When provided, the same seed produces identical
@@ -243,7 +243,9 @@ def _synthesize_params(
     damage_radius = int(rng.integers(0, 3))
     step_index = int(rng.integers(0, 1000))
 
-    # Resolve chase_target + is_pursuing per the M1 frozen-branch invariant.
+    # Resolve chase_target + is_pursuing per the frozen-branch invariant
+    # (`Predator.update_position` resolves these once per call and they
+    # stay committed across all accumulator-step iterations).
     if agent_positions:
         # Nearest by Manhattan, ties broken by env's iteration order (here,
         # synthesised list order).

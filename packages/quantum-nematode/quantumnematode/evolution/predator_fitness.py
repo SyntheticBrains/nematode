@@ -1,15 +1,15 @@
-"""Predator-side fitness functions for the M5 co-evolution loop.
+"""Predator-side fitness functions for the co-evolution loop.
 
 Two implementations conforming to the canonical
 :class:`~quantumnematode.evolution.fitness.FitnessFunction` Protocol:
 
 - :class:`PredatorEpisodicKillRate` — primary, frozen-weight kill-rate
-  measurement (matches design.md D13 for the predator side: no inner-loop
-  training, CMA-ES outer loop owns the gradient).
+  measurement (no inner-loop training; the outer-loop CMA-ES owns the
+  gradient on the predator's small policy space).
 - :class:`PredatorLearnedPerformanceFitness` — secondary variant that
   trains the predator brain inner-loop before evaluation. NOT used in
-  the main co-evolution flow per D13, but available as a follow-up
-  ablation if pilot evidence motivates it.
+  the main co-evolution flow, but available as a follow-up ablation
+  if pilot evidence motivates it.
 
 Both are designed to run inside the existing
 :meth:`EvolutionLoop._evaluate_in_worker` 11-tuple worker, so they are
@@ -17,11 +17,11 @@ plain classes with no per-instance shared state and pickle cleanly.
 
 The fitness function does NOT patch `sim_config` to mount frozen prey
 opponents — that is the CALLER's responsibility (the
-:class:`CoevolutionLoop` does this in PR 3 by replacing the agent block
-in `sim_config` with the opposing-side champion before invoking
-`evaluate`). This keeps the fitness function brain-agnostic on the prey
-side: it simply runs whatever multi-agent env the patched `sim_config`
-describes and aggregates predator-side metrics.
+:class:`CoevolutionLoop` does this by replacing the agent block in
+`sim_config` with the opposing-side champion before invoking
+`evaluate`). This keeps the fitness function brain-agnostic on the
+prey side: it simply runs whatever multi-agent env the patched
+`sim_config` describes and aggregates predator-side metrics.
 """
 
 from __future__ import annotations
@@ -43,10 +43,10 @@ if TYPE_CHECKING:
 
 # Fallback ceiling (exclusive) for the proximity signal: any non-zero
 # kill count across N episodes scores >= 1/N, so capping the proximity
-# fallback strictly below 1/N preserves the "one kill always beats zero
-# kills" invariant per spec scenario "Secondary Proximity Signal When
-# Kill Count Is Zero". Concretely the raw cross-slot proximity ratio
-# lives in [0, 1]; we scale it by this factor to land in [0, ~1/N).
+# fallback strictly below 1/N preserves the "one kill always beats
+# zero kills" invariant. Concretely the raw cross-slot proximity
+# ratio lives in [0, 1]; we scale it by this factor to land in
+# [0, ~1/N).
 _PROXIMITY_FALLBACK_HEADROOM = 0.99  # conservative — strictly < 1/N
 
 # Shared default mirroring `EpisodicSuccessRate` / `LearnedPerformanceFitness`.
@@ -72,7 +72,7 @@ def _build_env_with_genome_predators(
 ) -> DynamicForagingEnvironment:
     """Build a fresh env and install the genome-decoded brain on every predator.
 
-    Per spec scenario "PredatorEpisodicKillRate Mean Kills Calculation":
+    Spec contract:
     "all predator slots in the env using the same decoded brain (the
     genome under evaluation is the strategy being measured, not just
     slot 0)". The env's `_build_predator_brain` dispatcher constructs
@@ -224,8 +224,7 @@ def _build_prey_agents(
 class PredatorEpisodicKillRate:
     """Frozen-weight predator fitness: per-episode mean of total kills.
 
-    Per design.md D13 + spec scenario "PredatorEpisodicKillRate Mean
-    Kills Calculation":
+    Per-evaluation flow:
 
     1. Decode the genome into a predator brain via `encoder.decode`.
     2. Build a multi-agent env (HEADLESS) with frozen prey opponents
@@ -270,8 +269,8 @@ class PredatorEpisodicKillRate:
     ) -> float:
         """Return the per-episode mean kill count (with proximity fallback).
 
-        Returns 0.0 immediately when `episodes == 0` per spec scenario
-        "Mean Kills Calculation" final clause.
+        Returns 0.0 immediately when `episodes == 0` (the literal
+        kill-rate definition with no episodes yields no signal).
         """
         if episodes < 0:
             msg = f"episodes must be >= 0, got {episodes}"
@@ -337,20 +336,20 @@ class PredatorLearnedPerformanceFitness:
     """Train-then-eval predator fitness — DEFERRED ablation variant.
 
     Mirrors :class:`~quantumnematode.evolution.fitness.LearnedPerformanceFitness`
-    in shape but for predator-side genomes. Per design.md D13 the M5
-    co-evolution loop hardcodes :class:`PredatorEpisodicKillRate` (no
-    inner-loop training) for predator fitness; this class is reserved
-    for a follow-up ablation if pilot evidence shows predator-side
-    weight evolution stalls without inner-loop signal.
+    in shape but for predator-side genomes. The co-evolution loop
+    hardcodes :class:`PredatorEpisodicKillRate` (no inner-loop
+    training) for predator fitness; this class is reserved for a
+    follow-up ablation if pilot evidence shows predator-side weight
+    evolution stalls without inner-loop signal.
 
     Implementation note: the predator brain is currently designed for
     frozen-weight evaluation only — it has no `optimizer` /
-    `training_state` weight components and no `.learn()` hook (per
-    spec "Output Action Mapping" and the mlpppo_predator_brain.py
-    docstring). Wiring an inner-loop PPO training stage onto
-    `MLPPPOPredatorBrain` is out of scope for PR 2. This stub raises
-    `NotImplementedError` so an accidental config selection fails
-    loudly rather than silently degrading to frozen-weight behaviour.
+    `training_state` weight components and no `.learn()` hook.
+    Wiring an inner-loop PPO training stage onto
+    `MLPPPOPredatorBrain` is out of scope for the current substrate.
+    This stub raises `NotImplementedError` so an accidental config
+    selection fails loudly rather than silently degrading to
+    frozen-weight behaviour.
     """
 
     def evaluate(
@@ -366,8 +365,8 @@ class PredatorLearnedPerformanceFitness:
         del genome, sim_config, encoder, episodes, seed
         msg = (
             "PredatorLearnedPerformanceFitness is reserved for a future "
-            "follow-up ablation; M5 co-evolution uses "
-            "PredatorEpisodicKillRate (frozen-weight) per design.md D13. "
+            "follow-up ablation; the co-evolution loop currently uses "
+            "PredatorEpisodicKillRate (frozen-weight evaluation). "
             "Wiring the inner-loop PPO training stage requires extending "
             "MLPPPOPredatorBrain with optimizer + training_state weight "
             "components first."

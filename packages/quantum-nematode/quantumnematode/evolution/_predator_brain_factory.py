@@ -52,7 +52,7 @@ def instantiate_predator_brain_from_sim_config(
     constructor pins ``sample=False``: this factory is exclusively used
     by the genome encoder, which decodes a genome's weights into a
     fresh brain that the fitness function then evaluates with argmax
-    actions (no sampling — frozen-weight per design.md D13). Sampling-
+    actions (no sampling — the predator brain is evaluated frozen-weight). Sampling-
     mode is reachable via the env-side dispatcher
     (``DynamicForagingEnvironment._build_predator_brain``) for
     standalone scenarios and via the pretrain helper for exploration

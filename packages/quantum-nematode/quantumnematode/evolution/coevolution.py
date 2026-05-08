@@ -1,46 +1,50 @@
-"""Co-evolution loop orchestrator (PR 3 §6 — M5).
+"""Co-evolution loop orchestrator.
 
 Composes two `EvolutionLoop`-shaped sides (prey + predator) under an
-alternating-schedule controller. Per design.md:
+alternating-schedule controller. Key design choices:
 
-- **D2:** Both sides use `CMAESOptimizer(diagonal=True)` (sep-CMA-ES).
-  TPE is rejected for unbounded weight encoders.
-- **D7:** Predator gen-0 is bootstrapped via either heuristic-imitation
-  pretrain (arm A) or cold-start zeros (arm B). The pretrain runs
-  inside `__init__` on arm-A construction; cost is amortised across
-  the `K_per_block * generation_pairs` generations of the run.
-- **D10/D13:** Prey side uses `LearnedPerformanceFitness` +
-  `LamarckianInheritance`; predator side uses `PredatorEpisodicKillRate`
-  + `NoInheritance`. Asymmetry intentional and pinned in `__init__`
-  (NOT YAML-configurable per B20).
-- **D12:** Prey gen-0 elite loaded from `prey_gen0_seed_path` (a
-  warmstart genome JSON produced by the M3 lamarckian pilot) and passed
-  to `CMAESOptimizer(x0=...)`. When the path is None, the prey side
-  starts from `x0=zeros` like a cold-start run.
-- **D14:** YAML schema lives at
+- **Optimiser:** Both sides use `CMAESOptimizer(diagonal=True)`
+  (sep-CMA-ES). TPE-style optimisers are rejected because the weight
+  encoders return unbounded `genome_bounds`, which TPE cannot sample.
+- **Predator gen-0 bootstrap:** Either heuristic-imitation pretrain
+  (arm A) or cold-start zeros (arm B). The pretrain runs inside
+  `__init__` on arm-A construction; cost is amortised across the
+  `K_per_block * generation_pairs` generations of the run.
+- **Asymmetric fitness + inheritance:** Prey side uses
+  `LearnedPerformanceFitness` + `LamarckianInheritance` (large policy
+  space, K-train inner loop matters); predator side uses
+  `PredatorEpisodicKillRate` + `NoInheritance` (small policy space,
+  CMA-ES outer-loop weight gradient suffices). Asymmetry intentional
+  and pinned in `__init__` (NOT YAML-configurable — making it so
+  invites footguns like predator using `LearnedPerformanceFitness`
+  blowing the compute budget).
+- **Prey gen-0 warmstart:** Optional warmstart genome JSON loaded
+  from `prey_gen0_seed_path` and passed to `CMAESOptimizer(x0=...)`.
+  When the path is None, the prey side starts from `x0=zeros`.
+- **Schema validation:** YAML schema lives at
   `quantumnematode.utils.config_loader.CoevolutionConfig` with model
   validators enforcing all of the above at load time.
 
-PR 3 commit 5 shipped the scaffold + alternating schedule + per-K-block
-fresh `CMAESOptimizer` re-construction. PR 3 commit 6 (this commit)
-adds the per-generation loop body — HoF push at K-block end, HoF-mixed
-opposition sampling, generality probe, held-out opponent construction
-for both sides. Checkpoint/resume + worker dispatch + full test suite
-land in commits 7-8 within this PR.
+The orchestrator ships in two phases: this module ships the loop
+itself (alternating schedule, HoF opposition sampling, generality
+probe schema, checkpoint/resume); the campaign-level integration
+(opposition end-to-end weight injection, multiprocessing pool
+dispatch, smoke config) is layered on top of these primitives via
+the call-site sim_config patching documented below.
 
-Opposition injection (deferred to PR 4)
----------------------------------------
+Opposition injection (call-site responsibility)
+-----------------------------------------------
 The per-evaluation pattern samples opposition via
 `hof.mix_with_pop(rng, opposing_population, frac_hof=0.3)` and the
 opposition genomes are recorded on the candidate's evaluation. The
 final `sim_config` patching that translates opposition genomes into
 env-side opponents (decoded predator brains installed on
 `Predator.brain` slots, decoded prey brains exposed via
-`sim_config.multi_agent.agents`) requires the campaign-level configs
-that PR 4 ships. For PR 3 the loop calls `fitness.evaluate(...)` with
-the unpatched `sim_config` and records opposition for lineage; full
-end-to-end opposition injection is wired in PR 4 alongside the smoke
-config that exercises the integrated path.
+`sim_config.multi_agent.agents`) is the campaign integration layer's
+responsibility. The loop itself calls `fitness.evaluate(...)` with
+the configured `sim_config` and records opposition for lineage; the
+caller is expected to patch `sim_config` per-evaluation when the
+integrated path is wired.
 
 Champion history schema
 -----------------------
@@ -49,8 +53,8 @@ After each K-block ends, the training-side block elite is appended to
 "k_block_index": int, "fitness": float, "params": list[float]}``.
 Serialised at checkpoint time as JSON via `params.tolist()`; restored
 via `np.asarray(d["params"], dtype=np.float32)` per the convention
-shared with `Genome.params`. The aggregator (PR 5 task 8.1) walks
-this history for cycling and escalation analysis.
+shared with `Genome.params`. Post-hoc analysis tooling walks this
+history for cycling and escalation detection.
 """
 
 from __future__ import annotations
@@ -93,8 +97,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# Default Hall-of-Fame capacity per design.md D3 (8 entries; 70/30 mix
-# preserves live signal while preventing forgetting).
+# Default Hall-of-Fame capacity (8 entries). With the 70% current-pop
+# / 30% HoF mix, this preserves live signal while preventing
+# catastrophic forgetting of strong past champions.
 DEFAULT_HOF_CAPACITY = 8
 
 # Checkpoint format version. Bumped when the on-disk shape changes;
@@ -105,14 +110,14 @@ DEFAULT_HOF_CAPACITY = 8
 CHECKPOINT_VERSION = 1
 
 # Repo-root-anchored path to the prey held-out bundle (committed
-# in-repo per spec scenario "Held-Out Set Construction"). Resolved
-# from this file's location rather than the cwd, so the loop works
-# regardless of where the campaign driver was launched. The number of
-# `.parents[N]` hops matches the pattern in `validation/datasets.py:19`
-# (4 parents: this file → evolution/ → quantumnematode/ →
-# packages/quantum-nematode/ → repo root). PR 4's campaign driver
-# can override `CoevolutionLoop._PREY_HELD_OUT_BUNDLE_DIR` (e.g. for
-# multi-bundle ablations), and tests likewise.
+# in-repo so a fresh checkout can run the campaign reproducibly).
+# Resolved from this file's location rather than the cwd, so the loop
+# works regardless of where the campaign driver was launched. The
+# number of `.parents[N]` hops matches the pattern in
+# `validation/datasets.py` (4 parents: this file → evolution/ →
+# quantumnematode/ → packages/quantum-nematode/ → repo root). The
+# campaign driver may override `CoevolutionLoop._PREY_HELD_OUT_BUNDLE_DIR`
+# (e.g. for multi-bundle ablations), and tests likewise.
 _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
     Path(__file__).resolve().parents[4] / "configs" / "evolution" / "coevolution_held_out_prey"
 )
@@ -134,7 +139,7 @@ class _SideState:
     Construction is split between :meth:`CoevolutionLoop.__init__`
     (which builds the encoder + fitness + inheritance + HoF + initial
     optimizer) and :meth:`CoevolutionLoop._rebuild_optimizer` (which
-    re-constructs the optimizer at every K-block transition per D2).
+    re-constructs the optimizer at every K-block transition).
     """
 
     name: Literal["prey", "predator"]
@@ -183,7 +188,7 @@ class CoevolutionLoop:
 
     Construction
     ------------
-    `__init__` performs gen-0 setup for both sides per D7 + D12:
+    `__init__` performs gen-0 setup for both sides:
 
     - **Prey:** Loads an optional warmstart genome from
       `coevolution_config.prey_gen0_seed_path`; the genome's
@@ -200,13 +205,14 @@ class CoevolutionLoop:
       `coevolution_config.predator_gen0_bootstrap == "cold_start"`,
       seeds the optimizer with `x0=zeros`.
 
-    Fitness is hardcoded per side per D13 + B20 (NOT YAML-configurable):
-    prey gets `LearnedPerformanceFitness`; predator gets
+    Fitness is hardcoded per side (NOT YAML-configurable): prey gets
+    `LearnedPerformanceFitness`; predator gets
     `PredatorEpisodicKillRate`.
 
-    Inheritance is hardcoded per side per D10 + D13: prey gets
+    Inheritance is hardcoded per side: prey gets
     `LamarckianInheritance(elite_count=1)` (single-elite-broadcast,
-    matching the M3 substrate); predator gets `NoInheritance()`.
+    matching the upstream Lamarckian-LSTMPPO substrate); predator
+    gets `NoInheritance()`.
 
     Parameters
     ----------
@@ -228,7 +234,7 @@ class CoevolutionLoop:
     # Class-level attribute so tests + future subclasses can override
     # the bundle directory without monkey-patching module globals.
     # Defaults to the repo-root-anchored path so the loop works
-    # regardless of cwd. PR 4's campaign driver may override this when
+    # regardless of cwd. The campaign driver may override this when
     # running multi-bundle ablations (e.g. seed-specific bundles).
     _PREY_HELD_OUT_BUNDLE_DIR: Path = _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR
 
@@ -255,7 +261,7 @@ class CoevolutionLoop:
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         # Per-side subdirs for lineage CSVs (matches `EvolutionLoop`'s
-        # output_dir convention so M3 single-population analysis tooling
+        # output_dir convention so single-population analysis tooling
         # reuses unchanged).
         (self.output_dir / "prey").mkdir(parents=True, exist_ok=True)
         (self.output_dir / "predator").mkdir(parents=True, exist_ok=True)
@@ -274,7 +280,7 @@ class CoevolutionLoop:
         self._current_side: Literal["prey", "predator"] = self.coevolution_config.start_side
 
         # Per-K-block mean-fitness history per side, used by the
-        # rebalance heuristic (§6.14). Each side accumulates one entry
+        # rebalance heuristic. Each side accumulates one entry
         # per completed K-block; the rebalance check at K-block end
         # compares the most-recent K-block means across sides. The
         # buffers are unbounded but small (one float per K-block; 6
@@ -315,10 +321,11 @@ class CoevolutionLoop:
     def _build_prey_state(self) -> _SideState:
         """Construct the prey side's `_SideState` with gen-0 warmstart.
 
-        Per D12: the prey side's gen-0 elite is loaded from a warmstart
-        genome JSON (typically an M3 lamarckian-LSTMPPO elite from
-        logbook 013). When `prey_gen0_seed_path` is None, falls back
-        to `x0=zeros` — useful for tests and non-warmstart pilots.
+        The prey side's gen-0 elite is loaded from a warmstart genome
+        JSON (typically a lamarckian-LSTMPPO elite from a prior
+        single-population campaign). When `prey_gen0_seed_path` is
+        None, falls back to `x0=zeros` — useful for tests and
+        non-warmstart pilots.
         """
         cfg = self.coevolution_config
         encoder = LSTMPPOEncoder()
@@ -357,7 +364,7 @@ class CoevolutionLoop:
     def _build_predator_state(self) -> _SideState:
         """Construct the predator side's `_SideState` with gen-0 bootstrap.
 
-        Per D7: arm A pretrains via `pretrain_against_heuristic`
+        Per the bootstrap-arm config: arm A pretrains via `pretrain_against_heuristic`
         (cost amortised across the run); arm B cold-starts at zeros.
         Pretrain runs inside `__init__` rather than as a pre-computed
         bundle so a fresh checkout can run the campaign without an
@@ -407,11 +414,10 @@ class CoevolutionLoop:
     ) -> list[float]:
         """Load a warmstart genome's `params` list, or fall back to zeros.
 
-        File format (matches PR 4 task 7.0b's production bundle):
-        `{"genome_id": str, "generation": int, "fitness": float,
-        "params": list[float], "brain_config": {...}}`. Only `params`
-        is read here; the rest is for provenance + aggregator
-        introspection.
+        File format: `{"genome_id": str, "generation": int,
+        "fitness": float, "params": list[float], "brain_config":
+        {...}}`. Only `params` is read here; the rest is for
+        provenance + aggregator introspection.
 
         Raises
         ------
@@ -430,9 +436,9 @@ class CoevolutionLoop:
         if not path.exists():
             msg = (
                 f"prey_gen0_seed_path={path!r} does not exist. "
-                "Either provide a valid warmstart genome JSON (per PR 4 "
-                "task 7.0b's bundle) or set the field to null in the YAML "
-                "to fall back to cold-start zeros."
+                "Either provide a valid warmstart genome JSON or set "
+                "the field to null in the YAML to fall back to "
+                "cold-start zeros."
             )
             raise ValueError(msg)
         with path.open("r") as fh:
@@ -464,7 +470,7 @@ class CoevolutionLoop:
         return [float(v) for v in params]
 
     def _pretrain_predator_x0(self, genome_dim: int) -> list[float]:
-        """Run heuristic-imitation pretrain (D7 arm A) and return flattened weights.
+        """Run heuristic-imitation pretrain (bootstrap arm A) and return flattened weights.
 
         Builds a fresh `MLPPPOPredatorBrain` with the encoder's default
         config, trains it with `pretrain_against_heuristic`, then
@@ -489,7 +495,7 @@ class CoevolutionLoop:
         )
 
         logger.info(
-            "Predator gen-0: running heuristic-imitation pretrain (D7 arm A)...",
+            "Predator gen-0: running heuristic-imitation pretrain (bootstrap arm A)...",
         )
         student = MLPPPOPredatorBrain()
         teacher = HeuristicPredatorBrain()
@@ -516,7 +522,7 @@ class CoevolutionLoop:
         return flat
 
     # ------------------------------------------------------------------
-    # Held-out opponent construction (§6.10)
+    # Held-out opponent construction
     # ------------------------------------------------------------------
 
     def _load_held_out_prey_bundle(self) -> list[Genome]:
@@ -528,12 +534,12 @@ class CoevolutionLoop:
         length doesn't match the prey encoder's `genome_dim` are
         skipped with a warning rather than crashing the loop.
 
-        PR 3 ships the loader path; the production bundle (~8 real M3
-        elites) is curated in PR 4 task 7.0a. When the directory is
-        empty or missing the prey-side probe is a no-op for this run
-        (logged as a one-time warning at __init__) — the probe still
-        fires for the predator side, and CI smoke runs work without
-        the bundle.
+        When the directory is empty or missing the prey-side probe is
+        a no-op for this run (logged as a one-time warning at
+        __init__) — the probe still fires for the predator side, and
+        CI smoke runs work without the bundle. The production bundle
+        (typically curated from prior single-population elite genomes)
+        is shipped as a separate artefact, decoupled from this loader.
 
         Sampling: when `held_out_size > len(bundle)` we sample WITH
         replacement; when `held_out_size <= len(bundle)` WITHOUT
@@ -544,14 +550,14 @@ class CoevolutionLoop:
         # Bundle path is repo-root-anchored via the class attribute
         # `_PREY_HELD_OUT_BUNDLE_DIR` (resolved from this file's
         # location, NOT from cwd, so the loop works regardless of
-        # where the campaign driver was launched). Tests + PR 4's
+        # where the campaign driver was launched). Tests + the
         # campaign driver can override the class attribute to point
         # at a different bundle for ablations.
         bundle_dir = self._PREY_HELD_OUT_BUNDLE_DIR
         if not bundle_dir.is_dir():
             logger.warning(
                 "Prey held-out bundle missing at %s; prey-side probe will be a "
-                "no-op for this run. The production bundle ships in PR 4 task 7.0a.",
+                "no-op for this run. Provide a curated bundle when running the full campaign.",
                 bundle_dir,
             )
             return []
@@ -592,8 +598,10 @@ class CoevolutionLoop:
                 ),
             )
 
-        # Down-sample / up-sample to held_out_size. The spec scenario is
-        # explicit about with/without-replacement semantics here.
+        # Down-sample / up-sample to held_out_size. With-replacement
+        # when oversize so the count always matches the configured
+        # value; without-replacement when undersize so each held-out
+        # opponent is distinct.
         target = cfg.held_out_size
         if not loaded:
             return []
@@ -606,7 +614,7 @@ class CoevolutionLoop:
     def _build_held_out_predator_specs(self) -> list[tuple[int, int]]:
         """Build the predator-side held-out heuristic-radius grid.
 
-        Default grid per spec scenario "Held-Out Set Construction":
+        Default grid:
         `detection_radius in {4, 6, 8, 10} x damage_radius in {0, 1}`
         = 8 combos at default `held_out_size=8`. Returns a list of
         `(detection_radius, damage_radius)` tuples; the actual
@@ -698,7 +706,7 @@ class CoevolutionLoop:
         return [by_id[gid] for gid in recorded_ids]
 
     # ------------------------------------------------------------------
-    # Per-K-block CMA-ES re-construction (D2)
+    # Per-K-block CMA-ES re-construction
     # ------------------------------------------------------------------
 
     def _build_optimizer(
@@ -712,7 +720,7 @@ class CoevolutionLoop:
         """Construct a fresh `CMAESOptimizer(diagonal=True)` for one side.
 
         Used both at gen-0 (initial construction) and at every K-block
-        transition (per D2: re-construct rather than reset, since the
+        transition (re-construct rather than reset, since the
         existing optimiser has no public reset method). The fresh
         instance clears stale opposition-conditioned covariance from
         the prior K-block where the opponent was a different
@@ -753,7 +761,7 @@ class CoevolutionLoop:
         return (master ^ salt_int ^ (k_block_index * 31) ^ (side_offset * 17)) & 0x7FFFFFFF
 
     def _rebuild_optimizer(self, side: _SideState) -> None:
-        """Re-construct `side.optimizer` at a K-block transition (D2).
+        """Re-construct `side.optimizer` at a K-block transition.
 
         Carries over the side's current best (= last K-block's elite)
         as the new `x0` so the optimizer continues from the right
@@ -789,7 +797,7 @@ class CoevolutionLoop:
         )
 
     # ------------------------------------------------------------------
-    # Rebalance heuristic (§6.14)
+    # Rebalance heuristic
     # ------------------------------------------------------------------
 
     def _evaluate_rebalance(
@@ -799,10 +807,10 @@ class CoevolutionLoop:
     ) -> bool:
         """Return True if the current side SHALL flip; False to grant an extra K-block.
 
-        Per design.md Open Question 1 + Risk register row "One side
-        dominates → other's gradient saturates": when the
-        `rebalance_threshold` knob is set and a side's K-block-mean
-        fitness drops below `rebalance_threshold * opposing_side_mean`
+        Mitigation for the "one side dominates → other's gradient
+        saturates" failure mode: when the `rebalance_threshold` knob
+        is set and a side's K-block-mean fitness drops below
+        `rebalance_threshold * opposing_side_mean`
         for >= 3 consecutive K-blocks, freeze the dominant side for an
         extra K-block (the saturated side keeps training to recover).
 
@@ -873,18 +881,18 @@ class CoevolutionLoop:
         return not (predator_saturated and training_side.name == "predator")
 
     # ------------------------------------------------------------------
-    # Checkpoint / resume (§6.11)
+    # Checkpoint / resume
     # ------------------------------------------------------------------
 
     def _save_checkpoint(self) -> None:
         """Persist full loop state across five files (per-side pickles + 2 JSON + RNG pickle).
 
-        Per task 6.11 + spec scenario "Probe Cadence and Output Layout":
+        Output layout:
 
         - `{output_dir}/prey/checkpoint.pkl`: per-side pickle containing
           optimizer + population + prev_generation_ids + generation +
           champion_history + k_block_index + inheritance literal.
-          Reuses the existing `EvolutionLoop` checkpoint shape so M3
+          Reuses the existing `EvolutionLoop` checkpoint shape so
           single-population resume tooling can introspect.
         - `{output_dir}/predator/checkpoint.pkl`: same shape.
         - `{output_dir}/coevolution_state.json`: top-level JSON
@@ -893,7 +901,7 @@ class CoevolutionLoop:
           held-out predator specs, prey held-out genome IDs, and
           per-side K-block-mean fitness history (rebalance heuristic).
         - `{output_dir}/champion_history.json`: top-level JSON read by
-          PR 5's aggregator. `{prey: list[dict], predator: list[dict]}`
+          aggregator tooling. `{prey: list[dict], predator: list[dict]}`
           plus a `k_block_index` field for cross-file consistency.
         - `{output_dir}/coevolution_rng.pkl`: RNG state for the
           master `rng` and the held-out RNG, plus `k_block_index` as
@@ -957,7 +965,7 @@ class CoevolutionLoop:
                 # hardcodes inheritance per side at YAML load time, so
                 # a mid-run config edit is rejected before reaching
                 # the loop — but the field travels with the per-side
-                # checkpoint anyway, matching M3 single-population
+                # checkpoint anyway, matching single-population
                 # tooling's expectations.
                 "inheritance": side.evolution_config.inheritance,
             }
@@ -985,9 +993,8 @@ class CoevolutionLoop:
             coevo_state,
         )
 
-        # Top-level champion_history.json per spec scenario "Probe
-        # Cadence and Output Layout" — the aggregator (PR 5) reads
-        # this file. Format: `{prey: list[dict], predator: list[dict]}`
+        # Top-level champion_history.json — the aggregator tooling
+        # reads this file. Format: `{prey: list[dict], predator: list[dict]}`
         # where each dict is a champion_history entry as documented in
         # the module docstring (`{genome_id, generation, k_block_index,
         # fitness, params: list[float]}`). Already JSON-serialisable
@@ -995,7 +1002,7 @@ class CoevolutionLoop:
         # `params.tolist()`.
         champion_payload = {
             # Embed `k_block_index` for cross-file consistency check.
-            # Aggregator (PR 5) reads `prey` + `predator` only; the
+            # Aggregator tooling reads `prey` + `predator` only; the
             # extra field is ignored by aggregator code.
             "k_block_index": self._k_block_index,
             "prey": list(self.prey.champion_history),
@@ -1218,7 +1225,7 @@ class CoevolutionLoop:
             }
 
         # Cross-check `champion_history.json`'s k_block_index too —
-        # the file is a write-only artefact for the aggregator (PR 5),
+        # the file is a write-only artefact for aggregator tooling,
         # never read on resume, but its `k_block_index` field still
         # participates in the cross-file consistency check so a torn
         # save that wrote per-side pickles + state JSON but failed
@@ -1320,7 +1327,7 @@ class CoevolutionLoop:
            continuation.
         3. The current side flips.
         4. The just-flipped (now-training) side's optimizer is
-           rebuilt per D2.
+           rebuilt.
 
         Parameters
         ----------
@@ -1364,7 +1371,7 @@ class CoevolutionLoop:
 
             # K-block end: flip side (or freeze opposing per the
             # rebalance heuristic), persist state, then rebuild the
-            # newly-training side's optimizer per D2. Order matters:
+            # newly-training side's optimizer. Order matters:
             # increment k_block_index BEFORE saving so the checkpoint
             # records the post-block state (i.e. resume picks up from
             # the *next* block, not the one that just finished).
@@ -1408,12 +1415,12 @@ class CoevolutionLoop:
         3. For each candidate, build the opposition set via
            `opposing_side.hof.mix_with_pop(rng, opposing.population,
            frac_hof=0.3)` (per spec "70/30 Mixture During Evaluation").
-           Empty-HoF fallback returns all-from-pop (per "Empty HoF
-           Fallback").
-        4. Evaluate the candidate against the opposition (PR 4 wires
-           opposition into `sim_config`; PR 3 invokes
-           `fitness.evaluate(...)` with the unpatched config — see
-           module docstring "Opposition injection (deferred to PR 4)").
+           Empty-HoF fallback returns all-from-pop.
+        4. Evaluate the candidate against the opposition. The
+           call-site sim_config patching that injects decoded
+           opponents is the campaign integration layer's
+           responsibility — see module docstring "Opposition
+           injection (call-site responsibility)".
         5. `optimizer.tell(solutions, neg_fitnesses)` (negate per
            CMA-ES minimisation convention).
         6. Record lineage row.
@@ -1456,7 +1463,7 @@ class CoevolutionLoop:
         block_elite_genome: Genome | None = None
         block_elite_fitness: float = float("-inf")
         # Accumulate all fitnesses across the K-block to compute the
-        # K-block mean for the rebalance heuristic (§6.14).
+        # K-block mean for the rebalance heuristic.
         block_fitnesses: list[float] = []
 
         for k_gen in range(cfg.K_per_block):
@@ -1486,12 +1493,12 @@ class CoevolutionLoop:
                 )
                 gen_genomes.append(genome)
 
-                # HoF-mixed opposition. Even though the actual
-                # opposition-injection wiring is deferred to PR 4, we
-                # still draw the mix here so the deterministic
-                # RNG-state advancement is correct (the loop's RNG must
-                # be in the same state at the same generation index
-                # whether or not the opposition was actually injected
+                # HoF-mixed opposition. Even when the call-site
+                # sim_config patching has not been wired yet, we still
+                # draw the mix here so the deterministic RNG-state
+                # advancement is correct (the loop's RNG must be in
+                # the same state at the same generation index whether
+                # or not the opposition was actually injected
                 # downstream).
                 opposition = self._build_opposition(opposing_side)
 
@@ -1568,8 +1575,7 @@ class CoevolutionLoop:
         # rather than `k_gen` so it applies consistently across
         # K-blocks. The just-finished training side's elite is now
         # available; the opposing side's elite (if any) reflects its
-        # most-recent K-block's champion. See spec scenario "Probe
-        # Cadence and Output Layout" for the full contract.
+        # most-recent K-block's champion.
         if (
             cfg.generality_probe_every > 0
             and training_side.generation > 0
@@ -1578,7 +1584,7 @@ class CoevolutionLoop:
             self._fire_generality_probe()
 
     # ------------------------------------------------------------------
-    # Opposition + evaluation (§6.7-§6.8)
+    # Opposition + evaluation
     # ------------------------------------------------------------------
 
     def _build_opposition(
@@ -1587,7 +1593,7 @@ class CoevolutionLoop:
     ) -> list[Genome]:
         """Build the opposition list for one candidate evaluation.
 
-        Per spec scenario "70/30 Mixture During Evaluation": draw
+        Mix-with-pop: draw
         `opposing_side.evolution_config.population_size` opposition
         genomes via the HoF mix. Empty-pop fallback (very first
         K-block, opposing side has no population yet) returns an
@@ -1603,11 +1609,10 @@ class CoevolutionLoop:
             # case to bootstrap the first block.
             return []
         # Pin frac_hof=0.3 at the call site rather than relying on
-        # `HallOfFame.DEFAULT_FRAC_HOF` so the 70/30 contract from
-        # design.md D3 + the spec scenario "70/30 Mixture During
-        # Evaluation" lives in the loop, not in the buffer's default.
-        # If the buffer's default ever drifts (e.g. for an unrelated
-        # use), the loop's contract stays correct.
+        # `HallOfFame.DEFAULT_FRAC_HOF` so the 70/30 mix contract
+        # lives in the loop, not in the buffer's default. If the
+        # buffer's default ever drifts (e.g. for an unrelated use),
+        # the loop's contract stays correct.
         return opposing_side.hof.mix_with_pop(
             self.rng,
             opposing_side.population,
@@ -1624,10 +1629,12 @@ class CoevolutionLoop:
     ) -> float:
         """Evaluate one candidate genome against the sampled opposition.
 
-        For PR 3 this dispatches directly to `side.fitness.evaluate(...)`
-        with the unpatched `sim_config`. The opposition list is recorded
-        but not yet injected into the env (see module docstring
-        "Opposition injection (deferred to PR 4)"). PR 4 will:
+        Currently dispatches directly to `side.fitness.evaluate(...)`
+        with the unpatched `sim_config`. The opposition list is
+        recorded but not yet injected into the env (see module
+        docstring "Opposition injection (call-site responsibility)").
+        Full integration requires the campaign-level configs that
+        wire opposition into sim_config:
 
         1. Pre-decode each opposition genome into its brain instance
            (calling `opposing_side.encoder.decode(...)` against
@@ -1643,10 +1650,10 @@ class CoevolutionLoop:
         3. Pass the patched `sim_config` to `fitness.evaluate`.
 
         The opposition argument is documented + accepted here so the
-        interface is stable across the PR 3 → PR 4 boundary; only the
+        interface is stable across the integration boundary; only the
         body changes.
         """
-        del opposition  # PR 4 will consume; PR 3 records via ask/tell only
+        del opposition  # consumed once the integration layer wires it
         return side.fitness.evaluate(
             genome,
             self.sim_config,
@@ -1656,25 +1663,23 @@ class CoevolutionLoop:
         )
 
     # ------------------------------------------------------------------
-    # Generality probe (§6.9)
+    # Generality probe
     # ------------------------------------------------------------------
 
     def _fire_generality_probe(self) -> None:
         """Evaluate each side's current elite against its held-out set.
 
         Writes one row per (side, opponent_index) pair to
-        `{output_dir}/generality_probe.csv` per spec scenario "Probe
-        Cadence and Output Layout". Does NOT mutate any side's
-        population, optimizer, or hof (per "Probe Does Not Mutate
-        Population State"); the probe runs in append-mode against
-        the CSV.
+        `{output_dir}/generality_probe.csv`. Does NOT mutate any
+        side's population, optimizer, or hof; the probe runs in
+        append-mode against the CSV.
 
         Per side: the elite is the latest entry in `champion_history`
         (the K-block elite). When a side has no champions yet (first
         K-block hasn't completed), the probe is a no-op for that side.
-        Held-out evaluations themselves still use the deferred-to-PR-4
-        wiring — opposition is recorded but not injected end-to-end
-        in PR 3 (see `_evaluate_candidate`).
+        Held-out evaluations themselves still depend on the
+        call-site sim_config patching that the campaign integration
+        layer is responsible for wiring (see `_evaluate_candidate`).
         """
         with self._probe_csv_path.open("a", newline="") as fh:
             writer = csv.writer(fh)
@@ -1695,17 +1700,18 @@ class CoevolutionLoop:
                 # Per-side held-out set: prey loaded as Genome list;
                 # predator stored as (detection_radius, damage_radius)
                 # tuples. The actual probe evaluation uses the same
-                # deferred-to-PR-4 wiring as training evaluations.
-                # Currently the loop records the probe schema (one row
-                # per opponent) with a placeholder fitness of NaN —
-                # PR 4 plugs in real evaluation here.
+                # call-site sim_config patching that training
+                # evaluations depend on. Until that integration layer
+                # is wired the loop records the probe schema (one row
+                # per opponent) with a placeholder fitness of NaN.
                 if side.name == "prey":
                     held_out_count = len(self._prey_held_out)
                 else:
                     held_out_count = len(self._predator_held_out_specs)
                 for opp_idx in range(held_out_count):
                     # Probe RNG seed is derived per-fire so the rng
-                    # advances deterministically — PR 4 will consume.
+                    # advances deterministically; the integration
+                    # layer consumes it once wired.
                     eval_seed = int(self.rng.integers(0, 2**31 - 1))
                     fitness_val = self._probe_one_opponent(
                         side=side,
@@ -1732,11 +1738,12 @@ class CoevolutionLoop:
     ) -> float:
         """Evaluate `elite` against one held-out opponent.
 
-        PR 3 records the probe schema with a NaN fitness; PR 4 plugs
-        in real evaluation by patching `sim_config` (heuristic-radius
-        predator for prey-side probes; M3 elite prey genome for
-        predator-side probes) and calling the side's fitness function.
-        See `_evaluate_candidate` for the full PR-4 plan.
+        Currently records the probe schema with a NaN fitness; the
+        campaign integration layer plugs in real evaluation by
+        patching `sim_config` (heuristic-radius predator for prey-side
+        probes; warmstart-style elite prey genome for predator-side
+        probes) and calling the side's fitness function. See
+        `_evaluate_candidate` for the full integration plan.
         """
         del side, elite, opponent_index, eval_seed
         return float("nan")

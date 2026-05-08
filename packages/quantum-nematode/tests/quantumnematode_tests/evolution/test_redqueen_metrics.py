@@ -1,4 +1,4 @@
-"""Tests for :mod:`quantumnematode.evolution.redqueen_metrics` (task 5.7).
+"""Tests for :mod:`quantumnematode.evolution.redqueen_metrics`.
 
 Synthetic series with known answers — sine for cycling, monotone ramp
 for escalation, anti-phase pair for fitness_lag, identical-deltas for
@@ -6,12 +6,12 @@ coupled_rate, uniform-improvement matrix for generality. Plus negative
 cases (flat, zero-variance, random noise) so the metrics fail closed
 rather than producing spurious detections.
 
-Spec scenario coverage:
-- "Phenotypic Cycling Metric" → TestPhenotypicCycling (3 cases).
-- "Trait Escalation Metric" → TestTraitEscalation (3 cases).
-- "Fitness Lag Metric" → TestFitnessLag (2 cases).
-- "Coupled Rate Metric" → TestCoupledRate (2 cases).
-- "Generality Metric" → TestGenerality (2 cases).
+Coverage:
+- Phenotypic cycling → TestPhenotypicCycling.
+- Trait escalation → TestTraitEscalation.
+- Fitness lag → TestFitnessLag.
+- Coupled rate → TestCoupledRate.
+- Generality → TestGenerality.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ from quantumnematode.evolution.redqueen_metrics import (
 
 
 class TestPhenotypicCycling:
-    """Cycling spec scenarios: pure sine + linear trend rejection + statistical significance."""
+    """Cycling: pure sine + linear trend rejection + statistical significance."""
 
     def test_detects_pure_sine_at_period_8(self) -> None:
         """Sine wave at period 8 SHALL be detected with dominant_period within +/-1."""
@@ -88,7 +88,7 @@ class TestPhenotypicCycling:
 
 
 class TestTraitEscalation:
-    """Escalation spec scenarios: monotone increase + flat-series rejection + windowing."""
+    """Escalation: monotone increase + flat-series rejection + windowing."""
 
     def test_detects_monotone_increase(self) -> None:
         """Linear ramp + small noise over generations 0..34 SHALL fire with positive slope."""

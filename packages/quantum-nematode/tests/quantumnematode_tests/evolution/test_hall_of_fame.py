@@ -1,12 +1,12 @@
-"""Tests for :mod:`quantumnematode.evolution.hall_of_fame` (task 4.4).
+"""Tests for :mod:`quantumnematode.evolution.hall_of_fame`.
 
-Covers spec scenarios from `evolution-framework/spec.md` "Hall-of-Fame Buffer":
+Covers the Hall-of-Fame buffer behaviours:
 
-- Quality-Based Eviction (default).
-- FIFO Eviction Ablation.
-- Mix-With-Pop Sampling (70/30 fraction).
-- Reproducible Sampling Under Seeded RNG.
-- Checkpoint Round-Trip.
+- Quality-based eviction (default).
+- FIFO eviction (ablation).
+- Mix-with-pop sampling (70/30 fraction).
+- Reproducible sampling under a seeded RNG.
+- Checkpoint round-trip.
 
 Plus input-validation cases (capacity, replacement, n) so future refactors
 can't quietly drop the guards.
@@ -45,7 +45,7 @@ class TestConstruction:
     """Constructor surface + input-validation guards."""
 
     def test_default_replacement_is_quality(self) -> None:
-        """Default `replacement` SHALL be `"quality"` per design.md D3."""
+        """Default `replacement` SHALL be `"quality"`."""
         hof = HallOfFame(capacity=8)
         assert hof.replacement == "quality"
 

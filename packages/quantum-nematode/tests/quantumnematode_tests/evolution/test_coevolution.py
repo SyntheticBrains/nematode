@@ -1,24 +1,26 @@
-"""Tests for :mod:`quantumnematode.evolution.coevolution` (PR 3 sec 6.13-6.15).
+"""Tests for :mod:`quantumnematode.evolution.coevolution`.
 
-Covers the spec scenarios from `co-evolution/spec.md`:
+Covers the public-surface behaviours:
 
-- Side State Surface + Composition Over Inheritance.
-- K-Block Boundary + Opposing Side Frozen + Fresh CMA-ES At Transition.
-- Block Elite Pushed To HoF.
-- Prey Gen-0 Warm-Start From M3 Lamarckian Elite (incl. missing-path / wrong-shape).
-- Predator Gen-0 Bootstrap (arm A pretrain mocked + arm B cold-start).
-- Generality Probe (cadence + non-mutation + held-out construction).
+- Side state surface + composition over inheritance.
+- K-block boundary + opposing side frozen + fresh CMA-ES at transition.
+- Block elite pushed to HoF.
+- Prey gen-0 warm-start from a lamarckian-elite warmstart bundle
+  (incl. missing-path / wrong-shape).
+- Predator gen-0 bootstrap (heuristic-imitation pretrain mocked +
+  cold-start).
+- Generality probe (cadence + non-mutation + held-out construction).
 - Champion history schema round-trip.
-
-Plus the rebalance knob (§6.14) and the checkpoint round-trip (§6.11).
+- Rebalance knob.
+- Checkpoint round-trip.
 
 Tests use a minimal sim_config that satisfies the `CoevolutionConfig`
 validators with `population_size=4`, `K_per_block=1`,
 `generation_pairs=1`, and `predator_gen0_bootstrap='cold_start'` to
 avoid the ~30s heuristic-imitation pretrain in setup. Fitness +
 encoder behaviour during the per-generation evaluation is stubbed via
-monkeypatch so tests run in seconds rather than minutes (full
-end-to-end evaluation is exercised by the smoke pilot in PR 4).
+monkeypatch so tests run in seconds rather than minutes; full
+end-to-end evaluation is exercised by the campaign-driver smoke pilot.
 """
 
 from __future__ import annotations
@@ -184,7 +186,7 @@ class TestConstruction:
         assert isinstance(loop.predator.inheritance, NoInheritance)
 
     def test_default_hof_capacity(self, tmp_path: Path) -> None:
-        """Both HoFs SHALL have `DEFAULT_HOF_CAPACITY=8` per design.md D3."""
+        """Both HoFs SHALL have `DEFAULT_HOF_CAPACITY=8`."""
         loop = _make_loop(tmp_path)
         assert loop.prey.hof.capacity == DEFAULT_HOF_CAPACITY
         assert loop.predator.hof.capacity == DEFAULT_HOF_CAPACITY
@@ -196,7 +198,7 @@ class TestConstruction:
 
 
 class TestWarmstartLoader:
-    """Spec scenario "Prey Gen-0 Warm-Start From M3 Lamarckian Elite"."""
+    """Prey gen-0 warm-start from a lamarckian-elite warmstart bundle."""
 
     def test_missing_path_falls_back_to_zeros(self, tmp_path: Path) -> None:
         """`prey_gen0_seed_path=None` SHALL fall back to x0=zeros (cold-start prey)."""
@@ -419,13 +421,13 @@ class TestHoFPush:
 
 
 class TestChampionHistorySchema:
-    """Spec scenario "Side State Surface" + task 6.15 schema documentation."""
+    """Champion-history schema: round-trips through `json.dump`/`json.load`."""
 
     def test_champion_history_round_trip_through_json(self) -> None:
         """champion_history entries SHALL round-trip through `json.dump`/`json.load`.
 
-        Per task 6.15: the loop writes via `json.dump` after converting
-        `params` via `params.tolist()`; deserialise via
+        The loop writes via `json.dump` after converting `params` via
+        `params.tolist()`; deserialise via
         `np.asarray(d["params"], dtype=np.float32)` to restore in-memory
         shape. This test exercises the schema directly.
         """
@@ -490,8 +492,9 @@ class TestGeneralityProbe:
             assert cells[1] in {"prey", "predator"}
             # opponent_index is an integer.
             int(cells[2])
-            # fitness is a float (NaN in PR 3 — opposition wiring is
-            # PR 4) — just verify it's parseable.
+            # fitness is a float (NaN at this layer — the campaign
+            # integration layer is responsible for opposition wiring) —
+            # just verify it's parseable.
             float(cells[3])
 
     def test_probe_does_not_mutate_state(self, tmp_path: Path) -> None:
@@ -521,7 +524,7 @@ class TestGeneralityProbe:
 
 
 class TestCheckpointRoundTrip:
-    """Spec task 6.11 — full state round-trip through the four-file format."""
+    """Full state round-trip through the four-file checkpoint format."""
 
     def test_save_and_load_preserves_state(self, tmp_path: Path) -> None:
         """`_save_checkpoint` then `_load_checkpoint` SHALL preserve all loop state."""
@@ -702,7 +705,7 @@ class TestEndToEndStubbedRun:
 
 
 def test_default_hof_capacity_constant() -> None:
-    """`DEFAULT_HOF_CAPACITY` SHALL be 8 per design.md D3."""
+    """`DEFAULT_HOF_CAPACITY` SHALL be 8."""
     assert DEFAULT_HOF_CAPACITY == 8
 
 
@@ -721,14 +724,14 @@ def test_hof_dataclass_to_dict_round_trip() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Self-review regression: B1, B2, B3, S6 — bugs caught + fixed in pre-push
-# review. Each test pins the fix so a future refactor that re-introduces
-# the bug fails loudly here rather than silently breaking the M5 pilot.
+# Self-review regression: bugs caught + fixed in pre-push review. Each
+# test pins the fix so a future refactor that re-introduces the bug fails
+# loudly here rather than silently breaking a downstream campaign run.
 # ---------------------------------------------------------------------------
 
 
 class TestProbeFiresAtKBlockBoundary:
-    """B1: probe SHALL fire at K-block boundary AFTER elite push, not mid-block.
+    """Probe SHALL fire at K-block boundary AFTER elite push, not mid-block.
 
     Pre-fix bug: cadence check ran inside the per-generation for-loop
     AFTER `training_side.generation += 1`, BEFORE the K-block-end push
@@ -780,7 +783,7 @@ class TestProbeFiresAtKBlockBoundary:
 
 
 class TestResumeBundleDriftCrossCheck:
-    """B2: resume SHALL detect bundle drift via genome-id matching, not RNG re-sample.
+    """Resume SHALL detect bundle drift via genome-id matching, not RNG re-sample.
 
     Pre-fix bug: `_load_held_out_prey_bundle` (called in `__init__`)
     used `_held_out_rng.choice` to draw a subset; on resume the
@@ -819,14 +822,13 @@ class TestResumeBundleDriftCrossCheck:
 
 
 class TestChampionHistoryJSONEmitted:
-    """B3: `_save_checkpoint` SHALL emit `{output_dir}/champion_history.json`.
+    """`_save_checkpoint` SHALL emit `{output_dir}/champion_history.json`.
 
     Pre-fix bug: champion_history was only persisted inside the
-    per-side pickles. The aggregator (PR 5) reads the top-level JSON
-    file per spec scenario "Probe Cadence and Output Layout"; without
-    it, the aggregator can't load champion history without unpickling
-    each side's checkpoint pickle (which requires numpy + the full
-    cma library).
+    per-side pickles. The downstream aggregator reads the top-level
+    JSON file; without it, the aggregator can't load champion history
+    without unpickling each side's checkpoint pickle (which requires
+    numpy + the full cma library).
     Post-fix: `_save_checkpoint` writes a top-level `champion_history.json`
     with `{prey: list[dict], predator: list[dict]}`.
     """
@@ -860,9 +862,9 @@ class TestChampionHistoryJSONEmitted:
         history_path = tmp_path / "coevo" / "champion_history.json"
         assert history_path.exists()
         data = json.loads(history_path.read_text())
-        # Spec-required keys: `prey` and `predator`. Extra `k_block_index`
-        # field added in round-2 self-review for cross-file consistency
-        # check at resume; aggregator (PR 5) ignores it.
+        # Required keys: `prey` and `predator`. Extra `k_block_index`
+        # field is for cross-file consistency check at resume; the
+        # downstream aggregator ignores it.
         assert {"prey", "predator"}.issubset(data.keys())
         assert len(data["prey"]) == 1
         assert len(data["predator"]) == 1
@@ -1000,8 +1002,8 @@ class TestHeldOutBundlePathRepoAnchored:
     def test_class_attribute_overridable(self, tmp_path: Path) -> None:
         """`_PREY_HELD_OUT_BUNDLE_DIR` is a class attribute SHALL be overridable.
 
-        Tests + PR 4's campaign driver may want to point at a
-        different bundle (e.g. seed-specific bundles for ablations).
+        Tests + the campaign driver may want to point at a different
+        bundle (e.g. seed-specific bundles for ablations).
         """
         # Create a synthetic bundle dir with a known fixture and
         # verify the loop reads from there, not the default.

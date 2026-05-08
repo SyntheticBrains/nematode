@@ -9,6 +9,6 @@
   ],
   "brain_config": {
     "name": "test-stub-brain",
-    "comment": "Synthetic 20-float weight vector used by test_coevolution.py to exercise the warmstart-loader path. Production warmstart bundle (PR 4 task 7.0b) replaces this with real M3 lamarckian-LSTMPPO elite genomes from logbook 013."
+    "comment": "Synthetic 20-float weight vector used by test_coevolution.py to exercise the warmstart-loader path. The production warmstart bundle replaces this with real lamarckian-LSTMPPO elite genomes."
   }
 }

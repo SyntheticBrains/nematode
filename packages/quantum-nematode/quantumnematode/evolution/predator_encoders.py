@@ -1,4 +1,4 @@
-"""Predator-side genome encoder + registry for the M5 co-evolution loop.
+"""Predator-side genome encoder + registry for the co-evolution loop.
 
 Parallel to :data:`quantumnematode.evolution.encoders.ENCODER_REGISTRY` but
 isolated: the predator stack has its own brain factory + brain class, and
@@ -62,8 +62,8 @@ class MLPPPOPredatorEncoder(_ClassicalPPOEncoder):
     plus ``brain._update_learning_rate()``) is INTENTIONALLY skipped
     here: :class:`MLPPPOPredatorBrain` is frozen-weight at evaluation
     time (no inner-loop PPO training, no LR scheduler, no episode
-    counter) per design.md D13. Calling the agent-brain helpers would
-    raise `AttributeError`.
+    counter). Calling the agent-brain helpers would raise
+    `AttributeError`.
 
     Pinning ``brain_name = "mlpppo_predator"`` matches the dispatcher
     Literal extension in :class:`PredatorBrainConfigSchema` and the

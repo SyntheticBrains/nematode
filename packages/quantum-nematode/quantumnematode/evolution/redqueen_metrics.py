@@ -1,18 +1,18 @@
-"""Red Queen analysis primitives for the M5 co-evolution loop.
+"""Red Queen analysis primitives for the co-evolution loop.
 
 Five pure functions operating on numpy arrays / floats only — no `Genome`,
 `FitnessFunction`, or env dependencies. Designed to be called by both the
-post-hoc aggregator (PR 5) and any in-loop diagnostic that wants a quick
+post-hoc aggregator and any in-loop diagnostic that wants a quick
 readout on a per-generation trait or fitness series.
 
 The five primitives:
 
 1. :func:`phenotypic_cycling` — autocorrelation peak detection within a
-   bounded lag range. Used by the M5 verdict gate criterion (a) to detect
+   bounded lag range. Used by the verdict gate's cycling criterion to detect
    oscillation in trait/fitness series.
 2. :func:`trait_escalation` — windowed linear regression of a per-gen
-   trait-mean series; reports slope sign + significance. Verdict gate
-   criterion (b) for monotone trait drift.
+   trait-mean series; reports slope sign + significance. Used by the
+   verdict gate's escalation criterion for monotone trait drift.
 3. :func:`fitness_lag` — cross-correlation between two series with a
    `max_lag` parameter; returns the lag at which |correlation| peaks.
 4. :func:`coupled_rate` — Pearson correlation between per-generation
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-# Default p-value threshold matching the M5 verdict gate (design.md D6).
+# Default p-value threshold matching the verdict gate's significance bar.
 _DEFAULT_P_THRESHOLD = 0.05
 
 # Minimum series length to produce a meaningful detection. Below this the
@@ -46,11 +46,11 @@ _DEFAULT_P_THRESHOLD = 0.05
 # at trivial input lengths.
 _MIN_SERIES_LENGTH = 10
 
-# Default lag-range window for `phenotypic_cycling` per the M5 verdict
+# Default lag-range window for `phenotypic_cycling` per the verdict
 # gate ("autocorrelation peak at lag in [3, 15] generations").
 _DEFAULT_LAG_RANGE = (3, 15)
 
-# Default gen-window for `trait_escalation` per the M5 verdict gate
+# Default gen-window for `trait_escalation` per the verdict gate
 # ("regression over gens 5..30, skipping TPE bootstrap noise").
 _DEFAULT_GEN_WINDOW = (5, 30)
 
@@ -82,7 +82,7 @@ def phenotypic_cycling(
         peak to be defined.
     lag_range
         Inclusive ``(low, high)`` lag bounds in generations. Defaults
-        to ``(3, 15)`` per the M5 verdict gate.
+        to ``(3, 15)`` per the verdict gate.
     p_threshold
         Significance threshold for `cycling_detected`. A series is
         flagged as cycling iff the peak |correlation|'s permutation
@@ -138,7 +138,7 @@ def phenotypic_cycling(
     #    rel-floor below and falsely flag cycling on numerical noise.
     #    The absolute floor is `eps * (1 + mean^2) * n` with
     #    `eps = 1e-20`: well below any realistic per-element fitness
-    #    noise (M3 fitness values are O(0.1)-O(1), so the comparable
+    #    noise (typical fitness values are O(0.1)-O(1), so the comparable
     #    noise floor is around 1e-12 absolute, i.e. raw_variance
     #    around 1e-23 for an n=40 series).
     # 2. Relative floor (residual variance < 1e-12 x raw variance):
@@ -229,8 +229,9 @@ def trait_escalation(
 
     The regression is fit over generations ``gen_window[0]..gen_window[1]``
     (half-open: includes ``gen_window[0]``, excludes ``gen_window[1]+1``)
-    so the M5 default ``(5, 30)`` skips the TPE bootstrap noise of the
-    first 5 generations.
+    so the default ``(5, 30)`` skips the optimiser-bootstrap noise of
+    the first 5 generations (where TPE-style optimisers are still
+    accumulating their initial sample distribution).
 
     Significance is reported as a two-sided t-test on the slope; the
     `escalation_detected` flag fires iff the slope is significant AND
@@ -244,7 +245,7 @@ def trait_escalation(
         from generation 0).
     gen_window
         Inclusive-low, inclusive-high generation indices for the
-        regression. The default ``(5, 30)`` matches the M5 verdict gate.
+        regression. The default ``(5, 30)`` matches the verdict gate.
     p_threshold
         Significance threshold for `escalation_detected`.
 

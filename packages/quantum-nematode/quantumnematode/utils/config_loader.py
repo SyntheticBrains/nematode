@@ -319,8 +319,8 @@ class PredatorBrainConfigSchema(BaseModel):
 
     `kind: "heuristic"` (default) constructs a `HeuristicPredatorBrain`
     byte-equivalent to the legacy `_update_pursuit` / `_update_random`
-    logic; `kind: "mlpppo_predator"` (M5+) constructs a learnable
-    `MLPPPOPredatorBrain` whose weights are evolved by the M5 co-evolution
+    logic; `kind: "mlpppo_predator"` constructs a learnable
+    `MLPPPOPredatorBrain` whose weights are evolved by the co-evolution
     loop. The literal type can be extended further when additional learnable
     kinds are introduced.
     """
@@ -1285,16 +1285,16 @@ class ParamSchemaEntry(BaseModel):
 
 
 class CoevolutionConfig(BaseModel):
-    """Configuration for the M5 co-evolution loop (per design.md D14).
+    """Configuration for the co-evolution loop.
 
     A co-evolution run carries TWO `EvolutionConfig` sub-blocks (one per
     side) plus alternating-schedule controller knobs and gen-0 init
-    plumbing. Validators enforce the M5 substrate invariants at YAML
-    load time so a misconfigured config fails before launch rather than
+    plumbing. Validators enforce the substrate invariants at YAML load
+    time so a misconfigured config fails before launch rather than
     mid-run.
 
-    Per design.md D13 + B20, **fitness is NOT a YAML field**: prey side
-    is hardcoded to `LearnedPerformanceFitness` and predator side to
+    **Fitness is NOT a YAML field**: prey side is hardcoded to
+    `LearnedPerformanceFitness` and predator side to
     `PredatorEpisodicKillRate` inside `CoevolutionLoop.__init__`.
     Making fitness YAML-configurable invites footguns (e.g. predator
     accidentally configured with `LearnedPerformanceFitness` would
@@ -1303,9 +1303,9 @@ class CoevolutionConfig(BaseModel):
     Field summary
     -------------
     - `prey_evolution`, `predator_evolution`: the two side configs.
-      Both MUST use `algorithm: "cmaes"` with `cma_diagonal: True` per
-      D2 (TPE rejected for unbounded weight encoders; full-cov CMA-ES
-      not tractable at predator/prey weight counts).
+      Both MUST use `algorithm: "cmaes"` with `cma_diagonal: True`
+      (TPE is incompatible with unbounded weight encoders; full-cov
+      CMA-ES is not tractable at predator/prey weight counts).
     - `K_per_block` (default 10): generations per side before flipping.
     - `generation_pairs` (no default): number of K-pair blocks (one
       prey + one predator block = 1 pair). Total generations per side
@@ -1315,17 +1315,17 @@ class CoevolutionConfig(BaseModel):
     - `start_side` (default "prey"): which side trains first.
     - `held_out_size` (default 8): held-out opponent count.
     - `prey_gen0_seed_path`: optional path to a warmstart prey genome
-      JSON (per D12). When set, prey side's gen-0 elite is decoded
-      from this file and passed as `CMAESOptimizer(x0=...)`.
-    - `predator_gen0_bootstrap`: per D7, either
-      `"heuristic_imitation_pretrain"` (arm A — calls
+      JSON. When set, prey side's gen-0 elite is decoded from this file
+      and passed as `CMAESOptimizer(x0=...)`.
+    - `predator_gen0_bootstrap`: either
+      `"heuristic_imitation_pretrain"` (calls
       `pretrain_against_heuristic` inside `CoevolutionLoop.__init__`)
-      or `"cold_start"` (arm B — `x0=zeros`).
-    - `rebalance_threshold`: optional dominance-detection knob
-      (design.md Open Question 1). When set, if a side's K-block-mean
-      fitness drops below `rebalance_threshold * opposing_side_mean`
-      for >= 3 consecutive K-blocks, the dominant side is frozen for
-      an extra K-block. Disabled by default.
+      or `"cold_start"` (`x0=zeros`).
+    - `rebalance_threshold`: optional dominance-detection knob. When
+      set, if a side's K-block-mean fitness drops below
+      `rebalance_threshold * opposing_side_mean` for >= 3 consecutive
+      K-blocks, the dominant side is frozen for an extra K-block.
+      Disabled by default.
     """
 
     prey_evolution: EvolutionConfig
@@ -1343,83 +1343,82 @@ class CoevolutionConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_invariants(self) -> "CoevolutionConfig":
-        """Enforce D2 + D13 invariants at YAML load time.
+        """Enforce co-evolution substrate invariants at YAML load time.
 
-        Five rules — all stem from design.md decisions about the M5
-        substrate. A misconfigured YAML that gets past these checks
+        Five rules. A misconfigured YAML that gets past these checks
         would either (a) blow the compute budget, (b) silently drop
         the inheritance signal, or (c) fail mid-run with a confusing
         error.
 
-        1. Both sides use `algorithm == "cmaes"` (D2 — TPE rejected
-           for unbounded weight encoders).
-        2. Both sides use `cma_diagonal == True` (D2 — full-cov
-           CMA-ES not tractable at the weight counts involved).
+        1. Both sides use `algorithm == "cmaes"` (TPE is incompatible
+           with unbounded weight encoders).
+        2. Both sides use `cma_diagonal == True` (full-cov CMA-ES is
+           not tractable at the weight counts involved).
         3. Prey side has `learn_episodes_per_eval > 0` (required by
-           `LearnedPerformanceFitness`; D13 prey fitness).
+           `LearnedPerformanceFitness`).
         4. Predator side has `learn_episodes_per_eval == 0`
-           (frozen-weight evaluation per D13 predator fitness).
+           (frozen-weight evaluation under `PredatorEpisodicKillRate`).
         5. Prey side uses `inheritance == "lamarckian"`; predator side
-           uses `inheritance == "none"` (D10 + D13 — Lamarckian for
-           prey weights, NoInheritance for predator since the genome
-           encoder owns the weight gradient there).
+           uses `inheritance == "none"` (Lamarckian carries the prey
+           weight gradient across generations; the predator genome
+           encoder owns the weight gradient on its side, so
+           `NoInheritance` is correct there).
         """
         if self.prey_evolution.algorithm != "cmaes":
             msg = (
                 f"coevolution.prey_evolution.algorithm must be 'cmaes' "
                 f"(got {self.prey_evolution.algorithm!r}). TPE is "
-                "incompatible with unbounded weight encoders per design.md D2."
+                "incompatible with unbounded weight encoders."
             )
             raise ValueError(msg)
         if self.predator_evolution.algorithm != "cmaes":
             msg = (
                 f"coevolution.predator_evolution.algorithm must be 'cmaes' "
                 f"(got {self.predator_evolution.algorithm!r}). Same rationale "
-                "as prey side per design.md D2."
+                "as prey side."
             )
             raise ValueError(msg)
         if not self.prey_evolution.cma_diagonal:
             msg = (
                 "coevolution.prey_evolution.cma_diagonal must be True. "
                 "Prey LSTMPPO weight count (~30k+) is well above the n>~100 "
-                "tractability threshold for full-cov CMA-ES per design.md D2."
+                "tractability threshold for full-cov CMA-ES."
             )
             raise ValueError(msg)
         if not self.predator_evolution.cma_diagonal:
             msg = (
                 "coevolution.predator_evolution.cma_diagonal must be True. "
                 "Predator MLPPPO weight count (~10k) is above the n>~100 "
-                "tractability threshold per design.md D2."
+                "tractability threshold."
             )
             raise ValueError(msg)
         if self.prey_evolution.learn_episodes_per_eval <= 0:
             msg = (
                 f"coevolution.prey_evolution.learn_episodes_per_eval must be > 0 "
                 f"(got {self.prey_evolution.learn_episodes_per_eval}). "
-                "LearnedPerformanceFitness requires a non-zero K train phase "
-                "per design.md D13."
+                "LearnedPerformanceFitness requires a non-zero K train phase."
             )
             raise ValueError(msg)
         if self.predator_evolution.learn_episodes_per_eval != 0:
             msg = (
                 f"coevolution.predator_evolution.learn_episodes_per_eval must be 0 "
                 f"(got {self.predator_evolution.learn_episodes_per_eval}). "
-                "Predator side runs PredatorEpisodicKillRate (frozen-weight) per "
-                "design.md D13; no inner-loop training."
+                "Predator side runs PredatorEpisodicKillRate frozen-weight; "
+                "no inner-loop training."
             )
             raise ValueError(msg)
         if self.prey_evolution.inheritance != "lamarckian":
             msg = (
                 f"coevolution.prey_evolution.inheritance must be 'lamarckian' "
-                f"(got {self.prey_evolution.inheritance!r}); prey side is the M3 "
-                "Lamarckian-LSTMPPO substrate per design.md D10 + D13."
+                f"(got {self.prey_evolution.inheritance!r}); prey side is the "
+                "Lamarckian-LSTMPPO substrate."
             )
             raise ValueError(msg)
         if self.predator_evolution.inheritance != "none":
             msg = (
                 f"coevolution.predator_evolution.inheritance must be 'none' "
                 f"(got {self.predator_evolution.inheritance!r}); predator side runs "
-                "frozen-weight under PredatorEpisodicKillRate per design.md D13."
+                "frozen-weight under PredatorEpisodicKillRate."
             )
             raise ValueError(msg)
         return self
@@ -1444,7 +1443,7 @@ class SimulationConfig(BaseModel):
     environment: EnvironmentConfig | None = None
     multi_agent: MultiAgentConfig | None = None
     evolution: EvolutionConfig | None = None
-    # Co-evolution sub-block (PR 3, M5). When set, the run dispatches
+    # Co-evolution sub-block. When set, the run dispatches
     # through `CoevolutionLoop` instead of the single-population
     # `EvolutionLoop`. Mutually exclusive with the top-level `evolution`
     # field at the campaign-driver level (the driver picks one or the

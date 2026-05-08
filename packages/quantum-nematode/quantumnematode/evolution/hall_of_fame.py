@@ -1,7 +1,7 @@
 """Hall-of-Fame buffer for past champion genomes.
 
 A bounded buffer with a configurable replacement policy. Two roles in the
-M5 co-evolution loop:
+co-evolution loop:
 
 1. **Co-evolution opposition pool.** When evaluating a candidate on side X,
    draw a fraction of opponents from side Y's HoF (preserves strong past
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 # Default fraction of opponents drawn from the HoF in `mix_with_pop`. Per
-# design.md D3: 70% current pop / 30% HoF. Preserves the live signal as
+# 70% current pop / 30% HoF — preserves the live signal as
 # the primary driver while preventing forgetting.
 DEFAULT_FRAC_HOF = 0.3
 
@@ -164,8 +164,8 @@ class HallOfFame:
         )
         if fitness > self._entries[lowest_idx].fitness:
             # `deque` doesn't support indexed deletion in O(1); convert to
-            # list, swap, and rebuild the deque. HoF capacities in M5 are
-            # 8 (per design.md D3), so the cost is trivial.
+            # list, swap, and rebuild the deque. Typical HoF capacities
+            # are O(10), so the rebuild cost is trivial.
             entries = list(self._entries)
             entries[lowest_idx] = _HoFEntry(genome=genome, fitness=fitness)
             self._entries = deque(entries)
@@ -250,7 +250,7 @@ class HallOfFame:
             against.
         frac_hof
             Fraction of the returned list drawn from the HoF. Default
-            0.3 per design.md D3.
+            0.3 (the canonical 70/30 mix).
 
         Raises
         ------
@@ -301,7 +301,7 @@ class HallOfFame:
         dict has no numpy dependency. ``birth_metadata`` is preserved
         verbatim — callers MUST ensure their birth_metadata values are
         JSON-serialisable (e.g. encoder shape_maps using tuples need
-        list-conversion before reaching this method; the M5 weight
+        list-conversion before reaching this method; the weight
         encoders' `shape_map` is already tuple-keyed lists which json
         accepts).
         """

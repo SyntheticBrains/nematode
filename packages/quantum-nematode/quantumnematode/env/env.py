@@ -551,7 +551,7 @@ class Predator:
         self.predator_id = predator_id
         self.brain: PredatorBrain = brain if brain is not None else HeuristicPredatorBrain()
         # Per-predator metric counters (populated by the harness; surfaced
-        # in MultiAgentEpisodeResult per task 4.x).
+        # in MultiAgentEpisodeResult).
         self.kills: int = 0
         self.prey_proximity_steps: int = 0
         self.distance_traveled: int = 0
@@ -1541,13 +1541,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Dispatcher for the pluggable brain seam. `"heuristic"` (or
         `brain_config is None`) constructs a `HeuristicPredatorBrain`
         byte-equivalent to the legacy heuristic behaviour;
-        `"mlpppo_predator"` (M5+) constructs a learnable
-        `MLPPPOPredatorBrain`. The dispatcher imports `MLPPPOPredatorBrain`
-        directly from `env/mlpppo_predator_brain.py` (NOT via
+        `"mlpppo_predator"` constructs a learnable `MLPPPOPredatorBrain`.
+        The dispatcher imports `MLPPPOPredatorBrain` directly from
+        `env/mlpppo_predator_brain.py` (NOT via
         `evolution/predator_encoders.PREDATOR_ENCODER_REGISTRY` — that
         registry lives in the evolution package and is reserved for the
         co-evolution loop. Direct import keeps `env` free of `evolution`-
-        package dependencies, per design.md D14 import-boundary rule).
+        package dependencies, preserving the import-boundary rule that
+        the env layer never depends on the evolution layer).
 
         For `mlpppo_predator`, optional `extra` config keys:
 
@@ -1558,7 +1559,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
           explicit `extra["seed"]` value is applied IDENTICALLY to every
           predator in the env — all N predators will start with
           bit-identical weights. This is rarely what you want for a
-          standalone multi-predator scenario but is harmless for M5
+          standalone multi-predator scenario but is harmless for
           co-evolution where the genome encoder overwrites these weights
           via `WeightPersistence` before the first eval episode. When
           `extra["seed"]` is omitted (the default), each predator is
@@ -1568,11 +1569,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         - `sample`: when True, `run_brain` samples from the action
           distribution; when False (default), returns argmax.
 
-        (M5 co-evolution loads pre-trained weights via the genome
+        (Co-evolution loads pre-trained weights via the genome
         encoder, not via `_build_predator_brain`. A `weights_path`
-        load-from-disk hook may be added to `extra` in a future PR if
-        standalone scenarios need to spawn pre-trained predators
-        outside the co-evolution loop.)
+        load-from-disk hook may be added to `extra` later if standalone
+        scenarios need to spawn pre-trained predators outside the
+        co-evolution loop.)
         """
         config = self.predator.brain_config
         if config is None or config.kind == "heuristic":
