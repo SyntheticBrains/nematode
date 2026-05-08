@@ -4,10 +4,10 @@
 # Per design.md D4 + the M5 task plan: 4 seeds (42-45) × 50 generations
 # (5 K-pair blocks at K=10) per side, prey pop=24, predator pop=16,
 # K_per_block=10, generality_probe_every=10. Wall-time target
-# ~30-60 hours per seed under sequential dispatch → ~120-240 wall-hours
-# total across 4 sequential seeds (4x the design.md D4 estimate, which
-# assumed parallel_workers=4 — pool wiring lands in a follow-up).
-# Update from pilot result before launching, per task 10.1.
+# ~7.5-15 hours per seed at parallel_workers=4 per side → ~30-60
+# wall-hours total across 4 sequential seeds (per design.md D4; ±50%
+# pending pilot calibration — update from pilot result before
+# launching, per task 10.1).
 #
 # Bootstrap: `predator_gen0_bootstrap` is set here based on the pilot's
 # arm A vs arm B result (task 9.4 locks the choice). If pilot evidence
@@ -137,7 +137,6 @@ coevolution:
   # substitute (the loader fails fast on missing files).
   prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_42.json
 
-  # `parallel_workers` is intentionally omitted — see arm A YAML.
   prey_evolution:
     algorithm: cmaes
     cma_diagonal: true
@@ -147,6 +146,7 @@ coevolution:
     learn_episodes_per_eval: 50
     eval_episodes_per_eval: 25
     sigma0: 0.5
+    parallel_workers: 4
     inheritance: lamarckian
     inheritance_elite_count: 1
 
@@ -158,4 +158,5 @@ coevolution:
     episodes_per_eval: 25
     learn_episodes_per_eval: 0
     sigma0: 0.5
+    parallel_workers: 4
     inheritance: none

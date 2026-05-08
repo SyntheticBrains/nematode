@@ -2,13 +2,10 @@
 # M5 co-evolution FULL RUN — 4 seeds × 50 generations.
 # ============================================================================
 #
-# Per task 10.2: 4 seeds (42-45) × 50 gens × pop 24/16 × K=10. Under
-# the loop's current sequential dispatch, expect ~120-240 wall-hours
-# total across 4 sequential seeds (4x the design.md D4 estimate, which
-# assumed parallel_workers=4 — a pool dispatch hook is documented but
-# not yet wired in `CoevolutionLoop`; per-evaluation parallelism lands
-# in a follow-up). Lock the precise wall budget from the pilot's
-# actual per-episode wall before launch.
+# Per task 10.2: 4 seeds (42-45) × 50 gens × pop 24/16 × K=10.
+# Wall-time ~30-60 hours total at parallel_workers=4 per side × 4
+# sequential seeds (per design.md D4; lock from pilot's actual
+# per-episode wall before launch).
 #
 # Verdict gate (task 10.4): GO if cycling OR escalation fires in ≥2 of
 # 4 seeds; STOP if zero seeds; PIVOT if exactly 1.

@@ -8,11 +8,8 @@
 # head-to-head and lock the bootstrap choice for the full run
 # (task 9.4 / 10.1).
 #
-# Wall-time per arm: ~14-28 hours per seed under the loop's current
-# sequential dispatch (4x the design.md D4 estimate, which assumed
-# parallel_workers=4 — a pool dispatch hook is documented but not yet
-# wired in `CoevolutionLoop`; per-evaluation parallelism lands in a
-# follow-up). Pilot ships 1 seed per arm to amortise the
+# Wall-time per arm: ~3.5-7 hours per seed at parallel_workers=4 per
+# side, per design.md D4. Pilot ships 1 seed per arm to amortise the
 # heuristic-imitation pretrain cost (~30 sec) — full run uses 4 seeds.
 #
 # Outputs land under ${OUTPUT_ROOT}/{arm_a,arm_b}/<session>/.
