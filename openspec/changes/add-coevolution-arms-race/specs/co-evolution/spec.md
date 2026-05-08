@@ -2,7 +2,7 @@
 
 ### Requirement: CoevolutionLoop Orchestrator
 
-The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population). The per-evaluation interface SHALL align with the existing `EvolutionLoop._evaluate_in_worker` 11-tuple ABI so that PR 4's smoke config can swap in `multiprocessing.Pool` + `pool.map(_evaluate_in_worker, eval_args)` for parallelism without changing the loop body. Opponent brain weights are injected at evaluation time via `sim_config` patching at the call site (the worker tuple ABI is unchanged).
+The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population). The per-evaluation interface SHALL align with the existing `EvolutionLoop._evaluate_in_worker` 11-tuple ABI so the loop can swap in `multiprocessing.Pool` + `pool.map(_evaluate_in_worker, eval_args)` for parallelism without changing the loop body. Opponent brain weights are injected at evaluation time via `sim_config` patching at the call site (the worker tuple ABI is unchanged).
 
 #### Scenario: Side State Surface
 
@@ -19,8 +19,12 @@ The system SHALL provide a `CoevolutionLoop` orchestrator that drives two popula
 - **GIVEN** the `CoevolutionLoop` class
 - **THEN** it SHALL NOT subclass `EvolutionLoop`
 - **AND** the per-evaluation call shape (`fitness.evaluate(genome, sim_config, encoder, *, episodes, seed)`) SHALL be compatible with the existing 11-tuple worker pattern (`(params, sim_config, encoder, fitness, episodes, seed, generation, index, parent_ids, warm_start_path_override, weight_capture_path)`) so that `pool.map(_evaluate_in_worker, eval_args)` can be wired in with no body change
-- **AND** PR 3 of the M5 series ships sequential evaluation (no `multiprocessing.Pool` instantiated yet); PR 4 wires the pool alongside the smoke config that exercises end-to-end opposition injection. The interface is the contract; the dispatch is a runtime detail
-- **AND** the opposing-side opponent brain weights SHALL be injected at evaluation time via `sim_config` patching at the call site. PR 3 records the opposition draw via `HallOfFame.mix_with_pop` but invokes `fitness.evaluate(...)` with the unpatched `sim_config`; the actual weight-injection patch (decoded predator brains installed on `Predator.brain` slots; decoded prey brains exposed via `sim_config.multi_agent.agents`) lands in PR 4 alongside the smoke config that can validate the integrated path
+- **AND** the loop dispatch is sequential at first ship; multi-process parallelism is a swap-in runtime detail behind the 11-tuple worker shape
+- **AND** opposing-side opponent brain weights SHALL be injected at evaluation time by patching `sim_config` at the call site. The integration pattern: decode each opposing genome via `opposing_side.encoder.decode(...)`, materialise the brain's weights to a tempfile-managed `.pt`, then patch:
+  - prey-training: `sim_config.environment.predators.brain_config.extra["weights_path"]` — the env's `_build_predator_brain` honours this key and calls `load_weights` on the freshly-constructed predator brain. **Diversity simplification:** all N predator slots load the SAME opposition genome (the head of the HoF-mixed list), matching the focal genome's "same brain on every slot" semantic. The 70/30 HoF mix still varies across evaluations of the same K-block, so opposition diversity is exercised at the call level rather than the slot level. A future refinement could rotate genomes per slot if pilot evidence shows insufficient diversity.
+  - predator-training: `sim_config.multi_agent.agents[i].weights_path` (one per opposition genome) — `_build_prey_agents` honours this key and calls `load_weights` post-construction. The opposition list is **capped at 10 entries** (the schema cap on `MultiAgentConfig.agents`); larger pop sizes truncate to the first 10 opposition genomes after the HoF mix. With `frac_hof=0.3`, the 10 entries cover ~3 HoF + ~7 current-pop in the typical pop=24 case.
+- **AND** `sim_config.evolution` SHALL be patched to the training side's per-side `EvolutionConfig` so per-side fitness fields (`learn_episodes_per_eval`, `eval_episodes_per_eval`) resolve correctly for `LearnedPerformanceFitness`. The base sim_config carries `evolution=None` for co-evolution runs (the YAML uses the `coevolution:` block instead)
+- **AND** empty opposition (first K-block before the opposing side has trained) SHALL bootstrap with random-init opposing brains: prey side gets random-init predator weights via the env's native `mlpppo_predator` dispatcher; predator side spawns one random-init prey opponent so the multi-agent runner has at least one slot
 - **AND** each side's `fitness.evaluate` SHALL conform to the existing `FitnessFunction` Protocol surface `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`
 
 ### Requirement: Alternating Training Schedule
@@ -98,42 +102,46 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 
 #### Scenario: Held-Out Set Construction
 
-- **GIVEN** a `CoevolutionLoop` configured with `held_out_size=8`
+- **GIVEN** a `CoevolutionLoop` configured with `held_out_size=N` (the schema default is 8 for forward-compat with future expanded bundles; production YAMLs ship with `held_out_size=4` to match the curated bundle exactly — see footnote)
 - **WHEN** the loop initialises
 - **THEN** a held-out opponent set of size `held_out_size` SHALL be constructed for each side
-- **AND** the prey-side held-out set SHALL be loaded from a committed in-repo bundle at `configs/evolution/coevolution_held_out_prey/*.json` (one genome per file, ~tens of KB each); the bundle SHALL contain at least `held_out_size` genomes drawn from prior M3-Lamarckian-style runs
+- **AND** the prey-side held-out set SHALL be loaded from a committed in-repo bundle at `configs/evolution/coevolution_warmstart_prey/*.json` (one genome per file, ~1.2 MB each at LSTMPPO + klinotaxis brain shape; routed through Git LFS via `.gitattributes`). The same bundle directory serves as both the gen-0 warm-start anchor source (per-seed `prey_gen0_seed_path`) and the held-out probe opponents — one bundle, two roles, avoiding ~5 MB of byte-identical duplication. When the bundle ships fewer than `held_out_size` distinct genomes, the loader samples WITH replacement (so the configured set size is honoured at the cost of sample repetition); when at least `held_out_size` are available, the loader samples WITHOUT replacement
 - **AND** the predator-side held-out set SHALL be drawn from a heuristic-predator Cartesian grid `detection_radius × damage_radius` (default `{4, 6, 8, 10} × {0, 1}` = 8 combos at default `held_out_size=8`); when `held_out_size > grid_size` the rng samples WITH replacement; when `held_out_size < grid_size` the rng samples WITHOUT replacement; both via `held_out_rng.choice` with a fixed seed
 - **AND** held-out opponents SHALL NEVER be used in training evaluations
 - **AND** held-out genome bundles SHALL be committed to the repo (NOT stored only in `artifacts/`) so a fresh checkout can run the campaign reproducibly
+- **Footnote on bundle size:** the production prey bundle ships 4 distinct genomes (one per source-campaign seed). The original "8 genomes, 2 per seed" plan reduced because the source single-population campaign retained only the final-generation elite checkpoint per seed. All shipped co-evolution YAMLs (`coevolution_pilot_arm_a.yml`, `coevolution_pilot_arm_b.yml`, `coevolution_full.yml`) set `held_out_size: 4` to avoid implicit with-replacement sampling. The schema default stays at 8 so future expanded bundles can drop in without a config-schema migration
 
 #### Scenario: Probe Cadence and Output Layout
 
 - **GIVEN** `generality_probe_every=10` and a `CoevolutionLoop` configured with `output_dir`
 - **WHEN** generation index G is reached such that `G % 10 == 0`
 - **THEN** the loop SHALL evaluate each side's elite against the full held-out opponent set
-- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`. PR 3 writes the schema rows but the `fitness` column may be `NaN` until the opposition-injection wiring lands in PR 4 (real held-out evaluation depends on patched `sim_config` per "Composition Over Inheritance" scenario)
+- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`. The schema rows + cadence + non-mutation contract are normative now; the `fitness` column ships as `NaN` until per-opponent evaluation is wired in a follow-up commit (held-out evaluation reuses the same `sim_config` patching pattern as `_evaluate_candidate`, but the prey-side held-out is a prey genome — different role from the predator genomes we patch onto `Predator.brain` slots — and the predator-side held-out is a heuristic-radius spec rather than a learnable predator brain)
 - **AND** the probe SHALL be a no-op for sides whose `champion_history` is empty (the first K-block on each side hasn't completed yet, so there is no elite to probe)
 - **AND** per-side lineage CSVs SHALL live at `{output_dir}/prey/lineage.csv` and `{output_dir}/predator/lineage.csv` (per-side subdirs match the existing `EvolutionLoop` output shape — M3 single-population analysis tooling reuses unchanged)
 - **AND** champion_history SHALL live at `{output_dir}/champion_history.json` (top-level, single file with `prey` + `predator` dict keys)
 
-#### Scenario: Held-Out Bundle Missing Falls Back To No-Op (PR 3 only)
+#### Scenario: Held-Out Bundle Missing Falls Back To No-Op
 
-- **GIVEN** a `CoevolutionLoop` instance whose `configs/evolution/coevolution_held_out_prey/` directory is missing or empty (PR 3 ships before PR 4 task 7.0a curates the production prey held-out bundle)
+- **GIVEN** a `CoevolutionLoop` instance whose prey reference bundle directory (`configs/evolution/coevolution_warmstart_prey/`) is missing or empty
 - **WHEN** the loop initialises and constructs the prey held-out set
 - **THEN** the loader SHALL log a one-time warning and return an empty list rather than raising
 - **AND** the prey-side probe SHALL be a no-op for that run (probe still fires for the predator side, which constructs its held-out specs from the heuristic-radius grid without a bundle)
-- **Rationale:** allows PR 3 unit tests + smoke runs to exercise the loop end-to-end before the production bundle is curated; PR 4 ships the bundle and the warning becomes a no-op in production.
+- **Rationale:** allows fresh-checkout unit tests + smoke runs to exercise the loop end-to-end on machines where the production bundle is unavailable; the production bundle ships in-repo so the warning is a no-op for normal runs.
 
 #### Scenario: Checkpoint File Layout
 
 - **GIVEN** a `CoevolutionLoop` instance configured with `output_dir`
 - **WHEN** the loop reaches a K-block boundary and `_save_checkpoint` fires
-- **THEN** four files SHALL be written atomically (tmp file + rename per file):
-  - `{output_dir}/prey/checkpoint.pkl` — per-side pickle: optimizer + population_params + population_genome_ids + prev_generation_ids + generation + champion_history + checkpoint_version. Reuses the `EvolutionLoop._save_checkpoint` shape so M3 single-population resume tooling can introspect.
+- **THEN** five files SHALL be written atomically (tmp file + rename per file):
+  - `{output_dir}/prey/checkpoint.pkl` — per-side pickle: optimizer + population_params + population_genome_ids + prev_generation_ids + generation + champion_history + checkpoint_version + k_block_index. Reuses the single-population `EvolutionLoop._save_checkpoint` shape so single-population resume tooling can introspect.
   - `{output_dir}/predator/checkpoint.pkl` — same shape as prey.
   - `{output_dir}/coevolution_state.json` — top-level human-readable JSON: k_block_index + current_side + prey_hof + predator_hof (via `HallOfFame.to_dict`) + predator_held_out_specs + prey_held_out_ids + k_block_mean_fitness (rebalance heuristic state).
-  - `{output_dir}/coevolution_rng.pkl` — master RNG state + held-out RNG state (numpy bit_generator state has nested arrays that don't JSON natively, hence the separate pickle).
-- **AND** `_load_checkpoint` SHALL verify checkpoint_version on each per-side pickle; mismatch raises `ValueError`. The prey held-out bundle SHALL be cross-checked against `prey_held_out_ids` recorded in the JSON; bundle drift between save and resume raises `ValueError` to prevent silent state corruption.
+  - `{output_dir}/champion_history.json` — top-level JSON, `{prey: list[dict], predator: list[dict]}` plus a `k_block_index` field for cross-file consistency. Time-ordered audit log of K-block elites; consumed by aggregator-time analysis (cycling, escalation) without a numpy dependency on the per-side pickles.
+  - `{output_dir}/coevolution_rng.pkl` — master RNG state + held-out RNG state + immutable `run_seed` (used by `_derive_optimizer_seed`) + k_block_index. Pickled because numpy bit_generator state has nested arrays that don't JSON natively.
+- **AND** the RNG pickle SHALL be written LAST and SHALL hold the canonical `k_block_index`; `_load_checkpoint` SHALL fail if the RNG pickle is absent (signals the prior save was interrupted mid-write — refuse to resume rather than load partial state).
+- **AND** every file SHALL embed `k_block_index`; `_load_checkpoint` SHALL cross-check all four non-RNG files' `k_block_index` against the canonical RNG-pickle value and raise `ValueError` on any mismatch (torn-save detection, naming the divergent file in the diagnostic).
+- **AND** `_load_checkpoint` SHALL verify `checkpoint_version` on each per-side pickle; mismatch raises `ValueError`. The prey held-out bundle SHALL be cross-checked against `prey_held_out_ids` recorded in the JSON; bundle drift between save and resume raises `ValueError` to prevent silent state corruption.
 
 #### Scenario: Probe Does Not Mutate Population State
 
@@ -182,7 +190,7 @@ The system SHALL gate the full M5 campaign on a pilot run; pilot thresholds SHAL
 #### Scenario: Pilot Configuration
 
 - **GIVEN** the two pilot arm YAML files (`coevolution_pilot_arm_a.yml` and `coevolution_pilot_arm_b.yml`)
-- **THEN** each SHALL configure **30 per-side generations** (3 K-pairs × K_per_block=10 = 30 gens per side; total wall-clock loop generations = 60) × prey-pop 24 × predator-pop 16 × K=10 × HoF=8 × probe every 10 gens. Specifically, `generation_pairs=3`, `K_per_block=10`, `prey_evolution.population_size=24`, `predator_evolution.population_size=16`, `held_out_size=8`, `generality_probe_every=10`.
+- **THEN** each SHALL configure **30 per-side generations** (3 K-pairs × K_per_block=10 = 30 gens per side; total wall-clock loop generations = 60) × prey-pop 24 × predator-pop 16 × K=10 × HoF=8 × probe every 10 gens. Specifically, `generation_pairs=3`, `K_per_block=10`, `prey_evolution.population_size=24`, `predator_evolution.population_size=16`, `held_out_size=4` (matching the curated 4-genome held-out bundle; the loader samples WITH replacement when `held_out_size > len(bundle)` so an oversized config still works at the cost of sample repetition), `generality_probe_every=10`.
 - **AND** arm A SHALL run with seed=42 and `predator_gen0_bootstrap: "heuristic_imitation_pretrain"` (D7 arm A)
 - **AND** arm B SHALL run with seed=43 and `predator_gen0_bootstrap: "cold_start"` (D7 arm B)
 - **AND** the bash wrapper `phase5_m5_coevolution_pilot.sh` SHALL run both arms sequentially with distinct output directories

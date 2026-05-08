@@ -1,0 +1,161 @@
+# M5 co-evolution PILOT — arm A: heuristic-imitation pretrain bootstrap.
+# ============================================================================
+#
+# Pilot config sized per design.md D4 + the M5 task plan: 30 generations
+# (15 K-pair blocks at K=10) per side, prey pop=24, predator pop=16,
+# K_per_block=10, generality_probe_every=10. Predator gen-0 weights are
+# bootstrapped via heuristic-imitation pretrain (D7 arm A) — runs once
+# inside `CoevolutionLoop.__init__`, costs ~30 sec.
+#
+# Sibling: `coevolution_pilot_arm_b.yml` runs the cold-start arm
+# (D7 arm B). The two arms are run sequentially by the bash wrapper
+# `scripts/campaigns/phase5_m5_coevolution_pilot.sh`; pilot
+# decision-gate evaluation (task 9.4) compares the two to lock the
+# full-run config's bootstrap choice.
+#
+# Wall-time target: ~3.5-7 hours per seed at parallel_workers=4 per
+# side (per design.md D4 + per-episode ~0.75-1.5 sec from M3
+# calibration). Pilot uses 1 seed per arm to amortise the
+# heuristic-imitation pretrain cost (~30 sec).
+#
+# Brain shape MUST match the warmstart bundle's flattened-weight vector
+# encoder genome_dim (49,511 floats for LSTMPPO + klinotaxis with the
+# brain block below). If you change actor_hidden_dim, critic_hidden_dim,
+# rnn_type, lstm_hidden_dim, or sensory_modules, the warmstart bundle
+# becomes incompatible — re-curate via
+# `scripts/campaigns/curate_coevolution_prey_bundles.py` first.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+    brain_config:
+      kind: mlpppo_predator
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+# Co-evolution sub-block. Mutually exclusive with a top-level
+# `evolution:` block (rejected by
+# `SimulationConfig._validate_evolution_coevolution_exclusive`).
+coevolution:
+  K_per_block: 10
+  generation_pairs: 3  # 3 pairs * 2 sides = 6 K-blocks; per-side gens = 30
+  generality_probe_every: 10
+  held_out_size: 4  # bundle ships 4 distinct genomes (one per source seed)
+  start_side: prey
+  predator_gen0_bootstrap: heuristic_imitation_pretrain
+  prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_42.json
+
+  prey_evolution:
+    algorithm: cmaes
+    cma_diagonal: true
+    population_size: 24
+    generations: 30
+    episodes_per_eval: 25
+    learn_episodes_per_eval: 50
+    eval_episodes_per_eval: 25
+    sigma0: 0.5
+    parallel_workers: 4
+    inheritance: lamarckian
+    inheritance_elite_count: 1
+
+  predator_evolution:
+    algorithm: cmaes
+    cma_diagonal: true
+    population_size: 16
+    generations: 30
+    episodes_per_eval: 25
+    # Predator side is frozen-weight per design D13 — no inner-loop
+    # training. The CMA-ES outer loop owns the fitness gradient.
+    learn_episodes_per_eval: 0
+    sigma0: 0.5
+    parallel_workers: 4
+    inheritance: none

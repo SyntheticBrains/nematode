@@ -1,0 +1,168 @@
+# Co-evolution smoke pilot — fastest end-to-end CoevolutionLoop validation.
+# ============================================================================
+#
+# Targets ~60 seconds of wall-time per run so the loop body, lineage
+# CSVs, HoF accumulation, generality probe, and checkpoint write all get
+# exercised end-to-end before any compute-heavy run is launched.
+#
+# Smoke knobs (all reduced from pilot defaults; see coevolution_pilot_arm_a.yml
+# for the production-pilot scaling):
+#   prey/predator population_size: 4 (vs 24 / 16 in pilot)
+#   K_per_block: 2  (vs 10)
+#   generation_pairs: 1  -> 2 K-blocks total
+#   held_out_size: 2 (samples WITH replacement against the 4-genome bundle)
+#   generality_probe_every: 1 (fires every gen so the probe is exercised
+#       even at this tiny K)
+#   prey_evolution.learn_episodes_per_eval: 10 (vs 50)
+#   prey_evolution.eval_episodes_per_eval: 5 (vs 25)
+#   predator_evolution.episodes_per_eval: 5 (vs 25)
+#   predator_gen0_bootstrap: cold_start (skips the ~30s heuristic-imitation
+#       pretrain so the smoke run actually fits in ~60s; pilot arms exercise
+#       both bootstrap arms)
+#
+# Brain shape MUST match the source-campaign brain shape so the
+# warmstart bundle's flattened weight vector matches the encoder's
+# genome_dim (49,511 floats for LSTMPPO + klinotaxis + 4 sensory modules).
+# Mirrors `lamarckian_lstmppo_klinotaxis_predator_pilot.yml` field-for-field
+# in the brain block.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+    # Switch to learnable predator brains; weights driven by the
+    # CoevolutionLoop's predator side via MLPPPOPredatorEncoder.
+    brain_config:
+      kind: mlpppo_predator
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+# Co-evolution sub-block. Mutually exclusive with a top-level `evolution:`
+# block (rejected by `SimulationConfig._validate_evolution_coevolution_exclusive`).
+coevolution:
+  K_per_block: 2
+  generation_pairs: 1
+  generality_probe_every: 1
+  held_out_size: 2
+  start_side: prey
+  predator_gen0_bootstrap: cold_start
+  # Warmstart from the seed-42 elite curated by
+  # scripts/campaigns/curate_coevolution_prey_bundles.py. Templated
+  # explicitly here rather than via <run_seed> substitution so the smoke
+  # config has a single deterministic seed; pilot arms templatise.
+  prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_42.json
+
+  prey_evolution:
+    algorithm: cmaes
+    cma_diagonal: true
+    population_size: 4
+    generations: 2  # required by EvolutionConfig schema; CoevolutionLoop
+                    # actually drives K_per_block * generation_pairs gens
+                    # per side. Set high enough not to early-terminate.
+    episodes_per_eval: 5
+    learn_episodes_per_eval: 10
+    eval_episodes_per_eval: 5
+    sigma0: 0.5
+    parallel_workers: 1  # smoke runs serialised; pilot arms parallelise
+    inheritance: lamarckian
+    inheritance_elite_count: 1
+
+  predator_evolution:
+    algorithm: cmaes
+    cma_diagonal: true
+    population_size: 4
+    generations: 2
+    episodes_per_eval: 5
+    # Predator side is frozen-weight per D13 — no inner-loop training.
+    learn_episodes_per_eval: 0
+    sigma0: 0.5
+    parallel_workers: 1
+    inheritance: none

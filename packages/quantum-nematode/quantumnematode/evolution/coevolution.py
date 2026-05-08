@@ -62,12 +62,16 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import tempfile
+from contextlib import suppress
 from dataclasses import dataclass, field
+from multiprocessing import Pool
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
+from quantumnematode.brain.weights import save_weights
 from quantumnematode.evolution.encoders import (
     LSTMPPOEncoder,
     build_birth_metadata,
@@ -83,16 +87,34 @@ from quantumnematode.evolution.lineage import LineageTracker
 from quantumnematode.evolution.predator_encoders import MLPPPOPredatorEncoder
 from quantumnematode.evolution.predator_fitness import PredatorEpisodicKillRate
 from quantumnematode.optimizers.evolutionary import CMAESOptimizer
+from quantumnematode.utils.config_loader import (
+    AgentConfig,
+    MultiAgentConfig,
+)
 
 if TYPE_CHECKING:
+    from multiprocessing.pool import Pool as PoolType
+
+    from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
     from quantumnematode.evolution.inheritance import InheritanceStrategy
     from quantumnematode.utils.config_loader import (
         CoevolutionConfig,
+        EnvironmentConfig,
         EvolutionConfig,
         SimulationConfig,
     )
+
+# Re-use `EvolutionLoop`'s worker init + 11-tuple worker entry point so
+# the dispatch ABI stays single-source. Both functions are top-level in
+# `loop.py` so they pickle cleanly across the Pool's worker boundary
+# (spawn on macOS, fork on Linux per Python's `multiprocessing.Pool`
+# default; both require picklable worker entry points).
+from quantumnematode.evolution.loop import (
+    _evaluate_in_worker,
+    _init_worker,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +140,14 @@ CHECKPOINT_VERSION = 1
 # quantumnematode/ → packages/quantum-nematode/ → repo root). The
 # campaign driver may override `CoevolutionLoop._PREY_HELD_OUT_BUNDLE_DIR`
 # (e.g. for multi-bundle ablations), and tests likewise.
+# Unified prey reference bundle: same source genomes serve as both
+# the prey gen-0 warmstart anchor (per-seed `seed_{N}.json` consumed
+# by `_load_prey_warmstart`) AND the held-out probe opponents
+# (consumed by `_load_held_out_prey_bundle`). The two roles share the
+# same provenance JSONs by design — the curation script writes one
+# bundle dir; both loaders read from it.
 _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
-    Path(__file__).resolve().parents[4] / "configs" / "evolution" / "coevolution_held_out_prey"
+    Path(__file__).resolve().parents[4] / "configs" / "evolution" / "coevolution_warmstart_prey"
 )
 
 
@@ -170,6 +198,14 @@ class _SideState:
     # `None` for tests that bypass the standard construction path;
     # production runs always populate it.
     lineage: LineageTracker | None = None
+    # Selected parents from the most recently completed generation on
+    # this side. Drives per-child inheritance dispatch
+    # (`_resolve_per_child_inheritance`): under Lamarckian, child idx i
+    # inherits from `selected_parent_ids[inheritance.assign_parent(i)]`
+    # via the parent's pre-saved checkpoint. Empty until the first
+    # `select_parents` call after K-block 0's generation 0 completes.
+    # Mirrors `EvolutionLoop._selected_parent_ids` (per-side analogue).
+    selected_parent_ids: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +502,11 @@ class CoevolutionLoop:
                 f"{len(params) if isinstance(params, list) else 'N/A'}, "
                 f"expected {genome_dim}. The genome_dim is determined by "
                 "the prey encoder; the warmstart bundle MUST match the "
-                "current prey brain config."
+                "current prey brain config (`actor_hidden_dim`, "
+                "`critic_hidden_dim`, `lstm_hidden_dim`, sensory_modules, "
+                "etc.). Re-curate the bundle for the current brain shape "
+                "by running `scripts/campaigns/curate_coevolution_prey_bundles.py` "
+                "with the matching source-campaign YAML."
             )
             raise ValueError(msg)
         logger.info(
@@ -545,7 +585,14 @@ class CoevolutionLoop:
     # ------------------------------------------------------------------
 
     def _load_held_out_prey_bundle(self) -> list[Genome]:
-        """Load held-out prey genomes from `configs/evolution/coevolution_held_out_prey/*.json`.
+        """Load held-out prey genomes from `configs/evolution/coevolution_warmstart_prey/*.json`.
+
+        The held-out probe loader reads from the SAME bundle directory
+        as the prey warmstart (`_load_prey_warmstart`): same source
+        genomes, two roles. Per-seed warmstart anchors (`seed_{N}.json`,
+        consumed at gen-0 init) and held-out probe opponents (consumed
+        every `generality_probe_every` gens) are byte-identical files;
+        unifying the bundle dir avoids duplicating ~5 MB of JSON in-repo.
 
         Each JSON file in the bundle directory is expected to follow the
         warmstart fixture format (`{genome_id, generation, fitness,
@@ -977,6 +1024,7 @@ class CoevolutionLoop:
                 "population_params": [g.params.tolist() for g in side.population],
                 "population_genome_ids": [g.genome_id for g in side.population],
                 "prev_generation_ids": list(side.prev_generation_ids),
+                "selected_parent_ids": list(side.selected_parent_ids),
                 "generation": side.generation,
                 "champion_history": list(side.champion_history),
                 # Match `EvolutionLoop._save_checkpoint`'s shape: persist
@@ -1100,7 +1148,7 @@ class CoevolutionLoop:
 
         Held-out sets are NOT re-serialised in detail — the prey
         bundle is reconstructed BY ID from
-        `configs/evolution/coevolution_held_out_prey/*.json`
+        `configs/evolution/coevolution_warmstart_prey/*.json`
         (`_reload_prey_held_out_by_ids`) so the recorded order is
         preserved without depending on RNG state.
         """
@@ -1185,6 +1233,10 @@ class CoevolutionLoop:
             side.optimizer = payload["optimizer"]
             side.generation = int(payload["generation"])
             side.prev_generation_ids = list(payload["prev_generation_ids"])
+            # `selected_parent_ids` was added after the initial
+            # checkpoint format; tolerate older checkpoints by
+            # defaulting to an empty list.
+            side.selected_parent_ids = list(payload.get("selected_parent_ids", []))
             side.champion_history = list(payload["champion_history"])
             # Re-build genome instances from population_params +
             # population_genome_ids; birth_metadata is reconstructed
@@ -1443,12 +1495,19 @@ class CoevolutionLoop:
 
         logger.info("CoevolutionLoop: run complete.")
 
-    def _run_one_k_block(
+    def _run_one_k_block(  # noqa: C901, PLR0912, PLR0915
         self,
         training_side: _SideState,
         opposing_side: _SideState,
     ) -> None:
         """Run `K_per_block` generations of `training_side` vs frozen `opposing_side`.
+
+        Complexity note: C901 / PLR0912 / PLR0915 thresholds are
+        intentionally exceeded — this method is the canonical
+        ask → eval → tell → inheritance pipeline (mirroring
+        `EvolutionLoop.run`'s structure). Splitting it would fragment
+        the per-generation data flow that downstream readers (and the
+        spec scenarios) reason about.
 
         Per-generation flow:
 
@@ -1509,77 +1568,109 @@ class CoevolutionLoop:
         # K-block mean for the rebalance heuristic.
         block_fitnesses: list[float] = []
 
-        for k_gen in range(cfg.K_per_block):
-            global_gen = training_side.generation
-            logger.info(
-                "K-block %d (%s) gen %d/%d (side-global gen %d)",
-                self._k_block_index,
-                training_side.name,
-                k_gen,
-                cfg.K_per_block,
-                global_gen,
+        # Optional `multiprocessing.Pool` for parallel candidate evaluation.
+        # Pool init mirrors `EvolutionLoop`'s pattern: ignore SIGINT in
+        # workers so Ctrl-C propagates through the master process cleanly.
+        # When `parallel_workers <= 1` we keep the sequential dispatch path
+        # for ease of debugging + test reproducibility.
+        pool: PoolType | None = None
+        if training_side.evolution_config.parallel_workers > 1:
+            pool = Pool(
+                processes=training_side.evolution_config.parallel_workers,
+                initializer=_init_worker,
+                initargs=(self.log_level,),
             )
 
-            solutions = training_side.optimizer.ask()
-            parent_ids = list(training_side.prev_generation_ids)
-            gen_genomes: list[Genome] = []
-            fitnesses: list[float] = []
-
-            for idx, params in enumerate(solutions):
-                gid = genome_id_for(global_gen, idx, parent_ids)
-                genome = Genome(
-                    params=np.asarray(params, dtype=np.float32),
-                    genome_id=gid,
-                    parent_ids=parent_ids,
-                    generation=global_gen,
-                    birth_metadata=build_birth_metadata(self.sim_config),
-                )
-                gen_genomes.append(genome)
-
-                # HoF-mixed opposition. Even when the call-site
-                # sim_config patching has not been wired yet, we still
-                # draw the mix here so the deterministic RNG-state
-                # advancement is correct (the loop's RNG must be in
-                # the same state at the same generation index whether
-                # or not the opposition was actually injected
-                # downstream).
-                opposition = self._build_opposition(opposing_side)
-
-                # Per-evaluation seed derivation matches EvolutionLoop's
-                # pattern (each child gets a distinct stream from the
-                # master rng).
-                eval_seed = int(self.rng.integers(0, 2**31 - 1))
-                fitness_val = self._evaluate_candidate(
-                    side=training_side,
-                    genome=genome,
-                    opposition=opposition,
-                    eval_seed=eval_seed,
-                )
-                fitnesses.append(fitness_val)
-
-                # Lineage row.
-                training_side.lineage.record(
-                    genome,
-                    fitness=fitness_val,
-                    brain_type=training_side.encoder.brain_name,
-                    inherited_from="",
+        try:
+            for k_gen in range(cfg.K_per_block):
+                global_gen = training_side.generation
+                logger.info(
+                    "K-block %d (%s) gen %d/%d (side-global gen %d)",
+                    self._k_block_index,
+                    training_side.name,
+                    k_gen,
+                    cfg.K_per_block,
+                    global_gen,
                 )
 
-                # Track block elite. Strict-greater so first-seen
-                # high-tier wins on ties (preserves recency of the
-                # original champion in the K-block).
-                if fitness_val > block_elite_fitness:
-                    block_elite_fitness = fitness_val
-                    block_elite_genome = genome
+                solutions = training_side.optimizer.ask()
+                parent_ids = list(training_side.prev_generation_ids)
 
-            # Tell optimiser (CMA-ES minimises; our fitness maximises).
-            training_side.optimizer.tell(list(solutions), [-f for f in fitnesses])
-            block_fitnesses.extend(fitnesses)
+                # Per-generation tmp dir for opposition `.pt` files.
+                # Lifetime: must outlive `pool.map`/the sequential
+                # comprehension because workers read from it via
+                # `load_weights` during fitness evaluation.
+                with tempfile.TemporaryDirectory(
+                    prefix=f"coevo_gen{global_gen}_",
+                ) as tmp_dir_str:
+                    tmp_path = Path(tmp_dir_str)
+                    eval_args, gen_genomes, inherited_from_per_child = self._build_eval_args(
+                        training_side=training_side,
+                        opposing_side=opposing_side,
+                        solutions=solutions,
+                        parent_ids=parent_ids,
+                        global_gen=global_gen,
+                        tmp_path=tmp_path,
+                    )
 
-            # Update side-state population + bookkeeping for next gen.
-            training_side.population = gen_genomes
-            training_side.prev_generation_ids = [g.genome_id for g in gen_genomes]
-            training_side.generation += 1
+                    # Dispatch evaluation. The 11-tuple `eval_args` shape
+                    # matches `EvolutionLoop._evaluate_in_worker`.
+                    if pool is not None:
+                        fitnesses = list(pool.map(_evaluate_in_worker, eval_args))
+                    else:
+                        fitnesses = [_evaluate_in_worker(args) for args in eval_args]
+
+                # Post-eval bookkeeping: lineage rows, block elite,
+                # optimiser tell, generation advance.
+                for genome, fit, inherited_from in zip(
+                    gen_genomes,
+                    fitnesses,
+                    inherited_from_per_child,
+                    strict=True,
+                ):
+                    training_side.lineage.record(
+                        genome,
+                        fitness=fit,
+                        brain_type=training_side.encoder.brain_name,
+                        inherited_from=inherited_from,
+                    )
+                    # Strict-greater: first-seen high-tier wins on ties
+                    # (preserves recency of the original champion in
+                    # the K-block).
+                    if fit > block_elite_fitness:
+                        block_elite_fitness = fit
+                        block_elite_genome = genome
+
+                # Tell optimiser (CMA-ES minimises; our fitness maximises).
+                training_side.optimizer.tell(list(solutions), [-f for f in fitnesses])
+                block_fitnesses.extend(fitnesses)
+
+                # Update side-state population + bookkeeping for next gen.
+                training_side.population = gen_genomes
+                training_side.prev_generation_ids = [g.genome_id for g in gen_genomes]
+                training_side.generation += 1
+
+                # Per-side inheritance bookkeeping after each generation.
+                # Mirrors `EvolutionLoop.run`'s post-eval block: pick next
+                # gen's `selected_parent_ids` via the strategy, then GC
+                # stale per-genome inheritance checkpoints to keep disk
+                # usage bounded.
+                if self._inheritance_records_lineage(training_side):
+                    next_selected = training_side.inheritance.select_parents(
+                        [g.genome_id for g in gen_genomes],
+                        list(fitnesses),
+                        global_gen,
+                    )
+                    training_side.selected_parent_ids = next_selected
+                    if self._inheritance_active(training_side):
+                        # Drop the previous-gen elites whose children just ran.
+                        self._gc_inheritance_dir(training_side, global_gen - 1, [])
+                        # Keep only the about-to-be-parents in current gen.
+                        self._gc_inheritance_dir(training_side, global_gen, next_selected)
+        finally:
+            if pool is not None:
+                pool.close()
+                pool.join()
 
         # K-block end: push elite to HoF + champion_history per spec.
         # MUST happen BEFORE the probe cadence check so the probe sees
@@ -1640,16 +1731,16 @@ class CoevolutionLoop:
         `opposing_side.evolution_config.population_size` opposition
         genomes via the HoF mix. Empty-pop fallback (very first
         K-block, opposing side has no population yet) returns an
-        empty list — `_evaluate_candidate` handles that by treating
-        the genome as un-opposed (degenerate fitness; see method
-        docstring).
+        empty list — `_build_patched_sim_config` handles that by
+        treating the genome as un-opposed (degenerate fitness; see
+        the patcher's docstring).
         """
         if not opposing_side.population:
             # First K-block of the run: the opposing side hasn't
             # populated its `population` yet (it sits at the gen-0
             # optimiser mean but no `ask()` has fired). Return empty —
-            # `_evaluate_candidate` treats this as the un-opposed base
-            # case to bootstrap the first block.
+            # `_build_patched_sim_config` treats this as the un-opposed
+            # base case to bootstrap the first block.
             return []
         # Pin frac_hof=0.3 at the call site rather than relying on
         # `HallOfFame.DEFAULT_FRAC_HOF` so the 70/30 mix contract
@@ -1662,47 +1753,418 @@ class CoevolutionLoop:
             frac_hof=0.3,
         )
 
-    def _evaluate_candidate(
+    # ------------------------------------------------------------------
+    # Per-generation eval-args batch construction (master process)
+    # ------------------------------------------------------------------
+
+    def _build_eval_args(  # noqa: PLR0913 — kw-only batch builder; each input is orthogonal per-generation state
+        self,
+        *,
+        training_side: _SideState,
+        opposing_side: _SideState,
+        solutions: list,
+        parent_ids: list[str],
+        global_gen: int,
+        tmp_path: Path,
+    ) -> tuple[list[tuple], list[Genome], list[str]]:
+        """Build the per-generation `eval_args` batch for pool dispatch.
+
+        For each candidate:
+
+        1. Wrap the optimiser's flat-vector solution in a `Genome`.
+        2. Resolve per-child inheritance via the side's
+           `InheritanceStrategy` (warm-start path + capture path under
+           Lamarckian; empty strings under NoInheritance).
+        3. Sample HoF-mixed opposition (per "70/30 Mixture During
+           Evaluation" spec scenario), pre-decode each opposition
+           genome, and write its weights to a `.pt` under `tmp_path`.
+        4. Patch `sim_config` with the opposition `weights_path` keys
+           plus the side's per-side `EvolutionConfig` so fitness
+           evaluation reads the right per-side fields.
+        5. Append the 11-tuple shape consumed by
+           `_evaluate_in_worker`.
+
+        All RNG draws (eval_seed + opposition mix) happen in the master
+        process so the loop's RNG-state advancement is deterministic
+        regardless of `parallel_workers`.
+
+        Returns
+        -------
+        tuple
+            `(eval_args, gen_genomes, inherited_from_per_child)` —
+            `eval_args` for the pool dispatch; `gen_genomes` for
+            post-eval lineage rows + block-elite tracking;
+            `inherited_from_per_child` for the lineage CSV's
+            `inherited_from` column.
+        """
+        eval_args: list[tuple] = []
+        gen_genomes: list[Genome] = []
+        inherited_from_per_child: list[str] = []
+        for idx, params in enumerate(solutions):
+            gid = genome_id_for(global_gen, idx, parent_ids)
+            genome = Genome(
+                params=np.asarray(params, dtype=np.float32),
+                genome_id=gid,
+                parent_ids=parent_ids,
+                generation=global_gen,
+                birth_metadata=build_birth_metadata(self.sim_config),
+            )
+            gen_genomes.append(genome)
+
+            # HoF-mixed opposition — drawn here in the master process so
+            # RNG-state advancement is reproducible regardless of pool
+            # parallelism. Empty for the first K-block before the
+            # opposing side has populated.
+            opposition = self._build_opposition(opposing_side)
+
+            # Per-child inheritance dispatch (mirrors
+            # `EvolutionLoop._resolve_per_child_inheritance`).
+            (
+                parent_warm_start,
+                child_capture_path,
+                inherited_from,
+            ) = self._resolve_per_child_inheritance(training_side, idx, global_gen, gid)
+            inherited_from_per_child.append(inherited_from)
+
+            # Per-evaluation seed derivation matches `EvolutionLoop`'s
+            # pattern (each child gets a distinct RNG stream).
+            eval_seed = int(self.rng.integers(0, 2**31 - 1))
+
+            # Patch `sim_config` (opposition weights + side's
+            # EvolutionConfig). `candidate_tag=gid` namespaces the
+            # opposition `.pt` filenames so concurrent pool workers
+            # within the same per-generation tmp dir do not collide.
+            patched_sim_config = self._build_patched_sim_config(
+                side=training_side,
+                opposition=opposition,
+                eval_seed=eval_seed,
+                tmp_path=tmp_path,
+                candidate_tag=gid,
+            )
+
+            eval_args.append(
+                (
+                    np.asarray(params, dtype=np.float32),
+                    patched_sim_config,
+                    training_side.encoder,
+                    training_side.fitness,
+                    training_side.evolution_config.episodes_per_eval,
+                    eval_seed,
+                    global_gen,
+                    idx,
+                    parent_ids,
+                    parent_warm_start,
+                    child_capture_path,
+                ),
+            )
+        return eval_args, gen_genomes, inherited_from_per_child
+
+    # ------------------------------------------------------------------
+    # Per-side inheritance helpers (mirror `EvolutionLoop`'s)
+    # ------------------------------------------------------------------
+
+    def _inheritance_active(self, side: _SideState) -> bool:
+        """Return True iff the side's strategy uses per-genome weight checkpoints."""
+        return side.inheritance.kind() == "weights"
+
+    def _inheritance_records_lineage(self, side: _SideState) -> bool:
+        """Return True iff the side's strategy populates `inherited_from`."""
+        return side.inheritance.kind() != "none"
+
+    def _resolve_per_child_inheritance(
+        self,
+        side: _SideState,
+        child_idx: int,
+        gen: int,
+        gid: str,
+    ) -> tuple[Path | None, Path | None, str]:
+        """Compute one child's `(parent_warm_start, child_capture_path, inherited_from)`.
+
+        Per-side analogue of `EvolutionLoop._resolve_per_child_inheritance`.
+        Three-branch switch on the side's strategy `kind()`:
+
+        - `"none"` → `(None, None, "")` — child trains from scratch,
+          lineage row records no parent.
+        - `"trait"` (Baldwin) → `(None, None, parent_id)` where
+          `parent_id` is the prior-gen elite from
+          `side.selected_parent_ids` (or empty for gen 0).
+        - `"weights"` (Lamarckian) → full
+          `(parent_warm_start, child_capture_path, parent_id)` tuple.
+          `parent_warm_start` is the parent's pre-saved checkpoint Path
+          under the SIDE'S output dir, or None on missing.
+        """
+        kind = side.inheritance.kind()
+        if kind == "none":
+            return None, None, ""
+        if kind == "trait":
+            parent_id = side.selected_parent_ids[0] if side.selected_parent_ids else ""
+            return None, None, parent_id
+        # Lamarckian path. `checkpoint_path` is keyed off the side's
+        # `output_dir`, which the strategy already accepts so the
+        # per-side directory layout (`<run>/{side}/inheritance/...`)
+        # follows automatically.
+        child_capture_path = side.inheritance.checkpoint_path(side.output_dir, gen, gid)
+        parent_id = side.inheritance.assign_parent(child_idx, side.selected_parent_ids)
+        if parent_id is None:
+            return None, child_capture_path, ""
+        candidate = side.inheritance.checkpoint_path(side.output_dir, gen - 1, parent_id)
+        if candidate is not None and candidate.exists():
+            return candidate, child_capture_path, parent_id
+        logger.warning(
+            "Lamarckian parent checkpoint missing for %s child idx=%d gen=%d "
+            "(expected parent_id=%s at %s) — falling back to from-scratch.",
+            side.name,
+            child_idx,
+            gen,
+            parent_id,
+            candidate,
+        )
+        return None, child_capture_path, ""
+
+    def _gc_inheritance_dir(
+        self,
+        side: _SideState,
+        generation: int,
+        keep_ids: list[str],
+    ) -> None:
+        """Garbage-collect non-survivor checkpoints in one side's inheritance dir.
+
+        Per-side analogue of `EvolutionLoop._gc_inheritance_dir`. No-op
+        when `generation < 0` (e.g. the first GC pass before any
+        inheritance file has been written) or when the directory does
+        not exist.
+        """
+        if generation < 0:
+            return
+        gen_dir = side.output_dir / "inheritance" / f"gen-{generation:03d}"
+        if not gen_dir.exists():
+            return
+        keep = set(keep_ids)
+        for path in gen_dir.glob("genome-*.pt"):
+            gid = path.stem.removeprefix("genome-")
+            if gid not in keep:
+                path.unlink(missing_ok=True)
+        # Cosmetic: drop the dir if it's now empty so the inheritance/
+        # tree stays clean during a run.
+        with suppress(OSError):
+            gen_dir.rmdir()
+
+    def _build_patched_sim_config(
         self,
         *,
         side: _SideState,
-        genome: Genome,
         opposition: list[Genome],
         eval_seed: int,
-    ) -> float:
-        """Evaluate one candidate genome against the sampled opposition.
+        tmp_path: Path,
+        candidate_tag: str,
+    ) -> SimulationConfig:
+        """Build the per-evaluation `sim_config` with opposition + side patches.
 
-        Currently dispatches directly to `side.fitness.evaluate(...)`
-        with the unpatched `sim_config`. The opposition list is
-        recorded but not yet injected into the env (see module
-        docstring "Opposition injection (call-site responsibility)").
-        Full integration requires the campaign-level configs that
-        wire opposition into sim_config:
+        Caller owns the `tmp_path` lifecycle (the opposition `.pt`
+        files written here must outlive this call so the worker process
+        can read them on `load_weights`). `candidate_tag` namespaces
+        the file names so concurrent calls within the same generation
+        do not collide; pass the genome_id (or any per-candidate
+        unique string).
 
-        1. Pre-decode each opposition genome into its brain instance
-           (calling `opposing_side.encoder.decode(...)` against
-           `sim_config`).
-        2. Patch `sim_config` to point at the decoded brains:
-           - Prey-side training: install decoded predator brains on
-             `env.predators[i].brain` post-construction (re-using the
-             pattern from `predator_fitness._build_env_with_genome_predators`).
-           - Predator-side training: populate
-             `sim_config.multi_agent.agents` with prey-side
-             BrainContainerConfigs whose weights point at the decoded
-             prey brains.
-        3. Pass the patched `sim_config` to `fitness.evaluate`.
+        Three patches are layered onto `self.sim_config`:
 
-        The opposition argument is documented + accepted here so the
-        interface is stable across the integration boundary; only the
-        body changes.
+        1. `sim_config.evolution = side.evolution_config` so per-side
+           fitness fields (`learn_episodes_per_eval`,
+           `eval_episodes_per_eval`) resolve correctly for
+           `LearnedPerformanceFitness`.
+        2. When `side.name == "prey"`, opposition predator weights flow
+           into `environment.predators.brain_config.extra["weights_path"]`
+           — all N predator slots load the same opposition genome
+           (matching the focal genome's "same brain on every slot"
+           semantic). Empty opposition skips this patch and the env
+           builds predators with random-init weights.
+        3. When `side.name == "predator"`, opposition prey weights flow
+           into `multi_agent.agents[i].weights_path` — one slot per
+           opposition genome, capped at the
+           `MultiAgentConfig._validate_population` upper bound (10).
+           Empty opposition pads with random-init prey opponents up to
+           the schema's lower bound (2).
+
+        `model_copy(update=...)` produces shallow copies; fitness
+        evaluation does not mutate the config so shallow is safe.
         """
-        del opposition  # consumed once the integration layer wires it
-        return side.fitness.evaluate(
-            genome,
+        base_patch: dict[str, object] = {"evolution": side.evolution_config}
+
+        opposing_side = self.predator if side.name == "prey" else self.prey
+        if side.name == "prey":
+            if opposition:
+                base_patch["environment"] = self._build_prey_side_environment_patch(
+                    opposition=opposition,
+                    opposing_side=opposing_side,
+                    eval_seed=eval_seed,
+                    tmp_path=tmp_path,
+                    candidate_tag=candidate_tag,
+                )
+        else:
+            base_patch["multi_agent"] = self._build_predator_side_multi_agent_patch(
+                opposition=opposition,
+                opposing_side=opposing_side,
+                eval_seed=eval_seed,
+                tmp_path=tmp_path,
+                candidate_tag=candidate_tag,
+            )
+        return self.sim_config.model_copy(update=base_patch)
+
+    def _build_prey_side_environment_patch(
+        self,
+        *,
+        opposition: list[Genome],
+        opposing_side: _SideState,
+        eval_seed: int,
+        tmp_path: Path,
+        candidate_tag: str,
+    ) -> EnvironmentConfig:
+        """Materialise one opposition predator's weights and patch env.
+
+        Picks the first opposition genome (deterministic across calls
+        with the same `opposition` list ordering, which itself is
+        seeded via `_build_opposition`). All env predator slots load
+        these weights via the env's
+        `_build_predator_brain` `extra["weights_path"]` hook.
+        """
+        # Decode the opposition genome to a fresh predator brain, save its
+        # weights to a tmp .pt, and patch the env's predator brain_config
+        # to load them on construction.
+        opp_genome = opposition[0]
+        opp_brain = opposing_side.encoder.decode(
+            opp_genome,
             self.sim_config,
-            side.encoder,
-            episodes=side.evolution_config.episodes_per_eval,
             seed=eval_seed,
+        )
+        # `candidate_tag` namespaces the file so multiple
+        # `_build_patched_sim_config` calls within the same per-generation
+        # tmp dir do not collide (concurrent pool workers all read from
+        # the same dir).
+        weights_file = tmp_path / f"opposition_predator_{candidate_tag}.pt"
+        # `encoder.decode` annotates the return as `Brain`; concrete
+        # predator decoders return `MLPPPOPredatorBrain` which satisfies
+        # the separate `PredatorBrain` Protocol. The runtime brain
+        # implements `WeightPersistence`; `save_weights` only needs
+        # `WeightPersistence` (it accepts `Brain` for back-compat but
+        # only consults `get_weight_components`). Cast for the static
+        # checker.
+        save_weights(cast("Brain", opp_brain), weights_file)
+
+        env_cfg = self.sim_config.environment
+        if env_cfg is None or env_cfg.predators is None:
+            msg = (
+                "Prey-side opposition injection requires sim_config.environment.predators "
+                "to be set; got None. The YAML must enable predators with "
+                "`brain_config.kind: mlpppo_predator`."
+            )
+            raise ValueError(msg)
+        predators_cfg = env_cfg.predators
+        existing_brain_cfg = predators_cfg.brain_config
+        if existing_brain_cfg is None:
+            msg = (
+                "Prey-side opposition injection requires "
+                "sim_config.environment.predators.brain_config "
+                "to be set with `kind: mlpppo_predator`. "
+                "Add the block to the YAML."
+            )
+            raise ValueError(msg)
+        # The env's `_build_predator_brain` dispatcher only honours
+        # `extra["weights_path"]` on the `mlpppo_predator` branch —
+        # a `heuristic` brain config would silently ignore the
+        # injected path and the run would proceed with the default
+        # heuristic predator opponent (no opposition signal). Fail
+        # fast so a misconfigured YAML surfaces here rather than
+        # producing a flat-zero fitness gradient.
+        if existing_brain_cfg.kind != "mlpppo_predator":
+            msg = (
+                "Prey-side opposition injection requires "
+                f"sim_config.environment.predators.brain_config.kind == 'mlpppo_predator'; "
+                f"got {existing_brain_cfg.kind!r}. The env's `_build_predator_brain` "
+                "dispatcher only honours `extra['weights_path']` on the learnable "
+                "predator branch."
+            )
+            raise ValueError(msg)
+        new_extra = dict(existing_brain_cfg.extra or {})
+        new_extra["weights_path"] = str(weights_file)
+        new_brain_cfg = existing_brain_cfg.model_copy(update={"extra": new_extra})
+        new_predators_cfg = predators_cfg.model_copy(
+            update={"brain_config": new_brain_cfg},
+        )
+        return env_cfg.model_copy(update={"predators": new_predators_cfg})
+
+    def _build_predator_side_multi_agent_patch(
+        self,
+        *,
+        opposition: list[Genome],
+        opposing_side: _SideState,
+        eval_seed: int,
+        tmp_path: Path,
+        candidate_tag: str,
+    ) -> MultiAgentConfig:
+        """Materialise opposition prey weights and patch multi_agent.
+
+        One env agent slot per opposition genome. Each slot's
+        `BrainContainerConfig` mirrors the YAML's top-level
+        `sim_config.brain` (the prey brain shape); per-slot
+        `weights_path` injects the opposition genome's weights.
+        """
+        if self.sim_config.brain is None:
+            msg = (
+                "Predator-side opposition injection requires sim_config.brain "
+                "(top-level prey brain block) to be set so opposition prey "
+                "agents can construct via the same brain shape."
+            )
+            raise ValueError(msg)
+        # `MultiAgentConfig._validate_population` enforces 2 <= len(agents) <= 10.
+        # Cap the opposition list size so a pop=24 prey side (which produces
+        # ~24 opposition genomes per evaluation) does not blow the schema cap.
+        # Subsample uniformly (preserving the HoF mix order at the head of the
+        # list) rather than truncating arbitrarily — the 70/30 mix is set
+        # upstream in `_build_opposition`, so the head of the list already
+        # reflects the desired prevalence.
+        max_agents = 10
+        min_agents = 2
+        capped_opposition = list(opposition[:max_agents])
+        agent_configs: list[AgentConfig] = []
+        for idx, opp_genome in enumerate(capped_opposition):
+            opp_brain = opposing_side.encoder.decode(
+                opp_genome,
+                self.sim_config,
+                seed=eval_seed,
+            )
+            weights_file = tmp_path / f"opposition_prey_{candidate_tag}_{idx}.pt"
+            save_weights(cast("Brain", opp_brain), weights_file)
+            agent_configs.append(
+                AgentConfig(
+                    id=f"opposition_prey_{idx}",
+                    brain=self.sim_config.brain,
+                    weights_path=str(weights_file),
+                ),
+            )
+        # Pad up to the schema's lower bound (2 agents) with random-init
+        # bootstrap entries when opposition is empty or has only 1 entry.
+        # The schema rejects len(agents) < 2; the fitness function
+        # tolerates extra prey slots since predator metrics aggregate
+        # across slots.
+        bootstrap_idx = 0
+        while len(agent_configs) < min_agents:
+            agent_configs.append(
+                AgentConfig(
+                    id=f"opposition_prey_bootstrap_{bootstrap_idx}",
+                    brain=self.sim_config.brain,
+                    weights_path=None,
+                ),
+            )
+            bootstrap_idx += 1
+        # Replace `count` (if any) with the explicit per-slot config.
+        # `_validate_population` rejects setting both, so we explicitly
+        # null out `count`.
+        existing_ma = self.sim_config.multi_agent
+        if existing_ma is None:
+            return MultiAgentConfig(enabled=True, agents=agent_configs)
+        return existing_ma.model_copy(
+            update={"enabled": True, "count": None, "agents": agent_configs},
         )
 
     # ------------------------------------------------------------------
@@ -1720,9 +2182,11 @@ class CoevolutionLoop:
         Per side: the elite is the latest entry in `champion_history`
         (the K-block elite). When a side has no champions yet (first
         K-block hasn't completed), the probe is a no-op for that side.
-        Held-out evaluations themselves still depend on the
-        call-site sim_config patching that the campaign integration
-        layer is responsible for wiring (see `_evaluate_candidate`).
+        Per-opponent evaluation is deferred — `_probe_one_opponent`
+        returns NaN; the schema + cadence are normative, the body is
+        non-normative pending follow-up. See `_build_patched_sim_config`
+        for the equivalent training-side patching pattern that the
+        probe will reuse once wired.
         """
         with self._probe_csv_path.open("a", newline="") as fh:
             writer = csv.writer(fh)
@@ -1786,7 +2250,8 @@ class CoevolutionLoop:
         patching `sim_config` (heuristic-radius predator for prey-side
         probes; warmstart-style elite prey genome for predator-side
         probes) and calling the side's fitness function. See
-        `_evaluate_candidate` for the full integration plan.
+        `_build_patched_sim_config` for the analogous training-side
+        patching pattern that the probe will reuse once wired.
         """
         del side, elite, opponent_index, eval_seed
         return float("nan")
