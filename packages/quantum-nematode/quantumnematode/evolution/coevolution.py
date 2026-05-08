@@ -249,6 +249,22 @@ class CoevolutionLoop:
         self._k_block_index: int = 0
         self._current_side: Literal["prey", "predator"] = self.coevolution_config.start_side
 
+        # Per-K-block mean-fitness history per side, used by the
+        # rebalance heuristic (§6.14). Each side accumulates one entry
+        # per completed K-block; the rebalance check at K-block end
+        # compares the most-recent K-block means across sides. The
+        # buffers are unbounded but small (one float per K-block; 6
+        # K-blocks at pilot scale).
+        self._k_block_mean_fitness: dict[Literal["prey", "predator"], list[float]] = {
+            "prey": [],
+            "predator": [],
+        }
+        # When the rebalance condition fires, the dominant side gets
+        # an extra K-block — implemented by NOT flipping `_current_side`
+        # at the next K-block boundary. Tracks how many extra blocks
+        # remain to grant; reset when consumed.
+        self._dominant_freeze_blocks_remaining: int = 0
+
         # Generality-probe state. Held-out opponent sets are constructed
         # once at __init__ and never mutated thereafter — opposite of
         # the live `population` and `hof` which both grow / churn during
@@ -669,6 +685,78 @@ class CoevolutionLoop:
         )
 
     # ------------------------------------------------------------------
+    # Rebalance heuristic (§6.14)
+    # ------------------------------------------------------------------
+
+    def _evaluate_rebalance(
+        self,
+        training_side: _SideState,
+        opposing_side: _SideState,  # noqa: ARG002 — accepted for symmetry + future use
+    ) -> bool:
+        """Return True if the current side SHALL flip; False to grant an extra K-block.
+
+        Per design.md Open Question 1 + Risk register row "One side
+        dominates → other's gradient saturates": when the
+        `rebalance_threshold` knob is set and a side's K-block-mean
+        fitness drops below `rebalance_threshold * opposing_side_mean`
+        for >= 3 consecutive K-blocks, freeze the dominant side for an
+        extra K-block (the saturated side keeps training to recover).
+
+        Disabled by default (`rebalance_threshold is None`); pilot may
+        enable if domination is observed.
+
+        The check fires AFTER K-block end (so we have at least one
+        K-block of fitness data on the just-trained side); needs >= 3
+        K-blocks of history on EACH side to evaluate the
+        "consecutively below threshold" predicate. Until both sides
+        have that history, the heuristic is a no-op (returns True =
+        flip normally).
+
+        Returns
+        -------
+        bool
+            True → flip `_current_side` per the standard alternating
+            schedule. False → keep `_current_side` (the saturated side
+            gets an extra K-block).
+        """
+        threshold = self.coevolution_config.rebalance_threshold
+        if threshold is None:
+            return True
+
+        # Both sides need at least 3 K-blocks of history before we can
+        # apply the "≥3 consecutive" rule. Until then, flip normally.
+        min_history = 3
+        prey_history = self._k_block_mean_fitness["prey"]
+        predator_history = self._k_block_mean_fitness["predator"]
+        if len(prey_history) < min_history or len(predator_history) < min_history:
+            return True
+
+        # Pair up the most-recent 3 K-blocks per side (the comparison
+        # is cross-side, so we look at each side's last 3 means).
+        recent_prey = prey_history[-min_history:]
+        recent_predator = predator_history[-min_history:]
+        # Saturation predicate: a side is "saturated" if every one of
+        # its last 3 K-block means is below `threshold * opposing_mean`
+        # (using the corresponding K-block on the opposing side as the
+        # comparison point). Both directions checked: prey saturated
+        # OR predator saturated would each trigger a freeze of the
+        # OTHER side.
+        prey_saturated = all(
+            p < threshold * pr for p, pr in zip(recent_prey, recent_predator, strict=True)
+        )
+        predator_saturated = all(
+            p < threshold * pr for p, pr in zip(recent_predator, recent_prey, strict=True)
+        )
+
+        # Freeze the dominant side: the side OPPOSITE the saturated
+        # one keeps training (so the saturated side has an extra
+        # block of opposition to learn against).
+        if prey_saturated and training_side.name == "prey":
+            return False  # don't flip - prey gets an extra K-block
+        # `predator` saturated branch handled symmetrically.
+        return not (predator_saturated and training_side.name == "predator")
+
+    # ------------------------------------------------------------------
     # Checkpoint / resume (§6.11)
     # ------------------------------------------------------------------
 
@@ -726,6 +814,10 @@ class CoevolutionLoop:
             "predator_hof": self.predator.hof.to_dict(),
             "predator_held_out_specs": [list(spec) for spec in self._predator_held_out_specs],
             "prey_held_out_ids": [g.genome_id for g in self._prey_held_out],
+            "k_block_mean_fitness": {
+                "prey": list(self._k_block_mean_fitness["prey"]),
+                "predator": list(self._k_block_mean_fitness["predator"]),
+            },
         }
         self._atomic_json_write(
             self.output_dir / "coevolution_state.json",
@@ -834,6 +926,16 @@ class CoevolutionLoop:
         self.prey.hof = HallOfFame.from_dict(coevo["prey_hof"])
         self.predator.hof = HallOfFame.from_dict(coevo["predator_hof"])
         self._predator_held_out_specs = [tuple(spec) for spec in coevo["predator_held_out_specs"]]
+        # Optional rebalance-history field (added in checkpoint v1; kept
+        # `.get` to not break older v1 checkpoints that pre-date the
+        # rebalance knob — the `if not in payload` would force a
+        # checkpoint regen).
+        rebalance_state = coevo.get("k_block_mean_fitness")
+        if rebalance_state is not None:
+            self._k_block_mean_fitness = {
+                "prey": list(rebalance_state.get("prey", [])),
+                "predator": list(rebalance_state.get("predator", [])),
+            }
         # Cross-check prey held-out IDs against the freshly loaded
         # bundle. If the bundle has shifted (file added / removed),
         # fail loudly rather than silently use a different set.
@@ -948,14 +1050,30 @@ class CoevolutionLoop:
 
             self._run_one_k_block(training_side, opposing_side)
 
-            # K-block end: flip side, persist state, then rebuild the
-            # just-flipped (now-training) side's optimizer per D2.
-            # Order matters: increment k_block_index BEFORE saving so
-            # the checkpoint records the post-block state (i.e. resume
-            # picks up from the *next* block, not the one that just
-            # finished).
+            # K-block end: flip side (or freeze opposing per the
+            # rebalance heuristic), persist state, then rebuild the
+            # newly-training side's optimizer per D2. Order matters:
+            # increment k_block_index BEFORE saving so the checkpoint
+            # records the post-block state (i.e. resume picks up from
+            # the *next* block, not the one that just finished).
             self._k_block_index += 1
-            self._current_side = "predator" if self._current_side == "prey" else "prey"
+            should_flip = self._evaluate_rebalance(training_side, opposing_side)
+            if should_flip:
+                self._current_side = "predator" if self._current_side == "prey" else "prey"
+            else:
+                # Saturated side gets an extra K-block — `_current_side`
+                # stays the same so the next iteration retrains the
+                # losing side (against the same frozen dominant side).
+                # Logged so the operator can see the rebalance fired.
+                logger.info(
+                    "K-block %d: rebalance heuristic kept training side=%s "
+                    "(this side has been saturated relative to %s for >=3 K-blocks; "
+                    "%s stays frozen for an extra K-block).",
+                    self._k_block_index,
+                    self._current_side,
+                    opposing_side.name,
+                    opposing_side.name,
+                )
             self._save_checkpoint()
             if self._k_block_index < total_blocks:
                 next_training_side = self.prey if self._current_side == "prey" else self.predator
@@ -1018,6 +1136,9 @@ class CoevolutionLoop:
         # generation when a new best appears.
         block_elite_genome: Genome | None = None
         block_elite_fitness: float = float("-inf")
+        # Accumulate all fitnesses across the K-block to compute the
+        # K-block mean for the rebalance heuristic (§6.14).
+        block_fitnesses: list[float] = []
 
         for k_gen in range(cfg.K_per_block):
             global_gen = training_side.generation
@@ -1084,6 +1205,7 @@ class CoevolutionLoop:
 
             # Tell optimiser (CMA-ES minimises; our fitness maximises).
             training_side.optimizer.tell(list(solutions), [-f for f in fitnesses])
+            block_fitnesses.extend(fitnesses)
 
             # Update side-state population + bookkeeping for next gen.
             training_side.population = gen_genomes
@@ -1121,6 +1243,13 @@ class CoevolutionLoop:
                 block_elite_genome.genome_id,
                 block_elite_fitness,
             )
+
+        # Record K-block mean fitness for the rebalance heuristic.
+        # Empty-block fallback is 0.0 — defensive against the
+        # NotImplementedError-stub case + unit tests that may run
+        # zero-iteration K-blocks.
+        block_mean = float(np.mean(block_fitnesses)) if block_fitnesses else 0.0
+        self._k_block_mean_fitness[training_side.name].append(block_mean)
 
     # ------------------------------------------------------------------
     # Opposition + evaluation (§6.7-§6.8)
