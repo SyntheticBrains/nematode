@@ -173,8 +173,8 @@ class PredatorBrainConfig:
     `kind` selects which brain implementation `_build_predator_brain`
     constructs. `"heuristic"` (default) constructs a `HeuristicPredatorBrain`
     byte-equivalent to the legacy `_update_pursuit` / `_update_random` logic;
-    `"mlpppo_predator"` (M5+) constructs a learnable `MLPPPOPredatorBrain`
-    whose weights are evolved by the M5 co-evolution loop.
+    `"mlpppo_predator"` constructs a learnable `MLPPPOPredatorBrain`
+    whose weights are evolved by the co-evolution loop.
     """
 
     kind: Literal["heuristic", "mlpppo_predator"] = "heuristic"

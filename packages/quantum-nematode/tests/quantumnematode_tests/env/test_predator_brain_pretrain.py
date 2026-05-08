@@ -1,14 +1,12 @@
-"""Tests for the predator-brain pretrain helper (M5 PR 1, task 1.4 / 1.6).
+"""Tests for the predator-brain pretrain helper.
 
 Covers:
 
 - Loss decreases by ≥0.05 absolute reduction (initial vs final window)
-  per spec scenario "Imitation Loss Decreases" (relaxed in round-5
-  review — accuracy claim removed).
+  on the imitation-loss invariant.
 - Pretrain modifies brain weights in place.
 - Synthesised params are deterministic given a fixed seed.
-- Pretrained weights round-trip through the encoder unchanged
-  (per spec scenario "Pretrained Weights Round-Trip Through Encoder").
+- Pretrained weights round-trip through the encoder unchanged.
 - Empty agent_positions edge case handled (synthesis always produces
   at least one valid in-pursuit state given enough attempts).
 
@@ -17,9 +15,9 @@ Notes
 The pretrain helper trains on **in-pursuit** states only — out-of-pursuit
 states give the heuristic teacher's noisy random-branch action which
 contains no learnable signal (uniform `rng.integers(4)` draw). This is
-intentional per design.md D7 + the round-5 spec relaxation; the bootstrap
-helper teaches the chase behaviour to break orthogonal-init symmetry, with
-out-of-pursuit policy left for CMA-ES outer-loop evolution.
+intentional: the bootstrap helper teaches the chase behaviour to break
+orthogonal-init symmetry, with out-of-pursuit policy left for CMA-ES
+outer-loop evolution.
 """
 
 from __future__ import annotations

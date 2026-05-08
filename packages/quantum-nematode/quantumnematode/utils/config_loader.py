@@ -319,8 +319,8 @@ class PredatorBrainConfigSchema(BaseModel):
 
     `kind: "heuristic"` (default) constructs a `HeuristicPredatorBrain`
     byte-equivalent to the legacy `_update_pursuit` / `_update_random`
-    logic; `kind: "mlpppo_predator"` (M5+) constructs a learnable
-    `MLPPPOPredatorBrain` whose weights are evolved by the M5 co-evolution
+    logic; `kind: "mlpppo_predator"` constructs a learnable
+    `MLPPPOPredatorBrain` whose weights are evolved by the co-evolution
     loop. The literal type can be extended further when additional learnable
     kinds are introduced.
     """
@@ -1284,6 +1284,146 @@ class ParamSchemaEntry(BaseModel):
             raise ValueError(msg)
 
 
+class CoevolutionConfig(BaseModel):
+    """Configuration for the co-evolution loop.
+
+    A co-evolution run carries TWO `EvolutionConfig` sub-blocks (one per
+    side) plus alternating-schedule controller knobs and gen-0 init
+    plumbing. Validators enforce the substrate invariants at YAML load
+    time so a misconfigured config fails before launch rather than
+    mid-run.
+
+    **Fitness is NOT a YAML field**: prey side is hardcoded to
+    `LearnedPerformanceFitness` and predator side to
+    `PredatorEpisodicKillRate` inside `CoevolutionLoop.__init__`.
+    Making fitness YAML-configurable invites footguns (e.g. predator
+    accidentally configured with `LearnedPerformanceFitness` would
+    multiply per-evaluation cost by ~3x and blow the compute budget).
+
+    Field summary
+    -------------
+    - `prey_evolution`, `predator_evolution`: the two side configs.
+      Both MUST use `algorithm: "cmaes"` with `cma_diagonal: True`
+      (TPE is incompatible with unbounded weight encoders; full-cov
+      CMA-ES is not tractable at predator/prey weight counts).
+    - `K_per_block` (default 10): generations per side before flipping.
+    - `generation_pairs` (no default): number of K-pair blocks (one
+      prey + one predator block = 1 pair). Total generations per side
+      = `generation_pairs * K_per_block`.
+    - `generality_probe_every` (default 10): generations between probe
+      firings against the held-out opponent set.
+    - `start_side` (default "prey"): which side trains first.
+    - `held_out_size` (default 8): held-out opponent count.
+    - `prey_gen0_seed_path`: optional path to a warmstart prey genome
+      JSON. When set, prey side's gen-0 elite is decoded from this file
+      and passed as `CMAESOptimizer(x0=...)`.
+    - `predator_gen0_bootstrap`: either
+      `"heuristic_imitation_pretrain"` (calls
+      `pretrain_against_heuristic` inside `CoevolutionLoop.__init__`)
+      or `"cold_start"` (`x0=zeros`).
+    - `rebalance_threshold`: optional dominance-detection knob. When
+      set, if a side's K-block-mean fitness drops below
+      `rebalance_threshold * opposing_side_mean` for >= 3 consecutive
+      K-blocks, the dominant side is frozen for an extra K-block.
+      Disabled by default.
+    """
+
+    prey_evolution: EvolutionConfig
+    predator_evolution: EvolutionConfig
+    K_per_block: int = Field(default=10, ge=1)
+    generation_pairs: int = Field(ge=1)
+    generality_probe_every: int = Field(default=10, ge=1)
+    start_side: Literal["prey", "predator"] = "prey"
+    held_out_size: int = Field(default=8, ge=1)
+    prey_gen0_seed_path: Path | None = None
+    predator_gen0_bootstrap: Literal["heuristic_imitation_pretrain", "cold_start"] = (
+        "heuristic_imitation_pretrain"
+    )
+    rebalance_threshold: float | None = Field(default=None, gt=0.0, lt=1.0)
+
+    @model_validator(mode="after")
+    def _validate_invariants(self) -> "CoevolutionConfig":
+        """Enforce co-evolution substrate invariants at YAML load time.
+
+        Five rules. A misconfigured YAML that gets past these checks
+        would either (a) blow the compute budget, (b) silently drop
+        the inheritance signal, or (c) fail mid-run with a confusing
+        error.
+
+        1. Both sides use `algorithm == "cmaes"` (TPE is incompatible
+           with unbounded weight encoders).
+        2. Both sides use `cma_diagonal == True` (full-cov CMA-ES is
+           not tractable at the weight counts involved).
+        3. Prey side has `learn_episodes_per_eval > 0` (required by
+           `LearnedPerformanceFitness`).
+        4. Predator side has `learn_episodes_per_eval == 0`
+           (frozen-weight evaluation under `PredatorEpisodicKillRate`).
+        5. Prey side uses `inheritance == "lamarckian"`; predator side
+           uses `inheritance == "none"` (Lamarckian carries the prey
+           weight gradient across generations; the predator genome
+           encoder owns the weight gradient on its side, so
+           `NoInheritance` is correct there).
+        """
+        if self.prey_evolution.algorithm != "cmaes":
+            msg = (
+                f"coevolution.prey_evolution.algorithm must be 'cmaes' "
+                f"(got {self.prey_evolution.algorithm!r}). TPE is "
+                "incompatible with unbounded weight encoders."
+            )
+            raise ValueError(msg)
+        if self.predator_evolution.algorithm != "cmaes":
+            msg = (
+                f"coevolution.predator_evolution.algorithm must be 'cmaes' "
+                f"(got {self.predator_evolution.algorithm!r}). Same rationale "
+                "as prey side."
+            )
+            raise ValueError(msg)
+        if not self.prey_evolution.cma_diagonal:
+            msg = (
+                "coevolution.prey_evolution.cma_diagonal must be True. "
+                "Prey LSTMPPO weight count (~30k+) is well above the n>~100 "
+                "tractability threshold for full-cov CMA-ES."
+            )
+            raise ValueError(msg)
+        if not self.predator_evolution.cma_diagonal:
+            msg = (
+                "coevolution.predator_evolution.cma_diagonal must be True. "
+                "Predator MLPPPO weight count (~10k) is above the n>~100 "
+                "tractability threshold."
+            )
+            raise ValueError(msg)
+        if self.prey_evolution.learn_episodes_per_eval <= 0:
+            msg = (
+                f"coevolution.prey_evolution.learn_episodes_per_eval must be > 0 "
+                f"(got {self.prey_evolution.learn_episodes_per_eval}). "
+                "LearnedPerformanceFitness requires a non-zero K train phase."
+            )
+            raise ValueError(msg)
+        if self.predator_evolution.learn_episodes_per_eval != 0:
+            msg = (
+                f"coevolution.predator_evolution.learn_episodes_per_eval must be 0 "
+                f"(got {self.predator_evolution.learn_episodes_per_eval}). "
+                "Predator side runs PredatorEpisodicKillRate frozen-weight; "
+                "no inner-loop training."
+            )
+            raise ValueError(msg)
+        if self.prey_evolution.inheritance != "lamarckian":
+            msg = (
+                f"coevolution.prey_evolution.inheritance must be 'lamarckian' "
+                f"(got {self.prey_evolution.inheritance!r}); prey side is the "
+                "Lamarckian-LSTMPPO substrate."
+            )
+            raise ValueError(msg)
+        if self.predator_evolution.inheritance != "none":
+            msg = (
+                f"coevolution.predator_evolution.inheritance must be 'none' "
+                f"(got {self.predator_evolution.inheritance!r}); predator side runs "
+                "frozen-weight under PredatorEpisodicKillRate."
+            )
+            raise ValueError(msg)
+        return self
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -1303,6 +1443,13 @@ class SimulationConfig(BaseModel):
     environment: EnvironmentConfig | None = None
     multi_agent: MultiAgentConfig | None = None
     evolution: EvolutionConfig | None = None
+    # Co-evolution sub-block. When set, the run dispatches
+    # through `CoevolutionLoop` instead of the single-population
+    # `EvolutionLoop`. Mutually exclusive with the top-level `evolution`
+    # field at the campaign-driver level (the driver picks one or the
+    # other based on which sub-block is populated); both being None is
+    # the "non-evolution scenario" case.
+    coevolution: CoevolutionConfig | None = None
     # Hyperparameter-evolution schema: top-level list of param-schema
     # entries.  When None (the default), runs use weight-evolution
     # dispatch.  When set, the run is a hyperparameter-evolution run
@@ -1310,6 +1457,27 @@ class SimulationConfig(BaseModel):
     # of brain.name.  See the evolution-framework capability spec for
     # the full contract.
     hyperparam_schema: list[ParamSchemaEntry] | None = None
+
+    @model_validator(mode="after")
+    def _validate_evolution_coevolution_exclusive(self) -> "SimulationConfig":
+        """Reject configs that set both `evolution` and `coevolution`.
+
+        The two top-level sub-blocks dispatch to different campaign
+        drivers (`EvolutionLoop` vs `CoevolutionLoop`); having both
+        populated would silently let one win at the driver site,
+        masking a config-author mistake. Forcing the user to pick one
+        keeps the dispatch unambiguous.
+        """
+        if self.evolution is not None and self.coevolution is not None:
+            msg = (
+                "Cannot set both 'evolution' and 'coevolution' top-level "
+                "blocks — they are mutually exclusive (each dispatches a "
+                "different campaign driver). Pick one: 'evolution' for "
+                "single-population runs, 'coevolution' for two-population "
+                "co-evolution runs."
+            )
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _validate_hyperparam_schema(self) -> "SimulationConfig":  # noqa: C901, PLR0912
@@ -1343,6 +1511,14 @@ class SimulationConfig(BaseModel):
         # EvolutionConfig._validate_inheritance) because the
         # hyperparam_schema field lives on SimulationConfig, not
         # EvolutionConfig.
+        #
+        # Single-population paths only — co-evolution intentionally
+        # pairs `inheritance="lamarckian"` (prey side) with weight
+        # evolution and NO `hyperparam_schema`; that's the canonical
+        # Lamarckian-LSTMPPO substrate the prey side reuses.
+        # Applying this guard there would conflict with the documented
+        # `CoevolutionConfig._validate_invariants` contract that
+        # *requires* prey-side inheritance to be "lamarckian".
         if (
             self.evolution is not None
             and self.evolution.inheritance != "none"
@@ -1428,23 +1604,25 @@ class SimulationConfig(BaseModel):
         # reshape some layer's state_dict, which ``load_weights`` would then
         # either crash on or silently mis-load.  Reject at load time so the
         # 100-genome x 20-generation campaign doesn't discover the problem
-        # mid-run.
-        if self.evolution is not None and self.evolution.warm_start_path is not None:
-            offenders = sorted(
-                {entry.name for entry in self.hyperparam_schema} & _ARCHITECTURE_CHANGING_FIELDS,
-            )
-            if offenders:
-                msg = (
-                    "evolution.warm_start_path is set but hyperparam_schema "
-                    f"contains architecture-changing entries: {offenders}.  "
-                    "Warm-start loads a fixed-shape checkpoint; the genome "
-                    "cannot reshape the brain at the same time.  Either "
-                    "(a) drop the architecture entries from the schema and "
-                    "evolve only non-architecture fields (learning rates, "
-                    "gamma, entropy, etc.), or (b) drop warm_start_path and "
-                    "let each genome train from a fresh init."
+        # mid-run. Applies to single-population AND co-evolution paths.
+        for label, evolution_cfg in self._iter_evolution_configs():
+            if evolution_cfg.warm_start_path is not None:
+                offenders = sorted(
+                    {entry.name for entry in self.hyperparam_schema}
+                    & _ARCHITECTURE_CHANGING_FIELDS,
                 )
-                raise ValueError(msg)
+                if offenders:
+                    msg = (
+                        f"{label}.warm_start_path is set but hyperparam_schema "
+                        f"contains architecture-changing entries: {offenders}.  "
+                        "Warm-start loads a fixed-shape checkpoint; the genome "
+                        "cannot reshape the brain at the same time.  Either "
+                        "(a) drop the architecture entries from the schema and "
+                        "evolve only non-architecture fields (learning rates, "
+                        "gamma, entropy, etc.), or (b) drop warm_start_path and "
+                        "let each genome train from a fresh init."
+                    )
+                    raise ValueError(msg)
 
         # Inheritance arch-fields incompatibility: same shape-mismatch
         # reasoning as warm-start above, applied to per-genome dynamic
@@ -1452,22 +1630,49 @@ class SimulationConfig(BaseModel):
         # _ARCHITECTURE_CHANGING_FIELDS denylist.  Applies to Lamarckian
         # ONLY: Baldwin doesn't load weights, so shape mismatches are
         # fine — a future Baldwin arm can evolve actor_hidden_dim etc.
-        if self.evolution is not None and self.evolution.inheritance == "lamarckian":
-            offenders = sorted(
-                {entry.name for entry in self.hyperparam_schema} & _ARCHITECTURE_CHANGING_FIELDS,
-            )
-            if offenders:
-                msg = (
-                    f"evolution.inheritance is {self.evolution.inheritance!r} but "
-                    f"hyperparam_schema contains architecture-changing entries: "
-                    f"{offenders}.  Per-genome checkpoints cannot be loaded "
-                    "into a child whose architecture differs from the parent's. "
-                    "Either drop the architecture entries from the schema and "
-                    "evolve only non-architecture fields, or drop inheritance."
+        for label, evolution_cfg in self._iter_evolution_configs():
+            if evolution_cfg.inheritance == "lamarckian":
+                offenders = sorted(
+                    {entry.name for entry in self.hyperparam_schema}
+                    & _ARCHITECTURE_CHANGING_FIELDS,
                 )
-                raise ValueError(msg)
+                if offenders:
+                    msg = (
+                        f"{label}.inheritance is {evolution_cfg.inheritance!r} but "
+                        f"hyperparam_schema contains architecture-changing entries: "
+                        f"{offenders}.  Per-genome checkpoints cannot be loaded "
+                        "into a child whose architecture differs from the parent's. "
+                        "Either drop the architecture entries from the schema and "
+                        "evolve only non-architecture fields, or drop inheritance."
+                    )
+                    raise ValueError(msg)
 
         return self
+
+    def _iter_evolution_configs(
+        self,
+    ) -> "list[tuple[str, EvolutionConfig]]":
+        """Yield `(label, EvolutionConfig)` pairs for every evolution sub-block.
+
+        Returns the single-population `evolution` config (labelled
+        `"evolution"`) and/or the two co-evolution sides (labelled
+        `"coevolution.prey_evolution"` /
+        `"coevolution.predator_evolution"`). The mutual-exclusion check
+        between `evolution` and `coevolution` runs in a separate
+        validator so this helper is safe to call when both are set
+        (it just yields all of them).
+        """
+        out: list[tuple[str, EvolutionConfig]] = []
+        if self.evolution is not None:
+            out.append(("evolution", self.evolution))
+        if self.coevolution is not None:
+            out.append(
+                ("coevolution.prey_evolution", self.coevolution.prey_evolution),
+            )
+            out.append(
+                ("coevolution.predator_evolution", self.coevolution.predator_evolution),
+            )
+        return out
 
 
 # Brain-config fields whose values change tensor shapes (and therefore the

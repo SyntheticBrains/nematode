@@ -177,7 +177,7 @@ class TestMLPPPOPredatorDispatch:
         for pred in env.predators:
             assert isinstance(pred.brain, MLPPPOPredatorBrain)
             # AND it SHALL also be `isinstance(brain, PredatorBrain)`
-            # via the @runtime_checkable Protocol from M1.
+            # via the @runtime_checkable Protocol.
             from quantumnematode.env import PredatorBrain
 
             assert isinstance(pred.brain, PredatorBrain)

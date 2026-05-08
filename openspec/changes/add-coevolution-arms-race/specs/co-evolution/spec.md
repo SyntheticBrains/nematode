@@ -2,24 +2,25 @@
 
 ### Requirement: CoevolutionLoop Orchestrator
 
-The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population) and SHALL reuse the existing `EvolutionLoop._evaluate_in_worker` multiprocessing worker pattern per side, with opponent brain weights injected via `sim_config` patching following the M2 idiom.
+The system SHALL provide a `CoevolutionLoop` orchestrator that drives two populations (prey and predator) through an alternating-schedule co-evolution run. The loop SHALL compose two side-state objects (each with its own encoder, fitness, optimiser, inheritance strategy, hall-of-fame, and population). The per-evaluation interface SHALL align with the existing `EvolutionLoop._evaluate_in_worker` 11-tuple ABI so that PR 4's smoke config can swap in `multiprocessing.Pool` + `pool.map(_evaluate_in_worker, eval_args)` for parallelism without changing the loop body. Opponent brain weights are injected at evaluation time via `sim_config` patching at the call site (the worker tuple ABI is unchanged).
 
 #### Scenario: Side State Surface
 
 - **GIVEN** a `CoevolutionLoop` instance
-- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: CMAESOptimizer` constructed with `diagonal=True` (sep-CMA-ES, imported from `quantumnematode.optimizers.evolutionary`), `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[Genome]`
+- **THEN** each side state SHALL carry an `encoder: GenomeEncoder`, `fitness: FitnessFunction`, `optimizer: CMAESOptimizer` constructed with `diagonal=True` (sep-CMA-ES, imported from `quantumnematode.optimizers.evolutionary`), `inheritance: InheritanceStrategy`, `hof: HallOfFame`, `population: list[Genome]`, and `champion_history: list[dict[str, Any]]`
 - **AND** the prey side state SHALL be configured with `LearnedPerformanceFitness` (Lamarckian-style: K_train=50 inner-loop training + L_eval=25 frozen evaluation episodes per genome) plus `LamarckianInheritance`, mirroring the M3 Lamarckian-LSTMPPO winner stack
 - **AND** the predator side state SHALL be configured with `PredatorEpisodicKillRate` (frozen-weight evaluation only: N_eval=25 multi-agent episodes per genome, NO inner-loop PPO training, NO weight capture) plus `NoInheritance`
 - **AND** the asymmetric fitness shapes are intentional per design.md D13 — prey trains per evaluation (large policy space, M3 substrate); predator evaluates frozen (small policy space, direct CMA-ES weight gradient suffices)
 - **AND** `hof` SHALL be a bounded buffer with eviction policy (the runtime opposition-sampling pool)
-- **AND** `champion_history` SHALL be unbounded — exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), never evicted; the time-ordered audit log walked by aggregator-time analysis (cycling, escalation). Distinct from per-generation lineage rows AND distinct from `hof`. A K-block's elite genome lands in BOTH `hof` (subject to eviction) and `champion_history` (unbounded)
+- **AND** `champion_history` SHALL be unbounded — exactly one entry per completed K-block (the K-block's top-fitness genome at K-block end), never evicted; the time-ordered audit log walked by aggregator-time analysis (cycling, escalation). Distinct from per-generation lineage rows AND distinct from `hof`. A K-block's elite genome lands in BOTH `hof` (subject to eviction) and `champion_history` (unbounded). Each entry is a dict `{genome_id: str, generation: int, k_block_index: int, fitness: float, params: list[float]}` — JSON-serialisable so the aggregator can read it without a numpy dependency
 
 #### Scenario: Composition Over Inheritance
 
 - **GIVEN** the `CoevolutionLoop` class
 - **THEN** it SHALL NOT subclass `EvolutionLoop`
-- **AND** it SHALL invoke worker evaluation via `EvolutionLoop._evaluate_in_worker` so the existing 11-tuple worker pattern (`(params, sim_config, encoder, fitness, episodes, seed, generation, index, parent_ids, warm_start_path_override, weight_capture_path)`) is preserved verbatim
-- **AND** the opposing-side opponent brain weights SHALL be injected at evaluation time via `sim_config` patching at the call site (the worker tuple ABI is unchanged)
+- **AND** the per-evaluation call shape (`fitness.evaluate(genome, sim_config, encoder, *, episodes, seed)`) SHALL be compatible with the existing 11-tuple worker pattern (`(params, sim_config, encoder, fitness, episodes, seed, generation, index, parent_ids, warm_start_path_override, weight_capture_path)`) so that `pool.map(_evaluate_in_worker, eval_args)` can be wired in with no body change
+- **AND** PR 3 of the M5 series ships sequential evaluation (no `multiprocessing.Pool` instantiated yet); PR 4 wires the pool alongside the smoke config that exercises end-to-end opposition injection. The interface is the contract; the dispatch is a runtime detail
+- **AND** the opposing-side opponent brain weights SHALL be injected at evaluation time via `sim_config` patching at the call site. PR 3 records the opposition draw via `HallOfFame.mix_with_pop` but invokes `fitness.evaluate(...)` with the unpatched `sim_config`; the actual weight-injection patch (decoded predator brains installed on `Predator.brain` slots; decoded prey brains exposed via `sim_config.multi_agent.agents`) lands in PR 4 alongside the smoke config that can validate the integrated path
 - **AND** each side's `fitness.evaluate` SHALL conform to the existing `FitnessFunction` Protocol surface `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`
 
 ### Requirement: Alternating Training Schedule
@@ -69,7 +70,7 @@ The system SHALL drive the co-evolution loop under an alternating schedule with 
 
 - **GIVEN** a `CoevolutionLoop` instance and a YAML config specifying `predator_gen0_bootstrap: "heuristic_imitation_pretrain"` (D7 arm A) or `"cold_start"` (D7 arm B)
 - **WHEN** the loop initialises
-- **THEN** for arm A, the predator-side `CMAESOptimizer` SHALL be constructed with `x0` set to the result of `instantiate_predator_brain_from_sim_config` followed by 50-episode `pretrain_against_heuristic` (via the helper at `quantumnematode/env/_predator_brain_pretrain.py`)
+- **THEN** for arm A, the predator-side `CMAESOptimizer` SHALL be constructed with `x0` set to the flattened weights of a fresh `MLPPPOPredatorBrain` (default constructor) trained for 50 batches via `pretrain_against_heuristic` (the helper at `quantumnematode/env/_predator_brain_pretrain.py`). Note: PR 3 calls `MLPPPOPredatorBrain()` directly rather than going through `instantiate_predator_brain_from_sim_config` because gen-0 init is a one-shot operation that doesn't need the full sim_config + factory plumbing — orthogonal-init weights are about to be overwritten by 50 batches of pretrain anyway. The encoder factory IS used at decode time (per genome) inside `MLPPPOPredatorEncoder.decode`, which is the load-bearing path the factory was designed for.
 - **AND** for arm B, the predator-side `CMAESOptimizer` SHALL be constructed with `x0=zeros` (random-init MLPPPO weights via the brain's own constructor)
 - **AND** seed 42 of the pilot SHALL use arm A; seed 43 SHALL use arm B (per "Pilot Configuration" scenario)
 
@@ -110,9 +111,29 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 - **GIVEN** `generality_probe_every=10` and a `CoevolutionLoop` configured with `output_dir`
 - **WHEN** generation index G is reached such that `G % 10 == 0`
 - **THEN** the loop SHALL evaluate each side's elite against the full held-out opponent set
-- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`
+- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`. PR 3 writes the schema rows but the `fitness` column may be `NaN` until the opposition-injection wiring lands in PR 4 (real held-out evaluation depends on patched `sim_config` per "Composition Over Inheritance" scenario)
+- **AND** the probe SHALL be a no-op for sides whose `champion_history` is empty (the first K-block on each side hasn't completed yet, so there is no elite to probe)
 - **AND** per-side lineage CSVs SHALL live at `{output_dir}/prey/lineage.csv` and `{output_dir}/predator/lineage.csv` (per-side subdirs match the existing `EvolutionLoop` output shape — M3 single-population analysis tooling reuses unchanged)
 - **AND** champion_history SHALL live at `{output_dir}/champion_history.json` (top-level, single file with `prey` + `predator` dict keys)
+
+#### Scenario: Held-Out Bundle Missing Falls Back To No-Op (PR 3 only)
+
+- **GIVEN** a `CoevolutionLoop` instance whose `configs/evolution/coevolution_held_out_prey/` directory is missing or empty (PR 3 ships before PR 4 task 7.0a curates the production prey held-out bundle)
+- **WHEN** the loop initialises and constructs the prey held-out set
+- **THEN** the loader SHALL log a one-time warning and return an empty list rather than raising
+- **AND** the prey-side probe SHALL be a no-op for that run (probe still fires for the predator side, which constructs its held-out specs from the heuristic-radius grid without a bundle)
+- **Rationale:** allows PR 3 unit tests + smoke runs to exercise the loop end-to-end before the production bundle is curated; PR 4 ships the bundle and the warning becomes a no-op in production.
+
+#### Scenario: Checkpoint File Layout
+
+- **GIVEN** a `CoevolutionLoop` instance configured with `output_dir`
+- **WHEN** the loop reaches a K-block boundary and `_save_checkpoint` fires
+- **THEN** four files SHALL be written atomically (tmp file + rename per file):
+  - `{output_dir}/prey/checkpoint.pkl` — per-side pickle: optimizer + population_params + population_genome_ids + prev_generation_ids + generation + champion_history + checkpoint_version. Reuses the `EvolutionLoop._save_checkpoint` shape so M3 single-population resume tooling can introspect.
+  - `{output_dir}/predator/checkpoint.pkl` — same shape as prey.
+  - `{output_dir}/coevolution_state.json` — top-level human-readable JSON: k_block_index + current_side + prey_hof + predator_hof (via `HallOfFame.to_dict`) + predator_held_out_specs + prey_held_out_ids + k_block_mean_fitness (rebalance heuristic state).
+  - `{output_dir}/coevolution_rng.pkl` — master RNG state + held-out RNG state (numpy bit_generator state has nested arrays that don't JSON natively, hence the separate pickle).
+- **AND** `_load_checkpoint` SHALL verify checkpoint_version on each per-side pickle; mismatch raises `ValueError`. The prey held-out bundle SHALL be cross-checked against `prey_held_out_ids` recorded in the JSON; bundle drift between save and resume raises `ValueError` to prevent silent state corruption.
 
 #### Scenario: Probe Does Not Mutate Population State
 
@@ -129,9 +150,8 @@ The system SHALL evaluate full-run results against a softened-disjunctive decisi
 
 - **GIVEN** a per-generation Red Queen metric series for a single seed
 - **WHEN** the verdict aggregator evaluates the cycling criterion
-- **THEN** the criterion SHALL fire if either:
-  - The Lomb-Scargle / autocorrelation peak for the series occurs at lag ∈ [3, 15] generations with significance p < 0.05, OR
-  - The dominant FFT bin (excluding DC) has power greater than 2× the median bin power
+- **THEN** the criterion SHALL fire if `phenotypic_cycling(series, lag_range=(3, 15))` returns `cycling_detected=True` (i.e. the OLS-detrended autocorrelation peak in the lag range has permutation-null `p_value < 0.05`); see "Phenotypic Cycling Metric" in `red-queen-analysis/spec.md` for the full algorithm
+- **Implementation note:** earlier drafts of this scenario disjoined an FFT-bin-power threshold ("dominant FFT bin > 2× median bin power") with the autocorrelation peak. The shipped `phenotypic_cycling` uses autocorrelation only — it suffices for the verdict-gate inference task and avoids a scipy dependency. The verdict aggregator (PR 5) consumes the autocorrelation result directly.
 
 #### Scenario: Escalation Criterion
 

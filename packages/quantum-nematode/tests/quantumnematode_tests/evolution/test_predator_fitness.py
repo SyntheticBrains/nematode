@@ -1,6 +1,6 @@
-"""Tests for :mod:`quantumnematode.evolution.predator_fitness` (task 3.6).
+"""Tests for :mod:`quantumnematode.evolution.predator_fitness`.
 
-Covers spec scenarios from `evolution-framework/spec.md`:
+Covers:
 
 - FitnessFunction Protocol conformance (`isinstance` via runtime_checkable).
 - `evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`

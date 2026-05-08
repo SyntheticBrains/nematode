@@ -1,4 +1,4 @@
-"""Tests for `MLPPPOPredatorBrain` (M5 PR 1).
+"""Tests for `MLPPPOPredatorBrain`.
 
 Covers:
 
@@ -325,7 +325,7 @@ class TestParamCount:
     """Architecture defaults yield the expected parameter count."""
 
     def test_default_param_count_is_around_10k(self) -> None:
-        """Verify the default architecture has ~10k parameters per design.md D2."""
+        """Verify the default architecture has ~10k parameters."""
         brain = MLPPPOPredatorBrain(seed=42)
         n_params = sum(
             p.numel() for p in list(brain.actor.parameters()) + list(brain.critic.parameters())
