@@ -119,7 +119,7 @@ A second design constraint comes from M4's STOP closure: single-task K=50 PPO ha
 
 **Decision:** Every 10 generations, evaluate the current population's elite (top-1) on each side against a *held-out* opponent set — `held_out_size` opponents (default 8) pre-built at run start that have NEVER been used in training. Held-out set sources:
 
-- **Prey side:** drawn from a small bundle of pre-trained M3-Lamarckian-style prey elite genomes committed to the repo at `configs/evolution/coevolution_held_out_prey/*.json` (8 genomes × ~tens of KB each). Committing the bundle keeps the probe reproducible on a fresh checkout — gitignored `artifacts/` paths cannot be relied on.
+- **Prey side:** drawn from a small bundle of pre-trained M3-Lamarckian-style prey elite genomes committed to the repo at `configs/evolution/coevolution_held_out_prey/*.json` (~tens of KB per genome). Committing the bundle keeps the probe reproducible on a fresh checkout — gitignored `artifacts/` paths cannot be relied on. **Bundle size:** the production bundle ships 4 distinct genomes (one per source-campaign seed; the M3 lamarckian-LSTMPPO source GC'd intermediate elite checkpoints, so the original "8 held-out, 2 per seed" plan reduced to 4). All shipped co-evolution YAMLs set `held_out_size: 4` to match the bundle exactly. The `CoevolutionConfig` schema default stays at 8 for forward-compat with future expanded bundles — when `held_out_size > len(bundle)` the loader samples WITH replacement, so an oversized config still runs (with sample repetition).
 - **Predator side:** drawn from heuristic-radius variants spanning a configurable Cartesian grid `detection_radius × damage_radius`. Default grid is `detection_radius ∈ {4, 6, 8, 10} × damage_radius ∈ {0, 1}` (8 combos = `held_out_size=8`); when `held_out_size` differs, the loop SHALL widen or sub-sample the grid deterministically (e.g. via `held_out_rng.choice` with a fixed seed) so the held-out set count always matches `held_out_size`.
 
 **Rationale:** Sakana 2025 — generality probe is the discriminator between "escalation" (real progress generalising to held-out opposition) and "self-play overfitting" (training fitness climbs while held-out flat or drops). The probe is reported alongside the verdict gate but is not itself a verdict input — softened-disjunctive (cycling OR escalation in ≥2 of 4 seeds) is the gate, generality is the *interpretation guide*.
@@ -430,7 +430,7 @@ No data migration. Behaviour change is opt-in via `PredatorBrainConfig.kind: "ml
 1. Land predator brain + dispatcher (PR 1, tasks 1.1–2.4).
 2. Land predator brain factory + encoder + fitness (PR 2, tasks 3.0–3.6).
 3. Land HoF + Red Queen metrics + CoevolutionLoop (PR 3, tasks 4.1–6.10).
-4. Land configs + held-out bundle + driver + smoke (PR 4, tasks 7.0–7.6).
+4. Land configs + held-out bundle + driver + smoke (PR 4, tasks 7.0a–7.6).
 5. Land aggregator + plots (PR 5, tasks 8.1–8.5; can develop in parallel with PR 4).
 6. Run pilot, land logbook section (PR 6, tasks 9.1–9.6).
 7. Run full, land verdict logbook (PR 7, tasks 10.1–10.6).
