@@ -105,7 +105,7 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 - **GIVEN** a `CoevolutionLoop` configured with `held_out_size=N` (the schema default is 8 for forward-compat with future expanded bundles; production YAMLs ship with `held_out_size=4` to match the curated bundle exactly — see footnote)
 - **WHEN** the loop initialises
 - **THEN** a held-out opponent set of size `held_out_size` SHALL be constructed for each side
-- **AND** the prey-side held-out set SHALL be loaded from a committed in-repo bundle at `configs/evolution/coevolution_held_out_prey/*.json` (one genome per file, ~tens of KB each). When the bundle ships fewer than `held_out_size` distinct genomes, the loader samples WITH replacement (so the configured set size is honoured at the cost of sample repetition); when at least `held_out_size` are available, the loader samples WITHOUT replacement
+- **AND** the prey-side held-out set SHALL be loaded from a committed in-repo bundle at `configs/evolution/coevolution_warmstart_prey/*.json` (one genome per file, ~1.2 MB each at LSTMPPO + klinotaxis brain shape; routed through Git LFS via `.gitattributes`). The same bundle directory serves as both the gen-0 warm-start anchor source (per-seed `prey_gen0_seed_path`) and the held-out probe opponents — one bundle, two roles, avoiding ~5 MB of byte-identical duplication. When the bundle ships fewer than `held_out_size` distinct genomes, the loader samples WITH replacement (so the configured set size is honoured at the cost of sample repetition); when at least `held_out_size` are available, the loader samples WITHOUT replacement
 - **AND** the predator-side held-out set SHALL be drawn from a heuristic-predator Cartesian grid `detection_radius × damage_radius` (default `{4, 6, 8, 10} × {0, 1}` = 8 combos at default `held_out_size=8`); when `held_out_size > grid_size` the rng samples WITH replacement; when `held_out_size < grid_size` the rng samples WITHOUT replacement; both via `held_out_rng.choice` with a fixed seed
 - **AND** held-out opponents SHALL NEVER be used in training evaluations
 - **AND** held-out genome bundles SHALL be committed to the repo (NOT stored only in `artifacts/`) so a fresh checkout can run the campaign reproducibly
@@ -123,7 +123,7 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 
 #### Scenario: Held-Out Bundle Missing Falls Back To No-Op
 
-- **GIVEN** a `CoevolutionLoop` instance whose `configs/evolution/coevolution_held_out_prey/` directory is missing or empty
+- **GIVEN** a `CoevolutionLoop` instance whose prey reference bundle directory (`configs/evolution/coevolution_warmstart_prey/`) is missing or empty
 - **WHEN** the loop initialises and constructs the prey held-out set
 - **THEN** the loader SHALL log a one-time warning and return an empty list rather than raising
 - **AND** the prey-side probe SHALL be a no-op for that run (probe still fires for the predator side, which constructs its held-out specs from the heuristic-radius grid without a bundle)

@@ -138,8 +138,14 @@ CHECKPOINT_VERSION = 1
 # quantumnematode/ → packages/quantum-nematode/ → repo root). The
 # campaign driver may override `CoevolutionLoop._PREY_HELD_OUT_BUNDLE_DIR`
 # (e.g. for multi-bundle ablations), and tests likewise.
+# Unified prey reference bundle: same source genomes serve as both
+# the prey gen-0 warmstart anchor (per-seed `seed_{N}.json` consumed
+# by `_load_prey_warmstart`) AND the held-out probe opponents
+# (consumed by `_load_held_out_prey_bundle`). The two roles share the
+# same provenance JSONs by design — the curation script writes one
+# bundle dir; both loaders read from it.
 _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
-    Path(__file__).resolve().parents[4] / "configs" / "evolution" / "coevolution_held_out_prey"
+    Path(__file__).resolve().parents[4] / "configs" / "evolution" / "coevolution_warmstart_prey"
 )
 
 
@@ -577,7 +583,14 @@ class CoevolutionLoop:
     # ------------------------------------------------------------------
 
     def _load_held_out_prey_bundle(self) -> list[Genome]:
-        """Load held-out prey genomes from `configs/evolution/coevolution_held_out_prey/*.json`.
+        """Load held-out prey genomes from `configs/evolution/coevolution_warmstart_prey/*.json`.
+
+        The held-out probe loader reads from the SAME bundle directory
+        as the prey warmstart (`_load_prey_warmstart`): same source
+        genomes, two roles. Per-seed warmstart anchors (`seed_{N}.json`,
+        consumed at gen-0 init) and held-out probe opponents (consumed
+        every `generality_probe_every` gens) are byte-identical files;
+        unifying the bundle dir avoids duplicating ~5 MB of JSON in-repo.
 
         Each JSON file in the bundle directory is expected to follow the
         warmstart fixture format (`{genome_id, generation, fitness,
@@ -1133,7 +1146,7 @@ class CoevolutionLoop:
 
         Held-out sets are NOT re-serialised in detail — the prey
         bundle is reconstructed BY ID from
-        `configs/evolution/coevolution_held_out_prey/*.json`
+        `configs/evolution/coevolution_warmstart_prey/*.json`
         (`_reload_prey_held_out_by_ids`) so the recorded order is
         preserved without depending on RNG state.
         """

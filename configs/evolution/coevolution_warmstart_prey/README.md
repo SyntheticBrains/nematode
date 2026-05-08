@@ -1,6 +1,24 @@
-# Coevolution prey warmstart bundle
+# Coevolution prey reference bundle
 
-Each `seed_{N}.json` is the prey gen-0 warm-start anchor (`CMAESOptimizer(x0=...)`) for the matching co-evolution run seed. `CoevolutionLoop.__init__` reads `coevolution.prey_gen0_seed_path` from the YAML — typically templated as `seed_<run_seed>.json` so each campaign seed loads its own warmstart anchor.
+Each `seed_{N}.json` is one prey LSTMPPO elite genome with TWO roles
+in the co-evolution loop, both consumed from this single bundle:
+
+1. **Gen-0 warm-start anchor** for the prey CMA-ES (per-seed
+   `coevolution.prey_gen0_seed_path` in the YAML, consumed by
+   `CoevolutionLoop._load_prey_warmstart`). Each campaign seed loads
+   its own anchor (template is `seed_<run_seed>.json`).
+2. **Held-out probe opponents** for the co-evolution generality
+   probe. `CoevolutionLoop._load_held_out_prey_bundle` walks the same
+   directory and loads ALL JSONs (one per seed) into the held-out
+   set, then samples `held_out_size` of them per probe firing.
+
+The two roles share the same source genomes by design — one bundle
+on disk avoids ~5 MB of byte-identical duplication between separate
+warmstart/ and held-out/ directories.
+
+Files committed to repo (vs `artifacts/`) so a fresh checkout can run
+the campaign reproducibly. Routed through Git LFS via the repo's
+`configs/**/*.json` rule in `.gitattributes`.
 
 ## Provenance
 

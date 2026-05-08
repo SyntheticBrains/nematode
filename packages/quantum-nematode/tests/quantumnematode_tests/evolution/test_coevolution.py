@@ -261,10 +261,21 @@ class TestHeldOutConstruction:
 
     def test_prey_held_out_missing_bundle_no_op(self, tmp_path: Path) -> None:
         """Missing prey held-out bundle SHALL log a warning and return []."""
-        # No `configs/evolution/coevolution_held_out_prey/` dir exists
-        # in the test fixtures; the loader should gracefully no-op.
-        loop = _make_loop(tmp_path)
-        assert loop._prey_held_out == []
+        # Override the class-level `_PREY_HELD_OUT_BUNDLE_DIR` to a
+        # tmp path that doesn't exist on disk so we exercise the
+        # missing-dir branch directly. The production bundle
+        # (`configs/evolution/coevolution_warmstart_prey/`) DOES exist
+        # on a fresh checkout, so testing the no-op path requires an
+        # explicit override here.
+        from quantumnematode.evolution.coevolution import CoevolutionLoop
+
+        with patch.object(
+            CoevolutionLoop,
+            "_PREY_HELD_OUT_BUNDLE_DIR",
+            tmp_path / "no_such_bundle",
+        ):
+            loop = _make_loop(tmp_path)
+            assert loop._prey_held_out == []
 
 
 # ---------------------------------------------------------------------------
@@ -978,7 +989,7 @@ class TestHeldOutBundlePathRepoAnchored:
 
     Pre-fix gap: `_load_held_out_prey_bundle` and
     `_reload_prey_held_out_by_ids` used a bare relative path
-    `Path("configs/evolution/coevolution_held_out_prey")` resolved
+    `Path("configs/evolution/coevolution_warmstart_prey")` resolved
     against cwd. A campaign driver launched from `/tmp` (or any
     non-repo-root cwd) would silently no-op the loader.
     Post-fix: class attribute `_PREY_HELD_OUT_BUNDLE_DIR` is anchored
@@ -987,15 +998,16 @@ class TestHeldOutBundlePathRepoAnchored:
     """
 
     def test_bundle_path_anchored_to_repo_root(self) -> None:
-        """Class attribute SHALL resolve to `<repo>/configs/evolution/coevolution_held_out_prey`."""
+        """Class attribute SHALL resolve under `configs/evolution/coevolution_warmstart_prey`."""
         from quantumnematode.evolution.coevolution import (
             _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR,
         )
 
         # Repo root is the parent of `packages/quantum-nematode/...`.
         # The resolved path's last 3 components MUST be
-        # `configs/evolution/coevolution_held_out_prey`.
-        assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.name == "coevolution_held_out_prey"
+        # `configs/evolution/coevolution_warmstart_prey`. Same dir as
+        # the warmstart bundle — held-out + warmstart share genomes.
+        assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.name == "coevolution_warmstart_prey"
         assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.parent.name == "evolution"
         assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.parent.parent.name == "configs"
 

@@ -1,18 +1,20 @@
-"""Curate prey held-out + warmstart bundles for the co-evolution loop.
+"""Curate the prey reference bundle for the co-evolution loop.
 
 This is a one-shot data-preparation utility: it loads the per-seed final
 elite LSTMPPO weight checkpoints from a prior single-population
 campaign (typically the lamarckian-LSTMPPO-klinotaxis-predator pilot at
 ``artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-{42,43,44,45}/``),
 flattens each elite's weights via the same ``MLPPPOEncoder`` /
-``LSTMPPOEncoder`` flatten path the genome encoder uses, and emits two
-JSON bundles:
+``LSTMPPOEncoder`` flatten path the genome encoder uses, and emits one
+JSON bundle:
 
 * ``configs/evolution/coevolution_warmstart_prey/seed_{42..45}.json``:
-  one elite per seed for prey gen-0 warm-start (``CMAESOptimizer(x0=...)``).
-* ``configs/evolution/coevolution_held_out_prey/seed_{42..45}.json``:
-  one elite per seed for the generality probe held-out opponent set.
-  Same source genomes as the warmstart bundle; different role.
+  serves BOTH the prey gen-0 warm-start anchor
+  (``CMAESOptimizer(x0=...)``, consumed by ``_load_prey_warmstart``)
+  AND the generality probe's prey-side held-out set (consumed by
+  ``_load_held_out_prey_bundle``). The two roles share the same
+  source genomes; one bundle on disk avoids ~5 MB of byte-identical
+  duplication.
 
 Output schema (matches ``CoevolutionLoop._load_prey_warmstart`` /
 ``_load_held_out_prey_bundle`` expectations):
@@ -43,11 +45,11 @@ script needs the brain shape (``actor_hidden_dim``, ``critic_hidden_dim``,
 ``num_hidden_layers``, ``rnn_type``, ``lstm_hidden_dim``, sensory modules)
 to construct a fresh brain whose component shapes match the saved weights.
 
-Re-running the script is safe: it overwrites existing JSONs in the two
-output dirs and rewrites the README. No state is carried between runs.
+Re-running the script is safe: it overwrites existing JSONs in the
+output dir and rewrites the README. No state is carried between runs.
 
 Note on bundle size: the M3 lamarckian campaign saved one elite ``.pt``
-file per seed (intermediates were GC'd), so the held-out bundle ships
+file per seed (intermediates were GC'd), so the bundle ships
 4 distinct genomes (one per source seed). Coevolution YAMLs that target
 this bundle SHOULD set ``held_out_size: 4`` (default 8 in
 ``CoevolutionConfig`` is generous; the loader gracefully samples
@@ -133,10 +135,9 @@ def curate_seed(
     sim_config_path: Path,
     seed_dir: Path,
     seed: int,
-    warmstart_out: Path,
-    held_out_out: Path,
+    bundle_out: Path,
 ) -> None:
-    """Curate one seed: extract weights, write both bundle JSONs.
+    """Curate one seed: extract weights, write the unified bundle JSON.
 
     Parameters
     ----------
@@ -149,9 +150,10 @@ def curate_seed(
     seed
         Source campaign seed (e.g. 42); embedded in the output
         ``brain_config.comment`` for provenance.
-    warmstart_out, held_out_out
-        Output JSON paths. Both receive the SAME genome — different
-        roles (warm-start anchor vs held-out probe), same provenance.
+    bundle_out
+        Output JSON path. Single file per seed serves both the
+        warm-start anchor and the held-out probe roles (same source
+        genome, two roles).
     """
     pt_path = _find_elite_pt(seed_dir)
     genome_id = pt_path.stem.removeprefix("genome-")
@@ -203,17 +205,13 @@ def curate_seed(
         },
     }
 
-    warmstart_out.parent.mkdir(parents=True, exist_ok=True)
-    held_out_out.parent.mkdir(parents=True, exist_ok=True)
-    warmstart_out.write_text(json.dumps(payload, indent=2))
-    held_out_out.write_text(json.dumps(payload, indent=2))
+    bundle_out.parent.mkdir(parents=True, exist_ok=True)
+    bundle_out.write_text(json.dumps(payload, indent=2))
     logger.info(
-        "Seed %s: wrote %d-float warmstart -> %s + held-out -> %s "
-        "(genome_id=%s, gen=%s, fitness=%.4f)",
+        "Seed %s: wrote %d-float bundle JSON -> %s (genome_id=%s, gen=%s, fitness=%.4f)",
         seed,
         len(flat_params),
-        warmstart_out,
-        held_out_out,
+        bundle_out,
         genome_id,
         generation,
         fitness,
@@ -223,36 +221,35 @@ def curate_seed(
 def _write_readme(
     *,
     out_dir: Path,
-    role: str,
     seeds: list[int],
     source_config: Path,
     source_root: Path,
 ) -> None:
-    """Emit a small README documenting the bundle's provenance + role."""
+    """Emit a small README documenting the bundle's provenance + dual role."""
     out_dir.mkdir(parents=True, exist_ok=True)
     readme_path = out_dir / "README.md"
-    role_blurb = {
-        "warmstart": (
-            "Each `seed_{N}.json` is the prey gen-0 warm-start anchor "
-            "(`CMAESOptimizer(x0=...)`) for the matching co-evolution "
-            "run seed. `CoevolutionLoop.__init__` reads "
-            "`coevolution.prey_gen0_seed_path` from the YAML — typically "
-            "templated as `seed_<run_seed>.json` so each campaign seed "
-            "loads its own warmstart anchor."
-        ),
-        "held_out": (
-            "Each `seed_{N}.json` is one held-out prey opponent for the "
-            "co-evolution generality probe. `CoevolutionLoop` loads ALL "
-            "JSONs in this directory at `__init__` and samples "
-            "`held_out_size` of them per probe firing. With a 4-genome "
-            "bundle, the loader gracefully samples WITH replacement when "
-            "`held_out_size > 4`."
-        ),
-    }[role]
     readme_path.write_text(
-        f"""# Coevolution prey {role} bundle
+        f"""# Coevolution prey reference bundle
 
-{role_blurb}
+Each `seed_{{N}}.json` is one prey LSTMPPO elite genome with TWO roles
+in the co-evolution loop, both consumed from this single bundle:
+
+1. **Gen-0 warm-start anchor** for the prey CMA-ES (per-seed
+   `coevolution.prey_gen0_seed_path` in the YAML, consumed by
+   `CoevolutionLoop._load_prey_warmstart`). Each campaign seed loads
+   its own anchor (template is `seed_<run_seed>.json`).
+2. **Held-out probe opponents** for the co-evolution generality
+   probe. `CoevolutionLoop._load_held_out_prey_bundle` walks the same
+   directory and loads ALL JSONs (one per seed) into the held-out
+   set, then samples `held_out_size` of them per probe firing.
+
+The two roles share the same source genomes by design — one bundle
+on disk avoids ~5 MB of byte-identical duplication between separate
+warmstart/ and held-out/ directories.
+
+Files committed to repo (vs `artifacts/`) so a fresh checkout can run
+the campaign reproducibly. Routed through Git LFS via the repo's
+`configs/**/*.json` rule in `.gitattributes`.
 
 ## Provenance
 
@@ -325,8 +322,9 @@ def main() -> int:
         type=Path,
         default=Path("configs/evolution"),
         help=(
-            "Output root containing the two bundle subdirs "
-            "(coevolution_warmstart_prey/ and coevolution_held_out_prey/)."
+            "Output root containing the unified bundle subdir "
+            "(coevolution_warmstart_prey/). Both warmstart anchors and "
+            "held-out probe opponents read from this same dir."
         ),
     )
     parser.add_argument(
@@ -356,8 +354,7 @@ def main() -> int:
         logger.error("--source-root is not a directory: %s", args.source_root)
         return 1
 
-    warmstart_dir = args.out_root / "coevolution_warmstart_prey"
-    held_out_dir = args.out_root / "coevolution_held_out_prey"
+    bundle_dir = args.out_root / "coevolution_warmstart_prey"
 
     completed_seeds: list[int] = []
     for seed in args.seeds:
@@ -370,8 +367,7 @@ def main() -> int:
                 sim_config_path=args.source_config,
                 seed_dir=seed_dir,
                 seed=seed,
-                warmstart_out=warmstart_dir / f"seed_{seed}.json",
-                held_out_out=held_out_dir / f"seed_{seed}.json",
+                bundle_out=bundle_dir / f"seed_{seed}.json",
             )
         except (FileNotFoundError, ValueError, RuntimeError):
             logger.exception("Seed %s failed", seed)
@@ -383,24 +379,15 @@ def main() -> int:
         return 1
 
     _write_readme(
-        out_dir=warmstart_dir,
-        role="warmstart",
-        seeds=completed_seeds,
-        source_config=args.source_config,
-        source_root=args.source_root,
-    )
-    _write_readme(
-        out_dir=held_out_dir,
-        role="held_out",
+        out_dir=bundle_dir,
         seeds=completed_seeds,
         source_config=args.source_config,
         source_root=args.source_root,
     )
     logger.info(
-        "Curated %d seeds; warmstart bundle at %s, held-out bundle at %s",
+        "Curated %d seeds; bundle at %s (warmstart + held-out roles)",
         len(completed_seeds),
-        warmstart_dir,
-        held_out_dir,
+        bundle_dir,
     )
     return 0
 

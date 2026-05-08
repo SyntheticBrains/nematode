@@ -62,7 +62,7 @@ Not a behaviour change for any existing scenario YAML — `PredatorBrainConfig.k
 - `configs/evolution/coevolution_pilot_arm_b.yml`
 - `configs/evolution/coevolution_full.yml`
 - `configs/evolution/coevolution_warmstart_prey/seed_{42..45}.json` (4-genome bundle, one per source seed; consumed by `CoevolutionLoop.__init__` for prey gen-0 warm-start)
-- `configs/evolution/coevolution_held_out_prey/seed_{42..45}.json` (4-genome bundle, same source genomes as warmstart but different role; consumed by the generality probe's prey-side held-out set)
+- (no separate held-out bundle directory — the held-out probe loader reads the same `coevolution_warmstart_prey/` bundle. Two roles, one bundle dir; avoids ~5 MB of byte-identical duplication)
 
 **Scripts (new):**
 
