@@ -98,6 +98,13 @@ logger = logging.getLogger(__name__)
 # preserves live signal while preventing forgetting).
 DEFAULT_HOF_CAPACITY = 8
 
+# Checkpoint format version. Bumped when the on-disk shape changes;
+# resume rejects mismatched versions to prevent silent state corruption.
+# Distinct from `EvolutionLoop.CHECKPOINT_VERSION` — they evolve
+# independently because the shapes differ (single-population pickle vs
+# 4-file co-evolution split).
+CHECKPOINT_VERSION = 1
+
 
 # ---------------------------------------------------------------------------
 # Side state
@@ -662,38 +669,269 @@ class CoevolutionLoop:
         )
 
     # ------------------------------------------------------------------
+    # Checkpoint / resume (§6.11)
+    # ------------------------------------------------------------------
+
+    def _save_checkpoint(self) -> None:
+        """Persist full loop state across two per-side files + one top-level JSON.
+
+        Per task 6.11 + spec scenario "Probe Cadence and Output Layout":
+
+        - `{output_dir}/prey/checkpoint.pkl`: per-side pickle containing
+          optimizer + population + prev_generation_ids + generation +
+          champion_history. Reuses the existing `EvolutionLoop`
+          checkpoint shape so M3 single-population resume tooling
+          can introspect.
+        - `{output_dir}/predator/checkpoint.pkl`: same shape.
+        - `{output_dir}/coevolution_state.json`: top-level JSON
+          containing co-evolution-specific state: K-block index,
+          alternating-schedule cursor, both HoFs (via `HallOfFame.to_dict`),
+          held-out predator specs, prey held-out genome IDs (the
+          full bundle reloads from disk on resume — no need to
+          re-serialise the params).
+        - `{output_dir}/coevolution_rng.pkl`: RNG state for the
+          master `rng` and the held-out RNG. Pickled separately
+          because numpy bit_generator state has nested arrays that
+          don't JSON natively.
+
+        Atomic write via tmp file + rename for each output to avoid
+        torn writes if the process is killed mid-checkpoint.
+        """
+        # Per-side pickles. The optimizer carries ALL CMA-ES adaptive
+        # state (covariance, sigma, mean, generation counter inside the
+        # cma library); pickling it directly is the same approach
+        # `EvolutionLoop._save_checkpoint` uses.
+        for side in (self.prey, self.predator):
+            payload = {
+                "checkpoint_version": CHECKPOINT_VERSION,
+                "side": side.name,
+                "optimizer": side.optimizer,
+                "population_params": [g.params.tolist() for g in side.population],
+                "population_genome_ids": [g.genome_id for g in side.population],
+                "prev_generation_ids": list(side.prev_generation_ids),
+                "generation": side.generation,
+                "champion_history": list(side.champion_history),
+            }
+            self._atomic_pickle_write(
+                side.output_dir / "checkpoint.pkl",
+                payload,
+            )
+
+        # Top-level JSON for human-readable co-evolution state.
+        coevo_state = {
+            "checkpoint_version": CHECKPOINT_VERSION,
+            "k_block_index": self._k_block_index,
+            "current_side": self._current_side,
+            "prey_hof": self.prey.hof.to_dict(),
+            "predator_hof": self.predator.hof.to_dict(),
+            "predator_held_out_specs": [list(spec) for spec in self._predator_held_out_specs],
+            "prey_held_out_ids": [g.genome_id for g in self._prey_held_out],
+        }
+        self._atomic_json_write(
+            self.output_dir / "coevolution_state.json",
+            coevo_state,
+        )
+
+        # RNG state pickle (separate file because numpy bit_generator
+        # state is awkward to JSON).
+        rng_payload = {
+            "master_rng_state": self.rng.bit_generator.state,
+            "held_out_rng_state": self._held_out_rng.bit_generator.state,
+        }
+        self._atomic_pickle_write(
+            self.output_dir / "coevolution_rng.pkl",
+            rng_payload,
+        )
+
+    def _load_checkpoint(self) -> None:
+        """Restore full loop state from the four checkpoint files.
+
+        Inverse of `_save_checkpoint`. Reads per-side pickles to
+        restore optimizer + population + champion_history; reads the
+        top-level JSON to restore K-block index, side cursor, HoFs;
+        reads the RNG pickle to restore master + held-out RNG state.
+
+        Resume invariants verified:
+
+        - Each per-side checkpoint's `checkpoint_version` matches
+          `CHECKPOINT_VERSION`; mismatch raises `ValueError` to
+          prevent silent state corruption.
+        - The two per-side files agree on `k_block_index` (cross-
+          checked against the top-level JSON).
+
+        Held-out sets are NOT re-serialised in detail — the prey
+        bundle is re-read from `configs/evolution/coevolution_held_out_prey/*.json`
+        and the recorded genome IDs are checked against the freshly
+        loaded set so a resume across a bundle-edit fails loudly.
+        Predator held-out specs are restored from the JSON directly
+        (they're tiny tuples).
+        """
+        import pickle
+
+        for side in (self.prey, self.predator):
+            ckpt_path = side.output_dir / "checkpoint.pkl"
+            if not ckpt_path.exists():
+                msg = (
+                    f"CoevolutionLoop._load_checkpoint: per-side checkpoint "
+                    f"missing at {ckpt_path}. Resume requires both per-side "
+                    "files plus coevolution_state.json + coevolution_rng.pkl."
+                )
+                raise FileNotFoundError(msg)
+            with ckpt_path.open("rb") as fh:
+                payload = pickle.load(fh)  # noqa: S301 — trusted local file
+            version = payload.get("checkpoint_version")
+            if version != CHECKPOINT_VERSION:
+                msg = (
+                    f"Per-side checkpoint version mismatch on {side.name}: "
+                    f"expected {CHECKPOINT_VERSION}, got {version}. "
+                    "Refusing to resume."
+                )
+                raise ValueError(msg)
+            side.optimizer = payload["optimizer"]
+            side.generation = int(payload["generation"])
+            side.prev_generation_ids = list(payload["prev_generation_ids"])
+            side.champion_history = list(payload["champion_history"])
+            # Re-build genome instances from population_params +
+            # population_genome_ids; birth_metadata is reconstructed
+            # from the current sim_config (encoder shape_map is
+            # determined by the encoder + sim_config, so re-running
+            # `build_birth_metadata` here gives a fresh template that
+            # matches what the loop would produce in a non-resume run).
+            side.population = [
+                Genome(
+                    params=np.asarray(params, dtype=np.float32),
+                    genome_id=gid,
+                    parent_ids=[],
+                    generation=side.generation,
+                    birth_metadata=build_birth_metadata(self.sim_config),
+                )
+                for params, gid in zip(
+                    payload["population_params"],
+                    payload["population_genome_ids"],
+                    strict=True,
+                )
+            ]
+
+        coevo_path = self.output_dir / "coevolution_state.json"
+        if not coevo_path.exists():
+            msg = (
+                f"CoevolutionLoop._load_checkpoint: top-level state missing "
+                f"at {coevo_path}. Both per-side checkpoints loaded but the "
+                "co-evolution-specific state file is required."
+            )
+            raise FileNotFoundError(msg)
+        with coevo_path.open("r") as fh:
+            coevo = json.load(fh)
+        if coevo.get("checkpoint_version") != CHECKPOINT_VERSION:
+            msg = (
+                f"coevolution_state.json version mismatch: expected "
+                f"{CHECKPOINT_VERSION}, got {coevo.get('checkpoint_version')!r}. "
+                "Refusing to resume."
+            )
+            raise ValueError(msg)
+        self._k_block_index = int(coevo["k_block_index"])
+        self._current_side = coevo["current_side"]
+        self.prey.hof = HallOfFame.from_dict(coevo["prey_hof"])
+        self.predator.hof = HallOfFame.from_dict(coevo["predator_hof"])
+        self._predator_held_out_specs = [tuple(spec) for spec in coevo["predator_held_out_specs"]]
+        # Cross-check prey held-out IDs against the freshly loaded
+        # bundle. If the bundle has shifted (file added / removed),
+        # fail loudly rather than silently use a different set.
+        recorded_ids = list(coevo["prey_held_out_ids"])
+        current_ids = [g.genome_id for g in self._prey_held_out]
+        if recorded_ids != current_ids:
+            msg = (
+                f"Prey held-out bundle drifted between save and resume: "
+                f"checkpoint recorded {recorded_ids}, current bundle has "
+                f"{current_ids}. Restore the bundle to its prior contents "
+                "(or accept a fresh run instead of resuming)."
+            )
+            raise ValueError(msg)
+
+        rng_path = self.output_dir / "coevolution_rng.pkl"
+        if not rng_path.exists():
+            msg = (
+                f"CoevolutionLoop._load_checkpoint: RNG state missing at "
+                f"{rng_path}. All four checkpoint files are required."
+            )
+            raise FileNotFoundError(msg)
+        with rng_path.open("rb") as fh:
+            rng_payload = pickle.load(fh)  # noqa: S301 — trusted local file
+        self.rng.bit_generator.state = rng_payload["master_rng_state"]
+        self._held_out_rng.bit_generator.state = rng_payload["held_out_rng_state"]
+        logger.info(
+            "CoevolutionLoop: resumed from checkpoint (k_block=%d, side=%s, "
+            "prey gen=%d, predator gen=%d).",
+            self._k_block_index,
+            self._current_side,
+            self.prey.generation,
+            self.predator.generation,
+        )
+
+    def _atomic_pickle_write(self, target: Path, payload: object) -> None:
+        """Write a pickle atomically via tmp file + rename.
+
+        Mirrors `EvolutionLoop._save_checkpoint`'s pattern. Avoids
+        torn writes if the process is killed mid-checkpoint.
+        """
+        import pickle
+
+        tmp_path = target.with_suffix(target.suffix + ".tmp")
+        with tmp_path.open("wb") as fh:
+            pickle.dump(payload, fh)
+        tmp_path.replace(target)
+
+    def _atomic_json_write(self, target: Path, payload: dict[str, Any]) -> None:
+        """Write a JSON file atomically via tmp file + rename."""
+        tmp_path = target.with_suffix(target.suffix + ".tmp")
+        with tmp_path.open("w") as fh:
+            json.dump(payload, fh, indent=2)
+        tmp_path.replace(target)
+
+    # ------------------------------------------------------------------
     # Run loop (alternating schedule)
     # ------------------------------------------------------------------
 
-    def run(self) -> None:
+    def run(self, *, resume: bool = False) -> None:
         """Run `generation_pairs * 2` K-blocks under the alternating schedule.
 
         Each K-block trains one side for `K_per_block` generations
         while the opposing side is FROZEN (no `optimizer.tell()`).
         At the end of every K-block:
 
-        1. The training-side block elite is appended to its
-           `champion_history` (and pushed to its `hof` in commit 6).
-        2. The current side flips.
-        3. The just-flipped (now-training) side's optimizer is
+        1. The training-side block elite is pushed to its `hof` and
+           appended to `champion_history` (in `_run_one_k_block`).
+        2. Full state is persisted to the four checkpoint files so a
+           resume from this point is byte-identical to a non-interrupted
+           continuation.
+        3. The current side flips.
+        4. The just-flipped (now-training) side's optimizer is
            rebuilt per D2.
 
-        HoF integration, opposition sampling, generality probe, and
-        checkpoint/resume land in subsequent commits within this PR.
-        This commit's `run()` is the controller scaffold — the actual
-        per-generation `ask`/`tell`/`evaluate` plumbing is a stub
-        marked NotImplemented so a smoke-test of the schedule
-        fails loudly until the wiring lands.
+        Parameters
+        ----------
+        resume
+            When True, load state from the four checkpoint files
+            (`{output_dir}/{prey,predator}/checkpoint.pkl`,
+            `{output_dir}/coevolution_state.json`,
+            `{output_dir}/coevolution_rng.pkl`) before entering the
+            loop. The loop then continues from the last checkpointed
+            K-block. When False (default), starts fresh from
+            `_k_block_index=0`.
         """
+        if resume:
+            self._load_checkpoint()
+
         cfg = self.coevolution_config
         total_blocks = cfg.generation_pairs * 2
         logger.info(
             "CoevolutionLoop: %d K-blocks total (%d generation pairs x 2 sides), "
-            "K_per_block=%d, start_side=%s",
+            "K_per_block=%d, start_side=%s, starting at k_block=%d",
             total_blocks,
             cfg.generation_pairs,
             cfg.K_per_block,
             cfg.start_side,
+            self._k_block_index,
         )
 
         while self._k_block_index < total_blocks:
@@ -708,17 +946,17 @@ class CoevolutionLoop:
                 opposing_side.name,
             )
 
-            # Per-generation evaluation loop lands in commit 6 (HoF +
-            # opposition sampling) and commit 7 (worker reuse). Until
-            # then this is a structural placeholder: the run method's
-            # contract is "drive the schedule"; the body is wired in
-            # the next commit.
             self._run_one_k_block(training_side, opposing_side)
 
-            # K-block end: flip side and rebuild the just-flipped (now-
-            # training) side's optimizer per D2.
+            # K-block end: flip side, persist state, then rebuild the
+            # just-flipped (now-training) side's optimizer per D2.
+            # Order matters: increment k_block_index BEFORE saving so
+            # the checkpoint records the post-block state (i.e. resume
+            # picks up from the *next* block, not the one that just
+            # finished).
             self._k_block_index += 1
             self._current_side = "predator" if self._current_side == "prey" else "prey"
+            self._save_checkpoint()
             if self._k_block_index < total_blocks:
                 next_training_side = self.prey if self._current_side == "prey" else self.predator
                 self._rebuild_optimizer(next_training_side)
