@@ -259,6 +259,15 @@ class CoevolutionLoop:
         self.rng = rng
         self.log_level = log_level
 
+        # Immutable run-level seed used by `_derive_optimizer_seed`. Drawn
+        # once from the master rng at construction time so the per-K-block
+        # optimiser seed is a pure function of `(run_seed, side,
+        # k_block_index)` — independent of how many other rng draws have
+        # happened in between. This keeps optimiser-seed derivation
+        # reproducible regardless of the order of unrelated rng consumers
+        # (held-out construction, eval seeds, pretrain seeds).
+        self._run_seed: int = int(rng.integers(0, 2**31 - 1))
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
         # Per-side subdirs for lineage CSVs (matches `EvolutionLoop`'s
         # output_dir convention so single-population analysis tooling
@@ -470,36 +479,45 @@ class CoevolutionLoop:
         return [float(v) for v in params]
 
     def _pretrain_predator_x0(self, genome_dim: int) -> list[float]:
-        """Run heuristic-imitation pretrain (bootstrap arm A) and return flattened weights.
+        """Run heuristic-imitation pretrain and return flattened weights.
 
-        Builds a fresh `MLPPPOPredatorBrain` with the encoder's default
-        config, trains it with `pretrain_against_heuristic`, then
-        encodes the brain via the `MLPPPOPredatorEncoder`'s
-        `WeightPersistence` round-trip to produce a flat weight
-        vector suitable for `CMAESOptimizer(x0=...)`.
+        Constructs the student brain via the same predator factory used
+        at runtime (`instantiate_predator_brain_from_sim_config`) so the
+        pretrained architecture honours
+        `sim_config.environment.predators.brain_config.extra` overrides
+        (`actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers`).
+        Trains it with `pretrain_against_heuristic`, then flattens the
+        weights via the same `_select_genome_components` /
+        `_flatten_components` path the encoder uses so the resulting
+        `x0` is byte-equivalent to what the encoder would produce.
 
         Cost ~30s at the default 50-batch budget; runs once per
         `CoevolutionLoop` construction (NOT per K-block).
         """
         # Local imports — pretrain helper pulls torch + the heuristic
-        # brain machinery; defer until the arm-A path is actually
+        # brain machinery; defer until the bootstrap path is actually
         # selected so cold-start runs don't pay the import cost.
         from quantumnematode.env._predator_brain_pretrain import (
             pretrain_against_heuristic,
         )
-        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
         from quantumnematode.env.predator_brain import HeuristicPredatorBrain
+        from quantumnematode.evolution._predator_brain_factory import (
+            instantiate_predator_brain_from_sim_config,
+        )
         from quantumnematode.evolution.encoders import (
             _flatten_components,
             _select_genome_components,
         )
 
         logger.info(
-            "Predator gen-0: running heuristic-imitation pretrain (bootstrap arm A)...",
+            "Predator gen-0: running heuristic-imitation pretrain bootstrap...",
         )
-        student = MLPPPOPredatorBrain()
-        teacher = HeuristicPredatorBrain()
         seed = int(self.rng.integers(0, 2**31 - 1))
+        student = instantiate_predator_brain_from_sim_config(
+            self.sim_config,
+            seed=seed,
+        )
+        teacher = HeuristicPredatorBrain()
         pretrain_against_heuristic(student, teacher, seed=seed)
 
         # Flatten to a list[float] suitable for CMAESOptimizer(x0=...).
@@ -512,7 +530,8 @@ class CoevolutionLoop:
                 f"encoder reports genome_dim={genome_dim}. The pretrain "
                 "helper must produce a brain whose encoder round-trip matches "
                 "the encoder's expected dimension; if these have drifted, "
-                "verify MLPPPOPredatorEncoder vs MLPPPOPredatorBrain wire-up."
+                "verify MLPPPOPredatorEncoder vs MLPPPOPredatorBrain wire-up "
+                "(or that brain_config.extra overrides flow through both)."
             )
             raise ValueError(msg)
         logger.info(
@@ -743,22 +762,24 @@ class CoevolutionLoop:
     ) -> int:
         """Derive a per-K-block CMA-ES seed deterministically.
 
-        Combines the run's master `rng` state with the side and
-        K-block index so two K-blocks (across sides or generations)
+        Pure function of `(self._run_seed, side, k_block_index)`. Does
+        NOT consume `self.rng` — `_run_seed` is captured once at
+        construction time so two K-blocks (across sides or generations)
         get distinct optimiser samples while a re-run with the same
-        master seed reproduces the same trajectory.
+        master seed reproduces the same trajectory regardless of
+        unrelated rng draws elsewhere in the loop.
         """
-        # `rng.integers` with side-specific offset salts the seed so
-        # prey K-block 0 and predator K-block 0 are distinct streams.
+        # Side-specific offset salts the seed so prey K-block 0 and
+        # predator K-block 0 are distinct streams.
         side_offset = 0 if side == "prey" else 1
         # Mix in the k_block_index so every block gets a fresh draw.
         salt = f"{side}-{k_block_index}".encode()
-        # Fast deterministic hash via numpy: take 32 bits of the
-        # `rng.integers` draw XORed with a hash of the salt string.
-        # Avoids importing hashlib for what's a low-stakes seed mix.
+        # Fast deterministic hash: fold the salt's first 8 bytes into a
+        # 31-bit integer and XOR with the immutable run seed plus
+        # block/side mixing. Avoids importing hashlib for what's a
+        # low-stakes seed mix.
         salt_int = int.from_bytes(salt[:8].ljust(8, b"\0"), "big") & 0x7FFFFFFF
-        master = int(self.rng.integers(0, 2**31 - 1))
-        return (master ^ salt_int ^ (k_block_index * 31) ^ (side_offset * 17)) & 0x7FFFFFFF
+        return (self._run_seed ^ salt_int ^ (k_block_index * 31) ^ (side_offset * 17)) & 0x7FFFFFFF
 
     def _rebuild_optimizer(self, side: _SideState) -> None:
         """Re-construct `side.optimizer` at a K-block transition.
@@ -1026,6 +1047,14 @@ class CoevolutionLoop:
             "k_block_index": self._k_block_index,
             "master_rng_state": self.rng.bit_generator.state,
             "held_out_rng_state": self._held_out_rng.bit_generator.state,
+            # Persist `_run_seed` so post-resume calls to
+            # `_derive_optimizer_seed` produce the same per-K-block
+            # optimiser seeds the original run would have. Construction
+            # captures it from the input rng with a one-time draw, but
+            # that draw consumes state — re-running construction on
+            # resume would advance the post-restore rng past where we
+            # want it.
+            "run_seed": self._run_seed,
         }
         self._atomic_pickle_write(
             self.output_dir / "coevolution_rng.pkl",
@@ -1252,6 +1281,13 @@ class CoevolutionLoop:
         # construction sees the saved state.
         self.rng.bit_generator.state = rng_payload["master_rng_state"]
         self._held_out_rng.bit_generator.state = rng_payload["held_out_rng_state"]
+        # Restore the immutable run seed if present. Older checkpoints
+        # (pre run-seed introduction) lack the field — fall back to the
+        # construction-time draw rather than failing, since legacy
+        # checkpoints couldn't have been written with a stable run seed
+        # anyway.
+        if "run_seed" in rng_payload:
+            self._run_seed = int(rng_payload["run_seed"])
 
         # Re-sample the prey held-out bundle from disk with the
         # restored `_held_out_rng` state. This MUST run AFTER the RNG
@@ -1370,11 +1406,18 @@ class CoevolutionLoop:
             self._run_one_k_block(training_side, opposing_side)
 
             # K-block end: flip side (or freeze opposing per the
-            # rebalance heuristic), persist state, then rebuild the
-            # newly-training side's optimizer. Order matters:
-            # increment k_block_index BEFORE saving so the checkpoint
-            # records the post-block state (i.e. resume picks up from
-            # the *next* block, not the one that just finished).
+            # rebalance heuristic), rebuild the newly-training side's
+            # optimizer, then persist state. Order matters:
+            # 1. Increment k_block_index so post-flip state reflects
+            #    the *next* block, not the one that just finished.
+            # 2. Decide flip via the rebalance heuristic, update
+            #    `_current_side` accordingly.
+            # 3. Rebuild the next training side's optimizer FIRST so
+            #    the freshly-built optimizer state is what gets pickled.
+            #    A crash between step 3 and step 4 just falls back to
+            #    rebuilding again on resume; a crash AFTER step 4
+            #    resumes from the rebuilt optimizer with no extra work.
+            # 4. Save the checkpoint.
             self._k_block_index += 1
             should_flip = self._evaluate_rebalance(training_side, opposing_side)
             if should_flip:
@@ -1393,10 +1436,10 @@ class CoevolutionLoop:
                     opposing_side.name,
                     opposing_side.name,
                 )
-            self._save_checkpoint()
             if self._k_block_index < total_blocks:
                 next_training_side = self.prey if self._current_side == "prey" else self.predator
                 self._rebuild_optimizer(next_training_side)
+            self._save_checkpoint()
 
         logger.info("CoevolutionLoop: run complete.")
 

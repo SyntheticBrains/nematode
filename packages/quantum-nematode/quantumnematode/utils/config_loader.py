@@ -1459,6 +1459,27 @@ class SimulationConfig(BaseModel):
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")
+    def _validate_evolution_coevolution_exclusive(self) -> "SimulationConfig":
+        """Reject configs that set both `evolution` and `coevolution`.
+
+        The two top-level sub-blocks dispatch to different campaign
+        drivers (`EvolutionLoop` vs `CoevolutionLoop`); having both
+        populated would silently let one win at the driver site,
+        masking a config-author mistake. Forcing the user to pick one
+        keeps the dispatch unambiguous.
+        """
+        if self.evolution is not None and self.coevolution is not None:
+            msg = (
+                "Cannot set both 'evolution' and 'coevolution' top-level "
+                "blocks — they are mutually exclusive (each dispatches a "
+                "different campaign driver). Pick one: 'evolution' for "
+                "single-population runs, 'coevolution' for two-population "
+                "co-evolution runs."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def _validate_hyperparam_schema(self) -> "SimulationConfig":  # noqa: C901, PLR0912
         # C901/PLR0912 (too complex / too many branches): this validator
         # is a sequence of independent guards (None-skip, empty-list,
@@ -1490,6 +1511,14 @@ class SimulationConfig(BaseModel):
         # EvolutionConfig._validate_inheritance) because the
         # hyperparam_schema field lives on SimulationConfig, not
         # EvolutionConfig.
+        #
+        # Single-population paths only — co-evolution intentionally
+        # pairs `inheritance="lamarckian"` (prey side) with weight
+        # evolution and NO `hyperparam_schema`; that's the canonical
+        # Lamarckian-LSTMPPO substrate the prey side reuses.
+        # Applying this guard there would conflict with the documented
+        # `CoevolutionConfig._validate_invariants` contract that
+        # *requires* prey-side inheritance to be "lamarckian".
         if (
             self.evolution is not None
             and self.evolution.inheritance != "none"
@@ -1575,23 +1604,25 @@ class SimulationConfig(BaseModel):
         # reshape some layer's state_dict, which ``load_weights`` would then
         # either crash on or silently mis-load.  Reject at load time so the
         # 100-genome x 20-generation campaign doesn't discover the problem
-        # mid-run.
-        if self.evolution is not None and self.evolution.warm_start_path is not None:
-            offenders = sorted(
-                {entry.name for entry in self.hyperparam_schema} & _ARCHITECTURE_CHANGING_FIELDS,
-            )
-            if offenders:
-                msg = (
-                    "evolution.warm_start_path is set but hyperparam_schema "
-                    f"contains architecture-changing entries: {offenders}.  "
-                    "Warm-start loads a fixed-shape checkpoint; the genome "
-                    "cannot reshape the brain at the same time.  Either "
-                    "(a) drop the architecture entries from the schema and "
-                    "evolve only non-architecture fields (learning rates, "
-                    "gamma, entropy, etc.), or (b) drop warm_start_path and "
-                    "let each genome train from a fresh init."
+        # mid-run. Applies to single-population AND co-evolution paths.
+        for label, evolution_cfg in self._iter_evolution_configs():
+            if evolution_cfg.warm_start_path is not None:
+                offenders = sorted(
+                    {entry.name for entry in self.hyperparam_schema}
+                    & _ARCHITECTURE_CHANGING_FIELDS,
                 )
-                raise ValueError(msg)
+                if offenders:
+                    msg = (
+                        f"{label}.warm_start_path is set but hyperparam_schema "
+                        f"contains architecture-changing entries: {offenders}.  "
+                        "Warm-start loads a fixed-shape checkpoint; the genome "
+                        "cannot reshape the brain at the same time.  Either "
+                        "(a) drop the architecture entries from the schema and "
+                        "evolve only non-architecture fields (learning rates, "
+                        "gamma, entropy, etc.), or (b) drop warm_start_path and "
+                        "let each genome train from a fresh init."
+                    )
+                    raise ValueError(msg)
 
         # Inheritance arch-fields incompatibility: same shape-mismatch
         # reasoning as warm-start above, applied to per-genome dynamic
@@ -1599,22 +1630,49 @@ class SimulationConfig(BaseModel):
         # _ARCHITECTURE_CHANGING_FIELDS denylist.  Applies to Lamarckian
         # ONLY: Baldwin doesn't load weights, so shape mismatches are
         # fine — a future Baldwin arm can evolve actor_hidden_dim etc.
-        if self.evolution is not None and self.evolution.inheritance == "lamarckian":
-            offenders = sorted(
-                {entry.name for entry in self.hyperparam_schema} & _ARCHITECTURE_CHANGING_FIELDS,
-            )
-            if offenders:
-                msg = (
-                    f"evolution.inheritance is {self.evolution.inheritance!r} but "
-                    f"hyperparam_schema contains architecture-changing entries: "
-                    f"{offenders}.  Per-genome checkpoints cannot be loaded "
-                    "into a child whose architecture differs from the parent's. "
-                    "Either drop the architecture entries from the schema and "
-                    "evolve only non-architecture fields, or drop inheritance."
+        for label, evolution_cfg in self._iter_evolution_configs():
+            if evolution_cfg.inheritance == "lamarckian":
+                offenders = sorted(
+                    {entry.name for entry in self.hyperparam_schema}
+                    & _ARCHITECTURE_CHANGING_FIELDS,
                 )
-                raise ValueError(msg)
+                if offenders:
+                    msg = (
+                        f"{label}.inheritance is {evolution_cfg.inheritance!r} but "
+                        f"hyperparam_schema contains architecture-changing entries: "
+                        f"{offenders}.  Per-genome checkpoints cannot be loaded "
+                        "into a child whose architecture differs from the parent's. "
+                        "Either drop the architecture entries from the schema and "
+                        "evolve only non-architecture fields, or drop inheritance."
+                    )
+                    raise ValueError(msg)
 
         return self
+
+    def _iter_evolution_configs(
+        self,
+    ) -> "list[tuple[str, EvolutionConfig]]":
+        """Yield `(label, EvolutionConfig)` pairs for every evolution sub-block.
+
+        Returns the single-population `evolution` config (labelled
+        `"evolution"`) and/or the two co-evolution sides (labelled
+        `"coevolution.prey_evolution"` /
+        `"coevolution.predator_evolution"`). The mutual-exclusion check
+        between `evolution` and `coevolution` runs in a separate
+        validator so this helper is safe to call when both are set
+        (it just yields all of them).
+        """
+        out: list[tuple[str, EvolutionConfig]] = []
+        if self.evolution is not None:
+            out.append(("evolution", self.evolution))
+        if self.coevolution is not None:
+            out.append(
+                ("coevolution.prey_evolution", self.coevolution.prey_evolution),
+            )
+            out.append(
+                ("coevolution.predator_evolution", self.coevolution.predator_evolution),
+            )
+        return out
 
 
 # Brain-config fields whose values change tensor shapes (and therefore the

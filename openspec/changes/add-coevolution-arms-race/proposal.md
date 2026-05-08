@@ -67,7 +67,7 @@ Not a behaviour change for any existing scenario YAML — `PredatorBrainConfig.k
 - `scripts/campaigns/aggregate_m5_pilot.py`
 - `scripts/campaigns/baldwin_m5_secondary_eval.py`
 
-**Tests (new):** ~70-80 cases across:
+**Tests (new):** 124 cases across:
 
 - `tests/env/test_mlpppo_predator_brain.py` (23 cases) — Protocol conformance, input-encoding correctness, action-mapping correctness, deterministic-action under fixed seed, weight round-trip via `WeightPersistence`, `copy()` independence, lifecycle hooks no-op, param-count assertion (~10k actor + value head).
 - `tests/env/test_predator_brain_pretrain.py` (6 cases) — imitation loss decrease invariant (≥0.05 absolute reduction between initial and final 10-batch windows); reproducibility under fixed seed; weight-update side effect; pretrained weights round-trip through `WeightPersistence` unchanged. Note: action-match accuracy is NOT a spec invariant — see `specs/environment-simulation/spec.md` "Imitation Loss Decreases" scenario for the round-5 spec relaxation rationale.

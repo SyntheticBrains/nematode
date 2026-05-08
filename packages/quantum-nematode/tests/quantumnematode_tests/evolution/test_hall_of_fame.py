@@ -184,16 +184,24 @@ class TestMixWithPop:
         hof_a = HallOfFame(capacity=4, replacement="quality")
         hof_b = HallOfFame(capacity=4, replacement="quality")
         for i in range(4):
-            g = _make_genome(float(i), genome_id=f"hof_{i}")
-            hof_a.push(g, fitness=float(i))
-            hof_b.push(g, fitness=float(i))
+            # Distinct Genome instances per HoF so any aliasing /
+            # in-place-mutation bug surfaces here rather than hiding
+            # behind shared object identity. Compare on params (equal
+            # across HoFs by construction) rather than genome_id since
+            # IDs differ to keep instances independent.
+            g_a = _make_genome(float(i), genome_id=f"hof_a_{i}")
+            g_b = _make_genome(float(i), genome_id=f"hof_b_{i}")
+            hof_a.push(g_a, fitness=float(i))
+            hof_b.push(g_b, fitness=float(i))
         pop = [_make_genome(99.0, genome_id=f"pop_{i}") for i in range(8)]
 
         rng_a = np.random.default_rng(seed=42)
         rng_b = np.random.default_rng(seed=42)
         out_a = hof_a.mix_with_pop(rng_a, pop, frac_hof=0.3)
         out_b = hof_b.mix_with_pop(rng_b, pop, frac_hof=0.3)
-        assert [g.genome_id for g in out_a] == [g.genome_id for g in out_b]
+        assert len(out_a) == len(out_b)
+        for g_a_out, g_b_out in zip(out_a, out_b, strict=True):
+            np.testing.assert_array_equal(g_a_out.params, g_b_out.params)
 
     def test_invalid_frac_hof_raises(self) -> None:
         """`frac_hof` outside `[0.0, 1.0]` SHALL raise `ValueError`."""

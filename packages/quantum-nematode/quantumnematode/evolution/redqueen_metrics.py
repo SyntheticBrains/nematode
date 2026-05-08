@@ -407,6 +407,16 @@ def fitness_lag(
     # lag +/-2 (half-period anti-phase). Anti-phase coupling is a
     # separate concept captured by `coupled_rate` (returns -1 for
     # anti-coupled deltas); `fitness_lag` reports the in-phase shift.
+    #
+    # Full-series norm (rather than per-lag overlap norm) is
+    # intentional for periodic inputs: a per-lag denominator
+    # re-normalises each window's energy to ~1 and lets aliased lags
+    # (e.g. lag +4 vs lag -8 at period 12) tie at correlation ~1.0,
+    # making the argmax non-deterministic across periods. The
+    # full-series norm acts as an anti-aliasing weight that prefers
+    # the smaller-magnitude lag for periodic inputs — which matches
+    # the test invariant `assert abs(out - constructed_shift) <= 1.0`
+    # for two sines with constructed phase shift.
     best_lag = 0
     best_corr = -np.inf
     for lag in range(-max_lag, max_lag + 1):
