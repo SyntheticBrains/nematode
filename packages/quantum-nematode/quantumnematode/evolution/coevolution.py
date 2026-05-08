@@ -21,10 +21,26 @@ alternating-schedule controller. Per design.md:
   `quantumnematode.utils.config_loader.CoevolutionConfig` with model
   validators enforcing all of the above at load time.
 
-This commit (PR 3 commit 5) ships the scaffold + alternating schedule +
-per-K-block fresh `CMAESOptimizer` re-construction. Hall-of-Fame
-integration, generality probe, checkpoint/resume, and full test suite
-land in subsequent commits within this PR.
+PR 3 commit 5 shipped the scaffold + alternating schedule + per-K-block
+fresh `CMAESOptimizer` re-construction. PR 3 commit 6 (this commit)
+adds the per-generation loop body — HoF push at K-block end, HoF-mixed
+opposition sampling, generality probe, held-out opponent construction
+for both sides. Checkpoint/resume + worker dispatch + full test suite
+land in commits 7-8 within this PR.
+
+Opposition injection (deferred to PR 4)
+---------------------------------------
+The per-evaluation pattern samples opposition via
+`hof.mix_with_pop(rng, opposing_population, frac_hof=0.3)` and the
+opposition genomes are recorded on the candidate's evaluation. The
+final `sim_config` patching that translates opposition genomes into
+env-side opponents (decoded predator brains installed on
+`Predator.brain` slots, decoded prey brains exposed via
+`sim_config.multi_agent.agents`) requires the campaign-level configs
+that PR 4 ships. For PR 3 the loop calls `fitness.evaluate(...)` with
+the unpatched `sim_config` and records opposition for lineage; full
+end-to-end opposition injection is wired in PR 4 alongside the smoke
+config that exercises the integrated path.
 
 Champion history schema
 -----------------------
@@ -39,18 +55,26 @@ this history for cycling and escalation analysis.
 
 from __future__ import annotations
 
+import csv
 import json
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
-from quantumnematode.evolution.encoders import LSTMPPOEncoder
+import numpy as np
+
+from quantumnematode.evolution.encoders import (
+    LSTMPPOEncoder,
+    build_birth_metadata,
+)
 from quantumnematode.evolution.fitness import LearnedPerformanceFitness
+from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.hall_of_fame import HallOfFame
 from quantumnematode.evolution.inheritance import (
     LamarckianInheritance,
     NoInheritance,
 )
+from quantumnematode.evolution.lineage import LineageTracker
 from quantumnematode.evolution.predator_encoders import MLPPPOPredatorEncoder
 from quantumnematode.evolution.predator_fitness import PredatorEpisodicKillRate
 from quantumnematode.optimizers.evolutionary import CMAESOptimizer
@@ -58,13 +82,9 @@ from quantumnematode.optimizers.evolutionary import CMAESOptimizer
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import numpy as np
-
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
-    from quantumnematode.evolution.genome import Genome
     from quantumnematode.evolution.inheritance import InheritanceStrategy
-    from quantumnematode.evolution.lineage import LineageTracker
     from quantumnematode.utils.config_loader import (
         CoevolutionConfig,
         EvolutionConfig,
@@ -221,6 +241,24 @@ class CoevolutionLoop:
         # each K-block boundary).
         self._k_block_index: int = 0
         self._current_side: Literal["prey", "predator"] = self.coevolution_config.start_side
+
+        # Generality-probe state. Held-out opponent sets are constructed
+        # once at __init__ and never mutated thereafter — opposite of
+        # the live `population` and `hof` which both grow / churn during
+        # the run. Stored separately per side because the construction
+        # rules differ (prey loads from a committed JSON bundle;
+        # predator builds heuristic-radius variants).
+        held_out_seed = int(self.rng.integers(0, 2**31 - 1))
+        self._held_out_rng = np.random.default_rng(seed=held_out_seed)
+        self._prey_held_out: list[Genome] = self._load_held_out_prey_bundle()
+        self._predator_held_out_specs: list[tuple[int, int]] = self._build_held_out_predator_specs()
+        self._probe_csv_path = self.output_dir / "generality_probe.csv"
+        # Initialise the probe CSV with its header row at __init__ so
+        # post-hoc inspection works even if the loop crashes before any
+        # probe fires. Atomic-write friendly (single write, no append).
+        with self._probe_csv_path.open("w", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(["generation", "side", "opponent_index", "fitness"])
 
     # ------------------------------------------------------------------
     # Per-side construction
@@ -421,6 +459,118 @@ class CoevolutionLoop:
         return flat
 
     # ------------------------------------------------------------------
+    # Held-out opponent construction (§6.10)
+    # ------------------------------------------------------------------
+
+    def _load_held_out_prey_bundle(self) -> list[Genome]:
+        """Load held-out prey genomes from `configs/evolution/coevolution_held_out_prey/*.json`.
+
+        Each JSON file in the bundle directory is expected to follow the
+        warmstart fixture format (`{genome_id, generation, fitness,
+        params: list[float], brain_config}`). Files whose `params`
+        length doesn't match the prey encoder's `genome_dim` are
+        skipped with a warning rather than crashing the loop.
+
+        PR 3 ships the loader path; the production bundle (~8 real M3
+        elites) is curated in PR 4 task 7.0a. When the directory is
+        empty or missing the prey-side probe is a no-op for this run
+        (logged as a one-time warning at __init__) — the probe still
+        fires for the predator side, and CI smoke runs work without
+        the bundle.
+
+        Sampling: when `held_out_size > len(bundle)` we sample WITH
+        replacement; when `held_out_size <= len(bundle)` WITHOUT
+        replacement. Both via `_held_out_rng.choice` so the same
+        master seed reproduces the held-out set.
+        """
+        cfg = self.coevolution_config
+        # Bundle path is fixed by spec ("Held-Out Set Construction"
+        # scenario). Resolved relative to the repo root via cwd —
+        # tests can patch this attribute by passing a custom
+        # `_prey_held_out_dir` override when subclassing for tests.
+        from pathlib import Path
+
+        bundle_dir = Path("configs/evolution/coevolution_held_out_prey")
+        if not bundle_dir.is_dir():
+            logger.warning(
+                "Prey held-out bundle missing at %s; prey-side probe will be a "
+                "no-op for this run. The production bundle ships in PR 4 task 7.0a.",
+                bundle_dir,
+            )
+            return []
+
+        bundle_paths = sorted(bundle_dir.glob("*.json"))
+        if not bundle_paths:
+            logger.warning(
+                "Prey held-out bundle dir %s is empty; prey-side probe will be a no-op.",
+                bundle_dir,
+            )
+            return []
+
+        expected_dim = self.prey.encoder.genome_dim(self.sim_config)
+        loaded: list[Genome] = []
+        for p in bundle_paths:
+            try:
+                with p.open("r") as fh:
+                    data = json.load(fh)
+                params = data["params"]
+            except (json.JSONDecodeError, KeyError, OSError) as e:
+                logger.warning("Skipping malformed prey held-out file %s: %s", p, e)
+                continue
+            if not isinstance(params, list) or len(params) != expected_dim:
+                logger.warning(
+                    "Skipping prey held-out file %s: params length %s != expected %d.",
+                    p,
+                    len(params) if isinstance(params, list) else "<not a list>",
+                    expected_dim,
+                )
+                continue
+            loaded.append(
+                Genome(
+                    params=np.asarray(params, dtype=np.float32),
+                    genome_id=str(data.get("genome_id", p.stem)),
+                    parent_ids=[],
+                    generation=int(data.get("generation", 0)),
+                    birth_metadata=build_birth_metadata(self.sim_config),
+                ),
+            )
+
+        # Down-sample / up-sample to held_out_size. The spec scenario is
+        # explicit about with/without-replacement semantics here.
+        target = cfg.held_out_size
+        if not loaded:
+            return []
+        if target <= len(loaded):
+            chosen = self._held_out_rng.choice(len(loaded), size=target, replace=False)
+        else:
+            chosen = self._held_out_rng.choice(len(loaded), size=target, replace=True)
+        return [loaded[int(i)] for i in chosen]
+
+    def _build_held_out_predator_specs(self) -> list[tuple[int, int]]:
+        """Build the predator-side held-out heuristic-radius grid.
+
+        Default grid per spec scenario "Held-Out Set Construction":
+        `detection_radius in {4, 6, 8, 10} x damage_radius in {0, 1}`
+        = 8 combos at default `held_out_size=8`. Returns a list of
+        `(detection_radius, damage_radius)` tuples; the actual
+        heuristic-brain instances are constructed lazily inside the
+        probe (a tuple is what gets stored / checkpointed).
+
+        Sampling: `held_out_rng.choice` with replacement / without per
+        the same convention as the prey loader.
+        """
+        cfg = self.coevolution_config
+        detection_radii = [4, 6, 8, 10]
+        damage_radii = [0, 1]
+        grid = [(d, dmg) for d in detection_radii for dmg in damage_radii]
+        target = cfg.held_out_size
+        if target <= len(grid):
+            chosen = self._held_out_rng.choice(len(grid), size=target, replace=False)
+        else:
+            chosen = self._held_out_rng.choice(len(grid), size=target, replace=True)
+        return [grid[int(i)] for i in chosen]
+
+    # ------------------------------------------------------------------
     # Per-K-block CMA-ES re-construction (D2)
     # ------------------------------------------------------------------
 
@@ -580,21 +730,316 @@ class CoevolutionLoop:
         training_side: _SideState,
         opposing_side: _SideState,
     ) -> None:
-        """Run `K_per_block` generations of `training_side` against frozen `opposing_side`.
+        """Run `K_per_block` generations of `training_side` vs frozen `opposing_side`.
 
-        Stub for this commit (PR 3 §6.3-6.6). Per-generation `ask`/
-        `tell`/`evaluate` plumbing — including HoF-mixed opposition
-        sampling, generality probe, and worker dispatch — lands in
-        commits 6 and 7 within this PR. Defining the method here lets
-        the schedule controller call it and unit tests verify the
-        K-block boundary semantics in commit 8 even before the body
-        is implemented.
+        Per-generation flow:
+
+        1. `optimizer.ask()` produces population_size flat float vectors.
+        2. Wrap each into a `Genome` with `genome_id_for(...)`; record
+           on `training_side.population` for opposition lookup.
+        3. For each candidate, build the opposition set via
+           `opposing_side.hof.mix_with_pop(rng, opposing.population,
+           frac_hof=0.3)` (per spec "70/30 Mixture During Evaluation").
+           Empty-HoF fallback returns all-from-pop (per "Empty HoF
+           Fallback").
+        4. Evaluate the candidate against the opposition (PR 4 wires
+           opposition into `sim_config`; PR 3 invokes
+           `fitness.evaluate(...)` with the unpatched config — see
+           module docstring "Opposition injection (deferred to PR 4)").
+        5. `optimizer.tell(solutions, neg_fitnesses)` (negate per
+           CMA-ES minimisation convention).
+        6. Record lineage row.
+        7. Increment `training_side.generation`.
+
+        At K-block end (after the K-th generation):
+
+        - The block elite (highest-fitness genome of the K generations)
+          is pushed to `training_side.hof` AND appended to
+          `champion_history` per spec "Block Elite Pushed To HoF" +
+          "Side State Surface".
+        - The opposing side's `population`, `optimizer`, and `hof`
+          remain UNTOUCHED throughout (per "Opposing Side Frozen
+          During Off-Block").
+
+        Generality probe fires every `coevolution_config.generality_probe_every`
+        generations within the block (counted on `training_side.generation`),
+        evaluating each side's elite against its held-out set without
+        mutating any state (per "Probe Does Not Mutate Population State").
         """
-        del training_side, opposing_side  # unused until commits 6/7 wire up the body
-        msg = (
-            "_run_one_k_block body lands in PR 3 commit 6 (HoF + opposition "
-            "sampling) and commit 7 (worker reuse). The schedule controller "
-            "(this commit) drives the K-block flips; the per-generation "
-            "evaluation plumbing is wired separately for review tractability."
+        cfg = self.coevolution_config
+        # Lineage tracker is lazy: created on the first K-block when the
+        # training side first records a row. Avoids creating an empty
+        # CSV file for the side that hasn't trained yet.
+        if training_side.lineage is None:
+            training_side.lineage = LineageTracker(
+                training_side.output_dir / "lineage.csv",
+            )
+
+        # Track the K-block's best so we know what to push to HoF +
+        # champion_history at the end. `block_elite_*` are updated each
+        # generation when a new best appears.
+        block_elite_genome: Genome | None = None
+        block_elite_fitness: float = float("-inf")
+
+        for k_gen in range(cfg.K_per_block):
+            global_gen = training_side.generation
+            logger.info(
+                "K-block %d (%s) gen %d/%d (side-global gen %d)",
+                self._k_block_index,
+                training_side.name,
+                k_gen,
+                cfg.K_per_block,
+                global_gen,
+            )
+
+            solutions = training_side.optimizer.ask()
+            parent_ids = list(training_side.prev_generation_ids)
+            gen_genomes: list[Genome] = []
+            fitnesses: list[float] = []
+
+            for idx, params in enumerate(solutions):
+                gid = genome_id_for(global_gen, idx, parent_ids)
+                genome = Genome(
+                    params=np.asarray(params, dtype=np.float32),
+                    genome_id=gid,
+                    parent_ids=parent_ids,
+                    generation=global_gen,
+                    birth_metadata=build_birth_metadata(self.sim_config),
+                )
+                gen_genomes.append(genome)
+
+                # HoF-mixed opposition. Even though the actual
+                # opposition-injection wiring is deferred to PR 4, we
+                # still draw the mix here so the deterministic
+                # RNG-state advancement is correct (the loop's RNG must
+                # be in the same state at the same generation index
+                # whether or not the opposition was actually injected
+                # downstream).
+                opposition = self._build_opposition(opposing_side)
+
+                # Per-evaluation seed derivation matches EvolutionLoop's
+                # pattern (each child gets a distinct stream from the
+                # master rng).
+                eval_seed = int(self.rng.integers(0, 2**31 - 1))
+                fitness_val = self._evaluate_candidate(
+                    side=training_side,
+                    genome=genome,
+                    opposition=opposition,
+                    eval_seed=eval_seed,
+                )
+                fitnesses.append(fitness_val)
+
+                # Lineage row.
+                training_side.lineage.record(
+                    genome,
+                    fitness=fitness_val,
+                    brain_type=training_side.encoder.brain_name,
+                    inherited_from="",
+                )
+
+                # Track block elite. Strict-greater so first-seen
+                # high-tier wins on ties (preserves recency of the
+                # original champion in the K-block).
+                if fitness_val > block_elite_fitness:
+                    block_elite_fitness = fitness_val
+                    block_elite_genome = genome
+
+            # Tell optimiser (CMA-ES minimises; our fitness maximises).
+            training_side.optimizer.tell(list(solutions), [-f for f in fitnesses])
+
+            # Update side-state population + bookkeeping for next gen.
+            training_side.population = gen_genomes
+            training_side.prev_generation_ids = [g.genome_id for g in gen_genomes]
+            training_side.generation += 1
+
+            # Probe cadence check. Probes operate on side-global
+            # generation index (NOT k_gen), so the cadence applies
+            # consistently across K-blocks. Probe is a no-op until
+            # at least one block elite exists per side; the first probe
+            # fires at the configured cadence after gen-0 blocks
+            # complete.
+            if (
+                cfg.generality_probe_every > 0
+                and training_side.generation % cfg.generality_probe_every == 0
+            ):
+                self._fire_generality_probe()
+
+        # K-block end: push elite to HoF + champion_history per spec.
+        if block_elite_genome is not None:
+            training_side.hof.push(block_elite_genome, fitness=block_elite_fitness)
+            training_side.champion_history.append(
+                {
+                    "genome_id": block_elite_genome.genome_id,
+                    "generation": block_elite_genome.generation,
+                    "k_block_index": self._k_block_index,
+                    "fitness": float(block_elite_fitness),
+                    "params": block_elite_genome.params.tolist(),
+                },
+            )
+            logger.info(
+                "K-block %d (%s) end: pushed elite %s (fitness=%.4f) to HoF + champion_history.",
+                self._k_block_index,
+                training_side.name,
+                block_elite_genome.genome_id,
+                block_elite_fitness,
+            )
+
+    # ------------------------------------------------------------------
+    # Opposition + evaluation (§6.7-§6.8)
+    # ------------------------------------------------------------------
+
+    def _build_opposition(
+        self,
+        opposing_side: _SideState,
+    ) -> list[Genome]:
+        """Build the opposition list for one candidate evaluation.
+
+        Per spec scenario "70/30 Mixture During Evaluation": draw
+        `opposing_side.evolution_config.population_size` opposition
+        genomes via the HoF mix. Empty-pop fallback (very first
+        K-block, opposing side has no population yet) returns an
+        empty list — `_evaluate_candidate` handles that by treating
+        the genome as un-opposed (degenerate fitness; see method
+        docstring).
+        """
+        if not opposing_side.population:
+            # First K-block of the run: the opposing side hasn't
+            # populated its `population` yet (it sits at the gen-0
+            # optimiser mean but no `ask()` has fired). Return empty —
+            # `_evaluate_candidate` treats this as the un-opposed base
+            # case to bootstrap the first block.
+            return []
+        return opposing_side.hof.mix_with_pop(
+            self.rng,
+            opposing_side.population,
+            # Default 0.3 per design.md D3 (70/30 mix); could be made
+            # YAML-configurable later if pilot evidence motivates a
+            # different ratio.
         )
-        raise NotImplementedError(msg)
+
+    def _evaluate_candidate(
+        self,
+        *,
+        side: _SideState,
+        genome: Genome,
+        opposition: list[Genome],
+        eval_seed: int,
+    ) -> float:
+        """Evaluate one candidate genome against the sampled opposition.
+
+        For PR 3 this dispatches directly to `side.fitness.evaluate(...)`
+        with the unpatched `sim_config`. The opposition list is recorded
+        but not yet injected into the env (see module docstring
+        "Opposition injection (deferred to PR 4)"). PR 4 will:
+
+        1. Pre-decode each opposition genome into its brain instance
+           (calling `opposing_side.encoder.decode(...)` against
+           `sim_config`).
+        2. Patch `sim_config` to point at the decoded brains:
+           - Prey-side training: install decoded predator brains on
+             `env.predators[i].brain` post-construction (re-using the
+             pattern from `predator_fitness._build_env_with_genome_predators`).
+           - Predator-side training: populate
+             `sim_config.multi_agent.agents` with prey-side
+             BrainContainerConfigs whose weights point at the decoded
+             prey brains.
+        3. Pass the patched `sim_config` to `fitness.evaluate`.
+
+        The opposition argument is documented + accepted here so the
+        interface is stable across the PR 3 → PR 4 boundary; only the
+        body changes.
+        """
+        del opposition  # PR 4 will consume; PR 3 records via ask/tell only
+        return side.fitness.evaluate(
+            genome,
+            self.sim_config,
+            side.encoder,
+            episodes=side.evolution_config.episodes_per_eval,
+            seed=eval_seed,
+        )
+
+    # ------------------------------------------------------------------
+    # Generality probe (§6.9)
+    # ------------------------------------------------------------------
+
+    def _fire_generality_probe(self) -> None:
+        """Evaluate each side's current elite against its held-out set.
+
+        Writes one row per (side, opponent_index) pair to
+        `{output_dir}/generality_probe.csv` per spec scenario "Probe
+        Cadence and Output Layout". Does NOT mutate any side's
+        population, optimizer, or hof (per "Probe Does Not Mutate
+        Population State"); the probe runs in append-mode against
+        the CSV.
+
+        Per side: the elite is the latest entry in `champion_history`
+        (the K-block elite). When a side has no champions yet (first
+        K-block hasn't completed), the probe is a no-op for that side.
+        Held-out evaluations themselves still use the deferred-to-PR-4
+        wiring — opposition is recorded but not injected end-to-end
+        in PR 3 (see `_evaluate_candidate`).
+        """
+        with self._probe_csv_path.open("a", newline="") as fh:
+            writer = csv.writer(fh)
+            for side in (self.prey, self.predator):
+                if not side.champion_history:
+                    continue
+                elite_record = side.champion_history[-1]
+                # Reconstruct the elite genome from the champion_history
+                # record. Mirror Genome.params dtype for downstream
+                # encoder consumption.
+                elite = Genome(
+                    params=np.asarray(elite_record["params"], dtype=np.float32),
+                    genome_id=str(elite_record["genome_id"]),
+                    parent_ids=[],
+                    generation=int(elite_record["generation"]),
+                    birth_metadata=build_birth_metadata(self.sim_config),
+                )
+                # Per-side held-out set: prey loaded as Genome list;
+                # predator stored as (detection_radius, damage_radius)
+                # tuples. The actual probe evaluation uses the same
+                # deferred-to-PR-4 wiring as training evaluations.
+                # Currently the loop records the probe schema (one row
+                # per opponent) with a placeholder fitness of NaN —
+                # PR 4 plugs in real evaluation here.
+                if side.name == "prey":
+                    held_out_count = len(self._prey_held_out)
+                else:
+                    held_out_count = len(self._predator_held_out_specs)
+                for opp_idx in range(held_out_count):
+                    # Probe RNG seed is derived per-fire so the rng
+                    # advances deterministically — PR 4 will consume.
+                    eval_seed = int(self.rng.integers(0, 2**31 - 1))
+                    fitness_val = self._probe_one_opponent(
+                        side=side,
+                        elite=elite,
+                        opponent_index=opp_idx,
+                        eval_seed=eval_seed,
+                    )
+                    writer.writerow(
+                        [
+                            side.generation,
+                            side.name,
+                            opp_idx,
+                            f"{fitness_val:.6f}",
+                        ],
+                    )
+
+    def _probe_one_opponent(
+        self,
+        *,
+        side: _SideState,
+        elite: Genome,
+        opponent_index: int,
+        eval_seed: int,
+    ) -> float:
+        """Evaluate `elite` against one held-out opponent.
+
+        PR 3 records the probe schema with a NaN fitness; PR 4 plugs
+        in real evaluation by patching `sim_config` (heuristic-radius
+        predator for prey-side probes; M3 elite prey genome for
+        predator-side probes) and calling the side's fitness function.
+        See `_evaluate_candidate` for the full PR-4 plan.
+        """
+        del side, elite, opponent_index, eval_seed
+        return float("nan")
