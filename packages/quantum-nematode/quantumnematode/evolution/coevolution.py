@@ -104,6 +104,19 @@ DEFAULT_HOF_CAPACITY = 8
 # 4-file co-evolution split).
 CHECKPOINT_VERSION = 1
 
+# Repo-root-anchored path to the prey held-out bundle (committed
+# in-repo per spec scenario "Held-Out Set Construction"). Resolved
+# from this file's location rather than the cwd, so the loop works
+# regardless of where the campaign driver was launched. The number of
+# `.parents[N]` hops matches the pattern in `validation/datasets.py:19`
+# (4 parents: this file → evolution/ → quantumnematode/ →
+# packages/quantum-nematode/ → repo root). PR 4's campaign driver
+# can override `CoevolutionLoop._PREY_HELD_OUT_BUNDLE_DIR` (e.g. for
+# multi-bundle ablations), and tests likewise.
+_DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
+    Path(__file__).resolve().parents[4] / "configs" / "evolution" / "coevolution_held_out_prey"
+)
+
 
 # ---------------------------------------------------------------------------
 # Side state
@@ -211,6 +224,13 @@ class CoevolutionLoop:
     log_level
         Forwarded to worker init; matches `EvolutionLoop`'s convention.
     """
+
+    # Class-level attribute so tests + future subclasses can override
+    # the bundle directory without monkey-patching module globals.
+    # Defaults to the repo-root-anchored path so the loop works
+    # regardless of cwd. PR 4's campaign driver may override this when
+    # running multi-bundle ablations (e.g. seed-specific bundles).
+    _PREY_HELD_OUT_BUNDLE_DIR: Path = _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR
 
     def __init__(
         self,
@@ -521,11 +541,13 @@ class CoevolutionLoop:
         master seed reproduces the held-out set.
         """
         cfg = self.coevolution_config
-        # Bundle path is fixed by spec ("Held-Out Set Construction"
-        # scenario). Resolved relative to the repo root via cwd —
-        # tests can patch this attribute by passing a custom
-        # `_prey_held_out_dir` override when subclassing for tests.
-        bundle_dir = Path("configs/evolution/coevolution_held_out_prey")
+        # Bundle path is repo-root-anchored via the class attribute
+        # `_PREY_HELD_OUT_BUNDLE_DIR` (resolved from this file's
+        # location, NOT from cwd, so the loop works regardless of
+        # where the campaign driver was launched). Tests + PR 4's
+        # campaign driver can override the class attribute to point
+        # at a different bundle for ablations.
+        bundle_dir = self._PREY_HELD_OUT_BUNDLE_DIR
         if not bundle_dir.is_dir():
             logger.warning(
                 "Prey held-out bundle missing at %s; prey-side probe will be a "
@@ -627,7 +649,8 @@ class CoevolutionLoop:
 
         Returns the held-out list in the same order it was saved.
         """
-        bundle_dir = Path("configs/evolution/coevolution_held_out_prey")
+        # Same repo-root-anchored path as `_load_held_out_prey_bundle`.
+        bundle_dir = self._PREY_HELD_OUT_BUNDLE_DIR
         if not bundle_dir.is_dir():
             if recorded_ids:
                 msg = (
@@ -854,30 +877,61 @@ class CoevolutionLoop:
     # ------------------------------------------------------------------
 
     def _save_checkpoint(self) -> None:
-        """Persist full loop state across two per-side files + one top-level JSON.
+        """Persist full loop state across five files (per-side pickles + 2 JSON + RNG pickle).
 
         Per task 6.11 + spec scenario "Probe Cadence and Output Layout":
 
         - `{output_dir}/prey/checkpoint.pkl`: per-side pickle containing
           optimizer + population + prev_generation_ids + generation +
-          champion_history. Reuses the existing `EvolutionLoop`
-          checkpoint shape so M3 single-population resume tooling
-          can introspect.
+          champion_history + k_block_index + inheritance literal.
+          Reuses the existing `EvolutionLoop` checkpoint shape so M3
+          single-population resume tooling can introspect.
         - `{output_dir}/predator/checkpoint.pkl`: same shape.
         - `{output_dir}/coevolution_state.json`: top-level JSON
           containing co-evolution-specific state: K-block index,
           alternating-schedule cursor, both HoFs (via `HallOfFame.to_dict`),
-          held-out predator specs, prey held-out genome IDs (the
-          full bundle reloads from disk on resume — no need to
-          re-serialise the params).
+          held-out predator specs, prey held-out genome IDs, and
+          per-side K-block-mean fitness history (rebalance heuristic).
+        - `{output_dir}/champion_history.json`: top-level JSON read by
+          PR 5's aggregator. `{prey: list[dict], predator: list[dict]}`
+          plus a `k_block_index` field for cross-file consistency.
         - `{output_dir}/coevolution_rng.pkl`: RNG state for the
-          master `rng` and the held-out RNG. Pickled separately
-          because numpy bit_generator state has nested arrays that
-          don't JSON natively.
+          master `rng` and the held-out RNG, plus `k_block_index` as
+          the canonical cross-file consistency value. Pickled because
+          numpy bit_generator state has nested arrays that don't JSON
+          natively. Written LAST: its presence signals "checkpoint
+          complete"; its absence triggers `_load_checkpoint` to
+          refuse to resume (treats partial writes as never-happened).
 
-        Atomic write via tmp file + rename for each output to avoid
-        torn writes if the process is killed mid-checkpoint.
+        Crash recovery design:
+
+        - Each file is tmp+rename atomic — individual files never
+          observe a torn write.
+        - The RNG pickle is written LAST. If the process is killed
+          between any of the earlier writes, the RNG pickle is
+          missing and `_load_checkpoint` refuses to resume.
+        - `k_block_index` is embedded in EVERY file as a cross-file
+          consistency check. `_load_checkpoint` uses the RNG-pickle
+          value as canonical (since it was written last) and
+          validates the other four against it. Mismatch implies a
+          torn save where the kill landed mid-write across files;
+          resume refuses with a diagnostic naming the divergent file.
         """
+        # Write order is load-bearing for crash recovery: the four
+        # non-RNG files are written first; `coevolution_rng.pkl` is
+        # written LAST. If the process is killed between any of the
+        # earlier writes, the RNG pickle is missing and `_load_checkpoint`
+        # refuses to resume (treats absence as "incomplete checkpoint").
+        # Each file is also tmp+rename atomic so individual files
+        # never observe a torn write.
+        #
+        # Cross-file consistency: `k_block_index` is embedded in EVERY
+        # file (per-side pickles + JSON state + champion_history JSON +
+        # RNG pickle) so `_load_checkpoint` can detect partial-write
+        # divergence (e.g. prey pickle at K-block 4, predator pickle at
+        # K-block 3 because the kill landed mid-write) by mismatching
+        # the `k_block_index` fields across files.
+
         # Per-side pickles. The optimizer carries ALL CMA-ES adaptive
         # state (covariance, sigma, mean, generation counter inside the
         # cma library); pickling it directly is the same approach
@@ -885,6 +939,10 @@ class CoevolutionLoop:
         for side in (self.prey, self.predator):
             payload = {
                 "checkpoint_version": CHECKPOINT_VERSION,
+                # Cross-file consistency check: `_load_checkpoint`
+                # verifies BOTH per-side pickles agree on this value
+                # AND that the JSON's `k_block_index` matches.
+                "k_block_index": self._k_block_index,
                 "side": side.name,
                 "optimizer": side.optimizer,
                 "population_params": [g.params.tolist() for g in side.population],
@@ -936,6 +994,10 @@ class CoevolutionLoop:
         # since the per-K-block append in `_run_one_k_block` calls
         # `params.tolist()`.
         champion_payload = {
+            # Embed `k_block_index` for cross-file consistency check.
+            # Aggregator (PR 5) reads `prey` + `predator` only; the
+            # extra field is ignored by aggregator code.
+            "k_block_index": self._k_block_index,
             "prey": list(self.prey.champion_history),
             "predator": list(self.predator.champion_history),
         }
@@ -945,8 +1007,16 @@ class CoevolutionLoop:
         )
 
         # RNG state pickle (separate file because numpy bit_generator
-        # state is awkward to JSON).
+        # state is awkward to JSON). Written LAST: its presence
+        # signals "checkpoint complete"; its absence triggers
+        # `_load_checkpoint` to refuse to resume (treats partial
+        # writes as never having happened).
         rng_payload = {
+            # Embed `k_block_index` for cross-file consistency check —
+            # since the RNG pickle is the last-written file, this is
+            # the canonical "expected k_block_index" against which the
+            # other four files are validated at load time.
+            "k_block_index": self._k_block_index,
             "master_rng_state": self.rng.bit_generator.state,
             "held_out_rng_state": self._held_out_rng.bit_generator.state,
         }
@@ -955,30 +1025,76 @@ class CoevolutionLoop:
             rng_payload,
         )
 
-    def _load_checkpoint(self) -> None:
-        """Restore full loop state from the four checkpoint files.
+    def _load_checkpoint(self) -> None:  # noqa: C901, PLR0912, PLR0915
+        """Restore full loop state from the five checkpoint files.
+
+        Complexity note: C901 / PLR0912 / PLR0915 ruff thresholds are
+        intentionally exceeded — the method is a sequence of fail-fast
+        validation steps (5 file existence checks, 5 cross-file
+        consistency checks, version comparisons, restoration assignments).
+        Splitting into helpers would fragment the resume contract and
+        make the failure modes harder to follow at the call site.
 
         Inverse of `_save_checkpoint`. Reads per-side pickles to
         restore optimizer + population + champion_history; reads the
         top-level JSON to restore K-block index, side cursor, HoFs;
         reads the RNG pickle to restore master + held-out RNG state.
 
-        Resume invariants verified:
+        Resume invariants verified (in order):
 
-        - Each per-side checkpoint's `checkpoint_version` matches
-          `CHECKPOINT_VERSION`; mismatch raises `ValueError` to
-          prevent silent state corruption.
-        - The two per-side files agree on `k_block_index` (cross-
-          checked against the top-level JSON).
+        1. RNG pickle exists. The RNG pickle is written LAST in
+           `_save_checkpoint`; its absence implies the prior save was
+           interrupted before completing → refuse to resume rather
+           than recover from inconsistent intermediate state.
+        2. Each per-side checkpoint's `checkpoint_version` matches
+           `CHECKPOINT_VERSION`; mismatch raises `ValueError`.
+        3. **Cross-file `k_block_index` consistency**: the RNG
+           pickle's `k_block_index` is the canonical value (it's
+           written last so disagreement implies a torn save). All
+           four other files (per-side pickles, state JSON,
+           champion_history JSON) MUST agree. Mismatch raises with
+           a diagnostic naming the offending file → operator can
+           hand-recover by deleting the divergent file and
+           re-running with `resume=True` (which will then fail at
+           the version check below for the absent file, prompting
+           a fresh-start decision).
+        4. The two per-side files agree on `inheritance` literal
+           with the resolved current value (mid-run inheritance
+           changes rejected, matching `EvolutionLoop`'s shape).
 
         Held-out sets are NOT re-serialised in detail — the prey
-        bundle is re-read from `configs/evolution/coevolution_held_out_prey/*.json`
-        and the recorded genome IDs are checked against the freshly
-        loaded set so a resume across a bundle-edit fails loudly.
-        Predator held-out specs are restored from the JSON directly
-        (they're tiny tuples).
+        bundle is reconstructed BY ID from
+        `configs/evolution/coevolution_held_out_prey/*.json`
+        (`_reload_prey_held_out_by_ids`) so the recorded order is
+        preserved without depending on RNG state.
         """
         import pickle
+
+        # Load RNG pickle FIRST so we have the canonical
+        # `k_block_index` to cross-check the other files. Absence
+        # signals an incomplete save (RNG pickle is written last);
+        # refuse to resume rather than recover from inconsistent
+        # intermediate state.
+        rng_path = self.output_dir / "coevolution_rng.pkl"
+        if not rng_path.exists():
+            msg = (
+                f"CoevolutionLoop._load_checkpoint: RNG state missing at "
+                f"{rng_path}. Either the prior save was interrupted "
+                "before completing (refusing to resume from inconsistent "
+                "state) or the file was deleted manually. Restore the "
+                "file from a backup or start a fresh run."
+            )
+            raise FileNotFoundError(msg)
+        with rng_path.open("rb") as fh:
+            rng_payload = pickle.load(fh)  # noqa: S301 — trusted local file
+        canonical_k_block_index = rng_payload.get("k_block_index")
+        if canonical_k_block_index is None:
+            msg = (
+                "coevolution_rng.pkl missing required `k_block_index` field. "
+                "This field is mandatory for cross-file consistency checking; "
+                "refusing to resume from a checkpoint without it."
+            )
+            raise ValueError(msg)
 
         for side in (self.prey, self.predator):
             ckpt_path = side.output_dir / "checkpoint.pkl"
@@ -997,6 +1113,23 @@ class CoevolutionLoop:
                     f"Per-side checkpoint version mismatch on {side.name}: "
                     f"expected {CHECKPOINT_VERSION}, got {version}. "
                     "Refusing to resume."
+                )
+                raise ValueError(msg)
+            # Cross-file `k_block_index` consistency: the per-side
+            # pickle's value MUST match the canonical RNG pickle.
+            # Mismatch implies a torn save (one side's pickle was
+            # written before the kill, the other after), which would
+            # silently corrupt the alternating-schedule cursor on
+            # resume.
+            side_k_block = payload.get("k_block_index")
+            if side_k_block != canonical_k_block_index:
+                msg = (
+                    f"Per-side checkpoint k_block_index mismatch on {side.name}: "
+                    f"checkpoint={side_k_block!r}, canonical (from RNG pickle)="
+                    f"{canonical_k_block_index!r}. This indicates a torn save "
+                    "(the prior run was interrupted between writing this "
+                    "side's pickle and writing the RNG pickle). Recover by "
+                    "deleting the divergent file and accepting a fresh run."
                 )
                 raise ValueError(msg)
             # Cross-check inheritance literal. `CoevolutionConfig` already
@@ -1055,6 +1188,19 @@ class CoevolutionLoop:
                 "Refusing to resume."
             )
             raise ValueError(msg)
+        # Cross-file `k_block_index` consistency: the JSON's value
+        # MUST match the canonical RNG-pickle value loaded at the top.
+        json_k_block = coevo.get("k_block_index")
+        if json_k_block != canonical_k_block_index:
+            msg = (
+                f"coevolution_state.json k_block_index mismatch: "
+                f"json={json_k_block!r}, canonical (from RNG pickle)="
+                f"{canonical_k_block_index!r}. This indicates a torn save "
+                "(JSON written before kill, RNG pickle written after a "
+                "subsequent successful save, or the JSON is stale). "
+                "Recover by deleting the divergent file."
+            )
+            raise ValueError(msg)
         self._k_block_index = int(coevo["k_block_index"])
         self._current_side = coevo["current_side"]
         self.prey.hof = HallOfFame.from_dict(coevo["prey_hof"])
@@ -1071,23 +1217,32 @@ class CoevolutionLoop:
                 "predator": list(rebalance_state.get("predator", [])),
             }
 
-        # RNG restore MUST happen BEFORE the held-out re-sample below.
-        # The held-out bundle was originally drawn in `__init__` using
-        # `_held_out_rng` seeded from `self.rng.integers(...)` — but
-        # on this resume path, both RNGs were re-seeded fresh in
-        # `__init__` (different state from the saved run). Restoring
-        # `self.rng` and `self._held_out_rng` to their checkpointed
-        # state lets the bundle re-sample below produce the same
-        # subset that was saved.
-        rng_path = self.output_dir / "coevolution_rng.pkl"
-        if not rng_path.exists():
-            msg = (
-                f"CoevolutionLoop._load_checkpoint: RNG state missing at "
-                f"{rng_path}. All four checkpoint files are required."
-            )
-            raise FileNotFoundError(msg)
-        with rng_path.open("rb") as fh:
-            rng_payload = pickle.load(fh)  # noqa: S301 — trusted local file
+        # Cross-check `champion_history.json`'s k_block_index too —
+        # the file is a write-only artefact for the aggregator (PR 5),
+        # never read on resume, but its `k_block_index` field still
+        # participates in the cross-file consistency check so a torn
+        # save that wrote per-side pickles + state JSON but failed
+        # before champion_history.json + RNG pickle is detected.
+        champion_path = self.output_dir / "champion_history.json"
+        if champion_path.exists():
+            with champion_path.open("r") as fh:
+                champion_data = json.load(fh)
+            champion_k_block = champion_data.get("k_block_index")
+            if champion_k_block != canonical_k_block_index:
+                msg = (
+                    f"champion_history.json k_block_index mismatch: "
+                    f"champion_history={champion_k_block!r}, canonical="
+                    f"{canonical_k_block_index!r}. Torn save detected; "
+                    "delete the divergent file to recover."
+                )
+                raise ValueError(msg)
+
+        # RNG state already loaded at the top of this method as the
+        # canonical k_block_index source — restore the actual
+        # generator states now that we've verified the cross-file
+        # consistency invariants. MUST happen BEFORE the held-out
+        # bundle reload (next block) so any RNG-dependent
+        # construction sees the saved state.
         self.rng.bit_generator.state = rng_payload["master_rng_state"]
         self._held_out_rng.bit_generator.state = rng_payload["held_out_rng_state"]
 

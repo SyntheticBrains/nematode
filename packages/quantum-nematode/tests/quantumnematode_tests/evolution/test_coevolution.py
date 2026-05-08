@@ -860,7 +860,10 @@ class TestChampionHistoryJSONEmitted:
         history_path = tmp_path / "coevo" / "champion_history.json"
         assert history_path.exists()
         data = json.loads(history_path.read_text())
-        assert set(data.keys()) == {"prey", "predator"}
+        # Spec-required keys: `prey` and `predator`. Extra `k_block_index`
+        # field added in round-2 self-review for cross-file consistency
+        # check at resume; aggregator (PR 5) ignores it.
+        assert {"prey", "predator"}.issubset(data.keys())
         assert len(data["prey"]) == 1
         assert len(data["predator"]) == 1
         assert data["prey"][0]["genome_id"] == "elite-prey-0"
@@ -900,6 +903,117 @@ class TestRebalanceLagDocumented:
 # ---------------------------------------------------------------------------
 # S2 regression: phenotypic_cycling absolute-variance floor
 # ---------------------------------------------------------------------------
+
+
+class TestCheckpointTornSaveDetected:
+    """Round-2 #1: cross-file `k_block_index` mismatch SHALL refuse to resume.
+
+    Pre-fix gap: `_save_checkpoint` writes 5 files but `_load_checkpoint`
+    didn't cross-check `k_block_index` between them. A torn save (kill
+    landed mid-write across files) could leave the per-side pickles
+    at K-block 4 while the JSON state was still at K-block 3 → resume
+    silently corrupts the alternating-schedule cursor.
+    Post-fix: `k_block_index` is embedded in EVERY checkpoint file.
+    `_load_checkpoint` reads the RNG pickle's value as canonical
+    (since it's written last) and validates the other 4 files match.
+    Any mismatch raises with a diagnostic naming the divergent file.
+    """
+
+    def test_per_side_pickle_k_block_mismatch_raises(self, tmp_path: Path) -> None:
+        """Tampered prey checkpoint with stale k_block_index SHALL refuse to resume."""
+        import pickle
+
+        loop = _make_loop(tmp_path)
+        # Advance state so champion_history is non-trivial.
+        loop._k_block_index = 5
+        loop._save_checkpoint()
+
+        # Tamper with the prey pickle to set a stale k_block_index
+        # (simulates a torn save where the prey pickle was written
+        # before the K-block-index increment, then the kill landed).
+        prey_ckpt = tmp_path / "coevo" / "prey" / "checkpoint.pkl"
+        with prey_ckpt.open("rb") as fh:
+            payload = pickle.load(fh)  # noqa: S301 — test file
+        payload["k_block_index"] = 4  # canonical (RNG pickle) is 5
+        with prey_ckpt.open("wb") as fh:
+            pickle.dump(payload, fh)
+
+        sim_config = _build_minimal_sim_config()
+        loop2 = CoevolutionLoop(
+            sim_config,
+            output_dir=tmp_path / "coevo",
+            rng=np.random.default_rng(seed=99),
+        )
+        with pytest.raises(ValueError, match="k_block_index mismatch"):
+            loop2._load_checkpoint()
+
+    def test_missing_rng_pickle_refuses_resume(self, tmp_path: Path) -> None:
+        """Missing `coevolution_rng.pkl` SHALL be treated as incomplete checkpoint.
+
+        The RNG pickle is written LAST in `_save_checkpoint`; its
+        absence implies an interrupted save. `_load_checkpoint` MUST
+        refuse to resume rather than try to recover from the
+        intermediate state of the other 4 files.
+        """
+        loop = _make_loop(tmp_path)
+        loop._save_checkpoint()
+        # Simulate an interrupted save: delete the RNG pickle.
+        rng_path = tmp_path / "coevo" / "coevolution_rng.pkl"
+        rng_path.unlink()
+
+        sim_config = _build_minimal_sim_config()
+        loop2 = CoevolutionLoop(
+            sim_config,
+            output_dir=tmp_path / "coevo",
+            rng=np.random.default_rng(seed=99),
+        )
+        with pytest.raises(FileNotFoundError, match="interrupted"):
+            loop2._load_checkpoint()
+
+
+class TestHeldOutBundlePathRepoAnchored:
+    """Round-2 #2: held-out bundle path SHALL resolve from `__file__`, not cwd.
+
+    Pre-fix gap: `_load_held_out_prey_bundle` and
+    `_reload_prey_held_out_by_ids` used a bare relative path
+    `Path("configs/evolution/coevolution_held_out_prey")` resolved
+    against cwd. A campaign driver launched from `/tmp` (or any
+    non-repo-root cwd) would silently no-op the loader.
+    Post-fix: class attribute `_PREY_HELD_OUT_BUNDLE_DIR` is anchored
+    to `Path(__file__).resolve().parents[4]` so the path resolves
+    correctly regardless of cwd.
+    """
+
+    def test_bundle_path_anchored_to_repo_root(self) -> None:
+        """Class attribute SHALL resolve to `<repo>/configs/evolution/coevolution_held_out_prey`."""
+        from quantumnematode.evolution.coevolution import (
+            _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR,
+        )
+
+        # Repo root is the parent of `packages/quantum-nematode/...`.
+        # The resolved path's last 3 components MUST be
+        # `configs/evolution/coevolution_held_out_prey`.
+        assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.name == "coevolution_held_out_prey"
+        assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.parent.name == "evolution"
+        assert _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR.parent.parent.name == "configs"
+
+    def test_class_attribute_overridable(self, tmp_path: Path) -> None:
+        """`_PREY_HELD_OUT_BUNDLE_DIR` is a class attribute SHALL be overridable.
+
+        Tests + PR 4's campaign driver may want to point at a
+        different bundle (e.g. seed-specific bundles for ablations).
+        """
+        # Create a synthetic bundle dir with a known fixture and
+        # verify the loop reads from there, not the default.
+        custom_dir = tmp_path / "custom_bundle"
+        custom_dir.mkdir(parents=True)
+
+        with patch.object(CoevolutionLoop, "_PREY_HELD_OUT_BUNDLE_DIR", custom_dir):
+            loop = _make_loop(tmp_path)
+            # The custom dir is empty, so the loader returns [] AND
+            # the warning mentions the custom path (not the repo-root
+            # default).
+            assert loop._prey_held_out == []
 
 
 class TestCyclingTinyAmplitudeOnLargeConstant:
