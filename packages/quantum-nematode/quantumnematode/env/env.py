@@ -1636,13 +1636,33 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     f"int, float, or str; got {type(sample_raw).__name__}"
                 )
                 raise ValueError(msg)
-            return MLPPPOPredatorBrain(
+            brain = MLPPPOPredatorBrain(
                 actor_hidden_dim=int(extra.get("actor_hidden_dim", 64)),
                 critic_hidden_dim=int(extra.get("critic_hidden_dim", 64)),
                 num_hidden_layers=int(extra.get("num_hidden_layers", 2)),
                 seed=derived_seed,
                 sample=sample_value,
             )
+            # Optional `weights_path` overrides the freshly-init weights
+            # with a saved checkpoint. Used by the co-evolution loop to
+            # inject opposition predator genome weights when the prey
+            # side is training: each opposition predator's flattened
+            # genome is materialised to a tmp .pt and the path is set
+            # on `brain_config.extra` here. Mirrors the agent-side
+            # `AgentConfig.weights_path` flow honoured by
+            # `_build_prey_agents` in the predator fitness module.
+            weights_path = extra.get("weights_path")
+            if weights_path is not None:
+                # Local import: parallels the lazy-import strategy above
+                # for `MLPPPOPredatorBrain` and keeps env-only paths
+                # (where weight loading is unused) free of the
+                # persistence import.
+                from pathlib import Path as _Path
+
+                from quantumnematode.brain.weights import load_weights
+
+                load_weights(brain, _Path(str(weights_path)))
+            return brain
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "
             "Supported kinds: 'heuristic', 'mlpppo_predator'."

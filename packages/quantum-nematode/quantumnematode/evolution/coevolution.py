@@ -62,12 +62,14 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
+from quantumnematode.brain.weights import save_weights
 from quantumnematode.evolution.encoders import (
     LSTMPPOEncoder,
     build_birth_metadata,
@@ -83,13 +85,19 @@ from quantumnematode.evolution.lineage import LineageTracker
 from quantumnematode.evolution.predator_encoders import MLPPPOPredatorEncoder
 from quantumnematode.evolution.predator_fitness import PredatorEpisodicKillRate
 from quantumnematode.optimizers.evolutionary import CMAESOptimizer
+from quantumnematode.utils.config_loader import (
+    AgentConfig,
+    MultiAgentConfig,
+)
 
 if TYPE_CHECKING:
+    from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
     from quantumnematode.evolution.inheritance import InheritanceStrategy
     from quantumnematode.utils.config_loader import (
         CoevolutionConfig,
+        EnvironmentConfig,
         EvolutionConfig,
         SimulationConfig,
     )
@@ -1672,37 +1680,198 @@ class CoevolutionLoop:
     ) -> float:
         """Evaluate one candidate genome against the sampled opposition.
 
-        Currently dispatches directly to `side.fitness.evaluate(...)`
-        with the unpatched `sim_config`. The opposition list is
-        recorded but not yet injected into the env (see module
-        docstring "Opposition injection (call-site responsibility)").
-        Full integration requires the campaign-level configs that
-        wire opposition into sim_config:
+        Patches `sim_config` to materialise opposition weights into the
+        env before invoking `side.fitness.evaluate(...)`. Three patches
+        are layered:
 
-        1. Pre-decode each opposition genome into its brain instance
-           (calling `opposing_side.encoder.decode(...)` against
-           `sim_config`).
-        2. Patch `sim_config` to point at the decoded brains:
-           - Prey-side training: install decoded predator brains on
-             `env.predators[i].brain` post-construction (re-using the
-             pattern from `predator_fitness._build_env_with_genome_predators`).
-           - Predator-side training: populate
-             `sim_config.multi_agent.agents` with prey-side
-             BrainContainerConfigs whose weights point at the decoded
-             prey brains.
-        3. Pass the patched `sim_config` to `fitness.evaluate`.
+        1. `sim_config.evolution` is set to `side.evolution_config` so
+           fitness functions reading evolution-block fields
+           (e.g. `LearnedPerformanceFitness` for prey) see the right
+           per-side values.
+        2. When `side.name == "prey"`, opposition predator weights are
+           materialised to a tmp `.pt` and injected via
+           `environment.predators.brain_config.extra["weights_path"]`.
+           All N predator slots in the env load the same opposition
+           genome — a deliberate simplification matching the focal
+           predator's "same brain on every slot" semantic from
+           `_build_env_with_genome_predators`.
+        3. When `side.name == "predator"`, opposition prey weights are
+           materialised to a tmp `.pt` per opposition genome and
+           injected via `multi_agent.agents[i].weights_path`. Each
+           opposition prey gets its own slot, replacing the YAML's
+           top-level `multi_agent.count` (if any).
 
-        The opposition argument is documented + accepted here so the
-        interface is stable across the integration boundary; only the
-        body changes.
+        Empty opposition (first K-block before the opposing side has
+        trained) skips the opposition patch entirely — the env builds
+        with random-init opposing brains, which is correct first-block
+        bootstrap behaviour. The focal genome's fitness signal still
+        flows; it just measures performance against a random opponent.
+
+        `model_copy(update=...)` produces shallow copies; fitness
+        evaluation does not mutate the config so shallow is safe.
         """
-        del opposition  # consumed once the integration layer wires it
-        return side.fitness.evaluate(
-            genome,
+        with tempfile.TemporaryDirectory(prefix="coevo_opposition_") as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            base_patch: dict[str, object] = {"evolution": side.evolution_config}
+
+            opposing_side = self.predator if side.name == "prey" else self.prey
+            if side.name == "prey":
+                # Prey-side training: opposition predators (or random-init
+                # bootstrap if first K-block has no opposing pop yet).
+                # Empty opposition → no `weights_path` patch → env builds
+                # predators with random-init weights (the
+                # `mlpppo_predator` dispatcher handles this case
+                # natively). Prey fitness still flows.
+                if opposition:
+                    base_patch["environment"] = self._build_prey_side_environment_patch(
+                        opposition=opposition,
+                        opposing_side=opposing_side,
+                        eval_seed=eval_seed,
+                        tmp_path=tmp_path,
+                    )
+            else:
+                # Predator-side training: opposition prey via populated
+                # `multi_agent.agents`. Even with empty opposition we
+                # MUST populate the agents list — the predator fitness
+                # function requires at least one prey agent slot to
+                # build the multi-agent env. Empty-opposition bootstrap
+                # uses one random-init prey agent (no `weights_path`),
+                # mirroring the prey-side bootstrap.
+                base_patch["multi_agent"] = self._build_predator_side_multi_agent_patch(
+                    opposition=opposition,
+                    opposing_side=opposing_side,
+                    eval_seed=eval_seed,
+                    tmp_path=tmp_path,
+                )
+
+            patched_sim_config = self.sim_config.model_copy(update=base_patch)
+            return side.fitness.evaluate(
+                genome,
+                patched_sim_config,
+                side.encoder,
+                episodes=side.evolution_config.episodes_per_eval,
+                seed=eval_seed,
+            )
+
+    def _build_prey_side_environment_patch(
+        self,
+        *,
+        opposition: list[Genome],
+        opposing_side: _SideState,
+        eval_seed: int,
+        tmp_path: Path,
+    ) -> EnvironmentConfig:
+        """Materialise one opposition predator's weights and patch env.
+
+        Picks the first opposition genome (deterministic across calls
+        with the same `opposition` list ordering, which itself is
+        seeded via `_build_opposition`). All env predator slots load
+        these weights via the env's
+        `_build_predator_brain` `extra["weights_path"]` hook.
+        """
+        # Decode the opposition genome to a fresh predator brain, save its
+        # weights to a tmp .pt, and patch the env's predator brain_config
+        # to load them on construction.
+        opp_genome = opposition[0]
+        opp_brain = opposing_side.encoder.decode(
+            opp_genome,
             self.sim_config,
-            side.encoder,
-            episodes=side.evolution_config.episodes_per_eval,
             seed=eval_seed,
+        )
+        weights_file = tmp_path / "opposition_predator.pt"
+        # `encoder.decode` annotates the return as `Brain`; concrete
+        # predator decoders return `MLPPPOPredatorBrain` which satisfies
+        # the separate `PredatorBrain` Protocol. The runtime brain
+        # implements `WeightPersistence`; `save_weights` only needs
+        # `WeightPersistence` (it accepts `Brain` for back-compat but
+        # only consults `get_weight_components`). Cast for the static
+        # checker.
+        save_weights(cast("Brain", opp_brain), weights_file)
+
+        env_cfg = self.sim_config.environment
+        if env_cfg is None or env_cfg.predators is None:
+            msg = (
+                "Prey-side opposition injection requires sim_config.environment.predators "
+                "to be set; got None. The YAML must enable predators with "
+                "`brain_config.kind: mlpppo_predator`."
+            )
+            raise ValueError(msg)
+        predators_cfg = env_cfg.predators
+        existing_brain_cfg = predators_cfg.brain_config
+        if existing_brain_cfg is None:
+            msg = (
+                "Prey-side opposition injection requires "
+                "sim_config.environment.predators.brain_config "
+                "to be set with `kind: mlpppo_predator`. "
+                "Add the block to the YAML."
+            )
+            raise ValueError(msg)
+        new_extra = dict(existing_brain_cfg.extra or {})
+        new_extra["weights_path"] = str(weights_file)
+        new_brain_cfg = existing_brain_cfg.model_copy(update={"extra": new_extra})
+        new_predators_cfg = predators_cfg.model_copy(
+            update={"brain_config": new_brain_cfg},
+        )
+        return env_cfg.model_copy(update={"predators": new_predators_cfg})
+
+    def _build_predator_side_multi_agent_patch(
+        self,
+        *,
+        opposition: list[Genome],
+        opposing_side: _SideState,
+        eval_seed: int,
+        tmp_path: Path,
+    ) -> MultiAgentConfig:
+        """Materialise opposition prey weights and patch multi_agent.
+
+        One env agent slot per opposition genome. Each slot's
+        `BrainContainerConfig` mirrors the YAML's top-level
+        `sim_config.brain` (the prey brain shape); per-slot
+        `weights_path` injects the opposition genome's weights.
+        """
+        if self.sim_config.brain is None:
+            msg = (
+                "Predator-side opposition injection requires sim_config.brain "
+                "(top-level prey brain block) to be set so opposition prey "
+                "agents can construct via the same brain shape."
+            )
+            raise ValueError(msg)
+        agent_configs: list[AgentConfig] = []
+        if not opposition:
+            # First K-block bootstrap: opposing prey side hasn't
+            # populated yet. Spawn one random-init prey opponent — the
+            # predator's fitness still measures performance against a
+            # random-policy prey, which is the right gen-0 baseline.
+            agent_configs.append(
+                AgentConfig(
+                    id="opposition_prey_bootstrap",
+                    brain=self.sim_config.brain,
+                    weights_path=None,
+                ),
+            )
+        for idx, opp_genome in enumerate(opposition):
+            opp_brain = opposing_side.encoder.decode(
+                opp_genome,
+                self.sim_config,
+                seed=eval_seed,
+            )
+            weights_file = tmp_path / f"opposition_prey_{idx}.pt"
+            save_weights(cast("Brain", opp_brain), weights_file)
+            agent_configs.append(
+                AgentConfig(
+                    id=f"opposition_prey_{idx}",
+                    brain=self.sim_config.brain,
+                    weights_path=str(weights_file),
+                ),
+            )
+        # Replace `count` (if any) with the explicit per-slot config.
+        # `_validate_population` rejects setting both, so we explicitly
+        # null out `count`.
+        existing_ma = self.sim_config.multi_agent
+        if existing_ma is None:
+            return MultiAgentConfig(enabled=True, agents=agent_configs)
+        return existing_ma.model_copy(
+            update={"enabled": True, "count": None, "agents": agent_configs},
         )
 
     # ------------------------------------------------------------------

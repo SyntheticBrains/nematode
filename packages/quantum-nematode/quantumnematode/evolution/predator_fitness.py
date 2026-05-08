@@ -26,6 +26,7 @@ prey side: it simply runs whatever multi-agent env the patched
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from quantumnematode.agent.multi_agent import MultiAgentSimulation
@@ -204,6 +205,28 @@ def _build_prey_agents(
             update={"brain": agent_config.brain},
         )
         brain = instantiate_brain_from_sim_config(per_agent_sim_config)
+
+        # Per-agent `weights_path` overrides the freshly-init weights
+        # with a saved checkpoint. `CoevolutionLoop._evaluate_candidate`
+        # uses this to inject opposition prey genome weights when the
+        # predator side is training: each opposition prey's flattened
+        # genome is materialised to a tmp .pt and the path is set here.
+        # Mirrors the pattern at `scripts/run_simulation.py:1633-1641`
+        # for parity with the standalone multi-agent runner.
+        if agent_config.weights_path:
+            from quantumnematode.brain.weights import (
+                WeightPersistence,
+                load_weights,
+            )
+
+            if not isinstance(brain, WeightPersistence):
+                msg = (
+                    f"Agent {agent_config.id!r} brain {type(brain).__name__} "
+                    "does not implement WeightPersistence; cannot load "
+                    f"weights from {agent_config.weights_path!r}."
+                )
+                raise TypeError(msg)
+            load_weights(brain, Path(agent_config.weights_path))
 
         if agent_config.id not in env.agents:
             env.add_agent(agent_id=agent_config.id, position=None)
