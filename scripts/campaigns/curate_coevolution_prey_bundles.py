@@ -360,23 +360,30 @@ def main() -> int:
     for seed in args.seeds:
         seed_dir = args.source_root / f"seed-{seed}"
         if not seed_dir.is_dir():
-            logger.error("Seed dir missing, skipping: %s", seed_dir)
-            continue
+            logger.error("Seed dir missing, aborting: %s", seed_dir)
+            return 1
+        bundle_out = bundle_dir / f"seed_{seed}.json"
+        # Pre-delete any existing per-seed file so a stale JSON from a
+        # prior run can't get mixed in if curate_seed fails mid-write
+        # (we abort below on any exception, but defensive removal here
+        # also avoids partial overwrites if `write_text` is interrupted).
+        if bundle_out.exists():
+            bundle_out.unlink()
         try:
             curate_seed(
                 sim_config_path=args.source_config,
                 seed_dir=seed_dir,
                 seed=seed,
-                bundle_out=bundle_dir / f"seed_{seed}.json",
+                bundle_out=bundle_out,
             )
         except (FileNotFoundError, ValueError, RuntimeError):
-            logger.exception("Seed %s failed", seed)
-            continue
+            # Abort instead of continuing: a partial bundle (some
+            # seeds curated, others stale or missing) would silently
+            # mislead downstream loaders. Fail loud and let the user
+            # re-run after fixing the source.
+            logger.exception("Seed %s failed; aborting curation", seed)
+            return 1
         completed_seeds.append(seed)
-
-    if not completed_seeds:
-        logger.error("No seeds curated successfully.")
-        return 1
 
     _write_readme(
         out_dir=bundle_dir,

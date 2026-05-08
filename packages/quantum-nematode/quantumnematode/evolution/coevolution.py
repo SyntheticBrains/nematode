@@ -2069,6 +2069,22 @@ class CoevolutionLoop:
                 "Add the block to the YAML."
             )
             raise ValueError(msg)
+        # The env's `_build_predator_brain` dispatcher only honours
+        # `extra["weights_path"]` on the `mlpppo_predator` branch —
+        # a `heuristic` brain config would silently ignore the
+        # injected path and the run would proceed with the default
+        # heuristic predator opponent (no opposition signal). Fail
+        # fast so a misconfigured YAML surfaces here rather than
+        # producing a flat-zero fitness gradient.
+        if existing_brain_cfg.kind != "mlpppo_predator":
+            msg = (
+                "Prey-side opposition injection requires "
+                f"sim_config.environment.predators.brain_config.kind == 'mlpppo_predator'; "
+                f"got {existing_brain_cfg.kind!r}. The env's `_build_predator_brain` "
+                "dispatcher only honours `extra['weights_path']` on the learnable "
+                "predator branch."
+            )
+            raise ValueError(msg)
         new_extra = dict(existing_brain_cfg.extra or {})
         new_extra["weights_path"] = str(weights_file)
         new_brain_cfg = existing_brain_cfg.model_copy(update={"extra": new_extra})

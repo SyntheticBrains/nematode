@@ -134,17 +134,27 @@ def _resolve_session_dir(
     if not resume_path.is_dir():
         logger.error("--resume path is not a directory: %s", resume_path)
         return None
-    # Five-file checkpoint sanity: refuse to resume if the rng-pickle
-    # (written LAST by `_save_checkpoint`) is missing — same invariant
-    # the loop's `_load_checkpoint` checks, but firing here gives a
-    # cleaner error before any setup work.
-    rng_pickle = resume_path / "coevolution_rng.pkl"
-    if not rng_pickle.is_file():
+    # Full checkpoint-set sanity: refuse to resume if any of the four
+    # required files are missing. Firing here avoids paying the
+    # `CoevolutionLoop.__init__` cost (incl. the ~30s heuristic-imitation
+    # pretrain on arm A) before `_load_checkpoint` discovers the
+    # incomplete set. The rng-pickle is the canonical "checkpoint
+    # complete" signal (written LAST by `_save_checkpoint`); if any of
+    # the other three are missing while the rng-pickle is present,
+    # that's a torn save (concurrent writer, manual deletion, partial
+    # restore from backup) — caught here either way.
+    required_files = [
+        resume_path / "prey" / "checkpoint.pkl",
+        resume_path / "predator" / "checkpoint.pkl",
+        resume_path / "coevolution_state.json",
+        resume_path / "coevolution_rng.pkl",
+    ]
+    missing = [str(p) for p in required_files if not p.is_file()]
+    if missing:
         logger.error(
-            "Missing coevolution_rng.pkl under resume dir %s; "
-            "the prior save was interrupted before completing. "
-            "Refuse to resume from a partial checkpoint.",
+            "Cannot resume from %s — required checkpoint files missing:\n  %s",
             resume_path,
+            "\n  ".join(missing),
         )
         return None
     explicit_root = Path(output_dir_arg).resolve()
