@@ -108,7 +108,9 @@ if TYPE_CHECKING:
 
 # Re-use `EvolutionLoop`'s worker init + 11-tuple worker entry point so
 # the dispatch ABI stays single-source. Both functions are top-level in
-# `loop.py` so they pickle cleanly across Pool fork.
+# `loop.py` so they pickle cleanly across the Pool's worker boundary
+# (spawn on macOS, fork on Linux per Python's `multiprocessing.Pool`
+# default; both require picklable worker entry points).
 from quantumnematode.evolution.loop import (
     _evaluate_in_worker,
     _init_worker,
@@ -1729,16 +1731,16 @@ class CoevolutionLoop:
         `opposing_side.evolution_config.population_size` opposition
         genomes via the HoF mix. Empty-pop fallback (very first
         K-block, opposing side has no population yet) returns an
-        empty list — `_evaluate_candidate` handles that by treating
-        the genome as un-opposed (degenerate fitness; see method
-        docstring).
+        empty list — `_build_patched_sim_config` handles that by
+        treating the genome as un-opposed (degenerate fitness; see
+        the patcher's docstring).
         """
         if not opposing_side.population:
             # First K-block of the run: the opposing side hasn't
             # populated its `population` yet (it sits at the gen-0
             # optimiser mean but no `ask()` has fired). Return empty —
-            # `_evaluate_candidate` treats this as the un-opposed base
-            # case to bootstrap the first block.
+            # `_build_patched_sim_config` treats this as the un-opposed
+            # base case to bootstrap the first block.
             return []
         # Pin frac_hof=0.3 at the call site rather than relying on
         # `HallOfFame.DEFAULT_FRAC_HOF` so the 70/30 mix contract
@@ -2035,9 +2037,10 @@ class CoevolutionLoop:
             self.sim_config,
             seed=eval_seed,
         )
-        # `candidate_tag` namespaces the file so multiple `_evaluate_candidate`
-        # calls within the same per-generation tmp dir do not collide
-        # (concurrent pool workers all read from the same dir).
+        # `candidate_tag` namespaces the file so multiple
+        # `_build_patched_sim_config` calls within the same per-generation
+        # tmp dir do not collide (concurrent pool workers all read from
+        # the same dir).
         weights_file = tmp_path / f"opposition_predator_{candidate_tag}.pt"
         # `encoder.decode` annotates the return as `Brain`; concrete
         # predator decoders return `MLPPPOPredatorBrain` which satisfies
@@ -2163,9 +2166,11 @@ class CoevolutionLoop:
         Per side: the elite is the latest entry in `champion_history`
         (the K-block elite). When a side has no champions yet (first
         K-block hasn't completed), the probe is a no-op for that side.
-        Held-out evaluations themselves still depend on the
-        call-site sim_config patching that the campaign integration
-        layer is responsible for wiring (see `_evaluate_candidate`).
+        Per-opponent evaluation is deferred — `_probe_one_opponent`
+        returns NaN; the schema + cadence are normative, the body is
+        non-normative pending follow-up. See `_build_patched_sim_config`
+        for the equivalent training-side patching pattern that the
+        probe will reuse once wired.
         """
         with self._probe_csv_path.open("a", newline="") as fh:
             writer = csv.writer(fh)
@@ -2229,7 +2234,8 @@ class CoevolutionLoop:
         patching `sim_config` (heuristic-radius predator for prey-side
         probes; warmstart-style elite prey genome for predator-side
         probes) and calling the side's fitness function. See
-        `_evaluate_candidate` for the full integration plan.
+        `_build_patched_sim_config` for the analogous training-side
+        patching pattern that the probe will reuse once wired.
         """
         del side, elite, opponent_index, eval_seed
         return float("nan")

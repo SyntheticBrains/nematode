@@ -154,7 +154,6 @@ coevolution:
     parallel_workers: 1  # smoke runs serialised; pilot arms parallelise
     inheritance: lamarckian
     inheritance_elite_count: 1
-    cma_diagonal: true
 
   predator_evolution:
     algorithm: cmaes
@@ -167,4 +166,3 @@ coevolution:
     sigma0: 0.5
     parallel_workers: 1
     inheritance: none
-    cma_diagonal: true
