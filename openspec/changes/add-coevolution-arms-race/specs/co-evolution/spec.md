@@ -173,8 +173,9 @@ The system SHALL evaluate full-run results against a softened-disjunctive decisi
 - **GIVEN** four full-run seeds with computed cycling/escalation results
 - **WHEN** the aggregator emits the verdict
 - **THEN** the verdict SHALL be `GO` iff (cycling fires OR escalation fires) in at least 2 of 4 seeds
-- **AND** the verdict SHALL be `STOP` iff neither criterion fires in any seed
+- **AND** the verdict SHALL be `STOP` iff neither criterion fires in any seed (with at least one seed resolved)
 - **AND** the verdict SHALL be `PIVOT` iff exactly 1 of 4 seeds has a firing criterion
+- **AND** the verdict SHALL be `INCONCLUSIVE` iff zero seeds were resolvable (e.g. all per-seed dirs missing or all sessions corrupted), distinct from `STOP` (which is a substantive null result over ≥1 resolved seeds)
 
 #### Scenario: Generality Probe Is Reported But Not A Verdict Input
 
