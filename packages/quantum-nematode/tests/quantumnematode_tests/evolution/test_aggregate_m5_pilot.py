@@ -132,6 +132,101 @@ class TestProbeMatrix:
         assert np.isnan(out[0, 0])
         assert out[0, 1] == 0.5
 
+    def test_duplicate_row_keeps_last_and_warns(
+        self,
+        aggregator: Any,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Duplicate (gen, opp_idx) pair SHALL keep the LAST fitness and emit a warning.
+
+        Probe CSV under cadence < K_per_block writes multiple rows at
+        the same `side.generation` count. With NaN fitness everywhere
+        (deferred-body case) the collision is harmless. Once the probe
+        body is wired, real fitness values from the same generation
+        would be silently dropped without this warning. The behaviour
+        is keep-LAST (matches `setdefault(...)[k] = v` semantic).
+        """
+        rows = [
+            {"generation": "5", "side": "prey", "opponent_index": "0", "fitness": "0.3"},
+            {"generation": "5", "side": "prey", "opponent_index": "0", "fitness": "0.7"},
+        ]
+        with caplog.at_level("WARNING", logger="aggregate_m5_pilot"):
+            out = aggregator._probe_matrix(rows, side_filter="prey")
+        assert out.shape == (1, 1)
+        # Keep-LAST: the second 0.7 wins over the first 0.3.
+        assert out[0, 0] == 0.7
+        # Warning fired once with the collision count + sample.
+        assert any("duplicate" in r.message.lower() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Cross-side tie-breaker for verdict.csv slot selection
+# ---------------------------------------------------------------------------
+
+
+class TestPickSide:
+    """`_pick_side` selects which side's values populate the verdict.csv slot."""
+
+    def test_only_prey_fires_returns_prey(self, aggregator: Any) -> None:
+        """When only prey fires, return prey EVEN IF predator's p-value is smaller."""
+        prey = {"cycling_detected": True, "p_value": 0.04, "dominant_period": 8}
+        predator = {"cycling_detected": False, "p_value": 0.01, "dominant_period": 99}
+        out = aggregator._pick_side(
+            prey,
+            predator,
+            p_key="p_value",
+            detected_key="cycling_detected",
+        )
+        assert out is prey
+
+    def test_only_predator_fires_returns_predator(self, aggregator: Any) -> None:
+        """When only predator fires, return predator regardless of prey's p-value."""
+        prey = {"cycling_detected": False, "p_value": 0.01, "dominant_period": 99}
+        predator = {"cycling_detected": True, "p_value": 0.04, "dominant_period": 8}
+        out = aggregator._pick_side(
+            prey,
+            predator,
+            p_key="p_value",
+            detected_key="cycling_detected",
+        )
+        assert out is predator
+
+    def test_both_fire_smaller_pvalue_wins(self, aggregator: Any) -> None:
+        """When both fire, prefer the side with the smaller p-value (more decisive)."""
+        prey = {"cycling_detected": True, "p_value": 0.04, "dominant_period": 8}
+        predator = {"cycling_detected": True, "p_value": 0.01, "dominant_period": 5}
+        out = aggregator._pick_side(
+            prey,
+            predator,
+            p_key="p_value",
+            detected_key="cycling_detected",
+        )
+        assert out is predator
+
+    def test_neither_fires_smaller_pvalue_wins_for_cosmetics(self, aggregator: Any) -> None:
+        """When neither fires, smaller-p-value side wins (cosmetic; both rows are 0)."""
+        prey = {"cycling_detected": False, "p_value": 0.5, "dominant_period": None}
+        predator = {"cycling_detected": False, "p_value": 0.3, "dominant_period": None}
+        out = aggregator._pick_side(
+            prey,
+            predator,
+            p_key="p_value",
+            detected_key="cycling_detected",
+        )
+        assert out is predator
+
+    def test_tie_on_pvalue_returns_first(self, aggregator: Any) -> None:
+        """Equal p-values (both fire) SHALL return the first arg (prey by convention)."""
+        prey = {"cycling_detected": True, "p_value": 0.05, "dominant_period": 8}
+        predator = {"cycling_detected": True, "p_value": 0.05, "dominant_period": 5}
+        out = aggregator._pick_side(
+            prey,
+            predator,
+            p_key="p_value",
+            detected_key="cycling_detected",
+        )
+        assert out is prey
+
 
 # ---------------------------------------------------------------------------
 # Verdict gate
@@ -365,7 +460,13 @@ def test_main_end_to_end_synthetic(aggregator: Any, tmp_path: Path) -> None:
 
 
 def test_main_empty_root_errors(aggregator: Any, tmp_path: Path) -> None:
-    """`--root` with no seed dirs (and no session-dir fallback) returns 1."""
+    """`--root` with no seed dirs and no session-dir fallback SHALL return 1.
+
+    Distinct from the "zero seeds resolved" INCONCLUSIVE case below
+    (`test_main_zero_seeds_resolved_yields_inconclusive`) — that case
+    has a seed-<N>/ structure but the per-seed dirs are empty/unreadable.
+    Here `--root` has nothing the discovery logic recognises at all.
+    """
     root = tmp_path / "empty"
     root.mkdir()
     out = tmp_path / "aggregate"
@@ -382,6 +483,48 @@ def test_main_empty_root_errors(aggregator: Any, tmp_path: Path) -> None:
         rc = aggregator.main()
     assert rc == 1
     assert not out.exists()
+
+
+def test_main_zero_seeds_resolved_yields_inconclusive(
+    aggregator: Any,
+    tmp_path: Path,
+) -> None:
+    """Empty `seed-N/` dirs SHALL yield INCONCLUSIVE summary + empty verdict.csv.
+
+    Per the co-evolution capability's "Verdict Aggregation Across
+    Seeds" scenario: zero resolvable seeds produces INCONCLUSIVE
+    (distinct from STOP, which is a substantive null over >=1 seeds).
+    Aggregator emits summary.md + an empty-body verdict.csv anyway so
+    downstream tooling can detect the case without grepping logs.
+    """
+    root = tmp_path / "campaign"
+    # Two seed-<N>/ dirs that are EMPTY (no session subdirs) — discovery
+    # finds them (so layout 1 is selected) but `_resolve_session_dir`
+    # returns None for each, leaving `per_seed_rows` empty.
+    (root / "seed-42").mkdir(parents=True)
+    (root / "seed-43").mkdir(parents=True)
+    out = tmp_path / "aggregate"
+    argv = [
+        "aggregate_m5_pilot.py",
+        "--root",
+        str(root),
+        "--output-dir",
+        str(out),
+        "--log-level",
+        "WARNING",
+    ]
+    with patch.object(sys, "argv", argv):
+        rc = aggregator.main()
+    assert rc == 0
+    assert (out / "summary.md").is_file()
+    assert (out / "verdict.csv").is_file()
+    summary = (out / "summary.md").read_text()
+    assert "**Verdict:** INCONCLUSIVE" in summary
+    assert "No seeds resolved" in summary
+    # verdict.csv has the header but no per-seed rows.
+    with (out / "verdict.csv").open() as fh:
+        rows = list(csv.DictReader(fh))
+    assert rows == []
 
 
 def test_main_single_session_root(aggregator: Any, tmp_path: Path) -> None:

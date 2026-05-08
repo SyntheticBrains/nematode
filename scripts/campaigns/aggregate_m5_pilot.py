@@ -142,7 +142,7 @@ def _block_elite_series(champion_history: list[dict[str, Any]]) -> np.ndarray:
     )
 
 
-def _probe_matrix(
+def _probe_matrix(  # noqa: C901 — collision-detection + dual-loop reshape; splitting fragments the keep-LAST contract
     probe_rows: list[dict[str, Any]],
     *,
     side_filter: str,
@@ -160,6 +160,14 @@ def _probe_matrix(
     if not filtered:
         return np.empty((0, 0), dtype=np.float64)
     by_gen: dict[int, dict[int, float]] = {}
+    # Track non-NaN collisions across the same `(gen, opp_idx)` pair so
+    # we surface them with a logger.warning. The probe CSV under K-block
+    # cadence less than `K_per_block` writes multiple rows at the same
+    # `side.generation` — for the deferred-body case (NaN-filled) the
+    # collision is harmless; once the probe body is wired, real fitness
+    # values would be silently dropped without this warning. Keep-LAST
+    # semantic matches the prior behaviour.
+    collisions: list[tuple[int, int]] = []
     for row in filtered:
         try:
             gen = int(row["generation"])
@@ -170,7 +178,27 @@ def _probe_matrix(
             fitness = float(row["fitness"])
         except (KeyError, ValueError, TypeError):
             fitness = float("nan")
-        by_gen.setdefault(gen, {})[opp_idx] = fitness
+        cell = by_gen.setdefault(gen, {})
+        prev = cell.get(opp_idx)
+        if prev is not None and not (np.isnan(prev) and np.isnan(fitness)):
+            # Both prev and incoming are non-NaN, OR one is non-NaN and the
+            # other is NaN — either way it's a real collision worth flagging.
+            collisions.append((gen, opp_idx))
+        cell[opp_idx] = fitness
+    if collisions:
+        # De-dupe + cap the list so massive cadence-mismatches don't
+        # spam logs.
+        unique = sorted(set(collisions))
+        sample = unique[:5]
+        logger.warning(
+            "%d duplicate (generation, opponent_index) pair(s) in probe CSV "
+            "for side=%s; keeping the LAST fitness value per pair. "
+            "Sample: %s%s",
+            len(unique),
+            side_filter,
+            sample,
+            " ..." if len(unique) > len(sample) else "",
+        )
     if not by_gen:
         return np.empty((0, 0), dtype=np.float64)
     sorted_gens = sorted(by_gen.keys())
@@ -364,15 +392,29 @@ def _write_verdict_csv(out_path: Path, per_seed_rows: list[dict[str, Any]]) -> N
         writer.writeheader()
         for row in per_seed_rows:
             metrics = row["metrics"]
-            # Pick the side that fires for the cycling/escalation
-            # columns; if both fire, prefer the one with smaller p_value
-            # (more decisive). If neither fires, fall back to prey side
-            # values for stability.
-            cyc = _pick_side(metrics["prey_cycling"], metrics["predator_cycling"], "p_value")
+            # Pick the side whose values populate the cycling /
+            # escalation columns. Order of preference:
+            #   1. If exactly one side fires, prefer that side (so the
+            #      row's `cycling_period` etc. come from the firing
+            #      side, not from a non-firing side that happened to
+            #      have a smaller p_value).
+            #   2. If both sides fire, prefer the smaller-p-value side
+            #      (more decisive).
+            #   3. If neither fires, prefer the smaller-p-value side
+            #      anyway — purely cosmetic in that case (the row's
+            #      `*_detected=0` makes the slot's slope/period
+            #      uninteresting).
+            cyc = _pick_side(
+                metrics["prey_cycling"],
+                metrics["predator_cycling"],
+                p_key="p_value",
+                detected_key="cycling_detected",
+            )
             esc = _pick_side(
                 metrics["prey_escalation"],
                 metrics["predator_escalation"],
-                "p_value",
+                p_key="p_value",
+                detected_key="escalation_detected",
             )
             # Generality: prefer the side with non-NaN value; if both
             # are NaN, write NaN.
@@ -394,10 +436,32 @@ def _write_verdict_csv(out_path: Path, per_seed_rows: list[dict[str, Any]]) -> N
             )
 
 
-def _pick_side(a: dict[str, Any], b: dict[str, Any], key: str) -> dict[str, Any]:
-    """Return the side dict with the smaller value at `key` (NaN-safe)."""
-    av = a.get(key, float("nan"))
-    bv = b.get(key, float("nan"))
+def _pick_side(
+    a: dict[str, Any],
+    b: dict[str, Any],
+    *,
+    p_key: str,
+    detected_key: str,
+) -> dict[str, Any]:
+    """Return whichever of `a` and `b` populates the verdict.csv slot.
+
+    Selection rule (per spec scenario "Verdict CSV Schema"):
+
+    1. If exactly one side has `detected_key=True`, prefer that side.
+       This avoids the cross-side leak where the row's `cycling_period`
+       comes from a non-firing side that happened to have a smaller
+       `p_value` while `cycling_detected=1` (which is OR across sides).
+    2. Otherwise (both fire, or neither fires), prefer the smaller-
+       `p_key`-value side (more decisive). NaN-safe.
+    3. Tie on equal p-values: side `a` wins. Convention: callers pass
+       the prey side as `a`, so prey wins ties.
+    """
+    a_fires = bool(a.get(detected_key, False))
+    b_fires = bool(b.get(detected_key, False))
+    if a_fires != b_fires:
+        return a if a_fires else b
+    av = a.get(p_key, float("nan"))
+    bv = b.get(p_key, float("nan"))
     av = float("nan") if av is None else av
     bv = float("nan") if bv is None else bv
     if np.isnan(av) and np.isnan(bv):
@@ -461,6 +525,14 @@ def _format_summary(  # noqa: PLR0913 — readability: each section is one param
     lines.append("")
     lines.append("## Per-seed results")
     lines.append("")
+    if not per_seed_rows:
+        lines.append(
+            "**No seeds resolved** — every seed dir under `--root` was "
+            "missing or unreadable. The aggregator emits this summary + "
+            "an empty-body verdict.csv anyway so downstream tooling can "
+            "detect the INCONCLUSIVE case without grepping logs.",
+        )
+        lines.append("")
     for row in per_seed_rows:
         seed = row["seed"]
         metrics = row["metrics"]
@@ -835,10 +907,12 @@ def main() -> int:
             },
         )
 
-    if not per_seed_rows:
-        logger.error("No seeds produced metrics; nothing to aggregate.")
-        return 1
-
+    # Zero-resolved-seeds case: emit an INCONCLUSIVE artefact set per
+    # the co-evolution capability's "Verdict Aggregation Across Seeds"
+    # scenario. Distinct from STOP (which is a substantive null result
+    # over ≥1 resolved seeds). Skip plots (no series to plot) but
+    # still write summary.md + an empty-body verdict.csv so downstream
+    # tooling can detect the case without grepping logs.
     verdict, fires, total = _aggregate_verdict([r["metrics"] for r in per_seed_rows])
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
