@@ -2,10 +2,13 @@
 # M5 co-evolution FULL RUN — 4 seeds × 50 generations.
 # ============================================================================
 #
-# Per task 10.2: 4 seeds (42-45) × 50 gens × pop 24/16 × K=10. Wall-time
-# ~30-60 hours total at parallel_workers=4 per seed × 4 sequential
-# seeds (per design.md D4; lock from pilot's actual per-episode wall
-# before launch).
+# Per task 10.2: 4 seeds (42-45) × 50 gens × pop 24/16 × K=10. Under
+# the loop's current sequential dispatch, expect ~120-240 wall-hours
+# total across 4 sequential seeds (4x the design.md D4 estimate, which
+# assumed parallel_workers=4 — a pool dispatch hook is documented but
+# not yet wired in `CoevolutionLoop`; per-evaluation parallelism lands
+# in a follow-up). Lock the precise wall budget from the pilot's
+# actual per-episode wall before launch.
 #
 # Verdict gate (task 10.4): GO if cycling OR escalation fires in ≥2 of
 # 4 seeds; STOP if zero seeds; PIVOT if exactly 1.
@@ -67,6 +70,14 @@ for SEED in ${SEEDS}; do
     # its own M3-elite anchor.
     sed -e "s|coevolution_warmstart_prey/seed_42\.json|coevolution_warmstart_prey/seed_${SEED}.json|" \
         "${BASE_CONFIG}" > "${PER_SEED_CONFIG}"
+    # Verify the substitution actually fired — silent no-ops would
+    # otherwise leave every seed loading seed_42.json.
+    if ! grep -q "coevolution_warmstart_prey/seed_${SEED}.json" "${PER_SEED_CONFIG}"; then
+        echo "ERROR: warmstart substitution failed for seed ${SEED}." >&2
+        echo "  expected `seed_42.json` placeholder in ${BASE_CONFIG}; not found." >&2
+        echo "  edit BASE_CONFIG to restore the placeholder, or update the sed pattern." >&2
+        exit 1
+    fi
 
     echo "============================================================"
     echo "Seed ${SEED} — start: $(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -13,11 +13,10 @@
 # decision-gate evaluation (task 9.4) compares the two to lock the
 # full-run config's bootstrap choice.
 #
-# Wall-time target: ~3.5-7 hours per seed at parallel_workers=4
-# (per-episode ~0.75-1.5 sec from M3 calibration; total
-# generation_pairs*K_per_block*2 = 30 K-blocks per pair * train/eval
-# protocol per side; pilot uses 1 seed per arm to amortise the
-# pretrain cost).
+# Wall-time target: ~14-28 hours per seed under the loop's current
+# sequential dispatch (4x the design.md D4 estimate, which assumed
+# parallel_workers=4 — see the wrapper script for the rationale).
+# Pilot uses 1 seed per arm to amortise the pretrain cost.
 #
 # Brain shape MUST match the warmstart bundle's flattened-weight vector
 # encoder genome_dim (49,511 floats for LSTMPPO + klinotaxis with the
@@ -135,6 +134,12 @@ coevolution:
   predator_gen0_bootstrap: heuristic_imitation_pretrain
   prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_42.json
 
+  # `parallel_workers` is intentionally omitted from both per-side
+  # blocks: `CoevolutionLoop` evaluates candidates sequentially; the
+  # multiprocessing-pool dispatch path that honours `parallel_workers`
+  # lives on `EvolutionLoop` only. Wiring a pool into `CoevolutionLoop`
+  # is a follow-up; pilot wall-time targets in the campaign script
+  # reflect the sequential dispatch.
   prey_evolution:
     algorithm: cmaes
     cma_diagonal: true
@@ -144,7 +149,6 @@ coevolution:
     learn_episodes_per_eval: 50
     eval_episodes_per_eval: 25
     sigma0: 0.5
-    parallel_workers: 4
     inheritance: lamarckian
     inheritance_elite_count: 1
 
@@ -158,5 +162,4 @@ coevolution:
     # training. The CMA-ES outer loop owns the fitness gradient.
     learn_episodes_per_eval: 0
     sigma0: 0.5
-    parallel_workers: 4
     inheritance: none

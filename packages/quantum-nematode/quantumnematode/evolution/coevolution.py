@@ -474,7 +474,11 @@ class CoevolutionLoop:
                 f"{len(params) if isinstance(params, list) else 'N/A'}, "
                 f"expected {genome_dim}. The genome_dim is determined by "
                 "the prey encoder; the warmstart bundle MUST match the "
-                "current prey brain config."
+                "current prey brain config (`actor_hidden_dim`, "
+                "`critic_hidden_dim`, `lstm_hidden_dim`, sensory_modules, "
+                "etc.). Re-curate the bundle for the current brain shape "
+                "by running `scripts/campaigns/curate_coevolution_prey_bundles.py` "
+                "with the matching source-campaign YAML."
             )
             raise ValueError(msg)
         logger.info(
@@ -1836,20 +1840,18 @@ class CoevolutionLoop:
                 "agents can construct via the same brain shape."
             )
             raise ValueError(msg)
+        # `MultiAgentConfig._validate_population` enforces 2 <= len(agents) <= 10.
+        # Cap the opposition list size so a pop=24 prey side (which produces
+        # ~24 opposition genomes per evaluation) does not blow the schema cap.
+        # Subsample uniformly (preserving the HoF mix order at the head of the
+        # list) rather than truncating arbitrarily — the 70/30 mix is set
+        # upstream in `_build_opposition`, so the head of the list already
+        # reflects the desired prevalence.
+        max_agents = 10
+        min_agents = 2
+        capped_opposition = list(opposition[:max_agents])
         agent_configs: list[AgentConfig] = []
-        if not opposition:
-            # First K-block bootstrap: opposing prey side hasn't
-            # populated yet. Spawn one random-init prey opponent — the
-            # predator's fitness still measures performance against a
-            # random-policy prey, which is the right gen-0 baseline.
-            agent_configs.append(
-                AgentConfig(
-                    id="opposition_prey_bootstrap",
-                    brain=self.sim_config.brain,
-                    weights_path=None,
-                ),
-            )
-        for idx, opp_genome in enumerate(opposition):
+        for idx, opp_genome in enumerate(capped_opposition):
             opp_brain = opposing_side.encoder.decode(
                 opp_genome,
                 self.sim_config,
@@ -1864,6 +1866,21 @@ class CoevolutionLoop:
                     weights_path=str(weights_file),
                 ),
             )
+        # Pad up to the schema's lower bound (2 agents) with random-init
+        # bootstrap entries when opposition is empty or has only 1 entry.
+        # The schema rejects len(agents) < 2; the fitness function
+        # tolerates extra prey slots since predator metrics aggregate
+        # across slots.
+        bootstrap_idx = 0
+        while len(agent_configs) < min_agents:
+            agent_configs.append(
+                AgentConfig(
+                    id=f"opposition_prey_bootstrap_{bootstrap_idx}",
+                    brain=self.sim_config.brain,
+                    weights_path=None,
+                ),
+            )
+            bootstrap_idx += 1
         # Replace `count` (if any) with the explicit per-slot config.
         # `_validate_population` rejects setting both, so we explicitly
         # null out `count`.

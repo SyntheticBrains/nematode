@@ -124,6 +124,7 @@ coevolution:
   predator_gen0_bootstrap: cold_start  # arm B differs here
   prey_gen0_seed_path: configs/evolution/coevolution_warmstart_prey/seed_43.json
 
+  # `parallel_workers` is intentionally omitted — see arm A YAML.
   prey_evolution:
     algorithm: cmaes
     cma_diagonal: true
@@ -133,7 +134,6 @@ coevolution:
     learn_episodes_per_eval: 50
     eval_episodes_per_eval: 25
     sigma0: 0.5
-    parallel_workers: 4
     inheritance: lamarckian
     inheritance_elite_count: 1
 
@@ -145,5 +145,4 @@ coevolution:
     episodes_per_eval: 25
     learn_episodes_per_eval: 0
     sigma0: 0.5
-    parallel_workers: 4
     inheritance: none
