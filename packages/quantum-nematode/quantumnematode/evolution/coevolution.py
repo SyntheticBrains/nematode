@@ -259,11 +259,12 @@ class CoevolutionLoop:
             "prey": [],
             "predator": [],
         }
-        # When the rebalance condition fires, the dominant side gets
-        # an extra K-block — implemented by NOT flipping `_current_side`
-        # at the next K-block boundary. Tracks how many extra blocks
-        # remain to grant; reset when consumed.
-        self._dominant_freeze_blocks_remaining: int = 0
+        # Note: when the rebalance condition fires, the dominant side
+        # gets an extra K-block — implemented by NOT flipping
+        # `_current_side` at the next K-block boundary. The check
+        # consumes `_k_block_mean_fitness` history directly inside
+        # `_evaluate_rebalance`; no separate counter state is needed
+        # for the single-shot freeze the spec mandates.
 
         # Generality-probe state. Held-out opponent sets are constructed
         # once at __init__ and never mutated thereafter — opposite of
@@ -1276,12 +1277,16 @@ class CoevolutionLoop:
             # `_evaluate_candidate` treats this as the un-opposed base
             # case to bootstrap the first block.
             return []
+        # Pin frac_hof=0.3 at the call site rather than relying on
+        # `HallOfFame.DEFAULT_FRAC_HOF` so the 70/30 contract from
+        # design.md D3 + the spec scenario "70/30 Mixture During
+        # Evaluation" lives in the loop, not in the buffer's default.
+        # If the buffer's default ever drifts (e.g. for an unrelated
+        # use), the loop's contract stays correct.
         return opposing_side.hof.mix_with_pop(
             self.rng,
             opposing_side.population,
-            # Default 0.3 per design.md D3 (70/30 mix); could be made
-            # YAML-configurable later if pilot evidence motivates a
-            # different ratio.
+            frac_hof=0.3,
         )
 
     def _evaluate_candidate(
