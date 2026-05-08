@@ -158,7 +158,7 @@ def _resolve_session_dir(
     return resume_path.name, resume_path
 
 
-def main() -> int:
+def main() -> int:  # noqa: PLR0911 — sequential CLI entrypoint with distinct early-exit error paths (config load, missing coevolution block, resume-dir resolve, KeyboardInterrupt, unhandled exception) + the success path; flattening would obscure the failure modes
     """Entry point."""
     args = parse_arguments()
     logger.setLevel(args.log_level)
@@ -205,7 +205,9 @@ def main() -> int:
     logger.info("Resume:           %s", bool(args.resume))
     logger.info("K per block:      %d", cfg.K_per_block)
     logger.info(
-        "Generation pairs: %d (= %d K-blocks)", cfg.generation_pairs, 2 * cfg.generation_pairs
+        "Generation pairs: %d (= %d K-blocks)",
+        cfg.generation_pairs,
+        2 * cfg.generation_pairs,
     )
     logger.info("Probe cadence:    every %d gens", cfg.generality_probe_every)
     logger.info("Held-out size:    %d", cfg.held_out_size)

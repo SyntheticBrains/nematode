@@ -1658,10 +1658,19 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 # (where weight loading is unused) free of the
                 # persistence import.
                 from pathlib import Path as _Path
+                from typing import Any, cast
 
                 from quantumnematode.brain.weights import load_weights
 
-                load_weights(brain, _Path(str(weights_path)))
+                # `load_weights` is annotated `Brain` (agent-side
+                # protocol) but concretely only needs the
+                # `WeightPersistence` surface — which
+                # `MLPPPOPredatorBrain` (`PredatorBrain` protocol)
+                # implements. `cast(Any, ...)` satisfies the static
+                # checker without taking on a runtime `Brain` import;
+                # runtime is fine because `load_weights` only consults
+                # `get_weight_components` / `load_weight_components`.
+                load_weights(cast("Any", brain), _Path(str(weights_path)))
             return brain
         msg = (
             f"Unknown predator brain kind: {config.kind!r}. "
