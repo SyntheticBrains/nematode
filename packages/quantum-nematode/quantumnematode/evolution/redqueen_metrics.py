@@ -128,14 +128,36 @@ def phenotypic_cycling(
     centered = arr - (intercept + slope * x_axis)
     variance = float((centered**2).sum())
     raw_variance = float(((arr - arr.mean()) ** 2).sum())
-    # Reject the series when residuals are numerical-noise relative to
-    # the original variance — captures both constant series (raw_variance
-    # = 0) and pure-linear series (residual ~1e-28, raw_variance ~1e+3).
-    # The 1e-12 floor is conservative: floats have ~1e-16 epsilon, and
-    # a 4-orders-of-magnitude buffer catches realistic detrend rounding.
+    # Two-stage variance gate:
+    #
+    # 1. Absolute floor scaled to the series magnitude. Catches
+    #    "tiny-amplitude oscillations on a large constant" — e.g.
+    #    `[1.0, 1.0+1e-15, 1.0-1e-15, ...]` where raw_variance is
+    #    machine-epsilon-noise around the mean (~1e-29) and ratio
+    #    `variance / raw_variance` is order-1 → would bypass the
+    #    rel-floor below and falsely flag cycling on numerical noise.
+    #    The absolute floor is `eps * (1 + mean^2) * n` with
+    #    `eps = 1e-20`: well below any realistic per-element fitness
+    #    noise (M3 fitness values are O(0.1)-O(1), so the comparable
+    #    noise floor is around 1e-12 absolute, i.e. raw_variance
+    #    around 1e-23 for an n=40 series).
+    # 2. Relative floor (residual variance < 1e-12 x raw variance):
+    #    catches pure-linear series whose detrend residuals are
+    #    numerical-noise (~1e-28) but whose raw variance is large
+    #    (~1e+3 for a `[0..40]` ramp). Without this gate the
+    #    autocorrelation of the noise-only residuals would
+    #    spuriously flag low-lag cycling.
+    abs_variance_eps = 1e-20
+    abs_variance_floor = abs_variance_eps * (1.0 + arr.mean() ** 2) * n
     rel_variance_floor = 1e-12
-    if variance <= 0.0 or raw_variance <= 0.0 or variance / raw_variance < rel_variance_floor:
-        # Constant or numerically-pure-linear series — no oscillatory residual.
+    if (
+        variance <= 0.0
+        or raw_variance <= 0.0
+        or raw_variance < abs_variance_floor
+        or variance / raw_variance < rel_variance_floor
+    ):
+        # Constant, near-constant, or numerically-pure-linear series
+        # — no oscillatory residual that's not numerical noise.
         return {
             "cycling_detected": False,
             "dominant_period": None,

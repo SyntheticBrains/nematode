@@ -59,6 +59,7 @@ import csv
 import json
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -80,8 +81,6 @@ from quantumnematode.evolution.predator_fitness import PredatorEpisodicKillRate
 from quantumnematode.optimizers.evolutionary import CMAESOptimizer
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
     from quantumnematode.evolution.inheritance import InheritanceStrategy
@@ -145,8 +144,13 @@ class _SideState:
     # side; used to populate `parent_ids` for the next generation's
     # children. Mirrors `EvolutionLoop._prev_generation_ids`.
     prev_generation_ids: list[str] = field(default_factory=list)
-    # Lazily initialised lineage tracker (one per side; lives at
-    # `{output_dir}/{side}/lineage.csv`). Created on first K-block.
+    # Eager lineage tracker (one per side; lives at
+    # `{output_dir}/{side}/lineage.csv`). Constructed in
+    # `_build_{prey,predator}_state` so the CSV header exists from
+    # __init__ time onward, matching `EvolutionLoop`'s shape.
+    # Typed `Optional` only so the dataclass `__init__` can accept
+    # `None` for tests that bypass the standard construction path;
+    # production runs always populate it.
     lineage: LineageTracker | None = None
 
 
@@ -312,6 +316,7 @@ class CoevolutionLoop:
             seed=self._derive_optimizer_seed(side="prey", k_block_index=0),
         )
 
+        prey_dir = self.output_dir / "prey"
         return _SideState(
             name="prey",
             encoder=encoder,
@@ -319,8 +324,14 @@ class CoevolutionLoop:
             optimizer=optimizer,
             inheritance=inheritance,
             evolution_config=evolution_cfg,
-            output_dir=self.output_dir / "prey",
+            output_dir=prey_dir,
             hof=hof,
+            # Eager lineage construction (matches `EvolutionLoop` shape).
+            # The CSV header is written at construction time; if the
+            # side never trains in this run (e.g. test that exercises
+            # only one side) the file exists but stays at the header
+            # row, which is harmless.
+            lineage=LineageTracker(prey_dir / "lineage.csv"),
         )
 
     def _build_predator_state(self) -> _SideState:
@@ -352,6 +363,7 @@ class CoevolutionLoop:
             seed=self._derive_optimizer_seed(side="predator", k_block_index=0),
         )
 
+        predator_dir = self.output_dir / "predator"
         return _SideState(
             name="predator",
             encoder=encoder,
@@ -359,8 +371,9 @@ class CoevolutionLoop:
             optimizer=optimizer,
             inheritance=inheritance,
             evolution_config=evolution_cfg,
-            output_dir=self.output_dir / "predator",
+            output_dir=predator_dir,
             hof=hof,
+            lineage=LineageTracker(predator_dir / "lineage.csv"),
         )
 
     # ------------------------------------------------------------------
@@ -512,8 +525,6 @@ class CoevolutionLoop:
         # scenario). Resolved relative to the repo root via cwd —
         # tests can patch this attribute by passing a custom
         # `_prey_held_out_dir` override when subclassing for tests.
-        from pathlib import Path
-
         bundle_dir = Path("configs/evolution/coevolution_held_out_prey")
         if not bundle_dir.is_dir():
             logger.warning(
@@ -593,6 +604,75 @@ class CoevolutionLoop:
         else:
             chosen = self._held_out_rng.choice(len(grid), size=target, replace=True)
         return [grid[int(i)] for i in chosen]
+
+    def _reload_prey_held_out_by_ids(self, recorded_ids: list[str]) -> list[Genome]:
+        """Reconstruct the prey held-out list on resume by matching genome IDs.
+
+        Used by `_load_checkpoint` to rebuild `_prey_held_out` without
+        relying on the post-restore RNG state (which doesn't reproduce
+        the construction-time draw — see `_load_checkpoint`'s detailed
+        docstring). Walks the same bundle directory `_load_held_out_prey_bundle`
+        reads from, builds an index of `{genome_id: Genome}`, and
+        returns the list in the order recorded at save time. Failure
+        modes:
+
+        - Bundle dir missing: empty `recorded_ids` is the only valid
+          shape (the original run had no bundle either); non-empty
+          recorded_ids with missing dir means the bundle was deleted
+          between save and resume → raise.
+        - A recorded ID is not present in the current bundle (file
+          was deleted or renamed) → raise. This is the actual
+          "bundle drifted" failure mode that was supposed to be
+          detected by the cross-check the original code attempted.
+
+        Returns the held-out list in the same order it was saved.
+        """
+        bundle_dir = Path("configs/evolution/coevolution_held_out_prey")
+        if not bundle_dir.is_dir():
+            if recorded_ids:
+                msg = (
+                    f"Resume: prey held-out bundle dir {bundle_dir} is missing "
+                    f"but the checkpoint recorded {len(recorded_ids)} held-out "
+                    "IDs. The bundle was deleted between save and resume; "
+                    "restore it to its prior contents to resume."
+                )
+                raise ValueError(msg)
+            return []
+
+        # Build {genome_id: Genome} from the bundle on disk.
+        expected_dim = self.prey.encoder.genome_dim(self.sim_config)
+        by_id: dict[str, Genome] = {}
+        for p in sorted(bundle_dir.glob("*.json")):
+            try:
+                with p.open("r") as fh:
+                    data = json.load(fh)
+            except (json.JSONDecodeError, OSError):
+                continue
+            params = data.get("params")
+            if not isinstance(params, list) or len(params) != expected_dim:
+                continue
+            gid = str(data.get("genome_id", p.stem))
+            by_id[gid] = Genome(
+                params=np.asarray(params, dtype=np.float32),
+                genome_id=gid,
+                parent_ids=[],
+                generation=int(data.get("generation", 0)),
+                birth_metadata=build_birth_metadata(self.sim_config),
+            )
+
+        # Match recorded IDs in order. Any missing ID is a real drift
+        # — fail loudly with a diagnostic.
+        missing = [gid for gid in recorded_ids if gid not in by_id]
+        if missing:
+            msg = (
+                f"Resume: prey held-out bundle drifted between save and resume. "
+                f"The checkpoint recorded {len(recorded_ids)} IDs but {len(missing)} "
+                f"are no longer present on disk: {missing}. "
+                "Restore the bundle to its prior contents (or accept a fresh "
+                "run instead of resuming)."
+            )
+            raise ValueError(msg)
+        return [by_id[gid] for gid in recorded_ids]
 
     # ------------------------------------------------------------------
     # Per-K-block CMA-ES re-construction (D2)
@@ -752,6 +832,18 @@ class CoevolutionLoop:
         # Freeze the dominant side: the side OPPOSITE the saturated
         # one keeps training (so the saturated side has an extra
         # block of opposition to learn against).
+        #
+        # Note on one-block lag: the rebalance only fires when the
+        # SATURATED side is also the just-trained side. If the
+        # dominant side just trained, we flip to the saturated side
+        # normally — the rebalance kicks in on the NEXT K-block
+        # boundary (after the saturated side has trained once with
+        # the now-frozen dominant side). This is by design: the
+        # check is keyed on `training_side.name` because that's the
+        # side whose K-block we just observed, and the freeze applies
+        # to the next iteration of the same side's training. A
+        # one-block delay is acceptable since the saturation predicate
+        # already requires >=3 consecutive K-blocks of evidence.
         if prey_saturated and training_side.name == "prey":
             return False  # don't flip - prey gets an extra K-block
         # `predator` saturated branch handled symmetrically.
@@ -800,6 +892,16 @@ class CoevolutionLoop:
                 "prev_generation_ids": list(side.prev_generation_ids),
                 "generation": side.generation,
                 "champion_history": list(side.champion_history),
+                # Match `EvolutionLoop._save_checkpoint`'s shape: persist
+                # the inheritance literal so resume can compare against
+                # the resolved current value and reject mid-run drift.
+                # In practice `CoevolutionConfig._validate_invariants`
+                # hardcodes inheritance per side at YAML load time, so
+                # a mid-run config edit is rejected before reaching
+                # the loop — but the field travels with the per-side
+                # checkpoint anyway, matching M3 single-population
+                # tooling's expectations.
+                "inheritance": side.evolution_config.inheritance,
             }
             self._atomic_pickle_write(
                 side.output_dir / "checkpoint.pkl",
@@ -823,6 +925,23 @@ class CoevolutionLoop:
         self._atomic_json_write(
             self.output_dir / "coevolution_state.json",
             coevo_state,
+        )
+
+        # Top-level champion_history.json per spec scenario "Probe
+        # Cadence and Output Layout" — the aggregator (PR 5) reads
+        # this file. Format: `{prey: list[dict], predator: list[dict]}`
+        # where each dict is a champion_history entry as documented in
+        # the module docstring (`{genome_id, generation, k_block_index,
+        # fitness, params: list[float]}`). Already JSON-serialisable
+        # since the per-K-block append in `_run_one_k_block` calls
+        # `params.tolist()`.
+        champion_payload = {
+            "prey": list(self.prey.champion_history),
+            "predator": list(self.predator.champion_history),
+        }
+        self._atomic_json_write(
+            self.output_dir / "champion_history.json",
+            champion_payload,
         )
 
         # RNG state pickle (separate file because numpy bit_generator
@@ -878,6 +997,20 @@ class CoevolutionLoop:
                     f"Per-side checkpoint version mismatch on {side.name}: "
                     f"expected {CHECKPOINT_VERSION}, got {version}. "
                     "Refusing to resume."
+                )
+                raise ValueError(msg)
+            # Cross-check inheritance literal. `CoevolutionConfig` already
+            # rejects mid-run inheritance changes at YAML load time, so
+            # this is belt-and-braces — but matching `EvolutionLoop`'s
+            # shape avoids surprising future maintainers.
+            checkpoint_inheritance = payload.get("inheritance")
+            current_inheritance = side.evolution_config.inheritance
+            if checkpoint_inheritance is not None and checkpoint_inheritance != current_inheritance:
+                msg = (
+                    f"Per-side checkpoint inheritance mismatch on {side.name}: "
+                    f"checkpoint={checkpoint_inheritance!r}, "
+                    f"current={current_inheritance!r}. Mid-run inheritance "
+                    "changes are not supported."
                 )
                 raise ValueError(msg)
             side.optimizer = payload["optimizer"]
@@ -937,20 +1070,15 @@ class CoevolutionLoop:
                 "prey": list(rebalance_state.get("prey", [])),
                 "predator": list(rebalance_state.get("predator", [])),
             }
-        # Cross-check prey held-out IDs against the freshly loaded
-        # bundle. If the bundle has shifted (file added / removed),
-        # fail loudly rather than silently use a different set.
-        recorded_ids = list(coevo["prey_held_out_ids"])
-        current_ids = [g.genome_id for g in self._prey_held_out]
-        if recorded_ids != current_ids:
-            msg = (
-                f"Prey held-out bundle drifted between save and resume: "
-                f"checkpoint recorded {recorded_ids}, current bundle has "
-                f"{current_ids}. Restore the bundle to its prior contents "
-                "(or accept a fresh run instead of resuming)."
-            )
-            raise ValueError(msg)
 
+        # RNG restore MUST happen BEFORE the held-out re-sample below.
+        # The held-out bundle was originally drawn in `__init__` using
+        # `_held_out_rng` seeded from `self.rng.integers(...)` — but
+        # on this resume path, both RNGs were re-seeded fresh in
+        # `__init__` (different state from the saved run). Restoring
+        # `self.rng` and `self._held_out_rng` to their checkpointed
+        # state lets the bundle re-sample below produce the same
+        # subset that was saved.
         rng_path = self.output_dir / "coevolution_rng.pkl"
         if not rng_path.exists():
             msg = (
@@ -962,6 +1090,34 @@ class CoevolutionLoop:
             rng_payload = pickle.load(fh)  # noqa: S301 — trusted local file
         self.rng.bit_generator.state = rng_payload["master_rng_state"]
         self._held_out_rng.bit_generator.state = rng_payload["held_out_rng_state"]
+
+        # Re-sample the prey held-out bundle from disk with the
+        # restored `_held_out_rng` state. This MUST run AFTER the RNG
+        # restore (above): the bundle was originally sampled with a
+        # `_held_out_rng` seeded by the master rng's pre-construction
+        # state; on resume the construction-time RNGs are stale, so
+        # we re-draw with the post-restore state to reproduce the
+        # saved subset. The cross-check below then verifies the
+        # recorded IDs match the fresh draw — failure indicates the
+        # bundle dir on disk has actually drifted (files added /
+        # removed) and resume cannot reproduce the saved set.
+        #
+        # The `_held_out_rng` state at the moment of the original
+        # `__init__` sampling was the FRESHLY-SEEDED state (no draws
+        # yet). Restoring from the checkpoint gives us the state
+        # AFTER the original sampling drew its `held_out_size`
+        # entries plus any subsequent draws (probe seeds, etc.). To
+        # reproduce the original sample we need the pre-sampling
+        # state, which we don't have. Instead we cross-check IDs
+        # only — if the bundle dir is byte-identical to the saved run,
+        # `_load_held_out_prey_bundle` (called fresh below with the
+        # restored RNG) will draw a SUBSET, but it might not match
+        # the recorded IDs. The simplest correct path: skip
+        # re-sampling entirely on resume and instead reconstruct the
+        # held-out genomes BY ID from the bundle dir, matching the
+        # recorded order.
+        recorded_ids = list(coevo["prey_held_out_ids"])
+        self._prey_held_out = self._reload_prey_held_out_by_ids(recorded_ids)
         logger.info(
             "CoevolutionLoop: resumed from checkpoint (k_block=%d, side=%s, "
             "prey gen=%d, predator gen=%d).",
@@ -1124,13 +1280,20 @@ class CoevolutionLoop:
         mutating any state (per "Probe Does Not Mutate Population State").
         """
         cfg = self.coevolution_config
-        # Lineage tracker is lazy: created on the first K-block when the
-        # training side first records a row. Avoids creating an empty
-        # CSV file for the side that hasn't trained yet.
-        if training_side.lineage is None:
-            training_side.lineage = LineageTracker(
-                training_side.output_dir / "lineage.csv",
+        # Lineage tracker is constructed eagerly in
+        # `_build_{prey,predator}_state` to match `EvolutionLoop`'s
+        # shape. The field type is `LineageTracker | None` (None
+        # permitted for tests that bypass the standard construction);
+        # explicit None-check narrows the type for the .record() call
+        # later in this method.
+        if training_side.lineage is None:  # pragma: no cover - standard construction populates
+            msg = (
+                f"_run_one_k_block: {training_side.name}.lineage is None. "
+                "Standard construction (_build_prey_state / _build_predator_state) "
+                "populates this; tests that bypass construction must populate "
+                "the field manually before calling run()."
             )
+            raise RuntimeError(msg)
 
         # Track the K-block's best so we know what to push to HoF +
         # champion_history at the end. `block_elite_*` are updated each
@@ -1213,19 +1376,11 @@ class CoevolutionLoop:
             training_side.prev_generation_ids = [g.genome_id for g in gen_genomes]
             training_side.generation += 1
 
-            # Probe cadence check. Probes operate on side-global
-            # generation index (NOT k_gen), so the cadence applies
-            # consistently across K-blocks. Probe is a no-op until
-            # at least one block elite exists per side; the first probe
-            # fires at the configured cadence after gen-0 blocks
-            # complete.
-            if (
-                cfg.generality_probe_every > 0
-                and training_side.generation % cfg.generality_probe_every == 0
-            ):
-                self._fire_generality_probe()
-
         # K-block end: push elite to HoF + champion_history per spec.
+        # MUST happen BEFORE the probe cadence check so the probe sees
+        # the just-completed-block's elite when the cadence fires —
+        # otherwise the very first probe at side.generation == K_per_block
+        # would observe an empty champion_history and silently no-op.
         if block_elite_genome is not None:
             training_side.hof.push(block_elite_genome, fitness=block_elite_fitness)
             training_side.champion_history.append(
@@ -1251,6 +1406,21 @@ class CoevolutionLoop:
         # zero-iteration K-blocks.
         block_mean = float(np.mean(block_fitnesses)) if block_fitnesses else 0.0
         self._k_block_mean_fitness[training_side.name].append(block_mean)
+
+        # Probe cadence check at K-block boundary, AFTER the elite has
+        # been pushed to champion_history. Cadence is keyed on
+        # `training_side.generation` (the side-global gen counter)
+        # rather than `k_gen` so it applies consistently across
+        # K-blocks. The just-finished training side's elite is now
+        # available; the opposing side's elite (if any) reflects its
+        # most-recent K-block's champion. See spec scenario "Probe
+        # Cadence and Output Layout" for the full contract.
+        if (
+            cfg.generality_probe_every > 0
+            and training_side.generation > 0
+            and training_side.generation % cfg.generality_probe_every == 0
+        ):
+            self._fire_generality_probe()
 
     # ------------------------------------------------------------------
     # Opposition + evaluation (§6.7-§6.8)

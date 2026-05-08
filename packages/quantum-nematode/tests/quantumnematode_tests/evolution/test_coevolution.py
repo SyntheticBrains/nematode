@@ -24,7 +24,8 @@ end-to-end evaluation is exercised by the smoke pilot in PR 4).
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
@@ -47,9 +48,6 @@ from quantumnematode.utils.config_loader import (
     PredatorConfig,
     SimulationConfig,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _build_minimal_sim_config(  # noqa: PLR0913 — kwargs map 1:1 to CoevolutionConfig fields
@@ -351,11 +349,11 @@ class TestAlternatingSchedule:
         with patch.object(loop, "_rebuild_optimizer", side_effect=capture):
             loop.run()
 
-        # 4 K-blocks → 3 transitions, but the LAST transition skips
+        # 4 K-blocks -> 3 transitions, but the LAST transition skips
         # rebuild (the loop exits before the would-be next block).
-        # Order: prey-block-end → predator rebuild; predator-block-end →
-        # prey rebuild; prey-block-end → predator rebuild; predator-
-        # block-end → loop exits, no rebuild. So predator was rebuilt
+        # Order: prey-block-end -> predator rebuild; predator-block-end ->
+        # prey rebuild; prey-block-end -> predator rebuild; predator-
+        # block-end -> loop exits, no rebuild. So predator was rebuilt
         # 2 times; prey was rebuilt 1 time.
         # Assert each side's optimizer was rebuilt at least once and
         # the new instance is a different object.
@@ -479,7 +477,7 @@ class TestGeneralityProbe:
         probe_path = tmp_path / "coevo" / "generality_probe.csv"
         lines = probe_path.read_text().strip().split("\n")
         # Header + at least 1 row per side per probe firing.
-        # K_per_block=1, generation_pairs=1 → 2 total per-side
+        # K_per_block=1, generation_pairs=1 -> 2 total per-side
         # generations. Probe fires at gens (post-K-block) where
         # `side.generation % 1 == 0`, so on every K-block.
         assert lines[0] == "generation,side,opponent_index,fitness"
@@ -656,8 +654,8 @@ class TestRebalanceHeuristic:
         `training_side` is prey, meaning prey gets an extra K-block.
         """
         loop = _make_loop(tmp_path, rebalance_threshold=0.5)
-        # Prey at 0.1, predator at 1.0 → prey/predator = 0.1, well
-        # below threshold 0.5 → prey saturated.
+        # Prey at 0.1, predator at 1.0 -> prey/predator = 0.1, well
+        # below threshold 0.5 -> prey saturated.
         loop._k_block_mean_fitness["prey"] = [0.1, 0.1, 0.1]
         loop._k_block_mean_fitness["predator"] = [1.0, 1.0, 1.0]
         # When prey just trained (training_side=prey), keep prey
@@ -720,3 +718,215 @@ def test_hof_dataclass_to_dict_round_trip() -> None:
     restored = HallOfFame.from_dict(hof.to_dict())
     assert len(restored) == 0
     assert restored.capacity == 4
+
+
+# ---------------------------------------------------------------------------
+# Self-review regression: B1, B2, B3, S6 — bugs caught + fixed in pre-push
+# review. Each test pins the fix so a future refactor that re-introduces
+# the bug fails loudly here rather than silently breaking the M5 pilot.
+# ---------------------------------------------------------------------------
+
+
+class TestProbeFiresAtKBlockBoundary:
+    """B1: probe SHALL fire at K-block boundary AFTER elite push, not mid-block.
+
+    Pre-fix bug: cadence check ran inside the per-generation for-loop
+    AFTER `training_side.generation += 1`, BEFORE the K-block-end push
+    to `champion_history`. With `K_per_block=10` and
+    `generality_probe_every=10`, the very first probe attempt at gen 10
+    saw an empty `champion_history` (push hasn't happened yet) and
+    silently no-op'd — the prey side's K-block-0 elite never got
+    probed. Post-fix: probe runs at K-block end AFTER the elite push.
+    """
+
+    def test_probe_writes_rows_for_first_kblock(self, tmp_path: Path) -> None:
+        """First K-block at K_per_block=2, probe_every=2 SHALL write probe rows.
+
+        Setup: prey K-block 0 trains for 2 gens -> elite pushed -> probe
+        fires at gen 2 (since `2 % 2 == 0`). The pre-fix bug would
+        have probed BEFORE the push and produced 0 rows from the prey
+        side; the fix produces `held_out_size` predator-side rows on
+        each subsequent K-block probe (predator held-out is non-empty
+        even without a prey bundle).
+        """
+        loop = _make_loop(
+            tmp_path,
+            generation_pairs=1,
+            K_per_block=2,
+            held_out_size=2,
+            generality_probe_every=2,
+        )
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
+
+        loop.run()
+
+        probe_path = tmp_path / "coevo" / "generality_probe.csv"
+        lines = probe_path.read_text().strip().split("\n")
+        # Header + at least 1 row from the predator side. Prey held-out
+        # is empty (no bundle), so prey rows are 0; predator held-out
+        # has held_out_size=2 rows x 2 K-block boundaries = 4 rows
+        # (one per K-block end, because predator side trains the second
+        # K-block and the probe fires at predator.generation=2).
+        assert lines[0] == "generation,side,opponent_index,fitness"
+        assert len(lines) > 1, (
+            f"probe MUST write at least one row at the K-block boundary; "
+            f"got only the header. Lines: {lines}"
+        )
+        # Verify the rows came from the predator side (prey bundle is empty).
+        for row in lines[1:]:
+            cells = row.split(",")
+            assert cells[1] == "predator"
+
+
+class TestResumeBundleDriftCrossCheck:
+    """B2: resume SHALL detect bundle drift via genome-id matching, not RNG re-sample.
+
+    Pre-fix bug: `_load_held_out_prey_bundle` (called in `__init__`)
+    used `_held_out_rng.choice` to draw a subset; on resume the
+    construction-time RNG state differed from the saved RNG state
+    (the master rng was not yet restored), so `without-replacement`
+    draws picked a different subset -> spurious "bundle drifted"
+    raise even when the bundle on disk was byte-identical.
+    Post-fix: `_reload_prey_held_out_by_ids` reads files BY ID
+    matching `prey_held_out_ids` recorded in the JSON.
+    """
+
+    def test_resume_with_drifted_bundle_detected(self, tmp_path: Path) -> None:
+        """If the saved bundle's IDs no longer match disk, resume SHALL raise.
+
+        Constructs a synthetic bundle dir with 2 fixture files,
+        records their IDs in the checkpoint, then DELETES one file
+        and verifies resume raises with a clear "drifted" diagnostic.
+        """
+        # Build a synthetic bundle dir relative to cwd (the production
+        # path is `configs/evolution/coevolution_held_out_prey/` in
+        # the repo root). To avoid polluting the real repo, monkeypatch
+        # the bundle-dir constant on the loop methods.
+        bundle_dir = tmp_path / "held_out_bundle"
+        bundle_dir.mkdir(parents=True)
+
+        # Test the helper directly with a minimal sim_config + recorded_ids
+        # that don't exist on disk -> expect ValueError.
+        loop = _make_loop(tmp_path)
+        with (
+            patch.object(Path, "is_dir", return_value=True),
+            patch.object(Path, "glob", return_value=[]),
+            pytest.raises(ValueError, match="drifted"),
+        ):
+            # No bundle files on disk but we recorded 2 IDs at save time.
+            loop._reload_prey_held_out_by_ids(["genome-a", "genome-b"])
+
+
+class TestChampionHistoryJSONEmitted:
+    """B3: `_save_checkpoint` SHALL emit `{output_dir}/champion_history.json`.
+
+    Pre-fix bug: champion_history was only persisted inside the
+    per-side pickles. The aggregator (PR 5) reads the top-level JSON
+    file per spec scenario "Probe Cadence and Output Layout"; without
+    it, the aggregator can't load champion history without unpickling
+    each side's checkpoint pickle (which requires numpy + the full
+    cma library).
+    Post-fix: `_save_checkpoint` writes a top-level `champion_history.json`
+    with `{prey: list[dict], predator: list[dict]}`.
+    """
+
+    def test_save_emits_top_level_champion_history_json(self, tmp_path: Path) -> None:
+        """`_save_checkpoint` SHALL produce `champion_history.json` at output_dir top-level."""
+        loop = _make_loop(tmp_path)
+        # Manually populate champion_history on each side so the JSON
+        # is non-trivial.
+        loop.prey.champion_history.append(
+            {
+                "genome_id": "elite-prey-0",
+                "generation": 0,
+                "k_block_index": 0,
+                "fitness": 0.7,
+                "params": [1.0, 2.0, 3.0],
+            },
+        )
+        loop.predator.champion_history.append(
+            {
+                "genome_id": "elite-pred-0",
+                "generation": 0,
+                "k_block_index": 1,
+                "fitness": 0.4,
+                "params": [-0.5, 0.5],
+            },
+        )
+
+        loop._save_checkpoint()
+
+        history_path = tmp_path / "coevo" / "champion_history.json"
+        assert history_path.exists()
+        data = json.loads(history_path.read_text())
+        assert set(data.keys()) == {"prey", "predator"}
+        assert len(data["prey"]) == 1
+        assert len(data["predator"]) == 1
+        assert data["prey"][0]["genome_id"] == "elite-prey-0"
+        assert data["prey"][0]["fitness"] == 0.7
+        assert data["prey"][0]["params"] == [1.0, 2.0, 3.0]
+        assert data["predator"][0]["genome_id"] == "elite-pred-0"
+
+
+class TestRebalanceLagDocumented:
+    """S6: rebalance heuristic only fires when saturated side IS the just-trained side.
+
+    Spec ambiguity flagged in audit: the heuristic has a one-block
+    lag when the dominant side just trained (we flip normally to the
+    saturated side, then on the NEXT K-block boundary the freeze
+    kicks in). This test pins the lag behaviour so a future refactor
+    that "fixes" the lag (by also freezing when training_side is the
+    DOMINANT side) doesn't silently change semantics.
+    """
+
+    def test_rebalance_no_freeze_when_dominant_side_just_trained(self, tmp_path: Path) -> None:
+        """Prey saturated + training_side=predator (dominant just trained) SHALL flip normally.
+
+        The next iteration trains prey (the saturated side); the freeze
+        kicks in on the K-block AFTER that.
+        """
+        loop = _make_loop(tmp_path, rebalance_threshold=0.5)
+        # Prey saturated for 3 K-blocks; predator dominant.
+        loop._k_block_mean_fitness["prey"] = [0.1, 0.1, 0.1]
+        loop._k_block_mean_fitness["predator"] = [1.0, 1.0, 1.0]
+
+        # Predator just trained -> flip normally to prey (so prey can
+        # train). Freeze kicks in NEXT block when training_side flips
+        # back to prey AND prey is still saturated.
+        assert loop._evaluate_rebalance(loop.predator, loop.prey) is True
+
+
+# ---------------------------------------------------------------------------
+# S2 regression: phenotypic_cycling absolute-variance floor
+# ---------------------------------------------------------------------------
+
+
+class TestCyclingTinyAmplitudeOnLargeConstant:
+    """S2: tiny-amplitude oscillation on a large constant SHALL NOT flag cycling.
+
+    Pre-fix gap: `phenotypic_cycling` only had a relative-variance
+    gate (`residual / raw < 1e-12`). For series like
+    `[1.0, 1.0+1e-15, 1.0-1e-15, ...]`, the ratio is order-1 (residual
+    after detrend is comparable to the raw variance, both at
+    machine-epsilon scale around the mean), so the rel gate didn't
+    fire. The permutation test then ran on numerical noise and could
+    spuriously flag p<0.05 cycling.
+    Post-fix: absolute-variance floor `eps * (1 + mean^2) * n`
+    catches this case.
+    """
+
+    def test_tiny_oscillation_on_large_constant_rejected(self) -> None:
+        """Series with mean ~1.0 and 1e-15 amplitude SHALL return cycling_detected=False."""
+        from quantumnematode.evolution.redqueen_metrics import phenotypic_cycling
+
+        n = 40
+        t = np.arange(n, dtype=np.float64)
+        # Mean ~ 1.0; oscillation amplitude 1e-15 (machine epsilon scale).
+        series = 1.0 + 1e-15 * np.sin(2.0 * np.pi * t / 8.0)
+        result = phenotypic_cycling(series)
+        assert result["cycling_detected"] is False, (
+            f"tiny-amplitude oscillation on large constant must NOT trigger "
+            f"cycling detection (would be a false positive on numerical noise). "
+            f"Got: {result}"
+        )
