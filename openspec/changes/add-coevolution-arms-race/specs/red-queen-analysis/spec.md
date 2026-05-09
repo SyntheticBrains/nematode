@@ -101,7 +101,7 @@ The system SHALL provide a `generality` pure function that summarises the held-o
 - **GIVEN** a held-out probe series where elite fitness on training opponents climbs but fitness on held-out opponents declines or stays flat
 - **WHEN** `generality(probe_series)` runs
 - **THEN** the returned generality scalar SHALL be near 0 or negative
-- **AND** the aggregator SHALL include a "self-play overfitting suspected" flag in its summary output when generality < threshold
+- **Note:** an aggregator-level "self-play overfitting suspected" flag is a non-normative reporting concern that lands alongside the per-opponent probe-evaluation body (deferred — `_probe_one_opponent` currently returns NaN). When the probe body is wired and a generality threshold is calibrated from pilot evidence, the aggregator's `summary.md` MAY add a flag derived from the generality scalar; the threshold value is not pinned by this spec
 
 ### Requirement: Aggregator Verdict Output
 
@@ -111,25 +111,44 @@ The system SHALL provide an aggregator that consumes per-seed Red Queen metric s
 
 - **GIVEN** completed full-run results for N seeds
 - **WHEN** the aggregator runs
-- **THEN** it SHALL produce `verdict.csv` with one row per seed and columns:
-  - `seed: int`
-  - `cycling_detected: bool`
-  - `escalation_detected: bool`
-  - `escalation_slope: float`
-  - `escalation_p_value: float`
-  - `cycling_period: int | NaN`
-  - `cycling_p_value: float`
-  - `generality_scalar: float`
-  - `gate_fires: bool` (cycling OR escalation)
+- **THEN** it SHALL produce `verdict.csv` with one row per seed and the following columns in this order (column order is normative so machine-readers can rely on positional access):
+  1. `seed: int`
+  2. `cycling_detected: bool`
+  3. `escalation_detected: bool`
+  4. `escalation_slope: float`
+  5. `escalation_p_value: float`
+  6. `cycling_period: int | NaN`
+  7. `cycling_p_value: float`
+  8. `generality_scalar: float`
+  9. `gate_fires: bool` (cycling OR escalation)
 - **AND** the verdict CSV SHALL be readable by `pandas.read_csv` without dtype coercion
+- **AND** when both prey and predator sides have firing metric values for the same seed, the smaller-`p_value` side's slope/period/p-values SHALL be written (more decisive). When neither side has computed values, NaN-shaped placeholders are written. Generality scalar prefers the prey side; falls back to the predator side when prey is NaN
 
 #### Scenario: Summary Markdown Output
 
 - **GIVEN** completed full-run aggregation
 - **WHEN** the aggregator runs
 - **THEN** it SHALL produce `summary.md` containing:
-  - The overall verdict (`GO` / `STOP` / `PIVOT`) and the seeds-firing count
+  - The overall verdict (`GO` / `STOP` / `PIVOT` / `INCONCLUSIVE` per the co-evolution capability's "Verdict Aggregation Across Seeds" scenario) and the seeds-firing count
   - Per-seed cycling and escalation results
   - The generality probe trajectory plot reference
   - A clear note that generality is reported but not a verdict input
   - For M5.7, a Baldwin-readout block clearly labelled "secondary observation, not a verdict input"
+
+#### Scenario: Input Layout Auto-Discovery
+
+- **GIVEN** a `--root` argument pointing at one of three layouts:
+  1. A campaign root containing per-seed subdirs (`<root>/seed-<N>/<session_id>/...`).
+  2. A per-seed parent dir containing one or more session subdirs (`<root>/<session_id>/...`) with no `seed-<N>/` wrapping — produced by the smoke driver and by single-seed manual runs.
+  3. `<root>` itself IS a session dir (contains `prey/`, `predator/`, `champion_history.json` directly).
+- **WHEN** the aggregator runs
+- **THEN** it SHALL auto-discover the layout: prefer (1) when any `seed-<N>/` subdir is present; otherwise fall back to (2) or (3) and label the synthetic seed id as `-1` in the verdict CSV + summary
+- **AND** for layout (2), when multiple session subdirs exist the most-recently-modified is selected by default; an explicit `--session <id>` SHALL override the most-recent default
+- **Rationale:** layout (1) is the production pilot/full layout; layouts (2) and (3) are smoke-driver and ad-hoc convenience cases. Pinning all three in the spec lets `tasks.md` 8.5's "smoke-validate the aggregator" exercise be deterministic without per-script branch logic in the test harness.
+
+#### Scenario: NaN-Tolerance When Probe Body Is Deferred
+
+- **GIVEN** an aggregator input where `generality_probe.csv`'s `fitness` column is uniformly NaN (the deferred-body case where `_probe_one_opponent` returns NaN per the co-evolution capability's "Probe Cadence and Output Layout" scenario)
+- **WHEN** the aggregator computes per-seed metrics
+- **THEN** the generality scalar SHALL be reported as NaN (not 0.0, not "skip"), surfaced as `N/A` in `summary.md` and the empty string in `verdict.csv`
+- **AND** the per-seed gate firing SHALL be unaffected (verdict gate uses cycling + escalation only per design.md D6); generality is interpretation-only
