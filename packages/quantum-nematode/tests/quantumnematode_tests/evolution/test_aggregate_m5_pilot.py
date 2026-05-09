@@ -385,6 +385,53 @@ class TestWalltimeSummary:
         # Tie (4 vs 8, both freq=1); 1 absent → smallest tied wins.
         assert out["parallel_workers_used"] == 4
 
+    def test_malformed_parallel_workers_skipped_not_fabricated(
+        self,
+        aggregator: Any,
+    ) -> None:
+        """Missing / malformed `parallel_workers` SHALL be skipped, NOT fabricated as 1.
+
+        Pre-fix bug: `int(row.get("parallel_workers", 1))` defaulted to
+        1 on missing column; `except: workers.append(1)` defaulted to
+        1 on parse error. Both polluted the modal counter and masked
+        the "no instrumentation present" case. Post-fix: missing /
+        malformed entries are skipped; when ALL rows lack a parseable
+        `parallel_workers`, the summary returns the "N/A" sentinel.
+        """
+        # All 3 rows have wall_seconds (so wall data is captured) but
+        # parallel_workers is variously missing / empty / unparseable.
+        rows = [
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "0",
+                "index": "0",
+                # missing parallel_workers entirely
+                "wall_seconds": "1.0",
+            },
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "1",
+                "index": "0",
+                "parallel_workers": "",  # empty string
+                "wall_seconds": "1.0",
+            },
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "2",
+                "index": "0",
+                "parallel_workers": "abc",  # unparseable
+                "wall_seconds": "1.0",
+            },
+        ]
+        out = aggregator._walltime_summary(rows)
+        # All 3 wall values are captured (eval mean = 1.0)
+        assert out["mean_eval_wall_seconds"]["prey"] == 1.0
+        # But no parallel_workers column survived → N/A sentinel.
+        assert out["parallel_workers_used"] == "N/A"
+
     def test_main_walltime_summary_emitted(self, aggregator: Any, tmp_path: Path) -> None:
         """Aggregator main() SHALL emit walltime_summary.csv alongside verdict.csv."""
         root = tmp_path / "campaign"

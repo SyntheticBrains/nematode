@@ -53,6 +53,7 @@ import csv
 import json
 import logging
 import sys
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -190,10 +191,17 @@ def _walltime_summary(walltime_rows: list[dict[str, Any]]) -> dict[str, Any]:
             wall = float(row["wall_seconds"])
         except (KeyError, ValueError, TypeError):
             continue
-        try:
-            workers.append(int(row.get("parallel_workers", 1)))
-        except (ValueError, TypeError):
-            workers.append(1)
+        # Only append a parsed int when `parallel_workers` is present
+        # AND parses cleanly. Missing or malformed entries are skipped
+        # (treated as missing data) rather than silently fabricating a
+        # `1`, which would have polluted the modal counter and
+        # masked truly-missing instrumentation. When every row has a
+        # missing/malformed column, `workers` ends up empty and the
+        # downstream branch returns the "N/A" sentinel.
+        raw_workers = row.get("parallel_workers")
+        if raw_workers not in (None, ""):
+            with suppress(ValueError, TypeError):
+                workers.append(int(raw_workers))
         if side not in eval_walls:
             continue
         if scope == "evaluation":
