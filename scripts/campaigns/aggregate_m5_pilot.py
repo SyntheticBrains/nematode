@@ -4,8 +4,9 @@ r"""Aggregate the M5 co-evolution arms-race pilot/full output.
 Reads per-seed `CoevolutionLoop` output dirs (per-side lineage CSVs +
 champion_history JSON + generality_probe CSV) and emits:
 
-- ``summary.md`` — overall verdict (GO / STOP / PIVOT) + per-seed
-  cycling/escalation/generality results + plot references.
+- ``summary.md`` — overall verdict (GO / STOP / PIVOT / INCONCLUSIVE)
+  + per-seed cycling/escalation/generality results + wall-time
+  reconciliation table + plot references.
 - ``cycling.png`` — per-seed prey + predator block-elite fitness
   trajectories with autocorrelation peak overlay.
 - ``escalation.png`` — per-seed prey + predator block-elite fitness
@@ -13,6 +14,10 @@ champion_history JSON + generality_probe CSV) and emits:
 - ``generality.png`` — per-seed held-out probe trajectory (one line
   per (side, opponent_index)).
 - ``verdict.csv`` — one row per seed with the gate's metric values.
+- ``walltime_summary.csv`` — one row per seed with operational
+  wall-time roll-ups (mean eval/gen walls per side, total run wall,
+  modal parallel_workers_used). Source for the markdown table in
+  ``summary.md``'s wall-time reconciliation section per task 9.5.
 
 Verdict gate (per design.md D6):
 - Per-seed firing = phenotypic cycling OR trait escalation in EITHER

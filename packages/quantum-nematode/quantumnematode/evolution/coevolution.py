@@ -355,10 +355,14 @@ class CoevolutionLoop:
         self._probe_csv_path = self.output_dir / "generality_probe.csv"
         # Initialise the probe CSV with its header row at __init__ so
         # post-hoc inspection works even if the loop crashes before any
-        # probe fires. Atomic-write friendly (single write, no append).
-        with self._probe_csv_path.open("w", newline="") as fh:
-            writer = csv.writer(fh)
-            writer.writerow(["generation", "side", "opponent_index", "fitness"])
+        # probe fires. RESUME-SAFE: write the header only when the file
+        # doesn't already exist; on resume the prior run's rows are
+        # preserved so the aggregator's totals reflect the full
+        # multi-resume campaign rather than just the post-resume slice.
+        if not self._probe_csv_path.exists():
+            with self._probe_csv_path.open("w", newline="") as fh:
+                writer = csv.writer(fh)
+                writer.writerow(["generation", "side", "opponent_index", "fitness"])
 
         # Wall-time instrumentation. One CSV row per evaluation +
         # per-generation aggregate rows. Captured master-side via
@@ -376,21 +380,23 @@ class CoevolutionLoop:
         #     1 for sequential, side.evolution_config.parallel_workers
         #     otherwise)
         #   - wall_seconds: float
-        # Initialised with a header row at __init__ so post-hoc
-        # inspection works even on early crashes.
+        # RESUME-SAFE: same header-only-on-fresh-create pattern as
+        # the probe CSV above, so the multi-day full run's
+        # walltime.csv survives resumes intact.
         self._walltime_csv_path = self.output_dir / "walltime.csv"
-        with self._walltime_csv_path.open("w", newline="") as fh:
-            writer = csv.writer(fh)
-            writer.writerow(
-                [
-                    "scope",
-                    "side",
-                    "generation",
-                    "index",
-                    "parallel_workers",
-                    "wall_seconds",
-                ],
-            )
+        if not self._walltime_csv_path.exists():
+            with self._walltime_csv_path.open("w", newline="") as fh:
+                writer = csv.writer(fh)
+                writer.writerow(
+                    [
+                        "scope",
+                        "side",
+                        "generation",
+                        "index",
+                        "parallel_workers",
+                        "wall_seconds",
+                    ],
+                )
 
     # ------------------------------------------------------------------
     # Per-side construction

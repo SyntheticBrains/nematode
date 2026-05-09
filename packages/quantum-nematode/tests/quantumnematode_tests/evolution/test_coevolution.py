@@ -768,6 +768,45 @@ class TestWalltimeInstrumentation:
             wall = float(r["wall_seconds"])
             assert wall >= 0.0
 
+    def test_walltime_csv_preserved_across_init(self, tmp_path: Path) -> None:
+        """Re-instantiating a loop SHALL NOT truncate prior walltime.csv rows.
+
+        Resume goes through `__init__` again; if the CSV is opened in
+        `"w"` mode unconditionally, every prior wall-time row is wiped
+        and the aggregator's `total_run_wall_seconds` for the resumed
+        seed silently understates the campaign total. Both
+        `walltime.csv` and `generality_probe.csv` use the
+        header-only-on-fresh-create pattern.
+        """
+        # First instantiation: fresh CSVs with header rows.
+        loop_a = _make_loop(tmp_path)
+        walltime_path = tmp_path / "coevo" / "walltime.csv"
+        probe_path = tmp_path / "coevo" / "generality_probe.csv"
+        # Append a synthetic data row to each CSV to simulate prior-run
+        # state. (Real runs append via `_record_walltime` /
+        # `_fire_generality_probe`; we forge the rows here to exercise
+        # the resume-safety contract independent of the loop body.)
+        with walltime_path.open("a", newline="") as fh:
+            csv.writer(fh).writerow(["evaluation", "prey", 0, 0, 1, "1.234"])
+        with probe_path.open("a", newline="") as fh:
+            csv.writer(fh).writerow([5, "prey", 0, "0.42"])
+        del loop_a
+
+        # Second instantiation (mirrors the resume path): __init__ runs
+        # again but MUST NOT clobber the existing CSVs.
+        _make_loop(tmp_path)
+        with walltime_path.open() as fh:
+            walltime_rows = list(csv.reader(fh))
+        with probe_path.open() as fh:
+            probe_rows = list(csv.reader(fh))
+        # Header + 1 forged data row each.
+        assert len(walltime_rows) == 2
+        assert walltime_rows[0][0] == "scope"
+        assert walltime_rows[1] == ["evaluation", "prey", "0", "0", "1", "1.234"]
+        assert len(probe_rows) == 2
+        assert probe_rows[0][0] == "generation"
+        assert probe_rows[1] == ["5", "prey", "0", "0.42"]
+
 
 # ---------------------------------------------------------------------------
 # Sanity: HoF default capacity import
