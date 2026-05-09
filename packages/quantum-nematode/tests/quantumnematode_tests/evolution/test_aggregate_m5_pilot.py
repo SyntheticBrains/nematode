@@ -481,9 +481,10 @@ class TestWalltimeSummary:
     ) -> None:
         """Older runs without walltime.csv SHALL render `parallel_workers_used` as `N/A`.
 
-        The synthetic-session helper writes an empty walltime.csv
-        (header only). `_walltime_summary` with no data rows returns
-        the `"N/A"` sentinel for `parallel_workers_used`; both
+        Passing `walltime_rows=None` to the synthetic-session helper
+        skips creating walltime.csv entirely, which models a
+        pre-instrumentation run. `_walltime_summary` with no file
+        returns the `"N/A"` sentinel for `parallel_workers_used`; both
         `summary.md` and `walltime_summary.csv` SHALL surface that
         sentinel verbatim instead of "0".
         """
@@ -493,8 +494,12 @@ class TestWalltimeSummary:
             seed42_session,
             prey_series=[0.5] * 5,
             predator_series=[0.5] * 5,
-            walltime_rows=None,  # header only — no data rows
+            walltime_rows=None,  # truly absent — file is not created
         )
+        # Sanity-check the helper actually skipped writing the file so
+        # the test exercises the genuinely-missing-file branch (not a
+        # header-only file that happens to round-trip identically).
+        assert not (seed42_session / "walltime.csv").exists()
         out = tmp_path / "aggregate"
         argv = [
             "aggregate_m5_pilot.py",
@@ -514,6 +519,46 @@ class TestWalltimeSummary:
         summary = (out / "summary.md").read_text()
         # Markdown table uses "N/A" for both parallel_workers and the
         # NaN-valued mean walls.
+        assert "| 42 | N/A | N/A | N/A |" in summary
+
+    def test_main_walltime_summary_renders_na_with_header_only_walltime_csv(
+        self,
+        aggregator: Any,
+        tmp_path: Path,
+    ) -> None:
+        """A header-only walltime.csv (file exists, no data rows) SHALL also render N/A.
+
+        Mirrors the missing-file test but exercises the
+        `walltime_rows=[]` branch (file present, header only) which
+        happens when an instrumented run aborted before recording any
+        rows.
+        """
+        root = tmp_path / "campaign"
+        seed42_session = root / "seed-42" / "session-1"
+        _build_synthetic_session(
+            seed42_session,
+            prey_series=[0.5] * 5,
+            predator_series=[0.5] * 5,
+            walltime_rows=[],  # header only — no data rows
+        )
+        assert (seed42_session / "walltime.csv").exists()
+        out = tmp_path / "aggregate"
+        argv = [
+            "aggregate_m5_pilot.py",
+            "--root",
+            str(root),
+            "--output-dir",
+            str(out),
+            "--log-level",
+            "WARNING",
+        ]
+        with patch.object(sys, "argv", argv):
+            rc = aggregator.main()
+        assert rc == 0
+        with (out / "walltime_summary.csv").open() as fh:
+            csv_rows = list(csv.DictReader(fh))
+        assert csv_rows[0]["parallel_workers_used"] == "N/A"
+        summary = (out / "summary.md").read_text()
         assert "| 42 | N/A | N/A | N/A |" in summary
 
 
@@ -651,6 +696,9 @@ def _build_synthetic_session(
 
     `walltime_rows` schema: `(scope, side, generation, index,
     parallel_workers, wall_seconds)` matching `_record_walltime` output.
+    Pass `walltime_rows=None` to skip creating walltime.csv entirely
+    (simulating a pre-instrumentation run); pass `[]` to write a
+    header-only file.
     """
     (session_dir / "prey").mkdir(parents=True, exist_ok=True)
     (session_dir / "predator").mkdir(parents=True, exist_ok=True)
@@ -697,12 +745,12 @@ def _build_synthetic_session(
             for gen, side, opp_idx, fitness in probe_rows:
                 writer.writerow([gen, side, opp_idx, f"{fitness:.6f}"])
 
-    with (session_dir / "walltime.csv").open("w", newline="") as fh:
-        writer = csv.writer(fh)
-        writer.writerow(
-            ["scope", "side", "generation", "index", "parallel_workers", "wall_seconds"],
-        )
-        if walltime_rows:
+    if walltime_rows is not None:
+        with (session_dir / "walltime.csv").open("w", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(
+                ["scope", "side", "generation", "index", "parallel_workers", "wall_seconds"],
+            )
             for scope, side, gen, index, workers, wall in walltime_rows:
                 writer.writerow([scope, side, gen, index, workers, f"{wall:.6f}"])
 
