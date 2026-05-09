@@ -63,6 +63,7 @@ import csv
 import json
 import logging
 import tempfile
+import time
 from contextlib import suppress
 from dataclasses import dataclass, field
 from multiprocessing import Pool
@@ -358,6 +359,38 @@ class CoevolutionLoop:
         with self._probe_csv_path.open("w", newline="") as fh:
             writer = csv.writer(fh)
             writer.writerow(["generation", "side", "opponent_index", "fitness"])
+
+        # Wall-time instrumentation. One CSV row per evaluation +
+        # per-generation aggregate rows. Captured master-side via
+        # `time.perf_counter()` brackets so the worker ABI
+        # (`_evaluate_in_worker` returning float) stays stable. The
+        # aggregator (PR 5) reads this for the design.md D4
+        # reconciliation row. Schema:
+        #   - scope: "evaluation" or "generation"
+        #   - side: "prey" or "predator"
+        #   - generation: int (the side's generation counter at write
+        #     time; for "evaluation" rows, the gen the eval belongs to)
+        #   - index: int (genome index within the gen for "evaluation"
+        #     rows; population_size for "generation" rows)
+        #   - parallel_workers: int (effective workers for that batch;
+        #     1 for sequential, side.evolution_config.parallel_workers
+        #     otherwise)
+        #   - wall_seconds: float
+        # Initialised with a header row at __init__ so post-hoc
+        # inspection works even on early crashes.
+        self._walltime_csv_path = self.output_dir / "walltime.csv"
+        with self._walltime_csv_path.open("w", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(
+                [
+                    "scope",
+                    "side",
+                    "generation",
+                    "index",
+                    "parallel_workers",
+                    "wall_seconds",
+                ],
+            )
 
     # ------------------------------------------------------------------
     # Per-side construction
@@ -1615,10 +1648,47 @@ class CoevolutionLoop:
 
                     # Dispatch evaluation. The 11-tuple `eval_args` shape
                     # matches `EvolutionLoop._evaluate_in_worker`.
+                    # Master-side wall-time bracket: per-eval timing for
+                    # the sequential path, per-batch timing for the pool
+                    # path (worker ABI returns float; we don't extend it
+                    # to a tuple here to keep the spec's "ABI does NOT
+                    # change for co-evolution" contract intact). Pool-
+                    # mode per-eval rows record the *amortised* wall
+                    # (batch_wall / population_size) — a per-worker
+                    # average rather than a true per-eval measurement,
+                    # which is the correct denominator for the
+                    # design.md D4 reconciliation question ("seconds per
+                    # episode at parallel_workers=N").
+                    eval_walls: list[float] = []
+                    gen_start = time.perf_counter()
                     if pool is not None:
                         fitnesses = list(pool.map(_evaluate_in_worker, eval_args))
+                        gen_wall = time.perf_counter() - gen_start
+                        # Amortise across population_size to recover a
+                        # per-eval average. Cast to float to avoid
+                        # integer division in case `len(eval_args) == 0`
+                        # (empty population — not a real case but
+                        # defensive).
+                        amortised = gen_wall / len(eval_args) if eval_args else 0.0
+                        eval_walls = [amortised] * len(eval_args)
                     else:
-                        fitnesses = [_evaluate_in_worker(args) for args in eval_args]
+                        fitnesses = []
+                        for args in eval_args:
+                            eval_start = time.perf_counter()
+                            fitnesses.append(_evaluate_in_worker(args))
+                            eval_walls.append(time.perf_counter() - eval_start)
+                        gen_wall = time.perf_counter() - gen_start
+                    self._record_walltime(
+                        side=training_side,
+                        generation=global_gen,
+                        eval_walls=eval_walls,
+                        gen_wall=gen_wall,
+                        parallel_workers=(
+                            training_side.evolution_config.parallel_workers
+                            if pool is not None
+                            else 1
+                        ),
+                    )
 
                 # Post-eval bookkeeping: lineage rows, block elite,
                 # optimiser tell, generation advance.
@@ -1716,6 +1786,52 @@ class CoevolutionLoop:
             and training_side.generation % cfg.generality_probe_every == 0
         ):
             self._fire_generality_probe()
+
+    def _record_walltime(
+        self,
+        *,
+        side: _SideState,
+        generation: int,
+        eval_walls: list[float],
+        gen_wall: float,
+        parallel_workers: int,
+    ) -> None:
+        """Append per-eval + per-gen aggregate rows to walltime.csv.
+
+        One row per evaluation (`scope="evaluation"`, `index=child_idx`)
+        plus one summary row per generation (`scope="generation"`,
+        `index=len(eval_walls)`). Header is written once at __init__
+        in `_init_walltime_csv` (header: `scope, side, generation,
+        index, parallel_workers, wall_seconds`).
+
+        Pool-mode per-eval rows record the amortised wall (batch_wall
+        / population_size) since the worker ABI returns float, not a
+        timing tuple. Sequential-mode per-eval rows record the true
+        per-eval wall.
+        """
+        with self._walltime_csv_path.open("a", newline="") as fh:
+            writer = csv.writer(fh)
+            for idx, wall in enumerate(eval_walls):
+                writer.writerow(
+                    [
+                        "evaluation",
+                        side.name,
+                        generation,
+                        idx,
+                        parallel_workers,
+                        f"{wall:.6f}",
+                    ],
+                )
+            writer.writerow(
+                [
+                    "generation",
+                    side.name,
+                    generation,
+                    len(eval_walls),
+                    parallel_workers,
+                    f"{gen_wall:.6f}",
+                ],
+            )
 
     # ------------------------------------------------------------------
     # Opposition + evaluation

@@ -25,6 +25,7 @@ end-to-end evaluation is exercised by the campaign-driver smoke pilot.
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 from typing import Any
@@ -708,6 +709,64 @@ class TestEndToEndStubbedRun:
         assert (tmp_path / "coevo" / "predator" / "checkpoint.pkl").exists()
         assert (tmp_path / "coevo" / "coevolution_state.json").exists()
         assert (tmp_path / "coevo" / "coevolution_rng.pkl").exists()
+
+
+# ---------------------------------------------------------------------------
+# Wall-time instrumentation
+# ---------------------------------------------------------------------------
+
+
+class TestWalltimeInstrumentation:
+    """`_record_walltime` writes per-eval + per-gen aggregate rows to walltime.csv."""
+
+    def test_walltime_csv_initialised_with_header(self, tmp_path: Path) -> None:
+        """`__init__` SHALL create walltime.csv with the canonical header row."""
+        loop = _make_loop(tmp_path)
+        path = tmp_path / "coevo" / "walltime.csv"
+        assert path.is_file()
+        rows = path.read_text().strip().split("\n")
+        assert rows[0] == "scope,side,generation,index,parallel_workers,wall_seconds"
+        # Header-only at __init__ — no run has fired yet.
+        assert len(rows) == 1
+        del loop
+
+    def test_run_writes_evaluation_and_generation_rows(self, tmp_path: Path) -> None:
+        """A completed run SHALL append one evaluation row per child + one generation row per gen.
+
+        At population_size=4, K_per_block=1, generation_pairs=1 the run
+        executes 2 K-blocks (1 prey + 1 predator), each with 1
+        generation. So we expect:
+        - 4 evaluation rows + 1 generation row for prey side
+        - 4 evaluation rows + 1 generation row for predator side
+        Total: 10 data rows + 1 header.
+        """
+        loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, population_size=4)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
+        loop.run()
+        with (tmp_path / "coevo" / "walltime.csv").open() as fh:
+            rows = list(csv.DictReader(fh))
+        # 8 evaluation rows (4 prey + 4 predator) + 2 generation rows.
+        assert len(rows) == 10
+        eval_rows = [r for r in rows if r["scope"] == "evaluation"]
+        gen_rows = [r for r in rows if r["scope"] == "generation"]
+        assert len(eval_rows) == 8
+        assert len(gen_rows) == 2
+        # Per-side breakdown.
+        prey_evals = [r for r in eval_rows if r["side"] == "prey"]
+        predator_evals = [r for r in eval_rows if r["side"] == "predator"]
+        assert len(prey_evals) == 4
+        assert len(predator_evals) == 4
+        # Generation rows record `index = population_size`.
+        for gr in gen_rows:
+            assert int(gr["index"]) == 4
+        # parallel_workers=1 (smoke config / minimal sim has no
+        # multi-worker pool dispatch).
+        assert all(int(r["parallel_workers"]) == 1 for r in rows)
+        # Wall seconds parse as floats and are non-negative.
+        for r in rows:
+            wall = float(r["wall_seconds"])
+            assert wall >= 0.0
 
 
 # ---------------------------------------------------------------------------

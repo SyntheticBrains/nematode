@@ -229,6 +229,152 @@ class TestPickSide:
 
 
 # ---------------------------------------------------------------------------
+# Wall-time summary
+# ---------------------------------------------------------------------------
+
+
+class TestWalltimeSummary:
+    """`_walltime_summary` reduces walltime CSV rows to per-seed totals."""
+
+    def test_empty_rows_returns_nan_summary(self, aggregator: Any) -> None:
+        """No walltime rows SHALL return a NaN-shaped summary (older runs)."""
+        out = aggregator._walltime_summary([])
+        assert np.isnan(out["mean_eval_wall_seconds"]["prey"])
+        assert np.isnan(out["mean_eval_wall_seconds"]["predator"])
+        assert np.isnan(out["mean_gen_wall_seconds"]["prey"])
+        assert np.isnan(out["mean_gen_wall_seconds"]["predator"])
+        assert np.isnan(out["total_run_wall_seconds"])
+        assert out["parallel_workers_used"] == 0
+        assert out["n_eval_rows"] == 0
+        assert out["n_gen_rows"] == 0
+
+    def test_per_side_means_and_total(self, aggregator: Any) -> None:
+        """Mean eval/gen walls SHALL be per-side; total sums per-gen rows across both sides."""
+        rows = [
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "0",
+                "index": "0",
+                "parallel_workers": "1",
+                "wall_seconds": "1.0",
+            },
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "0",
+                "index": "1",
+                "parallel_workers": "1",
+                "wall_seconds": "3.0",
+            },
+            {
+                "scope": "generation",
+                "side": "prey",
+                "generation": "0",
+                "index": "2",
+                "parallel_workers": "1",
+                "wall_seconds": "5.0",
+            },
+            {
+                "scope": "evaluation",
+                "side": "predator",
+                "generation": "0",
+                "index": "0",
+                "parallel_workers": "1",
+                "wall_seconds": "10.0",
+            },
+            {
+                "scope": "generation",
+                "side": "predator",
+                "generation": "0",
+                "index": "1",
+                "parallel_workers": "1",
+                "wall_seconds": "12.0",
+            },
+        ]
+        out = aggregator._walltime_summary(rows)
+        # Prey eval mean = (1+3)/2 = 2.0; predator eval mean = 10.0.
+        assert out["mean_eval_wall_seconds"]["prey"] == 2.0
+        assert out["mean_eval_wall_seconds"]["predator"] == 10.0
+        # Per-gen: prey has one row (5.0); predator has one row (12.0).
+        assert out["mean_gen_wall_seconds"]["prey"] == 5.0
+        assert out["mean_gen_wall_seconds"]["predator"] == 12.0
+        # Total = sum of all per-gen rows = 5 + 12 = 17.0.
+        assert out["total_run_wall_seconds"] == 17.0
+        assert out["parallel_workers_used"] == 1
+        assert out["n_eval_rows"] == 3  # 2 prey + 1 predator
+        assert out["n_gen_rows"] == 2
+
+    def test_modal_parallel_workers_when_split(self, aggregator: Any) -> None:
+        """`parallel_workers_used` SHALL be the modal value across rows."""
+        rows = [
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "0",
+                "index": str(i),
+                "parallel_workers": "4",
+                "wall_seconds": "1.0",
+            }
+            for i in range(3)
+        ] + [
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "1",
+                "index": "0",
+                "parallel_workers": "1",
+                "wall_seconds": "1.0",
+            },
+        ]
+        out = aggregator._walltime_summary(rows)
+        # 3 rows at parallel_workers=4 vs 1 at parallel_workers=1 → modal=4.
+        assert out["parallel_workers_used"] == 4
+
+    def test_main_walltime_summary_emitted(self, aggregator: Any, tmp_path: Path) -> None:
+        """Aggregator main() SHALL emit walltime_summary.csv alongside verdict.csv."""
+        root = tmp_path / "campaign"
+        seed42_session = root / "seed-42" / "session-1"
+        _build_synthetic_session(
+            seed42_session,
+            prey_series=[0.5] * 5,
+            predator_series=[0.5] * 5,
+            walltime_rows=[
+                ("evaluation", "prey", 0, 0, 1, 1.5),
+                ("generation", "prey", 0, 1, 1, 1.5),
+                ("evaluation", "predator", 0, 0, 1, 2.5),
+                ("generation", "predator", 0, 1, 1, 2.5),
+            ],
+        )
+        out = tmp_path / "aggregate"
+        argv = [
+            "aggregate_m5_pilot.py",
+            "--root",
+            str(root),
+            "--output-dir",
+            str(out),
+            "--log-level",
+            "WARNING",
+        ]
+        with patch.object(sys, "argv", argv):
+            rc = aggregator.main()
+        assert rc == 0
+        assert (out / "walltime_summary.csv").is_file()
+        with (out / "walltime_summary.csv").open() as fh:
+            rows = list(csv.DictReader(fh))
+        assert len(rows) == 1
+        assert rows[0]["seed"] == "42"
+        assert rows[0]["mean_eval_wall_seconds_prey"] == "1.500000"
+        assert rows[0]["mean_eval_wall_seconds_predator"] == "2.500000"
+        assert rows[0]["total_run_wall_seconds"] == "4.000000"
+        assert rows[0]["parallel_workers_used"] == "1"
+        # Reconciliation table also lands in summary.md.
+        summary = (out / "summary.md").read_text()
+        assert "## Wall-time reconciliation" in summary
+        assert "| 42 | 1 | 1.5000 | 2.5000 |" in summary
+
+
+# ---------------------------------------------------------------------------
 # Verdict gate
 # ---------------------------------------------------------------------------
 
@@ -352,12 +498,16 @@ def _build_synthetic_session(
     prey_series: list[float],
     predator_series: list[float],
     probe_rows: list[tuple[int, str, int, float]] | None = None,
+    walltime_rows: list[tuple[str, str, int, int, int, float]] | None = None,
 ) -> None:
     """Materialise a synthetic CoevolutionLoop session dir on disk.
 
     Writes the minimum subset of files the aggregator reads:
     `prey/lineage.csv`, `predator/lineage.csv`,
-    `champion_history.json`, `generality_probe.csv`.
+    `champion_history.json`, `generality_probe.csv`, `walltime.csv`.
+
+    `walltime_rows` schema: `(scope, side, generation, index,
+    parallel_workers, wall_seconds)` matching `_record_walltime` output.
     """
     (session_dir / "prey").mkdir(parents=True, exist_ok=True)
     (session_dir / "predator").mkdir(parents=True, exist_ok=True)
@@ -403,6 +553,15 @@ def _build_synthetic_session(
         if probe_rows:
             for gen, side, opp_idx, fitness in probe_rows:
                 writer.writerow([gen, side, opp_idx, f"{fitness:.6f}"])
+
+    with (session_dir / "walltime.csv").open("w", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(
+            ["scope", "side", "generation", "index", "parallel_workers", "wall_seconds"],
+        )
+        if walltime_rows:
+            for scope, side, gen, index, workers, wall in walltime_rows:
+                writer.writerow([scope, side, gen, index, workers, f"{wall:.6f}"])
 
 
 def test_main_end_to_end_synthetic(aggregator: Any, tmp_path: Path) -> None:

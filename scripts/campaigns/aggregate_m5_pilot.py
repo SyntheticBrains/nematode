@@ -123,6 +123,102 @@ def _load_probe_csv(session_dir: Path) -> list[dict[str, Any]]:
         return list(reader)
 
 
+def _load_walltime_csv(session_dir: Path) -> list[dict[str, Any]]:
+    """Read walltime.csv into a list of row dicts.
+
+    Schema (set by `CoevolutionLoop._record_walltime`):
+    `scope, side, generation, index, parallel_workers, wall_seconds`.
+    Returns an empty list when the file is missing (older runs ship
+    without instrumentation; aggregator surfaces "N/A" in the
+    reconciliation row when this is the case).
+    """
+    path = session_dir / "walltime.csv"
+    if not path.is_file():
+        return []
+    with path.open() as fh:
+        reader = csv.DictReader(fh)
+        return list(reader)
+
+
+def _walltime_summary(walltime_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Reduce walltime CSV rows to a per-seed summary dict.
+
+    Returns
+    -------
+    `{
+       "mean_eval_wall_seconds": {"prey": float, "predator": float},
+       "mean_gen_wall_seconds":  {"prey": float, "predator": float},
+       "total_run_wall_seconds": float,
+       "parallel_workers_used":  int (modal value across rows; 1 if mixed),
+       "n_eval_rows":            int,
+       "n_gen_rows":             int,
+     }`
+
+    NaN values fill in missing-side cases (e.g. only prey rows present).
+    `total_run_wall_seconds` is the sum of per-generation aggregate
+    rows across BOTH sides (the per-eval rows would double-count).
+    """
+    if not walltime_rows:
+        return {
+            "mean_eval_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
+            "mean_gen_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
+            "total_run_wall_seconds": float("nan"),
+            "parallel_workers_used": 0,
+            "n_eval_rows": 0,
+            "n_gen_rows": 0,
+        }
+    eval_walls: dict[str, list[float]] = {"prey": [], "predator": []}
+    gen_walls: dict[str, list[float]] = {"prey": [], "predator": []}
+    workers: list[int] = []
+    for row in walltime_rows:
+        scope = row.get("scope")
+        side = row.get("side")
+        try:
+            wall = float(row["wall_seconds"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        try:
+            workers.append(int(row.get("parallel_workers", 1)))
+        except (ValueError, TypeError):
+            workers.append(1)
+        if side not in eval_walls:
+            continue
+        if scope == "evaluation":
+            eval_walls[side].append(wall)
+        elif scope == "generation":
+            gen_walls[side].append(wall)
+    # Modal parallel_workers (most common). If split, default to 1
+    # (sequential is the conservative interpretation).
+    if workers:
+        from collections import (
+            Counter,
+        )
+
+        parallel_workers_used = Counter(workers).most_common(1)[0][0]
+    else:
+        parallel_workers_used = 0
+    return {
+        "mean_eval_wall_seconds": {
+            "prey": float(np.mean(eval_walls["prey"])) if eval_walls["prey"] else float("nan"),
+            "predator": float(np.mean(eval_walls["predator"]))
+            if eval_walls["predator"]
+            else float("nan"),
+        },
+        "mean_gen_wall_seconds": {
+            "prey": float(np.mean(gen_walls["prey"])) if gen_walls["prey"] else float("nan"),
+            "predator": float(np.mean(gen_walls["predator"]))
+            if gen_walls["predator"]
+            else float("nan"),
+        },
+        "total_run_wall_seconds": float(
+            sum(gen_walls["prey"]) + sum(gen_walls["predator"]),
+        ),
+        "parallel_workers_used": parallel_workers_used,
+        "n_eval_rows": len(eval_walls["prey"]) + len(eval_walls["predator"]),
+        "n_gen_rows": len(gen_walls["prey"]) + len(gen_walls["predator"]),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Per-seed metric computation
 # ---------------------------------------------------------------------------
@@ -436,6 +532,65 @@ def _write_verdict_csv(out_path: Path, per_seed_rows: list[dict[str, Any]]) -> N
             )
 
 
+def _write_walltime_summary_csv(
+    out_path: Path,
+    per_seed_rows: list[dict[str, Any]],
+) -> None:
+    """Emit one row per seed with wall-time roll-ups for the design.md D4 reconciliation.
+
+    Columns: `seed`, `mean_eval_wall_seconds_prey`,
+    `mean_eval_wall_seconds_predator`, `mean_gen_wall_seconds_prey`,
+    `mean_gen_wall_seconds_predator`, `total_run_wall_seconds`,
+    `parallel_workers_used`, `n_eval_rows`, `n_gen_rows`. NaN-safe
+    (older runs without instrumentation surface NaN columns).
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "seed",
+        "mean_eval_wall_seconds_prey",
+        "mean_eval_wall_seconds_predator",
+        "mean_gen_wall_seconds_prey",
+        "mean_gen_wall_seconds_predator",
+        "total_run_wall_seconds",
+        "parallel_workers_used",
+        "n_eval_rows",
+        "n_gen_rows",
+    ]
+    with out_path.open("w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in per_seed_rows:
+            wt = row.get("walltime") or {
+                "mean_eval_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
+                "mean_gen_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
+                "total_run_wall_seconds": float("nan"),
+                "parallel_workers_used": 0,
+                "n_eval_rows": 0,
+                "n_gen_rows": 0,
+            }
+            writer.writerow(
+                {
+                    "seed": row["seed"],
+                    "mean_eval_wall_seconds_prey": _fmt_float(
+                        wt["mean_eval_wall_seconds"]["prey"],
+                    ),
+                    "mean_eval_wall_seconds_predator": _fmt_float(
+                        wt["mean_eval_wall_seconds"]["predator"],
+                    ),
+                    "mean_gen_wall_seconds_prey": _fmt_float(
+                        wt["mean_gen_wall_seconds"]["prey"],
+                    ),
+                    "mean_gen_wall_seconds_predator": _fmt_float(
+                        wt["mean_gen_wall_seconds"]["predator"],
+                    ),
+                    "total_run_wall_seconds": _fmt_float(wt["total_run_wall_seconds"]),
+                    "parallel_workers_used": wt["parallel_workers_used"],
+                    "n_eval_rows": wt["n_eval_rows"],
+                    "n_gen_rows": wt["n_gen_rows"],
+                },
+            )
+
+
 def _pick_side(
     a: dict[str, Any],
     b: dict[str, Any],
@@ -496,7 +651,7 @@ def _fmt_period(v: Any) -> str:  # noqa: ANN401 — formatter accepts heterogene
         return ""
 
 
-def _format_summary(  # noqa: PLR0913 — readability: each section is one parameter
+def _format_summary(  # noqa: PLR0913, PLR0915 — readability: linear render of a multi-section markdown doc; splitting into sub-renderers fragments the section ordering contract
     *,
     verdict: str,
     fires: int,
@@ -558,6 +713,49 @@ def _format_summary(  # noqa: PLR0913 — readability: each section is one param
             f"predator={_fmt_float_or_na(metrics['predator_generality'])}",
         )
         lines.append("")
+    # Wall-time reconciliation table (per task 9.5): compares actual
+    # per-eval / per-gen wall against the design.md D4 envelope
+    # (~0.75-1.5 sec per episode at parallel_workers=4). Per-seed rows
+    # show the side-specific means; the totals roll up to the run wall
+    # used for the full-run wall-budget lock at task 10.2.
+    lines.append("## Wall-time reconciliation")
+    lines.append("")
+    lines.append("Source: per-seed `walltime.csv` (master-side bracket).")
+    lines.append(
+        "`mean_eval_wall_seconds` is the mean wall per genome evaluation "
+        "(amortised across `parallel_workers` in pool mode); "
+        "`mean_gen_wall_seconds` is the mean wall per generation across "
+        "all population_size children. `total_run_wall_seconds` sums "
+        "per-generation rows across both sides — the campaign wall "
+        "to compare against the full-run budget. Older runs without "
+        "instrumentation surface N/A.",
+    )
+    lines.append("")
+    lines.append(
+        "| Seed | parallel_workers | Mean eval (s) prey | Mean eval (s) predator | "
+        "Mean gen (s) prey | Mean gen (s) predator | Total run (s) |",
+    )
+    lines.append(
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    )
+    for row in per_seed_rows:
+        wt = row.get("walltime") or {}
+        mean_eval = wt.get("mean_eval_wall_seconds", {})
+        mean_gen = wt.get("mean_gen_wall_seconds", {})
+        lines.append(
+            f"| {row['seed']} | "
+            f"{wt.get('parallel_workers_used', 'N/A')} | "
+            f"{_fmt_float_or_na(mean_eval.get('prey'))} | "
+            f"{_fmt_float_or_na(mean_eval.get('predator'))} | "
+            f"{_fmt_float_or_na(mean_gen.get('prey'))} | "
+            f"{_fmt_float_or_na(mean_gen.get('predator'))} | "
+            f"{_fmt_float_or_na(wt.get('total_run_wall_seconds'))} |",
+        )
+    lines.append("")
+    lines.append(
+        "See `walltime_summary.csv` for the same data in machine-readable form (one row per seed).",
+    )
+    lines.append("")
     lines.append("## Plots")
     lines.append("")
     for plot_name in ("cycling.png", "escalation.png", "generality.png"):
@@ -886,6 +1084,8 @@ def main() -> int:
         probe_rows = _load_probe_csv(session_dir)
         prey_probe = _probe_matrix(probe_rows, side_filter="prey")
         predator_probe = _probe_matrix(probe_rows, side_filter="predator")
+        walltime_rows = _load_walltime_csv(session_dir)
+        walltime = _walltime_summary(walltime_rows)
         metrics = _seed_metrics(
             prey_series=prey_series,
             predator_series=predator_series,
@@ -903,6 +1103,7 @@ def main() -> int:
                 "predator_series": predator_series,
                 "prey_probe": prey_probe,
                 "predator_probe": predator_probe,
+                "walltime": walltime,
                 "metrics": metrics,
             },
         )
@@ -917,6 +1118,10 @@ def main() -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     _write_verdict_csv(args.output_dir / "verdict.csv", per_seed_rows)
+    _write_walltime_summary_csv(
+        args.output_dir / "walltime_summary.csv",
+        per_seed_rows,
+    )
 
     # Plots are optional (matplotlib import happens lazily inside each
     # plot function). Don't fail the run if matplotlib is unavailable.
