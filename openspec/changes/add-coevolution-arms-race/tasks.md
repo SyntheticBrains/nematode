@@ -79,6 +79,21 @@
 - [x] 8.4 Implemented `verdict.csv` schema per spec: columns `seed`, `cycling_detected`, `escalation_detected`, `escalation_slope`, `escalation_p_value`, `cycling_period`, `cycling_p_value`, `generality_scalar`, `gate_fires`. When both sides fire the same metric, the smaller-p-value side's values are written (more decisive).
 - [x] 8.5 Smoke-ran the aggregator on the PR 4 smoke-pilot output (`/tmp/coevolution_smoke/<session>/`): EXIT=0; emits all 5 artefacts (summary.md + verdict.csv + 3 plots) under `--output-dir`. Verdict is STOP for the smoke (only 2 K-blocks → series too short for cycling/escalation to fire — correct outcome). 18 unit tests cover series extraction, probe-matrix reshape (NaN-safe), verdict logic on synthetic series with known cycling/escalation/flat patterns, and an end-to-end smoke against synthetic per-seed dirs.
 
+## 8a. Pre-Pilot Polish (PR 5a)
+
+Pre-flight surface for PR 6's pilot run. Decoupled from PR 5b's probe wiring because the polish items here (wall-time instrumentation + pretrain-arm smoke) are mechanical and have no dependency on the deferred prey-side held-out semantic discussion.
+
+- [ ] 8a.1 Wall-time instrumentation in `_run_one_k_block`: capture per-evaluation and per-generation wall-clock elapsed time so PR 6's logbook (task 9.5) reconciliation row is populated automatically rather than reverse-engineered from session logs. Surface (TBD; design discussion before implementation): which timing fields to record (per-eval vs per-gen aggregate vs both), where to write them (extend lineage.csv columns vs new `walltime.csv` vs the existing log stream), and granularity for the `LearnedPerformanceFitness` K-train phase (single timer covering K_train+L_eval vs split per phase).
+- [ ] 8a.2 Pretrain-arm smoke validation: run a 1-gen smoke with `predator_gen0_bootstrap: heuristic_imitation_pretrain` to verify the pretrain path doesn't crash before launching the ~3.5-7 hour pilot arm A. Pilot arm A is the only place this code path is exercised end-to-end (smoke uses cold_start by default). If a fix is needed it lands in PR 5a; otherwise the validation is a documented pre-flight check and no code lands.
+
+## 8b. Probe Body Wiring (PR 5b)
+
+Real per-opponent fitness evaluation in `_probe_one_opponent` (currently returns NaN). Without this the pilot's generality column is N/A, which weakens the "is it real escalation or self-play overfitting?" diagnostic the probe was designed to provide.
+
+- [ ] 8b.1 Probe semantic design discussion (no code): resolve what `_prey_held_out` (currently a list of prey `Genome`) actually measures. Three candidate semantics: (a) prey elite shares a multi-agent env with held-out co-prey — food-competition signal; (b) prey-side held-out should be heuristic-radius predator specs (matches predator-side; would require re-cataloguing the bundle); (c) keep the current asymmetric semantic and document it. Decision feeds 8b.2's implementation.
+- [ ] 8b.2 Wire `_probe_one_opponent` body per the 8b.1 decision. Reuses the `_build_patched_sim_config` patching pattern from `_evaluate_candidate`. Estimated ~150-300 LoC + tests + smoke validation.
+- [ ] 8b.3 Update OpenSpec `co-evolution/spec.md` "Probe Cadence and Output Layout" + `red-queen-analysis/spec.md` "NaN-Tolerance When Probe Body Is Deferred" scenarios to reflect the wired-body contract; reduce the deferred-body language to a historical note. Re-validate `openspec validate add-coevolution-arms-race --strict`.
+
 ## 9. Pilot Run and Logbook (PR 6)
 
 - [ ] 9.1 Run pilot: `phase5_m5_coevolution_pilot.sh` with 2 seeds × 30 gens × pop 24/16 × K=10 alternating; expect ~7–14 wall-hours total at parallel_workers=4, sequential 2 seeds (per design.md D4 compute envelope; ±50% pending pilot calibration).
@@ -117,18 +132,20 @@
 
 ## PR Splitting (Reference)
 
-The 12 task groups above split across **9 PRs** for review tractability:
+The 14 task groups above split across **11 PRs** for review tractability:
 
-- **PR 1** (Predator brain + dispatcher): tasks 1.1–1.7 + 2.1–2.4. ~600 LoC + ~400 LoC tests.
-- **PR 2** (Predator brain factory + encoder + fitness): tasks 3.0–3.6. ~430 LoC + ~250 LoC tests (includes the new `_predator_brain_factory.py` module).
-- **PR 3** (Pydantic schema + HoF + Red Queen metrics + CoevolutionLoop): tasks 4.1–4.4 + 5.1–5.7 + 6.1–6.15. ~1280 LoC + ~540 LoC tests (CoevolutionLoop carries ~100 LoC of replicated inheritance bookkeeping per design D10, ~50 LoC for the rebalancing knob, ~30 LoC for gen-0 init + JSON schema docstring, ~80 LoC for `CoevolutionConfig` Pydantic class + validators per design D14, ~3 KB for synthetic warmstart test fixture). Largest PR; consider further splitting if review feedback suggests. **Note:** task 6.3's full end-to-end exercise (warmstart bundle + heuristic-imitation pretrain integration) requires PR 1 (already merged for `pretrain_against_heuristic`) AND PR 4 (production warmstart bundle); PR 3 lands the *interface* and exercises the loader against the synthetic test fixture from task 6.2.
-- **PR 4** (Configs + held-out + warmstart bundles + driver + smoke): tasks 7.0a–7.6. ~500 LoC + held-out bundle (~80-200 KB JSONs) + warmstart bundle (4 genomes × ~tens-of-KB each); smoke validates the substrate before pilot.
-- **PR 5** (Aggregator + plots): tasks 8.1–8.5. ~700 LoC. **Can develop in parallel with PR 4** once PR 3 pins (a) the lineage CSV / probe CSV / champion_history JSON schemas AND (b) the per-side subdir output_dir convention (`{run_dir}/prey/lineage.csv`, `{run_dir}/predator/lineage.csv`, top-level `generality_probe.csv` + `champion_history.json`).
+- **PR 1** (Predator brain + dispatcher): tasks 1.1–1.7 + 2.1–2.4. ~600 LoC + ~400 LoC tests. **Merged.**
+- **PR 2** (Predator brain factory + encoder + fitness): tasks 3.0–3.6. ~430 LoC + ~250 LoC tests (includes the new `_predator_brain_factory.py` module). **Merged.**
+- **PR 3** (Pydantic schema + HoF + Red Queen metrics + CoevolutionLoop): tasks 4.1–4.4 + 5.1–5.7 + 6.1–6.15. ~1280 LoC + ~540 LoC tests (CoevolutionLoop carries ~100 LoC of replicated inheritance bookkeeping per design D10, ~50 LoC for the rebalancing knob, ~30 LoC for gen-0 init + JSON schema docstring, ~80 LoC for `CoevolutionConfig` Pydantic class + validators per design D14, ~3 KB for synthetic warmstart test fixture). Largest PR. **Merged.**
+- **PR 4** (Configs + held-out + warmstart bundles + driver + smoke): tasks 7.0a–7.6. ~500 LoC + curated bundle JSONs (4 genomes, ~5 MB via Git LFS); smoke validates the substrate before pilot. **Merged.**
+- **PR 5** (Aggregator + plots): tasks 8.1–8.5. ~880 LoC + ~410 LoC tests. **Merged.**
+- **PR 5a** (Pre-pilot polish): tasks 8a.1–8a.2. Wall-time instrumentation in `_run_one_k_block` + pretrain-arm smoke validation. ~30-100 LoC + tests. Decoupled from PR 5b's probe wiring because the polish items are mechanical and dependency-free.
+- **PR 5b** (Probe body wiring): tasks 8b.1–8b.3. Real per-opponent fitness in `_probe_one_opponent` (currently NaN). Begins with a design discussion on prey-side held-out semantics, then implementation. ~150-300 LoC + tests + OpenSpec sync.
 - **PR 6** (Pilot run + logbook): tasks 9.1–9.6. Run-only PR; no new code.
 - **PR 7** (Full run + verdict): tasks 10.1–10.6. Run-only PR.
 - **PR 8** (M5.7 Baldwin readout — reduced): tasks 11.1–11.5. ~200 LoC delta + logbook (signal-delta only; hyperparam-spread condition dropped per design D11).
 - **PR 9** (Tracker + roadmap + spec sync + archive): tasks 12.1–12.5. Closure PR.
 
-PRs 1→2→3 are sequentially dependent (substrate stack); PR 4 depends on PR 3; PR 5 can develop in parallel with PR 4. PRs 6/7/9 are gated on results, not just code-review.
+PRs 1→2→3 are sequentially dependent (substrate stack); PR 4 depends on PR 3; PR 5 developed in parallel with PR 4. PRs 5a + 5b are pre-flight for PR 6 and ship in either order (independent). PRs 6/7/9 are gated on results, not just code-review.
 
 **On STOP at PR 6 (pilot) or PR 7 (full run):** the run-only PR still lands regardless of verdict — the logbook + artefacts are the deliverable, and a STOP outcome is still a research result worth recording. Subsequent PRs may be skipped or scoped down: if PR 6 closes STOP, PR 7 is skipped; PR 8 (M5.7) still runs (per task 11.4); PR 9 closes the milestone with a STOP verdict in roadmap.md and the OpenSpec change is archived without spec sync (since the capability didn't deliver under this attempt — the spec deltas would be deferred to a follow-up change like `add-coevolution-arms-race-v2`).
