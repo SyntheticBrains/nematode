@@ -244,7 +244,10 @@ class TestWalltimeSummary:
         assert np.isnan(out["mean_gen_wall_seconds"]["prey"])
         assert np.isnan(out["mean_gen_wall_seconds"]["predator"])
         assert np.isnan(out["total_run_wall_seconds"])
-        assert out["parallel_workers_used"] == 0
+        # "N/A" sentinel rather than int 0 — older runs without
+        # instrumentation surface as N/A in summary.md / verdict.csv,
+        # distinct from a real run (parallel_workers >= 1 per schema).
+        assert out["parallel_workers_used"] == "N/A"
         assert out["n_eval_rows"] == 0
         assert out["n_gen_rows"] == 0
 
@@ -423,6 +426,48 @@ class TestWalltimeSummary:
         summary = (out / "summary.md").read_text()
         assert "## Wall-time reconciliation" in summary
         assert "| 42 | 1 | 1.5000 | 2.5000 |" in summary
+
+    def test_main_walltime_summary_renders_na_without_walltime_csv(
+        self,
+        aggregator: Any,
+        tmp_path: Path,
+    ) -> None:
+        """Older runs without walltime.csv SHALL render `parallel_workers_used` as `N/A`.
+
+        The synthetic-session helper writes an empty walltime.csv
+        (header only). `_walltime_summary` with no data rows returns
+        the `"N/A"` sentinel for `parallel_workers_used`; both
+        `summary.md` and `walltime_summary.csv` SHALL surface that
+        sentinel verbatim instead of "0".
+        """
+        root = tmp_path / "campaign"
+        seed42_session = root / "seed-42" / "session-1"
+        _build_synthetic_session(
+            seed42_session,
+            prey_series=[0.5] * 5,
+            predator_series=[0.5] * 5,
+            walltime_rows=None,  # header only — no data rows
+        )
+        out = tmp_path / "aggregate"
+        argv = [
+            "aggregate_m5_pilot.py",
+            "--root",
+            str(root),
+            "--output-dir",
+            str(out),
+            "--log-level",
+            "WARNING",
+        ]
+        with patch.object(sys, "argv", argv):
+            rc = aggregator.main()
+        assert rc == 0
+        with (out / "walltime_summary.csv").open() as fh:
+            csv_rows = list(csv.DictReader(fh))
+        assert csv_rows[0]["parallel_workers_used"] == "N/A"
+        summary = (out / "summary.md").read_text()
+        # Markdown table uses "N/A" for both parallel_workers and the
+        # NaN-valued mean walls.
+        assert "| 42 | N/A | N/A | N/A |" in summary
 
 
 # ---------------------------------------------------------------------------

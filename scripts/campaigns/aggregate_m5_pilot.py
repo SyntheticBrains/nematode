@@ -154,7 +154,10 @@ def _walltime_summary(walltime_rows: list[dict[str, Any]]) -> dict[str, Any]:
        "mean_eval_wall_seconds": {"prey": float, "predator": float},
        "mean_gen_wall_seconds":  {"prey": float, "predator": float},
        "total_run_wall_seconds": float,
-       "parallel_workers_used":  int (modal value across rows; 1 if mixed),
+       "parallel_workers_used":  int | "N/A" (modal value across rows; on
+                                  ties, prefer 1 if 1 is among the tied
+                                  values, else the smallest tied value;
+                                  "N/A" sentinel when no walltime data),
        "n_eval_rows":            int,
        "n_gen_rows":             int,
      }`
@@ -168,7 +171,12 @@ def _walltime_summary(walltime_rows: list[dict[str, Any]]) -> dict[str, Any]:
             "mean_eval_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
             "mean_gen_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
             "total_run_wall_seconds": float("nan"),
-            "parallel_workers_used": 0,
+            # Sentinel "N/A" (string) rather than int 0 so older runs
+            # without instrumentation render as "N/A" in summary.md +
+            # verdict.csv, distinct from a real 0-worker run (which
+            # isn't actually possible — `parallel_workers >= 1` per
+            # `EvolutionConfig` schema, so 0 would be misleading).
+            "parallel_workers_used": "N/A",
             "n_eval_rows": 0,
             "n_gen_rows": 0,
         }
@@ -206,9 +214,13 @@ def _walltime_summary(walltime_rows: list[dict[str, Any]]) -> dict[str, Any]:
         counts = Counter(workers)
         max_freq = max(counts.values())
         tied = [w for w, c in counts.items() if c == max_freq]
-        parallel_workers_used = 1 if 1 in tied else min(tied)
+        parallel_workers_used: int | str = 1 if 1 in tied else min(tied)
     else:
-        parallel_workers_used = 0
+        # Defensive: walltime rows present but every `parallel_workers`
+        # column was unparseable. Fall back to the same sentinel as
+        # the empty-rows case so downstream renderers don't produce a
+        # misleading "0".
+        parallel_workers_used = "N/A"
     return {
         "mean_eval_wall_seconds": {
             "prey": float(np.mean(eval_walls["prey"])) if eval_walls["prey"] else float("nan"),
@@ -576,7 +588,7 @@ def _write_walltime_summary_csv(
                 "mean_eval_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
                 "mean_gen_wall_seconds": {"prey": float("nan"), "predator": float("nan")},
                 "total_run_wall_seconds": float("nan"),
-                "parallel_workers_used": 0,
+                "parallel_workers_used": "N/A",
                 "n_eval_rows": 0,
                 "n_gen_rows": 0,
             }
