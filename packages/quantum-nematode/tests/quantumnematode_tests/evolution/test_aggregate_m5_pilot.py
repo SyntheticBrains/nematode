@@ -331,6 +331,57 @@ class TestWalltimeSummary:
         # 3 rows at parallel_workers=4 vs 1 at parallel_workers=1 → modal=4.
         assert out["parallel_workers_used"] == 4
 
+    def test_modal_parallel_workers_tie_prefers_1(self, aggregator: Any) -> None:
+        """Tied modal values SHALL prefer 1 (conservative sequential interpretation)."""
+        rows = [
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "0",
+                "index": "0",
+                "parallel_workers": "4",
+                "wall_seconds": "1.0",
+            },
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "1",
+                "index": "0",
+                "parallel_workers": "1",
+                "wall_seconds": "1.0",
+            },
+        ]
+        out = aggregator._walltime_summary(rows)
+        # Tie (1 vs 4, both freq=1); 1 is among the tied → prefer 1.
+        assert out["parallel_workers_used"] == 1
+
+    def test_modal_parallel_workers_tie_without_1_picks_smallest(
+        self,
+        aggregator: Any,
+    ) -> None:
+        """Tied modal values without 1 in the tie SHALL pick the smallest deterministically."""
+        rows = [
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "0",
+                "index": "0",
+                "parallel_workers": "4",
+                "wall_seconds": "1.0",
+            },
+            {
+                "scope": "evaluation",
+                "side": "prey",
+                "generation": "1",
+                "index": "0",
+                "parallel_workers": "8",
+                "wall_seconds": "1.0",
+            },
+        ]
+        out = aggregator._walltime_summary(rows)
+        # Tie (4 vs 8, both freq=1); 1 absent → smallest tied wins.
+        assert out["parallel_workers_used"] == 4
+
     def test_main_walltime_summary_emitted(self, aggregator: Any, tmp_path: Path) -> None:
         """Aggregator main() SHALL emit walltime_summary.csv alongside verdict.csv."""
         root = tmp_path / "campaign"

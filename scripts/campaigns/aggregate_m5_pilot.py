@@ -192,14 +192,21 @@ def _walltime_summary(walltime_rows: list[dict[str, Any]]) -> dict[str, Any]:
             eval_walls[side].append(wall)
         elif scope == "generation":
             gen_walls[side].append(wall)
-    # Modal parallel_workers (most common). If split, default to 1
-    # (sequential is the conservative interpretation).
+    # Modal parallel_workers. Tie-break rule: if multiple values share
+    # the highest frequency AND 1 is among them, prefer 1 (the
+    # conservative sequential interpretation matches the existing
+    # docstring contract). Otherwise pick the smallest tied value
+    # for deterministic output across runs (avoids dict-iteration-
+    # order dependence in `Counter.most_common`).
     if workers:
         from collections import (
             Counter,
         )
 
-        parallel_workers_used = Counter(workers).most_common(1)[0][0]
+        counts = Counter(workers)
+        max_freq = max(counts.values())
+        tied = [w for w, c in counts.items() if c == max_freq]
+        parallel_workers_used = 1 if 1 in tied else min(tied)
     else:
         parallel_workers_used = 0
     return {
