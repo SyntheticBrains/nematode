@@ -101,7 +101,7 @@ The system SHALL provide a `generality` pure function that summarises the held-o
 - **GIVEN** a held-out probe series where elite fitness on training opponents climbs but fitness on held-out opponents declines or stays flat
 - **WHEN** `generality(probe_series)` runs
 - **THEN** the returned generality scalar SHALL be near 0 or negative
-- **Note:** an aggregator-level "self-play overfitting suspected" flag is a non-normative reporting concern that lands alongside the per-opponent probe-evaluation body (deferred — `_probe_one_opponent` currently returns NaN). When the probe body is wired and a generality threshold is calibrated from pilot evidence, the aggregator's `summary.md` MAY add a flag derived from the generality scalar; the threshold value is not pinned by this spec
+- **Note:** an aggregator-level "self-play overfitting suspected" flag is a non-normative reporting concern; when a generality threshold is calibrated from pilot evidence, the aggregator's `summary.md` MAY add a flag derived from the generality scalar. The threshold value is not pinned by this spec. (Historical: the probe body shipped a NaN placeholder in early PR commits before being wired in PR 5b — see "NaN-Tolerance For Empty Held-Out" scenario for the residual NaN handling that remains relevant for missing-bundle cases.)
 
 ### Requirement: Aggregator Verdict Output
 
@@ -146,9 +146,10 @@ The system SHALL provide an aggregator that consumes per-seed Red Queen metric s
 - **AND** for layout (2), when multiple session subdirs exist the most-recently-modified is selected by default; an explicit `--session <id>` SHALL override the most-recent default
 - **Rationale:** layout (1) is the production pilot/full layout; layouts (2) and (3) are smoke-driver and ad-hoc convenience cases. Pinning all three in the spec lets `tasks.md` 8.5's "smoke-validate the aggregator" exercise be deterministic without per-script branch logic in the test harness.
 
-#### Scenario: NaN-Tolerance When Probe Body Is Deferred
+#### Scenario: NaN-Tolerance For Empty Held-Out
 
-- **GIVEN** an aggregator input where `generality_probe.csv`'s `fitness` column is uniformly NaN (the deferred-body case where `_probe_one_opponent` returns NaN per the co-evolution capability's "Probe Cadence and Output Layout" scenario)
+- **GIVEN** an aggregator input where `generality_probe.csv`'s `fitness` column is empty or partially NaN (e.g., the prey reference bundle was missing at `__init__` — see the co-evolution capability's "Held-Out Bundle Missing Falls Back To No-Op" scenario — so the predator-side probe was a no-op for the run; or the side's `champion_history` was empty for early generations so the probe wrote no rows for that side)
 - **WHEN** the aggregator computes per-seed metrics
 - **THEN** the generality scalar SHALL be reported as NaN (not 0.0, not "skip"), surfaced as `N/A` in `summary.md` and the empty string in `verdict.csv`
 - **AND** the per-seed gate firing SHALL be unaffected (verdict gate uses cycling + escalation only per design.md D6); generality is interpretation-only
+- **Historical note:** prior to PR 5b, `_probe_one_opponent` returned NaN unconditionally (the deferred-body design); the aggregator's NaN-tolerance was originally written for that case. PR 5b wired the body (per "Probe Held-Out Wiring (Option B)") so the NaN path now surfaces only via the empty/missing held-out cases described above.

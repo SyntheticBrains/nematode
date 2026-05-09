@@ -2304,11 +2304,20 @@ class CoevolutionLoop:
         Per side: the elite is the latest entry in `champion_history`
         (the K-block elite). When a side has no champions yet (first
         K-block hasn't completed), the probe is a no-op for that side.
-        Per-opponent evaluation is deferred — `_probe_one_opponent`
-        returns NaN; the schema + cadence are normative, the body is
-        non-normative pending follow-up. See `_build_patched_sim_config`
-        for the equivalent training-side patching pattern that the
-        probe will reuse once wired.
+
+        Held-out wiring (Option B per design.md D5): each side's elite
+        is evaluated against the OPPOSING-side held-out set — prey
+        elite vs. frozen heuristic predators (`_predator_held_out_specs`),
+        predator elite vs. frozen prey genomes (`_prey_held_out`).
+        Per-opponent evaluation runs sequentially in the master process
+        via `_probe_one_opponent` (probe volume is low — typically
+        ~8 evals every 10 gens — so pool dispatch overhead is not
+        worth the complication).
+
+        When a side's opposing held-out set is empty (e.g. the prey
+        bundle dir was missing at __init__), that side's probe rows
+        are skipped silently for the K-block — `_load_held_out_prey_bundle`
+        already logs the one-time warning at startup.
         """
         with self._probe_csv_path.open("a", newline="") as fh:
             writer = csv.writer(fh)
@@ -2326,21 +2335,22 @@ class CoevolutionLoop:
                     generation=int(elite_record["generation"]),
                     birth_metadata=build_birth_metadata(self.sim_config),
                 )
-                # Per-side held-out set: prey loaded as Genome list;
-                # predator stored as (detection_radius, damage_radius)
-                # tuples. The actual probe evaluation uses the same
-                # call-site sim_config patching that training
-                # evaluations depend on. Until that integration layer
-                # is wired the loop records the probe schema (one row
-                # per opponent) with a placeholder fitness of NaN.
+                # Each side faces the OPPOSING-side held-out set: the
+                # prey-side probe iterates over `_predator_held_out_specs`
+                # (heuristic predator radius variants); the predator-side
+                # probe iterates over `_prey_held_out` (frozen M3
+                # lamarckian prey genomes). The variable names are
+                # content-keyed (what's in the collection), not
+                # consumer-keyed (which side reads it) — see design.md
+                # D5 for the rationale.
                 if side.name == "prey":
-                    held_out_count = len(self._prey_held_out)
-                else:
                     held_out_count = len(self._predator_held_out_specs)
+                else:
+                    held_out_count = len(self._prey_held_out)
                 for opp_idx in range(held_out_count):
                     # Probe RNG seed is derived per-fire so the rng
-                    # advances deterministically; the integration
-                    # layer consumes it once wired.
+                    # advances deterministically regardless of how many
+                    # opponents each held-out set holds.
                     eval_seed = int(self.rng.integers(0, 2**31 - 1))
                     fitness_val = self._probe_one_opponent(
                         side=side,
@@ -2367,13 +2377,188 @@ class CoevolutionLoop:
     ) -> float:
         """Evaluate `elite` against one held-out opponent.
 
-        Currently records the probe schema with a NaN fitness; the
-        campaign integration layer plugs in real evaluation by
-        patching `sim_config` (heuristic-radius predator for prey-side
-        probes; warmstart-style elite prey genome for predator-side
-        probes) and calling the side's fitness function. See
-        `_build_patched_sim_config` for the analogous training-side
-        patching pattern that the probe will reuse once wired.
+        Sequential, master-side evaluation. Materialises a per-call
+        tmp dir for the opposition `.pt` checkpoint (predator-side
+        only — prey-side probe uses heuristic predators with no weight
+        injection), patches `sim_config` to install the held-out
+        opponent on the opposing-side slot(s), and routes through
+        `_evaluate_in_worker` with `warm_start_path_override=None,
+        weight_capture_path=None` so the probe does not mutate the
+        elite's germline weights. The tmp dir is cleaned up on exit.
         """
-        del side, elite, opponent_index, eval_seed
-        return float("nan")
+        with tempfile.TemporaryDirectory(prefix="probe_") as tmp:
+            tmp_path = Path(tmp)
+            if side.name == "prey":
+                patched_sim_config = self._build_prey_side_probe_sim_config(
+                    opponent_index=opponent_index,
+                )
+            else:
+                patched_sim_config = self._build_predator_side_probe_sim_config(
+                    opponent_index=opponent_index,
+                    eval_seed=eval_seed,
+                    tmp_path=tmp_path,
+                )
+            episodes = self._probe_episode_count(side)
+            args = (
+                np.asarray(elite.params, dtype=np.float32),
+                patched_sim_config,
+                side.encoder,
+                side.fitness,
+                episodes,
+                eval_seed,
+                int(elite.generation),
+                opponent_index,
+                list(elite.parent_ids),
+                None,  # warm_start_path_override — probe must not load germline weights
+                None,  # weight_capture_path — probe must not write germline weights
+            )
+            return float(_evaluate_in_worker(args))
+
+    def _probe_episode_count(self, side: _SideState) -> int:
+        """Resolve the per-opponent episode count for the probe.
+
+        Mirrors the training-time `episodes_per_eval` so probe values
+        and training values are directly comparable on the same axis.
+        For prey side, `LearnedPerformanceFitness.evaluate` enforces
+        K + L = `learn_episodes_per_eval + (eval_episodes_per_eval or
+        episodes_per_eval)`; the probe re-uses the side's existing
+        `episodes_per_eval` budget so the fitness signal magnitude is
+        directly comparable to training rows in `lineage.csv`.
+        """
+        return int(side.evolution_config.episodes_per_eval)
+
+    def _build_prey_side_probe_sim_config(
+        self,
+        *,
+        opponent_index: int,
+    ) -> SimulationConfig:
+        """Build the per-eval `sim_config` for a prey-side probe.
+
+        Patches `environment.predators` to a HEURISTIC predator at the
+        held-out spec's `(detection_radius, damage_radius)`. The
+        `brain_config.kind` flips from `"mlpppo_predator"` (training
+        config) to `"heuristic"`, and any pre-existing
+        `extra["weights_path"]` is dropped — the probe deliberately
+        side-steps the learned predator brain so the held-out yardstick
+        is independent of co-evolution lineage.
+
+        Also lays the prey-side `evolution_config` onto `sim_config.evolution`
+        so `LearnedPerformanceFitness` reads the right per-side budget
+        fields (matches `_build_patched_sim_config`'s training-side
+        patch).
+        """
+        spec = self._predator_held_out_specs[opponent_index]
+        detection_radius, damage_radius = spec
+
+        env_cfg = self.sim_config.environment
+        if env_cfg is None or env_cfg.predators is None:
+            msg = (
+                "Prey-side probe requires sim_config.environment.predators to be "
+                "set; got None. The YAML must enable predators."
+            )
+            raise ValueError(msg)
+        predators_cfg = env_cfg.predators
+        existing_brain_cfg = predators_cfg.brain_config
+        if existing_brain_cfg is None:
+            # Fall back to constructing a minimal heuristic brain config
+            # via the existing schema; tests that build a config without
+            # a `brain_config` block exercise this path.
+            new_brain_cfg = None
+        else:
+            # Strip any learned-brain `extra["weights_path"]` and force
+            # `kind="heuristic"`. `model_copy(update=...)` preserves the
+            # other fields so future schema additions don't silently
+            # diverge from the training config's heuristic-flavour shape.
+            new_brain_cfg = existing_brain_cfg.model_copy(
+                update={"kind": "heuristic", "extra": None},
+            )
+        new_predators_cfg = predators_cfg.model_copy(
+            update={
+                "enabled": True,
+                "detection_radius": int(detection_radius),
+                "damage_radius": int(damage_radius),
+                "brain_config": new_brain_cfg,
+            },
+        )
+        new_env = env_cfg.model_copy(update={"predators": new_predators_cfg})
+        return self.sim_config.model_copy(
+            update={
+                "environment": new_env,
+                "evolution": self.prey.evolution_config,
+            },
+        )
+
+    def _build_predator_side_probe_sim_config(
+        self,
+        *,
+        opponent_index: int,
+        eval_seed: int,
+        tmp_path: Path,
+    ) -> SimulationConfig:
+        """Build the per-eval `sim_config` for a predator-side probe.
+
+        Patches `multi_agent.agents` to install one held-out prey
+        genome's weights on slot 0 via `weights_path`, padding with
+        random-init bootstrap entries up to the schema's
+        `MultiAgentConfig._validate_population` minimum (2 agents).
+        Mirrors `_build_predator_side_multi_agent_patch`'s shape but
+        with `opposition=[held_out_prey_genome]` (single-element
+        opposition).
+
+        The held-out prey's weights are decoded via the prey encoder
+        and persisted to a tmp `.pt` whose lifecycle the caller owns
+        (`_probe_one_opponent`'s `TemporaryDirectory`).
+        """
+        held_out_genome = self._prey_held_out[opponent_index]
+        opp_brain = self.prey.encoder.decode(
+            held_out_genome,
+            self.sim_config,
+            seed=eval_seed,
+        )
+        weights_file = tmp_path / f"probe_held_out_prey_{opponent_index}.pt"
+        save_weights(cast("Brain", opp_brain), weights_file)
+
+        if self.sim_config.brain is None:
+            msg = (
+                "Predator-side probe requires sim_config.brain (top-level prey "
+                "brain block) to be set so held-out prey can construct via the "
+                "same brain shape."
+            )
+            raise ValueError(msg)
+        agent_configs = [
+            AgentConfig(
+                id=f"probe_held_out_prey_{opponent_index}",
+                brain=self.sim_config.brain,
+                weights_path=str(weights_file),
+            ),
+        ]
+        # Pad to the schema's lower bound (2 agents); the second slot
+        # is a random-init bootstrap entry. The predator-vs-held-out
+        # signal still dominates because the predator metrics aggregate
+        # across slots and the held-out prey is by construction the
+        # stronger opponent.
+        min_agents = 2
+        bootstrap_idx = 0
+        while len(agent_configs) < min_agents:
+            agent_configs.append(
+                AgentConfig(
+                    id=f"probe_bootstrap_prey_{bootstrap_idx}",
+                    brain=self.sim_config.brain,
+                    weights_path=None,
+                ),
+            )
+            bootstrap_idx += 1
+
+        existing_ma = self.sim_config.multi_agent
+        if existing_ma is None:
+            new_ma = MultiAgentConfig(enabled=True, agents=agent_configs)
+        else:
+            new_ma = existing_ma.model_copy(
+                update={"enabled": True, "count": None, "agents": agent_configs},
+            )
+        return self.sim_config.model_copy(
+            update={
+                "multi_agent": new_ma,
+                "evolution": self.predator.evolution_config,
+            },
+        )

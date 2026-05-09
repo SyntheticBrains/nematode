@@ -115,18 +115,27 @@ The system SHALL evaluate the elite genome of each side against a held-out froze
 
 - **GIVEN** `generality_probe_every=10` and a `CoevolutionLoop` configured with `output_dir`
 - **WHEN** generation index G is reached such that `G % 10 == 0`
-- **THEN** the loop SHALL evaluate each side's elite against the full held-out opponent set
-- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`. The schema rows + cadence + non-mutation contract are normative now; the `fitness` column ships as `NaN` until per-opponent evaluation is wired in a follow-up commit (held-out evaluation reuses the same `sim_config` patching pattern as `_evaluate_candidate`, but the prey-side held-out is a prey genome — different role from the predator genomes we patch onto `Predator.brain` slots — and the predator-side held-out is a heuristic-radius spec rather than a learnable predator brain)
+- **THEN** the loop SHALL evaluate each side's elite against the full OPPOSING-side held-out opponent set (per "Probe Held-Out Wiring (Option B)" scenario): the prey elite is evaluated against `_predator_held_out_specs` (heuristic predator radius variants), and the predator elite is evaluated against `_prey_held_out` (frozen prey genomes from the M3 lamarckian bundle)
+- **AND** results SHALL be written to `{output_dir}/generality_probe.csv` (top-level, single file across both sides) with columns `(generation, side, opponent_index, fitness)`. The `fitness` column SHALL be a real-valued float produced by routing the elite + per-opponent patched `sim_config` through `_evaluate_in_worker` with `warm_start_path_override=None, weight_capture_path=None` (eval-only — no germline weight capture, no inheritance side-effects). The probe runs sequentially in the master process — pool dispatch overhead is not worth the complication at probe volumes (~8 evals every 10 gens)
 - **AND** the probe SHALL be a no-op for sides whose `champion_history` is empty (the first K-block on each side hasn't completed yet, so there is no elite to probe)
 - **AND** per-side lineage CSVs SHALL live at `{output_dir}/prey/lineage.csv` and `{output_dir}/predator/lineage.csv` (per-side subdirs match the existing `EvolutionLoop` output shape — M3 single-population analysis tooling reuses unchanged)
 - **AND** champion_history SHALL live at `{output_dir}/champion_history.json` (top-level, single file with `prey` + `predator` dict keys)
+
+#### Scenario: Probe Held-Out Wiring (Option B)
+
+- **GIVEN** a generality probe firing for a given side
+- **WHEN** the probe iterates per-opponent evaluations
+- **THEN** the prey-side branch SHALL iterate over `_predator_held_out_specs` (heuristic-radius `(detection_radius, damage_radius)` tuples). For each opponent index, the loop SHALL patch `sim_config.environment.predators` to a heuristic predator at the held-out spec — flipping `brain_config.kind` from `mlpppo_predator` to `heuristic` and clearing any pre-existing `extra["weights_path"]` — so the held-out yardstick is independent of the co-evolution lineage
+- **AND** the predator-side branch SHALL iterate over `_prey_held_out` (frozen prey `Genome` entries). For each opponent index, the loop SHALL patch `sim_config.multi_agent.agents` to install one held-out prey's weights via `weights_path`, padding to the schema's `MultiAgentConfig._validate_population` minimum (2 agents) with random-init bootstrap entries when needed
+- **AND** both branches SHALL set `sim_config.evolution = side.evolution_config` so the side's `episodes_per_eval` (and, where applicable, `learn_episodes_per_eval` / `eval_episodes_per_eval`) drive the per-opponent evaluation budget — keeping probe-fitness magnitudes directly comparable to training-time `lineage.csv` fitness rows on the same axis
+- **Rationale:** matches the published Sakana 2025 generality-probe protocol — focal elite vs. frozen *opposing-side* yardstick, never peer-comparison vs. same-side held-out — and corresponds to the cross-species fitness measurement used in published microbial co-evolution chemostats (Gallet 2018; Hall 2011). A rising probe-fitness curve = real escalation; flat or falling = self-play overfitting
 
 #### Scenario: Held-Out Bundle Missing Falls Back To No-Op
 
 - **GIVEN** a `CoevolutionLoop` instance whose prey reference bundle directory (`configs/evolution/coevolution_warmstart_prey/`) is missing or empty
 - **WHEN** the loop initialises and constructs the prey held-out set
 - **THEN** the loader SHALL log a one-time warning and return an empty list rather than raising
-- **AND** the prey-side probe SHALL be a no-op for that run (probe still fires for the predator side, which constructs its held-out specs from the heuristic-radius grid without a bundle)
+- **AND** under Option B wiring (per "Probe Held-Out Wiring (Option B)") the predator-side probe SHALL be a no-op for that run because `_prey_held_out` is its opponent set; the prey-side probe still fires unaffected because it iterates `_predator_held_out_specs` (heuristic-radius grid, constructed at `__init__` without a bundle)
 - **Rationale:** allows fresh-checkout unit tests + smoke runs to exercise the loop end-to-end on machines where the production bundle is unavailable; the production bundle ships in-repo so the warning is a no-op for normal runs.
 
 #### Scenario: Checkpoint File Layout

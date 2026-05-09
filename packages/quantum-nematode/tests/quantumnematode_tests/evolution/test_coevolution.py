@@ -495,19 +495,26 @@ class TestGeneralityProbe:
         # generations. Probe fires at gens (post-K-block) where
         # `side.generation % 1 == 0`, so on every K-block.
         assert lines[0] == "generation,side,opponent_index,fitness"
-        # No prey held-out bundle, so prey rows are 0; predator gets
-        # held_out_size rows per probe firing.
+        # Under Option B wiring, prey-side reads from
+        # `_predator_held_out_specs` (always non-empty — built at
+        # __init__ from the heuristic-radius grid); predator-side reads
+        # from `_prey_held_out` which is empty here (no bundle dir or
+        # genome-dim mismatch). So we expect prey rows but no predator
+        # rows.
         for row in lines[1:]:
             cells = row.split(",")
             assert len(cells) == 4
-            # Side is "prey" or "predator".
+            # Side is "prey" or "predator" (predator side fires only
+            # if `_prey_held_out` is non-empty).
             assert cells[1] in {"prey", "predator"}
             # opponent_index is an integer.
             int(cells[2])
-            # fitness is a float (NaN at this layer — the campaign
-            # integration layer is responsible for opposition wiring) —
-            # just verify it's parseable.
-            float(cells[3])
+            # Fitness is a real float (the stub fitness returns
+            # `fixed_value`, never NaN). Verify it is finite — Option B
+            # probe body returns positive fitness via the side's
+            # fitness function.
+            value = float(cells[3])
+            assert np.isfinite(value)
 
     def test_probe_does_not_mutate_state(self, tmp_path: Path) -> None:
         """Probe SHALL NOT alter population, optimizer, hof, or generation counter."""
@@ -528,6 +535,165 @@ class TestGeneralityProbe:
         assert len(loop.prey.hof) == prey_hof_count
         assert loop.prey.generation == prey_gen
         assert id(loop.prey.optimizer) == prey_opt_id
+
+    def test_prey_side_probe_iterates_predator_held_out(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Prey-side probe SHALL produce one row per `_predator_held_out_specs` entry.
+
+        Under Option B (design.md D5), the prey-side probe evaluates
+        the prey elite against the OPPOSING-side held-out set
+        (`_predator_held_out_specs`). The row count per fire MUST
+        equal `len(_predator_held_out_specs)` regardless of the prey
+        bundle's load state.
+        """
+        held_out_size = 3
+        loop = _make_loop(
+            tmp_path,
+            generation_pairs=1,
+            K_per_block=1,
+            held_out_size=held_out_size,
+            generality_probe_every=1,
+        )
+        loop.prey.fitness = _StubFitness(fixed_value=0.7)  # type: ignore[assignment]
+        loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
+
+        # Seed `prey.champion_history` with a synthetic K-block elite
+        # so the probe's "no champions" no-op branch doesn't fire.
+        encoder = loop.prey.encoder
+        elite_params = np.zeros(encoder.genome_dim(loop.sim_config), dtype=np.float32)
+        loop.prey.champion_history.append(
+            {
+                "genome_id": "synthetic-prey-elite",
+                "generation": 0,
+                "k_block_index": 0,
+                "fitness": 0.7,
+                "params": elite_params.tolist(),
+            },
+        )
+        # Empty predator champion_history -> predator-side probe is a no-op.
+        loop._fire_generality_probe()
+
+        probe_path = tmp_path / "coevo" / "generality_probe.csv"
+        lines = probe_path.read_text().strip().split("\n")
+        # Header + held_out_size prey rows. No predator rows because
+        # `predator.champion_history` is empty (predator-side probe
+        # no-ops when no champion exists yet).
+        assert len(lines) == 1 + held_out_size
+        prey_rows = [line for line in lines[1:] if line.split(",")[1] == "prey"]
+        assert len(prey_rows) == held_out_size
+        # opponent_index spans 0..held_out_size-1.
+        assert sorted(int(r.split(",")[2]) for r in prey_rows) == list(range(held_out_size))
+        # All rows MUST be finite floats (Option B body, not the NaN
+        # placeholder of the deferred-body design).
+        for row in prey_rows:
+            value = float(row.split(",")[3])
+            assert np.isfinite(value)
+
+    def test_predator_side_probe_iterates_prey_held_out(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Predator-side probe SHALL produce one row per `_prey_held_out` entry.
+
+        Under Option B (design.md D5), the predator-side probe
+        evaluates the predator elite against the OPPOSING-side
+        held-out set (`_prey_held_out`). Prey held-out is empty in the
+        test harness (no bundle dir), so we manually inject one entry
+        to exercise the predator-side body.
+        """
+        loop = _make_loop(
+            tmp_path,
+            generation_pairs=1,
+            K_per_block=1,
+            held_out_size=2,
+            generality_probe_every=1,
+        )
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
+
+        # Inject a held-out prey genome so the predator-side branch
+        # has something to iterate.
+        prey_genome_dim = loop.prey.encoder.genome_dim(loop.sim_config)
+        injected = Genome(
+            params=np.zeros(prey_genome_dim, dtype=np.float32),
+            genome_id="injected-held-out-prey",
+            parent_ids=[],
+            generation=0,
+        )
+        loop._prey_held_out = [injected]
+
+        # Seed predator champion_history so the predator-side probe
+        # is not a no-op.
+        predator_params_dim = loop.predator.encoder.genome_dim(loop.sim_config)
+        elite_params = np.zeros(predator_params_dim, dtype=np.float32)
+        loop.predator.champion_history.append(
+            {
+                "genome_id": "synthetic-predator-elite",
+                "generation": 0,
+                "k_block_index": 0,
+                "fitness": 0.4,
+                "params": elite_params.tolist(),
+            },
+        )
+
+        loop._fire_generality_probe()
+
+        probe_path = tmp_path / "coevo" / "generality_probe.csv"
+        rows = probe_path.read_text().strip().split("\n")[1:]
+        predator_rows = [r for r in rows if r.split(",")[1] == "predator"]
+        # Exactly one predator row (one held-out prey entry).
+        assert len(predator_rows) == 1
+        # Stub fitness was 0.4; probe routed through it.
+        cells = predator_rows[0].split(",")
+        assert int(cells[2]) == 0
+        assert float(cells[3]) == pytest.approx(0.4)
+
+    def test_probe_does_not_capture_germline_weights(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Probe SHALL NOT pass weight_capture_path so germline weights stay frozen.
+
+        Verifies the eval-only contract: `_evaluate_in_worker` is
+        called with `warm_start_path_override=None,
+        weight_capture_path=None`, mirroring the no-inheritance branch
+        of the worker entry point. We exercise this by checking that
+        no per-genome `.pt` files are written under the probe's tmp dir
+        for the prey-side branch (heuristic predator + no opposition
+        weights), and that the side's inheritance dir is unchanged
+        before/after the probe fire.
+        """
+        loop = _make_loop(
+            tmp_path,
+            generation_pairs=1,
+            K_per_block=1,
+            held_out_size=1,
+            generality_probe_every=1,
+        )
+        loop.prey.fitness = _StubFitness(fixed_value=0.6)  # type: ignore[assignment]
+        loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
+
+        # Seed a prey champion so the prey-side branch fires.
+        encoder = loop.prey.encoder
+        elite_params = np.zeros(encoder.genome_dim(loop.sim_config), dtype=np.float32)
+        loop.prey.champion_history.append(
+            {
+                "genome_id": "synthetic-prey-elite",
+                "generation": 0,
+                "k_block_index": 0,
+                "fitness": 0.6,
+                "params": elite_params.tolist(),
+            },
+        )
+
+        prey_inherit_dir = tmp_path / "coevo" / "prey" / "inheritance"
+        before = sorted(prey_inherit_dir.rglob("*.pt")) if prey_inherit_dir.exists() else []
+        loop._fire_generality_probe()
+        after = sorted(prey_inherit_dir.rglob("*.pt")) if prey_inherit_dir.exists() else []
+        # The probe MUST NOT write into the per-side inheritance dir.
+        assert before == after
 
 
 # ---------------------------------------------------------------------------
@@ -855,11 +1021,15 @@ class TestProbeFiresAtKBlockBoundary:
         """First K-block at K_per_block=2, probe_every=2 SHALL write probe rows.
 
         Setup: prey K-block 0 trains for 2 gens -> elite pushed -> probe
-        fires at gen 2 (since `2 % 2 == 0`). The pre-fix bug would
-        have probed BEFORE the push and produced 0 rows from the prey
-        side; the fix produces `held_out_size` predator-side rows on
-        each subsequent K-block probe (predator held-out is non-empty
-        even without a prey bundle).
+        fires at gen 2 (since `2 % 2 == 0`). The pre-fix cadence bug
+        would have probed BEFORE the push and produced 0 rows.
+
+        Under Option B wiring, the prey side faces the
+        `_predator_held_out_specs` set (heuristic-radius grid, always
+        non-empty), so the K-block-end probe writes prey rows. The
+        predator-side probe writes 0 rows here because `_prey_held_out`
+        is empty in the test harness (no bundle dir or genome-dim
+        mismatch).
         """
         loop = _make_loop(
             tmp_path,
@@ -875,20 +1045,17 @@ class TestProbeFiresAtKBlockBoundary:
 
         probe_path = tmp_path / "coevo" / "generality_probe.csv"
         lines = probe_path.read_text().strip().split("\n")
-        # Header + at least 1 row from the predator side. Prey held-out
-        # is empty (no bundle), so prey rows are 0; predator held-out
-        # has held_out_size=2 rows x 2 K-block boundaries = 4 rows
-        # (one per K-block end, because predator side trains the second
-        # K-block and the probe fires at predator.generation=2).
         assert lines[0] == "generation,side,opponent_index,fitness"
         assert len(lines) > 1, (
             f"probe MUST write at least one row at the K-block boundary; "
             f"got only the header. Lines: {lines}"
         )
-        # Verify the rows came from the predator side (prey bundle is empty).
+        # Verify the rows came from the prey side under Option B
+        # wiring (prey faces `_predator_held_out_specs`, which is the
+        # only non-empty held-out set in this test harness).
         for row in lines[1:]:
             cells = row.split(",")
-            assert cells[1] == "predator"
+            assert cells[1] == "prey"
 
 
 class TestResumeBundleDriftCrossCheck:
