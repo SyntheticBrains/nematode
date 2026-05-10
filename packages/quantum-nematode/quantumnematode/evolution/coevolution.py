@@ -152,6 +152,29 @@ _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
 )
 
 
+# Prey-side probe env override. The probe measures whether the prey
+# elite generalises to opponents it never saw in training. For that
+# diagnostic to be informative the probe env must be DIFFICULTY-CALIBRATED
+# to the substrate's known-survivable range — otherwise hard-env training
+# automatically nukes the diagnostic (every prey scores 0.0 regardless
+# of training quality; substrate ceiling, not overfitting).
+#
+# These values were calibrated by running the M3-trained held-out prey
+# bundle through frozen-weight `EpisodicSuccessRate` across a grid of
+# heuristic predator radii:
+#   - count=2, speed=0.5, grid=20 -> mean fitness 0.531 across 24 cells
+#     (8 radius specs x 3 unique genomes x 10 episodes). Range 0.07-0.93.
+#   - count=4, speed=1.0, grid=16 (R3 screen env) -> mean fitness 0.000
+#     across all 24 cells (substrate ceiling - no klinotaxis-LSTMPPO
+#     prey can survive).
+# The pilot env is therefore the lower-bound discriminative env. Probe
+# uses it regardless of training env. See `tmp/evaluations/coevolution/`
+# scratchpad for the calibration study + rationale.
+PROBE_ENV_PREDATOR_COUNT = 2
+PROBE_ENV_PREDATOR_SPEED = 0.5
+PROBE_ENV_GRID_SIZE = 20
+
+
 # ---------------------------------------------------------------------------
 # Side state
 # ---------------------------------------------------------------------------
@@ -875,7 +898,23 @@ class CoevolutionLoop:
         starting point; `sigma0` resets to the configured value (the
         re-construction is the equivalent of "reset" since CMA's `cma`
         library exposes no public reset method).
+
+        Skip-condition: when `side.evolution_config.persist_cma_across_kblocks`
+        is True, the rebuild is a no-op — the existing CMA-ES study
+        continues with its accumulated covariance + mean across K-block
+        boundaries. This is intended for the predator side, where the
+        wide-search-distribution restart compounds the slow-convergence
+        problem on the ~700-dim weight space.
         """
+        if side.evolution_config.persist_cma_across_kblocks:
+            logger.info(
+                "K-block %d: %s optimizer NOT rebuilt "
+                "(persist_cma_across_kblocks=True); continuing existing study "
+                "with accumulated covariance.",
+                self._k_block_index,
+                side.name,
+            )
+            return
         # Use the most-recent champion as x0 if we have one; otherwise
         # the side hasn't run any K-block yet so fall back to the
         # current optimizer's mean (CMA-ES exposes the running mean
@@ -2442,6 +2481,18 @@ class CoevolutionLoop:
         side-steps the learned predator brain so the held-out yardstick
         is independent of co-evolution lineage.
 
+        Also overrides the env-level `count`, `speed`, and `grid_size`
+        to the substrate-calibrated probe values (`PROBE_ENV_*` constants
+        at module top). The training env may use harder settings (e.g.
+        count=4, speed=1.0, grid=16) where no klinotaxis-LSTMPPO prey
+        can survive heuristic predators at all; using the training env
+        for the probe in that case produces uniformly-zero fitness
+        independent of training quality, which is uninformative. The
+        calibrated probe env preserves the probe's discriminative range
+        (M3 baseline prey score ~0.5 mean across this env's spec grid;
+        a co-evolved prey scoring near zero indicates real overfitting,
+        not substrate ceiling).
+
         Also lays the prey-side `evolution_config` onto `sim_config.evolution`
         so `LearnedPerformanceFitness` reads the right per-side budget
         fields (matches `_build_patched_sim_config`'s training-side
@@ -2475,12 +2526,19 @@ class CoevolutionLoop:
         new_predators_cfg = predators_cfg.model_copy(
             update={
                 "enabled": True,
+                "count": PROBE_ENV_PREDATOR_COUNT,
+                "speed": PROBE_ENV_PREDATOR_SPEED,
                 "detection_radius": int(detection_radius),
                 "damage_radius": int(damage_radius),
                 "brain_config": new_brain_cfg,
             },
         )
-        new_env = env_cfg.model_copy(update={"predators": new_predators_cfg})
+        new_env = env_cfg.model_copy(
+            update={
+                "predators": new_predators_cfg,
+                "grid_size": PROBE_ENV_GRID_SIZE,
+            },
+        )
         return self.sim_config.model_copy(
             update={
                 "environment": new_env,

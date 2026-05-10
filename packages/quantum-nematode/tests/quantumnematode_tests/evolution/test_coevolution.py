@@ -1323,3 +1323,100 @@ class TestCyclingTinyAmplitudeOnLargeConstant:
             f"cycling detection (would be a false positive on numerical noise). "
             f"Got: {result}"
         )
+
+
+class TestPreySideProbeEnvOverride:
+    """Probe-semantics fix: prey-side probe SHALL use calibrated env, not training env.
+
+    The training env's predator settings (count, speed, grid_size) may
+    be tuned for harder dynamics than klinotaxis-LSTMPPO prey can survive
+    against heuristic predators. The probe overrides these to the
+    calibrated `PROBE_ENV_*` constants so the diagnostic stays informative.
+    """
+
+    def test_probe_overrides_predator_count(self, tmp_path: Path) -> None:
+        """Prey-side probe sim_config SHALL use `PROBE_ENV_PREDATOR_COUNT`, not training count."""
+        from quantumnematode.evolution.coevolution import PROBE_ENV_PREDATOR_COUNT
+
+        loop = _make_loop(tmp_path)
+        # Set the training env's predator count to something distinct
+        # from the probe constant so the override is observable.
+        non_probe_count = 4
+        assert non_probe_count != PROBE_ENV_PREDATOR_COUNT, "test setup must use a distinct count"
+        loop.sim_config.environment.predators.count = non_probe_count  # type: ignore[union-attr]
+
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.predators.count == PROBE_ENV_PREDATOR_COUNT  # type: ignore[union-attr]
+
+    def test_probe_overrides_predator_speed(self, tmp_path: Path) -> None:
+        """Prey-side probe sim_config SHALL use `PROBE_ENV_PREDATOR_SPEED`, not training speed."""
+        from quantumnematode.evolution.coevolution import PROBE_ENV_PREDATOR_SPEED
+
+        loop = _make_loop(tmp_path)
+        non_probe_speed = 1.5
+        assert non_probe_speed != PROBE_ENV_PREDATOR_SPEED
+        loop.sim_config.environment.predators.speed = non_probe_speed  # type: ignore[union-attr]
+
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.predators.speed == PROBE_ENV_PREDATOR_SPEED  # type: ignore[union-attr]
+
+    def test_probe_overrides_grid_size(self, tmp_path: Path) -> None:
+        """Prey-side probe sim_config SHALL use `PROBE_ENV_GRID_SIZE`, not training grid."""
+        from quantumnematode.evolution.coevolution import PROBE_ENV_GRID_SIZE
+
+        loop = _make_loop(tmp_path)
+        non_probe_grid = 16
+        assert non_probe_grid != PROBE_ENV_GRID_SIZE
+        loop.sim_config.environment.grid_size = non_probe_grid  # type: ignore[union-attr]
+
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.grid_size == PROBE_ENV_GRID_SIZE  # type: ignore[union-attr]
+
+    def test_probe_still_uses_held_out_spec_for_radii(self, tmp_path: Path) -> None:
+        """Probe SHALL still take detection/damage radii from held-out spec (NOT calibrated)."""
+        loop = _make_loop(tmp_path, held_out_size=2)
+        # Held-out specs come from `_build_held_out_predator_specs`; pick
+        # the first one and verify the probe sim_config sees the same value.
+        spec = loop._predator_held_out_specs[0]
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.predators.detection_radius == spec[0]  # type: ignore[union-attr]
+        assert patched.environment.predators.damage_radius == spec[1]  # type: ignore[union-attr]
+
+
+class TestPersistCmaAcrossKBlocks:
+    """R2-mini: `persist_cma_across_kblocks` SHALL skip the K-block-end rebuild."""
+
+    def test_persist_true_skips_rebuild(self, tmp_path: Path) -> None:
+        """When set, `_rebuild_optimizer` SHALL leave `side.optimizer` unchanged."""
+        loop = _make_loop(tmp_path)
+        loop.predator.evolution_config.persist_cma_across_kblocks = True  # type: ignore[misc]
+        original_optimizer = loop.predator.optimizer
+        loop._rebuild_optimizer(loop.predator)
+        assert loop.predator.optimizer is original_optimizer, (
+            "persist_cma_across_kblocks=True must skip optimizer rebuild "
+            "so the existing CMA-ES study continues uninterrupted across "
+            "K-block boundaries."
+        )
+
+    def test_persist_false_still_rebuilds(self, tmp_path: Path) -> None:
+        """Default (False) behaviour SHALL rebuild — preserves legacy semantics."""
+        loop = _make_loop(tmp_path)
+        # Default is False; assert no regression.
+        assert loop.predator.evolution_config.persist_cma_across_kblocks is False
+        original_optimizer = loop.predator.optimizer
+        # Need a champion to drive the rebuild's x0 (else _rebuild_optimizer
+        # falls back to optimizer.mean which is also fine — both paths
+        # produce a NEW optimizer).
+        loop.predator.champion_history.append(
+            {
+                "k_block_index": 0,
+                "generation": 0,
+                "genome_id": "predator-elite-0",
+                "fitness": 0.5,
+                "params": [0.0] * loop.predator.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        loop._rebuild_optimizer(loop.predator)
+        assert loop.predator.optimizer is not original_optimizer, (
+            "default behaviour (persist=False) must rebuild the optimizer."
+        )

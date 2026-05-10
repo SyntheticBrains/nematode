@@ -1065,6 +1065,18 @@ class EvolutionConfig(BaseModel):
     # Persisted in the checkpoint pickle (CHECKPOINT_VERSION 3) so
     # resume preserves the saturation-tracking state.
     early_stop_on_saturation: int | None = Field(default=None, ge=1)
+    # Co-evolution-specific: when True, the side's CMA-ES study persists
+    # across K-block boundaries instead of rebuilding fresh. Default
+    # False matches the pre-existing reset-per-K-block behaviour.
+    # Intended for the predator side, where the CMA-ES search on a
+    # ~700-dim weight space rarely converges within 10 K-block gens
+    # and benefits from accumulating covariance across K-blocks.
+    # The prey side typically does NOT want this (Lamarckian inheritance
+    # already carries weights across boundaries; persisting CMA-ES on
+    # top would compound stale opposition-conditioned signal). The
+    # `CoevolutionLoop` reads this off `prey_evolution` / `predator_evolution`
+    # at K-block transitions; ignored entirely outside co-evolution.
+    persist_cma_across_kblocks: bool = False
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":
