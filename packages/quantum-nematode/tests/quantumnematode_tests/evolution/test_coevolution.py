@@ -1442,6 +1442,250 @@ class TestPersistCmaAcrossKBlocks:
         # measurements.
         assert type(loop._prey_probe_fitness) is not type(loop.prey.fitness)
 
+    def test_probe_gap3_loads_lamarckian_checkpoint_when_present(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Gap-3 fix: in-run probe SHALL pass elite's `.pt` as `warm_start_path_override`.
+
+        Under Lamarckian inheritance, the K-block-elite's `genome.params`
+        encode the CMA-ES sample (pre-PPO-training weights). The actual
+        co-evolved policy lives in the post-training `.pt` checkpoint.
+        The probe MUST load that checkpoint via `warm_start_path_override`
+        to measure what the prey actually learned — otherwise the in-run
+        probe consistently shows ~0.0 (untrained CMA-ES sample) while
+        post-hoc analysis correctly shows a non-zero value for the same
+        elite.
+        """
+        loop = _make_loop(tmp_path)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
+        # Seed a synthetic K-block elite + create its `.pt` so the
+        # probe can find it on disk.
+        elite_gen = 4
+        elite_gid = "synthetic-prey-elite"
+        loop.prey.champion_history.append(
+            {
+                "genome_id": elite_gid,
+                "generation": elite_gen,
+                "k_block_index": 0,
+                "fitness": 0.95,
+                "params": [0.0] * loop.prey.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        # Materialise the canonical Lamarckian checkpoint path so the
+        # probe's `candidate.exists()` check passes. Content doesn't
+        # matter — we monkeypatch `_evaluate_in_worker` to capture
+        # the args tuple without actually loading the file.
+        checkpoint_path = loop.prey.inheritance.checkpoint_path(
+            loop.prey.output_dir,
+            elite_gen,
+            elite_gid,
+        )
+        assert checkpoint_path is not None
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_path.touch()
+
+        captured: list[tuple] = []
+
+        def fake_evaluate_in_worker(args: tuple) -> float:
+            captured.append(args)
+            return 0.5
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.coevolution._evaluate_in_worker",
+            fake_evaluate_in_worker,
+        )
+        # Fire the probe; it should pass the .pt path as the 10th
+        # element of the args tuple (warm_start_path_override).
+        loop._fire_generality_probe()
+        # Expect at least one prey-side probe call (predator has no
+        # champions so its branch no-ops).
+        assert len(captured) > 0
+        # Each captured args tuple's 10th element (index 9) is the
+        # `warm_start_path_override` field. For the gap-3 fix, this
+        # SHALL equal the canonical Lamarckian checkpoint path.
+        for args in captured:
+            warm_start = args[9]
+            assert warm_start == checkpoint_path, (
+                f"probe must pass elite's .pt as warm_start_path_override; "
+                f"got {warm_start} (expected {checkpoint_path})"
+            )
+
+    def test_probe_gap3_no_warm_start_when_checkpoint_missing(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When elite's `.pt` is missing, probe SHALL pass None (fallback to genome.params).
+
+        Resilient to GC of post-K-block inheritance dirs: if the elite's
+        checkpoint was removed (e.g., not the K-block survivor under
+        `_gc_inheritance_dir`), the probe gracefully falls back to the
+        raw genome.params via the encoder, NOT crashing.
+        """
+        loop = _make_loop(tmp_path)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
+        loop.prey.champion_history.append(
+            {
+                "genome_id": "missing-checkpoint-elite",
+                "generation": 4,
+                "k_block_index": 0,
+                "fitness": 0.95,
+                "params": [0.0] * loop.prey.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        # Deliberately do NOT create the .pt file. The probe's
+        # `candidate.exists()` check should evaluate False and
+        # `warm_start_path` should default to None.
+        captured: list[tuple] = []
+
+        def fake_evaluate_in_worker(args: tuple) -> float:
+            captured.append(args)
+            return 0.0
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.coevolution._evaluate_in_worker",
+            fake_evaluate_in_worker,
+        )
+        loop._fire_generality_probe()
+        assert len(captured) > 0
+        for args in captured:
+            warm_start = args[9]
+            assert warm_start is None, (
+                f"probe must pass None when checkpoint is missing; got {warm_start}"
+            )
+
+    def test_probe_gap3_prefers_champion_archive_over_inheritance_dir(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Gap-3 Option A: probe SHALL prefer champion_archive over inheritance dir.
+
+        The champion_archive holds the K-block-elite's `.pt` separately
+        from `inheritance/`, so it's not subject to GC. When BOTH paths
+        exist, probe uses the archive (it's the canonical
+        post-PPO-trained-elite source).
+        """
+        loop = _make_loop(tmp_path)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
+
+        elite_gen = 4
+        elite_gid = "synthetic-prey-elite"
+        elite_k_block = 0
+        loop.prey.champion_history.append(
+            {
+                "genome_id": elite_gid,
+                "generation": elite_gen,
+                "k_block_index": elite_k_block,
+                "fitness": 0.95,
+                "params": [0.0] * loop.prey.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        # Create BOTH the inheritance path and the archive path.
+        inh_path = loop.prey.inheritance.checkpoint_path(
+            loop.prey.output_dir,
+            elite_gen,
+            elite_gid,
+        )
+        assert inh_path is not None
+        inh_path.parent.mkdir(parents=True, exist_ok=True)
+        inh_path.write_bytes(b"inheritance")
+        archive_path = loop._kblock_archive_path(loop.prey, elite_k_block)
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        archive_path.write_bytes(b"archive")
+
+        captured: list[tuple] = []
+
+        def fake_evaluate(args: tuple) -> float:
+            captured.append(args)
+            return 0.5
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.coevolution._evaluate_in_worker",
+            fake_evaluate,
+        )
+        loop._fire_generality_probe()
+        assert len(captured) > 0
+        for args in captured:
+            assert args[9] == archive_path, (
+                f"probe must prefer champion_archive when both exist; "
+                f"got {args[9]} (expected {archive_path})"
+            )
+
+    def test_archive_kblock_elite_checkpoint_copies_pt(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`_archive_kblock_elite_checkpoint` SHALL copy from inheritance to archive."""
+        from quantumnematode.evolution.genome import Genome
+
+        loop = _make_loop(tmp_path)
+        # Manually create an inheritance .pt for a synthetic elite at gen 3.
+        elite_gen = 3
+        elite_gid = "test-elite-001"
+        loop._k_block_index = 1  # simulate being mid-K-block-1
+        inh_path = loop.prey.inheritance.checkpoint_path(
+            loop.prey.output_dir,
+            elite_gen,
+            elite_gid,
+        )
+        assert inh_path is not None
+        inh_path.parent.mkdir(parents=True, exist_ok=True)
+        inh_path.write_bytes(b"trained-weights-payload")
+
+        # Build a synthetic Genome to pass to the archive helper.
+        elite_genome = Genome(
+            params=np.zeros(
+                loop.prey.encoder.genome_dim(loop.sim_config),
+                dtype=np.float32,
+            ),
+            genome_id=elite_gid,
+            parent_ids=[],
+            generation=elite_gen,
+        )
+        loop._archive_kblock_elite_checkpoint(
+            loop.prey,
+            elite_genome=elite_genome,
+            elite_gen=elite_gen,
+        )
+        archive_path = loop._kblock_archive_path(loop.prey, 1)
+        assert archive_path.exists()
+        # Content should match the source.
+        assert archive_path.read_bytes() == b"trained-weights-payload"
+
+    def test_archive_kblock_elite_noop_for_no_inheritance(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Archive SHALL be a no-op when side inheritance kind != 'weights'."""
+        from quantumnematode.evolution.genome import Genome
+
+        loop = _make_loop(tmp_path)
+        # Predator side defaults to NoInheritance under the minimal config.
+        assert loop.predator.inheritance.kind() == "none"
+        elite_genome = Genome(
+            params=np.zeros(
+                loop.predator.encoder.genome_dim(loop.sim_config),
+                dtype=np.float32,
+            ),
+            genome_id="pred-elite-001",
+            parent_ids=[],
+            generation=2,
+        )
+        loop._archive_kblock_elite_checkpoint(
+            loop.predator,
+            elite_genome=elite_genome,
+            elite_gen=2,
+        )
+        # No archive created.
+        archive_path = loop._kblock_archive_path(loop.predator, 0)
+        assert not archive_path.exists()
+
     def test_persist_false_still_rebuilds(self, tmp_path: Path) -> None:
         """Default (False) behaviour SHALL rebuild — preserves legacy semantics."""
         loop = _make_loop(tmp_path)

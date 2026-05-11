@@ -223,7 +223,7 @@ class EpisodicSuccessRate:
     actions depend on weights + seeded RNG only).
     """
 
-    def evaluate(
+    def evaluate(  # noqa: PLR0913 — inheritance kwargs mirror LearnedPerformanceFitness's ABI
         self,
         genome: Genome,
         sim_config: SimulationConfig,
@@ -231,8 +231,28 @@ class EpisodicSuccessRate:
         *,
         episodes: int,
         seed: int,
+        warm_start_path_override: Path | None = None,
+        weight_capture_path: Path | None = None,  # noqa: ARG002 — accepted for ABI symmetry
     ) -> float:
-        """Run ``episodes`` complete episodes and return the success ratio."""
+        """Run ``episodes`` complete episodes and return the success ratio.
+
+        Optional inheritance kwargs (mirror `LearnedPerformanceFitness`'s
+        surface so the co-evolution loop's `_evaluate_in_worker` dispatch
+        can pass them uniformly regardless of which fitness function is
+        being invoked):
+
+        - ``warm_start_path_override``: when set, after decoding the
+          genome into a fresh brain, load weights from this `.pt` path
+          INSTEAD of using the genome-encoded weights. Used by the
+          generality probe to measure POST-Lamarckian-training weights
+          (the actual co-evolved policy) rather than the genome's
+          CMA-ES-sampled-but-untrained weights. See
+          `CoevolutionLoop._probe_one_opponent`'s gap-3 fix for the
+          rationale.
+        - ``weight_capture_path``: accepted for ABI symmetry but IGNORED.
+          Frozen-weight evaluation has no training phase, so there's
+          nothing to capture beyond the genome itself.
+        """
         if episodes <= 0:
             msg = f"episodes must be positive, got {episodes}"
             raise ValueError(msg)
@@ -242,6 +262,15 @@ class EpisodicSuccessRate:
         # set_global_seed(seed) and self.rng = get_rng(seed) — seeding numpy
         # global, torch global, and the brain's local RNG to OUR seed.
         brain = encoder.decode(genome, sim_config, seed=seed)
+
+        # Optional warm-start: load weights from a Lamarckian checkpoint
+        # AFTER decoding the genome to a fresh brain. Used by the
+        # generality probe to test the post-training weights (the
+        # genome.params encode CMA-ES samples, not the PPO-trained
+        # weights from inner-loop fitness evaluation).
+        if warm_start_path_override is not None:
+            load_weights(brain, warm_start_path_override)
+
         if sim_config.environment is None:
             msg = "EpisodicSuccessRate.evaluate requires sim_config.environment to be set."
             raise ValueError(msg)

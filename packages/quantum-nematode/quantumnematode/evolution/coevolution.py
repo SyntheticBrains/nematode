@@ -1809,6 +1809,24 @@ class CoevolutionLoop:
                     if fit > block_elite_fitness:
                         block_elite_fitness = fit
                         block_elite_genome = genome
+                        # Probe-semantics gap-3 (Option A): archive the
+                        # K-block elite's POST-PPO-trained weights to a
+                        # dedicated dir that is NOT subject to inheritance
+                        # GC. The source `.pt` was just saved during this
+                        # generation's eval at the canonical inheritance
+                        # path; the post-eval GC at the end of this same
+                        # generation may remove it (if the genome isn't
+                        # selected as a parent for the next gen). Copy
+                        # NOW so the probe can find it at K-block end,
+                        # whether or not GC has run. Archive is keyed
+                        # on `k_block_index` only — one entry per K-block
+                        # per side, overwritten on each fitness
+                        # improvement within the K-block.
+                        self._archive_kblock_elite_checkpoint(
+                            training_side,
+                            elite_genome=genome,
+                            elite_gen=global_gen,
+                        )
 
                 # Tell optimiser (CMA-ES minimises; our fitness maximises).
                 training_side.optimizer.tell(list(solutions), [-f for f in fitnesses])
@@ -2164,6 +2182,55 @@ class CoevolutionLoop:
         with suppress(OSError):
             gen_dir.rmdir()
 
+    def _kblock_archive_path(self, side: _SideState, k_block_index: int) -> Path:
+        """Canonical path for a side's K-block-elite weight archive.
+
+        Probe-semantics gap-3 (Option A): the K-block elite's POST-PPO-trained
+        weights are archived here, separate from `<side>/inheritance/`
+        which is subject to GC. One entry per K-block per side.
+        """
+        return side.output_dir / "champion_archive" / f"k_block-{k_block_index:03d}.pt"
+
+    def _archive_kblock_elite_checkpoint(
+        self,
+        side: _SideState,
+        *,
+        elite_genome: Genome,
+        elite_gen: int,
+    ) -> None:
+        """Copy the elite's `.pt` from inheritance dir to the champion archive.
+
+        Called each time the K-block-elite is updated within a K-block. The
+        source `.pt` was just saved during the elite's eval at the canonical
+        inheritance path
+        `<side>/inheritance/gen-<elite_gen>/genome-<elite_id>.pt`. The
+        destination is `<side>/champion_archive/k_block-<k>.pt`, keyed only
+        on the loop's current `_k_block_index` (overwriting prior entries
+        for the same K-block).
+
+        No-op when:
+        - The side's inheritance kind is not "weights" (no `.pt` to archive).
+        - The source `.pt` doesn't exist (defensive — shouldn't happen since
+          this fires right after the eval that wrote it, but be safe).
+        """
+        if side.inheritance.kind() != "weights":
+            return
+        source = side.inheritance.checkpoint_path(
+            side.output_dir,
+            int(elite_gen),
+            str(elite_genome.genome_id),
+        )
+        if source is None or not source.exists():
+            return
+        dest = self._kblock_archive_path(side, self._k_block_index)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        # `shutil.copyfile` rather than rename: source is still active
+        # in the inheritance dir and may be consumed by subsequent
+        # Lamarckian warm-start lookups within the same K-block.
+        import shutil
+
+        shutil.copyfile(source, dest)
+
     def _build_patched_sim_config(
         self,
         *,
@@ -2517,6 +2584,62 @@ class CoevolutionLoop:
                 )
                 # Predator side already frozen-weight; keep side.fitness.
                 probe_fitness = side.fitness
+
+            # Probe-semantics gap-3 fix: when the side uses Lamarckian
+            # inheritance, the K-block-elite's genome.params encode the
+            # CMA-ES sample (pre-PPO-training weights). The actual
+            # co-evolved policy lives in the post-training `.pt`
+            # checkpoint. Load it via `warm_start_path_override` so the
+            # probe measures what the prey ACTUALLY learned, not the
+            # untrained sample. The post-hoc analysis path uses the
+            # same checkpoint via the script's `load_weights` call;
+            # this fix aligns the in-run probe with that semantic.
+            #
+            # Lookup order:
+            # 1. `champion_archive/k_block-<k>.pt` — the elite's `.pt`
+            #    archived at fitness-improvement time during the K-block
+            #    (Option A; NOT subject to inheritance GC).
+            # 2. `inheritance/gen-<g>/genome-<id>.pt` — the canonical
+            #    Lamarckian path, may have been GC'd by now if the
+            #    elite wasn't selected as a parent for subsequent gens.
+            # 3. None — fall back to raw genome.params via encoder.decode.
+            #
+            # The frozen-weight fitness functions (`EpisodicSuccessRate`
+            # and `PredatorEpisodicKillRate`) both accept
+            # `warm_start_path_override` and load the checkpoint into
+            # the decoded brain before evaluation.
+            warm_start_path: Path | None = None
+            if side.inheritance.kind() == "weights":
+                # Path 1: champion archive (preferred; gap-3 Option A).
+                # Find the K-block index that produced this elite. We
+                # iterate champion_history to locate the entry matching
+                # the elite's (genome_id, generation) — typically the
+                # most-recently-pushed entry.
+                archive_k_block_index: int | None = None
+                for record in reversed(side.champion_history):
+                    if record.get("genome_id") == elite.genome_id and int(
+                        record.get("generation", -1),
+                    ) == int(elite.generation):
+                        archive_k_block_index = int(record.get("k_block_index", -1))
+                        break
+                if archive_k_block_index is not None and archive_k_block_index >= 0:
+                    archive_candidate = self._kblock_archive_path(
+                        side,
+                        archive_k_block_index,
+                    )
+                    if archive_candidate.exists():
+                        warm_start_path = archive_candidate
+
+                # Path 2 fallback: canonical inheritance path.
+                if warm_start_path is None:
+                    candidate = side.inheritance.checkpoint_path(
+                        side.output_dir,
+                        int(elite.generation),
+                        str(elite.genome_id),
+                    )
+                    if candidate is not None and candidate.exists():
+                        warm_start_path = candidate
+
             episodes = self._probe_episode_count(side)
             args = (
                 np.asarray(elite.params, dtype=np.float32),
@@ -2528,7 +2651,7 @@ class CoevolutionLoop:
                 int(elite.generation),
                 opponent_index,
                 list(elite.parent_ids),
-                None,  # warm_start_path_override — probe must not load germline weights
+                warm_start_path,  # gap-3 fix: load post-PPO checkpoint when Lamarckian
                 None,  # weight_capture_path — probe must not write germline weights
             )
             return float(_evaluate_in_worker(args))
