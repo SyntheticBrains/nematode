@@ -348,6 +348,24 @@ class CoevolutionLoop:
         self.prey = self._build_prey_state()
         self.predator = self._build_predator_state()
 
+        # Probe-time fitness function for prey side (Option 1
+        # probe-semantics fix). The training-time `LearnedPerformanceFitness`
+        # runs K PPO train episodes against the held-out opponent
+        # before L frozen eval, which pushes the elite's policy in
+        # unhelpful directions when the opponent class differs from
+        # what the prey trained against (the case for heuristic-radius
+        # held-out opponents vs MLPPPO training opponents). The probe
+        # uses `EpisodicSuccessRate` (frozen-weight L eval only) instead,
+        # giving the scientifically correct "what did the prey learn?"
+        # measurement. Settable as an attribute so tests can stub it
+        # without setting up a full RewardConfig + env-realistic env.
+        # Local import to avoid circular: `fitness` imports from
+        # `inheritance` which imports from `_predator_brain_factory`
+        # which imports from this module's environment.
+        from quantumnematode.evolution.fitness import EpisodicSuccessRate
+
+        self._prey_probe_fitness: Any = EpisodicSuccessRate()
+
         # Alternating-schedule controller state. `_k_block_index`
         # counts completed K-blocks (0 = before first K-block ran);
         # `_current_side` is the side currently training (flips at
@@ -2460,6 +2478,28 @@ class CoevolutionLoop:
         `_evaluate_in_worker` with `warm_start_path_override=None,
         weight_capture_path=None` so the probe does not mutate the
         elite's germline weights. The tmp dir is cleaned up on exit.
+
+        Fitness function selection (Option 1: probe-semantics fix):
+        - **Prey side**: forces `self._prey_probe_fitness` (default
+          `EpisodicSuccessRate`, frozen-weight, L eval episodes only)
+          INSTEAD of the side's training-time
+          `LearnedPerformanceFitness`. Rationale: training-time
+          `LearnedPerformanceFitness` runs K PPO train episodes against
+          the held-out opponent before the L eval — those K episodes
+          fine-tune the elite's policy against a totally different
+          opponent class (heuristic radius variants vs MLPPPO), pushing
+          weights in a direction the prey didn't see during co-evolution
+          training. With K=8 episodes against an unfamiliar opponent
+          class, the policy consistently degrades to 0.0 by eval phase.
+          Frozen-weight eval measures the elite AS-IS — the
+          scientifically correct test of "what did the prey learn?"
+          matching the post-hoc analysis path. The attribute is settable
+          for tests that stub the fitness function to skip real
+          episode execution.
+        - **Predator side**: keeps `side.fitness`
+          (`PredatorEpisodicKillRate`) — already frozen-weight by
+          default, no inner-loop train phase, so the probe's measurement
+          semantic was already correct on this side.
         """
         with tempfile.TemporaryDirectory(prefix="probe_") as tmp:
             tmp_path = Path(tmp)
@@ -2467,18 +2507,22 @@ class CoevolutionLoop:
                 patched_sim_config = self._build_prey_side_probe_sim_config(
                     opponent_index=opponent_index,
                 )
+                # Frozen-weight measurement — see docstring.
+                probe_fitness = self._prey_probe_fitness
             else:
                 patched_sim_config = self._build_predator_side_probe_sim_config(
                     opponent_index=opponent_index,
                     eval_seed=eval_seed,
                     tmp_path=tmp_path,
                 )
+                # Predator side already frozen-weight; keep side.fitness.
+                probe_fitness = side.fitness
             episodes = self._probe_episode_count(side)
             args = (
                 np.asarray(elite.params, dtype=np.float32),
                 patched_sim_config,
                 side.encoder,
-                side.fitness,
+                probe_fitness,
                 episodes,
                 eval_seed,
                 int(elite.generation),
@@ -2494,11 +2538,12 @@ class CoevolutionLoop:
 
         Mirrors the training-time `episodes_per_eval` so probe values
         and training values are directly comparable on the same axis.
-        For prey side, `LearnedPerformanceFitness.evaluate` enforces
-        K + L = `learn_episodes_per_eval + (eval_episodes_per_eval or
-        episodes_per_eval)`; the probe re-uses the side's existing
-        `episodes_per_eval` budget so the fitness signal magnitude is
-        directly comparable to training rows in `lineage.csv`.
+        Note: under Option 1's probe-semantics fix, the prey-side probe
+        uses `EpisodicSuccessRate` (frozen-weight, L eval episodes only,
+        no K train phase). The `episodes_per_eval` field maps to L
+        cleanly in that mode. For the predator side
+        (`PredatorEpisodicKillRate`), `episodes_per_eval` is the total
+        episode count (no train/eval split).
         """
         return int(side.evolution_config.episodes_per_eval)
 

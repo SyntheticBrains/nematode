@@ -321,6 +321,7 @@ class TestAlternatingSchedule:
         loop = _make_loop(tmp_path, generation_pairs=2, K_per_block=1)
         # Stub fitnesses so we don't run real evaluations.
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         loop.run()
@@ -343,6 +344,7 @@ class TestAlternatingSchedule:
         """Each K-block transition SHALL produce a fresh `CMAESOptimizer` instance."""
         loop = _make_loop(tmp_path, generation_pairs=2, K_per_block=1)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         # Capture initial optimizer ids; after run, the prey + predator
@@ -384,6 +386,7 @@ class TestAlternatingSchedule:
         # still be empty (predator hasn't trained yet).
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=2)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         # Snapshot predator state mid-prey-block. We can't easily
@@ -414,6 +417,7 @@ class TestHoFPush:
         """The K-block's top-fitness genome SHALL be pushed to its HoF."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, population_size=4)
         loop.prey.fitness = _StubFitness()  # mean(params) — varies by genome
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         loop.run()
@@ -482,6 +486,7 @@ class TestGeneralityProbe:
         """Probe SHALL write rows with `(generation, side, opponent_index, fitness)`."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, held_out_size=2)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         # Force the probe to fire at every generation.
         loop.coevolution_config.generality_probe_every = 1  # type: ignore[misc]
@@ -520,6 +525,7 @@ class TestGeneralityProbe:
         """Probe SHALL NOT alter population, optimizer, hof, or generation counter."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, held_out_size=2)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
 
@@ -557,6 +563,7 @@ class TestGeneralityProbe:
             generality_probe_every=1,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.7)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
 
         # Seed `prey.champion_history` with a synthetic K-block elite
@@ -611,6 +618,7 @@ class TestGeneralityProbe:
             generality_probe_every=1,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
 
         # Inject a held-out prey genome so the predator-side branch
@@ -673,6 +681,7 @@ class TestGeneralityProbe:
             generality_probe_every=1,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.6)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
 
         # Seed a prey champion so the prey-side branch fires.
@@ -860,6 +869,7 @@ class TestEndToEndStubbedRun:
         """A completed run SHALL write per-side `lineage.csv` files."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
         assert (tmp_path / "coevo" / "prey" / "lineage.csv").exists()
@@ -869,6 +879,7 @@ class TestEndToEndStubbedRun:
         """A completed run SHALL write all four checkpoint files."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
         assert (tmp_path / "coevo" / "prey" / "checkpoint.pkl").exists()
@@ -908,6 +919,7 @@ class TestWalltimeInstrumentation:
         """
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, population_size=4)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
         with (tmp_path / "coevo" / "walltime.csv").open() as fh:
@@ -1039,6 +1051,7 @@ class TestProbeFiresAtKBlockBoundary:
             generality_probe_every=2,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         loop.run()
@@ -1397,6 +1410,37 @@ class TestPersistCmaAcrossKBlocks:
             "so the existing CMA-ES study continues uninterrupted across "
             "K-block boundaries."
         )
+
+    def test_prey_probe_fitness_defaults_to_episodic_success_rate(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Option 1: in-run prey probe SHALL default to `EpisodicSuccessRate` (frozen-weight).
+
+        Rationale: the training-time `LearnedPerformanceFitness` runs K
+        PPO train episodes against held-out opponents before the L eval,
+        which fine-tunes the elite's policy against a different opponent
+        class than what it co-evolved against. The result is the policy
+        consistently degrades to 0.0 by eval phase. Frozen-weight
+        `EpisodicSuccessRate` measures the elite AS-IS — the
+        scientifically correct test of "what did the prey learn?"
+        matching the post-hoc analysis path.
+        """
+        from quantumnematode.evolution.fitness import (
+            EpisodicSuccessRate,
+            LearnedPerformanceFitness,
+        )
+
+        loop = _make_loop(tmp_path)
+        # Probe-time fitness is frozen-weight `EpisodicSuccessRate`.
+        assert isinstance(loop._prey_probe_fitness, EpisodicSuccessRate)
+        # Distinct from `loop.prey.fitness` (training-time
+        # `LearnedPerformanceFitness` with K PPO train + L frozen eval).
+        assert isinstance(loop.prey.fitness, LearnedPerformanceFitness)
+        # And `_prey_probe_fitness` is NOT the same instance/class as
+        # the training fitness — they're intentionally different
+        # measurements.
+        assert type(loop._prey_probe_fitness) is not type(loop.prey.fitness)
 
     def test_persist_false_still_rebuilds(self, tmp_path: Path) -> None:
         """Default (False) behaviour SHALL rebuild — preserves legacy semantics."""
