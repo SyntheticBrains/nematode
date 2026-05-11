@@ -1411,12 +1411,37 @@ class CoevolutionConfig(BaseModel):
                 "LearnedPerformanceFitness requires a non-zero K train phase."
             )
             raise ValueError(msg)
-        if self.predator_evolution.learn_episodes_per_eval != 0:
+        # Predator-side validation: two supported modes.
+        # 1. Frozen-weight (legacy): inheritance=none AND
+        #    learn_episodes_per_eval=0. PredatorEpisodicKillRate runs
+        #    pure frozen-weight evaluation; CMA-ES owns the weight
+        #    gradient.
+        # 2. Lamarckian (R2-full): inheritance=lamarckian. Predator
+        #    PPO inner-loop fires per-step via the multi-agent runner's
+        #    section 6b hook; weights persist across K-blocks via
+        #    LamarckianInheritance checkpoint plumbing. The
+        #    `learn_episodes_per_eval` field is NOT meaningful in this
+        #    mode (no separate train+eval phases), so we accept any
+        #    value >= 1 (EvolutionConfig's own validator requires >0
+        #    when inheritance != none).
+        if self.predator_evolution.inheritance not in {"none", "lamarckian"}:
+            msg = (
+                f"coevolution.predator_evolution.inheritance must be one of "
+                f"{{'none', 'lamarckian'}} (got "
+                f"{self.predator_evolution.inheritance!r}). 'baldwin' is not "
+                "currently supported on the predator side."
+            )
+            raise ValueError(msg)
+        if (
+            self.predator_evolution.inheritance == "none"
+            and self.predator_evolution.learn_episodes_per_eval != 0
+        ):
             msg = (
                 f"coevolution.predator_evolution.learn_episodes_per_eval must be 0 "
-                f"(got {self.predator_evolution.learn_episodes_per_eval}). "
-                "Predator side runs PredatorEpisodicKillRate frozen-weight; "
-                "no inner-loop training."
+                f"when inheritance='none' (got "
+                f"{self.predator_evolution.learn_episodes_per_eval}). "
+                "Predator side runs PredatorEpisodicKillRate frozen-weight under "
+                "inheritance='none'; no inner-loop training."
             )
             raise ValueError(msg)
         if self.prey_evolution.inheritance != "lamarckian":
@@ -1424,13 +1449,6 @@ class CoevolutionConfig(BaseModel):
                 f"coevolution.prey_evolution.inheritance must be 'lamarckian' "
                 f"(got {self.prey_evolution.inheritance!r}); prey side is the "
                 "Lamarckian-LSTMPPO substrate."
-            )
-            raise ValueError(msg)
-        if self.predator_evolution.inheritance != "none":
-            msg = (
-                f"coevolution.predator_evolution.inheritance must be 'none' "
-                f"(got {self.predator_evolution.inheritance!r}); predator side runs "
-                "frozen-weight under PredatorEpisodicKillRate."
             )
             raise ValueError(msg)
         return self
