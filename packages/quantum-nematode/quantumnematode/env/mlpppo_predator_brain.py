@@ -113,7 +113,7 @@ class MLPPPOPredatorBrain:
         (default), `run_brain` returns the argmax action.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - PPO hyperparameters map 1:1 to MLPPPOBrain's surface
         self,
         *,
         actor_hidden_dim: int = DEFAULT_ACTOR_HIDDEN_DIM,
@@ -121,6 +121,27 @@ class MLPPPOPredatorBrain:
         num_hidden_layers: int = DEFAULT_NUM_HIDDEN_LAYERS,
         seed: int | None = None,
         sample: bool = False,
+        # PPO inner-loop training surface. Default `enable_learning=False`
+        # preserves the original frozen-weight contract — CMA-ES owns the
+        # weight gradient at the outer loop, no buffer/optimizer is built,
+        # `learn()` is a no-op. Flip to True to enable within-eval PPO
+        # training (R2-full path; required for predator-side Lamarckian
+        # inheritance to be meaningful since otherwise nothing varies
+        # within an evaluation).
+        enable_learning: bool = False,
+        # Standard PPO hyperparameters; mirror MLPPPOBrain defaults so
+        # behaviour transfers cleanly between agent + predator sides.
+        actor_lr: float = 3e-4,
+        critic_lr: float = 3e-4,
+        clip_epsilon: float = 0.2,
+        gamma: float = 0.99,
+        gae_lambda: float = 0.95,
+        value_loss_coef: float = 0.5,
+        entropy_coef: float = 0.02,
+        rollout_buffer_size: int = 512,
+        num_epochs: int = 4,
+        num_minibatches: int = 2,
+        max_grad_norm: float = 0.5,
     ) -> None:
         if num_hidden_layers < 1:
             msg = f"num_hidden_layers must be >= 1, got {num_hidden_layers}"
@@ -130,6 +151,7 @@ class MLPPPOPredatorBrain:
         self._critic_hidden_dim = critic_hidden_dim
         self._num_hidden_layers = num_hidden_layers
         self._sample = sample
+        self._enable_learning = enable_learning
 
         if seed is not None:
             # Seed torch's global generator so `nn.init.orthogonal_` (called
@@ -142,6 +164,56 @@ class MLPPPOPredatorBrain:
         self.actor = self._build_network(actor_hidden_dim, num_hidden_layers, NUM_ACTIONS)
         self.critic = self._build_network(critic_hidden_dim, num_hidden_layers, output_dim=1)
         self._initialize_parameters()
+
+        # PPO training state (built only when learning is enabled to keep
+        # the frozen-weight construction byte-equivalent for existing
+        # co-evolution paths).
+        self._clip_epsilon = clip_epsilon
+        self._gamma = gamma
+        self._gae_lambda = gae_lambda
+        self._value_loss_coef = value_loss_coef
+        self._entropy_coef = entropy_coef
+        self._num_epochs = num_epochs
+        self._num_minibatches = num_minibatches
+        self._max_grad_norm = max_grad_norm
+        if enable_learning:
+            # Deferred import to avoid a circular: `env` imports this
+            # module at startup; if we top-level-import from
+            # `brain.arch._ppo_buffer`, Python loads `brain.__init__`
+            # which loads `brain.arch.__init__` which loads `_brain.py`
+            # which imports `Direction` from `env` — but `env` isn't
+            # fully initialised yet during this module's load. Import
+            # at first-construction-with-learning bypasses the cycle
+            # because by the time anyone constructs a learning predator
+            # the package graph is fully loaded.
+            from quantumnematode.brain.arch._ppo_buffer import (
+                RolloutBuffer,
+            )
+
+            self._device = torch.device("cpu")
+            self._optimizer = torch.optim.Adam(
+                [
+                    {"params": self.actor.parameters(), "lr": actor_lr},
+                    {"params": self.critic.parameters(), "lr": critic_lr},
+                ],
+            )
+            self._buffer = RolloutBuffer(rollout_buffer_size, self._device)
+            # Per-step pending fields (set by `run_brain`, consumed by
+            # the NEXT `learn()` call).
+            self._pending_state: np.ndarray | None = None
+            self._pending_action: int | None = None
+            self._pending_log_prob: torch.Tensor | None = None
+            self._pending_value: torch.Tensor | None = None
+            self._last_value: torch.Tensor | None = None
+        else:
+            self._device = None
+            self._optimizer = None
+            self._buffer = None
+            self._pending_state = None
+            self._pending_action = None
+            self._pending_log_prob = None
+            self._pending_value = None
+            self._last_value = None
 
     @staticmethod
     def _build_network(hidden_dim: int, num_hidden_layers: int, output_dim: int) -> nn.Sequential:
@@ -225,8 +297,38 @@ class MLPPPOPredatorBrain:
         but its output is unused at inference time — kept attached for
         weight-persistence symmetry with the agent-side LearnedPerformanceFitness's
         actor + critic round-trip.
+
+        When `enable_learning=True`, also captures pending state +
+        action + log_prob + value for the next `learn()` call to
+        commit into the rollout buffer. The action is sampled
+        (categorically over softmax) rather than argmax so the policy
+        explores; argmax mode is used during frozen-eval / inference.
         """
         obs = self.encode_observation(params)
+        if self._enable_learning:
+            # PPO needs gradients flowing through log_prob + value for
+            # the eventual update, so this branch does NOT use
+            # `torch.no_grad()`. Sampling is forced (independent of
+            # `self._sample`) because PPO requires categorical action
+            # selection to compute log_prob correctly for the surrogate
+            # objective.
+            obs_tensor = torch.from_numpy(obs).unsqueeze(0)  # (1, INPUT_DIM)
+            logits = self.actor(obs_tensor).squeeze(0)
+            value = self.critic(obs_tensor).squeeze()
+            probs = torch.softmax(logits, dim=-1)
+            dist = torch.distributions.Categorical(probs)
+            action_tensor = dist.sample()
+            idx = int(action_tensor.item())
+            log_prob = dist.log_prob(action_tensor)
+            # Stash for the next `learn()` call.
+            self._pending_state = obs
+            self._pending_action = idx
+            self._pending_log_prob = log_prob
+            self._pending_value = value
+            self._last_value = value
+            return _ACTION_BY_INDEX[idx]
+
+        # Frozen-weight inference path (no gradient, no buffer capture).
         with torch.no_grad():
             obs_tensor = torch.from_numpy(obs).unsqueeze(0)  # (1, INPUT_DIM)
             logits = self.actor(obs_tensor).squeeze(0)  # (NUM_ACTIONS,)
@@ -243,16 +345,138 @@ class MLPPPOPredatorBrain:
                 idx = int(torch.argmax(logits).item())
         return _ACTION_BY_INDEX[idx]
 
+    def learn(
+        self,
+        *,
+        reward: float,
+        episode_done: bool = False,
+    ) -> None:
+        """Add one (state, action, reward) transition to the rollout buffer.
+
+        Called per-step by the multi-agent runner (or the predator-only
+        training harness) immediately AFTER `run_brain` returned an
+        action and the env's reward was computed. The pending
+        `(state, action, log_prob, value)` from `run_brain` are paired
+        with `reward` here and pushed into the buffer. When the buffer
+        fills OR the episode ends with enough samples, fires a PPO
+        update and resets.
+
+        No-op when `enable_learning=False` (the frozen-weight path).
+        """
+        if not self._enable_learning:
+            return
+        if self._buffer is None or self._optimizer is None:
+            # Defensive: _enable_learning=True implies these are built;
+            # this branch only fires if a future code path bypasses
+            # __init__'s construction guard.
+            return
+        if (
+            self._pending_state is None
+            or self._pending_action is None
+            or self._pending_log_prob is None
+            or self._pending_value is None
+        ):
+            # First call before any `run_brain` — nothing to commit.
+            return
+        self._buffer.add(
+            state=self._pending_state,
+            action=self._pending_action,
+            log_prob=self._pending_log_prob,
+            value=self._pending_value,
+            reward=reward,
+            done=episode_done,
+        )
+        # Clear pending so a missed run_brain call surfaces as a
+        # silent no-op rather than committing stale state.
+        self._pending_state = None
+        self._pending_action = None
+        self._pending_log_prob = None
+        self._pending_value = None
+
+        # Fire PPO update when buffer full OR episode ended with enough samples.
+        if self._buffer.is_full() or (episode_done and len(self._buffer) >= self._num_minibatches):
+            self._perform_ppo_update()
+            self._buffer.reset()
+
+    def _perform_ppo_update(self) -> None:
+        """Run a clipped-surrogate PPO update on the buffered batch.
+
+        Mirrors `MLPPPOBrain._perform_standard_ppo_update`'s math (clipped
+        surrogate objective + MSE value loss + entropy bonus, per-epoch
+        across `num_minibatches`) but operates on the predator's actor
+        + critic networks. The 11-D input shape is automatically
+        respected by the buffer's `states[mb_indices]` slicing.
+        """
+        if self._buffer is None or self._optimizer is None or self._last_value is None:
+            return
+        if len(self._buffer) == 0:
+            return
+
+        returns, advantages = self._buffer.compute_returns_and_advantages(
+            self._last_value.detach(),
+            self._gamma,
+            self._gae_lambda,
+        )
+
+        for _ in range(self._num_epochs):
+            for batch in self._buffer.get_minibatches(
+                self._num_minibatches,
+                returns,
+                advantages,
+            ):
+                logits = self.actor(batch["states"])
+                values = self.critic(batch["states"]).squeeze(-1)
+
+                probs = torch.softmax(logits, dim=-1)
+                dist = torch.distributions.Categorical(probs)
+                new_log_probs = dist.log_prob(batch["actions"])
+                entropy = dist.entropy().mean()
+
+                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
+                surr1 = ratio * batch["advantages"]
+                surr2 = (
+                    torch.clamp(ratio, 1 - self._clip_epsilon, 1 + self._clip_epsilon)
+                    * batch["advantages"]
+                )
+                policy_loss = -torch.min(surr1, surr2).mean()
+                value_loss = nn.functional.mse_loss(values, batch["returns"])
+                loss = (
+                    policy_loss + self._value_loss_coef * value_loss - self._entropy_coef * entropy
+                )
+
+                self._optimizer.zero_grad()
+                loss.backward()
+                params_for_clip = list(self.actor.parameters()) + list(self.critic.parameters())
+                nn.utils.clip_grad_norm_(params_for_clip, self._max_grad_norm)
+                self._optimizer.step()
+
     def prepare_episode(self) -> None:
-        """No-op (frozen-weight evaluation has no per-episode state)."""
-        return
+        """Reset per-episode state.
+
+        Clears any leftover pending step state so a stale (state,
+        action, log_prob, value) tuple from the previous episode's
+        terminal step doesn't leak into the new episode's first
+        `learn()` call.
+        """
+        self._pending_state = None
+        self._pending_action = None
+        self._pending_log_prob = None
+        self._pending_value = None
 
     def post_process_episode(
         self,
         *,
         episode_success: bool | None = None,
     ) -> None:
-        """No-op (frozen-weight evaluation has no per-episode state)."""
+        """Per-episode lifecycle hook.
+
+        When learning is enabled and the buffer has remaining samples
+        from the just-finished episode (which may not have triggered
+        a buffer-full flush), we DO NOT force a flush here. The
+        agent-side equivalent leaves the partial buffer in place
+        across episode boundaries, and a PPO update only fires when
+        `learn(episode_done=True)` is called by the runner.
+        """
         del episode_success
 
     def copy(self) -> MLPPPOPredatorBrain:
@@ -275,6 +499,14 @@ class MLPPPOPredatorBrain:
             critic_hidden_dim=self._critic_hidden_dim,
             num_hidden_layers=self._num_hidden_layers,
             sample=self._sample,
+            # NOTE: do NOT propagate `enable_learning` into the clone.
+            # `copy()` is used in contexts (env construction, weight
+            # round-trip via WeightPersistence) that want a clean
+            # frozen-weight clone of the network shape, not a duplicate
+            # of the PPO training state. Training state (buffer,
+            # optimizer, pending tuples) does not survive `copy()`;
+            # downstream callers that need a learning clone must
+            # construct via the full constructor + `load_weights`.
         )
         clone.actor.load_state_dict(self.actor.state_dict())
         clone.critic.load_state_dict(self.critic.state_dict())

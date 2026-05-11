@@ -352,3 +352,108 @@ class TestHeuristicTeacherInteraction:
         # Both invocations SHALL succeed without error.
         assert brain.run_brain(params) is not None
         assert teacher.run_brain(params) is not None
+
+
+class TestPPOInnerLoopLearning:
+    """Brain SHALL support optional PPO inner-loop training via `enable_learning=True`."""
+
+    def test_default_construction_has_no_learning_state(self) -> None:
+        """Frozen-weight default construction SHALL build no optimizer/buffer."""
+        brain = MLPPPOPredatorBrain(seed=42)
+        assert brain._enable_learning is False
+        assert brain._optimizer is None
+        assert brain._buffer is None
+
+    def test_enable_learning_constructs_training_state(self) -> None:
+        """`enable_learning=True` SHALL build optimizer + rollout buffer."""
+        brain = MLPPPOPredatorBrain(seed=42, enable_learning=True)
+        assert brain._enable_learning is True
+        assert brain._optimizer is not None
+        assert brain._buffer is not None
+        assert brain._buffer.buffer_size == 512  # default
+
+    def test_learn_is_noop_when_learning_disabled(self) -> None:
+        """`learn()` SHALL be a no-op when `enable_learning=False`."""
+        brain = MLPPPOPredatorBrain(seed=42)
+        # Should NOT raise.
+        brain.learn(reward=1.0, episode_done=False)
+        assert brain._buffer is None
+
+    def test_run_brain_captures_pending_state_when_learning(self) -> None:
+        """When learning, `run_brain` SHALL stash pending state for `learn()` to commit."""
+        brain = MLPPPOPredatorBrain(seed=42, enable_learning=True)
+        params = _make_params()
+        assert brain._pending_state is None
+        brain.run_brain(params)
+        assert brain._pending_state is not None
+        assert brain._pending_action is not None
+        assert brain._pending_log_prob is not None
+        assert brain._pending_value is not None
+
+    def test_learn_commits_pending_to_buffer(self) -> None:
+        """One `run_brain` + one `learn(reward=...)` SHALL grow buffer by 1."""
+        brain = MLPPPOPredatorBrain(seed=42, enable_learning=True)
+        params = _make_params()
+        brain.run_brain(params)
+        assert brain._buffer is not None
+        assert len(brain._buffer) == 0
+        brain.learn(reward=1.0, episode_done=False)
+        assert len(brain._buffer) == 1
+        # Pending cleared after commit.
+        assert brain._pending_state is None
+
+    def test_buffer_full_triggers_ppo_update(self) -> None:
+        """When buffer fills, `learn()` SHALL fire a PPO update and reset the buffer."""
+        # Tiny buffer + minibatches so the update fires quickly.
+        brain = MLPPPOPredatorBrain(
+            seed=42,
+            enable_learning=True,
+            rollout_buffer_size=4,
+            num_minibatches=2,
+        )
+        from torch import nn
+
+        params = _make_params()
+        # Snapshot initial actor weights so we can verify they change.
+        # Cast `actor[0]` (typed as `nn.Module`) to `nn.Linear` so pyright
+        # knows `.weight` is a Tensor attribute.
+        first_layer = brain.actor[0]
+        assert isinstance(first_layer, nn.Linear)
+        initial_actor_weight = first_layer.weight.detach().clone()
+        for _ in range(4):
+            brain.run_brain(params)
+            brain.learn(reward=1.0, episode_done=False)
+        # Buffer was reset after the update.
+        assert brain._buffer is not None
+        assert len(brain._buffer) == 0
+        # Actor weights changed (non-zero gradient applied).
+        final_actor_weight = first_layer.weight.detach()
+        assert not torch.allclose(initial_actor_weight, final_actor_weight), (
+            "actor weights must change after a PPO update"
+        )
+
+    def test_prepare_episode_clears_pending(self) -> None:
+        """`prepare_episode` SHALL clear pending state so it doesn't leak across episodes."""
+        brain = MLPPPOPredatorBrain(seed=42, enable_learning=True)
+        brain.run_brain(_make_params())
+        assert brain._pending_state is not None
+        brain.prepare_episode()
+        assert brain._pending_state is None
+        assert brain._pending_action is None
+        assert brain._pending_log_prob is None
+        assert brain._pending_value is None
+
+    def test_copy_drops_learning_state(self) -> None:
+        """`copy()` SHALL return a frozen-weight clone (training state dropped)."""
+        brain = MLPPPOPredatorBrain(seed=42, enable_learning=True)
+        clone = brain.copy()
+        assert clone._enable_learning is False
+        assert clone._optimizer is None
+        assert clone._buffer is None
+        # But network weights SHALL be identical.
+        for orig, dup in zip(
+            brain.actor.parameters(),
+            clone.actor.parameters(),
+            strict=True,
+        ):
+            assert torch.allclose(orig, dup), "actor weights must transfer through copy()"

@@ -463,3 +463,103 @@ class TestPerPredatorMetrics:
         # Fallback: global-closest — predator_0 at dist 3.
         assert sim._kills_by_predator["predator_0"] == 1
         assert sim._kills_by_predator["predator_1"] == 0
+
+
+class TestLearningPredatorPerStepHook:
+    """Per-step `predator.brain.learn(reward, done)` integration into MultiAgentSimulation.
+
+    Wired in step 6b of `run_episode`; only fires for predator brains
+    exposing a `learn` attribute (currently `MLPPPOPredatorBrain` with
+    `enable_learning=True`). Heuristic predator brains are untouched.
+    """
+
+    def test_learning_predator_buffer_grows_during_episode(self) -> None:
+        """Multi-agent runner SHALL call predator.brain.learn() per step when available."""
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        env = _make_env(grid_size=20, seed=42, predators=True)
+        # Replace the heuristic predator with a learning MLPPPOPredator.
+        learning_brain = MLPPPOPredatorBrain(
+            seed=42,
+            enable_learning=True,
+            rollout_buffer_size=4096,
+            # Buffer big enough that no PPO update fires mid-episode for
+            # this short test; we only want to verify buffer growth.
+        )
+        env.predators[0].brain = learning_brain
+
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        sim = MultiAgentSimulation(env=env, agents=[a0])
+        max_steps = 20
+        result = sim.run_episode(RewardConfig(), max_steps=max_steps)
+
+        # Predator stepped at most `max_steps`. Buffer should have grown
+        # by at least `max_steps - 1` entries (one per step) PLUS the
+        # final terminal `learn(reward=0, episode_done=True)` flush. If
+        # the buffer is exactly empty, the runner did NOT call learn().
+        # NOTE: at speed=0.5, the predator stays still on alternating
+        # steps (accumulator < 1) - but the learn() hook fires every
+        # sim step regardless of whether the predator moved.
+        #
+        # Caveat: the terminal learn(episode_done=True) call may have
+        # triggered a PPO update if the buffer happened to fill exactly
+        # at that step. With rollout_buffer_size=4096 we're well clear
+        # of that case.
+        assert learning_brain._buffer is not None
+        assert len(learning_brain._buffer) > 0, (
+            "predator.brain.learn() must have fired at least once per step "
+            "with a learning predator brain attached"
+        )
+        # Episode result still has the standard kill-rate counters.
+        assert isinstance(result.per_predator_kills, dict)
+
+    def test_heuristic_predator_skipped_no_attribute_error(self) -> None:
+        """Heuristic predator brains (no `learn` method) SHALL NOT raise."""
+        # Existing test verifies _make_env+_make_agent+sim.run_episode
+        # works with heuristic predators; here we verify the per-step
+        # `hasattr(brain, "learn")` gate keeps that path clean.
+        env = _make_env(grid_size=20, seed=42, predators=True)
+        # env.predators[0] is a HeuristicPredatorBrain by default - no
+        # `learn` method.
+        assert not hasattr(env.predators[0].brain, "learn"), (
+            "test precondition: default HeuristicPredatorBrain has no learn method"
+        )
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        sim = MultiAgentSimulation(env=env, agents=[a0])
+        # Should NOT raise.
+        sim.run_episode(RewardConfig(), max_steps=10)
+
+    def test_reward_coefficients_propagate(self) -> None:
+        """Custom predator reward coefficients SHALL change observed buffer rewards."""
+        from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
+
+        env = _make_env(grid_size=20, seed=42, predators=True)
+        # Pin predator next to agent so proximity_reward fires every step.
+        env.predators[0].position = (6, 5)  # Manhattan 1 from agent at (5, 5)
+        learning_brain = MLPPPOPredatorBrain(
+            seed=42,
+            enable_learning=True,
+            rollout_buffer_size=4096,
+        )
+        env.predators[0].brain = learning_brain
+
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        # Use big proximity_reward, zero kill/step components, to isolate
+        # the proximity-shaping signal.
+        sim = MultiAgentSimulation(
+            env=env,
+            agents=[a0],
+            predator_kill_reward=0.0,
+            predator_proximity_reward=10.0,
+            predator_step_penalty=0.0,
+        )
+        sim.run_episode(RewardConfig(), max_steps=5)
+
+        # The buffer's rewards list should contain at least one ~10.0
+        # entry (the proximity hit), reflecting the high coefficient
+        # we configured.
+        assert learning_brain._buffer is not None
+        rewards = learning_brain._buffer.rewards
+        assert any(r >= 9.0 for r in rewards), (
+            f"expected at least one large proximity reward (~10.0); got rewards={rewards}"
+        )
