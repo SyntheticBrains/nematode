@@ -1420,3 +1420,57 @@ class TestPersistCmaAcrossKBlocks:
         assert loop.predator.optimizer is not original_optimizer, (
             "default behaviour (persist=False) must rebuild the optimizer."
         )
+
+
+class TestPredatorInheritanceYamlConfigurable:
+    """R2-full Step 3: `predator_evolution.inheritance` SHALL drive predator side state.
+
+    Default `"none"` -> `NoInheritance`; `"lamarckian"` -> `LamarckianInheritance`.
+    Removes the pre-R2 hardcode that pinned predator to `NoInheritance()`.
+    """
+
+    def test_default_predator_inheritance_is_no_inheritance(self, tmp_path: Path) -> None:
+        """Default config SHALL preserve legacy `NoInheritance` predator behaviour."""
+        from quantumnematode.evolution.inheritance import NoInheritance
+
+        loop = _make_loop(tmp_path)
+        assert isinstance(loop.predator.inheritance, NoInheritance)
+        # Confirm the inheritance kind matches.
+        assert loop.predator.inheritance.kind() == "none"
+
+    def test_lamarckian_predator_inheritance_builds_lamarckian(self, tmp_path: Path) -> None:
+        """`predator_evolution.inheritance="lamarckian"` SHALL build LamarckianInheritance."""
+        from quantumnematode.evolution.inheritance import LamarckianInheritance
+
+        sim_config = _build_minimal_sim_config()
+        # Patch predator inheritance in the parsed config — schema accepts
+        # "lamarckian" for EvolutionConfig.
+        sim_config.coevolution.predator_evolution = (  # type: ignore[union-attr]
+            sim_config.coevolution.predator_evolution.model_copy(  # type: ignore[union-attr]
+                update={"inheritance": "lamarckian"},
+            )
+        )
+        loop = CoevolutionLoop(
+            sim_config,
+            output_dir=tmp_path / "coevo",
+            rng=np.random.default_rng(seed=42),
+        )
+        assert isinstance(loop.predator.inheritance, LamarckianInheritance)
+        assert loop.predator.inheritance.kind() == "weights"
+
+    def test_invalid_predator_inheritance_raises(self, tmp_path: Path) -> None:
+        """An unsupported predator inheritance value SHALL raise at construction."""
+        # Patch the parsed config to bypass Pydantic schema validation and
+        # exercise the runtime guard in `_build_predator_state`. Use
+        # object.__setattr__ to bypass Pydantic's frozen-ness if needed.
+        sim_config = _build_minimal_sim_config()
+        # Replace with a fake-string that the Literal would reject at
+        # schema-load but we sneak past by direct field overwrite.
+        pe = sim_config.coevolution.predator_evolution  # type: ignore[union-attr]
+        object.__setattr__(pe, "inheritance", "baldwin")  # unsupported on predator
+        with pytest.raises(ValueError, match="Predator-side inheritance"):
+            CoevolutionLoop(
+                sim_config,
+                output_dir=tmp_path / "coevo",
+                rng=np.random.default_rng(seed=42),
+            )

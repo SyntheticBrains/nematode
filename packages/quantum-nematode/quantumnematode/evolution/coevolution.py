@@ -269,10 +269,17 @@ class CoevolutionLoop:
     `LearnedPerformanceFitness`; predator gets
     `PredatorEpisodicKillRate`.
 
-    Inheritance is hardcoded per side: prey gets
+    Inheritance: prey is hardcoded to
     `LamarckianInheritance(elite_count=1)` (single-elite-broadcast,
-    matching the upstream Lamarckian-LSTMPPO substrate); predator
-    gets `NoInheritance()`.
+    matching the upstream Lamarckian-LSTMPPO substrate). Predator
+    inheritance is YAML-configurable via
+    `predator_evolution.inheritance` and accepts `none` (default;
+    legacy frozen-weight contract) or `lamarckian` (R2-full path;
+    requires `PredatorEpisodicKillRate.evaluate` to thread
+    `warm_start_path_override` + `weight_capture_path`, which it does,
+    and brings up the predator brain's PPO inner-loop via the
+    multi-agent runner's per-step `learn(reward, episode_done)`
+    hook).
 
     Parameters
     ----------
@@ -476,11 +483,40 @@ class CoevolutionLoop:
         Pretrain runs inside `__init__` rather than as a pre-computed
         bundle so a fresh checkout can run the campaign without an
         artefact dependency.
+
+        Predator-side inheritance: default `none` (frozen-weight kill-rate
+        evolution; CMA-ES outer loop owns the weight gradient). When
+        `predator_evolution.inheritance: lamarckian` is set in YAML,
+        `LamarckianInheritance(elite_count=1)` is constructed and the
+        co-evolution loop wires `warm_start_path_override` + `weight_capture_path`
+        through `PredatorEpisodicKillRate.evaluate`'s new kwargs. The
+        learning-enabled flag on the predator brain is derived from the
+        inheritance kind in the kwargs path — when either inheritance
+        kwarg is set, the brain is built with `enable_learning=True` and
+        the multi-agent runner's per-step `predator.brain.learn(reward,
+        episode_done)` hook fires during evaluation. R2-full path.
         """
         cfg = self.coevolution_config
         encoder = MLPPPOPredatorEncoder()
         fitness = PredatorEpisodicKillRate()
-        inheritance = NoInheritance()
+        # Predator inheritance is now YAML-configurable (was previously
+        # hardcoded to `NoInheritance()`). `lamarckian` requires the
+        # predator brain to support PPO inner-loop training (R2-full
+        # path); `none` preserves the legacy frozen-weight contract.
+        # Baldwin is not a meaningful predator-side strategy without
+        # the prey's hyperparam-evolution machinery, and is rejected
+        # here.
+        if cfg.predator_evolution.inheritance == "lamarckian":
+            inheritance = LamarckianInheritance(elite_count=1)
+        elif cfg.predator_evolution.inheritance == "none":
+            inheritance = NoInheritance()
+        else:
+            msg = (
+                "Predator-side inheritance must be one of "
+                "{'none', 'lamarckian'}; got "
+                f"{cfg.predator_evolution.inheritance!r}."
+            )
+            raise ValueError(msg)
         hof = HallOfFame(capacity=DEFAULT_HOF_CAPACITY, replacement="quality")
         evolution_cfg = cfg.predator_evolution
 

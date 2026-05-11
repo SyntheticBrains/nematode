@@ -110,6 +110,7 @@ class MLPPPOPredatorEncoder(_ClassicalPPOEncoder):
         sim_config: SimulationConfig,
         *,
         seed: int | None = None,
+        enable_learning: bool = False,
     ) -> Any:  # noqa: ANN401 — see class docstring rationale
         """Construct a fresh predator brain and apply the genome's weights.
 
@@ -124,13 +125,23 @@ class MLPPPOPredatorEncoder(_ClassicalPPOEncoder):
           (:class:`PredatorBrain`); annotating `Any` here keeps both
           static checkers happy and runtime callers correct (the
           actual return is always an `MLPPPOPredatorBrain` instance).
+        - Accepts an `enable_learning` flag (default False, frozen-weight
+          contract). When True, the constructed brain has a rollout
+          buffer + Adam optimizer and its `learn()` method is wired up,
+          enabling within-eval PPO updates fired by the multi-agent
+          runner. Required for predator-side Lamarckian inheritance to
+          produce non-degenerate weight checkpoints.
 
         The shape_map is read from `genome.birth_metadata` when present;
         otherwise it is re-derived from the freshly-constructed brain's
         components (handles genomes produced by an optimiser sampling a
         flat vector directly with empty birth_metadata, e.g. CMA-ES).
         """
-        brain = instantiate_predator_brain_from_sim_config(sim_config, seed=seed)
+        brain = instantiate_predator_brain_from_sim_config(
+            sim_config,
+            seed=seed,
+            enable_learning=enable_learning,
+        )
         # Re-extract for fresh template (brain-agnostic — works because
         # MLPPPOPredatorBrain implements WeightPersistence with the same
         # surface as the agent brains).

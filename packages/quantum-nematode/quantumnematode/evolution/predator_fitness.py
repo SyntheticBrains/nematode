@@ -27,14 +27,16 @@ prey side: it simply runs whatever multi-agent env the patched
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from quantumnematode.agent.multi_agent import MultiAgentSimulation
+from quantumnematode.brain.weights import load_weights, save_weights
 from quantumnematode.utils.config_loader import create_env_from_config
 from quantumnematode.utils.seeding import derive_run_seed, set_global_seed
 
 if TYPE_CHECKING:
     from quantumnematode.agent.agent import QuantumNematodeAgent
+    from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.env import DynamicForagingEnvironment
     from quantumnematode.env.predator_brain import PredatorBrain
     from quantumnematode.evolution.encoders import GenomeEncoder
@@ -281,7 +283,7 @@ class PredatorEpisodicKillRate:
         """
         self.secondary_signal = secondary_signal
 
-    def evaluate(
+    def evaluate(  # noqa: C901, PLR0912, PLR0913 - train+eval branches mirror LearnedPerformanceFitness shape
         self,
         genome: Genome,
         sim_config: SimulationConfig,
@@ -289,11 +291,43 @@ class PredatorEpisodicKillRate:
         *,
         episodes: int,
         seed: int,
+        warm_start_path_override: Path | None = None,
+        weight_capture_path: Path | None = None,
     ) -> float:
         """Return the per-episode mean kill count (with proximity fallback).
 
         Returns 0.0 immediately when `episodes == 0` (the literal
         kill-rate definition with no episodes yields no signal).
+
+        Optional inheritance kwargs (mirror `LearnedPerformanceFitness`'s
+        surface for symmetric per-side Lamarckian inheritance):
+        - `warm_start_path_override`: when set, after decoding the
+          genome into a fresh brain, load weights from this `.pt` path
+          INSTEAD of using the genome-encoded weights. Used by the
+          co-evolution loop's Lamarckian inheritance step to seed each
+          child from its parent's K-block-end checkpoint.
+        - `weight_capture_path`: when set, save the brain's weights
+          (which may have been updated during evaluation if PPO inner
+          loop fired via the multi-agent runner's per-step hook) to
+          this `.pt` path BEFORE returning. Used by the co-evolution
+          loop's Lamarckian inheritance step to capture each genome's
+          post-train weights for next-generation children to inherit.
+
+        When `warm_start_path_override` or `weight_capture_path` is
+        set, the encoder is invoked with `enable_learning=True` so the
+        constructed brain has the PPO machinery; the multi-agent runner
+        then drives `predator.brain.learn(reward, episode_done)` per
+        step via `MultiAgentSimulation`'s section 6b hook.
+
+        Note (asymmetry vs `LearnedPerformanceFitness`): the prey-side
+        fitness does an explicit train-then-eval split (K train + L
+        frozen eval). The predator side returns the mean kill-rate
+        across the FULL N-episode trajectory (training-included). This
+        keeps the encoder/fitness surface simple and uses the
+        within-episode-learning average as the optimisation signal;
+        the trade-off is that early-episode-no-learning episodes
+        contribute to the mean. Acceptable for screening; can be
+        upgraded to a train-then-eval split if pilot evidence motivates.
         """
         if episodes < 0:
             msg = f"episodes must be >= 0, got {episodes}"
@@ -304,6 +338,12 @@ class PredatorEpisodicKillRate:
             msg = "PredatorEpisodicKillRate.evaluate requires sim_config.reward to be set."
             raise ValueError(msg)
 
+        # Inheritance kwargs (either set) flips the encoder/factory into
+        # learning-enabled mode so PPO can fire during the multi-agent
+        # runner's per-step hook. When BOTH are None, behaviour is
+        # byte-equivalent to the original frozen-weight contract.
+        enable_learning = warm_start_path_override is not None or weight_capture_path is not None
+
         max_steps = _resolve_max_steps(sim_config)
         total_kills = 0
         total_proximity = 0
@@ -311,6 +351,27 @@ class PredatorEpisodicKillRate:
         # rebuilds use the same env config so the count is invariant
         # across episodes. Used for proximity normalisation below.
         num_predator_slots: int | None = None
+        # When learning is enabled, keep a reference to the brain so we
+        # can `save_weights` after training. The env is rebuilt per
+        # episode but we want weight continuity across episodes — so
+        # we build the brain ONCE and re-attach it to each new env's
+        # predator slot.
+        persistent_brain = None
+        if enable_learning:
+            # `enable_learning` is a predator-encoder extension not part
+            # of the canonical `GenomeEncoder.decode` Protocol surface
+            # (the agent-side encoder doesn't need it). Cast to Any so
+            # static checkers don't complain about the extra kwarg, but
+            # runtime predator encoders accept it. Future revision: if
+            # other encoders adopt the kwarg, lift it into the Protocol.
+            persistent_brain = cast("Any", encoder).decode(
+                genome,
+                sim_config,
+                seed=seed,
+                enable_learning=True,
+            )
+            if warm_start_path_override is not None:
+                load_weights(cast("Brain", persistent_brain), warm_start_path_override)
 
         for ep_idx in range(episodes):
             # Fresh env per episode — `MultiAgentSimulation.run_episode`
@@ -322,7 +383,16 @@ class PredatorEpisodicKillRate:
             # is bounded by Poisson-disk food/predator placement).
             run_seed = derive_run_seed(seed, ep_idx)
             set_global_seed(run_seed)
-            env = _build_env_with_genome_predators(sim_config, encoder, genome, run_seed)
+            if persistent_brain is None:
+                # Frozen-weight path: encoder builds + decodes fresh per episode.
+                env = _build_env_with_genome_predators(sim_config, encoder, genome, run_seed)
+            else:
+                # Learning path: build env, then OVERWRITE the env's
+                # predator brains with our persistent one so weights
+                # accumulate across episodes within this eval.
+                env = _build_env_with_genome_predators(sim_config, encoder, genome, run_seed)
+                for predator in env.predators:
+                    predator.brain = cast("PredatorBrain", persistent_brain)
             # `_build_env_with_genome_predators` raises ValueError when
             # the env has no predator slots, so `len(env.predators) >= 1`
             # is guaranteed here.
@@ -333,6 +403,15 @@ class PredatorEpisodicKillRate:
             result = sim.run_episode(sim_config.reward, max_steps)
             total_kills += sum(result.per_predator_kills.values())
             total_proximity += sum(result.per_predator_prey_proximity_steps.values())
+
+        # Persist post-training weights for Lamarckian inheritance, if
+        # requested. Only meaningful in the learning path — the
+        # frozen-weight path's brain is recreated per episode from the
+        # genome's encoded weights, so there's nothing extra to capture
+        # beyond the genome itself.
+        if weight_capture_path is not None and persistent_brain is not None:
+            weight_capture_path.parent.mkdir(parents=True, exist_ok=True)
+            save_weights(cast("Brain", persistent_brain), weight_capture_path)
 
         mean_kills = total_kills / episodes
         if mean_kills > 0.0 or not self.secondary_signal:

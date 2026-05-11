@@ -36,6 +36,8 @@ from quantumnematode.evolution.predator_fitness import (
 )
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from quantumnematode.utils.config_loader import SimulationConfig
 
 
@@ -104,8 +106,9 @@ class _FakeEncoder:
         sim_config: SimulationConfig,
         *,
         seed: int | None = None,
+        enable_learning: bool = False,
     ) -> Any:
-        del sim_config
+        del sim_config, enable_learning
         self.decode_calls.append((genome, seed if seed is not None else 0))
         return _FakeBrain(marker=len(self.decode_calls))
 
@@ -673,3 +676,223 @@ def test_fake_encoder_satisfies_protocol() -> None:
     the production code doesn't see.
     """
     assert isinstance(_FakeEncoder(), GenomeEncoder)
+
+
+class TestLamarckianInheritanceKwargs:
+    """`PredatorEpisodicKillRate.evaluate` SHALL accept inheritance kwargs.
+
+    Mirrors `LearnedPerformanceFitness.evaluate`'s surface for symmetric
+    per-side Lamarckian inheritance (R2-full path):
+
+    - `warm_start_path_override`: load weights from path BEFORE eval.
+    - `weight_capture_path`: save weights to path AFTER eval (post-train).
+
+    Either kwarg set triggers `encoder.decode(..., enable_learning=True)`
+    so the brain has PPO machinery and the multi-agent runner's per-step
+    `predator.brain.learn()` hook fires.
+
+    When both kwargs are None, behaviour is byte-equivalent to the
+    pre-R2 frozen-weight contract.
+    """
+
+    def test_default_kwargs_byte_equivalent(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sim_config: SimulationConfig,
+    ) -> None:
+        """No inheritance kwargs SHALL preserve legacy frozen-weight behaviour."""
+        captures = _patch_runtime(
+            monkeypatch,
+            num_predator_slots=1,
+            results_per_episode=[
+                _make_synthetic_result(kills_per_slot={"predator_0": 1}),
+                _make_synthetic_result(kills_per_slot={"predator_0": 2}),
+            ],
+        )
+        encoder = _FakeEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        result = PredatorEpisodicKillRate(secondary_signal=False).evaluate(
+            genome,
+            fake_sim_config,
+            cast("GenomeEncoder", encoder),
+            episodes=2,
+            seed=42,
+            # No inheritance kwargs - the original contract.
+        )
+        # Mean kills = 1.5 over 2 episodes.
+        assert result == pytest.approx(1.5)
+        assert len(captures["run_episode_calls"]) == 2
+
+    def test_warm_start_path_triggers_load_weights(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        fake_sim_config: SimulationConfig,
+    ) -> None:
+        """`warm_start_path_override` set SHALL invoke `load_weights` on the brain."""
+        _patch_runtime(
+            monkeypatch,
+            num_predator_slots=1,
+            results_per_episode=[
+                _make_synthetic_result(kills_per_slot={"predator_0": 1}),
+            ],
+        )
+        load_calls: list[tuple[Any, Path]] = []
+        save_calls: list[tuple[Any, Path]] = []
+
+        def fake_load(brain: Any, path: Path) -> None:
+            load_calls.append((brain, path))
+
+        def fake_save(brain: Any, path: Path) -> None:
+            save_calls.append((brain, path))
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.load_weights",
+            fake_load,
+        )
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.save_weights",
+            fake_save,
+        )
+
+        encoder = _FakeEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        warm_path = tmp_path / "warm.pt"
+        PredatorEpisodicKillRate(secondary_signal=False).evaluate(
+            genome,
+            fake_sim_config,
+            cast("GenomeEncoder", encoder),
+            episodes=1,
+            seed=42,
+            warm_start_path_override=warm_path,
+            weight_capture_path=None,
+        )
+        # `load_weights` SHALL fire once with the warm path.
+        assert len(load_calls) == 1
+        assert load_calls[0][1] == warm_path
+        # `save_weights` SHALL NOT fire (no capture path).
+        assert len(save_calls) == 0
+
+    def test_weight_capture_path_triggers_save_weights(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        fake_sim_config: SimulationConfig,
+    ) -> None:
+        """`weight_capture_path` set SHALL invoke `save_weights` on the brain."""
+        _patch_runtime(
+            monkeypatch,
+            num_predator_slots=1,
+            results_per_episode=[
+                _make_synthetic_result(kills_per_slot={"predator_0": 1}),
+            ],
+        )
+        save_calls: list[tuple[Any, Path]] = []
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.load_weights",
+            lambda *a, **kw: None,
+        )
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.save_weights",
+            lambda brain, path: save_calls.append((brain, path)),
+        )
+
+        encoder = _FakeEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        capture_path = tmp_path / "capture.pt"
+        PredatorEpisodicKillRate(secondary_signal=False).evaluate(
+            genome,
+            fake_sim_config,
+            cast("GenomeEncoder", encoder),
+            episodes=1,
+            seed=42,
+            warm_start_path_override=None,
+            weight_capture_path=capture_path,
+        )
+        # `save_weights` SHALL fire once with the capture path.
+        assert len(save_calls) == 1
+        assert save_calls[0][1] == capture_path
+
+    def test_inheritance_kwargs_pass_enable_learning_to_encoder(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        fake_sim_config: SimulationConfig,
+    ) -> None:
+        """Either inheritance kwarg set SHALL forward enable_learning=True to encoder.decode."""
+        _patch_runtime(
+            monkeypatch,
+            num_predator_slots=1,
+            results_per_episode=[
+                _make_synthetic_result(kills_per_slot={"predator_0": 1}),
+            ],
+        )
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.load_weights",
+            lambda *a, **kw: None,
+        )
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.save_weights",
+            lambda *a, **kw: None,
+        )
+
+        # Track decode kwargs.
+        decode_kwargs: list[dict[str, Any]] = []
+
+        class _SpyEncoder(_FakeEncoder):
+            def decode(
+                self,
+                genome: Genome,
+                sim_config: SimulationConfig,
+                *,
+                seed: int | None = None,
+                enable_learning: bool = False,
+            ) -> Any:
+                decode_kwargs.append({"seed": seed, "enable_learning": enable_learning})
+                return super().decode(
+                    genome,
+                    sim_config,
+                    seed=seed,
+                    enable_learning=enable_learning,
+                )
+
+        encoder = _SpyEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        PredatorEpisodicKillRate(secondary_signal=False).evaluate(
+            genome,
+            fake_sim_config,
+            cast("GenomeEncoder", encoder),
+            episodes=1,
+            seed=42,
+            warm_start_path_override=tmp_path / "warm.pt",
+            weight_capture_path=None,
+        )
+        # The PERSISTENT-brain decode (line 1 of `enable_learning` path)
+        # SHALL receive enable_learning=True. Subsequent per-episode
+        # decodes (via `_build_env_with_genome_predators`) are
+        # frozen-weight decodes but are overwritten with the persistent
+        # brain, so their enable_learning state is irrelevant.
+        learning_decodes = [k for k in decode_kwargs if k["enable_learning"] is True]
+        assert len(learning_decodes) >= 1, (
+            f"expected at least 1 decode with enable_learning=True; got {decode_kwargs}"
+        )
