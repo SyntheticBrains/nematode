@@ -830,13 +830,25 @@ class TestLamarckianInheritanceKwargs:
         assert len(save_calls) == 1
         assert save_calls[0][1] == capture_path
 
+    @pytest.mark.parametrize(
+        "kwarg_shape",
+        ["warm_only", "capture_only", "both"],
+    )
     def test_inheritance_kwargs_pass_enable_learning_to_encoder(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         fake_sim_config: SimulationConfig,
+        kwarg_shape: str,
     ) -> None:
-        """Either inheritance kwarg set SHALL forward enable_learning=True to encoder.decode."""
+        """Either inheritance kwarg set SHALL forward enable_learning=True to encoder.decode.
+
+        Covers the three kwarg shapes that should trigger the learning
+        path (warm-start only, capture only, both). A regression that
+        flipped the `or` in `if warm_start_path_override is not None or
+        weight_capture_path is not None` to `and` would be caught by the
+        capture-only case.
+        """
         _patch_runtime(
             monkeypatch,
             num_predator_slots=1,
@@ -880,14 +892,16 @@ class TestLamarckianInheritanceKwargs:
             parent_ids=[],
             generation=0,
         )
+        warm_path = tmp_path / "warm.pt" if kwarg_shape in {"warm_only", "both"} else None
+        capture_path = tmp_path / "capture.pt" if kwarg_shape in {"capture_only", "both"} else None
         PredatorEpisodicKillRate(secondary_signal=False).evaluate(
             genome,
             fake_sim_config,
             cast("GenomeEncoder", encoder),
             episodes=1,
             seed=42,
-            warm_start_path_override=tmp_path / "warm.pt",
-            weight_capture_path=None,
+            warm_start_path_override=warm_path,
+            weight_capture_path=capture_path,
         )
         # The PERSISTENT-brain decode (line 1 of `enable_learning` path)
         # SHALL receive enable_learning=True. Subsequent per-episode
@@ -897,6 +911,11 @@ class TestLamarckianInheritanceKwargs:
         learning_decodes = [k for k in decode_kwargs if k["enable_learning"] is True]
         assert len(learning_decodes) >= 1, (
             f"expected at least 1 decode with enable_learning=True; got {decode_kwargs}"
+        )
+        # The seed SHALL be threaded through unchanged on the persistent-
+        # brain decode (the entry point for both branches).
+        assert learning_decodes[0]["seed"] == 42, (
+            f"expected seed=42 on the learning decode; got {learning_decodes[0]}"
         )
 
     def test_multi_predator_learning_path_raises(
