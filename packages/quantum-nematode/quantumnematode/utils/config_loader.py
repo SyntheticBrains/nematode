@@ -1368,13 +1368,18 @@ class CoevolutionConfig(BaseModel):
            not tractable at the weight counts involved).
         3. Prey side has `learn_episodes_per_eval > 0` (required by
            `LearnedPerformanceFitness`).
-        4. Predator side has `learn_episodes_per_eval == 0`
-           (frozen-weight evaluation under `PredatorEpisodicKillRate`).
-        5. Prey side uses `inheritance == "lamarckian"`; predator side
-           uses `inheritance == "none"` (Lamarckian carries the prey
-           weight gradient across generations; the predator genome
-           encoder owns the weight gradient on its side, so
-           `NoInheritance` is correct there).
+        4. Predator side has `learn_episodes_per_eval` in {0, 1}.
+           0 = the design-default frozen-weight contract under
+           `inheritance: none`; 1 = the opt-in PPO inner-loop path
+           that fires the multi-agent runner's per-step
+           `predator.brain.learn(...)` hook (required when
+           `inheritance: lamarckian`).
+        5. Prey side uses `inheritance == "lamarckian"`. Predator side
+           accepts `inheritance` in {"none", "lamarckian"} — "none" is
+           the design-default (CMA-ES owns the weight gradient on the
+           predator's small policy space); "lamarckian" is an opt-in
+           that carries predator weights across K-blocks for
+           substrate-symmetry ablations.
         """
         _allowed_algorithms = {"cmaes", "ga"}
         if self.prey_evolution.algorithm not in _allowed_algorithms:

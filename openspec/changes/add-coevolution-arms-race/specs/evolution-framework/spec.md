@@ -57,7 +57,7 @@ The system SHALL provide a separate `PREDATOR_ENCODER_REGISTRY` that maps predat
 
 The system SHALL provide predator-specific fitness functions that conform to the existing `FitnessFunction` Protocol surface (`evaluate(genome, sim_config, encoder, *, episodes, seed) -> float`) from `quantumnematode.evolution.fitness`. Internally, predator fitness drives the multi-agent runner against frozen prey opponents (configured via `sim_config` patching at the call site) and aggregates per-predator metrics from the resulting `MultiAgentEpisodeResult` instances (`per_predator_kills` for the primary signal, `per_predator_prey_proximity_steps` for the secondary fallback).
 
-`PredatorEpisodicKillRate` is the production fitness used by `CoevolutionLoop` per design.md D13. `PredatorLearnedPerformanceFitness` is shipped as a stub raising `NotImplementedError` — wiring an inner-loop PPO training stage onto the predator brain is out of scope for the M5 substrate (the predator brain has no `optimizer` / `training_state` weight components, no `.learn()` hook, and CMA-ES outer-loop weight evolution is sufficient for the predator's small policy space per D13). The stub class still satisfies the `FitnessFunction` Protocol via `runtime_checkable` so type-driven dispatch keeps working; calling `evaluate` on it raises clearly. A future ablation milestone may replace the stub with a working implementation if pilot evidence motivates it.
+`PredatorEpisodicKillRate` is the production fitness used by `CoevolutionLoop` per design.md D13. It accepts optional `warm_start_path_override` and `weight_capture_path` kwargs on `evaluate(...)` mirroring `LearnedPerformanceFitness.evaluate`'s surface — when populated by the loop (under `predator_evolution.inheritance: "lamarckian"`), the predator brain is built with `enable_learning=True` so the multi-agent runner's per-step `predator.brain.learn(reward, episode_done)` hook fires during evaluation and trained weights are captured for `LamarckianInheritance` to carry across generations. When both kwargs are `None` (the design.md D13 default under `inheritance: "none"`), evaluation is frozen-weight only and matches the original D13 contract. `PredatorLearnedPerformanceFitness` is shipped as a stub raising `NotImplementedError` — a notional separate fitness class with an explicit K_train + L_eval split (like `LearnedPerformanceFitness` on the prey side) remains out of scope; the in-place inner-loop training path on `PredatorEpisodicKillRate` covers the substrate ablation more cleanly. The stub class still satisfies the `FitnessFunction` Protocol via `runtime_checkable` so type-driven dispatch keeps working; calling `evaluate` on it raises clearly.
 
 `PredatorEpisodicKillRate.__init__(*, secondary_signal: bool = True)` exposes one configuration knob: when `True` (default), the proximity fallback below applies on all-zero-kills evaluations; when `False`, all-zero-kills evaluations score exactly `0.0` (matching the literal kill-rate definition; useful for ablations that disable the proximity assist).
 
@@ -74,7 +74,17 @@ The system SHALL provide predator-specific fitness functions that conform to the
 - **GIVEN** a `PredatorLearnedPerformanceFitness` instance
 - **THEN** it SHALL satisfy the `FitnessFunction` Protocol via `runtime_checkable` (so type-driven dispatch and Protocol-conformance checks pass)
 - **AND** `evaluate(...)` SHALL raise `NotImplementedError` with a clear diagnostic pointing at `PredatorEpisodicKillRate` as the production alternative and design.md D13 as the rationale
-- **AND** the stub SHALL NOT be wired into `CoevolutionLoop.__init__` — `CoevolutionLoop` hardcodes `PredatorEpisodicKillRate` per D13 + B20
+- **AND** the stub SHALL NOT be wired into `CoevolutionLoop.__init__` — `CoevolutionLoop` hardcodes `PredatorEpisodicKillRate` per D13 + B20; the predator-side inner-loop PPO ablation rides on `PredatorEpisodicKillRate`'s opt-in kwargs (see "Predator Lamarckian Opt-In") rather than a separate fitness class
+
+#### Scenario: PredatorEpisodicKillRate Lamarckian Opt-In
+
+- **GIVEN** a `PredatorEpisodicKillRate` evaluating a predator genome with `predator_evolution.inheritance: "lamarckian"` configured at the loop level
+- **WHEN** `CoevolutionLoop` invokes `evaluate(genome, sim_config, encoder, *, episodes, seed, warm_start_path_override=<parent_pt>, weight_capture_path=<child_pt>)`
+- **THEN** the predator brain SHALL be decoded with `enable_learning=True` so the optimizer + rollout buffer are constructed
+- **AND** when `warm_start_path_override` is a non-None `Path`, the post-decode brain SHALL `load_weights` from that path BEFORE the N evaluation episodes (Lamarckian warm-start from the parent's K-block-end weights)
+- **AND** the N multi-agent episodes SHALL exercise the per-step `predator.brain.learn(reward, episode_done)` hook (PPO inner-loop training fires during evaluation)
+- **AND** when `weight_capture_path` is a non-None `Path`, the brain's trained weights SHALL be `save_weights`'d to that path AFTER the N episodes complete (so `LamarckianInheritance` can broadcast them to children in the next generation)
+- **AND** with both kwargs `None` (the design.md D13 default under `inheritance: "none"`), behaviour SHALL match the original frozen-weight contract (no warm-start, no `.learn()`-eligible brain, no weight capture)
 
 #### Scenario: PredatorEpisodicKillRate Mean Kills Calculation
 
