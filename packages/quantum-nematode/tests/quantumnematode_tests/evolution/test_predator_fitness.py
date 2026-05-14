@@ -898,3 +898,56 @@ class TestLamarckianInheritanceKwargs:
         assert len(learning_decodes) >= 1, (
             f"expected at least 1 decode with enable_learning=True; got {decode_kwargs}"
         )
+
+    def test_multi_predator_learning_path_raises(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        fake_sim_config: SimulationConfig,
+    ) -> None:
+        """Learning path SHALL fail fast when env has > 1 predator slot.
+
+        The persistent brain holds single-track pending state
+        (``_pending_state`` etc.) that's overwritten on each ``run_brain``
+        call. Sharing one brain across multiple predator slots would
+        interleave ``run_brain`` / ``learn`` calls and corrupt the rollout
+        buffer. The guard surfaces this as a ``ValueError`` at evaluation
+        time rather than letting per-slot interleaving silently corrupt
+        training data.
+        """
+        _patch_runtime(
+            monkeypatch,
+            num_predator_slots=2,  # > 1 — triggers the guard
+            results_per_episode=[
+                _make_synthetic_result(kills_per_slot={"predator_0": 1, "predator_1": 0}),
+            ],
+        )
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.load_weights",
+            lambda *a, **kw: None,
+        )
+        monkeypatch.setattr(
+            "quantumnematode.evolution.predator_fitness.save_weights",
+            lambda *a, **kw: None,
+        )
+
+        encoder = _FakeEncoder()
+        genome = Genome(
+            params=np.zeros(4, dtype=np.float32),
+            genome_id="g",
+            parent_ids=[],
+            generation=0,
+        )
+        with pytest.raises(
+            ValueError,
+            match=r"does not support multi-predator scenarios",
+        ):
+            PredatorEpisodicKillRate(secondary_signal=False).evaluate(
+                genome,
+                fake_sim_config,
+                cast("GenomeEncoder", encoder),
+                episodes=1,
+                seed=42,
+                warm_start_path_override=tmp_path / "warm.pt",
+                weight_capture_path=None,
+            )

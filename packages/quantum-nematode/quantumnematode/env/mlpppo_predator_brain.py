@@ -370,28 +370,36 @@ class MLPPPOPredatorBrain:
             # this branch only fires if a future code path bypasses
             # __init__'s construction guard.
             return
+        pending_state = self._pending_state
+        pending_action = self._pending_action
+        pending_log_prob = self._pending_log_prob
+        pending_value = self._pending_value
         if (
-            self._pending_state is None
-            or self._pending_action is None
-            or self._pending_log_prob is None
-            or self._pending_value is None
+            pending_state is not None
+            and pending_action is not None
+            and pending_log_prob is not None
+            and pending_value is not None
         ):
-            # First call before any `run_brain` — nothing to commit.
+            self._buffer.add(
+                state=pending_state,
+                action=pending_action,
+                log_prob=pending_log_prob,
+                value=pending_value,
+                reward=reward,
+                done=episode_done,
+            )
+            # Clear pending so a missed run_brain call surfaces as a
+            # silent no-op rather than committing stale state.
+            self._pending_state = None
+            self._pending_action = None
+            self._pending_log_prob = None
+            self._pending_value = None
+        elif not episode_done:
+            # Mid-episode `learn` with no pending transition (e.g. before
+            # the first `run_brain`) — nothing to do. Episode-end flushes
+            # fall through to the buffer-drain check below so any
+            # remaining buffered transitions are not stranded.
             return
-        self._buffer.add(
-            state=self._pending_state,
-            action=self._pending_action,
-            log_prob=self._pending_log_prob,
-            value=self._pending_value,
-            reward=reward,
-            done=episode_done,
-        )
-        # Clear pending so a missed run_brain call surfaces as a
-        # silent no-op rather than committing stale state.
-        self._pending_state = None
-        self._pending_action = None
-        self._pending_log_prob = None
-        self._pending_value = None
 
         # Fire PPO update when buffer full OR episode ended with enough samples.
         if self._buffer.is_full() or (episode_done and len(self._buffer) >= self._num_minibatches):

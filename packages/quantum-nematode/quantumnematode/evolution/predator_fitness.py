@@ -394,6 +394,30 @@ class PredatorEpisodicKillRate:
                 # predator brains with our persistent one so weights
                 # accumulate across episodes within this eval.
                 env = _build_env_with_genome_predators(sim_config, encoder, genome, run_seed)
+                # Guard: the persistent brain holds single-track pending
+                # state (`_pending_state`, `_pending_action`,
+                # `_pending_log_prob`, `_pending_value`) that's
+                # overwritten on each `run_brain` call. Multiple predator
+                # slots sharing one brain instance would interleave
+                # `run_brain` / `learn` calls and corrupt the rollout
+                # buffer with mismatched (state, reward) pairs. A clean
+                # multi-predator learning fix would clone the brain (and
+                # its optimizer + buffer) per slot; that's a non-trivial
+                # change. Fail fast here so the corruption can't go
+                # silent.
+                if len(env.predators) > 1:
+                    msg = (
+                        f"PredatorEpisodicKillRate learning path does not "
+                        f"support multi-predator scenarios (got "
+                        f"{len(env.predators)} predator slots). The "
+                        f"persistent brain's pending-transition state is "
+                        f"single-track and would be corrupted by "
+                        f"interleaved per-slot `run_brain` / `learn` "
+                        f"calls. Set environment.predators.count=1 for "
+                        f"learning-enabled predator runs, or extend this "
+                        f"path with per-slot brain cloning."
+                    )
+                    raise ValueError(msg)
                 for predator in env.predators:
                     predator.brain = cast("PredatorBrain", persistent_brain)
             # `_build_env_with_genome_predators` raises ValueError when

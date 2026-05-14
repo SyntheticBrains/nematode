@@ -1804,3 +1804,54 @@ class TestPredatorInheritanceYamlConfigurable:
                 predator_evolution=pred_evo,
                 generation_pairs=2,
             )
+
+    def test_coevolution_validator_ga_ignores_cma_diagonal(self) -> None:
+        """Under ``algorithm="ga"`` the inert ``cma_diagonal`` field SHALL NOT be enforced.
+
+        ``cma_diagonal`` is a sep-CMA-ES toggle; under GA it has no
+        meaning. Configs using GA shouldn't have to set a CMA-ES-flavoured
+        field they don't use.
+        """
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=False,  # inert under GA, should not raise
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=False,  # inert under GA, should not raise
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        # Construction SHALL NOT raise.
+        CoevolutionConfig(
+            prey_evolution=prey_evo,
+            predator_evolution=pred_evo,
+            generation_pairs=2,
+        )
+
+    def test_coevolution_validator_cmaes_still_requires_diagonal(self) -> None:
+        """Under ``algorithm="cmaes"`` the ``cma_diagonal`` check SHALL still fire."""
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="cmaes",
+            cma_diagonal=False,  # invalid under CMA-ES
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="cmaes",
+            cma_diagonal=True,
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        with pytest.raises(ValueError, match="cma_diagonal must be True"):
+            CoevolutionConfig(
+                prey_evolution=prey_evo,
+                predator_evolution=pred_evo,
+                generation_pairs=2,
+            )

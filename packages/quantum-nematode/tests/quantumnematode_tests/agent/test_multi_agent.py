@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from quantumnematode.agent.agent import QuantumNematodeAgent, RewardConfig, SatietyConfig
 from quantumnematode.agent.multi_agent import (
@@ -483,32 +485,38 @@ class TestLearningPredatorPerStepHook:
             seed=42,
             enable_learning=True,
             rollout_buffer_size=4096,
-            # Buffer big enough that no PPO update fires mid-episode for
-            # this short test; we only want to verify buffer growth.
         )
         env.predators[0].brain = learning_brain
+
+        # Spy on `learn()` so we can verify it fired even though the
+        # terminal `learn(episode_done=True)` call drains the buffer
+        # before the assertion runs (per the brain's documented
+        # episode-end flush contract).
+        learn_calls: list[dict[str, Any]] = []
+        original_learn = learning_brain.learn
+
+        def spy_learn(*, reward: float, episode_done: bool) -> None:
+            learn_calls.append({"reward": reward, "episode_done": episode_done})
+            original_learn(reward=reward, episode_done=episode_done)
+
+        learning_brain.learn = spy_learn  # type: ignore[method-assign]
 
         a0 = _make_agent(env, "agent_0", position=(5, 5))
         sim = MultiAgentSimulation(env=env, agents=[a0])
         max_steps = 20
         result = sim.run_episode(RewardConfig(), max_steps=max_steps)
 
-        # Predator stepped at most `max_steps`. Buffer should have grown
-        # by at least `max_steps - 1` entries (one per step) PLUS the
-        # final terminal `learn(reward=0, episode_done=True)` flush. If
-        # the buffer is exactly empty, the runner did NOT call learn().
-        # NOTE: at speed=0.5, the predator stays still on alternating
-        # steps (accumulator < 1) - but the learn() hook fires every
-        # sim step regardless of whether the predator moved.
-        #
-        # Caveat: the terminal learn(episode_done=True) call may have
-        # triggered a PPO update if the buffer happened to fill exactly
-        # at that step. With rollout_buffer_size=4096 we're well clear
-        # of that case.
-        assert learning_brain._buffer is not None
-        assert len(learning_brain._buffer) > 0, (
-            "predator.brain.learn() must have fired at least once per step "
-            "with a learning predator brain attached"
+        # The runner fires one `learn()` per sim step (mid-episode) plus
+        # one terminal `learn(reward=0.0, episode_done=True)` flush.
+        # At least one mid-episode call AND the terminal call must
+        # appear.
+        mid_episode_calls = [c for c in learn_calls if not c["episode_done"]]
+        terminal_calls = [c for c in learn_calls if c["episode_done"]]
+        assert len(mid_episode_calls) >= 1, (
+            f"expected ≥1 mid-episode learn() call; got {learn_calls}"
+        )
+        assert len(terminal_calls) == 1, (
+            f"expected exactly one terminal learn(episode_done=True) call; got {terminal_calls}"
         )
         # Episode result still has the standard kill-rate counters.
         assert isinstance(result.per_predator_kills, dict)
@@ -530,7 +538,7 @@ class TestLearningPredatorPerStepHook:
         sim.run_episode(RewardConfig(), max_steps=10)
 
     def test_reward_coefficients_propagate(self) -> None:
-        """Custom predator reward coefficients SHALL change observed buffer rewards."""
+        """Custom predator reward coefficients SHALL change rewards passed to learn()."""
         from quantumnematode.env.mlpppo_predator_brain import MLPPPOPredatorBrain
 
         env = _make_env(grid_size=20, seed=42, predators=True)
@@ -542,6 +550,19 @@ class TestLearningPredatorPerStepHook:
             rollout_buffer_size=4096,
         )
         env.predators[0].brain = learning_brain
+
+        # Spy on `learn(reward=...)` to capture rewards as they're
+        # passed in by the runner. Inspecting the buffer post-episode
+        # is unreliable because the terminal `learn(episode_done=True)`
+        # call drains the buffer when it has ≥ num_minibatches entries.
+        rewards_observed: list[float] = []
+        original_learn = learning_brain.learn
+
+        def spy_learn(*, reward: float, episode_done: bool) -> None:
+            rewards_observed.append(reward)
+            original_learn(reward=reward, episode_done=episode_done)
+
+        learning_brain.learn = spy_learn  # type: ignore[method-assign]
 
         a0 = _make_agent(env, "agent_0", position=(5, 5))
         # Use big proximity_reward, zero kill/step components, to isolate
@@ -555,11 +576,9 @@ class TestLearningPredatorPerStepHook:
         )
         sim.run_episode(RewardConfig(), max_steps=5)
 
-        # The buffer's rewards list should contain at least one ~10.0
-        # entry (the proximity hit), reflecting the high coefficient
-        # we configured.
-        assert learning_brain._buffer is not None
-        rewards = learning_brain._buffer.rewards
-        assert any(r >= 9.0 for r in rewards), (
-            f"expected at least one large proximity reward (~10.0); got rewards={rewards}"
+        # At least one of the rewards passed to learn() during the
+        # episode SHALL be ≥9.0 (the proximity coefficient was 10.0
+        # and the predator was Manhattan-1 from the agent).
+        assert any(r >= 9.0 for r in rewards_observed), (
+            f"expected at least one large proximity reward (~10.0); got rewards={rewards_observed}"
         )

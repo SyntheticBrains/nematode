@@ -38,8 +38,17 @@ if [ ! -d "$ROOT" ]; then
 fi
 
 # Discover every session dir (one that contains `prey/lineage.csv`).
-# `find` is the simplest way to handle all four layouts uniformly.
-mapfile -t SESSIONS < <(find "$ROOT" -type f -name "lineage.csv" -path "*/prey/lineage.csv" -exec dirname {} \; | xargs -I{} dirname {} | sort -u)
+# Null-delimited pipeline so the script remains robust if a path ever
+# contains a space or newline — the `tmp/evaluations/coevolution/`
+# paths we generate don't, but the cost of being defensive is small.
+SESSIONS=()
+while IFS= read -r -d '' lineage_path; do
+    SESSIONS+=("$(dirname "$(dirname "$lineage_path")")")
+done < <(find "$ROOT" -type f -name "lineage.csv" -path "*/prey/lineage.csv" -print0)
+if [ ${#SESSIONS[@]} -gt 1 ]; then
+    # Deduplicate + sort, preserving null-safety.
+    mapfile -d '' -t SESSIONS < <(printf '%s\0' "${SESSIONS[@]}" | sort -u -z)
+fi
 
 if [ ${#SESSIONS[@]} -eq 0 ]; then
     echo "No co-evolution sessions found under $ROOT (looked for prey/lineage.csv)."

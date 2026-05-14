@@ -432,6 +432,49 @@ class TestPPOInnerLoopLearning:
             "actor weights must change after a PPO update"
         )
 
+    def test_episode_end_flush_drains_buffer_without_pending(self) -> None:
+        """`learn(reward=0.0, episode_done=True)` SHALL drain a buffered partial batch.
+
+        Regression for an early-return bug: when the prior `learn()` call
+        committed the pending transition (clearing `_pending_state` etc.)
+        and then the multi-agent runner's end-of-episode flush calls
+        `learn(reward=0.0, episode_done=True)` with no intervening
+        `run_brain`, the buffer might still hold buffered transitions
+        that need a final PPO update. The early-return path SHALL only
+        fire when not at episode end, so episode-end flushes still
+        evaluate the buffer-drain condition.
+        """
+        from torch import nn
+
+        brain = MLPPPOPredatorBrain(
+            seed=42,
+            enable_learning=True,
+            rollout_buffer_size=8,
+            num_minibatches=2,
+        )
+        params = _make_params()
+        # Accumulate enough transitions to meet the
+        # `len(buffer) >= num_minibatches` flush condition but NOT the
+        # full-buffer condition (so the mid-episode path doesn't fire).
+        for _ in range(3):
+            brain.run_brain(params)
+            brain.learn(reward=1.0, episode_done=False)
+        assert brain._buffer is not None
+        assert len(brain._buffer) == 3
+        first_layer = brain.actor[0]
+        assert isinstance(first_layer, nn.Linear)
+        weights_before = first_layer.weight.detach().clone()
+        # Now the simulated end-of-episode flush — NO `run_brain` first,
+        # so pending state is None.
+        assert brain._pending_state is None
+        brain.learn(reward=0.0, episode_done=True)
+        # Buffer drained AND a PPO update fired (weights changed).
+        assert len(brain._buffer) == 0
+        weights_after = first_layer.weight.detach()
+        assert not torch.allclose(weights_before, weights_after), (
+            "episode-end flush must fire PPO update on partial buffer"
+        )
+
     def test_prepare_episode_clears_pending(self) -> None:
         """`prepare_episode` SHALL clear pending state so it doesn't leak across episodes."""
         brain = MLPPPOPredatorBrain(seed=42, enable_learning=True)

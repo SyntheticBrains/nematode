@@ -1364,8 +1364,10 @@ class CoevolutionConfig(BaseModel):
 
         1. Both sides use `algorithm` in {"cmaes", "ga"} (TPE is
            incompatible with unbounded weight encoders).
-        2. Both sides use `cma_diagonal == True` (full-cov CMA-ES is
-           not tractable at the weight counts involved).
+        2. When a side uses `algorithm == "cmaes"`, that side must set
+           `cma_diagonal == True` (full-cov CMA-ES is not tractable at
+           the weight counts involved). Under `algorithm == "ga"` the
+           field is inert and ignored.
         3. Prey side has `learn_episodes_per_eval > 0` (required by
            `LearnedPerformanceFitness`).
         4. Predator side has `learn_episodes_per_eval` in {0, 1}.
@@ -1398,14 +1400,22 @@ class CoevolutionConfig(BaseModel):
                 "rationale as prey side."
             )
             raise ValueError(msg)
-        if not self.prey_evolution.cma_diagonal:
+        # `cma_diagonal` is a CMA-ES-specific knob (sep-CMA-ES toggle).
+        # Only enforce when the corresponding side actually uses
+        # CMA-ES — under `algorithm: "ga"` the field is inert and
+        # accepting either value keeps GA configs from needing to
+        # set a CMA-ES-flavoured field they don't use.
+        if self.prey_evolution.algorithm == "cmaes" and not self.prey_evolution.cma_diagonal:
             msg = (
                 "coevolution.prey_evolution.cma_diagonal must be True. "
                 "Prey LSTMPPO weight count (~30k+) is well above the n>~100 "
                 "tractability threshold for full-cov CMA-ES."
             )
             raise ValueError(msg)
-        if not self.predator_evolution.cma_diagonal:
+        if (
+            self.predator_evolution.algorithm == "cmaes"
+            and not self.predator_evolution.cma_diagonal
+        ):
             msg = (
                 "coevolution.predator_evolution.cma_diagonal must be True. "
                 "Predator MLPPPO weight count (~10k) is above the n>~100 "

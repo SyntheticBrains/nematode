@@ -95,6 +95,28 @@ def _block_elite_series(champion_history_path: Path, side: str) -> np.ndarray:
     )
 
 
+def _format_series_stats(series: np.ndarray) -> str:
+    """Compact stats line for a per-gen series; empty-safe.
+
+    `np.nanmin` / `np.nanmax` / `np.nanstd` raise on zero-size arrays
+    (and emit RuntimeWarning on all-NaN arrays). When a session crashed
+    before producing any lineage rows, the per-gen series is empty and
+    the aggregator should still produce a readable report instead of
+    aborting.
+    """
+    n = series.size
+    if n == 0:
+        return "n=0, min=n/a, max=n/a, std=n/a"
+    if np.all(np.isnan(series)):
+        return f"n={n}, min=n/a, max=n/a, std=n/a (all NaN)"
+    return (
+        f"n={n}, "
+        f"min={np.nanmin(series):.3f}, "
+        f"max={np.nanmax(series):.3f}, "
+        f"std={np.nanstd(series):.3f}"
+    )
+
+
 def _format_metric(name: str, result: dict[str, Any]) -> str:
     """Compact one-line summary of a metric result dict."""
     if name == "cycling":
@@ -209,17 +231,9 @@ def _format_summary(  # noqa: PLR0915 - linear formatter; splitting fragments ou
             relpath = sess
         lines.append(f"## {relpath}")
         lines.append("")
+        lines.append(f"- Prey per-gen series: {_format_series_stats(res['prey_per_gen'])}")
         lines.append(
-            f"- Prey per-gen series: n={res['prey_per_gen'].size}, "
-            f"min={np.nanmin(res['prey_per_gen']):.3f}, "
-            f"max={np.nanmax(res['prey_per_gen']):.3f}, "
-            f"std={np.nanstd(res['prey_per_gen']):.3f}",
-        )
-        lines.append(
-            f"- Predator per-gen series: n={res['predator_per_gen'].size}, "
-            f"min={np.nanmin(res['predator_per_gen']):.3f}, "
-            f"max={np.nanmax(res['predator_per_gen']):.3f}, "
-            f"std={np.nanstd(res['predator_per_gen']):.3f}",
+            f"- Predator per-gen series: {_format_series_stats(res['predator_per_gen'])}",
         )
         lines.append(f"- Prey K-block-elite series: {res['prey_block'].tolist()}")
         lines.append(f"- Predator K-block-elite series: {res['predator_block'].tolist()}")
