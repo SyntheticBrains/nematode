@@ -1065,6 +1065,18 @@ class EvolutionConfig(BaseModel):
     # Persisted in the checkpoint pickle (CHECKPOINT_VERSION 3) so
     # resume preserves the saturation-tracking state.
     early_stop_on_saturation: int | None = Field(default=None, ge=1)
+    # Co-evolution-specific: when True, the side's CMA-ES study persists
+    # across K-block boundaries instead of rebuilding fresh. Default
+    # False matches the pre-existing reset-per-K-block behaviour.
+    # Intended for the predator side, where the CMA-ES search on a
+    # ~700-dim weight space rarely converges within 10 K-block gens
+    # and benefits from accumulating covariance across K-blocks.
+    # The prey side typically does NOT want this (Lamarckian inheritance
+    # already carries weights across boundaries; persisting CMA-ES on
+    # top would compound stale opposition-conditioned signal). The
+    # `CoevolutionLoop` reads this off `prey_evolution` / `predator_evolution`
+    # at K-block transitions; ignored entirely outside co-evolution.
+    persist_cma_across_kblocks: bool = False
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":
@@ -1350,42 +1362,60 @@ class CoevolutionConfig(BaseModel):
         the inheritance signal, or (c) fail mid-run with a confusing
         error.
 
-        1. Both sides use `algorithm == "cmaes"` (TPE is incompatible
-           with unbounded weight encoders).
-        2. Both sides use `cma_diagonal == True` (full-cov CMA-ES is
-           not tractable at the weight counts involved).
+        1. Both sides use `algorithm` in {"cmaes", "ga"} (TPE is
+           incompatible with unbounded weight encoders).
+        2. When a side uses `algorithm == "cmaes"`, that side must set
+           `cma_diagonal == True` (full-cov CMA-ES is not tractable at
+           the weight counts involved). Under `algorithm == "ga"` the
+           field is inert and ignored.
         3. Prey side has `learn_episodes_per_eval > 0` (required by
            `LearnedPerformanceFitness`).
-        4. Predator side has `learn_episodes_per_eval == 0`
-           (frozen-weight evaluation under `PredatorEpisodicKillRate`).
-        5. Prey side uses `inheritance == "lamarckian"`; predator side
-           uses `inheritance == "none"` (Lamarckian carries the prey
-           weight gradient across generations; the predator genome
-           encoder owns the weight gradient on its side, so
-           `NoInheritance` is correct there).
+        4. Predator side has `learn_episodes_per_eval` in {0, 1}.
+           0 = the design-default frozen-weight contract under
+           `inheritance: none`; 1 = the opt-in PPO inner-loop path
+           that fires the multi-agent runner's per-step
+           `predator.brain.learn(...)` hook (required when
+           `inheritance: lamarckian`).
+        5. Prey side uses `inheritance == "lamarckian"`. Predator side
+           accepts `inheritance` in {"none", "lamarckian"} — "none" is
+           the design-default (CMA-ES owns the weight gradient on the
+           predator's small policy space); "lamarckian" is an opt-in
+           that carries predator weights across K-blocks for
+           substrate-symmetry ablations.
         """
-        if self.prey_evolution.algorithm != "cmaes":
+        _allowed_algorithms = {"cmaes", "ga"}
+        if self.prey_evolution.algorithm not in _allowed_algorithms:
             msg = (
-                f"coevolution.prey_evolution.algorithm must be 'cmaes' "
+                f"coevolution.prey_evolution.algorithm must be one of "
+                f"{sorted(_allowed_algorithms)} "
                 f"(got {self.prey_evolution.algorithm!r}). TPE is "
                 "incompatible with unbounded weight encoders."
             )
             raise ValueError(msg)
-        if self.predator_evolution.algorithm != "cmaes":
+        if self.predator_evolution.algorithm not in _allowed_algorithms:
             msg = (
-                f"coevolution.predator_evolution.algorithm must be 'cmaes' "
-                f"(got {self.predator_evolution.algorithm!r}). Same rationale "
-                "as prey side."
+                f"coevolution.predator_evolution.algorithm must be one of "
+                f"{sorted(_allowed_algorithms)} "
+                f"(got {self.predator_evolution.algorithm!r}). Same "
+                "rationale as prey side."
             )
             raise ValueError(msg)
-        if not self.prey_evolution.cma_diagonal:
+        # `cma_diagonal` is a CMA-ES-specific knob (sep-CMA-ES toggle).
+        # Only enforce when the corresponding side actually uses
+        # CMA-ES — under `algorithm: "ga"` the field is inert and
+        # accepting either value keeps GA configs from needing to
+        # set a CMA-ES-flavoured field they don't use.
+        if self.prey_evolution.algorithm == "cmaes" and not self.prey_evolution.cma_diagonal:
             msg = (
                 "coevolution.prey_evolution.cma_diagonal must be True. "
                 "Prey LSTMPPO weight count (~30k+) is well above the n>~100 "
                 "tractability threshold for full-cov CMA-ES."
             )
             raise ValueError(msg)
-        if not self.predator_evolution.cma_diagonal:
+        if (
+            self.predator_evolution.algorithm == "cmaes"
+            and not self.predator_evolution.cma_diagonal
+        ):
             msg = (
                 "coevolution.predator_evolution.cma_diagonal must be True. "
                 "Predator MLPPPO weight count (~10k) is above the n>~100 "
@@ -1399,12 +1429,37 @@ class CoevolutionConfig(BaseModel):
                 "LearnedPerformanceFitness requires a non-zero K train phase."
             )
             raise ValueError(msg)
-        if self.predator_evolution.learn_episodes_per_eval != 0:
+        # Predator-side validation: two supported modes.
+        # 1. Frozen-weight (legacy): inheritance=none AND
+        #    learn_episodes_per_eval=0. PredatorEpisodicKillRate runs
+        #    pure frozen-weight evaluation; CMA-ES owns the weight
+        #    gradient.
+        # 2. Lamarckian: inheritance=lamarckian. Predator
+        #    PPO inner-loop fires per-step via the multi-agent runner's
+        #    predator-learning pass; weights persist across K-blocks via
+        #    LamarckianInheritance checkpoint plumbing. The
+        #    `learn_episodes_per_eval` field is NOT meaningful in this
+        #    mode (no separate train+eval phases), so we accept any
+        #    value >= 1 (EvolutionConfig's own validator requires >0
+        #    when inheritance != none).
+        if self.predator_evolution.inheritance not in {"none", "lamarckian"}:
+            msg = (
+                f"coevolution.predator_evolution.inheritance must be one of "
+                f"{{'none', 'lamarckian'}} (got "
+                f"{self.predator_evolution.inheritance!r}). 'baldwin' is not "
+                "currently supported on the predator side."
+            )
+            raise ValueError(msg)
+        if (
+            self.predator_evolution.inheritance == "none"
+            and self.predator_evolution.learn_episodes_per_eval != 0
+        ):
             msg = (
                 f"coevolution.predator_evolution.learn_episodes_per_eval must be 0 "
-                f"(got {self.predator_evolution.learn_episodes_per_eval}). "
-                "Predator side runs PredatorEpisodicKillRate frozen-weight; "
-                "no inner-loop training."
+                f"when inheritance='none' (got "
+                f"{self.predator_evolution.learn_episodes_per_eval}). "
+                "Predator side runs PredatorEpisodicKillRate frozen-weight under "
+                "inheritance='none'; no inner-loop training."
             )
             raise ValueError(msg)
         if self.prey_evolution.inheritance != "lamarckian":
@@ -1412,13 +1467,6 @@ class CoevolutionConfig(BaseModel):
                 f"coevolution.prey_evolution.inheritance must be 'lamarckian' "
                 f"(got {self.prey_evolution.inheritance!r}); prey side is the "
                 "Lamarckian-LSTMPPO substrate."
-            )
-            raise ValueError(msg)
-        if self.predator_evolution.inheritance != "none":
-            msg = (
-                f"coevolution.predator_evolution.inheritance must be 'none' "
-                f"(got {self.predator_evolution.inheritance!r}); predator side runs "
-                "frozen-weight under PredatorEpisodicKillRate."
             )
             raise ValueError(msg)
         return self
@@ -1454,8 +1502,7 @@ class SimulationConfig(BaseModel):
     # entries.  When None (the default), runs use weight-evolution
     # dispatch.  When set, the run is a hyperparameter-evolution run
     # and select_encoder() returns a HyperparameterEncoder regardless
-    # of brain.name.  See the evolution-framework capability spec for
-    # the full contract.
+    # of brain.name.
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")

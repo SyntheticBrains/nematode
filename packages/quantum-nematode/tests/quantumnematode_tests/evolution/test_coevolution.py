@@ -321,6 +321,7 @@ class TestAlternatingSchedule:
         loop = _make_loop(tmp_path, generation_pairs=2, K_per_block=1)
         # Stub fitnesses so we don't run real evaluations.
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         loop.run()
@@ -343,6 +344,7 @@ class TestAlternatingSchedule:
         """Each K-block transition SHALL produce a fresh `CMAESOptimizer` instance."""
         loop = _make_loop(tmp_path, generation_pairs=2, K_per_block=1)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         # Capture initial optimizer ids; after run, the prey + predator
@@ -384,6 +386,7 @@ class TestAlternatingSchedule:
         # still be empty (predator hasn't trained yet).
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=2)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         # Snapshot predator state mid-prey-block. We can't easily
@@ -414,6 +417,7 @@ class TestHoFPush:
         """The K-block's top-fitness genome SHALL be pushed to its HoF."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, population_size=4)
         loop.prey.fitness = _StubFitness()  # mean(params) — varies by genome
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         loop.run()
@@ -482,6 +486,7 @@ class TestGeneralityProbe:
         """Probe SHALL write rows with `(generation, side, opponent_index, fitness)`."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, held_out_size=2)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         # Force the probe to fire at every generation.
         loop.coevolution_config.generality_probe_every = 1  # type: ignore[misc]
@@ -520,6 +525,7 @@ class TestGeneralityProbe:
         """Probe SHALL NOT alter population, optimizer, hof, or generation counter."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, held_out_size=2)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
 
@@ -542,9 +548,9 @@ class TestGeneralityProbe:
     ) -> None:
         """Prey-side probe SHALL produce one row per `_predator_held_out_specs` entry.
 
-        Under Option B (design.md D5), the prey-side probe evaluates
-        the prey elite against the OPPOSING-side held-out set
-        (`_predator_held_out_specs`). The row count per fire MUST
+        Under the cross-species yardstick wiring, the prey-side probe
+        evaluates the prey elite against the OPPOSING-side held-out
+        set (`_predator_held_out_specs`). The row count per fire MUST
         equal `len(_predator_held_out_specs)` regardless of the prey
         bundle's load state.
         """
@@ -557,6 +563,7 @@ class TestGeneralityProbe:
             generality_probe_every=1,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.7)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
 
         # Seed `prey.champion_history` with a synthetic K-block elite
@@ -597,8 +604,8 @@ class TestGeneralityProbe:
     ) -> None:
         """Predator-side probe SHALL produce one row per `_prey_held_out` entry.
 
-        Under Option B (design.md D5), the predator-side probe
-        evaluates the predator elite against the OPPOSING-side
+        Under the cross-species yardstick wiring, the predator-side
+        probe evaluates the predator elite against the OPPOSING-side
         held-out set (`_prey_held_out`). Prey held-out is empty in the
         test harness (no bundle dir), so we manually inject one entry
         to exercise the predator-side body.
@@ -611,6 +618,7 @@ class TestGeneralityProbe:
             generality_probe_every=1,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
 
         # Inject a held-out prey genome so the predator-side branch
@@ -673,6 +681,7 @@ class TestGeneralityProbe:
             generality_probe_every=1,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.6)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.4)  # type: ignore[assignment]
 
         # Seed a prey champion so the prey-side branch fires.
@@ -860,6 +869,7 @@ class TestEndToEndStubbedRun:
         """A completed run SHALL write per-side `lineage.csv` files."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
         assert (tmp_path / "coevo" / "prey" / "lineage.csv").exists()
@@ -869,6 +879,7 @@ class TestEndToEndStubbedRun:
         """A completed run SHALL write all four checkpoint files."""
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
         assert (tmp_path / "coevo" / "prey" / "checkpoint.pkl").exists()
@@ -908,6 +919,7 @@ class TestWalltimeInstrumentation:
         """
         loop = _make_loop(tmp_path, generation_pairs=1, K_per_block=1, population_size=4)
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
         loop.run()
         with (tmp_path / "coevo" / "walltime.csv").open() as fh:
@@ -1039,6 +1051,7 @@ class TestProbeFiresAtKBlockBoundary:
             generality_probe_every=2,
         )
         loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
         loop.run()
@@ -1323,3 +1336,522 @@ class TestCyclingTinyAmplitudeOnLargeConstant:
             f"cycling detection (would be a false positive on numerical noise). "
             f"Got: {result}"
         )
+
+
+class TestPreySideProbeEnvOverride:
+    """Probe-semantics fix: prey-side probe SHALL use calibrated env, not training env.
+
+    The training env's predator settings (count, speed, grid_size) may
+    be tuned for harder dynamics than klinotaxis-LSTMPPO prey can survive
+    against heuristic predators. The probe overrides these to the
+    calibrated `PROBE_ENV_*` constants so the diagnostic stays informative.
+    """
+
+    def test_probe_overrides_predator_count(self, tmp_path: Path) -> None:
+        """Prey-side probe sim_config SHALL use `PROBE_ENV_PREDATOR_COUNT`, not training count."""
+        from quantumnematode.evolution.coevolution import PROBE_ENV_PREDATOR_COUNT
+
+        loop = _make_loop(tmp_path)
+        # Set the training env's predator count to something distinct
+        # from the probe constant so the override is observable.
+        non_probe_count = 4
+        assert non_probe_count != PROBE_ENV_PREDATOR_COUNT, "test setup must use a distinct count"
+        loop.sim_config.environment.predators.count = non_probe_count  # type: ignore[union-attr]
+
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.predators.count == PROBE_ENV_PREDATOR_COUNT  # type: ignore[union-attr]
+
+    def test_probe_overrides_predator_speed(self, tmp_path: Path) -> None:
+        """Prey-side probe sim_config SHALL use `PROBE_ENV_PREDATOR_SPEED`, not training speed."""
+        from quantumnematode.evolution.coevolution import PROBE_ENV_PREDATOR_SPEED
+
+        loop = _make_loop(tmp_path)
+        non_probe_speed = 1.5
+        assert non_probe_speed != PROBE_ENV_PREDATOR_SPEED
+        loop.sim_config.environment.predators.speed = non_probe_speed  # type: ignore[union-attr]
+
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.predators.speed == PROBE_ENV_PREDATOR_SPEED  # type: ignore[union-attr]
+
+    def test_probe_overrides_grid_size(self, tmp_path: Path) -> None:
+        """Prey-side probe sim_config SHALL use `PROBE_ENV_GRID_SIZE`, not training grid."""
+        from quantumnematode.evolution.coevolution import PROBE_ENV_GRID_SIZE
+
+        loop = _make_loop(tmp_path)
+        non_probe_grid = 16
+        assert non_probe_grid != PROBE_ENV_GRID_SIZE
+        loop.sim_config.environment.grid_size = non_probe_grid  # type: ignore[union-attr]
+
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.grid_size == PROBE_ENV_GRID_SIZE  # type: ignore[union-attr]
+
+    def test_probe_still_uses_held_out_spec_for_radii(self, tmp_path: Path) -> None:
+        """Probe SHALL still take detection/damage radii from held-out spec (NOT calibrated)."""
+        loop = _make_loop(tmp_path, held_out_size=2)
+        # Held-out specs come from `_build_held_out_predator_specs`; pick
+        # the first one and verify the probe sim_config sees the same value.
+        spec = loop._predator_held_out_specs[0]
+        patched = loop._build_prey_side_probe_sim_config(opponent_index=0)
+        assert patched.environment.predators.detection_radius == spec[0]  # type: ignore[union-attr]
+        assert patched.environment.predators.damage_radius == spec[1]  # type: ignore[union-attr]
+
+
+class TestPersistCmaAcrossKBlocks:
+    """`persist_cma_across_kblocks` SHALL skip the K-block-end CMA-ES rebuild."""
+
+    def test_persist_true_skips_rebuild(self, tmp_path: Path) -> None:
+        """When set, `_rebuild_optimizer` SHALL leave `side.optimizer` unchanged."""
+        loop = _make_loop(tmp_path)
+        loop.predator.evolution_config.persist_cma_across_kblocks = True  # type: ignore[misc]
+        original_optimizer = loop.predator.optimizer
+        loop._rebuild_optimizer(loop.predator)
+        assert loop.predator.optimizer is original_optimizer, (
+            "persist_cma_across_kblocks=True must skip optimizer rebuild "
+            "so the existing CMA-ES study continues uninterrupted across "
+            "K-block boundaries."
+        )
+
+    def test_prey_probe_fitness_defaults_to_episodic_success_rate(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Option 1: in-run prey probe SHALL default to `EpisodicSuccessRate` (frozen-weight).
+
+        Rationale: the training-time `LearnedPerformanceFitness` runs K
+        PPO train episodes against held-out opponents before the L eval,
+        which fine-tunes the elite's policy against a different opponent
+        class than what it co-evolved against. The result is the policy
+        consistently degrades to 0.0 by eval phase. Frozen-weight
+        `EpisodicSuccessRate` measures the elite AS-IS — the
+        scientifically correct test of "what did the prey learn?"
+        matching the post-hoc analysis path.
+        """
+        from quantumnematode.evolution.fitness import (
+            EpisodicSuccessRate,
+            LearnedPerformanceFitness,
+        )
+
+        loop = _make_loop(tmp_path)
+        # Probe-time fitness is frozen-weight `EpisodicSuccessRate`.
+        assert isinstance(loop._prey_probe_fitness, EpisodicSuccessRate)
+        # Distinct from `loop.prey.fitness` (training-time
+        # `LearnedPerformanceFitness` with K PPO train + L frozen eval).
+        assert isinstance(loop.prey.fitness, LearnedPerformanceFitness)
+        # And `_prey_probe_fitness` is NOT the same instance/class as
+        # the training fitness — they're intentionally different
+        # measurements.
+        assert type(loop._prey_probe_fitness) is not type(loop.prey.fitness)
+
+    def test_probe_gap3_loads_lamarckian_checkpoint_when_present(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Gap-3 fix: in-run probe SHALL pass elite's `.pt` as `warm_start_path_override`.
+
+        Under Lamarckian inheritance, the K-block-elite's `genome.params`
+        encode the CMA-ES sample (pre-PPO-training weights). The actual
+        co-evolved policy lives in the post-training `.pt` checkpoint.
+        The probe MUST load that checkpoint via `warm_start_path_override`
+        to measure what the prey actually learned — otherwise the in-run
+        probe consistently shows ~0.0 (untrained CMA-ES sample) while
+        post-hoc analysis correctly shows a non-zero value for the same
+        elite.
+        """
+        loop = _make_loop(tmp_path)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
+        # Seed a synthetic K-block elite + create its `.pt` so the
+        # probe can find it on disk.
+        elite_gen = 4
+        elite_gid = "synthetic-prey-elite"
+        loop.prey.champion_history.append(
+            {
+                "genome_id": elite_gid,
+                "generation": elite_gen,
+                "k_block_index": 0,
+                "fitness": 0.95,
+                "params": [0.0] * loop.prey.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        # Materialise the canonical Lamarckian checkpoint path so the
+        # probe's `candidate.exists()` check passes. Content doesn't
+        # matter — we monkeypatch `_evaluate_in_worker` to capture
+        # the args tuple without actually loading the file.
+        checkpoint_path = loop.prey.inheritance.checkpoint_path(
+            loop.prey.output_dir,
+            elite_gen,
+            elite_gid,
+        )
+        assert checkpoint_path is not None
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_path.touch()
+
+        captured: list[tuple] = []
+
+        def fake_evaluate_in_worker(args: tuple) -> float:
+            captured.append(args)
+            return 0.5
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.coevolution._evaluate_in_worker",
+            fake_evaluate_in_worker,
+        )
+        # Fire the probe; it should pass the .pt path as the 10th
+        # element of the args tuple (warm_start_path_override).
+        loop._fire_generality_probe()
+        # Expect at least one prey-side probe call (predator has no
+        # champions so its branch no-ops).
+        assert len(captured) > 0
+        # Each captured args tuple's 10th element (index 9) is the
+        # `warm_start_path_override` field. For the gap-3 fix, this
+        # SHALL equal the canonical Lamarckian checkpoint path.
+        for args in captured:
+            warm_start = args[9]
+            assert warm_start == checkpoint_path, (
+                f"probe must pass elite's .pt as warm_start_path_override; "
+                f"got {warm_start} (expected {checkpoint_path})"
+            )
+
+    def test_probe_gap3_no_warm_start_when_checkpoint_missing(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When elite's `.pt` is missing, probe SHALL pass None (fallback to genome.params).
+
+        Resilient to GC of post-K-block inheritance dirs: if the elite's
+        checkpoint was removed (e.g., not the K-block survivor under
+        `_gc_inheritance_dir`), the probe gracefully falls back to the
+        raw genome.params via the encoder, NOT crashing.
+        """
+        loop = _make_loop(tmp_path)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
+        loop.prey.champion_history.append(
+            {
+                "genome_id": "missing-checkpoint-elite",
+                "generation": 4,
+                "k_block_index": 0,
+                "fitness": 0.95,
+                "params": [0.0] * loop.prey.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        # Deliberately do NOT create the .pt file. The probe's
+        # `candidate.exists()` check should evaluate False and
+        # `warm_start_path` should default to None.
+        captured: list[tuple] = []
+
+        def fake_evaluate_in_worker(args: tuple) -> float:
+            captured.append(args)
+            return 0.0
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.coevolution._evaluate_in_worker",
+            fake_evaluate_in_worker,
+        )
+        loop._fire_generality_probe()
+        assert len(captured) > 0
+        for args in captured:
+            warm_start = args[9]
+            assert warm_start is None, (
+                f"probe must pass None when checkpoint is missing; got {warm_start}"
+            )
+
+    def test_probe_gap3_prefers_champion_archive_over_inheritance_dir(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Gap-3 Option A: probe SHALL prefer champion_archive over inheritance dir.
+
+        The champion_archive holds the K-block-elite's `.pt` separately
+        from `inheritance/`, so it's not subject to GC. When BOTH paths
+        exist, probe uses the archive (it's the canonical
+        post-PPO-trained-elite source).
+        """
+        loop = _make_loop(tmp_path)
+        loop.prey.fitness = _StubFitness(fixed_value=0.5)  # type: ignore[assignment]
+        loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
+
+        elite_gen = 4
+        elite_gid = "synthetic-prey-elite"
+        elite_k_block = 0
+        loop.prey.champion_history.append(
+            {
+                "genome_id": elite_gid,
+                "generation": elite_gen,
+                "k_block_index": elite_k_block,
+                "fitness": 0.95,
+                "params": [0.0] * loop.prey.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        # Create BOTH the inheritance path and the archive path.
+        inh_path = loop.prey.inheritance.checkpoint_path(
+            loop.prey.output_dir,
+            elite_gen,
+            elite_gid,
+        )
+        assert inh_path is not None
+        inh_path.parent.mkdir(parents=True, exist_ok=True)
+        inh_path.write_bytes(b"inheritance")
+        archive_path = loop._kblock_archive_path(loop.prey, elite_k_block)
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        archive_path.write_bytes(b"archive")
+
+        captured: list[tuple] = []
+
+        def fake_evaluate(args: tuple) -> float:
+            captured.append(args)
+            return 0.5
+
+        monkeypatch.setattr(
+            "quantumnematode.evolution.coevolution._evaluate_in_worker",
+            fake_evaluate,
+        )
+        loop._fire_generality_probe()
+        assert len(captured) > 0
+        for args in captured:
+            assert args[9] == archive_path, (
+                f"probe must prefer champion_archive when both exist; "
+                f"got {args[9]} (expected {archive_path})"
+            )
+
+    def test_archive_kblock_elite_checkpoint_copies_pt(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`_archive_kblock_elite_checkpoint` SHALL copy from inheritance to archive."""
+        from quantumnematode.evolution.genome import Genome
+
+        loop = _make_loop(tmp_path)
+        # Manually create an inheritance .pt for a synthetic elite at gen 3.
+        elite_gen = 3
+        elite_gid = "test-elite-001"
+        loop._k_block_index = 1  # simulate being mid-K-block-1
+        inh_path = loop.prey.inheritance.checkpoint_path(
+            loop.prey.output_dir,
+            elite_gen,
+            elite_gid,
+        )
+        assert inh_path is not None
+        inh_path.parent.mkdir(parents=True, exist_ok=True)
+        inh_path.write_bytes(b"trained-weights-payload")
+
+        # Build a synthetic Genome to pass to the archive helper.
+        elite_genome = Genome(
+            params=np.zeros(
+                loop.prey.encoder.genome_dim(loop.sim_config),
+                dtype=np.float32,
+            ),
+            genome_id=elite_gid,
+            parent_ids=[],
+            generation=elite_gen,
+        )
+        loop._archive_kblock_elite_checkpoint(
+            loop.prey,
+            elite_genome=elite_genome,
+            elite_gen=elite_gen,
+        )
+        archive_path = loop._kblock_archive_path(loop.prey, 1)
+        assert archive_path.exists()
+        # Content should match the source.
+        assert archive_path.read_bytes() == b"trained-weights-payload"
+
+    def test_archive_kblock_elite_noop_for_no_inheritance(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Archive SHALL be a no-op when side inheritance kind != 'weights'."""
+        from quantumnematode.evolution.genome import Genome
+
+        loop = _make_loop(tmp_path)
+        # Predator side defaults to NoInheritance under the minimal config.
+        assert loop.predator.inheritance.kind() == "none"
+        elite_genome = Genome(
+            params=np.zeros(
+                loop.predator.encoder.genome_dim(loop.sim_config),
+                dtype=np.float32,
+            ),
+            genome_id="pred-elite-001",
+            parent_ids=[],
+            generation=2,
+        )
+        loop._archive_kblock_elite_checkpoint(
+            loop.predator,
+            elite_genome=elite_genome,
+            elite_gen=2,
+        )
+        # No archive created.
+        archive_path = loop._kblock_archive_path(loop.predator, 0)
+        assert not archive_path.exists()
+
+    def test_persist_false_still_rebuilds(self, tmp_path: Path) -> None:
+        """Default (False) behaviour SHALL rebuild — preserves legacy semantics."""
+        loop = _make_loop(tmp_path)
+        # Default is False; assert no regression.
+        assert loop.predator.evolution_config.persist_cma_across_kblocks is False
+        original_optimizer = loop.predator.optimizer
+        # Need a champion to drive the rebuild's x0 (else _rebuild_optimizer
+        # falls back to optimizer.mean which is also fine — both paths
+        # produce a NEW optimizer).
+        loop.predator.champion_history.append(
+            {
+                "k_block_index": 0,
+                "generation": 0,
+                "genome_id": "predator-elite-0",
+                "fitness": 0.5,
+                "params": [0.0] * loop.predator.encoder.genome_dim(loop.sim_config),
+            },
+        )
+        loop._rebuild_optimizer(loop.predator)
+        assert loop.predator.optimizer is not original_optimizer, (
+            "default behaviour (persist=False) must rebuild the optimizer."
+        )
+
+
+class TestPredatorInheritanceYamlConfigurable:
+    """`predator_evolution.inheritance` SHALL drive predator side state.
+
+    Default `"none"` -> `NoInheritance`; `"lamarckian"` -> `LamarckianInheritance`.
+    Removes the prior hardcode that pinned predator to `NoInheritance()`.
+    """
+
+    def test_default_predator_inheritance_is_no_inheritance(self, tmp_path: Path) -> None:
+        """Default config SHALL preserve legacy `NoInheritance` predator behaviour."""
+        from quantumnematode.evolution.inheritance import NoInheritance
+
+        loop = _make_loop(tmp_path)
+        assert isinstance(loop.predator.inheritance, NoInheritance)
+        # Confirm the inheritance kind matches.
+        assert loop.predator.inheritance.kind() == "none"
+
+    def test_lamarckian_predator_inheritance_builds_lamarckian(self, tmp_path: Path) -> None:
+        """`predator_evolution.inheritance="lamarckian"` SHALL build LamarckianInheritance."""
+        from quantumnematode.evolution.inheritance import LamarckianInheritance
+
+        sim_config = _build_minimal_sim_config()
+        # Patch predator inheritance in the parsed config — schema accepts
+        # "lamarckian" for EvolutionConfig.
+        sim_config.coevolution.predator_evolution = (  # type: ignore[union-attr]
+            sim_config.coevolution.predator_evolution.model_copy(  # type: ignore[union-attr]
+                update={"inheritance": "lamarckian"},
+            )
+        )
+        loop = CoevolutionLoop(
+            sim_config,
+            output_dir=tmp_path / "coevo",
+            rng=np.random.default_rng(seed=42),
+        )
+        assert isinstance(loop.predator.inheritance, LamarckianInheritance)
+        assert loop.predator.inheritance.kind() == "weights"
+
+    def test_invalid_predator_inheritance_raises(self, tmp_path: Path) -> None:
+        """An unsupported predator inheritance value SHALL raise at construction."""
+        # Patch the parsed config to bypass Pydantic schema validation and
+        # exercise the runtime guard in `_build_predator_state`. Use
+        # object.__setattr__ to bypass Pydantic's frozen-ness if needed.
+        sim_config = _build_minimal_sim_config()
+        # Replace with a fake-string that the Literal would reject at
+        # schema-load but we sneak past by direct field overwrite.
+        pe = sim_config.coevolution.predator_evolution  # type: ignore[union-attr]
+        object.__setattr__(pe, "inheritance", "baldwin")  # unsupported on predator
+        with pytest.raises(ValueError, match="Predator-side inheritance"):
+            CoevolutionLoop(
+                sim_config,
+                output_dir=tmp_path / "coevo",
+                rng=np.random.default_rng(seed=42),
+            )
+
+    def test_coevolution_validator_accepts_ga(self) -> None:
+        """CoevolutionConfig SHALL accept ``algorithm="ga"`` on both sides."""
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=True,
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=True,
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        # Construction SHALL NOT raise.
+        CoevolutionConfig(prey_evolution=prey_evo, predator_evolution=pred_evo, generation_pairs=2)
+
+    def test_coevolution_validator_rejects_tpe(self) -> None:
+        """CoevolutionConfig SHALL still reject TPE — unbounded weight encoder incompatible."""
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="tpe",
+            cma_diagonal=True,
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="cmaes",
+            cma_diagonal=True,
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        with pytest.raises(ValueError, match="algorithm must be one of"):
+            CoevolutionConfig(
+                prey_evolution=prey_evo,
+                predator_evolution=pred_evo,
+                generation_pairs=2,
+            )
+
+    def test_coevolution_validator_ga_ignores_cma_diagonal(self) -> None:
+        """Under ``algorithm="ga"`` the inert ``cma_diagonal`` field SHALL NOT be enforced.
+
+        ``cma_diagonal`` is a sep-CMA-ES toggle; under GA it has no
+        meaning. Configs using GA shouldn't have to set a CMA-ES-flavoured
+        field they don't use.
+        """
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=False,  # inert under GA, should not raise
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=False,  # inert under GA, should not raise
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        # Construction SHALL NOT raise.
+        CoevolutionConfig(
+            prey_evolution=prey_evo,
+            predator_evolution=pred_evo,
+            generation_pairs=2,
+        )
+
+    def test_coevolution_validator_cmaes_still_requires_diagonal(self) -> None:
+        """Under ``algorithm="cmaes"`` the ``cma_diagonal`` check SHALL still fire."""
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="cmaes",
+            cma_diagonal=False,  # invalid under CMA-ES
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="cmaes",
+            cma_diagonal=True,
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        with pytest.raises(ValueError, match="cma_diagonal must be True"):
+            CoevolutionConfig(
+                prey_evolution=prey_evo,
+                predator_evolution=pred_evo,
+                generation_pairs=2,
+            )

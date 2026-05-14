@@ -36,6 +36,7 @@ def instantiate_predator_brain_from_sim_config(
     sim_config: SimulationConfig,
     *,
     seed: int | None = None,
+    enable_learning: bool = False,
 ) -> MLPPPOPredatorBrain:
     """Build a fresh `MLPPPOPredatorBrain` for evolution from a sim config.
 
@@ -133,4 +134,10 @@ def instantiate_predator_brain_from_sim_config(
         # brain instance; encoders never need the sampled path because
         # weights, not actions, are what flow through the genome.
         sample=False,
+        # Optional PPO inner-loop training. Default False preserves the
+        # frozen-weight encoder/eval contract. Predator-side Lamarckian
+        # inheritance flips this True so within-eval PPO updates can
+        # fire via the multi-agent runner's per-step
+        # `predator.brain.learn(reward, episode_done)` hook.
+        enable_learning=enable_learning,
     )

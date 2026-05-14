@@ -152,6 +152,28 @@ _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
 )
 
 
+# Prey-side probe env override. The probe measures whether the prey
+# elite generalises to opponents it never saw in training. For that
+# diagnostic to be informative the probe env must be DIFFICULTY-CALIBRATED
+# to the substrate's known-survivable range — otherwise hard-env training
+# automatically nukes the diagnostic (every prey scores 0.0 regardless
+# of training quality; substrate ceiling, not overfitting).
+#
+# These values were calibrated by running the M3-trained held-out prey
+# bundle through frozen-weight `EpisodicSuccessRate` across a grid of
+# heuristic predator radii:
+#   - count=2, speed=0.5, grid=20 -> mean fitness 0.531 across 24 cells
+#     (8 radius specs x 3 unique genomes x 10 episodes). Range 0.07-0.93.
+#   - count=4, speed=1.0, grid=16 (high-pressure variant) -> mean
+#     fitness 0.000 across all 24 cells (substrate ceiling - no
+#     klinotaxis-LSTMPPO prey can survive).
+# The pilot env is therefore the lower-bound discriminative env. Probe
+# uses it regardless of training env.
+PROBE_ENV_PREDATOR_COUNT = 2
+PROBE_ENV_PREDATOR_SPEED = 0.5
+PROBE_ENV_GRID_SIZE = 20
+
+
 # ---------------------------------------------------------------------------
 # Side state
 # ---------------------------------------------------------------------------
@@ -246,10 +268,17 @@ class CoevolutionLoop:
     `LearnedPerformanceFitness`; predator gets
     `PredatorEpisodicKillRate`.
 
-    Inheritance is hardcoded per side: prey gets
+    Inheritance: prey is hardcoded to
     `LamarckianInheritance(elite_count=1)` (single-elite-broadcast,
-    matching the upstream Lamarckian-LSTMPPO substrate); predator
-    gets `NoInheritance()`.
+    matching the upstream Lamarckian-LSTMPPO substrate). Predator
+    inheritance is YAML-configurable via
+    `predator_evolution.inheritance` and accepts `none` (default;
+    legacy frozen-weight contract) or `lamarckian` (predator PPO
+    inner-loop path; requires `PredatorEpisodicKillRate.evaluate` to thread
+    `warm_start_path_override` + `weight_capture_path`, which it does,
+    and brings up the predator brain's PPO inner-loop via the
+    multi-agent runner's per-step `learn(reward, episode_done)`
+    hook).
 
     Parameters
     ----------
@@ -318,6 +347,24 @@ class CoevolutionLoop:
         self.prey = self._build_prey_state()
         self.predator = self._build_predator_state()
 
+        # Probe-time fitness function for prey side (Option 1
+        # probe-semantics fix). The training-time `LearnedPerformanceFitness`
+        # runs K PPO train episodes against the held-out opponent
+        # before L frozen eval, which pushes the elite's policy in
+        # unhelpful directions when the opponent class differs from
+        # what the prey trained against (the case for heuristic-radius
+        # held-out opponents vs MLPPPO training opponents). The probe
+        # uses `EpisodicSuccessRate` (frozen-weight L eval only) instead,
+        # giving the scientifically correct "what did the prey learn?"
+        # measurement. Settable as an attribute so tests can stub it
+        # without setting up a full RewardConfig + env-realistic env.
+        # Local import to avoid circular: `fitness` imports from
+        # `inheritance` which imports from `_predator_brain_factory`
+        # which imports from this module's environment.
+        from quantumnematode.evolution.fitness import EpisodicSuccessRate
+
+        self._prey_probe_fitness: Any = EpisodicSuccessRate()
+
         # Alternating-schedule controller state. `_k_block_index`
         # counts completed K-blocks (0 = before first K-block ran);
         # `_current_side` is the side currently training (flips at
@@ -368,7 +415,7 @@ class CoevolutionLoop:
         # per-generation aggregate rows. Captured master-side via
         # `time.perf_counter()` brackets so the worker ABI
         # (`_evaluate_in_worker` returning float) stays stable. The
-        # aggregator (PR 5) reads this for the design.md D4
+        # campaign aggregator reads this for the wall-time
         # reconciliation row. Schema:
         #   - scope: "evaluation" or "generation"
         #   - side: "prey" or "predator"
@@ -453,11 +500,40 @@ class CoevolutionLoop:
         Pretrain runs inside `__init__` rather than as a pre-computed
         bundle so a fresh checkout can run the campaign without an
         artefact dependency.
+
+        Predator-side inheritance: default `none` (frozen-weight kill-rate
+        evolution; CMA-ES outer loop owns the weight gradient). When
+        `predator_evolution.inheritance: lamarckian` is set in YAML,
+        `LamarckianInheritance(elite_count=1)` is constructed and the
+        co-evolution loop wires `warm_start_path_override` + `weight_capture_path`
+        through `PredatorEpisodicKillRate.evaluate`'s new kwargs. The
+        learning-enabled flag on the predator brain is derived from the
+        inheritance kind in the kwargs path — when either inheritance
+        kwarg is set, the brain is built with `enable_learning=True` and
+        the multi-agent runner's per-step `predator.brain.learn(reward,
+        episode_done)` hook fires during evaluation.
         """
         cfg = self.coevolution_config
         encoder = MLPPPOPredatorEncoder()
         fitness = PredatorEpisodicKillRate()
-        inheritance = NoInheritance()
+        # Predator inheritance is now YAML-configurable (was previously
+        # hardcoded to `NoInheritance()`). `lamarckian` requires the
+        # predator brain to support PPO inner-loop training; `none`
+        # preserves the legacy frozen-weight contract.
+        # Baldwin is not a meaningful predator-side strategy without
+        # the prey's hyperparam-evolution machinery, and is rejected
+        # here.
+        if cfg.predator_evolution.inheritance == "lamarckian":
+            inheritance = LamarckianInheritance(elite_count=1)
+        elif cfg.predator_evolution.inheritance == "none":
+            inheritance = NoInheritance()
+        else:
+            msg = (
+                "Predator-side inheritance must be one of "
+                "{'none', 'lamarckian'}; got "
+                f"{cfg.predator_evolution.inheritance!r}."
+            )
+            raise ValueError(msg)
         hof = HallOfFame(capacity=DEFAULT_HOF_CAPACITY, replacement="quality")
         evolution_cfg = cfg.predator_evolution
 
@@ -875,7 +951,23 @@ class CoevolutionLoop:
         starting point; `sigma0` resets to the configured value (the
         re-construction is the equivalent of "reset" since CMA's `cma`
         library exposes no public reset method).
+
+        Skip-condition: when `side.evolution_config.persist_cma_across_kblocks`
+        is True, the rebuild is a no-op — the existing CMA-ES study
+        continues with its accumulated covariance + mean across K-block
+        boundaries. This is intended for the predator side, where the
+        wide-search-distribution restart compounds the slow-convergence
+        problem on the ~700-dim weight space.
         """
+        if side.evolution_config.persist_cma_across_kblocks:
+            logger.info(
+                "K-block %d: %s optimizer NOT rebuilt "
+                "(persist_cma_across_kblocks=True); continuing existing study "
+                "with accumulated covariance.",
+                self._k_block_index,
+                side.name,
+            )
+            return
         # Use the most-recent champion as x0 if we have one; otherwise
         # the side hasn't run any K-block yet so fall back to the
         # current optimizer's mean (CMA-ES exposes the running mean
@@ -1663,7 +1755,7 @@ class CoevolutionLoop:
                     # (batch_wall / population_size) — a per-worker
                     # average rather than a true per-eval measurement,
                     # which is the correct denominator for the
-                    # design.md D4 reconciliation question ("seconds per
+                    # wall-time reconciliation question ("seconds per
                     # episode at parallel_workers=N").
                     eval_walls: list[float] = []
                     gen_start = time.perf_counter()
@@ -1716,6 +1808,24 @@ class CoevolutionLoop:
                     if fit > block_elite_fitness:
                         block_elite_fitness = fit
                         block_elite_genome = genome
+                        # Probe-semantics gap-3 (Option A): archive the
+                        # K-block elite's POST-PPO-trained weights to a
+                        # dedicated dir that is NOT subject to inheritance
+                        # GC. The source `.pt` was just saved during this
+                        # generation's eval at the canonical inheritance
+                        # path; the post-eval GC at the end of this same
+                        # generation may remove it (if the genome isn't
+                        # selected as a parent for the next gen). Copy
+                        # NOW so the probe can find it at K-block end,
+                        # whether or not GC has run. Archive is keyed
+                        # on `k_block_index` only — one entry per K-block
+                        # per side, overwritten on each fitness
+                        # improvement within the K-block.
+                        self._archive_kblock_elite_checkpoint(
+                            training_side,
+                            elite_genome=genome,
+                            elite_gen=global_gen,
+                        )
 
                 # Tell optimiser (CMA-ES minimises; our fitness maximises).
                 training_side.optimizer.tell(list(solutions), [-f for f in fitnesses])
@@ -2071,6 +2181,55 @@ class CoevolutionLoop:
         with suppress(OSError):
             gen_dir.rmdir()
 
+    def _kblock_archive_path(self, side: _SideState, k_block_index: int) -> Path:
+        """Canonical path for a side's K-block-elite weight archive.
+
+        Probe-semantics gap-3 (Option A): the K-block elite's POST-PPO-trained
+        weights are archived here, separate from `<side>/inheritance/`
+        which is subject to GC. One entry per K-block per side.
+        """
+        return side.output_dir / "champion_archive" / f"k_block-{k_block_index:03d}.pt"
+
+    def _archive_kblock_elite_checkpoint(
+        self,
+        side: _SideState,
+        *,
+        elite_genome: Genome,
+        elite_gen: int,
+    ) -> None:
+        """Copy the elite's `.pt` from inheritance dir to the champion archive.
+
+        Called each time the K-block-elite is updated within a K-block. The
+        source `.pt` was just saved during the elite's eval at the canonical
+        inheritance path
+        `<side>/inheritance/gen-<elite_gen>/genome-<elite_id>.pt`. The
+        destination is `<side>/champion_archive/k_block-<k>.pt`, keyed only
+        on the loop's current `_k_block_index` (overwriting prior entries
+        for the same K-block).
+
+        No-op when:
+        - The side's inheritance kind is not "weights" (no `.pt` to archive).
+        - The source `.pt` doesn't exist (defensive — shouldn't happen since
+          this fires right after the eval that wrote it, but be safe).
+        """
+        if side.inheritance.kind() != "weights":
+            return
+        source = side.inheritance.checkpoint_path(
+            side.output_dir,
+            int(elite_gen),
+            str(elite_genome.genome_id),
+        )
+        if source is None or not source.exists():
+            return
+        dest = self._kblock_archive_path(side, self._k_block_index)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        # `shutil.copyfile` rather than rename: source is still active
+        # in the inheritance dir and may be consumed by subsequent
+        # Lamarckian warm-start lookups within the same K-block.
+        import shutil
+
+        shutil.copyfile(source, dest)
+
     def _build_patched_sim_config(
         self,
         *,
@@ -2305,7 +2464,7 @@ class CoevolutionLoop:
         (the K-block elite). When a side has no champions yet (first
         K-block hasn't completed), the probe is a no-op for that side.
 
-        Held-out wiring (Option B per design.md D5): each side's elite
+        Held-out wiring (cross-species yardstick): each side's elite
         is evaluated against the OPPOSING-side held-out set — prey
         elite vs. frozen heuristic predators (`_predator_held_out_specs`),
         predator elite vs. frozen prey genomes (`_prey_held_out`).
@@ -2338,11 +2497,13 @@ class CoevolutionLoop:
                 # Each side faces the OPPOSING-side held-out set: the
                 # prey-side probe iterates over `_predator_held_out_specs`
                 # (heuristic predator radius variants); the predator-side
-                # probe iterates over `_prey_held_out` (frozen M3
-                # lamarckian prey genomes). The variable names are
+                # probe iterates over `_prey_held_out` (frozen
+                # lamarckian-LSTMPPO prey genomes from the upstream
+                # single-population campaign). The variable names are
                 # content-keyed (what's in the collection), not
-                # consumer-keyed (which side reads it) — see design.md
-                # D5 for the rationale.
+                # consumer-keyed (which side reads it) — they form
+                # cross-species yardsticks for the opposing side's
+                # elite.
                 if side.name == "prey":
                     held_out_count = len(self._predator_held_out_specs)
                 else:
@@ -2385,6 +2546,28 @@ class CoevolutionLoop:
         `_evaluate_in_worker` with `warm_start_path_override=None,
         weight_capture_path=None` so the probe does not mutate the
         elite's germline weights. The tmp dir is cleaned up on exit.
+
+        Fitness function selection (Option 1: probe-semantics fix):
+        - **Prey side**: forces `self._prey_probe_fitness` (default
+          `EpisodicSuccessRate`, frozen-weight, L eval episodes only)
+          INSTEAD of the side's training-time
+          `LearnedPerformanceFitness`. Rationale: training-time
+          `LearnedPerformanceFitness` runs K PPO train episodes against
+          the held-out opponent before the L eval — those K episodes
+          fine-tune the elite's policy against a totally different
+          opponent class (heuristic radius variants vs MLPPPO), pushing
+          weights in a direction the prey didn't see during co-evolution
+          training. With K=8 episodes against an unfamiliar opponent
+          class, the policy consistently degrades to 0.0 by eval phase.
+          Frozen-weight eval measures the elite AS-IS — the
+          scientifically correct test of "what did the prey learn?"
+          matching the post-hoc analysis path. The attribute is settable
+          for tests that stub the fitness function to skip real
+          episode execution.
+        - **Predator side**: keeps `side.fitness`
+          (`PredatorEpisodicKillRate`) — already frozen-weight by
+          default, no inner-loop train phase, so the probe's measurement
+          semantic was already correct on this side.
         """
         with tempfile.TemporaryDirectory(prefix="probe_") as tmp:
             tmp_path = Path(tmp)
@@ -2392,24 +2575,84 @@ class CoevolutionLoop:
                 patched_sim_config = self._build_prey_side_probe_sim_config(
                     opponent_index=opponent_index,
                 )
+                # Frozen-weight measurement — see docstring.
+                probe_fitness = self._prey_probe_fitness
             else:
                 patched_sim_config = self._build_predator_side_probe_sim_config(
                     opponent_index=opponent_index,
                     eval_seed=eval_seed,
                     tmp_path=tmp_path,
                 )
+                # Predator side already frozen-weight; keep side.fitness.
+                probe_fitness = side.fitness
+
+            # Probe-semantics gap-3 fix: when the side uses Lamarckian
+            # inheritance, the K-block-elite's genome.params encode the
+            # CMA-ES sample (pre-PPO-training weights). The actual
+            # co-evolved policy lives in the post-training `.pt`
+            # checkpoint. Load it via `warm_start_path_override` so the
+            # probe measures what the prey ACTUALLY learned, not the
+            # untrained sample. The post-hoc analysis path uses the
+            # same checkpoint via the script's `load_weights` call;
+            # this fix aligns the in-run probe with that semantic.
+            #
+            # Lookup order:
+            # 1. `champion_archive/k_block-<k>.pt` — the elite's `.pt`
+            #    archived at fitness-improvement time during the K-block
+            #    (Option A; NOT subject to inheritance GC).
+            # 2. `inheritance/gen-<g>/genome-<id>.pt` — the canonical
+            #    Lamarckian path, may have been GC'd by now if the
+            #    elite wasn't selected as a parent for subsequent gens.
+            # 3. None — fall back to raw genome.params via encoder.decode.
+            #
+            # The frozen-weight fitness functions (`EpisodicSuccessRate`
+            # and `PredatorEpisodicKillRate`) both accept
+            # `warm_start_path_override` and load the checkpoint into
+            # the decoded brain before evaluation.
+            warm_start_path: Path | None = None
+            if side.inheritance.kind() == "weights":
+                # Path 1: champion archive (preferred; gap-3 Option A).
+                # Find the K-block index that produced this elite. We
+                # iterate champion_history to locate the entry matching
+                # the elite's (genome_id, generation) — typically the
+                # most-recently-pushed entry.
+                archive_k_block_index: int | None = None
+                for record in reversed(side.champion_history):
+                    if record.get("genome_id") == elite.genome_id and int(
+                        record.get("generation", -1),
+                    ) == int(elite.generation):
+                        archive_k_block_index = int(record.get("k_block_index", -1))
+                        break
+                if archive_k_block_index is not None and archive_k_block_index >= 0:
+                    archive_candidate = self._kblock_archive_path(
+                        side,
+                        archive_k_block_index,
+                    )
+                    if archive_candidate.exists():
+                        warm_start_path = archive_candidate
+
+                # Path 2 fallback: canonical inheritance path.
+                if warm_start_path is None:
+                    candidate = side.inheritance.checkpoint_path(
+                        side.output_dir,
+                        int(elite.generation),
+                        str(elite.genome_id),
+                    )
+                    if candidate is not None and candidate.exists():
+                        warm_start_path = candidate
+
             episodes = self._probe_episode_count(side)
             args = (
                 np.asarray(elite.params, dtype=np.float32),
                 patched_sim_config,
                 side.encoder,
-                side.fitness,
+                probe_fitness,
                 episodes,
                 eval_seed,
                 int(elite.generation),
                 opponent_index,
                 list(elite.parent_ids),
-                None,  # warm_start_path_override — probe must not load germline weights
+                warm_start_path,  # gap-3 fix: load post-PPO checkpoint when Lamarckian
                 None,  # weight_capture_path — probe must not write germline weights
             )
             return float(_evaluate_in_worker(args))
@@ -2419,11 +2662,12 @@ class CoevolutionLoop:
 
         Mirrors the training-time `episodes_per_eval` so probe values
         and training values are directly comparable on the same axis.
-        For prey side, `LearnedPerformanceFitness.evaluate` enforces
-        K + L = `learn_episodes_per_eval + (eval_episodes_per_eval or
-        episodes_per_eval)`; the probe re-uses the side's existing
-        `episodes_per_eval` budget so the fitness signal magnitude is
-        directly comparable to training rows in `lineage.csv`.
+        Note: under Option 1's probe-semantics fix, the prey-side probe
+        uses `EpisodicSuccessRate` (frozen-weight, L eval episodes only,
+        no K train phase). The `episodes_per_eval` field maps to L
+        cleanly in that mode. For the predator side
+        (`PredatorEpisodicKillRate`), `episodes_per_eval` is the total
+        episode count (no train/eval split).
         """
         return int(side.evolution_config.episodes_per_eval)
 
@@ -2441,6 +2685,18 @@ class CoevolutionLoop:
         `extra["weights_path"]` is dropped — the probe deliberately
         side-steps the learned predator brain so the held-out yardstick
         is independent of co-evolution lineage.
+
+        Also overrides the env-level `count`, `speed`, and `grid_size`
+        to the substrate-calibrated probe values (`PROBE_ENV_*` constants
+        at module top). The training env may use harder settings (e.g.
+        count=4, speed=1.0, grid=16) where no klinotaxis-LSTMPPO prey
+        can survive heuristic predators at all; using the training env
+        for the probe in that case produces uniformly-zero fitness
+        independent of training quality, which is uninformative. The
+        calibrated probe env preserves the probe's discriminative range
+        (M3 baseline prey score ~0.5 mean across this env's spec grid;
+        a co-evolved prey scoring near zero indicates real overfitting,
+        not substrate ceiling).
 
         Also lays the prey-side `evolution_config` onto `sim_config.evolution`
         so `LearnedPerformanceFitness` reads the right per-side budget
@@ -2475,12 +2731,19 @@ class CoevolutionLoop:
         new_predators_cfg = predators_cfg.model_copy(
             update={
                 "enabled": True,
+                "count": PROBE_ENV_PREDATOR_COUNT,
+                "speed": PROBE_ENV_PREDATOR_SPEED,
                 "detection_radius": int(detection_radius),
                 "damage_radius": int(damage_radius),
                 "brain_config": new_brain_cfg,
             },
         )
-        new_env = env_cfg.model_copy(update={"predators": new_predators_cfg})
+        new_env = env_cfg.model_copy(
+            update={
+                "predators": new_predators_cfg,
+                "grid_size": PROBE_ENV_GRID_SIZE,
+            },
+        )
         return self.sim_config.model_copy(
             update={
                 "environment": new_env,

@@ -340,6 +340,23 @@ class MultiAgentSimulation:
     agent_phenotypes: dict[str, str] = field(default_factory=dict)
     renderer: PygameRenderer | None = None
 
+    # Predator-side per-step reward coefficients. Only consumed when a
+    # predator brain exposes a `learn(reward, episode_done)` method
+    # (currently `MLPPPOPredatorBrain` with `enable_learning=True`).
+    # Defaults match a simple "kill-rate maximisation with proximity
+    # shaping" objective:
+    #   - kill_reward: bonus per kill attributed to this predator in this
+    #     step. The dominant signal.
+    #   - proximity_reward: small bonus when any alive prey is within this
+    #     predator's `detection_radius`. Helps with sparse-reward training
+    #     by giving the policy a chase signal even before the first kill.
+    #   - step_penalty: small per-step cost. Encourages efficient policies
+    #     (don't wander idly).
+    # Heuristic predator brains have no `learn` method and ignore these.
+    predator_kill_reward: float = 1.0
+    predator_proximity_reward: float = 0.01
+    predator_step_penalty: float = 0.001
+
     # Runtime tracking (not init params)
     _followed_agent_id: str = field(default="", init=False)
     _renderer_closed: bool = field(default=False, init=False)
@@ -645,21 +662,35 @@ class MultiAgentSimulation:
             self._resolve_food_step(alive, current_step)
 
             # ── 4. PREDATORS ─────────────────────────────────────
+            # Snapshot kills + proximity flags BEFORE predators act
+            # so the per-predator step delta can be computed for the
+            # learning predator's reward in the predator-learning pass
+            # below. Only the keys in this dict are stable across the
+            # step — values may increase during predator damage
+            # attribution.
+            kills_pre_step = dict(self._kills_by_predator)
             self.env.update_predators(step_index=current_step)
 
             # Per-predator prey-proximity counter: increment by 1 per
             # step iff at least one alive agent is within this predator's
             # detection_radius (Manhattan). NOT scaled by prey count.
+            # Also captures the per-step boolean into
+            # `prey_in_range_this_step` for the learning predator's
+            # reward computation in the predator-learning pass below.
             alive_positions = [self.env.agents[a.agent_id].position for a in alive]
+            prey_in_range_this_step: dict[str, bool] = {}
             for predator in self.env.predators:
                 px, py = predator.position
+                in_range = False
                 for agent_pos_tuple in alive_positions:
                     if (
                         abs(px - agent_pos_tuple[0]) + abs(py - agent_pos_tuple[1])
                         <= predator.detection_radius
                     ):
                         predator.prey_proximity_steps += 1
+                        in_range = True
                         break
+                prey_in_range_this_step[predator.predator_id] = in_range
 
             # Per-agent predator damage (copy list — terminations modify alive set)
             for agent in list(alive):
@@ -802,6 +833,31 @@ class MultiAgentSimulation:
                     )
                 agent.brain.update_memory(reward_per_agent[aid])
 
+            # ── 6b. PREDATOR LEARNING ───────────────────────────
+            # For any predator whose brain exposes a `learn(reward,
+            # episode_done)` method (currently `MLPPPOPredatorBrain`
+            # with `enable_learning=True`), compose the per-step
+            # reward and call learn. Heuristic predator brains don't
+            # have `learn` and are skipped via the hasattr check.
+            for predator in self.env.predators:
+                if not hasattr(predator.brain, "learn"):
+                    continue
+                pid = predator.predator_id
+                kills_this_step = self._kills_by_predator.get(pid, 0) - kills_pre_step.get(pid, 0)
+                proximity_hit = 1.0 if prey_in_range_this_step.get(pid, False) else 0.0
+                predator_reward = (
+                    self.predator_kill_reward * kills_this_step
+                    + self.predator_proximity_reward * proximity_hit
+                    - self.predator_step_penalty
+                )
+                # `hasattr` narrowing isn't picked up by pyright on the
+                # PredatorBrain Protocol; ignore the missing-attribute
+                # check since the guard above ensures `learn` exists.
+                predator.brain.learn(  # type: ignore[attr-defined]
+                    reward=predator_reward,
+                    episode_done=False,
+                )
+
             # ── 7. RENDER ───────────────────────────────────────────
             self._render_step(current_step, current_step, max_steps)
             if self._renderer_closed:
@@ -916,7 +972,17 @@ class MultiAgentSimulation:
         # final step. No "episode_success" notion applies to predators
         # (their per-fitness signal is the per_predator_kills /
         # _prey_proximity_steps / _distance_traveled triple); pass None.
+        #
+        # For learning-enabled predator brains, also fire one final
+        # `learn(reward=0.0, episode_done=True)` call so the rollout
+        # buffer's PPO update fires on the terminal step (clearing
+        # any partial buffer that didn't reach buffer-full during the
+        # episode). Reward=0.0 because no kill/proximity event happens
+        # on the synthetic terminal step itself — the terminal flag is
+        # what matters for the GAE computation.
         for predator in self.env.predators:
+            if hasattr(predator.brain, "learn"):
+                predator.brain.learn(reward=0.0, episode_done=True)  # type: ignore[attr-defined]
             predator.brain.post_process_episode(episode_success=None)
 
         return self._build_result()

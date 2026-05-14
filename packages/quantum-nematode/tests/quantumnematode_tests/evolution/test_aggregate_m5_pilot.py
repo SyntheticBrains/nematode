@@ -1,4 +1,4 @@
-"""Unit tests for the M5 co-evolution aggregator.
+"""Unit tests for the co-evolution pilot aggregator.
 
 The script lives at ``scripts/campaigns/aggregate_m5_pilot.py`` (outside
 the package; imported via ``importlib`` so the tests don't need a
@@ -12,8 +12,8 @@ Coverage:
   (gens x opponents) matrix; NaN-handles deferred-body rows; filters
   by side.
 - `_aggregate_verdict` returns GO / PIVOT / STOP / INCONCLUSIVE per
-  the design.md D6 rule (≥2 firing → GO, 1 → PIVOT, 0 → STOP, no
-  seeds → INCONCLUSIVE).
+  the cycling-or-escalation rule (≥2 firing → GO, 1 → PIVOT, 0 → STOP,
+  no seeds → INCONCLUSIVE).
 - `_seed_metrics` returns `gate_fires=True` for synthetic series with
   known cycling or escalation; `False` for flat / short series.
 - End-to-end smoke: build a synthetic per-seed dir matching the
@@ -568,7 +568,7 @@ class TestWalltimeSummary:
 
 
 class TestAggregateVerdict:
-    """`_aggregate_verdict` per design.md D6: ≥2 → GO, 1 → PIVOT, 0 → STOP."""
+    """`_aggregate_verdict` rule: ≥2 firing → GO, 1 → PIVOT, 0 → STOP."""
 
     def test_zero_seeds_inconclusive(self, aggregator: Any) -> None:
         """No seeds at all SHALL return INCONCLUSIVE rather than STOP."""
