@@ -682,7 +682,7 @@ class TestLamarckianInheritanceKwargs:
     """`PredatorEpisodicKillRate.evaluate` SHALL accept inheritance kwargs.
 
     Mirrors `LearnedPerformanceFitness.evaluate`'s surface for symmetric
-    per-side Lamarckian inheritance (R2-full path):
+    per-side Lamarckian inheritance:
 
     - `warm_start_path_override`: load weights from path BEFORE eval.
     - `weight_capture_path`: save weights to path AFTER eval (post-train).

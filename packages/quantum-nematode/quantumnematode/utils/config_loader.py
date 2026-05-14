@@ -1362,8 +1362,8 @@ class CoevolutionConfig(BaseModel):
         the inheritance signal, or (c) fail mid-run with a confusing
         error.
 
-        1. Both sides use `algorithm == "cmaes"` (TPE is incompatible
-           with unbounded weight encoders).
+        1. Both sides use `algorithm` in {"cmaes", "ga"} (TPE is
+           incompatible with unbounded weight encoders).
         2. Both sides use `cma_diagonal == True` (full-cov CMA-ES is
            not tractable at the weight counts involved).
         3. Prey side has `learn_episodes_per_eval > 0` (required by
@@ -1376,18 +1376,21 @@ class CoevolutionConfig(BaseModel):
            encoder owns the weight gradient on its side, so
            `NoInheritance` is correct there).
         """
-        if self.prey_evolution.algorithm != "cmaes":
+        _allowed_algorithms = {"cmaes", "ga"}
+        if self.prey_evolution.algorithm not in _allowed_algorithms:
             msg = (
-                f"coevolution.prey_evolution.algorithm must be 'cmaes' "
+                f"coevolution.prey_evolution.algorithm must be one of "
+                f"{sorted(_allowed_algorithms)} "
                 f"(got {self.prey_evolution.algorithm!r}). TPE is "
                 "incompatible with unbounded weight encoders."
             )
             raise ValueError(msg)
-        if self.predator_evolution.algorithm != "cmaes":
+        if self.predator_evolution.algorithm not in _allowed_algorithms:
             msg = (
-                f"coevolution.predator_evolution.algorithm must be 'cmaes' "
-                f"(got {self.predator_evolution.algorithm!r}). Same rationale "
-                "as prey side."
+                f"coevolution.predator_evolution.algorithm must be one of "
+                f"{sorted(_allowed_algorithms)} "
+                f"(got {self.predator_evolution.algorithm!r}). Same "
+                "rationale as prey side."
             )
             raise ValueError(msg)
         if not self.prey_evolution.cma_diagonal:
@@ -1416,7 +1419,7 @@ class CoevolutionConfig(BaseModel):
         #    learn_episodes_per_eval=0. PredatorEpisodicKillRate runs
         #    pure frozen-weight evaluation; CMA-ES owns the weight
         #    gradient.
-        # 2. Lamarckian (R2-full): inheritance=lamarckian. Predator
+        # 2. Lamarckian: inheritance=lamarckian. Predator
         #    PPO inner-loop fires per-step via the multi-agent runner's
         #    section 6b hook; weights persist across K-blocks via
         #    LamarckianInheritance checkpoint plumbing. The

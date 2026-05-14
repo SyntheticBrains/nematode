@@ -125,7 +125,7 @@ class MLPPPOPredatorBrain:
         # preserves the original frozen-weight contract — CMA-ES owns the
         # weight gradient at the outer loop, no buffer/optimizer is built,
         # `learn()` is a no-op. Flip to True to enable within-eval PPO
-        # training (R2-full path; required for predator-side Lamarckian
+        # training (required for predator-side Lamarckian
         # inheritance to be meaningful since otherwise nothing varies
         # within an evaluation).
         enable_learning: bool = False,

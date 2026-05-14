@@ -135,9 +135,9 @@ def instantiate_predator_brain_from_sim_config(
         # weights, not actions, are what flow through the genome.
         sample=False,
         # Optional PPO inner-loop training. Default False preserves the
-        # frozen-weight encoder/eval contract. R2-full (predator-side
-        # Lamarckian inheritance) flips this True so within-eval PPO
-        # updates can fire via the multi-agent runner's per-step
+        # frozen-weight encoder/eval contract. Predator-side Lamarckian
+        # inheritance flips this True so within-eval PPO updates can
+        # fire via the multi-agent runner's per-step
         # `predator.brain.learn(reward, episode_done)` hook.
         enable_learning=enable_learning,
     )

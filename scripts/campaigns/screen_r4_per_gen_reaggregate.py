@@ -10,7 +10,7 @@ Both pilot arms returned `gate_fires=0` because:
    ceiling whenever the population saturates), so even a longer
    K-block series would be flat for prey.
 
-This script tests whether the M5 verdict gate fires when fed the
+This script tests whether the co-evolution verdict gate fires when fed the
 **per-generation mean** fitness from `lineage.csv` instead. With 30
 generations per side at pilot scale, the cycling autocorrelation has
 ~10x more samples in its lag range, and the escalation regression has
@@ -165,7 +165,7 @@ def _gate_fires(
     prey_escalation: dict,
     predator_escalation: dict,
 ) -> bool:
-    """M5 verdict gate per design.md D6: cycling OR escalation, either side."""
+    """Co-evolution verdict gate: cycling OR escalation, either side."""
     return bool(
         prey_cycling.get("cycling_detected")
         or predator_cycling.get("cycling_detected")
@@ -183,7 +183,7 @@ def _format_summary(  # noqa: PLR0915 - linear formatter; splitting fragments ou
     lines = [
         "# R4 — Per-generation re-aggregation",
         "",
-        "Re-runs the M5 verdict gate (cycling + escalation) on the per-generation",
+        "Re-runs the co-evolution verdict gate (cycling + escalation) on the per-generation",
         "mean-fitness series from each session's `prey/lineage.csv` and",
         "`predator/lineage.csv`, instead of the production aggregator's",
         "`champion_history.json` K-block-elite series. The hypothesis is that",

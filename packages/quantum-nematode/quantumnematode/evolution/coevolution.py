@@ -274,8 +274,8 @@ class CoevolutionLoop:
     matching the upstream Lamarckian-LSTMPPO substrate). Predator
     inheritance is YAML-configurable via
     `predator_evolution.inheritance` and accepts `none` (default;
-    legacy frozen-weight contract) or `lamarckian` (R2-full path;
-    requires `PredatorEpisodicKillRate.evaluate` to thread
+    legacy frozen-weight contract) or `lamarckian` (predator PPO
+    inner-loop path; requires `PredatorEpisodicKillRate.evaluate` to thread
     `warm_start_path_override` + `weight_capture_path`, which it does,
     and brings up the predator brain's PPO inner-loop via the
     multi-agent runner's per-step `learn(reward, episode_done)`
@@ -512,15 +512,15 @@ class CoevolutionLoop:
         inheritance kind in the kwargs path — when either inheritance
         kwarg is set, the brain is built with `enable_learning=True` and
         the multi-agent runner's per-step `predator.brain.learn(reward,
-        episode_done)` hook fires during evaluation. R2-full path.
+        episode_done)` hook fires during evaluation.
         """
         cfg = self.coevolution_config
         encoder = MLPPPOPredatorEncoder()
         fitness = PredatorEpisodicKillRate()
         # Predator inheritance is now YAML-configurable (was previously
         # hardcoded to `NoInheritance()`). `lamarckian` requires the
-        # predator brain to support PPO inner-loop training (R2-full
-        # path); `none` preserves the legacy frozen-weight contract.
+        # predator brain to support PPO inner-loop training; `none`
+        # preserves the legacy frozen-weight contract.
         # Baldwin is not a meaningful predator-side strategy without
         # the prey's hyperparam-evolution machinery, and is rejected
         # here.

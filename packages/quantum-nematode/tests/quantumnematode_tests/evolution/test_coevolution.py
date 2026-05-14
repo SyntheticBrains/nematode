@@ -1397,7 +1397,7 @@ class TestPreySideProbeEnvOverride:
 
 
 class TestPersistCmaAcrossKBlocks:
-    """R2-mini: `persist_cma_across_kblocks` SHALL skip the K-block-end rebuild."""
+    """`persist_cma_across_kblocks` SHALL skip the K-block-end CMA-ES rebuild."""
 
     def test_persist_true_skips_rebuild(self, tmp_path: Path) -> None:
         """When set, `_rebuild_optimizer` SHALL leave `side.optimizer` unchanged."""
@@ -1711,10 +1711,10 @@ class TestPersistCmaAcrossKBlocks:
 
 
 class TestPredatorInheritanceYamlConfigurable:
-    """R2-full Step 3: `predator_evolution.inheritance` SHALL drive predator side state.
+    """`predator_evolution.inheritance` SHALL drive predator side state.
 
     Default `"none"` -> `NoInheritance`; `"lamarckian"` -> `LamarckianInheritance`.
-    Removes the pre-R2 hardcode that pinned predator to `NoInheritance()`.
+    Removes the prior hardcode that pinned predator to `NoInheritance()`.
     """
 
     def test_default_predator_inheritance_is_no_inheritance(self, tmp_path: Path) -> None:
@@ -1761,4 +1761,46 @@ class TestPredatorInheritanceYamlConfigurable:
                 sim_config,
                 output_dir=tmp_path / "coevo",
                 rng=np.random.default_rng(seed=42),
+            )
+
+    def test_coevolution_validator_accepts_ga(self) -> None:
+        """CoevolutionConfig SHALL accept ``algorithm="ga"`` on both sides."""
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=True,
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="ga",
+            cma_diagonal=True,
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        # Construction SHALL NOT raise.
+        CoevolutionConfig(prey_evolution=prey_evo, predator_evolution=pred_evo, generation_pairs=2)
+
+    def test_coevolution_validator_rejects_tpe(self) -> None:
+        """CoevolutionConfig SHALL still reject TPE — unbounded weight encoder incompatible."""
+        from quantumnematode.utils.config_loader import CoevolutionConfig, EvolutionConfig
+
+        prey_evo = EvolutionConfig(
+            algorithm="tpe",
+            cma_diagonal=True,
+            learn_episodes_per_eval=8,
+            inheritance="lamarckian",
+        )
+        pred_evo = EvolutionConfig(
+            algorithm="cmaes",
+            cma_diagonal=True,
+            learn_episodes_per_eval=1,
+            inheritance="lamarckian",
+        )
+        with pytest.raises(ValueError, match="algorithm must be one of"):
+            CoevolutionConfig(
+                prey_evolution=prey_evo,
+                predator_evolution=pred_evo,
+                generation_pairs=2,
             )
