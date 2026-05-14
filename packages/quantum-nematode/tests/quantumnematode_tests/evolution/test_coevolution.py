@@ -548,9 +548,9 @@ class TestGeneralityProbe:
     ) -> None:
         """Prey-side probe SHALL produce one row per `_predator_held_out_specs` entry.
 
-        Under Option B (design.md D5), the prey-side probe evaluates
-        the prey elite against the OPPOSING-side held-out set
-        (`_predator_held_out_specs`). The row count per fire MUST
+        Under the cross-species yardstick wiring, the prey-side probe
+        evaluates the prey elite against the OPPOSING-side held-out
+        set (`_predator_held_out_specs`). The row count per fire MUST
         equal `len(_predator_held_out_specs)` regardless of the prey
         bundle's load state.
         """
@@ -604,8 +604,8 @@ class TestGeneralityProbe:
     ) -> None:
         """Predator-side probe SHALL produce one row per `_prey_held_out` entry.
 
-        Under Option B (design.md D5), the predator-side probe
-        evaluates the predator elite against the OPPOSING-side
+        Under the cross-species yardstick wiring, the predator-side
+        probe evaluates the predator elite against the OPPOSING-side
         held-out set (`_prey_held_out`). Prey held-out is empty in the
         test harness (no bundle dir), so we manually inject one entry
         to exercise the predator-side body.

@@ -1426,7 +1426,7 @@ class CoevolutionConfig(BaseModel):
         #    gradient.
         # 2. Lamarckian: inheritance=lamarckian. Predator
         #    PPO inner-loop fires per-step via the multi-agent runner's
-        #    section 6b hook; weights persist across K-blocks via
+        #    predator-learning pass; weights persist across K-blocks via
         #    LamarckianInheritance checkpoint plumbing. The
         #    `learn_episodes_per_eval` field is NOT meaningful in this
         #    mode (no separate train+eval phases), so we accept any
@@ -1492,8 +1492,7 @@ class SimulationConfig(BaseModel):
     # entries.  When None (the default), runs use weight-evolution
     # dispatch.  When set, the run is a hyperparameter-evolution run
     # and select_encoder() returns a HyperparameterEncoder regardless
-    # of brain.name.  See the evolution-framework capability spec for
-    # the full contract.
+    # of brain.name.
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")

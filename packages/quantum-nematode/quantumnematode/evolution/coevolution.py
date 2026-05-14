@@ -164,12 +164,11 @@ _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
 # heuristic predator radii:
 #   - count=2, speed=0.5, grid=20 -> mean fitness 0.531 across 24 cells
 #     (8 radius specs x 3 unique genomes x 10 episodes). Range 0.07-0.93.
-#   - count=4, speed=1.0, grid=16 (R3 screen env) -> mean fitness 0.000
-#     across all 24 cells (substrate ceiling - no klinotaxis-LSTMPPO
-#     prey can survive).
+#   - count=4, speed=1.0, grid=16 (high-pressure variant) -> mean
+#     fitness 0.000 across all 24 cells (substrate ceiling - no
+#     klinotaxis-LSTMPPO prey can survive).
 # The pilot env is therefore the lower-bound discriminative env. Probe
-# uses it regardless of training env. See `tmp/evaluations/coevolution/`
-# scratchpad for the calibration study + rationale.
+# uses it regardless of training env.
 PROBE_ENV_PREDATOR_COUNT = 2
 PROBE_ENV_PREDATOR_SPEED = 0.5
 PROBE_ENV_GRID_SIZE = 20
@@ -416,7 +415,7 @@ class CoevolutionLoop:
         # per-generation aggregate rows. Captured master-side via
         # `time.perf_counter()` brackets so the worker ABI
         # (`_evaluate_in_worker` returning float) stays stable. The
-        # aggregator (PR 5) reads this for the design.md D4
+        # campaign aggregator reads this for the wall-time
         # reconciliation row. Schema:
         #   - scope: "evaluation" or "generation"
         #   - side: "prey" or "predator"
@@ -1756,7 +1755,7 @@ class CoevolutionLoop:
                     # (batch_wall / population_size) — a per-worker
                     # average rather than a true per-eval measurement,
                     # which is the correct denominator for the
-                    # design.md D4 reconciliation question ("seconds per
+                    # wall-time reconciliation question ("seconds per
                     # episode at parallel_workers=N").
                     eval_walls: list[float] = []
                     gen_start = time.perf_counter()
@@ -2465,7 +2464,7 @@ class CoevolutionLoop:
         (the K-block elite). When a side has no champions yet (first
         K-block hasn't completed), the probe is a no-op for that side.
 
-        Held-out wiring (Option B per design.md D5): each side's elite
+        Held-out wiring (cross-species yardstick): each side's elite
         is evaluated against the OPPOSING-side held-out set — prey
         elite vs. frozen heuristic predators (`_predator_held_out_specs`),
         predator elite vs. frozen prey genomes (`_prey_held_out`).
@@ -2498,11 +2497,13 @@ class CoevolutionLoop:
                 # Each side faces the OPPOSING-side held-out set: the
                 # prey-side probe iterates over `_predator_held_out_specs`
                 # (heuristic predator radius variants); the predator-side
-                # probe iterates over `_prey_held_out` (frozen M3
-                # lamarckian prey genomes). The variable names are
+                # probe iterates over `_prey_held_out` (frozen
+                # lamarckian-LSTMPPO prey genomes from the upstream
+                # single-population campaign). The variable names are
                 # content-keyed (what's in the collection), not
-                # consumer-keyed (which side reads it) — see design.md
-                # D5 for the rationale.
+                # consumer-keyed (which side reads it) — they form
+                # cross-species yardsticks for the opposing side's
+                # elite.
                 if side.name == "prey":
                     held_out_count = len(self._predator_held_out_specs)
                 else:

@@ -664,9 +664,10 @@ class MultiAgentSimulation:
             # ── 4. PREDATORS ─────────────────────────────────────
             # Snapshot kills + proximity flags BEFORE predators act
             # so the per-predator step delta can be computed for the
-            # learning-side reward (section 6b below). Only the keys
-            # in this dict are stable across the step — values may
-            # increase during predator damage attribution.
+            # learning predator's reward in the predator-learning pass
+            # below. Only the keys in this dict are stable across the
+            # step — values may increase during predator damage
+            # attribution.
             kills_pre_step = dict(self._kills_by_predator)
             self.env.update_predators(step_index=current_step)
 
@@ -675,7 +676,7 @@ class MultiAgentSimulation:
             # detection_radius (Manhattan). NOT scaled by prey count.
             # Also captures the per-step boolean into
             # `prey_in_range_this_step` for the learning predator's
-            # reward computation in section 6b.
+            # reward computation in the predator-learning pass below.
             alive_positions = [self.env.agents[a.agent_id].position for a in alive]
             prey_in_range_this_step: dict[str, bool] = {}
             for predator in self.env.predators:

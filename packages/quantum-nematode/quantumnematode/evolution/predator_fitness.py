@@ -317,7 +317,10 @@ class PredatorEpisodicKillRate:
         set, the encoder is invoked with `enable_learning=True` so the
         constructed brain has the PPO machinery; the multi-agent runner
         then drives `predator.brain.learn(reward, episode_done)` per
-        step via `MultiAgentSimulation`'s section 6b hook.
+        step via `MultiAgentSimulation`'s predator-learning pass (which
+        composes a per-step reward from kill-deltas + proximity flags
+        and calls `predator.brain.learn` for every predator brain that
+        exposes the `learn` method).
 
         Note (asymmetry vs `LearnedPerformanceFitness`): the prey-side
         fitness does an explicit train-then-eval split (K train + L

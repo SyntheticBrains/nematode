@@ -692,7 +692,9 @@ class TestLamarckianInheritanceKwargs:
     `predator.brain.learn()` hook fires.
 
     When both kwargs are None, behaviour is byte-equivalent to the
-    pre-R2 frozen-weight contract.
+    frozen-weight contract (the default `inheritance: none` mode where
+    the predator brain has no PPO machinery and weights don't persist
+    across generations).
     """
 
     def test_default_kwargs_byte_equivalent(

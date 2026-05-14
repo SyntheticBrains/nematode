@@ -4,8 +4,6 @@ Provides genome encoding, fitness evaluation, lineage tracking, and an
 optimisation loop with checkpoint/resume. The framework is brain-agnostic:
 any classical brain implementing ``WeightPersistence`` can be plugged in
 via a one-class encoder registration.
-
-See ``openspec/specs/evolution-framework/`` for the capability spec.
 """
 
 from quantumnematode.evolution.brain_factory import instantiate_brain_from_sim_config
