@@ -210,7 +210,7 @@ M5 (co-evolution arms race) starts with this substrate fully in place:
 
 ## Next Steps
 
-- [x] M1.1-M1.8 ticked in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md); roadmap M1 row flipped to ✅ complete
+- [x] M1.1-M1.8 ticked in [`openspec/changes/phase5-tracking/tasks.md`](../../../openspec/changes/phase5-tracking/tasks.md); roadmap M1 row flipped to ✅ complete
 - [x] OpenSpec change `add-learning-predators` validated `--strict`; ready for archival on PR merge
 - [ ] M5 (co-evolution arms race) starts on this substrate. Predator brains plug in via `_build_predator_brain` dispatcher; per-predator metrics provide fitness signal candidates; brain-state copy semantics already in place for env-copy boundaries
 - [ ] Future PR (post-M5): widen `PredatorBrainConfigSchema.kind` Literal to include learnable kinds (e.g. `"mlpppo"`); add corresponding dispatcher branches in `_build_predator_brain`

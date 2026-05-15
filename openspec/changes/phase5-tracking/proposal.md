@@ -10,7 +10,7 @@ This change adds a new `phase5-tracking` spec capability whose requirements comm
 
 ### 1. Phase 5 Milestone Tracking Change
 
-Create `openspec/changes/2026-04-26-phase5-tracking/` with proposal/tasks/design. The `tasks.md` is a living checklist of every Phase 5 milestone (M0–M7) at sub-task granularity. Each subsequent Phase 5 milestone PR (M0, M1, M2, …) updates this checklist as part of its diff.
+Create `openspec/changes/phase5-tracking/` with proposal/tasks/design. The `tasks.md` is a living checklist of every Phase 5 milestone (M0–M7) at sub-task granularity. Each subsequent Phase 5 milestone PR (M0, M1, M2, …) updates this checklist as part of its diff.
 
 This change is intentionally not archived after merge — it stays open until the entire Phase 5 is complete (M7 logbook published). At that point it gets archived alongside the M7 evaluation change.
 
@@ -37,10 +37,10 @@ The plan that generated these milestones made three decisions that should be vis
 
 **Docs:**
 
-- `openspec/changes/2026-04-26-phase5-tracking/proposal.md` — this file
-- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — living Phase 5 milestone checklist
-- `openspec/changes/2026-04-26-phase5-tracking/design.md` — tracking strategy notes
-- `openspec/changes/2026-04-26-phase5-tracking/specs/phase5-tracking/spec.md` — new capability
+- `openspec/changes/phase5-tracking/proposal.md` — this file
+- `openspec/changes/phase5-tracking/tasks.md` — living Phase 5 milestone checklist
+- `openspec/changes/phase5-tracking/design.md` — tracking strategy notes
+- `openspec/changes/phase5-tracking/specs/phase5-tracking/spec.md` — new capability
 - `docs/roadmap.md` — Phase 5 status → IN PROGRESS, milestone tracker sub-section
 
 **Code:** None.

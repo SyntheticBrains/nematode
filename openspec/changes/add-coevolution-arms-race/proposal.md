@@ -91,4 +91,4 @@ Not a behaviour change for any existing scenario YAML — `PredatorBrainConfig.k
 
 **OpenSpec capability targets**: 2 new (`co-evolution`, `red-queen-analysis`) + 2 modified (`environment-simulation`, `evolution-framework`).
 
-**Tracker / roadmap:** ticks tracker M5.0–M5.9 (`openspec/changes/2026-04-26-phase5-tracking/tasks.md`); flips Phase 5 milestone tracker M5 row in `docs/roadmap.md` on full-run verdict.
+**Tracker / roadmap:** ticks tracker M5.0–M5.9 (`openspec/changes/phase5-tracking/tasks.md`); flips Phase 5 milestone tracker M5 row in `docs/roadmap.md` on full-run verdict.

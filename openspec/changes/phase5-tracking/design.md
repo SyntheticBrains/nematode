@@ -36,7 +36,7 @@ Phase 4's `2026-04-11-add-phase4-evaluation/tasks.md` used numbered sub-tasks (1
 
 ### Decision 3: Three recorded design decisions surface in proposal.md, not buried in this file
 
-The three decisions (pilot-first, no QVarCircuit backwards compat, LSTMPPO+klinotaxis first-class) are stated in `proposal.md` so they show up in `openspec change show 2026-04-26-phase5-tracking`. The rationale lives here in `design.md` for anyone who wants the reasoning.
+The three decisions (pilot-first, no QVarCircuit backwards compat, LSTMPPO+klinotaxis first-class) are stated in `proposal.md` so they show up in `openspec change show phase5-tracking`. The rationale lives here in `design.md` for anyone who wants the reasoning.
 
 **Why:** A future session reading the proposal first should see *what was decided* without having to open the design doc. The design doc explains *why those decisions* but isn't required reading.
 
@@ -44,7 +44,7 @@ The three decisions (pilot-first, no QVarCircuit backwards compat, LSTMPPO+klino
 
 Three artefacts answer "where are we in Phase 5?":
 
-1. **`openspec/changes/2026-04-26-phase5-tracking/tasks.md`** — sub-task checklist updated by every milestone PR
+1. **`openspec/changes/phase5-tracking/tasks.md`** — sub-task checklist updated by every milestone PR
 2. **`openspec/changes/<milestone>/`** — per-milestone proposal/tasks/design/specs, archived on milestone merge
 3. **`docs/roadmap.md` Phase 5 section** — one-line milestone status, updated as part of every milestone PR
 

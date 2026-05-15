@@ -2,26 +2,26 @@
 
 ### Requirement: Phase 5 Living Milestone Checklist
 
-The repository SHALL maintain a single living checklist file at `openspec/changes/2026-04-26-phase5-tracking/tasks.md` covering every Phase 5 milestone (M-1 through M7) at sub-task granularity, updated by every Phase 5 milestone PR as part of its diff.
+The repository SHALL maintain a single living checklist file at `openspec/changes/phase5-tracking/tasks.md` covering every Phase 5 milestone (M-1 through M7) at sub-task granularity, updated by every Phase 5 milestone PR as part of its diff.
 
 #### Scenario: Future session orients to Phase 5
 
 - **GIVEN** a fresh AI session resumes Phase 5 work
-- **WHEN** the agent reads `openspec/changes/2026-04-26-phase5-tracking/tasks.md` and the `docs/roadmap.md` Phase 5 block
+- **WHEN** the agent reads `openspec/changes/phase5-tracking/tasks.md` and the `docs/roadmap.md` Phase 5 block
 - **THEN** the agent SHALL be able to identify the current in-progress milestone and the next milestone to start without further codebase exploration
 
 #### Scenario: Milestone PR updates the checklist
 
 - **GIVEN** a Phase 5 milestone PR (e.g. M0, M1, …, M7) is being prepared
 - **WHEN** the PR is opened
-- **THEN** the PR diff SHALL include updates to `openspec/changes/2026-04-26-phase5-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the milestone status header
+- **THEN** the PR diff SHALL include updates to `openspec/changes/phase5-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the milestone status header
 
 #### Scenario: Checklist outlives individual milestones
 
 - **GIVEN** a Phase 5 milestone OpenSpec change (e.g. `2026-04-28-add-evolution-framework`) is archived
 - **WHEN** archival completes
-- **THEN** the `2026-04-26-phase5-tracking` change SHALL remain unarchived and continue to receive updates from subsequent milestone PRs
-- **AND** archival of `2026-04-26-phase5-tracking` itself SHALL only occur alongside the M7 synthesis evaluation change
+- **THEN** the `phase5-tracking` change SHALL remain unarchived and continue to receive updates from subsequent milestone PRs
+- **AND** archival of `phase5-tracking` itself SHALL only occur alongside the M7 synthesis evaluation change
 
 ### Requirement: Roadmap Phase 5 Status Block
 
@@ -43,14 +43,14 @@ The `docs/roadmap.md` Phase 5 section SHALL include a Phase 5 Milestone Tracker 
 
 ### Requirement: Recorded Phase 5 Decisions
 
-The `proposal.md` of `2026-04-26-phase5-tracking` SHALL record the three Phase 5 design decisions (pilot-first, no QVarCircuit backwards compatibility, LSTMPPO+klinotaxis as first-class brain) so that subsequent sessions do not re-litigate them.
+The `proposal.md` of `phase5-tracking` SHALL record the three Phase 5 design decisions (pilot-first, no QVarCircuit backwards compatibility, LSTMPPO+klinotaxis as first-class brain) so that subsequent sessions do not re-litigate them.
 
 #### Scenario: Decision is recorded once
 
 - **GIVEN** a Phase 5 design decision has been made (e.g. "no QVarCircuit backwards compatibility")
 - **WHEN** the decision is finalized
-- **THEN** it SHALL appear in `openspec/changes/2026-04-26-phase5-tracking/proposal.md`
-- **AND** the rationale SHALL appear in `openspec/changes/2026-04-26-phase5-tracking/design.md`
+- **THEN** it SHALL appear in `openspec/changes/phase5-tracking/proposal.md`
+- **AND** the rationale SHALL appear in `openspec/changes/phase5-tracking/design.md`
 
 #### Scenario: Decision reversal preserves audit trail
 

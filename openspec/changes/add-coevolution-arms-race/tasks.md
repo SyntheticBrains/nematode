@@ -139,7 +139,7 @@ Mid-pilot screening surfaced substrate gaps that required code changes outside t
 
 ## 12. Tracker, Roadmap, and Spec Sync (PR 8 or PR 9)
 
-- [ ] 12.1 Tick M5.0–M5.9 sub-tasks in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` as PRs land; add an M5.0 row above M5.1 for the predator stack (brain + encoder + fitness) if not already present.
+- [ ] 12.1 Tick M5.0–M5.9 sub-tasks in `openspec/changes/phase5-tracking/tasks.md` as PRs land; add an M5.0 row above M5.1 for the predator stack (brain + encoder + fitness) if not already present.
 - [ ] 12.2 On full-run verdict, flip Phase 5 milestone tracker M5 row in `docs/roadmap.md` to ✅ complete (GO) or ❌ stop / 🔁 pivot per the verdict.
 - [ ] 12.3 If verdict is GO, sync OpenSpec deltas: run the `openspec-sync-specs` skill on `add-coevolution-arms-race` to merge ADDED requirements into `openspec/specs/co-evolution/spec.md`, `openspec/specs/red-queen-analysis/spec.md`, `openspec/specs/environment-simulation/spec.md`, `openspec/specs/evolution-framework/spec.md`.
 - [ ] 12.4 Archive the OpenSpec change via `openspec-archive-change` skill (date prefix added automatically).

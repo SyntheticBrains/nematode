@@ -34,7 +34,7 @@ None. M3 extends `evolution-framework` rather than introducing a new capability 
 - **Configs**: new `configs/evolution/lamarckian_lstmppo_klinotaxis_predator_pilot.yml`. No existing configs change.
 - **Scripts**: two new campaign scripts + one new aggregator under `scripts/campaigns/`. M2.11's run_simulation.py-driven baseline script is reused as-is.
 - **Tests**: new `test_inheritance.py` and `test_weight_capture.py`; modifications to `test_loop_smoke.py`, `test_config.py`, `test_lineage.py` under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`.
-- **Docs**: new logbook `013-lamarckian-inheritance-pilot.md`; updates to `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (tick M3.1–M3.8, flip M3 status to `complete`) and `docs/roadmap.md` (M3 row → ✅ complete).
+- **Docs**: new logbook `013-lamarckian-inheritance-pilot.md`; updates to `openspec/changes/phase5-tracking/tasks.md` (tick M3.1–M3.8, flip M3 status to `complete`) and `docs/roadmap.md` (M3 row → ✅ complete).
 - **Dependencies**: none. Uses existing `WeightPersistence` round-trip, `OptunaTPEOptimizer`, and `HyperparameterEncoder`.
 - **Downstream milestones unblocked**: M4 (Baldwin Effect, gated on M3 GO) and M6 (transgenerational memory, gated on M3 + M4-or-M5).
 

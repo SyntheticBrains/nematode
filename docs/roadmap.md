@@ -497,7 +497,7 @@ ______________________________________________________________________
 
 #### Phase 5 Milestone Tracker
 
-Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). The living checklist with sub-task granularity lives in [openspec/changes/2026-04-26-phase5-tracking/tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md). Three Phase 5 design decisions are recorded in that change's [proposal.md](../openspec/changes/2026-04-26-phase5-tracking/proposal.md): pilot-first, no QVarCircuit backwards compatibility, and LSTMPPO+klinotaxis as the first-class brain for headline scientific milestones (M4/M5/M6).
+Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). The living checklist with sub-task granularity lives in [openspec/changes/phase5-tracking/tasks.md](../openspec/changes/phase5-tracking/tasks.md). Three Phase 5 design decisions are recorded in that change's [proposal.md](../openspec/changes/phase5-tracking/proposal.md): pilot-first, no QVarCircuit backwards compatibility, and LSTMPPO+klinotaxis as the first-class brain for headline scientific milestones (M4/M5/M6).
 
 | # | Milestone | Bio fidelity | Status |
 |---|-----------|--------------|--------|
@@ -513,7 +513,7 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 | M4.7 | Multi-task Baldwin retry (deferred) | HIGH | 🔲 deferred — gated on M5's outcome. Trigger conditions: M5 produces multi-task aggregation infrastructure as byproduct (≤2-day marginal investment) OR M5's secondary-Baldwin instrumentation comes back null AND priority rises |
 | M7 | Phase 5 synthesis logbook | — | 🔲 not started |
 
-**How to orient**: a fresh AI session resuming Phase 5 work should read this tracker first to identify the current milestone, then open the [tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md) checklist for sub-task detail, then any active per-milestone OpenSpec change under `openspec/changes/` for the in-flight scope (archived per-milestone changes live under `openspec/changes/archive/` — for example, M0's archived change at `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`).
+**How to orient**: a fresh AI session resuming Phase 5 work should read this tracker first to identify the current milestone, then open the [tasks.md](../openspec/changes/phase5-tracking/tasks.md) checklist for sub-task detail, then any active per-milestone OpenSpec change under `openspec/changes/` for the in-flight scope (archived per-milestone changes live under `openspec/changes/archive/` — for example, M0's archived change at `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`).
 
 **Phase 5 research questions**: open questions that don't fit cleanly under any single milestone are tracked in the same `tasks.md` checklist under the "Phase 5 Research Questions" section. Each has a concrete trigger condition; the section is the place to look before assuming a Phase 5 design choice (e.g. "why CMA-ES?") is settled.
 
