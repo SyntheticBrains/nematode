@@ -10,7 +10,7 @@ The system SHALL provide a `TransgenerationalMemory` dataclass in `quantumnemato
 - A `lineage_depth: int` field recording the inheritance generation (0 for F0, incremented by 1 at each `inherit_from` call).
 - A `source_genome_id: str` field identifying the F0 elite from which the substrate originated.
 
-The dataclass SHALL clamp `|logit_bias[i]| ≤ 2.0` in `__post_init__` (post-clamp Boltzmann ratio bounded at `e^2 ≈ 7.4×`) so a strong bias cannot collapse exploration. The dataclass SHALL be `frozen=True` so cross-generation aliasing cannot mutate an ancestor's substrate. Because frozen dataclasses cannot reassign fields directly, the clamping pass SHALL use `object.__setattr__(self, "logit_bias", clamped_tensor)` inside `__post_init__` (the canonical Python pattern for frozen-dataclass post-init mutation).
+The dataclass SHALL be `frozen=True` so cross-generation aliasing cannot mutate an ancestor's substrate. After construction, the stored `logit_bias` SHALL satisfy `|logit_bias[i]| ≤ 2.0` (post-clamp Boltzmann ratio bounded at `e^2 ≈ 7.4×`) so a strong bias cannot collapse exploration. The caller-provided input tensor SHALL NOT be mutated in place. Implementations MAY achieve these invariants either by (a) clamping inside `__post_init__` via `object.__setattr__(self, "logit_bias", clamped_tensor)` (the canonical Python pattern for frozen-dataclass post-init mutation, since frozen dataclasses cannot reassign fields directly), or (b) pre-clamping in a module-level factory function before construction. Both strategies are acceptable provided the post-construction invariant and the no-input-mutation invariant hold.
 
 #### Scenario: Substrate construction clamps bias values
 

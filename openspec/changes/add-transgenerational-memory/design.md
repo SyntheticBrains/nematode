@@ -25,8 +25,8 @@ The adjacent computational literature does not, to our knowledge, replicate this
 - A `TransgenerationalInheritance` strategy slotting into `EvolutionLoop` via the existing `InheritanceStrategy` Protocol with zero behaviour change to `none`/`lamarckian`/`baldwin` paths.
 - Per-generation `lawn_schedule` toggling F0 (pathogen on, training on) → F1/F2/F3 (pathogen off, training off) inside a single `EvolutionLoop` invocation, so paired-arm bookkeeping stays clean.
 - A measurable per-agent `pathogen_choice_index` (aggregator alias) — derived from existing per-step damage-radius detection (`env/env.py:2286 is_agent_in_damage_radius_for`). The underlying storage uses existing predator-avoidance trace columns; "pathogen_choice_index" is the aggregator output name, not a new metric.
-- A hard pre-flight F0-calibration smoke gate that prevents wasted compute on an uncalibratable decision gate.
-- A paired-arm ablation (`transgenerational.enabled: true|false`) where the substrate is the *only* cross-arm difference.
+- A non-blocking pre-flight F0-calibration smoke that logs a pass/fail flag against the `[0.45, 0.85]` envelope; the operator acknowledges the result before launching pilot/full (the script never aborts on out-of-envelope values — operator-acknowledged enforcement model per D8).
+- A paired-arm ablation (`transgenerational.enabled: true|false`) where the substrate is the *only* cross-arm difference. (The config-loader validator enforces the pairing contract at YAML load; the downstream choice-index gate at pilot/full time is operator-acknowledged per D8.)
 
 **Non-Goals**
 
@@ -129,7 +129,7 @@ Aligns with prior Phase 5 milestone envelopes (Baldwin retry was ~30+ wall-hours
 
 - **Action-prior numerical instability — strong bias collapses exploration.** → Clamp `|logit_bias| ≤ 2.0` in `__post_init__`. Unit test asserts clamp. Kaletsky F2 ≈ 0.55 corresponds to ~3× action-probability tilt; 7.4× cap leaves headroom.
 - **sRNA-token capacity overflow across generations.** → Fixed shape `(num_actions,)`. Overflow structurally impossible; ~12 bytes per genome × thousands of generations fits in kilobytes.
-- **F0 baseline at floor or ceiling — gate uncalibratable.** → Hard pre-flight calibration gate (D8). M6.5 cannot start until gate passes.
+- **F0 baseline at floor or ceiling — gate uncalibratable.** → Operator-acknowledged pre-flight calibration smoke (D8). Smoke logs the F0 mean and pass/fail flag against the `[0.45, 0.85]` envelope; operator decides whether to retune `damage_radius` / `ppo_train_episodes` or proceed (e.g. to confirm a ceiling failure mode in a debugging run). The operator pause at tasks.md 8.3 is the enforcement point — no script-side abort.
 - **TEI-on vs TEI-off confound — implicit pathway carries signal.** → Config-loader validator forces the pairing (D6). Same seeds + same env + same schedule. The substrate is the only difference.
 - **LSTMPPO + prior interaction — LSTM drowns prior after step 1.** → Apply at every step inside `run_brain()` before softmax (D7). Persistence test across 100 steps.
 - **Pathogen-lawn vocabulary drift in artefacts.** → Aggregator alias columns; logbook 018 § Methodology documents the repurposing (D3).
