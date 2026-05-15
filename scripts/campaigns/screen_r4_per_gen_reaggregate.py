@@ -226,9 +226,15 @@ def _format_summary(  # noqa: PLR0915 - linear formatter; splitting fragments ou
     for res in results:
         sess = res["session"]
         try:
-            relpath = sess.relative_to(Path.cwd())
+            relpath: Path | str = sess.relative_to(Path.cwd())
         except ValueError:
-            relpath = sess
+            # Fallback: session lives outside cwd. Emit only the session
+            # leaf (a timestamp+hash like `20260514_072921_e287c2df`)
+            # so we never embed any parent-path component — those can
+            # carry usernames (e.g. `/Users/<name>/...`, `/home/<name>/...`)
+            # or other local-filesystem details. The leaf alone uniquely
+            # identifies the run within a campaign.
+            relpath = sess.name
         lines.append(f"## {relpath}")
         lines.append("")
         lines.append(f"- Prey per-gen series: {_format_series_stats(res['prey_per_gen'])}")
