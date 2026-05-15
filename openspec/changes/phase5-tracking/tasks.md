@@ -23,7 +23,7 @@ to mark sub-tasks complete as part of its diff.
 
 ## M0: Brain-Agnostic Evolution Framework (Fresh Build)
 
-**OpenSpec change**: `2026-04-28-add-evolution-framework` — archived in the M0 PR (see `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`); the `evolution-framework` capability is now under `openspec/specs/`
+**OpenSpec change**: `2026-04-28-add-evolution-framework` — archived in the M0 PR (see `openspec/changes/archive/2026-04-28-add-evolution-framework/`); the `evolution-framework` capability is now under `openspec/specs/`
 **Status**: complete (archived)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO (smoke) + LSTMPPO+klinotaxis (smoke)
@@ -63,7 +63,7 @@ to mark sub-tasks complete as part of its diff.
 
 ## M2: Hyperparameter Evolution Pilot
 
-**OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-28-2026-04-27-add-hyperparameter-evolution`)
+**OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-27-add-hyperparameter-evolution`)
 **Status**: complete. Four arms GO: MLPPPO+oracle +5.5pp (saturated), LSTMPPO+klinotaxis foraging +7.5pp (saturated), LSTMPPO+klinotaxis+predator under CMA-ES (M2.11) **+47.0pp on 4 seeds, non-saturated** with 3/4 reaching 0.92 best fitness and 1/4 dead-zone failure, and LSTMPPO+klinotaxis+predator under TPE (M2.12) **+79.0pp on 4 seeds**, with seed 43's CMA-ES dead zone rescued (0.000 → 1.000) and mean +32pp over CMA-ES on the same brain/sensing/schema/budget. RQ1 closed: M3 default optimiser is TPE. Roadmap row flipped to ✅ complete
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO + LSTMPPO+klinotaxis

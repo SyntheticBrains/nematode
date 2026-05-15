@@ -445,7 +445,7 @@ M2 closes with a mechanically correct framework, a non-saturated arm, and TPE as
 
 ### Framework artefacts
 
-- **Spec change**: [`openspec/changes/archive/2026-04-28-2026-04-27-add-hyperparameter-evolution/`](../../../openspec/changes/archive/2026-04-28-2026-04-27-add-hyperparameter-evolution/) (M2 framework spec from PR #134).
+- **Spec change**: [`openspec/changes/archive/2026-04-27-add-hyperparameter-evolution/`](../../../openspec/changes/archive/2026-04-27-add-hyperparameter-evolution/) (M2 framework spec from PR #134).
 - **Spec deltas** in [`openspec/specs/evolution-framework/spec.md`](../../../openspec/specs/evolution-framework/spec.md):
   - Warm-start added to the `Learned-Performance Fitness` requirement (M2.10).
   - **Optimiser Portfolio** requirement added (M2.12) covering TPE selectability via `evolution.algorithm: tpe`, `genome_bounds` on the encoder protocol, and TPE rejecting unbounded encoders.
