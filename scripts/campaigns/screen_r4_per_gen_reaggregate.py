@@ -226,9 +226,14 @@ def _format_summary(  # noqa: PLR0915 - linear formatter; splitting fragments ou
     for res in results:
         sess = res["session"]
         try:
-            relpath = sess.relative_to(Path.cwd())
+            relpath: Path | str = sess.relative_to(Path.cwd())
         except ValueError:
-            relpath = sess
+            # Fallback: session lives outside cwd. Use only the trailing
+            # path components so we don't embed an absolute home-dir
+            # path (e.g. /Users/<name>/...) in the stashed summary.md —
+            # those leak local-filesystem details when the artefact
+            # gets committed to a logbook.
+            relpath = "/".join(sess.parts[-3:]) if len(sess.parts) >= 3 else sess.name
         lines.append(f"## {relpath}")
         lines.append("")
         lines.append(f"- Prey per-gen series: {_format_series_stats(res['prey_per_gen'])}")
