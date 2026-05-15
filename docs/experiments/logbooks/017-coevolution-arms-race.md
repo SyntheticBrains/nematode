@@ -67,7 +67,7 @@ The PR-review fixes carry a non-trivial caveat for the screening results: **ever
 
 The canonical pilot (2 seeds × 30 gens at pop 24/16, K=10 alternating, heuristic-imitation pretrain) ran first under `configs/evolution/coevolution_pilot_arm_a.yml`. The R4 per-gen reaggregation gate fired (cycling-or-escalation detected on the per-generation lineage mean rather than the original K-block-elite series; this was the first observability fix). But the prey-side generality probe scored 0.000 across every fire, raising the obvious diagnostic question: is the prey learning real or is it overfitting to MLPPPO predators?
 
-The pilot pivoted into a **screen sweep** to chase that question. Ten single-seed screens explored levers across four axes:
+The pilot pivoted into a **screen sweep** to chase that question. Thirteen single-seed screens explored levers across four axes:
 
 | Axis | Screens | Lever |
 |---|---|---|
@@ -95,7 +95,7 @@ Each screen produced a post-hoc 25-eps fair-test against a calibrated probe env 
 | 7 | Z3 | pred count 4→6 | 0.015 | 0.030 | 0.000 |
 | 8 | C16 | optimiser cmaes→ga | 0.010 | 0.020 | 0.000 |
 | 9 | Z1 | grid 16→18 | 0.005 | 0.010 | 0.000 |
-| 10-13 | R1, Z4, Z5, C4, C14 | various | 0.000 | 0.000 | 0.000 |
+| 10-14 | R1, Z4, Z5, C4, C14 | various | 0.000 | 0.000 | 0.000 |
 
 ### Cell-grid pattern: damage_radius cliff
 
