@@ -22,7 +22,7 @@ The `Brain` Protocol in `quantumnematode/brain/arch/_brain.py` SHALL NOT be modi
 
 - **GIVEN** an `LSTMPPOBrain` with `tei_prior = torch.tensor([2.0, 0.0, 0.0, 0.0])` (strong bias toward action 0)
 - **WHEN** the brain runs 100 sequential rollout steps via `run_brain` (with `prepare_episode` called once at the start)
-- **THEN** at every step, the actor logits SHALL include the additive `[+2.0, 0.0, 0.0]` offset before softmax
+- **THEN** at every step, the actor logits SHALL include the additive `[+2.0, 0.0, 0.0, 0.0]` offset before softmax (4-action default)
 - **AND** the empirical probability of action 0 across the 100 steps SHALL be strictly higher than a no-prior baseline run with the same seed
 - **AND** the prior SHALL NOT be drowned out by LSTM hidden-state evolution (i.e. the elevated probability persists across all 100 steps, not just step 1)
 
