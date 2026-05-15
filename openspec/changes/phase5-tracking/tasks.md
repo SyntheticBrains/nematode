@@ -9,21 +9,21 @@ to mark sub-tasks complete as part of its diff.
 ## M-1: Phase 5 Tracking Scaffold (THIS CHANGE)
 
 **Branch**: `feat/phase5-tracking-scaffold`
-**OpenSpec change**: `2026-04-26-phase5-tracking` (this directory)
+**OpenSpec change**: `phase5-tracking` (this directory)
 **Status**: in progress
 
-- [x] M-1.1 Create `openspec/changes/2026-04-26-phase5-tracking/proposal.md`
-- [x] M-1.2 Create `openspec/changes/2026-04-26-phase5-tracking/design.md`
-- [x] M-1.3 Create `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (this file)
+- [x] M-1.1 Create `openspec/changes/phase5-tracking/proposal.md`
+- [x] M-1.2 Create `openspec/changes/phase5-tracking/design.md`
+- [x] M-1.3 Create `openspec/changes/phase5-tracking/tasks.md` (this file)
 - [x] M-1.4 Update `docs/roadmap.md` Phase 5 row in Timeline Overview to `🟡 IN PROGRESS`
 - [x] M-1.5 Add "Phase 5 Milestone Tracker" sub-section to `docs/roadmap.md` Phase 5 block
-- [x] M-1.6 Validate change: `openspec validate --changes 2026-04-26-phase5-tracking --strict`
+- [x] M-1.6 Validate change: `openspec validate --changes phase5-tracking --strict`
 - [x] M-1.7 Run `uv run pre-commit run -a` clean
 - [x] M-1.8 Open PR
 
 ## M0: Brain-Agnostic Evolution Framework (Fresh Build)
 
-**OpenSpec change**: `2026-04-28-add-evolution-framework` — archived in the M0 PR (see `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`); the `evolution-framework` capability is now under `openspec/specs/`
+**OpenSpec change**: `2026-04-28-add-evolution-framework` — archived in the M0 PR (see `openspec/changes/archive/2026-04-28-add-evolution-framework/`); the `evolution-framework` capability is now under `openspec/specs/`
 **Status**: complete (archived)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO (smoke) + LSTMPPO+klinotaxis (smoke)
@@ -63,7 +63,7 @@ to mark sub-tasks complete as part of its diff.
 
 ## M2: Hyperparameter Evolution Pilot
 
-**OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-28-2026-04-27-add-hyperparameter-evolution`)
+**OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-27-add-hyperparameter-evolution`)
 **Status**: complete. Four arms GO: MLPPPO+oracle +5.5pp (saturated), LSTMPPO+klinotaxis foraging +7.5pp (saturated), LSTMPPO+klinotaxis+predator under CMA-ES (M2.11) **+47.0pp on 4 seeds, non-saturated** with 3/4 reaching 0.92 best fitness and 1/4 dead-zone failure, and LSTMPPO+klinotaxis+predator under TPE (M2.12) **+79.0pp on 4 seeds**, with seed 43's CMA-ES dead zone rescued (0.000 → 1.000) and mean +32pp over CMA-ES on the same brain/sensing/schema/budget. RQ1 closed: M3 default optimiser is TPE. Roadmap row flipped to ✅ complete
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO + LSTMPPO+klinotaxis
@@ -271,7 +271,7 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 - [ ] M7.4 Phase 6 quantum re-evaluation trigger recommendation
 - [ ] M7.5 Publish `artifacts/logbooks/019/synthesis.md` (016 = M1 predator-brain; 017 = M5 co-evolution; 018 = M6 transgenerational; 019 = M7 phase synthesis)
 - [ ] M7.6 Update `docs/roadmap.md` Phase 5 status → COMPLETE; record exit criterion outcomes
-- [ ] M7.7 Archive `2026-04-26-phase5-tracking` alongside `2026-07-21-add-phase5-evaluation`
+- [ ] M7.7 Archive `phase5-tracking` alongside `2026-07-21-add-phase5-evaluation`
 
 ## Phase 5 Research Questions
 

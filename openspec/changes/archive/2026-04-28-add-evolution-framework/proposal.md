@@ -2,7 +2,7 @@
 
 Phase 5 (Evolution & Adaptation) requires evolving classical brain architectures (MLPPPOBrain, LSTMPPOBrain) — but the existing [scripts/run_evolution.py](scripts/run_evolution.py) is hardcoded to `QVarCircuitBrain` quantum circuit parameters. The QVarCircuit coupling lives in three places: `create_brain_from_config()` (line 204) instantiates QVarCircuitBrain explicitly with a type check; `run_episode()` (line 248) hard-codes QVarCircuitBrain-specific sensory inputs; and `evaluate_fitness()` (line 386) calls both. Every subsequent Phase 5 milestone (M1 predator-as-brain, M2 hyperparameter pilot, M3 Lamarckian, M4 Baldwin, M5 co-evolution, M6 transgenerational) needs a brain-agnostic loop that does not exist today.
 
-Per the Phase 5 design decisions recorded in [2026-04-26-phase5-tracking/proposal.md](openspec/changes/2026-04-26-phase5-tracking/proposal.md), refined for M0:
+Per the Phase 5 design decisions recorded in [phase5-tracking/proposal.md](openspec/changes/phase5-tracking/proposal.md), refined for M0:
 
 - **No QVarCircuit backwards compatibility, no legacy preservation**: the existing QVarCircuit-only script and its smoke test are **deleted outright**. The user has explicitly decided that retaining legacy code under `scripts/legacy/` would tie M0 to suboptimal implementation choices. If quantum brain evolution is needed at a Phase 6 re-evaluation, a `QVarCircuitEncoder` will be added cleanly to the new framework's registry — not by resurrecting the old script. Git history preserves the old code for reference.
 - **LSTMPPO + klinotaxis is the first-class biological brain** for headline scientific milestones (M4/M5/M6). M0 ships its encoder so M3 can target it without a follow-up framework PR.
@@ -79,7 +79,7 @@ CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a n
 
 **Docs:**
 
-- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — M0.1 → M0.14 sub-tasks marked `[x]` per the M-1 invariant. The phase5-tracking change itself is **not** archived (it spans M-1 → M7 and stays open until M7 ships)
+- `openspec/changes/phase5-tracking/tasks.md` — M0.1 → M0.14 sub-tasks marked `[x]` per the M-1 invariant. The phase5-tracking change itself is **not** archived (it spans M-1 → M7 and stays open until M7 ships)
 - `docs/roadmap.md` Phase 5 Milestone Tracker — M0 row flipped to `✅ complete` in this PR (the PR's merge IS the M0 completion event, so the row flip ships in the same diff as the framework code)
 
 ## PR + archive flow
@@ -93,7 +93,7 @@ This change archives **on this branch** as the final Phase 10 task (10.6 — `op
 - The legacy `configs/evolution/qvarcircuit_foraging_small.yml` is **deleted** (no consumer remains).
 - The CI smoke test `test_run_evolution_smoke` (against the QVarCircuit script) is **deleted**, replaced by `test_run_evolution_smoke_mlpppo` against the new framework.
 
-These breaks are sanctioned by the Phase 5 decision recorded in `2026-04-26-phase5-tracking/proposal.md`. The user has explicitly declined to retain a legacy fallback so M0 is not constrained by suboptimal legacy choices.
+These breaks are sanctioned by the Phase 5 decision recorded in `phase5-tracking/proposal.md`. The user has explicitly declined to retain a legacy fallback so M0 is not constrained by suboptimal legacy choices.
 
 ## Backward Compatibility
 

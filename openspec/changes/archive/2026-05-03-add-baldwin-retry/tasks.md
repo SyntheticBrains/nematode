@@ -81,7 +81,7 @@
 
 ## 11. Tracker + roadmap update
 
-- [x] 11.1 Updated `openspec/changes/2026-04-26-phase5-tracking/tasks.md` M4.5 section: M4.5.1-M4.5.6 ticked with full descriptions of what each design change accomplished + the audit finding it addressed; M4.5.7 explicitly marked DEFERRED to M4.6.7 with rationale (a final verdict-flip from M4.5 alone would over-claim or require Decision 6's STOP semantic, but Decision 6 was scoped to "redesigned gates STOP after audit fixes"). New M4.6 section added with 7 sub-tasks scoping the abstraction redesign + iteration step 2.
+- [x] 11.1 Updated `openspec/changes/phase5-tracking/tasks.md` M4.5 section: M4.5.1-M4.5.6 ticked with full descriptions of what each design change accomplished + the audit finding it addressed; M4.5.7 explicitly marked DEFERRED to M4.6.7 with rationale (a final verdict-flip from M4.5 alone would over-claim or require Decision 6's STOP semantic, but Decision 6 was scoped to "redesigned gates STOP after audit fixes"). New M4.6 section added with 7 sub-tasks scoping the abstraction redesign + iteration step 2.
 - [x] 11.2 M4 row in phase5-tracker stays as INCONCLUSIVE per the iterative-until-valid framing (not ticked as complete; M4.6 will close the iteration).
 - [x] 11.3 Updated `docs/roadmap.md` M4 row. Reframed from "INCONCLUSIVE; M4.5 is follow-up" to "iterative evaluation IN PROGRESS; M4.5 step 1 STRUCTURAL FINDING; M4.6 step 2 PLANNED". M5/M6 dependencies stay deferred.
 

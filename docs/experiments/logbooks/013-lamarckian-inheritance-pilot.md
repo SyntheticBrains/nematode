@@ -289,7 +289,7 @@ M4 (Baldwin Effect) starts on the M3 predator-arm config + TPE + a Baldwin-style
 
 ## Next Steps
 
-- [x] This-PR M3 invariants: tick `M3.1`–`M3.8` plus added sub-tasks in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md); flip M3 status header to `complete`; flip [`docs/roadmap.md`](../../../docs/roadmap.md) M3 row to `✅ complete`.
+- [x] This-PR M3 invariants: tick `M3.1`–`M3.8` plus added sub-tasks in [`openspec/changes/phase5-tracking/tasks.md`](../../../openspec/changes/phase5-tracking/tasks.md); flip M3 status header to `complete`; flip [`docs/roadmap.md`](../../../docs/roadmap.md) M3 row to `✅ complete`.
 - [ ] **M4 (Baldwin Effect)** starts on the M3 predator config + TPE + a `BaldwinInheritance` strategy. Same arm, same K/L, same 4-field schema, same 4 seeds. The structural prediction: Baldwin should produce a gen-2 jump comparable to M3's 0.124 → 0.676 lamarckian jump *without* inheriting weights directly. The decision gate should compare M4 against M3 (does Baldwin match Lamarckian's saturation speed?) AND against control (does Baldwin do better than from-scratch?).
 
 ### M4 prerequisites flagged from M3 implementation

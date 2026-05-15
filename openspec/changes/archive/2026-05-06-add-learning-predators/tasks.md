@@ -78,6 +78,6 @@ The byte-equivalence parametrised test (task 2.6) is the **primary** regression 
 
 ## 7. Tracker + roadmap update
 
-- [x] 7.1 Ticked M1.1-M1.8 sub-tasks in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (M1 section)
+- [x] 7.1 Ticked M1.1-M1.8 sub-tasks in `openspec/changes/phase5-tracking/tasks.md` (M1 section)
 - [x] 7.2 Flipped M1 row in `docs/roadmap.md` Phase 5 milestone tracker table from 🟡 next to ✅ complete
 - [x] 7.3 Added detailed result summary to the M1 row referencing logbook 016, byte-equivalence gate, and 80/80 zero-delta regression-baseline outcome

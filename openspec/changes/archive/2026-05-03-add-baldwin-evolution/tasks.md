@@ -93,7 +93,7 @@
 
 ## 14. Tracker + roadmap
 
-- [x] 14.1 Ticked M4.1-M4.9 in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` (M4.8 + M4.9 added during planning). Flipped M4 status from `not started` to `complete` with the STOP verdict + per-gate margins. M4.2's scope-change note used the M3.4-style strikethrough pattern.
+- [x] 14.1 Ticked M4.1-M4.9 in `openspec/changes/phase5-tracking/tasks.md` (M4.8 + M4.9 added during planning). Flipped M4 status from `not started` to `complete` with the STOP verdict + per-gate margins. M4.2's scope-change note used the M3.4-style strikethrough pattern.
 - [x] 14.2 Flipped M4 row in `docs/roadmap.md` from 🟢 unblocked to ✅ complete with the STOP verdict summary.
 
 ## 15. PR + archive
@@ -110,5 +110,5 @@
 - [x] 16.3 Updated supporting appendix (`docs/experiments/logbooks/supporting/014/baldwin-inheritance-pilot-details.md`) with the schema-shift evidence (per-arm gen-0 best-fitness table showing Baldwin -0.14pp deficit), the F1 design-failure analysis, the sample-size discussion, and the knob-choice rationale for M4.5.
 - [x] 16.4 Updated `docs/experiments/README.md` M4 entry from "STOP" to "completed (framework shipped) — INCONCLUSIVE on the science" with audit summary.
 - [x] 16.5 Updated `docs/roadmap.md` M4 row to "✅ framework shipped, ⚠️ INCONCLUSIVE on the science" with audit summary + M4.5 forward reference.
-- [x] 16.6 Updated tracker (`openspec/changes/2026-04-26-phase5-tracking/tasks.md`): M4 status flipped from STOP to INCONCLUSIVE with audit summary; added M4.10 task for the audit; added a new M4.5 section with 7 sub-tasks scoping the proper retry.
+- [x] 16.6 Updated tracker (`openspec/changes/phase5-tracking/tasks.md`): M4 status flipped from STOP to INCONCLUSIVE with audit summary; added M4.10 task for the audit; added a new M4.5 section with 7 sub-tasks scoping the proper retry.
 - [x] 16.7 Updated this OpenSpec change's tasks (this file): M4.2/M4.3/M4.5/M4.9 task notes amended to reference the audit findings; task 15.4 changed to DEFERRED (not archiving the change in this PR).

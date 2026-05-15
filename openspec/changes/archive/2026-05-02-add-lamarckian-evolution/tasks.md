@@ -93,14 +93,14 @@ Mechanical correctness check at real per-episode budget before committing ~100 m
 
 ## 11. Tracker + roadmap updates
 
-- [x] 11.1 Rewrote the M3 sub-tasks in `openspec/changes/2026-04-26-phase5-tracking/tasks.md`: M3.4 dropped (saturated arms can't measure inheritance signal); M3.5 renamed to predator-arm; M3.6 updated to mention TPE base + within-experiment control + K=50/L=25 budget; added M3.9 (within-experiment control + cross-schema confounder check) and M3.10 (pre-pilot smoke at K=50/L=25 scale). Final sub-task count = 10 (was 8). All ticked.
+- [x] 11.1 Rewrote the M3 sub-tasks in `openspec/changes/phase5-tracking/tasks.md`: M3.4 dropped (saturated arms can't measure inheritance signal); M3.5 renamed to predator-arm; M3.6 updated to mention TPE base + within-experiment control + K=50/L=25 budget; added M3.9 (within-experiment control + cross-schema confounder check) and M3.10 (pre-pilot smoke at K=50/L=25 scale). Final sub-task count = 10 (was 8). All ticked.
 - [x] 11.2 Flipped M3 status header in the tracker to `complete` with a one-paragraph summary covering: decision (GO), speed-gate margin (+5.25 gens), per-seed best fitness (all 4 lamarckian → 1.00 vs control's 0.88-0.96), inheritance-rescues-TPE-unlucky-seed pattern (analogue to M2.12 rescuing M2.11's seed 43), and M4 carry-forward.
 - [x] 11.3 Flipped the M3 row in `docs/roadmap.md` Phase 5 Milestone Tracker to `✅ complete` with the GO outcome blurb.
 - [x] 11.4 Updated M4 row in tracker: status flipped from `🔲 not started` to `🟢 unblocked` with a note that M4 starts on M3's predator config + TPE + the new `BaldwinInheritance` strategy; M4.5 task description updated to mention M3's per-seed final-gen winner checkpoints under `artifacts/logbooks/013/.../inheritance/genome-*.pt` as valid hand-off points if M4 wants to start from M3's best-known policies.
 
 ## 12. Quality gates
 
-- [x] 12.1 `openspec validate --changes add-lamarckian-evolution --strict` passes (also re-verified add-lamarckian-evolution + 2026-04-26-phase5-tracking, both ✓).
+- [x] 12.1 `openspec validate --changes add-lamarckian-evolution --strict` passes (also re-verified add-lamarckian-evolution + phase5-tracking, both ✓).
 - [x] 12.2 `uv run pre-commit run -a` clean (ruff check, ruff format, pyright, mdformat, markdownlint, tests — all pass).
 - [x] 12.3 Full project test suite (`uv run pytest -m "not nightly"`) passes — 2304 tests in ~2 min. Evolution suite specifically: 148 pass (118 baseline + 30 new M3 tests).
 - [x] 12.4 Branch is PR-ready: framework + tests + pilot + control + baseline + aggregator + logbook 013 + tracker + roadmap all complete; 19 commits on `feat/m3-lamarckian-evolution`; openspec strict-clean; pre-commit clean; full project test suite (2305 tests) passes. PR will be opened separately by the user with the GO verdict + the deferred follow-ups (multi-elite + early-stop-on-saturation + M3 spec-archive — see logbook 013 § Next Steps) noted in the description.

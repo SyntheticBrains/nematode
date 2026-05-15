@@ -139,7 +139,7 @@
 **Dependencies**: Phases 1-9 complete
 **Parallelizable**: No (these are the final checks before the PR is opened — every task here MUST be `[x]` before opening the PR or archiving the change)
 
-- [x] 10.1 Update `openspec/changes/2026-04-26-phase5-tracking/tasks.md`: marked M0.1 → M0.14 complete (`[x]`); M0 status header set to `complete` in the milestone scaffold
+- [x] 10.1 Update `openspec/changes/phase5-tracking/tasks.md`: marked M0.1 → M0.14 complete (`[x]`); M0 status header set to `complete` in the milestone scaffold
 - [x] 10.2 Update `docs/roadmap.md` Phase 5 Milestone Tracker table: M0 row set to `✅ complete` in this PR (the PR's merge IS the M0 completion event, so the row flip ships in the same diff as the framework code)
 - [x] 10.3 Run `openspec validate --changes 2026-04-28-add-evolution-framework --strict` — passes
 - [x] 10.4 Run `uv run pre-commit run -a` — clean (all 10 hooks passed: large files, EOF fix, YAML/TOML check, mdformat, markdownlint-cli2, ruff check, ruff format, pyright, tests)

@@ -253,7 +253,7 @@ This PR uses CMA-ES (the M0-default optimiser) for hyperparameter evolution. Tha
 - The M2 pilot is a **pilot** — its goal is to exercise the framework and get a GO/PIVOT/STOP signal, not to find the globally-optimal hyperparameters. CMA-ES is good enough for that.
 - Adding an optimiser dependency (Optuna, Ax, etc.) is a real change with its own design questions — capability spec deltas, lockfile growth, dispatch surface. Bundling it into M2 widens the PR.
 
-**The follow-up:** see Phase 5 Research Questions in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../2026-04-26-phase5-tracking/tasks.md). After M2 ships, we run a TPE/Optuna comparison on the same pilot config; if TPE substantially outperforms (heuristic: ≥5pp better fitness at the same evaluation budget), open a follow-up change to add an `OptunaOptimizer` adapter alongside CMA-ES + GA. The bar is concrete; the work is bounded; no commitment is made up front.
+**The follow-up:** see Phase 5 Research Questions in [`openspec/changes/phase5-tracking/tasks.md`](../phase5-tracking/tasks.md). After M2 ships, we run a TPE/Optuna comparison on the same pilot config; if TPE substantially outperforms (heuristic: ≥5pp better fitness at the same evaluation budget), open a follow-up change to add an `OptunaOptimizer` adapter alongside CMA-ES + GA. The bar is concrete; the work is bounded; no commitment is made up front.
 
 **Related future need:** M6.5 (NEAT topology evolution, currently flagged as optional) inherently requires a NEAT-specific optimiser, not CMA-ES or BO. So an "optimiser portfolio" exists in the Phase 5 future regardless. Recording the M2-driven question now feeds into that broader portfolio decision.
 

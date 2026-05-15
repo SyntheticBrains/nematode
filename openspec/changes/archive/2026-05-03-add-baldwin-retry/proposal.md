@@ -94,7 +94,7 @@ If implementation discovers a framework-level requirement we missed (e.g. the F1
 - **New campaign scripts**: `scripts/campaigns/phase5_baldwin_retry_*.sh` for the 4-arm pilot launches. Same wrapper pattern as existing `phase5_m4_*.sh` scripts.
 - **No framework code changes** expected. If profiling shows the F1 evaluator's K'-train path exercises an encoder/loop combination not covered by existing tests, we'll add unit tests but not change the framework contract.
 - **Logbook**: new `docs/experiments/logbooks/015-baldwin-retry.md` + supporting appendix at `docs/experiments/logbooks/supporting/015/`.
-- **Tracker**: tick M4.5.1-M4.5.7 in `openspec/changes/2026-04-26-phase5-tracking/tasks.md` as work completes; flip M4 row from INCONCLUSIVE to whichever the M4.5 data supports per task M4.5.7.
+- **Tracker**: tick M4.5.1-M4.5.7 in `openspec/changes/phase5-tracking/tasks.md` as work completes; flip M4 row from INCONCLUSIVE to whichever the M4.5 data supports per task M4.5.7.
 - **Roadmap**: M4 row updated post-verdict.
 - **Compute**: ~3-4 hours wall-time for the 4-arm × 8-seed × 20-gen pilot (baseline + control + Baldwin + Lamarckian; Baldwin and Control share an 8-field schema so harder TPE search may need 25-30 gens — design.md will pin the gen budget after smoke testing).
 - **Wall-time risk**: 8-field TPE search may be slower to converge than 6-field. Will smoke-test 3 gens × pop 6 × seed 42 on the new schema before committing to the full pilot.

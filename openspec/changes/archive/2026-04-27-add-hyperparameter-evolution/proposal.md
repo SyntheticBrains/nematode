@@ -76,7 +76,7 @@ New `scripts/campaigns/phase5_m2_hyperparam_mlpppo.sh` — orchestrates the 4-se
 
 ### 8. MLPPPO pilot run + logbook
 
-Pilot is run during the spec-review/implementation window so the PR body includes the actual GO/PIVOT/STOP decision and the convergence curve plot. Logbook lands at `artifacts/logbooks/012/hyperparam_pilot_mlpppo.md`. Decision gate from the Phase 5 milestone scaffold (recorded in [`2026-04-26-phase5-tracking/tasks.md`](../2026-04-26-phase5-tracking/tasks.md), M2 section): GO if either brain ≥3pp over hand-tuned baseline AND fitness still rising at gen 20; PIVOT if marginal; STOP if no separation. This PR ships only the MLPPPO arm of the gate; the LSTMPPO arm lands in PR 3 if applicable.
+Pilot is run during the spec-review/implementation window so the PR body includes the actual GO/PIVOT/STOP decision and the convergence curve plot. Logbook lands at `artifacts/logbooks/012/hyperparam_pilot_mlpppo.md`. Decision gate from the Phase 5 milestone scaffold (recorded in [`phase5-tracking/tasks.md`](../phase5-tracking/tasks.md), M2 section): GO if either brain ≥3pp over hand-tuned baseline AND fitness still rising at gen 20; PIVOT if marginal; STOP if no separation. This PR ships only the MLPPPO arm of the gate; the LSTMPPO arm lands in PR 3 if applicable.
 
 ### 9. Spec deltas
 
@@ -88,9 +88,9 @@ Three new requirements added to the existing `evolution-framework` capability (d
 
 ### 10. M-1 invariant updates
 
-Per the Phase 5 tracking change's invariant ([`2026-04-26-phase5-tracking/specs/phase5-tracking/spec.md`](../2026-04-26-phase5-tracking/specs/phase5-tracking/spec.md)), the same PR diff updates:
+Per the Phase 5 tracking change's invariant ([`phase5-tracking/specs/phase5-tracking/spec.md`](../phase5-tracking/specs/phase5-tracking/spec.md)), the same PR diff updates:
 
-- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — tick `M2.1`, `M2.2`, `M2.3`, `M2.5` (MLPPPO campaign script — per the per-brain split documented in M2.5's body), and `M2.7` (MLPPPO logbook published). Leave `M2.4` (LSTMPPO pilot config), `M2.6` (LSTMPPO arm of the pilot run — MLPPPO arm runs in PR 2 but the line item itself isn't ticked until both arms complete), and `M2.8` (final checklist + roadmap flip) for PR 3.
+- `openspec/changes/phase5-tracking/tasks.md` — tick `M2.1`, `M2.2`, `M2.3`, `M2.5` (MLPPPO campaign script — per the per-brain split documented in M2.5's body), and `M2.7` (MLPPPO logbook published). Leave `M2.4` (LSTMPPO pilot config), `M2.6` (LSTMPPO arm of the pilot run — MLPPPO arm runs in PR 2 but the line item itself isn't ticked until both arms complete), and `M2.8` (final checklist + roadmap flip) for PR 3.
 - `docs/roadmap.md` Phase 5 Milestone Tracker — set M2 row to `🟡 in progress` (LSTMPPO arm pending PR 3).
 
 ### 11. Tests (new)
@@ -143,7 +143,7 @@ Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/` and `pa
 **Docs:**
 
 - `artifacts/logbooks/012/hyperparam_pilot_mlpppo.md` (new — published as part of PR)
-- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — M2.1–M2.5, M2.7 ticked (MLPPPO arm); plus a new "Phase 5 Research Questions" section recording RQ1 (Optimiser portfolio re-evaluation) — see `design.md` § Considered Alternatives — Optimiser choice for the rationale
+- `openspec/changes/phase5-tracking/tasks.md` — M2.1–M2.5, M2.7 ticked (MLPPPO arm); plus a new "Phase 5 Research Questions" section recording RQ1 (Optimiser portfolio re-evaluation) — see `design.md` § Considered Alternatives — Optimiser choice for the rationale
 - `docs/roadmap.md` Phase 5 Milestone Tracker — M2 row → `🟡 in progress`; plus a "Phase 5 research questions" paragraph after the tracker pointing readers at the new section
 - `.claude/skills/nematode-run-evolution/skill.md` — short note on the `--fitness learned_performance` mode
 
