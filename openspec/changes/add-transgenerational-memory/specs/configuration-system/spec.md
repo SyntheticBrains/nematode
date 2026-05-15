@@ -19,15 +19,25 @@ The `quantumnematode/utils/config_loader.py` module SHALL define a `Transgenerat
 - `pathogen_lawns_enabled: bool`. When `true`, the env-build step for that generation SHALL include at least one `STATIONARY` predator entity (the pathogen lawn). When `false`, the env-build step SHALL exclude `STATIONARY` predators for that generation.
 - `ppo_train_episodes: int` constrained to `≥ 0`. Overrides `EvolutionConfig.learn_episodes_per_eval` for that generation only.
 
-The `transgenerational` block SHALL be optional on the YAML's `evolution:` block. When absent, the loop SHALL behave byte-equivalently to its current behaviour (no per-gen schedule consulted).
+The `transgenerational` block SHALL be optional on the YAML's `evolution:` block when `inheritance` is any of `none`/`lamarckian`/`baldwin`. When absent and inheritance is non-TEI, the loop SHALL behave byte-equivalently to its current behaviour (no per-gen schedule consulted).
+
+**Presence requirement under `inheritance: transgenerational`.** When `evolution.inheritance == "transgenerational"`, the `evolution.transgenerational` block SHALL be present and MUST contain all required fields (`enabled`, `decay_factor`, `extraction_seed`, `lawn_schedule`). The Pydantic model validator SHALL reject configurations that set `inheritance: transgenerational` without the block (or with a partial block missing required fields) and SHALL emit a `ValidationError` whose message names `evolution.transgenerational` as the missing key and lists the required fields.
 
 #### Scenario: Default config has no transgenerational block
 
-- **GIVEN** any evolution YAML without a `transgenerational` field under `evolution:`
+- **GIVEN** any evolution YAML without a `transgenerational` field under `evolution:` AND `inheritance` is `none`/`lamarckian`/`baldwin`
 - **WHEN** the YAML is loaded via `load_simulation_config`
 - **THEN** `EvolutionConfig.transgenerational` SHALL be `None`
 - **AND** the loop SHALL construct the appropriate `InheritanceStrategy` from `evolution.inheritance` (defaulting to `NoInheritance`)
 - **AND** no per-gen schedule SHALL be consulted
+
+#### Scenario: inheritance: transgenerational without a transgenerational block is rejected
+
+- **GIVEN** a YAML with `evolution.inheritance: transgenerational` AND no `evolution.transgenerational` block (or a partial block missing one or more of `enabled`, `decay_factor`, `extraction_seed`, `lawn_schedule`)
+- **WHEN** the YAML is loaded via `load_simulation_config`
+- **THEN** loading SHALL raise a Pydantic `ValidationError`
+- **AND** the message SHALL name `evolution.transgenerational` as the missing/incomplete key
+- **AND** the message SHALL list the required fields (`enabled`, `decay_factor`, `extraction_seed`, `lawn_schedule`) so the operator can populate them
 
 #### Scenario: TransgenerationalConfig validates decay_factor range
 

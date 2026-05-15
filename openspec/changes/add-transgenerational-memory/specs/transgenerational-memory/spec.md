@@ -112,26 +112,26 @@ The extraction SHALL run AFTER fitness evaluation completes (so the F0 fitness s
 - **WHEN** the loader is called
 - **THEN** a `FileNotFoundError` SHALL be raised with the missing path in the message
 
-### Requirement: F0 Calibration Pre-Flight Gate
+### Requirement: F0 Calibration Operator-Acknowledged Gate
 
 The system SHALL provide an F0-calibration smoke target in the M6 campaign shell that runs an F0-only single-generation pass (no F1/F2/F3) and reports the mean F0 avoidance choice index. The smoke target SHALL be invocable independently of the pilot or full campaign (e.g., `phase5_m6_transgenerational_lstmppo_klinotaxis.sh --smoke`).
 
-The calibration SHALL be treated as a hard pre-flight gate before the M6.5 pilot or full campaign is unblocked: the mean F0 choice index from the smoke pass SHALL fall within `[0.45, 0.85]` inclusive. Values below `0.45` indicate F0 is at the chance floor (gate ratios uninterpretable); values above `0.85` indicate F0 is ceiling-saturated (F1 will inherit ~ceiling regardless of substrate). The implementer SHALL retune `damage_radius` and `ppo_train_episodes` until the smoke passes the gate before progressing M6.5 sub-tasks.
+**Enforcement model: operator-acknowledged, not script-enforced.** The calibration envelope `0.45 ≤ mean_f0_choice_index ≤ 0.85` is the recommended target range, but the smoke target and the pilot/full driver SHALL NOT abort on out-of-envelope values. The smoke MUST log the F0 mean and a pass/fail flag against the envelope; the operator MUST review the output and decide whether to retune `damage_radius` / `ppo_train_episodes` or to proceed (e.g. to confirm a ceiling failure mode in a debugging run). Values below `0.45` indicate F0 is at the chance floor (gate ratios uninterpretable); values above `0.85` indicate F0 is ceiling-saturated (F1 will inherit ~ceiling regardless of substrate). The single source of truth for this policy is this requirement; the operator pause is documented in tasks.md 8.3.
 
-#### Scenario: Calibration smoke target reports F0 choice index
+#### Scenario: Calibration smoke target reports F0 choice index without aborting
 
 - **GIVEN** the M6 campaign shell with `--smoke` mode
 - **WHEN** the calibration target runs (1 seed × pop 6 × F0-only × ~50 episodes)
 - **THEN** the output SHALL include a single-line summary stating `mean_f0_choice_index = <value>`
 - **AND** the output SHALL state whether the value falls within the `[0.45, 0.85]` calibratable envelope
-- **AND** the exit code SHALL be 0 regardless of envelope outcome (the gate is operator-actioned, not script-actioned, so the operator can choose to retune or accept)
+- **AND** the script exit code SHALL be 0 regardless of envelope outcome (the gate is operator-acknowledged, not script-enforced)
 
 #### Scenario: Calibration outcome is documented in pilot/full pre-flight
 
 - **GIVEN** an M6.5 pilot or full campaign launch
 - **WHEN** the pilot/full driver is invoked
 - **THEN** the driver SHALL log the latest recorded calibration outcome (F0 mean choice index and envelope pass/fail) at startup
-- **AND** the operator SHALL have acknowledged the calibration value in the campaign-shell preamble before pilot/full begins (manual confirmation; the script SHALL print a notice but SHALL NOT block)
+- **AND** the driver SHALL NOT block on the envelope check; the operator's acknowledgment at tasks.md 8.3 (pause for user review) is the enforcement point
 
 ### Requirement: Decision-Gate Cross-Seed Aggregation
 
@@ -165,4 +165,4 @@ The 2-of-4 threshold reflects the calibrated tolerance for per-seed variance obs
 - **GIVEN** a 4-seed full campaign producing per-seed verdicts
 - **WHEN** none of the 4 seeds satisfies all four criteria
 - **THEN** the campaign verdict SHALL be `STOP`
-- **AND** `summary.md` SHALL document the failure mode (which criterion(a) failed most often across seeds) to inform the logbook 018 narrative
+- **AND** `summary.md` SHALL document the failure mode (which criterion or criteria failed most often across seeds) to inform the logbook 018 narrative

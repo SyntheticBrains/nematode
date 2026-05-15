@@ -8,12 +8,12 @@ The adjacent computational literature does not, to our knowledge, replicate this
 
 **Current state.** M3 shipped `LamarckianInheritance` + `WeightPersistence` (bit-exact tensor round-trip across 18 LSTMPPO weight tensors). M4 closed STOP (substrate constraint on Baldwin). M5 closed STOP (architecture asymmetry). Both single-population evolution loop (`EvolutionLoop`) and multi-agent runner (`MultiAgentSimulation`) are stable. The existing `PredatorType.STATIONARY` toxic-zone entity (env/env.py:91–95) is functionally a pathogen lawn — `speed=0`, larger damage radius, perceived via nociception sensor.
 
-**Constraints.**
+**Constraints (rationale).** The four constraints below shape design decisions D1–D9; the corresponding pass/fail criteria live in the spec delta files (transgenerational-memory, evolution-framework, lstm-ppo-brain, configuration-system).
 
-1. *Decision-gate calibration sensitivity.* The literature gate (F1 ≥40%, F2 ≥25%, F3 ≥15% of F0, monotone non-increasing) requires F0 baseline to land in a calibratable envelope; floor or ceiling F0 makes the gate uninterpretable.
-2. *Confounder elimination.* Any signal carried by implicit channels (shared seeds, common training history, hyperparameter persistence) would mask the substrate's true contribution. M6.6's TEI-on/off ablation must be a one-bit difference.
-3. *Brain Protocol stability.* M6 must not cascade signature changes through 19 brain subtypes.
-4. *Compute envelope.* Must fit within ~20 wall-hours total to stay within prior Phase 5 milestone norms.
+1. *Decision-gate calibration sensitivity.* The literature gate (F1 ≥40%, F2 ≥25%, F3 ≥15% of F0, monotone non-increasing decay F0 ≥ F1 ≥ F2 ≥ F3) compares retention ratios *against* the F0 baseline, so the F0 baseline itself needs to land in a calibratable envelope; if F0 is at the chance floor or saturation ceiling, the ratios are uninterpretable. This rationale motivates D8's operator-acknowledged F0 calibration step.
+2. *Confounder elimination.* The M6.6 paired-arm ablation (TEI-on vs TEI-off) is informative only if the substrate is the single difference between arms. Any implicit channel (shared seeds, common training history, hyperparameter persistence) that carries signal would mask the substrate's true contribution. This rationale motivates D6's pure-TEI vs `NoInheritance` pairing and the configuration-system spec's pairing validator.
+3. *Brain Protocol stability.* The codebase ships 19 brain subtypes; a signature change on the `Brain` Protocol would cascade through all of them. This rationale motivates D7's choice to attach `tei_prior` as an LSTMPPO-specific attribute set by `fitness.evaluate`, leaving the Protocol untouched.
+4. *Compute envelope.* Prior Phase 5 milestones (M3 / M4 retry / M5) consumed up to ~30 wall-hours per full campaign. M6 staying within ~20 wall-hours preserves the project's milestone-cadence norm. This rationale motivates D9's pilot ~4h + full ~16h budget.
 
 **Stakeholders.** Phase 5 tracker (openspec/changes/phase5-tracking/tasks.md M6.1–M6.8); Phase 5 synthesis logbook (future M8); roadmap (docs/roadmap.md Phase 5 milestone table).
 
@@ -111,11 +111,11 @@ The `tei_prior` stays constant across an episode (it is set once by `fitness.eva
 
 *Implementation note on `frozen=True` dataclass + `__post_init__` clamping.* `TransgenerationalMemory` is `frozen=True` to prevent cross-generation aliasing mutation. Frozen dataclasses cannot reassign fields directly inside `__post_init__`; the canonical Python pattern uses `object.__setattr__(self, "logit_bias", clamped_tensor)` for frozen-dataclass post-init mutation. Alternatively, a module-level factory function can pre-clamp before construction. The normative requirement is in the transgenerational-memory spec's "Transgenerational Memory Substrate" requirement; either approach satisfies it.
 
-### D8. Hard pre-flight F0-calibration gate
+### D8. Operator-acknowledged F0-calibration gate
 
-Before M6.5 full campaign is unblocked, run an F0-only single-gen smoke (1 seed × pop 6 × ~50 episodes ≈ 30 minutes). Pass iff `0.45 ≤ mean F0 choice_index ≤ 0.85`.
+Before M6.5 full campaign is unblocked, run an F0-only single-gen smoke (1 seed × pop 6 × ~50 episodes ≈ 30 minutes). The smoke reports the F0 mean choice index and flags whether it falls within `0.45 ≤ value ≤ 0.85`. The operator acknowledges the result and decides to retune or proceed; the script does NOT abort on out-of-envelope values.
 
-*Why hard gate.* The decision-gate ratios (40%/25%/15% × F0) are uninterpretable if F0 is at the floor (~chance) or ceiling (~ceiling-saturated). A hard pre-flight gate prevents wasting ~16 wall-hours on an uncalibratable run. If F0 < 0.45, retune `damage_radius` and `ppo_train_episodes`. If F0 > 0.95, reduce damage radius or training episodes. The tracker's permissive caveat ("refining to tighter bounds during M6 design is sensible") explicitly authorises gate refinement post-calibration.
+*Why operator-acknowledged gate (not script-aborting).* The decision-gate ratios (40%/25%/15% × F0) are uninterpretable if F0 is at the floor (~chance) or ceiling (~ceiling-saturated). The smoke target logs the F0 mean and a pass/fail flag against the `[0.45, 0.85]` envelope; the operator inspects the output before launching the pilot. If F0 < 0.45, retune `damage_radius` and `ppo_train_episodes`. If F0 > 0.85, reduce `damage_radius` or `ppo_train_episodes`. The tracker's permissive caveat ("refining to tighter bounds during M6 design is sensible") explicitly authorises gate refinement post-calibration. *Why operator-acknowledged, not script-enforced abort:* during damage_radius retuning iterations the operator may legitimately accept a calibration outside the envelope (e.g. to confirm a ceiling failure mode); script-aborting at that point would be hostile to the iterative workflow.
 
 ### D9. Compute envelope
 
@@ -143,7 +143,7 @@ The change is additive — no breaking changes to existing inheritance modes (`n
 
 1. Scaffold `TransgenerationalInheritance` strategy stubs + Literal extensions (config_loader, inheritance.py).
 2. Add `TransgenerationalMemory` dataclass.
-3. Wire LSTMPPO `tei_prior` attribute + runner pass-through.
+3. Add the `LSTMPPOBrain.tei_prior` attribute + the `run_brain()`/`learn()` logits addition. All TEI-related interactions remain routed through the existing `fitness.evaluate` path (set by `fitness.evaluate` per the lstm-ppo-brain spec); no runner changes are introduced.
 4. Fill in `TransgenerationalInheritance.inherit_from()` + checkpoint round-trip.
 5. Add per-generation `lawn_schedule` consumer in `EvolutionLoop`.
 6. Ship YAML config + campaign shell.
