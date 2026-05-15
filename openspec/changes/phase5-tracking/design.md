@@ -1,6 +1,6 @@
 ## Overview
 
-Phase 5 (Evolution & Adaptation) spans 8 milestones (M0–M7) plus this scaffold (M-1) over many months and AI sessions. This design documents the cross-session tracking strategy so the choice of artefacts is explicit and can be revisited if it proves insufficient.
+Phase 5 (Evolution & Adaptation) spans 8 milestones (M0–M8) plus this scaffold (M-1) over many months and AI sessions. This design documents the cross-session tracking strategy so the choice of artefacts is explicit and can be revisited if it proves insufficient.
 
 ## Goals / Non-Goals
 
@@ -9,7 +9,7 @@ Phase 5 (Evolution & Adaptation) spans 8 milestones (M0–M7) plus this scaffold
 - A future AI session can answer "what's the next Phase 5 milestone?" by reading two files (this `tasks.md` and the roadmap Phase 5 block)
 - Each Phase 5 milestone PR has a single canonical place to mark progress
 - Three Phase 5 design decisions (pilot-first, no QVarCircuit backwards compat, LSTMPPO+klinotaxis first-class) are recorded once, not re-derived per session
-- The tracking artefact decays gracefully: when M7 is published, this change archives alongside it
+- The tracking artefact decays gracefully: when M8 is published, this change archives alongside it
 
 **Non-Goals:**
 
@@ -22,9 +22,9 @@ Phase 5 (Evolution & Adaptation) spans 8 milestones (M0–M7) plus this scaffold
 
 ### Decision 1: One change directory for all of Phase 5, not one per milestone
 
-Each Phase 5 milestone (M0–M7) gets its own OpenSpec change directory (e.g. `2026-04-28-add-evolution-framework`). This M-1 change is *additional* — it's the meta-tracking layer above the per-milestone changes.
+Each Phase 5 milestone (M0–M8) gets its own OpenSpec change directory (e.g. `2026-04-28-add-evolution-framework`). This M-1 change is *additional* — it's the meta-tracking layer above the per-milestone changes.
 
-**Why:** Per-milestone changes are scoped to one PR with concrete code/spec deltas; they archive on merge. The Phase 5 tracker needs to outlive any single milestone — it spans the entire phase. Putting it in its own change directory means it lives until M7 archives it, while individual milestones come and go.
+**Why:** Per-milestone changes are scoped to one PR with concrete code/spec deltas; they archive on merge. The Phase 5 tracker needs to outlive any single milestone — it spans the entire phase. Putting it in its own change directory means it lives until M8 archives it, while individual milestones come and go.
 
 **Alternative considered:** Embed milestone tracking in `docs/roadmap.md` only. Rejected because the roadmap is the public-facing strategy doc; sub-task granularity belongs in a working artefact. The roadmap gets a one-line status per milestone (the "Milestone Tracker" sub-section); the OpenSpec `tasks.md` carries the full sub-task checklist.
 
@@ -58,7 +58,7 @@ A future AI session orients by:
 ## Maintenance
 
 - Every Phase 5 milestone PR updates `tasks.md` (mark sub-tasks complete) and `docs/roadmap.md` Phase 5 milestone tracker (one-line status update)
-- This change does not archive until M7 completes
+- This change does not archive until M8 completes
 - If Phase 5 deviates substantially from this plan (e.g. a milestone is dropped or reordered), update `tasks.md` to reflect reality — the checklist is descriptive, not aspirational
 
 ## Risks
