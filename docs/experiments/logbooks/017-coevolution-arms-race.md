@@ -107,7 +107,7 @@ Every screen exhibits the same shape: prey holds up at `dam=0` (contact-radius d
 
 The c2 fitness-lag analysis cross-pairs each candidate's gen-19 prey elite against each candidate's gen-19 predator elite:
 
-```
+```text
 prey \ pred         X4      P1      Y1      Z2      Z3     C12     C15     C16
 X4               1.000   0.933   0.800   0.933   0.933   0.733   0.933   0.933
 P1               1.000   0.667   0.933   0.733   0.867   0.933   0.467   0.800
