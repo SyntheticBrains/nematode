@@ -9,6 +9,7 @@ The adjacent computational literature does not, to our knowledge, replicate this
 **Current state.** M3 shipped `LamarckianInheritance` + `WeightPersistence` (bit-exact tensor round-trip across 18 LSTMPPO weight tensors). M4 closed STOP (substrate constraint on Baldwin). M5 closed STOP (architecture asymmetry). Both single-population evolution loop (`EvolutionLoop`) and multi-agent runner (`MultiAgentSimulation`) are stable. The existing `PredatorType.STATIONARY` toxic-zone entity (env/env.py:91–95) is functionally a pathogen lawn — `speed=0`, larger damage radius, perceived via nociception sensor.
 
 **Constraints.**
+
 1. *Decision-gate calibration sensitivity.* The literature gate (F1 ≥40%, F2 ≥25%, F3 ≥15% of F0, monotone non-increasing) requires F0 baseline to land in a calibratable envelope; floor or ceiling F0 makes the gate uninterpretable.
 2. *Confounder elimination.* Any signal carried by implicit channels (shared seeds, common training history, hyperparameter persistence) would mask the substrate's true contribution. M6.6's TEI-on/off ablation must be a one-bit difference.
 3. *Brain Protocol stability.* M6 must not cascade signature changes through 19 brain subtypes.

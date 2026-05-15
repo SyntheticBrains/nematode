@@ -30,8 +30,8 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 
 - **GIVEN** an `EvolutionConfig` with `inheritance: transgenerational` and a `transgenerational` config block (per the configuration-system delta)
 - **WHEN** the loop runs for ≥ 2 generations
-- **THEN** the F0 generation SHALL run from-scratch and SHALL have its F0-elite substrate extracted via the telemetry pass AFTER fitness evaluation completes
-- **AND** every F1+ child SHALL receive a substrate decayed from its assigned parent's substrate via the substrate's `inherit_from(parents, decay_factor)` call BEFORE the F1+ generation's episode evaluation begins
+- **THEN** the F0 generation SHALL train from random init (no warm-start, no parent substrate) for `ppo_train_episodes` episodes per the `lawn_schedule[0]` entry; after F0 evaluation completes, the F0-elite substrate is extracted via the F0 Substrate Extraction Pipeline (separate requirement below)
+- **AND** every F1+ child's `tei_prior_source` SHALL be threaded through `fitness.evaluate` per the TEI Substrate Worker-to-Fitness Transport requirement; the substrate is loaded and decayed inside `fitness.evaluate`, not by the runner
 - **AND** the CLI flag `--inheritance transgenerational` SHALL override the YAML field with the same behaviour
 - **AND** `--inheritance none` SHALL force the no-op path even when the YAML sets `transgenerational`
 
@@ -39,10 +39,10 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 
 - **GIVEN** a transgenerational run with `inheritance_elite_count: 1`, `population_size: 6`, `generations: 4` (F0 through F3 inclusive), schedule with F0 pathogen-on / F1-F3 pathogen-off
 - **WHEN** the run completes
-- **THEN** during F0's post-fitness hook, exactly 1 `.tei.pt` file SHALL be written under `<output_dir>/inheritance/gen-000/genome-{elite_id}.tei.pt` (the F0 elite's substrate, the single authoritative source for the cascade)
-- **AND** at F1 evaluation start, each of the 6 F1 children SHALL load the F0 elite substrate from `gen-000/`, apply `inherit_from([f0_substrate], decay_factor)` once to produce an F1-depth substrate, and the runner SHALL set `brain.tei_prior = f1_substrate.logit_bias` before each F1 episode
-- **AND** at F2 evaluation start, each F2 child SHALL load the F0 elite substrate from `gen-000/` and apply `inherit_from` TWICE to produce an F2-depth substrate (mechanically equivalent to `f0_substrate.logit_bias * decay_factor ** 2`)
-- **AND** at F3 evaluation start, each F3 child SHALL load the F0 elite substrate from `gen-000/` and apply `inherit_from` THREE TIMES to produce an F3-depth substrate (`f0_substrate.logit_bias * decay_factor ** 3`)
+- **THEN** after F0 evaluation and elite identification, exactly 1 `.tei.pt` file SHALL exist under `<output_dir>/inheritance/gen-000/genome-{elite_id}.tei.pt` (the F0 elite's substrate, the single authoritative source for the cascade), produced by the F0 Substrate Extraction Pipeline (separate requirement below)
+- **AND** at F1 evaluation, each of the 6 F1 children's worker tuple SHALL carry `tei_prior_source = (gen_000_substrate_path, decay_factor, 1)`; `fitness.evaluate` loads the F0 substrate and applies `inherit_from` once to produce an F1-depth substrate, then sets `brain.tei_prior` per the lstm-ppo-brain spec
+- **AND** at F2 evaluation, each F2 child's `tei_prior_source` SHALL have `lineage_depth=2`; `fitness.evaluate` applies `inherit_from` TWICE (mechanically equivalent to `f0_substrate.logit_bias * decay_factor ** 2`)
+- **AND** at F3 evaluation, each F3 child's `tei_prior_source` SHALL have `lineage_depth=3`; `fitness.evaluate` applies `inherit_from` THREE TIMES (mechanically equivalent to `f0_substrate.logit_bias * decay_factor ** 3`)
 - **AND** no `.tei.pt` files SHALL be written under `gen-001/`, `gen-002/`, or `gen-003/` (F1/F2/F3 substrates are mechanically derived from the F0 source and do not require storage; this avoids any ambiguity about per-gen "elite substrate" since every member of F1+ shares the same depth-N substrate, mechanically)
 - **AND** on completion, the only surviving substrate file SHALL be `gen-000/genome-{elite_id}.tei.pt`, intentionally retained for forensic inspection
 - **AND** the lineage CSV `inherited_from` column SHALL be populated for all F1+ rows with the F0 elite's `genome_id` (so the lineage provenance is observable in the CSV even though F1+ substrates are not stored on disk)
@@ -100,6 +100,11 @@ When `transgenerational` config is absent (the default for all non-TEI runs), th
 ### Requirement: TEI Substrate Worker-to-Fitness Transport
 
 When `EvolutionLoop` is running under `inheritance: transgenerational`, the worker tuple passed to `_evaluate_in_worker` SHALL be extended with one additional element: `tei_prior_source: tuple[Path, float, int] | None`, carrying the triple `(f0_substrate_path, decay_factor, lineage_depth)`. The element SHALL be `None` for all other inheritance strategies, preserving the existing worker contract for `none`/`lamarckian`/`baldwin` paths.
+
+The loop SHALL compute `tei_prior_source` at the per-child dispatch step using the following rule:
+
+- At F0 (`current_generation == 0`): `tei_prior_source = None` (no parent substrate exists yet; F0 trains from random init).
+- At F1+: `tei_prior_source = (self._tei_f0_substrate_path, cfg.transgenerational.decay_factor, current_generation)`, where `self._tei_f0_substrate_path` is a new `EvolutionLoop` instance attribute populated by the F0 Substrate Extraction Pipeline (below) at the end of gen 0. The attribute SHALL also be persisted in the checkpoint pickle so resume from gen 1+ can recover the path without re-running F0.
 
 The worker (`_evaluate_in_worker`) SHALL forward `tei_prior_source` as a keyword argument to `LearnedPerformanceFitness.evaluate(...)`. This mirrors the existing forwarding pattern for `warm_start_path_override` and `weight_capture_path`. The worker SHALL NOT construct the agent/brain itself nor set `tei_prior` directly — those responsibilities live inside `fitness.evaluate` (see lstm-ppo-brain spec "Fitness Evaluator Sets TEI Prior on Decoded Brain").
 

@@ -32,6 +32,8 @@ The dataclass SHALL clamp `|logit_bias[i]| ≤ 2.0` in `__post_init__` (post-cla
 
 The decay SHALL be applied multiplicatively at the generation boundary inside `inherit_from`, NOT inside `prepare_episode` or per-step logic. This SHALL prevent re-decaying the same parent's substrate every episode within a generation.
 
+**Storage vs derivation.** The F0 substrate (produced by `extract_from_brain`) has `lineage_depth = 0` and is saved un-decayed to `gen-000/genome-{elite_id}.tei.pt` (per the evolution-framework spec's F0 Substrate Extraction Pipeline). Decay is applied *at substrate load time* inside `fitness.evaluate` by calling `inherit_from` N times where N = the child's generation index (F1: 1 call, F2: 2 calls, F3: 3 calls). This keeps the on-disk artefact authoritative (F0 ground truth, deterministic from the F0 elite's policy) while letting F1+ workers mechanically derive their depth-N substrate without needing per-gen storage. The `inherit_from` semantics — multiplicative per-call decay — are the same regardless of whether the call happens at a generation boundary in the loop or inside `fitness.evaluate` at substrate load time.
+
 #### Scenario: Single-parent decay produces geometric retention
 
 - **GIVEN** an F0 substrate with `logit_bias = torch.tensor([0.0, 1.0, -0.5, 0.2])` (4-action default), `lineage_depth = 0`, `source_genome_id = "gid-a"`
