@@ -40,7 +40,7 @@ The adjacent computational literature does not, to our knowledge, replicate this
 
 ### D1. Substrate shape — per-action additive logit bias of shape `(num_actions,)`
 
-The substrate is a single `torch.Tensor` of shape `(num_actions,)` (typically 3 for klinotaxis: forward / turn-left / turn-right), added to actor logits at every step before softmax. Clamped to `|x| ≤ 2.0` in `__post_init__` (Boltzmann ratio cap ≈ 7.4×).
+The substrate is a single `torch.Tensor` of shape `(num_actions,)` (`num_actions = 4` by default: `FORWARD / LEFT / RIGHT / STAY` per `brain/actions.py:20 DEFAULT_ACTIONS`; LSTMPPO `num_actions=4` per `brain/arch/lstmppo.py:320`), added to actor logits at every step before softmax. Clamped to `|x| ≤ 2.0` in `__post_init__` (Boltzmann ratio cap ≈ 7.4×). The substrate shape is read from the runtime `brain.num_actions` so the design remains correct if a future config selects the 6-action set.
 
 *Why.* Three options considered:
 
@@ -76,9 +76,11 @@ Single YAML config drives F0→F3 via a `lawn_schedule: [{generation, pathogen_l
 
 ### D5. Choice index — fraction of episode steps outside damage radius
 
-`choice_index = 1 - (steps_inside_damage_radius / total_steps)`, per agent × per episode, mean-aggregated across all agents × all episodes per generation. Reuses existing predator-damage detection at `agent/reward_calculator.py:42-99`.
+`choice_index = 1 - (steps_inside_damage_radius / total_steps)`, per agent × per episode, mean-aggregated across all agents × all episodes per generation. Reuses existing per-agent damage detection at `env/env.py:2286 is_agent_in_damage_radius_for(agent_id)` (single-agent helper at `:2282 is_agent_in_damage_radius`). The aggregator records the per-step boolean alongside existing per-step trace data; no new env method or reward path is required.
 
 *Why time-out over leaving-events.* Time-outside-lawn integrates over the whole episode and is robust to short transient incursions, matching how lawn-avoidance is measured in wet-lab literature. Kaletsky et al. eLife 2025 use this convention; their F2 ≈ 0.5–0.6 anchors the decision gate.
+
+*Honest comparability caveat.* Kaletsky's wet-lab choice index is computed via a two-lawn assay (pathogenic vs non-pathogenic) — worms choose between options. Our single-lawn time-outside-damage metric is approximate, not exact, to Kaletsky's convention. The decision-gate ratios (F1 ≥40%, F2 ≥25%, F3 ≥15% of F0) compare *within* our metric across generations, so the relative-retention contract is well-defined; absolute numerical comparability to wet-lab is approximate. Logbook 018 § Methodology SHALL document this distinction.
 
 ### D6. Pure-TEI vs `NoInheritance` ablation (M6.6)
 
@@ -86,15 +88,23 @@ TEI-on arm: `inheritance: transgenerational`. TEI-off arm: `inheritance: none`. 
 
 *Why pure-TEI, not paired with Lamarckian.* Mixing TEI with Lamarckian weight flow would make the substrate vs. weight-flow contribution un-attributable. Pure-TEI is the cleanest single-bit ablation. If F0→F1 collapses to chance in the TEI-off arm (because F1 cannot rescue an untrained policy with bias alone), schedule a staged follow-up with a new `kind() == "transgenerational+weights"` — explicitly out of scope for this milestone.
 
+**Escalation criterion for the staged follow-up.** The staged `transgenerational+weights` follow-up SHALL be triggered iff, in the pilot or full campaign, the TEI-off arm's F1 mean choice index is below `0.10` (within RNG noise of the chance floor on a 4-action policy) AND the TEI-on arm's F1 mean choice index is also below `0.40 × F0_mean` (i.e. the substrate alone cannot rescue F1 to gate-passing levels). If only the TEI-off arm collapses but TEI-on is gate-passing, no escalation — the substrate carries the signal as designed. If both arms gate-fail by other means (F2/F3 thresholds), the verdict is STOP under M6, not escalation.
+
 *Validator enforcement.* `transgenerational.enabled=true ⇒ inheritance=transgenerational`; `enabled=false ⇒ inheritance=none`. Implemented in `config_loader.py` Pydantic validator with a unit test.
 
 ### D7. Brain hook — attribute on brain instance, runner-set
 
-The runner sets `agent.brain.tei_prior = <Tensor | None>` immediately before calling `agent.brain.prepare_episode()` at `agent/runners.py:654`. LSTMPPO reads `self.tei_prior` inside `run_brain()` (line ~601) and adds it to actor logits before softmax.
+The runner sets `agent.brain.tei_prior = <Tensor | None>` immediately before calling `agent.brain.prepare_episode()` at `agent/runners.py:654`. The multi-agent runner SHALL apply the same set/clear at `agent/multi_agent.py:588` (each agent's per-episode `prepare_episode()` call) so single-agent and multi-agent paths stay symmetric. LSTMPPO reads `self.tei_prior` inside `run_brain()` (sampling forward pass at lstmppo.py:601, before softmax at line 602) AND inside `learn()` (training forward pass at lstmppo.py:747, before softmax at line 748). Both call sites add the same prior tensor to logits before softmax.
+
+*Why both call sites, not just sampling.* PPO computes a probability ratio `exp(new_log_probs - old_log_probs)` over the policy-update batch. `old_log_probs` is the log-probability recorded at action-sampling time (under the biased distribution). `new_log_probs` is recomputed at update time from the current policy's forward pass. If the training forward pass omits the bias while the sampling forward pass includes it, the two log-probs reflect different distributions and the PPO ratio is systematically wrong — silently corrupting F0 training. Applying the bias in BOTH paths keeps the distribution consistent across sampling and update; the bias is a constant additive offset on the actor head, so its effect on the PPO objective is well-defined (gradients flow through the actor parameters; the bias itself is non-trainable additive state that shifts the policy's exploration distribution).
+
+The `tei_prior` SHALL be constant across an episode (the runner sets it once pre-`prepare_episode` and does not mutate it during the step loop), which the existing per-episode set-then-prepare ordering already enforces. The implementer SHALL add an assertion at the top of `learn()` that confirms `self.tei_prior` is unchanged from the value seen during the most recent rollout episode whose data is being updated.
 
 *Why attribute, not Protocol signature extension.* Extending `Brain.prepare_episode(tei_prior=None)` would cascade through 19 brain subtypes. The attribute approach keeps the Protocol stable: non-LSTMPPO brains default `tei_prior = None` and ignore it. Minimal blast radius.
 
 *Why apply at every step, not just `prepare_episode()`.* The bias is a persistent additive offset on the actor head. Applying only at episode start lets LSTM dynamics drown it out within ~1 step. Persistence test in `test_lstmppo_transgenerational_prior.py` asserts elevated action-0 probability across 100 LSTM-rollout steps with `bias = +2.0` on action-0.
+
+*Implementation note on `frozen=True` dataclass + `__post_init__` clamping.* `TransgenerationalMemory` is `frozen=True` to prevent cross-generation aliasing mutation. Frozen dataclasses cannot reassign fields directly inside `__post_init__`; the clamping pass SHALL use `object.__setattr__(self, "logit_bias", clamped_tensor)` (the canonical Python pattern for frozen-dataclass post-init mutation). Alternatively, a module-level factory function MAY pre-clamp before construction; pick whichever the implementer finds clearer at the time.
 
 ### D8. Hard pre-flight F0-calibration gate
 

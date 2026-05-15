@@ -13,7 +13,7 @@ Phase 5's transgenerational-memory milestone is the next ready-to-start delivera
 - Apply the TEI bias inside the LSTMPPO actor head: brain instances expose a `tei_prior` attribute (default `None`); the runner sets it before each episode; `run_brain()` adds the bias to actor logits before softmax at every step. Brain Protocol signature unchanged.
 - Extend `EvolutionLoop` with a per-generation `lawn_schedule` that toggles `pathogen_lawns_enabled` and `ppo_train_episodes` per generation, enabling F0 (pathogen on, training on) → F1/F2/F3 (pathogen off, training off) experiment design.
 - Add a config-loader `transgenerational` block (Pydantic `TransgenerationalConfig`, `LawnScheduleEntry`) with an `enabled` boolean ablation switch and `decay_factor` parameter. Validator enforces TEI-on ⇒ `inheritance: transgenerational`, TEI-off ⇒ `inheritance: none`.
-- Repurpose existing `Predator(predator_type=STATIONARY)` as the pathogen-lawn entity via a config-loader alias (`pathogen_lawns:` keyword). No new env entity, no new sensory channel, no new reward path.
+- Repurpose existing `Predator(predator_type=STATIONARY)` as the pathogen-lawn entity by configuring the existing `predators:` YAML block with `predator_type: stationary` + `speed: 0` + larger `damage_radius`. "Pathogen lawn" is documentation vocabulary only; no new config-loader keyword, no new env entity, no new sensory channel, no new reward path.
 - Add a per-generation choice-index evaluator and paired-arm aggregator (TEI-on vs TEI-off) producing the F0→F3 retention table against the decision gate F1 ≥40% × F0, F2 ≥25%, F3 ≥15%, monotone non-increasing decay.
 - Add a hard pre-flight F0-calibration smoke gate (`0.45 ≤ F0 ≤ 0.85`) before the full M6.5 campaign is unblocked.
 

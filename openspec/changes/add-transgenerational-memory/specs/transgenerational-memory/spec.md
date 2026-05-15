@@ -6,17 +6,17 @@
 
 The system SHALL provide a `TransgenerationalMemory` dataclass in `quantumnematode/agent/transgenerational_memory.py` representing an inheritable behavioural-bias substrate. The dataclass SHALL expose:
 
-- A `logit_bias: torch.Tensor` field of shape `(num_actions,)` and dtype `float32`, representing an additive per-action bias on actor logits.
+- A `logit_bias: torch.Tensor` field of shape `(num_actions,)` and dtype `float32`, representing an additive per-action bias on actor logits. The size SHALL match the brain's `num_actions` (4 for the default `DEFAULT_ACTIONS` set in `brain/actions.py:20`; would be 6 for the `SIX_ACTIONS` set). The dataclass SHALL accept any 1-D `num_actions` size at construction (the size is not hardcoded), so a future config selecting `SIX_ACTIONS` does not require dataclass changes.
 - A `lineage_depth: int` field recording the inheritance generation (0 for F0, incremented by 1 at each `inherit_from` call).
 - A `source_genome_id: str` field identifying the F0 elite from which the substrate originated.
 
-The dataclass SHALL clamp `|logit_bias[i]| ≤ 2.0` in `__post_init__` (post-clamp Boltzmann ratio bounded at `e^2 ≈ 7.4×`) so a strong bias cannot collapse exploration. The dataclass SHALL be `frozen=True` so cross-generation aliasing cannot mutate an ancestor's substrate.
+The dataclass SHALL clamp `|logit_bias[i]| ≤ 2.0` in `__post_init__` (post-clamp Boltzmann ratio bounded at `e^2 ≈ 7.4×`) so a strong bias cannot collapse exploration. The dataclass SHALL be `frozen=True` so cross-generation aliasing cannot mutate an ancestor's substrate. Because frozen dataclasses cannot reassign fields directly, the clamping pass SHALL use `object.__setattr__(self, "logit_bias", clamped_tensor)` inside `__post_init__` (the canonical Python pattern for frozen-dataclass post-init mutation).
 
 #### Scenario: Substrate construction clamps bias values
 
-- **GIVEN** an attempt to construct `TransgenerationalMemory` with `logit_bias = torch.tensor([5.0, -3.0, 0.5])`
+- **GIVEN** an attempt to construct `TransgenerationalMemory` with `logit_bias = torch.tensor([5.0, -3.0, 0.5, 1.0])` (4-action default)
 - **WHEN** `__post_init__` runs
-- **THEN** the stored `logit_bias` SHALL equal `torch.tensor([2.0, -2.0, 0.5])` (each element clamped to `[-2.0, 2.0]`)
+- **THEN** the stored `logit_bias` SHALL equal `torch.tensor([2.0, -2.0, 0.5, 1.0])` (each element clamped to `[-2.0, 2.0]`)
 - **AND** the original input tensor SHALL NOT be mutated in place
 
 #### Scenario: Substrate shape is validated
@@ -34,11 +34,11 @@ The decay SHALL be applied multiplicatively at the generation boundary inside `i
 
 #### Scenario: Single-parent decay produces geometric retention
 
-- **GIVEN** an F0 substrate with `logit_bias = torch.tensor([0.0, 1.0, -0.5])`, `lineage_depth = 0`, `source_genome_id = "gid-a"`
+- **GIVEN** an F0 substrate with `logit_bias = torch.tensor([0.0, 1.0, -0.5, 0.2])` (4-action default), `lineage_depth = 0`, `source_genome_id = "gid-a"`
 - **WHEN** `inherit_from([f0_substrate], decay_factor=0.6)` is called once to produce F1, again on the F1 result to produce F2, and again to produce F3
-- **THEN** F1 `logit_bias` SHALL be `torch.tensor([0.0, 0.6, -0.3])` and `lineage_depth` SHALL be 1
-- **AND** F2 `logit_bias` SHALL be `torch.tensor([0.0, 0.36, -0.18])` and `lineage_depth` SHALL be 2
-- **AND** F3 `logit_bias` SHALL be `torch.tensor([0.0, 0.216, -0.108])` and `lineage_depth` SHALL be 3
+- **THEN** F1 `logit_bias` SHALL be `torch.tensor([0.0, 0.6, -0.3, 0.12])` and `lineage_depth` SHALL be 1
+- **AND** F2 `logit_bias` SHALL be `torch.tensor([0.0, 0.36, -0.18, 0.072])` and `lineage_depth` SHALL be 2
+- **AND** F3 `logit_bias` SHALL be `torch.tensor([0.0, 0.216, -0.108, 0.0432])` and `lineage_depth` SHALL be 3
 - **AND** every descendant SHALL have `source_genome_id = "gid-a"`
 
 #### Scenario: Decay factor out of range is rejected
@@ -60,17 +60,17 @@ The decay SHALL be applied multiplicatively at the generation boundary inside `i
 
 #### Scenario: Logits are augmented additively without mutation
 
-- **GIVEN** a substrate with `logit_bias = torch.tensor([0.5, -0.5, 1.0])` and logits `torch.tensor([[1.0, 2.0, 3.0]])`
+- **GIVEN** a substrate with `logit_bias = torch.tensor([0.5, -0.5, 1.0, 0.0])` and logits `torch.tensor([[1.0, 2.0, 3.0, 0.0]])` (4-action default)
 - **WHEN** `apply_to_logits` is called
-- **THEN** the returned tensor SHALL equal `torch.tensor([[1.5, 1.5, 4.0]])`
+- **THEN** the returned tensor SHALL equal `torch.tensor([[1.5, 1.5, 4.0, 0.0]])`
 - **AND** the input logits tensor SHALL be unchanged (no in-place mutation)
 - **AND** the returned tensor SHALL be a distinct tensor object (not an alias)
 
 #### Scenario: Apply preserves shape and dtype across batch dimensions
 
-- **GIVEN** a substrate with `logit_bias` of shape `(3,)` and logits of shape `(batch, seq, 3)` and dtype `float32`
+- **GIVEN** a substrate with `logit_bias` of shape `(4,)` and logits of shape `(batch, seq, 4)` and dtype `float32`
 - **WHEN** `apply_to_logits` is called
-- **THEN** the returned tensor SHALL have shape `(batch, seq, 3)` and dtype `float32`
+- **THEN** the returned tensor SHALL have shape `(batch, seq, 4)` and dtype `float32`
 - **AND** the bias SHALL be broadcast across the batch and sequence dimensions
 
 ### Requirement: F0 Telemetry-Pass Extraction
@@ -98,7 +98,7 @@ The extraction SHALL run AFTER fitness evaluation completes (so the F0 fitness s
 
 #### Scenario: Round-trip preserves all fields
 
-- **GIVEN** a `TransgenerationalMemory` with `logit_bias = torch.tensor([0.5, -0.3, 1.0])`, `lineage_depth = 2`, `source_genome_id = "gid-elite-3"`
+- **GIVEN** a `TransgenerationalMemory` with `logit_bias = torch.tensor([0.5, -0.3, 1.0, 0.0])` (4-action default), `lineage_depth = 2`, `source_genome_id = "gid-elite-3"`
 - **WHEN** the substrate is saved to `<tmp>/foo.tei.pt` and re-loaded
 - **THEN** the loaded instance SHALL satisfy `torch.equal(loaded.logit_bias, original.logit_bias)`
 - **AND** `loaded.lineage_depth == 2`
@@ -109,3 +109,24 @@ The extraction SHALL run AFTER fitness evaluation completes (so the F0 fitness s
 - **GIVEN** a path that does not exist
 - **WHEN** the loader is called
 - **THEN** a `FileNotFoundError` SHALL be raised with the missing path in the message
+
+### Requirement: F0 Calibration Pre-Flight Gate
+
+The system SHALL provide an F0-calibration smoke target in the M6 campaign shell that runs an F0-only single-generation pass (no F1/F2/F3) and reports the mean F0 avoidance choice index. The smoke target SHALL be invocable independently of the pilot or full campaign (e.g., `phase5_m6_transgenerational_lstmppo_klinotaxis.sh --smoke`).
+
+The calibration SHALL be treated as a hard pre-flight gate before the M6.5 pilot or full campaign is unblocked: the mean F0 choice index from the smoke pass SHALL fall within `[0.45, 0.85]` inclusive. Values below `0.45` indicate F0 is at the chance floor (gate ratios uninterpretable); values above `0.85` indicate F0 is ceiling-saturated (F1 will inherit ~ceiling regardless of substrate). The implementer SHALL retune `damage_radius` and `ppo_train_episodes` until the smoke passes the gate before progressing M6.5 sub-tasks.
+
+#### Scenario: Calibration smoke target reports F0 choice index
+
+- **GIVEN** the M6 campaign shell with `--smoke` mode
+- **WHEN** the calibration target runs (1 seed × pop 6 × F0-only × ~50 episodes)
+- **THEN** the output SHALL include a single-line summary stating `mean_f0_choice_index = <value>`
+- **AND** the output SHALL state whether the value falls within the `[0.45, 0.85]` calibratable envelope
+- **AND** the exit code SHALL be 0 regardless of envelope outcome (the gate is operator-actioned, not script-actioned, so the operator can choose to retune or accept)
+
+#### Scenario: Calibration outcome is documented in pilot/full pre-flight
+
+- **GIVEN** an M6.5 pilot or full campaign launch
+- **WHEN** the pilot/full driver is invoked
+- **THEN** the driver SHALL log the latest recorded calibration outcome (F0 mean choice index and envelope pass/fail) at startup
+- **AND** the operator SHALL have acknowledged the calibration value in the campaign-shell preamble before pilot/full begins (manual confirmation; the script SHALL print a notice but SHALL NOT block)

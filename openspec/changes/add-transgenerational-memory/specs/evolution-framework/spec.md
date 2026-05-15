@@ -35,14 +35,17 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **AND** the CLI flag `--inheritance transgenerational` SHALL override the YAML field with the same behaviour
 - **AND** `--inheritance none` SHALL force the no-op path even when the YAML sets `transgenerational`
 
-#### Scenario: Per-genome TEI substrate checkpoints are captured and garbage-collected
+#### Scenario: F0-elite substrate is captured once; F1+ substrates are mechanically derived (not stored)
 
 - **GIVEN** a transgenerational run with `inheritance_elite_count: 1`, `population_size: 6`, `generations: 4` (F0 through F3 inclusive), schedule with F0 pathogen-on / F1-F3 pathogen-off
 - **WHEN** the run completes
-- **THEN** during F0's post-fitness hook, exactly 1 `.tei.pt` file SHALL be written under `<output_dir>/inheritance/gen-000/genome-{elite_id}.tei.pt` (only the elite's substrate is extracted; non-elite F0 substrates are not generated)
-- **AND** at F1 evaluation start, each of the 6 F1 children SHALL load the F0 elite substrate, apply `inherit_from([f0_substrate], decay_factor)` to produce a per-child F1 substrate, and the runner SHALL set `brain.tei_prior = f1_substrate.logit_bias` before each F1 episode
-- **AND** after F1's post-fitness hook completes, gen-000's substrate file SHALL be retained (it is the F0 elite, the only authoritative substrate source for the staged decay cascade), and the F1 elite's substrate SHALL be written to gen-001
-- **AND** on completion, the surviving substrate files SHALL be one per generation under `gen-{000..003}/`, each containing the elite substrate for that generation, intentionally retained for forensic inspection
+- **THEN** during F0's post-fitness hook, exactly 1 `.tei.pt` file SHALL be written under `<output_dir>/inheritance/gen-000/genome-{elite_id}.tei.pt` (the F0 elite's substrate, the single authoritative source for the cascade)
+- **AND** at F1 evaluation start, each of the 6 F1 children SHALL load the F0 elite substrate from `gen-000/`, apply `inherit_from([f0_substrate], decay_factor)` once to produce an F1-depth substrate, and the runner SHALL set `brain.tei_prior = f1_substrate.logit_bias` before each F1 episode
+- **AND** at F2 evaluation start, each F2 child SHALL load the F0 elite substrate from `gen-000/` and apply `inherit_from` TWICE to produce an F2-depth substrate (mechanically equivalent to `f0_substrate.logit_bias * decay_factor ** 2`)
+- **AND** at F3 evaluation start, each F3 child SHALL load the F0 elite substrate from `gen-000/` and apply `inherit_from` THREE TIMES to produce an F3-depth substrate (`f0_substrate.logit_bias * decay_factor ** 3`)
+- **AND** no `.tei.pt` files SHALL be written under `gen-001/`, `gen-002/`, or `gen-003/` (F1/F2/F3 substrates are mechanically derived from the F0 source and do not require storage; this avoids any ambiguity about per-gen "elite substrate" since every member of F1+ shares the same depth-N substrate, mechanically)
+- **AND** on completion, the only surviving substrate file SHALL be `gen-000/genome-{elite_id}.tei.pt`, intentionally retained for forensic inspection
+- **AND** the lineage CSV `inherited_from` column SHALL be populated for all F1+ rows with the F0 elite's `genome_id` (so the lineage provenance is observable in the CSV even though F1+ substrates are not stored on disk)
 
 #### Scenario: Resume rejects mid-run inheritance changes to/from transgenerational
 
