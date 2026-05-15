@@ -97,39 +97,112 @@ When `transgenerational` config is absent (the default for all non-TEI runs), th
 - **THEN** loading SHALL raise a Pydantic `ValidationError`
 - **AND** the message SHALL state that each generation index in `[0, generations)` MUST appear exactly once in `lawn_schedule`
 
-### Requirement: TEI Substrate Worker Transport
+### Requirement: TEI Substrate Worker-to-Fitness Transport
 
-When `EvolutionLoop` is running under `inheritance: transgenerational`, the worker tuple passed to `_evaluate_in_worker` SHALL be extended with three additional elements: `(f0_substrate_path: Path | None, decay_factor: float | None, lineage_depth: int | None)`. These elements SHALL be `None` for all other inheritance strategies, preserving the existing worker contract for `none`/`lamarckian`/`baldwin` paths.
+When `EvolutionLoop` is running under `inheritance: transgenerational`, the worker tuple passed to `_evaluate_in_worker` SHALL be extended with one additional element: `tei_prior_source: tuple[Path, float, int] | None`, carrying the triple `(f0_substrate_path, decay_factor, lineage_depth)`. The element SHALL be `None` for all other inheritance strategies, preserving the existing worker contract for `none`/`lamarckian`/`baldwin` paths.
 
-The worker SHALL, when `f0_substrate_path is not None`:
+The worker (`_evaluate_in_worker`) SHALL forward `tei_prior_source` as a keyword argument to `LearnedPerformanceFitness.evaluate(...)`. This mirrors the existing forwarding pattern for `warm_start_path_override` and `weight_capture_path`. The worker SHALL NOT construct the agent/brain itself nor set `tei_prior` directly — those responsibilities live inside `fitness.evaluate` (see lstm-ppo-brain spec "Fitness Evaluator Sets TEI Prior on Decoded Brain").
 
-1. Load the F0 substrate via `TransgenerationalMemory.load(f0_substrate_path)`.
-2. Apply `inherit_from([f0_substrate], decay_factor)` `lineage_depth` times to produce a depth-N substrate (F0 → 0 applications, F1 → 1, F2 → 2, F3 → 3).
-3. Set `agent.brain.tei_prior = depth_n_substrate.logit_bias` via `hasattr`-gated dispatch (see lstm-ppo-brain delta "Worker Sets TEI Prior Before Runner Invocation") immediately after constructing the agent/brain and BEFORE invoking the episode runner. The runner code SHALL be unchanged.
+When `tei_prior_source is None`, the worker SHALL omit the kwarg entirely when calling `fitness.evaluate` (preserving byte-equivalent call shape for non-TEI runs).
 
-When `f0_substrate_path is None`, the worker SHALL NOT set `tei_prior` on any brain — the default `None` attribute (or attribute absence on non-LSTMPPO brains) preserves pre-TEI baseline behaviour.
-
-#### Scenario: Worker tuple is extended with TEI substrate transport elements
+#### Scenario: Worker tuple carries the TEI prior source for TEI runs
 
 - **GIVEN** an `EvolutionLoop` running under `inheritance: transgenerational` at F1 (generation 1) with `decay_factor: 0.6`
 - **WHEN** the loop dispatches a per-child worker tuple for an F1 genome
-- **THEN** the tuple SHALL include the three TEI elements `(f0_substrate_path, decay_factor, lineage_depth)` where `f0_substrate_path` points to `<output_dir>/inheritance/gen-000/genome-{f0_elite_id}.tei.pt`, `decay_factor == 0.6`, and `lineage_depth == 1` (F1 = one decay application)
+- **THEN** the tuple SHALL include `tei_prior_source = (f0_substrate_path, 0.6, 1)` where `f0_substrate_path` points to `<output_dir>/inheritance/gen-000/genome-{f0_elite_id}.tei.pt`
 - **AND** at F2 the tuple SHALL have `lineage_depth == 2`; at F3, `lineage_depth == 3`
-- **AND** for F0 the tuple SHALL have `f0_substrate_path = None` (F0 has no parent substrate to inherit)
+- **AND** for F0 the tuple SHALL have `tei_prior_source = None` (F0 has no parent substrate to inherit)
 
 #### Scenario: Non-transgenerational worker tuples preserve existing contract
 
 - **GIVEN** an `EvolutionLoop` running under any non-TEI inheritance strategy (`none` / `lamarckian` / `baldwin`)
 - **WHEN** the loop dispatches a worker tuple
-- **THEN** the three TEI elements SHALL be `(None, None, None)`
-- **AND** the worker SHALL NOT attempt to load any substrate file
-- **AND** the worker SHALL NOT touch `brain.tei_prior` on any brain (preserving pre-TEI baseline byte-equivalence)
+- **THEN** `tei_prior_source` SHALL be `None`
+- **AND** the worker SHALL omit the `tei_prior_source` kwarg when calling `fitness.evaluate`
+- **AND** the call shape SHALL be byte-equivalent to the pre-TEI worker contract for that strategy
 
-#### Scenario: Worker loads and decays substrate before runner invocation
+#### Scenario: Worker forwards tei_prior_source to fitness.evaluate
 
-- **GIVEN** a worker tuple with `f0_substrate_path` set to a valid `.tei.pt` file, `decay_factor = 0.6`, `lineage_depth = 2`
-- **WHEN** the worker constructs the agent/brain
-- **THEN** the worker SHALL load the F0 substrate (`load.logit_bias = b0`)
-- **AND** apply `inherit_from([f0], 0.6)` twice to produce a depth-2 substrate with `logit_bias ≈ b0 * 0.36`
-- **AND** if `hasattr(agent.brain, "tei_prior")` returns True, the worker SHALL set `agent.brain.tei_prior = depth2_substrate.logit_bias` BEFORE invoking `runner.run(agent, ...)`
-- **AND** if the brain does not have a `tei_prior` attribute, the worker SHALL log a warning and proceed without setting (defensive: a future config selecting a non-LSTMPPO brain under TEI should not crash the worker; the operator gets a visible signal that the substrate was inert)
+- **GIVEN** a worker tuple under TEI with `tei_prior_source = (path, 0.6, 2)`
+- **WHEN** `_evaluate_in_worker` invokes `fitness.evaluate`
+- **THEN** the kwarg `tei_prior_source=(path, 0.6, 2)` SHALL be passed through
+- **AND** `fitness.evaluate` SHALL be responsible for loading the substrate, applying decay, and setting `brain.tei_prior` per the lstm-ppo-brain spec's "Fitness Evaluator Sets TEI Prior on Decoded Brain" requirement
+- **AND** the worker SHALL NOT directly touch any brain or substrate state
+
+### Requirement: F0 Substrate Extraction Pipeline
+
+Under `inheritance: transgenerational`, the F0 generation requires a substrate-extraction step that does not exist in any other inheritance mode. The pipeline SHALL:
+
+1. **F0 weight capture (per-genome).** For every F0 genome, `EvolutionLoop` SHALL pass a `weight_capture_path` to `fitness.evaluate` (mirroring the Lamarckian pattern). This writes each F0 genome's post-train brain weights to `<output_dir>/inheritance/gen-000/genome-{gid}.pt`.
+2. **F0 elite identification.** After F0's `optimizer.tell` call, the loop's strategy `select_parents(...)` returns the top-1 elite (by fitness, lex-tie-broken).
+3. **F0 substrate extraction.** The loop SHALL load the F0 elite's captured weights into a fresh brain (decoded from the elite's genome via the same encoder), then invoke `TransgenerationalMemory.extract_from_brain(brain, env, probe_positions, rng_seed=transgenerational.extraction_seed)`. The resulting substrate SHALL be saved to `<output_dir>/inheritance/gen-000/genome-{elite_id}.tei.pt`.
+4. **F0 weight GC.** The loop SHALL delete all F0 `.pt` weight files (both elite and non-elite) after substrate extraction completes — only the `.tei.pt` substrate file is retained for the cascade.
+5. **F1+ flow.** For F1+, the loop SHALL compute `tei_prior_source = (gen_000/genome-{elite_id}.tei.pt, decay_factor, current_generation)` for every child's worker tuple. No F1+ weight capture or substrate file is created.
+
+#### Scenario: F0 weight capture is enabled under transgenerational inheritance
+
+- **GIVEN** a transgenerational run at generation 0 with `population_size: 6`
+- **WHEN** the loop dispatches gen-0 worker tuples
+- **THEN** each tuple's `weight_capture_path` SHALL be set to `<output_dir>/inheritance/gen-000/genome-{gid}.pt`
+- **AND** after F0 evaluation completes, exactly 6 `.pt` weight files SHALL exist under `gen-000/`
+
+#### Scenario: F0 substrate extraction reads the elite and writes the .tei.pt
+
+- **GIVEN** F0 completion with 6 captured weight files and an identified elite `genome_id`
+- **WHEN** the loop's post-gen-0 substrate-extraction step fires
+- **THEN** the elite's `.pt` SHALL be loaded into a fresh brain via the same encoder + sim_config used in evaluation
+- **AND** `TransgenerationalMemory.extract_from_brain(...)` SHALL be invoked with the configured `extraction_seed`
+- **AND** the resulting substrate SHALL be saved to `<output_dir>/inheritance/gen-000/genome-{elite_id}.tei.pt`
+- **AND** after extraction, all 6 `.pt` files SHALL be deleted (GC pass); the only surviving file under `gen-000/` SHALL be the `.tei.pt` substrate
+
+#### Scenario: F1+ tei_prior_source is computed from the F0 substrate
+
+- **GIVEN** F1, F2, F3 dispatches under transgenerational inheritance
+- **WHEN** the loop computes per-child worker tuples for these generations
+- **THEN** every gen-1 tuple SHALL have `tei_prior_source = (gen_000_substrate_path, decay_factor, 1)`
+- **AND** every gen-2 tuple SHALL have `tei_prior_source = (gen_000_substrate_path, decay_factor, 2)`
+- **AND** every gen-3 tuple SHALL have `tei_prior_source = (gen_000_substrate_path, decay_factor, 3)`
+- **AND** no F1+ `weight_capture_path` or `.tei.pt` file SHALL be created (substrates are derived in-memory inside `fitness.evaluate`)
+
+### Requirement: TEI Train-Phase Bypass for ppo_train_episodes=0
+
+`LearnedPerformanceFitness.evaluate` currently rejects `learn_episodes_per_eval == 0` with a `ValueError` (per existing guard at `fitness.py:418-424`). Under TEI's experimental design, F1/F2/F3 generations explicitly use `ppo_train_episodes: 0` from the `lawn_schedule` because the milestone tests inheritance *without re-exposure or re-training*. The fitness evaluator SHALL therefore accept zero training episodes when called with `tei_prior_source is not None`, treating the train phase as a structural no-op (the `for ep_idx in range(0)` loop already produces no iterations; only the validator must be bypassed).
+
+When `tei_prior_source is not None` AND `learn_episodes_per_eval == 0`, `fitness.evaluate` SHALL:
+
+1. Skip the train phase entirely (no `train_runner.run(...)` calls, no `save_weights` capture).
+2. Run the eval phase as normal (the substrate-biased brain is evaluated for L episodes).
+3. Return the eval-phase fitness scalar.
+
+The existing rejection SHALL remain in force for non-TEI calls (`tei_prior_source is None`) — only the TEI path relaxes the constraint.
+
+#### Scenario: F1+ evaluation skips train phase but runs eval phase
+
+- **GIVEN** a call to `fitness.evaluate(..., tei_prior_source=(path, 0.6, 1))` with `sim_config.evolution.learn_episodes_per_eval == 0`
+- **WHEN** `fitness.evaluate` executes
+- **THEN** the existing `learn_episodes_per_eval > 0` validator SHALL be bypassed (no `ValueError` raised)
+- **AND** the train phase SHALL NOT execute (no `StandardEpisodeRunner.run` invocations, no weight mutations)
+- **AND** the eval phase SHALL run for `episodes` episodes using `FrozenEvalRunner`
+- **AND** `brain.tei_prior` SHALL be set (per the lstm-ppo-brain spec) BEFORE the eval phase begins, so eval-phase episodes use the substrate-biased policy
+- **AND** the returned fitness scalar SHALL reflect the eval-phase success rate
+
+#### Scenario: Non-TEI calls still reject learn_episodes_per_eval=0
+
+- **GIVEN** a call to `fitness.evaluate(...)` with `tei_prior_source is None` (or omitted) AND `learn_episodes_per_eval == 0`
+- **WHEN** `fitness.evaluate` executes
+- **THEN** the existing `ValueError` SHALL be raised (current behaviour preserved)
+- **AND** the error message SHALL be unchanged for non-TEI callers
+
+### Requirement: CLI Guard for transgenerational + fitness pairing
+
+`scripts/run_evolution.py` SHALL reject the combination of `evolution.inheritance: transgenerational` with `--fitness success_rate` at CLI parse time, mirroring the existing guard for `inheritance: lamarckian|baldwin`. The guard SHALL fire BEFORE the optimizer or loop is constructed, exiting with code 1 and a clear message.
+
+The rationale: `EpisodicSuccessRate` does not accept the TEI `tei_prior_source` kwarg (nor the `warm_start_path_override` / `weight_capture_path` kwargs), and `inheritance: transgenerational` requires a learned-performance fitness signal because the F0 elite must be trained for its substrate-extraction telemetry pass to produce meaningful biases.
+
+#### Scenario: CLI rejects inheritance: transgenerational + --fitness success_rate
+
+- **GIVEN** an invocation of `scripts/run_evolution.py` with `evolution.inheritance: transgenerational` in YAML AND `--fitness success_rate` (the CLI default when `--fitness` is omitted)
+- **WHEN** the script parses arguments and resolves the `EvolutionConfig`
+- **THEN** the script SHALL exit with code 1 BEFORE constructing the optimizer or the loop
+- **AND** the error message SHALL state that `inheritance: transgenerational` requires `--fitness learned_performance` because the F0 elite must be trained for substrate extraction
+- **AND** the message SHALL point the user to set `--fitness learned_performance` or to set `inheritance: none`
