@@ -1,6 +1,6 @@
 # 017: Co-Evolution Arms Race — M5 (CoevolutionLoop + Red Queen primitives + screen-sweep pilot)
 
-**Status**: `STOP` — M5 closes without Red Queen verdict. The screen-sweep pilot (10 single-seed lever ablations) decisively falsified strict Red Queen entanglement at this substrate: own-vs-cross fitness lag delta stuck at +0.017 across every screened config including the GA optimiser fallback that the design reserved for "if CMA-ES diversity collapses". Methodology contributions (lag-matrix, cell-grid, fair-test instruments) ship intact and motivate M6.5 NEAT as the natural next Red Queen attempt.
+**Status**: `STOP` — M5 closes without Red Queen verdict. The screen-sweep pilot (13 single-seed lever ablations + an R1 re-audit) decisively falsified strict Red Queen entanglement at this substrate: own-vs-cross fitness lag delta landed at +0.017 to +0.024 across every candidate that produced a full champion-archive snapshot (8 of 13 screens, including the GA optimiser fallback design D2 reserved for "if CMA-ES diversity collapses"). Methodology contributions (lag-matrix, cell-grid, fair-test instruments) ship intact and motivate M6.5 NEAT as the natural next Red Queen attempt.
 
 **Branch**: `feat/m5-coevolution-pr7-logbook`.
 
@@ -13,7 +13,7 @@
 This logbook covers M5 across PRs 1–7:
 
 - **PRs 1–5**: substrate ship (predator MLPPPO brain + dispatcher + encoder + fitness, `CoevolutionLoop` orchestrator with alternating-K-block schedule + 70/30 HoF mix, Red Queen metric primitives, configs + warmstart bundles + aggregator). Logbook coverage of these is brief — the substrate landed clean, the screening exercised it, and the screening's results are the headline finding.
-- **PR 6**: pilot screening trajectory + substrate revisions discovered mid-flight. The originally planned 2-seed × 30-gen pilot expanded into a 10-screen lever sweep across env knobs, optimiser choice, alternation cadence, predator bootstrap, and prey regularisation when the canonical pilot's verdict gate produced ambiguous signal.
+- **PR 6**: pilot screening trajectory + substrate revisions discovered mid-flight. The originally planned 2-seed × 30-gen pilot expanded into a 13-screen lever sweep (plus an R1 re-audit under modern probe semantics) across env knobs, optimiser choice, alternation cadence, predator bootstrap, and prey regularisation when the canonical pilot's verdict gate produced ambiguous signal.
 - **PR 7 (this one)**: synthesis + STOP verdict + closure.
 
 ## Objective
@@ -82,7 +82,7 @@ Each screen produced a post-hoc 25-eps fair-test against a calibrated probe env 
 
 ## Headline results
 
-### Fair-test ranking ([summary/fair_test_summary.csv](pilot.md))
+### Fair-test ranking ([summary/fair_test_summary.csv](../../../artifacts/logbooks/017-coevolution-arms-race/summary/fair_test_summary.csv))
 
 | Rank | Candidate | Config delta vs X4 | Fair-test mean | dam=0 mean | dam=1 mean |
 |--:|---|---|--:|--:|--:|
@@ -103,7 +103,7 @@ Every screen exhibits the same shape: prey holds up at `dam=0` (contact-radius d
 
 **The dam=0 column is the realistic-physics ceiling**: X4 hits 0.200, C12 hits 0.180. M3 single-task baseline scored ~0.50 in roughly comparable conditions, so M5 sits at ~40% of M3 on the realistic-physics column. Not zero, not full success.
 
-### Lag matrix: no Red Queen entanglement ([summary/lag_matrix.csv](summary/lag_matrix.csv))
+### Lag matrix: no Red Queen entanglement ([summary/lag_matrix.csv](../../../artifacts/logbooks/017-coevolution-arms-race/summary/lag_matrix.csv))
 
 The c2 fitness-lag analysis cross-pairs each candidate's gen-19 prey elite against each candidate's gen-19 predator elite:
 
@@ -171,8 +171,8 @@ Going to a 4-seed full pilot on the best-screened config (X4) would have produce
 
 Even with STOP M5, the screening produced reusable methodology for future co-evolution attempts:
 
-1. **Cross-species fair-test cell grid** — post-hoc 25-eps evaluation of K-block-end elite weights against a calibrated probe env (count=2 speed=0.5 grid=20 matching M3 baseline) across an 8-cell (det, dam) grid. The dam=0 vs dam=1 split exposed the touch-vs-ranged-avoidance generalisation gap; the mean alone hides this. Per-screen cell-grid outputs live under [`pilot/<screen>/posthoc_25eps/matrix.csv`](pilot/x4/posthoc_25eps/matrix.csv) (example link); the aggregated table is at [`summary/fair_test_summary.csv`](summary/fair_test_summary.csv). The forensic helper scripts (`c2_cellgrid_audit.py`, `c2_fitness_lag.py`) lived under `tmp/evaluations/coevolution/pr6_y1_*/` during the screening pivot and are recoverable from commits `cea7ef7f` through `8436082c` on the merged PR #153 branch if a future analysis needs to reproduce them.
-2. **Own-vs-cross lag matrix** — cross-pair every candidate's prey-elite vs every candidate's predator-elite. Asymmetric quality vs paired entanglement appear in clearly different signatures: pure quality dominance shows as constant rows/columns; real Red Queen shows as negative diagonal-vs-off-diagonal delta. The default R4 gate (cycling-or-escalation per design D6) fires on prey-saturation patterns indistinguishable from Red Queen at the per-gen-lineage level; the lag matrix discriminates. The 8×8 final matrix is at [`summary/lag_matrix.csv`](summary/lag_matrix.csv); the captured stdout from the c2 cross-pairing run is at [`c2/lag_matrix_final.log`](c2/lag_matrix_final.log).
+1. **Cross-species fair-test cell grid** — post-hoc 25-eps evaluation of K-block-end elite weights against a calibrated probe env (count=2 speed=0.5 grid=20 matching M3 baseline) across an 8-cell (det, dam) grid. The dam=0 vs dam=1 split exposed the touch-vs-ranged-avoidance generalisation gap; the mean alone hides this. Per-screen cell-grid outputs live under [`pilot/<screen>/posthoc_25eps/matrix.csv`](../../../artifacts/logbooks/017-coevolution-arms-race/pilot/x4/posthoc_25eps/matrix.csv) (X4 example link); the aggregated table is at [`summary/fair_test_summary.csv`](../../../artifacts/logbooks/017-coevolution-arms-race/summary/fair_test_summary.csv). The forensic helper scripts (`c2_cellgrid_audit.py`, `c2_fitness_lag.py`) lived under `tmp/evaluations/coevolution/pr6_y1_*/` during the screening pivot and are recoverable from commits `cea7ef7f` through `8436082c` on the merged PR #153 branch if a future analysis needs to reproduce them.
+2. **Own-vs-cross lag matrix** — cross-pair every candidate's prey-elite vs every candidate's predator-elite. Asymmetric quality vs paired entanglement appear in clearly different signatures: pure quality dominance shows as constant rows/columns; real Red Queen shows as negative diagonal-vs-off-diagonal delta. The default R4 gate (cycling-or-escalation per design D6) fires on prey-saturation patterns indistinguishable from Red Queen at the per-gen-lineage level; the lag matrix discriminates. The 8×8 final matrix is at [`summary/lag_matrix.csv`](../../../artifacts/logbooks/017-coevolution-arms-race/summary/lag_matrix.csv); the captured stdout from the c2 cross-pairing run is at [`c2/lag_matrix_final.log`](../../../artifacts/logbooks/017-coevolution-arms-race/c2/lag_matrix_final.log).
 3. **Per-gen re-aggregation vs K-block-elite series** ([scripts/campaigns/screen_r4_per_gen_reaggregate.py](../../../scripts/campaigns/screen_r4_per_gen_reaggregate.py)) — the production aggregator's K-block-elite series is too short for cycling/escalation tests when `generation_pairs=2` (only 4 K-blocks → 4 points/side). Per-gen mean-fitness reaggregation gives ~10× more samples and exposes signal the K-block-elite series masks when prey saturates at the population's success-rate ceiling. **Both gates fire on Red Queen and non-Red-Queen alike; the lag matrix is the discriminative instrument, not the R4 gate.**
 
 These instruments are the M5 contribution that survives the STOP verdict.
@@ -180,7 +180,7 @@ These instruments are the M5 contribution that survives the STOP verdict.
 ## Compute envelope
 
 - Substrate dev (PRs 1–5): zero pilot compute; all unit tests + smoke runs.
-- Pilot screening (PR 6): 10 single-seed screens × ~2–3 wall-hours each at parallel_workers=4 = **~25 wall-hours total** (vs the canonical pilot's ~7–14 wall-hours; the screens explored more lever space at the cost of single-seed noise). C4 + C14 killed at gen ≤12 (wipeout pattern; recovery impossible).
+- Pilot screening (PR 6): 13 single-seed screens × ~2–3 wall-hours each at parallel_workers=4 = **~30 wall-hours total** (vs the canonical pilot's ~7–14 wall-hours; the screens explored more lever space at the cost of single-seed noise). C4 + C14 killed at gen ≤12 (wipeout pattern; recovery impossible). R1 re-audited under modern probe semantics at zero compute (re-ran post-hoc analysis against existing weights).
 - Post-hoc analysis: ~30 min per candidate × 14 (incl. R1 re-audit and c2 cross-pairing analyses).
 - Full-run campaign (tasks 10.x in the OpenSpec change): **NOT executed**. STOP recommendation derived from screening before committing the canonical 30–60 wall-hour 4-seed full run. This decision saves ~30 wall-hours; the screening evidence is decisive.
 
@@ -198,7 +198,7 @@ The GA optimiser ran at materially the same per-eval cost as CMA-ES (the optimis
 
 Design D11 / task 11 originally scoped a secondary Baldwin instrumentation: per-gen elite-vs-schema-prior signal-delta against the current predator population, evaluated at K′ ∈ {10, 25} PPO inner-loop training episodes per saved prey elite at generations G ∈ {5, 10, 15, 20, 25, 30}. Readout was scoped to run "regardless of M5 verdict" since the signal is informative even on a STOP.
 
-**Dropped**: the readout requires "per-gen elite snapshots from the full-run lineage CSV" plus "per-gen predator pop from champion_history.json contemporaneous with gen G". The full 4-seed × 30+ gen run that produces those snapshots was not executed (per the screening pivot). The 10 single-seed screens produced lineage CSVs but they're single-seed, not the 4-seed protocol the readout expects. Re-scoping to screening data would lose the statistical power the readout was designed against and muddle the protocol.
+**Dropped**: the readout requires "per-gen elite snapshots from the full-run lineage CSV" plus "per-gen predator pop from champion_history.json contemporaneous with gen G". The full 4-seed × 30+ gen run that produces those snapshots was not executed (per the screening pivot). The 13 single-seed screens produced lineage CSVs but they're single-seed, not the 4-seed protocol the readout expects. Re-scoping to screening data would lose the statistical power the readout was designed against and muddle the protocol.
 
 **Implication**: M4.7 (deferred Baldwin retry under hyperparameter evolution) stays armed but unmotivated by M5 evidence. The dropped hyperparam-spread condition (already dropped pre-pilot as not-observable under weight evolution) confirms that definitive Baldwin closure requires a dedicated hyperparameter-evolution milestone.
 
