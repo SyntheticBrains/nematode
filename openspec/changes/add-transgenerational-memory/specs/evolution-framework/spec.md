@@ -64,24 +64,29 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 
 ### Requirement: Per-Generation Lawn Schedule
 
-The `EvolutionLoop` SHALL consume a per-generation `lawn_schedule` (provided via the `transgenerational` config block) at the top of each generation, just before `optimizer.ask()`. The schedule entry for the current generation SHALL specify `pathogen_lawns_enabled: bool` (toggling whether `STATIONARY` predator entities are spawned in the environment) and `ppo_train_episodes: int` (the number of training episodes for that generation, overriding `learn_episodes_per_eval` for this generation only).
+The `EvolutionLoop` SHALL consume a per-generation `lawn_schedule` (the `LawnScheduleEntry` list defined in the configuration-system delta on `TransgenerationalConfig.lawn_schedule`) at the top of each generation, just before `optimizer.ask()`. The schedule entry for the current generation SHALL specify `pathogen_lawns_enabled: bool` and `ppo_train_episodes: int` (the number of training episodes for that generation, overriding `learn_episodes_per_eval` for this generation only).
 
-When `transgenerational` config is absent (the default for all non-TEI runs), the loop SHALL NOT consult any schedule and the env-rebuild branch SHALL be skipped. The no-schedule path SHALL be byte-equivalent to current behaviour for `inheritance: none|lamarckian|baldwin`.
+The `pathogen_lawns_enabled` field of `LawnScheduleEntry` SHALL map onto the existing `PredatorConfig.enabled` field of the per-generation `sim_config` copy — no new env-schema field is introduced. "Pathogen lawns" is documentation vocabulary; the underlying storage is the existing `predators:` block configured with `predator_type: stationary`.
+
+The loop SHALL implement the per-gen env toggle by creating a Pydantic `model_copy` of the run's base `sim_config` with `predators.enabled` set from the current schedule entry, and pass that per-gen copy to each worker tuple for that generation. The base `sim_config` SHALL remain unchanged across generations (no in-place mutation). This SHALL keep generations independent and allow resume from any generation boundary to reconstruct the correct env config for that generation.
+
+When `transgenerational` config is absent (the default for all non-TEI runs), the loop SHALL NOT consult any schedule and SHALL pass the unmodified base `sim_config` to every worker. The no-schedule path SHALL be byte-equivalent to current behaviour for `inheritance: none|lamarckian|baldwin`.
 
 #### Scenario: Schedule controls pathogen lawns and training episodes per generation
 
 - **GIVEN** a config with `transgenerational.lawn_schedule: [{generation: 0, pathogen_lawns_enabled: true, ppo_train_episodes: 50}, {generation: 1, pathogen_lawns_enabled: false, ppo_train_episodes: 0}, {generation: 2, pathogen_lawns_enabled: false, ppo_train_episodes: 0}, {generation: 3, pathogen_lawns_enabled: false, ppo_train_episodes: 0}]`
 - **WHEN** the loop reaches generation 0
-- **THEN** the env config used to evaluate every gen-0 genome SHALL have pathogen lawns enabled (at least one `STATIONARY` predator entity present)
+- **THEN** the per-gen `sim_config` copy used to evaluate every gen-0 genome SHALL have `predators.enabled = True`
 - **AND** the fitness invocation for every gen-0 genome SHALL use `learn_episodes_per_eval = 50` (overriding the default)
-- **AND** when the loop reaches generation 1, the env config SHALL have pathogen lawns disabled (no `STATIONARY` predator entities)
+- **AND** when the loop reaches generation 1, the per-gen `sim_config` copy SHALL have `predators.enabled = False`
 - **AND** the fitness invocation for every gen-1+ genome SHALL use `learn_episodes_per_eval = 0` (frozen-weight evaluation for inheriting generations)
+- **AND** the run's base `sim_config` (the one resolved at YAML load) SHALL NOT be mutated; each generation's worker tuples SHALL receive distinct `model_copy` instances
 
 #### Scenario: Schedule absence preserves current behaviour byte-equivalently
 
 - **GIVEN** any evolution config without a `transgenerational` block
 - **WHEN** the loop runs
-- **THEN** the env config SHALL be built once from the static config (no per-gen rebuild)
+- **THEN** each worker tuple SHALL receive the run's base `sim_config` unchanged (no per-gen copy)
 - **AND** `learn_episodes_per_eval` SHALL be read from `evolution.learn_episodes_per_eval` for every generation
 - **AND** the loop's observable behaviour SHALL be byte-equivalent to its current behaviour (no new generation-boundary branches taken)
 
@@ -91,3 +96,40 @@ When `transgenerational` config is absent (the default for all non-TEI runs), th
 - **WHEN** the YAML is loaded
 - **THEN** loading SHALL raise a Pydantic `ValidationError`
 - **AND** the message SHALL state that each generation index in `[0, generations)` MUST appear exactly once in `lawn_schedule`
+
+### Requirement: TEI Substrate Worker Transport
+
+When `EvolutionLoop` is running under `inheritance: transgenerational`, the worker tuple passed to `_evaluate_in_worker` SHALL be extended with three additional elements: `(f0_substrate_path: Path | None, decay_factor: float | None, lineage_depth: int | None)`. These elements SHALL be `None` for all other inheritance strategies, preserving the existing worker contract for `none`/`lamarckian`/`baldwin` paths.
+
+The worker SHALL, when `f0_substrate_path is not None`:
+
+1. Load the F0 substrate via `TransgenerationalMemory.load(f0_substrate_path)`.
+2. Apply `inherit_from([f0_substrate], decay_factor)` `lineage_depth` times to produce a depth-N substrate (F0 → 0 applications, F1 → 1, F2 → 2, F3 → 3).
+3. Set `agent.brain.tei_prior = depth_n_substrate.logit_bias` via `hasattr`-gated dispatch (see lstm-ppo-brain delta "Worker Sets TEI Prior Before Runner Invocation") immediately after constructing the agent/brain and BEFORE invoking the episode runner. The runner code SHALL be unchanged.
+
+When `f0_substrate_path is None`, the worker SHALL NOT set `tei_prior` on any brain — the default `None` attribute (or attribute absence on non-LSTMPPO brains) preserves pre-TEI baseline behaviour.
+
+#### Scenario: Worker tuple is extended with TEI substrate transport elements
+
+- **GIVEN** an `EvolutionLoop` running under `inheritance: transgenerational` at F1 (generation 1) with `decay_factor: 0.6`
+- **WHEN** the loop dispatches a per-child worker tuple for an F1 genome
+- **THEN** the tuple SHALL include the three TEI elements `(f0_substrate_path, decay_factor, lineage_depth)` where `f0_substrate_path` points to `<output_dir>/inheritance/gen-000/genome-{f0_elite_id}.tei.pt`, `decay_factor == 0.6`, and `lineage_depth == 1` (F1 = one decay application)
+- **AND** at F2 the tuple SHALL have `lineage_depth == 2`; at F3, `lineage_depth == 3`
+- **AND** for F0 the tuple SHALL have `f0_substrate_path = None` (F0 has no parent substrate to inherit)
+
+#### Scenario: Non-transgenerational worker tuples preserve existing contract
+
+- **GIVEN** an `EvolutionLoop` running under any non-TEI inheritance strategy (`none` / `lamarckian` / `baldwin`)
+- **WHEN** the loop dispatches a worker tuple
+- **THEN** the three TEI elements SHALL be `(None, None, None)`
+- **AND** the worker SHALL NOT attempt to load any substrate file
+- **AND** the worker SHALL NOT touch `brain.tei_prior` on any brain (preserving pre-TEI baseline byte-equivalence)
+
+#### Scenario: Worker loads and decays substrate before runner invocation
+
+- **GIVEN** a worker tuple with `f0_substrate_path` set to a valid `.tei.pt` file, `decay_factor = 0.6`, `lineage_depth = 2`
+- **WHEN** the worker constructs the agent/brain
+- **THEN** the worker SHALL load the F0 substrate (`load.logit_bias = b0`)
+- **AND** apply `inherit_from([f0], 0.6)` twice to produce a depth-2 substrate with `logit_bias ≈ b0 * 0.36`
+- **AND** if `hasattr(agent.brain, "tei_prior")` returns True, the worker SHALL set `agent.brain.tei_prior = depth2_substrate.logit_bias` BEFORE invoking `runner.run(agent, ...)`
+- **AND** if the brain does not have a `tei_prior` attribute, the worker SHALL log a warning and proceed without setting (defensive: a future config selecting a non-LSTMPPO brain under TEI should not crash the worker; the operator gets a visible signal that the substrate was inert)

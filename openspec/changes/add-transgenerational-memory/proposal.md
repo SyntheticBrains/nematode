@@ -33,7 +33,7 @@ Phase 5's transgenerational-memory milestone is the next ready-to-start delivera
 
 - **New code**: ~2400 LoC across 10 new files (dataclass, strategy, configs, campaign shell, two scripts, four test files).
 - **Modified code**: ~217 LoC delta across 6 existing files (`brain/arch/lstmppo.py`, `agent/runners.py`, `evolution/loop.py`, `evolution/inheritance.py`, `utils/config_loader.py`, plus tracker tick in `tasks.md`).
-- **Brain Protocol**: unchanged (additive attribute, not signature change). All non-LSTMPPO brains keep `tei_prior=None` defaulted and ignore it.
+- **Brain Protocol**: unchanged (additive attribute, not signature change). The `tei_prior` attribute is defined ONLY on `LSTMPPOBrain` (defaulted to `None`); non-LSTMPPO brains do not define the attribute. The worker dispatches via `hasattr(brain, "tei_prior")`, so non-LSTMPPO brains are observationally inert under any inheritance setting.
 - **Existing inheritance modes**: no behaviour change. `inheritance: none/lamarckian/baldwin` paths remain byte-equivalent.
 - **Env/reward path**: no change. Pathogen lawns repurpose existing `PredatorType.STATIONARY` plumbing.
 - **Compute envelope**: pilot ~4 wall-hours paired (1 seed × pop 6 × 4 gens); full ~16 wall-hours paired (4 seeds × pop 16 × 4 gens). Aligns with prior Phase 5 milestone envelopes.

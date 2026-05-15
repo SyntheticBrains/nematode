@@ -41,33 +41,50 @@ The `Brain` Protocol in `quantumnematode/brain/arch/_brain.py` SHALL NOT be modi
 - **AND** the LSTM hidden state SHALL be zeroed as before
 - **AND** the prior SHALL remain in effect for the next episode's `run_brain` calls
 
-### Requirement: Runner Sets TEI Prior Before prepare_episode
+### Requirement: Worker Sets TEI Prior Before Runner Invocation
 
-The episode runner (`StandardEpisodeRunner.run` in `quantumnematode/agent/runners.py`) SHALL set `agent.brain.tei_prior` to either the inherited substrate's `logit_bias` tensor or `None` immediately BEFORE calling `agent.brain.prepare_episode()`. The runner SHALL NOT set the attribute on non-LSTMPPO brain types (the attribute is LSTMPPO-specific).
+The `_evaluate_in_worker` function in `quantumnematode/evolution/loop.py` SHALL set `agent.brain.tei_prior` immediately AFTER constructing the agent and brain and BEFORE invoking the episode runner (`StandardEpisodeRunner.run` for single-agent runs; `MultiAgentSimulation.run_episode` for multi-agent runs). The runner code SHALL be unchanged — runners do not have TEI-specific logic.
 
-When no TEI substrate is configured for the current generation (e.g. `inheritance: none|lamarckian|baldwin`), the runner SHALL set `tei_prior = None` (explicit clear), ensuring no stale prior survives across configuration changes.
+The worker SHALL dispatch on the brain's attribute capability via `hasattr(brain, "tei_prior")` (attribute-based dispatch, future-proof if other brain subtypes later add the attribute). When `hasattr` returns False, the worker SHALL NOT set the attribute on that brain and SHALL emit a `logger.warning` if a non-None substrate was assigned (defensive signal that the substrate was inert because the brain does not support TEI).
 
-#### Scenario: Runner passes the substrate's logit_bias to the brain
+When the worker tuple specifies no TEI substrate (`f0_substrate_path is None`, e.g. for `inheritance: none|lamarckian|baldwin`), the worker SHALL NOT touch `brain.tei_prior` at all — the default `None` attribute (LSTMPPO) or attribute absence (other brains) preserves pre-TEI baseline byte-equivalence with no explicit assignment.
 
-- **GIVEN** an evolution generation under `inheritance: transgenerational` where the child genome has been assigned a substrate with `logit_bias = torch.tensor([0.5, -0.5, 0.3, 0.0])` (4-action default)
-- **WHEN** the runner begins each evaluation episode
-- **THEN** the runner SHALL set `agent.brain.tei_prior = torch.tensor([0.5, -0.5, 0.3, 0.0])` (or a clone thereof) BEFORE calling `agent.brain.prepare_episode()`
-- **AND** the prior SHALL remain in effect for the entire episode
+This mechanism applies symmetrically to single-agent and multi-agent paths because both paths flow through the same `_evaluate_in_worker` entry point. The episode runners themselves are TEI-agnostic.
 
-#### Scenario: Runner clears tei_prior when no substrate is configured
+#### Scenario: Worker passes the substrate's logit_bias to the brain
 
-- **GIVEN** an evolution run under `inheritance: none|lamarckian|baldwin`
-- **WHEN** the runner begins each evaluation episode
-- **THEN** the runner SHALL set `agent.brain.tei_prior = None` BEFORE calling `agent.brain.prepare_episode()` (defensive clear)
+- **GIVEN** a worker tuple under `inheritance: transgenerational` with a depth-N substrate computed from the F0 elite (e.g. `logit_bias = torch.tensor([0.5, -0.5, 0.3, 0.0])` at F1, 4-action default)
+- **WHEN** the worker constructs the agent/brain
+- **THEN** the worker SHALL detect `hasattr(agent.brain, "tei_prior") == True` for `LSTMPPOBrain`
+- **AND** the worker SHALL set `agent.brain.tei_prior = torch.tensor([0.5, -0.5, 0.3, 0.0])` (or a clone thereof) BEFORE invoking the episode runner
+- **AND** the prior SHALL remain in effect for every episode the runner executes on that agent (across the runner's internal `prepare_episode` / `run_brain` / `learn` cycle)
+- **AND** the runner code SHALL NOT contain any TEI-specific branches
+
+#### Scenario: Worker leaves tei_prior untouched when no substrate is configured
+
+- **GIVEN** a worker tuple with `f0_substrate_path = None` (any non-TEI inheritance strategy)
+- **WHEN** the worker constructs the agent/brain
+- **THEN** the worker SHALL NOT touch `brain.tei_prior` at all
+- **AND** for `LSTMPPOBrain`, `brain.tei_prior` SHALL remain the `__init__` default of `None`
+- **AND** for non-LSTMPPO brains, the attribute SHALL NOT be created
 - **AND** the actor logit computation SHALL be byte-equivalent to the pre-TEI implementation
 
-#### Scenario: Multi-agent runner applies the same set/clear symmetry
+#### Scenario: Non-LSTMPPO brains under transgenerational config emit a defensive warning
 
-- **GIVEN** a multi-agent evolution episode under `inheritance: transgenerational` where multiple agents share the same generation's substrate
-- **WHEN** `MultiAgentSimulation.run_episode` reaches each agent's per-episode `prepare_episode()` call site (`agent/multi_agent.py:588`)
-- **THEN** the runner SHALL set `agent.brain.tei_prior` for that agent (to its assigned substrate's `logit_bias`, or `None` when no substrate is configured) BEFORE calling `agent.brain.prepare_episode()`
-- **AND** the single-agent and multi-agent paths SHALL be observationally symmetric for the same substrate configuration: a single-agent episode and a multi-agent episode running an LSTMPPO with the same `tei_prior` SHALL apply the prior at every step of every episode in both paths
-- **AND** the multi-agent path SHALL skip the set on non-LSTMPPO brain types (the attribute is LSTMPPO-specific, mirroring the single-agent rule)
+- **GIVEN** a worker tuple under `inheritance: transgenerational` with a non-None `f0_substrate_path`, where the configured brain type is NOT `LSTMPPOBrain` (e.g. a future config experiments with applying TEI to a different brain)
+- **WHEN** the worker constructs the agent/brain
+- **THEN** the worker SHALL detect `hasattr(agent.brain, "tei_prior") == False`
+- **AND** the worker SHALL NOT set the attribute on the brain
+- **AND** the worker SHALL emit a `logger.warning` stating that a TEI substrate was assigned but the brain type does not support `tei_prior`, so the substrate is inert for this run
+- **AND** the worker SHALL proceed with the runner invocation (defensive — do not crash the worker pool over a config-level brain/substrate mismatch)
+
+#### Scenario: Single-agent and multi-agent paths apply the prior identically
+
+- **GIVEN** the same depth-N substrate assigned to an `LSTMPPOBrain` in both a single-agent worker (running `StandardEpisodeRunner.run`) and a multi-agent worker (running `MultiAgentSimulation.run_episode`)
+- **WHEN** each worker invokes its respective runner
+- **THEN** the prior SHALL be applied at every step of every episode in both paths (because `LSTMPPOBrain.run_brain` reads `self.tei_prior` at every actor forward pass, regardless of which runner orchestrates the episode)
+- **AND** the runners themselves SHALL contain no TEI-specific code
+- **AND** the per-step actor logits in both paths SHALL include the same additive offset (the substrate's `logit_bias`)
 
 ### Requirement: PPO Sampling/Update Distribution Consistency
 

@@ -6,7 +6,7 @@
 
 The system SHALL provide a `TransgenerationalMemory` dataclass in `quantumnematode/agent/transgenerational_memory.py` representing an inheritable behavioural-bias substrate. The dataclass SHALL expose:
 
-- A `logit_bias: torch.Tensor` field of shape `(num_actions,)` and dtype `float32`, representing an additive per-action bias on actor logits. The size SHALL match the brain's `num_actions` (4 for the default `DEFAULT_ACTIONS` set in `brain/actions.py:20`; would be 6 for the `SIX_ACTIONS` set). The dataclass SHALL accept any 1-D `num_actions` size at construction (the size is not hardcoded), so a future config selecting `SIX_ACTIONS` does not require dataclass changes.
+- A `logit_bias: torch.Tensor` field of shape `(num_actions,)` and dtype `float32`, representing an additive per-action bias on actor logits. The size SHALL match the brain's `num_actions` (4 for the default `DEFAULT_ACTIONS` set in `brain/actions.py:20`). The dataclass SHALL accept any 1-D `num_actions` size at construction (the size is not hardcoded) — this is forward-compatible with `SIX_ACTIONS` (currently flagged "NOT yet implemented" in `brain/actions.py:24`), but no M6-era config selects a 6-action set; the 4-action path is the only currently-exercised path.
 - A `lineage_depth: int` field recording the inheritance generation (0 for F0, incremented by 1 at each `inherit_from` call).
 - A `source_genome_id: str` field identifying the F0 elite from which the substrate originated.
 
@@ -130,3 +130,37 @@ The calibration SHALL be treated as a hard pre-flight gate before the M6.5 pilot
 - **WHEN** the pilot/full driver is invoked
 - **THEN** the driver SHALL log the latest recorded calibration outcome (F0 mean choice index and envelope pass/fail) at startup
 - **AND** the operator SHALL have acknowledged the calibration value in the campaign-shell preamble before pilot/full begins (manual confirmation; the script SHALL print a notice but SHALL NOT block)
+
+### Requirement: Decision-Gate Cross-Seed Aggregation
+
+The paired-arm aggregator SHALL compute a per-seed verdict against the four-criterion decision gate (F1 ≥ 0.40 × F0, F2 ≥ 0.25 × F0, F3 ≥ 0.15 × F0, monotone non-increasing decay F0 ≥ F1 ≥ F2 ≥ F3) and then aggregate per-seed verdicts to a single campaign-level verdict using the rule:
+
+- **GO** iff the full four-criterion AND condition holds for at least 2 of the 4 seeds in the full campaign (TEI-on arm).
+- **PIVOT** iff exactly 1 of the 4 seeds passes; consider the `transgenerational+weights` staged follow-up before committing to STOP.
+- **STOP** iff 0 of the 4 seeds pass.
+
+The aggregator SHALL emit the campaign-level verdict as a single line in `summary.md` and as a single cell in `verdict.csv` so downstream readers (logbook 018, roadmap update) can quote it verbatim. The aggregator SHALL also emit each per-seed verdict so the cross-seed aggregation is auditable.
+
+The 2-of-4 threshold reflects the calibrated tolerance for per-seed variance observed in M3/M4/M5 full campaigns (where ≥2 of 4 seeds passing has reliably distinguished real signal from RNG variance). The decision-gate ratios themselves (40% / 25% / 15%) trace to the Murphy lab quantitative envelope per [Kaletsky et al. eLife 2025](https://elifesciences.org/articles/105673) and are documented in the Phase 5 tracker line 228.
+
+#### Scenario: Two or more seeds passing yields GO
+
+- **GIVEN** a 4-seed full campaign producing per-seed F0/F1/F2/F3 mean choice indices
+- **WHEN** the aggregator evaluates the decision gate
+- **THEN** if at least 2 of the 4 TEI-on seeds satisfy all four criteria (F1 ≥ 0.40 × F0 AND F2 ≥ 0.25 × F0 AND F3 ≥ 0.15 × F0 AND monotone non-increasing), the campaign verdict SHALL be `GO`
+- **AND** `summary.md` SHALL include the verdict line `M6 verdict: GO (X of 4 seeds passing)` where X ≥ 2
+- **AND** `verdict.csv` SHALL contain a row with `verdict = GO`
+
+#### Scenario: One seed passing yields PIVOT
+
+- **GIVEN** a 4-seed full campaign producing per-seed verdicts
+- **WHEN** exactly 1 of the 4 seeds satisfies all four criteria
+- **THEN** the campaign verdict SHALL be `PIVOT` (consider staged `transgenerational+weights` follow-up)
+- **AND** `summary.md` SHALL include a note pointing at the design.md D6 escalation criterion
+
+#### Scenario: Zero seeds passing yields STOP
+
+- **GIVEN** a 4-seed full campaign producing per-seed verdicts
+- **WHEN** none of the 4 seeds satisfies all four criteria
+- **THEN** the campaign verdict SHALL be `STOP`
+- **AND** `summary.md` SHALL document the failure mode (which criterion(a) failed most often across seeds) to inform the logbook 018 narrative
