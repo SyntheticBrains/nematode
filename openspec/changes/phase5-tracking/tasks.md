@@ -219,21 +219,28 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 ## M6: Transgenerational Memory
 
 **OpenSpec change**: `2026-06-30-add-transgenerational-memory` (not yet created)
-**Status**: pending (gated on M3 GO ✅ + M4-or-M5; M3 already cleared, M4 closed STOP, M5 pending). Recommend beginning design once M5's pilot is launched and stable
+**Status**: ready to start (gated on M3 GO ✅ + M4 closed STOP ✅ + M5 closed STOP ✅ — all gates cleared). Highest-novelty remaining Phase 5 milestone; M6 implementation unblocked.
 **Bio fidelity**: HIGH
 **Brain target**: LSTMPPO+klinotaxis
-**Dependencies**: M3 GO ✅ + (M4 closed STOP / M5 pending — gate satisfied once M5 ships, or partially overlap once M5 pilot is launched and stable)
-**Decision gate**: GO if F1 retains ≥40% of F0 avoidance, F3 ≤10%
+**Dependencies**: M3 GO ✅ + (M4 closed STOP ✅ / M5 closed STOP ✅) — all gates cleared
+**Decision gate**: GO if **(a)** F1 retains ≥40% of F0 avoidance choice index, **(b)** F2 retains ≥25%, **(c)** F3 retains ≥15%, **(d)** monotone non-increasing decay F0 ≥ F1 ≥ F2 ≥ F3. The original gate (`F1 ≥ 40%, F3 ≤ 10%`) is corrected per the M6-prep literature scan (May 2026): the Murphy lab's recent quantitative reports (Kaletsky et al., Murphy lab, eLife May 2025) and the Vidal-Gadea independent validation (Akinosho et al., eLife Nov 2025) both show F1/F2 retention well above 0.10 of F0 — Kaletsky et al. report F2 choice indices in the 0.5-0.6 range when trained on PA14 lawns. So `F3 ≤ 10%` would mark a *successful* biological replication as STOP. The revised gate measures *successful TEI decay* (signal persists through F3 within a biologically-reasonable retention envelope) rather than *complete decay* (signal gone by F3, which is the actual failure case). Specific F3/F4 ratio thresholds are left intentionally permissive given the field's documented protocol-sensitivity (sodium azide, OD600=1.0, lawn density); refining to tighter bounds during M6.5 design is sensible if the prepped pilot reveals our substrate produces tighter or wider decay than biology.
 
-**Highest-novelty remaining Phase 5 milestone.** Post-M4-replan elevation: 2025 mechanism literature converges on the project's deliverable-5 design with multiple new papers in the year since the original roadmap was drafted. **Recommend beginning design once M5's pilot is launched and stable** (M5 pilots run for hours; M6 design + spec scaffolding can happen in that window) rather than serial-after-M5-completes — but committing M6 implementation only after M5's verdict so design choices can incorporate any M5 findings.
+**Status was**: pending (gated on M3 + M4/M5). All three are now resolved. M4 closed STOP (substrate constraint), M5 closed STOP (architecture asymmetry; see [logbook 017](../../../docs/experiments/logbooks/017-coevolution-arms-race.md)). M6 design can begin immediately.
 
-**Literature grounding (2023-2025, all post-Posner-2023)**:
+**Literature controversy note (May 2026 scan)**: Posner 2023 is **actively contested but not retracted**. Hunter lab (Gainey et al., eLife reviewed preprint 2024-2025) reported failure to replicate F2+. Murphy lab rebutted ("Absence of Evidence is Not Evidence of Absence", bioRxiv 2024 v2 2025). **Vidal-Gadea group's independent validation (Akinosho et al., eLife Nov 2025)** confirmed F1+F2 retention but documented strong protocol-sensitivity (sodium azide paralysis, OD600=1.0, lawn density, 25°C growth). The field's current consensus is "real but fragile." Implications for M6: (i) the corrected gate above accommodates the biologically-realistic decay envelope; (ii) M6's framing as "computational replication of a contested but defended biological mechanism" requires rigour rather than novelty; (iii) **no computational TEI replication exists in the literature** as of May 2026 — M6 occupies a genuinely open niche.
+
+**Literature grounding (updated May 2026 — Nov 2025 onwards in bold)**:
 
 - [Posner et al. 2023 — Inheritance of associative memories and acquired cellular changes in C. elegans (Nat Commun)](https://www.nature.com/articles/s41467-023-39804-8) — original deliverable-5 inspiration; small-RNA-mediated transmission of behavioural associations across generations
+- **[Akinosho/Vidal-Gadea — Independent validation of TEI of learned pathogen avoidance (eLife Nov 2025)](https://elifesciences.org/articles/107034)** — confirmed F1 AND F2 retention with documented protocol-sensitivity; "attenuates without further reinforcement". **The strongest current evidence FOR the mechanism.**
+- **[MacNeil — Twists and turns in the story of learned avoidance (eLife commentary Nov 2025)](https://elifesciences.org/articles/109427)** — framing of the three-way Murphy/Hunter/Vidal-Gadea controversy; load-bearing protocol variables documented
+- [Kaletsky, Moore, Sengupta et al. (Murphy lab) — Molecular requirements for TEI of pathogen avoidance (eLife May 2025)](https://elifesciences.org/articles/105673) — P11 necessary AND sufficient; reports F2 choice indices in the 0.5-0.6 range when trained on PA14 lawns; **anchors our revised decision-gate retention envelope (F1 ≥40%, F2 ≥25%, F3 ≥15%)**
+- **[Gainey et al. (Hunter lab) — Irreproducibility critique (eLife reviewed preprint 2024-2025)](https://elifesciences.org/articles/100254)** — failed replication; methodological gap was not verifying P11 expression. Cite to acknowledge controversy in M6 framing.
+- **[Murphy rebuttal — Absence of Evidence is Not Evidence of Absence (bioRxiv 2024 v2 2025)](https://www.biorxiv.org/content/10.1101/2024.06.07.597568v2)** — argues Hunter's negative result is a protocol artefact
+- **[TEI is variable across Caenorhabditis (bioRxiv Apr 2026)](https://www.biorxiv.org/content/10.64898/2026.04.10.717426v1)** — only C. elegans + C. remanei show TEI; C. tropicalis/briggsae/kamaaina do not. **Motivates the M6.5 TEI-on vs TEI-off lineage comparison.**
 - [SET-24 + HCF-1 maintain transgenerational epigenetic memory (Nat Commun 2025)](https://www.nature.com/articles/s41467-025-68200-7) — SET domain protein essential for germline immortality + small-RNA-mediated silencing
-- [Molecular Requirements for C. elegans TEI of Pathogen Avoidance (bioRxiv Jan 2025)](https://www.biorxiv.org/content/10.1101/2025.01.21.634111v1) — Pv1 + Pfs1 small RNAs → maco-1 silencing → daf-7 in ASI neuron → avoidance behaviour. **Maps directly onto the F0/F1/F2/F3 pathogen avoidance experiment in M6.5**
+- [Pfs1 sRNA + vab-1 mediator (Science Advances 2025)](https://www.science.org/doi/10.1126/sciadv.adt3850) — second pathogen (P. fluorescens) TEI confirmed; **supports modelling the substrate abstractly (sRNA-token, target-gene-token) rather than maco-1-specifically**
 - [Nucleus-independent transgenerational small-RNA inheritance (Sci Adv)](https://www.science.org/doi/10.1126/sciadv.adj8618) — cytoplasmic inheritance independent of nuclear factors; suggests the heritable substrate doesn't need a nucleus-equivalent in our model
-- [eLife 2025 review — Transgenerational Epigenetic Inheritance: twists and turns of learned avoidance](https://elifesciences.org/articles/109427)
 
 **Substrate readiness**: M3's `WeightPersistence` + `LamarckianInheritance` (heritable substrate proven bit-exact across 18 LSTMPPO trained tensors) + Phase 1's predator/pathogen-avoidance reward machinery + Phase 4's multi-agent infrastructure → most building blocks already shipped.
 
@@ -241,23 +248,30 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 - [ ] M6.2 Hook into `prepare_episode()` as a prior on response distribution
 - [ ] M6.3 Implement `inherit_from(parents, decay_factor)` transmission
 - [ ] M6.4 Create `configs/evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml`
-- [ ] M6.5 Run F0/F1/F2/F3 pathogen avoidance experiment (Posner 2023 replication design; cross-reference 2025 mechanism literature for biological plausibility checks on the inheritance decay schedule)
-- [ ] M6.6 Publish `artifacts/logbooks/018/` with transgenerational findings (017 is M5's; 016 is M1's predator-brain refactor)
+- [ ] M6.5a Run F0/F1/F2/F3 pathogen avoidance experiment (Posner 2023 replication design with the revised decision gate). Use the Murphy lab's quantitative envelope (Kaletsky et al., eLife 2025) as the biological-plausibility check on the decay schedule. (Renumbered from M6.5 to M6.5a in the May 2026 plan revision to disambiguate from milestone M6.5 in the next section.)
+- [ ] M6.5b **TEI-on vs TEI-off lineage comparison** (added May 2026 per literature scan). Run a paired cohort with `TransgenerationalMemory` disabled (decay_factor=0 / inherit_from no-op) alongside the TEI-enabled cohort, same seeds and same env, to provide confounder-free within-experiment evidence that the F1/F2/F3 retention specifically requires the inheritance substrate (rather than residual policy learning from a shared training history). Motivated by the bioRxiv Apr 2026 cross-species finding that TEI is itself a species-conditional trait — treating it as a binary substrate-knob is biologically realistic, not an artificial ablation.
+- [ ] M6.6 Publish `artifacts/logbooks/018/` with transgenerational findings (017 is M5's; 016 is M1's predator-brain refactor). **Framing**: position M6 as "first computational replication of the canonical (defended) TEI mechanism on an RL substrate". Cite the Murphy/Hunter/Vidal-Gadea controversy explicitly so the framing is honest about the biological reproducibility debate.
 - [ ] M6.7 Update this checklist + roadmap milestone tracker
 
-## M6.5: NEAT Architecture Evolution (OPTIONAL)
+## M6.5: NEAT Architecture Evolution (OPTIONAL — reframed as M5 closure)
 
 **OpenSpec change**: `2026-07-14-add-neat-evolution` (only if scheduled)
-**Status**: not started (compute-budget dependent; cost has dropped, see below)
-**Bio fidelity**: LOW
-**Brain target**: MLPPPO
+**Status**: OPTIONAL — reframed May 2026 from a generic NEAT-vs-PPO ablation to a **direct test of M5's architecture-asymmetry hypothesis**. M5's STOP verdict (logbook 017) identified the LSTMPPO-prey-vs-MLPPPO-predator capacity gap as the dominant cause of failed Red Queen entanglement; M6.5 would architecturally test that hypothesis by running matched-capacity vs asymmetric-capacity co-evolution head-to-head. If scheduled, this is now the *closure* of the M5 Red Queen question rather than a separate milestone. **OPTIONAL still applies** because the M5 question can alternatively be closed by Phase 6 (quantum re-evaluation removes the capacity asymmetry by other means — see M7.4); scheduling M6.5 within Phase 5 is a budget/timing call, not a scientific necessity.
+**Bio fidelity**: LOW (NEAT is an ML tool; the biological-fidelity contribution lives in M6)
+**Brain target**: NEAT-evolved network on both sides, configurable capacity envelope per arm
+**Reuses from M5**: lag-matrix instrument + cell-grid fair-test + per-gen reaggregation (logbook 017 § Methodology contributions); these are the discriminative verdict gates, NOT the original R4 cycling-or-escalation gate which was too permissive.
 
-**Cost note (post-M4 replan)**: [TensorNEAT (GPU-accelerated NEAT, 2024-2025)](https://arxiv.org/pdf/2504.08339) materially lowers M6.5's cost vs the original `neat-python` plan — TensorNEAT manages a range of neural networks and simultaneously optimises topology + weights on GPU. A 2025 NEAT-vs-PPO comparison ([Engineering Journal](https://engj.org/index.php/ej/article/view/4615)) reported NEAT +25% over PPO on inventory tasks at 1k generations, suggesting NEAT is competitive for our scale. Switching the integration target from `neat-python` to TensorNEAT is recommended if M6.5 is scheduled.
+**Cost note (May 2026 update)**: [TensorNEAT (GPU-accelerated NEAT, ACM TELO 2025 final)](https://dl.acm.org/doi/10.1145/3730406) (arXiv 2504.08339) is now mature with JAX-vmap + gymnax/Brax integration and ~500× speedup vs `neat-python`. Originally-cited compute concern materially weakened. [Nisioti et al. (arXiv 2505.22696, May 2025)](https://arxiv.org/abs/2505.22696) demonstrate neuroevolution outperforms RL specifically on transfer / morphology-variation tasks — relevant precedent for our co-evolution use case.
 
-- [ ] M6.5.1 Integrate **TensorNEAT** (preferred; falls back to `neat-python` if GPU unavailable) via `NeatEncoder` + `NeatGenome`
-- [ ] M6.5.2 30-gen pilot, single environment
-- [ ] M6.5.3 Logbook supplement to whichever logbook is current
-- [ ] M6.5.4 Update this checklist + roadmap milestone tracker
+**Independent corroboration (May 2026)**: [Resendez Prado "Personality Requires Struggle: Three Regimes of the Baldwin Effect in Neuroevolved Chess Agents" (arXiv 2604.03565, Apr 2026)](https://arxiv.org/abs/2604.03565) independently identifies a "transparent regime" — same-architecture self-play that *suppresses* the heterogeneity needed to produce a measurable Baldwin / Red Queen signal. This is the same hypothesis as our M5 architecture-asymmetry diagnosis from a completely different research group. M6.5 would be a falsification test of the "matched-architecture lifts the transparent-regime suppression" prediction.
+
+**Decision gate (if scheduled)**: GO if matched-capacity arm (NEAT-prey vs NEAT-predator, both starting at comparable initial topology budget) produces own-vs-cross lag delta ≤ −0.05 on the M5 lag-matrix instrument while asymmetric arm (NEAT-prey vs MLP-predator at M5 capacity) reproduces M5's +0.017 delta. Falsifies the architecture-asymmetry hypothesis if both arms produce ~+0.017 (capacity-symmetry is irrelevant); confirms it if matched arm flips sign.
+
+- [ ] M6.5.1 Integrate **TensorNEAT** via `NeatEncoder` + `NeatGenome` (GPU-accelerated; `neat-python` fallback only if GPU genuinely unavailable). Cite the ACM TELO 2025 paper for the JAX-vmap implementation pattern.
+- [ ] M6.5.2 **Matched vs asymmetric capacity head-to-head**: 30-gen pilot × 4 seeds × 2 arms (matched: NEAT-prey vs NEAT-predator at same initial-population topology budget; asymmetric: NEAT-prey vs MLPPPO-predator at M5's capacity). Same env as M5 (count=4, speed=0.5, grid=16) for direct comparison.
+- [ ] M6.5.3 Reuse M5's lag-matrix instrument (`c2_fitness_lag.py` recoverable from PR #153 commit history; logbook 017 § Methodology) as the primary verdict gate. **Do NOT use the R4 cycling-or-escalation gate alone** — logbook 017 demonstrated it's too permissive.
+- [ ] M6.5.4 Logbook 018b supplement (or fold into logbook 018 if M6 also lands). Cite Resendez Prado 2026 + Mougi 2026 (dual-trait decoupling) + the M5 STOP verdict explicitly — frame M6.5 as the closure of the M5 question, with the falsification of the architecture-asymmetry hypothesis as the headline finding either way.
+- [ ] M6.5.5 Update this checklist + roadmap milestone tracker. If matched-capacity arm flips the lag-delta sign, M5 retroactively becomes a "STOP at fixed architecture → GO at evolved architecture" arc rather than a standalone STOP.
 
 ## M7: Phase 5 Synthesis Logbook
 
@@ -265,11 +279,13 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 **Status**: not started
 **Dependencies**: M2–M6 complete (or explicitly dropped via gates)
 
-- [ ] M7.1 Aggregate cross-milestone fitness curves and tables
+**Synthesis scope** (updated May 2026 per literature scan): Phase 5 produced two GO results (M2 hyperparam evolution, M3 Lamarckian inheritance) and two STOP results (M4 Baldwin, M5 Red Queen) plus reusable methodology (lag-matrix, cell-grid fair-test, per-gen reaggregation). The STOPs have **substrate diagnoses** that connect to recent independent literature; M7 should synthesise these into a coherent Phase 5 narrative rather than just tabulating per-milestone outcomes. Specifically, M5's architecture-asymmetry hypothesis is independently corroborated by Resendez Prado ([arXiv 2604.03565, Apr 2026](https://arxiv.org/abs/2604.03565) — "transparent regime" Baldwin suppression in chess agents) and the cycling-vs-trait-decoupling framing is reinforced by Mougi ([Sci Reports 2026](https://www.nature.com/articles/s41598-026-50762-1) — apparent decoupling of dual-trait predator-prey dynamics); Chen ([arXiv 2512.15732, Dec 2025](https://arxiv.org/abs/2512.15732) — "Red Queen's Trap") documents a parallel co-evolution failure mode in HFT.
+
+- [ ] M7.1 Aggregate cross-milestone fitness curves and tables (M2 hyperparam, M3 lamarckian, M4 baldwin, M5 co-evolution, M6 transgenerational; M6.5 if scheduled)
 - [ ] M7.2 Walk through each Phase 5 exit criterion with evidence
-- [ ] M7.3 Document negative findings honestly (Phase 4 precedent)
-- [ ] M7.4 Phase 6 quantum re-evaluation trigger recommendation
-- [ ] M7.5 Publish `artifacts/logbooks/019/synthesis.md` (016 = M1 predator-brain; 017 = M5 co-evolution; 018 = M6 transgenerational; 019 = M7 phase synthesis)
+- [ ] M7.3 Document negative findings honestly (Phase 4 precedent). Specifically synthesise: (a) **M4 STOP** — single-task K=50 has no Baldwin axis (Fernando 2018 / Chiu 2024 substrate diagnosis); (b) **M5 STOP** — architecture-asymmetry suppresses Red Queen entanglement (independently corroborated by Resendez Prado's chess Baldwin "transparent regime", and by Mougi 2026 trait-decoupling indicating fitness-escalation is the wrong instrument); (c) **methodology contributions** — lag-matrix cross-pairing instrument (logbook 017 § Methodology) and cell-grid fair-test methodology are unscooped as of May 2026 and form a publishable Phase 5 contribution independent of the milestone verdicts.
+- [ ] M7.4 Phase 6 quantum re-evaluation trigger recommendation. Include explicit guidance on whether the M5 substrate-asymmetry hypothesis should be addressed within Phase 5 (via M6.5 NEAT) or deferred to Phase 6 (quantum brain re-evaluation removes the capacity asymmetry by other means).
+- [ ] M7.5 Publish `artifacts/logbooks/019/synthesis.md` (016 = M1 predator-brain; 017 = M5 co-evolution; 018 = M6 transgenerational; 019 = M7 phase synthesis). Cross-cite the three independent 2026 results identified in M7.3 to frame Phase 5's STOP verdicts as field-consistent rather than implementation-failure.
 - [ ] M7.6 Update `docs/roadmap.md` Phase 5 status → COMPLETE; record exit criterion outcomes
 - [ ] M7.7 Archive `phase5-tracking` alongside `2026-07-21-add-phase5-evaluation`
 
