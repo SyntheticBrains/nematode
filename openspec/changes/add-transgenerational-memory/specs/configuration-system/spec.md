@@ -8,7 +8,7 @@ The `quantumnematode/utils/config_loader.py` module SHALL define a `Transgenerat
 
 `TransgenerationalConfig` SHALL contain:
 
-- `enabled: bool` — ablation switch for paired-arm comparison. When `false`, the substrate is structurally absent and the runner SHALL set `tei_prior = None`.
+- `enabled: bool` — ablation switch for paired-arm comparison. When `false`, the substrate is structurally absent: the loop sets `tei_prior_source = None` in every worker tuple, `fitness.evaluate` omits the kwarg, and `brain.tei_prior` is never set (LSTMPPO's `__init__` default of `None` is preserved).
 - `decay_factor: float` constrained to `0.0 ≤ x ≤ 1.0`, defaulting to `0.6` (matches the planned F0=1.0 / F1=0.6 / F2=0.36 / F3=0.216 cascade).
 - `extraction_seed: int` constrained to `≥ 0`, defaulting to a fixed sentinel (e.g. `424242`). Controls determinism of the F0 telemetry-pass.
 - `lawn_schedule: list[LawnScheduleEntry]` — per-generation overrides for pathogen-lawn enablement and training-episode count.

@@ -29,7 +29,7 @@ The `Brain` Protocol in `quantumnematode/brain/arch/_brain.py` SHALL NOT be modi
 #### Scenario: Setting tei_prior to None restores baseline behaviour
 
 - **GIVEN** an `LSTMPPOBrain` with `tei_prior = torch.tensor([2.0, 0.0, 0.0, 0.0])`
-- **WHEN** the runner sets `brain.tei_prior = None` and then invokes `run_brain`
+- **WHEN** `brain.tei_prior` is set to `None` (e.g., by a test or by a non-TEI `fitness.evaluate` call) and `run_brain` is then invoked
 - **THEN** the actor logits SHALL be byte-equivalent to the pre-TEI implementation
 - **AND** action sampling SHALL match a no-prior baseline with the same seed
 
@@ -100,7 +100,7 @@ The `LSTMPPOBrain.learn()` method SHALL apply the same `tei_prior` to logits in 
 
 This requirement exists because PPO's policy-update step computes a probability ratio `exp(new_log_probs - chunk["old_log_probs"])` over the rollout batch. `chunk["old_log_probs"]` is the log-probability recorded at action-sampling time (under the biased distribution when TEI is active). `new_log_probs` is recomputed inside `learn()` from the current policy's forward pass. If the training forward pass omits the bias while the sampling forward pass includes it, `new_log_probs` and `old_log_probs` reflect different distributions and the PPO ratio is systematically wrong — silently corrupting F0 training under any non-zero `ppo_train_episodes`.
 
-`tei_prior` SHALL be constant across an episode (the runner sets it once pre-`prepare_episode` and does not mutate it during the step loop). The `learn()` method SHALL include a defensive assertion at entry that `self.tei_prior` is either `None` or a tensor with the same shape and dtype it had at the most recent `run_brain` call whose rollout data is in the current update batch; mismatch SHALL raise an explicit `RuntimeError` rather than silently degrading the ratio.
+`tei_prior` SHALL be constant across an episode (it is set once by `fitness.evaluate` post-decode and SHALL NOT be mutated during the step loop). The `learn()` method SHALL include a defensive assertion at entry that `self.tei_prior` is either `None` or a tensor with the same shape and dtype it had at the most recent `run_brain` call whose rollout data is in the current update batch; mismatch SHALL raise an explicit `RuntimeError` rather than silently degrading the ratio.
 
 #### Scenario: TEI prior is applied at the PPO training-time forward pass
 

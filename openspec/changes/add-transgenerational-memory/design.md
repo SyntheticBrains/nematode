@@ -24,7 +24,7 @@ The adjacent computational literature does not, to our knowledge, replicate this
 - A substrate (`TransgenerationalMemory`) that carries an inheritable behavioural-bias signal independent of trained weights.
 - A `TransgenerationalInheritance` strategy slotting into `EvolutionLoop` via the existing `InheritanceStrategy` Protocol with zero behaviour change to `none`/`lamarckian`/`baldwin` paths.
 - Per-generation `lawn_schedule` toggling F0 (pathogen on, training on) → F1/F2/F3 (pathogen off, training off) inside a single `EvolutionLoop` invocation, so paired-arm bookkeeping stays clean.
-- A measurable per-agent `pathogen_choice_index` derived from existing per-step damage-radius detection.
+- A measurable per-agent `pathogen_choice_index` (aggregator alias) — derived from existing per-step damage-radius detection (`env/env.py:2286 is_agent_in_damage_radius_for`). The underlying storage uses existing predator-avoidance trace columns; "pathogen_choice_index" is the aggregator output name, not a new metric.
 - A hard pre-flight F0-calibration smoke gate that prevents wasted compute on an uncalibratable decision gate.
 - A paired-arm ablation (`transgenerational.enabled: true|false`) where the substrate is the *only* cross-arm difference.
 
@@ -63,7 +63,7 @@ We pick (3). Kaletsky's F2 ≈ 0.55 choice index corresponds to ~3× action-prob
 
 `PredatorType.STATIONARY` already exists at `env/env.py:91-95` ("Does not move, acts as a toxic zone with larger damage radius") with a dedicated `speed=0` early exit at `env/env.py:590-591`. It *is* a pathogen lawn by construction.
 
-*Why repurpose, not add new entity.* The nociception sensor + aversive-gradient perception is wired and unit-tested for stationary toxic zones. A new entity would duplicate physics + reward path. We add a thin alias at the config-loader layer (`pathogen_lawns:` keyword) — no new env code, no new sensory channel.
+*Why repurpose, not add new entity.* The nociception sensor + aversive-gradient perception is wired and unit-tested for stationary toxic zones. A new entity would duplicate physics + reward path. We use the existing `predators:` YAML block with `predator_type: stationary` — no new config-loader keyword, no new env code, no new sensory channel; "pathogen lawn" is documentation vocabulary only.
 
 *Trade-off.* Vocabulary drift in lineage CSVs ("predator" not "pathogen"). Mitigated by aggregator alias columns (`pathogen_choice_index` parallel to underlying `predator_avoidance`); storage uses existing plumbing. Logbook 018 § Methodology documents the repurposing.
 
@@ -95,7 +95,7 @@ TEI-on arm: `inheritance: transgenerational`. TEI-off arm: `inheritance: none`. 
 
 *Validator enforcement.* `transgenerational.enabled=true ⇒ inheritance=transgenerational`; `enabled=false ⇒ inheritance=none`. Implemented in `config_loader.py` Pydantic validator with a unit test.
 
-### D7. Brain hook — attribute on brain instance, runner-set
+### D7. Brain hook — attribute on brain instance, set via fitness.evaluate
 
 The TEI prior is set by `LearnedPerformanceFitness.evaluate` in `quantumnematode/evolution/fitness.py`, NOT by the runner or the worker. The integration layer: `EvolutionLoop` builds per-child worker tuples with `tei_prior_source: tuple[Path, float, int] | None` (the `(f0_substrate_path, decay_factor, lineage_depth)` triple, or None). `_evaluate_in_worker` forwards `tei_prior_source` as a kwarg to `fitness.evaluate`, mirroring the existing `warm_start_path_override` / `weight_capture_path` forwarding pattern. Inside `fitness.evaluate`, immediately after `brain = encoder.decode(...)` (fitness.py:429) and BEFORE `_build_agent(...)` (fitness.py:460), the substrate is loaded, decayed `lineage_depth` times, and assigned to `brain.tei_prior` via `hasattr`-dispatch. The runner code (`StandardEpisodeRunner`, `FrozenEvalRunner`, `MultiAgentSimulation`) is unchanged — runners are TEI-agnostic. Single-agent and multi-agent paths apply the prior identically because both read `brain.tei_prior` from the same brain instance.
 
@@ -103,7 +103,7 @@ LSTMPPO reads `self.tei_prior` inside `run_brain()` (sampling forward pass at ls
 
 *Why both call sites, not just sampling.* PPO computes a probability ratio `exp(new_log_probs - old_log_probs)` over the policy-update batch. `old_log_probs` is the log-probability recorded at action-sampling time (under the biased distribution). `new_log_probs` is recomputed at update time from the current policy's forward pass. If the training forward pass omits the bias while the sampling forward pass includes it, the two log-probs reflect different distributions and the PPO ratio is systematically wrong — silently corrupting F0 training. Applying the bias in BOTH paths keeps the distribution consistent across sampling and update; the bias is a constant additive offset on the actor head, so its effect on the PPO objective is well-defined (gradients flow through the actor parameters; the bias itself is non-trainable additive state that shifts the policy's exploration distribution).
 
-The `tei_prior` SHALL be constant across an episode (the runner sets it once pre-`prepare_episode` and does not mutate it during the step loop), which the existing per-episode set-then-prepare ordering already enforces. The implementer SHALL add an assertion at the top of `learn()` that confirms `self.tei_prior` is unchanged from the value seen during the most recent rollout episode whose data is being updated.
+The `tei_prior` SHALL be constant across an episode (it is set once by `fitness.evaluate` post-decode and is not mutated during the step loop), which the call ordering at fitness.py:429 → fitness.py:460 enforces by construction. The implementer SHALL add an assertion at the top of `learn()` that confirms `self.tei_prior` is unchanged from the value seen during the most recent rollout episode whose data is being updated.
 
 *Why attribute, not Protocol signature extension.* Extending `Brain.prepare_episode(tei_prior=None)` would cascade through 19 brain subtypes. The attribute approach keeps the Protocol stable: non-LSTMPPO brains default `tei_prior = None` and ignore it. Minimal blast radius.
 
