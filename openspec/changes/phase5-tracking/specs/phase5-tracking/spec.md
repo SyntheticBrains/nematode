@@ -2,7 +2,7 @@
 
 ### Requirement: Phase 5 Living Milestone Checklist
 
-The repository SHALL maintain a single living checklist file at `openspec/changes/phase5-tracking/tasks.md` covering every Phase 5 milestone (M-1 through M7) at sub-task granularity, updated by every Phase 5 milestone PR as part of its diff.
+The repository SHALL maintain a single living checklist file at `openspec/changes/phase5-tracking/tasks.md` covering every Phase 5 milestone (M-1 through M8) at sub-task granularity, updated by every Phase 5 milestone PR as part of its diff.
 
 #### Scenario: Future session orients to Phase 5
 
@@ -12,7 +12,7 @@ The repository SHALL maintain a single living checklist file at `openspec/change
 
 #### Scenario: Milestone PR updates the checklist
 
-- **GIVEN** a Phase 5 milestone PR (e.g. M0, M1, …, M7) is being prepared
+- **GIVEN** a Phase 5 milestone PR (e.g. M0, M1, …, M8) is being prepared
 - **WHEN** the PR is opened
 - **THEN** the PR diff SHALL include updates to `openspec/changes/phase5-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the milestone status header
 
@@ -21,7 +21,7 @@ The repository SHALL maintain a single living checklist file at `openspec/change
 - **GIVEN** a Phase 5 milestone OpenSpec change (e.g. `2026-04-28-add-evolution-framework`) is archived
 - **WHEN** archival completes
 - **THEN** the `phase5-tracking` change SHALL remain unarchived and continue to receive updates from subsequent milestone PRs
-- **AND** archival of `phase5-tracking` itself SHALL only occur alongside the M7 synthesis evaluation change
+- **AND** archival of `phase5-tracking` itself SHALL only occur alongside the M8 synthesis evaluation change
 
 ### Requirement: Roadmap Phase 5 Status Block
 
@@ -39,7 +39,7 @@ The `docs/roadmap.md` Phase 5 section SHALL include a Phase 5 Milestone Tracker 
 - **GIVEN** Phase 5 has at least one milestone in progress (M-1 onward)
 - **WHEN** a reader views the Timeline Overview table at the top of `docs/roadmap.md`
 - **THEN** the Phase 5 row SHALL show status `🟡 IN PROGRESS` (not `🔲 PLANNED`)
-- **AND** when M7 completes the row SHALL change to `✅ COMPLETE`
+- **AND** when M8 completes the row SHALL change to `✅ COMPLETE`
 
 ### Requirement: Recorded Phase 5 Decisions
 

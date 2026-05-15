@@ -10,16 +10,16 @@ This change adds a new `phase5-tracking` spec capability whose requirements comm
 
 ### 1. Phase 5 Milestone Tracking Change
 
-Create `openspec/changes/phase5-tracking/` with proposal/tasks/design. The `tasks.md` is a living checklist of every Phase 5 milestone (M0–M7) at sub-task granularity. Each subsequent Phase 5 milestone PR (M0, M1, M2, …) updates this checklist as part of its diff.
+Create `openspec/changes/phase5-tracking/` with proposal/tasks/design. The `tasks.md` is a living checklist of every Phase 5 milestone (M0–M8) at sub-task granularity. Each subsequent Phase 5 milestone PR (M0, M1, M2, …) updates this checklist as part of its diff.
 
-This change is intentionally not archived after merge — it stays open until the entire Phase 5 is complete (M7 logbook published). At that point it gets archived alongside the M7 evaluation change.
+This change is intentionally not archived after merge — it stays open until the entire Phase 5 is complete (M8 logbook published). At that point it gets archived alongside the M8 evaluation change.
 
 ### 2. Roadmap Status Block Update
 
 Edit `docs/roadmap.md` Phase 5 section:
 
 - Update Phase 5 row in Timeline Overview table from `🔲 PLANNED` to `🟡 IN PROGRESS`
-- Add a **Phase 5 Milestone Tracker** sub-section directly under the existing Phase 5 deliverables list, with one bullet per milestone (M-1 through M7) and current status
+- Add a **Phase 5 Milestone Tracker** sub-section directly under the existing Phase 5 deliverables list, with one bullet per milestone (M-1 through M8) and current status
 
 ### 3. Three Recorded Phase 5 Decisions
 
@@ -31,7 +31,7 @@ The plan that generated these milestones made three decisions that should be vis
 
 ## Capabilities
 
-**Added**: `phase5-tracking` (new) — three requirements covering the living milestone checklist, the roadmap Phase 5 status block, and the Phase 5 decision record. This capability lives until M7 archives alongside it.
+**Added**: `phase5-tracking` (new) — three requirements covering the living milestone checklist, the roadmap Phase 5 status block, and the Phase 5 decision record. This capability lives until M8 archives alongside it.
 
 ## Impact
 
