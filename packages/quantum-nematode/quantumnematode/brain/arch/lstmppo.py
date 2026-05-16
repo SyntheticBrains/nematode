@@ -1159,8 +1159,19 @@ class LSTMPPOBrain(ClassicalBrain):
         # TEI rollout snapshot so a fresh rollout under the loaded weights
         # is treated as a pristine window (matches the contract that
         # ``self.buffer.reset()`` and the snapshot must move together).
+        # Also drop any in-flight pending transition: ``_pending_features``
+        # was populated by the LAST ``run_brain`` call under the OLD
+        # weights, and a subsequent ``learn()`` would enqueue it into
+        # the freshly-reset buffer — semantically wrong because the
+        # sample's log-prob and value were computed under weights that
+        # no longer exist. ``_pending_features = None`` is the gating
+        # predicate at line ~779 (``if self._pending_features is not None``);
+        # setting it to None drops the pending sample cleanly without
+        # needing to clear the other ``_pending_*`` fields (they are
+        # only read when ``_pending_features`` is non-None).
         self.buffer.reset()
         self._reset_tei_prior_rollout_snapshot()
+        self._pending_features = None
 
         logger.info(
             "LSTMPPOBrain weights loaded (components: %s, episode_count=%d)",
