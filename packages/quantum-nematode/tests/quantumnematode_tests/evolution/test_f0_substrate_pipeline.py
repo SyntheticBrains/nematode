@@ -369,6 +369,147 @@ def test_checkpoint_load_defaults_tei_f0_substrate_path_to_none(tmp_path: Path) 
 # ---------------------------------------------------------------------------
 
 
+def test_build_f0_probe_params_matches_brain_input_dim_under_stam(tmp_path: Path) -> None:
+    """Probe ``BrainParams`` MUST produce features matching ``brain.input_dim``.
+
+    Regression for an F0 extraction crash on configs with STAM + multiple
+    non-STAM modules. The brain's ``input_dim`` is built from the
+    inferred STAM dim (e.g., 7 for a 2-channel env), but the
+    ``STAMSensoryModule`` registry instance has ``classical_dim=11``
+    (4-channel default). When the probe ``BrainParams`` is constructed
+    without an explicit ``stam_state``, the runtime feature pipeline
+    emits 11 zeros for STAM — total features don't match the brain's
+    ``feature_norm.normalized_shape`` and ``torch.layer_norm`` raises.
+    The fix is in ``_build_f0_probe_params(brain=brain)`` which
+    derives the STAM dim from the brain's known ``input_dim``.
+
+    Uses a minimal in-test sim_config (not the live transgenerational
+    pilot YAML) so future YAML edits don't silently change test
+    coverage. The bug requires STAM + multiple non-STAM channels to
+    surface; ``[food_chemotaxis, nociception]`` is the minimum
+    reproducer (1 food channel + 1 predator channel → 2-channel STAM
+    of dim 7, vs the registry default of 11).
+    """
+    # Start from a stable LSTMPPO+klinotaxis scenario YAML, then patch
+    # the brain block to add ``nociception`` (the bug-trigger). The
+    # scenario YAML doesn't have a predator block; the brain just
+    # produces zero nociception features at runtime — that's fine for
+    # this dim-matching test (we're not exercising the predator logic).
+    from quantumnematode.brain.modules import ModuleName, extract_classical_features
+    from quantumnematode.evolution.encoders import (
+        HyperparameterEncoder,
+        build_birth_metadata,
+    )
+    from quantumnematode.evolution.genome import Genome
+    from quantumnematode.utils.config_loader import ParamSchemaEntry
+
+    base_yaml = PROJECT_ROOT / "configs" / "scenarios" / "foraging" / "lstmppo_small_klinotaxis.yml"
+    assert base_yaml.exists(), f"Base scenario YAML not found: {base_yaml}"
+    sim_config = load_simulation_config(str(base_yaml))
+    # Inject nociception so STAM has 2 channels (food + predator) — the
+    # minimum reproducer for the inferred-STAM-vs-registry-STAM bug.
+    assert sim_config.brain is not None
+    # ``sensory_modules`` exists on LSTMPPO/MLPPPO brain configs but not
+    # on every brain in the BrainConfig union; getattr() with the known
+    # default keeps pyright quiet.
+    existing_modules = list(getattr(sim_config.brain.config, "sensory_modules", []) or [])
+    patched_modules = [*existing_modules, ModuleName.NOCICEPTION]
+    new_brain_cfg = sim_config.brain.config.model_copy(
+        update={"sensory_modules": patched_modules},
+    )
+    new_brain_container = sim_config.brain.model_copy(update={"config": new_brain_cfg})
+    # Add a minimal hyperparam_schema so HyperparameterEncoder works.
+    sim_config = sim_config.model_copy(
+        update={
+            "brain": new_brain_container,
+            "hyperparam_schema": [
+                ParamSchemaEntry(name="actor_lr", type="float", bounds=(1e-5, 1e-3)),
+            ],
+        },
+    )
+
+    encoder = HyperparameterEncoder()
+    # Decode a fresh brain with an arbitrary genome value — we're only
+    # exercising brain construction, not training.
+    genome = Genome(
+        params=np.array([1e-4], dtype=np.float32),
+        genome_id="probe-test",
+        parent_ids=[],
+        generation=0,
+        birth_metadata=build_birth_metadata(sim_config),
+    )
+    brain = encoder.decode(genome, sim_config, seed=42)
+
+    # Construct a minimal EvolutionLoop just so we can call the helper.
+    encoder_for_loop = HyperparameterEncoder()
+    fitness = EpisodicSuccessRate()
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=2,
+        generations=1,
+        episodes_per_eval=1,
+        learn_episodes_per_eval=1,
+    )
+    optimizer = CMAESOptimizer(
+        num_params=encoder_for_loop.genome_dim(sim_config),
+        population_size=2,
+        sigma0=ecfg.sigma0,
+        seed=42,
+    )
+    loop = EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder_for_loop,
+        fitness=fitness,
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=tmp_path,
+        rng=np.random.default_rng(42),
+        log_level=logging.WARNING,
+    )
+
+    probe_params_list = loop._build_f0_probe_params(brain=brain)
+    assert len(probe_params_list) > 0, "Probe params list must be non-empty"
+
+    # Each probe MUST produce features matching brain.input_dim, otherwise
+    # ``feature_norm`` raises a RuntimeError in ``run_brain``.
+    # ``sensory_modules`` and ``input_dim`` are LSTMPPO-specific (not on
+    # the Brain protocol); cast via getattr to keep pyright quiet.
+    sensory_modules = brain.sensory_modules  # type: ignore[attr-defined]
+    input_dim = int(brain.input_dim)  # type: ignore[attr-defined]
+    # Sanity-check that this config DOES exercise the bug-relevant
+    # state — STAM module is in the brain's effective modules and the
+    # inferred STAM dim is < the registry default of 11 (the gap that
+    # the probe fix bridges).
+    assert ModuleName.STAM in sensory_modules, (
+        "Test fixture must include STAM (auto-enabled by klinotaxis); "
+        "otherwise the regression isn't being exercised."
+    )
+    for idx, probe in enumerate(probe_params_list):
+        features = extract_classical_features(probe, sensory_modules)
+        assert features.shape[0] == input_dim, (
+            f"Probe #{idx} produced features of shape {features.shape}, "
+            f"but brain.input_dim is {input_dim}. "
+            f"This will trip ``feature_norm`` during ``run_brain``."
+        )
+
+
+def test_build_f0_probe_params_without_brain_preserves_legacy_shape(tmp_path: Path) -> None:
+    """Without the optional ``brain`` arg, the helper SHALL still return probe params.
+
+    Backwards-compatibility check: existing callers / tests that don't
+    pass ``brain`` keep producing the legacy three-probe sequence
+    (with ``stam_state=None``). The legacy path is fine for brains
+    without STAM and for foraging-only configs.
+    """
+    loop = _make_baseline_loop(tmp_path)
+    loop.inheritance = TransgenerationalInheritance()
+    probe_params_list = loop._build_f0_probe_params()
+    assert len(probe_params_list) == 3
+    # No brain → no stam_state derivation → legacy None default.
+    for probe in probe_params_list:
+        assert probe.stam_state is None
+
+
 def test_existing_helpers_unchanged_for_lamarckian(tmp_path: Path) -> None:
     """Lamarckian path SHALL NOT be affected by the new substrate helper.
 
