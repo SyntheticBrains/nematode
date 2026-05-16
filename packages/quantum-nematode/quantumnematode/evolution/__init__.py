@@ -33,6 +33,7 @@ from quantumnematode.evolution.inheritance import (
 )
 from quantumnematode.evolution.lineage import CSV_HEADER, LineageTracker
 from quantumnematode.evolution.loop import CHECKPOINT_VERSION, EvolutionLoop
+from quantumnematode.evolution.transgenerational_inheritance import TransgenerationalInheritance
 
 __all__ = [
     "CHECKPOINT_VERSION",
@@ -54,6 +55,7 @@ __all__ = [
     "LineageTracker",
     "MLPPPOEncoder",
     "NoInheritance",
+    "TransgenerationalInheritance",
     "build_birth_metadata",
     "genome_id_for",
     "get_encoder",

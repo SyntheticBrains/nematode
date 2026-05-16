@@ -235,6 +235,7 @@ class EvolutionLoop:
             "none": "none",
             "lamarckian": "weights",
             "baldwin": "trait",
+            "transgenerational": "transgenerational",
         }[self.evolution_config.inheritance]
         if self.inheritance.kind() != _expected_kind:
             msg = (

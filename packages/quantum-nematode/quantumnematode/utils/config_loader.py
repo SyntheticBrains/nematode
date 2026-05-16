@@ -1042,7 +1042,7 @@ class EvolutionConfig(BaseModel):
     # = no weights to inherit); and incompatible with
     # architecture-changing schema fields.  All checks enforced by the
     # model validators below + ``SimulationConfig._validate_hyperparam_schema``.
-    inheritance: Literal["none", "lamarckian", "baldwin"] = "none"
+    inheritance: Literal["none", "lamarckian", "baldwin", "transgenerational"] = "none"
     # Number of prior-generation elites whose checkpoints survive into
     # the next generation.  Default 1 (single-elite-broadcast).  Only
     # 1 is currently accepted when inheritance is "lamarckian"; the

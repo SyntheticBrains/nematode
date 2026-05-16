@@ -51,6 +51,7 @@ from quantumnematode.evolution import (
     LamarckianInheritance,
     LearnedPerformanceFitness,
     NoInheritance,
+    TransgenerationalInheritance,
     select_encoder,
 )
 from quantumnematode.logging_config import configure_file_logging, logger
@@ -101,15 +102,19 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--inheritance",
         type=str,
-        choices=["none", "lamarckian", "baldwin"],
+        choices=["none", "lamarckian", "baldwin", "transgenerational"],
         default=None,
         help=(
             "Override evolution.inheritance. 'lamarckian' enables per-genome "
             "warm-start from the prior generation's elite parent (weight flow). "
             "'baldwin' records the prior elite ID in the lineage CSV but does "
             "NOT propagate weights — every child trains from-scratch (trait "
-            "flow only). Both require hyperparam_schema and learn_episodes_per_eval > 0; "
-            "both are mutually exclusive with warm_start_path. See evolution-framework spec."
+            "flow only). 'transgenerational' (M6 substrate flow) extracts an "
+            "inheritable behavioural-bias substrate from the F0 elite and "
+            "decays it across F1/F2/F3 — substrate set + decay pipeline land "
+            "in subsequent M6 commits. All three require hyperparam_schema "
+            "and learn_episodes_per_eval > 0; all are mutually exclusive with "
+            "warm_start_path. See evolution-framework spec."
         ),
     )
     parser.add_argument(
@@ -497,8 +502,12 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
     # with the configured elite count; "baldwin" → BaldwinInheritance
     # (no per-genome weight checkpoints, but the prior generation's
     # elite ID is recorded in lineage CSV's `inherited_from` for every
-    # child of the next generation).  Validators on EvolutionConfig
-    # already rejected unsafe combinations at YAML/CLI parse time.
+    # child of the next generation); "transgenerational" →
+    # TransgenerationalInheritance (substrate flow — F0-elite-derived
+    # behavioural-bias substrate cascaded F1/F2/F3 with multiplicative
+    # decay; F0 extraction + F1+ kwarg forwarding land in subsequent
+    # M6 commits).  Validators on EvolutionConfig already rejected
+    # unsafe combinations at YAML/CLI parse time.
     inheritance: InheritanceStrategy
     if evolution_config.inheritance == "lamarckian":
         inheritance = LamarckianInheritance(
@@ -506,6 +515,8 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
         )
     elif evolution_config.inheritance == "baldwin":
         inheritance = BaldwinInheritance()
+    elif evolution_config.inheritance == "transgenerational":
+        inheritance = TransgenerationalInheritance()
     else:
         inheritance = NoInheritance()
 
