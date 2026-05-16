@@ -1194,7 +1194,7 @@ class EvolutionConfig(BaseModel):
     persist_cma_across_kblocks: bool = False
 
     @model_validator(mode="after")
-    def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901
+    def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912
         """Enforce inheritance configuration rules at YAML load time.
 
         Four rules:
@@ -1314,6 +1314,30 @@ class EvolutionConfig(BaseModel):
                     f"{sorted(schedule_gens)}."
                 )
                 raise ValueError(msg)
+            # gen-0 train-phase check: under enabled TEI, F0 has no
+            # ``tei_prior_source`` to fall back on (the F0 elite IS the
+            # substrate source), so its schedule entry MUST set a non-
+            # zero ``ppo_train_episodes``. Otherwise the run reaches
+            # ``LearnedPerformanceFitness.evaluate`` with
+            # ``learn_episodes_per_eval=0`` and ``tei_prior_source=None``
+            # — rejected at worker entry, but only after pool startup.
+            # Catching it at config-load gives a friendlier error and
+            # avoids wasted process spawn.
+            if self.transgenerational.enabled:
+                gen0_entry = next(
+                    (e for e in self.transgenerational.lawn_schedule if e.generation == 0),
+                    None,
+                )
+                if gen0_entry is not None and gen0_entry.ppo_train_episodes == 0:
+                    msg = (
+                        "transgenerational.lawn_schedule entry for generation=0 "
+                        "has ppo_train_episodes=0, but F0 has no substrate to "
+                        "inherit from (F0 IS the substrate source). Set the "
+                        "generation=0 entry's ppo_train_episodes > 0 so the F0 "
+                        "elite can train before the substrate-extraction "
+                        "telemetry pass."
+                    )
+                    raise ValueError(msg)
         # Symmetric guard: if inheritance is "transgenerational" but
         # the config block is missing, the F0 extraction pipeline has
         # no decay_factor or lawn_schedule to use. Reject explicitly

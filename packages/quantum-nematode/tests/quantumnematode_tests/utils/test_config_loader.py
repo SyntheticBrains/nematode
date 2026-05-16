@@ -842,6 +842,75 @@ class TestEvolutionConfigTransgenerationalPairing:
                 ),
             )
 
+    def test_gen0_zero_train_episodes_rejected_when_enabled(self) -> None:
+        """Under enabled TEI, a gen-0 entry with ``ppo_train_episodes=0`` SHALL be rejected.
+
+        F0 has no substrate to inherit from (F0 IS the substrate source),
+        so its train phase MUST run for any subsequent extraction to have
+        meaningful biases. The fitness function would otherwise reject
+        this at worker entry, after pool startup.
+        """
+        with pytest.raises(
+            ValueError,
+            match=r"generation=0 has ppo_train_episodes=0",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=10,
+                inheritance="transgenerational",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=[
+                        LawnScheduleEntry(
+                            generation=0,
+                            pathogen_lawns_enabled=True,
+                            ppo_train_episodes=0,
+                        ),
+                        LawnScheduleEntry(
+                            generation=1,
+                            pathogen_lawns_enabled=False,
+                            ppo_train_episodes=0,
+                        ),
+                    ],
+                ),
+            )
+
+    def test_gen0_zero_train_episodes_allowed_when_disabled(self) -> None:
+        """Under TEI-off the gen-0 train-phase check is bypassed.
+
+        With ``enabled=False`` the control arm doesn't run substrate
+        extraction; its train-phase setting is governed by the outer
+        ``learn_episodes_per_eval`` field alone.
+        """
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=10,
+            inheritance="none",
+            transgenerational=TransgenerationalConfig(
+                enabled=False,
+                lawn_schedule=[
+                    LawnScheduleEntry(
+                        generation=0,
+                        pathogen_lawns_enabled=True,
+                        ppo_train_episodes=0,
+                    ),
+                    LawnScheduleEntry(
+                        generation=1,
+                        pathogen_lawns_enabled=False,
+                        ppo_train_episodes=0,
+                    ),
+                ],
+            ),
+        )
+        assert cfg.transgenerational is not None
+        assert cfg.transgenerational.enabled is False
+
     def test_well_formed_tei_config_accepted(self) -> None:
         """A schedule covering every gen in [0, generations) SHALL load cleanly."""
         cfg = EvolutionConfig(
