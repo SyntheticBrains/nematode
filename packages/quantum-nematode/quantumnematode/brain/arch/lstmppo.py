@@ -403,6 +403,28 @@ class LSTMPPOBrain(ClassicalBrain):
             lr=config.critic_lr,
         )
 
+        # Transgenerational-memory bias on actor logits. ``None`` is the
+        # disabled state and preserves byte-equivalent pre-TEI behaviour;
+        # when set to a 1-D ``(num_actions,)`` float32 tensor, the bias
+        # is added to actor logits in BOTH the sampling forward pass
+        # (``run_brain``) and the training forward pass (``learn``) so
+        # the PPO ratio ``exp(new_log_probs - old_log_probs)`` stays
+        # well-defined. See the OpenSpec change at
+        # ``openspec/changes/add-transgenerational-memory/`` for the
+        # rationale. The attribute is set externally by
+        # ``LearnedPerformanceFitness.evaluate`` (a follow-up addition)
+        # post-decode, before ``_build_agent``; never mutated by the
+        # runner or the step loop.
+        self.tei_prior: torch.Tensor | None = None
+        # Snapshot of ``tei_prior``'s ``(shape, dtype)`` captured during
+        # the most recent rollout step. ``learn()``'s defensive entry
+        # check compares this against the current attribute to detect
+        # mid-window mutation (which would silently invalidate the PPO
+        # ratio). ``None`` means "no rollout-time observation recorded
+        # yet" (e.g., first rollout, or all rollout steps ran with
+        # ``tei_prior is None``).
+        self._tei_prior_rollout_snapshot: tuple[torch.Size, torch.dtype] | None = None
+
         # ── LR scheduling ──
         self._episode_count = 0
         self.base_actor_lr = config.actor_lr
@@ -596,9 +618,26 @@ class LSTMPPOBrain(ClassicalBrain):
         self.h_t = h_new
         self.c_t = c_new
 
-        # Actor: h_t → logits → action
+        # Actor: h_t → logits → (optional TEI bias) → action
         with torch.no_grad():
             logits = self.actor(h_out)
+            if self.tei_prior is not None:
+                # Additive logit bias from the transgenerational substrate.
+                # Applied here AND at the matching site in ``learn()`` so the
+                # PPO ratio ``exp(new_log_probs - old_log_probs)`` stays
+                # well-defined (both sides see the same biased distribution).
+                # ``.to(logits.device)`` defends against a bias loaded from
+                # disk on a different device than the brain runs on (no-op
+                # when devices already match — the common case). Capture
+                # the snapshot for the defensive entry-check in ``learn()``
+                # — comparing shape/dtype, not identity, since the caller
+                # may legitimately rebind the attribute to an element-wise-
+                # equal tensor across episodes.
+                logits = logits + self.tei_prior.to(logits.device)
+                self._tei_prior_rollout_snapshot = (
+                    self.tei_prior.shape,
+                    self.tei_prior.dtype,
+                )
             action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
 
         # Sample action
@@ -650,6 +689,37 @@ class LSTMPPOBrain(ClassicalBrain):
         episode_done: bool = False,
     ) -> None:
         """Add experience to rollout buffer and trigger PPO update when full."""
+        # Defensive: confirm ``tei_prior``'s shape/dtype has not been mutated
+        # since the rollout that produced the buffer's pending data. If it
+        # was (e.g., the caller rebound the attribute to a different-shape
+        # tensor between rollout and update), the PPO ratio computation
+        # would silently use mismatched distributions. Mutating to ``None``
+        # mid-window is also rejected — sampling-time logits included the
+        # bias but training-time logits would not.
+        if self._tei_prior_rollout_snapshot is not None:
+            snap_shape, snap_dtype = self._tei_prior_rollout_snapshot
+            if self.tei_prior is None:
+                msg = (
+                    "LSTMPPOBrain.learn(): tei_prior was set during the "
+                    f"rollout window (snapshot shape={tuple(snap_shape)}, "
+                    f"dtype={snap_dtype}) but is None at update time. The "
+                    "rollout's sampling distribution included the bias; "
+                    "the update's training distribution would not. "
+                    "tei_prior MUST remain stable across the rollout-to-"
+                    "update window."
+                )
+                raise RuntimeError(msg)
+            cur_shape, cur_dtype = self.tei_prior.shape, self.tei_prior.dtype
+            if (cur_shape, cur_dtype) != self._tei_prior_rollout_snapshot:
+                msg = (
+                    "LSTMPPOBrain.learn(): tei_prior shape/dtype mismatch "
+                    "between rollout and update window. Rollout snapshot: "
+                    f"shape={tuple(snap_shape)}, dtype={snap_dtype}. "
+                    f"Current: shape={tuple(cur_shape)}, dtype={cur_dtype}. "
+                    "tei_prior MUST remain stable across the rollout-to-"
+                    "update window."
+                )
+                raise RuntimeError(msg)
         self.history_data.rewards.append(reward)
 
         # Add to buffer
@@ -671,6 +741,11 @@ class LSTMPPOBrain(ClassicalBrain):
         ):
             self._perform_ppo_update()
             self.buffer.reset()
+            # PPO update complete — clear the TEI snapshot so the next
+            # rollout window's first ``run_brain`` call re-captures the
+            # current ``tei_prior`` state, and a no-bias-during-next-window
+            # run doesn't false-alarm the entry check.
+            self._tei_prior_rollout_snapshot = None
 
     def _perform_ppo_update(self) -> None:  # noqa: PLR0915
         """Perform PPO update with chunk-based truncated BPTT."""
@@ -743,8 +818,14 @@ class LSTMPPOBrain(ClassicalBrain):
                     # RNN forward (differentiable)
                     h_out, h, c = self._rnn_forward(normalized, h, c)
 
-                    # Actor
+                    # Actor — apply the TEI bias here (training-time forward
+                    # pass) when set, mirroring the sampling-time bias add in
+                    # ``run_brain``. Both sides MUST see the same biased
+                    # distribution or the PPO ratio is wrong. ``.to`` defends
+                    # against a bias on a different device from the brain.
                     logits = self.actor(h_out)
+                    if self.tei_prior is not None:
+                        logits = logits + self.tei_prior.to(logits.device)
                     action_probs = torch.softmax(logits, dim=-1)
 
                     action_idx = chunk["actions"][step_idx].item()
