@@ -42,18 +42,31 @@ MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.y
 
 
 def _sim_config_with_predators() -> SimulationConfig:
-    """Load the MLPPPO foraging config and synthetically inject a predator block.
+    """Load the MLPPPO foraging config and inject predator + evolution blocks.
 
     Keeps the brain matched to MLPPPOEncoder (so encoder.genome_dim works
-    without an LSTMPPO mismatch) while still exercising the lawn_schedule's
+    without an LSTMPPO mismatch) while exercising the lawn_schedule's
     ``environment.predators.enabled`` toggle in ``_build_per_gen_sim_config``.
+    Also injects a minimal ``evolution`` block — production TEI runs
+    require ``sim_config.evolution`` to be set (LearnedPerformanceFitness
+    rejects None), and ``_build_per_gen_sim_config`` asserts the same
+    invariant.
     """
     base = load_simulation_config(str(MLPPPO_CONFIG))
     assert base.environment is not None
     env_with_predators = base.environment.model_copy(
         update={"predators": PredatorConfig(enabled=True, count=2)},
     )
-    return base.model_copy(update={"environment": env_with_predators})
+    evolution_block = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=4,
+        generations=2,
+        episodes_per_eval=1,
+        learn_episodes_per_eval=10,
+    )
+    return base.model_copy(
+        update={"environment": env_with_predators, "evolution": evolution_block},
+    )
 
 
 def _tei_config(

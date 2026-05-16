@@ -720,30 +720,36 @@ class EvolutionLoop:
         if cfg.transgenerational is None or not cfg.transgenerational.enabled:
             return self.sim_config
         # Find the schedule entry for the current generation. The
-        # config validator already verified that every generation in
-        # [0, generations) has exactly one matching entry.
+        # coverage validator on EvolutionConfig already enforced that
+        # every generation in [0, generations) has exactly one matching
+        # entry, so this lookup MUST succeed — fail loud if a future
+        # validator regression lets a gap-y schedule through.
         entry = next(
             (e for e in cfg.transgenerational.lawn_schedule if e.generation == gen),
             None,
         )
         if entry is None:
-            # Defensive — shouldn't be reachable given the validator,
-            # but log + fall back to base config rather than crash.
-            logger.warning(
-                "transgenerational.lawn_schedule has no entry for gen=%d; "
-                "using base sim_config unchanged.",
-                gen,
+            msg = (
+                f"transgenerational.lawn_schedule has no entry for gen={gen}; "
+                f"the EvolutionConfig coverage validator should have rejected "
+                f"this schedule at config-load."
             )
-            return self.sim_config
+            raise RuntimeError(msg)
         # Base the per-gen evolution copy on what workers already see
         # under non-TEI runs: ``self.sim_config.evolution`` (the raw
-        # YAML-or-merged block). Falls back to ``self.evolution_config``
-        # when ``sim_config.evolution`` is absent — the CLI requires
-        # an ``evolution:`` block for any TEI run because the fitness
-        # function does too, but the fallback keeps the helper safe to
-        # call from any code path.
-        base_evolution = self.sim_config.evolution or self.evolution_config
-        updated_evolution = base_evolution.model_copy(
+        # YAML-or-merged block). TEI runs use ``LearnedPerformanceFitness``
+        # (CLI guard rejects success_rate under inheritance: transgenerational)
+        # which requires ``sim_config.evolution`` to be set — see
+        # ``LearnedPerformanceFitness.evaluate``'s rejection. The raise
+        # documents that invariant.
+        if self.sim_config.evolution is None:
+            msg = (
+                "transgenerational runs require sim_config.evolution to be set "
+                "(LearnedPerformanceFitness rejects None); reached "
+                "_build_per_gen_sim_config without it."
+            )
+            raise RuntimeError(msg)
+        updated_evolution = self.sim_config.evolution.model_copy(
             update={"learn_episodes_per_eval": entry.ppo_train_episodes},
         )
         # Build the per-gen overrides. The environment's predators

@@ -499,3 +499,31 @@ def test_warm_start_missing_path_raises(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="Weight file not found"):
         fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+
+
+def test_tei_prior_source_corrupted_substrate_raises_operator_friendly(
+    tmp_path: Path,
+) -> None:
+    """A corrupted ``.tei.pt`` SHALL surface a RuntimeError naming the path.
+
+    Without the wrapping at ``LearnedPerformanceFitness.evaluate``'s
+    substrate-load site, a raw torch unpickle exception escapes inside
+    the worker — hard to correlate with the source artifact.
+    """
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=1)
+    corrupted_path = tmp_path / "elite_g0.tei.pt"
+    # Write junk bytes — torch.load will fail to unpickle.
+    corrupted_path.write_bytes(b"\x00\x01\x02not a torch tensor")
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    with pytest.raises(RuntimeError, match=r"Failed to load transgenerational substrate"):
+        fitness.evaluate(
+            genome,
+            sim_config,
+            encoder,
+            episodes=1,
+            seed=42,
+            tei_prior_source=(corrupted_path, 0.6, 1),
+        )

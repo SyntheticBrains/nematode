@@ -479,7 +479,20 @@ class LearnedPerformanceFitness:
                 load as load_substrate,
             )
 
-            substrate = load_substrate(f0_substrate_path)
+            try:
+                substrate = load_substrate(f0_substrate_path)
+            except Exception as exc:
+                # Re-raise with an operator-friendly message that names
+                # the path. Without this the raw torch unpickle error
+                # surfaces inside a worker process, where it's harder
+                # to correlate with the source artifact.
+                msg = (
+                    f"Failed to load transgenerational substrate from "
+                    f"{f0_substrate_path}: {exc}. The .tei.pt file may be "
+                    "corrupted or written by an incompatible schema; "
+                    "delete it and re-run F0 extraction."
+                )
+                raise RuntimeError(msg) from exc
             for _ in range(lineage_depth):
                 substrate = TransgenerationalMemory.inherit_from(
                     [substrate],
