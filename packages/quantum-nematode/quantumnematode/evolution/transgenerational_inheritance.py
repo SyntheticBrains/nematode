@@ -6,7 +6,7 @@ implementation of the :class:`InheritanceStrategy` Protocol (alongside
 in :mod:`quantumnematode.evolution.inheritance`).
 
 The strategy carries an inheritable behavioural-bias substrate
-(``TransgenerationalMemory``, landing in commit 2) extracted from the
+(``TransgenerationalMemory``, a follow-up addition) extracted from the
 F0 elite's policy and multiplicatively decayed across F1/F2/F3
 generations. The substrate biases the actor's logits before softmax,
 independently of trained weights.
@@ -18,24 +18,22 @@ methods:
   ``genome_id``), matching the Lamarckian/Baldwin selection rule so
   the loop's existing ``_selected_parent_ids`` array carries the F0
   elite ID forward.
-- ``assign_parent`` — returns ``None`` (TEI does not warm-start any
-  child from a per-genome weight checkpoint; the substrate flows
-  separately through ``fitness.evaluate``'s ``tei_prior_source``
-  kwarg, landing in commit 5).
+- ``assign_parent`` — returns ``None`` (transgenerational inheritance
+  does not warm-start any child from a per-genome weight checkpoint;
+  the substrate flows separately through ``fitness.evaluate``'s
+  ``tei_prior_source`` kwarg, a follow-up addition).
 - ``checkpoint_path`` — returns the ``.tei.pt`` path under
   ``inheritance/gen-NNN/genome-<gid>.tei.pt``. Distinct extension
   from Lamarckian's ``.pt`` so the two substrate types cannot
   collide on disk if a future config ever mixes them.
 - ``kind()`` — returns the new literal ``"transgenerational"``.
 
-This commit ships ONLY the strategy skeleton + Protocol conformance.
+This module ships ONLY the strategy skeleton + Protocol conformance.
 The F0 substrate extraction pipeline (writing the ``.tei.pt`` after
-F0 weight capture + telemetry pass) lands in commit 4; the worker
-tuple extension + ``fitness.evaluate`` kwarg forwarding land in
-commit 5.
-
-See the M6 OpenSpec change (``openspec/changes/add-transgenerational-
-memory/``) for the full design rationale.
+F0 weight capture + telemetry pass) and the worker tuple extension +
+``fitness.evaluate`` kwarg forwarding are follow-up additions tracked
+in the OpenSpec change under ``openspec/changes/add-transgenerational-
+memory/``.
 """
 
 from __future__ import annotations
@@ -53,14 +51,14 @@ class TransgenerationalInheritance:
     by :class:`BaldwinInheritance` and :class:`LamarckianInheritance`
     (``elite_count=1``). The selected elite's substrate is extracted
     AFTER F0 fitness evaluation via a deterministic telemetry pass
-    (``TransgenerationalMemory.extract_from_brain``, landing in
-    commit 2) and saved to disk at ``checkpoint_path(...)``. F1+
+    (``TransgenerationalMemory.extract_from_brain``, a follow-up
+    addition) and saved to disk at ``checkpoint_path(...)``. F1+
     children load this single F0 substrate and apply
     ``inherit_from(...)`` N times where N = current generation,
     producing depth-N substrates mechanically (no per-gen storage).
 
-    The Protocol's ``inheritance_elite_count`` field is unused under
-    transgenerational (single-elite by construction, matching
+    The ``EvolutionConfig.inheritance_elite_count`` field is unused
+    under transgenerational (single-elite by construction, matching
     Baldwin). The structural ``inheritance_elite_count <=
     population_size`` validator on ``EvolutionConfig`` still applies
     uniformly across all inheritance modes.
@@ -102,9 +100,9 @@ class TransgenerationalInheritance:
     ) -> str | None:
         """Return ``None`` — transgenerational does not warm-start any child.
 
-        TEI's substrate flows through the separate
-        ``tei_prior_source`` kwarg path into ``fitness.evaluate``
-        (landing in commit 5), not through the per-child weight-
+        The transgenerational substrate flows through the separate
+        ``tei_prior_source`` kwarg path into ``fitness.evaluate`` (a
+        follow-up addition), not through the per-child weight-
         checkpoint warm-start mechanism that Lamarckian uses. The
         F1+ branch of ``_resolve_per_child_inheritance`` returns
         ``(None, None, parent_id)`` — same shape as Baldwin's trait-
@@ -126,12 +124,12 @@ class TransgenerationalInheritance:
         config ever mixes them. Both capture (writer) and load
         (reader) sides MUST use this path-builder to avoid drift.
 
-        Used in commit 4 by the F0 Substrate Extraction Pipeline to
-        write the F0 elite's substrate. F1/F2/F3 substrates are
-        mechanically derived in-memory at load time (no per-gen
-        storage), so this method is only invoked at gen 0 in
-        practice — but it is structurally valid at any generation
-        for forensic round-trip tests.
+        Used by the F0 Substrate Extraction Pipeline (a follow-up
+        addition) to write the F0 elite's substrate. F1/F2/F3
+        substrates are mechanically derived in-memory at load time
+        (no per-gen storage), so this method is only invoked at
+        gen 0 in practice — but it is structurally valid at any
+        generation for forensic round-trip tests.
         """
         return output_dir / "inheritance" / f"gen-{generation:03d}" / f"genome-{genome_id}.tei.pt"
 

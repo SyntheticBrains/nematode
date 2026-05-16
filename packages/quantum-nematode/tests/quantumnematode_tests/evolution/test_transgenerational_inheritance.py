@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 import pytest
 from quantumnematode.evolution.inheritance import (
     BaldwinInheritance,
+    InheritanceStrategy,
     LamarckianInheritance,
     NoInheritance,
 )
@@ -90,10 +91,10 @@ def test_transgenerational_checkpoint_path_zero_pads_generation(tmp_path: Path) 
 def test_transgenerational_assign_parent_returns_none() -> None:
     """``assign_parent`` SHALL return ``None`` (no per-child warm-start under TEI).
 
-    TEI's substrate flows through ``fitness.evaluate``'s
-    ``tei_prior_source`` kwarg path (commit 5), not through the per-
-    child weight-checkpoint warm-start mechanism. Matches Baldwin's
-    return semantics.
+    The transgenerational substrate flows through ``fitness.evaluate``'s
+    ``tei_prior_source`` kwarg path (a follow-up addition), not
+    through the per-child weight-checkpoint warm-start mechanism.
+    Matches Baldwin's return semantics.
     """
     t = TransgenerationalInheritance()
     assert t.assign_parent(0, []) is None
@@ -175,6 +176,4 @@ def test_transgenerational_satisfies_inheritance_strategy_protocol() -> None:
     contract (not on ``isinstance(strategy, NoInheritance)`` etc.)
     to dispatch on ``kind()``.
     """
-    from quantumnematode.evolution.inheritance import InheritanceStrategy
-
     assert isinstance(TransgenerationalInheritance(), InheritanceStrategy)

@@ -1110,8 +1110,11 @@ class EvolutionConfig(BaseModel):
                     "requires a non-zero train phase: Lamarckian needs "
                     "weights to inherit; Baldwin's whole premise is that "
                     "lifetime learning shapes the gen-N elite that becomes "
-                    "the prior for gen-N+1. Either set "
-                    "learn_episodes_per_eval > 0 or set inheritance: none."
+                    "the prior for gen-N+1; transgenerational needs a "
+                    "trained F0 elite for the substrate-extraction "
+                    "telemetry pass to produce meaningful biases. Either "
+                    "set learn_episodes_per_eval > 0 or set inheritance: "
+                    "none."
                 )
                 raise ValueError(msg)
             if self.warm_start_path is not None:
@@ -1122,8 +1125,11 @@ class EvolutionConfig(BaseModel):
                     "brain slot before the K train phase. Under Baldwin, "
                     "static warm-start would collapse the Baldwin signal "
                     "(every child starts from the same checkpoint regardless "
-                    "of the elite's evolved hyperparameters). Drop one of "
-                    "the two."
+                    "of the elite's evolved hyperparameters). Under "
+                    "transgenerational, static warm-start would similarly "
+                    "decouple the F0 elite's trained policy from the "
+                    "evolved-hyperparameter genome, breaking the substrate-"
+                    "extraction provenance. Drop one of the two."
                 )
                 raise ValueError(msg)
         if self.inheritance == "lamarckian" and self.inheritance_elite_count != 1:
@@ -1576,10 +1582,13 @@ class SimulationConfig(BaseModel):
                 "no hyperparam_schema is set.  Lamarckian inheritance over "
                 "weight encoders would double-count weights as both genome "
                 "and substrate; Baldwin needs a hyperparameter genome to "
-                "evolve — without one there is no trait substrate to inherit. "
-                "Either drop inheritance (returning to weight evolution) "
-                "or add a hyperparam_schema (switching to hyperparameter "
-                "evolution + inheritance)."
+                "evolve — without one there is no trait substrate to "
+                "inherit; transgenerational needs the genome-identity "
+                "anchor that the hyperparam_schema provides so the F0 "
+                "elite's substrate has a stable provenance. Either drop "
+                "inheritance (returning to weight evolution) or add a "
+                "hyperparam_schema (switching to hyperparameter evolution "
+                "+ inheritance)."
             )
             raise ValueError(msg)
 

@@ -44,7 +44,9 @@ in without touching the loop:
   ``isinstance`` checks.  ``"none"`` skips both lineage-tracking and
   weight-IO; ``"weights"`` enables both; ``"trait"`` enables
   lineage-tracking only; ``"transgenerational"`` enables lineage-tracking
-  + the substrate-flow code path (commit 4 onwards).
+  + the substrate-flow code path (substrate extraction and worker
+  forwarding are follow-up additions tracked in
+  ``openspec/changes/add-transgenerational-memory/``).
 
 Future-work strategies (tournament selection, roulette sampling,
 soft-elite top-k) are NOT implemented here — they each become a new
@@ -152,8 +154,10 @@ class InheritanceStrategy(Protocol):
           — loop calls `select_parents` and writes `inherited_from` to
           lineage rows (same as Baldwin); additionally captures the F0
           elite's substrate via the F0 Substrate Extraction Pipeline
-          (commit 4 onwards) and threads ``tei_prior_source`` into
-          ``fitness.evaluate`` for F1+ workers (commit 5 onwards). No
+          and threads ``tei_prior_source`` into ``fitness.evaluate``
+          for F1+ workers. (The extraction pipeline and worker
+          forwarding are follow-up additions tracked in
+          ``openspec/changes/add-transgenerational-memory/``.) No
           per-child weight warm-start — the substrate is the only
           cross-generation flow.
 
@@ -161,10 +165,9 @@ class InheritanceStrategy(Protocol):
         ``kind() == "weights"`` (gates weight-IO code paths).  The loop's
         ``_inheritance_records_lineage()`` helper SHALL evaluate
         ``kind() != "none"`` (gates lineage-tracking + `select_parents`).
-        A new ``_substrate_inheritance_active()`` helper (landing in
-        commit 4) SHALL evaluate ``kind() == "transgenerational"``
-        (gates the F0 substrate extraction pipeline + F1+ kwarg
-        forwarding).
+        A follow-up ``_substrate_inheritance_active()`` helper SHALL
+        evaluate ``kind() == "transgenerational"`` (gates the F0
+        substrate extraction pipeline + F1+ kwarg forwarding).
         """
         ...
 
