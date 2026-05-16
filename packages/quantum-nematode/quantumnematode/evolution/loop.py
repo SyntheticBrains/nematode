@@ -327,7 +327,9 @@ class EvolutionLoop:
             # (or None) so the pickle is portable across runs that
             # rebase the output_dir. Loaders reconstruct the Path.
             "tei_f0_substrate_path": (
-                str(self._tei_f0_substrate_path) if self._tei_f0_substrate_path else None
+                str(self._tei_f0_substrate_path)
+                if self._tei_f0_substrate_path is not None
+                else None
             ),
         }
         # Atomic write via tmp file + rename.
@@ -360,7 +362,7 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
-        # Validate ALL resume-critical keys are present in the payload
+        # Validate the resume-critical key set present in the payload
         # BEFORE assigning any of them.  ``_save_checkpoint`` writes
         # every key in this list unconditionally for any v3 payload, so
         # a payload that passed the version check but is missing any of
@@ -375,6 +377,13 @@ class EvolutionLoop:
         # the early-stop fields defaulting to 0 / None would falsify the
         # saturation-tracking history.  Listed in the same order as the
         # save-side ``payload`` dict for grep-discoverability.
+        #
+        # NOTE: keys added to ``_save_checkpoint`` *after* the v3 schema
+        # was fixed (e.g. ``tei_f0_substrate_path``) intentionally do
+        # NOT appear here — those use ``.get(key, default)`` at the
+        # assignment site so legacy v3 payloads (pre-additive-field)
+        # load cleanly without a ``CHECKPOINT_VERSION`` bump. Only keys
+        # that were part of the original v3 schema are required.
         required_keys = (
             "optimizer",
             "generation",
@@ -695,6 +704,11 @@ class EvolutionLoop:
         transgenerational runs (or when the config block is absent),
         returns the base ``sim_config`` unchanged so behaviour is
         byte-equivalent for non-TEI strategies.
+
+        The ``evolution`` override is layered on top of
+        ``self.sim_config.evolution`` (what non-TEI workers already see),
+        not ``self.evolution_config`` — keeping the worker's view of the
+        evolution block consistent across TEI and non-TEI runs.
         """
         cfg = self.evolution_config
         if cfg.transgenerational is None:
@@ -715,6 +729,17 @@ class EvolutionLoop:
                 gen,
             )
             return self.sim_config
+        # Base the per-gen evolution copy on what workers already see
+        # under non-TEI runs: ``self.sim_config.evolution`` (the raw
+        # YAML-or-merged block). Falls back to ``self.evolution_config``
+        # when ``sim_config.evolution`` is absent — the CLI requires
+        # an ``evolution:`` block for any TEI run because the fitness
+        # function does too, but the fallback keeps the helper safe to
+        # call from any code path.
+        base_evolution = self.sim_config.evolution or self.evolution_config
+        updated_evolution = base_evolution.model_copy(
+            update={"learn_episodes_per_eval": entry.ppo_train_episodes},
+        )
         # Build the per-gen overrides. The environment's predators
         # block is optional in the base sim_config (None → no predators);
         # under TEI we expect predators to be configured already.
@@ -727,19 +752,12 @@ class EvolutionLoop:
                 gen,
             )
             return self.sim_config.model_copy(
-                update={
-                    "evolution": cfg.model_copy(
-                        update={"learn_episodes_per_eval": entry.ppo_train_episodes},
-                    ),
-                },
+                update={"evolution": updated_evolution},
             )
         updated_predators = env.predators.model_copy(
             update={"enabled": entry.pathogen_lawns_enabled},
         )
         updated_env = env.model_copy(update={"predators": updated_predators})
-        updated_evolution = cfg.model_copy(
-            update={"learn_episodes_per_eval": entry.ppo_train_episodes},
-        )
         return self.sim_config.model_copy(
             update={
                 "environment": updated_env,

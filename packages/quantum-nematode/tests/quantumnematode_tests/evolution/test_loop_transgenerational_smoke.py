@@ -12,10 +12,9 @@ from __future__ import annotations
 import logging
 import pickle
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-import pytest
 from quantumnematode.evolution.encoders import MLPPPOEncoder
 from quantumnematode.evolution.fitness import EpisodicSuccessRate
 from quantumnematode.evolution.inheritance import InheritanceStrategy, NoInheritance
@@ -35,6 +34,7 @@ from quantumnematode.utils.config_loader import (
 )
 
 if TYPE_CHECKING:
+    import pytest
     from quantumnematode.utils.config_loader import SimulationConfig
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
@@ -82,7 +82,7 @@ def _make_loop(  # noqa: PLR0913 - test fixture builder; each arg is orthogonal 
     *,
     sim_config: SimulationConfig,
     transgenerational: TransgenerationalConfig | None = None,
-    inheritance: str = "none",
+    inheritance: Literal["none", "lamarckian", "baldwin", "transgenerational"] = "none",
     generations: int = 2,
     population_size: int = 4,
 ) -> EvolutionLoop:
