@@ -2,8 +2,9 @@
 # Transgenerational Memory campaign — LSTMPPO + klinotaxis + stationary pathogens
 # ============================================================================
 #
-# Three subcommands map to the three execution stages of the M6
-# verification protocol:
+# Three subcommands map to the three execution stages of the
+# verification protocol described in the OpenSpec change
+# ``add-transgenerational-memory``:
 #
 #   --smoke   F0 calibration smoke. 1 seed × pop 6 × ~50 episodes.
 #             Single generation, TEI-on arm only. Used to verify the
@@ -93,7 +94,7 @@ esac
 
 mkdir -p "${OUTPUT_ROOT}"
 echo "============================================================"
-echo "M6 transgenerational campaign — mode: ${MODE}"
+echo "Transgenerational campaign — mode: ${MODE}"
 echo "============================================================"
 echo "Output root: ${OUTPUT_ROOT}"
 echo "Seeds:       ${SEEDS[*]}"

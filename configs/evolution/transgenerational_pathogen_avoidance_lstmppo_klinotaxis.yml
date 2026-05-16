@@ -15,7 +15,7 @@
 # stationary-predator schema, reused so no new env-side fields are
 # introduced.
 #
-# Schedule (per the M6 transgenerational config):
+# Schedule (per the transgenerational-memory OpenSpec change):
 #   - F0 (gen 0): pathogen lawns ON, K=50 PPO train episodes per child.
 #     End-of-gen the F0 elite's trained policy is loaded, the
 #     ``extract_from_brain`` telemetry pass produces the
@@ -30,7 +30,7 @@
 # "diluted across generations" framing matches Posner 2023 / Kaletsky
 # 2025 biological retention curves.
 #
-# Decision gate (per the M6 OpenSpec change):
+# Decision gate (per the transgenerational-memory OpenSpec change):
 #   GO iff F1 ≥ 40% × F0, F2 ≥ 25% × F0, F3 ≥ 15% × F0, AND the
 #   per-gen choice index is monotone non-increasing, in ≥2 of 4 seeds.
 #
@@ -190,8 +190,9 @@ evolution:
         ppo_train_episodes: 0
 
 hyperparam_schema:
-  # Six-field hyperparameter schema (same as the M3/M4 LSTMPPO predator
-  # pilots). The genome-identity anchor lets the F0 substrate carry
+  # Six-field hyperparameter schema (same shape as the existing
+  # LSTMPPO + klinotaxis + predator pilots under ``configs/evolution/``).
+  # The genome-identity anchor lets the F0 substrate carry
   # stable provenance back to its parent genome. The substrate itself
   # is a per-action ``logit_bias`` (shape (num_actions,)), independent
   # of these schema entries — they just give the elite a defined

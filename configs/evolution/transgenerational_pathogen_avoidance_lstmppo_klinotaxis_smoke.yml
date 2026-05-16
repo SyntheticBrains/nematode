@@ -17,9 +17,10 @@
 # Everything else — including ``inheritance: transgenerational``,
 # ``transgenerational.enabled: true``, ``decay_factor``,
 # ``extraction_seed``, the env/brain config, and the
-# ``hyperparam_schema`` — is byte-identical to the pilot YAML so the
-# calibration measures the same configuration that will be used in
-# the multi-seed runs.
+# ``hyperparam_schema`` — has field values matching the pilot YAML
+# so the calibration measures the same configuration that will be
+# used in the multi-seed runs. (Inline comments are not preserved
+# verbatim; field values are.)
 
 max_steps: 1000
 

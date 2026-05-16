@@ -173,8 +173,9 @@ evolution:
         ppo_train_episodes: 0
 
 hyperparam_schema:
-  # Six-field hyperparameter schema (same as the M3/M4 LSTMPPO predator
-  # pilots). The genome-identity anchor lets the F0 substrate carry
+  # Six-field hyperparameter schema (same shape as the existing
+  # LSTMPPO + klinotaxis + predator pilots under ``configs/evolution/``).
+  # The genome-identity anchor lets the F0 substrate carry
   # stable provenance back to its parent genome. The substrate itself
   # is a per-action ``logit_bias`` (shape (num_actions,)), independent
   # of these schema entries — they just give the elite a defined
