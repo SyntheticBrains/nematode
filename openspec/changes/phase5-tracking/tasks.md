@@ -220,8 +220,8 @@ Optional follow-up that revisits the Baldwin Effect with **task-distribution sel
 
 ## M6: Transgenerational Memory
 
-**OpenSpec change**: `add-transgenerational-memory` (not yet created)
-**Status**: ready to start (gated on M3 GO ✅ + M4 closed STOP ✅ + M5 closed STOP ✅ — all gates cleared). Highest-novelty remaining Phase 5 milestone; M6 implementation unblocked.
+**OpenSpec change**: `add-transgenerational-memory` (scaffolded in PR #158; implementation in progress)
+**Status**: in progress (gated on M3 GO ✅ + M4 closed STOP ✅ + M5 closed STOP ✅ — all gates cleared). Highest-novelty remaining Phase 5 milestone; M6 implementation underway.
 **Bio fidelity**: HIGH
 **Brain target**: LSTMPPO+klinotaxis
 **Dependencies**: M3 GO ✅ + (M4 closed STOP ✅ / M5 closed STOP ✅) — all gates cleared

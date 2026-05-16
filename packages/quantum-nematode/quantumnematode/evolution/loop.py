@@ -235,6 +235,7 @@ class EvolutionLoop:
             "none": "none",
             "lamarckian": "weights",
             "baldwin": "trait",
+            "transgenerational": "transgenerational",
         }[self.evolution_config.inheritance]
         if self.inheritance.kind() != _expected_kind:
             msg = (
@@ -399,9 +400,11 @@ class EvolutionLoop:
         """Return True iff the active strategy populates the lineage CSV's `inherited_from`.
 
         Gates the per-generation ``select_parents`` call and the
-        ``_selected_parent_ids`` update.  Both :class:`LamarckianInheritance`
-        and :class:`BaldwinInheritance` return ``True`` here; only
-        :class:`NoInheritance` returns ``False``.
+        ``_selected_parent_ids`` update.  :class:`LamarckianInheritance`,
+        :class:`BaldwinInheritance`, and
+        :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`
+        all return ``True`` here; only :class:`NoInheritance` returns
+        ``False``.
         """
         return self.inheritance.kind() != "none"
 
@@ -442,7 +445,7 @@ class EvolutionLoop:
     ) -> tuple[Path | None, Path | None, str]:
         """Compute one child's (parent_warm_start, child_capture_path, inherited_from).
 
-        Three-branch switch on the strategy's ``kind()``:
+        Four-branch switch on the strategy's ``kind()``:
 
         - ``"none"`` → returns ``(None, None, "")``.  The loop's
           per-child step short-circuits to from-scratch evaluation
@@ -452,6 +455,16 @@ class EvolutionLoop:
           (``self._selected_parent_ids[0]`` if set, else ``""`` for
           gen 0).  No checkpoint paths are computed; the child trains
           from-scratch but its lineage row records the elite ID.
+        - ``"transgenerational"`` → returns ``(None, None, parent_id)``
+          — same shape as ``"trait"``.  Transgenerational inheritance
+          does not use per-child weight-IO inheritance paths; the
+          F0 substrate is captured by a separate loop-level pipeline
+          (a follow-up addition tracked in the OpenSpec change) and
+          F1+ workers receive the substrate via a separate kwarg
+          path into ``fitness.evaluate``, not via the per-child
+          ``weight_capture_path`` field.  The lineage CSV's
+          ``inherited_from`` column records the F0 elite ID from
+          gen 1 onwards (same as Baldwin).
         - ``"weights"`` (Lamarckian) → returns the full
           ``(parent_warm_start, child_capture_path, parent_id)``
           tuple.  ``parent_warm_start`` is the ``Path`` to the parent's
@@ -463,7 +476,7 @@ class EvolutionLoop:
         kind = self.inheritance.kind()
         if kind == "none":
             return None, None, ""
-        if kind == "trait":
+        if kind in ("trait", "transgenerational"):
             parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""
             return None, None, parent_id
         # The remaining branch handles ``kind == "weights"`` (Lamarckian).

@@ -4,12 +4,12 @@ Tasks are grouped by commit (per the plan's 8-commit grouping). Each group repre
 
 ## 1. Scaffold strategy + Literal extensions (Commit 1)
 
-- [ ] 1.1 Create `quantumnematode/evolution/transgenerational_inheritance.py` with `TransgenerationalInheritance` skeleton implementing the `InheritanceStrategy` Protocol. Top-1 elite `select_parents`, single-elite `assign_parent`, `.tei.pt` `checkpoint_path`, `kind() -> "transgenerational"`. All methods runnable but the substrate-loading paths return placeholder no-ops pending commit 4.
-- [ ] 1.2 Extend `quantumnematode/evolution/inheritance.py` Protocol docstring + `kind()` Literal to include `"transgenerational"`. Update module docstring to document the fourth strategy.
-- [ ] 1.3 Extend `quantumnematode/utils/config_loader.py`: add `"transgenerational"` to the `EvolutionConfig.inheritance` Literal. No `TransgenerationalConfig` block yet (that lands in commit 6 alongside the YAML).
-- [ ] 1.4 Tests: `tests/.../evolution/test_transgenerational_inheritance.py` covers Protocol conformance: `select_parents` lex-tie (1 case), `assign_parent` single-broadcast (1 case), `checkpoint_path` format `gen-NNN/genome-<gid>.tei.pt` (1 case), `kind()` literal returns `"transgenerational"` (1 case). ~4 cases initially; expanded to ~14 in commit 4 as substrate-load/save paths fill in.
-- [ ] 1.5 Carry forward the uncommitted `add-transgenerational-memory` rename in `openspec/changes/phase5-tracking/tasks.md` (line 223) into commit 1's staged changes.
-- [ ] 1.6 Run `uv run pytest -m "not smoke and not nightly"` clean. Run `uv run pre-commit run -a` clean.
+- [x] 1.1 Create `quantumnematode/evolution/transgenerational_inheritance.py` with `TransgenerationalInheritance` skeleton implementing the `InheritanceStrategy` Protocol. Top-1 elite `select_parents`, single-elite `assign_parent`, `.tei.pt` `checkpoint_path`, `kind() -> "transgenerational"`. All methods runnable but the substrate-loading paths return placeholder no-ops pending commit 4.
+- [x] 1.2 Extend `quantumnematode/evolution/inheritance.py` Protocol docstring + `kind()` Literal to include `"transgenerational"`. Update module docstring to document the fourth strategy.
+- [x] 1.3 Extend `quantumnematode/utils/config_loader.py`: add `"transgenerational"` to the `EvolutionConfig.inheritance` Literal. No `TransgenerationalConfig` block yet (that lands in commit 6 alongside the YAML). Also: extended `evolution/__init__.py` exports, `evolution/loop.py` `_expected_kind` dispatch dict, and `scripts/run_evolution.py` CLI choices + strategy factory to keep the Literal extension runnable end-to-end (otherwise YAML loads with `inheritance: transgenerational` would crash at loop init or CLI parse).
+- [x] 1.4 Tests: `tests/.../evolution/test_transgenerational_inheritance.py` (11 cases): `kind()` literal returns `"transgenerational"`; extended known-kind set guard (all 4 strategies in `{"none","weights","trait","transgenerational"}`); `checkpoint_path` format + zero-padding; `assign_parent` returns None (3 cases); `select_parents` single-elite + lex-tie + matches Baldwin/Lamarckian(1) byte-for-byte + empty-input + length-mismatch (5 cases); `isinstance` Protocol conformance check.
+- [x] 1.5 Carry forward the `add-transgenerational-memory` rename + status update in `openspec/changes/phase5-tracking/tasks.md` (line 223: "(not yet created)" → "(scaffolded in PR #158; implementation in progress)"; status "ready to start" → "in progress").
+- [x] 1.6 `uv run pytest -m "not smoke and not nightly"` passes 2665/2665. `uv run pre-commit run -a` passes all 10 hooks.
 
 ## 2. TransgenerationalMemory dataclass (Commit 2)
 

@@ -1,6 +1,6 @@
 """Inheritance strategies for the evolution loop.
 
-Provides the :class:`InheritanceStrategy` Protocol and three concrete
+Provides the :class:`InheritanceStrategy` Protocol and four concrete
 implementations:
 
 - :class:`NoInheritance` (the default): every child is from-scratch; no
@@ -18,6 +18,15 @@ implementations:
   evolutionary trace), but no per-genome weight checkpoints are written.
   Mechanically equivalent to :class:`NoInheritance` on the weight-IO
   path; differs only by populating lineage rows from gen 1 onwards.
+- :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`:
+  substrate-flow inheritance — an inheritable behavioural-bias
+  substrate (``TransgenerationalMemory``) is extracted from the F0
+  elite's policy via a deterministic telemetry pass and multiplicatively
+  decayed across F1/F2/F3 generations. The substrate biases the actor's
+  logits before softmax, independently of trained weights. Defined in
+  the sibling module ``transgenerational_inheritance`` so this module
+  stays focused on the three baseline strategies; both modules share
+  the Protocol defined below.
 
 The Protocol exposes four methods so future strategies (tournament,
 fitness-proportionate "roulette", soft-elite top-k sampling) can plug
@@ -30,10 +39,14 @@ in without touching the loop:
   Lamarckian; sampling in tournament/roulette/soft-elite variants).
 - ``checkpoint_path`` — single canonical path-builder used by both the
   capture (writer) and warm-start (reader) sides so the two cannot drift.
-- ``kind`` — returns one of ``"none"``, ``"weights"``, or ``"trait"``
-  so the loop branches on intent rather than ``isinstance`` checks.
-  ``"none"`` skips both lineage-tracking and weight-IO; ``"weights"``
-  enables both; ``"trait"`` enables lineage-tracking only.
+- ``kind`` — returns one of ``"none"``, ``"weights"``, ``"trait"``, or
+  ``"transgenerational"`` so the loop branches on intent rather than
+  ``isinstance`` checks.  ``"none"`` skips both lineage-tracking and
+  weight-IO; ``"weights"`` enables both; ``"trait"`` enables
+  lineage-tracking only; ``"transgenerational"`` enables lineage-tracking
+  + the substrate-flow code path (substrate extraction and worker
+  forwarding are follow-up additions tracked in
+  ``openspec/changes/add-transgenerational-memory/``).
 
 Future-work strategies (tournament selection, roulette sampling,
 soft-elite top-k) are NOT implemented here — they each become a new
@@ -119,10 +132,10 @@ class InheritanceStrategy(Protocol):
         """
         ...
 
-    def kind(self) -> Literal["none", "weights", "trait"]:
+    def kind(self) -> Literal["none", "weights", "trait", "transgenerational"]:
         """Return the inheritance kind so the loop can branch on intent.
 
-        Three values, each gating different code paths:
+        Four values, each gating different code paths:
 
         - ``"none"`` (e.g. :class:`NoInheritance`) — loop skips ALL
           inheritance code paths.  No `select_parents` call, no
@@ -136,11 +149,25 @@ class InheritanceStrategy(Protocol):
           `select_parents` and writes `inherited_from` to lineage rows
           (so the elite-parent ID flows in lineage), but does NOT
           capture or GC any weight checkpoints.
+        - ``"transgenerational"`` (e.g.
+          :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`)
+          — loop calls `select_parents` and writes `inherited_from` to
+          lineage rows (same as Baldwin); additionally captures the F0
+          elite's substrate via the F0 Substrate Extraction Pipeline
+          and threads ``tei_prior_source`` into ``fitness.evaluate``
+          for F1+ workers. (The extraction pipeline and worker
+          forwarding are follow-up additions tracked in
+          ``openspec/changes/add-transgenerational-memory/``.) No
+          per-child weight warm-start — the substrate is the only
+          cross-generation flow.
 
         The loop's ``_inheritance_active()`` helper SHALL evaluate
         ``kind() == "weights"`` (gates weight-IO code paths).  The loop's
         ``_inheritance_records_lineage()`` helper SHALL evaluate
         ``kind() != "none"`` (gates lineage-tracking + `select_parents`).
+        A follow-up ``_substrate_inheritance_active()`` helper SHALL
+        evaluate ``kind() == "transgenerational"`` (gates the F0
+        substrate extraction pipeline + F1+ kwarg forwarding).
         """
         ...
 
