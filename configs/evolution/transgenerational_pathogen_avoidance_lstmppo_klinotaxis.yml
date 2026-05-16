@@ -40,11 +40,15 @@
 # before unblocking the multi-seed campaign.
 #
 # Paired-arm ablation: the campaign shell runs two arms with
-# byte-identical YAMLs except for two CLI overrides on the second arm:
-# ``inheritance=none`` and ``transgenerational.enabled=false``. The
-# substrate is therefore the only cross-arm difference. The pairing
-# validator at ``EvolutionConfig._validate_inheritance`` enforces this
-# pinning at config-load.
+# byte-identical YAMLs except for the two-field pairing flip
+# (``inheritance: none`` + ``transgenerational.enabled: false``).
+# The control arm is provided as a sibling YAML alongside this one
+# (``transgenerational_pathogen_avoidance_lstmppo_klinotaxis_tei_off.yml``)
+# rather than via CLI overrides — the ``transgenerational:`` block is
+# not CLI-overridable, and the pairing validator at
+# ``EvolutionConfig._validate_inheritance`` pins the two fields
+# together at config-load. The substrate is therefore the only
+# cross-arm difference.
 
 max_steps: 1000
 
