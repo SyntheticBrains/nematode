@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -518,7 +519,13 @@ def test_tei_prior_source_corrupted_substrate_raises_operator_friendly(
     genome = _make_genome(sim_config)
     fitness = LearnedPerformanceFitness()
 
-    with pytest.raises(RuntimeError, match=r"Failed to load transgenerational substrate"):
+    # Match both the generic prefix AND the failing path — the whole
+    # point of the wrapping is that operators can correlate the error
+    # back to the source artifact.
+    expected_match = r"Failed to load transgenerational substrate from .*" + re.escape(
+        str(corrupted_path),
+    )
+    with pytest.raises(RuntimeError, match=expected_match):
         fitness.evaluate(
             genome,
             sim_config,
