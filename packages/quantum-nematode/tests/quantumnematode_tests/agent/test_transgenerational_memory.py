@@ -273,18 +273,125 @@ def test_load_missing_file_raises_filenotfounderror(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Placeholder behaviour: extract_from_brain raises NotImplementedError
+# Telemetry-pass: extract_from_brain
 # ---------------------------------------------------------------------------
 
 
-def test_extract_from_brain_raises_not_implemented() -> None:
-    """``extract_from_brain`` SHALL raise ``NotImplementedError`` (placeholder).
+def _make_probe_brain(seed: int = 42) -> object:
+    """Build a tiny LSTMPPO brain for telemetry probing tests.
 
-    The functional implementation requires env coupling and lands
-    with the F0 Substrate Extraction Pipeline in a follow-up commit.
-    Asserting the placeholder raises here pins the public-API
-    surface so importers can register the symbol today; the loop
-    integration commit will replace the body.
+    Returns an LSTMPPOBrain instance with a freshly-initialised actor
+    and untrained weights; tests use this to verify ``extract_from_brain``'s
+    determinism + signature contract without depending on a full training
+    pipeline.
     """
-    with pytest.raises(NotImplementedError, match=r"placeholder"):
-        extract_from_brain(brain=object(), env=object(), probe_positions=[], rng_seed=42)
+    from quantumnematode.brain.arch.dtypes import DeviceType
+    from quantumnematode.brain.arch.lstmppo import LSTMPPOBrain, LSTMPPOBrainConfig
+    from quantumnematode.brain.modules import ModuleName
+
+    config = LSTMPPOBrainConfig(
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.PROPRIOCEPTION],
+        rollout_buffer_size=32,
+        bptt_chunk_length=8,
+        lstm_hidden_dim=16,
+        actor_hidden_dim=16,
+        critic_hidden_dim=16,
+        num_epochs=2,
+        seed=seed,
+    )
+    return LSTMPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+
+def _make_probe_params() -> list[object]:
+    """Build a small deterministic probe-params sequence for telemetry tests."""
+    import numpy as np
+    from quantumnematode.brain.arch import BrainParams
+    from quantumnematode.env import Direction
+
+    # Three probe positions with varying gradient strengths — synthetic
+    # "near-pathogen" sensory states.
+    return [
+        BrainParams(
+            food_gradient_strength=0.3,
+            food_gradient_direction=np.pi / 2,
+            agent_direction=Direction.UP,
+        ),
+        BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=np.pi,
+            agent_direction=Direction.UP,
+        ),
+        BrainParams(
+            food_gradient_strength=0.1,
+            food_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        ),
+    ]
+
+
+def test_extract_from_brain_is_deterministic_on_seed() -> None:
+    """``extract_from_brain`` SHALL produce identical output for the same seed + brain weights.
+
+    Spec scenario "Extraction is deterministic for a given seed":
+    two calls with the same brain (same initialisation seed), same
+    probe_params, and same rng_seed SHALL produce element-wise
+    equal ``logit_bias`` tensors.
+    """
+    brain_a = _make_probe_brain(seed=42)
+    brain_b = _make_probe_brain(seed=42)
+    probe_params = _make_probe_params()
+
+    sub_a = extract_from_brain(
+        brain=brain_a,
+        probe_params=probe_params,
+        rng_seed=123,
+        source_genome_id="gid-a",
+    )
+    sub_b = extract_from_brain(
+        brain=brain_b,
+        probe_params=probe_params,
+        rng_seed=123,
+        source_genome_id="gid-a",
+    )
+    assert torch.equal(sub_a.logit_bias, sub_b.logit_bias)
+
+
+def test_extract_from_brain_returns_f0_substrate() -> None:
+    """``extract_from_brain`` SHALL return a substrate with depth=0 and the supplied id."""
+    brain = _make_probe_brain(seed=42)
+    probe_params = _make_probe_params()
+    sub = extract_from_brain(
+        brain=brain,
+        probe_params=probe_params,
+        rng_seed=123,
+        source_genome_id="elite-7",
+    )
+    assert sub.lineage_depth == 0
+    assert sub.source_genome_id == "elite-7"
+    # logit_bias has the right shape (4 actions matching the brain).
+    assert sub.logit_bias.shape == (4,)
+    assert sub.logit_bias.dtype == torch.float32
+
+
+def test_extract_from_brain_rejects_empty_probe_params() -> None:
+    """``extract_from_brain`` SHALL raise ``ValueError`` on empty probe sequence.
+
+    The function requires at least one probe to produce meaningful
+    action statistics; an empty sequence would divide by zero in
+    the mean-probability computation.
+    """
+
+    # Minimal stub brain: only needs prepare_episode (callable) and
+    # num_actions to reach the empty-sequence check.
+    class _StubBrain:
+        num_actions = 4
+
+        def prepare_episode(self) -> None: ...
+
+    with pytest.raises(ValueError, match=r"at least one probe_params element"):
+        extract_from_brain(
+            brain=_StubBrain(),
+            probe_params=[],
+            rng_seed=42,
+            source_genome_id="gid-a",
+        )

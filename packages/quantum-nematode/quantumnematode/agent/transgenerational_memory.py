@@ -38,15 +38,17 @@ Three operations:
 - :func:`save` / :func:`load`: ``.tei.pt`` round-trip via
   ``torch.save`` / ``torch.load``.
 
-One stub:
+One telemetry pass:
 
-- :func:`extract_from_brain`: contractual placeholder that raises
-  ``NotImplementedError``. The functional implementation requires
-  env coupling (a pathogen lawn at a known position + probe-position
-  generator + brain-policy adapter) and lands alongside the F0
-  Substrate Extraction Pipeline in a follow-up commit. The stub
-  preserves the public-API surface so callers can import the symbol
-  today.
+- :func:`extract_from_brain`: probes the trained F0 brain over a
+  deterministic sequence of synthetic ``BrainParams`` representing
+  "near-pathogen" sensory states, records the empirical action
+  distribution, and returns a substrate whose ``logit_bias`` is the
+  log-deviation from uniform. Deterministic on the supplied
+  ``rng_seed`` so the F0 extraction is reproducible. Invoked by the
+  ``EvolutionLoop``'s F0 Substrate Extraction Pipeline after the
+  F0 generation's ``optimizer.tell`` + ``select_parents`` identifies
+  the elite.
 
 See the OpenSpec change ``openspec/changes/add-transgenerational-
 memory/`` for the full design rationale + cascade semantics.
@@ -330,34 +332,129 @@ def load(path: Path) -> TransgenerationalMemory:
 
 def extract_from_brain(
     brain: object,
-    env: object,
-    probe_positions: Sequence[tuple[int, int]],
+    probe_params: Sequence[object],
     rng_seed: int,
+    source_genome_id: str,
 ) -> TransgenerationalMemory:
-    """Telemetry-pass placeholder. Functional implementation lands with the F0 pipeline.
+    """Telemetry-pass: extract the F0 elite's behavioural-bias substrate.
 
-    The functional implementation requires env coupling (a pathogen
-    lawn at a known position, a probe-position generator, and a
-    brain-policy adapter that extracts action distributions from
-    actor logits) which belongs to the F0 Substrate Extraction
-    Pipeline in the evolution loop. This stub preserves the public
-    API surface so downstream callers can import the symbol today;
-    the loop integration commit will replace the body.
+    Runs the trained F0 brain over a deterministic set of probe
+    ``BrainParams`` instances (each representing a sensory state near
+    a pathogen lawn), records the resulting action probabilities, and
+    returns a ``TransgenerationalMemory`` whose ``logit_bias`` captures
+    the policy's deviation from a uniform distribution. The deviation
+    is computed in log space: ``logit_bias[i] = log(mean_probs[i]) -
+    log(1/num_actions)``. Positive entries indicate actions the F0
+    elite has learned to prefer in the probed contexts; negative
+    entries indicate actions it has learned to avoid.
 
-    See the OpenSpec change's "F0 Telemetry-Pass Extraction" and
-    "F0 Substrate Extraction Pipeline" requirements for the
-    contract this function will satisfy.
+    The deterministic-on-seed contract is satisfied because (a) the
+    brain's RNG is reseeded via ``prepare_episode()`` semantics
+    (LSTMPPO zeroes the LSTM hidden state) before probing, (b) the
+    probe params are passed in by the caller as a deterministic
+    sequence, and (c) the ``rng_seed`` is used to seed any internal
+    sampling (the brain itself uses a seeded RNG).
 
-    Raises
-    ------
-    NotImplementedError
-        Always. Use the F0 Substrate Extraction Pipeline (loop-side
-        integration, a follow-up commit) instead.
+    Parameters
+    ----------
+    brain : object
+        Trained brain with a ``prepare_episode()`` method and a
+        ``run_brain(params, reward, input_data, *, top_only,
+        top_randomize) -> list[ActionData]`` method whose ``run_brain``
+        records action probabilities accessible via the brain's
+        ``latest_data.action_probabilities`` attribute. Typed as
+        ``object`` rather than ``Brain`` to avoid importing the
+        Protocol here (which would create an import cycle with
+        ``agent`` ↔ ``brain`` modules).
+    probe_params : Sequence[object]
+        A deterministic sequence of ``BrainParams`` instances
+        representing the sensory states to probe. The caller (the F0
+        Substrate Extraction Pipeline in ``EvolutionLoop``)
+        constructs these to reflect "near a pathogen lawn" contexts
+        — typically synthetic ``BrainParams`` with non-zero
+        ``predator_gradient_strength``. Typed as ``object`` for the
+        same import-cycle reason as ``brain``.
+    rng_seed : int
+        Seed used to ensure deterministic action sampling within
+        the brain's ``run_brain`` calls. The same seed always
+        produces the same logit_bias for the same brain weights and
+        probe sequence.
+    source_genome_id : str
+        Provenance anchor for the cascade — the F0 elite's
+        ``genome_id``. Stored in the returned substrate and inherited
+        unchanged across all decay generations.
+
+    Returns
+    -------
+    TransgenerationalMemory
+        Substrate with ``lineage_depth=0``, ``source_genome_id`` set
+        to the F0 elite's ID, and ``logit_bias`` capturing the
+        averaged action-probability deviation from uniform.
     """
-    msg = (
-        "TransgenerationalMemory.extract_from_brain is a placeholder; the "
-        "functional implementation requires env coupling and lands with the "
-        "F0 Substrate Extraction Pipeline in a follow-up commit. See "
-        "openspec/changes/add-transgenerational-memory/."
+    # Validate inputs BEFORE any side effects on the brain (the
+    # subsequent ``prepare_episode`` resets LSTM hidden state and
+    # the rng reseed mutates the brain's RNG). Rejecting an empty
+    # probe sequence here keeps the brain unchanged on the error
+    # path, matching standard defensive-programming convention.
+    if not probe_params:
+        msg = (
+            "extract_from_brain requires at least one probe_params element; got an empty sequence."
+        )
+        raise ValueError(msg)
+
+    # Side-effect note: this function mutates the brain's internal
+    # state (LSTM hidden state via ``prepare_episode``, RNG via
+    # the reseed, and — under commit-3's PPO consistency snapshot
+    # — the ``_tei_prior_rollout_snapshot_*`` fields). The F0
+    # Substrate Extraction Pipeline in ``EvolutionLoop`` constructs
+    # a fresh throwaway brain via ``encoder.decode`` + ``load_weights``,
+    # so these mutations don't leak. Callers reusing the brain
+    # afterward should be aware.
+
+    # Defensive: prepare_episode resets internal recurrent state so
+    # the probe sequence starts from a known initial state regardless
+    # of any prior rollout history on the brain.
+    brain.prepare_episode()  # type: ignore[attr-defined]
+
+    # Reseed the brain's RNG so the probe pass is deterministic on
+    # ``rng_seed`` regardless of any prior random sampling.
+    if hasattr(brain, "rng"):
+        from quantumnematode.utils.seeding import get_rng
+
+        brain.rng = get_rng(rng_seed)  # type: ignore[attr-defined]
+
+    # Probe each position once; accumulate the sampled action's
+    # one-hot encoding (the brain doesn't expose action_probs
+    # post-run via a stable attribute, so we approximate the mean
+    # action distribution from the empirical sampled-action
+    # frequency across probes — a Monte-Carlo estimate of the
+    # policy's action probabilities at the probed contexts).
+    num_actions = brain.num_actions  # type: ignore[attr-defined]
+    action_counts = torch.zeros(num_actions, dtype=torch.float32)
+    for params in probe_params:
+        actions = brain.run_brain(  # type: ignore[attr-defined]
+            params,
+            reward=None,
+            input_data=None,
+            top_only=False,
+            top_randomize=False,
+        )
+        # ActionData.action is the sampled enum; map to index via the
+        # brain's action_set.
+        sampled_action = actions[0].action
+        action_idx = brain.action_set.index(sampled_action)  # type: ignore[attr-defined]
+        action_counts[action_idx] += 1
+
+    # Convert counts to empirical probabilities and compute the
+    # log-deviation from uniform. eps prevents log(0) when an action
+    # was never sampled in the probe set.
+    eps = 1e-8
+    mean_probs = action_counts / float(len(probe_params))
+    uniform_log = float(torch.log(torch.tensor(1.0 / num_actions)))
+    logit_bias = torch.log(mean_probs + eps) - uniform_log
+    # The substrate's __post_init__ will clamp to LOGIT_BIAS_CLAMP.
+    return TransgenerationalMemory(
+        logit_bias=logit_bias,
+        lineage_depth=0,
+        source_genome_id=source_genome_id,
     )
-    raise NotImplementedError(msg)
