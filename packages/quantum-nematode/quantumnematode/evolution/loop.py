@@ -510,7 +510,13 @@ class EvolutionLoop:
             # Scan for an existing entry at this generation. Readers
             # silently skip malformed lines (see ``_read_per_gen_elites``
             # in the evaluator); we mirror that here so a corrupted
-            # tail-line doesn't block the dedupe check.
+            # tail-line doesn't block the dedupe check. Each guard
+            # handles a distinct malformed shape:
+            #   - JSONDecodeError: not valid JSON at all
+            #   - non-dict (a list/scalar that happens to parse): skip
+            #   - missing 'generation' key: skip
+            #   - non-int-castable 'generation' value: skip
+            target = int(generation)
             with path.open(encoding="utf-8") as handle:
                 for raw in handle:
                     stripped = raw.strip()
@@ -520,11 +526,19 @@ class EvolutionLoop:
                         existing = _json.loads(stripped)
                     except _json.JSONDecodeError:
                         continue
-                    if int(existing.get("generation", -1)) == int(generation):
+                    if not isinstance(existing, dict):
+                        continue
+                    if "generation" not in existing:
+                        continue
+                    try:
+                        existing_gen = int(existing["generation"])
+                    except (TypeError, ValueError):
+                        continue
+                    if existing_gen == target:
                         logger.debug(
                             "per_gen_elites: row for generation=%d already exists; "
                             "skipping append (resume idempotency).",
-                            generation,
+                            target,
                         )
                         return
         row = {
@@ -1231,6 +1245,7 @@ class EvolutionLoop:
                 #    can read their parent file.  Steady-state disk usage
                 #    after this step is at most ``inheritance_elite_count``
                 #    files, bounded over the whole run.
+                next_selected: list[str] = []
                 if self._inheritance_records_lineage():
                     next_selected = self.inheritance.select_parents(
                         gen_ids,
@@ -1244,34 +1259,42 @@ class EvolutionLoop:
                         # Keep only the about-to-be-parents in current gen.
                         self._gc_inheritance_dir(gen, next_selected)
 
-                    # Per-gen elite snapshot: append the top-1 elite's
-                    # (generation, genome_id, params, fitness) to a
-                    # JSON-Lines artifact at ``per_gen_elites.jsonl``.
-                    # Used by post-hoc evaluators (e.g. the
-                    # transgenerational per-gen choice-index evaluator)
-                    # that need to re-construct each generation's elite
-                    # genome offline without re-running evolution.
-                    if next_selected:
-                        elite_id_this_gen = next_selected[0]
-                        try:
-                            elite_idx_this_gen = gen_ids.index(elite_id_this_gen)
-                        except ValueError:
-                            logger.warning(
-                                "per_gen_elites: elite_id=%s not in gen_ids; "
-                                "skipping snapshot for gen=%d.",
-                                elite_id_this_gen,
-                                gen,
-                            )
-                        else:
-                            self._append_per_gen_elite(
-                                generation=gen,
-                                genome_id=elite_id_this_gen,
-                                params=np.asarray(
-                                    solutions[elite_idx_this_gen],
-                                    dtype=np.float32,
-                                ),
-                                fitness=fitnesses[elite_idx_this_gen],
-                            )
+                # Per-gen elite snapshot: append the top-1 elite's
+                # (generation, genome_id, params, fitness) to a
+                # JSON-Lines artifact at ``per_gen_elites.jsonl``. Used
+                # by post-hoc evaluators (e.g. the transgenerational
+                # per-gen choice-index evaluator) that need to
+                # reconstruct each generation's elite genome offline.
+                # Runs UNCONDITIONALLY — including NoInheritance arms
+                # (the TEI-off control) — so the paired-arm decision
+                # gate can compare both sides. Under
+                # ``_inheritance_records_lineage`` the elite ID comes
+                # from the strategy's ``select_parents`` for parity
+                # with the lineage CSV; otherwise it's the argmax of
+                # the gen's fitness vector.
+                if next_selected:
+                    elite_id_this_gen = next_selected[0]
+                else:
+                    elite_argmax = int(np.argmax(fitnesses))
+                    elite_id_this_gen = gen_ids[elite_argmax]
+                try:
+                    elite_idx_this_gen = gen_ids.index(elite_id_this_gen)
+                except ValueError:
+                    logger.warning(
+                        "per_gen_elites: elite_id=%s not in gen_ids; skipping snapshot for gen=%d.",
+                        elite_id_this_gen,
+                        gen,
+                    )
+                else:
+                    self._append_per_gen_elite(
+                        generation=gen,
+                        genome_id=elite_id_this_gen,
+                        params=np.asarray(
+                            solutions[elite_idx_this_gen],
+                            dtype=np.float32,
+                        ),
+                        fitness=fitnesses[elite_idx_this_gen],
+                    )
 
                 # F0 Substrate Extraction Pipeline (transgenerational only,
                 # gen 0 only): load the F0 elite's captured weights, decode
