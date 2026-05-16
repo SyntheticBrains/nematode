@@ -791,7 +791,7 @@ class TestEvolutionConfigTransgenerationalPairing:
         """A schedule entry with ``generation >= evolution.generations`` SHALL be rejected."""
         with pytest.raises(
             ValueError,
-            match=r"generation=3 but evolution\.generations=2",
+            match=r"out-of-range generations \[3\]",
         ):
             EvolutionConfig(
                 algorithm="cmaes",
@@ -812,6 +812,31 @@ class TestEvolutionConfigTransgenerationalPairing:
                             generation=3,
                             pathogen_lawns_enabled=False,
                             ppo_train_episodes=0,
+                        ),
+                    ],
+                ),
+            )
+
+    def test_lawn_schedule_missing_generations_rejected(self) -> None:
+        """A schedule that doesn't cover ``[0, generations)`` SHALL be rejected."""
+        with pytest.raises(
+            ValueError,
+            match=r"missing generations \[1, 2\]",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=3,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=10,
+                inheritance="transgenerational",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=[
+                        LawnScheduleEntry(
+                            generation=0,
+                            pathogen_lawns_enabled=True,
+                            ppo_train_episodes=10,
                         ),
                     ],
                 ),

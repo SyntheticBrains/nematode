@@ -182,6 +182,32 @@ def test_build_per_gen_sim_config_applies_schedule_overrides(tmp_path: Path) -> 
     assert sim_config.environment.predators.enabled == base_enabled
 
 
+def test_build_per_gen_sim_config_returns_base_when_disabled(tmp_path: Path) -> None:
+    """TEI-off arm SHALL return base sim_config regardless of the schedule.
+
+    When ``transgenerational.enabled=False`` the helper SHALL return the
+    base sim_config unchanged at every generation.
+    """
+    sim_config = _sim_config_with_predators()
+    # The pairing validator pins ``enabled=false`` to ``inheritance=none``,
+    # so this construction matches the TEI-off control arm of the M6
+    # paired-arm ablation.
+    transgenerational = _tei_config(enabled=False, generations=2)
+    loop = _make_loop(
+        tmp_path,
+        sim_config=sim_config,
+        transgenerational=transgenerational,
+        inheritance="none",
+        generations=2,
+    )
+    out_gen0 = loop._build_per_gen_sim_config(0)
+    out_gen1 = loop._build_per_gen_sim_config(1)
+    # Identity-passthrough — schedule overrides MUST NOT leak into the
+    # control arm's per-gen sim_config.
+    assert out_gen0 is sim_config
+    assert out_gen1 is sim_config
+
+
 # ---------------------------------------------------------------------------
 # _compute_tei_prior_source
 # ---------------------------------------------------------------------------
@@ -250,6 +276,30 @@ def test_compute_tei_prior_source_returns_none_for_non_tei_runs(tmp_path: Path) 
     """Without a transgenerational config block the helper SHALL return None at every gen."""
     sim_config = load_simulation_config(str(MLPPPO_CONFIG))
     loop = _make_loop(tmp_path, sim_config=sim_config)
+    for gen in range(3):
+        assert loop._compute_tei_prior_source(gen) is None
+
+
+def test_compute_tei_prior_source_returns_none_when_disabled(tmp_path: Path) -> None:
+    """TEI-off arm SHALL return None at every gen, even with substrate set.
+
+    When ``transgenerational.enabled=False`` the helper SHALL return
+    None at every generation, even if ``_tei_f0_substrate_path`` was
+    populated.
+    """
+    sim_config = _sim_config_with_predators()
+    transgenerational = _tei_config(enabled=False, generations=3)
+    loop = _make_loop(
+        tmp_path,
+        sim_config=sim_config,
+        transgenerational=transgenerational,
+        inheritance="none",
+        generations=3,
+    )
+    # Even with a substrate path manually set, the disabled arm MUST NOT
+    # propagate it to workers — the substrate is the only cross-arm
+    # difference in the paired ablation.
+    loop._tei_f0_substrate_path = tmp_path / "fake.tei.pt"
     for gen in range(3):
         assert loop._compute_tei_prior_source(gen) is None
 

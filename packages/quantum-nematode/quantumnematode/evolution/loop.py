@@ -711,7 +711,13 @@ class EvolutionLoop:
         evolution block consistent across TEI and non-TEI runs.
         """
         cfg = self.evolution_config
-        if cfg.transgenerational is None:
+        # Bypass the schedule entirely when transgenerational is absent
+        # OR explicitly disabled (the TEI-off control arm of a paired
+        # ablation): the pairing validator pins ``enabled=false`` to
+        # ``inheritance=none``, so the control arm receives the base
+        # sim_config every generation and the substrate is the only
+        # cross-arm difference.
+        if cfg.transgenerational is None or not cfg.transgenerational.enabled:
             return self.sim_config
         # Find the schedule entry for the current generation. The
         # config validator already verified that every generation in
@@ -782,7 +788,10 @@ class EvolutionLoop:
         at end of gen 0, persisted in the checkpoint pickle for resume).
         """
         cfg = self.evolution_config
-        if cfg.transgenerational is None or gen == 0:
+        # Bypass when transgenerational is absent OR explicitly disabled
+        # (TEI-off control arm), and at F0 (the elite IS the substrate
+        # source, not consumer).
+        if cfg.transgenerational is None or not cfg.transgenerational.enabled or gen == 0:
             return None
         if self._tei_f0_substrate_path is None:
             # Defensive: F0 extraction must have populated this before

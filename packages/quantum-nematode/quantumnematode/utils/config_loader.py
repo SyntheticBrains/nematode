@@ -989,7 +989,7 @@ class LawnScheduleEntry(BaseModel):
         adding a new env-schema field — "pathogen lawn" is
         documentation vocabulary; the underlying storage is the
         existing ``predators:`` block configured with
-        ``predator_type: stationary``.
+        ``movement_pattern: stationary``.
     ppo_train_episodes : int
         Overrides ``EvolutionConfig.learn_episodes_per_eval`` for
         that generation only. ``0`` is permitted under TEI
@@ -1291,18 +1291,29 @@ class EvolutionConfig(BaseModel):
                     "inheritance: none or transgenerational.enabled: true."
                 )
                 raise ValueError(msg)
-            # lawn_schedule range check: each entry's generation index
-            # MUST be in [0, evolution.generations). Uniqueness is
-            # checked at the TransgenerationalConfig level.
-            for entry in self.transgenerational.lawn_schedule:
-                if entry.generation >= self.generations:
-                    msg = (
-                        f"transgenerational.lawn_schedule contains entry with "
-                        f"generation={entry.generation} but evolution.generations="
-                        f"{self.generations}. Each schedule entry MUST reference a "
-                        f"generation in [0, {self.generations})."
-                    )
-                    raise ValueError(msg)
+            # lawn_schedule coverage check: each generation in
+            # [0, evolution.generations) MUST be present exactly once.
+            # Uniqueness is checked at the TransgenerationalConfig
+            # level; this validator pins the schedule to the
+            # surrounding ``generations`` field (which lives on
+            # EvolutionConfig, not TransgenerationalConfig).
+            schedule_gens = {entry.generation for entry in self.transgenerational.lawn_schedule}
+            expected_gens = set(range(self.generations))
+            missing = sorted(expected_gens - schedule_gens)
+            extra = sorted(schedule_gens - expected_gens)
+            if missing or extra:
+                parts = []
+                if missing:
+                    parts.append(f"missing generations {missing}")
+                if extra:
+                    parts.append(f"out-of-range generations {extra}")
+                msg = (
+                    f"transgenerational.lawn_schedule must cover every generation "
+                    f"in [0, {self.generations}) exactly once: "
+                    f"{'; '.join(parts)}. Got schedule entries for generations "
+                    f"{sorted(schedule_gens)}."
+                )
+                raise ValueError(msg)
         # Symmetric guard: if inheritance is "transgenerational" but
         # the config block is missing, the F0 extraction pipeline has
         # no decay_factor or lawn_schedule to use. Reject explicitly
