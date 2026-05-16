@@ -36,6 +36,12 @@ SIMULATION_CONFIGS = [
     "scenarios/foraging/mlpppo_small_derivative.yml",
     "scenarios/foraging/lstmppo_small_derivative.yml",
     "scenarios/foraging/lstmppo_small_temporal.yml",
+    # Evolution-mode YAMLs: run_simulation.py ignores the
+    # ``evolution`` / ``hyperparam_schema`` / ``transgenerational``
+    # blocks, so this confirms the YAML parses and the brain runs
+    # in the configured env (the transgenerational pathogen-lawn
+    # substrate).
+    "evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml",
 ]
 
 
