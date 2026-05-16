@@ -13,13 +13,13 @@ Tasks are grouped by commit (per the plan's 8-commit grouping). Each group repre
 
 ## 2. TransgenerationalMemory dataclass (Commit 2)
 
-- [ ] 2.1 Create `quantumnematode/agent/transgenerational_memory.py` with the `TransgenerationalMemory` dataclass: `logit_bias: torch.Tensor`, `lineage_depth: int`, `source_genome_id: str`. `frozen=True`. `__post_init__` validates shape (`ndim == 1`), dtype (`float32`), and clamps `|x| ≤ 2.0`.
-- [ ] 2.2 Implement `apply_to_logits(logits)` returning `logits + self.logit_bias` (broadcast over leading dims), preserving shape/dtype/device, no in-place mutation.
-- [ ] 2.3 Implement `inherit_from(parents, decay_factor)` class method (or module factory). Top-1 elite semantics. Validates `0.0 ≤ decay_factor ≤ 1.0` and non-empty parents. Increments `lineage_depth`. Inherits `source_genome_id`.
-- [ ] 2.4 Implement `extract_from_brain(brain, env, probe_positions, rng_seed)` telemetry-pass extraction. Deterministic on `rng_seed`. Runs on disjoint episode rollouts from those that produced fitness scores.
-- [ ] 2.5 Implement serialise/deserialise via `torch.save`/`torch.load` over `.tei.pt`. Round-trip preserves all fields byte-equivalently.
-- [ ] 2.6 Tests: `tests/.../agent/test_transgenerational_memory.py`. ~12 cases covering construction-time clamp, shape/dtype validation, `apply_to_logits` shape preservation + non-mutation, `inherit_from` geometric decay across F0→F3, decay-factor range validator, empty-parents rejection, serialise round-trip, missing-file load error, determinism of telemetry pass.
-- [ ] 2.7 Run pytest + pre-commit clean.
+- [x] 2.1 Created `quantumnematode/agent/transgenerational_memory.py` with the `TransgenerationalMemory` dataclass: `logit_bias: torch.Tensor`, `lineage_depth: int`, `source_genome_id: str`. `frozen=True`. `__post_init__` validates shape (`ndim == 1`), dtype (`float32`), `lineage_depth ≥ 0`, and clamps `|x| ≤ LOGIT_BIAS_CLAMP` (= 2.0) via `object.__setattr__` on a `.detach().clone()` copy so the input tensor is never mutated.
+- [x] 2.2 Implemented `apply_to_logits(logits)` returning `logits + self.logit_bias` (broadcast over leading dims), preserving shape/dtype/device, no in-place mutation.
+- [x] 2.3 Implemented `inherit_from(parents, decay_factor)` as a `@classmethod`. Top-1 elite semantics (reads `parents[0]` only). Validates `0.0 ≤ decay_factor ≤ 1.0` and non-empty parents. Increments `lineage_depth`. Inherits `source_genome_id`.
+- [x] 2.4 `extract_from_brain(brain, env, probe_positions, rng_seed)` shipped as a `NotImplementedError`-raising placeholder. **Functional implementation deferred to the F0 Substrate Extraction Pipeline commit** (it requires env coupling — pathogen lawn at a known position + probe-position generator + brain-policy adapter — which belongs to the loop-integration commit). The placeholder preserves the public-API surface so downstream importers can register the symbol today.
+- [x] 2.5 Implemented module-level `save(substrate, path)` / `load(path)` via `torch.save` / `torch.load`. Round-trip preserves all fields byte-equivalently. `save` creates the parent dir if missing (mirrors Lamarckian capture). `load` raises `FileNotFoundError` with the missing path in the message.
+- [x] 2.6 Tests: `tests/.../agent/test_transgenerational_memory.py` (20 cases): construction clamp + no-input-mutation + shape/dtype/depth rejections + frozen-instance assertion (7 cases); `inherit_from` geometric decay F0→F3 + depth increment + source preservation + empty-parents + decay range validators + multi-parent picks parents[0] (7 cases); `apply_to_logits` additive + broadcast + no-mutation + distinct-object (2 cases); save/load round-trip + save-creates-parent-dir + load-missing-file (3 cases); `extract_from_brain` raises NotImplementedError (1 case).
+- [x] 2.7 `uv run pytest packages/.../test_transgenerational_memory.py -v` passes 20/20.
 
 ## 3. LSTMPPO TEI prior application (Commit 3)
 
