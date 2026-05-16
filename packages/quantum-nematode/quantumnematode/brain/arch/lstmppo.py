@@ -285,6 +285,24 @@ class LSTMPPORolloutBuffer:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _tei_prior_equal(a: torch.Tensor, b: torch.Tensor) -> bool:
+    """Return True iff two TEI-prior tensors are structurally + element-wise equal.
+
+    Compares shape, dtype, and contents. Moves the second tensor to
+    the first's device before the equality check so a CPU vs GPU
+    snapshot mismatch doesn't crash the comparison; the spec
+    requires the bias to be stable in shape/dtype/contents across
+    the rollout-to-update window but is silent on device (the
+    runner is responsible for keeping ``tei_prior`` on the brain's
+    device once set).
+    """
+    if a.shape != b.shape:
+        return False
+    if a.dtype != b.dtype:
+        return False
+    return bool(torch.equal(a, b.to(a.device)))
+
+
 class _LSTMPPOCritic(nn.Module):
     """MLP critic network for LSTM PPO."""
 
@@ -416,14 +434,24 @@ class LSTMPPOBrain(ClassicalBrain):
         # post-decode, before ``_build_agent``; never mutated by the
         # runner or the step loop.
         self.tei_prior: torch.Tensor | None = None
-        # Snapshot of ``tei_prior``'s ``(shape, dtype)`` captured during
-        # the most recent rollout step. ``learn()``'s defensive entry
-        # check compares this against the current attribute to detect
-        # mid-window mutation (which would silently invalidate the PPO
-        # ratio). ``None`` means "no rollout-time observation recorded
-        # yet" (e.g., first rollout, or all rollout steps ran with
-        # ``tei_prior is None``).
-        self._tei_prior_rollout_snapshot: tuple[torch.Size, torch.dtype] | None = None
+        # Frozen first-step snapshot of ``tei_prior`` for the current
+        # rollout window. Two-field design so the snapshot distinguishes
+        # three states: (a) ``_active=False``: no rollout step has run
+        # since the last buffer reset (pristine window); (b)
+        # ``_active=True`` and ``_value is None``: the rollout's first
+        # step ran with ``tei_prior=None``; (c) ``_active=True`` and
+        # ``_value`` is a cloned tensor: the rollout's first step ran
+        # with that exact bias. ``learn()``'s defensive entry check
+        # validates that the CURRENT ``tei_prior`` matches the frozen
+        # value (None-vs-None OR ``torch.equal``) — any mid-window
+        # mutation (None→tensor, tensor→None, shape/dtype/contents
+        # change) raises ``RuntimeError`` because it would silently
+        # invalidate the PPO ratio. The snapshot is captured on the
+        # FIRST step of each window only (not overwritten on later
+        # steps), so a flip from bias-A to bias-B mid-rollout is
+        # caught even if both biases share shape/dtype.
+        self._tei_prior_rollout_snapshot_active: bool = False
+        self._tei_prior_rollout_snapshot_value: torch.Tensor | None = None
 
         # ── LR scheduling ──
         self._episode_count = 0
@@ -618,6 +646,19 @@ class LSTMPPOBrain(ClassicalBrain):
         self.h_t = h_new
         self.c_t = c_new
 
+        # First-step snapshot capture for the defensive ``learn()`` entry
+        # check. Frozen on the rollout window's FIRST step so a mid-window
+        # flip (None→tensor, tensor→None, or value/shape/dtype change) is
+        # detectable even when shape/dtype are preserved. After capture,
+        # the snapshot is NOT overwritten on subsequent steps — it
+        # represents the bias state under which ``_pending_log_prob`` was
+        # recorded for the entire buffer's worth of data.
+        if not self._tei_prior_rollout_snapshot_active:
+            self._tei_prior_rollout_snapshot_active = True
+            self._tei_prior_rollout_snapshot_value = (
+                self.tei_prior.detach().clone() if self.tei_prior is not None else None
+            )
+
         # Actor: h_t → logits → (optional TEI bias) → action
         with torch.no_grad():
             logits = self.actor(h_out)
@@ -628,16 +669,8 @@ class LSTMPPOBrain(ClassicalBrain):
                 # well-defined (both sides see the same biased distribution).
                 # ``.to(logits.device)`` defends against a bias loaded from
                 # disk on a different device than the brain runs on (no-op
-                # when devices already match — the common case). Capture
-                # the snapshot for the defensive entry-check in ``learn()``
-                # — comparing shape/dtype, not identity, since the caller
-                # may legitimately rebind the attribute to an element-wise-
-                # equal tensor across episodes.
+                # when devices already match — the common case).
                 logits = logits + self.tei_prior.to(logits.device)
-                self._tei_prior_rollout_snapshot = (
-                    self.tei_prior.shape,
-                    self.tei_prior.dtype,
-                )
             action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
 
         # Sample action
@@ -689,35 +722,55 @@ class LSTMPPOBrain(ClassicalBrain):
         episode_done: bool = False,
     ) -> None:
         """Add experience to rollout buffer and trigger PPO update when full."""
-        # Defensive: confirm ``tei_prior``'s shape/dtype has not been mutated
-        # since the rollout that produced the buffer's pending data. If it
-        # was (e.g., the caller rebound the attribute to a different-shape
-        # tensor between rollout and update), the PPO ratio computation
-        # would silently use mismatched distributions. Mutating to ``None``
-        # mid-window is also rejected — sampling-time logits included the
-        # bias but training-time logits would not.
-        if self._tei_prior_rollout_snapshot is not None:
-            snap_shape, snap_dtype = self._tei_prior_rollout_snapshot
-            if self.tei_prior is None:
+        # Defensive: confirm ``tei_prior`` has not been mutated since the
+        # rollout that produced the buffer's pending data. The frozen
+        # first-step snapshot captures the bias state at the start of the
+        # current rollout window; any deviation now means the PPO ratio
+        # would use mismatched distributions, silently corrupting the
+        # update. Covered mutations: None→tensor (rollout started with
+        # None, operator activated mid-window), tensor→None (rollout
+        # started biased, operator cleared), and tensor→different tensor
+        # (shape, dtype, or contents change). The check is skipped if the
+        # window is pristine (no rollout step has run since the last
+        # buffer reset).
+        if self._tei_prior_rollout_snapshot_active:
+            snap_value = self._tei_prior_rollout_snapshot_value
+            if snap_value is None and self.tei_prior is not None:
                 msg = (
-                    "LSTMPPOBrain.learn(): tei_prior was set during the "
-                    f"rollout window (snapshot shape={tuple(snap_shape)}, "
-                    f"dtype={snap_dtype}) but is None at update time. The "
-                    "rollout's sampling distribution included the bias; "
+                    "LSTMPPOBrain.learn(): tei_prior was None at the start "
+                    "of the rollout window but is now set "
+                    f"(shape={tuple(self.tei_prior.shape)}, "
+                    f"dtype={self.tei_prior.dtype}). The rollout's sampling "
+                    "distribution was unbiased; the update's training "
+                    "distribution would include the bias. tei_prior MUST "
+                    "remain stable across the rollout-to-update window."
+                )
+                raise RuntimeError(msg)
+            if snap_value is not None and self.tei_prior is None:
+                msg = (
+                    "LSTMPPOBrain.learn(): tei_prior was set at the start "
+                    f"of the rollout window (shape={tuple(snap_value.shape)}, "
+                    f"dtype={snap_value.dtype}) but is None at update time. "
+                    "The rollout's sampling distribution included the bias; "
                     "the update's training distribution would not. "
                     "tei_prior MUST remain stable across the rollout-to-"
                     "update window."
                 )
                 raise RuntimeError(msg)
-            cur_shape, cur_dtype = self.tei_prior.shape, self.tei_prior.dtype
-            if (cur_shape, cur_dtype) != self._tei_prior_rollout_snapshot:
+            if (
+                snap_value is not None
+                and self.tei_prior is not None
+                and not _tei_prior_equal(snap_value, self.tei_prior)
+            ):
                 msg = (
-                    "LSTMPPOBrain.learn(): tei_prior shape/dtype mismatch "
-                    "between rollout and update window. Rollout snapshot: "
-                    f"shape={tuple(snap_shape)}, dtype={snap_dtype}. "
-                    f"Current: shape={tuple(cur_shape)}, dtype={cur_dtype}. "
-                    "tei_prior MUST remain stable across the rollout-to-"
-                    "update window."
+                    "LSTMPPOBrain.learn(): tei_prior shape/dtype/contents "
+                    "mismatch between rollout and update window. Rollout "
+                    f"snapshot: shape={tuple(snap_value.shape)}, "
+                    f"dtype={snap_value.dtype}. Current: "
+                    f"shape={tuple(self.tei_prior.shape)}, "
+                    f"dtype={self.tei_prior.dtype}. tei_prior MUST remain "
+                    "stable (same shape, dtype, AND element-wise values) "
+                    "across the rollout-to-update window."
                 )
                 raise RuntimeError(msg)
         self.history_data.rewards.append(reward)
@@ -741,11 +794,7 @@ class LSTMPPOBrain(ClassicalBrain):
         ):
             self._perform_ppo_update()
             self.buffer.reset()
-            # PPO update complete — clear the TEI snapshot so the next
-            # rollout window's first ``run_brain`` call re-captures the
-            # current ``tei_prior`` state, and a no-bias-during-next-window
-            # run doesn't false-alarm the entry check.
-            self._tei_prior_rollout_snapshot = None
+            self._reset_tei_prior_rollout_snapshot()
 
     def _perform_ppo_update(self) -> None:  # noqa: PLR0915
         """Perform PPO update with chunk-based truncated BPTT."""
@@ -920,6 +969,20 @@ class LSTMPPOBrain(ClassicalBrain):
                 f"episode={self._episode_count}",
             )
 
+    def _reset_tei_prior_rollout_snapshot(self) -> None:
+        """Clear the TEI-prior rollout-window snapshot.
+
+        Called after every ``self.buffer.reset()`` so the next rollout
+        window starts pristine — its first ``run_brain`` call captures
+        a fresh first-step bias state. Failing to clear after a buffer
+        reset would let a stale snapshot survive into a subsequent
+        unbiased rollout, where ``learn()``'s entry check would
+        spuriously fire ("tei_prior was set in rollout but is None at
+        update").
+        """
+        self._tei_prior_rollout_snapshot_active = False
+        self._tei_prior_rollout_snapshot_value = None
+
     # ──────────────────────────────────────────────────────────────────
     # Scheduling
     # ──────────────────────────────────────────────────────────────────
@@ -1092,8 +1155,12 @@ class LSTMPPOBrain(ClassicalBrain):
                 self._episode_count = int(ts["episode_count"])
                 self._update_learning_rate()
 
-        # Reset buffer to prevent stale experience
+        # Reset buffer to prevent stale experience; mirror by clearing the
+        # TEI rollout snapshot so a fresh rollout under the loaded weights
+        # is treated as a pristine window (matches the contract that
+        # ``self.buffer.reset()`` and the snapshot must move together).
         self.buffer.reset()
+        self._reset_tei_prior_rollout_snapshot()
 
         logger.info(
             "LSTMPPOBrain weights loaded (components: %s, episode_count=%d)",
