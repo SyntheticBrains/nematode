@@ -28,6 +28,7 @@ import pickle
 import signal
 from contextlib import suppress
 from multiprocessing import Pool
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -41,7 +42,6 @@ from quantumnematode.optimizers.evolutionary import EvolutionResult
 
 if TYPE_CHECKING:
     from multiprocessing.pool import Pool as PoolType
-    from pathlib import Path
 
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
@@ -271,6 +271,17 @@ class EvolutionLoop:
         self._gens_without_improvement: int = 0
         self._last_best_fitness: float | None = None
 
+        # Transgenerational-inheritance bookkeeping: path to the F0
+        # elite's ``.tei.pt`` substrate file, populated by the F0
+        # Substrate Extraction Pipeline at the end of gen 0. F1+
+        # worker tuples use this path to construct ``tei_prior_source``
+        # for ``fitness.evaluate`` (a follow-up addition). The
+        # attribute is persisted in the checkpoint pickle so resume
+        # from gen 1+ can recover the path without re-running F0.
+        # ``None`` outside of transgenerational runs and before the
+        # F0 extraction completes.
+        self._tei_f0_substrate_path: Path | None = None
+
     # ---- Checkpoint / Resume ---------------------------------------------
 
     def _save_checkpoint(self) -> None:
@@ -293,6 +304,12 @@ class EvolutionLoop:
             "last_best_fitness": self._last_best_fitness,
             "rng_state": self.rng.bit_generator.state,
             "lineage_path": str(self._lineage_path),
+            # Transgenerational F0 substrate path: stored as a string
+            # (or None) so the pickle is portable across runs that
+            # rebase the output_dir. Loaders reconstruct the Path.
+            "tei_f0_substrate_path": (
+                str(self._tei_f0_substrate_path) if self._tei_f0_substrate_path else None
+            ),
         }
         # Atomic write via tmp file + rename.
         tmp_path = self._checkpoint_path.with_suffix(".pkl.tmp")
@@ -383,6 +400,11 @@ class EvolutionLoop:
         self._gens_without_improvement = payload["gens_without_improvement"]
         self._last_best_fitness = payload["last_best_fitness"]
         self.rng.bit_generator.state = payload["rng_state"]
+        # Transgenerational F0 substrate path: ``.get`` with None default
+        # for backwards compatibility with v3 checkpoints (pre-TEI).
+        # The field is additive — no CHECKPOINT_VERSION bump needed.
+        tei_path_str = payload.get("tei_f0_substrate_path")
+        self._tei_f0_substrate_path = Path(tei_path_str) if tei_path_str else None
 
     # ---- Inheritance helpers --------------------------------------------
 
@@ -407,6 +429,20 @@ class EvolutionLoop:
         ``False``.
         """
         return self.inheritance.kind() != "none"
+
+    def _substrate_inheritance_active(self) -> bool:
+        """Return True iff the active strategy uses the TEI substrate-flow pipeline.
+
+        Gates the F0 Substrate Extraction Pipeline (F0 weight capture
+        + post-eval extraction + ``.tei.pt`` save + F0 ``.pt`` GC).
+        Distinct from ``_inheritance_active()`` (which gates Lamarckian
+        per-child weight-IO) because the transgenerational substrate
+        flow is a separate loop-level pipeline that runs ONCE at gen
+        0, not a per-child operation. Currently only
+        :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`
+        returns ``"transgenerational"`` from ``kind()``.
+        """
+        return self.inheritance.kind() == "transgenerational"
 
     def _gc_inheritance_dir(self, generation: int, keep_ids: list[str]) -> None:
         """Garbage-collect non-survivor checkpoints in one inheritance directory.
@@ -437,7 +473,190 @@ class EvolutionLoop:
         with suppress(OSError):
             gen_dir.rmdir()
 
-    def _resolve_per_child_inheritance(
+    def _run_f0_substrate_extraction(
+        self,
+        elite_id: str,
+        gen_ids: list[str],
+        solutions: list,
+    ) -> None:
+        """Run the F0 Substrate Extraction Pipeline.
+
+        Invoked once per run, immediately after F0's
+        ``select_parents`` identifies the elite. Steps:
+
+        1. Locate the elite's params (from the F0 ``solutions`` batch
+           via ``gen_ids.index(elite_id)``).
+        2. Decode a fresh brain from the elite genome (matches the
+           shape the F0 worker constructed).
+        3. Load the elite's captured ``.pt`` weights into the fresh
+           brain.
+        4. Invoke ``extract_from_brain`` to compute the substrate's
+           ``logit_bias`` via the deterministic probe pass.
+        5. Save the substrate to
+           ``inheritance/gen-000/genome-{elite_id}.tei.pt``.
+        6. GC every F0 ``.pt`` weight file; only the ``.tei.pt`` is
+           retained for the cascade.
+
+        Defensive: if the elite's captured ``.pt`` is missing
+        (unexpected — every F0 worker should have written one via
+        the ``weight_capture_path`` kwarg per
+        ``_resolve_per_child_inheritance``), log a warning and skip
+        the substrate save. F1+ workers downstream will then have
+        no substrate to load, which the loop's
+        ``_substrate_inheritance_active()`` flow handles
+        gracefully (a follow-up commit's worker integration will
+        detect the missing file and emit a clear error).
+        """
+        # Imports here to avoid heavy module-load cost when TEI is unused.
+        from quantumnematode.agent.transgenerational_memory import (
+            extract_from_brain,
+        )
+        from quantumnematode.agent.transgenerational_memory import (
+            save as save_substrate,
+        )
+        from quantumnematode.brain.weights import load_weights
+
+        # Locate elite params from the F0 solutions batch.
+        try:
+            elite_idx = gen_ids.index(elite_id)
+        except ValueError:
+            logger.warning(
+                "F0 substrate extraction: elite_id=%s not found in gen_ids; "
+                "skipping substrate save.",
+                elite_id,
+            )
+            return
+        elite_params = solutions[elite_idx]
+
+        # Decode the elite genome into a fresh brain. ``encoder.decode``
+        # is invoked at the F0 worker too, but we re-invoke here with
+        # a deterministic seed (same as ``run()``'s rng seeding pattern)
+        # to ensure shape parity. The elite's TRAINED weights are then
+        # loaded from disk into this fresh brain.
+        elite_genome = Genome(
+            params=np.asarray(elite_params, dtype=np.float32),
+            genome_id=elite_id,
+            parent_ids=list(self._prev_generation_ids),
+            generation=0,
+            birth_metadata=build_birth_metadata(self.sim_config),
+        )
+        # Use a deterministic seed for the brain construction; the brain's
+        # initial weights are overwritten by load_weights below, so the
+        # seed only affects ancillary RNG state (e.g., torch.manual_seed
+        # at construction). A fixed seed keeps the substrate extraction
+        # deterministic across runs.
+        brain = self.encoder.decode(elite_genome, self.sim_config, seed=0)
+
+        # Path to the F0 elite's captured weight file (written by the
+        # F0 worker via the ``weight_capture_path`` kwarg per
+        # ``_resolve_per_child_inheritance``'s transgenerational branch).
+        elite_pt_path = self.output_dir / "inheritance" / "gen-000" / f"genome-{elite_id}.pt"
+        if not elite_pt_path.exists():
+            logger.warning(
+                "F0 substrate extraction: expected elite weights at %s but file is "
+                "missing; skipping substrate save. F1+ workers will have no "
+                "substrate to load.",
+                elite_pt_path,
+            )
+            return
+        load_weights(brain, elite_pt_path)
+
+        # Build the probe params sequence. For now we use a minimal
+        # deterministic set; the spec's "ring of probe positions" can
+        # be made more sophisticated in a follow-up. Each probe is a
+        # synthetic BrainParams varying the gradient strength to
+        # simulate proximity to a pathogen lawn.
+        probe_params = self._build_f0_probe_params()
+
+        # Extraction seed: fixed sentinel for now. A configurable
+        # ``cfg.transgenerational.extraction_seed`` Pydantic field is
+        # a follow-up addition tracked in the OpenSpec change; until
+        # it lands, use a stable default so the F0 telemetry pass is
+        # deterministic across runs.
+        extraction_seed = 424242
+
+        substrate = extract_from_brain(
+            brain=brain,
+            probe_params=probe_params,
+            rng_seed=extraction_seed,
+            source_genome_id=elite_id,
+        )
+
+        # Save the substrate at the canonical ``.tei.pt`` path produced
+        # by the strategy's ``checkpoint_path``. The path-builder is
+        # the single source of truth for reader/writer alignment.
+        substrate_path = self.inheritance.checkpoint_path(
+            self.output_dir,
+            generation=0,
+            genome_id=elite_id,
+        )
+        if substrate_path is None:
+            # Defensive: the strategy contract guarantees a non-None
+            # path for transgenerational, but if a future strategy
+            # variant returns None we should log and skip rather than
+            # crash the run.
+            logger.warning(
+                "F0 substrate extraction: strategy.checkpoint_path returned "
+                "None for elite_id=%s; substrate not saved.",
+                elite_id,
+            )
+            return
+        save_substrate(substrate, substrate_path)
+
+        # Record the path so F1+ workers (a follow-up commit's
+        # worker-tuple extension) can compute ``tei_prior_source``
+        # without re-deriving the elite ID from ``_selected_parent_ids``
+        # (which gets overwritten at each generation's
+        # ``select_parents`` call). Persisted in the checkpoint pickle.
+        self._tei_f0_substrate_path = substrate_path
+
+        # GC every F0 ``.pt`` weight file — only the ``.tei.pt`` is
+        # retained for the cascade. We reuse ``_gc_inheritance_dir``
+        # with ``keep_ids=[]`` to clear all genome-*.pt entries; the
+        # method only matches files with the ``genome-`` prefix and
+        # extension matching the strategy's checkpoint_path output,
+        # so the ``.tei.pt`` we just wrote is NOT affected (different
+        # suffix). For safety we additionally filter explicitly: walk
+        # the directory and delete only ``.pt`` files (not ``.tei.pt``).
+        gen_dir = self.output_dir / "inheritance" / "gen-000"
+        for path in gen_dir.iterdir():
+            if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
+                path.unlink(missing_ok=True)
+
+    def _build_f0_probe_params(self) -> list:
+        """Build a deterministic sequence of probe ``BrainParams`` for F0 telemetry.
+
+        Minimal default implementation: three synthetic params with
+        varying gradient strengths to simulate "near a pathogen lawn"
+        sensory states. A follow-up commit may replace this with a
+        ring-of-probe-positions generator that uses the env's
+        STATIONARY-predator coordinates (per the spec's "deterministic
+        set built relative to the lawn position" guidance).
+        """
+        # Imports here to avoid coupling loop module load to the agent
+        # subpackage when TEI is unused.
+        from quantumnematode.brain.arch import BrainParams
+        from quantumnematode.env import Direction
+
+        return [
+            BrainParams(
+                food_gradient_strength=0.3,
+                food_gradient_direction=float(np.pi / 2),
+                agent_direction=Direction.UP,
+            ),
+            BrainParams(
+                food_gradient_strength=0.5,
+                food_gradient_direction=float(np.pi),
+                agent_direction=Direction.UP,
+            ),
+            BrainParams(
+                food_gradient_strength=0.1,
+                food_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+            ),
+        ]
+
+    def _resolve_per_child_inheritance(  # noqa: PLR0911
         self,
         child_idx: int,
         gen: int,
@@ -455,16 +674,21 @@ class EvolutionLoop:
           (``self._selected_parent_ids[0]`` if set, else ``""`` for
           gen 0).  No checkpoint paths are computed; the child trains
           from-scratch but its lineage row records the elite ID.
-        - ``"transgenerational"`` → returns ``(None, None, parent_id)``
-          — same shape as ``"trait"``.  Transgenerational inheritance
-          does not use per-child weight-IO inheritance paths; the
-          F0 substrate is captured by a separate loop-level pipeline
-          (a follow-up addition tracked in the OpenSpec change) and
-          F1+ workers receive the substrate via a separate kwarg
-          path into ``fitness.evaluate``, not via the per-child
-          ``weight_capture_path`` field.  The lineage CSV's
-          ``inherited_from`` column records the F0 elite ID from
-          gen 1 onwards (same as Baldwin).
+        - ``"transgenerational"`` → returns ``(None, capture_path, parent_id)``
+          where ``capture_path`` is non-None at gen 0 (F0 weight
+          capture for the post-eval substrate extraction pipeline)
+          and ``None`` at gen 1+. Transgenerational inheritance
+          does not use per-child weight-IO inheritance paths at
+          F1+; the F0 substrate is captured by a separate loop-level
+          pipeline that fires AFTER F0 evaluation completes, reads
+          the captured ``.pt`` files, extracts the bias via
+          ``TransgenerationalMemory.extract_from_brain``, saves
+          the substrate as ``.tei.pt``, and GCs the F0 ``.pt``
+          files. F1+ workers receive the substrate path via a
+          separate kwarg into ``fitness.evaluate`` (a follow-up
+          addition), not via the per-child ``weight_capture_path``
+          field. The lineage CSV's ``inherited_from`` column records
+          the F0 elite ID from gen 1 onwards (same as Baldwin).
         - ``"weights"`` (Lamarckian) → returns the full
           ``(parent_warm_start, child_capture_path, parent_id)``
           tuple.  ``parent_warm_start`` is the ``Path`` to the parent's
@@ -476,8 +700,27 @@ class EvolutionLoop:
         kind = self.inheritance.kind()
         if kind == "none":
             return None, None, ""
-        if kind in ("trait", "transgenerational"):
+        if kind == "trait":
             parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""
+            return None, None, parent_id
+        if kind == "transgenerational":
+            parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""
+            # Special-case F0: capture trained weights to disk so the
+            # post-eval F0 Substrate Extraction Pipeline can re-load
+            # the elite's brain and run the telemetry pass. F1+
+            # children inherit the substrate via a kwarg path, not via
+            # ``weight_capture_path``, so capture is disabled there.
+            # The ``.pt`` extension here matches Lamarckian's capture
+            # path; the substrate-extraction pipeline reads these
+            # ``.pt`` files and rewrites the result as ``.tei.pt`` (per
+            # ``TransgenerationalInheritance.checkpoint_path``), then
+            # GCs the ``.pt`` files. Distinct extensions prevent on-disk
+            # collisions.
+            if gen == 0:
+                capture_path = (
+                    self.output_dir / "inheritance" / f"gen-{gen:03d}" / f"genome-{gid}.pt"
+                )
+                return None, capture_path, parent_id
             return None, None, parent_id
         # The remaining branch handles ``kind == "weights"`` (Lamarckian).
         child_capture_path = self.inheritance.checkpoint_path(self.output_dir, gen, gid)
@@ -688,6 +931,26 @@ class EvolutionLoop:
                         self._gc_inheritance_dir(gen - 1, [])
                         # Keep only the about-to-be-parents in current gen.
                         self._gc_inheritance_dir(gen, next_selected)
+
+                # F0 Substrate Extraction Pipeline (transgenerational only,
+                # gen 0 only): load the F0 elite's captured weights, decode
+                # a fresh brain, invoke ``extract_from_brain`` to compute
+                # the substrate's logit_bias, save the ``.tei.pt`` artifact
+                # under ``inheritance/gen-000/genome-{elite_id}.tei.pt``,
+                # then GC every F0 ``.pt`` weight file (only the
+                # ``.tei.pt`` is retained for the cascade). Reads
+                # ``self._selected_parent_ids`` (set by the lineage block
+                # above) rather than ``next_selected`` so the check works
+                # even when the lineage block was skipped (it isn't,
+                # since transgenerational satisfies
+                # ``_inheritance_records_lineage()`` — but the indirection
+                # keeps the guards independent and pyright happy).
+                if self._substrate_inheritance_active() and gen == 0 and self._selected_parent_ids:
+                    self._run_f0_substrate_extraction(
+                        elite_id=self._selected_parent_ids[0],
+                        gen_ids=gen_ids,
+                        solutions=solutions,
+                    )
 
                 # Bookkeeping: prev gen for next iteration's parent_ids.
                 self._prev_generation_ids = gen_ids

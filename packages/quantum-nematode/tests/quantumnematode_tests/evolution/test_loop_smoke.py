@@ -149,6 +149,8 @@ def test_checkpoint_contains_required_keys(tmp_path: Path) -> None:
         "last_best_fitness",
         "rng_state",
         "lineage_path",
+        # Transgenerational F0 substrate path. None outside of TEI runs.
+        "tei_f0_substrate_path",
     }
     assert set(payload.keys()) == expected_keys
     assert payload["checkpoint_version"] == CHECKPOINT_VERSION
