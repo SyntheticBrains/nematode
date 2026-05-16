@@ -54,6 +54,7 @@ from quantumnematode.utils.config_loader import (
 )
 
 if TYPE_CHECKING:
+    from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.env.env import DynamicForagingEnvironment
     from quantumnematode.utils.config_loader import SimulationConfig
 
@@ -136,7 +137,7 @@ def _read_per_gen_elites(session_dir: Path) -> list[dict]:
 
 def _count_damage_steps_one_episode(
     *,
-    brain,  # noqa: ANN001 - Brain protocol from quantumnematode.brain.arch._brain
+    brain: Brain,
     env: DynamicForagingEnvironment,
     sim_config: SimulationConfig,
 ) -> tuple[int, int]:
@@ -161,7 +162,7 @@ def _count_damage_steps_one_episode(
 
 
 def _apply_tei_substrate(
-    brain,  # noqa: ANN001 - Brain protocol
+    brain: Brain,
     *,
     substrate_path: Path,
     decay_factor: float,
@@ -329,15 +330,38 @@ def evaluate_one_seed(
         decay_factor = float(sim_config.evolution.transgenerational.decay_factor)
 
     out: list[tuple] = []
+    required_keys = ("generation", "genome_id", "params")
     for elite in elite_rows:
-        per_ep = _eval_one_elite(
-            elite_row=elite,
-            sim_config=sim_config,
-            eval_episodes=eval_episodes,
-            seed=seed,
-            substrate_path=substrate_path,
-            decay_factor=decay_factor,
-        )
+        # Pre-validate the row's required keys + params shape. A
+        # malformed row should not abort the whole seed — the other
+        # generations are still useful for the decision-gate evaluation.
+        elite_label = f"gen={elite.get('generation', '?')} id={elite.get('genome_id', '?')}"
+        missing = [k for k in required_keys if k not in elite]
+        if missing:
+            logger.warning(
+                "Skipping elite %s (missing keys: %s).",
+                elite_label,
+                missing,
+            )
+            continue
+        if not isinstance(elite["params"], list) or not elite["params"]:
+            logger.warning(
+                "Skipping elite %s (params is not a non-empty list).",
+                elite_label,
+            )
+            continue
+        try:
+            per_ep = _eval_one_elite(
+                elite_row=elite,
+                sim_config=sim_config,
+                eval_episodes=eval_episodes,
+                seed=seed,
+                substrate_path=substrate_path,
+                decay_factor=decay_factor,
+            )
+        except Exception:
+            logger.exception("Failed to evaluate elite %s; skipping.", elite_label)
+            continue
         for ep, total, inside, ci in per_ep:
             out.append(
                 (

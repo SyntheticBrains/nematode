@@ -43,7 +43,7 @@ from quantumnematode.optimizers.evolutionary import EvolutionResult
 if TYPE_CHECKING:
     from multiprocessing.pool import Pool as PoolType
 
-    from quantumnematode.brain.arch._brain import Brain
+    from quantumnematode.brain.arch._brain import Brain, BrainParams
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
     from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
@@ -488,6 +488,15 @@ class EvolutionLoop:
         Each line is a self-contained JSON object — readers can iterate
         the file and skip malformed lines without disqualifying the rest.
 
+        Idempotent on ``generation``: if the file already contains a row
+        for ``generation``, the new row is skipped with a debug log.
+        This guards against duplicate snapshots when a run resumes from
+        a checkpoint written *before* the post-eval append (the
+        ``checkpoint_every`` interval means most generations land in
+        that window). Without the guard, the resumed run would re-append
+        for the same gen and the offline evaluator would see two
+        elites for the same (gen, seed).
+
         Post-hoc evaluators (e.g.
         ``scripts/campaigns/transgenerational_per_gen_eval.py``) read
         this artifact to reconstruct each generation's elite genome
@@ -497,6 +506,27 @@ class EvolutionLoop:
         import json as _json
 
         path = self.output_dir / "per_gen_elites.jsonl"
+        if path.exists():
+            # Scan for an existing entry at this generation. Readers
+            # silently skip malformed lines (see ``_read_per_gen_elites``
+            # in the evaluator); we mirror that here so a corrupted
+            # tail-line doesn't block the dedupe check.
+            with path.open(encoding="utf-8") as handle:
+                for raw in handle:
+                    stripped = raw.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        existing = _json.loads(stripped)
+                    except _json.JSONDecodeError:
+                        continue
+                    if int(existing.get("generation", -1)) == int(generation):
+                        logger.debug(
+                            "per_gen_elites: row for generation=%d already exists; "
+                            "skipping append (resume idempotency).",
+                            generation,
+                        )
+                        return
         row = {
             "generation": int(generation),
             "genome_id": str(genome_id),
@@ -685,7 +715,7 @@ class EvolutionLoop:
             if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
                 path.unlink(missing_ok=True)
 
-    def _build_f0_probe_params(self, brain: Brain | None = None) -> list:
+    def _build_f0_probe_params(self, brain: Brain | None = None) -> list[BrainParams]:
         """Build a deterministic sequence of probe ``BrainParams`` for F0 telemetry.
 
         Minimal default implementation: three synthetic params with
