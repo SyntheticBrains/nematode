@@ -7,6 +7,7 @@ the placeholder behaviour for ``extract_from_brain``.
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from typing import TYPE_CHECKING
 
 import pytest
@@ -86,11 +87,12 @@ def test_construction_rejects_negative_lineage_depth() -> None:
 def test_dataclass_is_frozen() -> None:
     """The dataclass SHALL be frozen (cross-generation aliasing protection).
 
-    Attempting to reassign any field SHALL raise ``FrozenInstanceError``
-    (dataclasses raise this from the auto-generated ``__setattr__``).
+    Attempting to reassign any field SHALL raise
+    ``dataclasses.FrozenInstanceError`` (the specific exception raised
+    by the auto-generated ``__setattr__`` on a frozen dataclass).
     """
     sub = _f0(torch.zeros(4, dtype=torch.float32))
-    with pytest.raises(Exception, match=r"frozen|immutable|cannot assign"):
+    with pytest.raises(FrozenInstanceError):
         sub.lineage_depth = 5  # type: ignore[misc]
 
 
