@@ -17,6 +17,7 @@ otherwise inheriting all step-loop logic unchanged.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from quantumnematode.agent.agent import DEFAULT_MAX_AGENT_BODY_LENGTH, QuantumNematodeAgent
@@ -36,6 +37,9 @@ if TYPE_CHECKING:
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.genome import Genome
     from quantumnematode.utils.config_loader import SimulationConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +237,7 @@ class EpisodicSuccessRate:
         seed: int,
         warm_start_path_override: Path | None = None,
         weight_capture_path: Path | None = None,  # noqa: ARG002 — accepted for ABI symmetry
+        tei_prior_source: tuple[Path, float, int] | None = None,  # noqa: ARG002 — same
     ) -> float:
         """Run ``episodes`` complete episodes and return the success ratio.
 
@@ -252,6 +257,15 @@ class EpisodicSuccessRate:
         - ``weight_capture_path``: accepted for ABI symmetry but IGNORED.
           Frozen-weight evaluation has no training phase, so there's
           nothing to capture beyond the genome itself.
+        - ``tei_prior_source``: accepted for ABI symmetry but IGNORED.
+          Transgenerational inheritance is incompatible with
+          frozen-weight evaluation (no train phase means no F0 elite
+          to extract a substrate from), and the CLI guard rejects
+          the ``inheritance: transgenerational + --fitness
+          success_rate`` combination at startup so this kwarg should
+          never be non-None in practice. Accepting it silently
+          preserves the call shape for callers that pass kwargs
+          uniformly.
         """
         if episodes <= 0:
             msg = f"episodes must be positive, got {episodes}"
@@ -368,7 +382,7 @@ class LearnedPerformanceFitness:
     # warm_start_path_override, weight_capture_path) is the documented Protocol
     # contract; collapsing into a config object would obscure the per-genome
     # call shape the loop uses.
-    def evaluate(  # noqa: C901, PLR0913
+    def evaluate(  # noqa: C901, PLR0913, PLR0912, PLR0915
         self,
         genome: Genome,
         sim_config: SimulationConfig,
@@ -378,10 +392,11 @@ class LearnedPerformanceFitness:
         seed: int,
         warm_start_path_override: Path | None = None,
         weight_capture_path: Path | None = None,
+        tei_prior_source: tuple[Path, float, int] | None = None,
     ) -> float:
         """Run K train + L eval and return ``eval_successes / L``.
 
-        Two optional kwargs that the :class:`EvolutionLoop` MAY pass
+        Three optional kwargs that the :class:`EvolutionLoop` MAY pass
         per-genome (defaulting to ``None`` when omitted, preserving the
         existing single-arg call shape):
 
@@ -396,6 +411,16 @@ class LearnedPerformanceFitness:
           the K train loop completes and BEFORE the L eval phase begins.
           This captures the policy as-trained (not as-eval'd).  The
           path's parent directory is created if missing.
+        - ``tei_prior_source``: ``(f0_substrate_path, decay_factor,
+          lineage_depth)``. When set, this is the single integration
+          point for transgenerational-memory inheritance. The function
+          loads the F0 elite's substrate, applies ``inherit_from``
+          ``lineage_depth`` times to produce a depth-N substrate, and
+          sets ``brain.tei_prior`` immediately after ``encoder.decode``
+          and BEFORE the train phase via ``hasattr(brain, "tei_prior")``
+          dispatch (so non-LSTMPPO brains are inert). When non-None,
+          the ``learn_episodes_per_eval == 0`` validator is bypassed
+          (TEI's F1+ runs eval-only with no training).
         """
         # Defensive guards mirroring EpisodicSuccessRate.evaluate, plus
         # the evolution-block guard specific to learned-performance fitness.
@@ -415,11 +440,16 @@ class LearnedPerformanceFitness:
             raise ValueError(msg)
 
         evolution_config = sim_config.evolution
-        if evolution_config.learn_episodes_per_eval == 0:
+        # Train-phase bypass for transgenerational: when ``tei_prior_source``
+        # is set AND ``learn_episodes_per_eval == 0``, the rejection is
+        # waived (F1/F2/F3 inherit the substrate without re-training; the
+        # eval phase still runs to measure the post-cascade fitness).
+        if evolution_config.learn_episodes_per_eval == 0 and tei_prior_source is None:
             msg = (
                 "LearnedPerformanceFitness requires learn_episodes_per_eval > 0; "
                 "got 0. Use EpisodicSuccessRate for frozen-weight evaluation, "
-                "or set learn_episodes_per_eval in the evolution: block."
+                "set learn_episodes_per_eval in the evolution: block, OR pass "
+                "tei_prior_source (transgenerational F1+ runs eval-only)."
             )
             raise ValueError(msg)
 
@@ -427,6 +457,42 @@ class LearnedPerformanceFitness:
 
         # Decode the genome → fresh brain with the evolved hyperparameters.
         brain = encoder.decode(genome, sim_config, seed=seed)
+
+        # Apply transgenerational-memory substrate: load the F0 substrate,
+        # decay it ``lineage_depth`` times, and set ``brain.tei_prior``.
+        # Single integration point for both single-agent and multi-agent
+        # paths (the runners themselves remain TEI-agnostic). The
+        # ``hasattr`` dispatch makes the application a no-op for non-
+        # LSTMPPO brains (with a warning so the operator sees the
+        # mismatch). MUST happen BEFORE ``_build_agent`` so the brain
+        # is already biased when the runner picks it up.
+        if tei_prior_source is not None:
+            f0_substrate_path, decay_factor, lineage_depth = tei_prior_source
+            # Import here to avoid a circular import at module load
+            # (agent → brain → ... → fitness in some downstream call
+            # graphs). The hot-path cost is one cached attribute
+            # lookup per fitness eval, negligible vs the train loop.
+            from quantumnematode.agent.transgenerational_memory import (
+                TransgenerationalMemory,
+            )
+            from quantumnematode.agent.transgenerational_memory import (
+                load as load_substrate,
+            )
+
+            substrate = load_substrate(f0_substrate_path)
+            for _ in range(lineage_depth):
+                substrate = TransgenerationalMemory.inherit_from(
+                    [substrate],
+                    decay_factor=decay_factor,
+                )
+            if hasattr(brain, "tei_prior"):
+                brain.tei_prior = substrate.logit_bias  # type: ignore[attr-defined]
+            else:
+                logger.warning(
+                    "tei_prior_source set but brain type %s does not expose a "
+                    "tei_prior attribute; substrate is inert for this run.",
+                    type(brain).__name__,
+                )
 
         # Optional warm-start: load a pre-trained checkpoint AFTER the fresh
         # brain is constructed and BEFORE the train phase.  Each genome's
@@ -451,34 +517,39 @@ class LearnedPerformanceFitness:
             load_weights(brain, warm_start_path)
 
         # Train phase: fresh env, brain weights mutate as it learns.
-        train_env = create_env_from_config(
-            sim_config.environment,
-            seed=seed,
-            theme=Theme.HEADLESS,
-            max_body_length=sim_config.body_length,
-        )
-        train_agent = _build_agent(brain, train_env, sim_config)
-        train_runner = StandardEpisodeRunner()
-        for ep_idx in range(evolution_config.learn_episodes_per_eval):
-            # Per-episode seed derivation matches run_simulation.py's
-            # per-run pattern.  Without it, the global RNG drifts
-            # monotonically across all K train episodes and every reset
-            # rebuilds the env from the same original seed → identical
-            # layouts every episode (food positions, agent start).  The
-            # brain trains on one specific layout repeatedly rather than
-            # the population of layouts the standard run loop produces.
-            run_seed = derive_run_seed(seed, ep_idx)
-            set_global_seed(run_seed)
-            # Reset env between episodes so training samples come from
-            # clean initial states rather than from whatever post-failure
-            # state the previous episode left behind.  Brain weights
-            # persist (they're learned across episodes); env state does
-            # not.  Matches the run_simulation.py per-run reset pattern.
-            if ep_idx > 0:
-                train_agent.env.seed = run_seed
-                train_agent.env.rng = get_rng(run_seed)
-                train_agent.reset_environment()
-            train_runner.run(train_agent, sim_config.reward, max_steps)
+        # Skipped entirely when ``learn_episodes_per_eval == 0`` (e.g.
+        # transgenerational F1+ eval-only path); no train_env / agent /
+        # runner constructed in that case so we don't pay the
+        # ``create_env_from_config`` cost for zero iterations.
+        if evolution_config.learn_episodes_per_eval > 0:
+            train_env = create_env_from_config(
+                sim_config.environment,
+                seed=seed,
+                theme=Theme.HEADLESS,
+                max_body_length=sim_config.body_length,
+            )
+            train_agent = _build_agent(brain, train_env, sim_config)
+            train_runner = StandardEpisodeRunner()
+            for ep_idx in range(evolution_config.learn_episodes_per_eval):
+                # Per-episode seed derivation matches run_simulation.py's
+                # per-run pattern.  Without it, the global RNG drifts
+                # monotonically across all K train episodes and every reset
+                # rebuilds the env from the same original seed → identical
+                # layouts every episode (food positions, agent start).  The
+                # brain trains on one specific layout repeatedly rather than
+                # the population of layouts the standard run loop produces.
+                run_seed = derive_run_seed(seed, ep_idx)
+                set_global_seed(run_seed)
+                # Reset env between episodes so training samples come from
+                # clean initial states rather than from whatever post-failure
+                # state the previous episode left behind.  Brain weights
+                # persist (they're learned across episodes); env state does
+                # not.  Matches the run_simulation.py per-run reset pattern.
+                if ep_idx > 0:
+                    train_agent.env.seed = run_seed
+                    train_agent.env.rng = get_rng(run_seed)
+                    train_agent.reset_environment()
+                train_runner.run(train_agent, sim_config.reward, max_steps)
 
         # Optional weight capture: persist the post-K-train brain weights
         # to ``weight_capture_path`` BEFORE the eval phase begins.  This

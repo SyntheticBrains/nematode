@@ -402,26 +402,31 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
     else:
         fitness = EpisodicSuccessRate()
 
-    # Inheritance + --fitness success_rate is broken in two distinct ways
-    # (one TypeError, one signal-collapse): the loop computes
-    # weight_capture_path for every child (Lamarckian) — the worker
-    # forwards it as a kwarg, and EpisodicSuccessRate.evaluate doesn't
-    # accept the kwarg → TypeError.  Or under Baldwin, the loop tries
-    # to record elite-parent lineage from a trained-elite-fitness signal
-    # — but frozen-eval has no train phase, so the "elite" is selected
-    # purely on fresh-init brain noise, collapsing the Baldwin signal.
+    # Inheritance + --fitness success_rate is broken in three distinct ways:
+    # (1) Lamarckian: loop computes weight_capture_path → worker forwards
+    #     it as a kwarg → EpisodicSuccessRate.evaluate accepts it for ABI
+    #     symmetry but ignores it (no train phase to capture from).
+    # (2) Baldwin: loop tries to record elite-parent lineage from a
+    #     trained-elite-fitness signal — but frozen-eval has no train
+    #     phase, so the "elite" is selected purely on fresh-init brain
+    #     noise, collapsing the Baldwin signal.
+    # (3) Transgenerational: the F0 elite must be trained for the
+    #     substrate-extraction telemetry pass to produce meaningful
+    #     biases; frozen-eval skips training entirely.
     # Catch the combination at startup with a clear pointer to
-    # --fitness learned_performance.  EvolutionConfig validators don't
+    # --fitness learned_performance. EvolutionConfig validators don't
     # see the --fitness flag, so this guard belongs in the CLI.
     if evolution_config.inheritance != "none" and args.fitness == "success_rate":
         logger.error(
             "evolution.inheritance is %r but --fitness success_rate (the "
             "default) is selected. Inheritance writes per-genome weight "
-            "checkpoints (Lamarckian) or records elite-parent lineage "
-            "from the trained-elite-fitness signal (Baldwin) after each "
-            "train phase; EpisodicSuccessRate is frozen-weight and has "
-            "no train phase.  Use --fitness learned_performance, or set "
-            "inheritance: none in the evolution: block (or via "
+            "checkpoints (Lamarckian), records elite-parent lineage "
+            "from the trained-elite-fitness signal (Baldwin), or "
+            "extracts the F0 elite's substrate via a telemetry pass "
+            "(transgenerational) — all of which require a non-zero "
+            "train phase. EpisodicSuccessRate is frozen-weight and "
+            "has no train phase. Use --fitness learned_performance, "
+            "or set inheritance: none in the evolution: block (or via "
             "--inheritance none).",
             evolution_config.inheritance,
         )

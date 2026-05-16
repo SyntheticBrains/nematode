@@ -11,12 +11,15 @@ from quantumnematode.env import (
 from quantumnematode.utils.config_loader import (
     AerotaxisConfig,
     EnvironmentConfig,
+    EvolutionConfig,
     ForagingConfig,
     HealthConfig,
+    LawnScheduleEntry,
     PredatorConfig,
     SensingConfig,
     SensingMode,
     ThermotaxisConfig,
+    TransgenerationalConfig,
     apply_sensing_mode,
     validate_sensing_config,
 )
@@ -660,3 +663,173 @@ class TestValidateSensingConfigAerotaxis:
         config = SensingConfig(aerotaxis_mode=SensingMode.DERIVATIVE)
         validated = validate_sensing_config(config)
         assert validated.stam_enabled is True
+
+
+class TestTransgenerationalConfig:
+    """Validate ``TransgenerationalConfig`` + ``LawnScheduleEntry`` schema rules."""
+
+    def _make_schedule(self, generations: int) -> list[LawnScheduleEntry]:
+        return [
+            LawnScheduleEntry(
+                generation=g,
+                pathogen_lawns_enabled=(g == 0),
+                ppo_train_episodes=10 if g == 0 else 0,
+            )
+            for g in range(generations)
+        ]
+
+    def test_defaults_are_sensible(self) -> None:
+        """``decay_factor`` defaults to 0.6 and ``extraction_seed`` to 424242."""
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(2),
+        )
+        assert cfg.enabled is True
+        assert cfg.decay_factor == pytest.approx(0.6)
+        assert cfg.extraction_seed == 424242
+        assert len(cfg.lawn_schedule) == 2
+
+    def test_decay_factor_out_of_range_rejected(self) -> None:
+        """``decay_factor`` MUST be in ``[0.0, 1.0]``."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            TransgenerationalConfig(
+                enabled=True,
+                decay_factor=1.5,
+                lawn_schedule=self._make_schedule(1),
+            )
+        with pytest.raises(ValidationError):
+            TransgenerationalConfig(
+                enabled=True,
+                decay_factor=-0.1,
+                lawn_schedule=self._make_schedule(1),
+            )
+
+    def test_duplicate_generation_in_schedule_rejected(self) -> None:
+        """Two schedule entries with the same generation index SHALL be rejected."""
+        with pytest.raises(ValueError, match="duplicate generation"):
+            TransgenerationalConfig(
+                enabled=True,
+                lawn_schedule=[
+                    LawnScheduleEntry(
+                        generation=0,
+                        pathogen_lawns_enabled=True,
+                        ppo_train_episodes=10,
+                    ),
+                    LawnScheduleEntry(
+                        generation=0,
+                        pathogen_lawns_enabled=False,
+                        ppo_train_episodes=0,
+                    ),
+                ],
+            )
+
+
+class TestEvolutionConfigTransgenerationalPairing:
+    """Validate the inheritance ↔ transgenerational pairing contract."""
+
+    def _make_schedule(self, generations: int) -> list[LawnScheduleEntry]:
+        return [
+            LawnScheduleEntry(
+                generation=g,
+                pathogen_lawns_enabled=(g == 0),
+                ppo_train_episodes=10 if g == 0 else 0,
+            )
+            for g in range(generations)
+        ]
+
+    def test_tei_enabled_requires_inheritance_transgenerational(self) -> None:
+        """``transgenerational.enabled=True`` SHALL require ``inheritance=transgenerational``."""
+        with pytest.raises(ValueError, match=r"transgenerational\.enabled=True requires"):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=10,
+                inheritance="lamarckian",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=self._make_schedule(2),
+                ),
+            )
+
+    def test_tei_disabled_requires_inheritance_none(self) -> None:
+        """``transgenerational.enabled=False`` SHALL require ``inheritance=none``."""
+        with pytest.raises(ValueError, match=r"transgenerational\.enabled=False requires"):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=10,
+                inheritance="lamarckian",
+                transgenerational=TransgenerationalConfig(
+                    enabled=False,
+                    lawn_schedule=self._make_schedule(2),
+                ),
+            )
+
+    def test_inheritance_transgenerational_requires_config_block(self) -> None:
+        """``inheritance=transgenerational`` SHALL require a non-None block."""
+        with pytest.raises(
+            ValueError,
+            match="transgenerational config block is missing",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=10,
+                inheritance="transgenerational",
+                transgenerational=None,
+            )
+
+    def test_lawn_schedule_generation_out_of_range_rejected(self) -> None:
+        """A schedule entry with ``generation >= evolution.generations`` SHALL be rejected."""
+        with pytest.raises(
+            ValueError,
+            match=r"generation=3 but evolution\.generations=2",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=10,
+                inheritance="transgenerational",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=[
+                        LawnScheduleEntry(
+                            generation=0,
+                            pathogen_lawns_enabled=True,
+                            ppo_train_episodes=10,
+                        ),
+                        LawnScheduleEntry(
+                            generation=3,
+                            pathogen_lawns_enabled=False,
+                            ppo_train_episodes=0,
+                        ),
+                    ],
+                ),
+            )
+
+    def test_well_formed_tei_config_accepted(self) -> None:
+        """A schedule covering every gen in [0, generations) SHALL load cleanly."""
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=10,
+            inheritance="transgenerational",
+            transgenerational=TransgenerationalConfig(
+                enabled=True,
+                lawn_schedule=self._make_schedule(2),
+            ),
+        )
+        assert cfg.transgenerational is not None
+        assert cfg.transgenerational.enabled is True
