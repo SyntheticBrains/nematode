@@ -21,7 +21,8 @@ def _load_aggregator_module():
     by default; loading via importlib avoids needing to symlink or repackage.
     """
     spec = importlib.util.spec_from_file_location("aggregate_m6_pilot", AGGREGATOR_PATH)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -50,9 +51,9 @@ def test_decision_gate_passes_when_all_four_ratios_satisfied_and_monotone() -> N
 
 
 def test_decision_gate_fails_when_f1_below_40_percent() -> None:
-    """A seed where F1 < 40% × F0 SHALL fail the gate even if F2/F3 pass.
+    """A seed where F1 < 40% x F0 SHALL fail the gate even if F2/F3 pass.
 
-    F1=0.35 < 0.40 × F0=1.0 → fail. Even though the cascade is monotone
+    F1=0.35 < 0.40 x F0=1.0 → fail. Even though the cascade is monotone
     and F2/F3 pass their own ratio thresholds against the same F0, the
     F1 check is independent and binding.
     """
@@ -60,8 +61,8 @@ def test_decision_gate_fails_when_f1_below_40_percent() -> None:
     retention = {
         ("tei_on", 42, 0): 1.0,
         ("tei_on", 42, 1): 0.35,
-        ("tei_on", 42, 2): 0.30,  # ≥ 0.25 × F0 → would pass standalone
-        ("tei_on", 42, 3): 0.20,  # ≥ 0.15 × F0 → would pass standalone
+        ("tei_on", 42, 2): 0.30,  # ≥ 0.25 x F0 → would pass standalone
+        ("tei_on", 42, 3): 0.20,  # ≥ 0.15 x F0 → would pass standalone
     }
     result = mod.evaluate_decision_gate_one_seed(retention=retention, arm="tei_on", seed=42)
     assert result["f1_ratio_pass"] is False
@@ -149,14 +150,15 @@ def test_cross_seed_verdict_stop_at_zero_passes() -> None:
 
 
 def test_build_retention_table_averages_episodes_per_generation() -> None:
-    """``build_retention_table`` SHALL average choice indices across episodes per (arm, seed, gen)."""
+    """``build_retention_table`` SHALL average choice indices across eps per (arm, seed, gen)."""
     mod = _load_aggregator_module()
     rows = [
+        # (tei_on, 42, gen 0): two eps at 0.8 and 0.6 → mean 0.7
         {"arm": "tei_on", "seed": "42", "generation": "0", "choice_index": "0.8"},
         {"arm": "tei_on", "seed": "42", "generation": "0", "choice_index": "0.6"},
-        # mean = 0.7
+        # (tei_on, 42, gen 1): single ep at 0.4 → mean 0.4
         {"arm": "tei_on", "seed": "42", "generation": "1", "choice_index": "0.4"},
-        # single ep, mean = 0.4
+        # (tei_off, 42, gen 0): single ep at 0.5 → mean 0.5
         {"arm": "tei_off", "seed": "42", "generation": "0", "choice_index": "0.5"},
     ]
     table = mod.build_retention_table(rows)

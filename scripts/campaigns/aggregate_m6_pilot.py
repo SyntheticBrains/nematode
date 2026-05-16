@@ -3,12 +3,12 @@
 Reads ``per_gen_choice_index.csv`` (produced by
 ``transgenerational_per_gen_eval.py``) and produces:
 
-1. **Per-generation retention table** per arm × seed (mean choice index
+1. **Per-generation retention table** per arm x seed (mean choice index
    across episodes for each generation).
 2. **Decision-gate evaluation** per seed:
-   - F1 ≥ 0.40 × F0
-   - F2 ≥ 0.25 × F0
-   - F3 ≥ 0.15 × F0
+   - F1 ≥ 0.40 x F0
+   - F2 ≥ 0.25 x F0
+   - F3 ≥ 0.15 x F0
    - Monotone non-increasing: F0 ≥ F1 ≥ F2 ≥ F3
 3. **Cross-seed verdict**:
    - **GO** iff ≥2 seeds pass all four checks
@@ -18,7 +18,7 @@ Reads ``per_gen_choice_index.csv`` (produced by
 5. **Markdown summary** suitable for inclusion in the logbook.
 
 Outputs (under ``--output-dir``):
-  - ``retention_table.csv`` (per arm × seed × generation: mean choice index)
+  - ``retention_table.csv`` (per arm x seed x generation: mean choice index)
   - ``decision_gate.csv`` (per seed: gate pass/fail per check, overall verdict)
   - ``summary.md`` (human-readable markdown summary)
 
@@ -36,10 +36,6 @@ import csv
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +85,7 @@ def evaluate_decision_gate_one_seed(
 
     Returns a dict with:
       - ``f0``..``f3``: per-gen mean choice indices (or None if missing)
-      - ``f1_ratio_pass``: bool — F1 ≥ ``GATE_F1_RATIO`` × F0
+      - ``f1_ratio_pass``: bool — F1 ≥ ``GATE_F1_RATIO`` x F0
       - ``f2_ratio_pass``: bool
       - ``f3_ratio_pass``: bool
       - ``monotone_pass``: bool — F0 ≥ F1 ≥ F2 ≥ F3
@@ -206,12 +202,16 @@ def _write_summary_md(
     for arm in sorted(verdict_per_arm):
         verdict = verdict_per_arm[arm]
         lines.append(f"## Arm: `{arm}` — verdict: **{verdict}**\n")
-        lines.append("| seed | F0 | F1 | F2 | F3 | F1≥40%×F0 | F2≥25%×F0 | F3≥15%×F0 | monotone | overall |")
-        lines.append("|------|----|----|----|----|-----------|-----------|-----------|----------|---------|")
+        lines.append(
+            "| seed | F0 | F1 | F2 | F3 | F1≥40%xF0 | F2≥25%xF0 | F3≥15%xF0 | monotone | overall |",
+        )
+        lines.append(
+            "|------|----|----|----|----|-----------|-----------|-----------|----------|---------|",
+        )
         for s in seed_evaluations_per_arm.get(arm, []):
             if s["skipped"]:
                 lines.append(
-                    f"| {s['seed']} | (incomplete) |  |  |  |  |  |  |  | **skipped** |"
+                    f"| {s['seed']} | (incomplete) |  |  |  |  |  |  |  | **skipped** |",
                 )
                 continue
             lines.append(
@@ -221,7 +221,7 @@ def _write_summary_md(
                 f"{'✓' if s['f2_ratio_pass'] else '✗'} | "
                 f"{'✓' if s['f3_ratio_pass'] else '✗'} | "
                 f"{'✓' if s['monotone_pass'] else '✗'} | "
-                f"{'**PASS**' if s['overall_pass'] else 'FAIL'} |"
+                f"{'**PASS**' if s['overall_pass'] else 'FAIL'} |",
             )
         lines.append("")
 
@@ -241,23 +241,27 @@ def _write_summary_md(
                 f"{_mean(per_gen_means[g]):.3f}" if per_gen_means.get(g) else "—"
                 for g in (0, 1, 2, 3)
             ]
-            lines.append(f"| {arm} | {gen_strs[0]} | {gen_strs[1]} | {gen_strs[2]} | {gen_strs[3]} |")
+            lines.append(
+                f"| {arm} | {gen_strs[0]} | {gen_strs[1]} | {gen_strs[2]} | {gen_strs[3]} |",
+            )
         lines.append("")
         lines.append(
             "Substrate is the only cross-arm difference (pairing validator enforces "
             "`enabled=true ⇔ inheritance=transgenerational`, `enabled=false ⇔ "
             "inheritance=none`). Any F1+ retention in `tei_on` but absent in `tei_off` "
-            "is attributable to the substrate."
+            "is attributable to the substrate.",
         )
         lines.append("")
 
     lines.append("## Gate thresholds\n")
-    lines.append(f"- F1 ≥ {GATE_F1_RATIO:.0%} × F0")
-    lines.append(f"- F2 ≥ {GATE_F2_RATIO:.0%} × F0")
-    lines.append(f"- F3 ≥ {GATE_F3_RATIO:.0%} × F0")
+    lines.append(f"- F1 ≥ {GATE_F1_RATIO:.0%} x F0")
+    lines.append(f"- F2 ≥ {GATE_F2_RATIO:.0%} x F0")
+    lines.append(f"- F3 ≥ {GATE_F3_RATIO:.0%} x F0")
     lines.append("- Monotone non-increasing: F0 ≥ F1 ≥ F2 ≥ F3\n")
-    lines.append(f"- **GO** iff ≥{VERDICT_GO_MIN_SEEDS} seeds pass; "
-                 f"**PIVOT** iff exactly {VERDICT_PIVOT_MIN_SEEDS}; **STOP** otherwise.")
+    lines.append(
+        f"- **GO** iff ≥{VERDICT_GO_MIN_SEEDS} seeds pass; "
+        f"**PIVOT** iff exactly {VERDICT_PIVOT_MIN_SEEDS}; **STOP** otherwise.",
+    )
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -326,9 +330,9 @@ def main() -> int:
     for arm in arms:
         print(f"  {arm}: {verdict_per_arm[arm]}")
     print(f"\nArtefacts written to {args.output_dir}/")
-    print(f"  - retention_table.csv")
-    print(f"  - decision_gate.csv")
-    print(f"  - summary.md")
+    print("  - retention_table.csv")
+    print("  - decision_gate.csv")
+    print("  - summary.md")
     return 0
 
 

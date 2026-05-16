@@ -124,7 +124,7 @@ def _read_per_gen_elites(session_dir: Path) -> list[dict]:
                 continue
             try:
                 rows.append(json.loads(stripped))
-            except json.JSONDecodeError:  # noqa: PERF203
+            except json.JSONDecodeError:
                 logger.warning(
                     "Skipping malformed line %d in %s: %r",
                     line_no,
@@ -160,12 +160,85 @@ def _count_damage_steps_one_episode(
     return steps_inside, total_steps
 
 
-def _eval_one_elite(
+def _apply_tei_substrate(
+    brain,  # noqa: ANN001 - Brain protocol
+    *,
+    substrate_path: Path,
+    decay_factor: float,
+    lineage_depth: int,
+) -> None:
+    """Load the F0 substrate, apply decay ``lineage_depth`` times, set ``brain.tei_prior``.
+
+    Mirrors the substrate-load logic in
+    ``LearnedPerformanceFitness.evaluate`` so the offline evaluator
+    measures the same substrate-biased policy that production workers
+    actually ran at F1+. Without this, the F1/F2/F3 choice indices
+    reflect the un-biased policy and the decision gate evaluates a
+    proxy of the substrate's effect, not the substrate itself.
+    """
+    from quantumnematode.agent.transgenerational_memory import (
+        TransgenerationalMemory,
+    )
+    from quantumnematode.agent.transgenerational_memory import (
+        load as load_substrate,
+    )
+
+    try:
+        substrate = load_substrate(substrate_path)
+    except Exception as exc:
+        msg = (
+            f"Failed to load transgenerational substrate from "
+            f"{substrate_path}: {exc}. The .tei.pt file may be corrupted "
+            "or written by an incompatible schema; delete it and re-run "
+            "F0 extraction."
+        )
+        raise RuntimeError(msg) from exc
+    for _ in range(lineage_depth):
+        substrate = TransgenerationalMemory.inherit_from(
+            [substrate],
+            decay_factor=decay_factor,
+        )
+    if hasattr(brain, "tei_prior"):
+        brain.tei_prior = substrate.logit_bias  # type: ignore[attr-defined]
+    else:
+        logger.warning(
+            "substrate_path set but brain type %s does not expose a "
+            "tei_prior attribute; substrate is inert for this evaluation.",
+            type(brain).__name__,
+        )
+
+
+def _find_substrate_path(session_dir: Path) -> Path | None:
+    """Return the F0 ``.tei.pt`` substrate path under the session dir, or None.
+
+    The loop writes the substrate at
+    ``<session>/inheritance/gen-000/genome-<elite>.tei.pt`` per
+    ``TransgenerationalInheritance.checkpoint_path``. Globs for any
+    matching file — the F0 elite is expected to be the only one.
+    """
+    gen0_dir = session_dir / "inheritance" / "gen-000"
+    if not gen0_dir.is_dir():
+        return None
+    matches = sorted(gen0_dir.glob("genome-*.tei.pt"))
+    if not matches:
+        return None
+    if len(matches) > 1:
+        logger.warning(
+            "Multiple F0 .tei.pt files under %s — using %s.",
+            gen0_dir,
+            matches[0],
+        )
+    return matches[0]
+
+
+def _eval_one_elite(  # noqa: PLR0913 - kw-only orthogonal args
     *,
     elite_row: dict,
     sim_config: SimulationConfig,
     eval_episodes: int,
     seed: int,
+    substrate_path: Path | None = None,
+    decay_factor: float = 0.6,
 ) -> list[tuple[int, int, int, float]]:
     """Re-run one generation's elite for ``eval_episodes`` episodes.
 
@@ -173,6 +246,12 @@ def _eval_one_elite(
     steps_inside, choice_index)``. Each episode runs against a fresh
     env so trial outcomes are independent (matching the frozen-eval
     semantics in ``LearnedPerformanceFitness``).
+
+    When ``substrate_path`` is set AND the elite's generation > 0,
+    the F0 substrate is loaded, decayed ``generation`` times (matching
+    the production worker's ``lineage_depth=gen``), and set on
+    ``brain.tei_prior`` before evaluation. F0 (gen 0) is unaffected —
+    the F0 elite IS the substrate source, not consumer.
     """
     encoder = HyperparameterEncoder()
     genome = Genome(
@@ -184,15 +263,20 @@ def _eval_one_elite(
     )
     brain = encoder.decode(genome, sim_config, seed=seed)
 
-    # If the elite has captured weights on disk (F0 under TEI), load
-    # them so the eval measures the TRAINED policy. F1+ elites have no
-    # saved weights — their post-inheritance state is reconstructable
-    # only via the substrate, which the loop applies inside the worker.
-    # Here we just measure the brain as decoded from the hyperparam
-    # genome; for F1+ under TEI, the substrate (.tei.pt) would need to
-    # be applied to brain.tei_prior — a refinement for a follow-up.
-    # For F0 the .pt may already have been GC'd by the substrate-extraction
-    # pipeline, so we don't attempt to load it here.
+    # For F1+ under TEI, apply the substrate so the eval measures the
+    # substrate-biased policy (matching what the production worker
+    # actually ran). For F0 the brain is decoded as-is. F0's .pt weights
+    # are GC'd by the substrate-extraction pipeline so we can't load
+    # those at F0 — but F0 fitness in lineage.csv is the trained-policy
+    # measurement.
+    lineage_depth = int(elite_row["generation"])
+    if substrate_path is not None and lineage_depth > 0:
+        _apply_tei_substrate(
+            brain,
+            substrate_path=substrate_path,
+            decay_factor=decay_factor,
+            lineage_depth=lineage_depth,
+        )
 
     if sim_config.environment is None:
         msg = "Evaluator requires sim_config.environment to be set."
@@ -232,6 +316,18 @@ def evaluate_one_seed(
     """Produce per-gen, per-episode rows for one (arm, seed)."""
     session_dir = _resolve_session_dir(seed_dir)
     elite_rows = _read_per_gen_elites(session_dir)
+
+    # Resolve the F0 substrate path + decay_factor for TEI-on arms.
+    # For TEI-off (control) arms, the inheritance/gen-000/ directory
+    # has no .tei.pt file (the loop only writes it under
+    # inheritance=transgenerational), so the substrate path is None
+    # and the offline eval measures the un-biased policy — which is
+    # exactly what the production worker ran for that arm too.
+    substrate_path = _find_substrate_path(session_dir)
+    decay_factor = 0.6  # default per the TEI YAML
+    if sim_config.evolution is not None and sim_config.evolution.transgenerational is not None:
+        decay_factor = float(sim_config.evolution.transgenerational.decay_factor)
+
     out: list[tuple] = []
     for elite in elite_rows:
         per_ep = _eval_one_elite(
@@ -239,6 +335,8 @@ def evaluate_one_seed(
             sim_config=sim_config,
             eval_episodes=eval_episodes,
             seed=seed,
+            substrate_path=substrate_path,
+            decay_factor=decay_factor,
         )
         for ep, total, inside, ci in per_ep:
             out.append(
