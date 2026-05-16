@@ -369,6 +369,111 @@ def test_checkpoint_load_defaults_tei_f0_substrate_path_to_none(tmp_path: Path) 
 # ---------------------------------------------------------------------------
 
 
+def test_build_f0_probe_params_matches_brain_input_dim_under_stam(tmp_path: Path) -> None:
+    """Probe ``BrainParams`` MUST produce features matching ``brain.input_dim``.
+
+    Regression for an F0 extraction crash on configs with STAM + multiple
+    non-STAM modules. The brain's ``input_dim`` is built from the
+    inferred STAM dim (e.g., 7 for a 2-channel env), but the
+    ``STAMSensoryModule`` registry instance has ``classical_dim=11``
+    (4-channel default). When the probe ``BrainParams`` is constructed
+    without an explicit ``stam_state``, the runtime feature pipeline
+    emits 11 zeros for STAM — total features don't match the brain's
+    ``feature_norm.normalized_shape`` and ``torch.layer_norm`` raises.
+    The fix is in ``_build_f0_probe_params(brain=brain)`` which
+    derives the STAM dim from the brain's known ``input_dim``.
+    """
+    from quantumnematode.brain.modules import extract_classical_features
+
+    tei_pilot = (
+        PROJECT_ROOT
+        / "configs"
+        / "evolution"
+        / "transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml"
+    )
+    assert tei_pilot.exists(), f"TEI pilot config not found: {tei_pilot}"
+    sim_config = load_simulation_config(str(tei_pilot))
+
+    from quantumnematode.evolution.encoders import (
+        HyperparameterEncoder,
+        build_birth_metadata,
+    )
+    from quantumnematode.evolution.genome import Genome
+
+    encoder = HyperparameterEncoder()
+    # Decode a fresh brain with arbitrary genome values — we're only
+    # exercising the brain construction path, not training.
+    genome = Genome(
+        params=np.array([1e-4, 1e-4, 0.95, 0.01, 1.0, 500], dtype=np.float32),
+        genome_id="probe-test",
+        parent_ids=[],
+        generation=0,
+        birth_metadata=build_birth_metadata(sim_config),
+    )
+    brain = encoder.decode(genome, sim_config, seed=42)
+
+    # Construct a minimal EvolutionLoop just so we can call the helper.
+    encoder_for_loop = HyperparameterEncoder()
+    fitness = EpisodicSuccessRate()
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=2,
+        generations=1,
+        episodes_per_eval=1,
+        learn_episodes_per_eval=1,
+    )
+    optimizer = CMAESOptimizer(
+        num_params=encoder_for_loop.genome_dim(sim_config),
+        population_size=2,
+        sigma0=ecfg.sigma0,
+        seed=42,
+    )
+    loop = EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder_for_loop,
+        fitness=fitness,
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=tmp_path,
+        rng=np.random.default_rng(42),
+        log_level=logging.WARNING,
+    )
+
+    probe_params_list = loop._build_f0_probe_params(brain=brain)
+    assert len(probe_params_list) > 0, "Probe params list must be non-empty"
+
+    # Each probe MUST produce features matching brain.input_dim, otherwise
+    # ``feature_norm`` raises a RuntimeError in ``run_brain``.
+    # ``sensory_modules`` and ``input_dim`` are LSTMPPO-specific (not on
+    # the Brain protocol); cast via getattr to keep pyright quiet.
+    sensory_modules = brain.sensory_modules  # type: ignore[attr-defined]
+    input_dim = int(brain.input_dim)  # type: ignore[attr-defined]
+    for idx, probe in enumerate(probe_params_list):
+        features = extract_classical_features(probe, sensory_modules)
+        assert features.shape[0] == input_dim, (
+            f"Probe #{idx} produced features of shape {features.shape}, "
+            f"but brain.input_dim is {input_dim}. "
+            f"This will trip ``feature_norm`` during ``run_brain``."
+        )
+
+
+def test_build_f0_probe_params_without_brain_preserves_legacy_shape(tmp_path: Path) -> None:
+    """Without the optional ``brain`` arg, the helper SHALL still return probe params.
+
+    Backwards-compatibility check: existing callers / tests that don't
+    pass ``brain`` keep producing the legacy three-probe sequence
+    (with ``stam_state=None``). The legacy path is fine for brains
+    without STAM and for foraging-only configs.
+    """
+    loop = _make_baseline_loop(tmp_path)
+    loop.inheritance = TransgenerationalInheritance()
+    probe_params_list = loop._build_f0_probe_params()
+    assert len(probe_params_list) == 3
+    # No brain → no stam_state derivation → legacy None default.
+    for probe in probe_params_list:
+        assert probe.stam_state is None
+
+
 def test_existing_helpers_unchanged_for_lamarckian(tmp_path: Path) -> None:
     """Lamarckian path SHALL NOT be affected by the new substrate helper.
 

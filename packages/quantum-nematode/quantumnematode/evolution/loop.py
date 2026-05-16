@@ -43,6 +43,7 @@ from quantumnematode.optimizers.evolutionary import EvolutionResult
 if TYPE_CHECKING:
     from multiprocessing.pool import Pool as PoolType
 
+    from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
     from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
@@ -472,6 +473,39 @@ class EvolutionLoop:
         """
         return self.inheritance.kind() == "transgenerational"
 
+    def _append_per_gen_elite(
+        self,
+        *,
+        generation: int,
+        genome_id: str,
+        params: np.ndarray,
+        fitness: float,
+    ) -> None:
+        """Append one ``(generation, genome_id, params, fitness)`` row to ``per_gen_elites.jsonl``.
+
+        JSON-Lines format so the file can be opened append-mode and
+        truncated by external tooling without parsing the whole structure.
+        Each line is a self-contained JSON object — readers can iterate
+        the file and skip malformed lines without disqualifying the rest.
+
+        Post-hoc evaluators (e.g.
+        ``scripts/campaigns/transgenerational_per_gen_eval.py``) read
+        this artifact to reconstruct each generation's elite genome
+        offline; without it, only the FINAL elite is recoverable from
+        ``best_params.json``.
+        """
+        import json as _json
+
+        path = self.output_dir / "per_gen_elites.jsonl"
+        row = {
+            "generation": int(generation),
+            "genome_id": str(genome_id),
+            "params": [float(p) for p in np.asarray(params).ravel()],
+            "fitness": float(fitness),
+        }
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(_json.dumps(row) + "\n")
+
     def _gc_inheritance_dir(self, generation: int, keep_ids: list[str]) -> None:
         """Garbage-collect non-survivor checkpoints in one inheritance directory.
 
@@ -594,7 +628,7 @@ class EvolutionLoop:
         # be made more sophisticated in a follow-up. Each probe is a
         # synthetic BrainParams varying the gradient strength to
         # simulate proximity to a pathogen lawn.
-        probe_params = self._build_f0_probe_params()
+        probe_params = self._build_f0_probe_params(brain=brain)
 
         # Extraction seed: fixed sentinel for now. A configurable
         # ``cfg.transgenerational.extraction_seed`` Pydantic field is
@@ -651,7 +685,7 @@ class EvolutionLoop:
             if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
                 path.unlink(missing_ok=True)
 
-    def _build_f0_probe_params(self) -> list:
+    def _build_f0_probe_params(self, brain: Brain | None = None) -> list:
         """Build a deterministic sequence of probe ``BrainParams`` for F0 telemetry.
 
         Minimal default implementation: three synthetic params with
@@ -660,26 +694,97 @@ class EvolutionLoop:
         ring-of-probe-positions generator that uses the env's
         STATIONARY-predator coordinates (per the spec's "deterministic
         set built relative to the lawn position" guidance).
+
+        When ``brain`` is provided, the probe params are filled with
+        zero-valued ``stam_state`` and ``predator_gradient_*`` fields
+        sized/typed to match the brain's runtime feature pipeline.
+        Without this, the brain's input shape (which depends on the
+        env-derived STAM dim) silently diverges from the synthetic
+        BrainParams shape (which defaults to the registry's hard-coded
+        STAM ``classical_dim=11``), and ``feature_norm`` raises at the
+        first probe step. The ``brain`` arg is optional to preserve
+        backwards-compatibility with existing tests that don't have a
+        decoded brain handy.
         """
         # Imports here to avoid coupling loop module load to the agent
         # subpackage when TEI is unused.
         from quantumnematode.brain.arch import BrainParams
+        from quantumnematode.brain.modules import SENSORY_MODULES, ModuleName
         from quantumnematode.env import Direction
 
+        # Derive the brain's effective STAM dim from its known input_dim
+        # minus the sum of non-STAM module classical_dims. This pins the
+        # synthetic ``stam_state`` to the same shape that the agent
+        # runner constructs at training time, where the env's
+        # ``stam_dim_from_env`` is the source of truth. See the
+        # ``STAMSensoryModule.to_classical`` branch that returns
+        # ``np.zeros(self.classical_dim)`` when ``params.stam_state is
+        # None`` — the registry instance's ``classical_dim`` defaults to
+        # 11 (4-channel mode), which doesn't match a 2-channel env's
+        # 7-element STAM state.
+        stam_state: tuple[float, ...] | None = None
+        # ``sensory_modules`` and ``input_dim`` are LSTMPPO/MLPPPO
+        # implementation attributes, not on the Brain protocol;
+        # ``getattr`` with sentinel + hasattr guards preserve the
+        # backwards-compat path for brains that lack them.
+        brain_modules = getattr(brain, "sensory_modules", None) if brain is not None else None
+        brain_input_dim = getattr(brain, "input_dim", None) if brain is not None else None
+        if brain_modules is not None and brain_input_dim is not None:
+            non_stam_total = 0
+            has_stam = False
+            for m in brain_modules:
+                if m == ModuleName.STAM:
+                    has_stam = True
+                    continue
+                sensory_module = SENSORY_MODULES.get(m)
+                if sensory_module is not None:
+                    non_stam_total += sensory_module.classical_dim
+                else:
+                    # Match ``extract_classical_features``'s 2-feature
+                    # fallback for unknown modules.
+                    non_stam_total += 2
+            if has_stam:
+                effective_stam_dim = int(brain_input_dim) - non_stam_total
+                if effective_stam_dim < 0:
+                    logger.warning(
+                        "F0 probe: brain.input_dim=%d is smaller than the sum of "
+                        "non-STAM module classical_dims=%d. Falling back to "
+                        "stam_state=None (the registry default will be used).",
+                        brain_input_dim,
+                        non_stam_total,
+                    )
+                else:
+                    stam_state = tuple(0.0 for _ in range(effective_stam_dim))
+
+        # Build the three synthetic probes. ``predator_gradient_*``
+        # defaults are zero (the transgenerational pilot config has
+        # nociception modules in the brain; ``_nociception_core``
+        # coerces None → 0.0 today, but explicit zero values are more
+        # readable + future-proof if the extractor's None-handling
+        # changes).
         return [
             BrainParams(
                 food_gradient_strength=0.3,
                 food_gradient_direction=float(np.pi / 2),
+                predator_gradient_strength=0.0,
+                predator_gradient_direction=0.0,
+                stam_state=stam_state,
                 agent_direction=Direction.UP,
             ),
             BrainParams(
                 food_gradient_strength=0.5,
                 food_gradient_direction=float(np.pi),
+                predator_gradient_strength=0.0,
+                predator_gradient_direction=0.0,
+                stam_state=stam_state,
                 agent_direction=Direction.UP,
             ),
             BrainParams(
                 food_gradient_strength=0.1,
                 food_gradient_direction=0.0,
+                predator_gradient_strength=0.0,
+                predator_gradient_direction=0.0,
+                stam_state=stam_state,
                 agent_direction=Direction.UP,
             ),
         ]
@@ -1108,6 +1213,35 @@ class EvolutionLoop:
                         self._gc_inheritance_dir(gen - 1, [])
                         # Keep only the about-to-be-parents in current gen.
                         self._gc_inheritance_dir(gen, next_selected)
+
+                    # Per-gen elite snapshot: append the top-1 elite's
+                    # (generation, genome_id, params, fitness) to a
+                    # JSON-Lines artifact at ``per_gen_elites.jsonl``.
+                    # Used by post-hoc evaluators (e.g. the
+                    # transgenerational per-gen choice-index evaluator)
+                    # that need to re-construct each generation's elite
+                    # genome offline without re-running evolution.
+                    if next_selected:
+                        elite_id_this_gen = next_selected[0]
+                        try:
+                            elite_idx_this_gen = gen_ids.index(elite_id_this_gen)
+                        except ValueError:
+                            logger.warning(
+                                "per_gen_elites: elite_id=%s not in gen_ids; "
+                                "skipping snapshot for gen=%d.",
+                                elite_id_this_gen,
+                                gen,
+                            )
+                        else:
+                            self._append_per_gen_elite(
+                                generation=gen,
+                                genome_id=elite_id_this_gen,
+                                params=np.asarray(
+                                    solutions[elite_idx_this_gen],
+                                    dtype=np.float32,
+                                ),
+                                fitness=fitnesses[elite_idx_this_gen],
+                            )
 
                 # F0 Substrate Extraction Pipeline (transgenerational only,
                 # gen 0 only): load the F0 elite's captured weights, decode
