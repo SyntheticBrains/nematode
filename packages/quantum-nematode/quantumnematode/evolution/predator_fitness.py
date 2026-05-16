@@ -12,7 +12,7 @@ Two implementations conforming to the canonical
   if pilot evidence motivates it.
 
 Both are designed to run inside the existing
-:meth:`EvolutionLoop._evaluate_in_worker` 11-tuple worker, so they are
+:meth:`EvolutionLoop._evaluate_in_worker` 12-tuple worker, so they are
 plain classes with no per-instance shared state and pickle cleanly.
 
 The fitness function does NOT patch `sim_config` to mount frozen prey

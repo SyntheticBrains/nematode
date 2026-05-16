@@ -964,6 +964,114 @@ class MultiAgentConfig(BaseModel):
         return self
 
 
+class LawnScheduleEntry(BaseModel):
+    """One per-generation entry in a transgenerational ``lawn_schedule``.
+
+    Specifies whether pathogen lawns (``STATIONARY`` predator entities)
+    are enabled for that generation and how many PPO training episodes
+    each genome runs. The schedule is consumed at the top of each
+    generation by ``EvolutionLoop.run()`` to produce a per-generation
+    ``sim_config`` copy with the schedule's overrides applied; the
+    base ``sim_config`` is never mutated.
+
+    Attributes
+    ----------
+    generation : int
+        Generation index this entry applies to. Non-negative. Each
+        generation in ``[0, evolution.generations)`` MUST appear
+        exactly once across the schedule (enforced by the
+        ``SimulationConfig`` validator).
+    pathogen_lawns_enabled : bool
+        When ``True``, the per-generation ``sim_config`` copy has
+        ``environment.predators.enabled = True`` (lawns spawn). When
+        ``False``, lawns are disabled for that generation. Maps onto
+        the existing ``PredatorConfig.enabled`` field rather than
+        adding a new env-schema field — "pathogen lawn" is
+        documentation vocabulary; the underlying storage is the
+        existing ``predators:`` block configured with
+        ``movement_pattern: stationary``.
+    ppo_train_episodes : int
+        Overrides ``EvolutionConfig.learn_episodes_per_eval`` for
+        that generation only. ``0`` is permitted under TEI
+        (F1/F2/F3 inherit without re-training); the train-phase
+        bypass in ``LearnedPerformanceFitness.evaluate`` handles
+        the ``learn_episodes_per_eval == 0`` case when
+        ``tei_prior_source`` is set.
+    """
+
+    generation: int = Field(ge=0)
+    pathogen_lawns_enabled: bool
+    ppo_train_episodes: int = Field(ge=0)
+
+
+class TransgenerationalConfig(BaseModel):
+    """Configuration block for the transgenerational-memory evolution arm.
+
+    Attached to :class:`EvolutionConfig.transgenerational` (optional).
+    Required when ``EvolutionConfig.inheritance == "transgenerational"``
+    (the pairing validator on ``EvolutionConfig`` enforces this).
+
+    Attributes
+    ----------
+    enabled : bool
+        Ablation switch for paired-arm comparison. ``True`` requires
+        ``EvolutionConfig.inheritance == "transgenerational"``; ``False``
+        requires ``EvolutionConfig.inheritance == "none"``. The
+        pairing validator enforces this so the paired-arm ablation
+        contract (substrate is the only cross-arm difference) is
+        guaranteed at config-load time.
+    decay_factor : float
+        Multiplicative decay applied to ``parent.logit_bias`` at
+        each ``inherit_from`` call. Constrained to ``[0.0, 1.0]``.
+        Default ``0.6`` matches the planned F0=1.0 / F1=0.6 / F2=0.36 /
+        F3=0.216 cascade.
+    extraction_seed : int
+        Seed for the F0 telemetry pass (``extract_from_brain``). A
+        fixed sentinel default (``424242``) keeps F0 extractions
+        reproducible across runs. Constrained to ``>= 0``.
+    lawn_schedule : list[LawnScheduleEntry]
+        Per-generation pathogen-lawn enablement + training-episode
+        overrides. Each entry in the schedule MUST reference a
+        generation in ``[0, evolution.generations)`` exactly once
+        (validated at ``SimulationConfig`` level since
+        ``EvolutionConfig`` doesn't know how many generations the
+        sibling fields specify until both are bound on the same
+        ``EvolutionConfig`` instance — the per-entry validator on
+        ``TransgenerationalConfig`` here handles uniqueness; the
+        ``[0, generations)`` range check happens in the
+        ``EvolutionConfig._validate_inheritance`` post-bind block).
+    """
+
+    enabled: bool
+    decay_factor: float = Field(default=0.6, ge=0.0, le=1.0)
+    extraction_seed: int = Field(default=424242, ge=0)
+    lawn_schedule: list[LawnScheduleEntry]
+
+    @model_validator(mode="after")
+    def _validate_lawn_schedule_unique_generations(self) -> "TransgenerationalConfig":
+        """Each generation index in ``lawn_schedule`` MUST be unique.
+
+        The ``[0, evolution.generations)`` range check happens later
+        in ``EvolutionConfig._validate_inheritance`` because that
+        validator has access to ``evolution.generations``; here we
+        only check uniqueness of the per-entry ``generation`` field.
+        """
+        seen: set[int] = set()
+        duplicates: list[int] = []
+        for entry in self.lawn_schedule:
+            if entry.generation in seen and entry.generation not in duplicates:
+                duplicates.append(entry.generation)
+            seen.add(entry.generation)
+        if duplicates:
+            msg = (
+                f"transgenerational.lawn_schedule contains duplicate generation "
+                f"indices: {sorted(duplicates)}. Each generation MUST appear "
+                "exactly once in the schedule."
+            )
+            raise ValueError(msg)
+        return self
+
+
 class EvolutionConfig(BaseModel):
     """Configuration for the evolution loop.
 
@@ -1057,6 +1165,13 @@ class EvolutionConfig(BaseModel):
     # in ``_validate_inheritance`` (rule 4) is still enforced for all
     # inheritance modes to keep the schema invariant uniform.
     inheritance_elite_count: int = Field(default=1, ge=1)
+    # Transgenerational-memory configuration block. Required when
+    # inheritance == "transgenerational" (the pairing validator below
+    # enforces this); optional and ignored under other strategies.
+    # When None and inheritance is non-TEI, the loop's lawn-schedule
+    # consumer is skipped — preserving byte-equivalent behaviour for
+    # the existing inheritance modes.
+    transgenerational: TransgenerationalConfig | None = None
     # Optional early-stop on saturation: when set to a positive integer
     # N, the loop exits if best_fitness has not strictly improved for N
     # consecutive generations.  Default None preserves existing
@@ -1079,7 +1194,7 @@ class EvolutionConfig(BaseModel):
     persist_cma_across_kblocks: bool = False
 
     @model_validator(mode="after")
-    def _validate_inheritance(self) -> "EvolutionConfig":
+    def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912
         """Enforce inheritance configuration rules at YAML load time.
 
         Four rules:
@@ -1148,6 +1263,94 @@ class EvolutionConfig(BaseModel):
                 f"evolution.inheritance_elite_count ({self.inheritance_elite_count}) "
                 f"exceeds evolution.population_size ({self.population_size}). "
                 "MUST be <= population_size."
+            )
+            raise ValueError(msg)
+        # Transgenerational ↔ inheritance pairing contract: TEI-on
+        # requires inheritance=transgenerational; TEI-off requires
+        # inheritance=none. This guarantees the paired-arm ablation
+        # is a one-bit difference (substrate is the only cross-arm
+        # signal carrier).
+        if self.transgenerational is not None:
+            if self.transgenerational.enabled and self.inheritance != "transgenerational":
+                msg = (
+                    "evolution.transgenerational.enabled=True requires "
+                    f"evolution.inheritance == 'transgenerational' (got {self.inheritance!r}). "
+                    "The paired-arm ablation contract requires the substrate "
+                    "to be the only cross-arm difference; mixing TEI-on with "
+                    "a non-TEI inheritance strategy would confound the "
+                    "comparison. Set inheritance: transgenerational or "
+                    "transgenerational.enabled: false."
+                )
+                raise ValueError(msg)
+            if not self.transgenerational.enabled and self.inheritance != "none":
+                msg = (
+                    "evolution.transgenerational.enabled=False requires "
+                    f"evolution.inheritance == 'none' (got {self.inheritance!r}). "
+                    "The TEI-off control arm must run with no inheritance "
+                    "(the substrate is the only cross-arm difference). Set "
+                    "inheritance: none or transgenerational.enabled: true."
+                )
+                raise ValueError(msg)
+            # lawn_schedule coverage check: each generation in
+            # [0, evolution.generations) MUST be present exactly once.
+            # Uniqueness is checked at the TransgenerationalConfig
+            # level; this validator pins the schedule to the
+            # surrounding ``generations`` field (which lives on
+            # EvolutionConfig, not TransgenerationalConfig).
+            schedule_gens = {entry.generation for entry in self.transgenerational.lawn_schedule}
+            expected_gens = set(range(self.generations))
+            missing = sorted(expected_gens - schedule_gens)
+            extra = sorted(schedule_gens - expected_gens)
+            if missing or extra:
+                parts = []
+                if missing:
+                    parts.append(f"missing generations {missing}")
+                if extra:
+                    parts.append(f"out-of-range generations {extra}")
+                msg = (
+                    f"transgenerational.lawn_schedule must cover every generation "
+                    f"in [0, {self.generations}) exactly once: "
+                    f"{'; '.join(parts)}. Got schedule entries for generations "
+                    f"{sorted(schedule_gens)}."
+                )
+                raise ValueError(msg)
+            # gen-0 train-phase check: under enabled TEI, F0 has no
+            # ``tei_prior_source`` to fall back on (the F0 elite IS the
+            # substrate source), so its schedule entry MUST set a non-
+            # zero ``ppo_train_episodes``. Otherwise the run reaches
+            # ``LearnedPerformanceFitness.evaluate`` with
+            # ``learn_episodes_per_eval=0`` and ``tei_prior_source=None``
+            # — rejected at worker entry, but only after pool startup.
+            # Catching it at config-load gives a friendlier error and
+            # avoids wasted process spawn.
+            if self.transgenerational.enabled:
+                gen0_entry = next(
+                    (e for e in self.transgenerational.lawn_schedule if e.generation == 0),
+                    None,
+                )
+                if gen0_entry is not None and gen0_entry.ppo_train_episodes == 0:
+                    msg = (
+                        "transgenerational.lawn_schedule entry for generation=0 "
+                        "has ppo_train_episodes=0, but F0 has no substrate to "
+                        "inherit from (F0 IS the substrate source). Set the "
+                        "generation=0 entry's ppo_train_episodes > 0 so the F0 "
+                        "elite can train before the substrate-extraction "
+                        "telemetry pass."
+                    )
+                    raise ValueError(msg)
+        # Symmetric guard: if inheritance is "transgenerational" but
+        # the config block is missing, the F0 extraction pipeline has
+        # no decay_factor or lawn_schedule to use. Reject explicitly
+        # rather than fail mysteriously deep in the loop.
+        if self.inheritance == "transgenerational" and self.transgenerational is None:
+            msg = (
+                "evolution.inheritance is 'transgenerational' but the "
+                "transgenerational config block is missing. Add a "
+                "transgenerational: block to the evolution: config with "
+                "at minimum: enabled (bool), decay_factor (float, default "
+                "0.6), and lawn_schedule (list of per-gen entries). See "
+                "the OpenSpec change 'add-transgenerational-memory' for "
+                "the schema."
             )
             raise ValueError(msg)
         return self

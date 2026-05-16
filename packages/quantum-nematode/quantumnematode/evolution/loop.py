@@ -109,13 +109,26 @@ def _evaluate_in_worker(args: tuple) -> float:
     args
         Tuple of ``(params_array, sim_config, encoder, fitness, episodes, seed,
         generation, index, parent_ids, warm_start_path_override,
-        weight_capture_path)``.  All elements must be picklable.  The two
-        trailing ``Path | None`` fields are used by the inheritance step:
-        when both are ``None`` (the no-inheritance case) the call site is
-        identical to a frozen-weight evolution run.  ``encoder`` and
-        ``fitness`` are class instances pickled by reference to their
-        class definitions; concrete encoders/fitness functions in this
-        module are top-level classes and pickle cleanly.
+        weight_capture_path, tei_prior_source)``.  All elements must be
+        picklable.  The three trailing ``Path | None`` / tuple fields are
+        used by the inheritance step:
+
+        - ``warm_start_path_override`` and ``weight_capture_path``: per the
+          Lamarckian/Baldwin pattern. When both are ``None`` (the no-
+          inheritance case) the call site is byte-equivalent to a
+          frozen-weight evolution run.
+        - ``tei_prior_source``: ``(f0_substrate_path, decay_factor,
+          lineage_depth)`` triple for transgenerational F1+ workers, or
+          ``None`` otherwise. When set, the worker forwards it to
+          ``fitness.evaluate`` as the same-named kwarg; ``fitness.evaluate``
+          loads the F0 substrate, applies ``inherit_from`` ``lineage_depth``
+          times, and sets ``brain.tei_prior`` post-decode (mirrors the
+          ``warm_start_path_override`` / ``weight_capture_path``
+          forwarding pattern).
+
+        ``encoder`` and ``fitness`` are class instances pickled by
+        reference to their class definitions; concrete encoders/fitness
+        functions in this module are top-level classes and pickle cleanly.
 
     Returns
     -------
@@ -135,6 +148,7 @@ def _evaluate_in_worker(args: tuple) -> float:
         parent_ids,
         warm_start_path_override,
         weight_capture_path,
+        tei_prior_source,
     ) = args
     genome = Genome(
         params=np.asarray(params, dtype=np.float32),
@@ -144,12 +158,16 @@ def _evaluate_in_worker(args: tuple) -> float:
         birth_metadata=build_birth_metadata(sim_config),
     )
     # Only LearnedPerformanceFitness accepts the inheritance kwargs;
-    # EpisodicSuccessRate doesn't.  Detect by signature rather than
-    # type-import to avoid coupling the worker to a specific fitness
-    # class.  When both kwargs are None (no-inheritance case) we drop
-    # them entirely so the call shape is identical to a frozen-weight
-    # evolution run.
-    if warm_start_path_override is not None or weight_capture_path is not None:
+    # EpisodicSuccessRate's signature accepts them for ABI symmetry but
+    # ignores them. Detect by signature rather than type-import to avoid
+    # coupling the worker to a specific fitness class. When all three
+    # kwargs are None (no-inheritance case) we drop them entirely so the
+    # call shape is byte-equivalent to a frozen-weight evolution run.
+    if (
+        warm_start_path_override is not None
+        or weight_capture_path is not None
+        or tei_prior_source is not None
+    ):
         return fitness.evaluate(
             genome,
             sim_config,
@@ -158,6 +176,7 @@ def _evaluate_in_worker(args: tuple) -> float:
             seed=seed,
             warm_start_path_override=warm_start_path_override,
             weight_capture_path=weight_capture_path,
+            tei_prior_source=tei_prior_source,
         )
     return fitness.evaluate(genome, sim_config, encoder, episodes=episodes, seed=seed)
 
@@ -308,7 +327,9 @@ class EvolutionLoop:
             # (or None) so the pickle is portable across runs that
             # rebase the output_dir. Loaders reconstruct the Path.
             "tei_f0_substrate_path": (
-                str(self._tei_f0_substrate_path) if self._tei_f0_substrate_path else None
+                str(self._tei_f0_substrate_path)
+                if self._tei_f0_substrate_path is not None
+                else None
             ),
         }
         # Atomic write via tmp file + rename.
@@ -341,7 +362,7 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
-        # Validate ALL resume-critical keys are present in the payload
+        # Validate the resume-critical key set present in the payload
         # BEFORE assigning any of them.  ``_save_checkpoint`` writes
         # every key in this list unconditionally for any v3 payload, so
         # a payload that passed the version check but is missing any of
@@ -356,6 +377,13 @@ class EvolutionLoop:
         # the early-stop fields defaulting to 0 / None would falsify the
         # saturation-tracking history.  Listed in the same order as the
         # save-side ``payload`` dict for grep-discoverability.
+        #
+        # NOTE: keys added to ``_save_checkpoint`` *after* the v3 schema
+        # was fixed (e.g. ``tei_f0_substrate_path``) intentionally do
+        # NOT appear here — those use ``.get(key, default)`` at the
+        # assignment site so legacy v3 payloads (pre-additive-field)
+        # load cleanly without a ``CHECKPOINT_VERSION`` bump. Only keys
+        # that were part of the original v3 schema are required.
         required_keys = (
             "optimizer",
             "generation",
@@ -656,6 +684,139 @@ class EvolutionLoop:
             ),
         ]
 
+    def _build_per_gen_sim_config(self, gen: int) -> SimulationConfig:
+        """Build the per-generation ``sim_config`` for worker dispatch.
+
+        Under transgenerational inheritance with a ``lawn_schedule``,
+        produces a Pydantic-v2 ``model_copy`` of the base ``sim_config``
+        with two overrides applied from the schedule entry for the
+        current generation:
+
+        - ``environment.predators.enabled`` ← ``pathogen_lawns_enabled``
+          (pathogen lawn on/off for this generation).
+        - ``evolution.learn_episodes_per_eval`` ← ``ppo_train_episodes``
+          (train-phase episode count override — 0 is permitted under
+          TEI's F1+ inheritance-without-retraining design, handled by
+          the train-phase bypass in ``LearnedPerformanceFitness.evaluate``).
+
+        Base ``sim_config`` is NEVER mutated — each generation's workers
+        receive a distinct ``model_copy`` instance. Outside of
+        transgenerational runs (or when the config block is absent),
+        returns the base ``sim_config`` unchanged so behaviour is
+        byte-equivalent for non-TEI strategies.
+
+        The ``evolution`` override is layered on top of
+        ``self.sim_config.evolution`` (what non-TEI workers already see),
+        not ``self.evolution_config`` — keeping the worker's view of the
+        evolution block consistent across TEI and non-TEI runs.
+        """
+        cfg = self.evolution_config
+        # Bypass the schedule entirely when transgenerational is absent
+        # OR explicitly disabled (the TEI-off control arm of a paired
+        # ablation): the pairing validator pins ``enabled=false`` to
+        # ``inheritance=none``, so the control arm receives the base
+        # sim_config every generation and the substrate is the only
+        # cross-arm difference.
+        if cfg.transgenerational is None or not cfg.transgenerational.enabled:
+            return self.sim_config
+        # Find the schedule entry for the current generation. The
+        # coverage validator on EvolutionConfig already enforced that
+        # every generation in [0, generations) has exactly one matching
+        # entry, so this lookup MUST succeed — fail loud if a future
+        # validator regression lets a gap-y schedule through.
+        entry = next(
+            (e for e in cfg.transgenerational.lawn_schedule if e.generation == gen),
+            None,
+        )
+        if entry is None:
+            msg = (
+                f"transgenerational.lawn_schedule has no entry for gen={gen}; "
+                f"the EvolutionConfig coverage validator should have rejected "
+                f"this schedule at config-load."
+            )
+            raise RuntimeError(msg)
+        # Base the per-gen evolution copy on what workers already see
+        # under non-TEI runs: ``self.sim_config.evolution`` (the raw
+        # YAML-or-merged block). TEI runs use ``LearnedPerformanceFitness``
+        # (CLI guard rejects success_rate under inheritance: transgenerational)
+        # which requires ``sim_config.evolution`` to be set — see
+        # ``LearnedPerformanceFitness.evaluate``'s rejection. The raise
+        # documents that invariant.
+        if self.sim_config.evolution is None:
+            msg = (
+                "transgenerational runs require sim_config.evolution to be set "
+                "(LearnedPerformanceFitness rejects None); reached "
+                "_build_per_gen_sim_config without it."
+            )
+            raise RuntimeError(msg)
+        updated_evolution = self.sim_config.evolution.model_copy(
+            update={"learn_episodes_per_eval": entry.ppo_train_episodes},
+        )
+        # Build the per-gen overrides. The environment's predators
+        # block is optional in the base sim_config (None → no predators);
+        # under TEI we expect predators to be configured already.
+        env = self.sim_config.environment
+        if env is None or env.predators is None:
+            logger.warning(
+                "transgenerational lawn_schedule expects an "
+                "environment.predators block but none is configured; "
+                "lawn enable/disable will have no effect for gen=%d.",
+                gen,
+            )
+            return self.sim_config.model_copy(
+                update={"evolution": updated_evolution},
+            )
+        updated_predators = env.predators.model_copy(
+            update={"enabled": entry.pathogen_lawns_enabled},
+        )
+        updated_env = env.model_copy(update={"predators": updated_predators})
+        return self.sim_config.model_copy(
+            update={
+                "environment": updated_env,
+                "evolution": updated_evolution,
+            },
+        )
+
+    def _compute_tei_prior_source(
+        self,
+        gen: int,
+    ) -> tuple[Path, float, int] | None:
+        """Compute the per-generation ``tei_prior_source`` for worker tuples.
+
+        Same value for every child within a single generation (the F0
+        substrate is one shared resource; ``decay_factor`` and
+        ``lineage_depth`` are gen-level). At F0 (gen 0) or non-TEI
+        runs, returns ``None``.
+
+        At F1+: requires both an active transgenerational config (for
+        ``decay_factor``) and a populated ``_tei_f0_substrate_path``
+        attribute (populated by the F0 Substrate Extraction Pipeline
+        at end of gen 0, persisted in the checkpoint pickle for resume).
+        """
+        cfg = self.evolution_config
+        # Bypass when transgenerational is absent OR explicitly disabled
+        # (TEI-off control arm), and at F0 (the elite IS the substrate
+        # source, not consumer).
+        if cfg.transgenerational is None or not cfg.transgenerational.enabled or gen == 0:
+            return None
+        if self._tei_f0_substrate_path is None:
+            # Defensive: F0 extraction must have populated this before
+            # the loop reaches gen 1. If it didn't (e.g., F0 weights
+            # missing on disk), the extraction pipeline logged a warning
+            # earlier; F1+ workers proceed without a substrate (None
+            # passed through, no bias applied).
+            logger.warning(
+                "transgenerational at gen=%d but _tei_f0_substrate_path "
+                "is unset; F1+ workers will have no substrate to load.",
+                gen,
+            )
+            return None
+        return (
+            self._tei_f0_substrate_path,
+            cfg.transgenerational.decay_factor,
+            gen,
+        )
+
     def _resolve_per_child_inheritance(  # noqa: PLR0911
         self,
         child_idx: int,
@@ -798,6 +959,21 @@ class EvolutionLoop:
                 gen = self._generation
                 logger.info("Generation %d / %d", gen, cfg.generations)
 
+                # Per-generation sim_config: under transgenerational, apply
+                # the lawn_schedule overrides (pathogen_lawns_enabled,
+                # ppo_train_episodes) via ``model_copy`` so the base
+                # sim_config is never mutated. Each generation's workers
+                # receive a distinct copy. When transgenerational config
+                # is absent (the default for all non-TEI runs), every
+                # worker receives the unmodified base sim_config —
+                # byte-equivalent to the prior behaviour.
+                sim_config_for_gen = self._build_per_gen_sim_config(gen)
+
+                # Compute the F1+ tei_prior_source once per generation
+                # (same value for every child within a generation). At
+                # F0 (gen 0) or non-TEI runs, this is None.
+                tei_prior_source_for_gen = self._compute_tei_prior_source(gen)
+
                 # Ask optimiser for population
                 solutions = self.optimizer.ask()
 
@@ -832,7 +1008,7 @@ class EvolutionLoop:
                     eval_args.append(
                         (
                             np.asarray(params, dtype=np.float32),
-                            self.sim_config,
+                            sim_config_for_gen,
                             self.encoder,
                             self.fitness,
                             cfg.episodes_per_eval,
@@ -842,6 +1018,7 @@ class EvolutionLoop:
                             parent_ids,
                             parent_warm_start,
                             child_capture_path,
+                            tei_prior_source_for_gen,
                         ),
                     )
 

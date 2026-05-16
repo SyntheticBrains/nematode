@@ -107,7 +107,7 @@ if TYPE_CHECKING:
         SimulationConfig,
     )
 
-# Re-use `EvolutionLoop`'s worker init + 11-tuple worker entry point so
+# Re-use `EvolutionLoop`'s worker init + 12-tuple worker entry point so
 # the dispatch ABI stays single-source. Both functions are top-level in
 # `loop.py` so they pickle cleanly across the Pool's worker boundary
 # (spawn on macOS, fork on Linux per Python's `multiprocessing.Pool`
@@ -1744,8 +1744,10 @@ class CoevolutionLoop:
                         tmp_path=tmp_path,
                     )
 
-                    # Dispatch evaluation. The 11-tuple `eval_args` shape
-                    # matches `EvolutionLoop._evaluate_in_worker`.
+                    # Dispatch evaluation. The 12-tuple `eval_args` shape
+                    # matches `EvolutionLoop._evaluate_in_worker` (12th
+                    # slot is `tei_prior_source`; co-evolution always
+                    # passes `None`).
                     # Master-side wall-time bracket: per-eval timing for
                     # the sequential path, per-batch timing for the pool
                     # path (worker ABI returns float; we don't extend it
@@ -2013,8 +2015,9 @@ class CoevolutionLoop:
         4. Patch `sim_config` with the opposition `weights_path` keys
            plus the side's per-side `EvolutionConfig` so fitness
            evaluation reads the right per-side fields.
-        5. Append the 11-tuple shape consumed by
-           `_evaluate_in_worker`.
+        5. Append the 12-tuple shape consumed by
+           `_evaluate_in_worker` (`tei_prior_source` slot is always
+           `None` for co-evolution).
 
         All RNG draws (eval_seed + opposition mix) happen in the master
         process so the loop's RNG-state advancement is deterministic
@@ -2087,6 +2090,10 @@ class CoevolutionLoop:
                     parent_ids,
                     parent_warm_start,
                     child_capture_path,
+                    # Co-evolution doesn't use the transgenerational
+                    # cascade — None preserves the 12-element worker-
+                    # tuple shape (`tei_prior_source` slot).
+                    None,
                 ),
             )
         return eval_args, gen_genomes, inherited_from_per_child
@@ -2654,6 +2661,7 @@ class CoevolutionLoop:
                 list(elite.parent_ids),
                 warm_start_path,  # gap-3 fix: load post-PPO checkpoint when Lamarckian
                 None,  # weight_capture_path — probe must not write germline weights
+                None,  # tei_prior_source — probes never use the transgenerational substrate
             )
             return float(_evaluate_in_worker(args))
 
