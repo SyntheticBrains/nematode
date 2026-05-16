@@ -1,0 +1,224 @@
+# Transgenerational Memory — LSTMPPO + klinotaxis + stationary pathogens
+# ============================================================================
+#
+# Tests transgenerational epigenetic inheritance (TEI) of pathogen
+# avoidance on an LSTMPPO+klinotaxis brain. The F0 generation trains
+# on pathogen-laced terrain; its trained policy is read back as a
+# per-action ``logit_bias`` substrate (the abstract sRNA-token); F1+
+# generations inherit a decayed copy of that substrate WITHOUT
+# re-training and WITHOUT direct re-exposure to pathogens.
+#
+# Pathogen lawns are represented via the existing ``predators:`` block
+# with ``movement_pattern: stationary``, ``speed: 0`` (a toxic-zone
+# substrate that doesn't pursue the agent). The "pathogen lawn"
+# vocabulary is documentation-only — the underlying storage is the
+# stationary-predator schema, reused so no new env-side fields are
+# introduced.
+#
+# Schedule (per the transgenerational-memory OpenSpec change):
+#   - F0 (gen 0): pathogen lawns ON, K=50 PPO train episodes per child.
+#     End-of-gen the F0 elite's trained policy is loaded, the
+#     ``extract_from_brain`` telemetry pass produces the
+#     ``logit_bias`` substrate, and the resulting ``.tei.pt`` is
+#     written. The capture is gated on success of the F0 train phase.
+#   - F1/F2/F3: pathogen lawns OFF, K=0 (no train). Each child loads
+#     the F0 substrate, applies the ``inherit_from`` decay cascade
+#     ``lineage_depth`` times (F1: 1×, F2: 2×, F3: 3×), and runs the
+#     eval phase only. The TEI prior is the only signal carrier.
+#
+# Decay factor 0.6 yields F0=1.0 / F1=0.6 / F2=0.36 / F3=0.216 — the
+# "diluted across generations" framing matches Posner 2023 / Kaletsky
+# 2025 biological retention curves.
+#
+# Decision gate (per the transgenerational-memory OpenSpec change):
+#   GO iff F1 ≥ 40% × F0, F2 ≥ 25% × F0, F3 ≥ 15% × F0, AND the
+#   per-gen choice index is monotone non-increasing, in ≥2 of 4 seeds.
+#
+# F0 calibration gate (run via ``--smoke`` before the pilot/full
+# campaign): mean F0 choice_index MUST be in [0.45, 0.85] — outside
+# the envelope, retune ``damage_radius`` or ``ppo_train_episodes``
+# before unblocking the multi-seed campaign.
+#
+# Paired-arm ablation: the campaign shell runs two arms with
+# byte-identical YAMLs except for the two-field pairing flip
+# (``inheritance: none`` + ``transgenerational.enabled: false``).
+# The control arm is provided as a sibling YAML alongside this one
+# (``transgenerational_pathogen_avoidance_lstmppo_klinotaxis_tei_off.yml``)
+# rather than via CLI overrides — the ``transgenerational:`` block is
+# not CLI-overridable, and the pairing validator at
+# ``EvolutionConfig._validate_inheritance`` pins the two fields
+# together at config-load. The substrate is therefore the only
+# cross-arm difference.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 500
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    weight_init_scale: 1.0
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    # "Pathogen lawns" repurposed via STATIONARY predator with speed 0.
+    # ``damage_radius=3`` is intentionally larger than the standard
+    # stationary scenario (damage_radius=2) so F0 has enough avoidance
+    # signal to learn from in 50 PPO episodes. If F0 calibration falls
+    # outside [0.45, 0.85], this is the first knob to retune.
+    enabled: true
+    count: 3
+    speed: 0.0
+    movement_pattern: stationary
+    detection_radius: 4
+    damage_radius: 3
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.2
+
+  health:
+    max_hp: 100.0
+    predator_damage: 15.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 16
+  generations: 4
+  # episodes_per_eval is the protocol fallback when
+  # eval_episodes_per_eval is None. Both are set to 25 so the per-gen
+  # choice-index aggregator (commit 7) has enough samples to stabilise.
+  episodes_per_eval: 25
+  # learn_episodes_per_eval is the BASELINE K. The per-gen
+  # ``lawn_schedule`` below overrides it per generation (F0: 50,
+  # F1/F2/F3: 0). The outer value MUST be > 0 to satisfy the
+  # inheritance ↔ train-phase validator at config-load; the
+  # per-gen override applies at worker-dispatch time.
+  learn_episodes_per_eval: 50
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 4
+  checkpoint_every: 2
+  cma_diagonal: false
+  inheritance: transgenerational
+  # Transgenerational inheritance: F0 trains on pathogens, F1+
+  # inherits the decayed substrate without re-training.
+  transgenerational:
+    enabled: true
+    decay_factor: 0.6
+    extraction_seed: 424242
+    lawn_schedule:
+      - generation: 0
+        pathogen_lawns_enabled: true
+        ppo_train_episodes: 50
+      - generation: 1
+        pathogen_lawns_enabled: false
+        ppo_train_episodes: 0
+      - generation: 2
+        pathogen_lawns_enabled: false
+        ppo_train_episodes: 0
+      - generation: 3
+        pathogen_lawns_enabled: false
+        ppo_train_episodes: 0
+
+hyperparam_schema:
+  # Six-field hyperparameter schema (same shape as the existing
+  # LSTMPPO + klinotaxis + predator pilots under ``configs/evolution/``).
+  # The genome-identity anchor lets the F0 substrate carry
+  # stable provenance back to its parent genome. The substrate itself
+  # is a per-action ``logit_bias`` (shape (num_actions,)), independent
+  # of these schema entries — they just give the elite a defined
+  # genome-ID for the lineage CSV and substrate filename.
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
+  - name: weight_init_scale
+    type: float
+    bounds: [0.5, 2.0]
+  - name: entropy_decay_episodes
+    type: int
+    bounds: [200, 2000]
