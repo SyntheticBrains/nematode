@@ -534,3 +534,261 @@ def test_tei_prior_source_corrupted_substrate_raises_operator_friendly(
             seed=42,
             tei_prior_source=(corrupted_path, 0.6, 1),
         )
+
+
+# ---------------------------------------------------------------------------
+# fitness_metric dispatch (M6.9+ spec primary-metric selector)
+# ---------------------------------------------------------------------------
+
+
+def _patched_evolution_config(
+    sim_config: SimulationConfig,
+    *,
+    fitness_metric: str = "composite",
+    fitness_survival_weight: float = 0.0,
+    learn_eps: int = 2,
+    eval_eps: int | None = 1,
+) -> SimulationConfig:
+    """Helper: rebuild the sim_config with a specific fitness_metric + weight."""
+    assert sim_config.evolution is not None
+    return sim_config.model_copy(
+        update={
+            "evolution": sim_config.evolution.model_copy(
+                update={
+                    "fitness_metric": fitness_metric,
+                    "fitness_survival_weight": fitness_survival_weight,
+                    "learn_episodes_per_eval": learn_eps,
+                    "eval_episodes_per_eval": eval_eps,
+                },
+            ),
+        },
+    )
+
+
+def _patch_runs(success_count: int, death_count: int, eval_count: int):
+    """Patch ``FrozenEvalRunner.run`` to return deterministic termination_reasons.
+
+    First ``success_count`` calls return COMPLETED_ALL_FOOD; next ``death_count``
+    return HEALTH_DEPLETED; the rest return MAX_STEPS (neither survive nor
+    succeed). Caller is responsible for ensuring ``success_count + death_count
+    <= eval_count``.
+    """
+    sequence: list[TerminationReason] = (
+        [TerminationReason.COMPLETED_ALL_FOOD] * success_count
+        + [TerminationReason.HEALTH_DEPLETED] * death_count
+        + [TerminationReason.MAX_STEPS] * (eval_count - success_count - death_count)
+    )
+    iterator = iter(sequence)
+
+    class _StubResult:
+        def __init__(self, reason: TerminationReason) -> None:
+            self.termination_reason = reason
+
+    def _fake_run(self, agent, reward_config, max_steps):
+        return _StubResult(next(iterator))
+
+    return patch.object(FrozenEvalRunner, "run", _fake_run)
+
+
+def test_fitness_metric_default_composite_is_byte_equivalent() -> None:
+    """``fitness_metric`` defaults to ``composite``; preserves M3/M6 byte-equivalence."""
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    sim_config = _patched_evolution_config(
+        sim_config,
+        fitness_metric="composite",
+        fitness_survival_weight=1.0,
+        eval_eps=4,
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    # 2 successes, 2 deaths → success_rate=0.5, death_rate=0.5
+    # composite = 0.5 * (1 - 1.0 * 0.5) = 0.25
+    with _patch_runs(success_count=2, death_count=2, eval_count=4):
+        score = fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+    assert score == pytest.approx(0.25, rel=1e-6)
+
+
+def test_fitness_metric_survival_rate_returns_survival_fraction() -> None:
+    """``fitness_metric: survival_rate`` SHALL return ``1 - deaths/eval_count``."""
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    sim_config = _patched_evolution_config(
+        sim_config,
+        fitness_metric="survival_rate",
+        fitness_survival_weight=1.0,
+        eval_eps=4,
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    # 1 success, 1 death, 2 max_steps → survival_rate = 1 - 1/4 = 0.75
+    with _patch_runs(success_count=1, death_count=1, eval_count=4):
+        score = fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+    assert score == pytest.approx(0.75, rel=1e-6)
+
+
+def test_fitness_metric_survival_rate_ignores_survival_weight() -> None:
+    """Under ``survival_rate`` dispatch, ``fitness_survival_weight`` SHALL NOT affect the return value."""
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    # Same termination distribution, two different fitness_survival_weight values.
+    sim_w0 = _patched_evolution_config(
+        sim_config,
+        fitness_metric="survival_rate",
+        fitness_survival_weight=0.0,
+        eval_eps=4,
+    )
+    sim_w1 = _patched_evolution_config(
+        sim_config,
+        fitness_metric="survival_rate",
+        fitness_survival_weight=1.0,
+        eval_eps=4,
+    )
+    # 4 deaths → survival_rate = 0.0 regardless of weight.
+    with _patch_runs(success_count=0, death_count=4, eval_count=4):
+        score_w0 = fitness.evaluate(genome, sim_w0, encoder, episodes=1, seed=42)
+    with _patch_runs(success_count=0, death_count=4, eval_count=4):
+        score_w1 = fitness.evaluate(genome, sim_w1, encoder, episodes=1, seed=42)
+    assert score_w0 == pytest.approx(0.0, abs=1e-6)
+    assert score_w1 == pytest.approx(0.0, abs=1e-6)
+
+
+def test_fitness_metric_success_rate_returns_foraging_fraction() -> None:
+    """``fitness_metric: success_rate`` SHALL return ``successes/eval_count`` ignoring deaths."""
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    sim_config = _patched_evolution_config(
+        sim_config,
+        fitness_metric="success_rate",
+        fitness_survival_weight=1.0,  # ignored under success_rate
+        eval_eps=4,
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    # 3 successes, 1 death → success_rate = 3/4 = 0.75 (deaths ignored)
+    with _patch_runs(success_count=3, death_count=1, eval_count=4):
+        score = fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+    assert score == pytest.approx(0.75, rel=1e-6)
+
+
+def test_fitness_metric_invalid_value_rejected_at_yaml_load() -> None:
+    """Pydantic SHALL reject ``fitness_metric`` values outside the Literal."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        EvolutionConfig(
+            algorithm="cmaes",
+            population_size=2,
+            generations=1,
+            episodes_per_eval=1,
+            fitness_metric="fastest_food",  # type: ignore[arg-type]
+        )
+
+
+# ---------------------------------------------------------------------------
+# eval_diagnostics.jsonl side-channel writer
+# ---------------------------------------------------------------------------
+
+
+def test_eval_diagnostics_writes_jsonl_row_with_all_metrics(tmp_path: Path) -> None:
+    """``diagnostics_path`` SHALL emit one JSONL row with all metric variants."""
+    import json
+
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    sim_config = _patched_evolution_config(
+        sim_config,
+        fitness_metric="survival_rate",
+        fitness_survival_weight=1.0,
+        eval_eps=4,
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    diag_path = tmp_path / "eval_diagnostics.jsonl"
+    with _patch_runs(success_count=2, death_count=1, eval_count=4):
+        score = fitness.evaluate(
+            genome,
+            sim_config,
+            encoder,
+            episodes=1,
+            seed=42,
+            diagnostics_path=diag_path,
+        )
+    assert diag_path.exists()
+    rows = [json.loads(line) for line in diag_path.read_text().strip().splitlines()]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["genome_id"] == "test"
+    assert row["eval_count"] == 4
+    assert row["successes"] == 2
+    assert row["deaths"] == 1
+    assert row["success_rate"] == pytest.approx(0.50)
+    assert row["survival_rate"] == pytest.approx(0.75)  # 1 - 1/4
+    assert row["composite"] == pytest.approx(0.50 * (1.0 - 1.0 * 0.25))
+    assert row["fitness"] == pytest.approx(score)
+    assert row["fitness_metric"] == "survival_rate"
+    assert row["fitness_survival_weight"] == pytest.approx(1.0)
+
+
+def test_eval_diagnostics_none_preserves_no_side_effects(tmp_path: Path) -> None:
+    """When ``diagnostics_path`` is None, no file is written + return value is unchanged."""
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    sim_config = _patched_evolution_config(
+        sim_config,
+        fitness_metric="composite",
+        fitness_survival_weight=0.5,
+        eval_eps=4,
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    # Run once WITHOUT diagnostics_path.
+    with _patch_runs(success_count=2, death_count=1, eval_count=4):
+        score_no_diag = fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+    # Run again WITH diagnostics_path on a fresh path.
+    diag_path = tmp_path / "diag.jsonl"
+    with _patch_runs(success_count=2, death_count=1, eval_count=4):
+        score_with_diag = fitness.evaluate(
+            genome,
+            sim_config,
+            encoder,
+            episodes=1,
+            seed=42,
+            diagnostics_path=diag_path,
+        )
+    # The side-channel is observation-only.
+    assert score_no_diag == pytest.approx(score_with_diag, rel=1e-9)
+    # No file is written when diagnostics_path is None.
+    assert not (tmp_path / "eval_diagnostics.jsonl").exists()
+    assert diag_path.exists()
+
+
+def test_eval_diagnostics_appends_across_multiple_calls(tmp_path: Path) -> None:
+    """Multiple ``evaluate`` calls to the same ``diagnostics_path`` SHALL append, not overwrite."""
+    import json
+
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
+    sim_config = _patched_evolution_config(
+        sim_config,
+        fitness_metric="composite",
+        eval_eps=4,
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    diag_path = tmp_path / "eval_diagnostics.jsonl"
+    for _ in range(3):
+        with _patch_runs(success_count=1, death_count=1, eval_count=4):
+            fitness.evaluate(
+                genome,
+                sim_config,
+                encoder,
+                episodes=1,
+                seed=42,
+                diagnostics_path=diag_path,
+            )
+    rows = [json.loads(line) for line in diag_path.read_text().strip().splitlines()]
+    assert len(rows) == 3

@@ -86,23 +86,28 @@ arms = {
     'control': '${CONFIG_CONTROL}',
 }
 values = {}
+metrics = {}
 for arm, path in arms.items():
     cfg = yaml.safe_load(open(path))
     evolution = cfg.get('evolution') or {}
     values[arm] = evolution.get('fitness_survival_weight', 'MISSING')
+    metrics[arm] = evolution.get('fitness_metric', 'composite')
 unique = set(values.values())
+unique_metrics = set(metrics.values())
 if len(unique) > 1 or 'MISSING' in unique:
-    print('MISMATCH', values, file=sys.stderr)
+    print('MISMATCH fitness_survival_weight=' + str(values), file=sys.stderr)
     sys.exit(1)
-print('OK', list(unique)[0])
+if len(unique_metrics) > 1:
+    print('MISMATCH fitness_metric=' + str(metrics), file=sys.stderr)
+    sys.exit(2)
+print('OK fitness_survival_weight=' + str(list(unique)[0]) + ' fitness_metric=' + str(list(unique_metrics)[0]))
 ") || {
-        echo "ERROR: fitness_survival_weight parity violated across the three arm YAMLs." >&2
+        echo "ERROR: fitness parity violated across the three arm YAMLs." >&2
         echo "${parity_out}" >&2
         echo "All three arms MUST share the same fitness_survival_weight" >&2
-        echo "for the M3 reproduction check via weights_only to be" >&2
-        echo "uncorrupted by elite-selection-rule mismatch. 'MISSING'" >&2
-        echo "means an arm's YAML omits the field; add it or fix the" >&2
-        echo "diverging value, then re-launch." >&2
+        echo "AND fitness_metric so the cross-arm comparison measures the" >&2
+        echo "same scalar. 'MISSING' means an arm's YAML omits the field;" >&2
+        echo "add it or fix the diverging value, then re-launch." >&2
         exit 1
     }
     echo "Parity check: ${parity_out}"

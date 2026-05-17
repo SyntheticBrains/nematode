@@ -22,6 +22,7 @@ from a pickle checkpoint without re-running prior generations.
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import math
@@ -116,9 +117,9 @@ def _evaluate_in_worker(args: tuple) -> float:
     args
         Tuple of ``(params_array, sim_config, encoder, fitness, episodes, seed,
         generation, index, parent_ids, warm_start_path_override,
-        weight_capture_path, tei_prior_source)``.  All elements must be
-        picklable.  The three trailing ``Path | None`` / tuple fields are
-        used by the inheritance step:
+        weight_capture_path, tei_prior_source, diagnostics_path)``.  All
+        elements must be picklable.  The four trailing ``Path | None`` / tuple
+        fields are used by the inheritance + telemetry steps:
 
         - ``warm_start_path_override`` and ``weight_capture_path``: per the
           Lamarckian/Baldwin pattern. When both are ``None`` (the no-
@@ -132,6 +133,16 @@ def _evaluate_in_worker(args: tuple) -> float:
           times, and sets ``brain.tei_prior`` post-decode (mirrors the
           ``warm_start_path_override`` / ``weight_capture_path``
           forwarding pattern).
+        - ``diagnostics_path``: per-session ``eval_diagnostics.jsonl``
+          path. When non-``None``, ``LearnedPerformanceFitness.evaluate``
+          appends one per-genome row recording ``success_rate``,
+          ``survival_rate``, deaths, successes, composite, and the
+          scalar fitness it returned. Used by the decision-gate
+          machinery (T1 envelope check, T3 M6-floor-to-beat, post-hoc
+          aggregator). ``EpisodicSuccessRate`` does not accept this
+          kwarg; the worker checks the signature dynamically before
+          forwarding (so co-evolution dispatch on either fitness
+          class works without per-class branching).
 
         ``encoder`` and ``fitness`` are class instances pickled by
         reference to their class definitions; concrete encoders/fitness
@@ -156,6 +167,7 @@ def _evaluate_in_worker(args: tuple) -> float:
         warm_start_path_override,
         weight_capture_path,
         tei_prior_source,
+        diagnostics_path,
     ) = args
     genome = Genome(
         params=np.asarray(params, dtype=np.float32),
@@ -164,27 +176,34 @@ def _evaluate_in_worker(args: tuple) -> float:
         generation=generation,
         birth_metadata=build_birth_metadata(sim_config),
     )
-    # Only LearnedPerformanceFitness accepts the inheritance kwargs;
-    # EpisodicSuccessRate's signature accepts them for ABI symmetry but
-    # ignores them. Detect by signature rather than type-import to avoid
-    # coupling the worker to a specific fitness class. When all three
-    # kwargs are None (no-inheritance case) we drop them entirely so the
-    # call shape is byte-equivalent to a frozen-weight evolution run.
+    # Only LearnedPerformanceFitness accepts the inheritance + diagnostics
+    # kwargs; EpisodicSuccessRate's signature accepts the inheritance ones
+    # for ABI symmetry but ignores them, and does NOT accept
+    # ``diagnostics_path``. Detect by signature rather than type-import to
+    # avoid coupling the worker to a specific fitness class. When all
+    # optional kwargs are None (no-inheritance, no-diagnostics case) we
+    # drop them entirely so the call shape is byte-equivalent to a
+    # frozen-weight evolution run.
     if (
         warm_start_path_override is not None
         or weight_capture_path is not None
         or tei_prior_source is not None
+        or diagnostics_path is not None
     ):
-        return fitness.evaluate(
-            genome,
-            sim_config,
-            encoder,
-            episodes=episodes,
-            seed=seed,
-            warm_start_path_override=warm_start_path_override,
-            weight_capture_path=weight_capture_path,
-            tei_prior_source=tei_prior_source,
-        )
+        # Build kwargs dynamically to avoid passing diagnostics_path to
+        # fitness functions that don't accept it (EpisodicSuccessRate).
+        kwargs = {
+            "episodes": episodes,
+            "seed": seed,
+            "warm_start_path_override": warm_start_path_override,
+            "weight_capture_path": weight_capture_path,
+            "tei_prior_source": tei_prior_source,
+        }
+        import inspect
+
+        if "diagnostics_path" in inspect.signature(fitness.evaluate).parameters:
+            kwargs["diagnostics_path"] = diagnostics_path
+        return fitness.evaluate(genome, sim_config, encoder, **kwargs)
     return fitness.evaluate(genome, sim_config, encoder, episodes=episodes, seed=seed)
 
 
@@ -1402,6 +1421,23 @@ class EvolutionLoop:
                     )
                     inherited_from_per_child.append(inherited_from)
 
+                    # eval_diagnostics.jsonl: per-genome telemetry
+                    # (success_rate + survival_rate + deaths + ...).
+                    # Single per-session file; workers append. Used by
+                    # the decision-gate machinery (T1 envelope check,
+                    # T3 M6-floor-to-beat, post-hoc aggregator). Only
+                    # ``LearnedPerformanceFitness`` accepts it; other
+                    # fitness functions (incl. test stubs) get ``None``
+                    # so the worker's signature-dispatch elides the
+                    # kwarg before forwarding. Signature-check at the
+                    # loop layer rather than the worker layer so the
+                    # worker pickling boundary doesn't need to import
+                    # ``LearnedPerformanceFitness``.
+                    diagnostics_path = (
+                        self.output_dir / "eval_diagnostics.jsonl"
+                        if "diagnostics_path" in inspect.signature(self.fitness.evaluate).parameters
+                        else None
+                    )
                     eval_args.append(
                         (
                             np.asarray(params, dtype=np.float32),
@@ -1416,6 +1452,7 @@ class EvolutionLoop:
                             parent_warm_start,
                             child_capture_path,
                             tei_prior_source_for_gen,
+                            diagnostics_path,
                         ),
                     )
 

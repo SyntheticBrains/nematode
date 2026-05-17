@@ -144,7 +144,7 @@ The M6.9+ PR-A campaign SHALL run three structurally-distinct YAML configs corre
 
 ### Requirement: Fitness Survival Weight Parity Across Arms
 
-When the M6.9+ PR-A three-arm campaign is launched, all three YAMLs SHALL set `evolution.fitness_survival_weight` to the same value (default `1.0` for the M6.9+ campaign). The composite fitness `success_rate × (1 − fitness_survival_weight × death_rate)` SHALL apply uniformly to F0 elite selection across all three arms so the cross-arm comparison is not confounded by elite-selection-strategy mismatch (food-grabber-dominant elites under raw `success_rate` would distort the `weights_only` vs `control` M3 reproduction check).
+When the M6.9+ PR-A three-arm campaign is launched, all three YAMLs SHALL set `evolution.fitness_survival_weight` to the same value (default `1.0` for the M6.9+ campaign). The composite fitness `success_rate × (1 − fitness_survival_weight × death_rate)` is the legacy `fitness_metric: "composite"` formulation; under M6.9+ default `fitness_metric: "survival_rate"` this field is ignored at fitness computation but SHALL still match across arms for round-trip / artefact-symmetry. Parity remains a launch precondition because future ablation runs may switch back to composite, and a divergent value in the YAMLs is a config drift smell regardless of which dispatch is active.
 
 #### Scenario: all three arm YAMLs set fitness_survival_weight: 1.0
 
@@ -156,5 +156,57 @@ When the M6.9+ PR-A three-arm campaign is launched, all three YAMLs SHALL set `e
 
 - **WHEN** `phase5_m69_transgenerational_lstmppo_klinotaxis.sh --pilot` or `--full` launches
 - **AND** the three arm YAMLs are loaded
-- **THEN** the shell SHALL extract `evolution.fitness_survival_weight` from each YAML
-- **AND** if any value differs from the others, the shell SHALL exit with a parity-violation error BEFORE any worker is dispatched
+- **THEN** the shell SHALL extract `evolution.fitness_survival_weight` AND `evolution.fitness_metric` from each YAML
+- **AND** if any `fitness_survival_weight` value differs from the others, the shell SHALL exit with a parity-violation error BEFORE any worker is dispatched
+- **AND** if any `fitness_metric` value differs from the others, the shell SHALL exit with a parity-violation error BEFORE any worker is dispatched
+
+### Requirement: Fitness Metric Primary-Scalar Selector
+
+`EvolutionConfig.fitness_metric: Literal["composite", "success_rate", "survival_rate"]` SHALL select the per-eval primary scalar that `LearnedPerformanceFitness.evaluate` returns. Default `"composite"` preserves the M3 / M6 byte-equivalent fitness `success_rate × (1 − fitness_survival_weight × death_rate)`. Under `"survival_rate"` the function SHALL return `1 − deaths / eval_count`; under `"success_rate"` it SHALL return `successes / eval_count`. `fitness_survival_weight` SHALL be ignored under both non-default dispatches — the dispatch is the single point of metric selection.
+
+#### Scenario: default composite preserves M3/M6 byte-equivalence
+
+- **WHEN** `EvolutionConfig` is loaded without `fitness_metric` (or with `fitness_metric: "composite"`)
+- **THEN** `LearnedPerformanceFitness.evaluate` SHALL return `success_rate × (1 − fitness_survival_weight × death_rate)` exactly as the pre-M6.9+ implementation did
+- **AND** the M3 / M5 / M6 regression tests SHALL pass without YAML changes
+
+#### Scenario: survival_rate dispatch returns survival fraction
+
+- **WHEN** `EvolutionConfig.fitness_metric: "survival_rate"` is configured
+- **THEN** `LearnedPerformanceFitness.evaluate` SHALL return `1 − (deaths / eval_count)`
+- **AND** the return value SHALL be in `[0.0, 1.0]`
+- **AND** `fitness_survival_weight` SHALL NOT influence the returned scalar
+
+#### Scenario: success_rate dispatch returns foraging fraction
+
+- **WHEN** `EvolutionConfig.fitness_metric: "success_rate"` is configured
+- **THEN** `LearnedPerformanceFitness.evaluate` SHALL return `successes / eval_count` where `successes` counts episodes ending in `TerminationReason.COMPLETED_ALL_FOOD`
+- **AND** `fitness_survival_weight` SHALL NOT influence the returned scalar
+
+#### Scenario: unknown fitness_metric rejected at YAML load
+
+- **WHEN** `fitness_metric: "fastest_food"` (or any value not in the Literal) is configured
+- **THEN** Pydantic SHALL raise a `ValidationError` at config load with the offending value
+
+#### Scenario: M6.9+ three arms set fitness_metric: survival_rate
+
+- **WHEN** the three M6.9+ PR-A arm YAMLs (`tei_on`, `weights_only`, `control`) are loaded
+- **THEN** each SHALL have `evolution.fitness_metric: "survival_rate"`
+- **AND** the value SHALL be identical across all three so the cross-arm primary verdict compares the same scalar
+
+### Requirement: Per-Genome Eval Diagnostics Side-Channel
+
+`LearnedPerformanceFitness.evaluate` SHALL accept an optional `diagnostics_path: Path | None = None` keyword argument. When set to a non-`None` path, the function SHALL append one JSON-Lines row per call recording `genome_id`, `generation`, `seed`, `eval_count`, `successes`, `deaths`, `success_rate`, `survival_rate`, `composite`, `fitness` (the returned scalar), `fitness_metric`, and `fitness_survival_weight`. The `EvolutionLoop` SHALL pass `output_dir / "eval_diagnostics.jsonl"` for every per-genome eval so the decision-gate machinery (T1 envelope check, T3 M6-floor-to-beat, post-hoc aggregator) can read the per-eval `survival_rate` directly.
+
+#### Scenario: diagnostics row carries all metric variants
+
+- **WHEN** `LearnedPerformanceFitness.evaluate` is called with `diagnostics_path` set
+- **THEN** one JSON-Lines row SHALL be appended to that path
+- **AND** the row SHALL contain `success_rate`, `survival_rate`, `composite`, and the returned `fitness` scalar
+- **AND** the row SHALL be reconstructable into a `dict` without parsing the whole file
+
+#### Scenario: diagnostics path None preserves byte-equivalence
+
+- **WHEN** `LearnedPerformanceFitness.evaluate` is called without `diagnostics_path` (or with `diagnostics_path=None`)
+- **THEN** no file I/O SHALL be performed by the diagnostics side-channel
+- **AND** the returned scalar SHALL be identical to the same call with `diagnostics_path` set (the side-channel is observation-only)

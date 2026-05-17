@@ -1348,7 +1348,36 @@ class EvolutionConfig(BaseModel):
     # ranks brains at 0.68 success_rate with 0.08 survival_rate as
     # top elites). Pure success_rate fitness decouples from avoidance
     # learning when food rewards dominate proximity/damage penalties.
+    #
+    # Note: ``fitness_survival_weight`` ONLY applies when
+    # ``fitness_metric == "composite"``. Under ``"success_rate"`` or
+    # ``"survival_rate"`` the field is ignored — the dispatch is the
+    # single point of metric selection.
     fitness_survival_weight: float = Field(default=0.0, ge=0.0, le=1.0)
+
+    # Fitness primary-metric selector: which scalar the optimizer + the
+    # decision-gate machinery consume per eval. Three options:
+    #
+    # - ``"composite"`` (default): preserves the M3/M6 legacy fitness
+    #   ``success_rate * (1 - fitness_survival_weight * death_rate)``.
+    #   Byte-equivalent to the prior single-metric path. Backwards-
+    #   compatible: existing M3/M4/M5/M6 configs continue to work
+    #   without YAML changes.
+    # - ``"success_rate"``: raw ``successes / L_eval`` (fraction of
+    #   eval episodes terminating in ``COMPLETED_ALL_FOOD``). Pure
+    #   foraging-success measure; ignores ``fitness_survival_weight``.
+    # - ``"survival_rate"``: ``1 - deaths / L_eval`` (fraction of
+    #   eval episodes NOT terminating in ``HEALTH_DEPLETED``). The
+    #   spec primary metric for the M6.9+ PR-A pathogen-avoidance
+    #   campaign — the decision gate (T1 envelope, T3 M6 floor,
+    #   cross-arm primary verdict) is specified against this metric.
+    #   Ignores ``fitness_survival_weight``.
+    #
+    # Only ``LearnedPerformanceFitness`` honours the dispatch;
+    # ``EpisodicSuccessRate`` is frozen-weight and always returns
+    # success_rate (no train phase → no survival-vs-foraging
+    # distinction to make).
+    fitness_metric: Literal["composite", "success_rate", "survival_rate"] = "composite"
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912

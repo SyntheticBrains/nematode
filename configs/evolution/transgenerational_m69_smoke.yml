@@ -146,6 +146,11 @@ evolution:
   cma_diagonal: false
   inheritance: transgenerational
   fitness_survival_weight: 1.0
+  # Spec primary metric (M6.9+ § D5). T1 F0 envelope check reads
+  # survival_rate from eval_diagnostics.jsonl produced under this
+  # dispatch — calibration smoke uses the same fitness shape the
+  # pilot/full campaign will use.
+  fitness_metric: survival_rate
   transgenerational:
     enabled: true
     decay_factor: 0.6

@@ -140,6 +140,10 @@ evolution:
   cma_diagonal: false
   inheritance: lamarckian
   fitness_survival_weight: 1.0
+  # Matches tei_on / control — the M6.9+ campaign uses survival_rate
+  # as the primary metric so the cross-arm comparison measures the
+  # same scalar (survival under predators) across all three arms.
+  fitness_metric: survival_rate
   # NO ``transgenerational:`` block — the validator's pairing contract
   # rejects ``lamarckian + transgenerational.enabled=False`` but accepts
   # ``lamarckian + transgenerational=None``. The block is omitted

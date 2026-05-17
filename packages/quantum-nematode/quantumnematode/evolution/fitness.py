@@ -393,6 +393,7 @@ class LearnedPerformanceFitness:
         warm_start_path_override: Path | None = None,
         weight_capture_path: Path | None = None,
         tei_prior_source: tuple[Path, float, int] | None = None,
+        diagnostics_path: Path | None = None,
     ) -> float:
         """Run K train + L eval and return ``eval_successes / L``.
 
@@ -648,10 +649,52 @@ class LearnedPerformanceFitness:
             if result.termination_reason == TerminationReason.HEALTH_DEPLETED:
                 deaths += 1
         success_rate = successes / eval_count
-        # Survival-weighted fitness (default 0.0 = byte-equivalent legacy
-        # behaviour). With weight > 0 the F0 elite is selected on a
-        # composite that penalises pathogen deaths, reducing the
-        # food-grabber-dominance bias observed at survival_weight=0
-        # on transgenerational pathogen-avoidance configs.
         death_rate = deaths / eval_count
-        return success_rate * (1.0 - evolution_config.fitness_survival_weight * death_rate)
+        survival_rate = 1.0 - death_rate
+        # Composite (M3/M6 byte-equivalent default): success-weighted
+        # by survival, with ``fitness_survival_weight`` controlling
+        # how harshly deaths penalise foraging score.
+        composite = success_rate * (1.0 - evolution_config.fitness_survival_weight * death_rate)
+        # Dispatch on ``fitness_metric``. The composite is the
+        # M3/M6/M5 legacy default — preserves byte-equivalence for
+        # configs that don't set the field. ``"survival_rate"`` is
+        # the M6.9+ PR-A spec primary metric (the decision-gate
+        # tripwires T1 + T3 + cross-arm primary verdict are
+        # specified against it). ``"success_rate"`` is a pure
+        # foraging measure for ablation studies.
+        if evolution_config.fitness_metric == "survival_rate":
+            fitness = survival_rate
+        elif evolution_config.fitness_metric == "success_rate":
+            fitness = success_rate
+        else:  # composite (default)
+            fitness = composite
+        # Optional per-genome telemetry side-channel. The decision-gate
+        # machinery (T1 envelope check, T3 M6-floor-to-beat, post-hoc
+        # aggregator) needs survival_rate + success_rate alongside the
+        # scalar fitness; the per_gen_elites.jsonl writer in the loop
+        # only records the scalar. ``diagnostics_path`` lets the loop
+        # request a structured per-eval line written here, indexed by
+        # the loop's (gen, genome_id) tuple. JSON-Lines so the loop
+        # can append from parallel workers without a global lock —
+        # each line is self-contained.
+        if diagnostics_path is not None:
+            import json as _json
+
+            diagnostics_path.parent.mkdir(parents=True, exist_ok=True)
+            row = {
+                "genome_id": genome.genome_id,
+                "generation": genome.generation,
+                "seed": seed,
+                "eval_count": eval_count,
+                "successes": successes,
+                "deaths": deaths,
+                "success_rate": success_rate,
+                "survival_rate": survival_rate,
+                "composite": composite,
+                "fitness": fitness,
+                "fitness_metric": evolution_config.fitness_metric,
+                "fitness_survival_weight": evolution_config.fitness_survival_weight,
+            }
+            with diagnostics_path.open("a", encoding="utf-8") as handle:
+                handle.write(_json.dumps(row) + "\n")
+        return fitness

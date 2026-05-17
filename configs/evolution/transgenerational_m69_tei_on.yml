@@ -173,7 +173,20 @@ evolution:
   # launcher shell asserts this value matches across tei_on /
   # weights_only / control at launch time; mismatch aborts before any
   # worker is dispatched.
+  # Ignored under fitness_metric=survival_rate (the M6.9+ PR-A
+  # spec primary metric — see below); retained for byte-equivalent
+  # round-trip with the prior M6 fitness machinery.
   fitness_survival_weight: 1.0
+  # Spec primary metric for the M6.9+ PR-A pathogen-avoidance
+  # campaign (design.md § D5). Dispatches the TPE optimizer +
+  # decision-gate machinery to optimise for SURVIVAL of predators,
+  # not foraging-given-survival. T1 envelope, T3 M6-floor-to-beat,
+  # and cross-arm primary verdict are all specified against this
+  # metric — under fitness_metric=composite (M3/M6 byte-equivalent
+  # default) the F0 elite is selected on a different signal than
+  # the decision gate measures, which is the M6.9+ smoke-pass-1
+  # failure mode that motivated this YAML field.
+  fitness_metric: survival_rate
   transgenerational:
     enabled: true
     decay_factor: 0.6
