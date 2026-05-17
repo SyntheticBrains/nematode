@@ -307,6 +307,191 @@ class TestPredatorEvasionReward:
         assert reward == pytest.approx(0.49)
 
 
+class TestGradientOnlyRewardMode:
+    """Validate the ``reward_mode='gradient_only'`` M6.10 audit-B remediation.
+
+    Under ``gradient_only`` the distance-scaled evasion term and the
+    first-step flat-fallback are both dropped; only the contact
+    penalty at ``dist <= 1`` fires. ``default`` mode preserves the
+    M3 / M4 / M5 / M6 byte-equivalent behaviour.
+    """
+
+    def _make_predator_env(self, agent_pos, predator_positions, *, in_danger=True):
+        env = _make_base_env(agent_pos, visited_cells={tuple(agent_pos)})
+        env.predator.enabled = True
+        env.is_agent_in_danger_for = Mock(return_value=in_danger)
+        predators = []
+        for pos in predator_positions:
+            pred = Mock()
+            pred.position = pos
+            predators.append(pred)
+        env.predators = predators
+        if predator_positions:
+            env.get_nearest_predator_distance_for = Mock(
+                return_value=min(
+                    abs(agent_pos[0] - p[0]) + abs(agent_pos[1] - p[1]) for p in predator_positions
+                ),
+            )
+        else:
+            env.get_nearest_predator_distance_for = Mock(return_value=None)
+        return env
+
+    def test_default_mode_preserves_distance_term(self):
+        """``reward_mode='default'`` (legacy) SHALL apply the distance-scaled evasion term."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="default",
+        )
+        env = self._make_predator_env([6, 5], [(3, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (6, 5)]
+
+        # Moving away (prev_dist=2 → curr_dist=3) → evasion_reward = +0.5; step penalty -0.01.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(0.49)
+
+    def test_gradient_only_drops_distance_term(self):
+        """``reward_mode='gradient_only'`` SHALL drop the distance-scaled tangential term."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_only",
+        )
+        env = self._make_predator_env([6, 5], [(3, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (6, 5)]
+
+        # Same move as above (away from predator, dist > 1) but no
+        # distance-scaled reward. Only step penalty fires.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.01)
+
+    def test_gradient_only_preserves_contact_penalty(self):
+        """``gradient_only`` SHALL keep the contact penalty at ``dist <= 1``."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_only",
+        )
+        env = self._make_predator_env([5, 5], [(5, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (5, 5)]
+
+        # Contact (dist=0) → contact penalty -0.5; step penalty -0.01.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.51)
+
+    def test_gradient_only_vs_default_diverges_on_motion_to_contact(self):
+        """``gradient_only`` and ``default`` SHALL produce different rewards on motion-to-contact.
+
+        Discriminating path: agent at (6,5) moves to (5,5) where predator
+        sits — prev_dist=1, curr_dist=0. Default mode adds distance-scaled
+        term `0.5*(0-1) = -0.5` (moving closer) PLUS contact penalty -0.5
+        = -1.0 evasion. gradient_only adds only the contact penalty -0.5.
+        With step penalty -0.01: default → -1.01, gradient_only → -0.51.
+        """
+        default_config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="default",
+        )
+        gradient_config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_only",
+        )
+        env_default = self._make_predator_env([5, 5], [(5, 5)])
+        env_gradient = self._make_predator_env([5, 5], [(5, 5)])
+        path = [(6, 5), (5, 5)]
+
+        r_default = RewardCalculator(default_config).calculate_reward(env_default, path)
+        r_gradient = RewardCalculator(gradient_config).calculate_reward(env_gradient, path)
+
+        assert r_default == pytest.approx(-1.01)
+        assert r_gradient == pytest.approx(-0.51)
+        assert r_default != r_gradient
+
+    def test_gradient_only_drops_flat_fallback(self):
+        """``gradient_only`` SHALL drop the first-step flat-fallback penalty."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_only",
+        )
+        env = self._make_predator_env([5, 5], [(3, 5)])
+        calculator = RewardCalculator(config)
+        # First step (single-position path) — no prev_dist available.
+        # Default mode would apply flat fallback; gradient_only skips it.
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.01)
+
+    def test_gradient_only_skips_fallback_when_curr_pred_dist_is_none(self):
+        """``gradient_only`` SHALL skip the fallback when ``curr_pred_dist`` is ``None``.
+
+        Same exec path as the first-step case (the original condition is
+        ``curr_pred_dist is not None and len(path) > 1``) but reached via
+        a different env state: predator in danger zone but distance
+        un-computable (env-side edge case). Default mode applies the
+        flat fallback; gradient_only mode does not.
+        """
+        env_default = self._make_predator_env([5, 5], [(3, 5)])
+        env_default.get_nearest_predator_distance_for = Mock(return_value=None)
+        env_gradient = self._make_predator_env([5, 5], [(3, 5)])
+        env_gradient.get_nearest_predator_distance_for = Mock(return_value=None)
+        path = [(4, 5), (5, 5)]  # len > 1 so first-step guard doesn't trip
+
+        default_config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="default",
+        )
+        gradient_config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_only",
+        )
+        r_default = RewardCalculator(default_config).calculate_reward(env_default, path)
+        r_gradient = RewardCalculator(gradient_config).calculate_reward(env_gradient, path)
+
+        # Default: flat-fallback -0.5 + step penalty -0.01 = -0.51.
+        # gradient_only: only step penalty -0.01.
+        assert r_default == pytest.approx(-0.51)
+        assert r_gradient == pytest.approx(-0.01)
+
+    def test_default_and_gradient_only_match_outside_predators(self):
+        """When predators are disabled, both modes SHALL produce identical rewards."""
+        env = _make_base_env([5, 5], visited_cells={(5, 5)})
+        env.predator.enabled = False
+        path = [(4, 5), (5, 5)]
+
+        default_calc = RewardCalculator(
+            RewardConfig(penalty_step=0.01, penalty_predator_proximity=0.5, reward_mode="default"),
+        )
+        gradient_calc = RewardCalculator(
+            RewardConfig(
+                penalty_step=0.01,
+                penalty_predator_proximity=0.5,
+                reward_mode="gradient_only",
+            ),
+        )
+        assert default_calc.calculate_reward(env, path) == gradient_calc.calculate_reward(env, path)
+
+    def test_reward_mode_default_value(self):
+        """``reward_mode`` SHALL default to ``"default"`` (legacy byte-equivalence)."""
+        config = RewardConfig()
+        assert config.reward_mode == "default"
+
+    def test_unknown_reward_mode_rejected_at_construction(self):
+        """``RewardConfig`` SHALL reject unknown ``reward_mode`` values at construction."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            RewardConfig(reward_mode="sparse")  # type: ignore[arg-type]
+
+
 class TestTemperatureAvoidanceReward:
     """Test distance-scaled temperature avoidance reward."""
 

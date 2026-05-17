@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from pydantic import BaseModel
@@ -209,6 +209,17 @@ class RewardConfig(BaseModel):
     penalty_temperature_proximity: float = (
         DEFAULT_PENALTY_TEMPERATURE_PROXIMITY  # Scale factor for temp deviation-based reward
     )
+    # Predator-evasion reward shape. ``"default"`` preserves the
+    # legacy distance-scaled evasion term (rewards moving AWAY,
+    # penalises moving CLOSER) PLUS the contact penalty + flat-fallback
+    # path. ``"gradient_only"`` drops the distance-scaled term and the
+    # flat fallback; only the contact penalty fires when the agent
+    # enters dist <= 1 of a predator. The "default" path is
+    # byte-equivalent to M3 / M4 / M5 / M6 behaviour; the
+    # "gradient_only" path is the M6.10 audit-B remediation that
+    # removes the "circle right" tangential-motion attractor's
+    # *incentive*. Configs that don't set the field stay byte-equivalent.
+    reward_mode: Literal["default", "gradient_only"] = "default"
 
 
 class ManyworldsModeConfig(BaseModel):
