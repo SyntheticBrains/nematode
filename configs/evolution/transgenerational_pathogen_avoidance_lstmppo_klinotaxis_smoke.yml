@@ -125,13 +125,15 @@ evolution:
   population_size: 6
   generations: 1
   episodes_per_eval: 25
-  learn_episodes_per_eval: 50
+  learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0
-  parallel_workers: 4
+  parallel_workers: 8
   checkpoint_every: 2
   cma_diagonal: false
   inheritance: transgenerational
+  # Survival-weighted fitness — see TEI-on YAML for rationale.
+  fitness_survival_weight: 1.0
   transgenerational:
     enabled: true
     decay_factor: 0.6
@@ -139,7 +141,7 @@ evolution:
     lawn_schedule:
       - generation: 0
         pathogen_lawns_enabled: true
-        ppo_train_episodes: 50
+        ppo_train_episodes: 1000
 
 hyperparam_schema:
   - name: actor_lr

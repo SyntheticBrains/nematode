@@ -16,10 +16,10 @@
 # ``_compute_tei_prior_source`` both early-return identity / None at
 # every generation. The TEI-off arm therefore receives the base
 # sim_config every gen (pathogen lawns present in the env from the
-# ``predators:`` block) and runs the standard K=50 train phase per
-# child for ALL four generations — no inheritance, no schedule
-# overrides, no substrate. This is the "what would the loop do
-# without TEI" control.
+# ``predators:`` block) and runs the standard
+# ``learn_episodes_per_eval`` (K=500) train phase per child for ALL
+# four generations — no inheritance, no schedule overrides, no
+# substrate. This is the "what would the loop do without TEI" control.
 #
 # Substrate is the only cross-arm difference. Any F1+ retention
 # observed in the TEI-on arm but absent here is attributable to the
@@ -113,10 +113,9 @@ environment:
 
   predators:
     # "Pathogen lawns" repurposed via STATIONARY predator with speed 0.
-    # ``damage_radius=3`` is intentionally larger than the standard
-    # stationary scenario (damage_radius=2) so F0 has enough avoidance
-    # signal to learn from in 50 PPO episodes. If F0 calibration falls
-    # outside [0.45, 0.85], this is the first knob to retune.
+    # ``damage_radius=3`` mirrors the TEI-on YAML's calibration. See
+    # the TEI-on YAML's predator-block comment for the full retune
+    # history (damage_radius=2 → 5 → 3 across Path A diagnostics).
     enabled: true
     count: 3
     speed: 0.0
@@ -133,7 +132,7 @@ environment:
 
 evolution:
   algorithm: tpe
-  population_size: 16
+  population_size: 8
   generations: 4
   # episodes_per_eval is the protocol fallback when
   # eval_episodes_per_eval is None. Both are set to 25 so the per-gen
@@ -144,13 +143,18 @@ evolution:
   # F1/F2/F3: 0). The outer value MUST be > 0 to satisfy the
   # inheritance ↔ train-phase validator at config-load; the
   # per-gen override applies at worker-dispatch time.
-  learn_episodes_per_eval: 50
+  learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0
-  parallel_workers: 4
+  parallel_workers: 8
   checkpoint_every: 2
   cma_diagonal: false
   inheritance: none
+  # Held in lockstep with the TEI-on YAML — see its
+  # ``fitness_survival_weight`` comment block for rationale. Both arms
+  # MUST use the same fitness function so the substrate is the only
+  # cross-arm difference.
+  fitness_survival_weight: 1.0
   # TEI-OFF control arm: the block is retained (in lockstep with the
   # TEI-on YAML for maintenance), but ``enabled: false`` causes the
   # helpers to short-circuit identity / None at every generation.
@@ -158,18 +162,25 @@ evolution:
     enabled: false
     decay_factor: 0.6
     extraction_seed: 424242
+    # Schedule held in lockstep with the TEI-on YAML for maintenance.
+    # Under ``enabled: false`` the helpers short-circuit this entire
+    # schedule (``_build_per_gen_sim_config`` returns the base
+    # sim_config and ``_compute_tei_prior_source`` returns None at
+    # every generation), so these values are vestigial when this YAML
+    # is loaded as-is. They exist so that flipping ``enabled: true``
+    # produces a runnable config without any other edits.
     lawn_schedule:
       - generation: 0
         pathogen_lawns_enabled: true
-        ppo_train_episodes: 50
+        ppo_train_episodes: 1000
       - generation: 1
-        pathogen_lawns_enabled: false
+        pathogen_lawns_enabled: true
         ppo_train_episodes: 0
       - generation: 2
-        pathogen_lawns_enabled: false
+        pathogen_lawns_enabled: true
         ppo_train_episodes: 0
       - generation: 3
-        pathogen_lawns_enabled: false
+        pathogen_lawns_enabled: true
         ppo_train_episodes: 0
 
 hyperparam_schema:

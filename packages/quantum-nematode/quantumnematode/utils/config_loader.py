@@ -1193,6 +1193,23 @@ class EvolutionConfig(BaseModel):
     # at K-block transitions; ignored entirely outside co-evolution.
     persist_cma_across_kblocks: bool = False
 
+    # Fitness function modifier: when > 0, ``LearnedPerformanceFitness``
+    # returns ``success_rate * (1 - fitness_survival_weight * death_rate)``
+    # instead of plain ``success_rate``. ``death_rate`` is the fraction
+    # of eval episodes ending in ``HEALTH_DEPLETED``. Range [0.0, 1.0].
+    #
+    # Default 0.0 keeps the byte-equivalent legacy behaviour (M3
+    # Lamarckian + M4 Baldwin + M5 co-evolution rely on raw
+    # success_rate). The transgenerational M6 pilot/full benefits from
+    # ``fitness_survival_weight: 1.0`` so the F0 elite is selected for
+    # both foraging AND pathogen avoidance — without this weighting,
+    # TPE selects "high-foraging, accept-death" food-grabber elites
+    # (per Path AA forensics: K=1000 produced fitness 0.68 but
+    # survival_rate 0.08). Pure success_rate fitness decouples from
+    # avoidance learning when food rewards dominate proximity/damage
+    # penalties.
+    fitness_survival_weight: float = Field(default=0.0, ge=0.0, le=1.0)
+
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912
         """Enforce inheritance configuration rules at YAML load time.

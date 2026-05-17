@@ -165,3 +165,103 @@ def test_build_retention_table_averages_episodes_per_generation() -> None:
     assert table[("tei_on", 42, 0)] == 0.7
     assert table[("tei_on", 42, 1)] == 0.4
     assert table[("tei_off", 42, 0)] == 0.5
+
+
+def test_f0_baseline_override_replaces_post_hoc_f0(tmp_path: Path) -> None:
+    """When ``f0_baseline_override`` is provided the gate SHALL compare F1+ against the override.
+
+    Regression for the M6 evaluator quirk: post-hoc F0 measures an
+    UNTRAINED brain (since F0 weights are GC'd by substrate extraction),
+    not the trained F0 elite the substrate was extracted from. Passing
+    the training-time F0 fitness as an override gives the biologically-
+    correct retention ratio.
+    """
+    mod = _load_aggregator_module()
+    # Post-hoc retention table: F0 looks like 0.08 (untrained), F1+
+    # ~0.10 (substrate-cascade). Without override, monotone fails
+    # at F1 > F0. With override (F0 trained at 0.50), monotone passes
+    # but ratios fail (F1=0.10 < 0.40 * 0.50 = 0.20).
+    retention = {
+        ("tei_on", 42, 0): 0.08,
+        ("tei_on", 42, 1): 0.10,
+        ("tei_on", 42, 2): 0.08,
+        ("tei_on", 42, 3): 0.06,
+    }
+    # Without override: F1=0.10 > F0=0.08 → monotone FAIL → overall FAIL
+    no_override = mod.evaluate_decision_gate_one_seed(retention=retention, arm="tei_on", seed=42)
+    assert no_override["f0"] == 0.08
+    assert no_override["monotone_pass"] is False
+
+    # With override F0=0.50: F0(0.50) >= F1(0.10) >= F2(0.08) >= F3(0.06)
+    # → monotone PASS. Ratios: F1=0.10 vs 0.40*0.50=0.20 → FAIL.
+    override = {("tei_on", 42): 0.50}
+    with_override = mod.evaluate_decision_gate_one_seed(
+        retention=retention,
+        arm="tei_on",
+        seed=42,
+        f0_baseline_override=override,
+    )
+    assert with_override["f0"] == 0.50
+    assert with_override["monotone_pass"] is True
+    assert with_override["f1_ratio_pass"] is False
+    assert with_override["overall_pass"] is False
+
+
+def test_f0_baseline_override_passes_when_retention_meets_envelope() -> None:
+    """A seed whose F1/F2/F3 retain >= thresholds x override F0 SHALL pass under override."""
+    mod = _load_aggregator_module()
+    retention = {
+        ("tei_on", 42, 0): 0.08,  # untrained post-hoc value (gets replaced)
+        ("tei_on", 42, 1): 0.45,  # 0.45 vs 0.40 * 1.0 = 0.40 → PASS
+        ("tei_on", 42, 2): 0.30,  # 0.30 vs 0.25 * 1.0 = 0.25 → PASS
+        ("tei_on", 42, 3): 0.20,  # 0.20 vs 0.15 * 1.0 = 0.15 → PASS
+    }
+    override = {("tei_on", 42): 1.0}
+    result = mod.evaluate_decision_gate_one_seed(
+        retention=retention,
+        arm="tei_on",
+        seed=42,
+        f0_baseline_override=override,
+    )
+    assert result["f0"] == 1.0
+    assert result["f1_ratio_pass"] is True
+    assert result["f2_ratio_pass"] is True
+    assert result["f3_ratio_pass"] is True
+    assert result["monotone_pass"] is True
+    assert result["overall_pass"] is True
+
+
+def test_load_f0_training_fitness_per_seed_reads_jsonl(tmp_path: Path) -> None:
+    """``load_f0_training_fitness_per_seed`` SHALL extract F0 fitness from each JSONL."""
+    mod = _load_aggregator_module()
+    # Build a synthetic campaign-root layout:
+    # <root>/tei_on/seed-42/per_gen_elites.jsonl (direct)
+    # <root>/tei_off/seed-42/<session>/per_gen_elites.jsonl (nested)
+    root = tmp_path / "campaign"
+    direct = root / "tei_on" / "seed-42"
+    direct.mkdir(parents=True)
+    (direct / "per_gen_elites.jsonl").write_text(
+        '{"generation": 0, "genome_id": "g0", "params": [], "fitness": 0.4624}\n'
+        '{"generation": 1, "genome_id": "g1", "params": [], "fitness": 0.0}\n',
+        encoding="utf-8",
+    )
+    nested = root / "tei_off" / "seed-42" / "20260516_133000_abc"
+    nested.mkdir(parents=True)
+    (nested / "per_gen_elites.jsonl").write_text(
+        '{"generation": 0, "genome_id": "g0", "params": [], "fitness": 0.3500}\n',
+        encoding="utf-8",
+    )
+
+    result = mod.load_f0_training_fitness_per_seed(root)
+    assert result == {("tei_on", 42): 0.4624, ("tei_off", 42): 0.35}
+
+
+def test_load_f0_training_fitness_per_seed_skips_missing(tmp_path: Path) -> None:
+    """``load_f0_training_fitness_per_seed`` SHALL skip seeds missing the JSONL artefact."""
+    mod = _load_aggregator_module()
+    root = tmp_path / "campaign"
+    (root / "tei_on" / "seed-42").mkdir(parents=True)
+    # No per_gen_elites.jsonl in seed-42
+
+    result = mod.load_f0_training_fitness_per_seed(root)
+    assert result == {}
