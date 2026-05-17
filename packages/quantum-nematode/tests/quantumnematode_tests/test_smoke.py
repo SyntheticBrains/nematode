@@ -42,6 +42,9 @@ SIMULATION_CONFIGS = [
     # in the configured env (the transgenerational pathogen-lawn
     # substrate).
     "evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml",
+    # M6.9+ TEI re-evaluation TEI-on config. Same env-block-only
+    # rationale as the M6 entry above.
+    "evolution/transgenerational_m69_tei_on.yml",
 ]
 
 
