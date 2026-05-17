@@ -15,16 +15,21 @@
 # stationary-predator schema, reused so no new env-side fields are
 # introduced.
 #
-# Schedule (per the transgenerational-memory OpenSpec change):
-#   - F0 (gen 0): pathogen lawns ON, K=50 PPO train episodes per child.
+# Schedule (as calibrated through the Path A/AA/AAA forensic chain
+# documented in tmp/evaluations/transgenerational/transgenerational_scratchpad.md):
+#   - F0 (gen 0): pathogen lawns ON, K=1000 PPO train episodes per child.
 #     End-of-gen the F0 elite's trained policy is loaded, the
 #     ``extract_from_brain`` telemetry pass produces the
 #     ``logit_bias`` substrate, and the resulting ``.tei.pt`` is
 #     written. The capture is gated on success of the F0 train phase.
-#   - F1/F2/F3: pathogen lawns OFF, K=0 (no train). Each child loads
-#     the F0 substrate, applies the ``inherit_from`` decay cascade
-#     ``lineage_depth`` times (F1: 1×, F2: 2×, F3: 3×), and runs the
+#   - F1/F2/F3: pathogen lawns ON (test-phase pathogens MUST be present
+#     to evaluate the choice index), K=0 (no train — offspring inherit
+#     the F0 substrate without re-exposure). Each child loads the F0
+#     substrate, applies the ``inherit_from`` decay cascade
+#     ``lineage_depth`` times (F1: 1x, F2: 2x, F3: 3x), and runs the
 #     eval phase only. The TEI prior is the only signal carrier.
+#     (See the ``lawn_schedule`` block below for the local-context
+#     rationale of pathogens-on at F1+.)
 #
 # Decay factor 0.6 yields F0=1.0 / F1=0.6 / F2=0.36 / F3=0.216 — the
 # "diluted across generations" framing matches Posner 2023 / Kaletsky
@@ -171,17 +176,18 @@ evolution:
   # choice-index aggregator (commit 7) has enough samples to stabilise.
   episodes_per_eval: 25
   # learn_episodes_per_eval is the BASELINE K. The per-gen
-  # ``lawn_schedule`` below overrides it per generation (F0: 500,
-  # F1/F2/F3: 0). The K=500 figure is calibrated against
-  # logbook 006's stationary-predator convergence finding ("500 runs
-  # required for this configuration to converge reliably" → 57.1%
-  # success, 75.5% post-conv on unified-sensory MLPPPO). Path A v2
-  # single-brain forensics at K=2000 showed survival_rate peaked at
-  # K=1200 (0.52) with PPO oscillation 0.04–0.52 across checkpoints;
-  # K=500 lands at the start of that learnable regime. The outer
-  # value MUST be > 0 to satisfy the inheritance ↔ train-phase
-  # validator at config-load; the per-gen override applies at
-  # worker-dispatch time.
+  # ``lawn_schedule`` below overrides it per generation (F0: 1000,
+  # F1/F2/F3: 0). The K=1000 figure is the upper end of the Path AA
+  # forensic sweep: Path A v2 single-brain runs at K=2000 showed
+  # survival_rate peaked at K=1200 (0.52) with PPO oscillation
+  # 0.04–0.52 across adjacent checkpoints; K=1000 lands inside that
+  # learnable regime while keeping per-child train wall-time under
+  # ~3 minutes. Logbook 006's stationary-predator finding ("500 runs
+  # for unified-sensory MLPPPO to converge reliably") was the lower
+  # anchor — Path AA bracketed K=500 vs K=1000 and the latter produced
+  # the calibrated F0 elite (composite fitness 0.46). The outer value
+  # MUST be > 0 to satisfy the inheritance ↔ train-phase validator at
+  # config-load; the per-gen override applies at worker-dispatch time.
   learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0

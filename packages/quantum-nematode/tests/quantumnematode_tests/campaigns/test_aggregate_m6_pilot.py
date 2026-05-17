@@ -167,10 +167,10 @@ def test_build_retention_table_averages_episodes_per_generation() -> None:
     assert table[("tei_off", 42, 0)] == 0.5
 
 
-def test_f0_baseline_override_replaces_post_hoc_f0(tmp_path: Path) -> None:
+def test_f0_baseline_override_replaces_post_hoc_f0() -> None:
     """When ``f0_baseline_override`` is provided the gate SHALL compare F1+ against the override.
 
-    Regression for the M6 evaluator quirk: post-hoc F0 measures an
+    Regression for the post-hoc evaluator quirk: F0 measures an
     UNTRAINED brain (since F0 weights are GC'd by substrate extraction),
     not the trained F0 elite the substrate was extracted from. Passing
     the training-time F0 fitness as an override gives the biologically-

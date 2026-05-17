@@ -1198,16 +1198,15 @@ class EvolutionConfig(BaseModel):
     # instead of plain ``success_rate``. ``death_rate`` is the fraction
     # of eval episodes ending in ``HEALTH_DEPLETED``. Range [0.0, 1.0].
     #
-    # Default 0.0 keeps the byte-equivalent legacy behaviour (M3
-    # Lamarckian + M4 Baldwin + M5 co-evolution rely on raw
-    # success_rate). The transgenerational M6 pilot/full benefits from
-    # ``fitness_survival_weight: 1.0`` so the F0 elite is selected for
-    # both foraging AND pathogen avoidance — without this weighting,
-    # TPE selects "high-foraging, accept-death" food-grabber elites
-    # (per Path AA forensics: K=1000 produced fitness 0.68 but
-    # survival_rate 0.08). Pure success_rate fitness decouples from
-    # avoidance learning when food rewards dominate proximity/damage
-    # penalties.
+    # Default 0.0 keeps the byte-equivalent legacy behaviour (legacy
+    # inheritance strategies rely on raw success_rate). Pathogen-
+    # avoidance configs benefit from ``fitness_survival_weight: 1.0``
+    # so the elite is selected for both foraging AND avoidance —
+    # without this weighting, TPE selects "high-foraging, accept-death"
+    # food-grabber elites (forensics: at K=1000 the unweighted fitness
+    # ranks brains at 0.68 success_rate with 0.08 survival_rate as
+    # top elites). Pure success_rate fitness decouples from avoidance
+    # learning when food rewards dominate proximity/damage penalties.
     fitness_survival_weight: float = Field(default=0.0, ge=0.0, le=1.0)
 
     @model_validator(mode="after")
