@@ -32,8 +32,11 @@ Substrate is the only cross-arm difference (pairing validator enforces `enabled=
 ## Gate thresholds
 
 - F1 ≥ 40% x F0
+
 - F2 ≥ 25% x F0
+
 - F3 ≥ 15% x F0
+
 - Monotone non-increasing: F0 ≥ F1 ≥ F2 ≥ F3
 
 - **GO** iff ≥2 seeds pass; **PIVOT** iff exactly 1; **STOP** otherwise.
