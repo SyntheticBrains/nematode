@@ -82,7 +82,7 @@ PR-A addresses the first three (substrate / env+reward / probes) on a three-arm 
 
 1. Read `env.predators` from the F0-eval env (available via `sim_config.environment.predators`).
 2. For each predator, generate `probe_ring.count` (default 8) ring positions at distance `probe_ring.radius_offset + damage_radius` from the predator center, evenly distributed by angle.
-3. For each probe position, compute `predator_gradient_strength = 1.0 / (1.0 + manhattan_distance_to_nearest_lawn)` and `predator_gradient_direction = atan2(predator_y − probe_y, predator_x − probe_x)`. Both pure functions, unit-testable.
+3. For each probe position, compute `predator_gradient_strength = 1.0 / (1.0 + manhattan_distance(probe_pos, predator_pos))` and `predator_gradient_direction = atan2(predator_y − probe_y, predator_x − probe_x)`. Both pure functions, unit-testable.
 4. Optionally vary food_gradient per probe-ring iteration if `probe_ring.include_food_gradient_variants: true` (default `false` — keeps probes pathogen-isolated).
 5. Return `num_lawns × probe_ring.count` total probes (default: 5 lawns × 8 = 40 probes on the M6.10 env).
 

@@ -398,22 +398,26 @@ class TransgenerationalMemory:
         # bias_network is None; under the bias-network path it's a
         # legacy artefact preserved for round-trip compatibility).
         scaled_logit_bias = parent.logit_bias * scale
-        # Scale the bias-network parameters in-place on a deep copy.
-        scaled_network: nn.Sequential | None = None
-        if parent.bias_network is not None:
-            scaled_network = copy.deepcopy(parent.bias_network)
-            with torch.no_grad():
-                for tensor in scaled_network.parameters():
-                    tensor.mul_(scale)
-                for buffer in scaled_network.buffers():
-                    buffer.mul_(scale)
-        return cls(
+        # Construct the child substrate; ``__post_init__`` deep-copies
+        # the ``bias_network`` so the parent's module is never mutated
+        # — we don't need to deep-copy here. Then scale the child's
+        # (already-cloned) bias_network in-place so we only pay one
+        # deep-copy per generation step (the M6.9+ commit-1 review
+        # flagged the prior double-deep-copy as a latency leak).
+        child = cls(
             logit_bias=scaled_logit_bias,
             lineage_depth=child_depth,
             source_genome_id=parent.source_genome_id,
-            bias_network=scaled_network,
+            bias_network=parent.bias_network,
             input_features=parent.input_features,
         )
+        if child.bias_network is not None:
+            with torch.no_grad():
+                for tensor in child.bias_network.parameters():
+                    tensor.mul_(scale)
+                for buffer in child.bias_network.buffers():
+                    buffer.mul_(scale)
+        return child
 
 
 def _resolve_decay_scale(
@@ -734,11 +738,21 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
     # Probe the brain. M6 legacy path: one sample per probe → action_counts.
     # M6.9+ path: samples_per_probe samples per probe → per-probe empirical
     # distribution recorded alongside the probe params for the MLP fit.
+    #
+    # Hidden-state reset between probes. The LSTM/GRU recurrent state
+    # updates on every ``run_brain`` call, so the policy at probe N
+    # depends on the trajectory through probes 0..N-1. At F1+ runtime
+    # the substrate is queried per-step with no shared recurrent
+    # context across the probe ring — the fit target distribution and
+    # the deployment input distribution must match. Reset
+    # ``prepare_episode()`` between probes so each probe is sampled
+    # against a stateless recurrent context, mirroring deployment.
     n_samples = samples_per_probe if bias_network_spec is not None else 1
     per_probe_counts: list[torch.Tensor] = []
     for params in probe_params:
         counts = torch.zeros(num_actions, dtype=torch.float32)
         for _ in range(n_samples):
+            brain.prepare_episode()  # type: ignore[attr-defined]
             actions = brain.run_brain(  # type: ignore[attr-defined]
                 params,
                 reward=None,

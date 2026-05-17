@@ -770,18 +770,38 @@ class EvolutionLoop:
         probe_env = self._build_probe_env_if_configured()
         probe_params = self._build_f0_probe_params(brain=brain, env=probe_env)
 
-        # Extraction seed: fixed sentinel for now. A configurable
-        # ``cfg.transgenerational.extraction_seed`` Pydantic field is
-        # a follow-up addition tracked in the OpenSpec change; until
-        # it lands, use a stable default so the F0 telemetry pass is
-        # deterministic across runs.
+        # Resolve the substrate form from the YAML-configured
+        # ``transgenerational`` block. When ``bias_network`` is set
+        # the F0 extraction follows the sensory-conditional path
+        # (MLP-fit substrate); when None it falls back to the M6
+        # legacy constant ``logit_bias`` path (byte-equivalent).
+        # ``extraction_seed`` is also threaded from config so the
+        # per-seed MLP init RNG is distinct across calibration
+        # seeds — without this the substrate-diversity tripwire
+        # underestimates pairwise CoV (every calibration seed
+        # shares the same MLP-init RNG → artificially low diversity).
+        cfg_tg = self.evolution_config.transgenerational
+        bias_network_spec: dict | None = None
+        input_features: tuple[str, ...] = ()
         extraction_seed = 424242
+        if cfg_tg is not None:
+            extraction_seed = cfg_tg.extraction_seed
+            if cfg_tg.bias_network is not None:
+                bias_network_spec = {
+                    "input_dim": len(cfg_tg.bias_network.input_features),
+                    "hidden_dim": cfg_tg.bias_network.hidden_dim,
+                    "output_dim": brain.num_actions,  # type: ignore[attr-defined]
+                    "activation": cfg_tg.bias_network.activation,
+                }
+                input_features = tuple(cfg_tg.bias_network.input_features)
 
         substrate = extract_from_brain(
             brain=brain,
             probe_params=probe_params,
             rng_seed=extraction_seed,
             source_genome_id=elite_id,
+            bias_network_spec=bias_network_spec,
+            input_features=input_features,
         )
 
         # Save the substrate at the canonical ``.tei.pt`` path produced
@@ -859,9 +879,18 @@ class EvolutionLoop:
             # config fails over to the legacy synthetic-probe path
             # rather than crashing.
             return None
+        from quantumnematode.env.theme import Theme
         from quantumnematode.utils.config_loader import create_env_from_config
 
-        return create_env_from_config(self.sim_config.environment, seed=0)
+        # Theme.HEADLESS — no episode is run on this env (it's used
+        # only for predator-coordinate enumeration), so the ASCII
+        # render path would be unused wall-time anyway. Mirrors the
+        # convention used in evolution/fitness.py for evaluation envs.
+        return create_env_from_config(
+            self.sim_config.environment,
+            seed=0,
+            theme=Theme.HEADLESS,
+        )
 
     def _build_f0_probe_params(
         self,

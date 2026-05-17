@@ -159,6 +159,32 @@ def compute_pairwise_cov_matrix(
     return triplets
 
 
+def _feature_range(feature_name: str) -> tuple[float, float]:
+    """Realistic production range for a sensory ``BrainParams`` feature.
+
+    Used by ``mean_abs_bias_output`` to sample probe inputs that
+    match the runtime input distribution. Sampling uniformly from
+    ``[-1, 1]`` for every feature is wrong because two of the
+    canonical TEI features (``predator_gradient_strength`` and
+    ``food_gradient_strength``) are non-negative in production
+    (env emits ``gradient_strength * exp(-d / decay)``). Out-of-
+    distribution probes can produce a non-zero mean-abs output via
+    odd-symmetric activations even when the substrate is
+    output-degenerate on the in-distribution range — a false-pass
+    on T4.
+
+    Rules (suffix-first, then fallback):
+        - ``*_sin`` / ``*_cos`` → ``[-1, 1]`` (trigonometric derived)
+        - ``*_strength`` → ``[0, 1]`` (decay-attenuated, non-negative)
+        - default → ``[-1, 1]`` (conservatively symmetric)
+    """
+    if feature_name.endswith(("_sin", "_cos")):
+        return -1.0, 1.0
+    if feature_name.endswith("_strength"):
+        return 0.0, 1.0
+    return -1.0, 1.0
+
+
 def mean_abs_bias_output(
     substrate: TransgenerationalMemory,
     *,
@@ -168,9 +194,11 @@ def mean_abs_bias_output(
     """Mean ``|bias_network(probe)|`` over a deterministic probe set.
 
     Surfaces the T4 substrate-magnitude tripwire signal. Probes are
-    sampled uniformly from ``[-1, 1]^len(input_features)`` (the
-    plausible normalised-sensory input range — gradient strengths and
-    sin/cos transforms are all in ``[-1, 1]``).
+    sampled uniformly from the **per-feature** realistic production
+    range — see :func:`_feature_range`. Sampling matches the runtime
+    input distribution so a substrate that is output-degenerate
+    in-distribution is correctly flagged as failing T4, regardless
+    of its behaviour on out-of-distribution inputs.
 
     Returns
     -------
@@ -197,7 +225,16 @@ def mean_abs_bias_output(
         )
         raise ValueError(msg)
     gen = torch.Generator(device="cpu").manual_seed(rng_seed)
-    probes = (torch.rand((num_probes, in_features), generator=gen) * 2.0) - 1.0
+    # Per-feature scale + offset to map U[0, 1) to [lo, hi].
+    lows: list[float] = []
+    spans: list[float] = []
+    for feature_name in substrate.input_features:
+        lo, hi = _feature_range(feature_name)
+        lows.append(lo)
+        spans.append(hi - lo)
+    lo_tensor = torch.tensor(lows)
+    span_tensor = torch.tensor(spans)
+    probes = torch.rand((num_probes, in_features), generator=gen) * span_tensor + lo_tensor
     with torch.no_grad():
         outputs = substrate.bias_network(probes)
     return float(outputs.abs().mean().item())

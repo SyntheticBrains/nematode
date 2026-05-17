@@ -89,6 +89,17 @@ CROSS_ARM_MIN_DELTA_PP = 0.05  # 5 percentage points
 CROSS_ARM_BOOTSTRAP_RESAMPLES = 1000
 CROSS_ARM_BOOTSTRAP_CI_LEVEL = 0.80  # 80% CI ⇒ alpha=0.20
 
+# Full-campaign target n. When the primary pair (tei_on - control)
+# has fewer than this many paired-seed deltas the cross-arm verdict
+# is INDETERMINATE — the one-sided Wilcoxon at n=3 has minimum
+# achievable p = 0.125, which can never satisfy
+# CROSS_ARM_WILCOXON_P_THRESHOLD = 0.10. A null verdict in that
+# regime cannot be distinguished from a real null, so we surface
+# the under-powered state explicitly rather than silently labelling
+# it STOP. M6 closed INCONCLUSIVE precisely because this distinction
+# was not made.
+CROSS_ARM_FULL_N_SEEDS = 4
+
 # Three-arm campaign arms.
 ARM_TEI_ON = "tei_on"
 ARM_WEIGHTS_ONLY = "weights_only"
@@ -384,6 +395,8 @@ def compute_cross_arm_delta_stats(
 def compute_cross_arm_primary_verdict(
     tei_on_seed_evaluations: list[dict],
     cross_arm_stats: dict,
+    *,
+    mode: str = "full",
 ) -> dict:
     """Cross-arm primary verdict: GO iff per-arm gate passes AND noise-aware delta is positive.
 
@@ -394,17 +407,33 @@ def compute_cross_arm_primary_verdict(
       3. Mean delta ≥ 5pp absolute.
       4. 80% bootstrap CI does NOT include zero (lo > 0).
 
-    Returns a verdict dict with ``verdict`` ∈ {"GO", "STOP"} +
-    per-check pass/fail flags + rationale.
+    Under ``mode == "full"``, when fewer than ``CROSS_ARM_FULL_N_SEEDS``
+    paired-seed deltas are available on the primary pair the verdict
+    is "INDETERMINATE" rather than "STOP" — a one-sided Wilcoxon at
+    n=3 has minimum p=0.125, making the GO threshold structurally
+    unreachable. The operator MUST distinguish this from a real null.
+    Under ``mode == "pilot"`` the n=1 single-seed run is expected to
+    fail Wilcoxon; the pilot's primary artefact is
+    ``pilot_pivot_decision.md`` rather than this verdict.
+
+    Returns a verdict dict with ``verdict`` ∈ {"GO", "STOP", "INDETERMINATE"}
+    + per-check pass/fail flags + rationale.
     """
     tei_on_arm_verdict = aggregate_per_arm_verdict(tei_on_seed_evaluations)
     per_arm_gate_pass = tei_on_arm_verdict == "GO"
     wilcoxon_pass = cross_arm_stats["wilcoxon_p"] < CROSS_ARM_WILCOXON_P_THRESHOLD
     delta_pass = cross_arm_stats["mean_delta"] >= CROSS_ARM_MIN_DELTA_PP
     ci_pass = cross_arm_stats["bootstrap_ci_lo"] > 0.0
+    n_seeds = len(cross_arm_stats.get("per_seed_deltas", []))
     overall_pass = per_arm_gate_pass and wilcoxon_pass and delta_pass and ci_pass
+    if overall_pass:
+        verdict = "GO"
+    elif mode == "full" and n_seeds < CROSS_ARM_FULL_N_SEEDS:
+        verdict = "INDETERMINATE"
+    else:
+        verdict = "STOP"
     return {
-        "verdict": "GO" if overall_pass else "STOP",
+        "verdict": verdict,
         "per_arm_gate_pass": per_arm_gate_pass,
         "tei_on_arm_verdict": tei_on_arm_verdict,
         "wilcoxon_pass": wilcoxon_pass,
@@ -414,6 +443,8 @@ def compute_cross_arm_primary_verdict(
         "ci_pass": ci_pass,
         "bootstrap_ci_lo": cross_arm_stats["bootstrap_ci_lo"],
         "bootstrap_ci_hi": cross_arm_stats["bootstrap_ci_hi"],
+        "n_seeds": n_seeds,
+        "indeterminate_under_powered": (mode == "full" and n_seeds < CROSS_ARM_FULL_N_SEEDS),
     }
 
 
@@ -546,6 +577,74 @@ def _write_summary_md(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _detect_chance_collapse(survival_table: dict, seeds: list[int]) -> bool:
+    """Pilot pivot row 1: all 3 arms collapse to ≈ chance survival at F0.
+
+    Heuristic: every arm's F0 survival across observed seeds is below
+    the lower bound of the F0 envelope (0.30 — T1 tripwire). When the
+    pilot lands here the reward-mode + env density combination is too
+    punishing and the experiment cannot differentiate substrate
+    signal from random-walk floor.
+    """
+    threshold = 0.30
+    for arm in EXPECTED_ARMS:
+        f0_means = [
+            survival_table.get((arm, seed, 0))
+            for seed in seeds
+            if survival_table.get((arm, seed, 0)) is not None
+        ]
+        if not f0_means:
+            return False
+        if max(v for v in f0_means if v is not None) >= threshold:
+            return False
+    return True
+
+
+def _detect_monotone_violated(
+    survival_table: dict,
+    arm: str,
+    seeds: list[int],
+) -> bool:
+    """Pilot pivot row 4: F1 > F0 on the primary arm (monotone-decay broken).
+
+    A substrate that *strengthens* with lineage depth is unstable
+    by construction — the MLP fit is too sensitive to F0 elite
+    idiosyncrasies and the F1+ cascade amplifies them rather than
+    decays them.
+    """
+    for seed in seeds:
+        f0 = survival_table.get((arm, seed, 0))
+        f1 = survival_table.get((arm, seed, 1))
+        if f0 is not None and f1 is not None and f1 > f0:
+            return True
+    return False
+
+
+def _detect_matched_by_weights(cross_arm_results: list[dict]) -> bool:
+    """Pilot pivot row 5: tei_on > control by ≥5pp BUT weights_only ≈ tei_on.
+
+    Substrate signal is real (positive vs control) but matched by
+    plain Lamarckian weight inheritance — substrate adds no value
+    on top of trained weights. PR-B (TEI+weights) becomes the
+    load-bearing question; the pure-TEI floor is necessary but
+    insufficient for the strongest scientific claim.
+    """
+    tei_vs_control = next(
+        (r for r in cross_arm_results if r["arm_a"] == "tei_on" and r["arm_b"] == "control"),
+        None,
+    )
+    tei_vs_weights = next(
+        (r for r in cross_arm_results if r["arm_a"] == "tei_on" and r["arm_b"] == "weights_only"),
+        None,
+    )
+    if tei_vs_control is None or tei_vs_weights is None:
+        return False
+    return (
+        tei_vs_control["mean_delta"] >= CROSS_ARM_MIN_DELTA_PP
+        and abs(tei_vs_weights["mean_delta"]) < 0.02
+    )
+
+
 def _write_pilot_pivot_decision(
     pilot_observations: dict,
     path: Path,
@@ -555,41 +654,105 @@ def _write_pilot_pivot_decision(
     Classifies the pilot observation against the six pre-declared
     pivots and writes a markdown summary the user reviews BEFORE
     unblocking the full campaign.
+
+    Required keys in ``pilot_observations``:
+        - ``tei_on_per_arm_verdict``: per-arm GO/PIVOT/STOP for tei_on
+        - ``primary_verdict_dict``: cross-arm primary-verdict dict
+        - ``survival_table``: ``{(arm, seed, gen): mean_survival}``
+        - ``seeds``: observed seeds
+        - ``cross_arm_results``: list of per-pair cross-arm stats
     """
     tei_on_v = pilot_observations.get("tei_on_per_arm_verdict", "UNKNOWN")
     primary = pilot_observations.get("primary_verdict_dict", {})
     mean_delta = float(primary.get("mean_delta", 0.0))
     per_arm_gate_pass = bool(primary.get("per_arm_gate_pass", False))
     wilcoxon_pass = bool(primary.get("wilcoxon_pass", False))
+    survival_table = pilot_observations.get("survival_table", {})
+    seeds = pilot_observations.get("seeds", [])
+    cross_arm_results = pilot_observations.get("cross_arm_results", [])
 
-    # Match against the six pre-declared pilot observations (design.md § D6).
+    # Match against the six pre-declared pilot observations (design.md
+    # § D6). Order matters — earlier branches are more specific.
     pivot_lines = ["# Pilot pivot decision\n"]
     pivot_lines.append(
         "Per design.md § D6, the pilot's outcome is classified against six pre-declared pivots:\n",
     )
-    if mean_delta > 0.05 and per_arm_gate_pass and wilcoxon_pass:
+    if _detect_chance_collapse(survival_table, seeds):
         pivot_lines.append(
-            "**Pilot signal: STRONG.** `tei_on > control` ≥ 5pp AND Wilcoxon significant.",
+            "**Pilot signal: chance-floor collapse (D6 row 1).** "
+            "All 3 arms' F0 survival_rate < 0.30 — env+reward is too "
+            "punishing to differentiate substrate signal from a random-walk floor.",
         )
-        pivot_lines.append("Pivot: NONE. Proceed to full campaign with no config changes.\n")
-    elif mean_delta < 0.01 and tei_on_v == "STOP":
-        pivot_lines.append("**Pilot signal: substrate likely inert.** `tei_on ≈ control` at F1+.")
         pivot_lines.append(
-            "Pivot: widen `bias_network.hidden_dim` 8→16 OR add features to `input_features` (e.g. `stam_state_mean`). Re-run pilot.\n",
+            "Pivot: widen lawn distribution OR retune "
+            "`penalty_predator_contact` upward; re-run F0 calibration smoke before re-pilot.\n",
         )
+    elif _detect_monotone_violated(survival_table, ARM_TEI_ON, seeds):
+        pivot_lines.append(
+            "**Pilot signal: monotone-decay violated (D6 row 4).** "
+            "`tei_on` shows F1 > F0 on at least one seed — substrate is "
+            "amplifying rather than decaying. The MLP fit is too "
+            "sensitive to F0 elite idiosyncrasies.",
+        )
+        pivot_lines.append(
+            "Pivot: reduce `bias_network.hidden_dim` 8→4 OR cap MLP "
+            "fit epochs 50→20. Re-run pilot.\n",
+        )
+    elif mean_delta > 0.05 and per_arm_gate_pass and wilcoxon_pass:
+        if _detect_matched_by_weights(cross_arm_results):
+            pivot_lines.append(
+                "**Pilot signal: substrate matched by weights (D6 row 5).** "
+                "`tei_on > control` by ≥ 5pp AND Wilcoxon significant, BUT "
+                "`weights_only ≈ tei_on` — substrate signal is real but "
+                "is matched by plain Lamarckian weight-flow.",
+            )
+            pivot_lines.append(
+                "Pivot: NONE for the full campaign — but PR-B "
+                "(TEI+weights symmetric-compute control) becomes the "
+                "load-bearing scientific question. The pure-TEI floor "
+                "is necessary but not sufficient.\n",
+            )
+        else:
+            pivot_lines.append(
+                "**Pilot signal: clean differentiation (D6 row 6).** "
+                "`tei_on > control` by ≥ 5pp AND Wilcoxon significant; "
+                "monotone decay holds; no weights-matched signature.",
+            )
+            pivot_lines.append(
+                "Pivot: NONE. Proceed to full campaign with no config changes.\n",
+            )
     elif tei_on_v == "PIVOT":
-        pivot_lines.append("**Pilot signal: marginal — 1/4 seed passes tei_on per-arm gate.**")
         pivot_lines.append(
-            "Pivot: review per-seed retention curves. If F1 retains but F2/F3 collapse, try `decay_shape: linear` or `decay_factor: 0.8`. Re-run pilot if config changes.\n",
+            "**Pilot signal: F0 diverse but cascade collapses (D6 row 3).** "
+            "1/4 seed passes the tei_on per-arm gate — F0 substrate "
+            "differs across seeds (T2 passed pre-flight) but F1+ "
+            "retention is near-uniform.",
+        )
+        pivot_lines.append(
+            "Pivot: decay shape too aggressive (geometric collapse); "
+            "try `decay_shape: linear` or `decay_factor: 0.8`. Re-run pilot.\n",
+        )
+    elif mean_delta < 0.01 and tei_on_v == "STOP":
+        pivot_lines.append(
+            "**Pilot signal: substrate likely inert (D6 row 2).** "
+            "`tei_on ≈ control` at F1+ — substrate carries no measurable signal.",
+        )
+        pivot_lines.append(
+            "Pivot: widen `bias_network.hidden_dim` 8→16 OR add features "
+            "to `input_features` (e.g. `stam_state_mean`). Re-run pilot.\n",
         )
     else:
         pivot_lines.append(
-            "**Pilot signal: ambiguous.** Inspect retention curves + cross-arm deltas manually.",
+            "**Pilot signal: ambiguous.** Observed pattern does not match "
+            "any of the 6 pre-declared design.md § D6 pivots. Inspect "
+            "retention curves + cross-arm deltas manually.",
         )
-        pivot_lines.append("Pivot decision: USER REVIEW REQUIRED before proceeding.\n")
+        pivot_lines.append(
+            "Pivot decision: USER REVIEW REQUIRED before proceeding.\n",
+        )
     pivot_lines.append("\nObserved metrics:\n")
     pivot_lines.append(f"- `tei_on` per-arm verdict: **{tei_on_v}**")
-    pivot_lines.append(f"- Cross-arm mean delta: {mean_delta * 100:+.2f}pp")
+    pivot_lines.append(f"- Cross-arm mean delta (tei_on - control): {mean_delta * 100:+.2f}pp")
     pivot_lines.append(f"- Per-arm gate pass (tei_on): {per_arm_gate_pass}")
     pivot_lines.append(f"- Wilcoxon p-threshold met: {wilcoxon_pass}")
     pivot_lines.append("\nThe full pivot table lives in design.md § D6.")
@@ -737,11 +900,15 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
         )
         cross_arm_results.append(stats)
 
-    # Primary verdict: tei_on vs control (the first pair).
+    # Primary verdict: tei_on vs control (the first pair). Pass
+    # ``mode`` so the verdict reports INDETERMINATE rather than STOP
+    # when the full campaign comes in under-powered (n<4 seeds on the
+    # primary pair).
     primary_stats = cross_arm_results[0]
     primary_verdict = compute_cross_arm_primary_verdict(
         per_arm_evals[ARM_TEI_ON],
         primary_stats,
+        mode=args.mode,
     )
 
     # Emit outputs.
@@ -759,13 +926,25 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
             pilot_observations={
                 "tei_on_per_arm_verdict": per_arm_verdicts.get(ARM_TEI_ON, "UNKNOWN"),
                 "primary_verdict_dict": primary_verdict,
+                "survival_table": survival_table,
+                "seeds": all_seeds,
+                "cross_arm_results": cross_arm_results,
             },
             path=args.output_dir / "pilot_pivot_decision.md",
         )
-    if primary_verdict["verdict"] == "GO":
-        _write_pr_b_trigger(args.output_dir / "pr_b_trigger.md")
-    else:
-        _write_m6_13_punt_note(args.output_dir / "m6_13_punt_note.md")
+    # PR-B trigger and M6.13 punt-note are FULL-campaign decisions only.
+    # Pilot mode has n=1 (Wilcoxon p=0.5 always → verdict=STOP), so
+    # emitting m6_13_punt_note.md after the pilot would falsely claim
+    # the campaign is dead when the pilot is just under-powered.
+    # Pilot's only verdict artefact is pilot_pivot_decision.md above.
+    # Under INDETERMINATE the campaign is structurally under-powered;
+    # neither PR-B trigger nor M6.13 punt is appropriate — the
+    # operator needs to re-run with the missing seeds first.
+    if args.mode == "full":
+        if primary_verdict["verdict"] == "GO":
+            _write_pr_b_trigger(args.output_dir / "pr_b_trigger.md")
+        elif primary_verdict["verdict"] == "STOP":
+            _write_m6_13_punt_note(args.output_dir / "m6_13_punt_note.md")
 
     logger.info("M6.9+ aggregator output written to %s", args.output_dir)
     logger.info("Per-arm verdicts: %s", per_arm_verdicts)

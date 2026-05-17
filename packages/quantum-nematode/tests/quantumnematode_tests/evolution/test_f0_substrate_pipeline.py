@@ -308,6 +308,318 @@ def test_f0_extraction_happy_path_writes_substrate_and_gcs_pt_files(tmp_path: Pa
     assert loop._tei_f0_substrate_path == substrate_path
 
 
+# ---------------------------------------------------------------------------
+# B1 / B2 regression: F0 extraction forwards YAML bias_network spec
+# + extraction_seed (the M6.9+ correctness gate).
+# ---------------------------------------------------------------------------
+
+
+def _attach_transgenerational_config_with_bias_network(
+    loop: EvolutionLoop,
+    *,
+    extraction_seed: int = 424242,
+    hidden_dim: int = 8,
+    input_features: tuple[str, ...] = (
+        "predator_gradient_strength",
+        "predator_gradient_direction_sin",
+        "food_gradient_strength",
+    ),
+) -> None:
+    """Attach a minimal ``transgenerational`` config block with ``bias_network`` set.
+
+    Bypasses the inheritance-pairing validator (``enabled=True`` would
+    normally require ``inheritance="transgenerational"``) by setting
+    ``enabled=False`` and overriding the loop's inheritance instance
+    afterwards. This is the same monkey-patch pattern used by
+    ``_make_baseline_loop``: the validator runs at config construction,
+    not at every field read.
+    """
+    from quantumnematode.utils.config_loader import (
+        BiasNetworkConfig,
+        LawnScheduleEntry,
+        TransgenerationalConfig,
+    )
+
+    bias_network = BiasNetworkConfig(
+        hidden_dim=hidden_dim,
+        activation="tanh",
+        input_features=list(input_features),
+    )
+    tg_cfg = TransgenerationalConfig(
+        enabled=False,
+        decay_factor=0.6,
+        decay_shape="geometric",
+        extraction_seed=extraction_seed,
+        lawn_schedule=[
+            LawnScheduleEntry(
+                generation=0,
+                pathogen_lawns_enabled=True,
+                ppo_train_episodes=10,
+            ),
+            LawnScheduleEntry(
+                generation=1,
+                pathogen_lawns_enabled=True,
+                ppo_train_episodes=10,
+            ),
+        ],
+        bias_network=bias_network,
+    )
+    loop.evolution_config = loop.evolution_config.model_copy(
+        update={"transgenerational": tg_cfg},
+    )
+
+
+def test_f0_extraction_forwards_bias_network_spec_from_config(
+    tmp_path: Path,
+) -> None:
+    """B1 regression: ``cfg.transgenerational.bias_network`` MUST flow to ``extract_from_brain``.
+
+    When the YAML configures a ``bias_network`` sub-block, the F0
+    extractor receives ``bias_network_spec`` + ``input_features``
+    matching it.
+
+    Without this wiring, the M6.9+ ``tei_on`` arm silently regresses
+    to M6 behaviour (constant ``logit_bias``, ``bias_network=None``)
+    and the original "3-of-4 bit-identical substrate" attractor
+    re-appears across calibration seeds. This test pins the call-site
+    contract using a spy on ``extract_from_brain``.
+    """
+    from unittest.mock import patch
+
+    from quantumnematode.brain.weights import save_weights
+    from quantumnematode.evolution.genome import Genome
+
+    loop = _make_baseline_loop(tmp_path)
+    loop.inheritance = TransgenerationalInheritance()
+    _attach_transgenerational_config_with_bias_network(
+        loop,
+        extraction_seed=98765,
+        hidden_dim=4,
+        input_features=("predator_gradient_strength", "food_gradient_strength"),
+    )
+
+    elite_id = "elite-b1"
+    gen_ids = [elite_id]
+    dim = loop.encoder.genome_dim(loop.sim_config)
+    solutions = [np.zeros(dim, dtype=np.float32) for _ in gen_ids]
+
+    gen_dir = tmp_path / "inheritance" / "gen-000"
+    gen_dir.mkdir(parents=True, exist_ok=True)
+    real_genome = Genome(
+        params=np.zeros(dim, dtype=np.float32),
+        genome_id=elite_id,
+        parent_ids=[],
+        generation=0,
+        birth_metadata={},
+    )
+    scratch_brain = loop.encoder.decode(real_genome, loop.sim_config, seed=0)
+    save_weights(scratch_brain, gen_dir / f"genome-{elite_id}.pt")
+
+    captured_kwargs: dict = {}
+    # Bind the REAL implementation BEFORE patching, otherwise the
+    # delegating call inside the spy resolves back to the mock and
+    # recurses infinitely.
+    from quantumnematode.agent.transgenerational_memory import (
+        extract_from_brain as _real_extract,
+    )
+
+    def _spy_extract(*args: object, **kwargs: object) -> object:
+        captured_kwargs.update(kwargs)
+        return _real_extract(*args, **kwargs)  # type: ignore[arg-type]
+
+    with patch(
+        "quantumnematode.agent.transgenerational_memory.extract_from_brain",
+        side_effect=_spy_extract,
+    ):
+        loop._run_f0_substrate_extraction(
+            elite_id=elite_id,
+            gen_ids=gen_ids,
+            solutions=solutions,
+        )
+
+    # B1: bias_network_spec is forwarded with the YAML-configured shape.
+    assert "bias_network_spec" in captured_kwargs
+    spec = captured_kwargs["bias_network_spec"]
+    assert spec is not None
+    assert spec["input_dim"] == 2  # len(input_features) above
+    assert spec["hidden_dim"] == 4
+    assert spec["activation"] == "tanh"
+    assert spec["output_dim"] == scratch_brain.num_actions  # type: ignore[attr-defined]
+
+    # B1: input_features is forwarded as a tuple matching the YAML.
+    assert captured_kwargs["input_features"] == (
+        "predator_gradient_strength",
+        "food_gradient_strength",
+    )
+
+    # B2: extraction_seed reads from the YAML, NOT the hard-coded 424242.
+    assert captured_kwargs["rng_seed"] == 98765
+
+
+def test_f0_extraction_legacy_path_when_bias_network_absent(tmp_path: Path) -> None:
+    """B1 negative: when ``cfg.transgenerational.bias_network is None``, the legacy M6 path runs.
+
+    Forward-compatibility / backwards-compat: a transgenerational
+    config without an explicit ``bias_network`` block falls back to
+    the M6 constant ``logit_bias`` extraction path. The call-site
+    MUST pass ``bias_network_spec=None`` so ``extract_from_brain``
+    dispatches the legacy branch (``input_features=()``).
+    """
+    from unittest.mock import patch
+
+    from quantumnematode.brain.weights import save_weights
+    from quantumnematode.evolution.genome import Genome
+    from quantumnematode.utils.config_loader import (
+        LawnScheduleEntry,
+        TransgenerationalConfig,
+    )
+
+    loop = _make_baseline_loop(tmp_path)
+    loop.inheritance = TransgenerationalInheritance()
+    # Configure transgenerational WITHOUT a bias_network sub-block.
+    tg_cfg = TransgenerationalConfig(
+        enabled=False,
+        decay_factor=0.6,
+        extraction_seed=11111,
+        lawn_schedule=[
+            LawnScheduleEntry(
+                generation=0,
+                pathogen_lawns_enabled=True,
+                ppo_train_episodes=10,
+            ),
+            LawnScheduleEntry(
+                generation=1,
+                pathogen_lawns_enabled=True,
+                ppo_train_episodes=10,
+            ),
+        ],
+        # bias_network defaults to None.
+    )
+    loop.evolution_config = loop.evolution_config.model_copy(
+        update={"transgenerational": tg_cfg},
+    )
+
+    elite_id = "elite-legacy"
+    gen_ids = [elite_id]
+    dim = loop.encoder.genome_dim(loop.sim_config)
+    solutions = [np.zeros(dim, dtype=np.float32) for _ in gen_ids]
+    gen_dir = tmp_path / "inheritance" / "gen-000"
+    gen_dir.mkdir(parents=True, exist_ok=True)
+    real_genome = Genome(
+        params=np.zeros(dim, dtype=np.float32),
+        genome_id=elite_id,
+        parent_ids=[],
+        generation=0,
+        birth_metadata={},
+    )
+    scratch_brain = loop.encoder.decode(real_genome, loop.sim_config, seed=0)
+    save_weights(scratch_brain, gen_dir / f"genome-{elite_id}.pt")
+
+    captured_kwargs: dict = {}
+    from quantumnematode.agent.transgenerational_memory import (
+        extract_from_brain as _real_extract,
+    )
+
+    def _spy_extract(*args: object, **kwargs: object) -> object:
+        captured_kwargs.update(kwargs)
+        return _real_extract(*args, **kwargs)  # type: ignore[arg-type]
+
+    with patch(
+        "quantumnematode.agent.transgenerational_memory.extract_from_brain",
+        side_effect=_spy_extract,
+    ):
+        loop._run_f0_substrate_extraction(
+            elite_id=elite_id,
+            gen_ids=gen_ids,
+            solutions=solutions,
+        )
+
+    # Legacy path: bias_network_spec is None, input_features is empty.
+    assert captured_kwargs["bias_network_spec"] is None
+    assert captured_kwargs["input_features"] == ()
+    # extraction_seed still threads from YAML.
+    assert captured_kwargs["rng_seed"] == 11111
+
+
+def test_f0_substrate_diversity_across_seeds_with_bias_network(tmp_path: Path) -> None:
+    """B1 + B2 end-to-end: four ``extraction_seed`` values produce diverse substrates.
+
+    This is the regression gate against the original M6 incident
+    (3-of-4 calibration seeds extracting bit-identical substrates).
+    Once B1 forwards the YAML ``bias_network`` spec AND B2 forwards
+    the YAML ``extraction_seed``, four runs with distinct seeds
+    SHALL produce substrates whose pairwise CoV (per the T2
+    tripwire definition) is non-zero (a degenerate substrate
+    collapse would re-appear here first).
+    """
+    import torch
+    from quantumnematode.agent.transgenerational_memory import (
+        TransgenerationalMemory,
+    )
+    from quantumnematode.agent.transgenerational_memory import (
+        load as load_substrate,
+    )
+    from quantumnematode.brain.weights import save_weights
+    from quantumnematode.evolution.genome import Genome
+
+    substrates: list[TransgenerationalMemory] = []
+    for seed_idx, extraction_seed in enumerate((42, 43, 44, 45)):
+        seed_tmp = tmp_path / f"seed-{extraction_seed}"
+        seed_tmp.mkdir()
+        loop = _make_baseline_loop(seed_tmp)
+        loop.inheritance = TransgenerationalInheritance()
+        _attach_transgenerational_config_with_bias_network(
+            loop,
+            extraction_seed=extraction_seed,
+            hidden_dim=8,
+        )
+
+        elite_id = f"elite-{seed_idx}"
+        gen_ids = [elite_id]
+        dim = loop.encoder.genome_dim(loop.sim_config)
+        solutions = [np.zeros(dim, dtype=np.float32) for _ in gen_ids]
+        gen_dir = seed_tmp / "inheritance" / "gen-000"
+        gen_dir.mkdir(parents=True, exist_ok=True)
+        real_genome = Genome(
+            params=np.zeros(dim, dtype=np.float32),
+            genome_id=elite_id,
+            parent_ids=[],
+            generation=0,
+            birth_metadata={},
+        )
+        scratch_brain = loop.encoder.decode(real_genome, loop.sim_config, seed=0)
+        save_weights(scratch_brain, gen_dir / f"genome-{elite_id}.pt")
+
+        loop._run_f0_substrate_extraction(
+            elite_id=elite_id,
+            gen_ids=gen_ids,
+            solutions=solutions,
+        )
+        assert loop._tei_f0_substrate_path is not None
+        substrates.append(load_substrate(loop._tei_f0_substrate_path))
+
+    # All four substrates SHALL have a populated bias_network (M6.9+ path).
+    assert all(s.bias_network is not None for s in substrates)
+
+    # Pairwise CoV is non-zero on the flattened state_dict — substrate
+    # is NOT bit-identical across seeds. The original M6 attractor
+    # signature would surface as CoV == 0 for at least one pair here.
+    def _flat(s: TransgenerationalMemory) -> torch.Tensor:
+        assert s.bias_network is not None
+        return torch.cat(
+            [t.flatten().to(torch.float64) for t in s.bias_network.state_dict().values()],
+        )
+
+    flat = [_flat(s) for s in substrates]
+    for i in range(len(flat)):
+        for j in range(i + 1, len(flat)):
+            diff = torch.linalg.vector_norm(flat[i] - flat[j])
+            assert diff.item() > 0.0, (
+                f"substrates for seed pairs ({i}, {j}) are bit-identical — "
+                "B1/B2 fix is incomplete or extraction is degenerate."
+            )
+
+
 def test_f0_extraction_persists_substrate_path_in_checkpoint(tmp_path: Path) -> None:
     """``self._tei_f0_substrate_path`` SHALL round-trip through checkpoint save/load.
 
