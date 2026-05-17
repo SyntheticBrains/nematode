@@ -35,7 +35,11 @@ The frozen-dataclass invariant SHALL be preserved: when a caller passes an `nn.S
 
 ### Requirement: Configurable Decay Shape for Substrate Cascade
 
-`TransgenerationalInheritance.inherit_from(parents, decay_factor, decay_shape)` SHALL support three decay shapes for the bias-network weights cascade: `geometric` (M6 default — every weight tensor scaled by `decay_factor` per generation), `linear` (scaled by `max(0, 1 − lineage_depth × (1 − decay_factor))`), and `sigmoid` (sigmoid-decay schedule with fixed `k=2` and `midpoint` at half-decay).
+`TransgenerationalInheritance.inherit_from(parents, decay_factor, decay_shape)` SHALL support three decay shapes for the bias-network weights cascade:
+
+- `geometric` (M6 default): cumulative scale at depth `d` is `decay_factor**d`. The per-generation factor is `decay_factor` regardless of depth — byte-equivalent to M6.
+- `linear`: cumulative scale at depth `d` is `max(0, 1 − d × (1 − decay_factor))`. Reaches zero at `d = 1/(1 − decay_factor)`; the per-generation factor is `cum(d+1) / cum(d)`.
+- `sigmoid`: cumulative scale at depth `d` is `sigmoid(K × (M − d))` with **fixed** `K = 2.0` and `M = 1.0`. The schedule is **independent of `decay_factor`** — it is a fixed-shape sensitivity-analysis alternative to geometric/linear, not a calibrated schedule. Monotonically decreasing; `cum(0) ≈ 0.881`, `cum(1) = 0.500`, `cum(2) ≈ 0.119`, `cum(3) ≈ 0.018`. Use sigmoid when the pilot pivot table flags "decay shape too aggressive under geometric collapse"; sigmoid concentrates most of the decay between depths 1 and 2.
 
 #### Scenario: geometric decay multiplies weights by decay_factor per generation
 
@@ -49,11 +53,12 @@ The frozen-dataclass invariant SHALL be preserved: when a caller passes an `nn.S
 - **THEN** at `lineage_depth=2` the child's weights SHALL equal `parent_weights × max(0, 1 − 2 × 0.4) = parent_weights × 0.2`
 - **AND** at `lineage_depth=3` the child's weights SHALL equal `0` (clipped at zero)
 
-#### Scenario: sigmoid decay follows slow-then-fast schedule
+#### Scenario: sigmoid decay follows a fixed slow-then-fast schedule
 
 - **WHEN** `inherit_from([parent], decay_factor=0.6, decay_shape="sigmoid")` is called repeatedly
-- **THEN** the per-generation decay factor SHALL follow `sigmoid(k × (midpoint − lineage_depth))` with `k=2` and `midpoint` derived to land at `decay_factor` at `lineage_depth=1`
-- **AND** the decay SHALL be monotonically decreasing in generation index
+- **THEN** the cumulative scale at depth `d` SHALL equal `sigmoid(2.0 * (1.0 − d))` (fixed `K=2`, `M=1`; `decay_factor` is intentionally ignored by sigmoid)
+- **AND** the cumulative scale SHALL be monotonically decreasing in generation index
+- **AND** `cum(0) ≈ 0.881`, `cum(1) = 0.500`, `cum(2) ≈ 0.119`, `cum(3) ≈ 0.018`
 
 ### Requirement: Env-Derived F0 Probe Ring
 

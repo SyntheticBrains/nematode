@@ -57,7 +57,7 @@ PR-A addresses the first three (substrate / env+reward / probes) on a three-arm 
 
 - `geometric`: each weight tensor scaled by `decay_factor` per generation. Multiplicative — same as M6.
 - `linear`: scaled by `max(0, 1 − lineage_depth × (1 − decay_factor))`. Reaches zero at lineage_depth = 1/(1−decay_factor) ≈ 2.5 generations under decay_factor=0.6.
-- `sigmoid`: scaled by `sigmoid(k × (midpoint − lineage_depth))` with `k=2`, `midpoint=lineage_depth_at_half_decay`. Slow-then-fast decay shape.
+- `sigmoid`: cumulative scale at depth `d` is `sigmoid(K × (M − d))` with **fixed** `K = 2.0`, `M = 1.0` — explicitly **independent of `decay_factor`**. Slow-then-fast shape: `cum(0) ≈ 0.881`, `cum(1) = 0.500`, `cum(2) ≈ 0.119`, `cum(3) ≈ 0.018`. Used as a sensitivity-analysis option for pilot pivots ("decay shape too aggressive under geometric collapse" → switch to sigmoid for slower start). Calibration-by-decay-factor is reserved for `geometric` and `linear`.
 
 **Output clamp** is applied identically across decay shapes — substrate magnitude bounded by `LOGIT_BIAS_CLAMP`.
 

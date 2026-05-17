@@ -1004,6 +1004,135 @@ class LawnScheduleEntry(BaseModel):
     ppo_train_episodes: int = Field(ge=0)
 
 
+_SUFFIX_SIN = "_sin"
+_SUFFIX_COS = "_cos"
+_DERIVED_SUFFIXES: tuple[str, ...] = (_SUFFIX_SIN, _SUFFIX_COS)
+
+
+def _known_brain_params_fields() -> set[str]:
+    """Return the set of valid ``BrainParams`` field names for validator dispatch.
+
+    Imported lazily to avoid pulling the brain Protocol into the
+    config-loader's module-load critical path.
+    """
+    from quantumnematode.brain.arch._brain import BrainParams
+
+    return set(BrainParams.model_fields.keys())
+
+
+class BiasNetworkConfig(BaseModel):
+    """M6.9+ sensory-conditional bias-network architecture sub-block.
+
+    Optional sub-block on :class:`TransgenerationalConfig`. When
+    absent, the substrate falls back to the M6 legacy constant
+    ``logit_bias`` path (byte-equivalent).
+
+    Attributes
+    ----------
+    hidden_dim : int
+        Hidden-layer width. ``0`` means linear projection only (no
+        hidden layer, no activation). Default 8.
+    activation : Literal["tanh", "relu", "gelu"]
+        Activation function between the two ``nn.Linear`` layers
+        when ``hidden_dim > 0``. Ignored when ``hidden_dim == 0``.
+        Default ``"tanh"``.
+    input_features : list[str]
+        Names of ``BrainParams`` fields the bias-network reads, in
+        the order it expects them. ``_sin`` / ``_cos`` suffixes are
+        supported as derived transforms (radian field → ``math.sin`` /
+        ``math.cos``); only radian-valued fields support the suffix.
+        Validator rejects unknown field names. Default matches the
+        plan v2 design: predator gradient strength + direction-sin +
+        food gradient strength.
+    """
+
+    hidden_dim: int = Field(default=8, ge=0)
+    activation: Literal["tanh", "relu", "gelu"] = "tanh"
+    input_features: list[str] = Field(
+        default_factory=lambda: [
+            "predator_gradient_strength",
+            "predator_gradient_direction_sin",
+            "food_gradient_strength",
+        ],
+    )
+
+    @model_validator(mode="after")
+    def _validate_input_features(self) -> "BiasNetworkConfig":
+        """Each ``input_features`` entry MUST resolve to a known ``BrainParams`` field.
+
+        Suffix support: ``"X_sin"`` / ``"X_cos"`` are accepted iff the
+        stem ``"X"`` is a known field. The runtime applies
+        ``math.sin`` / ``math.cos`` to the radian value at
+        ``build_sensory_input`` time.
+        """
+        if not self.input_features:
+            msg = (
+                "transgenerational.bias_network.input_features must contain at least one "
+                "feature name. The bias-network needs named BrainParams fields "
+                "to evaluate against per-step sensory input."
+            )
+            raise ValueError(msg)
+        known = _known_brain_params_fields()
+        bad: list[tuple[str, str]] = []  # (offending_name, reason)
+        for name in self.input_features:
+            if name in known:
+                continue
+            if name.endswith(_SUFFIX_SIN):
+                stem = name[: -len(_SUFFIX_SIN)]
+                if stem in known:
+                    continue
+                bad.append((name, f"unknown stem {stem!r} for _sin transform"))
+                continue
+            if name.endswith(_SUFFIX_COS):
+                stem = name[: -len(_SUFFIX_COS)]
+                if stem in known:
+                    continue
+                bad.append((name, f"unknown stem {stem!r} for _cos transform"))
+                continue
+            bad.append((name, "not a known BrainParams field"))
+        if bad:
+            offending_names = ", ".join(name for name, _ in bad)
+            reasons = "; ".join(f"{name}: {reason}" for name, reason in bad)
+            supported_preview = sorted(known)[:10]
+            msg = (
+                f"transgenerational.bias_network.input_features contains invalid "
+                f"entries: [{offending_names}]. Reasons: {reasons}. Only radian-"
+                f"valued BrainParams fields support the _sin / _cos suffix. "
+                f"Supported BrainParams fields (first 10): {supported_preview}."
+            )
+            raise ValueError(msg)
+        return self
+
+
+class ProbeRingConfig(BaseModel):
+    """M6.9+ env-derived F0 probe-ring configuration sub-block.
+
+    Optional sub-block on :class:`TransgenerationalConfig`. When
+    absent the loader defaults to the canonical 8-position ring at
+    ``damage_radius + 1`` from each stationary predator.
+
+    Attributes
+    ----------
+    count : int
+        Number of ring positions per stationary predator. Each
+        position is sampled at an even angular interval around the
+        predator center. Default 8. MUST be >= 1.
+    radius_offset : int
+        Manhattan-distance offset added to the predator's
+        ``damage_radius`` to compute the ring radius. Default 1
+        places the ring one cell outside the danger zone.
+    include_food_gradient_variants : bool
+        When True the probe builder emits two ring iterations per
+        predator (one with food-gradient set, one with food-gradient
+        zero) for ``2 * count`` total probes per predator. Default
+        False (pathogen-isolated).
+    """
+
+    count: int = Field(default=8, ge=1)
+    radius_offset: int = Field(default=1, ge=0)
+    include_food_gradient_variants: bool = False
+
+
 class TransgenerationalConfig(BaseModel):
     """Configuration block for the transgenerational-memory evolution arm.
 
@@ -1021,31 +1150,43 @@ class TransgenerationalConfig(BaseModel):
         contract (substrate is the only cross-arm difference) is
         guaranteed at config-load time.
     decay_factor : float
-        Multiplicative decay applied to ``parent.logit_bias`` at
-        each ``inherit_from`` call. Constrained to ``[0.0, 1.0]``.
-        Default ``0.6`` matches the planned F0=1.0 / F1=0.6 / F2=0.36 /
-        F3=0.216 cascade.
+        Multiplicative decay applied to the substrate at each
+        ``inherit_from`` call. Constrained to ``[0.0, 1.0]``.
+        Default ``0.6`` matches the planned F0=1.0 / F1=0.6 /
+        F2=0.36 / F3=0.216 cascade under ``decay_shape: geometric``.
+    decay_shape : Literal["geometric", "linear", "sigmoid"]
+        Selects the per-generation decay schedule. Default
+        ``"geometric"`` preserves M6 byte-equivalence (multiplicative
+        decay each generation). ``"linear"`` reaches zero at
+        ``lineage_depth = 1 / (1 - decay_factor)``; ``"sigmoid"``
+        uses a slow-then-fast schedule. Biology is silent on shape;
+        non-default values are sensitivity-analysis options for
+        M6.9+ pilot pivots.
     extraction_seed : int
         Seed for the F0 telemetry pass (``extract_from_brain``). A
         fixed sentinel default (``424242``) keeps F0 extractions
         reproducible across runs. Constrained to ``>= 0``.
     lawn_schedule : list[LawnScheduleEntry]
         Per-generation pathogen-lawn enablement + training-episode
-        overrides. Each entry in the schedule MUST reference a
-        generation in ``[0, evolution.generations)`` exactly once
-        (validated at ``SimulationConfig`` level since
-        ``EvolutionConfig`` doesn't know how many generations the
-        sibling fields specify until both are bound on the same
-        ``EvolutionConfig`` instance — the per-entry validator on
-        ``TransgenerationalConfig`` here handles uniqueness; the
-        ``[0, generations)`` range check happens in the
-        ``EvolutionConfig._validate_inheritance`` post-bind block).
+        overrides. Each entry MUST reference a generation in
+        ``[0, evolution.generations)`` exactly once.
+    bias_network : BiasNetworkConfig | None
+        Optional M6.9+ sensory-conditional bias-network architecture.
+        When ``None`` (default), the substrate uses the M6 legacy
+        constant ``logit_bias`` path (byte-equivalent).
+    probe_ring : ProbeRingConfig | None
+        Optional M6.9+ env-derived F0 probe-ring configuration.
+        When ``None`` (default), the F0 substrate-extraction
+        pipeline uses the M6 legacy synthetic-probe path.
     """
 
     enabled: bool
     decay_factor: float = Field(default=0.6, ge=0.0, le=1.0)
+    decay_shape: Literal["geometric", "linear", "sigmoid"] = "geometric"
     extraction_seed: int = Field(default=424242, ge=0)
     lawn_schedule: list[LawnScheduleEntry]
+    bias_network: BiasNetworkConfig | None = None
+    probe_ring: ProbeRingConfig | None = None
 
     @model_validator(mode="after")
     def _validate_lawn_schedule_unique_generations(self) -> "TransgenerationalConfig":

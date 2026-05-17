@@ -725,6 +725,134 @@ class TestTransgenerationalConfig:
                 ],
             )
 
+    def test_decay_shape_default_is_geometric(self) -> None:
+        """``decay_shape`` defaults to ``"geometric"`` (M6 byte-equivalent)."""
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(1),
+        )
+        assert cfg.decay_shape == "geometric"
+
+    def test_decay_shape_unknown_value_rejected(self) -> None:
+        """``decay_shape`` outside the Literal SHALL be rejected at YAML load."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            TransgenerationalConfig(
+                enabled=True,
+                decay_shape="exponential",  # type: ignore[arg-type]
+                lawn_schedule=self._make_schedule(1),
+            )
+
+    def test_bias_network_defaults_when_block_absent(self) -> None:
+        """When ``bias_network`` is absent the loader SHALL fall back to M6 legacy path."""
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(1),
+        )
+        assert cfg.bias_network is None
+
+    def test_bias_network_defaults_match_plan_v2(self) -> None:
+        """Empty ``bias_network`` sub-block populates the plan v2 defaults."""
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(1),
+            bias_network=BiasNetworkConfig(),
+        )
+        assert cfg.bias_network is not None
+        assert cfg.bias_network.hidden_dim == 8
+        assert cfg.bias_network.activation == "tanh"
+        assert cfg.bias_network.input_features == [
+            "predator_gradient_strength",
+            "predator_gradient_direction_sin",
+            "food_gradient_strength",
+        ]
+
+    def test_bias_network_hidden_dim_zero_means_linear(self) -> None:
+        """``hidden_dim: 0`` is accepted (linear projection only)."""
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(1),
+            bias_network=BiasNetworkConfig(hidden_dim=0),
+        )
+        assert cfg.bias_network is not None
+        assert cfg.bias_network.hidden_dim == 0
+
+    def test_bias_network_input_features_rejects_unknown_field(self) -> None:
+        """Unknown ``BrainParams`` field names in ``input_features`` SHALL be rejected."""
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        with pytest.raises(ValidationError, match="invalid entries"):
+            BiasNetworkConfig(input_features=["nonexistent_field"])
+
+    def test_bias_network_input_features_accepts_sin_cos_transform(self) -> None:
+        """``_sin`` and ``_cos`` suffixed names resolve to known radian fields."""
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        cfg = BiasNetworkConfig(
+            input_features=[
+                "predator_gradient_direction_sin",
+                "food_gradient_direction_cos",
+                "predator_gradient_strength",  # raw field also valid
+            ],
+        )
+        assert cfg.input_features == [
+            "predator_gradient_direction_sin",
+            "food_gradient_direction_cos",
+            "predator_gradient_strength",
+        ]
+
+    def test_bias_network_input_features_rejects_unknown_stem(self) -> None:
+        """``_sin`` / ``_cos`` suffix on an unknown stem SHALL be rejected."""
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        with pytest.raises(ValidationError, match="unknown stem"):
+            BiasNetworkConfig(input_features=["nonexistent_field_sin"])
+
+    def test_bias_network_input_features_must_be_non_empty(self) -> None:
+        """Empty ``input_features`` SHALL be rejected."""
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        with pytest.raises(ValidationError, match="at least one feature name"):
+            BiasNetworkConfig(input_features=[])
+
+    def test_probe_ring_defaults_when_block_absent(self) -> None:
+        """When ``probe_ring`` is absent the loader SHALL leave it ``None``."""
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(1),
+        )
+        assert cfg.probe_ring is None
+
+    def test_probe_ring_defaults_match_plan_v2(self) -> None:
+        """Empty ``probe_ring`` sub-block populates the plan v2 defaults."""
+        from quantumnematode.utils.config_loader import ProbeRingConfig
+
+        cfg = TransgenerationalConfig(
+            enabled=True,
+            lawn_schedule=self._make_schedule(1),
+            probe_ring=ProbeRingConfig(),
+        )
+        assert cfg.probe_ring is not None
+        assert cfg.probe_ring.count == 8
+        assert cfg.probe_ring.radius_offset == 1
+        assert cfg.probe_ring.include_food_gradient_variants is False
+
+    def test_probe_ring_count_must_be_at_least_1(self) -> None:
+        """``probe_ring.count: 0`` SHALL be rejected (would produce zero probes)."""
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import ProbeRingConfig
+
+        with pytest.raises(ValidationError):
+            ProbeRingConfig(count=0)
+
 
 class TestEvolutionConfigTransgenerationalPairing:
     """Validate the inheritance ↔ transgenerational pairing contract."""
