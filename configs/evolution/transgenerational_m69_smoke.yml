@@ -117,11 +117,11 @@ environment:
     agent_exclusion_radius: 5
     gradient_decay_constant: 8.0
     gradient_strength: 1.0
-    min_food_predator_distance: 5  # M6.9+ env-geometry fix (smoke pass 3): food cannot spawn within damage_radius + 2 of any predator
+    min_food_predator_distance: 4  # M6.9+ env-geometry fix (smoke pass 3): food cannot spawn within damage_radius + 1 of any predator
 
   predators:
     enabled: true
-    count: 5
+    count: 3
     speed: 0.0
     movement_pattern: stationary
     detection_radius: 4

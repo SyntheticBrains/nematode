@@ -18,7 +18,7 @@
 # Env + brain + reward subtrees are byte-identical to
 # transgenerational_m69_tei_on.yml AND transgenerational_m69_weights_only.yml
 # — all three arms share the audit-B-corrected env (grid_size: 15,
-# predators.count: 5, foods.count: 8, reward_mode: gradient_proximity) and
+# predators.count: 3, foods.count: 8, reward_mode: gradient_proximity) and
 # the composite-fitness parity contract (fitness_survival_weight: 1.0).
 #
 # F1+ semantics: K=1000 every gen, fresh TPE genome per child, no
@@ -109,11 +109,11 @@ environment:
     agent_exclusion_radius: 5
     gradient_decay_constant: 8.0
     gradient_strength: 1.0
-    min_food_predator_distance: 5  # M6.9+ env-geometry fix (smoke pass 3): food cannot spawn within damage_radius + 2 of any predator
+    min_food_predator_distance: 4  # M6.9+ env-geometry fix (smoke pass 3): food cannot spawn within damage_radius + 1 of any predator
 
   predators:
     enabled: true
-    count: 5
+    count: 3
     speed: 0.0
     movement_pattern: stationary
     detection_radius: 4
