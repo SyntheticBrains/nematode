@@ -486,3 +486,286 @@ def test_learn_with_none_tei_prior_runs_without_assertion() -> None:
     assert brain._tei_prior_rollout_snapshot_value is None
     # No exception expected: snapshot None matches current None.
     brain.learn(params, reward=0.1, episode_done=False)
+
+
+# ---------------------------------------------------------------------------
+# M6.9+ substrate-form tei_prior (TransgenerationalMemory with bias_network)
+# ---------------------------------------------------------------------------
+
+
+def _make_substrate_with_constant_bias(bias_tensor: torch.Tensor) -> Any:
+    """Construct a TransgenerationalMemory with the M6 legacy logit_bias path (no bias_network)."""
+    from quantumnematode.agent.transgenerational_memory import TransgenerationalMemory
+
+    return TransgenerationalMemory(
+        logit_bias=bias_tensor,
+        lineage_depth=0,
+        source_genome_id="test-gid",
+    )
+
+
+def _make_substrate_with_bias_network(action_idx_to_boost: int) -> Any:
+    """Construct a TransgenerationalMemory with a bias_network that boosts one action.
+
+    The bias_network is a tiny linear-projection (hidden_dim=0) whose
+    weights are explicitly set so the output strongly biases the chosen
+    action regardless of sensory input.
+    """
+    from typing import cast
+
+    from quantumnematode.agent.transgenerational_memory import TransgenerationalMemory
+
+    num_actions = 4
+    bias_network = torch.nn.Sequential(torch.nn.Linear(1, num_actions))
+    linear = cast("torch.nn.Linear", bias_network[0])
+    # Zero the projection weight (input has no effect); set bias so
+    # the target action receives +2.0 and others receive -2.0.
+    with torch.no_grad():
+        linear.weight.zero_()
+        linear.bias.fill_(-2.0)
+        linear.bias[action_idx_to_boost] = 2.0
+    return TransgenerationalMemory(
+        logit_bias=torch.zeros(num_actions, dtype=torch.float32),
+        lineage_depth=0,
+        source_genome_id="test-gid",
+        bias_network=bias_network,
+        input_features=("food_gradient_strength",),
+    )
+
+
+def test_substrate_legacy_path_is_byte_equivalent_to_tensor_form() -> None:
+    """Setting tei_prior to a substrate with no bias_network SHALL match the Tensor-form path.
+
+    Both forms produce the same per-step bias tensor in run_brain; the
+    PPO update receives the same per-step contribution. Verified via the
+    captured _pending_bias state.
+    """
+    bias_t = torch.tensor([1.0, 0.0, 0.0, 0.0], dtype=torch.float32)
+
+    brain_tensor = _make_brain(seed=42)
+    brain_tensor.tei_prior = bias_t.clone()
+    brain_tensor.prepare_episode()
+    params = _make_params()
+    _ = brain_tensor.run_brain(
+        params,
+        reward=None,
+        input_data=None,
+        top_only=False,
+        top_randomize=False,
+    )
+    bias_seen_tensor = brain_tensor._pending_bias
+
+    brain_substrate = _make_brain(seed=42)
+    brain_substrate.tei_prior = _make_substrate_with_constant_bias(bias_t.clone())
+    brain_substrate.prepare_episode()
+    _ = brain_substrate.run_brain(
+        params,
+        reward=None,
+        input_data=None,
+        top_only=False,
+        top_randomize=False,
+    )
+    bias_seen_substrate = brain_substrate._pending_bias
+
+    assert bias_seen_tensor is not None
+    assert bias_seen_substrate is not None
+    assert torch.equal(bias_seen_tensor, bias_seen_substrate)
+
+
+def test_substrate_bias_network_elevates_target_action() -> None:
+    """A substrate's bias_network output SHALL flow through run_brain to the action distribution.
+
+    Mirrors the existing tensor-form test_strong_bias_elevates pattern:
+    100 rollout steps under a bias_network that strongly favours action 2
+    SHALL yield empirical action-2 frequency well above the 0.25 chance
+    floor.
+    """
+    brain = _make_brain(seed=42)
+    brain.tei_prior = _make_substrate_with_bias_network(action_idx_to_boost=2)
+    brain.prepare_episode()
+    params = _make_params()
+    action_counts = [0, 0, 0, 0]
+    n_steps = 100
+    for _ in range(n_steps):
+        actions = brain.run_brain(
+            params,
+            reward=None,
+            input_data=None,
+            top_only=False,
+            top_randomize=False,
+        )
+        action_counts[brain.action_set.index(actions[0].action)] += 1
+    p_action_2 = action_counts[2] / n_steps
+    assert p_action_2 > 0.5, f"action-2 frequency {p_action_2} not above 0.5"
+
+
+def test_substrate_ppo_update_runs_without_consistency_error() -> None:
+    """Full PPO update under a sensory-conditional substrate SHALL not raise.
+
+    Verifies the rollout-buffer per-step bias capture + replay path:
+    sampling time stores the substrate's bias output per step;
+    training time recovers it from the buffer and reapplies in the
+    same arithmetic position. The consistency snapshot accepts the
+    substrate by identity (frozen + requires_grad=False).
+    """
+    brain = _make_brain(seed=42, rollout_buffer_size=8, bptt_chunk_length=4)
+    brain.tei_prior = _make_substrate_with_bias_network(action_idx_to_boost=1)
+    brain.prepare_episode()
+    params = _make_params()
+    for step in range(8):
+        _ = brain.run_brain(
+            params,
+            reward=None,
+            input_data=None,
+            top_only=False,
+            top_randomize=False,
+        )
+        brain.learn(params, reward=0.1, episode_done=(step == 7))
+
+
+def test_substrate_identity_change_mid_window_raises() -> None:
+    """Reassigning brain.tei_prior to a different substrate mid-window SHALL raise.
+
+    Substrates are frozen so the math output is stable as long as the
+    same instance is assigned. Reassigning to a different instance (even
+    with byte-identical state) is the only way the math can change; the
+    snapshot's identity check catches this.
+    """
+    brain = _make_brain(seed=42)
+    substrate_a = _make_substrate_with_bias_network(action_idx_to_boost=0)
+    substrate_b = _make_substrate_with_bias_network(action_idx_to_boost=0)
+    brain.tei_prior = substrate_a
+    brain.prepare_episode()
+    params = _make_params()
+    _ = brain.run_brain(
+        params,
+        reward=None,
+        input_data=None,
+        top_only=False,
+        top_randomize=False,
+    )
+    # Reassign to a different substrate instance.
+    brain.tei_prior = substrate_b
+    with pytest.raises(RuntimeError, match=r"substrate identity"):
+        brain.learn(params, reward=0.1, episode_done=False)
+
+
+def test_substrate_to_tensor_type_change_mid_window_raises() -> None:
+    """Switching from substrate to Tensor form mid-window SHALL raise type-change."""
+    brain = _make_brain(seed=42)
+    brain.tei_prior = _make_substrate_with_bias_network(action_idx_to_boost=0)
+    brain.prepare_episode()
+    params = _make_params()
+    _ = brain.run_brain(
+        params,
+        reward=None,
+        input_data=None,
+        top_only=False,
+        top_randomize=False,
+    )
+    # Replace substrate with a plain tensor.
+    brain.tei_prior = torch.zeros(4, dtype=torch.float32)
+    with pytest.raises(RuntimeError, match=r"type change"):
+        brain.learn(params, reward=0.1, episode_done=False)
+
+
+def test_substrate_snapshot_captured_on_first_step() -> None:
+    """First run_brain SHALL snapshot the substrate by reference (identity-equal)."""
+    brain = _make_brain(seed=42)
+    substrate = _make_substrate_with_bias_network(action_idx_to_boost=0)
+    brain.tei_prior = substrate
+    brain.prepare_episode()
+    assert brain._tei_prior_rollout_snapshot_active is False
+    assert brain._tei_prior_rollout_snapshot_value is None
+    params = _make_params()
+    _ = brain.run_brain(
+        params,
+        reward=None,
+        input_data=None,
+        top_only=False,
+        top_randomize=False,
+    )
+    assert brain._tei_prior_rollout_snapshot_active is True
+    # Substrate is stored by reference (NOT cloned) since
+    # TransgenerationalMemory is frozen.
+    assert brain._tei_prior_rollout_snapshot_value is substrate
+
+
+def test_substrate_bias_network_shape_mismatch_raises() -> None:
+    """A bias_network output that's not 1-D (num_actions,) SHALL raise at run_brain.
+
+    Spec scenario "shape/dtype mismatch raises at learn()" — implemented
+    at the upstream ``_compute_tei_bias`` validator so a mis-shaped
+    bias-network output is caught BEFORE it silently broadcasts into
+    actor logits. The non-broadcast-compatible case (e.g. out_features
+    != num_actions) raises inside ``apply_to_logits`` at the ``+``
+    operation; the BROADCAST-COMPATIBLE-BUT-WRONG-SHAPE case (e.g.
+    (1, num_actions)) is the one our explicit validator catches —
+    construct that scenario here.
+    """
+    from typing import cast
+
+    from quantumnematode.agent.transgenerational_memory import TransgenerationalMemory
+
+    num_actions = 4
+
+    # nn.Sequential with a wrapper that unsqueezes the bias output to
+    # (1, num_actions) — broadcast-compatible with the zero_logits
+    # tensor's shape (num_actions,) so torch's + would NOT raise.
+    class _UnsqueezingLinear(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.linear = torch.nn.Linear(1, num_actions)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return self.linear(x).unsqueeze(0)  # (1, num_actions)
+
+    mismatched_net = torch.nn.Sequential(_UnsqueezingLinear())
+    submodule = cast("_UnsqueezingLinear", mismatched_net[0])
+    with torch.no_grad():
+        submodule.linear.weight.zero_()
+        submodule.linear.bias.fill_(0.5)
+    substrate = TransgenerationalMemory(
+        logit_bias=torch.zeros(num_actions, dtype=torch.float32),
+        lineage_depth=0,
+        source_genome_id="test-gid",
+        bias_network=cast("torch.nn.Sequential", mismatched_net),
+        input_features=("food_gradient_strength",),
+    )
+    brain = _make_brain(seed=42)
+    brain.tei_prior = substrate
+    brain.prepare_episode()
+    with pytest.raises(RuntimeError, match=r"bias output shape"):
+        brain.run_brain(
+            _make_params(),
+            reward=None,
+            input_data=None,
+            top_only=False,
+            top_randomize=False,
+        )
+
+
+def test_substrate_bias_network_moved_to_brain_device() -> None:
+    """The substrate's bias_network SHALL be moved to the brain's device on first use.
+
+    GPU brain runs would mismatch CPU-constructed bias_network parameters
+    vs GPU sensory_input. The dispatch in ``_compute_tei_bias`` calls
+    ``prior.bias_network.to(device)`` lazily. Run a brain on CPU
+    (the only device tested in CI) and confirm the bias_network's
+    parameters end up on the brain's device after one run_brain call.
+    """
+    brain = _make_brain(seed=42)
+    substrate = _make_substrate_with_bias_network(action_idx_to_boost=0)
+    brain.tei_prior = substrate
+    brain.prepare_episode()
+    _ = brain.run_brain(
+        _make_params(),
+        reward=None,
+        input_data=None,
+        top_only=False,
+        top_randomize=False,
+    )
+    # Verify all bias_network parameters are now on the brain's device.
+    assert substrate.bias_network is not None
+    for param in substrate.bias_network.parameters():
+        assert param.device == brain.device

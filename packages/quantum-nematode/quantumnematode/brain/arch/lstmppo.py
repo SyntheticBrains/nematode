@@ -39,6 +39,7 @@ from torch import nn
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from quantumnematode.agent.transgenerational_memory import TransgenerationalMemory
     from quantumnematode.brain.weights import WeightComponent
     from quantumnematode.initializers._initializer import ParameterInitializer
 
@@ -177,6 +178,15 @@ class LSTMPPORolloutBuffer:
         self.dones: list[bool] = []
         self.h_states: list[torch.Tensor] = []
         self.c_states: list[torch.Tensor | None] = []
+        # Per-step TEI bias tensor. Captures the bias value applied to
+        # actor logits at sampling time (M6.9+ sensory-conditional path
+        # OR legacy constant tensor) so the PPO update can replay the
+        # exact same bias and the PPO ratio stays mathematically valid.
+        # ``None`` entries indicate no bias was applied (legacy non-TEI
+        # path). Mirrors the spec scenario "store the per-step bias
+        # output (or sufficient seed-reproducibility info) in the
+        # rollout buffer."
+        self.biases: list[torch.Tensor | None] = []
         self.position = 0
 
     def add(  # noqa: PLR0913
@@ -189,6 +199,7 @@ class LSTMPPORolloutBuffer:
         done: bool,  # noqa: FBT001
         h_state: torch.Tensor,
         c_state: torch.Tensor | None,
+        bias: torch.Tensor | None = None,
     ) -> None:
         """Add a single experience to the buffer."""
         self.features.append(features)
@@ -199,6 +210,7 @@ class LSTMPPORolloutBuffer:
         self.dones.append(done)
         self.h_states.append(h_state.detach().clone())
         self.c_states.append(c_state.detach().clone() if c_state is not None else None)
+        self.biases.append(bias.detach().clone() if bias is not None else None)
         self.position += 1
 
     def is_full(self) -> bool:
@@ -277,6 +289,7 @@ class LSTMPPORolloutBuffer:
                 "returns": returns[start:end],
                 "advantages": adv_normalized[start:end],
                 "dones": self.dones[start:end],
+                "biases": self.biases[start:end],
             }
 
 
@@ -301,6 +314,95 @@ def _tei_prior_equal(a: torch.Tensor, b: torch.Tensor) -> bool:
     if a.dtype != b.dtype:
         return False
     return bool(torch.equal(a, b.to(a.device)))
+
+
+def _snapshot_tei_prior(
+    prior: torch.Tensor | TransgenerationalMemory | None,
+) -> torch.Tensor | TransgenerationalMemory | None:
+    """Capture a stable snapshot of ``tei_prior`` for PPO consistency checking.
+
+    For a Tensor: detach-and-clone so future in-place mutations don't
+    affect the snapshot. For a ``TransgenerationalMemory`` substrate:
+    return the reference directly (the dataclass is ``frozen=True``
+    with all bias-network parameters at ``requires_grad=False``, so
+    its computational output is stable as long as the same instance
+    remains assigned to ``brain.tei_prior``). For None: return None.
+    """
+    if prior is None:
+        return None
+    if isinstance(prior, torch.Tensor):
+        return prior.detach().clone()
+    # TransgenerationalMemory: reference snapshot. Identity-equality
+    # at ``learn()`` is sufficient because the dataclass is frozen.
+    return prior
+
+
+def _compute_tei_bias(
+    prior: torch.Tensor | TransgenerationalMemory | None,
+    params: BrainParams,
+    device: torch.device,
+    num_actions: int,
+) -> torch.Tensor | None:
+    """Compute the per-step bias tensor produced by the configured tei_prior.
+
+    Returns ``None`` when no prior is set. For a legacy Tensor prior,
+    returns the tensor moved to ``device`` (no-op when devices match).
+    For a ``TransgenerationalMemory`` substrate, calls
+    ``substrate.apply_to_logits(zeros, sensory_input) - zeros`` to
+    recover the bias delta in isolation. The delta extraction is
+    necessary because ``apply_to_logits`` returns ``logits + bias``
+    and the caller wants just the bias to sum at its own call site.
+
+    Device handling: substrates are constructed on CPU at
+    ``extract_from_brain`` time. When the brain runs on GPU, the
+    ``bias_network`` parameters need to be moved to the brain's
+    device before the forward pass. ``nn.Module.to(device)`` mutates
+    parameter storage in place; the ``frozen=True`` dataclass
+    constraint is only on attribute *reassignment*, not on the
+    underlying tensor storage, so this is safe.
+    """
+    if prior is None:
+        return None
+    if isinstance(prior, torch.Tensor):
+        return prior.to(device)
+    # TransgenerationalMemory substrate path. The substrate handles
+    # legacy logit_bias fallback internally; we always pass a
+    # sensory_input (it's ignored when bias_network is None).
+    # Lazy import: ``quantumnematode.agent`` package init pulls
+    # ``agent.runners → report.dtypes``, which lstmppo's brain pipeline
+    # also imports — a top-level import here would create a circular
+    # init at module-load time. Python caches imports so per-call cost
+    # is negligible (dict lookup).
+    from quantumnematode.agent.transgenerational_memory import build_sensory_input
+
+    zero_logits = torch.zeros(num_actions, dtype=torch.float32, device=device)
+    if prior.bias_network is None:
+        # Legacy logit_bias path. apply_to_logits ignores sensory_input.
+        biased = prior.apply_to_logits(zero_logits)
+    else:
+        # Move the bias_network to the brain's device lazily. First-call
+        # cost is O(parameter-bytes); subsequent calls are no-ops when
+        # already on-device (PyTorch's .to() short-circuits same-device).
+        prior.bias_network.to(device)
+        sensory = build_sensory_input(params, prior.input_features).to(device)
+        biased = prior.apply_to_logits(zero_logits, sensory)
+    bias_delta = biased - zero_logits
+    # Validate the bias output shape — per the lstm-ppo-brain spec
+    # "shape/dtype mismatch raises at learn()", the bias-network must
+    # produce a 1-D tensor of shape (num_actions,). Catch a stray
+    # batch-axis (e.g. forgot a .squeeze(0) in a custom bias_network)
+    # here, before torch's broadcast rules silently produce a
+    # (1, num_actions) bias.
+    if bias_delta.shape != (num_actions,):
+        msg = (
+            f"_compute_tei_bias: bias output shape {tuple(bias_delta.shape)} "
+            f"does not match expected (num_actions,) = ({num_actions},). "
+            "TransgenerationalMemory.bias_network must produce a 1-D tensor "
+            "matching the brain's num_actions; check the network's final "
+            "linear layer's out_features and any trailing reshape/squeeze."
+        )
+        raise RuntimeError(msg)
+    return bias_delta
 
 
 class _LSTMPPOCritic(nn.Module):
@@ -422,36 +524,49 @@ class LSTMPPOBrain(ClassicalBrain):
         )
 
         # Transgenerational-memory bias on actor logits. ``None`` is the
-        # disabled state and preserves byte-equivalent pre-TEI behaviour;
-        # when set to a 1-D ``(num_actions,)`` float32 tensor, the bias
-        # is added to actor logits in BOTH the sampling forward pass
-        # (``run_brain``) and the training forward pass (``learn``) so
-        # the PPO ratio ``exp(new_log_probs - old_log_probs)`` stays
-        # well-defined. See the OpenSpec change at
-        # ``openspec/changes/add-transgenerational-memory/`` for the
-        # rationale. The attribute is set externally by
-        # ``LearnedPerformanceFitness.evaluate`` (a follow-up addition)
-        # post-decode, before ``_build_agent``; never mutated by the
-        # runner or the step loop.
-        self.tei_prior: torch.Tensor | None = None
-        # Frozen first-step snapshot of ``tei_prior`` for the current
-        # rollout window. Two-field design so the snapshot distinguishes
-        # three states: (a) ``_active=False``: no rollout step has run
-        # since the last buffer reset (pristine window); (b)
-        # ``_active=True`` and ``_value is None``: the rollout's first
-        # step ran with ``tei_prior=None``; (c) ``_active=True`` and
-        # ``_value`` is a cloned tensor: the rollout's first step ran
-        # with that exact bias. ``learn()``'s defensive entry check
-        # validates that the CURRENT ``tei_prior`` matches the frozen
-        # value (None-vs-None OR ``torch.equal``) — any mid-window
-        # mutation (None→tensor, tensor→None, shape/dtype/contents
-        # change) raises ``RuntimeError`` because it would silently
-        # invalidate the PPO ratio. The snapshot is captured on the
-        # FIRST step of each window only (not overwritten on later
-        # steps), so a flip from bias-A to bias-B mid-rollout is
-        # caught even if both biases share shape/dtype.
+        # disabled state and preserves byte-equivalent pre-TEI behaviour.
+        # Two supported forms, both applied identically to actor logits
+        # at BOTH the sampling forward pass (``run_brain``) and the
+        # training forward pass (``learn``) so the PPO ratio
+        # ``exp(new_log_probs - old_log_probs)`` stays well-defined:
+        #
+        # - **Legacy 1-D Tensor** (M6 form): ``(num_actions,)`` float32
+        #   tensor added directly to logits. Same shape every step.
+        # - **TransgenerationalMemory substrate** (M6.9+ form): the
+        #   substrate's ``apply_to_logits(logits, sensory_input)`` is
+        #   called per step. When the substrate has a sensory-
+        #   conditional ``bias_network``, the bias VARIES per step
+        #   with the brain's sensory input; the per-step bias result
+        #   is captured into the rollout buffer at sampling time and
+        #   replayed at training time so the PPO ratio is exact even
+        #   under the sensory-conditional bias.
+        #
+        # See the OpenSpec change at
+        # ``openspec/changes/add-transgenerational-memory-redesign/``
+        # for the rationale. The attribute is set externally by
+        # ``LearnedPerformanceFitness.evaluate`` post-decode, before
+        # ``_build_agent``; never mutated by the runner or the step loop.
+        self.tei_prior: torch.Tensor | TransgenerationalMemory | None = None
+        # Frozen first-step snapshot of the ``tei_prior`` REFERENCE for
+        # the current rollout window. Two-field design so the snapshot
+        # distinguishes three states: (a) ``_active=False``: no rollout
+        # step has run since the last buffer reset (pristine window);
+        # (b) ``_active=True`` and ``_value is None``: the rollout's
+        # first step ran with ``tei_prior=None``; (c) ``_active=True``
+        # and ``_value`` is the tei_prior object (cloned for Tensor,
+        # stored-by-reference for the frozen substrate): the rollout's
+        # first step ran with that exact bias. ``learn()``'s defensive
+        # entry check validates that the CURRENT ``tei_prior`` matches
+        # the frozen snapshot — any mid-window mutation (None↔bias OR
+        # bias-A↔bias-B) raises ``RuntimeError`` because it would
+        # silently invalidate the PPO ratio.
         self._tei_prior_rollout_snapshot_active: bool = False
-        self._tei_prior_rollout_snapshot_value: torch.Tensor | None = None
+        self._tei_prior_rollout_snapshot_value: torch.Tensor | TransgenerationalMemory | None = None
+        # Per-step bias captured at the most recent ``run_brain`` call.
+        # Used to populate the rollout buffer's ``bias`` field in
+        # ``learn()`` so the training-time forward pass can replay the
+        # exact bias the actor saw at sampling time.
+        self._pending_bias: torch.Tensor | None = None
 
         # ── LR scheduling ──
         self._episode_count = 0
@@ -648,30 +763,32 @@ class LSTMPPOBrain(ClassicalBrain):
 
         # First-step snapshot capture for the defensive ``learn()`` entry
         # check. Frozen on the rollout window's FIRST step so a mid-window
-        # flip (None→tensor, tensor→None, or value/shape/dtype change) is
-        # detectable even when shape/dtype are preserved. After capture,
-        # the snapshot is NOT overwritten on subsequent steps — it
-        # represents the bias state under which ``_pending_log_prob`` was
-        # recorded for the entire buffer's worth of data.
+        # mutation (None↔bias OR bias-A↔bias-B) is detectable. After
+        # capture, the snapshot is NOT overwritten on subsequent steps —
+        # it represents the bias state under which ``_pending_log_prob``
+        # was recorded for the entire buffer's worth of data. Tensors are
+        # cloned; substrates are stored by reference (TransgenerationalMemory
+        # is ``frozen=True`` with ``requires_grad=False`` bias-network
+        # parameters, so its math output is stable across the window
+        # provided the operator doesn't reassign brain.tei_prior).
         if not self._tei_prior_rollout_snapshot_active:
             self._tei_prior_rollout_snapshot_active = True
-            self._tei_prior_rollout_snapshot_value = (
-                self.tei_prior.detach().clone() if self.tei_prior is not None else None
-            )
+            self._tei_prior_rollout_snapshot_value = _snapshot_tei_prior(self.tei_prior)
 
-        # Actor: h_t → logits → (optional TEI bias) → action
+        # Actor: h_t → logits → (optional TEI bias) → action.
+        # Compute the per-step bias tensor (M6.9+ substrate path OR M6
+        # legacy tensor path) and capture it into ``_pending_bias`` so
+        # ``learn()`` can store it in the rollout buffer. The training
+        # forward pass replays the saved bias rather than recomputing —
+        # this lets sensory-conditional bias-networks vary per step
+        # while keeping the PPO ratio exact.
         with torch.no_grad():
             logits = self.actor(h_out)
-            if self.tei_prior is not None:
-                # Additive logit bias from the transgenerational substrate.
-                # Applied here AND at the matching site in ``learn()`` so the
-                # PPO ratio ``exp(new_log_probs - old_log_probs)`` stays
-                # well-defined (both sides see the same biased distribution).
-                # ``.to(logits.device)`` defends against a bias loaded from
-                # disk on a different device than the brain runs on (no-op
-                # when devices already match — the common case).
-                logits = logits + self.tei_prior.to(logits.device)
+            bias_t = _compute_tei_bias(self.tei_prior, params, logits.device, self.num_actions)
+            if bias_t is not None:
+                logits = logits + bias_t
             action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
+        self._pending_bias = bias_t
 
         # Sample action
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
@@ -727,52 +844,11 @@ class LSTMPPOBrain(ClassicalBrain):
         # first-step snapshot captures the bias state at the start of the
         # current rollout window; any deviation now means the PPO ratio
         # would use mismatched distributions, silently corrupting the
-        # update. Covered mutations: None→tensor (rollout started with
-        # None, operator activated mid-window), tensor→None (rollout
-        # started biased, operator cleared), and tensor→different tensor
-        # (shape, dtype, or contents change). The check is skipped if the
-        # window is pristine (no rollout step has run since the last
-        # buffer reset).
+        # update. Per-mutation messages give the operator targeted
+        # diagnostics. The check is skipped if the window is pristine
+        # (no rollout step has run since the last buffer reset).
         if self._tei_prior_rollout_snapshot_active:
-            snap_value = self._tei_prior_rollout_snapshot_value
-            if snap_value is None and self.tei_prior is not None:
-                msg = (
-                    "LSTMPPOBrain.learn(): tei_prior was None at the start "
-                    "of the rollout window but is now set "
-                    f"(shape={tuple(self.tei_prior.shape)}, "
-                    f"dtype={self.tei_prior.dtype}). The rollout's sampling "
-                    "distribution was unbiased; the update's training "
-                    "distribution would include the bias. tei_prior MUST "
-                    "remain stable across the rollout-to-update window."
-                )
-                raise RuntimeError(msg)
-            if snap_value is not None and self.tei_prior is None:
-                msg = (
-                    "LSTMPPOBrain.learn(): tei_prior was set at the start "
-                    f"of the rollout window (shape={tuple(snap_value.shape)}, "
-                    f"dtype={snap_value.dtype}) but is None at update time. "
-                    "The rollout's sampling distribution included the bias; "
-                    "the update's training distribution would not. "
-                    "tei_prior MUST remain stable across the rollout-to-"
-                    "update window."
-                )
-                raise RuntimeError(msg)
-            if (
-                snap_value is not None
-                and self.tei_prior is not None
-                and not _tei_prior_equal(snap_value, self.tei_prior)
-            ):
-                msg = (
-                    "LSTMPPOBrain.learn(): tei_prior shape/dtype/contents "
-                    "mismatch between rollout and update window. Rollout "
-                    f"snapshot: shape={tuple(snap_value.shape)}, "
-                    f"dtype={snap_value.dtype}. Current: "
-                    f"shape={tuple(self.tei_prior.shape)}, "
-                    f"dtype={self.tei_prior.dtype}. tei_prior MUST remain "
-                    "stable (same shape, dtype, AND element-wise values) "
-                    "across the rollout-to-update window."
-                )
-                raise RuntimeError(msg)
+            self._check_tei_prior_snapshot()
         self.history_data.rewards.append(reward)
 
         # Add to buffer
@@ -786,6 +862,7 @@ class LSTMPPOBrain(ClassicalBrain):
                 done=episode_done,
                 h_state=self._pending_h_state,
                 c_state=self._pending_c_state,
+                bias=self._pending_bias,
             )
 
         # PPO update when buffer is full or episode ends with enough data
@@ -867,14 +944,19 @@ class LSTMPPOBrain(ClassicalBrain):
                     # RNN forward (differentiable)
                     h_out, h, c = self._rnn_forward(normalized, h, c)
 
-                    # Actor — apply the TEI bias here (training-time forward
-                    # pass) when set, mirroring the sampling-time bias add in
-                    # ``run_brain``. Both sides MUST see the same biased
-                    # distribution or the PPO ratio is wrong. ``.to`` defends
-                    # against a bias on a different device from the brain.
+                    # Actor — replay the per-step bias captured at
+                    # sampling time. The bias was already computed by
+                    # ``run_brain`` (M6 legacy tensor path OR M6.9+
+                    # substrate path, dispatched by ``_compute_tei_bias``)
+                    # and stored per step in the rollout buffer. Replaying
+                    # the saved bias (rather than recomputing here) is
+                    # mathematically exact even for sensory-conditional
+                    # bias-networks that vary per step. ``.to(logits.device)``
+                    # defends against a bias snapshot on a different device.
                     logits = self.actor(h_out)
-                    if self.tei_prior is not None:
-                        logits = logits + self.tei_prior.to(logits.device)
+                    step_bias = chunk["biases"][step_idx]
+                    if step_bias is not None:
+                        logits = logits + step_bias.to(logits.device)
                     action_probs = torch.softmax(logits, dim=-1)
 
                     action_idx = chunk["actions"][step_idx].item()
@@ -982,6 +1064,97 @@ class LSTMPPOBrain(ClassicalBrain):
         """
         self._tei_prior_rollout_snapshot_active = False
         self._tei_prior_rollout_snapshot_value = None
+
+    def _check_tei_prior_snapshot(self) -> None:
+        """Validate ``self.tei_prior`` against the rollout-window snapshot.
+
+        Raises ``RuntimeError`` with a per-mutation diagnostic message
+        when the current prior differs from the snapshot. Covered
+        mutations:
+
+        - None → bias: rollout started unbiased, operator activated mid-window.
+        - bias → None: rollout started biased, operator cleared mid-window.
+        - tensor-A → tensor-B: shape/dtype/contents change.
+        - substrate-A → substrate-B: object identity change (substrates
+          are frozen so reassignment is the only way the math changes).
+        - tensor ↔ substrate: type change.
+
+        No-op when both current and snapshot are None, or when both are
+        the same Tensor (element-wise) or the same substrate (identity).
+        """
+        snap = self._tei_prior_rollout_snapshot_value
+        cur = self.tei_prior
+        if snap is None and cur is None:
+            return
+        if snap is None and cur is not None:
+            shape_info = (
+                f"shape={tuple(cur.shape)}, dtype={cur.dtype}"
+                if isinstance(cur, torch.Tensor)
+                else f"substrate id={id(cur)}"
+            )
+            msg = (
+                "LSTMPPOBrain.learn(): tei_prior was None at the start "
+                f"of the rollout window but is now set ({shape_info}). "
+                "The rollout's sampling distribution was unbiased; the "
+                "update's training distribution would include the bias. "
+                "tei_prior MUST remain stable across the rollout-to-"
+                "update window."
+            )
+            raise RuntimeError(msg)
+        if snap is not None and cur is None:
+            shape_info = (
+                f"shape={tuple(snap.shape)}, dtype={snap.dtype}"
+                if isinstance(snap, torch.Tensor)
+                else f"substrate id={id(snap)}"
+            )
+            msg = (
+                "LSTMPPOBrain.learn(): tei_prior was set at the start "
+                f"of the rollout window ({shape_info}) but is None at "
+                "update time. The rollout's sampling distribution "
+                "included the bias; the update's training distribution "
+                "would not. tei_prior MUST remain stable across the "
+                "rollout-to-update window."
+            )
+            raise RuntimeError(msg)
+        # Both non-None: classify mismatch type.
+        if isinstance(snap, torch.Tensor) and isinstance(cur, torch.Tensor):
+            if _tei_prior_equal(snap, cur):
+                return
+            msg = (
+                "LSTMPPOBrain.learn(): tei_prior shape/dtype/contents "
+                "mismatch between rollout and update window. Rollout "
+                f"snapshot: shape={tuple(snap.shape)}, "
+                f"dtype={snap.dtype}. Current: "
+                f"shape={tuple(cur.shape)}, dtype={cur.dtype}. "
+                "tei_prior MUST remain stable (same shape, dtype, AND "
+                "element-wise values) across the rollout-to-update "
+                "window."
+            )
+            raise RuntimeError(msg)
+        if isinstance(snap, torch.Tensor) != isinstance(cur, torch.Tensor):
+            msg = (
+                "LSTMPPOBrain.learn(): tei_prior type change between "
+                "rollout and update window. The rollout window started "
+                f"with a {'Tensor' if isinstance(snap, torch.Tensor) else 'substrate'} "
+                f"prior; the update sees a "
+                f"{'Tensor' if isinstance(cur, torch.Tensor) else 'substrate'} "
+                "prior. tei_prior MUST remain stable across the "
+                "rollout-to-update window."
+            )
+            raise RuntimeError(msg)
+        # Both are TransgenerationalMemory substrates. Identity-equal
+        # is sufficient because the dataclass is frozen.
+        if snap is not cur:
+            msg = (
+                "LSTMPPOBrain.learn(): tei_prior substrate identity "
+                "mismatch between rollout and update window. Substrates "
+                "are frozen so reassignment is the only way the math "
+                "changes; this means brain.tei_prior was reassigned to "
+                "a different TransgenerationalMemory instance mid-"
+                "window. tei_prior MUST remain stable across the "
+                "rollout-to-update window."
+            )
+            raise RuntimeError(msg)
 
     # ──────────────────────────────────────────────────────────────────
     # Scheduling

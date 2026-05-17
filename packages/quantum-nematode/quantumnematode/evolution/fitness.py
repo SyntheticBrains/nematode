@@ -493,13 +493,34 @@ class LearnedPerformanceFitness:
                     "delete it and re-run F0 extraction."
                 )
                 raise RuntimeError(msg) from exc
+            # Resolve the decay_shape from the live config when available;
+            # M6 callers (no transgenerational config block) fall through
+            # to the cascade's geometric default for byte-equivalence.
+            from quantumnematode.agent.transgenerational_memory import DecayShape
+
+            decay_shape: DecayShape = "geometric"
+            if (
+                sim_config.evolution is not None
+                and sim_config.evolution.transgenerational is not None
+            ):
+                decay_shape = sim_config.evolution.transgenerational.decay_shape
             for _ in range(lineage_depth):
                 substrate = TransgenerationalMemory.inherit_from(
                     [substrate],
                     decay_factor=decay_factor,
+                    decay_shape=decay_shape,
                 )
             if hasattr(brain, "tei_prior"):
-                brain.tei_prior = substrate.logit_bias  # type: ignore[attr-defined]
+                # Pass the substrate object directly. The LSTMPPO
+                # ``tei_prior`` attribute accepts either a legacy 1-D
+                # Tensor (M6 byte-equivalence path) or a
+                # ``TransgenerationalMemory`` (M6.9+ sensory-conditional
+                # path). When the substrate carries a bias_network, the
+                # brain dispatches via ``substrate.apply_to_logits`` per
+                # step with a sensory_input built from BrainParams; when
+                # bias_network is None, the brain's legacy path uses the
+                # substrate's constant logit_bias.
+                brain.tei_prior = substrate  # type: ignore[attr-defined]
             else:
                 logger.warning(
                     "tei_prior_source set but brain type %s does not expose a "
