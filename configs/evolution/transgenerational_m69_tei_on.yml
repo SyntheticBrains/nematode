@@ -111,7 +111,7 @@ reward:
   # tangential-motion attractor that M6 found relied on the
   # distance-scaled reward; gradient_only removes the incentive without
   # disabling damage avoidance.
-  reward_mode: gradient_only
+  reward_mode: gradient_proximity
 
 satiety:
   initial_satiety: 300.0
@@ -162,7 +162,7 @@ evolution:
   population_size: 8
   generations: 4
   episodes_per_eval: 25
-  learn_episodes_per_eval: 1000
+  learn_episodes_per_eval: 2000
   eval_episodes_per_eval: 25
   sigma0: 1.0
   parallel_workers: 8
@@ -216,7 +216,7 @@ evolution:
     lawn_schedule:
       - generation: 0
         pathogen_lawns_enabled: true
-        ppo_train_episodes: 1000
+        ppo_train_episodes: 2000
       - generation: 1
         pathogen_lawns_enabled: true
         ppo_train_episodes: 0

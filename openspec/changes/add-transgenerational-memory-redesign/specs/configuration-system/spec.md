@@ -85,7 +85,7 @@
 
 ### Requirement: Reward Mode Switch in RewardConfig
 
-`RewardConfig.reward_mode: Literal["default", "gradient_only"]` SHALL select the predator-evasion reward shape. Default `"default"` preserves byte-equivalence with M3 / M4 / M5 / M6. Under `"gradient_only"`, the distance-scaled evasion term SHALL be dropped from the per-step reward computation while the contact penalty and `HEALTH_DEPLETED` termination SHALL be preserved.
+`RewardConfig.reward_mode: Literal["default", "gradient_only", "gradient_proximity"]` SHALL select the predator-evasion reward shape. Default `"default"` preserves byte-equivalence with M3 / M4 / M5 / M6. Under `"gradient_only"`, the distance-scaled evasion term SHALL be dropped from the per-step reward computation while the contact penalty and `HEALTH_DEPLETED` termination SHALL be preserved. Under `"gradient_proximity"` (the M6.10 audit-B remediation v2), a smooth per-step penalty proportional to `env.get_predator_concentration(agent_pos)` SHALL apply anywhere predators are enabled (regardless of `is_in_danger`), the contact penalty SHALL still fire at `dist <= 1`, and the distance-scaled tangential term SHALL NOT fire. This avoids both the "circle right" attractor of `default` mode AND the "never-approach" attractor of `gradient_only` mode (smoke pass 2 finding).
 
 #### Scenario: default reward_mode preserves M3 byte-equivalence
 
@@ -107,6 +107,22 @@
 - **AND** a step is computed with a predator at `curr_dist ≤ 1` (contact)
 - **THEN** the contact penalty `reward -= penalty_predator_proximity` SHALL still fire
 - **AND** the `HEALTH_DEPLETED` termination path SHALL be unchanged
+
+#### Scenario: gradient_proximity mode applies smooth concentration-based penalty
+
+- **WHEN** `RewardConfig.reward_mode: "gradient_proximity"` is configured
+- **AND** a step is computed with predators enabled
+- **THEN** the per-step reward SHALL include `-(penalty_predator_proximity × env.get_predator_concentration(agent_pos))`
+- **AND** this penalty SHALL fire regardless of whether the agent is inside any predator's `damage_radius` zone (the concentration field has non-zero values throughout the exp-decay range)
+- **AND** the contact penalty at `dist <= 1` SHALL still fire (stacks with the gradient penalty)
+- **AND** the distance-scaled directional term from `default` mode SHALL NOT fire (no "circle right" attractor)
+
+#### Scenario: gradient_proximity mode penalty is zero when predators disabled
+
+- **WHEN** `RewardConfig.reward_mode: "gradient_proximity"` is configured
+- **AND** `env.predator.enabled` is `False`
+- **THEN** the smooth-gradient penalty branch SHALL NOT fire
+- **AND** the reward SHALL be byte-equivalent to predator-disabled `default` mode
 
 #### Scenario: unknown reward_mode rejected at YAML load
 

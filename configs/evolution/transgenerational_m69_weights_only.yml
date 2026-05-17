@@ -17,7 +17,7 @@
 # Env + brain + reward subtrees are byte-identical to
 # transgenerational_m69_tei_on.yml — they SHARE all audit-B
 # corrections (grid_size: 15, predators.count: 5, foods.count: 8,
-# reward_mode: gradient_only). The launcher shell asserts at launch
+# reward_mode: gradient_proximity). The launcher shell asserts at launch
 # that all three arm YAMLs use the same fitness_survival_weight
 # (1.0 — composite fitness parity).
 #
@@ -86,7 +86,7 @@ reward:
   penalty_boundary_collision: 0.02
   penalty_health_damage: 0.5
   reward_health_gain: 0.1
-  reward_mode: gradient_only
+  reward_mode: gradient_proximity
 
 satiety:
   initial_satiety: 300.0
@@ -132,7 +132,7 @@ evolution:
   population_size: 8
   generations: 4
   episodes_per_eval: 25
-  learn_episodes_per_eval: 1000
+  learn_episodes_per_eval: 2000
   eval_episodes_per_eval: 25
   sigma0: 1.0
   parallel_workers: 8

@@ -549,7 +549,7 @@ def _patched_evolution_config(
     learn_eps: int = 2,
     eval_eps: int | None = 1,
 ) -> SimulationConfig:
-    """Helper: rebuild the sim_config with a specific fitness_metric + weight."""
+    """Rebuild the sim_config with a specific fitness_metric + weight."""
     assert sim_config.evolution is not None
     return sim_config.model_copy(
         update={
@@ -628,7 +628,7 @@ def test_fitness_metric_survival_rate_returns_survival_fraction() -> None:
 
 
 def test_fitness_metric_survival_rate_ignores_survival_weight() -> None:
-    """Under ``survival_rate`` dispatch, ``fitness_survival_weight`` SHALL NOT affect the return value."""
+    """Under ``survival_rate`` dispatch, ``fitness_survival_weight`` SHALL NOT affect the return."""
     sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
     encoder = HyperparameterEncoder()
     genome = _make_genome(sim_config)

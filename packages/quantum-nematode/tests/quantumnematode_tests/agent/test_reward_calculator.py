@@ -491,6 +491,159 @@ class TestGradientOnlyRewardMode:
         with pytest.raises(ValidationError):
             RewardConfig(reward_mode="sparse")  # type: ignore[arg-type]
 
+    # -----------------------------------------------------------------
+    # gradient_proximity mode (M6.10 audit-B remediation v2)
+    # -----------------------------------------------------------------
+
+    def _make_predator_env_with_concentration(
+        self,
+        agent_pos,
+        predator_positions,
+        *,
+        in_danger=False,
+        concentration=0.0,
+    ):
+        """Variant fixture that also mocks ``get_predator_concentration``.
+
+        ``gradient_proximity`` mode queries the env's concentration field
+        regardless of whether the agent is in any predator's danger zone,
+        so this fixture lets us pin a concentration value to test the
+        smooth-penalty path.
+        """
+        env = self._make_predator_env(
+            agent_pos,
+            predator_positions,
+            in_danger=in_danger,
+        )
+        env.get_predator_concentration = Mock(return_value=concentration)
+        return env
+
+    def test_gradient_proximity_applies_smooth_penalty(self):
+        """``gradient_proximity`` SHALL apply penalty proportional to concentration."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_proximity",
+        )
+        env = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(3, 5)],
+            in_danger=False,
+            concentration=0.4,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        # Concentration 0.4 x penalty 0.5 = 0.2 gradient penalty; step
+        # penalty 0.01 — total reward = -0.21.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.21)
+
+    def test_gradient_proximity_fires_outside_danger_zone(self):
+        """``gradient_proximity`` smooth penalty SHALL fire even when not in_danger.
+
+        This is the key difference from ``gradient_only`` — the
+        concentration field has non-zero values throughout the
+        exponential-decay zone, not just at ``dist <= damage_radius``.
+        """
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_proximity",
+        )
+        env = self._make_predator_env_with_concentration(
+            [50, 50],  # far from predator
+            [(10, 10)],
+            in_danger=False,  # NOT in damage_radius
+            concentration=0.1,  # still feels the tail of the exp-decay field
+        )
+        calculator = RewardCalculator(config)
+        path = [(49, 50), (50, 50)]
+
+        # Smooth penalty fires despite in_danger=False: 0.1 x 0.5 = 0.05.
+        # Step penalty 0.01. Total = -0.06.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.06)
+
+    def test_gradient_proximity_keeps_contact_penalty(self):
+        """``gradient_proximity`` SHALL stack contact penalty + smooth gradient penalty."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_proximity",
+        )
+        env = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(5, 5)],
+            in_danger=True,
+            concentration=1.0,  # at predator → max field
+        )
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (5, 5)]
+
+        # Expected: gradient penalty (1.0 x 0.5 = 0.5) + contact penalty
+        # (-0.5; curr_pred_dist=0 is_in_danger=True fires inside the
+        # is_in_danger branch) + step penalty (-0.01) totalling -1.01.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-1.01)
+
+    def test_gradient_proximity_no_penalty_when_predators_disabled(self):
+        """``gradient_proximity`` SHALL produce zero gradient penalty when predators disabled."""
+        env = _make_base_env([5, 5], visited_cells={(5, 5)})
+        env.predator.enabled = False
+        # If somehow called, return 0 — but the gradient_proximity branch
+        # should not even check the field when predators are disabled.
+        env.get_predator_concentration = Mock(return_value=0.0)
+        path = [(4, 5), (5, 5)]
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_proximity",
+        )
+        reward = RewardCalculator(config).calculate_reward(env, path)
+        # Only step penalty fires.
+        assert reward == pytest.approx(-0.01)
+
+    def test_gradient_proximity_diverges_from_gradient_only_outside_danger(self):
+        """``gradient_proximity`` SHALL penalise more than ``gradient_only`` outside danger.
+
+        Key regression against smoke-pass-2's "never-approach" attractor:
+        an agent near (but not adjacent to) a predator should feel a
+        non-zero penalty under gradient_proximity but ZERO penalty under
+        gradient_only (because gradient_only's contact-only branch
+        never fires when dist > 1).
+        """
+        path = [(4, 5), (5, 5)]
+        env_prox = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(3, 5)],
+            in_danger=False,
+            concentration=0.25,
+        )
+        env_only = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(3, 5)],
+            in_danger=False,
+            concentration=0.25,
+        )
+        cfg_prox = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_proximity",
+        )
+        cfg_only = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="gradient_only",
+        )
+        r_prox = RewardCalculator(cfg_prox).calculate_reward(env_prox, path)
+        r_only = RewardCalculator(cfg_only).calculate_reward(env_only, path)
+        # gradient_only: just step penalty (-0.01). gradient_proximity:
+        # gradient -0.125 + step -0.01 = -0.135. Strict inequality.
+        assert r_prox < r_only
+        assert r_prox == pytest.approx(-0.135)
+        assert r_only == pytest.approx(-0.01)
+
 
 class TestTemperatureAvoidanceReward:
     """Test distance-scaled temperature avoidance reward."""

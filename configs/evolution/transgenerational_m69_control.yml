@@ -18,7 +18,7 @@
 # Env + brain + reward subtrees are byte-identical to
 # transgenerational_m69_tei_on.yml AND transgenerational_m69_weights_only.yml
 # — all three arms share the audit-B-corrected env (grid_size: 15,
-# predators.count: 5, foods.count: 8, reward_mode: gradient_only) and
+# predators.count: 5, foods.count: 8, reward_mode: gradient_proximity) and
 # the composite-fitness parity contract (fitness_survival_weight: 1.0).
 #
 # F1+ semantics: K=1000 every gen, fresh TPE genome per child, no
@@ -84,7 +84,7 @@ reward:
   penalty_boundary_collision: 0.02
   penalty_health_damage: 0.5
   reward_health_gain: 0.1
-  reward_mode: gradient_only
+  reward_mode: gradient_proximity
 
 satiety:
   initial_satiety: 300.0
@@ -130,7 +130,7 @@ evolution:
   population_size: 8
   generations: 4
   episodes_per_eval: 25
-  learn_episodes_per_eval: 1000
+  learn_episodes_per_eval: 2000
   eval_episodes_per_eval: 25
   sigma0: 1.0
   parallel_workers: 8
