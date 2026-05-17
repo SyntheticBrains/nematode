@@ -40,12 +40,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from quantumnematode.agent.runners import StandardEpisodeRunner
 from quantumnematode.evolution.encoders import (
     HyperparameterEncoder,
     build_birth_metadata,
 )
-from quantumnematode.evolution.fitness import _build_agent
+from quantumnematode.evolution.fitness import FrozenEvalRunner, _build_agent
 from quantumnematode.evolution.genome import Genome
 from quantumnematode.utils.config_loader import (
     configure_reward,
@@ -140,25 +139,39 @@ def _count_damage_steps_one_episode(
     brain: Brain,
     env: DynamicForagingEnvironment,
     sim_config: SimulationConfig,
-) -> tuple[int, int]:
-    """Run one episode and return ``(steps_inside, total_steps)``.
+) -> tuple[int, int, str]:
+    """Run one episode and return ``(steps_inside, total_steps, termination_reason)``.
 
     Constructs a fresh agent on the supplied env, runs the standard
     episode runner, and post-hoc counts steps where the agent's
     position lies within any predator's damage radius. Post-hoc
     counting is exact for stationary predators (the transgenerational pathogen-lawn
     substrate); pursuit predators would require per-step
-    instrumentation.
+    instrumentation. Also captures ``termination_reason`` so the
+    aggregator can compute a complementary "health-depleted rate"
+    metric that has more dynamic range than ``choice_index`` on envs
+    where geometry alone keeps a wandering agent mostly outside
+    damage radius.
     """
     agent = _build_agent(brain, env, sim_config)
-    runner = StandardEpisodeRunner()
+    # FrozenEvalRunner suppresses ``brain.learn()`` and ``update_memory``
+    # so the post-hoc per-gen eval reads true frozen-policy
+    # ``choice_index`` / ``termination_reason`` rather than letting the
+    # policy adapt during measurement. Mirrors the pattern
+    # ``LearnedPerformanceFitness.evaluate`` uses for its eval phase.
+    runner = FrozenEvalRunner()
     reward_config = configure_reward(sim_config)
     max_steps = sim_config.max_steps if sim_config.max_steps is not None else 1000
     result = runner.run(agent, reward_config, max_steps)
     agent_path = [(int(p[0]), int(p[1])) for p in result.agent_path]
     total_steps = len(agent_path)
     steps_inside = _count_path_steps_inside_damage(agent_path, env)
-    return steps_inside, total_steps
+    termination_reason = str(
+        result.termination_reason.value
+        if hasattr(result.termination_reason, "value")
+        else result.termination_reason,
+    )
+    return steps_inside, total_steps, termination_reason
 
 
 def _apply_tei_substrate(
@@ -240,13 +253,16 @@ def _eval_one_elite(  # noqa: PLR0913 - kw-only orthogonal args
     seed: int,
     substrate_path: Path | None = None,
     decay_factor: float = 0.6,
-) -> list[tuple[int, int, int, float]]:
+) -> list[tuple[int, int, int, float, str]]:
     """Re-run one generation's elite for ``eval_episodes`` episodes.
 
     Returns one tuple per episode: ``(episode_idx, total_steps,
-    steps_inside, choice_index)``. Each episode runs against a fresh
-    env so trial outcomes are independent (matching the frozen-eval
-    semantics in ``LearnedPerformanceFitness``).
+    steps_inside, choice_index, termination_reason)``. Each episode
+    runs against a fresh env so trial outcomes are independent
+    (matching the frozen-eval semantics in
+    ``LearnedPerformanceFitness``). ``termination_reason`` is a
+    ``TerminationReason`` string value, used by the aggregator to
+    compute a complementary health-depleted-rate metric.
 
     When ``substrate_path`` is set AND the elite's generation > 0,
     the F0 substrate is loaded, decayed ``generation`` times (matching
@@ -285,7 +301,7 @@ def _eval_one_elite(  # noqa: PLR0913 - kw-only orthogonal args
 
     from quantumnematode.env.theme import Theme
 
-    rows: list[tuple[int, int, int, float]] = []
+    rows: list[tuple[int, int, int, float, str]] = []
     for ep in range(eval_episodes):
         env = create_env_from_config(
             sim_config.environment,
@@ -293,7 +309,7 @@ def _eval_one_elite(  # noqa: PLR0913 - kw-only orthogonal args
             theme=Theme.HEADLESS,
             max_body_length=sim_config.body_length,
         )
-        steps_inside, total_steps = _count_damage_steps_one_episode(
+        steps_inside, total_steps, termination_reason = _count_damage_steps_one_episode(
             brain=brain,
             env=env,
             sim_config=sim_config,
@@ -302,7 +318,7 @@ def _eval_one_elite(  # noqa: PLR0913 - kw-only orthogonal args
         # termination on step 0). Default choice_index to 1.0 in that
         # case — the agent spent zero of zero steps in a damage zone.
         ci = 1.0 if total_steps == 0 else 1.0 - (steps_inside / total_steps)
-        rows.append((ep, total_steps, steps_inside, ci))
+        rows.append((ep, total_steps, steps_inside, ci, termination_reason))
     return rows
 
 
@@ -362,7 +378,7 @@ def evaluate_one_seed(
         except Exception:
             logger.exception("Failed to evaluate elite %s; skipping.", elite_label)
             continue
-        for ep, total, inside, ci in per_ep:
+        for ep, total, inside, ci, termination in per_ep:
             out.append(
                 (
                     seed,
@@ -374,6 +390,7 @@ def evaluate_one_seed(
                     inside,
                     ci,
                     ci,  # pathogen_choice_index alias (vocab clarity for artefacts)
+                    termination,
                 ),
             )
     return out
@@ -488,11 +505,14 @@ def main() -> int:
                 "steps_inside_damage_radius",
                 "choice_index",
                 "pathogen_choice_index",
+                "termination_reason",
             ),
         )
         for row in all_rows:
-            seed, arm, gen, gid, ep, total, inside, ci, alias = row
-            writer.writerow((seed, arm, gen, gid, ep, total, inside, f"{ci:.6f}", f"{alias:.6f}"))
+            seed, arm, gen, gid, ep, total, inside, ci, alias, termination = row
+            writer.writerow(
+                (seed, arm, gen, gid, ep, total, inside, f"{ci:.6f}", f"{alias:.6f}", termination),
+            )
 
     print(f"\nWrote {len(all_rows)} rows to {csv_path}")
     return 0

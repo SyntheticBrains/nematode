@@ -155,3 +155,51 @@ The change is additive — no breaking changes to existing inheritance modes (`n
 ## Open Questions
 
 None remaining. All six open questions raised during planning (substrate shape, ablation pairing, F0 calibration gate, brain hook style, compute budget, config-schedule granularity) were resolved with explicit user decisions before the OpenSpec scaffolding step. The one *deferred* question — whether to add a `transgenerational+weights` kind — is conditional on pilot results and explicitly out of scope for this milestone.
+
+## Post-execution audit addendum (2026-05-17)
+
+Recorded after the M6.5 full campaign completed (4 seeds × pop 16 × 4 gens × paired TEI-on / TEI-off, ~14 wall-hours). The body of this design.md above is preserved verbatim as the as-designed snapshot at scaffolding time; this addendum records the verdict + the implementation divergences from the original design that the deep-dive audit surfaced. Full narrative in [`docs/experiments/logbooks/018-transgenerational-memory.md`](../../../docs/experiments/logbooks/018-transgenerational-memory.md) § Audit + § What's next.
+
+### Verdict
+
+**Framework shipped — INCONCLUSIVE ⚠️ on the science.** Literal aggregator output:
+
+- Choice-index gate (D5): STOP. 0 of 4 seeds pass either arm; monotone-check fails everywhere because choice_index is geometry-dominated on this env layout (an untrained agent already spends ~93% of steps outside the small toxic-zone disk by random walk).
+- Survival-rate gate with F0 training-time fitness override (added in commit 8 — see [Implementation divergence #2](#implementation-divergence-2-aggregator-f0-baseline-override) below): PIVOT for TEI-on (1 of 4 seeds pass) / STOP for TEI-off (0 of 4). TEI-on > TEI-off paired delta is +0.07 / +0.11 / +0.04 absolute at F1 / F2 / F3 means across seeds.
+
+Neither verdict is load-bearing because the post-pilot deep-dive audit identified four blocking design issues that mean the gates compared a substrate which cannot, by construction, encode pathogen-conditional avoidance against a non-symmetric control.
+
+### Audit-flagged issues against the as-designed decisions
+
+| Decision (as designed) | Audit finding (as built and run) | Status |
+|---|---|---|
+| **D1** Per-action additive `logit_bias` of shape `(num_actions,)` is sufficient to bias offspring toward avoidance | The substrate is **gradient-unconditional**: a constant logit-bias vector cannot express "AVOID when near pathogen, FORAGE otherwise." Biology is gradient-conditional. 3 of 4 F0 elite seeds produced a bit-identical motion-bias substrate `[-2.0, -2.0, +1.39, -2.0]` ("always turn RIGHT") — a circle-in-place attractor that PPO finds reliably on this env, not pathogen-conditional avoidance | **Blocking** — addressed by M6.9 (substrate redesign) |
+| **D2** Telemetry probes "near a pathogen lawn"; choice-index from raw episode traces; the two metrics on disjoint data | `_build_f0_probe_params` ([`evolution/loop.py:732-834`](../../../packages/quantum-nematode/quantumnematode/evolution/loop.py#L732-L834)) ships three synthetic `BrainParams` with **`predator_gradient_strength=0.0` on every probe** — they vary only `food_gradient_strength`. The substrate captures policy deviation under food gradients, not under pathogen contexts. The function's docstring explicitly flags this as a "minimal default implementation; a follow-up may replace this with a ring-of-probe-positions generator that uses the env's STATIONARY-predator coordinates" — the follow-up never landed | **Blocking** — addressed by M6.11 (env-derived extraction contexts) |
+| **D5** Choice index = 1 − steps_inside_damage_radius / total_steps; Kaletsky F2 ≈ 0.55 anchor | The metric is geometry-dominated on this env (small toxic-zone disk in a 20×20 grid). An untrained agent random-walks at choice_index ≈ 0.93 already, so the gate cannot discriminate trained from random. Survival_rate (1 − HEALTH_DEPLETED rate) was added in commit 8 as a parallel-tracked metric with real dynamic range — this is what the verdict above is computed against | **Resolved at the metric layer** — survival_rate is now the primary signal, with choice-index as sanity-check secondary. The M6 spec retains both. |
+| **D6** Pure-TEI (TEI-on, `inheritance=transgenerational`) vs `NoInheritance` (TEI-off, `inheritance=none`). Substrate is the only signal carrier; same seeds + same env. | The control arm short-circuits the per-gen `lawn_schedule` at [`evolution/loop.py:869-870`](../../../packages/quantum-nematode/quantumnematode/evolution/loop.py#L869-L870) (`if cfg.transgenerational is None or not cfg.transgenerational.enabled: return self.sim_config`) and runs **K=1000 fresh training every generation**, not the "no train, no inheritance" pure-control the spec implied. TEI-on F1+ uses K=0 (fresh-random brain + logit_bias prior, 25 eval episodes only). Non-symmetric compute. The follow-up `transgenerational+weights` configuration the spec's "Open Questions" deferred is what would have made the comparison symmetric; it was not run as part of M6 | **Blocking** — addressed by M6.12 (`transgenerational+weights`) |
+| Training reward shape (not a numbered decision, but implicit) | The PPO step reward at [`agent/reward_calculator.py:104-133`](../../../packages/quantum-nematode/quantumnematode/agent/reward_calculator.py#L104-L133) has both a food-approach term AND a distance-scaled predator-evasion term + a contact penalty. Under our env geometry (small toxic-zone disk + strong evasion penalty), "circle right always" is a low-curvature local optimum: high evasion reward (tangent motion), low pathogen contact, occasional food pickup, no pathogen-conditional logic needed. PPO finds this attractor in K=1000 episodes; the F0 elite is then ranked at composite fitness 0.46 and selected | **Blocking** — addressed by M6.10 (env / training-reward redesign) |
+
+### Implementation divergence #1: composite survival-weighted fitness
+
+The original design assumes the existing `LearnedPerformanceFitness` (raw `success_rate`) is sufficient to select an F0 elite that has learned avoidance. Path AA forensics (scratchpad lines 1141-1166) found that `success_rate`-only fitness at K=1000 produces "food-grabber" elites: fitness 0.68 but survival_rate 0.08 (24 of 25 eval episodes still die — the agent collects food then dies in a pathogen lawn). To align the F0 substrate source with the M6 measurement target (avoidance), commit 8 added `evolution.fitness_survival_weight: float ∈ [0, 1]` (default 0.0 for byte-equivalent legacy behaviour). With weight 1.0 the fitness becomes `success_rate × (1 − death_rate)`. The TEI-on / TEI-off campaign uses weight 1.0. This is additive to D1–D9, not in tension with them.
+
+### Implementation divergence #2: aggregator F0 baseline override
+
+The post-hoc per-gen evaluator at [`scripts/campaigns/transgenerational_per_gen_eval.py`](../../../scripts/campaigns/transgenerational_per_gen_eval.py) decodes a **fresh untrained brain** from the elite's hyperparameter genome at every generation. For F1+ this matches production semantics (F1+ workers run no training, just substrate-cascade-on-fresh-brain — see Audit D in the table above). For F0 this is wrong — the production F0 worker trains for K=1000 episodes before extracting the substrate, but the F0 weight file is GC'd by the substrate-extraction pipeline (preserves only the `.tei.pt`). Without correction, the post-hoc F0 reads ≈ 0.08 (the untrained-brain baseline) and the monotone check trivially fails at F1 > F0. Commit 8 added `aggregate_m6_pilot.py --campaign-root <root>` which loads F0 training-time fitness from each `per_gen_elites.jsonl` and threads it as a per-(arm, seed) override into `evaluate_decision_gate_one_seed`. The override is what produces the survival-rate verdict reported above.
+
+### Pilot trajectory divergence from D9 compute envelope
+
+The original D9 envelope assumed a single calibrated pilot then a single full campaign. Reality required a five-iteration diagnostic chain: F0 calibration smoke → Path A retune (damage_radius 3→5) → Path AA hyperparameter sweep → Path AAA composite fitness → Full campaign. Total compute ≈ 21 wall-hours (vs the planned 16). The five iterations bought the diagnostic chain that surfaced the four audit issues; without them M6 would have shipped a clean STOP under the choice-index gate without surfacing the substrate-shape root cause. See [`tmp/evaluations/transgenerational/transgenerational_scratchpad.md`](../../../tmp/evaluations/transgenerational/transgenerational_scratchpad.md) lines 700-1330 for the full forensic trail.
+
+### What stays, what moves to M6.9+
+
+**Stays (framework deliverable):** `TransgenerationalInheritance` strategy + `TransgenerationalMemory` dataclass + LSTMPPO `tei_prior` actor-logit hook + per-gen `lawn_schedule` loop consumer + F0 substrate-extraction telemetry pipeline + paired-arm aggregator (with F0 override + survival-rate metric) + per-gen evaluator. ~37 substrate/loop tests + 12 aggregator tests pass. The mechanism is integration-ready for any future substrate shape that conforms to the same Protocol.
+
+**Moves to M6.9+ (deferred to follow-up OpenSpec change):**
+
+- M6.9 — substrate redesign (addresses D1 audit finding)
+- M6.10 — training reward + env redesign (addresses the training-reward audit finding)
+- M6.11 — env-derived extraction probes (addresses D2 audit finding)
+- M6.12 — `transgenerational+weights` configuration (addresses D6 audit finding; this is the spec's own deferred follow-up flagged in "Open Questions" above)
+
+The next PR after the one closing M6 will scaffold a dedicated OpenSpec change for M6.9+ with deeper planning + any further design issues a fresh review surfaces. Substrate-redesign details are deliberately **not** planned in this addendum.

@@ -602,6 +602,7 @@ class LearnedPerformanceFitness:
             raise ValueError(msg)
 
         successes = 0
+        deaths = 0
         for ep_idx in range(eval_count):
             # Per-episode seed derivation — same rationale as the train
             # loop above.  Eval episodes use a different base offset
@@ -623,4 +624,13 @@ class LearnedPerformanceFitness:
             result = eval_runner.run(eval_agent, sim_config.reward, max_steps)
             if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
                 successes += 1
-        return successes / eval_count
+            if result.termination_reason == TerminationReason.HEALTH_DEPLETED:
+                deaths += 1
+        success_rate = successes / eval_count
+        # Survival-weighted fitness (default 0.0 = byte-equivalent legacy
+        # behaviour). With weight > 0 the F0 elite is selected on a
+        # composite that penalises pathogen deaths, reducing the
+        # food-grabber-dominance bias observed at survival_weight=0
+        # on transgenerational pathogen-avoidance configs.
+        death_rate = deaths / eval_count
+        return success_rate * (1.0 - evolution_config.fitness_survival_weight * death_rate)

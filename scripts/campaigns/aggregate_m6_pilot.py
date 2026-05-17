@@ -33,9 +33,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import logging
+import math
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +65,7 @@ def _read_per_gen_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(handle))
 
 
-def _mean(values: list[float]) -> float:
+def _mean(values: Sequence[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
@@ -75,11 +81,152 @@ def build_retention_table(rows: list[dict]) -> dict[tuple[str, int, int], float]
     return {k: _mean(v) for k, v in bucket.items()}
 
 
+def build_survival_table(rows: list[dict]) -> dict[tuple[str, int, int], float]:
+    """Aggregate per-episode rows into ``(arm, seed, generation) -> survival_rate``.
+
+    ``survival_rate = 1 - (n_episodes_ending_in_HEALTH_DEPLETED / n_episodes)``.
+    Directionally aligned with ``choice_index`` (higher = better avoidance),
+    so the same decision-gate logic applies. Has higher dynamic range than
+    ``choice_index`` on envs where geometry alone keeps a wandering agent
+    mostly outside damage radius — death from accumulated damage is a much
+    sharper signal of "the agent walks into pathogens" than fractional
+    step-time inside damage radius.
+
+    Skips rows that lack a ``termination_reason`` column (backwards-compat
+    with older per_gen_choice_index.csv files that predate the column).
+    """
+    bucket: dict[tuple[str, int, int], list[int]] = defaultdict(list)
+    for row in rows:
+        if "termination_reason" not in row or row["termination_reason"] == "":
+            continue
+        key = (str(row["arm"]), int(row["seed"]), int(row["generation"]))
+        # 1 = died from health depletion (bad); 0 = survived (good)
+        died = 1 if str(row["termination_reason"]).lower() == "health_depleted" else 0
+        bucket[key].append(died)
+    return {k: 1.0 - _mean(v) for k, v in bucket.items()}
+
+
+def load_f0_training_fitness_per_seed(
+    campaign_root: Path,
+    *,
+    arms: list[str] | None = None,
+) -> dict[tuple[str, int], float]:
+    """Locate each (arm, seed)'s ``per_gen_elites.jsonl`` and extract F0 training fitness.
+
+    The training-time composite fitness recorded in
+    ``per_gen_elites.jsonl`` is the canonical F0 retention baseline for
+    transgenerational decision-gate evaluation:
+
+    - F0's trained brain achieved this fitness on the training-eval set
+      that TPE used to select it.
+    - The post-hoc per-gen evaluator can NOT reproduce that measurement
+      because the F0 weight ``.pt`` is GC'd by the substrate-extraction
+      pipeline (only the ``.tei.pt`` is retained); the evaluator's F0
+      row is an untrained-brain baseline, not a measurement of the
+      substrate's source policy.
+
+    Using training-time F0 fitness as the gate baseline gives a
+    biologically-correct retention ratio (F1+ post-hoc survival vs F0
+    trained survival), matching the wet-lab Kaletsky/Vidal-Gadea
+    convention.
+
+    Expected directory layout (mirrors campaign shell output):
+    ``<campaign_root>/{arm}/seed-{N}/[<session_id>/]per_gen_elites.jsonl``.
+
+    Returns a dict ``{(arm, seed): f0_fitness}``. Missing files / parse
+    errors are skipped with a warning so the rest of the campaign's
+    seeds are still evaluable.
+    """
+    arms_to_scan = (
+        arms if arms is not None else [d.name for d in campaign_root.iterdir() if d.is_dir()]
+    )
+    out: dict[tuple[str, int], float] = {}
+    for arm in arms_to_scan:
+        arm_dir = campaign_root / arm
+        if not arm_dir.is_dir():
+            continue
+        for seed_dir in sorted(arm_dir.iterdir()):
+            if not seed_dir.is_dir() or not seed_dir.name.startswith("seed-"):
+                continue
+            try:
+                seed = int(seed_dir.name.split("-", 1)[1])
+            except (IndexError, ValueError):
+                logger.warning("Skipping non-seed directory: %s", seed_dir)
+                continue
+            # Direct layout: <seed_dir>/per_gen_elites.jsonl
+            direct = seed_dir / "per_gen_elites.jsonl"
+            jsonl_path: Path | None = None
+            if direct.exists():
+                jsonl_path = direct
+            else:
+                # Nested layout: <seed_dir>/<session_id>/per_gen_elites.jsonl
+                candidates = [
+                    p
+                    for p in seed_dir.iterdir()
+                    if p.is_dir() and (p / "per_gen_elites.jsonl").is_file()
+                ]
+                if candidates:
+                    jsonl_path = (
+                        max(candidates, key=lambda p: p.stat().st_mtime) / "per_gen_elites.jsonl"
+                    )
+            if jsonl_path is None:
+                logger.warning(
+                    "No per_gen_elites.jsonl for arm=%s seed=%d under %s; skipping.",
+                    arm,
+                    seed,
+                    seed_dir,
+                )
+                continue
+            f0_fitness = _read_f0_training_fitness(jsonl_path)
+            if f0_fitness is not None:
+                out[(arm, seed)] = f0_fitness
+    return out
+
+
+def _read_f0_training_fitness(jsonl_path: Path) -> float | None:
+    """Return the F0 (``generation == 0``) elite's training-time ``fitness`` field, or None.
+
+    Returns ``None`` (so the caller skips the seed) when the F0 row is
+    missing the ``fitness`` key entirely OR when the field is present
+    but cannot be coerced to a finite float (``NaN``, ``inf``, a
+    non-numeric string, etc.). Defensively coding here matters because
+    a silent ``0.0`` default would set the gate's F0 baseline to zero
+    and let any positive F1 trivially pass the monotone check.
+    """
+    try:
+        with jsonl_path.open(encoding="utf-8") as handle:
+            for raw in handle:
+                stripped = raw.strip()
+                if not stripped:
+                    continue
+                try:
+                    row = json.loads(stripped)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                if int(row.get("generation", -1)) != 0:
+                    continue
+                if "fitness" not in row:
+                    return None
+                try:
+                    value = float(row["fitness"])
+                except (TypeError, ValueError):
+                    return None
+                if not math.isfinite(value):
+                    return None
+                return value
+    except OSError as exc:
+        logger.warning("Failed to read %s: %s", jsonl_path, exc)
+    return None
+
+
 def evaluate_decision_gate_one_seed(
     *,
     retention: dict[tuple[str, int, int], float],
     arm: str,
     seed: int,
+    f0_baseline_override: dict[tuple[str, int], float] | None = None,
 ) -> dict:
     """Evaluate the decision gate for one (arm, seed).
 
@@ -90,8 +237,20 @@ def evaluate_decision_gate_one_seed(
       - ``f3_ratio_pass``: bool
       - ``monotone_pass``: bool — F0 ≥ F1 ≥ F2 ≥ F3
       - ``overall_pass``: bool — AND of all four
+
+    When ``f0_baseline_override`` is provided AND contains the
+    ``(arm, seed)`` key, its value replaces the post-hoc retention
+    table's F0 entry. This is the biologically-correct path for
+    transgenerational decision-gate evaluation: F0 retention is the
+    training-time avoidance behaviour the substrate was extracted
+    from, not the untrained-brain baseline that the post-hoc
+    evaluator measures (the F0 ``.pt`` weights are GC'd by the
+    substrate-extraction pipeline).
     """
-    f0 = retention.get((arm, seed, 0))
+    if f0_baseline_override is not None and (arm, seed) in f0_baseline_override:
+        f0: float | None = f0_baseline_override[(arm, seed)]
+    else:
+        f0 = retention.get((arm, seed, 0))
     f1 = retention.get((arm, seed, 1))
     f2 = retention.get((arm, seed, 2))
     f3 = retention.get((arm, seed, 3))
@@ -266,7 +425,7 @@ def _write_summary_md(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901 - linear orchestration; nested loops are clearer than helpers
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description=(
@@ -287,6 +446,20 @@ def main() -> int:
         required=True,
         help="Directory to write retention_table.csv, decision_gate.csv, summary.md into.",
     )
+    parser.add_argument(
+        "--campaign-root",
+        type=Path,
+        default=None,
+        help=(
+            "Campaign output root (e.g. ``evolution_results/m6_transgenerational``). "
+            "When provided, the aggregator loads each (arm, seed)'s F0 training-time "
+            "fitness from ``per_gen_elites.jsonl`` and uses it as the F0 baseline for "
+            "the survival_rate decision gate, replacing the post-hoc evaluator's "
+            "untrained-brain F0 measurement. This is the biologically-correct gate "
+            "baseline: F0 retention should be measured against the substrate's source "
+            "(the trained F0 elite), not against an untrained brain."
+        ),
+    )
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -297,10 +470,23 @@ def main() -> int:
         return 1
 
     retention = build_retention_table(rows)
+    survival = build_survival_table(rows)  # higher dynamic range than choice_index
 
-    # Per-arm seed-by-seed gate evaluation.
+    # Per-arm seed-by-seed gate evaluation on BOTH metrics.
     arms = sorted({k[0] for k in retention})
     seeds = sorted({k[1] for k in retention})
+
+    # F0 baseline override: when --campaign-root is provided, load each
+    # (arm, seed)'s F0 training-time fitness from per_gen_elites.jsonl
+    # and use it as the F0 baseline for the survival_rate gate.
+    f0_override: dict[tuple[str, int], float] | None = None
+    if args.campaign_root is not None and args.campaign_root.is_dir():
+        f0_override = load_f0_training_fitness_per_seed(
+            args.campaign_root,
+            arms=arms,
+        )
+        print(f"\nF0 baseline override loaded for {len(f0_override)} (arm, seed) pairs.")
+
     seed_evaluations_all: list[dict] = []
     seed_evaluations_per_arm: dict[str, list[dict]] = defaultdict(list)
     verdict_per_arm: dict[str, str] = {}
@@ -317,8 +503,37 @@ def main() -> int:
         # but the logbook reads the tei_on row.
         verdict_per_arm[arm] = aggregate_verdict(per_arm)
 
+    # Same gate logic, applied to the survival_rate metric instead of
+    # choice_index. Only emitted if the CSV actually had a
+    # termination_reason column (older CSVs predate it). The
+    # ``f0_override`` (if provided) replaces the post-hoc F0 row with
+    # the training-time F0 fitness — see ``load_f0_training_fitness_per_seed``
+    # docstring for why this is the biologically-correct baseline.
+    survival_evaluations_per_arm: dict[str, list[dict]] = defaultdict(list)
+    survival_verdict_per_arm: dict[str, str] = {}
+    if survival:
+        for arm in arms:
+            per_arm_surv = [
+                evaluate_decision_gate_one_seed(
+                    retention=survival,
+                    arm=arm,
+                    seed=seed,
+                    f0_baseline_override=f0_override,
+                )
+                for seed in seeds
+                if (arm, seed, 0) in survival
+            ]
+            survival_evaluations_per_arm[arm] = per_arm_surv
+            survival_verdict_per_arm[arm] = aggregate_verdict(per_arm_surv)
+
     _write_retention_csv(retention, args.output_dir / "retention_table.csv")
     _write_decision_gate_csv(seed_evaluations_all, args.output_dir / "decision_gate.csv")
+    if survival:
+        _write_retention_csv(survival, args.output_dir / "survival_retention_table.csv")
+        all_surv_evals = [
+            s for arm_evals in survival_evaluations_per_arm.values() for s in arm_evals
+        ]
+        _write_decision_gate_csv(all_surv_evals, args.output_dir / "survival_decision_gate.csv")
     _write_summary_md(
         seed_evaluations_per_arm=seed_evaluations_per_arm,
         verdict_per_arm=verdict_per_arm,
@@ -326,12 +541,19 @@ def main() -> int:
         path=args.output_dir / "summary.md",
     )
 
-    print("\nVerdicts per arm:")
+    print("\nchoice_index verdicts per arm:")
     for arm in arms:
         print(f"  {arm}: {verdict_per_arm[arm]}")
+    if survival:
+        print("\nsurvival_rate verdicts per arm:")
+        for arm in arms:
+            print(f"  {arm}: {survival_verdict_per_arm.get(arm, 'n/a')}")
     print(f"\nArtefacts written to {args.output_dir}/")
-    print("  - retention_table.csv")
-    print("  - decision_gate.csv")
+    print("  - retention_table.csv (choice_index)")
+    print("  - decision_gate.csv (choice_index)")
+    if survival:
+        print("  - survival_retention_table.csv (survival_rate)")
+        print("  - survival_decision_gate.csv (survival_rate)")
     print("  - summary.md")
     return 0
 

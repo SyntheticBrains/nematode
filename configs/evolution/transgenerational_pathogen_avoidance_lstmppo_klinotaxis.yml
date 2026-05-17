@@ -15,16 +15,21 @@
 # stationary-predator schema, reused so no new env-side fields are
 # introduced.
 #
-# Schedule (per the transgenerational-memory OpenSpec change):
-#   - F0 (gen 0): pathogen lawns ON, K=50 PPO train episodes per child.
+# Schedule (as calibrated through the Path A/AA/AAA forensic chain
+# documented in tmp/evaluations/transgenerational/transgenerational_scratchpad.md):
+#   - F0 (gen 0): pathogen lawns ON, K=1000 PPO train episodes per child.
 #     End-of-gen the F0 elite's trained policy is loaded, the
 #     ``extract_from_brain`` telemetry pass produces the
 #     ``logit_bias`` substrate, and the resulting ``.tei.pt`` is
 #     written. The capture is gated on success of the F0 train phase.
-#   - F1/F2/F3: pathogen lawns OFF, K=0 (no train). Each child loads
-#     the F0 substrate, applies the ``inherit_from`` decay cascade
-#     ``lineage_depth`` times (F1: 1×, F2: 2×, F3: 3×), and runs the
+#   - F1/F2/F3: pathogen lawns ON (test-phase pathogens MUST be present
+#     to evaluate the choice index), K=0 (no train — offspring inherit
+#     the F0 substrate without re-exposure). Each child loads the F0
+#     substrate, applies the ``inherit_from`` decay cascade
+#     ``lineage_depth`` times (F1: 1x, F2: 2x, F3: 3x), and runs the
 #     eval phase only. The TEI prior is the only signal carrier.
+#     (See the ``lawn_schedule`` block below for the local-context
+#     rationale of pathogens-on at F1+.)
 #
 # Decay factor 0.6 yields F0=1.0 / F1=0.6 / F2=0.36 / F3=0.216 — the
 # "diluted across generations" framing matches Posner 2023 / Kaletsky
@@ -135,10 +140,19 @@ environment:
 
   predators:
     # "Pathogen lawns" repurposed via STATIONARY predator with speed 0.
-    # ``damage_radius=3`` is intentionally larger than the standard
-    # stationary scenario (damage_radius=2) so F0 has enough avoidance
-    # signal to learn from in 50 PPO episodes. If F0 calibration falls
-    # outside [0.45, 0.85], this is the first knob to retune.
+    # ``damage_radius=3`` covers ~19% of the 20x20 grid across 3 lawns
+    # (Manhattan disc area 25 cells/lawn). The pre-Path-A history of
+    # this knob: damage_radius=2 (the stationary-scenario default)
+    # produced ceiling-saturated F0 choice_index ≈ 0.93; damage_radius=5
+    # over-corrected (only ~52% of episodes survived a single child even
+    # at K=2000 single-brain training per Path A v2); damage_radius=3
+    # restores ~19% coverage, closer to logbook 006's working
+    # configuration (which converged the unified-sensory PPO brain to
+    # ~75% post-conv success on stationary predators at K=500).
+    # The choice_index metric remains geometry-dominated in this env
+    # (per Path A v2 forensics); the ``survival_rate`` metric (computed
+    # offline by the per-gen evaluator from termination_reason) is the
+    # primary signal of learned avoidance.
     enabled: true
     count: 3
     speed: 0.0
@@ -155,42 +169,76 @@ environment:
 
 evolution:
   algorithm: tpe
-  population_size: 16
+  population_size: 8
   generations: 4
   # episodes_per_eval is the protocol fallback when
   # eval_episodes_per_eval is None. Both are set to 25 so the per-gen
   # choice-index aggregator (commit 7) has enough samples to stabilise.
   episodes_per_eval: 25
   # learn_episodes_per_eval is the BASELINE K. The per-gen
-  # ``lawn_schedule`` below overrides it per generation (F0: 50,
-  # F1/F2/F3: 0). The outer value MUST be > 0 to satisfy the
-  # inheritance ↔ train-phase validator at config-load; the
-  # per-gen override applies at worker-dispatch time.
-  learn_episodes_per_eval: 50
+  # ``lawn_schedule`` below overrides it per generation (F0: 1000,
+  # F1/F2/F3: 0). The K=1000 figure is the upper end of the Path AA
+  # forensic sweep: Path A v2 single-brain runs at K=2000 showed
+  # survival_rate peaked at K=1200 (0.52) with PPO oscillation
+  # 0.04–0.52 across adjacent checkpoints; K=1000 lands inside that
+  # learnable regime while keeping per-child train wall-time under
+  # ~3 minutes. Logbook 006's stationary-predator finding ("500 runs
+  # for unified-sensory MLPPPO to converge reliably") was the lower
+  # anchor — Path AA bracketed K=500 vs K=1000 and the latter produced
+  # the calibrated F0 elite (composite fitness 0.46). The outer value
+  # MUST be > 0 to satisfy the inheritance ↔ train-phase validator at
+  # config-load; the per-gen override applies at worker-dispatch time.
+  learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0
-  parallel_workers: 4
+  # 8 of the machine's 10 cores; leaves 2 for system/IDE.
+  parallel_workers: 8
   checkpoint_every: 2
   cma_diagonal: false
   inheritance: transgenerational
+  # Survival-weighted fitness so the F0 elite selection rewards both
+  # foraging AND pathogen avoidance. Path AA forensics showed that
+  # success_rate-only fitness (the legacy M3/M4/M5 default) at K=1000
+  # produces "food-grabber" elites: fitness 0.68 but survival 0.08 (24
+  # of 25 eval episodes still die). Weight 1.0 means
+  # ``fitness = success_rate × (1 - death_rate)``, so a child that
+  # collects all food but dies once is rated lower than one that
+  # collects most food and never dies. This aligns the F0 substrate
+  # source with the M6 measurement target (avoidance), not the M3
+  # measurement target (foraging).
+  fitness_survival_weight: 1.0
   # Transgenerational inheritance: F0 trains on pathogens, F1+
   # inherits the decayed substrate without re-training.
   transgenerational:
     enabled: true
     decay_factor: 0.6
     extraction_seed: 424242
+    # ``pathogen_lawns_enabled`` is held to ``true`` for every generation
+    # — this is the biologically-faithful framing per the Vidal-Gadea
+    # 2025 choice-assay protocol. Offspring are *reared* without pathogen
+    # re-exposure (modelled here by ``ppo_train_episodes: 0`` at F1+),
+    # but the test phase MUST include pathogens because that is how
+    # avoidance is measured. The original M6 spec text wrote "F1+
+    # pathogen lawns OFF" — that conflates the rearing phase (correct:
+    # no re-training under TEI) with the test phase (incorrect:
+    # pathogens must be present to evaluate the choice index). Disabling
+    # predators at F1+ would also remove the predator channel from the
+    # env's STAM resolution, producing a feature-dim mismatch with the
+    # F0-trained brain (15 features vs the trained 17). Both arguments
+    # land at the same fix: pathogens stay ON across all generations;
+    # only the train-phase is toggled by ``ppo_train_episodes``.
     lawn_schedule:
       - generation: 0
         pathogen_lawns_enabled: true
-        ppo_train_episodes: 50
+        ppo_train_episodes: 1000
       - generation: 1
-        pathogen_lawns_enabled: false
+        pathogen_lawns_enabled: true
         ppo_train_episodes: 0
       - generation: 2
-        pathogen_lawns_enabled: false
+        pathogen_lawns_enabled: true
         ppo_train_episodes: 0
       - generation: 3
-        pathogen_lawns_enabled: false
+        pathogen_lawns_enabled: true
         ppo_train_episodes: 0
 
 hyperparam_schema:
