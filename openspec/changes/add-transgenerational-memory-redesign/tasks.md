@@ -63,11 +63,11 @@ Tasks grouped by commit (per design.md § Migration Plan). Each group is one PR-
 
 ## 7. Substrate-diversity tripwire script (Commit 7)
 
-- [ ] 7.1 Create `scripts/campaigns/m69_substrate_diversity.py`: input is a directory containing N seed `.tei.pt` files; output is a CSV with pairwise CoV of bias-network state_dict tensors across the seeds, plus a pass/fail flag against a configurable threshold (default 5%).
-- [ ] 7.2 Pairwise CoV computation: for each pair (i, j) of seeds, compute `||W_i − W_j|| / ((||W_i|| + ||W_j||) / 2)` over the flat-concatenated weight tensors. Report the minimum across all pairs as the diversity-CoV.
-- [ ] 7.3 Integrate the script into the campaign shell's `--smoke` flow as tripwire T2 (commit 5).
-- [ ] 7.4 Tests in `tests/.../campaigns/test_substrate_diversity.py` (~4 cases): CoV computation correctness on hand-built tensors; threshold pass/fail; degenerate (all-identical) substrate detection; empty-input rejection.
-- [ ] 7.5 `uv run pytest -m "not smoke and not nightly"` passes. Pre-commit clean.
+- [x] 7.1 Create `scripts/campaigns/m69_substrate_diversity.py`: input is a campaign-root directory; output is a CSV with pairwise CoV of bias-network state_dict tensors across the seeds plus a per-seed mean-abs bias-output (T4 surrogate), and a pass/fail flag against configurable thresholds (default 5% CoV, 0.1 magnitude).
+- [x] 7.2 Pairwise CoV computation: for each pair (i, j) of seeds, compute `||W_i − W_j|| / ((||W_i|| + ||W_j||) / 2)` over the flat-concatenated weight tensors. Report the minimum across all pairs as the diversity-CoV.
+- [x] 7.3 Integrate the script into the campaign shell's `--smoke` flow as tripwire T2 (commit 5 hint already references it; smoke-mode next-steps text invokes the script with `--campaign-root`).
+- [x] 7.4 Tests in `tests/.../campaigns/test_substrate_diversity.py` (~4 cases): CoV computation correctness on hand-built tensors; threshold pass/fail; degenerate (all-identical) substrate detection; empty-input rejection.
+- [x] 7.5 `uv run pytest -m "not smoke and not nightly"` passes. Pre-commit clean.
 
 ## 8. F0 calibration smoke + pilot + full campaign + logbook (Commit 8)
 

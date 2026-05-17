@@ -216,3 +216,47 @@ The F0 substrate extraction pipeline SHALL use the env-derived probe ring when `
 - **WHEN** an F1+ worker loads a `.tei.pt` substrate whose `input_features` includes a `BrainParams` field absent from the current brain config
 - **THEN** the worker SHALL raise `RuntimeError` with an operator-friendly message naming the missing field
 - **AND** the run SHALL fail-fast at substrate-load time, NOT at first `apply_to_logits` call
+
+### Requirement: Substrate-Diversity Tripwire (T2 + T4)
+
+The pre-flight calibration smoke SHALL include a substrate-diversity tripwire (T2) and substrate-magnitude tripwire (T4) that together catch the M6 failure mode (3-of-4 calibration seeds extracting bit-identical substrates from independent F0 elites). Both checks MUST pass before pilot is unblocked.
+
+T2 — substrate diversity — SHALL compute pairwise coefficient-of-variation across each pair of calibration seeds' flattened `bias_network.state_dict()` tensors. The pairwise CoV definition is `||W_i − W_j||_2 / mean(||W_i||_2, ||W_j||_2)`. The minimum pairwise CoV across all pairs SHALL be compared against a configurable threshold (default 5%); below threshold is a T2 trip.
+
+T4 — substrate magnitude — SHALL compute mean `|bias_network(probe)|` over a deterministic probe set (uniform in `[-1, 1]^len(input_features)`, seeded RNG). The minimum mean-abs-output across seeds SHALL be compared against a configurable threshold (default 0.1); below threshold is a T4 trip.
+
+#### Scenario: pairwise CoV is zero for bit-identical substrates
+
+- **WHEN** the diversity script flattens two byte-identical `bias_network.state_dict()` tensors
+- **THEN** their pairwise CoV SHALL equal 0.0 (to within float64 precision)
+- **AND** the substrate-diversity verdict SHALL fail with `diversity_pass=False`
+
+#### Scenario: pairwise CoV is scale-invariant
+
+- **WHEN** the diversity script computes pairwise CoV on two vectors AND on the same two vectors uniformly multiplied by a positive scalar
+- **THEN** both CoVs SHALL be equal (to within float precision)
+- **AND** the verdict SHALL not depend on overall substrate magnitude — only on relative direction differences
+
+#### Scenario: minimum pairwise CoV across N seeds is the reported diversity metric
+
+- **WHEN** N ≥ 2 seeds' substrates are passed to the diversity script
+- **THEN** the script SHALL report `min_pairwise_cov` as the worst-case (smallest) CoV across all `N*(N-1)/2` pairs
+- **AND** the verdict SHALL trip iff `min_pairwise_cov < diversity_threshold`
+
+#### Scenario: T4 magnitude trip on zero-output bias-network
+
+- **WHEN** a substrate's `bias_network` produces mean `|output|` below the magnitude threshold over the deterministic probe set
+- **THEN** the script SHALL fail T4 with `magnitude_pass=False`
+- **AND** the overall verdict SHALL be False (both T2 and T4 must pass)
+
+#### Scenario: empty or single-seed input fails closed
+
+- **WHEN** the diversity script is invoked with zero or one substrate
+- **THEN** the diversity verdict SHALL be False (`diversity_pass=False`)
+- **AND** the script SHALL exit with status code 1, NOT misleadingly pass through
+
+#### Scenario: campaign-root discovery walks the canonical inheritance layout
+
+- **WHEN** the diversity script is invoked with `--campaign-root <root> --arm tei_on`
+- **THEN** it SHALL discover substrate files at `<root>/tei_on/seed-<N>/<session>/inheritance/gen-000/genome-*.tei.pt`
+- **AND** missing seed directories or missing F0 substrates SHALL produce a warning + skipped seed, not a hard error
