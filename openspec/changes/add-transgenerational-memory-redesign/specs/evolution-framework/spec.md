@@ -62,7 +62,7 @@ The frozen-dataclass invariant SHALL be preserved: when a caller passes an `nn.S
 
 ### Requirement: Env-Derived F0 Probe Ring
 
-`EvolutionLoop._build_f0_probe_params` SHALL generate probe positions from the env's actual stationary-predator coordinates rather than synthetic `BrainParams` with zero predator gradient. For each predator, the builder SHALL emit `probe_ring.count` (default 8) probe positions in a ring at distance `probe_ring.radius_offset + predator.damage_radius` from the predator center.
+`EvolutionLoop._build_f0_probe_params` SHALL generate probe positions from the env's actual stationary-predator coordinates rather than synthetic `BrainParams` with zero predator gradient. For each predator, the builder SHALL emit `probe_ring.count` (default 8) probe positions on a **Manhattan-distance ring** (L1 perimeter) at exact distance `predator.damage_radius + probe_ring.radius_offset` from the predator center. The L1 ring is chosen so the spec's "distance equals damage_radius + radius_offset" invariant holds for every probe regardless of `count`; a Euclidean projection would produce variable Manhattan distances and contradict the gradient-strength formula (which uses L1).
 
 #### Scenario: probe ring uses env predator positions
 
@@ -77,11 +77,17 @@ The frozen-dataclass invariant SHALL be preserved: when a caller passes an `nn.S
 - **WHEN** `_build_f0_probe_params` is called with `probe_ring.count = 4` and `probe_ring.radius_offset = 2`
 - **AND** the env contains 3 stationary predators with `damage_radius = 3`
 - **THEN** the returned probe list SHALL contain 12 probes (3 × 4)
-- **AND** the distance from each probe to its source predator SHALL equal `3 + 2 = 5`
+- **AND** the Manhattan distance from each probe to its source predator SHALL equal `3 + 2 = 5` exactly
+
+#### Scenario: exact L1 distance at the default count
+
+- **WHEN** `_build_f0_probe_params` is called with the default `probe_ring.count = 8`, `radius_offset = 1`
+- **AND** the env contains a stationary predator with `damage_radius = 4`
+- **THEN** all 8 probes SHALL sit at exact Manhattan distance `4 + 1 = 5` from the predator (no Euclidean approximation drift)
 
 #### Scenario: pure helper for gradient computation
 
-- **WHEN** `_compute_probe_gradient(probe_pos=(5, 5), predator_pos=(10, 10), max_dist=20)` is called as a pure function
+- **WHEN** `_compute_probe_gradient(probe_pos=(5, 5), predator_pos=(10, 10))` is called as a pure function
 - **THEN** it SHALL return `(predator_gradient_strength, predator_gradient_direction)` deterministically
 - **AND** `predator_gradient_strength` SHALL equal `1.0 / (1.0 + manhattan_distance((5, 5), (10, 10))) = 1.0 / 11.0`
 

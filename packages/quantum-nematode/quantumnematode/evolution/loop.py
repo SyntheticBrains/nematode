@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import pickle
 import signal
 from contextlib import suppress
@@ -44,10 +45,15 @@ if TYPE_CHECKING:
     from multiprocessing.pool import Pool as PoolType
 
     from quantumnematode.brain.arch._brain import Brain, BrainParams
+    from quantumnematode.env.env import DynamicForagingEnvironment
     from quantumnematode.evolution.encoders import GenomeEncoder
     from quantumnematode.evolution.fitness import FitnessFunction
     from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
-    from quantumnematode.utils.config_loader import EvolutionConfig, SimulationConfig
+    from quantumnematode.utils.config_loader import (
+        EvolutionConfig,
+        ProbeRingConfig,
+        SimulationConfig,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +186,95 @@ def _evaluate_in_worker(args: tuple) -> float:
             tei_prior_source=tei_prior_source,
         )
     return fitness.evaluate(genome, sim_config, encoder, episodes=episodes, seed=seed)
+
+
+# ---------------------------------------------------------------------------
+# F0 probe ring helpers (M6.11 — env-derived probe geometry)
+# ---------------------------------------------------------------------------
+
+
+def _compute_probe_gradient(
+    probe_pos: tuple[int, int],
+    predator_pos: tuple[int, int],
+) -> tuple[float, float]:
+    """Return ``(strength, direction)`` of the predator gradient at a probe position.
+
+    Pure function, unit-testable without env mocks. Mirrors the env's
+    convention that gradient strength falls off with Manhattan distance
+    and direction points from the probe toward the predator (i.e. the
+    direction the agent would move TO reach the predator).
+
+    Parameters
+    ----------
+    probe_pos : tuple[int, int]
+        Grid coordinate of the probe position (where the synthetic
+        agent's sensory snapshot is being computed).
+    predator_pos : tuple[int, int]
+        Grid coordinate of the source predator.
+
+    Returns
+    -------
+    tuple[float, float]
+        ``(predator_gradient_strength, predator_gradient_direction)``.
+        Strength is in ``[0.0, 1.0]`` (1.0 at zero distance, monotonically
+        decreasing). Direction is in radians via ``atan2(predator_y -
+        probe_y, predator_x - probe_x)``; matches the env-side convention
+        for predator-gradient channel emission.
+    """
+    px, py = predator_pos
+    x, y = probe_pos
+    manhattan = abs(px - x) + abs(py - y)
+    strength = 1.0 / (1.0 + manhattan)
+    direction = math.atan2(py - y, px - x)
+    return strength, direction
+
+
+def _manhattan_ring_offsets(radius: int) -> list[tuple[int, int]]:
+    """Return the ``4 * radius`` ``(dx, dy)`` offsets on the L1 ring at distance ``radius``.
+
+    For ``radius > 0`` the offsets satisfy ``|dx| + |dy| == radius`` and
+    are emitted in counter-clockwise order starting from ``(radius, 0)``:
+    east → north → west → south. For ``radius == 0`` returns a single
+    ``(0, 0)`` offset.
+
+    Used by the M6.11 probe-ring builder to enumerate integer cells at
+    a fixed Manhattan distance from a stationary predator. Manhattan
+    geometry matches the env's gradient-strength falloff
+    (``1 / (1 + manhattan)``); a Euclidean ring would produce probes
+    at variable Manhattan distance, breaking the spec scenario that
+    ties probe distance to ``damage_radius + radius_offset``.
+    """
+    if radius <= 0:
+        return [(0, 0)]
+    # Build the four L1-perimeter quadrants in counter-clockwise order
+    # via list comprehensions (extending a single list inline is the
+    # idiomatic perf-conscious form per ruff PERF401).
+    offsets: list[tuple[int, int]] = []
+    # East→North quadrant: dx from +radius to 0; dy = radius - |dx|.
+    offsets.extend((dx, radius - dx) for dx in range(radius, 0, -1))
+    # North→West quadrant: dy from +radius to 0; dx = -(radius - dy).
+    offsets.extend((-(radius - dy), dy) for dy in range(radius, 0, -1))
+    # West→South quadrant: dx from -radius to 0; dy = -(radius - |dx|).
+    offsets.extend((dx, -(radius + dx)) for dx in range(-radius, 0, 1))
+    # South→East quadrant: dy from -radius to 0; dx = radius + dy.
+    offsets.extend((radius + dy, dy) for dy in range(-radius, 0, 1))
+    return offsets
+
+
+def _sample_ring_offsets(radius: int, count: int) -> list[tuple[int, int]]:
+    """Down-sample the L1 ring at ``radius`` to ``count`` evenly-spaced offsets.
+
+    If ``count`` equals or exceeds the ring perimeter (``4 * radius``)
+    the full ring is returned. Otherwise samples ``count`` cells at
+    evenly-spaced perimeter indices via integer index stepping so the
+    result is deterministic and angularly even.
+    """
+    full = _manhattan_ring_offsets(radius)
+    if count >= len(full):
+        return full
+    # Step through the full perimeter at len(full) / count cadence.
+    step = len(full) / count
+    return [full[round(i * step) % len(full)] for i in range(count)]
 
 
 # ---------------------------------------------------------------------------
@@ -667,12 +762,13 @@ class EvolutionLoop:
             return
         load_weights(brain, elite_pt_path)
 
-        # Build the probe params sequence. For now we use a minimal
-        # deterministic set; the spec's "ring of probe positions" can
-        # be made more sophisticated in a follow-up. Each probe is a
-        # synthetic BrainParams varying the gradient strength to
-        # simulate proximity to a pathogen lawn.
-        probe_params = self._build_f0_probe_params(brain=brain)
+        # Build the probe params sequence. M6.11 path: when the
+        # transgenerational config has a ``probe_ring`` sub-block AND
+        # the env has stationary predators, ``_build_f0_probe_params``
+        # generates env-derived ring positions. Otherwise falls back
+        # to the M6 legacy synthetic-probe path.
+        probe_env = self._build_probe_env_if_configured()
+        probe_params = self._build_f0_probe_params(brain=brain, env=probe_env)
 
         # Extraction seed: fixed sentinel for now. A configurable
         # ``cfg.transgenerational.extraction_seed`` Pydantic field is
@@ -729,26 +825,77 @@ class EvolutionLoop:
             if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
                 path.unlink(missing_ok=True)
 
-    def _build_f0_probe_params(self, brain: Brain | None = None) -> list[BrainParams]:
+    def _build_probe_env_if_configured(self) -> DynamicForagingEnvironment | None:
+        """Construct a transient env for F0 probe-ring sampling, or return None.
+
+        Returns ``None`` when no ``probe_ring`` sub-block is configured
+        (legacy M6 synthetic-probe path stays active). Otherwise
+        returns a freshly-constructed env from
+        ``self.sim_config.environment`` whose stationary predators the
+        probe-ring builder reads. The env is throwaway — used only
+        for predator-coordinate enumeration; no episode is run on it.
+
+        Probe env seed: hardcoded ``seed=0``, deliberately
+        independent of the campaign seed (which sweeps 42-45 across
+        the M6.9+ full campaign). Rationale: the substrate-diversity
+        tripwire T2 measures pairwise CoV across the 4 calibration
+        seeds' extracted bias-network ``state_dict()`` tensors. If
+        the probe env's predator positions varied with campaign
+        seed, T2 would conflate "different brain policy" (the M6
+        attractor signature we want to detect) with "different
+        probe geometry" (noise from the seeded env layout). Pinning
+        the probe-env seed makes substrate diversity attributable
+        to the brain-policy difference alone.
+        """
+        cfg = self.sim_config.evolution
+        if cfg is None or cfg.transgenerational is None:
+            return None
+        if cfg.transgenerational.probe_ring is None:
+            return None
+        if self.sim_config.environment is None:
+            # Defensive: should never happen under a transgenerational
+            # run (the YAML schema requires an env block when predators
+            # are configured) but guard explicitly so a misconfigured
+            # config fails over to the legacy synthetic-probe path
+            # rather than crashing.
+            return None
+        from quantumnematode.utils.config_loader import create_env_from_config
+
+        return create_env_from_config(self.sim_config.environment, seed=0)
+
+    def _build_f0_probe_params(
+        self,
+        brain: Brain | None = None,
+        env: DynamicForagingEnvironment | None = None,
+    ) -> list[BrainParams]:
         """Build a deterministic sequence of probe ``BrainParams`` for F0 telemetry.
 
-        Minimal default implementation: three synthetic params with
-        varying gradient strengths to simulate "near a pathogen lawn"
-        sensory states. A follow-up commit may replace this with a
-        ring-of-probe-positions generator that uses the env's
-        STATIONARY-predator coordinates (per the spec's "deterministic
-        set built relative to the lawn position" guidance).
+        Two paths:
+
+        - **Env-derived probe ring** (M6.11): when ``env`` is supplied
+          AND the transgenerational config has a ``probe_ring``
+          sub-block AND the env has at least one stationary predator,
+          generate ``probe_ring.count`` ring positions around each
+          stationary predator at distance ``predator.damage_radius +
+          probe_ring.radius_offset``, evenly angular-distributed. For
+          each ring position compute ``(predator_gradient_strength,
+          predator_gradient_direction)`` via :func:`_compute_probe_gradient`
+          relative to its source predator. Optionally emit two ring
+          iterations (food-gradient set vs zeroed) when
+          ``probe_ring.include_food_gradient_variants`` is True.
+        - **Legacy M6 synthetic** (fallback): three hardcoded probes
+          with varying food-gradient strengths and zero predator
+          gradient. Used when no ``probe_ring`` is configured (M6
+          byte-equivalent) or when no stationary predators exist on
+          the env.
 
         When ``brain`` is provided, the probe params are filled with
-        zero-valued ``stam_state`` and ``predator_gradient_*`` fields
-        sized/typed to match the brain's runtime feature pipeline.
-        Without this, the brain's input shape (which depends on the
-        env-derived STAM dim) silently diverges from the synthetic
-        BrainParams shape (which defaults to the registry's hard-coded
-        STAM ``classical_dim=11``), and ``feature_norm`` raises at the
-        first probe step. The ``brain`` arg is optional to preserve
-        backwards-compatibility with existing tests that don't have a
-        decoded brain handy.
+        zero-valued ``stam_state`` sized/typed to match the brain's
+        runtime feature pipeline. Without this, the brain's input
+        shape (which depends on the env-derived STAM dim) silently
+        diverges from the synthetic BrainParams shape (which defaults
+        to the registry's hard-coded STAM ``classical_dim=11``), and
+        ``feature_norm`` raises at the first probe step.
         """
         # Imports here to avoid coupling loop module load to the agent
         # subpackage when TEI is unused.
@@ -800,12 +947,22 @@ class EvolutionLoop:
                 else:
                     stam_state = tuple(0.0 for _ in range(effective_stam_dim))
 
-        # Build the three synthetic probes. ``predator_gradient_*``
-        # defaults are zero (the transgenerational pilot config has
-        # nociception modules in the brain; ``_nociception_core``
-        # coerces None → 0.0 today, but explicit zero values are more
-        # readable + future-proof if the extractor's None-handling
-        # changes).
+        # M6.11 env-derived probe ring path. Falls back to the legacy
+        # synthetic-probe path when ``env`` is None, no ``probe_ring``
+        # config is set, or the env has no stationary predators.
+        probe_ring_cfg: ProbeRingConfig | None = None
+        cfg = self.sim_config.evolution
+        if cfg is not None and cfg.transgenerational is not None:
+            probe_ring_cfg = cfg.transgenerational.probe_ring
+        if env is not None and probe_ring_cfg is not None:
+            ring_probes = self._build_ring_probes(env, probe_ring_cfg, stam_state)
+            if ring_probes:
+                return ring_probes
+
+        # Legacy M6 fallback: three synthetic probes with varying
+        # food-gradient strengths and zero predator gradient. Active
+        # when ``env`` is None, ``probe_ring`` is unset, or the env
+        # has no stationary predators (e.g. non-pathogen-lawn envs).
         return [
             BrainParams(
                 food_gradient_strength=0.3,
@@ -832,6 +989,68 @@ class EvolutionLoop:
                 agent_direction=Direction.UP,
             ),
         ]
+
+    def _build_ring_probes(
+        self,
+        env: DynamicForagingEnvironment,
+        probe_ring_cfg: ProbeRingConfig,
+        stam_state: tuple[float, ...] | None,
+    ) -> list[BrainParams]:
+        """Build the M6.11 env-derived probe ring for F0 substrate extraction.
+
+        Returns an empty list when the env has no stationary predators
+        (caller falls back to the legacy synthetic-probe path). Each
+        stationary predator contributes ``probe_ring.count`` probes
+        sampled from a Manhattan-distance ring at exact L1 distance
+        ``predator.damage_radius + probe_ring.radius_offset``. When
+        ``include_food_gradient_variants`` is True, emits two probes
+        per ring position (food-gradient zero + food-gradient set).
+        """
+        from quantumnematode.brain.arch import BrainParams
+        from quantumnematode.env import Direction
+        from quantumnematode.env.env import PredatorType
+
+        stationary = [p for p in env.predators if p.predator_type is PredatorType.STATIONARY]
+        if not stationary:
+            return []
+        ring_probes: list[BrainParams] = []
+        for predator in stationary:
+            radius = int(predator.damage_radius) + int(probe_ring_cfg.radius_offset)
+            offsets = _sample_ring_offsets(radius, probe_ring_cfg.count)
+            for dx, dy in offsets:
+                probe_x = int(predator.position[0]) + dx
+                probe_y = int(predator.position[1]) + dy
+                strength, direction = _compute_probe_gradient(
+                    (probe_x, probe_y),
+                    (int(predator.position[0]), int(predator.position[1])),
+                )
+                # Default probe: food-gradient zero (pathogen-isolated).
+                ring_probes.append(
+                    BrainParams(
+                        food_gradient_strength=0.0,
+                        food_gradient_direction=0.0,
+                        predator_gradient_strength=strength,
+                        predator_gradient_direction=direction,
+                        stam_state=stam_state,
+                        agent_direction=Direction.UP,
+                    ),
+                )
+                if probe_ring_cfg.include_food_gradient_variants:
+                    # Second probe at the same position: same predator
+                    # gradient but a moderate non-zero food gradient so
+                    # the substrate sees the joint (predator + food)
+                    # context too.
+                    ring_probes.append(
+                        BrainParams(
+                            food_gradient_strength=0.3,
+                            food_gradient_direction=float(np.pi / 2),
+                            predator_gradient_strength=strength,
+                            predator_gradient_direction=direction,
+                            stam_state=stam_state,
+                            agent_direction=Direction.UP,
+                        ),
+                    )
+        return ring_probes
 
     def _build_per_gen_sim_config(self, gen: int) -> SimulationConfig:
         """Build the per-generation ``sim_config`` for worker dispatch.
