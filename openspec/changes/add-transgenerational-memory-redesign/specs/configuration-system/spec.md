@@ -83,6 +83,37 @@
 - **AND** the F0 extraction runs
 - **THEN** the probe builder SHALL emit `2 × 8 = 16` probes per predator (one ring with food-gradient set, one with food-gradient zero)
 
+### Requirement: Food-Predator Placement Constraint in ForagingConfig
+
+`ForagingConfig.min_food_predator_distance: int = 0` SHALL define the minimum Euclidean distance from any predator at which food may spawn. Default `0` preserves byte-equivalence with the pre-M6.9+ env (food may spawn anywhere predators are not). When `> 0`, food cannot spawn within that distance of any predator — the M6.9+ env-geometry fix (smoke pass 3 finding) that admits a forage-without-dying policy by guaranteeing safe corridors between food sources. Without the constraint, food can spawn inside a predator's damage zone and PPO cannot find a middle-ground policy between "approach food" and "avoid predator" regardless of reward shape.
+
+#### Scenario: default zero preserves legacy food-placement behaviour
+
+- **WHEN** `ForagingConfig` is loaded without `min_food_predator_distance` (or with the default `0`)
+- **THEN** `_is_valid_food_position` SHALL NOT check distance from predators
+- **AND** food positions adjacent to or coincident with predators SHALL be accepted (subject only to existing agent-exclusion and food-to-food constraints)
+- **AND** the M3 / M4 / M5 / M6 regression tests SHALL pass without YAML changes
+
+#### Scenario: positive distance excludes food cells within range of any predator
+
+- **WHEN** `ForagingConfig.min_food_predator_distance: 5` is configured
+- **AND** predators are placed at known positions
+- **THEN** any candidate food cell whose Euclidean distance to ANY predator is `< 5` SHALL be rejected by `_is_valid_food_position`
+- **AND** food cells at distance `>= 5` from ALL predators SHALL be accepted
+
+#### Scenario: constraint skipped when predators disabled
+
+- **WHEN** `min_food_predator_distance > 0` is configured
+- **AND** `env.predator.enabled` is `False`
+- **THEN** the predator-distance branch SHALL NOT fire
+- **AND** food placement SHALL be byte-equivalent to predators-disabled `default` behaviour
+
+#### Scenario: predators initialised before foods so constraint applies on initial placement
+
+- **WHEN** `DynamicForagingEnvironment.__init__` runs with `min_food_predator_distance > 0` and `predator.enabled = True`
+- **THEN** `_initialize_predators` SHALL run BEFORE `_initialize_foods`
+- **AND** the initial food placement SHALL be constrained by the actual predator positions (not skipped due to missing `self.predators` attribute)
+
 ### Requirement: Reward Mode Switch in RewardConfig
 
 `RewardConfig.reward_mode: Literal["default", "gradient_only", "gradient_proximity"]` SHALL select the predator-evasion reward shape. Default `"default"` preserves byte-equivalence with M3 / M4 / M5 / M6. Under `"gradient_only"`, the distance-scaled evasion term SHALL be dropped from the per-step reward computation while the contact penalty and `HEALTH_DEPLETED` termination SHALL be preserved. Under `"gradient_proximity"` (the M6.10 audit-B remediation v2), a smooth per-step penalty proportional to `env.get_predator_concentration(agent_pos)` SHALL apply anywhere predators are enabled (regardless of `is_in_danger`), the contact penalty SHALL still fire at `dist <= 1`, and the distance-scaled tangential term SHALL NOT fire. This avoids both the "circle right" attractor of `default` mode AND the "never-approach" attractor of `gradient_only` mode (smoke pass 2 finding).

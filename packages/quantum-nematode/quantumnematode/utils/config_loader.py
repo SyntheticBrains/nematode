@@ -281,6 +281,15 @@ class ForagingConfig(BaseModel):
     food_hotspot_decay: float = Field(default=8.0, gt=0.0)
     no_respawn: bool = False
     satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
+    # Minimum Euclidean distance from any predator at which food may
+    # spawn. Default 0 preserves byte-equivalence with the legacy
+    # food-placement behaviour. The M6.9+ env-geometry fix
+    # (smoke pass 3 finding) sets this to ``damage_radius + N`` so the
+    # env genuinely admits a forage-without-dying policy — without the
+    # constraint, food can spawn inside a predator's damage zone and
+    # PPO cannot find a middle-ground policy between "approach food"
+    # and "avoid predator" regardless of reward shape.
+    min_food_predator_distance: int = Field(default=0, ge=0)
 
     def to_params(self) -> ForagingParams:
         """Convert to ForagingParams for environment initialization."""
@@ -306,6 +315,7 @@ class ForagingConfig(BaseModel):
             food_hotspot_decay=self.food_hotspot_decay,
             no_respawn=self.no_respawn,
             satiety_food_threshold=self.satiety_food_threshold,
+            min_food_predator_distance=self.min_food_predator_distance,
         )
 
 
