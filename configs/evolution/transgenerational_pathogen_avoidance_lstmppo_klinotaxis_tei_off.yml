@@ -17,13 +17,17 @@
 # every generation. The TEI-off arm therefore receives the base
 # sim_config every gen (pathogen lawns present in the env from the
 # ``predators:`` block) and runs the standard
-# ``learn_episodes_per_eval`` (K=500) train phase per child for ALL
+# ``learn_episodes_per_eval`` (K=1000) train phase per child for ALL
 # four generations — no inheritance, no schedule overrides, no
 # substrate. This is the "what would the loop do without TEI" control.
 #
-# Substrate is the only cross-arm difference. Any F1+ retention
-# observed in the TEI-on arm but absent here is attributable to the
-# substrate.
+# Substrate is the primary cross-arm difference identified, though
+# the F1+ compute envelope is asymmetric: TEI-on F1+ is a
+# fresh-random brain + ``logit_bias`` prior with 25 eval episodes
+# only (K=0 train), while TEI-off F1+ retrains K=1000 every gen here.
+# F1+ retention observed in the TEI-on arm versus this control is
+# consistent with substrate influence but is not definitively
+# attributable to the substrate alone — see logbook 018 § Audit D.
 #
 # Maintenance: keep this YAML in lockstep with the TEI-on arm. The two
 # files SHALL differ ONLY in the two fields above (and this header).

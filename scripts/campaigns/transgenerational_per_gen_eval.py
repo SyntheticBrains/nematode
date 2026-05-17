@@ -40,12 +40,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from quantumnematode.agent.runners import StandardEpisodeRunner
 from quantumnematode.evolution.encoders import (
     HyperparameterEncoder,
     build_birth_metadata,
 )
-from quantumnematode.evolution.fitness import _build_agent
+from quantumnematode.evolution.fitness import FrozenEvalRunner, _build_agent
 from quantumnematode.evolution.genome import Genome
 from quantumnematode.utils.config_loader import (
     configure_reward,
@@ -155,7 +154,12 @@ def _count_damage_steps_one_episode(
     damage radius.
     """
     agent = _build_agent(brain, env, sim_config)
-    runner = StandardEpisodeRunner()
+    # FrozenEvalRunner suppresses ``brain.learn()`` and ``update_memory``
+    # so the post-hoc per-gen eval reads true frozen-policy
+    # ``choice_index`` / ``termination_reason`` rather than letting the
+    # policy adapt during measurement. Mirrors the pattern
+    # ``LearnedPerformanceFitness.evaluate`` uses for its eval phase.
+    runner = FrozenEvalRunner()
     reward_config = configure_reward(sim_config)
     max_steps = sim_config.max_steps if sim_config.max_steps is not None else 1000
     result = runner.run(agent, reward_config, max_steps)

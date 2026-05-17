@@ -265,3 +265,40 @@ def test_load_f0_training_fitness_per_seed_skips_missing(tmp_path: Path) -> None
 
     result = mod.load_f0_training_fitness_per_seed(root)
     assert result == {}
+
+
+def test_load_f0_training_fitness_per_seed_skips_malformed_fitness(tmp_path: Path) -> None:
+    """Seeds whose F0 row lacks/has-non-finite ``fitness`` SHALL be skipped, not silently zero.
+
+    Regression for a parser footgun: a silent ``0.0`` default on missing
+    ``fitness`` would set the gate's F0 baseline to zero and let any
+    positive F1 trivially pass the monotone check. The loader returns
+    ``None`` for these rows so the caller drops the seed from the
+    override map.
+    """
+    mod = _load_aggregator_module()
+    root = tmp_path / "campaign"
+    # Case 1: F0 row present but ``fitness`` key absent
+    missing = root / "tei_on" / "seed-42"
+    missing.mkdir(parents=True)
+    (missing / "per_gen_elites.jsonl").write_text(
+        '{"generation": 0, "genome_id": "g0", "params": []}\n',
+        encoding="utf-8",
+    )
+    # Case 2: ``fitness`` present but non-numeric string
+    nonnumeric = root / "tei_on" / "seed-43"
+    nonnumeric.mkdir(parents=True)
+    (nonnumeric / "per_gen_elites.jsonl").write_text(
+        '{"generation": 0, "genome_id": "g0", "params": [], "fitness": "not-a-number"}\n',
+        encoding="utf-8",
+    )
+    # Case 3: ``fitness`` parses but is NaN
+    nan = root / "tei_on" / "seed-44"
+    nan.mkdir(parents=True)
+    (nan / "per_gen_elites.jsonl").write_text(
+        '{"generation": 0, "genome_id": "g0", "params": [], "fitness": NaN}\n',
+        encoding="utf-8",
+    )
+
+    result = mod.load_f0_training_fitness_per_seed(root)
+    assert result == {}

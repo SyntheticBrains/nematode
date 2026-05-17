@@ -35,6 +35,7 @@ import argparse
 import csv
 import json
 import logging
+import math
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -183,7 +184,15 @@ def load_f0_training_fitness_per_seed(
 
 
 def _read_f0_training_fitness(jsonl_path: Path) -> float | None:
-    """Return the F0 (``generation == 0``) elite's training-time ``fitness`` field, or None."""
+    """Return the F0 (``generation == 0``) elite's training-time ``fitness`` field, or None.
+
+    Returns ``None`` (so the caller skips the seed) when the F0 row is
+    missing the ``fitness`` key entirely OR when the field is present
+    but cannot be coerced to a finite float (``NaN``, ``inf``, a
+    non-numeric string, etc.). Defensively coding here matters because
+    a silent ``0.0`` default would set the gate's F0 baseline to zero
+    and let any positive F1 trivially pass the monotone check.
+    """
     try:
         with jsonl_path.open(encoding="utf-8") as handle:
             for raw in handle:
@@ -196,8 +205,17 @@ def _read_f0_training_fitness(jsonl_path: Path) -> float | None:
                     continue
                 if not isinstance(row, dict):
                     continue
-                if int(row.get("generation", -1)) == 0:
-                    return float(row.get("fitness", 0.0))
+                if int(row.get("generation", -1)) != 0:
+                    continue
+                if "fitness" not in row:
+                    return None
+                try:
+                    value = float(row["fitness"])
+                except (TypeError, ValueError):
+                    return None
+                if not math.isfinite(value):
+                    return None
+                return value
     except OSError as exc:
         logger.warning("Failed to read %s: %s", jsonl_path, exc)
     return None
