@@ -73,13 +73,13 @@ Tasks grouped by commit (per design.md § Migration Plan). Each group is one PR-
 
 Execution-only work below; the only code that lands in commit 8 is logbook 019 + any user-review-driven YAML retunes from the pivot table.
 
-- [ ] 8.1 Run F0 calibration smoke (`--smoke`). All four tripwires (T1–T4) MUST pass before pilot is unblocked. If any tripwire fails, STOP and apply the pivot from the design.md § D6 table. Compute the T3 baseline via `tmp/evaluations/transgenerational/m69_t3_baseline.py` (hand-crafted constant-action policies); F0 success_rate must clearly exceed this floor.
-- [ ] 8.2 Run pilot (`--pilot`): 1 seed × pop 8 × 4 gens × 3 arms, ~3 wall-h. Aggregator emits `pilot_pivot_decision.md`.
-- [ ] 8.3 Pause for user review of `pilot_pivot_decision.md`. User confirms either "proceed to full campaign" or applies one of the pre-declared pivots (decay_shape, hidden_dim, input_features, etc.). Re-run pilot if pivoted.
-- [ ] 8.4 Run full campaign (`--full`): 4 seeds × pop 16 × 4 gens × 3 arms, ~22-28 wall-h. Per-seed gen-2 monotonicity warning surfaces in campaign log.
-- [ ] 8.5 Pause for user review of full-campaign outputs BEFORE finalising logbook 019.
-- [ ] 8.6 Write `docs/experiments/logbooks/019-transgenerational-memory-redesign.md`. Mirrors the M4/M6 INCONCLUSIVE precedent OR ships a GO/PIVOT/STOP verdict depending on outcome. Cite Posner / Hunter / Murphy / Akinosho-Vidal-Gadea framing. Document the survival_rate envelope construction (honest gap). Per-(arm, seed) retention tables. Cross-arm Wilcoxon + bootstrap output. PR-B trigger decision.
+- [x] 8.1 F0 calibration smoke complete after 6 single-knob iteration passes; all four tripwires PASS at pass 6 (T1 mean elite 0.67 in [0.30, 0.70]; T2 min CoV 0.84 > 5%; T3 F0 success_rate 0.67 >> constant-action floor ~0.0; T4 min magnitude 1.76 > 0.1). T3 metric corrected to success_rate (logbook 019 + commit 2b25efd3).
+- [x] 8.2 Pilot run × 3 (basic substrate / +safe_probes / +clamp lifted). All three: D6 row 2 (substrate inert). tei_on F1+ collapses to ~0; cross-arm delta -49pp.
+- [x] 8.3 User-review pause held after each pilot. After pilot 3 (clamp lift, the steel-manned variant a from adversarial-critique pass): STOP confirmed across all three substrate variants.
+- [x] 8.4 Full campaign NOT run — pilot evidence sufficient for STOP per pre-registered criterion. Save ~22-28 wall-h compute.
+- [x] 8.5 User-review pause held; STOP verdict confirmed by user.
+- [x] 8.6 Logbook 019 written: `docs/experiments/logbooks/019-transgenerational-memory-redesign.md`. Documents framework shipped + M3-on-new-env validation (+17pp) + pure-TEI K=0 null across 3 pilots + literature alignment (Kaletsky 2025 + mammalian 2025 + 2024-2026 deep-RL distillation) + M6.13 reframe.
 - [ ] 8.7 Stash run artefacts under `artifacts/logbooks/019-transgenerational-memory-redesign/`. Audit file sizes vs `.gitattributes` LFS rules. Sanitise for absolute home paths.
-- [ ] 8.8 Update `openspec/changes/phase5-tracking/tasks.md` M6.9 / M6.10 / M6.11 ticks. Update `docs/roadmap.md` M6 row with PR-A verdict. If primary verdict GO: scaffold `openspec/changes/add-transgenerational-memory-weights/` for PR-B. If primary verdict null: document M6.13 punt in tracker.
-- [ ] 8.9 Archive this OpenSpec change via `openspec-archive-change` after verdict published. Per the M4 INCONCLUSIVE precedent: spec deltas stay in archive for reference if verdict is null; sync to main specs if verdict is GO.
+- [ ] 8.8 Update `openspec/changes/phase5-tracking/tasks.md` M6.9 / M6.10 / M6.11 ticks. Update `docs/roadmap.md` M6 row with PR-A verdict. PR-B NOT triggered per pre-registered criterion (-49pp tei_on-control delta); M6.13 reframe documented in logbook 019 § Follow-ups.
+- [ ] 8.9 Archive this OpenSpec change via `openspec-archive-change` after verdict published. Per the M4/M6 INCONCLUSIVE/STOP precedent: spec deltas stay in archive for reference (no main-spec sync since verdict is null).
 - [ ] 8.10 Push branch + open draft PR; reference logbook 019 in PR body; ask before push per project convention.
