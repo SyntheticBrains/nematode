@@ -185,8 +185,10 @@ This is why the three arms cannot share a single base YAML with arm-specific ove
 |--:|---|---|---|
 | T1 | F0 survival envelope | `0.30 ≤ mean F0 survival_rate ≤ 0.70` | Retune env (count, damage_radius, K) per the M6 Path A/AA/AAA chain. |
 | T2 | Substrate diversity | Pairwise coefficient-of-variation across 4 seeds' `bias_network.state_dict()` > 5% | STOP — M6 attractor signature. Widen `bias_network.hidden_dim` or `input_features`. |
-| T3 | M6-floor-to-beat | F0 survival_rate > M6 "circle right always" baseline survival on the new env (recomputable from M6 artefacts at K=0) | STOP — env redesign insufficient. Increase lawn density or strengthen `gradient_only` reward. |
+| T3 | M6-floor-to-beat | F0 **success_rate** > "constant-action" baseline success_rate on the new env (computed at K=0 with hand-crafted always-FORWARD / always-LEFT / always-RIGHT / always-STAY policies) | STOP — env redesign insufficient. Increase lawn density or strengthen `gradient_only` reward. |
 | T4 | Substrate magnitude | mean absolute bias-network output over probes > 0.1 | Substrate degenerate. Increase MLP fit epochs or check probe distribution. |
+
+**T3 metric correction (smoke pass 6 forensic)**: the original T3 spec used `survival_rate` as the floor metric, but empirical measurement on the M6.9+ env revealed survival_rate is gameable by trivial "do-nothing" policies (always-LEFT, always-RIGHT, always-STAY all achieve 1.0 survival_rate because they never approach predators; STAY achieves 1.0 by starving without dying-to-predator, which the survival_rate metric counts as "survived"). The correct T3 metric is `success_rate` — only learned conditional behaviour can collect foods. Constant-action baselines on the M6.9+ env score success_rate ≈ 0.0 across all 4 hand-crafted policies × 4 seeds; F0 elites at pass 6 scored mean success_rate 0.67 — a clear empirical pass by a factor of ~∞.
 
 **Pre-declared pilot pivot table** (binding at pilot review, BEFORE full campaign):
 
@@ -227,7 +229,7 @@ PR-B (if triggered) adds ~12-15 wall-h for the `tei_weights` arm.
 | R5 | LSTMPPO + bias-network interaction — MLP drowns recurrent state | `tei_prior` applies at every step before softmax (same hook M6 used). T4 magnitude tripwire catches degenerate near-zero substrate. |
 | R6 | Reward-shape regression breaks legacy configs | `reward_mode: "default"` byte-equivalent to M3/M4/M5/M6. Test asserts via existing M3 reproduction. |
 | R7 | n=4 cross-arm verdict noise-dominated | Wilcoxon p\<0.10 AND non-overlapping 80% bootstrap CIs — both must agree. Bare 5pp threshold explicitly rejected. |
-| R8 | Survival_rate envelope not biology-anchored (honest gap) | Logbook 019 documents the envelope as project-internal calibration. T3 M6-floor-to-beat is the empirical anchor. |
+| R8 | Survival_rate envelope not biology-anchored (honest gap) | Logbook 019 documents the envelope as project-internal calibration. T3 M6-floor-to-beat (measured on **success_rate**, not survival_rate — see correction note below the tripwire table) is the empirical anchor. |
 | R9 | Pilot pivot table doesn't cover an unforeseen failure mode | User-review pause at Layer 4 is the human-in-the-loop catch-all. Pre-committed pivots cover *expected* failure modes; user-review covers novel ones. |
 | R10 | PR-B trigger criterion (`tei_on > control`) too lenient | Wilcoxon + bootstrap noise check forces a real signal. If PR-A null, PR-B is honest-pivoted (NOT run). |
 | R11 | Decay-shape choice (geometric/linear/sigmoid) biases the cascade | All three shapes shipped + configurable via YAML; pilot pivot table includes `decay_shape: "linear"` as an explicit pivot if monotone-decay near-uniform across F1/F2/F3 under geometric. |
@@ -254,5 +256,5 @@ The change is **additive** — no breaking changes to existing inheritance modes
 None blocking implementation. Three honest gaps remain:
 
 1. **Decay shape choice not biology-anchored.** Geometric is the literature framing default (M6 inherited it from Posner/Kaletsky framing). Linear/sigmoid are sensitivity-analysis options. Pilot pivot table includes `decay_shape: "linear"` as a pre-declared pivot. PR-A documents the choice as project-internal calibration in logbook 019.
-2. **Survival_rate envelope `[0.30, 0.70]` constructed not anchored.** No wet-lab analogue to survival_rate exists (Kaletsky 0.55 anchors choice_index only). T1 + T3 tripwires use the constructed envelope + the M6 empirical floor as joint anchor. PR-A documents this gap in logbook 019.
+2. **Survival_rate envelope `[0.30, 0.70]` constructed not anchored.** No wet-lab analogue to survival_rate exists (Kaletsky 0.55 anchors choice_index only). T1 uses the constructed envelope; T3 uses the empirical constant-action floor on success_rate (different metric — see tripwire-table correction note). PR-A documents both calibration gaps in logbook 019.
 3. **PR-B's substrate fork (`transgenerational+weights` kind) not designed in PR-A.** Deliberate — scaffolded as a separate OpenSpec change at PR-A close iff PR-A's pure-TEI floor signal is non-zero. PR-A does not lock in PR-B's design.
