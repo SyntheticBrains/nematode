@@ -155,7 +155,7 @@ environment:
 
   health:
     max_hp: 100.0
-    predator_damage: 15.0
+    predator_damage: 25.0
     food_healing: 10.0
 
 evolution:
