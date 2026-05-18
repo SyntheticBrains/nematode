@@ -16,7 +16,7 @@
 #
 # Env + brain + reward subtrees are byte-identical to
 # transgenerational_m69_tei_on.yml — they SHARE all audit-B
-# corrections (grid_size: 15, predators.count: 3, foods.count: 8,
+# corrections (grid_size: 15, predators.count: 4, foods.count: 8,
 # reward_mode: gradient_proximity). The launcher shell asserts at launch
 # that all three arm YAMLs use the same fitness_survival_weight
 # (1.0 — composite fitness parity).
@@ -115,7 +115,7 @@ environment:
 
   predators:
     enabled: true
-    count: 3
+    count: 4
     speed: 0.0
     movement_pattern: stationary
     detection_radius: 4

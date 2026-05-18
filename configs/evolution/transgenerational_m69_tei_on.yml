@@ -12,7 +12,7 @@
 #        food_gradient_strength → 8 hidden tanh → 4 actions).
 #   - B: training-reward + env geometry produced "circle right always"
 #        motion-bias attractor. Fixed via:
-#        * env density: count 3 (M6.9+ smoke pass 3-4 refinement; was 5, micro-smoke found 5 created untraversable narrow corridors), grid 20→15, foods 6→8 (no
+#        * env density: count 4 (M6.9+ smoke pass 4-5 refinement; was 5 then 3 — micro-smokes found 5 created untraversable narrow corridors, 3 hit ceiling at 0.87 elite survival; 4 lands mid-envelope 0.67 mean), grid 20→15, foods 6→8 (no
 #          unobstructed circular path).
 #        * reward shape: gradient_only mode drops the distance-scaled
 #          evasion term + flat fallback; only contact penalty fires.
@@ -119,7 +119,7 @@ satiety:
   satiety_gain_per_food: 0.2
 
 environment:
-  # M6.10 audit-B remediation. 15x15 grid + 5 stationary predators +
+  # M6.10 audit-B remediation. 15x15 grid + 4 stationary predators +
   # 8 foods packs the env density tightly enough to remove the
   # geometric feasibility of an unobstructed circular path through
   # the lawns (M6's 20x20 + 3 lawns left ample axis-aligned paths
@@ -145,7 +145,7 @@ environment:
 
   predators:
     enabled: true
-    count: 3
+    count: 4
     speed: 0.0
     movement_pattern: stationary
     detection_radius: 4
@@ -208,7 +208,7 @@ evolution:
     # M6.11 audit-C remediation: env-derived F0 probe ring. The probe
     # builder generates 8 Manhattan-ring positions around each
     # stationary predator at distance damage_radius + radius_offset
-    # = 3 + 1 = 4. With 3 predators that's 24 probes per F0
+    # = 3 + 1 = 4. With 4 predators that's 32 probes per F0
     # extraction (vs M6's 3 synthetic predator-gradient-zero probes).
     probe_ring:
       count: 8
