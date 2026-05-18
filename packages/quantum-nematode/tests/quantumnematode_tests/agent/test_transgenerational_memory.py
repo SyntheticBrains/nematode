@@ -47,14 +47,24 @@ def _f0(logit_bias: torch.Tensor, source_genome_id: str = "gid-a") -> Transgener
 
 
 def test_construction_clamps_bias_values() -> None:
-    """``__post_init__`` SHALL clamp ``|logit_bias[i]| > 2.0`` to ``±2.0``.
+    """``__post_init__`` SHALL clamp ``|logit_bias[i]|`` to ``±LOGIT_BIAS_CLAMP``.
 
-    Matches the spec scenario "Substrate construction clamps bias values":
-    input ``[5.0, -3.0, 0.5, 1.0]`` → stored ``[2.0, -2.0, 0.5, 1.0]``.
+    Matches the spec scenario "Substrate construction clamps bias values".
+    The exact constant is read from the module so this test follows the
+    constant if it's tuned (e.g., the M6.9+ pilot-2 critique raised it from
+    2.0 to 6.0 to prevent fresh-init F1+ saturation).
     """
-    raw = torch.tensor([5.0, -3.0, 0.5, 1.0], dtype=torch.float32)
+    clamp_val = LOGIT_BIAS_CLAMP
+    # Pick values that straddle the clamp on both sides + an in-range value.
+    raw = torch.tensor(
+        [clamp_val + 1.0, -(clamp_val + 1.0), 0.5, clamp_val * 0.5],
+        dtype=torch.float32,
+    )
     sub = _f0(raw)
-    expected = torch.tensor([2.0, -2.0, 0.5, 1.0], dtype=torch.float32)
+    expected = torch.tensor(
+        [clamp_val, -clamp_val, 0.5, clamp_val * 0.5],
+        dtype=torch.float32,
+    )
     assert torch.equal(sub.logit_bias, expected)
 
 
@@ -104,10 +114,18 @@ def test_dataclass_is_frozen() -> None:
         sub.lineage_depth = 5  # type: ignore[misc]
 
 
-def test_clamp_constant_matches_spec() -> None:
-    """``LOGIT_BIAS_CLAMP`` SHALL be ``2.0`` per the spec's e^2 ~ 7.4x Boltzmann cap."""
-    expected_clamp = 2.0
-    assert expected_clamp == LOGIT_BIAS_CLAMP
+def test_clamp_constant_in_acceptable_range() -> None:
+    """``LOGIT_BIAS_CLAMP`` SHALL be a positive float in the expected M6.9+ range.
+
+    The exact value is tuned per pilot evidence (originally 2.0 = e^2 ~ 7.4x
+    Boltzmann cap; raised to 6.0 = e^6 ~ 403x after M6.9+ pilot-2 critique
+    flagged saturation as the mechanical bottleneck for fresh-init F1+
+    substrate application). The constant is positive AND finite AND
+    bounded above so a strong bias cannot collapse exploration entirely.
+    """
+    assert LOGIT_BIAS_CLAMP > 0.0
+    assert LOGIT_BIAS_CLAMP <= 10.0  # sane upper bound; e^10 ~22k is plenty
+    assert isinstance(LOGIT_BIAS_CLAMP, float)
 
 
 # ---------------------------------------------------------------------------
@@ -490,7 +508,7 @@ def test_bias_network_apply_to_logits_uses_clamp() -> None:
     logits = torch.zeros(4, dtype=torch.float32)
     sensory = torch.tensor([0.5, 0.3, 0.1], dtype=torch.float32)
     biased = sub.apply_to_logits(logits, sensory)
-    # Bias clamped at +2.0 on every action.
+    # Bias saturates at +LOGIT_BIAS_CLAMP on every action.
     assert torch.allclose(biased, torch.full((4,), LOGIT_BIAS_CLAMP))
 
 

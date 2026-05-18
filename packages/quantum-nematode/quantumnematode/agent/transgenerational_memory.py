@@ -56,11 +56,16 @@ if TYPE_CHECKING:
 # Maximum absolute element-wise magnitude of the effective substrate
 # bias (whether produced by the constant ``logit_bias`` or by
 # ``bias_network(sensory_input)``). Caps the Boltzmann ratio at
-# ``e^2 ≈ 7.4x`` so a strong bias cannot collapse exploration.
-# Kaletsky F2 ≈ 0.55 choice index corresponds to a ~3x action-
-# probability tilt; the cap leaves headroom while preventing
-# pathological deterministic policies.
-LOGIT_BIAS_CLAMP: float = 2.0
+# ``e^6 ≈ 403x`` so a strong bias can dominate fresh-init policy
+# noise at F1+ (K=0). Kaletsky F2 ≈ 0.55 choice index corresponds
+# to a ~3x action-probability tilt; the previous cap of 2.0
+# (e^2 ≈ 7.4x) saturated FORWARD/STAY at pilot 1 + pilot 2, blunting
+# substrate signal at F1+ even when the bias_network produced
+# stronger raw outputs (-5 to -6 range). The cap was raised to 6.0
+# after the M6.9+ pilot-2 critique flagged saturation as the
+# mechanical bottleneck. This still prevents pathological
+# deterministic policies (a 403x tilt is high but not infinity).
+LOGIT_BIAS_CLAMP: float = 6.0
 
 DecayShape = Literal["geometric", "linear", "sigmoid"]
 _SUPPORTED_DECAY_SHAPES: tuple[str, ...] = ("geometric", "linear", "sigmoid")
