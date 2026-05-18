@@ -1114,6 +1114,39 @@ class BiasNetworkConfig(BaseModel):
         return self
 
 
+class SafeProbesConfig(BaseModel):
+    """M6.9+ safe-position probe configuration sub-block.
+
+    Optional sub-block on :class:`ProbeRingConfig`. When present, the
+    F0 probe builder emits additional probes at positions FAR from
+    any predator (low ``predator_gradient_strength``) with varying
+    food-gradient strengths. Without these, all probes sit at the
+    danger-zone boundary and the substrate's bias-network MLP fits
+    an unconditional "near-predator → avoid" bias rather than a
+    *conditional* response (the pilot-1 failure mode at K=0:
+    substrate captured "always-LEFT" with no food/predator
+    discrimination).
+
+    Attributes
+    ----------
+    count : int
+        Number of safe-position probes to emit. These probes spread
+        across the grid at minimum L1 distance ``min_predator_distance``
+        from any predator. Each probe samples a varying
+        ``food_gradient_strength``. Default 16. MUST be >= 1.
+    min_predator_distance : int
+        Minimum L1 (Manhattan) distance from any stationary predator
+        for a position to qualify as "safe". Default 6 (well outside
+        any practical detection radius). When no positions satisfy
+        the constraint, the safe-probe set is emitted as empty with
+        a warning (caller's probe ring is still produced; only the
+        safe component is skipped).
+    """
+
+    count: int = Field(default=16, ge=1)
+    min_predator_distance: int = Field(default=6, ge=0)
+
+
 class ProbeRingConfig(BaseModel):
     """M6.9+ env-derived F0 probe-ring configuration sub-block.
 
@@ -1136,11 +1169,20 @@ class ProbeRingConfig(BaseModel):
         predator (one with food-gradient set, one with food-gradient
         zero) for ``2 * count`` total probes per predator. Default
         False (pathogen-isolated).
+    safe_probes : SafeProbesConfig | None
+        Optional sub-block requesting additional probes at positions
+        FAR from any predator (low ``predator_gradient_strength``)
+        with varying food-gradient strengths. Critical for fitting
+        a *conditional* bias-network MLP rather than an unconditional
+        "near-predator → avoid" bias (the pilot-1 failure mode at
+        K=0). Default ``None`` (byte-equivalent to the original
+        all-near-predator probe set).
     """
 
     count: int = Field(default=8, ge=1)
     radius_offset: int = Field(default=1, ge=0)
     include_food_gradient_variants: bool = False
+    safe_probes: SafeProbesConfig | None = None
 
 
 class TransgenerationalConfig(BaseModel):

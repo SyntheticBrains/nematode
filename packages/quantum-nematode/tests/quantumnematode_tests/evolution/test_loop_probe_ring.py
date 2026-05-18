@@ -126,10 +126,11 @@ def _make_mock_predator(position: tuple[int, int], damage_radius: int = 3) -> Mo
     return pred
 
 
-def _make_mock_env(predators: list[Mock]) -> Mock:
-    """Construct a mock env exposing only ``predators`` (the ring builder reads no other attr)."""
+def _make_mock_env(predators: list[Mock], grid_size: int = 15) -> Mock:
+    """Mock env exposing ``predators`` + ``grid_size`` (needed by safe-probe builder)."""
     env = Mock()
     env.predators = predators
+    env.grid_size = grid_size
     return env
 
 
@@ -322,3 +323,97 @@ def test_probe_ring_does_not_mutate_env() -> None:
     assert pred.position == original_position
     assert pred.damage_radius == original_damage_radius
     assert len(env.predators) == 1
+
+
+# ---------------------------------------------------------------------------
+# safe_probes path (M6.9+ pilot-2 fix — conditional bias-network response)
+# ---------------------------------------------------------------------------
+
+
+def _probe_ring_with_safe_probes(
+    *,
+    count: int = 8,
+    safe_count: int = 16,
+    min_predator_distance: int = 6,
+) -> object:
+    """Build a ProbeRingConfig with the safe_probes sub-block enabled."""
+    from quantumnematode.utils.config_loader import ProbeRingConfig, SafeProbesConfig
+
+    return ProbeRingConfig(
+        count=count,
+        radius_offset=1,
+        include_food_gradient_variants=False,
+        safe_probes=SafeProbesConfig(
+            count=safe_count,
+            min_predator_distance=min_predator_distance,
+        ),
+    )
+
+
+def test_safe_probes_default_none_omits_safe_set() -> None:
+    """``probe_ring.safe_probes is None`` (default) SHALL NOT emit extra probes."""
+    loop = _make_loop_with_probe_ring(_probe_ring_config(count=4))
+    env = _make_mock_env([_make_mock_predator((5, 5))])
+    probes = loop._build_f0_probe_params(brain=None, env=env)
+    # 1 predator x 4 ring positions, no safe set.
+    assert len(probes) == 4
+    assert all(p.food_gradient_strength == 0.0 for p in probes)
+
+
+def test_safe_probes_emits_additional_probes_when_configured() -> None:
+    """``safe_probes`` set SHALL append ``safe_probes.count`` probes after the ring set."""
+    loop = _make_loop_with_probe_ring(
+        _probe_ring_with_safe_probes(count=4, safe_count=8, min_predator_distance=4),
+    )
+    env = _make_mock_env([_make_mock_predator((5, 5))])
+    probes = loop._build_f0_probe_params(brain=None, env=env)
+    # 1 predator x 4 ring + 8 safe = 12 probes.
+    assert len(probes) == 12
+
+
+def test_safe_probes_varying_food_gradient_strength() -> None:
+    """Safe probes SHALL sweep ``food_gradient_strength`` across [0.1, 1.0] evenly."""
+    loop = _make_loop_with_probe_ring(
+        _probe_ring_with_safe_probes(count=4, safe_count=4, min_predator_distance=4),
+    )
+    env = _make_mock_env([_make_mock_predator((5, 5))])
+    probes = loop._build_f0_probe_params(brain=None, env=env)
+    safe_part = probes[4:]  # skip ring probes
+    food_strengths = [p.food_gradient_strength or 0.0 for p in safe_part]
+    # First and last should bracket [0.1, 1.0] inclusive (per the
+    # _build_safe_probes formula: 0.1 + 0.9 * (i / (count-1))).
+    assert food_strengths[0] == pytest.approx(0.1)
+    assert food_strengths[-1] == pytest.approx(1.0)
+    # All values monotonically increasing.
+    assert all(food_strengths[i] <= food_strengths[i + 1] for i in range(len(food_strengths) - 1))
+
+
+def test_safe_probes_pred_gradient_strength_lower_than_ring_probes() -> None:
+    """Safe probes SHALL have weaker ``predator_gradient_strength`` than ring probes."""
+    loop = _make_loop_with_probe_ring(
+        _probe_ring_with_safe_probes(count=4, safe_count=4, min_predator_distance=6),
+    )
+    env = _make_mock_env([_make_mock_predator((7, 7))], grid_size=15)
+    probes = loop._build_f0_probe_params(brain=None, env=env)
+    ring = probes[:4]
+    safe = probes[4:]
+    ring_max = max(p.predator_gradient_strength or 0.0 for p in ring)
+    safe_max = max(p.predator_gradient_strength or 0.0 for p in safe)
+    # Ring is at distance damage_radius+1 = 4 from predator -> strong gradient
+    # Safe is at distance >= 6 from predator -> weaker gradient
+    assert safe_max < ring_max, (
+        f"Expected safe probes to have weaker predator gradient than ring "
+        f"(safe_max={safe_max:.4f}, ring_max={ring_max:.4f})"
+    )
+
+
+def test_safe_probes_skipped_with_warning_when_no_valid_positions() -> None:
+    """If ``min_predator_distance`` is unsatisfiable on the grid, safe_probes SHALL skip (empty)."""
+    loop = _make_loop_with_probe_ring(
+        _probe_ring_with_safe_probes(count=4, safe_count=8, min_predator_distance=20),
+    )
+    # min_predator_distance=20 on a 15x15 grid: impossible.
+    env = _make_mock_env([_make_mock_predator((7, 7))], grid_size=15)
+    probes = loop._build_f0_probe_params(brain=None, env=env)
+    # Only the ring probes (1 predator x 4 positions); safe set is empty.
+    assert len(probes) == 4

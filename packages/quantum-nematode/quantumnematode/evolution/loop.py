@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from quantumnematode.utils.config_loader import (
         EvolutionConfig,
         ProbeRingConfig,
+        SafeProbesConfig,
         SimulationConfig,
     )
 
@@ -1053,6 +1054,15 @@ class EvolutionLoop:
         ``predator.damage_radius + probe_ring.radius_offset``. When
         ``include_food_gradient_variants`` is True, emits two probes
         per ring position (food-gradient zero + food-gradient set).
+
+        When ``probe_ring.safe_probes`` is set, additional probes are
+        appended at positions FAR from any predator (low
+        ``predator_gradient_strength``) with varying food-gradient
+        strengths. These give the substrate's bias-network MLP
+        examples of safe-zone behaviour, so it can fit a
+        *conditional* response (predator-near → avoid;
+        predator-far + food-near → forage) rather than the
+        unconditional "always-LEFT" bias that pilot-1 produced.
         """
         from quantumnematode.brain.arch import BrainParams
         from quantumnematode.env import Direction
@@ -1098,7 +1108,105 @@ class EvolutionLoop:
                             agent_direction=Direction.UP,
                         ),
                     )
+        # Append safe-zone probes when configured. These probe the
+        # substrate at positions FAR from any predator, with varying
+        # food-gradient strengths, so the MLP learns predator-low →
+        # forage behaviour distinct from the near-predator → avoid
+        # behaviour the ring captures.
+        if probe_ring_cfg.safe_probes is not None:
+            ring_probes.extend(
+                self._build_safe_probes(env, probe_ring_cfg.safe_probes, stam_state),
+            )
         return ring_probes
+
+    def _build_safe_probes(
+        self,
+        env: DynamicForagingEnvironment,
+        safe_cfg: SafeProbesConfig,
+        stam_state: tuple[float, ...] | None,
+    ) -> list[BrainParams]:
+        """Build N probes at positions far from any stationary predator.
+
+        Samples ``safe_cfg.count`` positions from the grid where the L1
+        (Manhattan) distance to every stationary predator is at least
+        ``safe_cfg.min_predator_distance``. Each probe has predator_gradient_strength
+        computed from the actual env geometry (which will be small but
+        not necessarily zero — the gradient_decay_constant tail still
+        reaches), and food_gradient_strength sampled across [0, 1] in
+        even increments so the MLP sees the full food-only response
+        surface.
+
+        Returns an empty list (with a logger warning) when no positions
+        on the grid satisfy ``min_predator_distance`` — typically only
+        happens when predators saturate the grid, which the ring-probe
+        path would also have struggled with.
+        """
+        from quantumnematode.brain.arch import BrainParams
+        from quantumnematode.env import Direction
+        from quantumnematode.env.env import PredatorType
+
+        stationary = [p for p in env.predators if p.predator_type is PredatorType.STATIONARY]
+        # Collect candidate positions: every grid cell at min L1 distance from all predators.
+        grid_size = env.grid_size
+        candidates: list[tuple[int, int]] = []
+        for x in range(grid_size):
+            for y in range(grid_size):
+                ok = True
+                for p in stationary:
+                    if (
+                        abs(x - int(p.position[0])) + abs(y - int(p.position[1]))
+                        < safe_cfg.min_predator_distance
+                    ):
+                        ok = False
+                        break
+                if ok:
+                    candidates.append((x, y))
+        if not candidates:
+            logger.warning(
+                "safe_probes: no grid positions at L1 distance >= %d from any predator; "
+                "skipping safe-probe set.",
+                safe_cfg.min_predator_distance,
+            )
+            return []
+        # Sample ``count`` positions evenly from the candidate set
+        # (deterministic — uses the candidate index, not RNG, so the
+        # probe set is identical across calls for the same env).
+        step = max(1, len(candidates) // safe_cfg.count)
+        sampled = candidates[::step][: safe_cfg.count]
+        safe_probes: list[BrainParams] = []
+        for i, (probe_x, probe_y) in enumerate(sampled):
+            # Compute the actual predator_gradient_strength + direction
+            # the env would report at this position (uses
+            # _compute_probe_gradient against the NEAREST stationary
+            # predator to get the strongest signal — even at
+            # min_predator_distance the gradient_decay tail isn't zero).
+            if stationary:
+                nearest = min(
+                    stationary,
+                    key=lambda p: (
+                        abs(probe_x - int(p.position[0])) + abs(probe_y - int(p.position[1]))
+                    ),
+                )
+                pred_strength, pred_direction = _compute_probe_gradient(
+                    (probe_x, probe_y),
+                    (int(nearest.position[0]), int(nearest.position[1])),
+                )
+            else:
+                pred_strength, pred_direction = 0.0, 0.0
+            # Vary food_gradient_strength across the probe set evenly
+            # in [0.1, 1.0] so the MLP sees the response surface.
+            food_strength = 0.1 + 0.9 * (i / max(1, safe_cfg.count - 1))
+            safe_probes.append(
+                BrainParams(
+                    food_gradient_strength=food_strength,
+                    food_gradient_direction=float(np.pi / 4),
+                    predator_gradient_strength=pred_strength,
+                    predator_gradient_direction=pred_direction,
+                    stam_state=stam_state,
+                    agent_direction=Direction.UP,
+                ),
+            )
+        return safe_probes
 
     def _build_per_gen_sim_config(self, gen: int) -> SimulationConfig:
         """Build the per-generation ``sim_config`` for worker dispatch.

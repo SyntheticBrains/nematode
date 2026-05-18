@@ -3051,8 +3051,8 @@ class TestMinFoodPredatorDistance:
         env.predators[0].position = (5, 5)
         env.predators[1].position = (15, 15)
         env.foods = []  # clear pre-existing
-        # A food position directly adjacent to a predator passes when
-        # min_food_predator_distance=0.
+        # With min_food_predator_distance=0, a food position directly
+        # adjacent to a predator should pass validation.
         assert env._is_valid_food_position((6, 5)) is True
         # Even at the predator's exact cell, the only blockers are
         # other foods and the agent — predator coincidence is allowed
@@ -3105,7 +3105,7 @@ class TestMinFoodPredatorDistance:
         assert env._is_valid_food_position((1, 1)) is True
 
     def test_food_actually_spawns_outside_predator_zone(self):
-        """A fresh env with the constraint set SHALL produce foods all at distance >= constraint from every predator."""
+        """All initial foods SHALL spawn at distance >= constraint from every predator."""
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),  # corner so agent_exclusion doesn't dominate

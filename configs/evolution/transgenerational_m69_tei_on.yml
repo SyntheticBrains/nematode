@@ -214,6 +214,9 @@ evolution:
       count: 8
       radius_offset: 1
       include_food_gradient_variants: false
+      safe_probes:
+        count: 16              # safe-zone probes complement the 32 near-predator ring probes
+        min_predator_distance: 6  # L1 distance from any predator — well outside detection radius 4
     lawn_schedule:
       - generation: 0
         pathogen_lawns_enabled: true
