@@ -41,7 +41,7 @@ PR-A addresses the first three (substrate / env+reward / probes) on a three-arm 
 
 ### D1. Substrate shape — sensory-conditional parametric bias-network (YAML-configurable)
 
-`TransgenerationalMemory` is extended with an optional `bias_network: torch.nn.Sequential | None`. When `None`, behaviour is byte-equivalent to M6 (legacy `logit_bias` path); existing M6 tests stay green. When set, `apply_to_logits(logits, sensory_input)` returns `logits + bias_network(sensory_input)`. Output clamped at `|x| ≤ LOGIT_BIAS_CLAMP = 2.0` (current M6 cap).
+`TransgenerationalMemory` is extended with an optional `bias_network: torch.nn.Sequential | None`. When `None`, behaviour is byte-equivalent to M6 (legacy `logit_bias` path); existing M6 tests stay green. When set, `apply_to_logits(logits, sensory_input)` returns `logits + bias_network(sensory_input)`. Output clamped at `|x| ≤ LOGIT_BIAS_CLAMP = 6.0` (raised from the initial 2.0 in pilot 3; see Risks R1 + logbook 019 for the empirical evidence that the wider clamp did not unlock substrate signal).
 
 **Configurable defaults** under `TransgenerationalConfig.bias_network`:
 
@@ -104,12 +104,14 @@ PR-A addresses the first three (substrate / env+reward / probes) on a three-arm 
 
 ### D3. Env redesign — density + reward shape (YAML for env, code for reward_mode)
 
-**Env (YAML only)**:
+**Env (YAML only) — final pass-6 calibration values** (the design started with `predators.count: 5` / `foods.count: 6`; the 6-pass single-knob calibration chain documented in logbook 019 § Calibration landed the canonical M6.9+ env at):
 
-- `environment.grid_size: 15` (was 20). Removes the geometric feasibility of an unobstructed circular path through 3 lawns.
-- `environment.predators.count: 5` (was 3). Increased lawn density forces gradient-conditional navigation.
-- `environment.predators.damage_radius: 3` (unchanged). Preserves the M6 single-lawn coverage geometry.
-- `environment.foods.count: 8` (was 6). Keeps density proportional to grid area (15²/20² × 6 ≈ 3.4 + buffer for redundancy).
+- `environment.grid_size: 15` (was 20). Removes the geometric feasibility of an unobstructed circular path through the lawns.
+- `environment.predators.count: 4` (initial design proposed 5; pass-2 admitted middle-ground policy by dropping to 3, pass-4 re-raised to 4 to land mid-envelope).
+- `environment.predators.damage_radius: 3` (unchanged across calibration).
+- `environment.predators.predator_damage: 25.0` (initial 15.0; raised in pass-5 to land mid-envelope at T1 mean elite 0.67).
+- `environment.foods.count: 8` (unchanged from initial). Keeps density proportional to grid area.
+- `environment.foods.min_food_predator_distance: 4` (added pass-3 — admits forage-while-avoiding policy by guaranteeing safe corridors between food and predators; see \[[configuration-system]\] § Food-Predator Placement Constraint).
 
 **Reward (code in `agent/reward_calculator.py`)**: new `reward_mode: Literal["default", "gradient_only"] = "default"` field on `RewardConfig`. Branch in `RewardCalculator.calculate_reward`:
 
@@ -222,7 +224,7 @@ PR-B (if triggered) adds ~12-15 wall-h for the `tei_weights` arm.
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | Bias-network overflow under multiplicative decay across generations | All decay shapes shrink magnitude monotonically; output clamped at `LOGIT_BIAS_CLAMP = 2.0`. Unit test asserts decay preserves direction + monotonically shrinks norm. |
+| R1 | Bias-network overflow under multiplicative decay across generations | All decay shapes shrink magnitude monotonically; output clamped at `LOGIT_BIAS_CLAMP = 6.0` (raised from initial 2.0 in pilot 3 to rule out saturation; substrate remained null at the wider clamp — see logbook 019 § Pilot 3). Unit test asserts decay preserves direction + monotonically shrinks norm. |
 | R2 | Sensory input shape drift between F0 elite training env and F1+ inheritance | `bias_network.input_features` persisted in `.tei.pt` payload; runtime validator at substrate load. |
 | R3 | F0 survival_rate envelope uncalibratable on new env | T1 tripwire is a hard pre-flight gate. |
 | R4 | Substrate converges to same attractor across seeds (M6 failure mode) | T2 substrate-diversity tripwire catches at calibration smoke before pilot. |

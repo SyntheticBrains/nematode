@@ -83,6 +83,19 @@
 - **AND** the F0 extraction runs
 - **THEN** the probe builder SHALL emit `2 × 8 = 16` probes per predator (one ring with food-gradient set, one with food-gradient zero)
 
+#### Scenario: safe_probes sub-block adds zero-pathogen response-surface probes
+
+- **WHEN** `probe_ring.safe_probes: {count: 8, min_predator_distance: 4}` is configured
+- **THEN** the F0 extraction probe set SHALL be extended with `count` additional probes drawn from grid cells whose Manhattan distance from EVERY predator is `>= min_predator_distance`
+- **AND** each safe probe SHALL set `predator_gradient_strength = 0.0` with varying `food_gradient_*` (sweeping the response surface in the no-pathogen regime so the substrate MLP can express conditional behaviour rather than a constant-bias collapse)
+- **AND** when `safe_probes` is absent or `null`, the probe set SHALL contain only the ring probes (byte-equivalent to the pre-safe-probes M6.9+ flow)
+
+#### Scenario: safe_probes rejects min_predator_distance leaving no valid cells
+
+- **WHEN** `safe_probes.min_predator_distance` is configured high enough that no grid cell satisfies the constraint
+- **THEN** `_build_safe_probes` SHALL log a warning and return an empty list (downgrade gracefully)
+- **AND** the F0 extraction SHALL proceed with only the ring probes
+
 ### Requirement: Food-Predator Placement Constraint in ForagingConfig
 
 `ForagingConfig.min_food_predator_distance: int = 0` SHALL define the minimum Euclidean distance from any predator at which food may spawn. Default `0` preserves byte-equivalence with the pre-M6.9+ env (food may spawn anywhere predators are not). When `> 0`, food cannot spawn within that distance of any predator — the M6.9+ env-geometry fix (smoke pass 3 finding) that admits a forage-without-dying policy by guaranteeing safe corridors between food sources. Without the constraint, food can spawn inside a predator's damage zone and PPO cannot find a middle-ground policy between "approach food" and "avoid predator" regardless of reward shape.

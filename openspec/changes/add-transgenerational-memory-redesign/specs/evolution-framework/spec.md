@@ -23,8 +23,9 @@ The frozen-dataclass invariant SHALL be preserved: when a caller passes an `nn.S
 
 #### Scenario: bias_network output is clamped at LOGIT_BIAS_CLAMP
 
-- **WHEN** the bias-network's raw output exceeds `LOGIT_BIAS_CLAMP = 2.0` in absolute magnitude on any action dimension
+- **WHEN** the bias-network's raw output exceeds `LOGIT_BIAS_CLAMP = 6.0` in absolute magnitude on any action dimension
 - **THEN** `apply_to_logits` SHALL clamp the output element-wise to `[-LOGIT_BIAS_CLAMP, +LOGIT_BIAS_CLAMP]` BEFORE adding to logits
+- **AND** the clamp value SHALL be 6.0 (raised from the initial M6.9+ design value of 2.0 in pilot 3 to rule out logit saturation as the source of F1+ collapse; the wider clamp did not unlock substrate signal — see \[[019-transgenerational-memory-redesign]\])
 
 #### Scenario: bias_network is deep-copied in `__post_init__`
 
@@ -90,6 +91,14 @@ The frozen-dataclass invariant SHALL be preserved: when a caller passes an `nn.S
 - **WHEN** `_compute_probe_gradient(probe_pos=(5, 5), predator_pos=(10, 10))` is called as a pure function
 - **THEN** it SHALL return `(predator_gradient_strength, predator_gradient_direction)` deterministically
 - **AND** `predator_gradient_strength` SHALL equal `1.0 / (1.0 + manhattan_distance((5, 5), (10, 10))) = 1.0 / 11.0`
+
+#### Scenario: safe_probes extends probe set with zero-pathogen response-surface samples
+
+- **WHEN** `_build_f0_probe_params` is called with a `probe_ring.safe_probes` sub-block configured
+- **THEN** `_build_safe_probes(env, safe_probes_cfg, stam_state)` SHALL be invoked AFTER the ring probes are built
+- **AND** the returned probes SHALL each have `predator_gradient_strength == 0.0` and varying `food_gradient_*` values that sweep the no-pathogen response surface
+- **AND** the candidate cells SHALL satisfy `min(manhattan(cell, p) for p in env.predators) >= safe_probes.min_predator_distance`
+- **AND** when no cell on the grid satisfies the distance constraint, `_build_safe_probes` SHALL log a warning and return an empty list (probe extraction proceeds with ring probes only — no hard failure)
 
 ### Requirement: F0 Bias-Network Fit
 
