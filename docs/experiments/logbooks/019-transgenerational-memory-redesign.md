@@ -4,7 +4,7 @@
 
 **Branch**: `feat/m69-transgenerational-redesign`.
 
-**OpenSpec change**: `add-transgenerational-memory-redesign` (to be archived as `2026-05-18-add-transgenerational-memory-redesign`; spec sync per STOP convention — the binding scenarios stay in the change archive; no main-spec promotion since the experiment is closing as a calibrated null).
+**OpenSpec change**: `add-transgenerational-memory-redesign` (archived as `2026-05-19-add-transgenerational-memory-redesign`; spec sync per STOP convention — the binding scenarios stay in the change archive; no main-spec promotion since the experiment is closing as a calibrated null).
 
 **Date Started**: 2026-05-17 (post-M6-merge planning; commit 1 of PR-A landed 2026-05-17).
 

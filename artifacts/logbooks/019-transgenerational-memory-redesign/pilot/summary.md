@@ -1,5 +1,20 @@
 # M6.9+ TEI re-evaluation — aggregator summary
 
+> **Pilot mode caveat (n=1).** This summary was produced by
+> `aggregate_m69_pilot.py --mode pilot` against a single-seed pilot.
+> The cross-arm Wilcoxon p-value and bootstrap CIs below are
+> mathematically **degenerate at n=1** (the cross-arm pairwise table
+> shows `n=1` with `p=1.0` and CI lo==hi) and MUST NOT be used as
+> definitive cross-arm decision evidence. The per-arm gate
+> (`tei_on ≥ 2/4 seeds pass`) also cannot be satisfied at n=1.
+>
+> The load-bearing pilot artefact is `pilot_pivot_decision.md` in
+> the same directory — it classifies the observed pattern against
+> design.md § D6's six pre-declared pivots. The pilot's STOP-signal
+> for the `tei_on` arm is driven by the per-arm gate (F1+ collapse
+> below threshold within the single seed), not by the degenerate
+> cross-arm statistics.
+
 ## Per-arm cross-seed verdicts
 
 | arm | verdict |

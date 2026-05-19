@@ -679,6 +679,7 @@ class LearnedPerformanceFitness:
         # each line is self-contained.
         if diagnostics_path is not None:
             import json as _json
+            import os as _os
 
             diagnostics_path.parent.mkdir(parents=True, exist_ok=True)
             row = {
@@ -695,6 +696,19 @@ class LearnedPerformanceFitness:
                 "fitness_metric": evolution_config.fitness_metric,
                 "fitness_survival_weight": evolution_config.fitness_survival_weight,
             }
-            with diagnostics_path.open("a", encoding="utf-8") as handle:
-                handle.write(_json.dumps(row) + "\n")
+            # Atomic append: POSIX guarantees ``O_APPEND`` writes are
+            # atomic up to ``PIPE_BUF`` (≥ 4096 bytes on Linux/macOS).
+            # Our JSON row is ~300 bytes — comfortably under that
+            # boundary — so concurrent worker writes cannot interleave.
+            # ``with`` block ensures FD is closed even on exception.
+            payload = (_json.dumps(row) + "\n").encode("utf-8")
+            fd = _os.open(
+                diagnostics_path,
+                _os.O_WRONLY | _os.O_APPEND | _os.O_CREAT,
+                0o644,
+            )
+            try:
+                _os.write(fd, payload)
+            finally:
+                _os.close(fd)
         return fitness

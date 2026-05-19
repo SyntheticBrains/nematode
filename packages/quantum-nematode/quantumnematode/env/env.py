@@ -1355,19 +1355,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
             )
             raise ValueError(msg)
 
-        # Initialize food sources using Poisson disk sampling
+        # Initialize food sources using Poisson disk sampling.
+        #
+        # Init-order policy:
+        # - ``min_food_predator_distance > 0`` (M6.9+ env-geometry fix):
+        #   predators MUST be placed before foods so the food validator
+        #   can read ``self.predators`` and enforce the distance
+        #   constraint during initial food sampling.
+        # - ``min_food_predator_distance == 0`` (default — M3 / M4 / M5 /
+        #   M6 legacy): foods are placed BEFORE predators so the RNG
+        #   draw sequence matches pre-M6.9+ behaviour exactly (both
+        #   ``_initialize_foods`` and ``_initialize_predators`` consume
+        #   from ``self.rng``; reversing them would shift seed-replay
+        #   outputs for every legacy config).
         self.foods: list[tuple[int, int]] = []
-        # Initialize predators FIRST (when enabled) so the food placement
-        # constraint ``min_food_predator_distance > 0`` can use the
-        # predator positions during initial food sampling. With
-        # ``min_food_predator_distance == 0`` (the default — M3 / M4 /
-        # M5 / M6 byte-equivalent) this ordering is invisible because
-        # the food validator never reads ``self.predators``.
         self.predators: list[Predator] = []
-        if self.predator.enabled:
+        if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
             self._initialize_predators()
-
-        self._initialize_foods()
+            self._initialize_foods()
+        else:
+            self._initialize_foods()
+            if self.predator.enabled:
+                self._initialize_predators()
 
         # visited_cells and wall_collision_occurred are now per-agent (in AgentState).
         # Backward-compatible properties are defined below.

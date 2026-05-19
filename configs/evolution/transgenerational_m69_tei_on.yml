@@ -105,12 +105,16 @@ reward:
   penalty_boundary_collision: 0.02
   penalty_health_damage: 0.5
   reward_health_gain: 0.1
-  # M6.10 audit-B remediation. Drops the distance-scaled evasion term
-  # + flat fallback; keeps the contact penalty at dist <= 1 (the
-  # load-bearing damage-zone signal). The "circle right always"
-  # tangential-motion attractor that M6 found relied on the
-  # distance-scaled reward; gradient_only removes the incentive without
-  # disabling damage avoidance.
+  # M6.10 audit-B remediation v2 (smoke pass 3 finding). Adds a smooth
+  # per-step penalty proportional to env.get_predator_concentration at
+  # the agent's position (fires anywhere predators are enabled,
+  # regardless of is_in_danger), preserves the contact penalty at
+  # dist <= 1 (the load-bearing damage-zone signal), and drops the
+  # distance-scaled directional evasion term + flat fallback. v1
+  # (gradient_only) removed the M6 "circle right" tangential attractor
+  # but traded it for a "never-approach" attractor; gradient_proximity
+  # gives the agent a continuous "closer = worse" gradient before
+  # contact so it learns a middle-ground forage-while-avoiding policy.
   reward_mode: gradient_proximity
 
 satiety:

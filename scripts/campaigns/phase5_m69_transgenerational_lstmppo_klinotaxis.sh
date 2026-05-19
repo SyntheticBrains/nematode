@@ -78,6 +78,13 @@ CONFIG_SMOKE="configs/evolution/transgenerational_m69_smoke.yml"
 # dispatched if values diverge or any arm is missing the field.
 check_fitness_survival_weight_parity() {
     local parity_out
+    # Merge stderr into stdout via 2>&1 so MISMATCH diagnostics
+    # printed by the Python block reach the operator on both the
+    # success path (echoed below) and the failure path (via the
+    # ``|| { ... echo \"${parity_out}\" >&2 ... }`` branch). Without
+    # the redirect, stderr was silently dropped by the command
+    # substitution and the failure branch could only echo an empty
+    # diagnostic.
     parity_out=$(uv run python -c "
 import sys, yaml
 arms = {
@@ -101,7 +108,7 @@ if len(unique_metrics) > 1:
     print('MISMATCH fitness_metric=' + str(metrics), file=sys.stderr)
     sys.exit(2)
 print('OK fitness_survival_weight=' + str(list(unique)[0]) + ' fitness_metric=' + str(list(unique_metrics)[0]))
-") || {
+" 2>&1) || {
         echo "ERROR: fitness parity violated across the three arm YAMLs." >&2
         echo "${parity_out}" >&2
         echo "All three arms MUST share the same fitness_survival_weight" >&2

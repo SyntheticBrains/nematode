@@ -815,6 +815,25 @@ class TestTransgenerationalConfig:
         with pytest.raises(ValidationError, match="unknown stem"):
             BiasNetworkConfig(input_features=["nonexistent_field_sin"])
 
+    def test_bias_network_input_features_rejects_sin_cos_on_nonradian_known_field(
+        self,
+    ) -> None:
+        """``_sin`` / ``_cos`` on a KNOWN but NON-radian stem SHALL be rejected.
+
+        ``predator_gradient_strength`` is a known ``BrainParams`` field but
+        its value is a unit-scaled magnitude (not a radian angle), so
+        applying ``math.sin`` to it is nonsense. The validator MUST catch
+        this so a typo or copy-paste error in a YAML doesn't silently
+        produce a substrate that reads sin(magnitude).
+        """
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import BiasNetworkConfig
+
+        with pytest.raises(ValidationError, match="not radian-valued"):
+            BiasNetworkConfig(input_features=["predator_gradient_strength_sin"])
+        with pytest.raises(ValidationError, match="not radian-valued"):
+            BiasNetworkConfig(input_features=["food_gradient_strength_cos"])
+
     def test_bias_network_input_features_must_be_non_empty(self) -> None:
         """Empty ``input_features`` SHALL be rejected."""
         from pydantic import ValidationError

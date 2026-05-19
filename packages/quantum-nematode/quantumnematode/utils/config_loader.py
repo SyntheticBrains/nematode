@@ -1030,6 +1030,46 @@ def _known_brain_params_fields() -> set[str]:
     return set(BrainParams.model_fields.keys())
 
 
+def _is_radian_brain_params_field(name: str) -> bool:
+    """Return ``True`` if ``name`` is a radian-valued ``BrainParams`` field.
+
+    Radian-valued fields are detected by their pydantic description
+    (``"... (radians ...)"``) so adding a new radian field to
+    ``BrainParams`` automatically grants ``_sin`` / ``_cos`` suffix
+    support without a parallel allow-list to maintain. Returns
+    ``False`` for unknown stems.
+    """
+    from quantumnematode.brain.arch._brain import BrainParams
+
+    field = BrainParams.model_fields.get(name)
+    if field is None:
+        return False
+    description = (field.description or "").lower()
+    return "radian" in description
+
+
+def _check_one_input_feature(name: str, known: set[str]) -> str | None:
+    """Validate one ``input_features`` entry; return ``None`` if valid, else a reason string.
+
+    A raw stem is valid iff it names a known ``BrainParams`` field
+    (sin/cos transform NOT applied). A ``_sin`` / ``_cos`` suffixed
+    name is valid iff the stem is known AND radian-valued.
+    """
+    if name in known:
+        return None
+    for suffix in _DERIVED_SUFFIXES:
+        if not name.endswith(suffix):
+            continue
+        transform = suffix.lstrip("_")  # "sin" or "cos"
+        stem = name[: -len(suffix)]
+        if stem not in known:
+            return f"unknown stem {stem!r} for _{transform} transform"
+        if not _is_radian_brain_params_field(stem):
+            return f"stem {stem!r} is not radian-valued and cannot use the _{transform} suffix"
+        return None
+    return "not a known BrainParams field"
+
+
 class BiasNetworkConfig(BaseModel):
     """M6.9+ sensory-conditional bias-network architecture sub-block.
 
@@ -1071,9 +1111,12 @@ class BiasNetworkConfig(BaseModel):
         """Each ``input_features`` entry MUST resolve to a known ``BrainParams`` field.
 
         Suffix support: ``"X_sin"`` / ``"X_cos"`` are accepted iff the
-        stem ``"X"`` is a known field. The runtime applies
-        ``math.sin`` / ``math.cos`` to the radian value at
-        ``build_sensory_input`` time.
+        stem ``"X"`` is a known field AND ``X`` is radian-valued
+        (detected via the field's pydantic description). The runtime
+        applies ``math.sin`` / ``math.cos`` to the radian value at
+        ``build_sensory_input`` time; applying sin/cos to a non-radian
+        magnitude is nonsense so it's rejected here, not silently
+        accepted.
         """
         if not self.input_features:
             msg = (
@@ -1085,21 +1128,9 @@ class BiasNetworkConfig(BaseModel):
         known = _known_brain_params_fields()
         bad: list[tuple[str, str]] = []  # (offending_name, reason)
         for name in self.input_features:
-            if name in known:
-                continue
-            if name.endswith(_SUFFIX_SIN):
-                stem = name[: -len(_SUFFIX_SIN)]
-                if stem in known:
-                    continue
-                bad.append((name, f"unknown stem {stem!r} for _sin transform"))
-                continue
-            if name.endswith(_SUFFIX_COS):
-                stem = name[: -len(_SUFFIX_COS)]
-                if stem in known:
-                    continue
-                bad.append((name, f"unknown stem {stem!r} for _cos transform"))
-                continue
-            bad.append((name, "not a known BrainParams field"))
+            reason = _check_one_input_feature(name, known)
+            if reason is not None:
+                bad.append((name, reason))
         if bad:
             offending_names = ", ".join(name for name, _ in bad)
             reasons = "; ".join(f"{name}: {reason}" for name, reason in bad)
