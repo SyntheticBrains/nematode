@@ -1472,25 +1472,52 @@ class EvolutionConfig(BaseModel):
     def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912
         """Enforce inheritance configuration rules at YAML load time.
 
-        Four rules:
+        Eight rules (1-4 are the legacy invariants; 5-8 were added or
+        widened in M6.9+ and M6.13 to cover the substrate-flow strategies):
 
         1. ``inheritance != "none"`` AND ``learn_episodes_per_eval == 0``
-           — no train phase means no weights to inherit (Lamarckian) or
-           no learned-elite signal to propagate (Baldwin).
+           — no train phase means no weights to inherit (Lamarckian),
+           no learned-elite signal to propagate (Baldwin), no F0 elite
+           to extract substrate from (transgenerational), and nothing
+           for the substrate prior to act on (composed).
         2. ``inheritance != "none"`` AND ``warm_start_path is not None``
-           — Lamarckian and warm_start both load weights into the same
-           brain slot; Baldwin under static warm-start would mean every
-           child starts from the same fixed checkpoint, collapsing the
-           Baldwin signal.  Exactly one may be set.
-        3. ``inheritance == "lamarckian"`` AND ``inheritance_elite_count
-           != 1`` — single-elite-broadcast is the only currently-supported
-           parent-selection rule for Lamarckian inheritance.  The rule
-           does NOT apply under ``inheritance: baldwin`` since Baldwin
-           ignores the field.
+           — static warm-start and per-genome dynamic warm-start both
+           load weights into the same brain slot.  Exactly one may be
+           set.
+        3. ``inheritance in {"lamarckian", "weights+transgenerational"}``
+           AND ``inheritance_elite_count != 1`` — both modes use the M3
+           single-elite-broadcast pattern; multi-elite parent selection
+           (round-robin / tournament) is not currently supported.  The
+           rule does NOT apply to ``"baldwin"`` (single-elite by
+           construction) or ``"transgenerational"`` (substrate flows
+           from a single F0 elite per run).
         4. ``inheritance_elite_count > population_size`` — trivially
            impossible to keep more elites than there are genomes.
-           Independent of rule 3 so the multi-elite restriction can
-           be lifted without dropping this structural check.
+           Independent of rule 3.
+        5. (M6.9+ widened in M6.13) ``transgenerational.enabled=True``
+           requires ``inheritance in {"transgenerational",
+           "weights+transgenerational"}``; ``transgenerational.enabled=False``
+           requires ``inheritance == "none"``.  The substrate-enabled
+           pairing contract ensures the substrate-flow code path is
+           gated on exactly one bit.
+        6. (M6.9+) Under ``transgenerational.enabled=True``, the
+           ``lawn_schedule`` MUST cover every generation in ``[0,
+           generations)`` exactly once AND the gen-0 entry MUST set
+           ``ppo_train_episodes > 0`` (F0 has no substrate to inherit
+           from — F0 IS the substrate source).
+        7. (M6.13) ``inheritance == "weights+transgenerational"`` AND
+           any F1+ ``lawn_schedule`` entry with ``ppo_train_episodes ==
+           0`` — composed mode requires retraining for the prior to
+           act as a prior; F1+ K=0 collapses composed mode to pure-TEI.
+        8. (M6.9+ widened in M6.13) ``inheritance in {"transgenerational",
+           "weights+transgenerational"}`` AND ``transgenerational is None``
+           — the F0 extraction pipeline needs a populated config block.
+
+        The architecture-changing-fields rejection (Lamarckian /
+        composed cannot evolve ``actor_hidden_dim`` etc. because the
+        per-genome warm-start path requires fixed tensor shapes) lives
+        in ``SimulationConfig._validate_hyperparam_schema`` instead of
+        here, because ``hyperparam_schema`` is a SimulationConfig field.
         """
         if self.inheritance != "none":
             if self.learn_episodes_per_eval == 0:

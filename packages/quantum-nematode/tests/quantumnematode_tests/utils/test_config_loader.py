@@ -1281,3 +1281,42 @@ class TestEvolutionConfigComposedInheritancePairing:
                     lawn_schedule=self._composed_schedule(2),
                 ),
             )
+
+    def test_lamarckian_without_substrate_block_accepted(self) -> None:
+        """``inheritance=lamarckian`` + ``transgenerational=None`` SHALL load cleanly.
+
+        This is the M6.13 campaign's ``weights_only`` arm shape. The
+        cross-product matrix's M3 baseline cell — covered indirectly
+        by thousands of M3 tests, but worth pinning explicitly so the
+        validator's behaviour at this cell can't silently regress.
+        """
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=100,
+            inheritance="lamarckian",
+            transgenerational=None,
+        )
+        assert cfg.inheritance == "lamarckian"
+        assert cfg.transgenerational is None
+
+    def test_none_without_substrate_block_accepted(self) -> None:
+        """``inheritance=none`` + ``transgenerational=None`` SHALL load cleanly.
+
+        This is the M6.13 campaign's ``control`` arm shape AND the
+        default for every non-inheritance evolution run. Pins the
+        cross-product matrix's (none, None) positive cell.
+        """
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=100,
+            inheritance="none",
+            transgenerational=None,
+        )
+        assert cfg.inheritance == "none"
+        assert cfg.transgenerational is None
