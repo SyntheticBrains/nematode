@@ -281,6 +281,15 @@ class ForagingConfig(BaseModel):
     food_hotspot_decay: float = Field(default=8.0, gt=0.0)
     no_respawn: bool = False
     satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
+    # Minimum Euclidean distance from any predator at which food may
+    # spawn. Default 0 preserves byte-equivalence with the legacy
+    # food-placement behaviour. The M6.9+ env-geometry fix
+    # (smoke pass 3 finding) sets this to ``damage_radius + N`` so the
+    # env genuinely admits a forage-without-dying policy — without the
+    # constraint, food can spawn inside a predator's damage zone and
+    # PPO cannot find a middle-ground policy between "approach food"
+    # and "avoid predator" regardless of reward shape.
+    min_food_predator_distance: int = Field(default=0, ge=0)
 
     def to_params(self) -> ForagingParams:
         """Convert to ForagingParams for environment initialization."""
@@ -306,6 +315,7 @@ class ForagingConfig(BaseModel):
             food_hotspot_decay=self.food_hotspot_decay,
             no_respawn=self.no_respawn,
             satiety_food_threshold=self.satiety_food_threshold,
+            min_food_predator_distance=self.min_food_predator_distance,
         )
 
 
@@ -1004,6 +1014,208 @@ class LawnScheduleEntry(BaseModel):
     ppo_train_episodes: int = Field(ge=0)
 
 
+_SUFFIX_SIN = "_sin"
+_SUFFIX_COS = "_cos"
+_DERIVED_SUFFIXES: tuple[str, ...] = (_SUFFIX_SIN, _SUFFIX_COS)
+
+
+def _known_brain_params_fields() -> set[str]:
+    """Return the set of valid ``BrainParams`` field names for validator dispatch.
+
+    Imported lazily to avoid pulling the brain Protocol into the
+    config-loader's module-load critical path.
+    """
+    from quantumnematode.brain.arch._brain import BrainParams
+
+    return set(BrainParams.model_fields.keys())
+
+
+def _is_radian_brain_params_field(name: str) -> bool:
+    """Return ``True`` if ``name`` is a radian-valued ``BrainParams`` field.
+
+    Radian-valued fields are detected by their pydantic description
+    (``"... (radians ...)"``) so adding a new radian field to
+    ``BrainParams`` automatically grants ``_sin`` / ``_cos`` suffix
+    support without a parallel allow-list to maintain. Returns
+    ``False`` for unknown stems.
+    """
+    from quantumnematode.brain.arch._brain import BrainParams
+
+    field = BrainParams.model_fields.get(name)
+    if field is None:
+        return False
+    description = (field.description or "").lower()
+    return "radian" in description
+
+
+def _check_one_input_feature(name: str, known: set[str]) -> str | None:
+    """Validate one ``input_features`` entry; return ``None`` if valid, else a reason string.
+
+    A raw stem is valid iff it names a known ``BrainParams`` field
+    (sin/cos transform NOT applied). A ``_sin`` / ``_cos`` suffixed
+    name is valid iff the stem is known AND radian-valued.
+    """
+    if name in known:
+        return None
+    for suffix in _DERIVED_SUFFIXES:
+        if not name.endswith(suffix):
+            continue
+        transform = suffix.lstrip("_")  # "sin" or "cos"
+        stem = name[: -len(suffix)]
+        if stem not in known:
+            return f"unknown stem {stem!r} for _{transform} transform"
+        if not _is_radian_brain_params_field(stem):
+            return f"stem {stem!r} is not radian-valued and cannot use the _{transform} suffix"
+        return None
+    return "not a known BrainParams field"
+
+
+class BiasNetworkConfig(BaseModel):
+    """M6.9+ sensory-conditional bias-network architecture sub-block.
+
+    Optional sub-block on :class:`TransgenerationalConfig`. When
+    absent, the substrate falls back to the M6 legacy constant
+    ``logit_bias`` path (byte-equivalent).
+
+    Attributes
+    ----------
+    hidden_dim : int
+        Hidden-layer width. ``0`` means linear projection only (no
+        hidden layer, no activation). Default 8.
+    activation : Literal["tanh", "relu", "gelu"]
+        Activation function between the two ``nn.Linear`` layers
+        when ``hidden_dim > 0``. Ignored when ``hidden_dim == 0``.
+        Default ``"tanh"``.
+    input_features : list[str]
+        Names of ``BrainParams`` fields the bias-network reads, in
+        the order it expects them. ``_sin`` / ``_cos`` suffixes are
+        supported as derived transforms (radian field → ``math.sin`` /
+        ``math.cos``); only radian-valued fields support the suffix.
+        Validator rejects unknown field names. Default matches the
+        plan v2 design: predator gradient strength + direction-sin +
+        food gradient strength.
+    """
+
+    hidden_dim: int = Field(default=8, ge=0)
+    activation: Literal["tanh", "relu", "gelu"] = "tanh"
+    input_features: list[str] = Field(
+        default_factory=lambda: [
+            "predator_gradient_strength",
+            "predator_gradient_direction_sin",
+            "food_gradient_strength",
+        ],
+    )
+
+    @model_validator(mode="after")
+    def _validate_input_features(self) -> "BiasNetworkConfig":
+        """Each ``input_features`` entry MUST resolve to a known ``BrainParams`` field.
+
+        Suffix support: ``"X_sin"`` / ``"X_cos"`` are accepted iff the
+        stem ``"X"`` is a known field AND ``X`` is radian-valued
+        (detected via the field's pydantic description). The runtime
+        applies ``math.sin`` / ``math.cos`` to the radian value at
+        ``build_sensory_input`` time; applying sin/cos to a non-radian
+        magnitude is nonsense so it's rejected here, not silently
+        accepted.
+        """
+        if not self.input_features:
+            msg = (
+                "transgenerational.bias_network.input_features must contain at least one "
+                "feature name. The bias-network needs named BrainParams fields "
+                "to evaluate against per-step sensory input."
+            )
+            raise ValueError(msg)
+        known = _known_brain_params_fields()
+        bad: list[tuple[str, str]] = []  # (offending_name, reason)
+        for name in self.input_features:
+            reason = _check_one_input_feature(name, known)
+            if reason is not None:
+                bad.append((name, reason))
+        if bad:
+            offending_names = ", ".join(name for name, _ in bad)
+            reasons = "; ".join(f"{name}: {reason}" for name, reason in bad)
+            supported_preview = sorted(known)[:10]
+            msg = (
+                f"transgenerational.bias_network.input_features contains invalid "
+                f"entries: [{offending_names}]. Reasons: {reasons}. Only radian-"
+                f"valued BrainParams fields support the _sin / _cos suffix. "
+                f"Supported BrainParams fields (first 10): {supported_preview}."
+            )
+            raise ValueError(msg)
+        return self
+
+
+class SafeProbesConfig(BaseModel):
+    """M6.9+ safe-position probe configuration sub-block.
+
+    Optional sub-block on :class:`ProbeRingConfig`. When present, the
+    F0 probe builder emits additional probes at positions FAR from
+    any predator (low ``predator_gradient_strength``) with varying
+    food-gradient strengths. Without these, all probes sit at the
+    danger-zone boundary and the substrate's bias-network MLP fits
+    an unconditional "near-predator → avoid" bias rather than a
+    *conditional* response (the pilot-1 failure mode at K=0:
+    substrate captured "always-LEFT" with no food/predator
+    discrimination).
+
+    Attributes
+    ----------
+    count : int
+        Number of safe-position probes to emit. These probes spread
+        across the grid at minimum L1 distance ``min_predator_distance``
+        from any predator. Each probe samples a varying
+        ``food_gradient_strength``. Default 16. MUST be >= 1.
+    min_predator_distance : int
+        Minimum L1 (Manhattan) distance from any stationary predator
+        for a position to qualify as "safe". Default 6 (well outside
+        any practical detection radius). When no positions satisfy
+        the constraint, the safe-probe set is emitted as empty with
+        a warning (caller's probe ring is still produced; only the
+        safe component is skipped).
+    """
+
+    count: int = Field(default=16, ge=1)
+    min_predator_distance: int = Field(default=6, ge=0)
+
+
+class ProbeRingConfig(BaseModel):
+    """M6.9+ env-derived F0 probe-ring configuration sub-block.
+
+    Optional sub-block on :class:`TransgenerationalConfig`. When
+    absent the loader defaults to the canonical 8-position ring at
+    ``damage_radius + 1`` from each stationary predator.
+
+    Attributes
+    ----------
+    count : int
+        Number of ring positions per stationary predator. Each
+        position is sampled at an even angular interval around the
+        predator center. Default 8. MUST be >= 1.
+    radius_offset : int
+        Manhattan-distance offset added to the predator's
+        ``damage_radius`` to compute the ring radius. Default 1
+        places the ring one cell outside the danger zone.
+    include_food_gradient_variants : bool
+        When True the probe builder emits two ring iterations per
+        predator (one with food-gradient set, one with food-gradient
+        zero) for ``2 * count`` total probes per predator. Default
+        False (pathogen-isolated).
+    safe_probes : SafeProbesConfig | None
+        Optional sub-block requesting additional probes at positions
+        FAR from any predator (low ``predator_gradient_strength``)
+        with varying food-gradient strengths. Critical for fitting
+        a *conditional* bias-network MLP rather than an unconditional
+        "near-predator → avoid" bias (the pilot-1 failure mode at
+        K=0). Default ``None`` (byte-equivalent to the original
+        all-near-predator probe set).
+    """
+
+    count: int = Field(default=8, ge=1)
+    radius_offset: int = Field(default=1, ge=0)
+    include_food_gradient_variants: bool = False
+    safe_probes: SafeProbesConfig | None = None
+
+
 class TransgenerationalConfig(BaseModel):
     """Configuration block for the transgenerational-memory evolution arm.
 
@@ -1021,31 +1233,43 @@ class TransgenerationalConfig(BaseModel):
         contract (substrate is the only cross-arm difference) is
         guaranteed at config-load time.
     decay_factor : float
-        Multiplicative decay applied to ``parent.logit_bias`` at
-        each ``inherit_from`` call. Constrained to ``[0.0, 1.0]``.
-        Default ``0.6`` matches the planned F0=1.0 / F1=0.6 / F2=0.36 /
-        F3=0.216 cascade.
+        Multiplicative decay applied to the substrate at each
+        ``inherit_from`` call. Constrained to ``[0.0, 1.0]``.
+        Default ``0.6`` matches the planned F0=1.0 / F1=0.6 /
+        F2=0.36 / F3=0.216 cascade under ``decay_shape: geometric``.
+    decay_shape : Literal["geometric", "linear", "sigmoid"]
+        Selects the per-generation decay schedule. Default
+        ``"geometric"`` preserves M6 byte-equivalence (multiplicative
+        decay each generation). ``"linear"`` reaches zero at
+        ``lineage_depth = 1 / (1 - decay_factor)``; ``"sigmoid"``
+        uses a slow-then-fast schedule. Biology is silent on shape;
+        non-default values are sensitivity-analysis options for
+        M6.9+ pilot pivots.
     extraction_seed : int
         Seed for the F0 telemetry pass (``extract_from_brain``). A
         fixed sentinel default (``424242``) keeps F0 extractions
         reproducible across runs. Constrained to ``>= 0``.
     lawn_schedule : list[LawnScheduleEntry]
         Per-generation pathogen-lawn enablement + training-episode
-        overrides. Each entry in the schedule MUST reference a
-        generation in ``[0, evolution.generations)`` exactly once
-        (validated at ``SimulationConfig`` level since
-        ``EvolutionConfig`` doesn't know how many generations the
-        sibling fields specify until both are bound on the same
-        ``EvolutionConfig`` instance — the per-entry validator on
-        ``TransgenerationalConfig`` here handles uniqueness; the
-        ``[0, generations)`` range check happens in the
-        ``EvolutionConfig._validate_inheritance`` post-bind block).
+        overrides. Each entry MUST reference a generation in
+        ``[0, evolution.generations)`` exactly once.
+    bias_network : BiasNetworkConfig | None
+        Optional M6.9+ sensory-conditional bias-network architecture.
+        When ``None`` (default), the substrate uses the M6 legacy
+        constant ``logit_bias`` path (byte-equivalent).
+    probe_ring : ProbeRingConfig | None
+        Optional M6.9+ env-derived F0 probe-ring configuration.
+        When ``None`` (default), the F0 substrate-extraction
+        pipeline uses the M6 legacy synthetic-probe path.
     """
 
     enabled: bool
     decay_factor: float = Field(default=0.6, ge=0.0, le=1.0)
+    decay_shape: Literal["geometric", "linear", "sigmoid"] = "geometric"
     extraction_seed: int = Field(default=424242, ge=0)
     lawn_schedule: list[LawnScheduleEntry]
+    bias_network: BiasNetworkConfig | None = None
+    probe_ring: ProbeRingConfig | None = None
 
     @model_validator(mode="after")
     def _validate_lawn_schedule_unique_generations(self) -> "TransgenerationalConfig":
@@ -1207,7 +1431,36 @@ class EvolutionConfig(BaseModel):
     # ranks brains at 0.68 success_rate with 0.08 survival_rate as
     # top elites). Pure success_rate fitness decouples from avoidance
     # learning when food rewards dominate proximity/damage penalties.
+    #
+    # Note: ``fitness_survival_weight`` ONLY applies when
+    # ``fitness_metric == "composite"``. Under ``"success_rate"`` or
+    # ``"survival_rate"`` the field is ignored — the dispatch is the
+    # single point of metric selection.
     fitness_survival_weight: float = Field(default=0.0, ge=0.0, le=1.0)
+
+    # Fitness primary-metric selector: which scalar the optimizer + the
+    # decision-gate machinery consume per eval. Three options:
+    #
+    # - ``"composite"`` (default): preserves the M3/M6 legacy fitness
+    #   ``success_rate * (1 - fitness_survival_weight * death_rate)``.
+    #   Byte-equivalent to the prior single-metric path. Backwards-
+    #   compatible: existing M3/M4/M5/M6 configs continue to work
+    #   without YAML changes.
+    # - ``"success_rate"``: raw ``successes / L_eval`` (fraction of
+    #   eval episodes terminating in ``COMPLETED_ALL_FOOD``). Pure
+    #   foraging-success measure; ignores ``fitness_survival_weight``.
+    # - ``"survival_rate"``: ``1 - deaths / L_eval`` (fraction of
+    #   eval episodes NOT terminating in ``HEALTH_DEPLETED``). The
+    #   spec primary metric for the M6.9+ PR-A pathogen-avoidance
+    #   campaign — the decision gate (T1 envelope, T3 M6 floor,
+    #   cross-arm primary verdict) is specified against this metric.
+    #   Ignores ``fitness_survival_weight``.
+    #
+    # Only ``LearnedPerformanceFitness`` honours the dispatch;
+    # ``EpisodicSuccessRate`` is frozen-weight and always returns
+    # success_rate (no train phase → no survival-vs-foraging
+    # distinction to make).
+    fitness_metric: Literal["composite", "success_rate", "survival_rate"] = "composite"
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912

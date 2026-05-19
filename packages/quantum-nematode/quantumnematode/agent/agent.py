@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from pydantic import BaseModel
@@ -209,6 +209,32 @@ class RewardConfig(BaseModel):
     penalty_temperature_proximity: float = (
         DEFAULT_PENALTY_TEMPERATURE_PROXIMITY  # Scale factor for temp deviation-based reward
     )
+    # Predator-evasion reward shape. Three modes:
+    #
+    # - ``"default"`` (legacy): distance-scaled evasion term
+    #   ``penalty_predator_proximity * (curr_dist - prev_dist)`` rewards
+    #   moving AWAY / penalises moving CLOSER, PLUS the contact penalty
+    #   + flat-fallback path. Byte-equivalent to M3 / M4 / M5 / M6.
+    # - ``"gradient_only"`` (M6.10 audit-B remediation v1): drops the
+    #   distance-scaled term AND the flat fallback; only the contact
+    #   penalty fires when the agent enters dist <= 1 of a predator.
+    #   Removes the "circle right" tangential-motion attractor's
+    #   *incentive*. Smoke pass 2 found this trades one attractor for
+    #   another: agents now learn "never approach anything" because the
+    #   only predator signal is the terminal contact penalty.
+    # - ``"gradient_proximity"`` (M6.10 audit-B remediation v2): adds
+    #   a smooth per-step penalty proportional to
+    #   ``env.get_predator_concentration(agent_pos)`` (exponential-decay
+    #   sum from all predators, tanh-normalised to [0, 1]). Agent gets
+    #   continuous "closer = worse" signal BEFORE adjacency. Removes
+    #   both the "circle right" attractor (no distance-scaled directional
+    #   term that rewards tangential motion) AND the "never approach"
+    #   attractor (the gradient penalty applies anywhere the agent is in
+    #   the predator's exp-decay field, not just at contact). The
+    #   contact penalty is preserved.
+    #
+    # Configs that don't set the field stay byte-equivalent (default).
+    reward_mode: Literal["default", "gradient_only", "gradient_proximity"] = "default"
 
 
 class ManyworldsModeConfig(BaseModel):

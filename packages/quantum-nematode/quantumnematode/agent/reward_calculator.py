@@ -39,7 +39,7 @@ class RewardCalculator:
         """
         self.config = config
 
-    def calculate_reward(  # noqa: PLR0913
+    def calculate_reward(  # noqa: PLR0913, C901 — sequential branches across reward components (foraging, anti-dithering, predator x 3 modes, temperature, boundary, etc.); splitting into helpers fragments the per-step accumulator flow.
         self,
         env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
@@ -101,32 +101,69 @@ class RewardCalculator:
         reward -= self.config.penalty_step
         logger.debug(f"[Penalty] Step penalty applied: {-self.config.penalty_step}.")
 
-        # Distance-scaled predator evasion: reward for moving away, penalize for closer
-        # Also applies a contact penalty when predator is on or adjacent to agent
+        # Predator evasion reward. Three modes, gated by ``reward_mode``:
+        #
+        # - ``"default"`` (legacy): distance-scaled evasion term
+        #   ``penalty_predator_proximity * (curr_dist - prev_dist)`` rewards
+        #   moving away / penalises moving closer, plus the contact penalty
+        #   at ``dist <= 1`` and a flat-fallback penalty when no prev step
+        #   exists. Byte-equivalent to M3 / M4 / M5 / M6.
+        # - ``"gradient_only"`` (M6.10 v1): drops the distance-scaled term
+        #   AND the flat fallback; only the contact penalty at ``dist <= 1``
+        #   fires. Removes the "circle right" tangential-motion attractor
+        #   but trades for a "never-approach" attractor (smoke pass 2).
+        # - ``"gradient_proximity"`` (M6.10 v2): smooth per-step penalty
+        #   proportional to the env's predator concentration field at the
+        #   agent's position. Agent gets continuous "closer = worse"
+        #   signal BEFORE contact; preserves the contact penalty. The
+        #   gradient penalty fires anywhere the agent is in any predator's
+        #   exp-decay field, so the "do nothing" agent still accumulates
+        #   penalty if it sits near a predator.
+
+        # gradient_proximity: smooth per-step concentration penalty,
+        # fires anywhere predators are enabled (not gated by is_in_danger).
+        if env.predator.enabled and self.config.reward_mode == "gradient_proximity":
+            predator_concentration = env.get_predator_concentration(agent_pos)
+            gradient_penalty = self.config.penalty_predator_proximity * predator_concentration
+            reward -= gradient_penalty
+            logger.debug(
+                f"[Penalty] Predator gradient-proximity penalty: "
+                f"{-gradient_penalty:.4f} (concentration={predator_concentration:.4f})",
+            )
+
+        # Contact + distance-scaled evasion: gated by is_in_danger.
         if env.predator.enabled and env.is_agent_in_danger_for(agent_id):
             curr_pred_dist = env.get_nearest_predator_distance_for(agent_id)
             if curr_pred_dist is not None and len(path) > 1:
-                prev_pos = path[-2]
-                prev_pred_distances = [
-                    abs(prev_pos[0] - pred.position[0]) + abs(prev_pos[1] - pred.position[1])
-                    for pred in env.predators
-                ]
-                prev_pred_dist = min(prev_pred_distances)
-                # Positive when moving AWAY (curr > prev), negative when CLOSER
-                evasion_reward = self.config.penalty_predator_proximity * (
-                    curr_pred_dist - prev_pred_dist
-                )
+                evasion_reward = 0.0
+                if self.config.reward_mode == "default":
+                    prev_pos = path[-2]
+                    prev_pred_distances = [
+                        abs(prev_pos[0] - pred.position[0]) + abs(prev_pos[1] - pred.position[1])
+                        for pred in env.predators
+                    ]
+                    prev_pred_dist = min(prev_pred_distances)
+                    # Positive when moving AWAY (curr > prev), negative when CLOSER
+                    evasion_reward = self.config.penalty_predator_proximity * (
+                        curr_pred_dist - prev_pred_dist
+                    )
                 # Contact penalty: when predator is on or adjacent (dist ≤ 1),
-                # apply flat penalty so agent always has incentive to escape
+                # apply flat penalty so agent always has incentive to escape.
+                # Active under ALL THREE reward modes — this is the load-bearing
+                # damage-zone signal; gradient_only / gradient_proximity drop
+                # other terms but keep this.
                 if curr_pred_dist <= 1:
                     evasion_reward -= self.config.penalty_predator_proximity
                 reward += evasion_reward
                 logger.debug(
                     f"[Reward] Predator evasion reward: {evasion_reward:.3f} "
-                    f"(prev_dist={prev_pred_dist}, curr_dist={curr_pred_dist})",
+                    f"(curr_dist={curr_pred_dist}, mode={self.config.reward_mode})",
                 )
-            else:
-                # Fallback: flat penalty for first step or edge cases
+            elif self.config.reward_mode == "default":
+                # Fallback: flat penalty for first step or edge cases.
+                # gradient_only / gradient_proximity modes skip this path so
+                # the agent gets no phantom-distance penalty when it just
+                # spawned in a danger zone.
                 reward -= self.config.penalty_predator_proximity
                 logger.debug(
                     f"[Penalty] Predator proximity penalty (flat fallback): "

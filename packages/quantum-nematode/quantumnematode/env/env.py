@@ -142,6 +142,18 @@ class ForagingParams:
     satiety_food_threshold : float or None
         Fraction of max satiety (0.0-1.0) above which agents cannot consume
         food. None = disabled (no satiety gate).
+    min_food_predator_distance : int
+        Minimum Euclidean distance from any predator at which food may
+        spawn. Default 0 (byte-equivalent legacy behaviour — food may
+        spawn anywhere predators are not). Set to ``predator.damage_radius
+        + N`` to guarantee a foraging-without-dying corridor: at
+        ``damage_radius + 1`` food is just outside the damage zone; at
+        ``damage_radius + 2`` there's one cell of margin. The M6.9+ PR-A
+        audit-B remediation v3 (smoke pass 3 finding) sets this so the
+        env genuinely admits a foraging-while-avoiding policy — without
+        it, the "approach food" and "avoid predator" objectives are in
+        unresolvable conflict on a small grid and PPO collapses to one
+        extreme or the other regardless of reward shape.
     """
 
     foods_on_grid: int = 10
@@ -156,6 +168,7 @@ class ForagingParams:
     food_hotspot_decay: float = 8.0
     no_respawn: bool = False
     satiety_food_threshold: float | None = None
+    min_food_predator_distance: int = 0
 
 
 @dataclass
@@ -1342,14 +1355,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
             )
             raise ValueError(msg)
 
-        # Initialize food sources using Poisson disk sampling
+        # Initialize food sources using Poisson disk sampling.
+        #
+        # Init-order policy:
+        # - ``min_food_predator_distance > 0`` (M6.9+ env-geometry fix):
+        #   predators MUST be placed before foods so the food validator
+        #   can read ``self.predators`` and enforce the distance
+        #   constraint during initial food sampling.
+        # - ``min_food_predator_distance == 0`` (default — M3 / M4 / M5 /
+        #   M6 legacy): foods are placed BEFORE predators so the RNG
+        #   draw sequence matches pre-M6.9+ behaviour exactly (both
+        #   ``_initialize_foods`` and ``_initialize_predators`` consume
+        #   from ``self.rng``; reversing them would shift seed-replay
+        #   outputs for every legacy config).
         self.foods: list[tuple[int, int]] = []
-        self._initialize_foods()
-
-        # Initialize predators if enabled
         self.predators: list[Predator] = []
-        if self.predator.enabled:
+        if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
             self._initialize_predators()
+            self._initialize_foods()
+        else:
+            self._initialize_foods()
+            if self.predator.enabled:
+                self._initialize_predators()
 
         # visited_cells and wall_collision_occurred are now per-agent (in AgentState).
         # Backward-compatible properties are defined below.
@@ -1532,6 +1559,32 @@ class DynamicForagingEnvironment(BaseEnvironment):
             dist = np.sqrt((pos[0] - food[0]) ** 2 + (pos[1] - food[1]) ** 2)
             if dist < self.foraging.min_food_distance:
                 return False
+
+        # Check Euclidean distance from all predators. ``min_food_predator_distance``
+        # = 0 (default) preserves byte-equivalence with the legacy
+        # food-placement behaviour (food may spawn anywhere predators are
+        # not). When > 0, food cannot spawn within that distance of any
+        # predator — the M6.9+ env-geometry-fix that admits a
+        # forage-without-dying policy by guaranteeing safe corridors
+        # between food sources.
+        #
+        # ``getattr(self, "predators", None)`` guards against the
+        # initial-food-placement path: ``_initialize_foods()`` runs
+        # BEFORE ``self.predators`` is assigned in ``__init__``, so on
+        # the first env construction the attribute doesn't exist yet.
+        # The env reorders so predators are placed first when
+        # ``min_food_predator_distance > 0`` (see ``_initialize_foods``
+        # caller below). For respawns after step-1 the attribute always
+        # exists.
+        if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
+            predators = getattr(self, "predators", None)
+            if predators:
+                for pred in predators:
+                    pred_dist = np.sqrt(
+                        (pos[0] - pred.position[0]) ** 2 + (pos[1] - pred.position[1]) ** 2,
+                    )
+                    if pred_dist < self.foraging.min_food_predator_distance:
+                        return False
 
         return True
 

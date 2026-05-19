@@ -1,0 +1,170 @@
+# M6.9+ TEI re-evaluation — control arm (no inheritance)
+# ============================================================================
+#
+# Arm 3 of 3 in the M6.9+ PR-A three-arm campaign. Provides the
+# environmental ceiling: each F1+ child is a fresh TPE-sampled
+# genome trained from scratch for K=K_full episodes. No weight flow,
+# no substrate, no inheritance signal. This is the "what would the
+# evolution loop achieve at this compute budget WITHOUT any
+# transmission mechanism" baseline against which both ``tei_on``
+# (pure-TEI floor) and ``weights_only`` (M3 baseline) are compared.
+#
+# Cross-arm structural constraint (per configuration-system spec
+# § Three-Arm YAML Structural Pairing): this YAML MUST OMIT the
+# ``transgenerational:`` block entirely. ``inheritance: none`` with
+# the block present would also work, but for symmetry with the
+# weights_only arm and clarity of intent, the block is absent.
+#
+# Env + brain + reward subtrees are byte-identical to
+# transgenerational_m69_tei_on.yml AND transgenerational_m69_weights_only.yml
+# — all three arms share the audit-B-corrected env (grid_size: 15,
+# predators.count: 4, foods.count: 8, reward_mode: gradient_proximity) and
+# the composite-fitness parity contract (fitness_survival_weight: 1.0).
+#
+# F1+ semantics: K=1000 every gen, fresh TPE genome per child, no
+# warm-start. The aggregator's cross-arm primary verdict compares
+# ``tei_on F1+`` against THIS arm's F1+ to test "does the substrate
+# carry a measurable signal vs the environmental-ceiling baseline."
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 500
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    weight_init_scale: 1.0
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+  reward_mode: gradient_proximity
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 15
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 8
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+    min_food_predator_distance: 4  # M6.9+ env-geometry fix (smoke pass 3): food cannot spawn within damage_radius + 1 of any predator
+
+  predators:
+    enabled: true
+    count: 4
+    speed: 0.0
+    movement_pattern: stationary
+    detection_radius: 4
+    damage_radius: 3
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.2
+
+  health:
+    max_hp: 100.0
+    predator_damage: 25.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 8
+  generations: 4
+  episodes_per_eval: 25
+  learn_episodes_per_eval: 2000
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 8
+  checkpoint_every: 2
+  cma_diagonal: false
+  inheritance: none
+  fitness_survival_weight: 1.0
+  # Matches tei_on / weights_only — the M6.9+ campaign uses
+  # survival_rate as the primary metric so the cross-arm comparison
+  # measures the same scalar across all three arms.
+  fitness_metric: survival_rate
+  # NO ``transgenerational:`` block — control arm has no
+  # transmission mechanism (substrate or weights).
+
+hyperparam_schema:
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
+  - name: weight_init_scale
+    type: float
+    bounds: [0.5, 2.0]
+  - name: entropy_decay_episodes
+    type: int
+    bounds: [200, 2000]

@@ -2091,8 +2091,12 @@ class CoevolutionLoop:
                     parent_warm_start,
                     child_capture_path,
                     # Co-evolution doesn't use the transgenerational
-                    # cascade — None preserves the 12-element worker-
-                    # tuple shape (`tei_prior_source` slot).
+                    # cascade — None preserves the worker-tuple shape
+                    # (``tei_prior_source`` slot).
+                    None,
+                    # Co-evolution does not emit eval_diagnostics.jsonl
+                    # — None for ``diagnostics_path`` (13th slot;
+                    # mirrors ``EvolutionLoop._evaluate_in_worker``).
                     None,
                 ),
             )
@@ -2662,6 +2666,7 @@ class CoevolutionLoop:
                 warm_start_path,  # gap-3 fix: load post-PPO checkpoint when Lamarckian
                 None,  # weight_capture_path — probe must not write germline weights
                 None,  # tei_prior_source — probes never use the transgenerational substrate
+                None,  # diagnostics_path — probes write to a separate probe-output stream
             )
             return float(_evaluate_in_worker(args))
 

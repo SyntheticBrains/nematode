@@ -393,6 +393,7 @@ class LearnedPerformanceFitness:
         warm_start_path_override: Path | None = None,
         weight_capture_path: Path | None = None,
         tei_prior_source: tuple[Path, float, int] | None = None,
+        diagnostics_path: Path | None = None,
     ) -> float:
         """Run K train + L eval and return ``eval_successes / L``.
 
@@ -493,13 +494,34 @@ class LearnedPerformanceFitness:
                     "delete it and re-run F0 extraction."
                 )
                 raise RuntimeError(msg) from exc
+            # Resolve the decay_shape from the live config when available;
+            # M6 callers (no transgenerational config block) fall through
+            # to the cascade's geometric default for byte-equivalence.
+            from quantumnematode.agent.transgenerational_memory import DecayShape
+
+            decay_shape: DecayShape = "geometric"
+            if (
+                sim_config.evolution is not None
+                and sim_config.evolution.transgenerational is not None
+            ):
+                decay_shape = sim_config.evolution.transgenerational.decay_shape
             for _ in range(lineage_depth):
                 substrate = TransgenerationalMemory.inherit_from(
                     [substrate],
                     decay_factor=decay_factor,
+                    decay_shape=decay_shape,
                 )
             if hasattr(brain, "tei_prior"):
-                brain.tei_prior = substrate.logit_bias  # type: ignore[attr-defined]
+                # Pass the substrate object directly. The LSTMPPO
+                # ``tei_prior`` attribute accepts either a legacy 1-D
+                # Tensor (M6 byte-equivalence path) or a
+                # ``TransgenerationalMemory`` (M6.9+ sensory-conditional
+                # path). When the substrate carries a bias_network, the
+                # brain dispatches via ``substrate.apply_to_logits`` per
+                # step with a sensory_input built from BrainParams; when
+                # bias_network is None, the brain's legacy path uses the
+                # substrate's constant logit_bias.
+                brain.tei_prior = substrate  # type: ignore[attr-defined]
             else:
                 logger.warning(
                     "tei_prior_source set but brain type %s does not expose a "
@@ -627,10 +649,66 @@ class LearnedPerformanceFitness:
             if result.termination_reason == TerminationReason.HEALTH_DEPLETED:
                 deaths += 1
         success_rate = successes / eval_count
-        # Survival-weighted fitness (default 0.0 = byte-equivalent legacy
-        # behaviour). With weight > 0 the F0 elite is selected on a
-        # composite that penalises pathogen deaths, reducing the
-        # food-grabber-dominance bias observed at survival_weight=0
-        # on transgenerational pathogen-avoidance configs.
         death_rate = deaths / eval_count
-        return success_rate * (1.0 - evolution_config.fitness_survival_weight * death_rate)
+        survival_rate = 1.0 - death_rate
+        # Composite (M3/M6 byte-equivalent default): success-weighted
+        # by survival, with ``fitness_survival_weight`` controlling
+        # how harshly deaths penalise foraging score.
+        composite = success_rate * (1.0 - evolution_config.fitness_survival_weight * death_rate)
+        # Dispatch on ``fitness_metric``. The composite is the
+        # M3/M6/M5 legacy default — preserves byte-equivalence for
+        # configs that don't set the field. ``"survival_rate"`` is
+        # the M6.9+ PR-A spec primary metric (the decision-gate
+        # tripwires T1 + T3 + cross-arm primary verdict are
+        # specified against it). ``"success_rate"`` is a pure
+        # foraging measure for ablation studies.
+        if evolution_config.fitness_metric == "survival_rate":
+            fitness = survival_rate
+        elif evolution_config.fitness_metric == "success_rate":
+            fitness = success_rate
+        else:  # composite (default)
+            fitness = composite
+        # Optional per-genome telemetry side-channel. The decision-gate
+        # machinery (T1 envelope check, T3 M6-floor-to-beat, post-hoc
+        # aggregator) needs survival_rate + success_rate alongside the
+        # scalar fitness; the per_gen_elites.jsonl writer in the loop
+        # only records the scalar. ``diagnostics_path`` lets the loop
+        # request a structured per-eval line written here, indexed by
+        # the loop's (gen, genome_id) tuple. JSON-Lines so the loop
+        # can append from parallel workers without a global lock —
+        # each line is self-contained.
+        if diagnostics_path is not None:
+            import json as _json
+            import os as _os
+
+            diagnostics_path.parent.mkdir(parents=True, exist_ok=True)
+            row = {
+                "genome_id": genome.genome_id,
+                "generation": genome.generation,
+                "seed": seed,
+                "eval_count": eval_count,
+                "successes": successes,
+                "deaths": deaths,
+                "success_rate": success_rate,
+                "survival_rate": survival_rate,
+                "composite": composite,
+                "fitness": fitness,
+                "fitness_metric": evolution_config.fitness_metric,
+                "fitness_survival_weight": evolution_config.fitness_survival_weight,
+            }
+            # Atomic append: POSIX guarantees ``O_APPEND`` writes are
+            # atomic up to ``PIPE_BUF`` (≥ 4096 bytes on Linux/macOS).
+            # Our JSON row is ~300 bytes — comfortably under that
+            # boundary — so concurrent worker writes cannot interleave.
+            # ``with`` block ensures FD is closed even on exception.
+            payload = (_json.dumps(row) + "\n").encode("utf-8")
+            fd = _os.open(
+                diagnostics_path,
+                _os.O_WRONLY | _os.O_APPEND | _os.O_CREAT,
+                0o644,
+            )
+            try:
+                _os.write(fd, payload)
+            finally:
+                _os.close(fd)
+        return fitness

@@ -3017,3 +3017,113 @@ class TestMultiAgentPredatorTargeting:
         )
         # With only "default" agent, predators should still work
         env.update_predators()
+
+
+class TestMinFoodPredatorDistance:
+    """Test min_food_predator_distance constraint on food placement.
+
+    The M6.9+ env-geometry fix (smoke pass 3 finding) — without this
+    constraint food can spawn inside or adjacent to a predator's
+    damage zone and the PPO agent cannot find a middle-ground
+    "forage-while-avoiding" policy regardless of reward shape.
+    """
+
+    def test_default_zero_preserves_legacy_behaviour(self):
+        """``min_food_predator_distance=0`` SHALL not affect food placement.
+
+        Byte-equivalence with the pre-M6.9+ env: foods may spawn
+        anywhere predators are not at the same cell. M3 / M4 / M5 / M6
+        reproduction tests rely on this default.
+        """
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),  # corner so agent_exclusion_radius doesn't shadow the test cells
+            seed=42,
+            foraging=ForagingParams(
+                foods_on_grid=5,
+                target_foods_to_collect=10,
+                min_food_distance=2,
+                agent_exclusion_radius=2,  # small so the test cells remain reachable
+                min_food_predator_distance=0,  # default
+            ),
+            predator=PredatorParams(enabled=True, count=2, speed=0.0),
+        )
+        env.predators[0].position = (5, 5)
+        env.predators[1].position = (15, 15)
+        env.foods = []  # clear pre-existing
+        # With min_food_predator_distance=0, a food position directly
+        # adjacent to a predator should pass validation.
+        assert env._is_valid_food_position((6, 5)) is True
+        # Even at the predator's exact cell, the only blockers are
+        # other foods and the agent — predator coincidence is allowed
+        # under the default constraint.
+        assert env._is_valid_food_position((5, 5)) is True
+
+    def test_positive_distance_blocks_food_near_predator(self):
+        """``min_food_predator_distance>0`` SHALL reject food cells within range of any predator."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            seed=42,
+            foraging=ForagingParams(
+                foods_on_grid=5,
+                target_foods_to_collect=10,
+                min_food_distance=2,
+                agent_exclusion_radius=2,
+                min_food_predator_distance=5,
+            ),
+            predator=PredatorParams(enabled=True, count=2, speed=0.0),
+        )
+        env.predators[0].position = (5, 5)
+        env.predators[1].position = (15, 15)
+        env.foods = []  # clear pre-existing
+        # Cell at Euclidean distance < 5 from predator 0 SHALL be rejected.
+        assert env._is_valid_food_position((6, 5)) is False  # dist=1
+        assert env._is_valid_food_position((7, 5)) is False  # dist=2
+        assert env._is_valid_food_position((9, 5)) is False  # dist=4
+        # Cell at distance >= 5 from BOTH predators SHALL be accepted.
+        # (10, 5): dist to pred 0 = 5.0, dist to pred 1 = sqrt(125) ≈ 11.18
+        assert env._is_valid_food_position((10, 5)) is True
+
+    def test_constraint_skipped_when_predators_disabled(self):
+        """``min_food_predator_distance`` SHALL be ignored if predators disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            seed=42,
+            foraging=ForagingParams(
+                foods_on_grid=5,
+                target_foods_to_collect=10,
+                min_food_distance=2,
+                min_food_predator_distance=10,
+            ),
+            predator=PredatorParams(enabled=False, count=0),
+        )
+        env.foods = []
+        # Far from agent (at 10, 10), outside agent_exclusion_radius.
+        # Predator constraint should not fire (no predators enabled).
+        assert env._is_valid_food_position((1, 1)) is True
+
+    def test_food_actually_spawns_outside_predator_zone(self):
+        """All initial foods SHALL spawn at distance >= constraint from every predator."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),  # corner so agent_exclusion doesn't dominate
+            seed=42,
+            foraging=ForagingParams(
+                foods_on_grid=4,
+                target_foods_to_collect=10,
+                min_food_distance=2,
+                agent_exclusion_radius=2,
+                min_food_predator_distance=4,
+            ),
+            predator=PredatorParams(enabled=True, count=2, speed=0.0),
+        )
+        # End-to-end check: every spawned food respects the constraint.
+        for food in env.foods:
+            for pred in env.predators:
+                d = ((food[0] - pred.position[0]) ** 2 + (food[1] - pred.position[1]) ** 2) ** 0.5
+                assert d >= 4, (
+                    f"food at {food} is only {d:.2f} cells from predator at "
+                    f"{pred.position} but min_food_predator_distance=4"
+                )
