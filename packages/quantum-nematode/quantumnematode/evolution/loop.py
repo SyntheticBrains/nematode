@@ -844,25 +844,21 @@ class EvolutionLoop:
             input_features=input_features,
         )
 
-        # Save the substrate at the canonical ``.tei.pt`` path produced
-        # by the strategy's ``checkpoint_path``. The path-builder is
-        # the single source of truth for reader/writer alignment.
-        substrate_path = self.inheritance.checkpoint_path(
-            self.output_dir,
-            generation=0,
-            genome_id=elite_id,
+        # Save the substrate at the canonical ``.tei.pt`` path. This
+        # path is hardcoded here (NOT routed through
+        # ``self.inheritance.checkpoint_path``) because the strategy's
+        # ``checkpoint_path`` returns the WEIGHTS path under composed
+        # mode (M6.13 ``LamarckianTransgenerationalInheritance`` —
+        # canonical ``.pt`` for F1+ warm-start use). Asking the
+        # composed strategy for the substrate path would collide with
+        # the elite's weights file: substrate bytes would overwrite
+        # the weights ``.pt`` and F1 children would fail to warm-start.
+        # The substrate path-builder lives here in the loop because
+        # only the loop knows it needs a ``.tei.pt`` (substrate file)
+        # vs the strategy's ``.pt`` (weights file).
+        substrate_path = (
+            self.output_dir / "inheritance" / "gen-000" / f"genome-{elite_id}.tei.pt"
         )
-        if substrate_path is None:
-            # Defensive: the strategy contract guarantees a non-None
-            # path for transgenerational, but if a future strategy
-            # variant returns None we should log and skip rather than
-            # crash the run.
-            logger.warning(
-                "F0 substrate extraction: strategy.checkpoint_path returned "
-                "None for elite_id=%s; substrate not saved.",
-                elite_id,
-            )
-            return
         save_substrate(substrate, substrate_path)
 
         # Record the path so F1+ workers (a follow-up commit's
@@ -1675,18 +1671,20 @@ class EvolutionLoop:
                 #    (Lamarckian OR Baldwin) updates ``_selected_parent_ids``
                 #    so the next generation's children can populate the
                 #    lineage CSV's ``inherited_from`` column.
-                # 2. Weight-IO GC guard: only weight-flow strategies
-                #    (Lamarckian) write per-genome checkpoints, so only
-                #    they need GC.  Phase one clears all remaining files
-                #    in the previous-generation directory (keep=[]) because
-                #    the gen-N children that inherited from them have just
+                # 2. Weight-IO GC guard: weight-flow strategies
+                #    (Lamarckian AND M6.13 composed) write per-genome
+                #    checkpoints, so only they need GC. Phase one
+                #    clears all remaining files in the previous-
+                #    generation directory (keep=[]) because the gen-N
+                #    children that inherited from them have just
                 #    finished evaluating, so those checkpoints are no
-                #    longer needed; no-op when gen is zero.  Phase two
-                #    keeps only ``next_selected`` in the current-generation
-                #    directory so the about-to-evaluate gen-(N+1) children
-                #    can read their parent file.  Steady-state disk usage
-                #    after this step is at most ``inheritance_elite_count``
-                #    files, bounded over the whole run.
+                #    longer needed; no-op when gen is zero. Phase two
+                #    keeps only ``next_selected`` in the current-
+                #    generation directory so the about-to-evaluate
+                #    gen-(N+1) children can read their parent file.
+                #    Steady-state disk usage after this step is at most
+                #    ``inheritance_elite_count`` files, bounded over
+                #    the whole run.
                 next_selected: list[str] = []
                 if self._inheritance_records_lineage():
                     next_selected = self.inheritance.select_parents(

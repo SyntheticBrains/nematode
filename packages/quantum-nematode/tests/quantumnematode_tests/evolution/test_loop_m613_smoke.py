@@ -401,33 +401,46 @@ def test_composed_mode_threads_tei_prior_source_at_f1(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_composed_mode_suppresses_f0_inline_gc(tmp_path: Path) -> None:
-    """Under composed mode, ``_run_f0_substrate_extraction``'s inline ``.pt`` GC SHALL be SKIPPED.
+def test_composed_mode_inline_gc_skipped_preserves_f0_pt(tmp_path: Path) -> None:
+    """Under composed mode, the inline GC at ``_run_f0_substrate_extraction`` tail SHALL be skipped.
 
-    Sets up the on-disk state with a few F0 ``.pt`` files + a ``.tei.pt``
-    substrate, then calls the inline GC guard directly via
-    ``_combined_inheritance_active``-gated reasoning. Under composed
-    mode the F0 ``.pt`` files MUST survive so F1 children can
-    warm-start; under pure-TEI they MUST be deleted (the substrate
-    is the only artefact needed for F1+).
-
-    This test exercises the predicate + an end-to-end on-disk
-    assertion rather than monkey-patching the full
-    ``_run_f0_substrate_extraction`` path (which depends on
-    encoder.decode + load_weights internals not in scope here).
+    On-disk regression: simulates the post-extraction state (F0
+    ``.pt`` files exist alongside a ``.tei.pt`` substrate) and runs
+    just the inline-GC branch by calling ``_combined_inheritance_active``
+    + the guard's conditional body. Under composed mode the F0
+    ``.pt`` files MUST survive; under pure-TEI they MUST be deleted.
     """
     sim_config = _sim_config_with_predators()
 
-    # Composed-mode loop SHOULD suppress.
+    def _seed_f0_dir(loop_output_dir: Path) -> tuple[Path, Path, Path]:
+        gen0 = loop_output_dir / "inheritance" / "gen-000"
+        gen0.mkdir(parents=True, exist_ok=True)
+        elite_pt = gen0 / "genome-elite.pt"
+        other_pt = gen0 / "genome-other.pt"
+        substrate = gen0 / "genome-elite.tei.pt"
+        elite_pt.write_bytes(b"weights-elite")
+        other_pt.write_bytes(b"weights-other")
+        substrate.write_bytes(b"substrate-bytes")
+        return elite_pt, other_pt, substrate
+
+    # Composed-mode: inline GC skipped → both .pt + .tei.pt survive
     composed_loop = _make_loop(
         tmp_path / "composed",
         sim_config=sim_config,
         transgenerational=_composed_tei_config(),
         inheritance="weights+transgenerational",
     )
-    assert composed_loop._combined_inheritance_active() is True
+    composed_elite, composed_other, composed_substrate = _seed_f0_dir(composed_loop.output_dir)
+    # Inline-GC branch (lifted from _run_f0_substrate_extraction):
+    if not composed_loop._combined_inheritance_active():
+        for path in (composed_loop.output_dir / "inheritance" / "gen-000").iterdir():
+            if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
+                path.unlink(missing_ok=True)
+    assert composed_elite.exists()
+    assert composed_other.exists()
+    assert composed_substrate.exists()
 
-    # Pure-TEI loop SHOULD NOT suppress.
+    # Pure-TEI: inline GC fires → .pt files deleted, .tei.pt survives
     pure_tei_loop = _make_loop(
         tmp_path / "pure_tei",
         sim_config=sim_config,
@@ -449,4 +462,46 @@ def test_composed_mode_suppresses_f0_inline_gc(tmp_path: Path) -> None:
         ),
         inheritance="transgenerational",
     )
-    assert pure_tei_loop._combined_inheritance_active() is False
+    pure_tei_elite, pure_tei_other, pure_tei_substrate = _seed_f0_dir(pure_tei_loop.output_dir)
+    if not pure_tei_loop._combined_inheritance_active():
+        for path in (pure_tei_loop.output_dir / "inheritance" / "gen-000").iterdir():
+            if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
+                path.unlink(missing_ok=True)
+    assert not pure_tei_elite.exists()
+    assert not pure_tei_other.exists()
+    assert pure_tei_substrate.exists()
+
+
+def test_composed_mode_substrate_path_does_not_collide_with_weights_pt(tmp_path: Path) -> None:
+    """The substrate ``.tei.pt`` save path SHALL NOT collide with the elite's weights ``.pt``.
+
+    Regression for the B1 bug caught at Commit 4 review: under
+    composed mode, ``LamarckianTransgenerationalInheritance.checkpoint_path``
+    returns ``.pt`` (canonical M3 weights path, needed for F1+
+    warm-start). The substrate-extraction pipeline MUST NOT use the
+    strategy's ``checkpoint_path`` to compute its own ``.tei.pt`` save
+    path — that would overwrite the elite's weights file. The fix
+    is to hardcode the ``.tei.pt`` path inside ``_run_f0_substrate_extraction``.
+
+    This test asserts the two paths differ by extension AND that
+    the composed strategy's ``checkpoint_path`` does not return the
+    substrate path.
+    """
+    composed = LamarckianTransgenerationalInheritance()
+    pure_tei = TransgenerationalInheritance()
+
+    composed_weights_path = composed.checkpoint_path(tmp_path, generation=0, genome_id="elite")
+    pure_tei_substrate_path = pure_tei.checkpoint_path(tmp_path, generation=0, genome_id="elite")
+    assert composed_weights_path is not None
+    assert pure_tei_substrate_path is not None
+    # The canonical M6.13 substrate path the loop builds inline:
+    canonical_substrate_path = tmp_path / "inheritance" / "gen-000" / "genome-elite.tei.pt"
+
+    # Composed strategy returns the WEIGHTS path; substrate path MUST differ.
+    assert composed_weights_path.suffix == ".pt"
+    assert not composed_weights_path.name.endswith(".tei.pt")
+    assert composed_weights_path != canonical_substrate_path
+
+    # Pure-TEI strategy returns the SUBSTRATE path; matches canonical.
+    assert pure_tei_substrate_path.name.endswith(".tei.pt")
+    assert pure_tei_substrate_path == canonical_substrate_path
