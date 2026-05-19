@@ -371,6 +371,7 @@ class EvolutionLoop:
             "lamarckian": "weights",
             "baldwin": "trait",
             "transgenerational": "transgenerational",
+            "weights+transgenerational": "weights+transgenerational",
         }[self.evolution_config.inheritance]
         if self.inheritance.kind() != _expected_kind:
             msg = (
@@ -557,20 +558,22 @@ class EvolutionLoop:
 
         Gates the weight-IO code paths in the loop: per-genome
         ``checkpoint_path`` computation, the GC step, and the
-        warm-start lookup.  Currently only :class:`LamarckianInheritance`
-        returns ``"weights"`` from ``kind()``.
+        warm-start lookup. Fires for ``LamarckianInheritance``
+        (kind=``"weights"``) AND ``LamarckianTransgenerationalInheritance``
+        (kind=``"weights+transgenerational"``, the M6.13 composed mode
+        that reuses the M3 warm-start path alongside substrate flow).
         """
-        return self.inheritance.kind() == "weights"
+        return self.inheritance.kind() in {"weights", "weights+transgenerational"}
 
     def _inheritance_records_lineage(self) -> bool:
         """Return True iff the active strategy populates the lineage CSV's `inherited_from`.
 
         Gates the per-generation ``select_parents`` call and the
-        ``_selected_parent_ids`` update.  :class:`LamarckianInheritance`,
-        :class:`BaldwinInheritance`, and
-        :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`
-        all return ``True`` here; only :class:`NoInheritance` returns
-        ``False``.
+        ``_selected_parent_ids`` update. Fires for every non-no-op
+        strategy: ``LamarckianInheritance``, ``BaldwinInheritance``,
+        ``TransgenerationalInheritance``, and
+        ``LamarckianTransgenerationalInheritance`` (M6.13 composed).
+        Only ``NoInheritance`` returns ``False``.
         """
         return self.inheritance.kind() != "none"
 
@@ -579,14 +582,31 @@ class EvolutionLoop:
 
         Gates the F0 Substrate Extraction Pipeline (F0 weight capture
         + post-eval extraction + ``.tei.pt`` save + F0 ``.pt`` GC).
-        Distinct from ``_inheritance_active()`` (which gates Lamarckian
-        per-child weight-IO) because the transgenerational substrate
-        flow is a separate loop-level pipeline that runs ONCE at gen
-        0, not a per-child operation. Currently only
-        :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`
-        returns ``"transgenerational"`` from ``kind()``.
+        Distinct from ``_inheritance_active()`` (which gates the
+        weight-IO checkpoint flow); both predicates fire simultaneously
+        under composed mode so the loop runs BOTH the weight-IO
+        path AND the substrate-flow path in parallel.
+
+        Fires for ``TransgenerationalInheritance`` (kind=
+        ``"transgenerational"``, M6.9+ pure-TEI) AND
+        ``LamarckianTransgenerationalInheritance`` (kind=
+        ``"weights+transgenerational"``, M6.13 composed).
         """
-        return self.inheritance.kind() == "transgenerational"
+        return self.inheritance.kind() in {"transgenerational", "weights+transgenerational"}
+
+    def _combined_inheritance_active(self) -> bool:
+        """Return True iff the active strategy is the M6.13 composed mode.
+
+        Used to gate behaviour that fires ONLY under composed mode
+        (e.g. suppressing the F0 substrate-extraction pipeline's
+        internal `.pt` GC pass at lines 855-866 of
+        ``_run_f0_substrate_extraction`` — under composed mode the
+        F0 elite's `.pt` must survive that pass for F1 children to
+        warm-start from; the main-loop Lamarckian GC at the end of
+        the same generation iteration then keeps only the elite per
+        ``_inheritance_active()``'s widened scope).
+        """
+        return self.inheritance.kind() == "weights+transgenerational"
 
     def _append_per_gen_elite(
         self,
@@ -860,10 +880,25 @@ class EvolutionLoop:
         # so the ``.tei.pt`` we just wrote is NOT affected (different
         # suffix). For safety we additionally filter explicitly: walk
         # the directory and delete only ``.pt`` files (not ``.tei.pt``).
-        gen_dir = self.output_dir / "inheritance" / "gen-000"
-        for path in gen_dir.iterdir():
-            if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
-                path.unlink(missing_ok=True)
+        #
+        # M6.13 composed mode: this GC SHALL be SKIPPED. The composed
+        # mode reuses the M3 per-child weight-IO flow, so F1+ children
+        # warm-start from the F0 elite's ``.pt`` — it MUST survive
+        # this pipeline. The main-loop GC at ``run()``'s post-
+        # ``select_parents`` block (around line 1670) already keeps
+        # only the F0 elite per ``_inheritance_active()``'s widened
+        # scope (composed mode now satisfies that predicate), so the
+        # net effect under composed mode is byte-equivalent to pure
+        # M3: exactly one F0 ``.pt`` survives at the moment gen 1
+        # begins, indexed by the elite's genome_id, alongside the
+        # ``.tei.pt`` substrate. Pure-TEI (kind=``"transgenerational"``)
+        # is unchanged — main-loop GC does NOT fire for that kind, so
+        # this inline GC remains load-bearing.
+        if not self._combined_inheritance_active():
+            gen_dir = self.output_dir / "inheritance" / "gen-000"
+            for path in gen_dir.iterdir():
+                if path.suffix == ".pt" and not path.name.endswith(".tei.pt"):
+                    path.unlink(missing_ok=True)
 
     def _build_probe_env_if_configured(self) -> DynamicForagingEnvironment | None:
         """Construct a transient env for F0 probe-ring sampling, or return None.
@@ -1349,7 +1384,7 @@ class EvolutionLoop:
     ) -> tuple[Path | None, Path | None, str]:
         """Compute one child's (parent_warm_start, child_capture_path, inherited_from).
 
-        Four-branch switch on the strategy's ``kind()``:
+        Five-branch switch on the strategy's ``kind()``:
 
         - ``"none"`` → returns ``(None, None, "")``.  The loop's
           per-child step short-circuits to from-scratch evaluation
@@ -1362,18 +1397,14 @@ class EvolutionLoop:
         - ``"transgenerational"`` → returns ``(None, capture_path, parent_id)``
           where ``capture_path`` is non-None at gen 0 (F0 weight
           capture for the post-eval substrate extraction pipeline)
-          and ``None`` at gen 1+. Transgenerational inheritance
-          does not use per-child weight-IO inheritance paths at
-          F1+; the F0 substrate is captured by a separate loop-level
-          pipeline that fires AFTER F0 evaluation completes, reads
-          the captured ``.pt`` files, extracts the bias via
-          ``TransgenerationalMemory.extract_from_brain``, saves
-          the substrate as ``.tei.pt``, and GCs the F0 ``.pt``
-          files. F1+ workers receive the substrate path via a
-          separate kwarg into ``fitness.evaluate`` (a follow-up
-          addition), not via the per-child ``weight_capture_path``
-          field. The lineage CSV's ``inherited_from`` column records
-          the F0 elite ID from gen 1 onwards (same as Baldwin).
+          and ``None`` at gen 1+. Pure-TEI does not use per-child
+          weight-IO inheritance paths at F1+; the F0 substrate is
+          captured by a separate loop-level pipeline that fires AFTER
+          F0 evaluation completes, reads the captured ``.pt`` files,
+          extracts the bias, saves the substrate as ``.tei.pt``, and
+          GCs the F0 ``.pt`` files. F1+ workers receive the substrate
+          path via a separate ``tei_prior_source`` kwarg into
+          ``fitness.evaluate``, not via ``weight_capture_path``.
         - ``"weights"`` (Lamarckian) → returns the full
           ``(parent_warm_start, child_capture_path, parent_id)``
           tuple.  ``parent_warm_start`` is the ``Path`` to the parent's
@@ -1381,6 +1412,16 @@ class EvolutionLoop:
           ``assign_parent`` returned ``None``, or (c) the parent file
           is unexpectedly missing on disk (defensive fallback with a
           ``logger.warning``).
+        - ``"weights+transgenerational"`` (M6.13 composed) → returns
+          the SAME tuple shape as ``"weights"`` (per-child warm-start
+          path + capture path + parent ID). The composed-mode branch
+          handles both F0 capture AND F1+ warm-start through the
+          M3-pattern weight-IO path; the substrate flow is orthogonal
+          and goes through ``_compute_tei_prior_source`` /
+          ``_run_f0_substrate_extraction`` as it would for pure-TEI.
+          F1+ workers receive BOTH ``warm_start_path_override`` (from
+          this branch) AND ``tei_prior_source`` (from the substrate-
+          flow path) in their ``fitness.evaluate`` call.
         """
         kind = self.inheritance.kind()
         if kind == "none":
@@ -1407,7 +1448,15 @@ class EvolutionLoop:
                 )
                 return None, capture_path, parent_id
             return None, None, parent_id
-        # The remaining branch handles ``kind == "weights"`` (Lamarckian).
+        # Both ``"weights"`` (Lamarckian) and ``"weights+transgenerational"``
+        # (M6.13 composed) follow the M3 per-child warm-start + capture
+        # pattern: both write per-genome ``.pt`` files for every child
+        # (including F1+), and both warm-start each F1+ child from its
+        # parent's saved checkpoint. Composed mode additionally threads
+        # the F0 substrate through ``tei_prior_source`` (handled by
+        # ``_compute_tei_prior_source``), but that's an orthogonal flow.
+        # The strategy's ``checkpoint_path`` returns the canonical
+        # ``inheritance/gen-NNN/genome-<gid>.pt`` path for both kinds.
         child_capture_path = self.inheritance.checkpoint_path(self.output_dir, gen, gid)
         parent_id = self.inheritance.assign_parent(child_idx, self._selected_parent_ids)
         if parent_id is None:
