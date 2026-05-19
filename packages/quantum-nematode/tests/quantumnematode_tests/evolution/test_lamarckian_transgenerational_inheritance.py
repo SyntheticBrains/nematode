@@ -132,6 +132,29 @@ def test_select_parents_length_mismatch_raises() -> None:
         composed.select_parents(["a", "b"], [0.5], 0)
 
 
+def test_select_parents_multi_elite_returns_top_n() -> None:
+    """``elite_count=3`` SHALL return the top 3 IDs ranked by fitness.
+
+    Multi-elite is reserved for future work (the validator currently
+    rejects ``elite_count != 1`` from YAML), but the strategy SHALL
+    support the slice structurally so a future config-validator
+    relaxation can enable it without a code change to the strategy.
+    Tests parity with Lamarckian's existing multi-elite slice
+    behaviour across an even-fitness 4-element population.
+    """
+    composed = LamarckianTransgenerationalInheritance(elite_count=3)
+    lamarckian = LamarckianInheritance(elite_count=3)
+    gen_ids = ["alpha", "bravo", "charlie", "delta"]
+    fitnesses = [0.3, 0.9, 0.5, 0.7]
+    expected = ["bravo", "delta", "charlie"]  # top-3 descending
+    assert composed.select_parents(gen_ids, fitnesses, 0) == expected
+    assert composed.select_parents(gen_ids, fitnesses, 0) == lamarckian.select_parents(
+        gen_ids,
+        fitnesses,
+        0,
+    )
+
+
 # ---------------------------------------------------------------------------
 # assign_parent — round-robin parity with Lamarckian
 # ---------------------------------------------------------------------------
@@ -210,15 +233,8 @@ def test_implements_inheritance_strategy_protocol() -> None:
 
     The ``InheritanceStrategy`` Protocol is ``@runtime_checkable``; passing
     isinstance proves the class implements every Protocol method.
+    Kind-set membership is covered cross-file in
+    ``test_inheritance.test_kind_values_are_in_known_set`` to avoid
+    duplicating the set-membership assertion across two files.
     """
     assert isinstance(LamarckianTransgenerationalInheritance(), InheritanceStrategy)
-
-
-def test_kind_value_in_widened_protocol_literal() -> None:
-    """``kind()`` value SHALL be in the M6.13-widened five-value set.
-
-    Catches accidental literal-value regressions; the Protocol's Literal
-    annotation widened from four to five values in M6.13.
-    """
-    known = {"none", "weights", "trait", "transgenerational", "weights+transgenerational"}
-    assert LamarckianTransgenerationalInheritance().kind() in known
