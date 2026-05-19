@@ -183,6 +183,26 @@ def test_primary_verdict_indeterminate_when_under_powered_in_full() -> None:
     assert verdict["indeterminate_under_powered"] is True
 
 
+def test_primary_verdict_stop_not_indeterminate_under_pilot_mode() -> None:
+    """Pilot mode with n=1 SHALL emit STOP (NOT INDETERMINATE).
+
+    Pilots run at n=1 by design — INDETERMINATE is reserved for
+    under-powered FULL campaigns where the operator must re-run with
+    missing seeds. The pilot's primary verdict artefact is
+    ``pilot_pivot_decision.md``, not this raw cross-arm verdict;
+    surfacing INDETERMINATE here would falsely flag the pilot as
+    unfinished when the pilot was never meant to produce a definitive
+    cross-arm verdict.
+    """
+    mod = _load_aggregator_module()
+    seed_evals, stats = _go_verdict_inputs(mod)
+    stats["mean_delta"] = 0.03  # forces STOP path
+    stats["per_seed_deltas"] = [0.03]  # n=1 (pilot)
+    verdict = mod.compute_cross_arm_primary_verdict(seed_evals, stats, mode="pilot")
+    assert verdict["verdict"] == "STOP"
+    assert verdict["indeterminate_under_powered"] is False
+
+
 # ---------------------------------------------------------------------------
 # M6.13 D6 pivot-table detectors
 # ---------------------------------------------------------------------------
