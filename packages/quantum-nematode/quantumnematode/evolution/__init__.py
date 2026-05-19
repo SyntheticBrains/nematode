@@ -31,6 +31,9 @@ from quantumnematode.evolution.inheritance import (
     LamarckianInheritance,
     NoInheritance,
 )
+from quantumnematode.evolution.lamarckian_transgenerational_inheritance import (
+    LamarckianTransgenerationalInheritance,
+)
 from quantumnematode.evolution.lineage import CSV_HEADER, LineageTracker
 from quantumnematode.evolution.loop import CHECKPOINT_VERSION, EvolutionLoop
 from quantumnematode.evolution.transgenerational_inheritance import TransgenerationalInheritance
@@ -51,6 +54,7 @@ __all__ = [
     "InheritanceStrategy",
     "LSTMPPOEncoder",
     "LamarckianInheritance",
+    "LamarckianTransgenerationalInheritance",
     "LearnedPerformanceFitness",
     "LineageTracker",
     "MLPPPOEncoder",
