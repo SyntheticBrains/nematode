@@ -1,6 +1,6 @@
 # 019: Transgenerational Memory Redesign — M6.9+ (PR-A)
 
-**Status**: `complete (framework + calibration + M3 validation shipped) — STOP ⛔ on the pure-TEI hypothesis`. The framework changes (sensory-conditional bias-network substrate, env-derived F0 probe ring with safe-zone variants, fitness_metric dispatch with per-genome eval_diagnostics, M6.10 audit-B reward/env redesign incl. min_food_predator_distance, gradient_proximity reward mode, 4-predator + damage=25 calibration landing T1 mean elite 0.67 mid-envelope) are validated and shipped. M3 weights_only inheritance reproduced on the new env at **+17pp delta vs from-scratch control** (F0=0.84, F1=0.88, F2=0.84, F3=0.76; control F1-F3 mean 0.50). **Three independent pilots at n=1 each — with progressively richer substrate (sensory-conditional MLP only, +safe_probes extraction, +clamp lifted 2.0→6.0 for 3× more inference-time authority) — all collapsed to tei_on F1+ ≈ 0 at K=0.** The cross-arm delta `tei_on − control` is **-49pp** (substrate is *worse* than from-scratch baseline at K=0). The pure-TEI hypothesis as formulated in PR-A — "audit-A/B/C-corrected sensory-conditional substrate carries a measurable pathogen-conditional avoidance signal F0→F1+ without retraining" — is **falsified** by the empirical data, **corroborated** by 2024-2026 deep-RL literature (no published K=0 recurrent-policy substrate transfer), and **clarified** by 2025 wet-lab TEI literature (Kaletsky resolution: wet-lab TEI is a single-circuit *switch/prior*, not a *policy*). PR-B (TEI+weights) **NOT** triggered per pre-registered criterion. M6.13+ scope: reframe TEI as a *prior on M3* (K>0 with small inherited bias), aligning with the actual wet-lab mechanism.
+**Status**: `complete (framework + calibration + M3 validation shipped) — STOP ⛔ on the pure-TEI hypothesis`. The framework changes (sensory-conditional bias-network substrate, env-derived F0 probe ring with safe-zone variants, fitness_metric dispatch with per-genome eval_diagnostics, M6.10 audit-B reward/env redesign incl. min_food_predator_distance, gradient_proximity reward mode, 4-predator + damage=25 calibration landing T1 mean elite 0.67 mid-envelope) are validated and shipped. M3 weights_only inheritance reproduced on the new env at **+17.5pp delta vs from-scratch control** (weights_only F0=0.575, F1=0.695, F2=0.675, F3=0.635; control F1-F3 mean 0.493 — source: pilot aggregator [`cross_arm_verdict.csv`](../../../artifacts/logbooks/019-transgenerational-memory-redesign/pilot/cross_arm_verdict.csv)). **Three independent pilots at n=1 each — with progressively richer substrate (sensory-conditional MLP only, +safe_probes extraction, +clamp lifted 2.0→6.0 for 3× more inference-time authority) — all collapsed to tei_on F1+ ≈ 0 at K=0.** The cross-arm delta `tei_on − control` is **-49pp** (substrate is *worse* than from-scratch baseline at K=0). The pure-TEI hypothesis as formulated in PR-A — "audit-A/B/C-corrected sensory-conditional substrate carries a measurable pathogen-conditional avoidance signal F0→F1+ without retraining" — is **falsified** by the empirical data, **corroborated** by 2024-2026 deep-RL literature (no published K=0 recurrent-policy substrate transfer), and **clarified** by 2025 wet-lab TEI literature (Kaletsky resolution: wet-lab TEI is a single-circuit *switch/prior*, not a *policy*). PR-B (TEI+weights) **NOT** triggered per pre-registered criterion. M6.13+ scope: reframe TEI as a *prior on M3* (K>0 with small inherited bias), aligning with the actual wet-lab mechanism.
 
 **Branch**: `feat/m69-transgenerational-redesign`.
 
@@ -83,7 +83,7 @@ Three pilots at n=1 seed × pop 8 × 4 gens × 3 arms, ~2-3 wall-h each:
 | **2** | + safe_probes (commit 3efcaaed) | 0.84 / 0.00 / 0.04 / 0.00 | D6 row 2 — substrate did learn food-conditional bias on RIGHT axis but FORWARD/STAY saturated at clamp |
 | **3** | + LOGIT_BIAS_CLAMP 2.0→6.0 (commit e9f2817d) | 0.84 / 0.00 / 0.04 / 0.00 | D6 row 2 — 3× more inference-time authority made NO difference |
 
-**Cross-arm primary verdict (all three pilots)**: STOP. `tei_on − control` mean delta = **-49pp** (substrate is much *worse* than from-scratch). Per-arm verdicts: tei_on STOP / weights_only PIVOT (M3 reproduces at +17pp) / control STOP.
+**Cross-arm primary verdict (all three pilots)**: STOP. `tei_on − control` mean delta = **-49pp** (substrate is much *worse* than from-scratch). Per-arm verdicts: tei_on STOP / weights_only PIVOT (M3 reproduces at +17.5pp) / control STOP.
 
 **`weights_only` and `control` arms are bit-identical across pilots 1-3** (deterministic, same seed) — only tei_on differs by substrate variant, all three null.
 
@@ -91,13 +91,15 @@ Three pilots at n=1 seed × pop 8 × 4 gens × 3 arms, ~2-3 wall-h each:
 
 `weights_only` (lamarckian + K=2000 retrain at every gen) succeeds robustly:
 
+Numbers below are sourced verbatim from the pilot aggregator's [`retention_table.csv`](../../../artifacts/logbooks/019-transgenerational-memory-redesign/pilot/retention_table.csv) and [`cross_arm_verdict.csv`](../../../artifacts/logbooks/019-transgenerational-memory-redesign/pilot/cross_arm_verdict.csv) (load-bearing artefacts; the +17.5pp F1-F3 delta is the aggregator's recorded cross-arm mean for `weights_only − control`).
+
 | Gen | weights_only | control | M3 delta |
 |---|---|---|---|
-| 0 (F0) | 0.84 | 0.84 | 0 |
-| 1 (F1) | 0.88 | 0.60 | **+28pp** |
-| 2 (F2) | 0.84 | 0.64 | **+20pp** |
-| 3 (F3) | 0.76 | 0.80 | -4pp |
-| **F1-F3 mean** | **0.83** | **0.68** | **+17pp** |
+| 0 (F0) | 0.575 | 0.575 | 0 |
+| 1 (F1) | 0.695 | 0.420 | **+27.5pp** |
+| 2 (F2) | 0.675 | 0.535 | **+14.0pp** |
+| 3 (F3) | 0.635 | 0.525 | **+11.0pp** |
+| **F1-F3 mean** | **0.668** | **0.493** | **+17.5pp** |
 
 M3 reproduces on the M6.10-redesigned env. This is the headline POSITIVE finding of M6.9+ PR-A: the audit-B env redesign didn't break the M3 mechanism.
 
@@ -160,7 +162,7 @@ Variant (a) was the steel-manned strongest argument against stopping. Empiricall
 
 **M6.9+ PR-A: STOP ⛔ on the pure-TEI hypothesis. SHIPPED ✅ on the framework + M3 validation.**
 
-The literal aggregator output across three pilots: **tei_on STOP / weights_only PIVOT / control STOP** with cross-arm primary verdict STOP and `tei_on − control` mean delta = **-49pp**. This verdict is **load-bearing** because (1) all four tripwires passed at calibration → the env is properly calibrated for the test, (2) three substrate variants all produced the same null, (3) the failure mode is mechanistically understood, (4) the 2024-2026 literature corroborates the null, and (5) the M3 control on the same env succeeds at +17pp — the framework is not broken.
+The literal aggregator output across three pilots: **tei_on STOP / weights_only PIVOT / control STOP** with cross-arm primary verdict STOP and `tei_on − control` mean delta = **-49pp**. This verdict is **load-bearing** because (1) all four tripwires passed at calibration → the env is properly calibrated for the test, (2) three substrate variants all produced the same null, (3) the failure mode is mechanistically understood, (4) the 2024-2026 literature corroborates the null, and (5) the M3 control on the same env succeeds at +17.5pp — the framework is not broken.
 
 **PR-B (TEI+weights symmetric-compute control) NOT triggered** per the pre-registered criterion: "PR-B only triggered if PR-A's `tei_on > control` shows a non-zero pure-TEI floor signal." `tei_on − control` is **-49pp**, far from non-zero positive. PR-B as originally scoped would compare against a confirmed null floor and produce an uninterpretable result.
 
@@ -174,7 +176,7 @@ The current M6.9+ substrate IS a low-bandwidth bias prior; the issue is that we 
 
 This is **not** a failed experiment in the sense of "we did the work and got nothing useful." This is **a decisive negative result on a sharply-posed hypothesis**, with mechanistic understanding, literature alignment, and a clear reframe path. The framework that shipped — sensory-conditional substrate, env-derived probes, fitness/reward calibration, three-arm aggregator with noise-aware verdict, calibrated env — is broadly reusable for M6.13+ and any follow-up TEI work.
 
-**M3 (Lamarckian inheritance) remains the strongest concrete Phase 5 result**: +47pp in M3 pilot (logbook 013); +17pp validated on the new M6.10 env (this work). Combined, M3 is the production-grade inheritance mechanism for the codebase.
+**M3 (Lamarckian inheritance) remains the strongest concrete Phase 5 result**: +47pp in M3 pilot (logbook 013); +17.5pp validated on the new M6.10 env (this work). Combined, M3 is the production-grade inheritance mechanism for the codebase.
 
 ## Compute spent
 
