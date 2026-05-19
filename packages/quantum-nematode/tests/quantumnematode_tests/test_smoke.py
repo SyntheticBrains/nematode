@@ -45,6 +45,9 @@ SIMULATION_CONFIGS = [
     # M6.9+ TEI re-evaluation TEI-on config. Same env-block-only
     # rationale as the M6 entry above.
     "evolution/transgenerational_m69_tei_on.yml",
+    # M6.13 TEI-as-prior-on-M3 tei_weights config. Same env-block-only
+    # rationale; tests that the composed inheritance YAML parses.
+    "evolution/tei_prior_m613_tei_weights.yml",
 ]
 
 

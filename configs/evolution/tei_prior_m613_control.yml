@@ -1,0 +1,173 @@
+# M6.13 TEI-as-prior-on-M3 — control arm (no inheritance, K_test from scratch)
+# ============================================================================
+#
+# Arm 3 of 3 in the M6.13 three-arm campaign. Provides the environmental
+# ceiling at K=K_test: each F1+ child is a fresh TPE-sampled genome
+# trained from scratch for K=K_test episodes. No weight flow, no
+# substrate, no inheritance signal.
+#
+# Cross-arm structural constraint (per configuration-system spec
+# § M6.13 Three-Arm YAML Structural Pairing): this YAML MUST OMIT the
+# ``transgenerational:`` block entirely. ``inheritance: none`` with
+# the block present would also pass the validator, but for symmetry
+# with weights_only and clarity of intent, the block is absent.
+#
+# Env + brain + reward subtrees are byte-identical to
+# tei_prior_m613_tei_weights.yml AND tei_prior_m613_weights_only.yml
+# — all three arms share the audit-B-corrected env (grid_size: 15,
+# predators.count: 4, foods.count: 8, min_food_predator_distance: 4,
+# reward_mode: gradient_proximity), the fitness_survival_weight: 1.0
+# parity, and the fitness_metric: survival_rate primary metric. The
+# launcher shell asserts at launch.
+#
+# F1+ semantics: K=K_test (default 1000) every gen, fresh TPE genome
+# per child, no warm-start. K_test MUST match the K used in the
+# tei_weights F1+ lawn_schedule AND in weights_only's
+# learn_episodes_per_eval. The aggregator's primary cross-arm
+# verdict compares tei_weights F1+ vs weights_only F1+ (not vs this
+# arm); this control provides the floor reference for the secondary
+# verdicts (weights_only − control = M3 re-reproduction at K_test;
+# tei_weights − control = composed arm vs floor, sanity check).
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 500
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    weight_init_scale: 1.0
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+  reward_mode: gradient_proximity
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 15
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 8
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+    min_food_predator_distance: 4
+
+  predators:
+    enabled: true
+    count: 4
+    speed: 0.0
+    movement_pattern: stationary
+    detection_radius: 4
+    damage_radius: 3
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.2
+
+  health:
+    max_hp: 100.0
+    predator_damage: 25.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 8
+  generations: 4
+  episodes_per_eval: 25
+  # K_test for ALL gens. No inheritance, no warm-start; every child
+  # trains from scratch for this many episodes. MUST match
+  # weights_only.learn_episodes_per_eval AND tei_weights F1+
+  # lawn_schedule K; launcher parity check asserts.
+  learn_episodes_per_eval: 1000
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 8
+  checkpoint_every: 2
+  cma_diagonal: false
+  inheritance: none
+  fitness_survival_weight: 1.0
+  fitness_metric: survival_rate
+  # NO ``transgenerational:`` block — control has no transmission.
+
+hyperparam_schema:
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
+  - name: weight_init_scale
+    type: float
+    bounds: [0.5, 2.0]
+  - name: entropy_decay_episodes
+    type: int
+    bounds: [200, 2000]
