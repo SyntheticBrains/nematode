@@ -198,9 +198,11 @@ evolution:
     # passes per design.md § D5.
     #
     # NB: composed mode REQUIRES F1+ ppo_train_episodes > 0 (validator
-    # at config_loader.py:1633). The K_test value here MUST also
-    # match the launcher's K_TEST env var so the parity check sees
-    # all three arms at the same K.
+    # at config_loader.py:1633). The K_test value below MUST match
+    # weights_only.learn_episodes_per_eval AND
+    # control.learn_episodes_per_eval (across all three production
+    # arm YAMLs) — the launcher's parity check asserts this so the
+    # cross-arm primary verdict compares the same compute budget.
     lawn_schedule:
       - generation: 0
         pathogen_lawns_enabled: true

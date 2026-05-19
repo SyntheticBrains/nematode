@@ -258,6 +258,36 @@ esac
 check_cross_arm_parity
 check_scipy_available
 
+# Smoke-mode K disclosure: the parity check above audits the PRODUCTION
+# trio (CONFIG_TEI_WEIGHTS / CONFIG_WEIGHTS_ONLY / CONFIG_CONTROL) —
+# correct for pilot/full because production is what gets dispatched
+# there. Under --smoke the dispatched YAML is CONFIG_SMOKE (a
+# weights_only variant whose K is calibration-tunable per design.md
+# § D5). The operator may edit CONFIG_SMOKE between passes without
+# updating production until T3' locks K_test in — that's the
+# expected calibration flow. To prevent "parity passed but smoke ran
+# at a different K" confusion, surface the smoke YAML's K and flag
+# any divergence from production as INFORMATIONAL (not an error).
+if [[ "${MODE}" == "smoke" ]]; then
+    SMOKE_K=$(uv run python -c "
+import yaml
+cfg = yaml.safe_load(open('${CONFIG_SMOKE}'))
+print((cfg.get('evolution') or {}).get('learn_episodes_per_eval', 'MISSING'))
+")
+    PROD_WO_K=$(uv run python -c "
+import yaml
+cfg = yaml.safe_load(open('${CONFIG_WEIGHTS_ONLY}'))
+print((cfg.get('evolution') or {}).get('learn_episodes_per_eval', 'MISSING'))
+")
+    if [[ "${SMOKE_K}" != "${PROD_WO_K}" ]]; then
+        echo "INFO: smoke YAML K=${SMOKE_K} differs from production weights_only K=${PROD_WO_K}."
+        echo "      This is expected during K_test calibration; the smoke dispatches at K=${SMOKE_K}."
+        echo "      After T3' locks K_test, update the production trio to match before --pilot."
+    else
+        echo "Smoke K=${SMOKE_K} matches production K=${PROD_WO_K}."
+    fi
+fi
+
 mkdir -p "${OUTPUT_ROOT}"
 echo "============================================================"
 echo "M6.13 TEI-as-prior-on-M3 — mode: ${MODE}"
