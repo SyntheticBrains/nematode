@@ -1,13 +1,13 @@
-# M6.13 TEI-as-prior-on-M3 — control arm (no inheritance, K_test from scratch)
+# TEI-as-prior-on-Lamarckian — control arm (no inheritance, K_test from scratch)
 # ============================================================================
 #
-# Arm 3 of 3 in the M6.13 three-arm campaign. Provides the environmental
-# ceiling at K=K_test: each F1+ child is a fresh TPE-sampled genome
-# trained from scratch for K=K_test episodes. No weight flow, no
-# substrate, no inheritance signal.
+# Arm 3 of 3 in the composed-mode three-arm campaign. Provides the
+# environmental ceiling at K=K_test: each F1+ child is a fresh
+# TPE-sampled genome trained from scratch for K=K_test episodes.
+# No weight flow, no substrate, no inheritance signal.
 #
-# Cross-arm structural constraint (per configuration-system spec
-# § M6.13 Three-Arm YAML Structural Pairing): this YAML MUST OMIT the
+# Cross-arm structural constraint (per configuration-system spec's
+# three-arm YAML structural pairing rule): this YAML MUST OMIT the
 # ``transgenerational:`` block entirely. ``inheritance: none`` with
 # the block present would also pass the validator, but for symmetry
 # with weights_only and clarity of intent, the block is absent.
@@ -26,8 +26,8 @@
 # learn_episodes_per_eval. The aggregator's primary cross-arm
 # verdict compares tei_weights F1+ vs weights_only F1+ (not vs this
 # arm); this control provides the floor reference for the secondary
-# verdicts (weights_only − control = M3 re-reproduction at K_test;
-# tei_weights − control = composed arm vs floor, sanity check).
+# verdicts (weights_only − control = Lamarckian re-reproduction at
+# K_test; tei_weights − control = composed arm vs floor, sanity check).
 
 max_steps: 1000
 

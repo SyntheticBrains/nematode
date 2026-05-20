@@ -1,15 +1,16 @@
-"""Tests for the M6.13 three-arm aggregator.
+"""Tests for the composed-mode three-arm aggregator.
 
-Covers the M6.13 spec scenarios:
-- ``openspec/changes/add-tei-prior-on-m3/specs/evolution-framework/spec.md``
-  § M6.13 Cross-Arm Primary Verdict (Reframed) — verdict pair is
-  ``tei_weights - weights_only`` (NOT M6.9+'s ``tei_on - control``).
-- § M6.13 Pre-Declared Pilot Pivot Table — six D6 rows + deterministic
+Covers the spec scenarios under
+``openspec/changes/add-tei-prior-on-m3/specs/evolution-framework/spec.md``:
+- Cross-arm primary verdict (reframed) — verdict pair is
+  ``tei_weights - weights_only`` (not the prior pure-TEI campaign's
+  ``tei_on - control``).
+- Pre-declared pilot pivot table — six D6 rows + deterministic
   classification.
-- § M6.14 Trigger Decision — trigger emission on GO; null-finding
-  note on STOP.
-- Per-arm gate (mirrors PR-A; no M6.13-specific change but covered
-  for three-arm sanity).
+- Frequency-prior follow-up trigger — trigger emission on GO;
+  null-finding note on STOP.
+- Per-arm gate (mirrors the prior pure-TEI campaign; covered for
+  three-arm sanity).
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ AGGREGATOR_PATH = PROJECT_ROOT / "scripts/campaigns/aggregate_m613_pilot.py"
 
 
 def _load_aggregator_module() -> ModuleType:
-    """Dynamically load the M6.13 aggregator script as a module."""
+    """Dynamically load the composed-mode aggregator script as a module."""
     spec = importlib.util.spec_from_file_location("aggregate_m613_pilot", AGGREGATOR_PATH)
     assert spec is not None
     assert spec.loader is not None
@@ -43,7 +44,7 @@ def _load_aggregator_module() -> ModuleType:
 
 
 def test_three_arm_aggregator_uses_m613_arm_names() -> None:
-    """``EXPECTED_ARMS`` SHALL include the three M6.13 arms in spec order."""
+    """``EXPECTED_ARMS`` SHALL include the three composed-mode arms in spec order."""
     mod = _load_aggregator_module()
     assert mod.EXPECTED_ARMS == ("tei_weights", "weights_only", "control")
 
@@ -76,7 +77,7 @@ def _make_survival_table_for_primary_pair(
     weights_only_f1_plus: list[float],
     seeds: list[int],
 ) -> dict:
-    """Build a survival table for the M6.13 primary pair (tei_weights vs weights_only).
+    """Build a survival table for the composed-mode primary pair (tei_weights vs weights_only).
 
     F0 row is also seeded (same value as F1+) so the per-arm gate
     helper can resolve a non-None F0 baseline. Per-seed F1+ mean is
@@ -119,7 +120,7 @@ def test_cross_arm_stats_primary_pair_uses_tei_weights_minus_weights_only() -> N
 
 
 # ---------------------------------------------------------------------------
-# Cross-arm primary verdict — reframed for M6.13
+# Cross-arm primary verdict — reframed for composed mode
 # ---------------------------------------------------------------------------
 
 
@@ -204,7 +205,7 @@ def test_primary_verdict_stop_not_indeterminate_under_pilot_mode() -> None:
 
 
 # ---------------------------------------------------------------------------
-# M6.13 D6 pivot-table detectors
+# D6 pivot-table detectors
 # ---------------------------------------------------------------------------
 
 
@@ -235,20 +236,20 @@ def test_pivot_detector_substrate_interferes() -> None:
     assert mod._detect_substrate_interferes(results) is False
 
 
-def test_pivot_detector_m3_saturation() -> None:
-    """Row 5: weights_only F0 ≈ F1 SHALL fire the M3-saturation detector."""
+def test_pivot_detector_lamarckian_saturation() -> None:
+    """Row 5: weights_only F0 ≈ F1 SHALL fire the Lamarckian-saturation detector."""
     mod = _load_aggregator_module()
     saturated_table = {
         ("weights_only", 42, 0): 0.70,
         ("weights_only", 42, 1): 0.71,  # within 2pp of F0 → saturated
     }
-    assert mod._detect_m3_saturation(saturated_table, [42]) is True
+    assert mod._detect_lamarckian_saturation(saturated_table, [42]) is True
 
     headroom_table = {
         ("weights_only", 42, 0): 0.40,
         ("weights_only", 42, 1): 0.60,  # 20pp gain — clear headroom
     }
-    assert mod._detect_m3_saturation(headroom_table, [42]) is False
+    assert mod._detect_lamarckian_saturation(headroom_table, [42]) is False
 
 
 def test_pivot_detector_ppo_destabilised() -> None:
@@ -338,7 +339,7 @@ def test_pilot_pivot_emits_substrate_inert_at_zero_delta(tmp_path: Path) -> None
     mod._write_pilot_pivot_decision(observations, out)
     text = out.read_text()
     assert "substrate inert (D6 row 1)" in text
-    assert "M6.13 hypothesis is" in text
+    assert "substrate-accelerates-retraining hypothesis is falsified" in text
 
 
 def test_pilot_pivot_emits_substrate_interferes_at_negative_delta(tmp_path: Path) -> None:
@@ -348,14 +349,14 @@ def test_pilot_pivot_emits_substrate_interferes_at_negative_delta(tmp_path: Path
     out = tmp_path / "pilot_pivot_decision.md"
     mod._write_pilot_pivot_decision(observations, out)
     text = out.read_text()
-    assert "substrate INTERFERES with M3 (D6 row 4)" in text
+    assert "substrate INTERFERES with Lamarckian (D6 row 4)" in text
     assert "substrate-policy alignment" in text
 
 
-def test_pilot_pivot_emits_m3_saturation_pivot(tmp_path: Path) -> None:
-    """Row 5: weights_only F0 ≈ F1 SHALL emit M3-saturation pivot (highest priority)."""
+def test_pilot_pivot_emits_lamarckian_saturation_pivot(tmp_path: Path) -> None:
+    """Row 5: weights_only F0 ≈ F1 SHALL emit Lamarckian-saturation pivot (highest priority)."""
     mod = _load_aggregator_module()
-    # M3 saturated AND tei_weights also looks good — row 5 wins by branch order.
+    # Lamarckian saturated AND tei_weights also looks good — row 5 wins by branch order.
     observations = _make_pilot_observations(
         mean_delta=0.07,  # Would otherwise hit row 2
         survival_table={
@@ -368,7 +369,7 @@ def test_pilot_pivot_emits_m3_saturation_pivot(tmp_path: Path) -> None:
     out = tmp_path / "pilot_pivot_decision.md"
     mod._write_pilot_pivot_decision(observations, out)
     text = out.read_text()
-    assert "M3-saturation (D6 row 5)" in text
+    assert "Lamarckian saturation (D6 row 5)" in text
     assert "drop K_test to 500" in text
 
 
@@ -394,28 +395,28 @@ def test_pilot_pivot_emits_ppo_destabilised_pivot(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# M6.14 trigger + M6.13 null-finding note emission
+# Frequency-prior trigger + null-finding note emission
 # ---------------------------------------------------------------------------
 
 
-def test_m614_trigger_emitted_on_go(tmp_path: Path) -> None:
-    """``_write_m614_frequency_prior_trigger`` SHALL emit the M6.14 scaffold note."""
+def test_frequency_prior_trigger_emitted_on_go(tmp_path: Path) -> None:
+    """``_write_m614_frequency_prior_trigger`` SHALL emit the follow-up scaffold note."""
     mod = _load_aggregator_module()
     out = tmp_path / "m614_frequency_prior_trigger.md"
     mod._write_m614_frequency_prior_trigger(out)
     text = out.read_text()
-    assert "M6.14 trigger" in text
+    assert "Frequency-prior-ablation trigger" in text
     assert "add-frequency-prior-ablation" in text
     # The trigger references the design choice: minimum-viable substrate.
     assert "frequency prior" in text.lower() or "frequency-prior" in text
 
 
-def test_m613_null_finding_note_emitted_on_stop(tmp_path: Path) -> None:
-    """``_write_m613_null_finding_note`` SHALL document the null + close the M6 thread."""
+def test_null_finding_note_emitted_on_stop(tmp_path: Path) -> None:
+    """``_write_m613_null_finding_note`` SHALL document the null + close the TEI thread."""
     mod = _load_aggregator_module()
     out = tmp_path / "m613_null_finding_note.md"
     mod._write_m613_null_finding_note(out)
     text = out.read_text()
-    assert "M6.13 null finding" in text
-    assert "M6.14 is **NOT** scaffolded" in text or "M6.14 is NOT scaffolded" in text
-    assert "closes the M6 thread" in text
+    assert "TEI-as-prior null finding" in text
+    assert "**NOT** scaffolded" in text or "NOT scaffolded" in text
+    assert "closes the TEI thread" in text

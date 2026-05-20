@@ -166,9 +166,9 @@ def test_kind_values_are_in_known_set() -> None:
     """All shipped strategies SHALL return a value from the known kind set.
 
     Guards against future strategies leaking new literals without
-    updating the loop's branching logic. The set widened in M6.9+
-    (added ``"transgenerational"``) and again in M6.13 (added
-    ``"weights+transgenerational"`` for the composed strategy).
+    updating the loop's branching logic. The set widened with the
+    addition of ``"transgenerational"`` (pure-TEI) and
+    ``"weights+transgenerational"`` (composed) strategies.
     """
     known = {"none", "weights", "trait", "transgenerational", "weights+transgenerational"}
     assert NoInheritance().kind() in known

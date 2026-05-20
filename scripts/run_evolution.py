@@ -529,10 +529,10 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
     elif evolution_config.inheritance == "transgenerational":
         inheritance = TransgenerationalInheritance()
     elif evolution_config.inheritance == "weights+transgenerational":
-        # M6.13 composed mode: M3 weight-inheritance path AND
+        # Composed mode: Lamarckian weight-inheritance path AND
         # F0-substrate-flow path active in parallel; single-elite-
-        # broadcast per the validator's M6.13 rule. See OpenSpec
-        # change `add-tei-prior-on-m3`.
+        # broadcast per the validator. See OpenSpec change
+        # `add-tei-prior-on-m3`.
         inheritance = LamarckianTransgenerationalInheritance(
             elite_count=evolution_config.inheritance_elite_count,
         )

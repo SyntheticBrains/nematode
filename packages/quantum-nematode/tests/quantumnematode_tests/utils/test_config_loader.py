@@ -1077,11 +1077,11 @@ class TestEvolutionConfigTransgenerationalPairing:
 
 
 class TestEvolutionConfigComposedInheritancePairing:
-    """Validate the M6.13 ``weights+transgenerational`` composed-mode pairing rules.
+    """Validate the ``weights+transgenerational`` composed-mode pairing rules.
 
     Cross-product matrix: every (inheritance, transgenerational.enabled)
     cell SHOULD be either explicitly accepted or explicitly rejected. The
-    PR-A archived M6.9+ tests cover the four pre-M6.13 cells; this class
+    archived pure-TEI tests cover the four pre-existing cells; this class
     covers the new composed cell plus the previously-tested cells that
     interact with the widened pairing rules.
     """
@@ -1161,10 +1161,10 @@ class TestEvolutionConfigComposedInheritancePairing:
     def test_composed_mode_with_f1_k_zero_rejected(self) -> None:
         """Composed mode SHALL reject any F1+ ``ppo_train_episodes=0`` entry.
 
-        Pure-TEI (M6.9+) uses K=0 at F1+ to test the floor; composed mode
-        is the opposite — the substrate prior acts ON the training
-        distribution, not in place of it. K=0 at F1+ would silently
-        collapse composed mode to pure-TEI.
+        Pure-TEI uses K=0 at F1+ to test the floor; composed mode is the
+        opposite — the substrate prior acts ON the training distribution,
+        not in place of it. K=0 at F1+ would silently collapse composed
+        mode to pure-TEI.
         """
         with pytest.raises(
             ValueError,
@@ -1209,8 +1209,8 @@ class TestEvolutionConfigComposedInheritancePairing:
     def test_pure_tei_mode_with_f1_k_zero_still_accepted(self) -> None:
         """The composed-mode F1+ K>0 rule SHALL NOT apply to pure-TEI ``transgenerational``.
 
-        Pure-TEI is M6.9+'s K=0 floor test; the M6.13 K>0 sub-rule fires
-        only when ``inheritance == "weights+transgenerational"``.
+        Pure-TEI is the K=0 floor test; the composed-mode K>0 sub-rule
+        fires only when ``inheritance == "weights+transgenerational"``.
         """
         cfg = EvolutionConfig(
             algorithm="cmaes",
@@ -1241,8 +1241,8 @@ class TestEvolutionConfigComposedInheritancePairing:
     def test_lamarckian_with_substrate_enabled_rejected(self) -> None:
         """``inheritance=lamarckian`` + ``transgenerational.enabled=True`` SHALL raise.
 
-        The M6.13 widening accepts ``weights+transgenerational`` as a
-        substrate-enabled pairing — but it MUST NOT accept plain
+        The composed-mode widening accepts ``weights+transgenerational``
+        as a substrate-enabled pairing — but it MUST NOT accept plain
         Lamarckian with a substrate block. Users who want both inheritance
         types must use the new composed value.
         """
@@ -1285,10 +1285,10 @@ class TestEvolutionConfigComposedInheritancePairing:
     def test_lamarckian_without_substrate_block_accepted(self) -> None:
         """``inheritance=lamarckian`` + ``transgenerational=None`` SHALL load cleanly.
 
-        This is the M6.13 campaign's ``weights_only`` arm shape. The
-        cross-product matrix's M3 baseline cell — covered indirectly
-        by thousands of M3 tests, but worth pinning explicitly so the
-        validator's behaviour at this cell can't silently regress.
+        This is the composed-mode campaign's ``weights_only`` arm shape.
+        The cross-product matrix's Lamarckian-baseline cell — covered
+        indirectly by many Lamarckian tests, but worth pinning explicitly
+        so the validator's behaviour at this cell can't silently regress.
         """
         cfg = EvolutionConfig(
             algorithm="cmaes",
@@ -1305,8 +1305,8 @@ class TestEvolutionConfigComposedInheritancePairing:
     def test_none_without_substrate_block_accepted(self) -> None:
         """``inheritance=none`` + ``transgenerational=None`` SHALL load cleanly.
 
-        This is the M6.13 campaign's ``control`` arm shape AND the
-        default for every non-inheritance evolution run. Pins the
+        This is the composed-mode campaign's ``control`` arm shape AND
+        the default for every non-inheritance evolution run. Pins the
         cross-product matrix's (none, None) positive cell.
         """
         cfg = EvolutionConfig(

@@ -1,10 +1,10 @@
 """Unit tests for :mod:`quantumnematode.evolution.lamarckian_transgenerational_inheritance`.
 
 The composed strategy mirrors :class:`LamarckianInheritance` exactly on
-``select_parents`` / ``assign_parent`` / ``checkpoint_path`` (the M3
+``select_parents`` / ``assign_parent`` / ``checkpoint_path`` (the
 single-elite-broadcast contract) and adds the new
-``"weights+transgenerational"`` kind literal to drive the M6.13 loop
-dispatch. The tests below assert per-method parity with Lamarckian
+``"weights+transgenerational"`` kind literal to drive composed-mode
+loop dispatch. The tests below assert per-method parity with Lamarckian
 where appropriate, distinctness from both parent strategies on
 ``kind()``, and protocol-conformance.
 """
@@ -78,7 +78,7 @@ def test_kind_distinct_from_either_parent_strategy() -> None:
 
     The whole point of a fifth literal is to drive distinct loop dispatch;
     accidentally returning ``"weights"`` (Lamarckian) or ``"transgenerational"``
-    (M6.9+ pure-TEI) would silently route the composed strategy through one
+    (pure-TEI) would silently route the composed strategy through one
     of the existing branches.
     """
     composed = LamarckianTransgenerationalInheritance().kind()
@@ -106,8 +106,8 @@ def test_select_parents_returns_top_fitness_lex_tie_broken() -> None:
 def test_select_parents_matches_lamarckian_byte_for_byte() -> None:
     """Composed.select_parents output SHALL equal Lamarckian.select_parents for same inputs.
 
-    Cross-strategy parity test: the composed strategy reuses the M3
-    selection rule by construction. This test pins that contract.
+    Cross-strategy parity test: the composed strategy reuses the
+    Lamarckian selection rule by construction. This test pins that contract.
     """
     composed = LamarckianTransgenerationalInheritance(elite_count=1)
     lamarckian = LamarckianInheritance(elite_count=1)

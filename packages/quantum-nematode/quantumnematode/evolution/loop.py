@@ -560,8 +560,8 @@ class EvolutionLoop:
         ``checkpoint_path`` computation, the GC step, and the
         warm-start lookup. Fires for ``LamarckianInheritance``
         (kind=``"weights"``) AND ``LamarckianTransgenerationalInheritance``
-        (kind=``"weights+transgenerational"``, the M6.13 composed mode
-        that reuses the M3 warm-start path alongside substrate flow).
+        (kind=``"weights+transgenerational"``, the composed mode that
+        reuses the Lamarckian warm-start path alongside substrate flow).
         """
         return self.inheritance.kind() in {"weights", "weights+transgenerational"}
 
@@ -572,7 +572,7 @@ class EvolutionLoop:
         ``_selected_parent_ids`` update. Fires for every non-no-op
         strategy: ``LamarckianInheritance``, ``BaldwinInheritance``,
         ``TransgenerationalInheritance``, and
-        ``LamarckianTransgenerationalInheritance`` (M6.13 composed).
+        ``LamarckianTransgenerationalInheritance`` (composed).
         Only ``NoInheritance`` returns ``False``.
         """
         return self.inheritance.kind() != "none"
@@ -588,14 +588,14 @@ class EvolutionLoop:
         path AND the substrate-flow path in parallel.
 
         Fires for ``TransgenerationalInheritance`` (kind=
-        ``"transgenerational"``, M6.9+ pure-TEI) AND
+        ``"transgenerational"``, pure-TEI) AND
         ``LamarckianTransgenerationalInheritance`` (kind=
-        ``"weights+transgenerational"``, M6.13 composed).
+        ``"weights+transgenerational"``, composed).
         """
         return self.inheritance.kind() in {"transgenerational", "weights+transgenerational"}
 
     def _combined_inheritance_active(self) -> bool:
-        """Return True iff the active strategy is the M6.13 composed mode.
+        """Return True iff the active strategy is the composed mode.
 
         Used to gate behaviour that fires ONLY under composed mode
         (e.g. suppressing the F0 substrate-extraction pipeline's
@@ -848,8 +848,8 @@ class EvolutionLoop:
         # path is hardcoded here (NOT routed through
         # ``self.inheritance.checkpoint_path``) because the strategy's
         # ``checkpoint_path`` returns the WEIGHTS path under composed
-        # mode (M6.13 ``LamarckianTransgenerationalInheritance`` —
-        # canonical ``.pt`` for F1+ warm-start use). Asking the
+        # mode (``LamarckianTransgenerationalInheritance`` returns
+        # the canonical ``.pt`` for F1+ warm-start use). Asking the
         # composed strategy for the substrate path would collide with
         # the elite's weights file: substrate bytes would overwrite
         # the weights ``.pt`` and F1 children would fail to warm-start.
@@ -875,18 +875,19 @@ class EvolutionLoop:
         # suffix). For safety we additionally filter explicitly: walk
         # the directory and delete only ``.pt`` files (not ``.tei.pt``).
         #
-        # M6.13 composed mode: this GC SHALL be SKIPPED. The composed
-        # mode reuses the M3 per-child weight-IO flow, so F1+ children
-        # warm-start from the F0 elite's ``.pt`` — it MUST survive
-        # this pipeline. The main-loop GC at ``run()``'s post-
-        # ``select_parents`` block (around line 1670) already keeps
-        # only the F0 elite per ``_inheritance_active()``'s widened
-        # scope (composed mode now satisfies that predicate), so the
-        # net effect under composed mode is byte-equivalent to pure
-        # M3: exactly one F0 ``.pt`` survives at the moment gen 1
-        # begins, indexed by the elite's genome_id, alongside the
-        # ``.tei.pt`` substrate. Pure-TEI (kind=``"transgenerational"``)
-        # is unchanged — main-loop GC does NOT fire for that kind, so
+        # Composed mode: this GC SHALL be SKIPPED. Composed mode
+        # reuses the Lamarckian per-child weight-IO flow, so F1+
+        # children warm-start from the F0 elite's ``.pt`` — it MUST
+        # survive this pipeline. The main-loop GC at ``run()``'s
+        # post-``select_parents`` block (around line 1670) already
+        # keeps only the F0 elite per ``_inheritance_active()``'s
+        # widened scope (composed mode now satisfies that predicate),
+        # so the net effect under composed mode is byte-equivalent to
+        # pure Lamarckian: exactly one F0 ``.pt`` survives at the
+        # moment gen 1 begins, indexed by the elite's genome_id,
+        # alongside the ``.tei.pt`` substrate. Pure-TEI
+        # (kind=``"transgenerational"``) is unchanged — main-loop GC
+        # does NOT fire for that kind, so
         # this inline GC remains load-bearing.
         if not self._combined_inheritance_active():
             gen_dir = self.output_dir / "inheritance" / "gen-000"
@@ -1406,12 +1407,12 @@ class EvolutionLoop:
           ``assign_parent`` returned ``None``, or (c) the parent file
           is unexpectedly missing on disk (defensive fallback with a
           ``logger.warning``).
-        - ``"weights+transgenerational"`` (M6.13 composed) → returns
-          the SAME tuple shape as ``"weights"`` (per-child warm-start
-          path + capture path + parent ID). The composed-mode branch
+        - ``"weights+transgenerational"`` (composed) → returns the
+          SAME tuple shape as ``"weights"`` (per-child warm-start path
+          + capture path + parent ID). The composed-mode branch
           handles both F0 capture AND F1+ warm-start through the
-          M3-pattern weight-IO path; the substrate flow is orthogonal
-          and goes through ``_compute_tei_prior_source`` /
+          Lamarckian-pattern weight-IO path; the substrate flow is
+          orthogonal and goes through ``_compute_tei_prior_source`` /
           ``_run_f0_substrate_extraction`` as it would for pure-TEI.
           F1+ workers receive BOTH ``warm_start_path_override`` (from
           this branch) AND ``tei_prior_source`` (from the substrate-
@@ -1443,11 +1444,11 @@ class EvolutionLoop:
                 return None, capture_path, parent_id
             return None, None, parent_id
         # Both ``"weights"`` (Lamarckian) and ``"weights+transgenerational"``
-        # (M6.13 composed) follow the M3 per-child warm-start + capture
-        # pattern: both write per-genome ``.pt`` files for every child
-        # (including F1+), and both warm-start each F1+ child from its
-        # parent's saved checkpoint. Composed mode additionally threads
-        # the F0 substrate through ``tei_prior_source`` (handled by
+        # (composed) follow the per-child warm-start + capture pattern:
+        # both write per-genome ``.pt`` files for every child (including
+        # F1+), and both warm-start each F1+ child from its parent's
+        # saved checkpoint. Composed mode additionally threads the F0
+        # substrate through ``tei_prior_source`` (handled by
         # ``_compute_tei_prior_source``), but that's an orthogonal flow.
         # The strategy's ``checkpoint_path`` returns the canonical
         # ``inheritance/gen-NNN/genome-<gid>.pt`` path for both kinds.
@@ -1670,7 +1671,7 @@ class EvolutionLoop:
                 #    so the next generation's children can populate the
                 #    lineage CSV's ``inherited_from`` column.
                 # 2. Weight-IO GC guard: weight-flow strategies
-                #    (Lamarckian AND M6.13 composed) write per-genome
+                #    (Lamarckian AND composed) write per-genome
                 #    checkpoints, so only they need GC. Phase one
                 #    clears all remaining files in the previous-
                 #    generation directory (keep=[]) because the gen-N

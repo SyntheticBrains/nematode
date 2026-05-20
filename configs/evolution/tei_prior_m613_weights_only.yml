@@ -1,13 +1,13 @@
-# M6.13 TEI-as-prior-on-M3 — weights_only arm (M3 Lamarckian baseline at K_test)
+# TEI-as-prior-on-Lamarckian — weights_only arm (Lamarckian baseline at K_test)
 # ============================================================================
 #
-# Arm 2 of 3 in the M6.13 three-arm campaign. Provides the M3-baseline
-# reference at K=K_test: each F1+ child inherits its parent's trained
-# weights (M3 Lamarckian pattern) and retrains K=K_test episodes per
-# gen. The substrate is absent — this arm has no TEI signal carrier,
-# only M3's weight flow.
+# Arm 2 of 3 in the composed-mode three-arm campaign. Provides the
+# Lamarckian-baseline reference at K=K_test: each F1+ child inherits
+# its parent's trained weights (Lamarckian pattern) and retrains
+# K=K_test episodes per gen. The substrate is absent — this arm has
+# no TEI signal carrier, only the Lamarckian weight flow.
 #
-# THE COMPARISON the M6.13 cross-arm primary verdict makes is
+# THE COMPARISON the cross-arm primary verdict makes is
 # tei_weights F1+ retention vs weights_only F1+ retention at the SAME
 # K_test value. Both arms warm-start F1+ children from F0 weights;
 # only tei_weights additionally applies the substrate prior during
@@ -15,8 +15,8 @@
 # acceleration contribution; null delta means the substrate is inert
 # under retraining.
 #
-# Cross-arm structural constraint (per configuration-system spec
-# § M6.13 Three-Arm YAML Structural Pairing): this YAML MUST OMIT the
+# Cross-arm structural constraint (per configuration-system spec's
+# three-arm YAML structural pairing rule): this YAML MUST OMIT the
 # ``transgenerational:`` block entirely. The validator accepts
 # ``lamarckian + transgenerational=None`` but rejects
 # ``lamarckian + transgenerational.enabled=False``.
@@ -142,9 +142,9 @@ evolution:
   # K_test for ALL gens (F0 + F1+). Lamarckian inheritance has no
   # per-gen schedule override, so this single value is what every
   # gen trains for. MUST match the K used in tei_weights' F1+
-  # lawn_schedule entries (1000 placeholder — calibration smoke
-  # picks the final value). The launcher's parity check asserts
-  # this alignment.
+  # lawn_schedule entries (placeholder — calibration smoke picks
+  # the final value). The launcher's parity check asserts this
+  # alignment.
   learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0

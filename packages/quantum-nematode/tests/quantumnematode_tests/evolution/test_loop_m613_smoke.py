@@ -1,4 +1,4 @@
-"""Loop-level smoke tests for the M6.13 composed inheritance mode.
+"""Loop-level smoke tests for the composed inheritance mode.
 
 Covers ``EvolutionLoop``'s integration of the
 ``LamarckianTransgenerationalInheritance`` strategy: the widened
@@ -75,7 +75,7 @@ def _sim_config_with_predators() -> SimulationConfig:
 def _composed_tei_config(generations: int = 2, f1_k: int = 10) -> TransgenerationalConfig:
     """Build a TransgenerationalConfig for composed-mode tests.
 
-    All F1+ entries have ``ppo_train_episodes > 0`` per the M6.13 validator
+    All F1+ entries have ``ppo_train_episodes > 0`` per the validator
     rule (composed mode requires retraining).
     """
     return TransgenerationalConfig(
@@ -165,8 +165,8 @@ def test_composed_mode_strategy_instance_mismatch_raises(tmp_path: Path) -> None
     """Loop init SHALL raise when the strategy instance's kind() mismatches the config string.
 
     Pins the kind-mismatch defensive check at loop.__init__ for the
-    new composed value. Without the ``_expected_kind`` dict entry
-    added in M6.13, the loop would either silently accept the wrong
+    new composed value. Without the composed-mode ``_expected_kind``
+    dict entry, the loop would either silently accept the wrong
     strategy OR KeyError on dict access.
     """
     sim_config = _sim_config_with_predators()
@@ -243,12 +243,13 @@ def test_composed_mode_fires_both_predicates(tmp_path: Path) -> None:
 
 
 def test_pure_tei_mode_does_not_fire_combined_predicate(tmp_path: Path) -> None:
-    """Pure-TEI (M6.9+) SHALL satisfy substrate predicate but NOT combined / weight-IO predicates.
+    """Pure-TEI SHALL satisfy substrate predicate but NOT combined / weight-IO predicates.
 
-    Regression check: the M6.13 widening MUST NOT accidentally make
-    ``_inheritance_active()`` or ``_combined_inheritance_active()``
-    fire for pure-TEI runs. Pure-TEI continues using the F0
-    extraction pipeline's internal GC; weight-IO is not active.
+    Regression check: the composed-mode predicate widening MUST NOT
+    accidentally make ``_inheritance_active()`` or
+    ``_combined_inheritance_active()`` fire for pure-TEI runs.
+    Pure-TEI continues using the F0 extraction pipeline's internal
+    GC; weight-IO is not active.
     """
     sim_config = _sim_config_with_predators()
     loop = _make_loop(
@@ -279,9 +280,9 @@ def test_pure_tei_mode_does_not_fire_combined_predicate(tmp_path: Path) -> None:
 
 
 def test_lamarckian_mode_does_not_fire_substrate_predicate(tmp_path: Path) -> None:
-    """M3 Lamarckian SHALL satisfy weight-IO predicate but NOT substrate predicate.
+    """Lamarckian SHALL satisfy weight-IO predicate but NOT substrate predicate.
 
-    Regression check: M3 baseline byte-equivalence — the widened
+    Regression check: Lamarckian byte-equivalence — the widened
     ``_substrate_inheritance_active()`` MUST NOT fire for pure
     Lamarckian.
     """
@@ -371,8 +372,8 @@ def test_composed_mode_threads_tei_prior_source_at_f1(tmp_path: Path) -> None:
     """At gen 1 under composed mode, ``_compute_tei_prior_source`` SHALL return a tuple.
 
     The substrate-flow path is shared with pure-TEI; under composed
-    mode it MUST also fire (the substrate flows alongside the M3
-    weight-inheritance path).
+    mode it MUST also fire (the substrate flows alongside the
+    Lamarckian weight-inheritance path).
     """
     sim_config = _sim_config_with_predators()
     loop = _make_loop(
@@ -475,13 +476,13 @@ def test_composed_mode_inline_gc_skipped_preserves_f0_pt(tmp_path: Path) -> None
 def test_composed_mode_substrate_path_does_not_collide_with_weights_pt(tmp_path: Path) -> None:
     """The substrate ``.tei.pt`` save path SHALL NOT collide with the elite's weights ``.pt``.
 
-    Regression for the B1 bug caught at Commit 4 review: under
-    composed mode, ``LamarckianTransgenerationalInheritance.checkpoint_path``
-    returns ``.pt`` (canonical M3 weights path, needed for F1+
-    warm-start). The substrate-extraction pipeline MUST NOT use the
-    strategy's ``checkpoint_path`` to compute its own ``.tei.pt`` save
-    path — that would overwrite the elite's weights file. The fix
-    is to hardcode the ``.tei.pt`` path inside ``_run_f0_substrate_extraction``.
+    Under composed mode, ``LamarckianTransgenerationalInheritance.checkpoint_path``
+    returns ``.pt`` (canonical Lamarckian weights path, needed for
+    F1+ warm-start). The substrate-extraction pipeline MUST NOT use
+    the strategy's ``checkpoint_path`` to compute its own ``.tei.pt``
+    save path — that would overwrite the elite's weights file. The
+    fix is to hardcode the ``.tei.pt`` path inside
+    ``_run_f0_substrate_extraction``.
 
     This test asserts the two paths differ by extension AND that
     the composed strategy's ``checkpoint_path`` does not return the
@@ -494,7 +495,7 @@ def test_composed_mode_substrate_path_does_not_collide_with_weights_pt(tmp_path:
     pure_tei_substrate_path = pure_tei.checkpoint_path(tmp_path, generation=0, genome_id="elite")
     assert composed_weights_path is not None
     assert pure_tei_substrate_path is not None
-    # The canonical M6.13 substrate path the loop builds inline:
+    # The canonical composed-mode substrate path the loop builds inline:
     canonical_substrate_path = tmp_path / "inheritance" / "gen-000" / "genome-elite.tei.pt"
 
     # Composed strategy returns the WEIGHTS path; substrate path MUST differ.

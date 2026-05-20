@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# M6.13 TEI-as-prior-on-M3 campaign — three-arm campaign + tripwires
+# TEI-as-prior-on-Lamarckian campaign — three-arm campaign + tripwires
 # ============================================================================
 #
 # Three subcommands map to the verification protocol described in
 # the OpenSpec change ``add-tei-prior-on-m3``:
 #
 #   --smoke   K_test calibration smoke. 1-2 seeds × pop 6 × 2 gens ×
-#             weights_only ONLY (the M3 baseline arm — calibration
-#             target is "find K_test where M3 has headroom AND beats
-#             control"). Operator reviews T1'-T4' tripwires before
-#             unblocking pilot. ~2-4 wall-hours.
+#             weights_only ONLY (the Lamarckian baseline arm —
+#             calibration target is "find K_test where Lamarckian
+#             retraining has headroom AND beats control"). Operator
+#             reviews T1'-T4' tripwires before unblocking pilot.
+#             ~2-4 wall-hours.
 #
 #   --pilot   Pilot. 1 seed × pop 8 × 4 gens × 3 arms (tei_weights,
 #             weights_only, control). ~3 wall-hours. Aggregator
@@ -19,8 +20,8 @@
 #
 #   --full    Full campaign (only if pilot GO). 4 seeds × pop 16 × 4
 #             gens × 3 arms. ~14-18 wall-hours. Aggregator emits
-#             per-seed + cross-seed + cross-arm verdict + M6.14 trigger
-#             (or null-finding note if STOP).
+#             per-seed + cross-seed + cross-arm verdict + follow-up
+#             trigger (or null-finding note if STOP).
 #
 # Launch-time sanity checks (per configuration-system spec scenarios
 # § "launch-time parity check fires on env-config divergence"):
@@ -30,7 +31,7 @@
 #      predators.predator_damage, foraging.min_food_predator_distance.
 #   3. K_test alignment MUST hold: weights_only.learn_episodes_per_eval
 #      AND control.learn_episodes_per_eval MUST match tei_weights F1+
-#      lawn_schedule entries' ppo_train_episodes. This is the M6.13
+#      lawn_schedule entries' ppo_train_episodes. This is the
 #      load-bearing check — the cross-arm primary verdict
 #      tei_weights − weights_only is only meaningful when both arms
 #      use the same compute budget.
@@ -45,14 +46,15 @@
 #   T1' F0 envelope: mean F0 survival_rate ∈ [0.30, 0.70] across
 #       smoke seeds. Reads from eval_diagnostics.jsonl.
 #   T2' Substrate diversity: pairwise CoV > 5% across calibration
-#       seeds' bias_network state_dicts. Reuses PR-A's
+#       seeds' bias_network state_dicts. Reuses the existing
 #       m69_substrate_diversity.py script unchanged — composed-mode
 #       substrate extraction is byte-identical to pure-TEI extraction.
 #       (Note: T2'/T4' require a tei_weights-arm smoke run on top of
 #       the weights_only K_test calibration; see "Smoke flow" below.)
-#   T3' M3-headroom (NEW M6.13 tripwire, load-bearing):
-#       ``weights_only F1+ ≤ 0.95 × F0`` (M3 has headroom) AND
-#       ``weights_only F1+ ≥ 1.2 × control F1+`` (M3 is doing useful
+#   T3' Lamarckian-headroom (load-bearing):
+#       ``weights_only F1+ ≤ 0.95 × F0`` (Lamarckian retraining has
+#       headroom) AND ``weights_only F1+ ≥ 1.2 × control F1+`` (it is
+#       doing useful
 #       work). Operator-verified at smoke review.
 #   T4' Substrate magnitude: mean |bias_network output| > 0.1.
 #
@@ -97,9 +99,9 @@ CONFIG_SMOKE="configs/evolution/tei_prior_m613_smoke.yml"
 #
 # Audit dimensions:
 #   - fitness_survival_weight: same scalar across arms (composite
-#     fitness parity, M6.9+ inherited contract).
-#   - fitness_metric: same primary metric across arms (M6.13 specifies
-#     ``survival_rate``).
+#     fitness parity, inherited contract from the pure-TEI campaign).
+#   - fitness_metric: same primary metric across arms (campaign
+#     specifies ``survival_rate``).
 #   - env.grid_size + predators.count + predators.predator_damage +
 #     foraging.min_food_predator_distance: same env across arms (the
 #     audit-B/C corrections must apply uniformly).
@@ -108,7 +110,8 @@ CONFIG_SMOKE="configs/evolution/tei_prior_m613_smoke.yml"
 #     lawn_schedule entries' ppo_train_episodes ALL match.
 #
 # stderr merged into stdout via ``2>&1`` so MISMATCH diagnostics
-# reach the failure branch (PR-A lesson from logbook 019 review).
+# reach the failure branch (lesson from the prior campaign's
+# logbook 019 review).
 check_cross_arm_parity() {
     local parity_out
     parity_out=$(uv run python -c "
@@ -192,7 +195,7 @@ print('OK fitness_survival_weight=' + str(list(set(fsw.values()))[0])
 " 2>&1) || {
         echo "ERROR: cross-arm parity violated." >&2
         echo "${parity_out}" >&2
-        echo "M6.13's cross-arm primary verdict (tei_weights − weights_only)" >&2
+        echo "The cross-arm primary verdict (tei_weights − weights_only)" >&2
         echo "requires all three arms to share env config, fitness metric," >&2
         echo "and K_test compute budget. Fix the diverging field and re-launch." >&2
         exit 1
@@ -206,7 +209,7 @@ print('OK fitness_survival_weight=' + str(list(set(fsw.values()))[0])
 check_scipy_available() {
     if ! uv run python -c "import scipy.stats" 2>/dev/null; then
         echo "ERROR: scipy is not importable in the current uv env." >&2
-        echo "The M6.13 aggregator requires scipy for Wilcoxon +" >&2
+        echo "The aggregator requires scipy for Wilcoxon +" >&2
         echo "bootstrap CI computation. Install via:" >&2
         echo "  uv sync --extra analysis" >&2
         echo "before re-launching." >&2
@@ -290,7 +293,7 @@ fi
 
 mkdir -p "${OUTPUT_ROOT}"
 echo "============================================================"
-echo "M6.13 TEI-as-prior-on-M3 — mode: ${MODE}"
+echo "TEI-as-prior-on-Lamarckian — mode: ${MODE}"
 echo "============================================================"
 echo "Output root: ${OUTPUT_ROOT}"
 echo "Seeds:       ${SEEDS[*]}"
@@ -336,8 +339,9 @@ if [[ "${MODE}" == "smoke" ]]; then
     echo "Next: review T1'/T3' from the weights_only smoke before unblocking pilot."
     echo "  T1' F0 envelope: inspect ${OUTPUT_ROOT}/weights_only/seed-*/eval_diagnostics.jsonl"
     echo "                   for mean F0 survival_rate ∈ [0.30, 0.70]."
-    echo "  T3' M3-headroom: F1 ≤ 0.95×F0 (M3 has headroom) AND F1 ≥ 1.2×control_F1"
-    echo "                   (M3 doing useful work). If T3' fails high, edit"
+    echo "  T3' Lamarckian-headroom: F1 ≤ 0.95×F0 (Lamarckian has headroom)"
+    echo "                   AND F1 ≥ 1.2×control_F1 (Lamarckian doing useful"
+    echo "                   work). If T3' fails high, edit"
     echo "                   tei_prior_m613_smoke.yml learn_episodes_per_eval to 500"
     echo "                   and re-run --smoke. If T3' fails low, bump to 1500."
     echo "                   Caps at 2 calibration passes."

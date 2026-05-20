@@ -1,32 +1,33 @@
-# M6.13 TEI-as-prior-on-M3 — tei_weights arm (composed inheritance)
+# TEI-as-prior-on-Lamarckian — tei_weights arm (composed inheritance)
 # ============================================================================
 #
-# Arm 1 of 3 in the M6.13 three-arm campaign. Tests whether a small
-# inherited substrate prior, combined with M3-pattern weight inheritance
-# + K_test retraining, accelerates F1+ learning vs M3 alone at K below
-# saturation. This is the wet-lab-aligned reframe of TEI (Kaletsky 2025;
-# mammalian-TEI 2025 — TEI as a low-bandwidth excitability prior, not a
-# transmitted policy).
+# Arm 1 of 3 in the composed-mode three-arm campaign. Tests whether a
+# small inherited substrate prior, combined with Lamarckian weight
+# inheritance + K_test retraining, accelerates F1+ learning vs
+# Lamarckian alone at K below saturation. This is the wet-lab-aligned
+# reframe of TEI (Kaletsky 2025; mammalian-TEI 2025 — TEI as a
+# low-bandwidth excitability prior, not a transmitted policy).
 #
-# Reuses PR-A's M6.10 env + reward + bias-network substrate unchanged:
+# Reuses the prior pure-TEI campaign's env + reward + bias-network
+# substrate unchanged:
 #   - env: 15x15 grid, 4 stationary predators, damage=25,
 #          min_food_predator_distance=4 (audit-B remediation v3)
 #   - reward: gradient_proximity (audit-B remediation v2)
 #   - substrate: 3-input → 8-hidden tanh → 4-output MLP, decay 0.6
 #   - probes: env-derived Manhattan ring + safe_probes extension
 #
-# M6.13 deltas from PR-A's tei_on:
+# Deltas from the prior pure-TEI tei_on arm:
 #   - inheritance: transgenerational → weights+transgenerational (composed)
 #   - lawn_schedule F1+ ppo_train_episodes: 0 → K_test (composed mode
 #     REQUIRES F1+ retraining; the validator rejects K=0 under composed
 #     mode per design.md § D2). Default K_test=1000 is a smoke-tunable
-#     placeholder; the calibration smoke at task 6.1 picks the value
-#     where weights_only F1+ has measurable headroom AND beats control
-#     by ≥1.2× (T3' tripwire).
+#     placeholder; the calibration smoke picks the value where
+#     weights_only F1+ has measurable headroom AND beats control by
+#     ≥1.2× (T3' tripwire).
 #
 # Cross-arm pairing (per design.md § D4):
 #   - tei_weights (this file): inheritance=weights+transgenerational, F1+ K=K_test
-#   - weights_only:            inheritance=lamarckian, F1+ K=K_test (M3 baseline)
+#   - weights_only:            inheritance=lamarckian, F1+ K=K_test (Lamarckian baseline)
 #   - control:                 inheritance=none, F1+ K=K_test (TPE-fresh)
 #
 # The launcher shell (phase5_m613_tei_prior_lstmppo_klinotaxis.sh)
@@ -37,7 +38,7 @@
 # Decision gate: F1 ≥ 40% × F0, F2 ≥ 25% × F0, F3 ≥ 15% × F0 (training-
 # time F0 fitness override applied), monotone non-increasing decay, in
 # ≥ 2 of 4 seeds. Primary metric: survival_rate. Cross-arm verdict
-# (reframed from PR-A): GO iff tei_weights passes its per-arm gate AND
+# (reframed from the prior pure-TEI campaign): GO iff tei_weights passes its per-arm gate AND
 # tei_weights − weights_only paired-seed delta is statistically
 # non-zero via Wilcoxon p<0.10 AND ≥ 5pp delta with non-overlapping
 # 80% bootstrap CIs.
@@ -100,8 +101,8 @@ reward:
   penalty_boundary_collision: 0.02
   penalty_health_damage: 0.5
   reward_health_gain: 0.1
-  # M6.10 audit-B remediation v2 — see PR-A configs for the full
-  # rationale. M6.13 reuses this reward_mode unchanged.
+  # Audit-B remediation v2 — see the prior pure-TEI configs for the
+  # full rationale. Composed mode reuses this reward_mode unchanged.
   reward_mode: gradient_proximity
 
 satiety:
@@ -110,7 +111,7 @@ satiety:
   satiety_gain_per_food: 0.2
 
 environment:
-  # M6.10 audit-B remediation. Same as PR-A's tei_on env: 15x15 grid,
+  # Audit-B remediation. Same as the prior pure-TEI tei_on env: 15x15 grid,
   # 4 stationary predators at damage=25, min_food_predator_distance=4.
   grid_size: 15
   viewport_size: [11, 11]
@@ -160,20 +161,20 @@ evolution:
   parallel_workers: 8
   checkpoint_every: 2
   cma_diagonal: false
-  # M6.13 composed inheritance: F1+ children inherit BOTH the F0
-  # elite's weights (M3 pattern) AND the F0-extracted substrate prior.
+  # Composed inheritance: F1+ children inherit BOTH the F0 elite's
+  # weights (Lamarckian pattern) AND the F0-extracted substrate prior.
   inheritance: weights+transgenerational
   # Parity contract: same value across all three arms (the launcher
   # shell asserts this at launch).
   fitness_survival_weight: 1.0
-  # Primary metric — same as PR-A.
+  # Primary metric — same as the prior pure-TEI campaign.
   fitness_metric: survival_rate
   transgenerational:
     enabled: true
     decay_factor: 0.6
     decay_shape: geometric
     extraction_seed: 424242
-    # Reuses PR-A's audit-A bias-network substrate unchanged.
+    # Reuses the prior pure-TEI audit-A bias-network substrate unchanged.
     bias_network:
       hidden_dim: 8
       activation: tanh
@@ -181,7 +182,7 @@ evolution:
         - predator_gradient_strength
         - predator_gradient_direction_sin
         - food_gradient_strength
-    # Reuses PR-A's audit-C env-derived probe ring + safe_probes
+    # Reuses the prior pure-TEI audit-C env-derived probe ring + safe_probes
     # extension unchanged.
     probe_ring:
       count: 8

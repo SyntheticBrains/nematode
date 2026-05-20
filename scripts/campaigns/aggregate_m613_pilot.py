@@ -1,37 +1,34 @@
-r"""Aggregator for the M6.13 TEI-as-prior-on-M3 three-arm campaign.
+r"""Aggregator for the TEI-as-prior-on-Lamarckian three-arm campaign.
 
 Forks ``aggregate_m69_pilot.py`` patterns. The four-method skeleton
 (per-gen CSV read → survival table → per-arm gate → cross-arm verdict)
-is byte-equivalent to M6.9+; the M6.13 deltas are:
+is byte-equivalent to the pure-TEI aggregator; the deltas are:
 
-- **Reframed arm naming**. ``tei_weights`` (composed mode:
-  weights+transgenerational) replaces M6.9+'s ``tei_on`` (pure-TEI).
-  ``weights_only`` (M3 baseline at K_test) and ``control`` (TPE-fresh
-  at K_test) keep their names but the role of ``weights_only``
-  flips: in M6.9+ it was a secondary M3-reproduction control, in
-  M6.13 it is the PRIMARY comparator (does substrate prior accelerate
-  M3 retraining?).
+- **Arm naming**. ``tei_weights`` (composed mode:
+  weights+transgenerational) is the primary substrate arm.
+  ``weights_only`` (Lamarckian baseline at K_test) is the PRIMARY
+  comparator (does substrate prior accelerate Lamarckian retraining?).
+  ``control`` (TPE-fresh at K_test) is the environmental-floor
+  reference for secondary verdicts.
 
-- **Reframed primary verdict pair**. M6.9+ tested
-  ``tei_on - control`` (pure-TEI vs from-scratch floor at K=0). M6.13
-  tests ``tei_weights - weights_only`` (composed vs M3 alone at K_test).
-  Per design.md § D4 the cross-arm verdict requires Wilcoxon p < 0.10
-  AND ≥ 5pp delta with non-overlapping 80% bootstrap CIs. Both checks
-  MUST agree on direction.
+- **Primary verdict pair**: ``tei_weights - weights_only`` (composed
+  vs Lamarckian alone at K_test). Per design.md § D4 the cross-arm
+  verdict requires Wilcoxon p < 0.10 AND ≥ 5pp delta with
+  non-overlapping 80% bootstrap CIs. Both checks MUST agree on direction.
 
-- **Reframed pivot table** (design.md § D6). Six rows:
+- **Pivot table** (design.md § D6). Six rows:
     1. tei_weights ≈ weights_only (|Δ| < 2pp) → STOP, substrate inert
     2. tei_weights > weights_only by ≥5pp at K_test → GO
     3. tei_weights > weights_only by 2-5pp at K_test → K-sensitivity
     4. tei_weights < weights_only (Δ < -2pp) → STOP, substrate interferes
-    5. weights_only F0 ≈ F1 → PIVOT, K_test too large (M3 saturation)
+    5. weights_only F0 ≈ F1 → PIVOT, K_test too large (Lamarckian saturation)
     6. tei_weights F1 collapses to ~0 → STOP, PPO destabilised
 
-- **M6.14 trigger decision** replaces PR-B trigger. If primary verdict
-  is GO, emit ``m614_frequency_prior_trigger.md`` recommending the
-  M6.14 ablation (frequency-prior substrate variant). Otherwise emit
+- **Frequency-prior trigger** on GO: emits
+  ``m614_frequency_prior_trigger.md`` recommending the minimum-viable
+  substrate ablation as a follow-up. On STOP, emits
   ``m613_null_finding_note.md`` documenting the null finding and
-  closing the M6 thread (M6.14 NOT triggered when M6.13 is null).
+  declining the follow-up.
 
 Outputs (under ``--output-dir``):
   - ``retention_table.csv`` (per arm x seed x gen: mean survival_rate)
@@ -94,7 +91,7 @@ VERDICT_GO_MIN_SEEDS = 2
 VERDICT_PIVOT_MIN_SEEDS = 1
 
 # Cross-arm primary-verdict thresholds (n=4 noise-aware verdict —
-# inherited unchanged from M6.9+; reframed pair under M6.13).
+# inherited unchanged from the pure-TEI aggregator; reframed pair here).
 CROSS_ARM_WILCOXON_P_THRESHOLD = 0.10
 CROSS_ARM_MIN_DELTA_PP = 0.05  # 5 percentage points
 CROSS_ARM_BOOTSTRAP_RESAMPLES = 1000
@@ -107,20 +104,20 @@ CROSS_ARM_BOOTSTRAP_CI_LEVEL = 0.80  # 80% CI ⇒ alpha=0.20
 # CROSS_ARM_WILCOXON_P_THRESHOLD = 0.10. A null verdict in that
 # regime cannot be distinguished from a real null, so we surface
 # the under-powered state explicitly rather than silently labelling
-# it STOP. M6 closed INCONCLUSIVE precisely because this distinction
-# was not made.
+# it STOP. Earlier campaigns closed INCONCLUSIVE precisely because
+# this distinction was not made.
 CROSS_ARM_FULL_N_SEEDS = 4
 
-# Three-arm campaign arms (M6.13 reframe).
+# Three-arm campaign arms.
 # - ARM_TEI_WEIGHTS: composed-mode (weights+transgenerational) arm.
-#   M3 weight inheritance + F0-extracted substrate prior; F1+ retrains
-#   K_test episodes with both signals active.
-# - ARM_WEIGHTS_ONLY: M3 baseline (lamarckian) at K_test. PRIMARY
-#   COMPARATOR for the M6.13 cross-arm verdict (vs PR-A's secondary
-#   role as M3-reproduction control).
+#   Lamarckian weight inheritance + F0-extracted substrate prior;
+#   F1+ retrains K_test episodes with both signals active.
+# - ARM_WEIGHTS_ONLY: Lamarckian baseline at K_test. PRIMARY
+#   COMPARATOR for the cross-arm verdict.
 # - ARM_CONTROL: TPE-fresh (no inheritance) at K_test. Floor reference
-#   for secondary verdicts (weights_only - control = M3 re-reproduction
-#   at K_test; tei_weights - control = composed vs floor sanity check).
+#   for secondary verdicts (weights_only - control = Lamarckian
+#   re-reproduction at K_test; tei_weights - control = composed vs
+#   floor sanity check).
 ARM_TEI_WEIGHTS = "tei_weights"
 ARM_WEIGHTS_ONLY = "weights_only"
 ARM_CONTROL = "control"
@@ -254,9 +251,9 @@ def evaluate_decision_gate_one_seed(
 ) -> dict:
     """Evaluate the per-arm decision gate for one (arm, seed).
 
-    Mirrors M6's `evaluate_decision_gate_one_seed` exactly. The gate
-    is on survival_rate (the M6.9+ primary metric); choice_index is
-    not used at the per-arm gate.
+    Mirrors the pure-TEI `evaluate_decision_gate_one_seed` exactly.
+    The gate is on survival_rate (the primary campaign metric);
+    choice_index is not used at the per-arm gate.
     """
     if f0_baseline_override is not None and (arm, seed) in f0_baseline_override:
         f0: float | None = f0_baseline_override[(arm, seed)]
@@ -420,7 +417,7 @@ def compute_cross_arm_primary_verdict(
 ) -> dict:
     """Cross-arm primary verdict: GO iff per-arm gate passes AND noise-aware delta is positive.
 
-    Per the M6.13 evolution-framework spec § "M6.13 Cross-Arm Primary
+    Per the evolution-framework spec § "M6.13 Cross-Arm Primary
     Verdict (Reframed)": GO requires ALL of:
       1. tei_weights per-arm gate passes (≥ 2/4 seeds pass).
       2. Wilcoxon p < 0.10 (one-sided, tei_weights > weights_only).
@@ -563,7 +560,7 @@ def _write_summary_md(
 ) -> None:
     """Write a human-readable markdown summary of the campaign verdict."""
     lines: list[str] = []
-    lines.append("# M6.13 TEI-as-prior-on-M3 — aggregator summary\n")
+    lines.append("# TEI-as-prior-on-Lamarckian — aggregator summary\n")
     lines.append("## Per-arm cross-seed verdicts\n")
     lines.append("| arm | verdict |")
     lines.append("|---|---|")
@@ -600,13 +597,13 @@ def _write_summary_md(
 
 
 # ============================================================================
-# M6.13 D6 pivot-table detectors. Six rows per design.md § D6:
+# D6 pivot-table detectors. Six rows per design.md § D6:
 #
 #   Row 1: tei_weights ≈ weights_only (|Δ| < 2pp) → STOP, substrate inert
 #   Row 2: tei_weights > weights_only by ≥5pp at K_test → GO
 #   Row 3: tei_weights > weights_only by 2-5pp at K_test → K-sensitivity
 #   Row 4: tei_weights < weights_only (Δ < -2pp) → STOP, substrate interferes
-#   Row 5: weights_only F0 ≈ F1 → PIVOT, K_test too large (M3 saturation)
+#   Row 5: weights_only F0 ≈ F1 → PIVOT, K_test too large (Lamarckian saturation)
 #   Row 6: tei_weights F1 collapses to ~0 → STOP, PPO destabilised
 # ============================================================================
 
@@ -615,8 +612,8 @@ def _write_summary_md(
 PIVOT_DELTA_INERT = 0.02  # |Δ| < 2pp ⇒ substrate inert (row 1)
 PIVOT_DELTA_K_SENSITIVITY = 0.05  # 2-5pp ⇒ K-sensitivity pivot (row 3)
 PIVOT_DELTA_INTERFERES = -0.02  # Δ < -2pp ⇒ substrate interferes (row 4)
-# M3-saturation: weights_only F1 within ε of F0.
-PIVOT_M3_SATURATION_EPSILON = 0.02
+# Lamarckian saturation: weights_only F1 within ε of F0.
+PIVOT_LAMARCKIAN_SATURATION_EPSILON = 0.02
 # PPO-destabilised: tei_weights F1 below this absolute threshold.
 PIVOT_PPO_COLLAPSE_THRESHOLD = 0.05
 
@@ -625,8 +622,8 @@ def _detect_substrate_inert(cross_arm_results: list[dict]) -> bool:
     """D6 row 1: ``tei_weights ≈ weights_only`` (|Δ| < 2pp).
 
     Substrate prior carries no measurable signal under retraining.
-    The composed mode collapses to pure M3; the M6.13 hypothesis is
-    falsified. STOP.
+    The composed mode collapses to pure Lamarckian; the substrate-
+    accelerates-retraining hypothesis is falsified. STOP.
     """
     primary = next(
         (
@@ -644,10 +641,10 @@ def _detect_substrate_inert(cross_arm_results: list[dict]) -> bool:
 def _detect_substrate_interferes(cross_arm_results: list[dict]) -> bool:
     """D6 row 4: ``tei_weights < weights_only`` (Δ < -2pp).
 
-    Substrate prior actively interferes with M3 retraining — the
-    prior misleads early F1+ exploration before inherited weights
-    take over. STOP with a useful negative result: future work
-    might investigate substrate-policy alignment.
+    Substrate prior actively interferes with Lamarckian retraining
+    — the prior misleads early F1+ exploration before inherited
+    weights take over. STOP with a useful negative result: future
+    work might investigate substrate-policy alignment.
     """
     primary = next(
         (
@@ -662,22 +659,23 @@ def _detect_substrate_interferes(cross_arm_results: list[dict]) -> bool:
     return primary["mean_delta"] < PIVOT_DELTA_INTERFERES
 
 
-def _detect_m3_saturation(survival_table: dict, seeds: list[int]) -> bool:
+def _detect_lamarckian_saturation(survival_table: dict, seeds: list[int]) -> bool:
     """D6 row 5: ``weights_only F0 ≈ F1`` (K_test too large).
 
-    M3 has saturated at the chosen K_test — no headroom for the
-    substrate prior to help (or hurt). PIVOT: drop K_test to 500
-    and rerun the pilot. The T3' smoke tripwire was supposed to
-    catch this BEFORE the pilot; firing here means T3' was bypassed
-    or the env shifted between smoke and pilot.
+    Lamarckian retraining has saturated at the chosen K_test — no
+    headroom for the substrate prior to help (or hurt). PIVOT: drop
+    K_test to 500 and rerun the pilot. The T3' smoke tripwire was
+    supposed to catch this BEFORE the pilot; firing here means T3'
+    was bypassed or the env shifted between smoke and pilot.
     """
     for seed in seeds:
         f0 = survival_table.get((ARM_WEIGHTS_ONLY, seed, 0))
         f1 = survival_table.get((ARM_WEIGHTS_ONLY, seed, 1))
         if f0 is None or f1 is None:
             continue
-        # Saturated when F1 is within ε of F0 (M3 hasn't improved meaningfully).
-        if f0 > 0 and abs(f1 - f0) < PIVOT_M3_SATURATION_EPSILON:
+        # Saturated when F1 is within ε of F0 (Lamarckian retraining
+        # hasn't improved meaningfully).
+        if f0 > 0 and abs(f1 - f0) < PIVOT_LAMARCKIAN_SATURATION_EPSILON:
             return True
     return False
 
@@ -702,7 +700,7 @@ def _write_pilot_pivot_decision(
 ) -> None:
     """Emit pilot_pivot_decision.md populated from design.md § D6 pivot table.
 
-    Classifies the pilot observation against the six M6.13-specific
+    Classifies the pilot observation against the six pre-declared
     pivots and writes a markdown summary the user reviews BEFORE
     unblocking the full campaign.
 
@@ -726,24 +724,24 @@ def _write_pilot_pivot_decision(
     seeds = pilot_observations.get("seeds", [])
     cross_arm_results = pilot_observations.get("cross_arm_results", [])
 
-    pivot_lines = ["# Pilot pivot decision (M6.13)\n"]
+    pivot_lines = ["# Pilot pivot decision\n"]
     pivot_lines.append(
         "Per design.md § D6, the pilot's outcome is classified against "
         "six pre-declared pivots. Branch order is by specificity — "
         "catastrophic failure modes (rows 5, 6) match before positive- "
         "or null-delta variants.\n",
     )
-    # Row 5: M3-saturation (K_test too large) — check first because
-    # it disqualifies the entire comparison frame (no headroom for
-    # substrate to demonstrate anything).
-    if _detect_m3_saturation(survival_table, seeds):
+    # Row 5: Lamarckian saturation (K_test too large) — check first
+    # because it disqualifies the entire comparison frame (no
+    # headroom for substrate to demonstrate anything).
+    if _detect_lamarckian_saturation(survival_table, seeds):
         pivot_lines.append(
-            "**Pilot signal: M3-saturation (D6 row 5).** "
-            "`weights_only F0 ≈ F1` — K_test is too large, M3 has "
-            "ceiling'd, and there is no headroom for the substrate "
-            "prior to demonstrate acceleration. The T3' smoke tripwire "
-            "should have caught this BEFORE the pilot; firing here "
-            "means the env shifted or T3' was bypassed.",
+            "**Pilot signal: Lamarckian saturation (D6 row 5).** "
+            "`weights_only F0 ≈ F1` — K_test is too large, Lamarckian "
+            "retraining has ceiling'd, and there is no headroom for "
+            "the substrate prior to demonstrate acceleration. The T3' "
+            "smoke tripwire should have caught this BEFORE the pilot; "
+            "firing here means the env shifted or T3' was bypassed.",
         )
         pivot_lines.append(
             "Pivot: drop K_test to 500 and rerun the pilot (+3 wall-h cap per design.md § D6).\n",
@@ -755,19 +753,19 @@ def _write_pilot_pivot_decision(
             "**Pilot signal: PPO destabilised (D6 row 6).** "
             "`tei_weights F1` collapses to ~0 — the substrate prior "
             "breaks PPO retraining. Either the clamp is too aggressive "
-            "or the prior misdirects gradient updates beyond what M3 "
+            "or the prior misdirects gradient updates beyond what Lamarckian "
             "can recover.",
         )
         pivot_lines.append(
             "Pivot: STOP. Investigate substrate clamp / freeze-during-"
             "update as future work; document as useful negative result.\n",
         )
-    # Row 4: substrate interferes with M3.
+    # Row 4: substrate interferes with Lamarckian retraining.
     elif _detect_substrate_interferes(cross_arm_results):
         pivot_lines.append(
-            "**Pilot signal: substrate INTERFERES with M3 (D6 row 4).** "
+            "**Pilot signal: substrate INTERFERES with Lamarckian (D6 row 4).** "
             "`tei_weights < weights_only` by > 2pp — the substrate "
-            "prior actively HURTS M3 retraining rather than "
+            "prior actively HURTS Lamarckian retraining rather than "
             "accelerating it. Likely the prior misleads early F1+ "
             "exploration before inherited weights take over.",
         )
@@ -781,8 +779,8 @@ def _write_pilot_pivot_decision(
         pivot_lines.append(
             "**Pilot signal: clean GO at K_test (D6 row 2).** "
             "`tei_weights > weights_only` by ≥ 5pp — substrate prior "
-            "accelerates M3 retraining at K_test. The M6.13 hypothesis "
-            "is supported.",
+            "accelerates Lamarckian retraining at K_test. The "
+            "substrate-accelerates-retraining hypothesis is supported.",
         )
         pivot_lines.append(
             "Pivot: NONE. Proceed to full campaign at K_test only "
@@ -808,8 +806,8 @@ def _write_pilot_pivot_decision(
             "**Pilot signal: substrate inert (D6 row 1).** "
             "`tei_weights ≈ weights_only` (|Δ| < 2pp) — the substrate "
             "prior carries no measurable signal under retraining. The "
-            "composed mode collapses to pure M3; M6.13 hypothesis is "
-            "falsified.",
+            "composed mode collapses to pure Lamarckian; the "
+            "substrate-accelerates-retraining hypothesis is falsified.",
         )
         pivot_lines.append(
             "Pivot: STOP. Logbook 020 documents the null finding.\n",
@@ -839,34 +837,35 @@ def _write_pilot_pivot_decision(
 def _write_m614_frequency_prior_trigger(path: Path) -> None:
     """Emit m614_frequency_prior_trigger.md when the primary verdict is GO.
 
-    M6.14 follow-up: the substrate-prior signal observed in M6.13 may
-    or may not require the full bias-network MLP. M6.14 ablates the
-    substrate down to a minimum-viable form (frequency prior — a 4-
-    element action-frequency vector, no sensory conditioning) and
-    re-runs the M6.13 three-arm campaign at the locked-in K_test. If
-    the frequency prior recovers the bias-network's GO signal, the
-    minimum-viable substrate is sufficient. If only the bias-network
-    works, sensory conditioning is the load-bearing feature.
+    Frequency-prior-ablation follow-up: the substrate-prior signal
+    observed in this campaign may or may not require the full
+    bias-network MLP. The follow-up ablates the substrate down to a
+    minimum-viable form (frequency prior — a 4-element action-
+    frequency vector, no sensory conditioning) and re-runs the three-
+    arm campaign at the locked-in K_test. If the frequency prior
+    recovers the bias-network's GO signal, the minimum-viable
+    substrate is sufficient. If only the bias-network works, sensory
+    conditioning is the load-bearing feature.
     """
     body = (
-        "# M6.14 trigger — frequency-prior ablation\n\n"
-        "The M6.13 primary verdict was **GO**: the composed mode\n"
-        "(weights+transgenerational, tei_weights arm) outperforms M3\n"
-        "alone (weights_only) by a statistically distinguishable\n"
-        "margin (Wilcoxon p < 0.10 AND ≥ 5pp mean delta AND\n"
-        "non-overlapping 80% bootstrap CIs).\n\n"
-        "**Recommended next step**: scaffold the M6.14 OpenSpec change\n"
+        "# Frequency-prior-ablation trigger\n\n"
+        "The composed-mode primary verdict was **GO**: the composed\n"
+        "mode (weights+transgenerational, tei_weights arm) outperforms\n"
+        "Lamarckian alone (weights_only) by a statistically\n"
+        "distinguishable margin (Wilcoxon p < 0.10 AND ≥ 5pp mean\n"
+        "delta AND non-overlapping 80% bootstrap CIs).\n\n"
+        "**Recommended next step**: scaffold an OpenSpec change for\n"
         "``add-frequency-prior-ablation``. The bias-network substrate\n"
         "is a 3-input by 8-hidden by 4-output sensory-conditional MLP\n"
-        "(~60 parameters). M6.14 ablates it down to the minimum-viable\n"
-        "substrate — a 4-element action-frequency vector (~4 parameters,\n"
-        "no sensory conditioning) — and re-runs the M6.13 three-arm\n"
-        "campaign at the locked-in K_test. Decision gate: if the\n"
-        "frequency prior recovers the bias-network's positive delta\n"
-        "vs weights_only, the minimum-viable substrate is sufficient\n"
-        "(closer to the wet-lab Kaletsky 'low-bandwidth switch'\n"
-        "framing). If only the bias-network produces the signal,\n"
-        "sensory conditioning is the load-bearing feature.\n\n"
+        "(~60 parameters). The ablation reduces it to the minimum-\n"
+        "viable substrate — a 4-element action-frequency vector\n"
+        "(~4 parameters, no sensory conditioning) — and re-runs the\n"
+        "three-arm campaign at the locked-in K_test. Decision gate:\n"
+        "if the frequency prior recovers the bias-network's positive\n"
+        "delta vs weights_only, the minimum-viable substrate is\n"
+        "sufficient (closer to the wet-lab Kaletsky 'low-bandwidth\n"
+        "switch' framing). If only the bias-network produces the\n"
+        "signal, sensory conditioning is the load-bearing feature.\n\n"
         "Use `/openspec:new-change add-frequency-prior-ablation`.\n"
     )
     path.write_text(body, encoding="utf-8")
@@ -875,29 +874,29 @@ def _write_m614_frequency_prior_trigger(path: Path) -> None:
 def _write_m613_null_finding_note(path: Path) -> None:
     """Emit m613_null_finding_note.md when the primary verdict is STOP."""
     body = (
-        "# M6.13 null finding\n\n"
-        "The M6.13 primary verdict was **STOP**: the composed mode\n"
-        "(weights+transgenerational, tei_weights arm) is not\n"
-        "statistically distinguishable from M3 alone (weights_only)\n"
-        "on F1+ retention at the chosen K_test.\n\n"
-        "**Recommended next step**: M6.14 is **NOT** scaffolded —\n"
-        "the frequency-prior ablation is only motivated when M6.13\n"
-        "demonstrates a positive bias-network signal worth simplifying.\n"
-        "Combined with PR-A's STOP on pure-TEI K=0, the M6.13 null\n"
-        "closes the M6 thread: TEI does not transfer on this RL\n"
-        "substrate in either form (pure-TEI floor OR substrate-on-top-\n"
-        "of-M3 acceleration). Logbook 020 documents the result; future\n"
-        "work (Phase 6 quantum substrates, M7 NEAT) takes a different\n"
-        "direction.\n\n"
-        "See design.md § D4 for the M6.14 trigger criterion.\n"
+        "# TEI-as-prior null finding\n\n"
+        "The composed-mode primary verdict was **STOP**: the composed\n"
+        "mode (weights+transgenerational, tei_weights arm) is not\n"
+        "statistically distinguishable from Lamarckian alone\n"
+        "(weights_only) on F1+ retention at the chosen K_test.\n\n"
+        "**Recommended next step**: the frequency-prior ablation is\n"
+        "**NOT** scaffolded — that follow-up is only motivated when\n"
+        "the composed mode demonstrates a positive bias-network\n"
+        "signal worth simplifying. Combined with the prior STOP on\n"
+        "pure-TEI K=0, this null closes the TEI thread on this RL\n"
+        "substrate: TEI does not transfer in either form (pure-TEI\n"
+        "floor OR substrate-on-top-of-trained-weights acceleration).\n"
+        "Future work (quantum substrates, NEAT architecture evolution)\n"
+        "takes a different direction.\n\n"
+        "See design.md § D4 for the follow-up trigger criterion.\n"
     )
     path.write_text(body, encoding="utf-8")
 
 
 def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would obscure flow
-    """Entry point for the M6.13 three-arm aggregator."""
+    """Entry point for the composed TEI-as-prior three-arm aggregator."""
     parser = argparse.ArgumentParser(
-        description="M6.13 TEI-as-prior-on-M3 three-arm pilot/full aggregator.",
+        description="TEI-as-prior-on-Lamarckian three-arm pilot/full aggregator.",
     )
     parser.add_argument(
         "--per-gen-csv",
@@ -980,12 +979,13 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
 
     per_arm_verdicts = {arm: aggregate_per_arm_verdict(evs) for arm, evs in per_arm_evals.items()}
 
-    # Cross-arm pairwise stats (M6.13 reframe):
+    # Cross-arm pairwise stats:
     # - PRIMARY pair: (tei_weights, weights_only). The cross-arm
-    #   verdict tests whether the substrate prior accelerates M3
-    #   retraining at K_test.
-    # - SECONDARY pair 1: (weights_only, control) — M3 re-reproduction
-    #   at K_test (should match PR-A's +17.5pp scaled to this K).
+    #   verdict tests whether the substrate prior accelerates
+    #   Lamarckian retraining at K_test.
+    # - SECONDARY pair 1: (weights_only, control) — Lamarckian
+    #   re-reproduction at K_test (should match the prior pilot's
+    #   +17.5pp scaled to this K).
     # - SECONDARY pair 2: (tei_weights, control) — composed arm vs
     #   floor; sanity check that the composed arm is at least as good
     #   as TPE-fresh.
@@ -1038,13 +1038,13 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
             },
             path=args.output_dir / "pilot_pivot_decision.md",
         )
-    # M6.14 trigger and M6.13 null-finding note are FULL-campaign
+    # Frequency-prior-trigger and null-finding-note are FULL-campaign
     # decisions only. Pilot mode has n=1 (Wilcoxon p=0.5 always →
     # verdict=STOP), so emitting m613_null_finding_note.md after the
     # pilot would falsely claim the campaign is dead when the pilot is
     # just under-powered. Pilot's only verdict artefact is
     # pilot_pivot_decision.md above. Under INDETERMINATE the campaign
-    # is structurally under-powered; neither M6.14 trigger nor M6.13
+    # is structurally under-powered; neither follow-up trigger nor
     # null-finding is appropriate — operator must re-run with missing
     # seeds first.
     if args.mode == "full":
@@ -1055,7 +1055,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
         elif primary_verdict["verdict"] == "STOP":
             _write_m613_null_finding_note(args.output_dir / "m613_null_finding_note.md")
 
-    logger.info("M6.13 aggregator output written to %s", args.output_dir)
+    logger.info("Aggregator output written to %s", args.output_dir)
     logger.info("Per-arm verdicts: %s", per_arm_verdicts)
     logger.info("Cross-arm primary verdict: %s", primary_verdict["verdict"])
     return 0

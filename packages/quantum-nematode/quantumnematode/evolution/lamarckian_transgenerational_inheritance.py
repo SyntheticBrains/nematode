@@ -1,7 +1,7 @@
 """Composed weights + substrate inheritance strategy.
 
 Provides :class:`LamarckianTransgenerationalInheritance`, the fifth
-``InheritanceStrategy`` implementation. Composes the M3 Lamarckian
+``InheritanceStrategy`` implementation. Composes the Lamarckian
 weight-inheritance path (per-genome ``.pt`` warm-start + capture + GC)
 with the substrate-flow path (F0 substrate extraction +
 decayed cascade applied via ``brain.tei_prior``).
@@ -10,7 +10,7 @@ The class lives in its own module — not as a subclass of
 :class:`~quantumnematode.evolution.inheritance.LamarckianInheritance`
 nor :class:`~quantumnematode.evolution.transgenerational_inheritance.TransgenerationalInheritance`
 — so the two parent strategies remain auditable in isolation. Their
-regression tests gate byte-equivalence on the M3 and pure-TEI paths
+regression tests gate byte-equivalence on the Lamarckian and pure-TEI paths
 respectively; this composed class is orthogonal and has its own tests.
 
 Per-method behaviour mirrors :class:`LamarckianInheritance` exactly:
@@ -31,10 +31,10 @@ on this value so both ``_inheritance_active()`` (weight-IO) and
 composed mode, threading both ``warm_start_path_override`` and
 ``tei_prior_source`` into every F1+ child's ``fitness.evaluate`` call.
 
-See the M6.13 OpenSpec change ``openspec/changes/add-tei-prior-on-m3/``
+See the OpenSpec change ``openspec/changes/add-tei-prior-on-m3/``
 for the full design rationale + biological framing (TEI as a *prior on
-M3*, aligning with the wet-lab Kaletsky/mammalian mechanism — not a
-transmitted policy).
+trained weights*, aligning with the wet-lab Kaletsky/mammalian
+mechanism — not a transmitted policy).
 """
 
 from __future__ import annotations
@@ -46,11 +46,11 @@ if TYPE_CHECKING:
 
 
 class LamarckianTransgenerationalInheritance:
-    """Composed weights + substrate inheritance — the M6.13 strategy.
+    """Composed weights + substrate inheritance strategy.
 
     Single-elite (or top-K) parent broadcast for the weight-IO path
-    (M3 pattern), composed with the substrate-flow path (F0 substrate
-    extraction → F1+ ``tei_prior`` application). The composition is
+    (Lamarckian pattern), composed with the substrate-flow path (F0
+    substrate extraction → F1+ ``tei_prior`` application). The composition is
     orthogonal: this class only owns the four ``InheritanceStrategy``
     Protocol methods + the new ``"weights+transgenerational"`` kind
     literal; the loop's existing ``_substrate_inheritance_active()``
@@ -79,8 +79,8 @@ class LamarckianTransgenerationalInheritance:
         """Return the top ``elite_count`` IDs by fitness, lex-tie-broken.
 
         Selection rule is identical to :class:`LamarckianInheritance`
-        with the same ``elite_count`` — composed mode reuses the M3
-        elite-selection contract by construction.
+        with the same ``elite_count`` — composed mode reuses the
+        Lamarckian elite-selection contract by construction.
         """
         if len(gen_ids) != len(fitnesses):
             msg = (
@@ -104,7 +104,7 @@ class LamarckianTransgenerationalInheritance:
 
         Identical to :class:`LamarckianInheritance.assign_parent`. With
         ``elite_count=1`` (the only YAML-supported configuration today),
-        every child broadcasts from the same single elite — the M3
+        every child broadcasts from the same single elite — the
         single-elite-broadcast pattern.
         """
         if not parent_ids:
@@ -119,8 +119,8 @@ class LamarckianTransgenerationalInheritance:
     ) -> Path | None:
         """Return the canonical ``inheritance/gen-NNN/genome-<gid>.pt`` path.
 
-        Returns the WEIGHTS checkpoint path (the M3 ``.pt`` artefact) —
-        NOT the substrate ``.tei.pt`` path. The substrate path is owned
+        Returns the WEIGHTS checkpoint path (the Lamarckian ``.pt`` artefact)
+        — NOT the substrate ``.tei.pt`` path. The substrate path is owned
         by the F0 substrate-extraction pipeline (``_run_f0_substrate_extraction``
         in the loop) as a separate concern; the loop's per-child
         inheritance plumbing reads only this single path. Identical to
@@ -131,9 +131,9 @@ class LamarckianTransgenerationalInheritance:
     def kind(self) -> Literal["weights+transgenerational"]:
         """Return ``"weights+transgenerational"`` — the new composed dispatch value.
 
-        The loop's ``_inheritance_active()`` predicate (widened in
-        M6.13) evaluates ``kind() in {"weights", "weights+transgenerational"}``
-        and the ``_substrate_inheritance_active()`` predicate evaluates
+        The loop's ``_inheritance_active()`` predicate evaluates
+        ``kind() in {"weights", "weights+transgenerational"}`` and
+        the ``_substrate_inheritance_active()`` predicate evaluates
         ``kind() in {"transgenerational", "weights+transgenerational"}``,
         so BOTH the weight-IO code path AND the substrate-flow code
         path fire under composed mode without any new plumbing.

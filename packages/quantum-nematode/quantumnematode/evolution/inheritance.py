@@ -163,12 +163,12 @@ class InheritanceStrategy(Protocol):
           :class:`~quantumnematode.evolution.lamarckian_transgenerational_inheritance.LamarckianTransgenerationalInheritance`)
           — composes the weight-IO path with the substrate-flow path.
           Every F1+ child warm-starts from the F0 elite's ``.pt``
-          (M3 pattern) AND has ``brain.tei_prior`` set from the
-          F0-extracted substrate (M6.9+ pattern). The K_test
+          (Lamarckian pattern) AND has ``brain.tei_prior`` set from
+          the F0-extracted substrate (transgenerational pattern). The
           retraining phase then runs with both signals active. Added
-          in M6.13 (``openspec/changes/add-tei-prior-on-m3/``) as the
-          wet-lab-aligned reframe: TEI as a *prior on M3*, not a
-          standalone policy.
+          per ``openspec/changes/add-tei-prior-on-m3/`` as the
+          wet-lab-aligned reframe: TEI as a *prior on trained
+          weights*, not a standalone policy.
 
         The loop's ``_inheritance_active()`` helper SHALL evaluate
         ``kind() in {"weights", "weights+transgenerational"}`` (gates

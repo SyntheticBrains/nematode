@@ -1,24 +1,27 @@
-# M6.13 TEI-as-prior-on-M3 — K_test calibration smoke
+# TEI-as-prior-on-Lamarckian — K_test calibration smoke
 # ============================================================================
 #
 # F0+F1 calibration variant of the weights_only arm. Used by the
 # campaign shell's ``--smoke`` subcommand to pick K_test BEFORE
-# the multi-seed pilot is unblocked. The smoke runs ONLY the M3
-# Lamarckian arm because the M6.13 calibration target is "find K
-# where weights_only F1+ has measurable headroom AND beats control" —
+# the multi-seed pilot is unblocked. The smoke runs ONLY the
+# Lamarckian arm because the calibration target is "find K where
+# weights_only F1+ has measurable headroom AND beats control" —
 # the substrate arm's behaviour is irrelevant at calibration time;
-# what matters is that the K_test sits below M3's saturation point.
+# what matters is that the K_test sits below the Lamarckian
+# saturation point.
 #
 # Tripwires (per design.md § D5):
 #   T1':  F0 envelope ``0.30 ≤ mean F0 survival_rate ≤ 0.70``
-#         (already validated by PR-A pass-6; re-verify on composed-arm).
+#         (already validated by the prior pure-TEI campaign's
+#         pass-6 smoke; re-verify on composed-arm).
 #   T2':  Substrate diversity — pairwise CoV > 5% across calibration
-#         seeds' bias_network state_dicts. Reuses PR-A's
+#         seeds' bias_network state_dicts. Reuses the existing
 #         m69_substrate_diversity.py script unchanged.
-#   T3':  M3-headroom (NEW M6.13 tripwire) — load-bearing:
-#         ``weights_only F1+ ≤ 0.95 × F0`` (M3 hasn't ceiling'd at
-#         K_test) AND ``weights_only F1+ ≥ 1.2 × control F1+`` (M3
-#         is doing useful work).
+#   T3':  Lamarckian-headroom (load-bearing):
+#         ``weights_only F1+ ≤ 0.95 × F0`` (Lamarckian retraining
+#         hasn't ceiling'd at K_test) AND
+#         ``weights_only F1+ ≥ 1.2 × control F1+`` (Lamarckian
+#         retraining is doing useful work).
 #   T4':  Substrate magnitude — mean |bias_network output| > 0.1.
 #
 # All four MUST pass before pilot is unblocked. T3' failure on the
@@ -34,7 +37,8 @@
 #   - ``checkpoint_every: 1`` for forensic granularity.
 #
 # Everything else matches the weights_only arm exactly so the smoke
-# MEASURES the same M3 trajectory the pilot will produce.
+# MEASURES the same Lamarckian retraining trajectory the pilot will
+# produce.
 
 max_steps: 1000
 
@@ -142,9 +146,10 @@ evolution:
   generations: 2
   episodes_per_eval: 25
   # K_test calibration starting point: 1000. The smoke decides whether
-  # to keep (T3' pass), drop to 500 (T3' high — M3 saturated), or
-  # bump to 1500 (T3' low — M3 not learning enough). Edit this value
-  # between passes if the first one fails T3'.
+  # to keep (T3' pass), drop to 500 (T3' high — Lamarckian retraining
+  # saturated), or bump to 1500 (T3' low — Lamarckian retraining not
+  # learning enough). Edit this value between passes if the first one
+  # fails T3'.
   learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0
@@ -154,9 +159,9 @@ evolution:
   inheritance: lamarckian
   fitness_survival_weight: 1.0
   fitness_metric: survival_rate
-  # NO ``transgenerational:`` block — calibration smoke runs the M3
-  # arm only; the substrate-diversity tripwire T2' is exercised
-  # separately at pilot time on a tei_weights-arm config.
+  # NO ``transgenerational:`` block — calibration smoke runs the
+  # Lamarckian arm only; the substrate-diversity tripwire T2' is
+  # exercised separately at pilot time on a tei_weights-arm config.
 
 hyperparam_schema:
   - name: actor_lr
