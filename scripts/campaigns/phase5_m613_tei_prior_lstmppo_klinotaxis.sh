@@ -282,6 +282,36 @@ check_scipy_available
 # at a different K" confusion, surface the smoke YAML's K and flag
 # any divergence from production as INFORMATIONAL (not an error).
 if [[ "${MODE}" == "smoke" ]]; then
+    # Smoke YAML fitness audit. CONFIG_SMOKE is the actually-dispatched
+    # YAML under --smoke (see CONFIG_WEIGHTS_ONLY_RESOLVED rebind above)
+    # but the production-trio parity check skipped it. Apply the same
+    # REQUIRED fsw==1.0 + fm=='survival_rate' checks here so smoke
+    # can't silently run at a different fitness setting from the
+    # campaign requirement during K_test calibration.
+    smoke_fitness_audit=$(uv run python -c "
+import sys, yaml
+cfg = yaml.safe_load(open('${CONFIG_SMOKE}'))
+evolution = cfg.get('evolution') or {}
+fsw = evolution.get('fitness_survival_weight', 'MISSING')
+fm = evolution.get('fitness_metric', 'composite')
+if fsw != 1.0:
+    print('REQUIRED fitness_survival_weight=1.0 not met in smoke YAML: ' + str(fsw), file=sys.stderr)
+    sys.exit(1)
+if fm != 'survival_rate':
+    print('REQUIRED fitness_metric=survival_rate not met in smoke YAML: ' + str(fm), file=sys.stderr)
+    sys.exit(2)
+print('OK smoke fitness_survival_weight=' + str(fsw) + ' fitness_metric=' + str(fm))
+" 2>&1) || {
+        echo "ERROR: smoke YAML fitness audit failed." >&2
+        echo "${smoke_fitness_audit}" >&2
+        echo "The smoke YAML (${CONFIG_SMOKE}) must match the campaign" >&2
+        echo "fitness contract (fsw=1.0, fm=survival_rate) so T3' headroom" >&2
+        echo "measurements are calibrated against the same scalar the pilot" >&2
+        echo "and full campaign measure." >&2
+        exit 1
+    }
+    echo "Smoke fitness audit: ${smoke_fitness_audit}"
+
     SMOKE_K=$(uv run python -c "
 import yaml
 cfg = yaml.safe_load(open('${CONFIG_SMOKE}'))
