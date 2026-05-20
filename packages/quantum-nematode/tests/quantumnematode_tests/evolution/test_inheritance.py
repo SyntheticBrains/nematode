@@ -10,6 +10,12 @@ from quantumnematode.evolution.inheritance import (
     LamarckianInheritance,
     NoInheritance,
 )
+from quantumnematode.evolution.lamarckian_transgenerational_inheritance import (
+    LamarckianTransgenerationalInheritance,
+)
+from quantumnematode.evolution.transgenerational_inheritance import (
+    TransgenerationalInheritance,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -160,12 +166,16 @@ def test_kind_values_are_in_known_set() -> None:
     """All shipped strategies SHALL return a value from the known kind set.
 
     Guards against future strategies leaking new literals without
-    updating the loop's branching logic.
+    updating the loop's branching logic. The set widened with the
+    addition of ``"transgenerational"`` (pure-TEI) and
+    ``"weights+transgenerational"`` (composed) strategies.
     """
-    known = {"none", "weights", "trait"}
+    known = {"none", "weights", "trait", "transgenerational", "weights+transgenerational"}
     assert NoInheritance().kind() in known
     assert LamarckianInheritance().kind() in known
     assert BaldwinInheritance().kind() in known
+    assert TransgenerationalInheritance().kind() in known
+    assert LamarckianTransgenerationalInheritance().kind() in known
 
 
 # ---------------------------------------------------------------------------

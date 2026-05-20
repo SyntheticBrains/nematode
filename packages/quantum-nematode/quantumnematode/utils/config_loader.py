@@ -1374,7 +1374,13 @@ class EvolutionConfig(BaseModel):
     # = no weights to inherit); and incompatible with
     # architecture-changing schema fields.  All checks enforced by the
     # model validators below + ``SimulationConfig._validate_hyperparam_schema``.
-    inheritance: Literal["none", "lamarckian", "baldwin", "transgenerational"] = "none"
+    inheritance: Literal[
+        "none",
+        "lamarckian",
+        "baldwin",
+        "transgenerational",
+        "weights+transgenerational",
+    ] = "none"
     # Number of prior-generation elites whose checkpoints survive into
     # the next generation.  Default 1 (single-elite-broadcast).  Only
     # 1 is currently accepted when inheritance is "lamarckian"; the
@@ -1466,25 +1472,51 @@ class EvolutionConfig(BaseModel):
     def _validate_inheritance(self) -> "EvolutionConfig":  # noqa: C901, PLR0912
         """Enforce inheritance configuration rules at YAML load time.
 
-        Four rules:
+        Eight rules covering legacy invariants + substrate-flow strategies:
 
         1. ``inheritance != "none"`` AND ``learn_episodes_per_eval == 0``
-           — no train phase means no weights to inherit (Lamarckian) or
-           no learned-elite signal to propagate (Baldwin).
+           — no train phase means no weights to inherit (Lamarckian),
+           no learned-elite signal to propagate (Baldwin), no F0 elite
+           to extract substrate from (transgenerational), and nothing
+           for the substrate prior to act on (composed).
         2. ``inheritance != "none"`` AND ``warm_start_path is not None``
-           — Lamarckian and warm_start both load weights into the same
-           brain slot; Baldwin under static warm-start would mean every
-           child starts from the same fixed checkpoint, collapsing the
-           Baldwin signal.  Exactly one may be set.
-        3. ``inheritance == "lamarckian"`` AND ``inheritance_elite_count
-           != 1`` — single-elite-broadcast is the only currently-supported
-           parent-selection rule for Lamarckian inheritance.  The rule
-           does NOT apply under ``inheritance: baldwin`` since Baldwin
-           ignores the field.
+           — static warm-start and per-genome dynamic warm-start both
+           load weights into the same brain slot.  Exactly one may be
+           set.
+        3. ``inheritance in {"lamarckian", "weights+transgenerational"}``
+           AND ``inheritance_elite_count != 1`` — both modes use the
+           single-elite-broadcast pattern; multi-elite parent selection
+           (round-robin / tournament) is not currently supported.  The
+           rule does NOT apply to ``"baldwin"`` (single-elite by
+           construction) or ``"transgenerational"`` (substrate flows
+           from a single F0 elite per run).
         4. ``inheritance_elite_count > population_size`` — trivially
            impossible to keep more elites than there are genomes.
-           Independent of rule 3 so the multi-elite restriction can
-           be lifted without dropping this structural check.
+           Independent of rule 3.
+        5. ``transgenerational.enabled=True`` requires ``inheritance in
+           {"transgenerational", "weights+transgenerational"}``;
+           ``transgenerational.enabled=False`` requires
+           ``inheritance == "none"``.  The substrate-enabled pairing
+           contract ensures the substrate-flow code path is gated on
+           exactly one bit.
+        6. Under ``transgenerational.enabled=True``, the
+           ``lawn_schedule`` MUST cover every generation in ``[0,
+           generations)`` exactly once AND the gen-0 entry MUST set
+           ``ppo_train_episodes > 0`` (F0 has no substrate to inherit
+           from — F0 IS the substrate source).
+        7. ``inheritance == "weights+transgenerational"`` AND
+           any F1+ ``lawn_schedule`` entry with ``ppo_train_episodes ==
+           0`` — composed mode requires retraining for the prior to
+           act as a prior; F1+ K=0 collapses composed mode to pure-TEI.
+        8. ``inheritance in {"transgenerational", "weights+transgenerational"}``
+           AND ``transgenerational is None`` — the F0 extraction pipeline
+           needs a populated config block.
+
+        The architecture-changing-fields rejection (Lamarckian /
+        composed cannot evolve ``actor_hidden_dim`` etc. because the
+        per-genome warm-start path requires fixed tensor shapes) lives
+        in ``SimulationConfig._validate_hyperparam_schema`` instead of
+        here, because ``hyperparam_schema`` is a SimulationConfig field.
         """
         if self.inheritance != "none":
             if self.learn_episodes_per_eval == 0:
@@ -1516,15 +1548,17 @@ class EvolutionConfig(BaseModel):
                     "extraction provenance. Drop one of the two."
                 )
                 raise ValueError(msg)
-        if self.inheritance == "lamarckian" and self.inheritance_elite_count != 1:
+        single_elite_kinds = {"lamarckian", "weights+transgenerational"}
+        if self.inheritance in single_elite_kinds and self.inheritance_elite_count != 1:
             msg = (
                 f"evolution.inheritance_elite_count={self.inheritance_elite_count} "
                 f"but evolution.inheritance is {self.inheritance!r}. "
-                "inheritance_elite_count MUST be 1 when inheritance: lamarckian. "
-                "Multi-elite parent selection (round-robin or tournament) "
-                "is not currently supported; the field exists structurally "
-                "so future strategies can populate it without a "
-                "config-schema migration."
+                f"inheritance_elite_count MUST be 1 when inheritance is in "
+                f"{sorted(single_elite_kinds)!r}. Both modes use the "
+                "single-elite-broadcast pattern; multi-elite parent selection "
+                "(round-robin or tournament) is not currently supported. The "
+                "field exists structurally so future strategies can populate "
+                "it without a config-schema migration."
             )
             raise ValueError(msg)
         if self.inheritance_elite_count > self.population_size:
@@ -1535,20 +1569,23 @@ class EvolutionConfig(BaseModel):
             )
             raise ValueError(msg)
         # Transgenerational ↔ inheritance pairing contract: TEI-on
-        # requires inheritance=transgenerational; TEI-off requires
-        # inheritance=none. This guarantees the paired-arm ablation
-        # is a one-bit difference (substrate is the only cross-arm
-        # signal carrier).
+        # requires inheritance ∈ {"transgenerational", "weights+transgenerational"};
+        # TEI-off requires inheritance="none". The composed
+        # "weights+transgenerational" mode is the second valid pairing
+        # with TEI-on (substrate flows alongside weight inheritance).
+        # TEI-off still requires "none" — the disabled-substrate sentinel
+        # must NOT pair with any non-no-op inheritance strategy.
+        substrate_enabled_kinds = {"transgenerational", "weights+transgenerational"}
         if self.transgenerational is not None:
-            if self.transgenerational.enabled and self.inheritance != "transgenerational":
+            if self.transgenerational.enabled and self.inheritance not in substrate_enabled_kinds:
                 msg = (
                     "evolution.transgenerational.enabled=True requires "
-                    f"evolution.inheritance == 'transgenerational' (got {self.inheritance!r}). "
-                    "The paired-arm ablation contract requires the substrate "
-                    "to be the only cross-arm difference; mixing TEI-on with "
-                    "a non-TEI inheritance strategy would confound the "
-                    "comparison. Set inheritance: transgenerational or "
-                    "transgenerational.enabled: false."
+                    f"evolution.inheritance in {sorted(substrate_enabled_kinds)!r} "
+                    f"(got {self.inheritance!r}). 'transgenerational' is the "
+                    "pure-TEI arm (F1+ K=0); 'weights+transgenerational' "
+                    "is the composed arm (F1+ K>0 with both weights + "
+                    "substrate prior). For TEI-off control arms, set "
+                    "transgenerational.enabled: false instead."
                 )
                 raise ValueError(msg)
             if not self.transgenerational.enabled and self.inheritance != "none":
@@ -1607,19 +1644,49 @@ class EvolutionConfig(BaseModel):
                         "telemetry pass."
                     )
                     raise ValueError(msg)
-        # Symmetric guard: if inheritance is "transgenerational" but
-        # the config block is missing, the F0 extraction pipeline has
-        # no decay_factor or lawn_schedule to use. Reject explicitly
-        # rather than fail mysteriously deep in the loop.
-        if self.inheritance == "transgenerational" and self.transgenerational is None:
+                # Composed mode requires F1+ retraining for the prior
+                # to act as a prior. Pure-TEI uses K=0 at F1+ to test
+                # the floor; composed mode is the opposite: the
+                # substrate biases exploration during retraining, so
+                # K=0 at F1+ collapses composed mode to pure-TEI and
+                # would silently make the cross-arm comparison
+                # ill-defined. Enforce K>0 at every F1+ entry when
+                # inheritance == "weights+transgenerational".
+                if self.inheritance == "weights+transgenerational":
+                    offending = [
+                        e
+                        for e in self.transgenerational.lawn_schedule
+                        if e.generation > 0 and e.ppo_train_episodes == 0
+                    ]
+                    if offending:
+                        offender_gens = sorted(e.generation for e in offending)
+                        msg = (
+                            "evolution.inheritance is 'weights+transgenerational' "
+                            f"but transgenerational.lawn_schedule has F1+ entries "
+                            f"with ppo_train_episodes=0 (generations: {offender_gens}). "
+                            "Composed mode requires F1+ retraining — the substrate "
+                            "prior acts ON the training distribution, not in place "
+                            "of it. Set ppo_train_episodes > 0 for every F1+ entry, "
+                            "or use inheritance: transgenerational for the pure-TEI "
+                            "K=0 arm."
+                        )
+                        raise ValueError(msg)
+        # Symmetric guard: if inheritance ∈ {transgenerational,
+        # weights+transgenerational} but the config block is missing,
+        # the F0 extraction pipeline has no decay_factor or
+        # lawn_schedule to use. Reject explicitly rather than fail
+        # mysteriously deep in the loop.
+        if self.inheritance in substrate_enabled_kinds and self.transgenerational is None:
             msg = (
-                "evolution.inheritance is 'transgenerational' but the "
+                f"evolution.inheritance is {self.inheritance!r} but the "
                 "transgenerational config block is missing. Add a "
                 "transgenerational: block to the evolution: config with "
-                "at minimum: enabled (bool), decay_factor (float, default "
-                "0.6), and lawn_schedule (list of per-gen entries). See "
-                "the OpenSpec change 'add-transgenerational-memory' for "
-                "the schema."
+                "at minimum: enabled: true, decay_factor (float, default "
+                "0.6), and lawn_schedule. The bias_network and probe_ring "
+                "sub-blocks are optional (default None). See the OpenSpec "
+                "change 'add-tei-prior-on-m3' for the composed-mode "
+                "schema, or the archived change "
+                "'add-transgenerational-memory-redesign' for pure-TEI."
             )
             raise ValueError(msg)
         return self
@@ -2154,12 +2221,16 @@ class SimulationConfig(BaseModel):
 
         # Inheritance arch-fields incompatibility: same shape-mismatch
         # reasoning as warm-start above, applied to per-genome dynamic
-        # checkpoints.  Single source of truth via the same
-        # _ARCHITECTURE_CHANGING_FIELDS denylist.  Applies to Lamarckian
-        # ONLY: Baldwin doesn't load weights, so shape mismatches are
-        # fine — a future Baldwin arm can evolve actor_hidden_dim etc.
+        # checkpoints. Single source of truth via the same
+        # _ARCHITECTURE_CHANGING_FIELDS denylist. Applies to all
+        # warm-start-bearing strategies: Lamarckian (kind="weights")
+        # AND the composed mode (kind="weights+transgenerational"),
+        # which uses the same warm-start path. Baldwin and pure-TEI
+        # do not load weights so shape mismatches are fine — a future
+        # Baldwin or pure-TEI arm can evolve actor_hidden_dim etc.
+        weight_inheriting_kinds = {"lamarckian", "weights+transgenerational"}
         for label, evolution_cfg in self._iter_evolution_configs():
-            if evolution_cfg.inheritance == "lamarckian":
+            if evolution_cfg.inheritance in weight_inheriting_kinds:
                 offenders = sorted(
                     {entry.name for entry in self.hyperparam_schema}
                     & _ARCHITECTURE_CHANGING_FIELDS,

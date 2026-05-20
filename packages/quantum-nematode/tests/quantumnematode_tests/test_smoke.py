@@ -42,9 +42,12 @@ SIMULATION_CONFIGS = [
     # in the configured env (the transgenerational pathogen-lawn
     # substrate).
     "evolution/transgenerational_pathogen_avoidance_lstmppo_klinotaxis.yml",
-    # M6.9+ TEI re-evaluation TEI-on config. Same env-block-only
-    # rationale as the M6 entry above.
+    # Pure-TEI re-evaluation TEI-on config. Same env-block-only
+    # rationale as the entry above.
     "evolution/transgenerational_m69_tei_on.yml",
+    # Composed-mode TEI-as-prior tei_weights config. Same env-block-only
+    # rationale; tests that the composed inheritance YAML parses.
+    "evolution/tei_prior_m613_tei_weights.yml",
 ]
 
 

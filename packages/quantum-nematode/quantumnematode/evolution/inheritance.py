@@ -132,10 +132,12 @@ class InheritanceStrategy(Protocol):
         """
         ...
 
-    def kind(self) -> Literal["none", "weights", "trait", "transgenerational"]:
+    def kind(
+        self,
+    ) -> Literal["none", "weights", "trait", "transgenerational", "weights+transgenerational"]:
         """Return the inheritance kind so the loop can branch on intent.
 
-        Four values, each gating different code paths:
+        Five values, each gating different code paths:
 
         - ``"none"`` (e.g. :class:`NoInheritance`) — loop skips ALL
           inheritance code paths.  No `select_parents` call, no
@@ -155,19 +157,29 @@ class InheritanceStrategy(Protocol):
           lineage rows (same as Baldwin); additionally captures the F0
           elite's substrate via the F0 Substrate Extraction Pipeline
           and threads ``tei_prior_source`` into ``fitness.evaluate``
-          for F1+ workers. (The extraction pipeline and worker
-          forwarding are follow-up additions tracked in
-          ``openspec/changes/add-transgenerational-memory/``.) No
-          per-child weight warm-start — the substrate is the only
-          cross-generation flow.
+          for F1+ workers. No per-child weight warm-start — the
+          substrate is the only cross-generation flow.
+        - ``"weights+transgenerational"`` (e.g.
+          :class:`~quantumnematode.evolution.lamarckian_transgenerational_inheritance.LamarckianTransgenerationalInheritance`)
+          — composes the weight-IO path with the substrate-flow path.
+          Every F1+ child warm-starts from the F0 elite's ``.pt``
+          (Lamarckian pattern) AND has ``brain.tei_prior`` set from
+          the F0-extracted substrate (transgenerational pattern). The
+          retraining phase then runs with both signals active. Added
+          per ``openspec/changes/add-tei-prior-on-m3/`` as the
+          wet-lab-aligned reframe: TEI as a *prior on trained
+          weights*, not a standalone policy.
 
         The loop's ``_inheritance_active()`` helper SHALL evaluate
-        ``kind() == "weights"`` (gates weight-IO code paths).  The loop's
+        ``kind() in {"weights", "weights+transgenerational"}`` (gates
+        weight-IO code paths).  The loop's
         ``_inheritance_records_lineage()`` helper SHALL evaluate
-        ``kind() != "none"`` (gates lineage-tracking + `select_parents`).
-        A follow-up ``_substrate_inheritance_active()`` helper SHALL
-        evaluate ``kind() == "transgenerational"`` (gates the F0
-        substrate extraction pipeline + F1+ kwarg forwarding).
+        ``kind() != "none"`` (gates lineage-tracking + `select_parents`
+        — fires for all four non-no-op kinds).  The
+        ``_substrate_inheritance_active()`` helper SHALL evaluate
+        ``kind() in {"transgenerational", "weights+transgenerational"}``
+        (gates the F0 substrate extraction pipeline + F1+ kwarg
+        forwarding).
         """
         ...
 

@@ -1,0 +1,242 @@
+# TEI-as-prior-on-Lamarckian — tei_weights arm (composed inheritance)
+# ============================================================================
+#
+# Arm 1 of 3 in the composed-mode three-arm campaign. Tests whether a
+# small inherited substrate prior, combined with Lamarckian weight
+# inheritance + K_test retraining, accelerates F1+ learning vs
+# Lamarckian alone at K below saturation. This is the wet-lab-aligned
+# reframe of TEI (Kaletsky 2025; mammalian-TEI 2025 — TEI as a
+# low-bandwidth excitability prior, not a transmitted policy).
+#
+# Reuses the prior pure-TEI campaign's env + reward + bias-network
+# substrate unchanged:
+#   - env: 15x15 grid, 4 stationary predators, damage=25,
+#          min_food_predator_distance=4 (audit-B remediation v3)
+#   - reward: gradient_proximity (audit-B remediation v2)
+#   - substrate: 3-input → 8-hidden tanh → 4-output MLP, decay 0.6
+#   - probes: env-derived Manhattan ring + safe_probes extension
+#
+# Deltas from the prior pure-TEI tei_on arm:
+#   - inheritance: transgenerational → weights+transgenerational (composed)
+#   - lawn_schedule F1+ ppo_train_episodes: 0 → K_test (composed mode
+#     REQUIRES F1+ retraining; the validator rejects K=0 under composed
+#     mode per design.md § D2). Default K_test=1000 is a smoke-tunable
+#     placeholder; the calibration smoke picks the value where
+#     weights_only F1+ has measurable headroom AND beats control by
+#     ≥1.2× (T3' tripwire).
+#
+# Cross-arm pairing (per design.md § D4):
+#   - tei_weights (this file): inheritance=weights+transgenerational, F1+ K=K_test
+#   - weights_only:            inheritance=lamarckian, F1+ K=K_test (Lamarckian baseline)
+#   - control:                 inheritance=none, F1+ K=K_test (TPE-fresh)
+#
+# The launcher shell (phase5_m613_tei_prior_lstmppo_klinotaxis.sh)
+# sanity-checks at launch that all three YAMLs share: fitness_survival_weight,
+# fitness_metric, grid_size, predators.count, health.predator_damage,
+# foraging.min_food_predator_distance.
+#
+# Decision gate: F1 ≥ 40% × F0, F2 ≥ 25% × F0, F3 ≥ 15% × F0 (training-
+# time F0 fitness override applied), monotone non-increasing decay, in
+# ≥ 2 of 4 seeds. Primary metric: survival_rate. Cross-arm verdict
+# (reframed from the prior pure-TEI campaign): GO iff tei_weights passes its per-arm gate AND
+# tei_weights − weights_only paired-seed delta is statistically
+# non-zero via Wilcoxon p<0.10 AND ≥ 5pp delta with non-overlapping
+# 80% bootstrap CIs.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 500
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    weight_init_scale: 1.0
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+  # Audit-B remediation v2 — see the prior pure-TEI configs for the
+  # full rationale. Composed mode reuses this reward_mode unchanged.
+  reward_mode: gradient_proximity
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  # Audit-B remediation. Same as the prior pure-TEI tei_on env: 15x15 grid,
+  # 4 stationary predators at damage=25, min_food_predator_distance=4.
+  grid_size: 15
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 8
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+    min_food_predator_distance: 4
+
+  predators:
+    enabled: true
+    count: 4
+    speed: 0.0
+    movement_pattern: stationary
+    detection_radius: 4
+    damage_radius: 3
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.2
+
+  health:
+    max_hp: 100.0
+    predator_damage: 25.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 8
+  generations: 4
+  episodes_per_eval: 25
+  # learn_episodes_per_eval is the F0 train budget (gen-0 entry's
+  # ppo_train_episodes overrides it via lawn_schedule). The F1+
+  # entries override to K_test below.
+  learn_episodes_per_eval: 2000
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 8
+  checkpoint_every: 2
+  cma_diagonal: false
+  # Composed inheritance: F1+ children inherit BOTH the F0 elite's
+  # weights (Lamarckian pattern) AND the F0-extracted substrate prior.
+  inheritance: weights+transgenerational
+  # Parity contract: same value across all three arms (the launcher
+  # shell asserts this at launch).
+  fitness_survival_weight: 1.0
+  # Primary metric — same as the prior pure-TEI campaign.
+  fitness_metric: survival_rate
+  transgenerational:
+    enabled: true
+    decay_factor: 0.6
+    decay_shape: geometric
+    extraction_seed: 424242
+    # Reuses the prior pure-TEI audit-A bias-network substrate unchanged.
+    bias_network:
+      hidden_dim: 8
+      activation: tanh
+      input_features:
+        - predator_gradient_strength
+        - predator_gradient_direction_sin
+        - food_gradient_strength
+    # Reuses the prior pure-TEI audit-C env-derived probe ring + safe_probes
+    # extension unchanged.
+    probe_ring:
+      count: 8
+      radius_offset: 1
+      include_food_gradient_variants: false
+      safe_probes:
+        count: 16
+        min_predator_distance: 6
+    # K_test calibration: pilot at K=1000; if weights_only F1+
+    # saturates (F1 ≥ 0.95 × F0), drop to K=500; if F1 < 0.80 × F0,
+    # bump to K=1500. The T3' tripwire enforces
+    # weights_only F1+ ≤ 0.95 × F0 AND ≥ 1.2 × control F1+ — both
+    # MUST pass before the pilot is unblocked. Caps at 2 calibration
+    # passes per design.md § D5.
+    #
+    # NB: composed mode REQUIRES F1+ ppo_train_episodes > 0 (validator
+    # at config_loader.py:1633). The K_test value below MUST match
+    # weights_only.learn_episodes_per_eval AND
+    # control.learn_episodes_per_eval (across all three production
+    # arm YAMLs) — the launcher's parity check asserts this so the
+    # cross-arm primary verdict compares the same compute budget.
+    lawn_schedule:
+      - generation: 0
+        pathogen_lawns_enabled: true
+        ppo_train_episodes: 2000
+      - generation: 1
+        pathogen_lawns_enabled: true
+        ppo_train_episodes: 1000  # K_test placeholder
+      - generation: 2
+        pathogen_lawns_enabled: true
+        ppo_train_episodes: 1000
+      - generation: 3
+        pathogen_lawns_enabled: true
+        ppo_train_episodes: 1000
+
+hyperparam_schema:
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
+  - name: weight_init_scale
+    type: float
+    bounds: [0.5, 2.0]
+  - name: entropy_decay_episodes
+    type: int
+    bounds: [200, 2000]

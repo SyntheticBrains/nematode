@@ -1074,3 +1074,249 @@ class TestEvolutionConfigTransgenerationalPairing:
         )
         assert cfg.transgenerational is not None
         assert cfg.transgenerational.enabled is True
+
+
+class TestEvolutionConfigComposedInheritancePairing:
+    """Validate the ``weights+transgenerational`` composed-mode pairing rules.
+
+    Cross-product matrix: every (inheritance, transgenerational.enabled)
+    cell SHOULD be either explicitly accepted or explicitly rejected. The
+    archived pure-TEI tests cover the four pre-existing cells; this class
+    covers the new composed cell plus the previously-tested cells that
+    interact with the widened pairing rules.
+    """
+
+    def _composed_schedule(self, generations: int, f1_k: int = 100) -> list[LawnScheduleEntry]:
+        """Build a lawn_schedule where F0 has K>0 (substrate extraction needs trained
+        elite) AND every F1+ entry has ``ppo_train_episodes=f1_k`` (composed mode
+        requires retraining).
+        """  # noqa: D205
+        return [
+            LawnScheduleEntry(
+                generation=g,
+                pathogen_lawns_enabled=(g == 0),
+                ppo_train_episodes=100 if g == 0 else f1_k,
+            )
+            for g in range(generations)
+        ]
+
+    def test_composed_mode_with_tei_enabled_accepted(self) -> None:
+        """``inheritance=weights+transgenerational`` + ``enabled=True`` + F1+ K>0 SHALL load."""
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=100,
+            inheritance="weights+transgenerational",
+            transgenerational=TransgenerationalConfig(
+                enabled=True,
+                lawn_schedule=self._composed_schedule(2, f1_k=100),
+            ),
+        )
+        assert cfg.inheritance == "weights+transgenerational"
+        assert cfg.transgenerational is not None
+        assert cfg.transgenerational.enabled is True
+
+    def test_composed_mode_with_tei_disabled_rejected(self) -> None:
+        """``inheritance=weights+transgenerational`` + ``enabled=False`` SHALL raise.
+
+        Composed mode REQUIRES the substrate to be active; otherwise it
+        collapses to pure Lamarckian and the user should set
+        ``inheritance: lamarckian`` for that case.
+        """
+        with pytest.raises(
+            ValueError,
+            match=r"transgenerational\.enabled=False requires",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=100,
+                inheritance="weights+transgenerational",
+                transgenerational=TransgenerationalConfig(
+                    enabled=False,
+                    lawn_schedule=self._composed_schedule(2),
+                ),
+            )
+
+    def test_composed_mode_without_transgenerational_block_rejected(self) -> None:
+        """``inheritance=weights+transgenerational`` + ``transgenerational=None`` SHALL raise."""
+        with pytest.raises(
+            ValueError,
+            match="transgenerational config block is missing",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=100,
+                inheritance="weights+transgenerational",
+                transgenerational=None,
+            )
+
+    def test_composed_mode_with_f1_k_zero_rejected(self) -> None:
+        """Composed mode SHALL reject any F1+ ``ppo_train_episodes=0`` entry.
+
+        Pure-TEI uses K=0 at F1+ to test the floor; composed mode is the
+        opposite — the substrate prior acts ON the training distribution,
+        not in place of it. K=0 at F1+ would silently collapse composed
+        mode to pure-TEI.
+        """
+        with pytest.raises(
+            ValueError,
+            match=r"F1\+ entries with ppo_train_episodes=0",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=100,
+                inheritance="weights+transgenerational",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=self._composed_schedule(2, f1_k=0),
+                ),
+            )
+
+    def test_composed_mode_with_elite_count_two_rejected(self) -> None:
+        """``inheritance=weights+transgenerational`` + ``elite_count=2`` SHALL raise.
+
+        Same single-elite-broadcast contract as Lamarckian.
+        """
+        with pytest.raises(
+            ValueError,
+            match=r"inheritance_elite_count MUST be 1",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=100,
+                inheritance="weights+transgenerational",
+                inheritance_elite_count=2,
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=self._composed_schedule(2),
+                ),
+            )
+
+    def test_pure_tei_mode_with_f1_k_zero_still_accepted(self) -> None:
+        """The composed-mode F1+ K>0 rule SHALL NOT apply to pure-TEI ``transgenerational``.
+
+        Pure-TEI is the K=0 floor test; the composed-mode K>0 sub-rule
+        fires only when ``inheritance == "weights+transgenerational"``.
+        """
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=100,
+            inheritance="transgenerational",
+            transgenerational=TransgenerationalConfig(
+                enabled=True,
+                lawn_schedule=[
+                    LawnScheduleEntry(
+                        generation=0,
+                        pathogen_lawns_enabled=True,
+                        ppo_train_episodes=100,
+                    ),
+                    LawnScheduleEntry(
+                        generation=1,
+                        pathogen_lawns_enabled=False,
+                        ppo_train_episodes=0,
+                    ),
+                ],
+            ),
+        )
+        # Pure-TEI accepts F1+ K=0 — that's the floor-test config.
+        assert cfg.inheritance == "transgenerational"
+
+    def test_lamarckian_with_substrate_enabled_rejected(self) -> None:
+        """``inheritance=lamarckian`` + ``transgenerational.enabled=True`` SHALL raise.
+
+        The composed-mode widening accepts ``weights+transgenerational``
+        as a substrate-enabled pairing — but it MUST NOT accept plain
+        Lamarckian with a substrate block. Users who want both inheritance
+        types must use the new composed value.
+        """
+        with pytest.raises(
+            ValueError,
+            match=r"transgenerational\.enabled=True requires",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=100,
+                inheritance="lamarckian",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=self._composed_schedule(2),
+                ),
+            )
+
+    def test_baldwin_with_substrate_enabled_rejected(self) -> None:
+        """``inheritance=baldwin`` + ``transgenerational.enabled=True`` SHALL raise."""
+        with pytest.raises(
+            ValueError,
+            match=r"transgenerational\.enabled=True requires",
+        ):
+            EvolutionConfig(
+                algorithm="cmaes",
+                population_size=4,
+                generations=2,
+                episodes_per_eval=1,
+                learn_episodes_per_eval=100,
+                inheritance="baldwin",
+                transgenerational=TransgenerationalConfig(
+                    enabled=True,
+                    lawn_schedule=self._composed_schedule(2),
+                ),
+            )
+
+    def test_lamarckian_without_substrate_block_accepted(self) -> None:
+        """``inheritance=lamarckian`` + ``transgenerational=None`` SHALL load cleanly.
+
+        This is the composed-mode campaign's ``weights_only`` arm shape.
+        The cross-product matrix's Lamarckian-baseline cell — covered
+        indirectly by many Lamarckian tests, but worth pinning explicitly
+        so the validator's behaviour at this cell can't silently regress.
+        """
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=100,
+            inheritance="lamarckian",
+            transgenerational=None,
+        )
+        assert cfg.inheritance == "lamarckian"
+        assert cfg.transgenerational is None
+
+    def test_none_without_substrate_block_accepted(self) -> None:
+        """``inheritance=none`` + ``transgenerational=None`` SHALL load cleanly.
+
+        This is the composed-mode campaign's ``control`` arm shape AND
+        the default for every non-inheritance evolution run. Pins the
+        cross-product matrix's (none, None) positive cell.
+        """
+        cfg = EvolutionConfig(
+            algorithm="cmaes",
+            population_size=4,
+            generations=2,
+            episodes_per_eval=1,
+            learn_episodes_per_eval=100,
+            inheritance="none",
+            transgenerational=None,
+        )
+        assert cfg.inheritance == "none"
+        assert cfg.transgenerational is None
