@@ -27,12 +27,12 @@
 # ``fitness_metric: survival_rate`` primary metric. The launcher
 # shell asserts these match at launch.
 #
-# F1+ semantics: K=K_test (default 1000 — the placeholder set
-# alongside the tei_weights F1+ lawn_schedule). Lamarckian inheritance
-# has NO per-gen schedule override; it uses ``learn_episodes_per_eval``
-# uniformly. K_test MUST match the tei_weights F1+ entries' K — the
-# launcher's parity check asserts this so the cross-arm comparison
-# measures the same scalar at the same compute budget.
+# F1+ semantics: K=K_test (calibration-locked at 1000 on 2026-05-20).
+# Lamarckian inheritance has NO per-gen schedule override; it uses
+# ``learn_episodes_per_eval`` uniformly. K_test MUST match the
+# tei_weights F1+ entries' K — the launcher's parity check asserts
+# this so the cross-arm comparison measures the same scalar at the
+# same compute budget.
 
 max_steps: 1000
 
@@ -141,10 +141,10 @@ evolution:
   episodes_per_eval: 25
   # K_test for ALL gens (F0 + F1+). Lamarckian inheritance has no
   # per-gen schedule override, so this single value is what every
-  # gen trains for. MUST match the K used in tei_weights' F1+
-  # lawn_schedule entries (placeholder — calibration smoke picks
-  # the final value). The launcher's parity check asserts this
-  # alignment.
+  # gen trains for. K_test=1000 was calibration-locked on 2026-05-20
+  # (pass-1 smoke). MUST match tei_weights' F1+ lawn_schedule
+  # entries' ppo_train_episodes — the launcher's parity check
+  # asserts this alignment.
   learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0

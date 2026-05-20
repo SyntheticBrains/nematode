@@ -20,8 +20,9 @@
 # parity, and the fitness_metric: survival_rate primary metric. The
 # launcher shell asserts at launch.
 #
-# F1+ semantics: K=K_test (default 1000) every gen, fresh TPE genome
-# per child, no warm-start. K_test MUST match the K used in the
+# F1+ semantics: K=K_test (calibration-locked at 1000 on 2026-05-20)
+# every gen, fresh TPE genome per child, no warm-start. K_test MUST
+# match the K used in the
 # tei_weights F1+ lawn_schedule AND in weights_only's
 # learn_episodes_per_eval. The aggregator's primary cross-arm
 # verdict compares tei_weights F1+ vs weights_only F1+ (not vs this
@@ -134,10 +135,10 @@ evolution:
   population_size: 8
   generations: 4
   episodes_per_eval: 25
-  # K_test for ALL gens. No inheritance, no warm-start; every child
-  # trains from scratch for this many episodes. MUST match
-  # weights_only.learn_episodes_per_eval AND tei_weights F1+
-  # lawn_schedule K; launcher parity check asserts.
+  # K_test for ALL gens (calibration-locked at 1000 on 2026-05-20).
+  # No inheritance, no warm-start; every child trains from scratch
+  # for this many episodes. MUST match weights_only.learn_episodes_per_eval
+  # AND tei_weights F1+ lawn_schedule K; launcher parity check asserts.
   learn_episodes_per_eval: 1000
   eval_episodes_per_eval: 25
   sigma0: 1.0
