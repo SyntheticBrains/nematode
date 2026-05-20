@@ -88,7 +88,7 @@ Tasks grouped by commit (per design.md § Migration Plan). Each group is one PR-
 
 Execution-only work below; the only code that lands in commits 7+8 is logbook 020 + any user-review-driven YAML retunes from the smoke / pivot table.
 
-- [ ] 6.1 K_test calibration smoke pass 1 at K=1000: `--smoke` on `tei_weights` config (or `weights_only` standalone), 1 seed × pop 6 × 2 gens. Read T1' / T2' / T3' / T4' from emitted `eval_diagnostics.jsonl`. Decide: K stays / drops to 500 / bumps to 1500 per design.md § D5.
+- [ ] 6.1 K_test calibration smoke pass 1 at K=1000: `--smoke` runs the `weights_only` arm via `tei_prior_m613_smoke.yml` (1 seed × pop 6 × 2 gens). The calibration target is "find K_test where M3 has headroom", which is a Lamarckian-arm measurement; the substrate-diversity tripwires T2'/T4' run separately via a manual `tei_weights` smoke pass after K_test is locked in (per launcher header "Smoke flow"). Read T1'/T3' from emitted `eval_diagnostics.jsonl`. Decide: K stays / drops to 500 / bumps to 1500 per design.md § D5.
 - [ ] 6.2 K_test calibration smoke pass 2 if needed (cap at 2 passes total). On second-pass failure, STOP and document as "PR-A env doesn't support M6.13 testing."
 - [ ] 6.3 Update the three arm YAMLs' `learn_episodes_per_eval` and `lawn_schedule` F1+ entries to the chosen K_test value. Commit as a `chore(configs): M6.13 land K_test = N` commit.
 - [ ] 6.4 Pilot run × 1 (single seed × pop 8 × 4 gens × 3 arms) at chosen K_test. Aggregator runs in `--mode pilot`. User-review pause held BEFORE unblocking full campaign per `feedback_logbook_review_before_verdict.md`.

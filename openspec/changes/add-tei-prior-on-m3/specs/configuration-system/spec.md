@@ -112,29 +112,36 @@ The gen-0 `lawn_schedule` entry SHALL be unaffected by this rule (gen 0 always t
 
 The M6.13 campaign SHALL run three structurally-distinct YAML configs corresponding to the `tei_weights`, `weights_only`, and `control` arms. The pairing validator SHALL accept the three arm YAMLs with the following structural contract:
 
-- `transgenerational_m613_tei_weights.yml`: `inheritance: weights+transgenerational` AND the `transgenerational:` block SHALL be PRESENT with `enabled: true`, `bias_network`, `decay_shape`, `probe_ring`, and `lawn_schedule` entries with `ppo_train_episodes >= 500` for every F1+ entry.
-- `transgenerational_m613_weights_only.yml`: `inheritance: lamarckian` AND the `transgenerational:` block SHALL be ABSENT (parsed as `None`).
-- `transgenerational_m613_control.yml`: `inheritance: none` AND the `transgenerational:` block SHALL be ABSENT.
+- `tei_prior_m613_tei_weights.yml`: `inheritance: weights+transgenerational` AND the `transgenerational:` block SHALL be PRESENT with `enabled: true`, `bias_network`, `decay_shape`, `probe_ring`, and `lawn_schedule` entries with `ppo_train_episodes >= 500` for every F1+ entry.
+- `tei_prior_m613_weights_only.yml`: `inheritance: lamarckian` AND the `transgenerational:` block SHALL be ABSENT (parsed as `None`).
+- `tei_prior_m613_control.yml`: `inheritance: none` AND the `transgenerational:` block SHALL be ABSENT.
 
-The three arm YAMLs SHALL share the env, brain, reward, and `fitness_metric` subtrees as plain YAML duplication (no shared-base + overlay pattern — the validator constraint prevents that). The campaign shell SHALL sanity-check the three files at launch time (mirroring M6.9+'s parity check): `fitness_survival_weight`, `fitness_metric`, and the env's `grid_size` / `predators.count` / `predator_damage` / `min_food_predator_distance` MUST match across the three arms; otherwise the shell SHALL exit before any worker is dispatched.
+The three arm YAMLs SHALL share the env, brain, reward, and `fitness_metric` subtrees as plain YAML duplication (no shared-base + overlay pattern — the validator constraint prevents that). The campaign shell SHALL sanity-check the three files at launch time (mirroring M6.9+'s parity check) across FOUR dimensions:
+
+1. **Fitness parity** (inherited from M6.9+): `fitness_survival_weight` AND `fitness_metric` MUST match across the three arms.
+2. **Env parity**: `environment.grid_size`, `environment.predators.count`, `environment.health.predator_damage`, AND `environment.foraging.min_food_predator_distance` MUST match across the three arms.
+3. **K_test alignment** (M6.13 load-bearing): `weights_only.learn_episodes_per_eval` AND `control.learn_episodes_per_eval` MUST match `tei_weights` F1+ `lawn_schedule` entries' `ppo_train_episodes`. The cross-arm primary verdict `tei_weights − weights_only` is only meaningful when both arms train at the same K compute budget.
+4. **scipy availability** (aggregator dependency): the launcher MUST import `scipy.stats` cleanly before dispatching workers; missing scipy SHALL produce a `uv sync --extra analysis` pointer.
+
+On any parity violation the shell SHALL exit with a non-zero status BEFORE dispatching any worker.
 
 #### Scenario: tei_weights YAML carries the full composed inheritance block
 
-- **WHEN** `transgenerational_m613_tei_weights.yml` is loaded
+- **WHEN** `tei_prior_m613_tei_weights.yml` is loaded
 - **THEN** `evolution.inheritance` SHALL equal `"weights+transgenerational"`
 - **AND** the `transgenerational:` block SHALL be present with `enabled: true` AND all M6.9+ sub-blocks (`bias_network`, `decay_shape`, `probe_ring`) populated
 - **AND** every `lawn_schedule` F1+ entry SHALL have `ppo_train_episodes >= 500`
 
 #### Scenario: weights_only YAML omits the transgenerational block (M3 reproduction)
 
-- **WHEN** `transgenerational_m613_weights_only.yml` is loaded
+- **WHEN** `tei_prior_m613_weights_only.yml` is loaded
 - **THEN** `evolution.inheritance` SHALL equal `"lamarckian"`
 - **AND** the `transgenerational:` block SHALL be absent (parsed as `None`)
 - **AND** the `_validate_inheritance` pairing rule SHALL NOT fire (it only checks when the block is present)
 
 #### Scenario: control YAML omits the transgenerational block (TPE-fresh)
 
-- **WHEN** `transgenerational_m613_control.yml` is loaded
+- **WHEN** `tei_prior_m613_control.yml` is loaded
 - **THEN** `evolution.inheritance` SHALL equal `"none"`
 - **AND** the `transgenerational:` block SHALL be absent
 
@@ -150,3 +157,10 @@ The three arm YAMLs SHALL share the env, brain, reward, and `fitness_metric` sub
 - **WHEN** the campaign shell is invoked with divergent `fitness_metric` across arms (e.g. tei_weights uses `survival_rate` but weights_only uses `composite`)
 - **THEN** the shell SHALL exit with a non-zero status BEFORE dispatching any worker
 - **AND** stderr SHALL name the divergent field and the per-arm values
+
+#### Scenario: launch-time parity check fires on K_test misalignment across arms
+
+- **WHEN** the campaign shell is invoked with `tei_weights` F1+ `lawn_schedule` entries having `ppo_train_episodes: 1000` AND `weights_only.learn_episodes_per_eval: 2000`
+- **THEN** the shell SHALL exit with a non-zero status BEFORE dispatching any worker
+- **AND** stderr SHALL name the K_test misalignment and the per-arm values
+- **AND** the message SHALL explain that the cross-arm primary verdict requires both arms to train at the same K_test budget

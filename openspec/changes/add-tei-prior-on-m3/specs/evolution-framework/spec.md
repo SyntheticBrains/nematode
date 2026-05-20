@@ -116,7 +116,7 @@ Two secondary verdicts SHALL also be emitted:
 - **AND** the 80% bootstrap CI of the mean delta is `[+0.04, +0.13]` (non-overlapping with zero)
 - **AND** `tei_weights` passes its per-arm gate
 - **THEN** the cross-arm primary verdict SHALL be GO
-- **AND** the aggregator SHALL emit `pr_close_note.md` documenting the M6.13 GO finding
+- **AND** the aggregator SHALL emit `m614_frequency_prior_trigger.md` documenting the M6.13 GO finding AND recommending the M6.14 frequency-prior ablation scaffold
 
 #### Scenario: STOP when tei_weights ≈ weights_only (substrate prior inert)
 
@@ -266,10 +266,11 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 
 - **GIVEN** a composed-mode run with `population_size: 8` and `inheritance: weights+transgenerational`
 - **WHEN** gen 0 completes
-- **THEN** the F0 substrate-extraction pipeline's internal GC pass SHALL be SUPPRESSED (the kind-conditional `_combined_inheritance_active()` predicate returns `True`, skipping the internal GC call)
-- **AND** all 8 F0 `.pt` files SHALL remain on disk through the end of the substrate-extraction pipeline
-- **AND** the main-loop Lamarckian GC pass (running at end of gen 0 after `select_parents`) SHALL then keep only the F0 elite's `.pt` (deleting the other 7)
-- **AND** the net effect at the moment gen 1 begins SHALL be IDENTICAL to a pure-M3 run: exactly one F0 `.pt` survives, indexed by the elite's genome_id
+- **THEN** the main-loop Lamarckian GC pass SHALL fire FIRST (running at end of gen 0 after `select_parents`, BEFORE F0 substrate extraction) — `_inheritance_active()` widens to `True` under composed mode — and SHALL keep only the F0 elite's `.pt` in `gen-000/` (deleting the other 7)
+- **AND** the F0 substrate-extraction pipeline SHALL THEN run, loading the surviving elite `.pt` and writing the `.tei.pt` substrate
+- **AND** the F0 substrate-extraction pipeline's internal GC pass SHALL be SUPPRESSED under composed mode (the kind-conditional `_combined_inheritance_active()` predicate returns `True`, skipping the internal GC) so the elite's `.pt` is NOT deleted by it
+- **AND** the net effect at the moment gen 1 begins SHALL be IDENTICAL to a pure-M3 run: exactly one F0 `.pt` survives, indexed by the elite's genome_id, alongside the `.tei.pt` substrate
+- **AND** under non-composed `inheritance: transgenerational` mode, the main-loop GC SHALL NOT fire (`_inheritance_active()` is False for that kind) but the inline GC inside `_run_f0_substrate_extraction` SHALL still fire — the inline GC remains load-bearing for the pure-TEI cleanup
 
 #### Scenario: Inheritance requires a training phase
 
