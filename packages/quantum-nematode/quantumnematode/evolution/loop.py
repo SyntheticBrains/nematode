@@ -688,13 +688,24 @@ class EvolutionLoop:
     def _gc_inheritance_dir(self, generation: int, keep_ids: list[str]) -> None:
         """Garbage-collect non-survivor checkpoints in one inheritance directory.
 
-        Deletes every file in ``inheritance/gen-{generation:03d}/`` whose
-        genome ID is NOT in ``keep_ids``.  No-op when the directory does
-        not exist (e.g. on the very first GC pass before any inheritance
-        file has been written, or when ``generation < 0``).  Files are
-        matched by the canonical ``genome-<gid>.pt`` name shape; the
-        ``<gid>`` token is extracted via ``stem.removeprefix("genome-")``
-        (cleaner than regex for the fixed pattern).
+        Deletes every weight-checkpoint file in
+        ``inheritance/gen-{generation:03d}/`` whose genome ID is NOT in
+        ``keep_ids``.  No-op when the directory does not exist (e.g. on
+        the very first GC pass before any inheritance file has been
+        written, or when ``generation < 0``).  Weight files are matched
+        by the canonical ``genome-<gid>.pt`` name shape; the ``<gid>``
+        token is extracted via ``stem.removeprefix("genome-")`` (cleaner
+        than regex for the fixed pattern).
+
+        Substrate files (``genome-<gid>.tei.pt``) are SKIPPED — their
+        lifecycle is owned by the F0 substrate-extraction pipeline, not
+        the main-loop Lamarckian GC.  Under composed mode the F0
+        substrate must survive past F0 because F2/F3 children inherit
+        it with ``decay_factor^2`` / ``decay_factor^3``; treating
+        ``genome-X.tei.pt`` as a weight checkpoint here would strip only
+        one suffix (``stem`` becomes ``genome-X.tei``) and leave a
+        bogus genome ID that never matches the keep-set, deleting the
+        substrate.
         """
         if generation < 0:
             return
@@ -703,6 +714,8 @@ class EvolutionLoop:
             return
         keep = set(keep_ids)
         for path in gen_dir.glob("genome-*.pt"):
+            if path.name.endswith(".tei.pt"):
+                continue
             gid = path.stem.removeprefix("genome-")
             if gid not in keep:
                 path.unlink(missing_ok=True)

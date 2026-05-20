@@ -473,6 +473,51 @@ def test_composed_mode_inline_gc_skipped_preserves_f0_pt(tmp_path: Path) -> None
     assert pure_tei_substrate.exists()
 
 
+def test_main_loop_gc_preserves_substrate_tei_pt(tmp_path: Path) -> None:
+    """``_gc_inheritance_dir`` SHALL NOT delete ``genome-X.tei.pt`` substrate files.
+
+    Regression for the composed-mode pilot crash on 2026-05-20:
+    ``Path.glob("genome-*.pt")`` matches BOTH weight checkpoints
+    (``genome-X.pt``) AND substrate files (``genome-X.tei.pt``).
+    ``Path.stem`` strips only ONE suffix, so for ``genome-X.tei.pt``
+    it returns ``genome-X.tei``, the extracted gid ends in ``.tei``,
+    and the substrate never matches ``keep_ids`` → gets deleted.
+
+    Under M3 / pure-TEI the bug never surfaced because either no
+    ``.tei.pt`` is in the GC'd directory (M3) or the main-loop GC
+    doesn't fire (pure-TEI). Under composed mode F2/F3 children
+    inherit F0's substrate with ``decay_factor^N`` so the substrate
+    MUST survive every main-loop GC pass for the whole campaign.
+
+    Test sets up an F0 directory with two ``.pt`` files (elite +
+    non-elite) and one ``.tei.pt`` file (the F0 elite's substrate),
+    calls ``_gc_inheritance_dir(generation=0, keep_ids=['elite'])``,
+    and asserts: elite ``.pt`` survives, non-elite ``.pt`` is deleted,
+    substrate ``.tei.pt`` survives unconditionally.
+    """
+    sim_config = _sim_config_with_predators()
+    loop = _make_loop(
+        tmp_path,
+        sim_config=sim_config,
+        transgenerational=_composed_tei_config(),
+        inheritance="weights+transgenerational",
+    )
+    gen0 = loop.output_dir / "inheritance" / "gen-000"
+    gen0.mkdir(parents=True, exist_ok=True)
+    elite_pt = gen0 / "genome-elite.pt"
+    non_elite_pt = gen0 / "genome-non-elite.pt"
+    substrate = gen0 / "genome-elite.tei.pt"
+    elite_pt.write_bytes(b"weights-elite")
+    non_elite_pt.write_bytes(b"weights-non-elite")
+    substrate.write_bytes(b"substrate-bytes")
+
+    loop._gc_inheritance_dir(generation=0, keep_ids=["elite"])
+
+    assert elite_pt.exists(), "elite weight checkpoint must survive GC"
+    assert not non_elite_pt.exists(), "non-elite weight checkpoint must be GC'd"
+    assert substrate.exists(), "F0 substrate .tei.pt must survive main-loop GC"
+
+
 def test_composed_mode_substrate_path_does_not_collide_with_weights_pt(tmp_path: Path) -> None:
     """The substrate ``.tei.pt`` save path SHALL NOT collide with the elite's weights ``.pt``.
 
