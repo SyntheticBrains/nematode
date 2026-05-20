@@ -63,10 +63,28 @@ Tasks grouped by commit (per design.md § Migration Plan). Each group is one PR-
 - [x] 5.2 Cross-arm primary verdict per evolution-framework spec § "M6.13 Cross-Arm Primary Verdict (Reframed)": GO iff `tei_weights` passes per-arm gate (≥ 2/4 seeds) AND `tei_weights − weights_only` paired-seed delta satisfies BOTH Wilcoxon one-sided p < 0.10 AND ≥ 5pp absolute delta with non-overlapping 80% bootstrap CIs (1000 resamples). Both checks MUST agree on direction. **Statistical machinery inherited byte-identical from M6.9+'s `aggregate_m69_pilot.py`; only the verdict-pair tuple `(arm_a, arm_b)` and the per-arm gate input change.**
 - [x] 5.3 Secondary verdicts: `weights_only − control` (M3 re-reproduction; should match PR-A's +17.5pp scaled to K_test) and `tei_weights − control` (composed-arm vs floor). **`cross_arm_pairs` reordered so the M6.13 primary pair is first; secondary pairs follow.**
 - [x] 5.4 Pilot pivot classification (M6.13 six rows from design.md § D6): row 1 (substrate-inert, STOP), row 2 (clear GO at K_test), row 3 (K-sensitivity, 2-5pp Δ), row 4 (substrate-interferes, STOP), row 5 (M3-saturation pivot, K_test too large), row 6 (PPO-destabilised, STOP). Classification SHALL be deterministic — exactly one row matches any given outcome. **Branch order is by specificity: rows 5 + 6 (catastrophic) → row 4 (interferes) → row 2/3 (positive delta variants) → row 1 (inert) → ambiguous fallback. Earlier branches absorb cases later rows would also match (e.g. PPO collapse → row 6, not row 1 even though Δ may be ≈0).**
-- [x] 5.5 Tests in `tests/.../campaigns/test_aggregate_m613_pilot.py` (~14 cases): three-arm arm-naming sanity; per-arm gate logic; cross-arm stats with the reframed pair (`tei_weights − weights_only`); primary-verdict AND-of-checks (GO + 3 STOP variants + INDETERMINATE under-powered); 4 D6 pivot detectors (substrate-inert, substrate-interferes, M3-saturation, PPO-destabilised); 6 pivot-emission tests covering each of the D6 rows with branch-order verification; M6.14 trigger emission on GO + M6.13 null-finding note emission on STOP. **Shipped 19 cases at commit `<pending>`.**
+- [x] 5.5 Tests in `tests/.../campaigns/test_aggregate_m613_pilot.py` (~14 cases): three-arm arm-naming sanity; per-arm gate logic; cross-arm stats with the reframed pair (`tei_weights − weights_only`); primary-verdict AND-of-checks (GO + 3 STOP variants + INDETERMINATE under-powered + pilot-mode-not-INDETERMINATE); 4 D6 pivot detectors (substrate-inert, substrate-interferes, M3-saturation, PPO-destabilised); 6 pivot-emission tests covering each of the D6 rows with branch-order verification; M6.14 trigger emission on GO + M6.13 null-finding note emission on STOP. **Shipped 20 cases (19 at commit `2fd84f3e` + 1 at commit `e8d76c46` for the pilot-mode-under-powered contract per S3 review).**
 - [x] 5.6 `uv run pytest -m "not smoke and not nightly"` passes (M6.9+ aggregator tests + new M6.13 tests). **42 aggregator tests pass (23 PR-A + 19 M6.13); ruff + pyright clean.**
 
 ## 6. K_test calibration smoke + pilot + full campaign + logbook (Commit 7 + 8)
+
+> **⚠ DEFERRED to follow-up PR — framework-only scope on this branch.**
+>
+> Per the PR-A precedent (commits 7 + 8 there ran the actual compute
+> after the framework PR merged), this branch ships the M6.13 framework
+> AND the OpenSpec change AS ACTIVE (not archived). The K_test
+> calibration smoke, pilot, full campaign, logbook 020, OpenSpec
+> archive, and downstream phase5-tracker/roadmap updates ALL land in a
+> separate follow-up PR after the operator runs the calibration smoke
+> at their convenience. The 11 unchecked items below are NOT a
+> "PR-incomplete" signal — they are the explicit scope of the next PR.
+>
+> What ships THIS PR (sections 1-5, all ticked): composed inheritance
+> strategy + Protocol widening; validator relaxation + cross-product
+> tests; loop integration + smoke tests; campaign YAMLs + launcher
+> shell; three-arm aggregator + reframed verdict. 56 new tests; 610
+> regression tests pass (M3 / Baldwin / M6.9+ pure-TEI / M6.13 composed
+> all green); pyright + ruff + mdformat + markdownlint clean.
 
 Execution-only work below; the only code that lands in commits 7+8 is logbook 020 + any user-review-driven YAML retunes from the smoke / pivot table.
 

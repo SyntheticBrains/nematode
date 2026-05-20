@@ -746,8 +746,7 @@ def _write_pilot_pivot_decision(
             "means the env shifted or T3' was bypassed.",
         )
         pivot_lines.append(
-            "Pivot: drop K_test to 500 and rerun the pilot (+3 wall-h "
-            "cap per design.md § D6).\n",
+            "Pivot: drop K_test to 500 and rerun the pilot (+3 wall-h cap per design.md § D6).\n",
         )
     # Row 6: PPO destabilised by substrate. tei_weights F1 collapse
     # is unambiguous even if mean_delta is also negative.

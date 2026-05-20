@@ -137,7 +137,7 @@ When the M6.13 aggregator runs in `--mode pilot`, it SHALL emit `pilot_pivot_dec
 
 | Pilot observation | Pre-declared pivot |
 |---|---|
-| `tei_weights F1+ ≈ weights_only F1+` (|Δ| < 2pp) | STOP — substrate prior inert under retraining. M6.13 hypothesis falsified. |
+| `tei_weights F1+ ≈ weights_only F1+` (abs delta < 2pp) | STOP — substrate prior inert under retraining. M6.13 hypothesis falsified. |
 | `tei_weights F1+ > weights_only F1+` by ≥ 5pp at K_test | GO — full campaign at K_test only. |
 | `tei_weights F1+ > weights_only F1+` by 2-5pp at K_test | K-sensitivity pilot: rerun at K=500 and K=1500 to map dose-response. +6 wall-h cap. |
 | `tei_weights F1+ < weights_only F1+` (Δ < -2pp) | STOP — substrate INTERFERES with M3. Document; future-work substrate-policy alignment. |

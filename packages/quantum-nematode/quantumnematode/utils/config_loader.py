@@ -1579,10 +1579,7 @@ class EvolutionConfig(BaseModel):
         # inheritance strategy.
         substrate_enabled_kinds = {"transgenerational", "weights+transgenerational"}
         if self.transgenerational is not None:
-            if (
-                self.transgenerational.enabled
-                and self.inheritance not in substrate_enabled_kinds
-            ):
+            if self.transgenerational.enabled and self.inheritance not in substrate_enabled_kinds:
                 msg = (
                     "evolution.transgenerational.enabled=True requires "
                     f"evolution.inheritance in {sorted(substrate_enabled_kinds)!r} "
@@ -1681,10 +1678,7 @@ class EvolutionConfig(BaseModel):
         # the F0 extraction pipeline has no decay_factor or
         # lawn_schedule to use. Reject explicitly rather than fail
         # mysteriously deep in the loop.
-        if (
-            self.inheritance in substrate_enabled_kinds
-            and self.transgenerational is None
-        ):
+        if self.inheritance in substrate_enabled_kinds and self.transgenerational is None:
             msg = (
                 f"evolution.inheritance is {self.inheritance!r} but the "
                 "transgenerational config block is missing. Add a "

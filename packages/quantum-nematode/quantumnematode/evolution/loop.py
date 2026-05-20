@@ -856,9 +856,7 @@ class EvolutionLoop:
         # The substrate path-builder lives here in the loop because
         # only the loop knows it needs a ``.tei.pt`` (substrate file)
         # vs the strategy's ``.pt`` (weights file).
-        substrate_path = (
-            self.output_dir / "inheritance" / "gen-000" / f"genome-{elite_id}.tei.pt"
-        )
+        substrate_path = self.output_dir / "inheritance" / "gen-000" / f"genome-{elite_id}.tei.pt"
         save_substrate(substrate, substrate_path)
 
         # Record the path so F1+ workers (a follow-up commit's
