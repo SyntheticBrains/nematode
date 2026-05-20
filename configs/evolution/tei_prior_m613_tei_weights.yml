@@ -32,7 +32,7 @@
 #
 # The launcher shell (phase5_m613_tei_prior_lstmppo_klinotaxis.sh)
 # sanity-checks at launch that all three YAMLs share: fitness_survival_weight,
-# fitness_metric, grid_size, predators.count, predators.predator_damage,
+# fitness_metric, grid_size, predators.count, health.predator_damage,
 # foraging.min_food_predator_distance.
 #
 # Decision gate: F1 ≥ 40% × F0, F2 ≥ 25% × F0, F3 ≥ 15% × F0 (training-

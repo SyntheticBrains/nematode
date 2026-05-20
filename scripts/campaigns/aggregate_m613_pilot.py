@@ -208,7 +208,7 @@ def load_f0_training_fitness_per_seed(
     return out
 
 
-def _read_f0_training_fitness(jsonl_path: Path) -> float | None:
+def _read_f0_training_fitness(jsonl_path: Path) -> float | None:  # noqa: C901 - linear JSONL row filter; branches are defensive guards
     """Return the F0 (``generation == 0``) elite's training-time ``fitness`` field, or None.
 
     Skips rows missing the ``fitness`` key OR with non-finite values
@@ -226,7 +226,16 @@ def _read_f0_training_fitness(jsonl_path: Path) -> float | None:
                     continue
                 if not isinstance(row, dict):
                     continue
-                if int(row.get("generation", -1)) != 0:
+                try:
+                    generation = int(row.get("generation", -1))
+                except (TypeError, ValueError):
+                    logger.warning(
+                        "Skipping row with malformed generation in %s: %s",
+                        jsonl_path,
+                        row.get("generation"),
+                    )
+                    continue
+                if generation != 0:
                     continue
                 if "fitness" not in row:
                     return None

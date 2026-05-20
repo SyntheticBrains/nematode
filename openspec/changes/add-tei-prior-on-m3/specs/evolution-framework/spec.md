@@ -88,8 +88,8 @@ The F1+ workers SHALL receive BOTH `warm_start_path_override` (resolved from the
 - **GIVEN** an `InheritanceStrategy` instance whose `kind()` returns one of the five legal values
 - **WHEN** the loop computes `_inheritance_active()` and `_substrate_inheritance_active()`
 - **THEN** both SHALL evaluate `True` when `kind() == "weights+transgenerational"` (composed mode runs both paths)
-- **AND** `_inheritance_active()` SHALL evaluate `True` exclusively when `kind() == "weights"` (Lamarckian-only path)
-- **AND** `_substrate_inheritance_active()` SHALL evaluate `True` exclusively when `kind() == "transgenerational"` (M6.9+ pure-TEI path)
+- **AND** `_inheritance_active()` SHALL evaluate `True` when `kind() == "weights"` (Lamarckian-only weight-IO path; substrate predicate is False)
+- **AND** `_substrate_inheritance_active()` SHALL evaluate `True` when `kind() == "transgenerational"` (M6.9+ pure-TEI substrate-flow path; weight-IO predicate is False)
 - **AND** both predicates SHALL evaluate `False` when `kind() == "none"` or `kind() == "trait"` (no weight-IO; no substrate flow)
 - **AND** `_inheritance_records_lineage()` SHALL evaluate `True` when `kind() == "weights+transgenerational"` (composed mode populates the lineage CSV's `inherited_from` column at F1+, same as the four existing non-`none` kinds — the existing `kind() != "none"` predicate widens through naturally; no separate widening needed for lineage tracking)
 

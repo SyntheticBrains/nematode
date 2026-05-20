@@ -28,7 +28,7 @@
 #
 #   1. fitness_survival_weight + fitness_metric MUST match across arms.
 #   2. env fields MUST match across arms: grid_size, predators.count,
-#      predators.predator_damage, foraging.min_food_predator_distance.
+#      health.predator_damage, foraging.min_food_predator_distance.
 #   3. K_test alignment MUST hold: weights_only.learn_episodes_per_eval
 #      AND control.learn_episodes_per_eval MUST match tei_weights F1+
 #      lawn_schedule entries' ppo_train_episodes. This is the
@@ -102,7 +102,7 @@ CONFIG_SMOKE="configs/evolution/tei_prior_m613_smoke.yml"
 #     fitness parity, inherited contract from the pure-TEI campaign).
 #   - fitness_metric: same primary metric across arms (campaign
 #     specifies ``survival_rate``).
-#   - env.grid_size + predators.count + predators.predator_damage +
+#   - env.grid_size + predators.count + health.predator_damage +
 #     foraging.min_food_predator_distance: same env across arms (the
 #     audit-B/C corrections must apply uniformly).
 #   - K_test alignment: weights_only.learn_episodes_per_eval AND
@@ -134,8 +134,18 @@ fm = {arm: (cfg.get('evolution') or {}).get('fitness_metric', 'composite')
 if len(set(fsw.values())) > 1 or 'MISSING' in set(fsw.values()):
     print('MISMATCH fitness_survival_weight=' + str(fsw), file=sys.stderr)
     sys.exit(1)
-if len(set(fm.values())) > 1:
+# Campaign requires fsw == 1.0 specifically — the cross-arm primary
+# verdict is calibrated against survival_rate at full weight.
+if next(iter(fsw.values())) != 1.0:
+    print('REQUIRED fitness_survival_weight=1.0 not met: ' + str(fsw), file=sys.stderr)
+    sys.exit(1)
+if len(set(fm.values())) > 1 or 'MISSING' in set(fm.values()):
     print('MISMATCH fitness_metric=' + str(fm), file=sys.stderr)
+    sys.exit(2)
+# Campaign requires fm == 'survival_rate' specifically — composite
+# would conflate F1+ retention with food-collection mass.
+if next(iter(fm.values())) != 'survival_rate':
+    print('REQUIRED fitness_metric=survival_rate not met: ' + str(fm), file=sys.stderr)
     sys.exit(2)
 
 # (b) Env-field parity. Reach into nested structure with defensive

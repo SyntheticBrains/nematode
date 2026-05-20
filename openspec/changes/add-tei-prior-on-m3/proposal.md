@@ -48,5 +48,5 @@ None — M6.13 extends existing capabilities; no new spec files.
 - **Existing inheritance modes** (`none`, `lamarckian`, `baldwin`, `transgenerational`): no behaviour change. The PR-A pure-TEI arm uses `kind() == "transgenerational"` (M6.9+ path); M6.13's composed arm uses the new `kind() == "weights+transgenerational"`.
 - **Compute envelope**: K_test calibration smoke ~2-4 wall-h; pilot ~3 wall-h; full ~14-18 wall-h; post-hoc ~1 wall-h. Total M6.13 ≈ **~20-25 wall-h**. Matches PR-A footprint with headroom for the calibration pivot.
 - **Decision-gate evaluation**: per-(arm, seed) survival_rate retention table + per-arm cross-seed verdict + reframed cross-arm primary verdict (`tei_weights − weights_only`). User-reviewed before logbook 020 publication (per `feedback_logbook_review_before_verdict.md`).
-- **Tests**: +40 cases across composed-strategy unit (+16), loop-smoke (+6), config-validator cross-product (+4), aggregator (+14).
+- **Tests**: +58 cases across composed-strategy unit (+18), loop-smoke (+10), config-validator cross-product (+10), aggregator (+20).
 - **Risk**: low for framework code (additive composition; M3 and M6.9+ regression tests gate byte-equivalence on existing paths); calibration-tripwire-gated for compute spend.

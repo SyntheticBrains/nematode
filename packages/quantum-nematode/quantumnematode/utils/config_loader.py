@@ -1682,9 +1682,10 @@ class EvolutionConfig(BaseModel):
                 "transgenerational config block is missing. Add a "
                 "transgenerational: block to the evolution: config with "
                 "at minimum: enabled: true, decay_factor (float, default "
-                "0.6), bias_network, probe_ring, and lawn_schedule. See "
-                "the OpenSpec change 'add-tei-prior-on-m3' for the "
-                "composed-mode schema, or the archived change "
+                "0.6), and lawn_schedule. The bias_network and probe_ring "
+                "sub-blocks are optional (default None). See the OpenSpec "
+                "change 'add-tei-prior-on-m3' for the composed-mode "
+                "schema, or the archived change "
                 "'add-transgenerational-memory-redesign' for pure-TEI."
             )
             raise ValueError(msg)
