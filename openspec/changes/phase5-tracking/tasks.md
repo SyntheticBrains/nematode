@@ -291,7 +291,7 @@ OpenSpec change: `add-transgenerational-memory-redesign` (to be archived as `202
 
 ## M8: Phase 5 Synthesis Logbook
 
-**OpenSpec change**: `2026-07-21-add-phase5-evaluation` was never created; `phase5-tracking` is the canonical tracker (archives standalone via `openspec-archive-change phase5-tracking` operator-side post-merge — see closing blockquote below the task list).
+**OpenSpec change**: `add-phase5-evaluation` was never created; `phase5-tracking` is the canonical tracker (archives standalone via `openspec-archive-change phase5-tracking` operator-side post-merge — see closing blockquote below the task list).
 **Status**: ✅ complete (scoped synthesis — see § Scope decision below; logbook 021 published)
 **Dependencies**: M2–M6 complete (or explicitly dropped via gates)
 
@@ -306,7 +306,7 @@ OpenSpec change: `add-transgenerational-memory-redesign` (to be archived as `202
 - [x] M8.5 Publish `docs/experiments/logbooks/021-phase5-synthesis.md` (numbering: 020 was M6.13 close-out; 021 is M8 synthesis). **Done**: logbook 021 published; cross-cites Resendez Prado / Mougi / Chen / Kaletsky 2025-2026 throughout the negative-findings synthesis.
 - [x] M8.6 Update `docs/roadmap.md` Phase 5 status → COMPLETE; record exit criterion outcomes. **Done**: Phase 5 status row flipped from 🟡 IN PROGRESS → 🟢 COMPLETE; M8 row added with verdict + reference to logbook 021. Phase 5 Exit Criteria EC3 (co-evolution arms race) and EC4 (transgenerational memory) demoted from bare ✅ to ⚠️ MET WITH CAVEAT (matching logbook 021 § M8.2's honest framing — the experiments ran but produced substrate-grounded STOP verdicts; the bare ✅s pre-dated the M5/M6 STOP landings and were stale).
 
-> Archiving `phase5-tracking` itself is an operator-side step that intentionally does NOT block task completion: `openspec-archive-change` requires every task ticked, so an "archive me" task here would self-block (same precedent as `add-tei-prior-on-m3/tasks.md`, where the original tasks 6.10 archive + 6.11 push were dropped from the task slate and replaced by the closing blockquote after task 6.9 explicitly framing them as operator-side steps outside the task slate). The archive happens after this PR merges to main via `openspec-archive-change phase5-tracking`; the OpenSpec change `2026-07-21-add-phase5-evaluation` referenced in the M8 header was never created — `phase5-tracking` is the canonical tracker and archives standalone.
+> Archiving `phase5-tracking` itself is an operator-side step that intentionally does NOT block task completion: `openspec-archive-change` requires every task ticked, so an "archive me" task here would self-block (same precedent as `add-tei-prior-on-m3/tasks.md`, where the original tasks 6.10 archive + 6.11 push were dropped from the task slate and replaced by the closing blockquote after task 6.9 explicitly framing them as operator-side steps outside the task slate). The archive happens after this PR merges to main via `openspec-archive-change phase5-tracking`; the OpenSpec change `add-phase5-evaluation` referenced in the M8 header was never created — `phase5-tracking` is the canonical tracker and archives standalone.
 
 ## Phase 5 Research Questions
 
