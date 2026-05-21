@@ -263,7 +263,7 @@ Three abstraction candidates were enumerated (informed by Fernando 2018 + Chiu 2
 
 ### Pre-flight smoke (gen-0 population at seed 42, K=10/25/50)
 
-Before committing to a 5-day implementation + ~9-14h pilot wall-time investment, ran a 3-minute smoke (`tmp/m4_6_b3_smoke.py`) measuring per-genome (fit_K=10, fit_K=25, fit_K=50) triples for the 12-genome gen-0 population deterministically reproduced from the M4.5 Baldwin pilot's seed 42. The smoke uses fresh-brain measurements at each K (cross-brain Δ rather than within-trajectory Δ), consistent with the existing F1 evaluator's pattern.
+Before committing to a 5-day implementation + ~9-14h pilot wall-time investment, ran a 3-minute smoke (script archived under [`artifacts/logbooks/015/m4_6_smoke/`](../../../artifacts/logbooks/015/m4_6_smoke/)) measuring per-genome (fit_K=10, fit_K=25, fit_K=50) triples for the 12-genome gen-0 population deterministically reproduced from the M4.5 Baldwin pilot's seed 42. The smoke uses fresh-brain measurements at each K (cross-brain Δ rather than within-trajectory Δ), consistent with the existing F1 evaluator's pattern.
 
 | genome_idx | fit_K=10 | fit_K=25 | fit_K=50 | Δ_25→50 | Δ_10→25 |
 |---|---|---|---|---|---|

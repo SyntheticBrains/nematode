@@ -1,6 +1,6 @@
 # R1+R3 post-hoc probe - env=X4 gen-19 prey (25 eps)
 
-Weights: `tmp/evaluations/coevolution/pr6_overnight_20260511T121704Z/x4/run/20260511_142906_75351f54/prey/inheritance/gen-019/genome-751d1173-9ccc-5b79-9e2c-b105a550f5ff.pt`
+Weights: `pr6_overnight_20260511T121704Z/x4/run/20260511_142906_75351f54/prey/inheritance/gen-019/genome-751d1173-9ccc-5b79-9e2c-b105a550f5ff.pt`
 Episodes per cell: 25, seed: 42
 
 ## Results

@@ -14,7 +14,7 @@ stays slightly below the elite max).
 Cycling lag range: 3-15 gens
 Escalation gen window: 5-30 gens
 
-## tmp/evaluations/coevolution/pr6_zcand_20260512T094431Z/z1/run/20260512_095440_d1c8c0f6
+## Session: pr6_zcand_20260512T094431Z/z1/run/20260512_095440_d1c8c0f6
 
 - Prey per-gen series: n=20, min=0.003, max=0.962, std=0.254
 - Predator per-gen series: n=20, min=0.958, max=2.297, std=0.385

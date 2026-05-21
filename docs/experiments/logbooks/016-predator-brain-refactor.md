@@ -222,7 +222,7 @@ M5 (co-evolution arms race) starts with this substrate fully in place:
 - **Pre-refactor CSV** ([commit `73684213`](https://github.com/SyntheticBrains/nematode/commit/73684213)): [`artifacts/logbooks/016-predator-brain-refactor/baseline_pre.csv`](../../../artifacts/logbooks/016-predator-brain-refactor/baseline_pre.csv)
 - **Post-refactor CSV** ([commit `3d45e75c`](https://github.com/SyntheticBrains/nematode/commit/3d45e75c)): [`artifacts/logbooks/016-predator-brain-refactor/baseline_post.csv`](../../../artifacts/logbooks/016-predator-brain-refactor/baseline_post.csv)
 - **Runner script archived**: [`artifacts/logbooks/016-predator-brain-refactor/run_baseline.sh`](../../../artifacts/logbooks/016-predator-brain-refactor/run_baseline.sh)
-- **Forensic notes** (saturation finding, raw per-cell numbers, intermediate decisions): `tmp/evaluations/evolution/evolution_scratchpad.md` § 2026-05-05 — M1. This file is gitignored under the repo's `tmp/` policy; the section persists in the local working tree of the contributor who wrote it. If you need the raw forensic trace and don't have a local copy, the relevant numbers are reproducible from the committed CSVs at `artifacts/logbooks/016-predator-brain-refactor/baseline_{pre,post}.csv`.
+- **Forensic notes** (saturation finding, raw per-cell numbers, intermediate decisions): kept in a gitignored scratchpad on the contributor's local working tree. If you need the raw forensic trace and don't have a local copy, the relevant numbers are reproducible from the committed CSVs at `artifacts/logbooks/016-predator-brain-refactor/baseline_{pre,post}.csv`.
 
 ### Framework artefacts
 

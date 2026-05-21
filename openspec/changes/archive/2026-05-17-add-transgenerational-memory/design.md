@@ -181,7 +181,7 @@ Neither verdict is load-bearing because the post-pilot deep-dive audit identifie
 
 ### Implementation divergence #1: composite survival-weighted fitness
 
-The original design assumes the existing `LearnedPerformanceFitness` (raw `success_rate`) is sufficient to select an F0 elite that has learned avoidance. Path AA forensics (scratchpad lines 1141-1166) found that `success_rate`-only fitness at K=1000 produces "food-grabber" elites: fitness 0.68 but survival_rate 0.08 (24 of 25 eval episodes still die — the agent collects food then dies in a pathogen lawn). To align the F0 substrate source with the M6 measurement target (avoidance), commit 8 added `evolution.fitness_survival_weight: float ∈ [0, 1]` (default 0.0 for byte-equivalent legacy behaviour). With weight 1.0 the fitness becomes `success_rate × (1 − death_rate)`. The TEI-on / TEI-off campaign uses weight 1.0. This is additive to D1–D9, not in tension with them.
+The original design assumes the existing `LearnedPerformanceFitness` (raw `success_rate`) is sufficient to select an F0 elite that has learned avoidance. Path AA forensics found that `success_rate`-only fitness at K=1000 produces "food-grabber" elites: fitness 0.68 but survival_rate 0.08 (24 of 25 eval episodes still die — the agent collects food then dies in a pathogen lawn). To align the F0 substrate source with the M6 measurement target (avoidance), commit 8 added `evolution.fitness_survival_weight: float ∈ [0, 1]` (default 0.0 for byte-equivalent legacy behaviour). With weight 1.0 the fitness becomes `success_rate × (1 − death_rate)`. The TEI-on / TEI-off campaign uses weight 1.0. This is additive to D1–D9, not in tension with them.
 
 ### Implementation divergence #2: aggregator F0 baseline override
 
@@ -189,7 +189,7 @@ The post-hoc per-gen evaluator at [`scripts/campaigns/transgenerational_per_gen_
 
 ### Pilot trajectory divergence from D9 compute envelope
 
-The original D9 envelope assumed a single calibrated pilot then a single full campaign. Reality required a five-iteration diagnostic chain: F0 calibration smoke → Path A retune (damage_radius 3→5) → Path AA hyperparameter sweep → Path AAA composite fitness → Full campaign. Total compute ≈ 21 wall-hours (vs the planned 16). The five iterations bought the diagnostic chain that surfaced the four audit issues; without them M6 would have shipped a clean STOP under the choice-index gate without surfacing the substrate-shape root cause. See [`tmp/evaluations/transgenerational/transgenerational_scratchpad.md`](../../../tmp/evaluations/transgenerational/transgenerational_scratchpad.md) lines 700-1330 for the full forensic trail.
+The original D9 envelope assumed a single calibrated pilot then a single full campaign. Reality required a five-iteration diagnostic chain: F0 calibration smoke → Path A retune (damage_radius 3→5) → Path AA hyperparameter sweep (K ∈ {500, 1000}) → Path AAA composite fitness (`fitness_survival_weight: 1.0`) → Full campaign. Total compute ≈ 21 wall-hours (vs the planned 16). The five iterations bought the diagnostic chain that surfaced the four audit issues; without them M6 would have shipped a clean STOP under the choice-index gate without surfacing the substrate-shape root cause.
 
 ### What stays, what moves to M6.9+
 

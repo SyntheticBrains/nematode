@@ -178,9 +178,9 @@ Three pairwise margins:
 Before publishing the verdict, ran a verification to rule out partial-load bugs in the inheritance pipeline (the highest-likelihood remaining failure mode after the framework tests passed). Methodology:
 
 1. Build an LSTMPPO brain via `HyperparameterEncoder.decode` on the M3 pilot YAML's deterministic initial genome.
-2. Run `LearnedPerformanceFitness.evaluate` with K=2 train + L=1 eval and `weight_capture_path=tmp/captured.pt` to exercise the actual fitness-function save path.
+2. Run `LearnedPerformanceFitness.evaluate` with K=2 train + L=1 eval and a `weight_capture_path` pointing to a throwaway location to exercise the actual fitness-function save path.
 3. Decode genome → fresh brain; `load_weights(brain, captured.pt)`; capture `brain.get_weight_components()`.
-4. `save_weights(brain, tmp/roundtrip.pt)`; decode genome → fresh brain again; `load_weights(brain, roundtrip.pt)`; capture again.
+4. `save_weights(brain, roundtrip.pt)`; decode genome → fresh brain again; `load_weights(brain, roundtrip.pt)`; capture again.
 5. Compare every tensor in every component between step 3 and step 4.
 
 Result: **18 tensors round-trip bit-exact** — `lstm.state["weight_ih_l0"]`, `lstm.state["weight_hh_l0"]`, `lstm.state["bias_ih_l0"]`, `lstm.state["bias_hh_l0"]`, `layer_norm.state["weight"]`, `layer_norm.state["bias"]`, policy network's actor head + value network's critic head, `actor_optimizer.state` (Adam first/second moments), `critic_optimizer.state`, and `training_state.step_count`. All 18 also confirmed mutated by training (zero remained at fresh-init values). The lamarckian children inherit the parent's exact trained brain — including optimiser momentum, second moments, training counters — no silent truncation.

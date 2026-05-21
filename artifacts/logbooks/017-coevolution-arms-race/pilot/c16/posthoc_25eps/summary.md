@@ -1,6 +1,6 @@
 # R1+R3 post-hoc probe - env=C16 gen-19 prey (pilot env, 25 eps)
 
-Weights: `tmp/evaluations/coevolution/pr6_c16_20260514T072255Z/run/20260514_072921_e287c2df/prey/champion_archive/k_block-002.pt`
+Weights: `pr6_c16_20260514T072255Z/run/20260514_072921_e287c2df/prey/champion_archive/k_block-002.pt`
 Episodes per cell: 25, seed: 42
 
 ## Results
