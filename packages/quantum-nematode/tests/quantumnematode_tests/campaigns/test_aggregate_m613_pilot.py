@@ -1,7 +1,7 @@
 """Tests for the composed-mode three-arm aggregator.
 
 Covers the spec scenarios under
-``openspec/changes/add-tei-prior-on-m3/specs/evolution-framework/spec.md``:
+``openspec/changes/archive/2026-05-21-add-tei-prior-on-m3/specs/evolution-framework/spec.md``:
 - Cross-arm primary verdict (reframed) — verdict pair is
   ``tei_weights - weights_only`` (not the prior pure-TEI campaign's
   ``tei_on - control``).

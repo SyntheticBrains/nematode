@@ -2184,6 +2184,16 @@ class CoevolutionLoop:
             return
         keep = set(keep_ids)
         for path in gen_dir.glob("genome-*.pt"):
+            # Mirrors EvolutionLoop._gc_inheritance_dir's ``.tei.pt`` skip:
+            # ``Path.stem`` strips only one suffix, so for a substrate file
+            # named ``genome-<gid>.tei.pt`` the extracted gid would end in
+            # ``.tei`` and never match the keep-set, deleting the substrate.
+            # Coevolution does not currently produce ``.tei.pt`` files
+            # (no per-side substrate machinery), but the guard is included
+            # preemptively so a future composed-coevolution arc cannot
+            # silently re-introduce the bug.
+            if path.name.endswith(".tei.pt"):
+                continue
             gid = path.stem.removeprefix("genome-")
             if gid not in keep:
                 path.unlink(missing_ok=True)

@@ -20,10 +20,10 @@
 #   - inheritance: transgenerational → weights+transgenerational (composed)
 #   - lawn_schedule F1+ ppo_train_episodes: 0 → K_test (composed mode
 #     REQUIRES F1+ retraining; the validator rejects K=0 under composed
-#     mode per design.md § D2). Default K_test=1000 is a smoke-tunable
-#     placeholder; the calibration smoke picks the value where
-#     weights_only F1+ has measurable headroom AND beats control by
-#     ≥1.2× (T3' tripwire).
+#     mode per design.md § D2). K_test=1000 was calibration-locked on
+#     2026-05-20 from the pass-1 smoke (weights_only F0=0.407 →
+#     F1=0.600, +19.3pp Lamarckian lift — T1' and T3' high/low both
+#     PASS; T3' beats-control leg deferred to pilot per design.md § D5).
 #
 # Cross-arm pairing (per design.md § D4):
 #   - tei_weights (this file): inheritance=weights+transgenerational, F1+ K=K_test
@@ -191,12 +191,13 @@ evolution:
       safe_probes:
         count: 16
         min_predator_distance: 6
-    # K_test calibration: pilot at K=1000; if weights_only F1+
-    # saturates (F1 ≥ 0.95 × F0), drop to K=500; if F1 < 0.80 × F0,
-    # bump to K=1500. The T3' tripwire enforces
-    # weights_only F1+ ≤ 0.95 × F0 AND ≥ 1.2 × control F1+ — both
-    # MUST pass before the pilot is unblocked. Caps at 2 calibration
-    # passes per design.md § D5.
+    # K_test calibration-locked at K=1000 (2026-05-20 pass-1 smoke;
+    # session evolution_results/m613_tei_prior/weights_only/seed-42/
+    # 20260520_115700_02c3aeef). T1' F0 envelope 0.407 ∈ [0.30, 0.70];
+    # T3' high-end F1=0.600 > 0.95×F0=0.387 (not saturated); T3' low-end
+    # F1=0.600 ≥ 0.80×F0=0.326 (well above floor). The T3' beats-control
+    # leg (F1 ≥ 1.2 × control_F1) is deferred to pilot time per
+    # design.md § D5 (the smoke runs weights_only only).
     #
     # NB: composed mode REQUIRES F1+ ppo_train_episodes > 0 (validator
     # at config_loader.py:1633). The K_test value below MUST match
@@ -210,7 +211,7 @@ evolution:
         ppo_train_episodes: 2000
       - generation: 1
         pathogen_lawns_enabled: true
-        ppo_train_episodes: 1000  # K_test placeholder
+        ppo_train_episodes: 1000  # K_test (calibration-locked 2026-05-20)
       - generation: 2
         pathogen_lawns_enabled: true
         ppo_train_episodes: 1000
