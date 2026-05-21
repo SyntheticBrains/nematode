@@ -523,27 +523,10 @@ class LSTMPPOBrain(ClassicalBrain):
             lr=config.critic_lr,
         )
 
-        # Transgenerational-memory bias on actor logits. ``None`` is the
-        # disabled state and preserves byte-equivalent pre-TEI behaviour.
-        # Two supported forms, both applied identically to actor logits
-        # at BOTH the sampling forward pass (``run_brain``) and the
-        # training forward pass (``learn``) so the PPO ratio
-        # ``exp(new_log_probs - old_log_probs)`` stays well-defined:
-        #
-        # - **Constant 1-D Tensor form**: ``(num_actions,)`` float32
-        #   tensor added directly to logits. Same shape every step.
-        # - **TransgenerationalMemory substrate form**: the substrate's
-        #   ``apply_to_logits(logits, sensory_input)`` is called per
-        #   step. When the substrate has a sensory-conditional
-        #   ``bias_network``, the bias VARIES per step with the brain's
-        #   sensory input; the per-step bias result is captured into
-        #   the rollout buffer at sampling time and replayed at
-        #   training time so the PPO ratio is exact even under the
-        #   sensory-conditional bias.
-        #
-        # The attribute is set externally by
-        # ``LearnedPerformanceFitness.evaluate`` post-decode, before
-        # ``_build_agent``; never mutated by the runner or the step loop.
+        # Per-step bias source added to actor logits. ``None`` disables
+        # the bias path. See ``_compute_tei_bias`` for the dispatch
+        # between Tensor and substrate forms. Set externally before
+        # ``_build_agent``; never mutated mid-rollout.
         self.tei_prior: torch.Tensor | TransgenerationalMemory | None = None
         # Frozen first-step snapshot of the ``tei_prior`` REFERENCE for
         # the current rollout window. Two-field design so the snapshot
@@ -560,10 +543,8 @@ class LSTMPPOBrain(ClassicalBrain):
         # silently invalidate the PPO ratio.
         self._tei_prior_rollout_snapshot_active: bool = False
         self._tei_prior_rollout_snapshot_value: torch.Tensor | TransgenerationalMemory | None = None
-        # Per-step bias captured at the most recent ``run_brain`` call.
-        # Used to populate the rollout buffer's ``bias`` field in
-        # ``learn()`` so the training-time forward pass can replay the
-        # exact bias the actor saw at sampling time.
+        # Per-step bias captured at the most recent ``run_brain`` call;
+        # consumed by ``learn()`` to populate the rollout buffer.
         self._pending_bias: torch.Tensor | None = None
 
         # ── LR scheduling ──
@@ -759,27 +740,16 @@ class LSTMPPOBrain(ClassicalBrain):
         self.h_t = h_new
         self.c_t = c_new
 
-        # First-step snapshot capture for the defensive ``learn()`` entry
-        # check. Frozen on the rollout window's FIRST step so a mid-window
-        # mutation (None↔bias OR bias-A↔bias-B) is detectable. After
-        # capture, the snapshot is NOT overwritten on subsequent steps —
-        # it represents the bias state under which ``_pending_log_prob``
-        # was recorded for the entire buffer's worth of data. Tensors are
-        # cloned; substrates are stored by reference (TransgenerationalMemory
-        # is ``frozen=True`` with ``requires_grad=False`` bias-network
-        # parameters, so its math output is stable across the window
-        # provided the operator doesn't reassign brain.tei_prior).
+        # Freeze the tei_prior snapshot on the rollout's first step so
+        # ``_check_tei_prior_snapshot`` can detect mid-window mutation.
         if not self._tei_prior_rollout_snapshot_active:
             self._tei_prior_rollout_snapshot_active = True
             self._tei_prior_rollout_snapshot_value = _snapshot_tei_prior(self.tei_prior)
 
-        # Actor: h_t → logits → (optional TEI bias) → action.
-        # Compute the per-step bias tensor (substrate path OR
-        # constant tensor path) and capture it into ``_pending_bias`` so
-        # ``learn()`` can store it in the rollout buffer. The training
-        # forward pass replays the saved bias rather than recomputing —
-        # this lets sensory-conditional bias-networks vary per step
-        # while keeping the PPO ratio exact.
+        # Actor: h_t → logits → (optional TEI bias) → action. Capture
+        # the bias into ``_pending_bias`` so ``learn()`` can replay it
+        # at training time (keeps the PPO ratio exact under per-step
+        # sensory-conditional bias).
         with torch.no_grad():
             logits = self.actor(h_out)
             bias_t = _compute_tei_bias(self.tei_prior, params, logits.device, self.num_actions)
@@ -837,14 +807,6 @@ class LSTMPPOBrain(ClassicalBrain):
         episode_done: bool = False,
     ) -> None:
         """Add experience to rollout buffer and trigger PPO update when full."""
-        # Defensive: confirm ``tei_prior`` has not been mutated since the
-        # rollout that produced the buffer's pending data. The frozen
-        # first-step snapshot captures the bias state at the start of the
-        # current rollout window; any deviation now means the PPO ratio
-        # would use mismatched distributions, silently corrupting the
-        # update. Per-mutation messages give the operator targeted
-        # diagnostics. The check is skipped if the window is pristine
-        # (no rollout step has run since the last buffer reset).
         if self._tei_prior_rollout_snapshot_active:
             self._check_tei_prior_snapshot()
         self.history_data.rewards.append(reward)
@@ -942,15 +904,11 @@ class LSTMPPOBrain(ClassicalBrain):
                     # RNN forward (differentiable)
                     h_out, h, c = self._rnn_forward(normalized, h, c)
 
-                    # Actor — replay the per-step bias captured at
-                    # sampling time. The bias was already computed by
-                    # ``run_brain`` (constant tensor path OR substrate
-                    # path, dispatched by ``_compute_tei_bias``) and
-                    # stored per step in the rollout buffer. Replaying
-                    # the saved bias (rather than recomputing here) is
-                    # mathematically exact even for sensory-conditional
-                    # bias-networks that vary per step. ``.to(logits.device)``
-                    # defends against a bias snapshot on a different device.
+                    # Actor: replay the per-step bias captured at
+                    # sampling time so the PPO ratio is exact under
+                    # sensory-conditional bias-networks. ``.to(device)``
+                    # handles the case where the snapshot was captured
+                    # on a different device than the live forward pass.
                     logits = self.actor(h_out)
                     step_bias = chunk["biases"][step_idx]
                     if step_bias is not None:
@@ -1326,20 +1284,12 @@ class LSTMPPOBrain(ClassicalBrain):
                 self._episode_count = int(ts["episode_count"])
                 self._update_learning_rate()
 
-        # Reset buffer to prevent stale experience; mirror by clearing the
-        # TEI rollout snapshot so a fresh rollout under the loaded weights
-        # is treated as a pristine window (matches the contract that
-        # ``self.buffer.reset()`` and the snapshot must move together).
-        # Also drop any in-flight pending transition: ``_pending_features``
-        # was populated by the LAST ``run_brain`` call under the OLD
-        # weights, and a subsequent ``learn()`` would enqueue it into
-        # the freshly-reset buffer — semantically wrong because the
-        # sample's log-prob and value were computed under weights that
-        # no longer exist. ``_pending_features = None`` is the gating
-        # predicate at line ~779 (``if self._pending_features is not None``);
-        # setting it to None drops the pending sample cleanly without
-        # needing to clear the other ``_pending_*`` fields (they are
-        # only read when ``_pending_features`` is non-None).
+        # Reset buffer + snapshot so a fresh rollout under the loaded
+        # weights starts pristine. Setting ``_pending_features = None``
+        # drops the in-flight transition captured by the LAST
+        # ``run_brain`` call under the OLD weights — it's the gating
+        # predicate in ``learn()``, so the other ``_pending_*`` fields
+        # don't need clearing.
         self.buffer.reset()
         self._reset_tei_prior_rollout_snapshot()
         self._pending_features = None
