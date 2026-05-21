@@ -308,12 +308,12 @@ class TestPredatorEvasionReward:
 
 
 class TestGradientOnlyRewardMode:
-    """Validate the ``reward_mode='gradient_only'`` M6.10 audit-B remediation.
+    """Validate the ``reward_mode='gradient_only'`` path.
 
     Under ``gradient_only`` the distance-scaled evasion term and the
     first-step flat-fallback are both dropped; only the contact
     penalty at ``dist <= 1`` fires. ``default`` mode preserves the
-    M3 / M4 / M5 / M6 byte-equivalent behaviour.
+    distance-scaled evasion behaviour.
     """
 
     def _make_predator_env(self, agent_pos, predator_positions, *, in_danger=True):
@@ -492,7 +492,7 @@ class TestGradientOnlyRewardMode:
             RewardConfig(reward_mode="sparse")  # type: ignore[arg-type]
 
     # -----------------------------------------------------------------
-    # gradient_proximity mode (M6.10 audit-B remediation v2)
+    # gradient_proximity mode
     # -----------------------------------------------------------------
 
     def _make_predator_env_with_concentration(

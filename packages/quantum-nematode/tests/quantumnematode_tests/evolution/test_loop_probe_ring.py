@@ -1,13 +1,13 @@
-"""Unit tests for the M6.11 env-derived F0 probe-ring helpers.
+"""Unit tests for the env-derived F0 probe-ring helpers.
 
-Covers the spec scenarios under "Env-Derived F0 Probe Ring" in
-``openspec/changes/add-transgenerational-memory-redesign/specs/evolution-framework/spec.md``:
+Covers:
 - probe ring uses env predator positions
 - configurable count and radius_offset
 - pure helper for gradient computation (``_compute_probe_gradient``)
-
-Plus task-3.5 angular-distribution, food-gradient-variants doubling,
-no-env-mutation invariant, and empty-predators fallback.
+- angular distribution
+- food-gradient-variants doubling
+- no-env-mutation invariant
+- empty-predators fallback
 
 The ring builder is exercised at the ``_build_f0_probe_params`` level
 via mock envs + mock predators (avoiding the full env construction
@@ -113,7 +113,7 @@ def test_sample_ring_offsets_downsamples_evenly() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Ring builder: _build_f0_probe_params under the M6.11 env-derived path
+# Ring builder: _build_f0_probe_params under the env-derived path
 # ---------------------------------------------------------------------------
 
 
@@ -219,10 +219,11 @@ def test_probe_ring_configurable_count_and_radius_offset() -> None:
 def test_probe_ring_exact_manhattan_distance_at_default_count_8() -> None:
     """At the default count=8 every probe SHALL sit at exact L1 distance == damage_radius + offset.
 
-    Regression test for the M6.11 Manhattan-ring rewrite (replaced an
-    earlier Euclidean cos/sin projection that produced variable Manhattan
-    distances 5-8 at radius=5 for the 8-position ring). The L1 ring at
-    radius=5 has 4*5=20 perimeter cells; count=8 down-samples evenly.
+    Regression test for the Manhattan-ring builder (replaces an
+    earlier Euclidean cos/sin projection that produced variable
+    Manhattan distances 5-8 at radius=5 for the 8-position ring).
+    The L1 ring at radius=5 has 4*5=20 perimeter cells; count=8
+    down-samples evenly.
     """
     loop = _make_loop_with_probe_ring(_probe_ring_config(count=8, radius_offset=1))
     env = _make_mock_env([_make_mock_predator((10, 10), damage_radius=4)])
@@ -277,8 +278,8 @@ def test_probe_ring_include_food_gradient_variants_doubles_count() -> None:
     assert len(nonzero_food) == 8
 
 
-def test_probe_ring_falls_back_to_legacy_when_no_probe_ring_config() -> None:
-    """When ``probe_ring is None`` the builder SHALL emit the M6 legacy 3-probe path."""
+def test_probe_ring_falls_back_to_synthetic_when_no_probe_ring_config() -> None:
+    """When ``probe_ring is None`` the builder SHALL emit the synthetic 3-probe path."""
     loop = _make_loop_with_probe_ring(probe_ring=None)
     env = _make_mock_env([_make_mock_predator((10, 10), damage_radius=3)])
 
@@ -326,7 +327,7 @@ def test_probe_ring_does_not_mutate_env() -> None:
 
 
 # ---------------------------------------------------------------------------
-# safe_probes path (M6.9+ pilot-2 fix — conditional bias-network response)
+# safe_probes path — conditional bias-network response
 # ---------------------------------------------------------------------------
 
 

@@ -537,7 +537,7 @@ def test_tei_prior_source_corrupted_substrate_raises_operator_friendly(
 
 
 # ---------------------------------------------------------------------------
-# fitness_metric dispatch (M6.9+ spec primary-metric selector)
+# fitness_metric dispatch — primary-metric selector
 # ---------------------------------------------------------------------------
 
 
@@ -591,7 +591,7 @@ def _patch_runs(success_count: int, death_count: int, eval_count: int):
 
 
 def test_fitness_metric_default_composite_is_byte_equivalent() -> None:
-    """``fitness_metric`` defaults to ``composite``; preserves M3/M6 byte-equivalence."""
+    """``fitness_metric`` defaults to ``composite``; preserves the legacy composite formula."""
     sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=4)
     sim_config = _patched_evolution_config(
         sim_config,

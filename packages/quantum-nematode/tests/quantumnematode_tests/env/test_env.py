@@ -3022,18 +3022,17 @@ class TestMultiAgentPredatorTargeting:
 class TestMinFoodPredatorDistance:
     """Test min_food_predator_distance constraint on food placement.
 
-    The M6.9+ env-geometry fix (smoke pass 3 finding) — without this
-    constraint food can spawn inside or adjacent to a predator's
-    damage zone and the PPO agent cannot find a middle-ground
-    "forage-while-avoiding" policy regardless of reward shape.
+    Without this constraint food can spawn inside or adjacent to a
+    predator's damage zone and the PPO agent cannot find a middle-
+    ground "forage-while-avoiding" policy regardless of reward shape.
     """
 
     def test_default_zero_preserves_legacy_behaviour(self):
         """``min_food_predator_distance=0`` SHALL not affect food placement.
 
-        Byte-equivalence with the pre-M6.9+ env: foods may spawn
-        anywhere predators are not at the same cell. M3 / M4 / M5 / M6
-        reproduction tests rely on this default.
+        Default behaviour: foods may spawn anywhere predators are not
+        at the same cell. Seed-replay reproduction tests rely on this
+        default.
         """
         env = DynamicForagingEnvironment(
             grid_size=20,

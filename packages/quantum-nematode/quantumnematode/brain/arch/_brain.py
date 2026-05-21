@@ -214,7 +214,7 @@ class BrainParams(BaseModel):
         description="Maximum HP the agent can have.",
     )
 
-    # --- Temporal sensing (Phase 3) ---
+    # --- Temporal sensing ---
     food_concentration: float | None = Field(
         default=None,
         description="Scalar food signal at agent's position (tanh-normalized, no direction).",

@@ -44,9 +44,7 @@ in without touching the loop:
   ``isinstance`` checks.  ``"none"`` skips both lineage-tracking and
   weight-IO; ``"weights"`` enables both; ``"trait"`` enables
   lineage-tracking only; ``"transgenerational"`` enables lineage-tracking
-  + the substrate-flow code path (substrate extraction and worker
-  forwarding are follow-up additions tracked in
-  ``openspec/changes/add-transgenerational-memory/``).
+  + the substrate-flow code path.
 
 Future-work strategies (tournament selection, roulette sampling,
 soft-elite top-k) are NOT implemented here — they each become a new
@@ -165,10 +163,8 @@ class InheritanceStrategy(Protocol):
           Every F1+ child warm-starts from the F0 elite's ``.pt``
           (Lamarckian pattern) AND has ``brain.tei_prior`` set from
           the F0-extracted substrate (transgenerational pattern). The
-          retraining phase then runs with both signals active. Added
-          per ``openspec/changes/archive/2026-05-21-add-tei-prior-on-m3/`` as the
-          wet-lab-aligned reframe: TEI as a *prior on trained
-          weights*, not a standalone policy.
+          retraining phase then runs with both signals active. Frames
+          TEI as a *prior on trained weights*, not a standalone policy.
 
         The loop's ``_inheritance_active()`` helper SHALL evaluate
         ``kind() in {"weights", "weights+transgenerational"}`` (gates

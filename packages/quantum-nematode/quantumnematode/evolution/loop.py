@@ -139,7 +139,7 @@ def _evaluate_in_worker(args: tuple) -> float:
           appends one per-genome row recording ``success_rate``,
           ``survival_rate``, deaths, successes, composite, and the
           scalar fitness it returned. Used by the decision-gate
-          machinery (T1 envelope check, T3 M6-floor-to-beat, post-hoc
+          machinery (T1 envelope check, T3 floor-to-beat, post-hoc
           aggregator). ``EpisodicSuccessRate`` does not accept this
           kwarg; the worker checks the signature dynamically before
           forwarding (so co-evolution dispatch on either fitness
@@ -209,7 +209,7 @@ def _evaluate_in_worker(args: tuple) -> float:
 
 
 # ---------------------------------------------------------------------------
-# F0 probe ring helpers (M6.11 — env-derived probe geometry)
+# F0 probe ring helpers — env-derived probe geometry
 # ---------------------------------------------------------------------------
 
 
@@ -257,7 +257,7 @@ def _manhattan_ring_offsets(radius: int) -> list[tuple[int, int]]:
     east → north → west → south. For ``radius == 0`` returns a single
     ``(0, 0)`` offset.
 
-    Used by the M6.11 probe-ring builder to enumerate integer cells at
+    Used by the probe-ring builder to enumerate integer cells at
     a fixed Manhattan distance from a stationary predator. Manhattan
     geometry matches the env's gradient-strength falloff
     (``1 / (1 + manhattan)``); a Euclidean ring would produce probes
@@ -815,19 +815,19 @@ class EvolutionLoop:
             return
         load_weights(brain, elite_pt_path)
 
-        # Build the probe params sequence. M6.11 path: when the
+        # Build the probe params sequence. Env-derived path: when the
         # transgenerational config has a ``probe_ring`` sub-block AND
         # the env has stationary predators, ``_build_f0_probe_params``
         # generates env-derived ring positions. Otherwise falls back
-        # to the M6 legacy synthetic-probe path.
+        # to the synthetic-probe path.
         probe_env = self._build_probe_env_if_configured()
         probe_params = self._build_f0_probe_params(brain=brain, env=probe_env)
 
         # Resolve the substrate form from the YAML-configured
         # ``transgenerational`` block. When ``bias_network`` is set
         # the F0 extraction follows the sensory-conditional path
-        # (MLP-fit substrate); when None it falls back to the M6
-        # legacy constant ``logit_bias`` path (byte-equivalent).
+        # (MLP-fit substrate); when None it falls back to the
+        # constant ``logit_bias`` path.
         # ``extraction_seed`` is also threaded from config so the
         # per-seed MLP init RNG is distinct across calibration
         # seeds — without this the substrate-diversity tripwire
@@ -912,20 +912,19 @@ class EvolutionLoop:
         """Construct a transient env for F0 probe-ring sampling, or return None.
 
         Returns ``None`` when no ``probe_ring`` sub-block is configured
-        (legacy M6 synthetic-probe path stays active). Otherwise
-        returns a freshly-constructed env from
-        ``self.sim_config.environment`` whose stationary predators the
-        probe-ring builder reads. The env is throwaway — used only
-        for predator-coordinate enumeration; no episode is run on it.
+        (the synthetic-probe path stays active). Otherwise returns a
+        freshly-constructed env from ``self.sim_config.environment``
+        whose stationary predators the probe-ring builder reads. The
+        env is throwaway — used only for predator-coordinate
+        enumeration; no episode is run on it.
 
         Probe env seed: hardcoded ``seed=0``, deliberately
-        independent of the campaign seed (which sweeps 42-45 across
-        the M6.9+ full campaign). Rationale: the substrate-diversity
-        tripwire T2 measures pairwise CoV across the 4 calibration
-        seeds' extracted bias-network ``state_dict()`` tensors. If
-        the probe env's predator positions varied with campaign
-        seed, T2 would conflate "different brain policy" (the M6
-        attractor signature we want to detect) with "different
+        independent of the campaign seed. Rationale: the substrate-
+        diversity tripwire T2 measures pairwise CoV across the
+        calibration seeds' extracted bias-network ``state_dict()``
+        tensors. If the probe env's predator positions varied with
+        campaign seed, T2 would conflate "different brain policy"
+        (the attractor signature we want to detect) with "different
         probe geometry" (noise from the seeded env layout). Pinning
         the probe-env seed makes substrate diversity attributable
         to the brain-policy difference alone.
@@ -939,8 +938,8 @@ class EvolutionLoop:
             # Defensive: should never happen under a transgenerational
             # run (the YAML schema requires an env block when predators
             # are configured) but guard explicitly so a misconfigured
-            # config fails over to the legacy synthetic-probe path
-            # rather than crashing.
+            # config fails over to the synthetic-probe path rather
+            # than crashing.
             return None
         from quantumnematode.env.theme import Theme
         from quantumnematode.utils.config_loader import create_env_from_config
@@ -964,22 +963,21 @@ class EvolutionLoop:
 
         Two paths:
 
-        - **Env-derived probe ring** (M6.11): when ``env`` is supplied
-          AND the transgenerational config has a ``probe_ring``
-          sub-block AND the env has at least one stationary predator,
-          generate ``probe_ring.count`` ring positions around each
-          stationary predator at distance ``predator.damage_radius +
+        - **Env-derived probe ring**: when ``env`` is supplied AND the
+          transgenerational config has a ``probe_ring`` sub-block AND
+          the env has at least one stationary predator, generate
+          ``probe_ring.count`` ring positions around each stationary
+          predator at distance ``predator.damage_radius +
           probe_ring.radius_offset``, evenly angular-distributed. For
           each ring position compute ``(predator_gradient_strength,
           predator_gradient_direction)`` via :func:`_compute_probe_gradient`
           relative to its source predator. Optionally emit two ring
           iterations (food-gradient set vs zeroed) when
           ``probe_ring.include_food_gradient_variants`` is True.
-        - **Legacy M6 synthetic** (fallback): three hardcoded probes
-          with varying food-gradient strengths and zero predator
-          gradient. Used when no ``probe_ring`` is configured (M6
-          byte-equivalent) or when no stationary predators exist on
-          the env.
+        - **Synthetic** (fallback): three hardcoded probes with
+          varying food-gradient strengths and zero predator gradient.
+          Used when no ``probe_ring`` is configured or when no
+          stationary predators exist on the env.
 
         When ``brain`` is provided, the probe params are filled with
         zero-valued ``stam_state`` sized/typed to match the brain's
@@ -1039,9 +1037,9 @@ class EvolutionLoop:
                 else:
                     stam_state = tuple(0.0 for _ in range(effective_stam_dim))
 
-        # M6.11 env-derived probe ring path. Falls back to the legacy
-        # synthetic-probe path when ``env`` is None, no ``probe_ring``
-        # config is set, or the env has no stationary predators.
+        # Env-derived probe ring path. Falls back to the synthetic-
+        # probe path when ``env`` is None, no ``probe_ring`` config is
+        # set, or the env has no stationary predators.
         probe_ring_cfg: ProbeRingConfig | None = None
         cfg = self.sim_config.evolution
         if cfg is not None and cfg.transgenerational is not None:
@@ -1051,10 +1049,10 @@ class EvolutionLoop:
             if ring_probes:
                 return ring_probes
 
-        # Legacy M6 fallback: three synthetic probes with varying
-        # food-gradient strengths and zero predator gradient. Active
-        # when ``env`` is None, ``probe_ring`` is unset, or the env
-        # has no stationary predators (e.g. non-pathogen-lawn envs).
+        # Synthetic fallback: three probes with varying food-gradient
+        # strengths and zero predator gradient. Active when ``env``
+        # is None, ``probe_ring`` is unset, or the env has no
+        # stationary predators (e.g. non-pathogen-lawn envs).
         return [
             BrainParams(
                 food_gradient_strength=0.3,
@@ -1088,7 +1086,7 @@ class EvolutionLoop:
         probe_ring_cfg: ProbeRingConfig,
         stam_state: tuple[float, ...] | None,
     ) -> list[BrainParams]:
-        """Build the M6.11 env-derived probe ring for F0 substrate extraction.
+        """Build the env-derived probe ring for F0 substrate extraction.
 
         Returns an empty list when the env has no stationary predators
         (caller falls back to the legacy synthetic-probe path). Each
@@ -1590,7 +1588,7 @@ class EvolutionLoop:
                     # (success_rate + survival_rate + deaths + ...).
                     # Single per-session file; workers append. Used by
                     # the decision-gate machinery (T1 envelope check,
-                    # T3 M6-floor-to-beat, post-hoc aggregator). Only
+                    # T3 floor-to-beat, post-hoc aggregator). Only
                     # ``LearnedPerformanceFitness`` accepts it; other
                     # fitness functions (incl. test stubs) get ``None``
                     # so the worker's signature-dispatch elides the

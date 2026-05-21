@@ -144,16 +144,16 @@ class ForagingParams:
         food. None = disabled (no satiety gate).
     min_food_predator_distance : int
         Minimum Euclidean distance from any predator at which food may
-        spawn. Default 0 (byte-equivalent legacy behaviour — food may
-        spawn anywhere predators are not). Set to ``predator.damage_radius
-        + N`` to guarantee a foraging-without-dying corridor: at
-        ``damage_radius + 1`` food is just outside the damage zone; at
-        ``damage_radius + 2`` there's one cell of margin. The M6.9+ PR-A
-        audit-B remediation v3 (smoke pass 3 finding) sets this so the
-        env genuinely admits a foraging-while-avoiding policy — without
-        it, the "approach food" and "avoid predator" objectives are in
-        unresolvable conflict on a small grid and PPO collapses to one
-        extreme or the other regardless of reward shape.
+        spawn. Default 0 preserves the original behaviour where food
+        may spawn anywhere predators are not. Set to
+        ``predator.damage_radius + N`` to guarantee a foraging-without-
+        dying corridor: at ``damage_radius + 1`` food is just outside
+        the damage zone; at ``damage_radius + 2`` there's one cell of
+        margin. Setting this makes the env genuinely admit a
+        foraging-while-avoiding policy — without it, the "approach
+        food" and "avoid predator" objectives are in unresolvable
+        conflict on a small grid and PPO collapses to one extreme or
+        the other regardless of reward shape.
     """
 
     foods_on_grid: int = 10
@@ -1358,16 +1358,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Initialize food sources using Poisson disk sampling.
         #
         # Init-order policy:
-        # - ``min_food_predator_distance > 0`` (M6.9+ env-geometry fix):
-        #   predators MUST be placed before foods so the food validator
-        #   can read ``self.predators`` and enforce the distance
-        #   constraint during initial food sampling.
-        # - ``min_food_predator_distance == 0`` (default — M3 / M4 / M5 /
-        #   M6 legacy): foods are placed BEFORE predators so the RNG
-        #   draw sequence matches pre-M6.9+ behaviour exactly (both
-        #   ``_initialize_foods`` and ``_initialize_predators`` consume
-        #   from ``self.rng``; reversing them would shift seed-replay
-        #   outputs for every legacy config).
+        # - ``min_food_predator_distance > 0``: predators MUST be placed
+        #   before foods so the food validator can read ``self.predators``
+        #   and enforce the distance constraint during initial food
+        #   sampling.
+        # - ``min_food_predator_distance == 0`` (default): foods are
+        #   placed BEFORE predators so the RNG draw sequence is
+        #   stable across runs (both ``_initialize_foods`` and
+        #   ``_initialize_predators`` consume from ``self.rng``;
+        #   reversing them would shift seed-replay outputs for every
+        #   existing config).
         self.foods: list[tuple[int, int]] = []
         self.predators: list[Predator] = []
         if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
@@ -1561,11 +1561,10 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 return False
 
         # Check Euclidean distance from all predators. ``min_food_predator_distance``
-        # = 0 (default) preserves byte-equivalence with the legacy
-        # food-placement behaviour (food may spawn anywhere predators are
-        # not). When > 0, food cannot spawn within that distance of any
-        # predator — the M6.9+ env-geometry-fix that admits a
-        # forage-without-dying policy by guaranteeing safe corridors
+        # = 0 (default) preserves the original food-placement behaviour
+        # (food may spawn anywhere predators are not). When > 0, food
+        # cannot spawn within that distance of any predator, admitting
+        # a forage-without-dying policy by guaranteeing safe corridors
         # between food sources.
         #
         # ``getattr(self, "predators", None)`` guards against the

@@ -83,7 +83,7 @@ class ModuleName(StrEnum):
     # Aerotaxis module
     AEROTAXIS = "aerotaxis"
 
-    # Temporal sensing modules (Phase 3)
+    # Temporal sensing modules
     FOOD_CHEMOTAXIS_TEMPORAL = "food_chemotaxis_temporal"
     NOCICEPTION_TEMPORAL = "nociception_temporal"
     THERMOTAXIS_TEMPORAL = "thermotaxis_temporal"
@@ -357,7 +357,7 @@ def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
 
 
 # =============================================================================
-# Temporal Sensing Core Feature Extractors (Phase 3)
+# Temporal Sensing Core Feature Extractors
 # =============================================================================
 
 
@@ -724,7 +724,7 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
 }
 
 
-# Temporal sensing modules (Phase 3)
+# Temporal sensing modules
 SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_TEMPORAL] = SensoryModule(
     name=ModuleName.FOOD_CHEMOTAXIS_TEMPORAL,
     extract=_food_chemotaxis_temporal_core,
