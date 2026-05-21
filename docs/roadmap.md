@@ -561,9 +561,9 @@ Phase 5 is broken into 8 milestones (M0–M8) plus a tracking scaffold (M-1). Th
 #### Phase 5 Exit Criteria
 
 - ✅ ≥2 evolution approaches piloted with documented results
-- ✅ Baldwin Effect or Lamarckian inheritance demonstrated (learned behaviors become innate)
-- ✅ Co-evolution produces arms race dynamics with measurable escalation
-- ✅ Transgenerational memory functional (if biologically justified by pilot results)
+- ✅ Baldwin Effect or Lamarckian inheritance demonstrated (learned behaviors become innate) — Lamarckian path (M3); Baldwin attempted but substrate-grounded STOP
+- ⚠️ Co-evolution produces arms race dynamics with measurable escalation — MET WITH CAVEAT: M5 ran an exhaustive screen sweep; verdict STOP (architecture-asymmetry diagnosis). See [logbook 021](experiments/logbooks/021-phase5-synthesis.md) § M8.2 EC3
+- ⚠️ Transgenerational memory functional (if biologically justified by pilot results) — MET WITH CAVEAT: framework fully functional + tested; three rounds of pilot experiments all STOP (substrate-shape diagnosis). See [logbook 021](experiments/logbooks/021-phase5-synthesis.md) § M8.2 EC4
 - ✅ Generational fitness tracking shows continuous improvement over ≥50 generations
 
 #### Quantum Note

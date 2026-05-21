@@ -36,7 +36,7 @@ Per `openspec/changes/phase5-tracking/tasks.md`:
 | M0 | Evolution framework | ✅ shipped | — |
 | M1 | Predator-as-brain refactor | ✅ GO (M1 byte-equivalent + M5 prerequisite) | [016](016-predator-brain-refactor.md) |
 | M2 | Hyperparameter evolution | ✅ GO (4 arms; RQ1 closed → TPE) | [012](012-hyperparam-evolution-mlpppo-pilot.md) |
-| M3 | Lamarckian inheritance | ✅ GO (+47pp / +79pp; speed gate +5.25 gens) | [013](013-lamarckian-inheritance-pilot.md) |
+| M3 | Lamarckian inheritance | ✅ GO (speed gate +5.25 gens; +17.5pp F1-F3 reproduction on M6.10 env) | [013](013-lamarckian-inheritance-pilot.md) |
 | M4 → M4.5 → M4.6 → M4.6.5 | Baldwin effect | ❌ STOP (substrate diagnosis: single-task K=50 has no Baldwin axis) | [014](014-baldwin-inheritance-pilot.md), [015](015-baldwin-iterative-evaluation.md) |
 | M5 | Co-evolution arms race | ❌ STOP (substrate diagnosis: LSTMPPO-prey-vs-MLPPPO-predator architecture asymmetry) | [017](017-coevolution-arms-race.md) |
 | M6 → M6.9+ → M6.12 → M6.13 | Transgenerational memory | ❌ STOP (substrate diagnosis: action-distribution-bias substrate ≠ wet-lab single-circuit excitability shift) | [018](018-transgenerational-memory.md), [019](019-transgenerational-memory-redesign.md), [020](020-tei-prior-on-lamarckian.md) |
@@ -57,7 +57,9 @@ Evidence: M2 (Hyperparameter Evolution via CMA-ES then TPE; 4 GO arms; logbook 0
 
 **Status**: ✅ MET (Lamarckian path).
 
-Evidence: M3 Lamarckian Inheritance produces a +47pp delta vs from-scratch control (4 seeds × pop 8 × 12 gens; the strongest concrete Phase 5 result; logbook 013). Speed gate passes at +5.25 generations (threshold ≥ 4); corrected floor gate at +0.42 (threshold > 0). M3 was the first concrete Phase 5 GO result and remains the canonical demonstration of "learned behaviour becomes innate" on this substrate (the F1+ child's warm-start weights ARE the innate-equivalent of the F0 parent's learned policy).
+Evidence: M3 Lamarckian Inheritance passes its primary speed gate at **+5.25 generations** (gen-to-0.92 fitness: 4.50 vs 9.75 baseline; threshold ≥ 4 — logbook 013). All 4 seeds reach best fitness 1.00 vs control 0.88–0.96. Corrected floor gate at +0.42 (threshold > 0). On the M6.10-redesigned env at K=K_test (logbook 019 PR-A), M3 reproduces at **+17.5pp F1-F3 mean retention** vs from-scratch control (weights_only F0=0.575, F1=0.695, F2=0.675, F3=0.635; control F1-F3 mean 0.493). M3 was the first concrete Phase 5 GO result and remains the canonical demonstration of "learned behaviour becomes innate" on this substrate (the F1+ child's warm-start weights ARE the innate-equivalent of the F0 parent's learned policy).
+
+*Citation-shorthand note*: prior logbooks 018-020 + the roadmap M3 row attribute "+47pp / +79pp" to M3. Those figures are actually M2 optimiser-portfolio deltas on the predator arm config that M3 inherits (CMA-ES +47pp over baseline; TPE +32pp on top → +79pp total; logbook 012). M3's own Lamarckian-vs-control deltas are the speed-gen number (+5.25) and the +17.5pp F1-F3 retention on the M6.10 env. The "+47pp/+79pp shorthand" persists in upstream artefacts as project convention; this logbook uses the strict M3 numbers.
 
 Baldwin (the alternative) was attempted but produced a substrate-diagnosed STOP — see § M8.3a below. The exit criterion is satisfied by the Lamarckian arm alone; both arms attempted gives the milestone full breadth.
 
@@ -211,7 +213,7 @@ None for M8 (synthesis is pure writing, no new experiments). Phase 5 total compu
 ### Phase 5 GO results (positive)
 
 - **M2 hyperparam evolution** (logbook 012; PR #144 + RQ1 closure PR) — CMA-ES + TPE arms; RQ1 closed with TPE as M3's default optimiser.
-- **M3 Lamarckian inheritance** (logbook 013; PR #155) — strongest concrete Phase 5 result (+47pp / +79pp on 4 seeds; speed gate +5.25 gens, threshold ≥ 4).
+- **M3 Lamarckian inheritance** (logbook 013; PR #138) — strongest concrete Phase 5 result. Speed gate +5.25 gens (4.50 vs 9.75; threshold ≥ 4); +17.5pp F1-F3 retention vs from-scratch control on the M6.10 env (logbook 019 PR-A reproduction). The "+47pp/+79pp" figures in upstream logbooks 018-020 are M2 optimiser-portfolio deltas on the predator arm config M3 inherits, not M3's own Lamarckian-vs-control deltas. See § EC2 for the citation-shorthand note.
 
 ## Tracker + roadmap status
 
