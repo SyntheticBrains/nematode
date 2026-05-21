@@ -310,7 +310,7 @@ def test_f0_extraction_happy_path_writes_substrate_and_gcs_pt_files(tmp_path: Pa
 
 # ---------------------------------------------------------------------------
 # B1 / B2 regression: F0 extraction forwards YAML bias_network spec
-# + extraction_seed (the M6.9+ correctness gate).
+# + extraction_seed (correctness gate).
 # ---------------------------------------------------------------------------
 
 
@@ -378,11 +378,11 @@ def test_f0_extraction_forwards_bias_network_spec_from_config(
     extractor receives ``bias_network_spec`` + ``input_features``
     matching it.
 
-    Without this wiring, the M6.9+ ``tei_on`` arm silently regresses
-    to M6 behaviour (constant ``logit_bias``, ``bias_network=None``)
-    and the original "3-of-4 bit-identical substrate" attractor
-    re-appears across calibration seeds. This test pins the call-site
-    contract using a spy on ``extract_from_brain``.
+    Without this wiring, the ``tei_on`` arm silently regresses to
+    constant-bias behaviour (``logit_bias`` only, ``bias_network=None``)
+    and the "3-of-4 bit-identical substrate" attractor re-appears
+    across calibration seeds. This test pins the call-site contract
+    using a spy on ``extract_from_brain``.
     """
     from unittest.mock import patch
 
@@ -456,14 +456,14 @@ def test_f0_extraction_forwards_bias_network_spec_from_config(
     assert captured_kwargs["rng_seed"] == 98765
 
 
-def test_f0_extraction_legacy_path_when_bias_network_absent(tmp_path: Path) -> None:
-    """B1 negative: when ``cfg.transgenerational.bias_network is None``, the legacy M6 path runs.
+def test_f0_extraction_constant_form_when_bias_network_absent(tmp_path: Path) -> None:
+    """B1 negative: ``cfg.transgenerational.bias_network is None`` → constant-form path.
 
     Forward-compatibility / backwards-compat: a transgenerational
     config without an explicit ``bias_network`` block falls back to
-    the M6 constant ``logit_bias`` extraction path. The call-site
-    MUST pass ``bias_network_spec=None`` so ``extract_from_brain``
-    dispatches the legacy branch (``input_features=()``).
+    the constant ``logit_bias`` extraction path. The call-site MUST
+    pass ``bias_network_spec=None`` so ``extract_from_brain``
+    dispatches the constant-form branch (``input_features=()``).
     """
     from unittest.mock import patch
 
@@ -544,8 +544,9 @@ def test_f0_extraction_legacy_path_when_bias_network_absent(tmp_path: Path) -> N
 def test_f0_substrate_diversity_across_seeds_with_bias_network(tmp_path: Path) -> None:
     """B1 + B2 end-to-end: four ``extraction_seed`` values produce diverse substrates.
 
-    This is the regression gate against the original M6 incident
-    (3-of-4 calibration seeds extracting bit-identical substrates).
+    This is the regression gate against the substrate-diversity
+    incident (3-of-4 calibration seeds extracting bit-identical
+    substrates).
     Once B1 forwards the YAML ``bias_network`` spec AND B2 forwards
     the YAML ``extraction_seed``, four runs with distinct seeds
     SHALL produce substrates whose pairwise CoV (per the T2
@@ -598,12 +599,13 @@ def test_f0_substrate_diversity_across_seeds_with_bias_network(tmp_path: Path) -
         assert loop._tei_f0_substrate_path is not None
         substrates.append(load_substrate(loop._tei_f0_substrate_path))
 
-    # All four substrates SHALL have a populated bias_network (M6.9+ path).
+    # All four substrates SHALL have a populated bias_network
+    # (sensory-conditional path).
     assert all(s.bias_network is not None for s in substrates)
 
     # Pairwise CoV is non-zero on the flattened state_dict — substrate
-    # is NOT bit-identical across seeds. The original M6 attractor
-    # signature would surface as CoV == 0 for at least one pair here.
+    # is NOT bit-identical across seeds. The attractor signature
+    # would surface as CoV == 0 for at least one pair here.
     def _flat(s: TransgenerationalMemory) -> torch.Tensor:
         assert s.bias_network is not None
         return torch.cat(

@@ -282,13 +282,13 @@ class ForagingConfig(BaseModel):
     no_respawn: bool = False
     satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
     # Minimum Euclidean distance from any predator at which food may
-    # spawn. Default 0 preserves byte-equivalence with the legacy
-    # food-placement behaviour. The M6.9+ env-geometry fix
-    # (smoke pass 3 finding) sets this to ``damage_radius + N`` so the
-    # env genuinely admits a forage-without-dying policy — without the
-    # constraint, food can spawn inside a predator's damage zone and
-    # PPO cannot find a middle-ground policy between "approach food"
-    # and "avoid predator" regardless of reward shape.
+    # spawn. Default 0 preserves the original food-placement
+    # behaviour where food can spawn anywhere a predator is not
+    # at the same cell. Setting this to ``damage_radius + N`` makes
+    # the env genuinely admit a forage-without-dying policy —
+    # without the constraint, food can spawn inside a predator's
+    # damage zone and PPO cannot find a middle-ground policy between
+    # "approach food" and "avoid predator" regardless of reward shape.
     min_food_predator_distance: int = Field(default=0, ge=0)
 
     def to_params(self) -> ForagingParams:
@@ -1071,11 +1071,11 @@ def _check_one_input_feature(name: str, known: set[str]) -> str | None:
 
 
 class BiasNetworkConfig(BaseModel):
-    """M6.9+ sensory-conditional bias-network architecture sub-block.
+    """Sensory-conditional bias-network architecture sub-block.
 
     Optional sub-block on :class:`TransgenerationalConfig`. When
-    absent, the substrate falls back to the M6 legacy constant
-    ``logit_bias`` path (byte-equivalent).
+    absent, the substrate falls back to the constant ``logit_bias``
+    path.
 
     Attributes
     ----------
@@ -1146,7 +1146,7 @@ class BiasNetworkConfig(BaseModel):
 
 
 class SafeProbesConfig(BaseModel):
-    """M6.9+ safe-position probe configuration sub-block.
+    """Safe-position probe configuration sub-block.
 
     Optional sub-block on :class:`ProbeRingConfig`. When present, the
     F0 probe builder emits additional probes at positions FAR from
@@ -1154,9 +1154,9 @@ class SafeProbesConfig(BaseModel):
     food-gradient strengths. Without these, all probes sit at the
     danger-zone boundary and the substrate's bias-network MLP fits
     an unconditional "near-predator → avoid" bias rather than a
-    *conditional* response (the pilot-1 failure mode at K=0:
-    substrate captured "always-LEFT" with no food/predator
-    discrimination).
+    *conditional* response — the failure mode is the substrate
+    capturing "always-LEFT" at K=0 with no food/predator
+    discrimination.
 
     Attributes
     ----------
@@ -1179,7 +1179,7 @@ class SafeProbesConfig(BaseModel):
 
 
 class ProbeRingConfig(BaseModel):
-    """M6.9+ env-derived F0 probe-ring configuration sub-block.
+    """Env-derived F0 probe-ring configuration sub-block.
 
     Optional sub-block on :class:`TransgenerationalConfig`. When
     absent the loader defaults to the canonical 8-position ring at
@@ -1239,12 +1239,11 @@ class TransgenerationalConfig(BaseModel):
         F2=0.36 / F3=0.216 cascade under ``decay_shape: geometric``.
     decay_shape : Literal["geometric", "linear", "sigmoid"]
         Selects the per-generation decay schedule. Default
-        ``"geometric"`` preserves M6 byte-equivalence (multiplicative
-        decay each generation). ``"linear"`` reaches zero at
+        ``"geometric"`` applies multiplicative decay each generation.
+        ``"linear"`` reaches zero at
         ``lineage_depth = 1 / (1 - decay_factor)``; ``"sigmoid"``
         uses a slow-then-fast schedule. Biology is silent on shape;
-        non-default values are sensitivity-analysis options for
-        M6.9+ pilot pivots.
+        non-default values are sensitivity-analysis options.
     extraction_seed : int
         Seed for the F0 telemetry pass (``extract_from_brain``). A
         fixed sentinel default (``424242``) keeps F0 extractions
@@ -1254,13 +1253,13 @@ class TransgenerationalConfig(BaseModel):
         overrides. Each entry MUST reference a generation in
         ``[0, evolution.generations)`` exactly once.
     bias_network : BiasNetworkConfig | None
-        Optional M6.9+ sensory-conditional bias-network architecture.
-        When ``None`` (default), the substrate uses the M6 legacy
-        constant ``logit_bias`` path (byte-equivalent).
+        Optional sensory-conditional bias-network architecture.
+        When ``None`` (default), the substrate uses the constant
+        ``logit_bias`` path.
     probe_ring : ProbeRingConfig | None
-        Optional M6.9+ env-derived F0 probe-ring configuration.
-        When ``None`` (default), the F0 substrate-extraction
-        pipeline uses the M6 legacy synthetic-probe path.
+        Optional env-derived F0 probe-ring configuration. When
+        ``None`` (default), the F0 substrate-extraction pipeline
+        uses the synthetic-probe path.
     """
 
     enabled: bool
@@ -1447,19 +1446,17 @@ class EvolutionConfig(BaseModel):
     # Fitness primary-metric selector: which scalar the optimizer + the
     # decision-gate machinery consume per eval. Three options:
     #
-    # - ``"composite"`` (default): preserves the M3/M6 legacy fitness
+    # - ``"composite"`` (default): legacy fitness shape
     #   ``success_rate * (1 - fitness_survival_weight * death_rate)``.
-    #   Byte-equivalent to the prior single-metric path. Backwards-
-    #   compatible: existing M3/M4/M5/M6 configs continue to work
+    #   Backwards-compatible — existing configs continue to work
     #   without YAML changes.
     # - ``"success_rate"``: raw ``successes / L_eval`` (fraction of
     #   eval episodes terminating in ``COMPLETED_ALL_FOOD``). Pure
     #   foraging-success measure; ignores ``fitness_survival_weight``.
     # - ``"survival_rate"``: ``1 - deaths / L_eval`` (fraction of
-    #   eval episodes NOT terminating in ``HEALTH_DEPLETED``). The
-    #   spec primary metric for the M6.9+ PR-A pathogen-avoidance
-    #   campaign — the decision gate (T1 envelope, T3 M6 floor,
-    #   cross-arm primary verdict) is specified against this metric.
+    #   eval episodes NOT terminating in ``HEALTH_DEPLETED``). Used
+    #   as the primary metric for pathogen-avoidance campaigns
+    #   where the decision gate is specified against this metric.
     #   Ignores ``fitness_survival_weight``.
     #
     # Only ``LearnedPerformanceFitness`` honours the dispatch;
@@ -1683,10 +1680,9 @@ class EvolutionConfig(BaseModel):
                 "transgenerational: block to the evolution: config with "
                 "at minimum: enabled: true, decay_factor (float, default "
                 "0.6), and lawn_schedule. The bias_network and probe_ring "
-                "sub-blocks are optional (default None). See the OpenSpec "
-                "change 'add-tei-prior-on-m3' for the composed-mode "
-                "schema, or the archived change "
-                "'add-transgenerational-memory-redesign' for pure-TEI."
+                "sub-blocks are optional (default None). The composed-mode "
+                "schema layers the substrate on top of trained weights; "
+                "the pure-substrate mode runs without weight inheritance."
             )
             raise ValueError(msg)
         return self

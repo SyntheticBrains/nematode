@@ -51,8 +51,7 @@ def test_construction_clamps_bias_values() -> None:
 
     Matches the spec scenario "Substrate construction clamps bias values".
     The exact constant is read from the module so this test follows the
-    constant if it's tuned (e.g., the M6.9+ pilot-2 critique raised it from
-    2.0 to 6.0 to prevent fresh-init F1+ saturation).
+    constant if it's tuned.
     """
     clamp_val = LOGIT_BIAS_CLAMP
     # Pick values that straddle the clamp on both sides + an in-range value.
@@ -115,13 +114,13 @@ def test_dataclass_is_frozen() -> None:
 
 
 def test_clamp_constant_in_acceptable_range() -> None:
-    """``LOGIT_BIAS_CLAMP`` SHALL be a positive float in the expected M6.9+ range.
+    """``LOGIT_BIAS_CLAMP`` SHALL be a positive float in the expected range.
 
-    The exact value is tuned per pilot evidence (originally 2.0 = e^2 ~ 7.4x
-    Boltzmann cap; raised to 6.0 = e^6 ~ 403x after M6.9+ pilot-2 critique
-    flagged saturation as the mechanical bottleneck for fresh-init F1+
-    substrate application). The constant is positive AND finite AND
-    bounded above so a strong bias cannot collapse exploration entirely.
+    The exact value is tuned per pilot evidence (originally 2.0
+    = e^2 ≈ 7.4x Boltzmann cap; raised to 6.0 = e^6 ≈ 403x after
+    saturation evidence at fresh-init F1+). The constant is positive
+    AND finite AND bounded above so a strong bias cannot collapse
+    exploration entirely.
     """
     assert LOGIT_BIAS_CLAMP > 0.0
     assert LOGIT_BIAS_CLAMP <= 10.0  # sane upper bound; e^10 ~22k is plenty
@@ -424,7 +423,7 @@ def test_extract_from_brain_rejects_empty_probe_params() -> None:
 
 
 # ---------------------------------------------------------------------------
-# M6.9+ sensory-conditional bias-network tests
+# Sensory-conditional bias-network tests
 # ---------------------------------------------------------------------------
 
 
@@ -513,7 +512,7 @@ def test_bias_network_apply_to_logits_uses_clamp() -> None:
 
 
 def test_bias_network_apply_to_logits_returns_legacy_when_none() -> None:
-    """``bias_network is None`` SHALL fall back to ``logits + logit_bias`` (M6 legacy)."""
+    """``bias_network is None`` SHALL fall back to ``logits + logit_bias``."""
     sub = _f0(torch.tensor([0.5, 0.0, 0.0, 0.0], dtype=torch.float32))
     logits = torch.zeros(4, dtype=torch.float32)
     # sensory_input passed but ignored.
@@ -578,8 +577,8 @@ def test_build_sensory_input_handles_none_with_zero() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_inherit_from_geometric_decay_byte_equivalent_to_m6() -> None:
-    """``decay_shape='geometric'`` (default) SHALL produce M6 byte-equivalent cascade."""
+def test_inherit_from_geometric_decay_matches_multiplicative_cascade() -> None:
+    """``decay_shape='geometric'`` (default) SHALL produce a multiplicative cascade."""
     f0 = _f0(torch.tensor([1.0, -1.0, 0.5, 0.0], dtype=torch.float32))
     f1 = TransgenerationalMemory.inherit_from([f0], decay_factor=0.6)
     f2 = TransgenerationalMemory.inherit_from([f1], decay_factor=0.6)
@@ -718,7 +717,7 @@ def test_save_load_round_trip_preserves_bias_network(tmp_path: Path) -> None:
 
 
 def test_save_load_round_trip_legacy_path_remains_byte_equivalent(tmp_path: Path) -> None:
-    """When ``bias_network is None`` round-trip SHALL preserve M6 byte-equivalent payload shape."""
+    """When ``bias_network is None`` round-trip SHALL preserve the constant-form payload shape."""
     sub = _f0(torch.tensor([0.5, -0.3, 0.0, 0.1], dtype=torch.float32))
     path = tmp_path / "f0_legacy.tei.pt"
     save(sub, path)

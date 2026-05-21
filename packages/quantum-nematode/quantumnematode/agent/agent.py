@@ -211,19 +211,19 @@ class RewardConfig(BaseModel):
     )
     # Predator-evasion reward shape. Three modes:
     #
-    # - ``"default"`` (legacy): distance-scaled evasion term
+    # - ``"default"``: distance-scaled evasion term
     #   ``penalty_predator_proximity * (curr_dist - prev_dist)`` rewards
     #   moving AWAY / penalises moving CLOSER, PLUS the contact penalty
-    #   + flat-fallback path. Byte-equivalent to M3 / M4 / M5 / M6.
-    # - ``"gradient_only"`` (M6.10 audit-B remediation v1): drops the
-    #   distance-scaled term AND the flat fallback; only the contact
-    #   penalty fires when the agent enters dist <= 1 of a predator.
-    #   Removes the "circle right" tangential-motion attractor's
-    #   *incentive*. Smoke pass 2 found this trades one attractor for
-    #   another: agents now learn "never approach anything" because the
-    #   only predator signal is the terminal contact penalty.
-    # - ``"gradient_proximity"`` (M6.10 audit-B remediation v2): adds
-    #   a smooth per-step penalty proportional to
+    #   + flat-fallback path.
+    # - ``"gradient_only"``: drops the distance-scaled term AND the
+    #   flat fallback; only the contact penalty fires when the agent
+    #   enters dist <= 1 of a predator. Removes the "circle right"
+    #   tangential-motion attractor's *incentive* but trades one
+    #   attractor for another — agents now learn "never approach
+    #   anything" because the only predator signal is the terminal
+    #   contact penalty.
+    # - ``"gradient_proximity"``: adds a smooth per-step penalty
+    #   proportional to
     #   ``env.get_predator_concentration(agent_pos)`` (exponential-decay
     #   sum from all predators, tanh-normalised to [0, 1]). Agent gets
     #   continuous "closer = worse" signal BEFORE adjacency. Removes
@@ -920,7 +920,7 @@ class QuantumNematodeAgent:
                 if self.env.aerotaxis.enabled
                 else 12.5
             ),
-            # Temporal sensing (Phase 3)
+            # Temporal sensing
             food_concentration=temporal.get("food_concentration"),
             predator_concentration=temporal.get("predator_concentration"),
             food_dconcentration_dt=temporal.get("food_dconcentration_dt"),

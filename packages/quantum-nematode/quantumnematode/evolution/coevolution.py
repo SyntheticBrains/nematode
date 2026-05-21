@@ -159,7 +159,7 @@ _DEFAULT_PREY_HELD_OUT_BUNDLE_DIR = (
 # automatically nukes the diagnostic (every prey scores 0.0 regardless
 # of training quality; substrate ceiling, not overfitting).
 #
-# These values were calibrated by running the M3-trained held-out prey
+# These values were calibrated by running the trained held-out prey
 # bundle through frozen-weight `EpisodicSuccessRate` across a grid of
 # heuristic predator radii:
 #   - count=2, speed=0.5, grid=20 -> mean fitness 0.531 across 24 cells
@@ -2717,7 +2717,7 @@ class CoevolutionLoop:
         for the probe in that case produces uniformly-zero fitness
         independent of training quality, which is uninformative. The
         calibrated probe env preserves the probe's discriminative range
-        (M3 baseline prey score ~0.5 mean across this env's spec grid;
+        (baseline prey score ~0.5 mean across this env's spec grid;
         a co-evolved prey scoring near zero indicates real overfitting,
         not substrate ceiling).
 

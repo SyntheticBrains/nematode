@@ -494,9 +494,9 @@ class LearnedPerformanceFitness:
                     "delete it and re-run F0 extraction."
                 )
                 raise RuntimeError(msg) from exc
-            # Resolve the decay_shape from the live config when available;
-            # M6 callers (no transgenerational config block) fall through
-            # to the cascade's geometric default for byte-equivalence.
+            # Resolve the decay_shape from the live config when
+            # available; callers without a transgenerational config
+            # block fall through to the cascade's geometric default.
             from quantumnematode.agent.transgenerational_memory import DecayShape
 
             decay_shape: DecayShape = "geometric"
@@ -513,14 +513,14 @@ class LearnedPerformanceFitness:
                 )
             if hasattr(brain, "tei_prior"):
                 # Pass the substrate object directly. The LSTMPPO
-                # ``tei_prior`` attribute accepts either a legacy 1-D
-                # Tensor (M6 byte-equivalence path) or a
-                # ``TransgenerationalMemory`` (M6.9+ sensory-conditional
-                # path). When the substrate carries a bias_network, the
-                # brain dispatches via ``substrate.apply_to_logits`` per
-                # step with a sensory_input built from BrainParams; when
-                # bias_network is None, the brain's legacy path uses the
-                # substrate's constant logit_bias.
+                # ``tei_prior`` attribute accepts either a 1-D Tensor
+                # (constant-bias path) or a ``TransgenerationalMemory``
+                # (sensory-conditional path). When the substrate
+                # carries a bias_network, the brain dispatches via
+                # ``substrate.apply_to_logits`` per step with a
+                # sensory_input built from BrainParams; when
+                # bias_network is None, the brain's constant-bias
+                # path uses the substrate's logit_bias.
                 brain.tei_prior = substrate  # type: ignore[attr-defined]
             else:
                 logger.warning(
@@ -651,17 +651,16 @@ class LearnedPerformanceFitness:
         success_rate = successes / eval_count
         death_rate = deaths / eval_count
         survival_rate = 1.0 - death_rate
-        # Composite (M3/M6 byte-equivalent default): success-weighted
-        # by survival, with ``fitness_survival_weight`` controlling
-        # how harshly deaths penalise foraging score.
+        # Composite (default): success-weighted by survival, with
+        # ``fitness_survival_weight`` controlling how harshly deaths
+        # penalise foraging score.
         composite = success_rate * (1.0 - evolution_config.fitness_survival_weight * death_rate)
-        # Dispatch on ``fitness_metric``. The composite is the
-        # M3/M6/M5 legacy default — preserves byte-equivalence for
-        # configs that don't set the field. ``"survival_rate"`` is
-        # the M6.9+ PR-A spec primary metric (the decision-gate
-        # tripwires T1 + T3 + cross-arm primary verdict are
-        # specified against it). ``"success_rate"`` is a pure
-        # foraging measure for ablation studies.
+        # Dispatch on ``fitness_metric``. The composite is the default
+        # for configs that don't set the field. ``"survival_rate"`` is
+        # the primary metric for pathogen-avoidance campaigns where
+        # the decision-gate tripwires T1 + T3 + cross-arm primary
+        # verdict are specified against it. ``"success_rate"`` is a
+        # pure foraging measure for ablation studies.
         if evolution_config.fitness_metric == "survival_rate":
             fitness = survival_rate
         elif evolution_config.fitness_metric == "success_rate":
@@ -669,7 +668,7 @@ class LearnedPerformanceFitness:
         else:  # composite (default)
             fitness = composite
         # Optional per-genome telemetry side-channel. The decision-gate
-        # machinery (T1 envelope check, T3 M6-floor-to-beat, post-hoc
+        # machinery (T1 envelope check, T3 floor-to-beat, post-hoc
         # aggregator) needs survival_rate + success_rate alongside the
         # scalar fitness; the per_gen_elites.jsonl writer in the loop
         # only records the scalar. ``diagnostics_path`` lets the loop

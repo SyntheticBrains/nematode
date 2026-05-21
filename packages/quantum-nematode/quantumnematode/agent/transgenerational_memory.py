@@ -7,17 +7,16 @@ F0 elite through F1/F2/F3 generations.
 Two substrate forms, selected via the optional ``bias_network``
 field:
 
-- **Constant logit-bias** (legacy default; M6 fallback). When
-  ``bias_network is None`` the substrate's effective bias is the
-  per-action constant ``logit_bias`` tensor of shape
-  ``(num_actions,)``.
+- **Constant logit-bias**. When ``bias_network is None`` the
+  substrate's effective bias is the per-action constant
+  ``logit_bias`` tensor of shape ``(num_actions,)``.
 - **Sensory-conditional bias-network**. When ``bias_network`` is set
   to a ``torch.nn.Sequential``, the effective bias is computed per
   step as ``bias_network(sensory_input)`` where ``sensory_input`` is
   a 1-D tensor of features named in ``input_features``. This lets
   the substrate express *context-conditional* biases (avoid when
-  near a pathogen gradient, forage otherwise) which the M6 constant
-  form structurally could not.
+  near a pathogen gradient, forage otherwise) which the constant
+  form structurally cannot.
 
 Both forms clamp the effective bias at ``|x| ≤ LOGIT_BIAS_CLAMP``
 (Boltzmann ratio cap ≈ 7.4x). The dataclass is ``frozen=True`` so
@@ -30,12 +29,8 @@ frozen-dataclass post-init mutation).
 The ``inherit_from`` cascade supports three decay shapes
 (geometric / linear / sigmoid) configured at the strategy layer.
 The cascade scales every weight tensor in the bias-network (or the
-constant logit_bias tensor, when in legacy form) by the decay
+constant logit_bias tensor, when in that form) by the decay
 schedule's per-generation factor.
-
-See the OpenSpec change
-``openspec/changes/add-transgenerational-memory-redesign/`` for the
-full audit-driven design rationale.
 """
 
 from __future__ import annotations
@@ -58,13 +53,13 @@ if TYPE_CHECKING:
 # ``bias_network(sensory_input)``). Caps the Boltzmann ratio at
 # ``e^6 ≈ 403x`` so a strong bias can dominate fresh-init policy
 # noise at F1+ (K=0). Kaletsky F2 ≈ 0.55 choice index corresponds
-# to a ~3x action-probability tilt; the previous cap of 2.0
-# (e^2 ≈ 7.4x) saturated FORWARD/STAY at pilot 1 + pilot 2, blunting
-# substrate signal at F1+ even when the bias_network produced
-# stronger raw outputs (-5 to -6 range). The cap was raised to 6.0
-# after the M6.9+ pilot-2 critique flagged saturation as the
-# mechanical bottleneck. This still prevents pathological
-# deterministic policies (a 403x tilt is high but not infinity).
+# to a ~3x action-probability tilt; a tighter cap saturates
+# FORWARD/STAY and blunts substrate signal at F1+ even when the
+# bias_network produces stronger raw outputs. The cap was raised
+# from 2.0 (e^2 ≈ 7.4x) to 6.0 after empirical evidence of
+# saturation as the mechanical bottleneck. 6.0 still prevents
+# pathological deterministic policies (a 403x tilt is high but
+# not infinity).
 LOGIT_BIAS_CLAMP: float = 6.0
 
 DecayShape = Literal["geometric", "linear", "sigmoid"]
@@ -114,19 +109,19 @@ def build_sensory_input(params: object, input_features: Sequence[str]) -> torch.
 class TransgenerationalMemory:
     """Inheritable behavioural-bias substrate carried across generations.
 
-    Stores either a per-action constant logit bias (legacy M6 form) or
-    a sensory-conditional parametric bias-network (M6.9+ default).
-    The substrate is extracted from an F0 elite policy via
-    :func:`extract_from_brain` and multiplicatively decayed across
-    F1/F2/F3 generations via :meth:`inherit_from`.
+    Stores either a per-action constant logit bias or a sensory-
+    conditional parametric bias-network. The substrate is extracted
+    from an F0 elite policy via :func:`extract_from_brain` and
+    multiplicatively decayed across F1/F2/F3 generations via
+    :meth:`inherit_from`.
 
     Parameters
     ----------
     logit_bias : torch.Tensor
         1-D tensor of shape ``(num_actions,)`` and dtype ``float32``.
-        Used as the effective bias when ``bias_network is None`` (M6
-        legacy path); used only as a placeholder / fallback dtype anchor
-        when ``bias_network`` is set. Each element SHALL satisfy
+        Used as the effective bias when ``bias_network is None``;
+        used only as a placeholder / fallback dtype anchor when
+        ``bias_network`` is set. Each element SHALL satisfy
         ``|x| ≤ LOGIT_BIAS_CLAMP`` after construction; values are
         clamped automatically in ``__post_init__`` and the input
         tensor is NOT mutated in place.
@@ -140,12 +135,12 @@ class TransgenerationalMemory:
         Optional sensory-conditional parametric bias-network. When
         set, :meth:`apply_to_logits` returns
         ``logits + clamp(bias_network(sensory_input))``; when ``None``,
-        falls back to the constant ``logits + logit_bias`` path
-        (M6 byte-equivalent). The caller-passed module is
-        ``copy.deepcopy``'d in ``__post_init__`` so caller-side
-        mutations cannot bleed across generations (mirrors the
-        ``logit_bias.detach().clone()`` clamp-clone pattern). Default
-        ``None`` preserves M6 behaviour.
+        falls back to the constant ``logits + logit_bias`` path.
+        The caller-passed module is ``copy.deepcopy``'d in
+        ``__post_init__`` so caller-side mutations cannot bleed across
+        generations (mirrors the ``logit_bias.detach().clone()``
+        clamp-clone pattern). Default ``None`` selects the constant
+        logit-bias form.
     input_features : tuple[str, ...]
         Names of the sensory features the ``bias_network`` consumes,
         in the order it expects them. Each entry is either a raw
@@ -255,14 +250,14 @@ class TransgenerationalMemory:
 
         Two paths:
 
-        - When ``bias_network is None`` (legacy M6 form): returns
+        - When ``bias_network is None`` (constant form): returns
           ``logits + self.logit_bias``. The ``sensory_input`` argument
           is ignored — supplied for signature compatibility with the
-          M6.9+ form. Broadcasts over leading batch / sequence
-          dimensions.
-        - When ``bias_network`` is set (M6.9+ form): returns
-          ``logits + clamp(bias_network(sensory_input))`` where the
-          clamp is element-wise to ``[-LOGIT_BIAS_CLAMP, +LOGIT_BIAS_CLAMP]``.
+          sensory-conditional form. Broadcasts over leading batch /
+          sequence dimensions.
+        - When ``bias_network`` is set (sensory-conditional form):
+          returns ``logits + clamp(bias_network(sensory_input))`` where
+          the clamp is element-wise to ``[-LOGIT_BIAS_CLAMP, +LOGIT_BIAS_CLAMP]``.
           ``sensory_input`` SHALL be a 1-D tensor matching the
           bias-network's expected input width (typically
           ``len(self.input_features)``). The returned tensor is a
@@ -294,7 +289,7 @@ class TransgenerationalMemory:
             condition).
         """
         if self.bias_network is None:
-            # Legacy M6 path: `+` is non-in-place on tensors.
+            # Constant-form path: `+` is non-in-place on tensors.
             return logits + self.logit_bias
         if sensory_input is None:
             msg = (
@@ -326,9 +321,9 @@ class TransgenerationalMemory:
         The cascade scales every weight tensor in the substrate by a
         per-generation factor determined by ``decay_shape``:
 
-        - ``geometric`` (M6 default, byte-equivalent): factor =
-          ``decay_factor`` every generation. Cumulative effect at
-          child depth ``d``: ``decay_factor ** d``.
+        - ``geometric`` (default): factor = ``decay_factor`` every
+          generation. Cumulative effect at child depth ``d``:
+          ``decay_factor ** d``.
         - ``linear``: factor at child depth ``d`` is
           ``max(0, 1 - d * (1 - decay_factor))``. The cumulative
           factor reaches zero at ``d = 1 / (1 - decay_factor)``;
@@ -338,8 +333,8 @@ class TransgenerationalMemory:
           **explicitly independent of `decay_factor`**. Slow-then-fast
           schedule with ``cum(0)≈0.881``, ``cum(1)=0.500``,
           ``cum(2)≈0.119``, ``cum(3)≈0.018``. Reserved as a
-          sensitivity-analysis alternative for pilot pivots; calibration
-          by ``decay_factor`` only applies to ``geometric`` and ``linear``.
+          sensitivity-analysis alternative; calibration by
+          ``decay_factor`` only applies to ``geometric`` and ``linear``.
 
         For non-geometric shapes, the per-generation factor depends on
         the *cumulative* depth of the child (``parent.lineage_depth + 1``),
@@ -360,7 +355,7 @@ class TransgenerationalMemory:
             ``ValueError``. Anchors all three decay shapes.
         decay_shape : Literal["geometric", "linear", "sigmoid"]
             Selects the per-generation factor formula. Default
-            ``"geometric"`` preserves M6 byte-equivalence.
+            ``"geometric"``.
 
         Returns
         -------
@@ -407,8 +402,8 @@ class TransgenerationalMemory:
         # the ``bias_network`` so the parent's module is never mutated
         # — we don't need to deep-copy here. Then scale the child's
         # (already-cloned) bias_network in-place so we only pay one
-        # deep-copy per generation step (the M6.9+ commit-1 review
-        # flagged the prior double-deep-copy as a latency leak).
+        # deep-copy per generation step (the prior double-deep-copy
+        # was a latency leak).
         child = cls(
             logit_bias=scaled_logit_bias,
             lineage_depth=child_depth,
@@ -512,8 +507,8 @@ def _describe_bias_network(net: nn.Sequential) -> dict:
     Records architecture metadata (dims + activation) alongside the
     state_dict so :func:`_build_bias_network_from_spec` can rebuild
     the module on load. The architecture introspection assumes the
-    canonical M6.9+ shapes (linear-only or linear-act-linear); a
-    future capacity bump would extend this descriptor.
+    canonical shapes (linear-only or linear-act-linear); a future
+    capacity bump would extend this descriptor.
     """
     linears = [m for m in net if isinstance(m, nn.Linear)]
     activations = [m for m in net if not isinstance(m, nn.Linear)]
@@ -656,19 +651,19 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
 
     Two paths, selected by ``bias_network_spec``:
 
-    - **Constant logit-bias** (M6 legacy, ``bias_network_spec is None``):
+    - **Constant logit-bias** (``bias_network_spec is None``):
       probes the trained F0 brain over ``probe_params``, accumulates
       empirical sampled-action counts, and returns a substrate whose
       ``logit_bias`` is the log-deviation from uniform.
-    - **Sensory-conditional bias-network** (M6.9+, ``bias_network_spec``
+    - **Sensory-conditional bias-network** (``bias_network_spec``
       provided): probes the brain ``samples_per_probe`` times per
       ``probe_params`` entry under the configured seed, fits the
       bias-network MLP against ``(sensory_input -> logit_offset_from_uniform)``
       with Adam over ``fit_epochs`` epochs (or closed-form
       least-squares when the spec's ``hidden_dim == 0``), and returns
       a substrate carrying the fitted MLP. The ``logit_bias``
-      tensor in the M6.9+ path is the per-probe-averaged offset
-      (an unused legacy artefact preserved for round-trip + diagnostics).
+      tensor in the sensory-conditional path is the per-probe-averaged
+      offset (an unused artefact preserved for round-trip + diagnostics).
 
     The deterministic-on-seed contract is satisfied because (a) the
     brain's RNG is reseeded via ``prepare_episode()`` (zeroes the
@@ -680,13 +675,13 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
     Parameters
     ----------
     brain : object
-        Trained brain (see existing M6 docstring for the duck-type
-        contract — ``prepare_episode``, ``run_brain``,
-        ``action_set``, ``num_actions``, optional ``rng``).
+        Trained brain. Duck-type contract: ``prepare_episode``,
+        ``run_brain``, ``action_set``, ``num_actions``, optional
+        ``rng``.
     probe_params : Sequence[object]
         Deterministic sequence of ``BrainParams`` instances. Caller
         (the F0 substrate-extraction pipeline) constructs these from
-        the env-derived probe ring (M6.11).
+        the env-derived probe ring.
     rng_seed : int
         Seed for deterministic action sampling + MLP fit. Same seed
         always produces the same substrate.
@@ -697,8 +692,8 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
         When set, must contain ``input_dim`` (= ``len(input_features)``),
         ``hidden_dim``, ``output_dim`` (= ``brain.num_actions``), and
         ``activation`` (Literal["tanh", "relu", "gelu"]). Triggers the
-        M6.9+ sensory-conditional path. When ``None``, the M6 legacy
-        path runs.
+        sensory-conditional path. When ``None``, the constant
+        logit-bias path runs.
     input_features : Sequence[str]
         Names of the ``BrainParams`` features (incl. ``_sin`` / ``_cos``
         suffixes) consumed by the bias-network. Required when
@@ -709,9 +704,10 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
     fit_lr : float
         Adam learning rate for the MLP fit.
     samples_per_probe : int
-        Per-probe action samples for the empirical distribution. M6
-        used 1 implicitly; M6.9+ defaults to 10 to reduce variance in
-        the MLP fit target.
+        Per-probe action samples for the empirical distribution.
+        Under the constant logit-bias path this is implicitly 1; the
+        sensory-conditional path defaults to 10 to reduce variance
+        in the MLP fit target.
 
     Returns
     -------
@@ -740,9 +736,10 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
     num_actions = brain.num_actions  # type: ignore[attr-defined]
     eps = 1e-8
 
-    # Probe the brain. M6 legacy path: one sample per probe → action_counts.
-    # M6.9+ path: samples_per_probe samples per probe → per-probe empirical
-    # distribution recorded alongside the probe params for the MLP fit.
+    # Probe the brain. Constant-form path: one sample per probe →
+    # action_counts. Sensory-conditional path: samples_per_probe
+    # samples per probe → per-probe empirical distribution recorded
+    # alongside the probe params for the MLP fit.
     #
     # Hidden-state reset between probes. The LSTM/GRU recurrent state
     # updates on every ``run_brain`` call, so the policy at probe N
@@ -777,8 +774,8 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
     logit_offsets = torch.log(probs + eps) - uniform_log
 
     if bias_network_spec is None:
-        # M6 legacy path: average across probes; the substrate carries
-        # the per-action constant tensor; bias_network=None.
+        # Constant-form path: average across probes; the substrate
+        # carries the per-action constant tensor; bias_network=None.
         mean_logit_bias = logit_offsets.mean(dim=0)
         return TransgenerationalMemory(
             logit_bias=mean_logit_bias,
@@ -788,7 +785,7 @@ def extract_from_brain(  # noqa: PLR0913 - the bias-network fit knobs are delibe
             input_features=(),
         )
 
-    # M6.9+ path: build the MLP, fit it against
+    # Sensory-conditional path: build the MLP, fit it against
     # (sensory_input -> logit_offset_from_uniform).
     # Seed BEFORE constructing the network so its initial parameter
     # init is deterministic on ``rng_seed`` (Linear's default init uses

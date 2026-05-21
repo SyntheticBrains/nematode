@@ -203,7 +203,7 @@ def test_build_per_gen_sim_config_returns_base_when_disabled(tmp_path: Path) -> 
     """
     sim_config = _sim_config_with_predators()
     # The pairing validator pins ``enabled=false`` to ``inheritance=none``,
-    # so this construction matches the TEI-off control arm of the M6
+    # so this construction matches the TEI-off control arm of the
     # paired-arm ablation.
     transgenerational = _tei_config(enabled=False, generations=2)
     loop = _make_loop(

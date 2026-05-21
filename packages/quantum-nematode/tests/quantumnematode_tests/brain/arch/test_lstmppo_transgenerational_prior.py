@@ -1,7 +1,6 @@
 """Unit tests for the LSTMPPO ``tei_prior`` integration.
 
-Covers the eight scenarios from the OpenSpec change's lstm-ppo-brain
-delta:
+Covers eight scenarios:
 
 (a) Default ``tei_prior=None`` byte-equivalent to pre-TEI baseline.
 (b) ``bias=[+2, 0, 0, 0]`` elevates empirical action-0 probability
@@ -489,12 +488,12 @@ def test_learn_with_none_tei_prior_runs_without_assertion() -> None:
 
 
 # ---------------------------------------------------------------------------
-# M6.9+ substrate-form tei_prior (TransgenerationalMemory with bias_network)
+# Substrate-form tei_prior (TransgenerationalMemory with bias_network)
 # ---------------------------------------------------------------------------
 
 
 def _make_substrate_with_constant_bias(bias_tensor: torch.Tensor) -> Any:
-    """Construct a TransgenerationalMemory with the M6 legacy logit_bias path (no bias_network)."""
+    """Construct a TransgenerationalMemory with the constant logit_bias path (no bias_network)."""
     from quantumnematode.agent.transgenerational_memory import TransgenerationalMemory
 
     return TransgenerationalMemory(

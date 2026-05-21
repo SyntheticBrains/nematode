@@ -726,7 +726,7 @@ class TestTransgenerationalConfig:
             )
 
     def test_decay_shape_default_is_geometric(self) -> None:
-        """``decay_shape`` defaults to ``"geometric"`` (M6 byte-equivalent)."""
+        """``decay_shape`` defaults to ``"geometric"``."""
         cfg = TransgenerationalConfig(
             enabled=True,
             lawn_schedule=self._make_schedule(1),
@@ -745,7 +745,7 @@ class TestTransgenerationalConfig:
             )
 
     def test_bias_network_defaults_when_block_absent(self) -> None:
-        """When ``bias_network`` is absent the loader SHALL fall back to M6 legacy path."""
+        """When ``bias_network`` is absent the loader SHALL fall back to constant logit-bias."""
         cfg = TransgenerationalConfig(
             enabled=True,
             lawn_schedule=self._make_schedule(1),

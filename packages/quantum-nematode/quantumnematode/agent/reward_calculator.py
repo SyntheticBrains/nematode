@@ -103,20 +103,20 @@ class RewardCalculator:
 
         # Predator evasion reward. Three modes, gated by ``reward_mode``:
         #
-        # - ``"default"`` (legacy): distance-scaled evasion term
+        # - ``"default"``: distance-scaled evasion term
         #   ``penalty_predator_proximity * (curr_dist - prev_dist)`` rewards
         #   moving away / penalises moving closer, plus the contact penalty
         #   at ``dist <= 1`` and a flat-fallback penalty when no prev step
-        #   exists. Byte-equivalent to M3 / M4 / M5 / M6.
-        # - ``"gradient_only"`` (M6.10 v1): drops the distance-scaled term
-        #   AND the flat fallback; only the contact penalty at ``dist <= 1``
+        #   exists.
+        # - ``"gradient_only"``: drops the distance-scaled term AND the
+        #   flat fallback; only the contact penalty at ``dist <= 1``
         #   fires. Removes the "circle right" tangential-motion attractor
-        #   but trades for a "never-approach" attractor (smoke pass 2).
-        # - ``"gradient_proximity"`` (M6.10 v2): smooth per-step penalty
-        #   proportional to the env's predator concentration field at the
-        #   agent's position. Agent gets continuous "closer = worse"
-        #   signal BEFORE contact; preserves the contact penalty. The
-        #   gradient penalty fires anywhere the agent is in any predator's
+        #   but empirically trades for a "never-approach" attractor.
+        # - ``"gradient_proximity"``: smooth per-step penalty proportional
+        #   to the env's predator concentration field at the agent's
+        #   position. Agent gets continuous "closer = worse" signal
+        #   BEFORE contact; preserves the contact penalty. The gradient
+        #   penalty fires anywhere the agent is in any predator's
         #   exp-decay field, so the "do nothing" agent still accumulates
         #   penalty if it sits near a predator.
 

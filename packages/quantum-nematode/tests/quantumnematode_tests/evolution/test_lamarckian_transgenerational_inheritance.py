@@ -202,8 +202,8 @@ def test_checkpoint_path_matches_lamarckian(tmp_path: Path) -> None:
     The composed strategy owns the WEIGHTS checkpoint path; the substrate
     ``.tei.pt`` path is owned by the F0 substrate-extraction pipeline as a
     separate concern. This test pins that the strategy's
-    ``checkpoint_path`` returns the ``.pt`` (M3) path, NOT the ``.tei.pt``
-    (TEI substrate) path.
+    ``checkpoint_path`` returns the ``.pt`` (weights) path, NOT the
+    ``.tei.pt`` (TEI substrate) path.
     """
     composed = LamarckianTransgenerationalInheritance()
     lamarckian = LamarckianInheritance()

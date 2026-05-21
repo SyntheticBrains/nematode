@@ -28,12 +28,10 @@ methods:
   collide on disk if a future config ever mixes them.
 - ``kind()`` — returns the new literal ``"transgenerational"``.
 
-This module ships ONLY the strategy skeleton + Protocol conformance.
-The F0 substrate extraction pipeline (writing the ``.tei.pt`` after
-F0 weight capture + telemetry pass) and the worker tuple extension +
-``fitness.evaluate`` kwarg forwarding are follow-up additions tracked
-in the OpenSpec change under ``openspec/changes/add-transgenerational-
-memory/``.
+This module ships the strategy skeleton + Protocol conformance. The
+F0 substrate extraction pipeline (writing the ``.tei.pt`` after F0
+weight capture + telemetry pass), the worker tuple extension, and
+``fitness.evaluate`` kwarg forwarding live in adjacent modules.
 """
 
 from __future__ import annotations

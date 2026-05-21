@@ -179,8 +179,8 @@ class LSTMPPORolloutBuffer:
         self.h_states: list[torch.Tensor] = []
         self.c_states: list[torch.Tensor | None] = []
         # Per-step TEI bias tensor. Captures the bias value applied to
-        # actor logits at sampling time (M6.9+ sensory-conditional path
-        # OR legacy constant tensor) so the PPO update can replay the
+        # actor logits at sampling time (sensory-conditional path OR
+        # constant tensor) so the PPO update can replay the
         # exact same bias and the PPO ratio stays mathematically valid.
         # ``None`` entries indicate no bias was applied (legacy non-TEI
         # path). Mirrors the spec scenario "store the per-step bias
@@ -530,20 +530,18 @@ class LSTMPPOBrain(ClassicalBrain):
         # training forward pass (``learn``) so the PPO ratio
         # ``exp(new_log_probs - old_log_probs)`` stays well-defined:
         #
-        # - **Legacy 1-D Tensor** (M6 form): ``(num_actions,)`` float32
+        # - **Constant 1-D Tensor form**: ``(num_actions,)`` float32
         #   tensor added directly to logits. Same shape every step.
-        # - **TransgenerationalMemory substrate** (M6.9+ form): the
-        #   substrate's ``apply_to_logits(logits, sensory_input)`` is
-        #   called per step. When the substrate has a sensory-
-        #   conditional ``bias_network``, the bias VARIES per step
-        #   with the brain's sensory input; the per-step bias result
-        #   is captured into the rollout buffer at sampling time and
-        #   replayed at training time so the PPO ratio is exact even
-        #   under the sensory-conditional bias.
+        # - **TransgenerationalMemory substrate form**: the substrate's
+        #   ``apply_to_logits(logits, sensory_input)`` is called per
+        #   step. When the substrate has a sensory-conditional
+        #   ``bias_network``, the bias VARIES per step with the brain's
+        #   sensory input; the per-step bias result is captured into
+        #   the rollout buffer at sampling time and replayed at
+        #   training time so the PPO ratio is exact even under the
+        #   sensory-conditional bias.
         #
-        # See the OpenSpec change at
-        # ``openspec/changes/add-transgenerational-memory-redesign/``
-        # for the rationale. The attribute is set externally by
+        # The attribute is set externally by
         # ``LearnedPerformanceFitness.evaluate`` post-decode, before
         # ``_build_agent``; never mutated by the runner or the step loop.
         self.tei_prior: torch.Tensor | TransgenerationalMemory | None = None
@@ -776,8 +774,8 @@ class LSTMPPOBrain(ClassicalBrain):
             self._tei_prior_rollout_snapshot_value = _snapshot_tei_prior(self.tei_prior)
 
         # Actor: h_t → logits → (optional TEI bias) → action.
-        # Compute the per-step bias tensor (M6.9+ substrate path OR M6
-        # legacy tensor path) and capture it into ``_pending_bias`` so
+        # Compute the per-step bias tensor (substrate path OR
+        # constant tensor path) and capture it into ``_pending_bias`` so
         # ``learn()`` can store it in the rollout buffer. The training
         # forward pass replays the saved bias rather than recomputing —
         # this lets sensory-conditional bias-networks vary per step
@@ -946,9 +944,9 @@ class LSTMPPOBrain(ClassicalBrain):
 
                     # Actor — replay the per-step bias captured at
                     # sampling time. The bias was already computed by
-                    # ``run_brain`` (M6 legacy tensor path OR M6.9+
-                    # substrate path, dispatched by ``_compute_tei_bias``)
-                    # and stored per step in the rollout buffer. Replaying
+                    # ``run_brain`` (constant tensor path OR substrate
+                    # path, dispatched by ``_compute_tei_bias``) and
+                    # stored per step in the rollout buffer. Replaying
                     # the saved bias (rather than recomputing here) is
                     # mathematically exact even for sensory-conditional
                     # bias-networks that vary per step. ``.to(logits.device)``

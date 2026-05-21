@@ -1,4 +1,4 @@
-"""Tests for Phase 4 evaluation metrics (territorial_index, alarm_response_rate)."""
+"""Tests for evaluation metrics (territorial_index, alarm_response_rate)."""
 
 from __future__ import annotations
 
