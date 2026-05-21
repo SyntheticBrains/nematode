@@ -291,8 +291,8 @@ OpenSpec change: `add-transgenerational-memory-redesign` (to be archived as `202
 
 ## M8: Phase 5 Synthesis Logbook
 
-**OpenSpec change**: `2026-07-21-add-phase5-evaluation` (not yet created)
-**Status**: not started
+**OpenSpec change**: `2026-07-21-add-phase5-evaluation` was never created; `phase5-tracking` is the canonical tracker (archives standalone via `openspec-archive-change phase5-tracking` operator-side post-merge — see closing blockquote below the task list).
+**Status**: ✅ complete (scoped synthesis — see § Scope decision below; logbook 021 published)
 **Dependencies**: M2–M6 complete (or explicitly dropped via gates)
 
 **Synthesis scope** (updated May 2026 per literature scan): Phase 5 produced two GO results (M2 hyperparam evolution, M3 Lamarckian inheritance) and two STOP results (M4 Baldwin, M5 Red Queen) plus reusable methodology (lag-matrix, cell-grid fair-test, per-gen reaggregation). The STOPs have **substrate diagnoses** that connect to recent independent literature; M8 should synthesise these into a coherent Phase 5 narrative rather than just tabulating per-milestone outcomes. Specifically, M5's architecture-asymmetry hypothesis is independently corroborated by Resendez Prado ([arXiv 2604.03565, Apr 2026](https://arxiv.org/abs/2604.03565) — "transparent regime" Baldwin suppression in chess agents) and the cycling-vs-trait-decoupling framing is reinforced by Mougi ([Sci Reports 2026](https://www.nature.com/articles/s41598-026-50762-1) — apparent decoupling of dual-trait predator-prey dynamics); Chen ([arXiv 2512.15732, Dec 2025](https://arxiv.org/abs/2512.15732) — "Red Queen's Trap") documents a parallel co-evolution failure mode in HFT.
