@@ -483,9 +483,10 @@ def test_main_loop_gc_preserves_substrate_tei_pt(tmp_path: Path) -> None:
     it returns ``genome-X.tei``, the extracted gid ends in ``.tei``,
     and the substrate never matches ``keep_ids`` → gets deleted.
 
-    Under M3 / pure-TEI the bug never surfaced because either no
-    ``.tei.pt`` is in the GC'd directory (M3) or the main-loop GC
-    doesn't fire (pure-TEI). Under composed mode F2/F3 children
+    Under lamarckian-only / pure-transgenerational the bug never
+    surfaced because either no ``.tei.pt`` is in the GC'd directory
+    (lamarckian-only) or the main-loop GC doesn't fire
+    (pure-transgenerational). Under composed mode F2/F3 children
     inherit F0's substrate with ``decay_factor^N`` so the substrate
     MUST survive every main-loop GC pass for the whole campaign.
 

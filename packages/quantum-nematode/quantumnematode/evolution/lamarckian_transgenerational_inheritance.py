@@ -31,7 +31,7 @@ on this value so both ``_inheritance_active()`` (weight-IO) and
 composed mode, threading both ``warm_start_path_override`` and
 ``tei_prior_source`` into every F1+ child's ``fitness.evaluate`` call.
 
-See the OpenSpec change ``openspec/changes/add-tei-prior-on-m3/``
+See the OpenSpec change ``openspec/changes/archive/2026-05-21-add-tei-prior-on-m3/``
 for the full design rationale + biological framing (TEI as a *prior on
 trained weights*, aligning with the wet-lab Kaletsky/mammalian
 mechanism — not a transmitted policy).

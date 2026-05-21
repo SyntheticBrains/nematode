@@ -166,7 +166,7 @@ class InheritanceStrategy(Protocol):
           (Lamarckian pattern) AND has ``brain.tei_prior`` set from
           the F0-extracted substrate (transgenerational pattern). The
           retraining phase then runs with both signals active. Added
-          per ``openspec/changes/add-tei-prior-on-m3/`` as the
+          per ``openspec/changes/archive/2026-05-21-add-tei-prior-on-m3/`` as the
           wet-lab-aligned reframe: TEI as a *prior on trained
           weights*, not a standalone policy.
 
