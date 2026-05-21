@@ -16,7 +16,9 @@
 # introduced.
 #
 # Schedule (as calibrated through the Path A/AA/AAA forensic chain
-# documented in tmp/evaluations/transgenerational/transgenerational_scratchpad.md):
+# — Path A retune damage_radius 3→5, Path AA hyperparameter sweep
+# K ∈ {500, 1000}, Path AAA composite fitness fitness_survival_weight: 1.0;
+# converged at F0 survival_rate ≈ 0.46 inside the [0.45, 0.85] envelope):
 #   - F0 (gen 0): pathogen lawns ON, K=1000 PPO train episodes per child.
 #     End-of-gen the F0 elite's trained policy is loaded, the
 #     ``extract_from_brain`` telemetry pass produces the
