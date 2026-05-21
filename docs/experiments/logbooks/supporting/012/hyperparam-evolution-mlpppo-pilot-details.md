@@ -207,19 +207,19 @@ uv run python scripts/run_evolution.py \
     --config configs/evolution/hyperparam_mlpppo_pilot.yml \
     --fitness learned_performance \
     --generations 1 --population 4 --seed 42 \
-    --output-dir tmp/calibration
+    --output-dir <calibration_dir>
 
 # 2. Full 4-seed pilot
-OUTPUT_ROOT=tmp/m2_pilot scripts/campaigns/phase5_m2_hyperparam_mlpppo.sh
+OUTPUT_ROOT=<pilot_output_dir> scripts/campaigns/phase5_m2_hyperparam_mlpppo.sh
 
 # 3. Hand-tuned baseline for comparison
-OUTPUT_ROOT=tmp/m2_baseline scripts/campaigns/phase5_m2_hyperparam_baseline.sh
+OUTPUT_ROOT=<baseline_output_dir> scripts/campaigns/phase5_m2_hyperparam_baseline.sh
 
 # 4. Aggregate + plot
 uv run python scripts/campaigns/aggregate_m2_pilot.py \
-    --pilot-root tmp/m2_pilot \
-    --baseline-root tmp/m2_baseline \
-    --output-dir tmp/m2_summary
+    --pilot-root <pilot_output_dir> \
+    --baseline-root <baseline_output_dir> \
+    --output-dir <summary_output_dir>
 ```
 
 Total wall time: ~30 minutes on a 10-core macOS machine.

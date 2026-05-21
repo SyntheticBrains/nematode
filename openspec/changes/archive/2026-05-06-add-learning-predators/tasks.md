@@ -50,9 +50,9 @@ The byte-equivalence parametrised test (task 2.6) is the **primary** regression 
 
   The two arms write different CSVs with different schemas: multi-agent path emits `multi_agent_summary.csv` (cols include `agents_alive_at_end`, `total_food`, `proximity_events`, `mean_success`); single-agent path emits `simulation_results.csv` (cols include `success`, `foods_collected`, `steps`, `predator_encounters`, `died_to_health_depletion`, `successful_evasions`). Metrics extracted in 5.3 below are reconciled across both schemas
 
-  Output: `tmp/m1_regression_baseline/baseline_pre.csv` with columns `arm, config, seed, mean_success, mean_total_food, mean_steps, mean_predator_engagement, n_episodes, session_id`. `mean_predator_engagement` aliases differently per arm — multi-agent reads `proximity_events / num_episodes` (already in summary CSV); single-agent reads `(predator_encounters + successful_evasions) / num_episodes` (composite signal of predator-trajectory effects). `mean_success` will saturate at 0.0 on the multi-agent pursuit arm (heuristic predators kill all 5 agents reliably under default config); single-agent arm is non-saturated and provides discriminating signal
+  Output: `baseline_pre.csv` (now archived at `artifacts/logbooks/016-predator-brain-refactor/baseline_pre.csv` per task 5.5) with columns `arm, config, seed, mean_success, mean_total_food, mean_steps, mean_predator_engagement, n_episodes, session_id`. `mean_predator_engagement` aliases differently per arm — multi-agent reads `proximity_events / num_episodes` (already in summary CSV); single-agent reads `(predator_encounters + successful_evasions) / num_episodes` (composite signal of predator-trajectory effects). `mean_success` will saturate at 0.0 on the multi-agent pursuit arm (heuristic predators kill all 5 agents reliably under default config); single-agent arm is non-saturated and provides discriminating signal
 
-- [x] 5.2 Post-refactor baseline campaign: identical protocol on the M1 head commit (after all M1.1-M1.4 tasks land). Output: `tmp/m1_regression_baseline/baseline_post.csv`
+- [x] 5.2 Post-refactor baseline campaign: identical protocol on the M1 head commit (after all M1.1-M1.4 tasks land). Output: `baseline_post.csv` (now archived at `artifacts/logbooks/016-predator-brain-refactor/baseline_post.csv` per task 5.5)
 
 - [x] 5.3 Compute deltas across all four metrics, per-cell. **Result: every single delta is exactly 0.0 across all 4 metrics × 20 (config, seed) cells = 80 metric-cells.** No tolerance adjustment needed — the byte-equivalence gate (task 2.6) holds at the full-simulation level. Initial pre-registered tolerances:
 
@@ -67,7 +67,7 @@ The byte-equivalence parametrised test (task 2.6) is the **primary** regression 
 
 - [x] 5.4 Wrote `docs/experiments/logbooks/016-predator-brain-refactor.md` documenting framework changes, both gates' results (byte-equivalence + multi-metric campaign), and carry-forward to M5
 
-- [x] 5.5 Baseline CSVs staged under `artifacts/logbooks/016-predator-brain-refactor/{baseline_pre,baseline_post}.csv`; runner script archived at `artifacts/logbooks/016-predator-brain-refactor/run_baseline.sh`. Forensic notes in `tmp/evaluations/evolution/evolution_scratchpad.md` (gitignored)
+- [x] 5.5 Baseline CSVs staged under `artifacts/logbooks/016-predator-brain-refactor/{baseline_pre,baseline_post}.csv`; runner script archived at `artifacts/logbooks/016-predator-brain-refactor/run_baseline.sh`. Forensic notes were kept in gitignored scratchpad files; the load-bearing CSVs reproduce the headline numbers
 
 ## 6. Smoke + final checks
 

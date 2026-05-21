@@ -13,24 +13,31 @@
 # complete refactor regression check.
 #
 # Usage:
-#   tmp/m1_regression_baseline/run_baseline.sh <pre|post>
+#   artifacts/logbooks/016-predator-brain-refactor/run_baseline.sh <pre|post>
 #
-# Output: tmp/m1_regression_baseline/baseline_<pre|post>.csv with header
+# Optional env var:
+#   BASELINE_OUTPUT_DIR — override output directory (defaults to
+#   ./m1_regression_baseline_output/ under the repo root so re-runs don't
+#   clobber the committed baseline CSVs archived next to this script).
+#
+# Output: $BASELINE_OUTPUT_DIR/baseline_<pre|post>.csv with header
 #   arm,config,seed,mean_success,mean_total_food,mean_steps,
 #   mean_predator_engagement,n_episodes,session_id
 set -euo pipefail
 
 LABEL="${1:?missing label arg (pre|post)}"
 # Use git to resolve the repo root regardless of where this script lives.
-# (After archival the script moved from tmp/m1_regression_baseline/ to
-# artifacts/logbooks/016-predator-brain-refactor/, so a relative ../.. walk
-# is fragile.) Falls back to a path-relative resolution if not in a git tree.
+# Falls back to a path-relative resolution if not in a git tree.
 if REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   :
 else
   REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 fi
-OUT_DIR="${REPO_ROOT}/tmp/m1_regression_baseline"
+# Output directory. Defaults to a scratch location next to the repo root
+# so re-runs don't clobber the committed baseline CSVs that live alongside
+# this script under artifacts/logbooks/016-predator-brain-refactor/.
+# Override via BASELINE_OUTPUT_DIR env var when re-running for forensics.
+OUT_DIR="${BASELINE_OUTPUT_DIR:-${REPO_ROOT}/m1_regression_baseline_output}"
 mkdir -p "${OUT_DIR}"
 OUT_CSV="${OUT_DIR}/baseline_${LABEL}.csv"
 SUMMARY_LOG="${OUT_DIR}/run_${LABEL}.log"

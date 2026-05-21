@@ -64,7 +64,7 @@ None. PR-A extends existing capabilities; no new spec files.
 
 ## Impact
 
-- **New code**: ~880 LoC across 4 new files + 5 modified files (per [plan v2](../../../tmp/evaluations/transgenerational/transgenerational_scratchpad.md) compute envelope).
+- **New code**: ~880 LoC across 4 new files + 5 modified files (per the plan-v2 compute envelope documented in the gitignored design scratchpad).
 - **Modified code**: 5 existing files — `agent/transgenerational_memory.py` (+~180), `agent/reward_calculator.py` (+~30), `evolution/loop.py` (+~60), `utils/config_loader.py` (+~80), `brain/arch/lstmppo.py` (+~20). All preserve M6 byte-equivalence on the default path.
 - **Brain Protocol**: unchanged (`tei_prior` attribute remains additive; non-LSTMPPO brains unaffected).
 - **Existing inheritance modes** (`none`, `lamarckian`, `baldwin`): no behaviour change.

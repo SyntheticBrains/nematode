@@ -35,8 +35,8 @@ The `InheritanceStrategy.kind()` Protocol Literal SHALL widen from `Literal["non
 
 #### Scenario: composed strategy returns the canonical .pt checkpoint path
 
-- **WHEN** `checkpoint_path(output_dir=Path("/tmp/run"), generation=2, genome_id="abc")` is called on `LamarckianTransgenerationalInheritance(elite_count=1)`
-- **THEN** the returned path SHALL equal `Path("/tmp/run/inheritance/gen-002/genome-abc.pt")` (the canonical Lamarckian path, NOT `.tei.pt`)
+- **WHEN** `checkpoint_path(output_dir=Path("/output"), generation=2, genome_id="abc")` is called on `LamarckianTransgenerationalInheritance(elite_count=1)`
+- **THEN** the returned path SHALL equal `Path("/output/inheritance/gen-002/genome-abc.pt")` (the canonical Lamarckian path, NOT `.tei.pt`)
 - **AND** the returned path SHALL be identical to what `LamarckianInheritance.checkpoint_path` would return for the same inputs
 
 #### Scenario: composed strategy rejects elite_count != 1 like Lamarckian

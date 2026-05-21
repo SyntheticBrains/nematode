@@ -52,7 +52,7 @@ Test coverage: ~37 new cases across substrate (round-trip, clamp, decay, apply_t
 
 ### Pilot trajectory — five iterations chasing a learnable F0
 
-The original M6 plan called for a single 1-seed pilot + 4-seed full campaign. The pilot turned into a five-stage diagnostic chain when each prior stage's F0 substrate failed to encode a useful avoidance bias. The progression is recorded in detail in [`tmp/evaluations/transgenerational/transgenerational_scratchpad.md`](../../../tmp/evaluations/transgenerational/transgenerational_scratchpad.md) lines 700-1330; the headline arc:
+The original M6 plan called for a single 1-seed pilot + 4-seed full campaign. The pilot turned into a five-stage diagnostic chain when each prior stage's F0 substrate failed to encode a useful avoidance bias. Headline arc:
 
 1. **F0 calibration smoke** (damage_radius=3, pop=6 × 1 gen × ~50 ep) — passed at choice_index 0.93 (ceiling-saturated, NOT inside the envelope 0.45 ≤ F0 ≤ 0.85). Diagnostic: damage_radius too small relative to grid size.
 2. **Path A retune** (damage_radius 3 → 5, pop=8 × K=1000) — F0 elite fitness ~0.46 (success_rate=0.68 × survival_rate=0.68 under composite fitness), substrate `logit_bias = [-2.0, -2.0, +1.39, -2.0]` for `[FORWARD, LEFT, RIGHT, STAY]` (i.e. "always turn RIGHT"). Trained on real pathogen-conditional dynamics.
