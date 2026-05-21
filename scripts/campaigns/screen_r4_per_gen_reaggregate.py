@@ -23,8 +23,8 @@ verbatim (no copy-paste of metric implementations).
 Usage::
 
     uv run python scripts/campaigns/screen_r4_per_gen_reaggregate.py \
-        --pilot-root tmp/evaluations/coevolution/pr6_pilot_<TS>/pilot_run \
-        --output-dir tmp/evaluations/coevolution/pr6_pilot_<TS>/r4
+        --pilot-root <pilot_run_dir> \
+        --output-dir <r4_output_dir>
 
 Outputs a markdown summary + a comparison CSV (per-gen vs K-block-elite
 gate firings, side-by-side).

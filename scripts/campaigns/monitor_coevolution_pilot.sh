@@ -39,8 +39,8 @@ fi
 
 # Discover every session dir (one that contains `prey/lineage.csv`).
 # Null-delimited pipeline so the script remains robust if a path ever
-# contains a space or newline — the `tmp/evaluations/coevolution/`
-# paths we generate don't, but the cost of being defensive is small.
+# contains a space or newline — the paths we generate don't, but the
+# cost of being defensive is small.
 SESSIONS=()
 while IFS= read -r -d '' lineage_path; do
     SESSIONS+=("$(dirname "$(dirname "$lineage_path")")")

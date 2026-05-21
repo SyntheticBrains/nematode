@@ -21,9 +21,9 @@ about the workflow is hard-coded):
 
 Usage:
     uv run python scripts/campaigns/aggregate_m2_pilot.py \
-        --pilot-root tmp/evaluations/evolution/m2_pilot \
-        --baseline-root tmp/evaluations/evolution/m2_baseline \
-        --output-dir tmp/evaluations/evolution/m2_pilot_summary
+        --pilot-root <pilot_output_dir> \
+        --baseline-root <baseline_output_dir> \
+        --output-dir <summary_output_dir>
 """
 
 from __future__ import annotations
