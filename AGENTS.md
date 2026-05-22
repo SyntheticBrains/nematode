@@ -19,6 +19,8 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 
 - Install: `uv sync --extra cpu --extra torch`
 - Test (default, excludes nightly): `uv run pytest -m "not nightly"`
+- Test (pre-commit subset, fast): `uv run pytest -m "not smoke and not nightly and not slow"`
+- Test (slow integration only): `uv run pytest -m slow -v`
 - Test (smoke only): `uv run pytest -m smoke -v`
 - Test (nightly E2E only): `uv run pytest -m nightly -v`
 - Test (all, including nightly): `uv run pytest`
@@ -56,13 +58,14 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 
 ## Testing
 
-Three tiers:
+Four tiers:
 
-1. **Unit/Integration** — Default pytest, runs on commits
-2. **Smoke** (`@pytest.mark.smoke`) — CLI end-to-end, runs on PRs
-3. **Nightly** (`@pytest.mark.nightly`) — Full training benchmarks, runs daily
+1. **Unit/Integration** — Default pytest, runs on commits via pre-commit
+2. **Slow** (`@pytest.mark.slow`) — Heavy in-process integration (real `EvolutionLoop` runs etc.), excluded from pre-commit, run before push
+3. **Smoke** (`@pytest.mark.smoke`) — CLI end-to-end, runs on PRs
+4. **Nightly** (`@pytest.mark.nightly`) — Full training benchmarks, runs daily
 
-Always run `uv run pytest -m "not nightly"` after changes. Run `uv run pre-commit run -a` before committing.
+Pre-commit runs only the fast tier (`not smoke and not nightly and not slow`). Run `uv run pytest -m "not nightly"` (includes slow + smoke) after substantive changes, especially when touching `evolution/`, and `uv run pre-commit run -a` before committing.
 
 ## Pull Requests
 

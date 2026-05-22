@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from quantumnematode.evolution.genome import Genome
     from quantumnematode.utils.config_loader import SimulationConfig
 
+pytestmark = pytest.mark.slow
+
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.yml"
 

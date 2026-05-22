@@ -32,6 +32,6 @@ repos:
     hooks:
       - id: pytest
         name: tests
-        entry: uv run pytest -m "not smoke and not nightly"
+        entry: uv run pytest -m "not smoke and not nightly and not slow"
         language: system
         pass_filenames: false

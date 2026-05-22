@@ -52,6 +52,8 @@ from quantumnematode.utils.config_loader import (
     SimulationConfig,
 )
 
+pytestmark = pytest.mark.slow
+
 
 def _build_minimal_sim_config(  # noqa: PLR0913 — kwargs map 1:1 to CoevolutionConfig fields
     *,
