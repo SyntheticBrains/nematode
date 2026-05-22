@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+import pytest
 from quantumnematode.evolution.encoders import MLPPPOEncoder
 from quantumnematode.evolution.fitness import EpisodicSuccessRate
 from quantumnematode.evolution.inheritance import InheritanceStrategy, NoInheritance
@@ -34,8 +35,9 @@ from quantumnematode.utils.config_loader import (
 )
 
 if TYPE_CHECKING:
-    import pytest
     from quantumnematode.utils.config_loader import SimulationConfig
+
+pytestmark = pytest.mark.slow
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.yml"

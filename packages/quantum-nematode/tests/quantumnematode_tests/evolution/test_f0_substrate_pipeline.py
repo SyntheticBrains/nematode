@@ -17,14 +17,11 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 from quantumnematode.evolution.encoders import MLPPPOEncoder
 from quantumnematode.evolution.fitness import EpisodicSuccessRate
-
-if TYPE_CHECKING:
-    import pytest
 from quantumnematode.evolution.inheritance import (
     BaldwinInheritance,
     LamarckianInheritance,
@@ -39,6 +36,8 @@ from quantumnematode.utils.config_loader import (
     EvolutionConfig,
     load_simulation_config,
 )
+
+pytestmark = pytest.mark.slow
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.yml"

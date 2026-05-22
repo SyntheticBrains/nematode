@@ -31,6 +31,8 @@ from quantumnematode.evolution.encoders import HyperparameterEncoder, build_birt
 from quantumnematode.evolution.genome import Genome
 from quantumnematode.utils.config_loader import SimulationConfig, load_simulation_config
 
+pytestmark = pytest.mark.slow
+
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 SCRIPT_PATH = PROJECT_ROOT / "scripts" / "campaigns" / "baldwin_f1_postpilot_eval.py"
 
