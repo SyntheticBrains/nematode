@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from quantumnematode.connectome.model import Connectome
 
 
-_DEGENERATE_VARIANCE_THRESHOLD = 1e-6
+_DEGENERATE_VARIANCE_THRESHOLD: float = 1e-6
 """Below this variance the forward pass is considered degenerate / saturated."""
 
 
@@ -94,11 +94,14 @@ def _build_adjacency(
 def run_forward_pass(connectome: Connectome, *, seed: int = 0) -> np.ndarray:
     """Run one PPO-shaped forward pass on the connectome topology.
 
-    The pass computes ``output = tanh((W_chem + W_gap) @ x)`` where ``x``
-    is a synthetic seeded random input vector and ``W_chem`` / ``W_gap``
-    are the chemical-synapse / gap-junction matrices described in
-    ``_build_adjacency``. The returned array contains the values at
-    motor-neuron rows only.
+    The pass computes ``output = tanh((W_chem + W_gap).T @ x)`` where
+    ``x`` is a synthetic seeded random input vector and ``W_chem`` /
+    ``W_gap`` are the chemical-synapse / gap-junction matrices described
+    in ``_build_adjacency``. The transpose is biologically correct:
+    ``W[i, j]`` stores the weight from pre neuron ``i`` to post neuron
+    ``j``, so each post neuron's pre-activation sum is
+    ``sum_i(W[i, j] * x[i])`` = ``(W.T @ x)[j]``. The returned array
+    contains the values at motor-neuron rows only.
 
     Raises
     ------

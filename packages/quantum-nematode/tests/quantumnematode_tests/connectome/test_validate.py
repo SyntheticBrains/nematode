@@ -13,8 +13,8 @@ from quantumnematode.connectome import (
     validate_neuron_count,
 )
 
-EXPECTED_HERMAPHRODITE_NEURONS = 302
-MIN_SHARED_NEURONS_COOK_VS_WITVLIET = 100  # nerve-ring overlap
+EXPECTED_HERMAPHRODITE_NEURONS: int = 302
+MIN_SHARED_NEURONS_COOK_VS_WITVLIET: int = 100  # nerve-ring overlap
 
 
 @pytest.fixture(scope="module")

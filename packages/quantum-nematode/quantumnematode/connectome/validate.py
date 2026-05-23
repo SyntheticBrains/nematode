@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from quantumnematode.connectome.model import Connectome
 
 
-EXPECTED_HERMAPHRODITE_NEURON_COUNT = 302
+EXPECTED_HERMAPHRODITE_NEURON_COUNT: int = 302
 """Expected neuron count for the *C. elegans* hermaphrodite connectome."""
 
 
@@ -124,17 +124,23 @@ class DivergenceReport(BaseModel):
     shared_neurons
         Count of neurons present in both connectomes.
     shared_pairs_agreement
-        Count of (pre, post) pairs (within the shared neuron subset) where
-        both connectomes either both report a chemical synapse OR both
-        report no chemical synapse.
+        Count of (pre, post) pairs in the union of present chemical-synapse
+        edges (within the shared neuron subset) where both connectomes
+        agree the pair has a synapse. "Absent in both" pairs are
+        *not* counted in this sparse-graph metric — including the ~N²
+        absent-in-both pairs would dwarf the meaningful agreement signal
+        (connectomes are sparse: < 10% of possible directed pairs are
+        present).
     shared_pairs_disagreement
-        Count of (pre, post) pairs where the two connectomes disagree on
-        chemical-synapse presence.
+        Count of (pre, post) pairs in the union of present edges where
+        the two connectomes disagree on chemical-synapse presence (one
+        reports a synapse, the other does not).
     primary_only_pairs
         Chemical-synapse (pre, post) pairs that appear in the primary
         connectome but not in the secondary, restricted to the shared
-        neuron subset. Capped at 50 entries (full list available via
-        ``cross_validate(..., truncate_lists=False)``).
+        neuron subset. Capped at ``list_cap`` entries (default 50);
+        callers wanting the full list can pass a larger ``list_cap`` to
+        ``cross_validate`` or post-process the connectomes directly.
     secondary_only_pairs
         Chemical-synapse pairs in the secondary but not the primary.
     weight_divergence_summary

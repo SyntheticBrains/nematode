@@ -25,7 +25,7 @@ from quantumnematode.connectome.validate import (
     validate_neuron_count,
 )
 
-__all__ = [
+__all__: list[str] = [
     "CellClass",
     "ChemicalSynapse",
     "Connectome",

@@ -363,6 +363,12 @@ def load_witvliet_2021_adult() -> Connectome:
     valid = set(NEURON_CLASSIFICATION)
 
     df = pd.read_excel(WITVLIET_2021_ADULT_PATH, engine="openpyxl")
+    # pd.read_excel can return a dict when sheet_name is a list; with the
+    # default sheet_name it always returns a single DataFrame, but pyright
+    # can't narrow that, so assert it here (mirrors the Cook loader pattern).
+    if not isinstance(df, pd.DataFrame):
+        msg = f"Expected DataFrame from {WITVLIET_2021_ADULT_PATH}, got {type(df).__name__}"
+        raise TypeError(msg)
     chem_edges, gj_edges = _parse_witvliet_edge_list(df, valid_neurons=valid)
 
     chemical_synapses = [
