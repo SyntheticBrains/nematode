@@ -30,7 +30,7 @@ ______________________________________________________________________
     - [Phase 3: Temporal Sensing & Memory](#phase-3-temporal-sensing--memory)
     - [Phase 4: Multi-Agent Complexity](#phase-4-multi-agent-complexity)
     - [Phase 5: Evolution & Adaptation](#phase-5-evolution--adaptation)
-    - [Phase 6: Continuous Physics & Connectome](#phase-6-continuous-physics--connectome)
+    - [Phase 6: Connectome Substrate & Architecture Comparison](#phase-6-connectome-substrate--architecture-comparison)
     - [Phase 7: Community, Validation & Publication](#phase-7-community-validation--publication)
     - [Phase 8: Integration & Comprehensive Evaluation](#phase-8-integration--comprehensive-evaluation)
 05. [Quantum Re-evaluation Checkpoints](#quantum-re-evaluation-checkpoints)
@@ -577,91 +577,148 @@ Phase 5 does not include a formal quantum checkpoint — evolution does not dire
 
 ______________________________________________________________________
 
-### Phase 6: Continuous Physics & Connectome
+### Phase 6: Connectome Substrate & Architecture Comparison
 
-**Goal**: Transition from grid-world to continuous 2D physics with realistic C. elegans locomotion, and introduce connectome-constrained architectures using the real 302-neuron wiring diagram. This is the largest single fidelity jump in the roadmap and creates the conditions for a major quantum re-evaluation.
+**Goal**: Build the platform on which learning and evolution operate on the real *C. elegans* 302-neuron connectome in a closed sensory-motor loop, and use it to rank the wild-type connectome against MLP, recurrent, spiking, reservoir, quantum, hybrid, and NEAT-evolved architectures on three nematode behaviours (klinotaxis, thermotaxis, predator evasion). The headline platform claim is *first closed-loop learning + evolution on the real C. elegans connectome with a pluggable architecture interface*.
 
-**Aspirational timeline**: Q1-Q3 2027
+**Aspirational timeline**: ~6-10 months from Phase 5 close.
 
-#### Background
+#### The layered platform
 
-**Continuous physics**: C. elegans moves via sinusoidal body undulations, with a rich locomotion repertoire: forward crawling, reversals, omega turns (deep ventral bends reorienting 180°), pirouettes, and speed modulation. Current discrete 4-direction grid movement captures none of this. Continuous 2D dramatically increases both action space (speed + turning angle) and state space (continuous coordinates + heading + velocity).
+Phase 6 is built as four layers (L0-L3) that together materialise the architecture-comparison sweep. L4 (biologically-plausible plasticity) is deferred to Phase 7 — Phase 6 stays on PPO-family learning rules so the layer stack remains tractable.
 
-**Connectome**: C. elegans has the only fully mapped connectome of any organism — 302 neurons connected by ~7,000 chemical synapses and ~900 gap junctions (Cook et al. 2019). This is the uniquely tractable advantage of choosing C. elegans. Using the real wiring diagram to constrain network architecture lets us ask: "Does biology's wiring learn better than arbitrary architectures?" and "Do quantum circuits on the real topology outperform classical ones?"
+| Layer | What it is | Phase 6 commitment |
+|---|---|---|
+| **L0 — Connectome substrate** | Import *C. elegans* 302-neuron wiring (Cook et al. 2019 / OpenWorm c302 in NeuroML 2 format). Real synaptic adjacency. Defines the topology interface that pluggable brains conform to. | **MUST.** The headline claim doesn't exist without this. |
+| **L1 — Architecture-as-plugin** | A clean `Brain` interface where every architecture family conforms. The comparison is one experimental sweep, not a per-architecture re-implementation. Plugin parity test: adding a new architecture ≤ 1 week of work. | **MUST.** Without this, "swap in another brain" is words, not code. |
+| **L2 — Weight search (PPO et al.)** | Train weights on the connectome topology and on every comparison architecture. This is the *first closed-loop learning on the C. elegans connectome*. | **MUST.** Cheapest scientifically meaningful Phase 6 result. |
+| **L3 — Topology search (NEAT-style)** | Search topologies unconstrained, compare to the real connectome's topology. Tests "is the wild-type connectome a local optimum?" The architecture-asymmetry question Phase 5 M5 diagnosed re-emerges here under matched capacity. | **MUST.** Without this, the optimal-vs-connectome comparison has no "optimum" to compare against. |
+| **L4 — Plasticity / learning rules** | Biologically-plausible plasticity (STDP, neuromodulator-modulated three-factor STDP) on the connectome. The Nature-Neuroscience-tier claim. | **DEFERRED to Phase 7.** Substantial new code; clean L1 is a prerequisite. |
 
-#### Deliverables
+#### Behavioural scope: three behaviours on a common substrate
 
-1. **Continuous 2D Environment** [CRITICAL]
+Phase 6 commits to the same three behaviours across every architecture in the comparison sweep:
 
-   - Replace discrete grid with continuous 2D coordinates
-   - Realistic C. elegans locomotion: sinusoidal crawling, reversals, omega turns, pirouettes
-   - Continuous action space: speed (0 to max) + turning angle (-π to π)
-   - Realistic spatial scales: ~1mm worm body on cm-scale plates
-   - Physics: basic 2D kinematics, optional viscous medium effects
+- **Klinotaxis** — chemical gradient ascent via head-sweep modulation. Phase 4's klinotaxis sensing is the substrate.
+- **Thermotaxis** — thermal gradient navigation. Phase 1's thermotaxis configurations carry forward.
+- **Predator evasion** — escape from pursuit predators, integrating the corrected ASH/ADL contact-based nociception (see Realistic Sensory Physics below).
 
-2. **Realistic Sensory Physics**
+Aerotaxis (oxygen sensing), pheromone signalling, and multi-agent dynamics are *deferred* — including them pushes Phase 6 past 10 months and weakens the focused architecture-comparison framing. They re-enter scope in a future phase if the connectome story holds and additional behaviours become scientifically warranted.
 
-   - Diffusion-based chemical gradients (Fick's law, not superposition approximation)
-   - Physical temperature fields with conduction
-   - Contact mechanics for mechanosensation (collision detection with continuous bodies)
-   - Realistic sensory ranges scaled to worm body length
+#### Architecture families in the comparison sweep
 
-3. **Full 302-Neuron Connectome-Constrained Architecture** [CORE DELIVERABLE]
+The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks.
 
-   - Import C. elegans wiring diagram (Cook et al. 2019 / WormAtlas)
-   - Build network where connections exist only where real synapses exist
-   - Weights are learned via RL; topology is biologically fixed
-   - Functional circuit modules: chemotaxis (AWC→AIY→RIB→motor), thermotaxis (AFD→AIY→AIZ→RIA), escape (ASH→AVA→motor)
-   - Compare connectome-constrained vs. unconstrained architectures on identical tasks
-   - Ablation: remove specific circuits and measure behavioral impact (matches biological lesion studies)
+| Family | Existing impl | Phase 6 role |
+|---|---|---|
+| **Connectome-constrained (302-neuron, Cook 2019)** | Not yet | **Focal architecture.** The wild-type topology with PPO-learned weights. The headline rank. |
+| **MLP-PPO** | `MLPPPOBrain` | Strongest classical baseline (Phase 2 SOTA on foraging). |
+| **LSTM / GRU-PPO** | `LSTMPPOBrain` | Strongest temporal baseline (Phase 3 reached 94% L500). |
+| **Spiking (PPO-trained)** | `SpikingReinforceBrain` | Bridge to L4. STDP is the spiking-network plasticity rule; without spiking in the comparison, L4 has no L2 precursor on the same substrate. |
+| **Reservoir** | `QRHBrain`, `CRHBrain` | Preserves Phase 2's pursuit-advantage finding (QRH +9.4pp). One row each; low marginal cost. |
+| **Quantum** | `QVarCircuitBrain`, `QEF`, others | Phase 2's 300-session campaign is the baseline reference; Phase 6 confirms (or refines) its findings on continuous-physics tasks. |
+| **Hybrid quantum-classical** | `HybridQuantum`, `HybridClassical` | Preserves Phase 2's SOTA finding (96.9% / 96.3%). One row to confirm at higher complexity. |
+| **NEAT-evolved (topology + weights)** | Not yet (L3 deliverable) | The unconstrained-optimal baseline against which the connectome is ranked. |
+| **Transformer / attention-based** | Not yet | ⭐ **MAY.** Optional addition if scope and engineering effort allow. Flagged so reviewers see it considered, not forgotten. |
 
-4. **Architecture Adaptation for Continuous Control**
+#### Continuous environment + sensory physics
 
-   - Existing brain architectures (MLPPPOBrain, QVarCircuitBrain, HybridQuantum, QRH, etc.) were designed for discrete 4-action grid-worlds
-   - Continuous action space (speed + turning angle) requires actor-critic variants with continuous action heads (e.g., Gaussian policy for PPO, continuous-output quantum circuits)
-   - Adaptation strategy: extend PPO with continuous action head first (well-understood), then adapt quantum architectures
-   - Benchmark discrete-trained vs. continuous-native architectures to quantify the impact of action space expansion
+The platform leaves the discrete grid behind in Phase 6, but the body-mechanics fidelity story is deliberately scoped down from v3.
 
-5. **Connectome + Quantum** [RESEARCH]
+- **Continuous 2D coordinates + continuous action space** (speed 0-to-max + turning angle −π to π). Realistic spatial scales: ~1mm worm body on cm-scale plates. Existing PPO-family brains extend with continuous action heads (Gaussian policy); quantum architectures adapt with continuous-output circuits.
+- **Body mechanics**: native sinusoidal undulation, omega turns, and pirouettes are **not** implemented in Phase 6. If behavioural-fidelity claims later require them, the platform interoperates with OpenWorm Sibernetic at the c302 boundary. The platform claim ("first closed-loop learning on the connectome") survives without native body physics; the behavioural-fidelity claim ("matches real-worm movement statistics") is a separate, optional add.
+- **3D environment is deferred to Future Directions.** Wild *C. elegans* lives on agar plates (functionally 2D); the experimental reference data Phase 6 validates against (Bargmann chemotaxis indices, Kavli Ca²⁺ recordings, BAAIWorm correlation matrices, Witvliet connectomes) is all 2D-plate data. Going 3D widens the model-vs-data gap; it does not strengthen the platform claim.
 
-   - Build quantum circuit architectures (QSNN, variational) whose topology mirrors the real connectome
-   - Test whether biologically-constrained quantum circuits outperform:
-     - Unconstrained quantum circuits (arbitrary topology)
-     - Biologically-constrained classical circuits (same topology, classical dynamics)
-     - Unconstrained classical circuits (arbitrary MLP)
+**Chemical-gradient fidelity — Rung 2 commitment.** The v3 phrase "Fick's-law gradients" is too vague. Phase 6 commits explicitly to Rung 2 of four possible rungs of fidelity:
 
-#### Metrics Focus
+| Rung | What it adds | Field-level realism |
+|---|---|---|
+| 0 (current) | Superposition of static 1/r or exponential-decay terms; no time evolution | Not biologically realistic |
+| 1 (minimal Fick's-law) | Heat-equation diffusion (∂C/∂t = D∇²C); single diffusion coefficient; static sources | Refactor, not a fidelity upgrade — the brain still sees a normalised scalar |
+| **2 (dynamic Fick's-law + adaptation) — Phase 6 target** | Source depletion when worms feed; source replenishment; decay terms for short-lived signals; signal-type-specific D values (food vs pheromone vs CO₂); paired with **log-concentration chemosensory adaptation kinetics** on AWC/AWA/ASE-style sensors | What the computational-chemotaxis field actually uses |
+| 3 (multi-species + substrate) | Vector of chemical signals with cross-modal receptor overlap; substrate-varying diffusion; bacterial biofilm boundary layers | OpenWorm-level fidelity; specialist territory |
 
-- **Locomotion fidelity**: Match real C. elegans movement statistics (speed distribution, turn angle distribution, reversal frequency)
-- **Connectome advantage**: Performance gap between constrained and unconstrained architectures
-- **Continuous complexity**: Quantify state/action space expansion vs. grid-world
-- **Classical ceiling**: Does continuous action space + connectome create problems where classical approaches genuinely struggle?
+Rung 2 has two coupled components — environment dynamics AND chemosensory adaptation kinetics. They must be designed together; without log-concentration adaptation on the sensory side, the gradient realism is wasted (the brain sees a normalised scalar either way).
 
-#### Phase 6 Exit Criteria
+**Mechanosensation: corrected ASH/ADL contact-based nociception.** Phase 4's Logbook 011 surfaced that the current nociception model is biologically wrong — real *C. elegans* nociception is contact-based mechanosensation (ASH/ADL neurons), not chemosensory at distance. The corrected model is owed correctness work and lands in Phase 6's sensory-physics stack.
 
-- ✅ Continuous 2D environment operational with realistic locomotion (crawling, reversals, omega turns)
-- ✅ Full 302-neuron connectome architecture benchmarked on at least 3 tasks
-- ✅ Connectome-constrained vs. unconstrained comparison completed with statistical analysis
-- ✅ Action space is continuous (speed + turning angle, not discrete directions)
-- ✅ Locomotion statistics quantitatively compared to real C. elegans data
+**Other sensors:** physical temperature fields with conduction; contact mechanics for mechanosensation with continuous bodies; realistic sensory ranges scaled to worm body length.
 
-#### Quantum Checkpoint (Phase 6) — MAJOR
+#### Architecture-comparison protocol
 
-**Trigger**: Continuous environment + connectome operational, classical baselines established.
+The architecture-comparison protocol is one experimental sweep across three dimensions: architecture family × behaviour × seed. The Phase 5 statistical bar carries forward — paired-seed Wilcoxon tests, bootstrap confidence intervals, n ≥ 4 seeds per condition with explicit power analysis when smaller. Phase 5's lag-matrix instrument and TEI fair-F0 paired comparison are the methodological templates.
 
-This is the primary quantum re-evaluation point:
+The protocol explicitly answers the four primary Phase 6 research questions (connectome ranking; fitness landscape; architecture asymmetry under matched capacity; first closed-loop learning on the connectome) via the same sweep, not via separate experiments.
 
-- Continuous action/state space addresses the "action space too small" and "state space polynomial" limitations
-- Connectome complexity adds structural constraints that may favour quantum representations
-- High-dimensional continuous observations (>50D with temporal + multi-agent + continuous) address the "observation space too small" limitation
+#### Built-in real-worm validation
 
-**Action**: If any classical architecture drops below 70% on hard continuous tasks, launch **full quantum campaign v2** — systematic re-evaluation of QRH, QEF, HybridQuantum, and potentially new architectures designed for continuous domains.
+Phase 6 validates *at least one* model output quantitatively against published real-worm data, as a Phase 6 exit criterion rather than a Phase 7 collaboration deliverable. Three data sources are concrete candidates:
 
-#### Go/No-Go Decision
+- **Chemotaxis indices** (Bargmann lab + others, multiple published datasets).
+- **Escape latencies** (mechanosensation literature). The corrected ASH/ADL nociception is the natural validation pair.
+- **Whole-brain Ca²⁺ imaging correlation matrices** (Kavli / Janelia open data; BAAIWorm achieves 92.4% fidelity to this in the literature).
 
-**GO if**: Continuous physics creates meaningfully harder problems AND connectome architectures show interesting properties.
-**PIVOT if**: Continuous physics doesn't increase difficulty → Classical approaches trivially handle continuous control. Focus on multi-agent + evolution as the primary complexity source.
-**STOP if**: Continuous physics too expensive computationally → Optimize or simplify (reduce physics fidelity while keeping continuous action space).
+Internal validation against public data is required at Phase 6 close; external lab collaboration (Phase 7) is additive, not a precondition.
+
+#### Phase 6 exit criteria
+
+**Required (MUST):**
+
+- ✅ L0 connectome substrate operational: ≥ 1 real connectome dataset (Cook 2019 or OpenWorm c302) imported, with documented topology and synaptic-weight provenance.
+- ✅ L1 architecture-plugin interface accommodates the curated MUST set above. Adding a 9th architecture is ≤ 1 week of work (the plugin-parity test).
+- ✅ L2 weight-search results across all MUST architectures on all three behaviours, at the Phase 5 statistical bar (paired-seed, bootstrap CIs, n ≥ 4 seeds per condition).
+- ✅ L3 NEAT topology-search results comparing the wild-type connectome to NEAT-evolved topologies on at least one behaviour, with the lag-matrix or equivalent discriminative instrument.
+- ✅ Rung 2 chemical gradients (dynamic Fick's-law + source dynamics + signal-type diffusion coefficients) operational, paired with log-concentration chemosensory adaptation kinetics.
+- ✅ Corrected ASH/ADL contact-based nociception operational.
+- ✅ At least one model output quantitatively validated against published real-worm data.
+
+**Optional (MAY) — not phase exit criteria:**
+
+- ⭐ Transformer / attention-based architecture added to the comparison sweep.
+- ⭐ Connectome-learning platform paper drafted.
+- ⭐ Connectome fitness-landscape science paper drafted.
+- ⭐ Reproducibility artefacts (Docker, evaluation scripts) updated to current Phase 6 state.
+
+Papers and external collaboration are explicitly optional — the project may pursue them when evidence and context justify, but pursuing them is not a precondition for closing Phase 6 or advancing to Phase 7.
+
+#### Mid-phase decision gates
+
+Phase 6 is long enough (~6-10 months) that mid-phase gates matter. Each gate produces a written go/no-go decision in the relevant OpenSpec change, not just an implicit continuation — the same discipline Phase 5 used.
+
+- **Gate 1 (month ~2): L0 import working?** Connectome substrate loaded, validated, and basic-MLP-PPO baseline trainable on it. If not, trigger the L0 hand-curated-subset pivot (see Risk-mitigation below).
+- **Gate 2 (month ~4-5): L1 plugin parity achieved?** Adding a new architecture demonstrably ≤ 1 week. If not, trigger the L1 refactor pivot.
+- **Gate 3 (month ~7-8): L2 results across architectures?** Weight-search results across MUST architectures and all three behaviours in hand. If not, trigger the Phase 6a / Phase 6b sub-phase split.
+
+The hard phase boundary between Phase 5 and Phase 6 protects the narrative arc (no Phase 6 work begins until Phase 5 is synthesised); the mid-phase gates protect the execution (fail-fast at the architecture and substrate level, not at the phase level). Both are intentional.
+
+#### Risk-mitigation: failure modes and pivots
+
+| Failure mode | Trigger | Pivot |
+|---|---|---|
+| **L0 c302 import takes > 2 months** | OpenWorm c302 / NeuroML integration proves harder than expected (format incompatibility, missing metadata, unclear synaptic-weight provenance) | Drop to a hand-curated subset of the Cook 2019 connectome — sensory-interneuron-motor subgraph for the three target behaviours, ~50-100 neurons. Document the subset choice; defer full 302-neuron import to Phase 7. The platform claim survives ("learning on a real *C. elegans* subgraph"); the comparative-completeness claim weakens. |
+| **L1 architecture-plugin interface proves messy** | Multiple architecture families need bespoke plumbing; the interface accumulates per-architecture branches; "swap in another brain" stops being one-line | Pause architecture-sweep work; spend 2-4 weeks refactoring L1 toward genuine plugin parity. Better to delay L2/L3 results than to ship a "platform" that isn't one. |
+| **L2 PPO-on-connectome fails to learn** | After reasonable hyperparameter search, no architecture family reaches the Phase 0-3 baselines on any of the three behaviours | Diagnostic sequence: (a) is the connectome topology dense enough to support gradient flow? (b) is the continuous action head the bottleneck? (c) is reward shaping the issue? If none resolve: the finding is "learning on the real connectome with PPO requires further substrate work" — itself a publishable negative result and a Phase 7 prerequisite. |
+| **L3 NEAT produces no separation from connectome** | NEAT-evolved topologies and the wild-type connectome converge to indistinguishable performance | This is itself a finding: "the connectome is competitive with evolved topologies on these behaviours." The optimal-primary framing weakens; the connectome-primary framing strengthens. Acceptable outcome — pivot the headline framing if it lands. |
+| **Phase 6 overshoots 10 months** | Scope creep, L1 refactor, multi-architecture debugging push timeline past 12 months | Trigger a sub-phase split: Phase 6a (L0+L1+L2) ships first as a standalone result; Phase 6b (L3 + NEAT topology search) becomes a follow-on. Pre-commit the split criterion: if L2 isn't producing publishable architecture comparisons by month 6, split the phase. |
+
+The general principle: **fail-fast at the architecture and substrate level, not at the phase level.** A Phase 6 that fails a mid-phase gate produces a documented pivot, not a silent slide past the gate.
+
+#### Compute / infrastructure planning
+
+Phase 5 ran on CPU. Phase 6's L3 (NEAT topology search across many candidates × multiple architectures × multiple behaviours × multiple seeds) is substantially more compute-intensive. Three tiers should be considered explicitly, in order of preference:
+
+1. **CPU + targeted parallelism (no new infra).** Sufficient for L0, L1, L2 on small-to-medium architecture sweeps. Probably not sufficient for full L3 NEAT search at population sizes the field uses (~1000+ genomes × generations).
+2. **GPU (single or small cluster, including consumer-class cards).** The realistic baseline. Sufficient for L3 with TensorNEAT vectorisation (~500× speedup over neat-python via JAX/vmap on GPU is documented in the field); sufficient for full L2 sweeps across all architectures.
+3. **HPC allocation (NERSC, JURECA, or similar).** Optional, not required for Phase 6. Pursue an allocation if a specific Phase 6 or Phase 7 need justifies it (e.g., Phase 7 pacificus comparative work, neuromorphic-hardware deployment). National HPC centres regularly fund computational-neuroscience time on this class of work — realistic, not aspirational, but not a precondition.
+
+The roadmap encodes GPU as the realistic baseline. The L3 implementation choices (TensorNEAT, JAX vmap, batched fitness evaluation) flow from that.
+
+#### Go / No-go decision
+
+- **GO if**: L0+L1+L2 ship and the three mid-phase gates pass with results in hand. L3 either ships within Phase 6, or splits into Phase 6b under the sub-phase pivot.
+- **PIVOT-narrative if**: L3 shows the connectome competitive-but-not-dominant with evolved alternatives. The headline framing shifts toward connectome-primary; the platform claim is unchanged.
+- **PIVOT-scope if**: a mid-phase gate fails — execute the relevant Risk-mitigation row above and document the pivot in the OpenSpec change.
+- **STOP if**: L0 connectome import is fundamentally infeasible after the hand-curated-subset pivot has also failed — at which point the diagnosis itself is the Phase 6 deliverable, and Phase 7 inherits a substrate-engineering question rather than a plasticity question.
 
 ______________________________________________________________________
 
