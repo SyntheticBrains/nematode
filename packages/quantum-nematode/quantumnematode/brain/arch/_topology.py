@@ -46,17 +46,3 @@ class BrainTopology(Protocol):
         masked-weight tensor.
         """
         ...
-
-
-class IdentityMaskMixin:
-    """Mixin providing ``apply_weight_mask`` as the identity function.
-
-    For dense topologies where every potential edge is learnable. The
-    learning rule still calls ``apply_weight_mask`` for uniform handling
-    across dense and sparse topologies; the identity implementation makes
-    that call a no-op.
-    """
-
-    def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
-        """Return weights unchanged (dense topology has no edge mask)."""
-        return weights
