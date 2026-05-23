@@ -9,7 +9,7 @@ Phase 6 Tranche 1 (L0). Sub-task numbering matches `openspec/changes/phase6-trac
 - [x] 1.3 Create `openspec/changes/add-connectome-substrate/tasks.md` (this file)
 - [x] 1.4 Create `openspec/changes/add-connectome-substrate/specs/connectome-substrate/spec.md`
 - [x] 1.5 `openspec validate add-connectome-substrate --strict` clean
-- [ ] 1.6 Add `pandas>=2.2` and `openpyxl>=3.1` to `packages/quantum-nematode/pyproject.toml` `dependencies` list (neither currently in the dep tree; verified against both pyproject.toml files and uv.lock). Run `uv sync` to regenerate `uv.lock`
+- [x] 1.6 Add `pandas>=2.2` and `openpyxl>=3.1` to `packages/quantum-nematode/pyproject.toml` `dependencies` list (neither currently in the dep tree; verified against both pyproject.toml files and uv.lock). Run `uv sync` to regenerate `uv.lock`. Resolved versions: `pandas==3.0.3`, `openpyxl==3.1.5`
 
 ## Phase 2 — Data vendoring (T1.1 + T1.5)
 
