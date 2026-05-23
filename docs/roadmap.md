@@ -42,7 +42,8 @@ ______________________________________________________________________
 12. [Relationship to External Projects](#relationship-to-external-projects)
 13. [Future Directions](#future-directions)
 14. [Technical Debt & Maintenance](#technical-debt--maintenance)
-15. [Conclusion](#conclusion)
+15. [Scoping Changes from v3](#scoping-changes-from-v3)
+16. [Conclusion](#conclusion)
 
 ______________________________________________________________________
 
@@ -215,9 +216,9 @@ ______________________________________________________________________
 
 ### Phase 3: Temporal Sensing & Memory
 
-**Goal**: Transform the simulation from stateless reflex to temporal integration. Make C. elegans sense the way it actually senses — through temporal derivatives, not spatial gradient lookups. This is the single most impactful biological fidelity upgrade and directly addresses two quantum advantage thresholds (non-Markovian dependencies and partial observability).
+**Goal**: Transform the simulation from stateless reflex to temporal integration. Make *C. elegans* sense the way it actually senses — through temporal derivatives, not spatial gradient lookups. This is the single most impactful biological-fidelity upgrade in the early phases; it also raises the substrate's complexity along two dimensions (non-Markovian dependencies and partial observability) that matter for architecture-comparison interpretation.
 
-**Aspirational timeline**: Q2-Q3 2026
+**Aspirational timeline**: —
 
 #### Background
 
@@ -342,27 +343,25 @@ This is how real C. elegans navigates: a "biased random walk" where the worm mov
 - ✅ Oxygen sensing — implemented with asymmetric 5-zone system (URX/BAG neuron-inspired), combined thermal+oxygen environments, full temporal/derivative sensing support, and experiment tracking pipeline
 - 🔲 Associative learning paradigms — deferred to Phase 5
 
-#### Quantum Checkpoint (Phase 3)
+#### Quantum architecture-comparison assessment (historical, Phase 3)
 
-**Trigger**: Temporal sensing operational, classical ceiling measured.
+The v3 roadmap planned a Phase 3 quantum checkpoint to re-evaluate QRH and QEF on non-Markovian temporal tasks if classical ceiling dropped under temporal sensing.
 
-**Result**: Classical GRU PPO achieves oracle-level converged performance on temporal sensing. The classical ceiling did NOT drop — GRU temporal reaches 94% L500 on the hardest environment. This means:
+**Result**: classical GRU PPO achieves oracle-level converged performance on temporal sensing. The classical ceiling did *not* drop — GRU temporal reaches 94% L500 on the hardest environment. The checkpoint did not trigger a quantum-campaign re-run; QRH's Phase 2 temporal-pursuit advantage was noted as worth revisiting if substrate changes plausibly amplified it. Training-efficiency comparisons (classical temporal agents need ~10× more episodes than oracle to converge) were flagged as a candidate axis for future quantum evaluation.
 
-- **QRH re-evaluation on temporal tasks is warranted** — if classical GRU matches oracle, does QRH's temporal advantage (from Phase 2) still hold?
-- **The quantum opportunity may be in training efficiency** — temporal agents need 10x more episodes than oracle. If quantum architectures can learn temporal correlations faster, that's a genuine advantage.
-- **Phase 4 (multi-agent) remains the primary quantum advantage pathway** — exponential state spaces from agent interactions.
+This assessment is preserved as historical record. Going forward, quantum architectures sit in the Phase 6 architecture-comparison sweep as one row among many — see [Architecture-Comparison Protocol](#architecture-comparison-protocol).
 
 #### Go/No-Go Decision
 
-**GO to Phase 4**: Temporal sensing is operational and validated. Classical approaches handle temporal derivatives effectively with GRU PPO — confirming that multi-agent complexity (Phase 4) is the right next frontier for quantum advantage investigation.
+**GO to Phase 4**: temporal sensing is operational and validated. Classical approaches handle temporal derivatives effectively with GRU PPO.
 
 ______________________________________________________________________
 
 ### Phase 4: Multi-Agent Complexity
 
-**Goal**: Create exponential state spaces through agent-agent interactions. This is where quantum game theory has the strongest theoretical backing for advantage, and where C. elegans social behaviors (aggregation, pheromone communication, alarm signaling) are well-documented.
+**Goal**: Create multi-agent state spaces and study *C. elegans* social behaviours (aggregation, pheromone communication, alarm signalling) — all well-documented in the literature. Multi-agent dynamics expand the substrate's complexity surface for architecture comparison.
 
-**Aspirational timeline**: Q3-Q4 2026
+**Aspirational timeline**: —
 
 **Prerequisites**: Phase 3 memory infrastructure (agents need to remember past interactions)
 
@@ -377,7 +376,7 @@ C. elegans, while often considered solitary, exhibits sophisticated social behav
 - **Cooperative-like behaviors**: Worms following pheromone trails benefit from others' foraging discoveries
 - **Competition**: Limited food creates resource competition and dominance dynamics
 
-Multi-agent scenarios create exponential state spaces (state × number of agents), partial observability (each agent has local view), and strategic interactions — all identified as quantum advantage thresholds.
+Multi-agent scenarios create exponential state spaces (state × number of agents), partial observability (each agent has local view), and strategic interactions. These are complexity dimensions that shape what the architecture comparison can interpret — not separate quantum-advantage gates.
 
 #### Deliverables
 
@@ -440,17 +439,13 @@ Multi-agent scenarios create exponential state spaces (state × number of agents
 - ✅ Pheromone communication functional (at least alarm + food-marking) — *Infrastructure works correctly. Klinotaxis Era K1 demonstrates food-marking pheromones provide +77pp on agents-fed and +36× on all-fed under proper conditions (single persistent food cluster, klinotaxis sensing, strong pheromone parameters). Aggregation and alarm channels are informationally inert under all tested conditions — these limitations are documented for future code work.*
 - ⚠️ Classical approaches show measurable strain on coordination tasks — *Partially met. 19.7% degradation at 10 agents with scarce resources (B1-v2), but zero coordination overhead with proportional resources (Campaign G). Strain is from resource scarcity, not coordination complexity. Klinotaxis Era did not re-test classical strain (out of scope; pheromone evaluation focus).*
 
-#### Quantum Checkpoint (Phase 4)
+#### Quantum architecture-comparison assessment (historical, Phase 4)
 
-**Trigger**: Multi-agent operational with ≥5 agents, coordination metrics established.
+The v3 roadmap planned a Phase 4 quantum checkpoint to evaluate quantum entangled strategy spaces and quantum-enhanced Nash equilibrium solvers against multi-agent coordination tasks if classical ceiling dropped below ~85%.
 
-Evaluate:
+**Assessment (Logbook 011, post Klinotaxis Era)**: the 80.2% ceiling at 10 agents (B1-v2) meets the numerical threshold, but Campaign G proved this is resource-allocation difficulty, not computational complexity. With proportional resources, classical MLP PPO achieves 100% of ceiling at all scales. The Klinotaxis Era K1 finding (89% L100 on 5-agent collective discovery with pheromones) represents successful learned use of an extra observation channel, not a search-space explosion that would favour quantum approaches. **The checkpoint did not trigger.** The environment does not create genuine coordination complexity at the scales tested. Conditions that could: harder partial observability, multi-cluster foraging requiring trail specialisation (K7 weakening suggests a candidate area), or co-evolutionary phenotype dynamics (Phase 5 territory).
 
-- **Quantum entangled strategy spaces**: Can quantum architectures represent correlated multi-agent strategies more efficiently?
-- **Quantum game theory approaches**: Do quantum-enhanced Nash equilibrium solvers outperform classical?
-- If classical approaches show measurable difficulty on coordination tasks (aspirational: ceiling \<85%), launch targeted quantum evaluation campaign
-
-**Assessment (Logbook 011, post Klinotaxis Era)**: The 80.2% ceiling at 10 agents (B1-v2) meets the numerical threshold, but Campaign G proved this is resource allocation difficulty, not computational complexity. With proportional resources, classical MLP PPO achieves 100% of ceiling at all scales. The Klinotaxis Era K1 finding (89% L100 on 5-agent collective discovery with pheromones) represents successful learned use of an extra observation channel, not a search-space explosion that would favour quantum approaches. **Recommendation: do not trigger quantum multi-agent evaluation.** The environment does not create genuine coordination complexity. Conditions that could: harder partial observability, multi-cluster foraging requiring trail specialisation (K7 weakening suggests a candidate area), or co-evolutionary phenotype dynamics (Phase 5 territory).
+This assessment is preserved here as historical record. Going forward, quantum architectures sit in the Phase 6 architecture-comparison sweep as one row among many — see [Architecture-Comparison Protocol](#architecture-comparison-protocol).
 
 #### Go/No-Go Decision
 
@@ -462,7 +457,7 @@ ______________________________________________________________________
 
 **Goal**: Evolve optimal learning strategies and study how learning guides evolution, including biologically-documented transgenerational memory.
 
-**Aspirational timeline**: Q4 2026 - Q1 2027
+**Aspirational timeline**: —
 
 **Prerequisites**: Phase 3 (memory infrastructure for transgenerational memory). Phase 4 multi-agent infrastructure required only for co-evolution (deliverable 4) — other deliverables can begin in parallel with Phase 4.
 
@@ -1176,24 +1171,55 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Scoping Changes from v3
+
+This roadmap is v4. v3 was framed around two co-equal goals — "biological simulation + quantum architecture analysis" — with a Phase 6 major quantum re-evaluation gate and a Phase 7/8 publication-and-community arc. v4 reframes the project around an optimal-primary, connectome-as-control architecture comparison; quantum becomes one architecture family in the comparison sweep rather than a project-organising principle. The Phase 5 evidence base (logbooks 012-021), the post-Phase-5 platform data, and 2024-2026 external research (Cook et al. 2025 pacificus connectome; Resendez Prado architecture-asymmetry corroboration; OpenWorm c302 trajectory) together support the reframe.
+
+For reviewers reading v4 who recall v3 commitments: the full pre-rewrite v3 text is recoverable from git history at commit `3d48e04f` via `git show 3d48e04f:docs/roadmap.md`. This appendix documents which v3 promises v4 does **not** carry forward, with the reframe rationale for each.
+
+| v3 promise | v4 disposition | Reframe rationale |
+|---|---|---|
+| Two co-equal goals: biological simulation + quantum architecture analysis | One primary research question: optimal architecture comparison with connectome as focal point; quantum is one architecture family in the comparison | The 300-session Phase 2 campaign + Phase 3-4 results established that grid-world complexity is below the threshold for quantum advantage on every variant tested. Carrying quantum as a co-equal goal is no longer evidence-supported. |
+| Phase 6 quantum checkpoint (MAJOR), full quantum campaign v2 if classical drops below 70% | Architecture-comparison protocol at Phase 6 includes quantum families as comparison rows; 300-session campaign is baseline reference | Quantum re-evaluation collapses into the architecture-family sweep; no separate gate or escalation rule. |
+| Phase 7 "Community, Validation & Publication" with NematodeBench launch as a core deliverable | Phase 7 retitled to "Deepen — Plasticity & Cross-Species Transfer". NematodeBench public launch moves to Future Directions | Benchmarks crystallise mature communities; they don't bootstrap them (OpenWorm, Brian2, NeuroBench all followed this pattern). NematodeBench infrastructure persists as internal tooling. |
+| Phase 7 publication campaign with three named papers (quantum evaluation, NematodeBench, connectome) targeting Nature Methods / NeurIPS / ICML / eLife / PNAS | Paper drafts (platform / connectome-learning / fitness-landscape) are Phase 6/7 MAY items; no specific venues promised | Specific venue commitments produce overclaiming; the project may publish when evidence and context justify, not on a phase-locked schedule. |
+| Phase 7 external collaboration with ≥1 *C. elegans* lab partnership as exit criterion | Biological-validation collaboration is Phase 7 MAY (optional); Phase 6 commits to ≥1 internal validation against published real-worm data as exit criterion | Internal validation against open datasets (Bargmann chemotaxis indices, Kavli Ca²⁺ recordings, BAAIWorm correlation matrices) is sufficient for Phase 6 close. Lab partnership is additive, not a precondition. |
+| Phase 8 "Integration & Comprehensive Evaluation" with definitive quantum vs classical comparison at maximum complexity | Phase 8 deleted entirely | The definitive-quantum-vs-classical question is structurally retired; quantum is one row in the architecture-family comparison at every phase that runs the sweep. |
+| Phase 8 "≥3 universal principles documented and validated" | Dropped; principles emerge organically in papers if they emerge at all | The "≥N universal principles" framing is the engineering-the-breakthrough antipattern. Whatever generalisable principles surface, surface organically. |
+| Phase 8 applied directions (drug screening, neurodegeneration models, BCI) | Moved to Future Directions | Each is a multi-year programme of its own requiring different funding/partnerships/expertise than the Phase 6/7 platform work. Out of scope for the reframed two-phase post-Phase-6 arc. |
+| Phase 8 Drosophila ~100K-neuron transfer proof-of-concept | Moved to Future Directions, reframed as neuromorphic-hardware question | FlyWire + Sandia/Loihi 2 at >100× real-time establishes Drosophila scale-up as a neuromorphic-hardware problem, not a connectome-learning one. Different infrastructure requirements. |
+| *C. briggsae* transfer (Future Directions in v3 + Phase 7 wishlist) | Gated on future connectome data availability | No high-quality *C. briggsae* connectome has been published. *P. pacificus* (Cook et al. 2025) supersedes briggsae as the realistic cross-species target. |
+| Phase 6 "sinusoidal undulation, omega turns, pirouettes" native body mechanics | Dropped; interop with OpenWorm Sibernetic at c302 boundary if body-physics fidelity needed | High cost (10-100× simulation step cost), low scientific leverage for the architecture-comparison question. The platform claim survives without native body mechanics. |
+| Phase 6 "aerotaxis / pheromone signalling / multi-agent in continuous physics" implicit in scope | Deferred to future phases | Three-behaviour Phase 6 scope (klinotaxis + thermotaxis + predator evasion) keeps the architecture-comparison framing focused. Multi-agent in continuous physics is its own research problem. |
+| HPC compute access assumed for evolution + connectome work | HPC is explicitly optional, not required | GPU access (consumer-class cards via TensorNEAT vectorisation) is the realistic baseline. HPC is pursued opportunistically when a specific Phase 6/7 stretch need justifies an allocation. |
+| Phase 6 "all 19 existing architectures" implicit comparison scope | Curated MUST set of 8 architecture families + transformer as MAY | The L1 architecture-plugin interface admits the families that test the load-bearing questions; historical variants from Phases 0-3 stay in their logbooks as reference. |
+| Vision: "build the deepest, most complete behavioral simulation of *C. elegans* ever created. Progressively implement all sensory systems, survival behaviors, learning and memory, social dynamics, and realistic physics" | Vision recast around "most efficient brain architecture for nematode-like embodied tasks, using the *C. elegans* connectome as the focal comparison point" | "Simulating all *C. elegans* behaviours" is the OpenWorm-15-year-trap. The platform's contribution is what *learning + evolution + architecture comparison* on a curated subset enables — the all-behaviours framing pushed scope without strengthening the contribution. |
+| Phase 7 WormBot ("potential future validation platform") | Removed; no concrete commitment in v3 either | WormBot was an aspirational hardware-embodiment future direction; not a project commitment. If hardware embodiment becomes relevant, it re-emerges in Future Directions. |
+| North Star: "demonstrate quantum advantage at high biological fidelity OR characterise complexity thresholds for quantum advantage" | North Star: "be the platform on which learning and evolution operate on the real *C. elegans* connectome in a closed sensory-motor loop, and rank the wild-type connectome against unconstrained, evolved, and quantum architectures" | The platform contribution + scientific contribution are the load-bearing pair; quantum-advantage framing demoted to one architecture family in the comparison. |
+
+The Adaptive Roadmap Philosophy section retains v3's "evidence-driven, fail-fast, scientific rigor over claim inflation" stance; v4 sharpens it with the hard-phase-boundary-vs-mid-phase-gates distinction and with the M3 / M4-M5-M6 STOP pattern from Phase 5 as the canonical demonstration that STOP-with-diagnosis is a scientific contribution.
+
+The roadmap follows the project's standing conventions documented in [CLAUDE.md](../CLAUDE.md) and [AGENTS.md](../AGENTS.md): OpenSpec workflow for non-trivial work; paired-seed statistical rigor (Wilcoxon, bootstrap CIs, n ≥ 4 per condition); no milestone references in implementation code or docstrings; per-completed-milestone logbook with audit findings + decision-gate verdicts; LFS-rules audit before committing artefacts; no autonomous push / PR creation.
+
+______________________________________________________________________
+
 ## Conclusion
 
-This roadmap charts a milestone-based adaptive path from strong completed foundations (Phases 0-2) through progressively increasing biological fidelity toward the most complete C. elegans behavioral simulation available, while systematically testing quantum advantage hypotheses at each complexity milestone.
+This roadmap charts a milestone-based adaptive path from a Phase 5 close anchored in M3 Lamarckian inheritance (the positive headline) and four substrate-grounded STOP diagnoses (M4 Baldwin, M5 co-evolution, M6.x transgenerational memory — each surfacing a substrate or architecture finding that carries forward) toward a connectome-grounded architecture-comparison platform at Phase 6 and a biologically-plausible plasticity + cross-species deepening at Phase 7.
 
-The dual-goal approach ensures scientific value regardless of quantum outcomes:
+The contribution is paired, not dual-goal:
 
-1. **If quantum shows advantage at higher complexity**: Groundbreaking result demonstrating that biological fidelity creates the conditions for quantum computational advantage — a new research direction linking quantum computing to neuroscience.
+1. **Platform contribution**: first closed-loop learning and evolution on the real *C. elegans* connectome with a pluggable architecture interface that admits MLP, recurrent, spiking, reservoir, quantum, hybrid, NEAT-evolved, and connectome-constrained brains as comparable rows in one experimental sweep.
+2. **Scientific contribution**: a defensible answer to "how does the wild-type *C. elegans* connectome rank against unconstrained and evolved alternatives — when learning and evolution operate on it in a closed sensory-motor loop?", with cross-species transfer to *P. pacificus* and biologically-plausible plasticity (STDP + neuromodulator-modulated three-factor STDP) extending the answer at Phase 7.
 
-2. **If quantum shows no advantage**: The simulation itself is a major contribution to computational neuroscience, and the comprehensive characterisation of complexity thresholds (from 300+ sessions at grid-world complexity through enriched environments) provides definitive guidance for the quantum ML field.
+The project's unique position — integrating biologically-grounded sensing, multiple learning and evolutionary regimes, a pluggable architecture interface, and the real *C. elegans* connectome on a single substrate — is the contribution. No competing computational *C. elegans* effort has all four. OpenWorm has the connectome and body physics but not closed-loop learning; Izquierdo & Beer have learning and evolution but on minimal evolved circuits rather than the real connectome; the Leeds physics group has body mechanics but not learning. The platform interoperates with each of these where the boundaries are natural (c302 import, Sibernetic for body mechanics if needed); it does not compete with them on their home turf.
 
-The project's unique position — the only effort combining real connectome topology + reinforcement learning + quantum architecture comparison, grounded in the only organism with a fully mapped nervous system — provides unparalleled opportunities for breakthrough discoveries.
+Key principles guiding execution:
 
-Key principles:
+1. **Evidence-driven, not aspiration-driven.** Decisions live in per-milestone logbooks; STOP-with-diagnosis is the correct verdict when honest experimentation reveals a substrate or architecture limit.
+2. **Fail-fast at the substrate level, not at the phase level.** Mid-phase decision gates (Phase 6's three gates; Phase 7's L4-month-6 split criterion) trigger documented pivots — not silent slides past missed milestones.
+3. **Hard phase boundaries between completed and in-flight phases.** Phase N+1 work does not begin until Phase N is synthesised — the narrative arc has integrity, even when mid-phase execution is adaptive.
+4. **Demote rather than delete.** Quantum demoted to one architecture family. NematodeBench demoted from public-launch deliverable to internal tooling. Optionality preserved; commitments matched to evidence.
+5. **One programme, two contributions.** The platform claim and the scientific claim are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer.
 
-1. **Biological fidelity drives complexity**: Each phase makes the simulation more realistic AND creates harder computational problems
-2. **Quantum checkpoints, not quantum phases**: Re-evaluation is triggered by measured complexity milestones
-3. **C. elegans deep dive**: Stay with the only fully-mapped organism and go deeper than anyone else
-4. **Community and validation**: External collaboration and open-source adoption amplify impact
-5. **Adaptive execution**: Every phase has go/no-go gates; negative results are valuable when rigorous
-
-By the completion of Phase 8, this project will have either demonstrated quantum advantage on biologically-grounded tasks or provided the most comprehensive negative result in quantum RL — along with the deepest C. elegans behavioral simulation, connectome-constrained architectures, and universal computational principles extracted from a uniquely tractable biological system.
+By Phase 7 close, the project will have shipped a connectome-grounded architecture-comparison platform with biologically-plausible plasticity and cross-species transfer, alongside per-milestone logbooks documenting both positive results and substrate-grounded diagnoses. Whether the connectome ranks as dominant or merely competitive against evolved alternatives, the platform contribution stands and the architecture-comparison question is answered — with the evidence chain documented at the per-milestone level rather than asserted in the roadmap.
