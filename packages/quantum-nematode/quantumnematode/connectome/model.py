@@ -1,14 +1,17 @@
 """Connectome data model — Pydantic types for the *C. elegans* connectome.
 
-Per phase6-tracking Decision 7, chemical synapses and gap junctions are
-**separately-typed connection categories**. The dual-edge case (e.g.
-AVAL <-> AVBL, connected by both a chemical synapse AND a gap junction) is
-represented as two distinct entries — one ``ChemicalSynapse`` and one
-``GapJunction`` — never as a single edge with two weight attributes.
+Chemical synapses and gap junctions are modelled as separately-typed
+connection categories. The dual-edge case (e.g. AVAL <-> AVBL, connected by
+both a chemical synapse AND a gap junction) is represented as two distinct
+entries — one ``ChemicalSynapse`` and one ``GapJunction`` — never as a
+single edge with two weight attributes. This distinction matters because
+the two connection types are biologically different (chemical = directed,
+neurotransmitter-mediated, learnable; gap junction = undirected, electrical
+coupling, fixed by physiology).
 
 Extra-synaptic / peptidergic signalling is NOT represented in this data
-model; that work is reserved for Phase 7 L4 plasticity per phase6-tracking
-Decision 7.
+model; modelling diffusible neuromodulator concentrations requires receptor-
+class metadata and diffusion dynamics that aren't yet built.
 """
 
 from __future__ import annotations
@@ -18,11 +21,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 CellClass = Literal["sensory", "interneuron", "motor", "muscle", "pharyngeal"]
-"""Allowed cell-class labels per phase6-tracking Decision 7's taxonomy.
-
-Source: derived from cect's ``Cells.py`` MIT-licensed Python constants,
-which themselves attribute Cook et al. 2019 paper + WormAtlas.
-"""
+"""Allowed cell-class labels — canonical *C. elegans* anatomical roles."""
 
 
 class Neuron(BaseModel):
@@ -32,13 +31,14 @@ class Neuron(BaseModel):
     ----------
     name
         Canonical *C. elegans* neuron name (e.g. ``"ASEL"``, ``"AVAL"``,
-        ``"VB02"``). Bilateral pairs use suffixes ``L`` / ``R``; ventral-cord
-        motor neurons use a numbered suffix (``VB01``..``VB11``,
-        ``DB01``..``DB07``, etc.).
+        ``"VB2"``). Bilateral pairs use suffixes ``L`` / ``R``; ventral-cord
+        motor neurons use a numbered suffix (``VB1``..``VB11``,
+        ``DB1``..``DB7``, etc.).
     cell_class
         One of ``"sensory"``, ``"interneuron"``, ``"motor"``, ``"muscle"``,
         ``"pharyngeal"``. Boundaries are convention-dependent for polymodal
-        cells; this codebase defers to cect's ``Cells.py`` classification.
+        cells; the project's ``NEURON_CLASSIFICATION`` table assigns the
+        primary class.
     neurotransmitter
         Primary neurotransmitter when known (e.g. ``"Glutamate"``,
         ``"GABA"``, ``"Acetylcholine"``), otherwise ``None``.
@@ -76,9 +76,10 @@ class GapJunction(BaseModel):
     """An undirected gap junction (electrical coupling).
 
     Stored in canonical form with ``neuron_a < neuron_b`` (lexicographic) so
-    each unordered pair appears at most once. ``weight`` is the Cook 2019
-    junction count; this is treated as a fixed physiological signal per
-    phase6-tracking Decision 7 (NOT a learnable scalar).
+    each unordered pair appears at most once. ``weight`` is the junction
+    count from the underlying connectome dataset; this is treated as a fixed
+    physiological signal (NOT a learnable scalar) because gap-junction
+    conductance is set by physiology rather than by per-episode learning.
 
     Attributes
     ----------
@@ -87,7 +88,7 @@ class GapJunction(BaseModel):
     neuron_b
         Name of the other neuron in the pair (lexicographically larger).
     weight
-        Junction count from Cook et al. 2019 EM-derived data.
+        Junction count from the EM-derived connectome dataset.
     """
 
     neuron_a: str = Field(..., min_length=1)

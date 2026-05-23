@@ -1,7 +1,9 @@
-"""*C. elegans* connectome substrate (Phase 6 Tranche 1 / L0).
+"""*C. elegans* connectome substrate.
 
-Public API for downstream consumers. See
-``openspec/changes/add-connectome-substrate/`` for the design.
+Loads the real *C. elegans* 302-neuron connectome (Cook et al. 2019
+hermaphrodite) and exposes it through typed Pydantic models for downstream
+consumption by brain architectures. Chemical synapses and gap junctions are
+represented as separately-typed connections.
 """
 
 from quantumnematode.connectome.model import (

@@ -37,12 +37,12 @@ Maps to T1.2 in the tracker: connectome data model exposing chemical synapses + 
 
 302-neuron classification derived from OpenWorm cect's MIT-licensed `Cells.py` constants (which themselves attribute Cook 2019 paper + WormAtlas). Static dict shipped as code per design.md Decision T1.4. Cook 2019 does NOT publish a discrete SI 1 cell-list XLSX — cect's `Cells.py` is the de facto authoritative curation of the paper's classification.
 
-- [ ] 4.1 Source cect's `Cells.py` constants (`SENSORY_NEURONS_COOK`, `INTERNEURONS_COOK`, `MOTORNEURONS_COOK`, `HEAD_MOTORNEURONS_COOK`, `SUBLATERAL_MOTORNEURONS_COOK`, `VENTRAL_CORD_MOTORNEURONS`, `HERM_SPECIFIC_MOTORNEURONS`, pharyngeal lists) from `https://raw.githubusercontent.com/openworm/ConnectomeToolbox/master/cect/Cells.py`. Save the source URL + commit SHA to PROVENANCE.md
-- [ ] 4.2 Manually merge the lists into a single `NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]]` covering all 302 hermaphrodite neurons. Cross-check by total count (must be exactly 302) and by spot-check (ASEL/ASER → sensory, AVAL/AVAR → interneuron, VB02 → motor)
-- [ ] 4.3 For each neuron, attach a neurotransmitter when known (Glutamate, GABA, Acetylcholine, Serotonin, Dopamine, etc.) from cect's neurotransmitter data and `docs/nematode_biology.md` § Neurotransmitter Systems. Default `None` where uncertain
-- [ ] 4.4 Implement `connectome/neurons.py` with `NEURON_CLASSIFICATION` + module docstring attributing the curation chain (this project → cect.Cells.py → Cook 2019 paper + WormAtlas)
-- [ ] 4.5 Add `CANONICAL_NAME_ALIASES: dict[str, str]` for cross-dataset name normalisation (e.g. `RIA-L` → `RIAL`) per design.md Risks #2
-- [ ] 4.6 Coverage assertion in module: assert `len(NEURON_CLASSIFICATION) == 302` at import time (fail-fast if a future edit drops an entry)
+- [x] 4.1 Source cect's `Cells.py` constants (`SENSORY_NEURONS_COOK`, `INTERNEURONS_COOK`, `MOTORNEURONS_COOK`, pharyngeal lists, `PREFERRED_HERM_NEURON_NAMES`) from `https://raw.githubusercontent.com/openworm/ConnectomeToolbox/master/cect/Cells.py`. Source URL + version pinned at cect v0.3.1 (recorded in PROVENANCE.md)
+- [x] 4.2 Manually merge the lists into a single `NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]]` covering all 302 hermaphrodite neurons. Cross-checked: total = 302, ASEL/ASER → sensory, AVAL/AVAR → interneuron, VB2 → motor. Per-class counts: sensory 83, interneuron 83, motor 116, pharyngeal 20
+- [ ] 4.3 For each neuron, attach a neurotransmitter when known (Glutamate, GABA, Acetylcholine, Serotonin, Dopamine, etc.) from cect's neurotransmitter data and `docs/nematode_biology.md` § Neurotransmitter Systems. Default `None` where uncertain — DEFERRED: shipped as `None` for all 302 entries in initial table; NT enrichment is a follow-up commit (not blocking for L0 deliverable per design.md Decision T1.4)
+- [x] 4.4 Implement `connectome/neurons.py` with `NEURON_CLASSIFICATION` + module docstring attributing the curation chain (this project → cect.Cells.py → Cook 2019 paper + WormAtlas)
+- [x] 4.5 Add `CANONICAL_NAME_ALIASES: dict[str, str]` for cross-dataset name normalisation (e.g. `RIA-L` → `RIAL`) — empty initial map; populated as the loader encounters dataset-name quirks in Phase 5/6
+- [x] 4.6 Coverage assertion in module: assert `len(NEURON_CLASSIFICATION) == 302` at import time (fail-fast if a future edit drops an entry)
 
 ## Phase 5 — Loader (T1.3)
 
