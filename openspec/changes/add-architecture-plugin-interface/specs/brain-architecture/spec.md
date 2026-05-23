@@ -43,7 +43,8 @@ The `BrainType` enum SHALL remain the public typed dispatch key for callers outs
 #### Scenario: Enum and registry agree at import time
 
 - **WHEN** `quantumnematode.brain.arch` finishes importing
-- **THEN** the set of `BrainType` enum string values SHALL equal the set of registered brain names
+- **THEN** `BrainType` SHALL be a `StrEnum` (so enum values are first-class strings)
+- **AND** the set `{bt.value for bt in BrainType}` SHALL equal `list_registered_brains()`
 - **AND** a mismatch SHALL raise a clear exception identifying which names are missing from which side
 
 #### Scenario: Family type-aliases derived from registry metadata
@@ -229,5 +230,6 @@ The `BrainType` enum SHALL remain the canonical typed dispatch key and SHALL inc
 #### Scenario: Registry-enum consistency check at import time
 
 - **WHEN** `quantumnematode.brain.arch` finishes importing
-- **THEN** the set of string-values across `BrainType` enum members SHALL equal the set of names registered via `@register_brain(...)`
+- **THEN** `BrainType` SHALL be a `StrEnum`
+- **AND** `{bt.value for bt in BrainType}` SHALL equal the set of names registered via `@register_brain(...)`
 - **AND** any mismatch SHALL raise an exception that identifies which names are present on each side

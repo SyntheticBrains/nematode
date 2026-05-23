@@ -2,7 +2,7 @@
 
 Phase 6 Tranche 2 (T2) refactors the brain-architecture dispatcher into a registry pattern and introduces the first connectome-constrained brain. Current state, from the [T2.1 audit](../../../packages/quantum-nematode/quantumnematode/utils/brain_factory.py):
 
-- `setup_brain_model()` is a 459-LOC function with 19 `elif brain_type == BrainType.<X>:` branches. Every branch repeats a type-check pattern on the brain config and a per-architecture instantiation.
+- `setup_brain_model()` is a 459-LOC function with 19 branches (1 `if` + 18 `elif`) dispatching on `brain_type == BrainType.<X>`. Every branch repeats a type-check pattern on the brain config and a per-architecture instantiation.
 - `BRAIN_CONFIG_MAP` at [config_loader.py:130-150](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) is a hand-maintained dict mapping 19 YAML brain names to their Pydantic config classes.
 - The `BrainType` enum at [brain/arch/dtypes.py:9-37](../../../packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py) is the canonical typed dispatch key, with 19 hand-maintained members + companion type aliases (`BRAIN_TYPES`, `QUANTUM_BRAIN_TYPES`, `CLASSICAL_BRAIN_TYPES`, `SPIKING_BRAIN_TYPES`).
 - The 19 brain modules each pair a *topology* (MLP, LSTM, variational quantum circuit, reservoir, spiking, etc.) with a *learning rule* (PPO, REINFORCE, DQN, Q-learning) in a fused implementation. There is no shared topology abstraction that the T1 connectome data model can be substituted into.
@@ -121,9 +121,9 @@ The 19 existing brains adopt these Protocols **internally** — each holds a `se
 
 The 19-member enum at [brain/arch/dtypes.py:9-37](../../../packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py) and its companion type aliases (`BRAIN_TYPES` Literal, `QUANTUM_BRAIN_TYPES` set, etc.) are consumed by callers outside the brain-architecture subsystem (evolution framework + predator factory). Removing them is out of scope. The compromise:
 
-- `BrainType` stays as a `StrEnum` with the same 19 + 1 (connectome) members. Members are hand-declared (Python enum members must be declared at class-definition time).
-- `BRAIN_TYPES` Literal and the `QUANTUM_BRAIN_TYPES` / `CLASSICAL_BRAIN_TYPES` / `SPIKING_BRAIN_TYPES` sets are derived from registry metadata at module-init time, replacing the current hand-maintained literals. The `families=("classical",)` / `("quantum",)` / `("spiking",)` parameter on `@register_brain(...)` is the metadata source.
-- A startup-time consistency check asserts the registry has exactly the same set of names as `BrainType` enum members. Mismatch raises at import — fails loudly if someone adds an enum member without a registration or vice versa.
+- `BrainType` migrates from `Enum` to `StrEnum` (already encodes string values like `MLP_PPO = "mlpppo"`; the migration makes `BrainType.MLP_PPO == "mlpppo"` evaluate True). The 19 + 1 (connectome) members remain hand-declared (Python enum members must be declared at class-definition time). The `Enum` → `StrEnum` change is backward-compatible for callers using `BrainType.X.value` and additive for callers wanting string-equality semantics.
+- `BRAIN_TYPES` Literal and the `QUANTUM_BRAIN_TYPES` / `CLASSICAL_BRAIN_TYPES` / `SPIKING_BRAIN_TYPES` sets are derived from registry metadata at module-init time, replacing the current hand-maintained literals. The `families=("classical",)` / `("quantum",)` / `("spiking",)` parameter on `@register_brain(...)` is the metadata source. An architecture may belong to multiple families (e.g. `QSNNReinforce` is in both `"quantum"` and `"spiking"`); the family sets are the union of all registrations carrying that family tag, which is a broadening from the current single-family-set semantics that the migration documents explicitly.
+- A startup-time consistency check asserts the registry has exactly the same set of names as `BrainType` enum string values (since `BrainType` is now a `StrEnum`, the values ARE strings). Mismatch raises at import — fails loudly if someone adds an enum member without a registration or vice versa.
 
 **Alternatives considered:**
 
@@ -148,7 +148,7 @@ The `ConnectomeTopology` consumed by `ConnectomePPOBrain` is constructed from a 
 
 **Sensor projection** (env → connectome input):
 
-- `food_chemotaxis` env input → `ASE` (left + right) + `AWC` (left + right) + `AWA` sensory neurons (canonical Bargmann-lab klinotaxis sensory pathway). The 1D chemotaxis gradient signal is broadcast to all five sensory neurons identically; differential left-right encoding is added in T5/T6 when continuous-2D coordinates make it meaningful.
+- `food_chemotaxis` env input → `ASE` (left + right) + `AWC` (left + right) + `AWA` (left + right) sensory neurons (canonical Bargmann-lab klinotaxis sensory pathway). The 1D chemotaxis gradient signal is broadcast to all six sensory neurons identically; differential left-right encoding is added in T5/T6 when continuous-2D coordinates make it meaningful.
 - `proprioception` env input → `AVA` + `AVB` command interneurons (driven by Bargmann-lab anatomical convention; the actual klinotaxis pathway routes proprioception through interneurons before reaching motor neurons).
 - Sensor inputs are placed onto the connectome via additive injection on the sensory neurons' activation vector, scaled by a per-input learnable gain (a single scalar each, registered as PPO-learnable parameters but separate from the chemical-synapse weight matrix).
 
@@ -233,8 +233,8 @@ The 19-architecture migration runs in a deliberate order to surface problems ear
 
 1. **MLPPPO first** (sub-task in `tasks.md`). The shortest forward + learning loop; the G1.d MUST that the rest of the Gate 1 decision depends on. If byte-equivalence breaks here, the registry pattern itself is wrong and we re-design before touching the other 18.
 2. **LSTMPPO second**. The other G1.d MUST; adds recurrent-state byte-equivalence to the bar.
-3. **Eight classical brains next** (`MLPReinforce`, `MLPDQN`, `QRC`, `CRH`, `CRHQLSTM`, `HybridClassical`, `SpikingReinforce` — and any other classical-flagged arch). Numerical-equivalence at `atol=1e-7`. Pure-classical means no QPU shot variance.
-4. **Eight quantum + spiking-quantum brains last** (`QVarCircuit`, `QQLearning`, `QRH`, `QEF`, `QSNNReinforce`, `QSNNPPO`, `HybridQuantum`, `HybridQuantumCortex`, `QLIFLSTM`, `QRHQLSTM`). Most likely to surface RNG-reassociation drift; if any fails `atol=1e-7`, the diagnosis is contained to that arch.
+3. **Seven classical / spiking brains next** (`MLPReinforce`, `MLPDQN`, `QRC`, `CRH`, `CRHQLSTM`, `HybridClassical`, `SpikingReinforce`). Numerical-equivalence at `atol=1e-7`. QRC is a classical-reservoir arch despite the Q prefix (no QPU shot variance); SpikingReinforce is non-quantum spiking.
+4. **Ten quantum + spiking-quantum brains last** (`QVarCircuit`, `QQLearning`, `QRH`, `QEF`, `QSNNReinforce`, `QSNNPPO`, `HybridQuantum`, `HybridQuantumCortex`, `QLIFLSTM`, `QRHQLSTM`). Most likely to surface RNG-reassociation drift; if any fails `atol=1e-7`, the diagnosis is contained to that arch.
 5. **`ConnectomePPOBrain` last** of all. The first new brain registered via the new interface; its existence is also the Gate 1 G1.b check (registry instantiates connectome + MLPPPO through the same code path).
 
 **Alternatives considered**:
@@ -276,8 +276,8 @@ T2 ships as a single OpenSpec change (single feature branch, single PR series wi
 1. **Scaffold the registry** — `_registry.py` + `_topology.py` + `_rule.py` modules, unit tests for the registry (register / instantiate / duplicate-name detection / unknown-name error).
 2. **Migrate MLPPPO** — decorator + internal topology/rule extraction. Capture byte-equivalence fixture pre-refactor; assert post-refactor. **Migration validation gate: if MLPPPO byte-equivalence fails, halt migration, re-design Decision 2's strategy.**
 3. **Migrate LSTMPPO** — same pattern. **Migration validation gate: if LSTMPPO byte-equivalence fails, halt migration.**
-4. **Migrate the 8 classical brains** — batch migration, numerical equivalence at `atol=1e-7`. Per-architecture pass/fail recorded.
-5. **Migrate the 9 quantum + spiking-quantum brains** — batch migration with the deterministic-simulator strategy from Risk A. Per-architecture pass/fail recorded; any failure escalates to the fallback tolerance tier.
+4. **Migrate the 7 classical / spiking brains** — batch migration, numerical equivalence at `atol=1e-7`. Per-architecture pass/fail recorded.
+5. **Migrate the 10 quantum + spiking-quantum brains** — batch migration with the deterministic-simulator strategy from Risk A. Per-architecture pass/fail recorded; any failure escalates to the fallback tolerance tier.
 6. **Implement `ConnectomePPOBrain`** — topology construction from `Connectome`, sensor projection, motor readout, PPO rule wiring. Unit tests for shape + finiteness + strict-mask invariant + gap-junction-frozen invariant.
 7. **G1.c smoke campaign** — run the klinotaxis learning + frozen-control pair; record measurements; evaluate Gate 1 G1.c pass conditions.
 8. **Plugin-developer documentation** — write the walkthrough; include the hypothetical-addition exercise per [phase6-tracking/tasks.md T2.7](../phase6-tracking/tasks.md).

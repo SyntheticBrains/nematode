@@ -38,7 +38,7 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 #### Scenario: Sensor projection routes env input to canonical sensory neurons
 
 - **WHEN** `run_brain()` receives a `BrainParams` with food-chemotaxis input
-- **THEN** the food-chemotaxis signal SHALL be additively injected onto the ASE-left, ASE-right, AWC-left, AWC-right, and AWA sensory neurons' input vector
+- **THEN** the food-chemotaxis signal SHALL be additively injected onto the ASE-left, ASE-right, AWC-left, AWC-right, AWA-left, and AWA-right sensory neurons' input vector
 - **AND** the injection SHALL be scaled by a per-input learnable gain (PPO-learnable scalar parameter, separate from the chemical-synapse weight matrix)
 
 #### Scenario: Motor readout aggregates motor-class activations
