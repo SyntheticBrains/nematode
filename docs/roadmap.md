@@ -579,7 +579,7 @@ Phase 6 is broken into nine tranches with deliberate ordering — L0 ingest (T1)
 | Tranche | Scope | Roadmap layer | Approx duration | Gate trigger | Status |
 |---|---|---|---|---|---|
 | P6-0 | Phase 6 tracking scaffold (this change) | — | — | — | 🟡 in progress |
-| 1 | L0 connectome ingest — Cook 2019 via OpenWorm `cect`, vendored, cross-validated against Witvliet 2021, forward-pass smoke | L0 | 2-3 weeks | — | 🔲 not started |
+| 1 | L0 connectome ingest — Cook 2019 hermaphrodite (302 neurons, 3709 chemical synapses, 1093 gap junctions) via direct *Nature* SI parsing; cross-validated against Witvliet 2021 nerve-ring (180 shared); forward-pass smoke + 71-test suite | L0 | 2-3 weeks | — | ✅ complete (logbook [022](experiments/logbooks/022-connectome-substrate.md)) |
 | 2 | L1 plugin refactor (dispatcher → registry + topology/rule factoring + 19-architecture migration with regression bar) + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1** | 🔲 not started |
 | 3 | Corrected ASH/ADL contact-based nociception (owed correctness work per Logbook 011) | env-correctness | 1-2 weeks | — | 🔲 not started |
 | 4 | L2 initial pass — four MUST architectures × three behaviours, grid substrate, chemical-synapse strict-mask connectome | L2 (first pass) | 4-6 weeks | — | 🔲 not started |

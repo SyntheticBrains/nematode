@@ -44,14 +44,14 @@ and does not appear as a Phase 6 tranche.
 - [x] P6-0.6 Add Phase 6 Tranche Tracker sub-section to `docs/roadmap.md` Phase 6 block
 - [x] P6-0.7 Annotate `docs/roadmap.md` Phase 6 architecture-families table with MUST/SHOULD/MAY per [design.md § Decision 4](design.md)
 - [x] P6-0.8 Annotate `docs/roadmap.md` Phase 6 layered-platform table with the env-upgrade tranche note
-- [ ] P6-0.9 Validate change: `openspec validate phase6-tracking --strict`
-- [ ] P6-0.10 Run targeted `uv run pre-commit run --files <changed>` clean
-- [ ] P6-0.11 Open PR
+- [x] P6-0.9 Validate change: `openspec validate phase6-tracking --strict`
+- [x] P6-0.10 Run targeted `uv run pre-commit run --files <changed>` clean
+- [x] P6-0.11 Open PR
 
 ## Tranche 1 — L0 Connectome Substrate
 
-**OpenSpec change**: `add-connectome-substrate` (not yet created — first Phase 6 milestone change)
-**Status**: 🔲 not started
+**OpenSpec change**: `add-connectome-substrate` (complete; ready for archive post-merge)
+**Status**: ✅ complete
 **Roadmap layer**: L0
 **Approx duration**: 2-3 weeks
 **Bio fidelity**: HIGH (real wiring is the substrate)
@@ -67,16 +67,16 @@ to. Per [design.md § Decision 7](design.md), the data model MUST expose chemica
 synapses (directed, weighted) and gap junctions (undirected, electrical) as
 separately-typed connections.
 
-- [ ] T1.1 Choose and document the import library (decision pre-recorded: `cect` / ConnectomeToolbox; see [design.md § Decision 2](design.md)). Pin the dependency version; record the upstream dataset identifiers. The exact Cook 2019 sub-file selection is deliberately left to this tranche to decide — see [design.md § What This Change Explicitly Does Not Decide](design.md) — but the choice is constrained by Decision 7's connection-type taxonomy requirement.
-- [ ] T1.2 Build the connectome data model. MUST expose: chemical synapses (directed, weighted by synapse count); gap junctions (undirected, electrical, fixed-weight per Decision 7); neurons (with anatomical roles — sensory / interneuron / motor — and neurotransmitter labels). Extra-synaptic/peptidergic signalling is explicitly out of scope for Phase 6 (Decision 7 reserves that for Phase 7 L4 plasticity). The data model is the topology interface every architecture plugin will conform to in T2.
-- [ ] T1.3 Import the Cook 2019 hermaphrodite connectome. Verify neuron count (302), chemical-synapse count (within published bounds), gap-junction count, and neuron-name conformance to standard *C. elegans* naming.
-- [ ] T1.4 Cross-validate against Witvliet et al. 2021 nerve-ring subset (~50 lines of pandas). Document where the two datasets agree, where they diverge (developmental stage + lineage-tracing differences are expected), and which divergences would materially affect downstream learning.
-- [ ] T1.5 Vendor the connectome data (no network access at training time). Document the import provenance: upstream dataset DOI / commit, `cect` version, any transformations applied during import, any neurons / synapses dropped or merged, any metadata gaps.
-- [ ] T1.6 Forward-pass smoke test: instantiate a trivial PPO weight set on the connectome topology (chemical synapses only, strict-mask), run a single forward pass, verify shapes / no NaNs. Not a training run — a "does the substrate respond to inputs" sanity check.
-- [ ] T1.7 Unit + smoke tests for the data model and import pipeline; CI integration.
-- [ ] T1.8 T1↔T2 handshake: T1 publishes a signature-level data-model API sketch (not implementation — just the public method signatures + key dataclass shapes for chemical-synapse iteration, gap-junction iteration, sensor/motor neuron lookup) as part of the T1 logbook. T2's OpenSpec change MUST cite this sketch in its design.md when scoping the plugin Protocol consumption pattern. If T2's design surfaces an API mismatch that PPO/spiking/NEAT consumption can't accommodate, T1 amends — but the handshake review happens during T2 design, not at T1 close (T2's design is the consumer that can actually validate the API). This sub-task ticks when the sketch is published; T2's design review is where the API earns its keep.
-- [ ] T1.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T1 row.
-- [ ] T1.10 Publish T1 logbook (suggested: `docs/experiments/logbooks/0XX-connectome-substrate.md`). Feeds into Gate 1's evidence base (full Gate 1 decision lands at T2 close).
+- [x] T1.1 Choose and document the import library (revised from pre-recorded `cect`/ConnectomeToolbox to direct *Nature* SI parsing with pandas + openpyxl; cect investigation surfaced licence inconsistency and pre-1.0 maturity risks — see `add-connectome-substrate/design.md` § Decision T1.1 for rationale). Cook 2019 SI 5 + Witvliet 2020/2021 dataset 8 chosen as the canonical sub-files; vendored via cect's MIT-licensed mirror.
+- [x] T1.2 Build the connectome data model. MUST expose: chemical synapses (directed, weighted by synapse count); gap junctions (undirected, electrical, fixed-weight per Decision 7); neurons (with anatomical roles — sensory / interneuron / motor — and neurotransmitter labels). Extra-synaptic/peptidergic signalling is explicitly out of scope for Phase 6 (Decision 7 reserves that for Phase 7 L4 plasticity). The data model is the topology interface every architecture plugin will conform to in T2.
+- [x] T1.3 Import the Cook 2019 hermaphrodite connectome. Verify neuron count (302 ✓), chemical-synapse count 3709 (loose lower-bound > 3000; project-docs cite ~7000 but include muscles/glia/end-organs that the loader filters out), gap-junction count 1093 after merging Cook 2019's symmetric + asymmetric sheets, and neuron-name conformance via canonical-name unpadding (VC01 → VC1, etc.).
+- [x] T1.4 Cross-validate against Witvliet et al. 2021 nerve-ring subset. Observed: 180 shared neurons, 1271 agreement / 1942 disagreement on chemical-synapse presence, weight ratio mean 0.86 (median 0.57). The disagreement is dominated by Cook-only pairs (Cook covers whole-animal; Witvliet covers only nerve-ring); the divergence map is captured in `DivergenceReport` and surfaced in the T1 logbook.
+- [x] T1.5 Vendor the connectome data (no network access at training time). Cook 2019 SI 5 + Witvliet 2020/2021 dataset 8 vendored under `data/connectome/` with LFS-tracking. `PROVENANCE.md` records per-file SHA256, source URLs, DOIs, paper citations, and the cect-mirror redistribution rationale.
+- [x] T1.6 Forward-pass smoke test: instantiate a trivial PPO-shaped weight set on the connectome topology (chemical synapses strict-masked + fixed gap-junction weights with fan-in normalisation), run a single forward pass, verify finite output + non-degenerate variance. Verified end-to-end via `uv run python -m quantumnematode.connectome.smoke`: 116 motor outputs, variance 0.69, PASS.
+- [x] T1.7 Unit + smoke tests for the data model and import pipeline; CI integration. 71 tests across 5 files (`test_loader.py`, `test_model.py`, `test_neurons.py`, `test_validate.py`, `test_smoke.py`); all pass in the default `uv run pytest -m "not nightly"` tier.
+- [x] T1.8 T1↔T2 handshake: T1 publishes a signature-level data-model API sketch as part of the T1 logbook. Published in [logbook 022 § T1↔T2 API sketch](../../../docs/experiments/logbooks/022-connectome-substrate.md). T2's design review will validate against this sketch.
+- [x] T1.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T1 row. Done.
+- [x] T1.10 Publish T1 logbook at [docs/experiments/logbooks/022-connectome-substrate.md](../../../docs/experiments/logbooks/022-connectome-substrate.md). Feeds into Gate 1's evidence base (full Gate 1 decision lands at T2 close).
 
 **T1 risk-mitigation pivot (per roadmap)**: if `cect` import / dataset access proves harder than expected (format incompatibility, missing metadata, unclear synaptic-weight provenance), drop to a hand-curated subset of the Cook 2019 connectome — sensory-interneuron-motor subgraph for the three target behaviours, ~50-100 neurons. The pivot decision is itself a written gate-style decision; the T1 OpenSpec change documents it.
 
