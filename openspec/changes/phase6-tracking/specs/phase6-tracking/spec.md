@@ -28,7 +28,8 @@ The repository SHALL maintain a single living checklist file at `openspec/change
 - **GIVEN** Gate 3 PIVOT-scope is triggered (partial MUST-cell coverage or 10-month overshoot per `design.md` § Decision 6 § Gate 3)
 - **WHEN** the Phase 6a / Phase 6b split is documented in the T7 logbook
 - **THEN** this change's `proposal.md` + `design.md` + `tasks.md` SHALL be amended to mark Phase 6a as the scope that ships first (T1–T7) and Phase 6b as the deferred follow-on (T8 NEAT + T9 synthesis)
-- **AND** archival of `phase6-tracking` SHALL occur on Phase 6a's synthesis logbook publication (an interim synthesis logbook scoped to T1–T7); Phase 6b SHALL inherit a fresh tracking change (`phase6b-tracking`) if its scope warrants
+- **AND** archival of `phase6-tracking` SHALL occur on Phase 6a's synthesis logbook publication (an interim synthesis logbook scoped to T1–T7)
+- **AND** Phase 6b's tracker arrangement SHALL follow this concrete rule: if Phase 6b contains more than one tranche (e.g. T8 NEAT + T9 synthesis = two tranches) it SHALL inherit a fresh `phase6b-tracking` change; if Phase 6b is a single-tranche continuation (e.g. T9 synthesis only, with T8 already shipped under Phase 6a) it SHALL be appended as a new `phase6b-tracking` change with a single-tranche scope OR scoped inside the synthesis change directly — the choice MAY be left to the Phase 6b OpenSpec change's author
 
 ### Requirement: Roadmap Phase 6 Status Block
 
@@ -66,6 +67,20 @@ Each of the three roadmap-defined mid-phase decision gates (Gate 1 at the close 
 - **GIVEN** a tranche-close logbook claims a gate as GO but does not address every pre-registered numerical criterion from `design.md` § Decision 6
 - **WHEN** a reviewer observes the missing criterion
 - **THEN** the gate SHALL be treated as not-yet-decided and the next tranche's PR SHALL be blocked until the logbook is amended to evaluate each criterion explicitly
+
+#### Scenario: Gate criterion recalibrated before the gate fires (allowed)
+
+- **GIVEN** an in-flight tranche surfaces evidence that one of Decision 6's pre-registered criteria was empirically miscalibrated (e.g. T1 reveals the G1.c frozen-random-control baseline is itself unstable, or T2 reveals the G2.b "≤ 6 files" floor is too tight against the chosen registry pattern)
+- **WHEN** the criterion is amended *before* the triggering tranche closes (i.e. before the gate fires)
+- **THEN** the amendment SHALL land as a commit to `design.md` § Decision 6 that names the criterion being recalibrated, the in-flight evidence motivating the change, and the alternative criterion that replaces it
+- **AND** the triggering tranche's logbook gate-decision SHALL record both the original criterion and the amended one when evaluating
+
+#### Scenario: Gate criterion changed after the gate has fired (prohibited — goalpost-moving)
+
+- **GIVEN** a tranche has produced data evaluated against a Decision 6 criterion, and the criterion is failing
+- **WHEN** a PR proposes lowering or relaxing that criterion to make the gate pass
+- **THEN** the PR SHALL be blocked; the gate verdict stays as it stood under the original criterion
+- **AND** the only acceptable amendment after a gate has fired is one that *raises* the bar (e.g. tightening tolerances on the basis of better-than-expected data) — this rule prevents goalpost-moving while permitting evidence-driven calibration before the gate fires
 
 #### Scenario: Pivot triggered at a mid-phase gate
 

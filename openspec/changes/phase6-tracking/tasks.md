@@ -21,7 +21,7 @@ why T7 holds real-worm validation; why T8 runs against the upgraded substrate).
 | 2 | L1 plugin refactor + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1** — basic PPO-on-connectome trainable on existing grid (see Gate 1 § below for quantitative criteria) |
 | 3 | Corrected ASH/ADL contact-based nociception (owed correctness work per Logbook 011) | env-correctness | 1-2 weeks | — |
 | 4 | L2 initial pass — MUST architectures × 3 behaviours, grid-world substrate, corrected nociception | L2 (first pass) | 4-6 weeks | — |
-| 5 | Platform refactor — continuous-2D coordinates + continuous-action heads on existing MUST brains; plugin-parity verification | env-upgrade (platform) | 3-4 weeks | **Gate 2** — L1 plugin parity test (≤ 5 working days to add a 9th architecture) verified during this work |
+| 5 | Platform refactor — continuous-2D coordinates + continuous-action heads on existing MUST brains; plugin-parity verification | env-upgrade (platform) | 3-4 weeks | **Gate 2** — L1 plugin parity primary checks: ≤ 6 files touched + no per-architecture branches when adding a 9th architecture during this work; engineer-hours documented but not load-bearing |
 | 6 | Env fidelity — Rung 2 dynamic Fick's-law diffusion + log-concentration chemosensory adaptation kinetics | env-upgrade (fidelity) | 3-4 weeks | — |
 | 7 | L2 re-run on fully-upgraded substrate; real-worm validation; SHOULD/MAY architectures evaluated opportunistically | L2 (final) | 4-6 weeks | **Gate 3** — L2 results across MUST set in hand (see Gate 3 § below for quantitative criteria) |
 | 8 | L3 NEAT topology search on upgraded substrate | L3 | 6-10 weeks | — |
@@ -74,7 +74,7 @@ separately-typed connections.
 - [ ] T1.5 Vendor the connectome data (no network access at training time). Document the import provenance: upstream dataset DOI / commit, `cect` version, any transformations applied during import, any neurons / synapses dropped or merged, any metadata gaps.
 - [ ] T1.6 Forward-pass smoke test: instantiate a trivial PPO weight set on the connectome topology (chemical synapses only, strict-mask), run a single forward pass, verify shapes / no NaNs. Not a training run — a "does the substrate respond to inputs" sanity check.
 - [ ] T1.7 Unit + smoke tests for the data model and import pipeline; CI integration.
-- [ ] T1.8 T1↔T2 handshake: brief review of the T1 data model API against T2's planned plugin Protocol consumption pattern *before* T1 closes. If the data model forces a topology API that doesn't fit PPO/spiking/NEAT, fix in T1; otherwise mark the handshake complete.
+- [ ] T1.8 T1↔T2 handshake: T1 publishes a signature-level data-model API sketch (not implementation — just the public method signatures + key dataclass shapes for chemical-synapse iteration, gap-junction iteration, sensor/motor neuron lookup) as part of the T1 logbook. T2's OpenSpec change MUST cite this sketch in its design.md when scoping the plugin Protocol consumption pattern. If T2's design surfaces an API mismatch that PPO/spiking/NEAT consumption can't accommodate, T1 amends — but the handshake review happens during T2 design, not at T1 close (T2's design is the consumer that can actually validate the API). This sub-task ticks when the sketch is published; T2's design review is where the API earns its keep.
 - [ ] T1.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T1 row.
 - [ ] T1.10 Publish T1 logbook (suggested: `docs/experiments/logbooks/0XX-connectome-substrate.md`). Feeds into Gate 1's evidence base (full Gate 1 decision lands at T2 close).
 
@@ -109,8 +109,8 @@ Sub-tasks are coarse-grained; the L1 OpenSpec change elaborates them.
 - [ ] T2.4 Migrate the existing 19 architectures behind the new registry. The migration is mechanical for the 17 already-built MUST/SHOULD/MAY families; LSTMPPO + MLPPPO go first as the architectures that will carry the first L2 runs.
 - [ ] T2.5 Migration regression bar (per [design.md § Decision 3](design.md)). Phase 5 M1's PredatorBrain refactor precedent: documented byte-equivalence (or seeded-RNG-noise-tolerance, declared up-front) on at least one smoke config per migrated architecture, pre- and post-refactor. MLPPPO + LSTMPPO MUST hit byte-equivalence (these are the gate-1 + L2-first-pass workhorses); the other 17 may declare a noise tolerance if byte-equivalence is impractical.
 - [ ] T2.6 Wire the connectome-as-brain through the existing grid env via the new plugin interface. Train weights with PPO on klinotaxis (Phase 4's substrate carries forward; chemical-synapse strict-mask per [design.md § Decision 7](design.md)). This is the first closed-loop learning on the real *C. elegans* connectome — the platform claim, on the existing grid (the upgraded-substrate version lands in T7).
-- [ ] T2.7 Plugin-parity test (methodology). Document the procedure (or CI integration test) for measuring "how long to add a 9th architecture" — counting engineer-hours, files touched, tests required. T2 establishes the methodology and runs the test once on a hypothetical addition. NOTE: Gate 2's "≤ 5 working days" verdict comes during T5, not here — T5 re-runs the test against the env-upgrades work as a real-world verification.
-- [ ] T2.8 Documentation: plugin-developer guide; "how to add a new architecture family in ≤ 5 working days" walkthrough.
+- [ ] T2.7 Plugin-parity test (methodology). Document the procedure (or CI integration test) for measuring "how long to add a 9th architecture" — primary metrics are files-touched count + no-per-architecture-branches code-review verdict (Gate 2 G2.b + G2.c). Engineer-hours are recorded for future reference but are not a load-bearing pass criterion per Gate 2 G2.a. T2 establishes the methodology and runs the test once on a hypothetical addition; T5 re-runs it against the platform-refactor work as the real-world verification.
+- [ ] T2.8 Documentation: plugin-developer guide; "how to add a new architecture family — files to touch, no-branches discipline" walkthrough.
 - [ ] T2.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T2 row.
 - [ ] T2.10 Publish T2 logbook (suggested: `docs/experiments/logbooks/0XX-l1-plugin-interface.md`). Required reading material for Gate 1.
 
@@ -120,10 +120,10 @@ Sub-tasks are coarse-grained; the L1 OpenSpec change elaborates them.
 
 **Trigger**: T2 closed; connectome-as-brain trainable via the new plugin interface on the existing grid env.
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Mid-phase decision gates § Gate 1.
-**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 1](design.md) for the full criterion set (G1.a connectome loaded + cross-validation shipped; G1.b plugin registry instantiates both MLP-PPO and connectome through the same code path; G1.c PPO-on-connectome trains ≥ 100 episodes without NaNs and reaches ≥ 1.5× random-policy mean return on klinotaxis smoke; G1.d migration regression for MLPPPO + LSTMPPO byte-equivalent).
+**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 1](design.md) for the full criterion set (G1.a connectome loaded + cross-validation shipped; G1.b plugin registry instantiates both MLP-PPO and connectome through the same code path; G1.c PPO-on-connectome trains ≥ 100 episodes without NaNs, mean return over last 25 episodes ≥ frozen-random-weights forward-pass control by ≥ 10% AND monotonic improvement first-25 → last-25; G1.d migration regression byte-equivalent for MLPPPO + LSTMPPO only — connectome brain establishes own baseline in T2.6 and is evaluated against G1.c).
 **Decision must be written in**: the T2 OpenSpec change's published logbook (NOT `tasks.md`, which becomes hard to amend post-archive per Decision 6). This tracker links to the decision once it lands.
 
-- [ ] **Gate 1 decision recorded**: connectome substrate loaded + cross-validated (G1.a), L1 plugin registry instantiates connectome + MLPPPO via the same code path (G1.b), PPO-on-connectome on klinotaxis smoke trains ≥ 100 episodes without NaNs at ≥ 1.5× random-policy mean return (G1.c), and migration regression byte-equivalent for MLPPPO + LSTMPPO (G1.d) — all four → GO. Full 302-neuron import infeasible → hand-curated-subset PIVOT (Gate 1 re-evaluates against the subset). G1.c fails after diagnostic sequence AND subset pivot also fails → STOP (publishable substrate-engineering negative result).
+- [ ] **Gate 1 decision recorded**: connectome substrate loaded + cross-validated (G1.a), L1 plugin registry instantiates connectome + MLPPPO via the same code path (G1.b), PPO-on-connectome on klinotaxis smoke trains ≥ 100 episodes without NaNs AND beats the frozen-random-weights forward-pass control by ≥ 10% on last-25-episodes mean return AND shows monotonic improvement (G1.c), and migration regression byte-equivalent for MLPPPO + LSTMPPO (G1.d — connectome brain NOT in scope for byte-equivalence) — all four → GO. Full 302-neuron import infeasible → hand-curated-subset PIVOT (Gate 1 re-evaluates against the subset). G1.c fails after diagnostic sequence AND subset pivot also fails → STOP (publishable substrate-engineering negative result).
 - [ ] **Gate 1 decision link**: [add link to the T2 logbook where the decision is recorded]
 
 ## Tranche 3 — Corrected ASH/ADL Contact-Based Nociception
@@ -249,10 +249,10 @@ T5 closes Gate 2.
 
 ### T5.parity — Plugin-parity verification (closes Gate 2)
 
-- [ ] T5.parity.1 Add a hypothetical new architecture family (or revive a Phase 0-3 architecture that didn't make the MUST set) through the L1 plugin interface during T5. Measure engineer-hours and files touched; verify ≤ 5 working days of engineer-time per Gate 2 G2.a.
+- [ ] T5.parity.1 Add a hypothetical new architecture family (or revive a Phase 0-3 architecture that didn't make the MUST set) through the L1 plugin interface during T5. Record engineer-hours and files-touched count in the T5 logbook. Primary parity checks are G2.b (files touched ≤ 6) and G2.c (no per-architecture branches); engineer-hours are documented for future reference but the "≤ 5 working days" target is not load-bearing per Gate 2 G2.a (no pre-refactor baseline measurement exists to compare against).
 - [ ] T5.parity.2 File-count check: addition touches ≤ 6 files (registry registration + brain implementation + config class + config example + smoke test + docs) per Gate 2 G2.b.
 - [ ] T5.parity.3 Code-review check: no per-architecture branches in the simulation loop or training loop after the addition (per Gate 2 G2.c).
-- [ ] T5.parity.4 Continuous-substrate smoke training: at least the connectome and MLP-PPO MUST families train cleanly on klinotaxis on the new continuous-2D substrate with continuous-action heads; mean return within 25% of T4's grid-substrate baseline (per Gate 2 G2.d).
+- [ ] T5.parity.4 Continuous-substrate floor check (per Gate 2 G2.d): at least the connectome and MLP-PPO MUST families train cleanly on klinotaxis on the new continuous-2D substrate with continuous-action heads; **mean episode return ≥ 50% of T4's per-architecture grid-substrate baseline mean episode return for the same architecture**. The 50% floor is deliberately wide because grid-discrete-action and continuous-2D-continuous-action return scales are not directly comparable; this verifies the substrate change didn't break training, not an apples-to-apples ranking. The actual upgraded-substrate ranking lands in T7.
 - [ ] T5.parity.5 Document the parity verification in the T5 logbook; this is the evidence Gate 2 needs.
 
 ### T5 — analysis + logbook
@@ -266,10 +266,10 @@ T5 closes Gate 2.
 
 **Trigger**: T5 closed with the parity test verified during the continuous-action work.
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Mid-phase decision gates § Gate 2.
-**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 2](design.md) for the full criterion set (G2.a ≤ 5 working days engineer-time to add a 9th architecture; G2.b ≤ 6 files touched; G2.c no per-architecture branches in simulation/training loops; G2.d continuous-substrate smoke training within 25% of T4 grid baseline on connectome + MLPPPO).
+**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 2](design.md) for the full criterion set. Primary (load-bearing): G2.b files-touched ≤ 6; G2.c no per-architecture branches in simulation/training loops. Documented but not load-bearing: G2.a engineer-hours for the addition (no pre-refactor baseline measurement exists). Floor check: G2.d continuous-substrate smoke training mean episode return ≥ 50% of T4 per-architecture grid baseline on connectome + MLPPPO.
 **Decision must be written in**: the T5 OpenSpec change's published logbook. This tracker links to the decision once it lands.
 
-- [ ] **Gate 2 decision recorded**: ≤ 5 working days engineer-time (G2.a) AND ≤ 6 files touched (G2.b) AND no per-architecture branches (G2.c) AND continuous-substrate smoke training within 25% (G2.d) → GO. Any of G2.a/b/c fails → L1 refactor PIVOT (T5 amends to add 2-4 weeks of L1 refactor work before re-evaluating Gate 2). Post-pivot, plugin interface still fundamentally incompatible with one or more MUST families → STOP (connectome-specific interface scoped; parity test not met).
+- [ ] **Gate 2 decision recorded**: ≤ 6 files touched (G2.b PRIMARY) AND no per-architecture branches (G2.c PRIMARY) AND continuous-substrate floor check passes (G2.d ≥ 50% of T4 baseline) → GO. G2.a engineer-hours recorded for future reference. G2.b OR G2.c fails → L1 refactor PIVOT (T5 amends to add 2-4 weeks of L1 refactor work before re-evaluating Gate 2). Post-pivot, plugin interface still fundamentally incompatible with one or more MUST families → STOP (connectome-specific interface scoped; parity test not met).
 - [ ] **Gate 2 decision link**: [add link to the T5 logbook where the decision is recorded]
 
 ## Tranche 6 — Env Fidelity (Rung 2 dynamic Fick's-law + log-concentration chemosensory adaptation)
@@ -348,18 +348,18 @@ T7 closes Gate 3.
 
 ### T7 — cross-architecture analysis + env-upgrade delta + logbook
 
-- [ ] T7.analysis.ranking_upgraded — paired-seed Wilcoxon + bootstrap 95% CIs + Holm-Bonferroni across the 12 MUST cells (per Gate 3 G3.a). NOT corrected against T4 — T4 and T7 test different hypotheses.
+- [ ] T7.analysis.ranking_upgraded — paired-seed Wilcoxon + bootstrap 95% CIs across the 12 MUST cells (per Gate 3 G3.a). Multiple-comparisons strategy applied consistently with T4 per the documented choice in the T4 OpenSpec change's design.md (default Holm-Bonferroni within-pass, but the T4 design may argue for BH-FDR or experiment-wide correction; whichever T4 commits to is the strategy T7 reuses).
 - [ ] T7.analysis.env_delta — head-to-head T4-grid vs T7-upgraded ranking delta (RQ5). The load-bearing finding that justifies the deliberate T4-vs-T7 split per [design.md § Decision 1](design.md).
 - [ ] T7.analysis.connectome_final_ranking — explicit answer to "where does the wild-type connectome (chemical-synapse strict-mask) rank under PPO weight search on the upgraded substrate?" (per Gate 3 G3.b — "failed to train" is STOP, not tie).
 - [ ] T7.logbook — publish T7 logbook (suggested: `docs/experiments/logbooks/0XX-l2-final-pass.md`). Required reading material for Gate 3.
 
 **T7 risk-mitigation pivot (per roadmap)**: if the L2 re-run on the upgraded substrate fails to learn after diagnostic sequencing (topology density / continuous-action head parameterisation / reward shaping / gap-junction-as-learnable per Decision 7 amendment trigger), the finding is publishable as "PPO-on-the-real-connectome under continuous-physics requires further substrate work" — Phase 7 L4 plasticity work inherits the substrate-engineering question.
 
-## Gate 3 (closes Tranche 7, month ~6-8 cumulative): L2 results across architectures + real-worm validation in hand?
+## Gate 3 (closes Tranche 7, month ~7-8 cumulative): L2 results across architectures + real-worm validation in hand?
 
 **Trigger**: T7 closed with the cross-architecture ranking on the upgraded substrate + real-worm validation in hand.
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Mid-phase decision gates § Gate 3.
-**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 3](design.md) for the full criterion set (G3.a all 12 MUST cells at Phase 5 statistical bar + Holm-Bonferroni; G3.b connectome lands in the ranking with a clear wins/ties/loses verdict per behaviour; G3.c env-upgrade delta analysis shipped; G3.d real-worm validation shipped with quantitative agreement + CIs).
+**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 3](design.md) for the full criterion set (G3.a all 12 MUST cells at Phase 5 statistical bar with the documented multiple-comparisons strategy declared in the T4 OpenSpec change's design.md and applied consistently to T4 and T7; G3.b connectome lands in the ranking with a clear wins/ties/loses verdict per behaviour; G3.c env-upgrade delta analysis shipped; G3.d real-worm validation shipped with quantitative agreement + CIs).
 **Decision must be written in**: the T7 OpenSpec change's published logbook (likely the T7 logbook itself). This tracker links to the decision once it lands.
 
 - [ ] **Gate 3 decision recorded**: all 12 MUST cells (G3.a) AND connectome ranking clear (G3.b) AND env-upgrade delta (G3.c) AND real-worm validation (G3.d) → GO to T8. Partial MUST coverage (1-2 cells missing) → PIVOT-scope: Phase 6a (T1–T7) ships, Phase 6b (T8 NEAT + T9 synthesis) becomes follow-on. Phase 6 overshoots 10 months cumulative → PIVOT-scope for delivery reasons (same 6a/6b split). Fewer than half MUST cells reach the statistical bar after T7 risk-mitigation pivot → STOP (publishable negative result; Phase 7 L4 inherits substrate-engineering question).
