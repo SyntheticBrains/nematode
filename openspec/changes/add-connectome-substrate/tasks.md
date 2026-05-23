@@ -27,11 +27,11 @@ Maps to `phase6-tracking/tasks.md` T1.1 (import-library + data-source decision, 
 
 Maps to T1.2 in the tracker: connectome data model exposing chemical synapses + gap junctions as separately-typed connections per phase6-tracking Decision 7.
 
-- [ ] 3.1 Create `packages/quantum-nematode/quantumnematode/connectome/__init__.py` with explicit named re-exports matching project convention (e.g. `from .model import Neuron, ChemicalSynapse, GapJunction, Connectome, CellClass`; no wildcard imports)
-- [ ] 3.2 Implement `connectome/model.py` per design.md Decision T1.2: pydantic `Neuron`, `ChemicalSynapse`, `GapJunction`, `Connectome`; `CellClass = Literal["sensory", "interneuron", "motor", "muscle", "pharyngeal"]`
-- [ ] 3.3 Add field-level validation: chemical-synapse `weight: int = Field(gt=0)`; gap-junction `weight: int = Field(ge=0)`; neuron-set integrity (every synapse `pre`/`post`/`neuron_a`/`neuron_b` exists in `neurons` dict)
-- [ ] 3.4 Implement gap-junction canonical-form convention (alphabetically sorted `neuron_a < neuron_b`) to deduplicate `AVA-AVB` and `AVB-AVA` reports
-- [ ] 3.5 Closes T1.2 — tick the matching T1.2 box in `phase6-tracking/tasks.md`
+- [x] 3.1 Create `packages/quantum-nematode/quantumnematode/connectome/__init__.py` with explicit named re-exports matching project convention (e.g. `from .model import Neuron, ChemicalSynapse, GapJunction, Connectome, CellClass`; no wildcard imports)
+- [x] 3.2 Implement `connectome/model.py` per design.md Decision T1.2: pydantic `Neuron`, `ChemicalSynapse`, `GapJunction`, `Connectome`; `CellClass = Literal["sensory", "interneuron", "motor", "muscle", "pharyngeal"]`
+- [x] 3.3 Add field-level validation: chemical-synapse `weight: int = Field(gt=0)`; gap-junction `weight: int = Field(ge=0)`; neuron-set integrity (every synapse `pre`/`post`/`neuron_a`/`neuron_b` exists in `neurons` dict)
+- [x] 3.4 Implement gap-junction canonical-form convention (alphabetically sorted `neuron_a < neuron_b`) to deduplicate `AVA-AVB` and `AVB-AVA` reports
+- [x] 3.5 Closes T1.2 — tick the matching T1.2 box in `phase6-tracking/tasks.md`
 
 ## Phase 4 — Neuron classification table (supports T1.2 + T1.3)
 
