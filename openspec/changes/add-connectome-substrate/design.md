@@ -34,7 +34,7 @@ phase6-tracking Decision 2 picked Cook 2019 as the data and tentatively named Op
 - **Project maturity**: cect is pre-1.0 (v0.3.1, March 2026), small contributor base, no formal release-branch discipline. The roadmap commits Phase 6 to a 6-10 month timeline; binding L0 to a pre-1.0 niche dependency carries asymmetric upside (API convenience) vs downside (the dependency drifts or breaks during Phase 6).
 - **Transitive dependency cost**: cect drags in `pyneuroml`, `wormneuroatlas` (GPL-3.0), `hiveplotlib`, and others — none of which are needed for L0's data-loading job.
 
-The alternative — direct *Nature* Supplementary Information parsing with `pandas` and `openpyxl` (already in our dep tree) — costs ~150-300 lines of parser code we own. The cect-bundled data files we'd have used ARE the Cook 2019 + Witvliet 2021 *Nature* SI files; using them directly removes the wrapper layer that carries the risk.
+The alternative — direct *Nature* Supplementary Information parsing with `pandas` and `openpyxl` (neither currently in our dep tree, but both are standard, well-maintained packages with stable APIs) — costs ~150-300 lines of parser code we own plus two new dependencies. The cect-bundled data files we'd have used ARE the Cook 2019 + Witvliet 2021 *Nature* SI files; using them directly removes the wrapper layer that carries the risk. The two new dependencies are domain-neutral data-parsing libraries, not connectome-specific niche packages — they trade one pre-1.0 niche library (cect) for two production-grade standard libraries (pandas + openpyxl).
 
 **What we keep from cect-as-API-layer**:
 
@@ -115,7 +115,7 @@ NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]] = {
 
 **Why a static dict, not parsed from SI 1 at runtime**: the 302-entry classification is essentially a constant for *C. elegans* (the connectome wiring is fixed; cell identities are canonical). Parsing it from SI 1 at every load adds runtime cost and a fragile dependency on SI 1's exact sheet structure. Ship it as code; bump it in a follow-up change if the field updates the classification.
 
-**Coverage assertion**: tests assert exactly 302 entries with valid `cell_class` values; smoke-test coverage by class is in expected order-of-magnitude bands (sensory ~60-80, interneuron ~70-90, motor ~80-100, pharyngeal ~20, muscle entries not in 302 neuron set).
+**Coverage assertion**: tests assert exactly 302 entries with valid `cell_class` values (module-import-time `assert len(NEURON_CLASSIFICATION) == 302`); the T1 logbook reports the observed counts per class. No band-checking assertion is added in the test suite because cell-class boundaries are convention-dependent — Cook 2019 SI 1, WormAtlas, and the project's `docs/nematode_biology.md` (which states sensory ~40%, interneuron ~30%, motor ~30%) use slightly different boundary rules for polymodal / pharyngeal-vs-non-pharyngeal cells. The logbook records counts for forensic review; tests stay loose.
 
 ### Decision T1.5: Smoke-test forward pass uses NumPy + chemical-synapse strict-mask
 
@@ -125,16 +125,20 @@ The smoke test in `connectome/smoke.py` validates that the data model can suppor
 def run_forward_pass(c: Connectome, *, seed: int = 0) -> np.ndarray:
     """Single PPO-shaped forward pass on the connectome with random weights.
 
-    - Build chemical-synapse adjacency matrix (N×N), apply random weight per edge,
-      pin all non-existent edges to zero (strict-mask).
-    - Build gap-junction adjacency matrix (N×N), use Cook 2019 synapse count as
-      fixed weight (Decision 7).
-    - Forward pass: input synthetic vector through (chemical_W + gap_W) @ x, apply
-      tanh, return output of motor-neuron rows.
+    - Build chemical-synapse adjacency matrix (N×N), apply random weight per
+      edge sampled from N(0, 1/sqrt(fan_in)) where fan_in is the in-degree of
+      the post-synaptic neuron. Non-existent edges pinned to zero (strict-mask).
+      The 1/sqrt(fan_in) scaling prevents the pre-tanh sum from saturating —
+      Cook 2019 has up to ~50 chemical inputs per neuron, so an unnormalised
+      N(0, 1) init would push tanh to ±1 across most outputs.
+    - Build gap-junction adjacency matrix (N×N), use Cook 2019 junction count
+      as fixed weight (Decision 7).
+    - Forward pass: input synthetic vector through (chemical_W + gap_W) @ x,
+      apply tanh, return output of motor-neuron rows.
     """
 ```
 
-Output shape: number of motor neurons. Test asserts no NaN/Inf in output, output is non-trivially non-zero (not a degenerate constant), and the chemical-synapse adjacency has at least one entry (sanity guard against load failure that silently returns an empty connectome).
+Output shape: number of motor neurons. Test asserts: no NaN/Inf in output; output has non-zero variance across the motor-neuron rows (catches a degenerate constant output AND a fully-saturated ±1 output); the chemical-synapse adjacency has at least one entry (sanity guard against load failure that silently returns an empty connectome).
 
 **Why NumPy and not PyTorch**: smoke test is data-validation-grade, not gradient-grade. Plain NumPy is one less import in the smoke-test path and makes the test fast (< 1 second). PyTorch enters the picture in T2 when the connectome becomes a `Brain` Protocol implementation with real `learn()` semantics.
 

@@ -23,8 +23,8 @@ Six files under `packages/quantum-nematode/quantumnematode/connectome/`:
 - `__init__.py` — public API surface for downstream consumers (T2 plugin design consumes this)
 - `model.py` — typed data model: `Neuron`, `ChemicalSynapse`, `GapJunction`, `Connectome`. Per Decision 7, chemical synapses and gap junctions are **separately-typed connection categories**; the dual-edge case (AVA↔AVB) is represented as two distinct edge entries with type metadata. Neuron `cell_class` is `Literal["sensory","interneuron","motor","muscle","pharyngeal"]` derived from Cook 2019 SI 1 cell-list metadata
 - `neurons.py` — hand-curated 302-neuron classification table sourced from Cook 2019 SI 1 cell-list + cross-checked against WormAtlas (wormatlas.org). Static dict mapping neuron name → `cell_class` + `neurotransmitter`. Becomes the canonical project reference for *C. elegans* neuron identities for the rest of Phase 6+
-- `loader.py` — `load_cook_2019_hermaphrodite()` and `load_witvliet_2021_adult(dataset: Literal[7, 8] = 8)` returning `Connectome` instances. Reads the vendored XLSX files directly via pandas + openpyxl; constructs `Connectome` instances using the neuron classification dict in `neurons.py`. Pure stdlib + pandas — no third-party connectome dependency
-- `validate.py` — neuron-count check (302 hermaphrodite), known-pathway check (≥ 1 classical sensory → interneuron → motor pathway, e.g. ASE → AIY → RIA → SMD), cross-validation between Cook 2019 and Witvliet 2021 nerve-ring subset returning a `DivergenceReport`
+- `loader.py` — `load_cook_2019_hermaphrodite()` and `load_witvliet_2021_adult()` returning `Connectome` instances. Reads the vendored XLSX files directly via pandas + openpyxl; constructs `Connectome` instances using the neuron classification dict in `neurons.py`. Pure stdlib + pandas — no third-party connectome dependency
+- `validate.py` — neuron-count check (302 hermaphrodite), known-pathway check (≥ 1 of three canonical sensory → interneuron → motor pathways from the Bargmann lab klinotaxis / thermotaxis / nociception literature: ASE → AIY → RIA → SMD, AFD → AIY → RIA → SMD, or ASH → AVA → VA/DA), cross-validation between Cook 2019 and Witvliet 2021 nerve-ring subset returning a `DivergenceReport`
 - `smoke.py` — instantiate a trivial PPO weight tensor over the connectome's chemical synapses (strict-mask: weights pinned to zero outside the wild-type adjacency), run a single forward pass on synthetic input, verify output shape + no NaNs/Infs. Per Decision 7, gap junctions participate at their fixed Cook 2019 counts in the forward pass
 
 The forward-pass smoke check uses PPO-shaped weight matrices but does NOT instantiate a `Brain` Protocol implementation, does NOT register a new `BrainType` enum value, and does NOT touch the env. It validates that the data model can support a learned-weight forward computation; the actual plugin wiring is T2's job.
@@ -36,9 +36,9 @@ The forward-pass smoke check uses PPO-shaped weight matrices but does NOT instan
 - `data/connectome/witvliet_2021_dataset8_adult.xlsx` — adult worm (dataset 8) from the Witvliet 2021 developmental connectome series, used for T1.4 nerve-ring cross-validation
 - `data/connectome/PROVENANCE.md` — per-file: source URL (Nature SI direct link), DOI of the paper the SI accompanies, SHA256, retrieval date, citation, redistribution rationale (academic research re-use of *Nature* SI is standard practice; we cite the paper)
 
-### 3. No New Connectome-Package Dependency
+### 3. Two New Standard Dependencies (No Third-Party Connectome Package)
 
-`pandas` and `openpyxl` are already in the dependency tree (verified). No additional package needs to be added for the connectome loader. This is a deliberate decision — see [design.md § Decision 2 revisited](design.md).
+Add `pandas>=2.2` and `openpyxl>=3.1` to `packages/quantum-nematode/pyproject.toml`. Neither is currently in the dependency tree — verified against both `pyproject.toml` files and `uv.lock`. These are standard, well-maintained packages (not niche connectome-domain libraries) needed to parse the vendored XLSX files. No third-party connectome-domain package (cect, wormneuroatlas, etc.) is added — see [design.md § Decision T1.1](design.md) for the rationale.
 
 ### 4. `.gitattributes` LFS Rules
 
@@ -82,7 +82,7 @@ New directory `packages/quantum-nematode/tests/quantumnematode_tests/connectome/
 
 **Configs:** None.
 
-**Dependencies:** None added — `pandas` and `openpyxl` already in the tree.
+**Dependencies:** Two standard packages added to `packages/quantum-nematode/pyproject.toml`: `pandas>=2.2` and `openpyxl>=3.1`. No third-party connectome-domain package added.
 
 **Tests:**
 

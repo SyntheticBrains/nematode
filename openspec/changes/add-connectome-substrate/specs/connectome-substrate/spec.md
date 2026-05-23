@@ -10,15 +10,15 @@ The `quantumnematode.connectome` subpackage SHALL load the *C. elegans* connecto
 - **WHEN** `load_cook_2019_hermaphrodite()` is called
 - **THEN** a `Connectome` instance SHALL be returned
 - **AND** `len(connectome.neurons) == 302`
-- **AND** `len(connectome.chemical_synapses) > 5000` (Cook 2019's published bound is ~7700; loose lower bound catches load failures)
-- **AND** `len(connectome.gap_junctions) > 600` (sanity bound)
+- **AND** `len(connectome.chemical_synapses) > 5000` (loose lower bound; project docs at `docs/nematode_biology.md:644` cite ~7000 chemical synapses for Cook 2019 hermaphrodite — the exact count depends on edge-collation conventions)
+- **AND** `len(connectome.gap_junctions) > 600` (loose lower bound vs project-documented ~900)
 - **AND** every entry in `chemical_synapses` and `gap_junctions` references neurons present in the `neurons` dict
 - **AND** the `source` field is `"cook_2019_hermaphrodite"` and `version` records the SI 5 publication metadata
 
 #### Scenario: Loading the Witvliet 2021 adult connectome
 
 - **GIVEN** the vendored `data/connectome/witvliet_2021_dataset8_adult.xlsx` file is present
-- **WHEN** `load_witvliet_2021_adult(dataset=8)` is called
+- **WHEN** `load_witvliet_2021_adult()` is called
 - **THEN** a `Connectome` instance SHALL be returned
 - **AND** `len(connectome.neurons)` is in the nerve-ring range (~150-200, smaller than Cook 2019's whole-animal 302)
 - **AND** cross-dataset name aliases (e.g. `RIA-L` → `RIAL`) SHALL be applied so the result matches Cook 2019's canonical naming
@@ -72,13 +72,20 @@ The connectome subpackage SHALL ship a hand-curated 302-neuron classification ta
 - **WHEN** `NEURON_CLASSIFICATION` is inspected
 - **THEN** `len(NEURON_CLASSIFICATION) == 302` (asserted at module import time as a fail-fast guard)
 - **AND** every entry's `cell_class` SHALL be a valid `CellClass` value
-- **AND** coverage by class SHALL be in expected bands: sensory 60-80, interneuron 70-90, motor 80-100, pharyngeal ~20 (muscle is not in the 302-neuron set)
+- **AND** coverage by class SHALL be reported in the T1 logbook as observed counts (no exact-band assertion in the test suite — class-boundary conventions differ between Cook 2019 SI 1, WormAtlas, and project docs for polymodal / pharyngeal-vs-non-pharyngeal cells)
 
 #### Scenario: Canonical sensory neurons are classified correctly
 
 - **GIVEN** a loaded Cook 2019 `Connectome`
 - **WHEN** sensory neurons (ASEL, ASER, AFDL, AFDR, ASHL, ASHR, ADLL, ADLR, AWAL, AWAR, AWCL, AWCR, URXL, URXR, BAGL, BAGR) are looked up via `connectome.neurons[name].cell_class`
 - **THEN** every one SHALL be `"sensory"`
+
+#### Scenario: Known klinotaxis / thermotaxis / nociception pathway is present
+
+- **GIVEN** a loaded Cook 2019 `Connectome`
+- **WHEN** `validate_known_pathways(c)` is called
+- **THEN** the validator SHALL pass if at least one of the following pathways traces successfully through the connectome's chemical synapses: ASE → AIY → RIA → SMD (klinotaxis; Gray et al. 2005, Iino & Yoshida 2009); AFD → AIY → RIA → SMD (thermotaxis); ASH → AVA → VA/DA (nociception)
+- **AND** the validator's result SHALL document which pathway(s) were found, for forensic review in the T1 logbook
 
 #### Scenario: Canonical motor neurons are classified correctly
 
@@ -117,14 +124,14 @@ The connectome subpackage SHALL provide a `run_forward_pass(c, *, seed=0) -> np.
 - **WHEN** `run_forward_pass(c, seed=0)` is called
 - **THEN** the function SHALL return a finite `np.ndarray` of shape `(n_motor_neurons,)`
 - **AND** the output SHALL NOT contain NaN or Inf values
-- **AND** the output SHALL NOT be a degenerate constant vector (non-trivial activity through the network)
+- **AND** the output SHALL have non-zero variance across the motor-neuron rows (catches both degenerate constant outputs AND fully-saturated ±1 outputs caused by inadequate weight scaling)
 
-#### Scenario: Chemical-synapse strict-mask applied
+#### Scenario: Chemical-synapse strict-mask applied with fan-in-normalised initialisation
 
 - **GIVEN** a loaded `Connectome` with the chemical-synapse adjacency built into a learnable weight matrix `W_chem`
 - **WHEN** the forward pass is constructed
 - **THEN** every (i, j) pair where Cook 2019 reports no chemical synapse SHALL have `W_chem[i, j] == 0`
-- **AND** non-zero entries SHALL be sampled from a seeded random distribution (deterministic by `seed`)
+- **AND** non-zero entries SHALL be sampled from a seeded random distribution `N(0, 1/sqrt(fan_in))` where `fan_in` is the in-degree of the postsynaptic neuron (deterministic by `seed`; fan-in normalisation prevents tanh saturation given Cook 2019 has up to ~50 chemical inputs per neuron)
 
 #### Scenario: Gap junctions participate at fixed Cook 2019 weights
 
