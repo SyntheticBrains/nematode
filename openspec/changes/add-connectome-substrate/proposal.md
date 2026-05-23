@@ -50,13 +50,13 @@ New directory `packages/quantum-nematode/tests/quantumnematode_tests/connectome/
 
 - `test_loader.py` — Cook 2019 + Witvliet 2021 load correctly; neuron count = 302; expected sensory neurons (ASE, AFD, ASH, ADL, AWA, AWC, URX, BAG) present with correct cell-class labels; expected motor-neuron classes (VB / DB / VA / DA / VC / DD) present
 - `test_model.py` — data-model invariants: no orphan synapses (every edge's pre/post neuron exists in `neurons`); chemical synapses and gap junctions are separately-iterable; the AVA↔AVB dual-edge case is represented as two distinct entries (one `ChemicalSynapse`, one `GapJunction`), not one entry; chemical-synapse weights are positive integers; gap-junction weights are non-negative integers
-- `test_neurons.py` — neuron-classification table has 302 entries; every entry has a valid `cell_class`; coverage by class is sane (~70 sensory / ~120 inter / ~120 motor / pharyngeal — order-of-magnitude check, not exact)
-- `test_validate.py` — neuron-count validator flags an artificially-broken (e.g. 301-neuron) connectome; known-pathway validator finds ASE → AIY → RIA → SMD; `cross_validate(cook_2019, witvliet_2021_adult)` produces a `DivergenceReport` with non-empty agreement set and documented divergence map
-- `test_smoke.py` — `smoke.run_forward_pass()` returns finite output of expected shape; raises if connectome's chemical-synapse adjacency is zero-dense (sanity guard)
+- `test_neurons.py` — neuron-classification table has 302 entries; every entry has a valid `cell_class`. Coverage-by-class is NOT band-asserted in tests (boundaries are convention-dependent across Cook 2019 SI 1 / WormAtlas / project docs); the test prints class counts for forensic review in the T1 logbook
+- `test_validate.py` — neuron-count validator flags an artificially-broken (e.g. 301-neuron) connectome; known-pathway validator passes if ≥ 1 of three Bargmann-lab canonical pathways traces successfully (klinotaxis ASE → AIY → RIA → SMD, thermotaxis AFD → AIY → RIA → SMD, or nociception ASH → AVA → VA/DA); `cross_validate(cook_2019, witvliet_2021_adult)` produces a `DivergenceReport` with non-empty agreement set and documented divergence map
+- `test_smoke.py` — `smoke.run_forward_pass()` returns finite output of expected shape; output has non-zero variance across motor-neuron rows (catches degenerate constants AND fully-saturated outputs); raises if connectome's chemical-synapse adjacency is zero-dense (sanity guard)
 
 ### 6. T1 Logbook + T1↔T2 API Sketch
 
-- `docs/experiments/logbooks/0XX-connectome-substrate.md` — T1 logbook: implementation summary, data-model decisions, cross-validation findings, any divergences from Cook 2019 documented neuron counts (G1.a evidence), T1.4 divergence map summary, and the T1↔T2 signature-level API sketch (per phase6-tracking T1.8). The sketch lists the public method signatures + key dataclass shapes that T2's plugin Protocol design will consume
+- `docs/experiments/logbooks/022-connectome-substrate.md` — T1 logbook: implementation summary, data-model decisions, cross-validation findings, any divergences from Cook 2019 documented neuron counts (G1.a evidence), T1.4 divergence map summary, and the T1↔T2 signature-level API sketch (per phase6-tracking T1.8). The sketch lists the public method signatures + key dataclass shapes that T2's plugin Protocol design will consume
 
 ### 7. Tracking + Roadmap Updates
 
@@ -90,7 +90,7 @@ New directory `packages/quantum-nematode/tests/quantumnematode_tests/connectome/
 
 **Docs:**
 
-- `docs/experiments/logbooks/0XX-connectome-substrate.md` — T1 logbook + T1↔T2 API sketch
+- `docs/experiments/logbooks/022-connectome-substrate.md` — T1 logbook + T1↔T2 API sketch
 - `openspec/changes/phase6-tracking/tasks.md` — T1.x sub-tasks ticked
 - `docs/roadmap.md` Phase 6 Tranche Tracker — T1 row updated
 

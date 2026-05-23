@@ -79,7 +79,7 @@ class Connectome(BaseModel):
     chemical_synapses: list[ChemicalSynapse]
     gap_junctions: list[GapJunction]
     source: str    # e.g. "cook_2019_hermaphrodite"
-    version: str   # e.g. "Cook et al. 2019 Nature, SI 5 v2019-06-26"
+    version: str   # e.g. "Cook et al. 2019 Nature, SI 5" (vendored snapshot — actual value resolves from PROVENANCE.md per Phase 2.7)
 ```
 
 **Critical dual-edge case** (phase6-tracking Decision 7): many *C. elegans* neuron pairs are connected by BOTH a chemical synapse AND a gap junction. AVA↔AVB is the canonical example. The data model represents these as two separate entries (one `ChemicalSynapse` AND one `GapJunction`), never as a single edge with two weight attributes. A test in `test_model.py` asserts AVA↔AVB exists as both entry types.
@@ -205,9 +205,9 @@ Deferred to later tranches; recorded here so T2-T9 don't re-litigate:
 
 ## Risks
 
-1. **Cook 2019 SI 5's sheet structure varies from what the loader expects.** Mitigation: integration test loads the actual file and asserts neuron count = 302 and chemical-synapse count > 5000 (Cook 2019's published bound is ~7700 connections). If counts deviate, the loader fails loudly at T1 close rather than silently in T2.
+1. **Cook 2019 SI 5's sheet structure varies from what the loader expects.** Mitigation: integration test loads the actual file and asserts neuron count = 302 and chemical-synapse count > 5000 (the project docs at `docs/nematode_biology.md:644` cite ~7000 chemical synapses; the exact count depends on edge-collation conventions). If counts deviate dramatically, the loader fails loudly at T1 close rather than silently in T2.
 2. **Witvliet 2021 dataset 8 has different neuron-name conventions than Cook 2019.** Mitigation: cross-validation step explicitly handles name aliasing (e.g. `RIAL` vs `RIA-L` — known variant); aliasing rules go in `connectome/neurons.py` as a canonical-name map.
-3. **The hand-curated 302-neuron classification is brittle — one typo in a CellClass label breaks downstream lookups.** Mitigation: `test_neurons.py` asserts every entry is valid, count is exactly 302, coverage by class is in expected bands.
+3. **The hand-curated 302-neuron classification is brittle — one typo in a CellClass label breaks downstream lookups.** Mitigation: `test_neurons.py` asserts every entry is valid and count is exactly 302; the T1 logbook reports the observed counts per class for forensic review (no band-checking assertion — boundaries are convention-dependent).
 4. **Vendoring the *Nature* SI files raises a legal-review-style question for the team.** Mitigation: PROVENANCE.md cites the standard academic-research re-use rationale; if legal review surfaces an issue at PR-review time, fall back to fetch-on-first-use with the loader caching to `data/connectome/` (one-line code change).
 5. **Pydantic v1/v2 import paths**: project is on Pydantic 2.11.4+ per AGENTS.md, so we use `pydantic.BaseModel` and `pydantic.Field` directly. No fallback shim needed.
-6. **`openpyxl` version pin**: the loader uses `pd.read_excel(..., engine="openpyxl")`. `openpyxl` is in the existing dep tree but if the version is ancient enough to lack XLSX-format support for the *Nature* SI files (unlikely — *Nature* SIs are standard XLSX), bump `openpyxl` in the same change.
+6. **`openpyxl` version compatibility**: the loader uses `pd.read_excel(..., engine="openpyxl")`. `openpyxl` is added in this change (Phase 1.6) at `>=3.1` — the floor is set above 3.0 to ensure modern XLSX-format support for the *Nature* SI files. If a future SI file uses a newer format feature, bump the floor in a follow-up change.

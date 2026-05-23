@@ -80,18 +80,28 @@ The connectome subpackage SHALL ship a hand-curated 302-neuron classification ta
 - **WHEN** sensory neurons (ASEL, ASER, AFDL, AFDR, ASHL, ASHR, ADLL, ADLR, AWAL, AWAR, AWCL, AWCR, URXL, URXR, BAGL, BAGR) are looked up via `connectome.neurons[name].cell_class`
 - **THEN** every one SHALL be `"sensory"`
 
+#### Scenario: Canonical motor neurons are classified correctly
+
+- **GIVEN** a loaded Cook 2019 `Connectome`
+- **WHEN** motor neurons matching the prefix patterns `VB`, `DB`, `VA`, `DA`, `VC`, `DD` are looked up
+- **THEN** every one SHALL be `"motor"`
+
+### Requirement: Structural Validators (neuron count + known pathways)
+
+The connectome subpackage SHALL provide structural validators that confirm a loaded `Connectome` matches expected *C. elegans* biology before downstream consumers (T2 plugin design, T4 L2 PPO training) depend on it.
+
+#### Scenario: Neuron count validator
+
+- **GIVEN** a loaded Cook 2019 hermaphrodite `Connectome`
+- **WHEN** `validate_neuron_count(c)` is called
+- **THEN** the validator SHALL pass if `len(c.neurons) == 302` and SHALL fail with a descriptive error otherwise
+
 #### Scenario: Known klinotaxis / thermotaxis / nociception pathway is present
 
 - **GIVEN** a loaded Cook 2019 `Connectome`
 - **WHEN** `validate_known_pathways(c)` is called
 - **THEN** the validator SHALL pass if at least one of the following pathways traces successfully through the connectome's chemical synapses: ASE → AIY → RIA → SMD (klinotaxis; Gray et al. 2005, Iino & Yoshida 2009); AFD → AIY → RIA → SMD (thermotaxis); ASH → AVA → VA/DA (nociception)
 - **AND** the validator's result SHALL document which pathway(s) were found, for forensic review in the T1 logbook
-
-#### Scenario: Canonical motor neurons are classified correctly
-
-- **GIVEN** a loaded Cook 2019 `Connectome`
-- **WHEN** motor neurons matching the prefix patterns `VB`, `DB`, `VA`, `DA`, `VC`, `DD` are looked up
-- **THEN** every one SHALL be `"motor"`
 
 ### Requirement: Cross-Validation Against Witvliet 2021
 
