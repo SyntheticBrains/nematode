@@ -1,14 +1,16 @@
 ## Overview
 
-Phase 6 (Connectome Substrate & Architecture Comparison) is a four-layer build (L0 connectome substrate → L1 architecture-plugin → L2 PPO weight search → L3 NEAT topology search) plus continuous-physics + Rung 2 chemical gradients + corrected ASH/ADL nociception + ≥1 real-worm validation, with three mid-phase decision gates. The roadmap (`docs/roadmap.md` § Phase 6, approximately lines 569-710) is the canonical strategic document; this tracking change is its sub-task working artefact. Phase 6 spans ~6-10 months and many AI sessions. This design records the cross-session decisions whose re-litigation would consume disproportionate session budget, so each subsequent milestone change can pick up the framing without re-deriving it.
+Phase 6 (Connectome Substrate & Architecture Comparison) is a four-layer build (L0 connectome substrate → L1 architecture-plugin → L2 PPO weight search → L3 NEAT topology search) plus continuous-physics + Rung 2 chemical gradients + corrected ASH/ADL nociception + ≥1 real-worm validation, with three mid-phase decision gates. The roadmap (`docs/roadmap.md` § Phase 6, approximately lines 569-735) is the canonical strategic document; this tracking change is its sub-task working artefact. Phase 6 spans ~6-10 months and many AI sessions. This design records the cross-session decisions whose re-litigation would consume disproportionate session budget, so each subsequent milestone change can pick up the framing without re-deriving it.
+
+The decisions below were refined post-roadmap with the help of a parallel L0-planning session that surfaced four scope-level pushbacks against the roadmap's initial framing — captured here as Decisions 1, 3, 4, and 7.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- A future AI session can answer "what's the next Phase 6 layer/milestone?" by reading two files (this `tasks.md` and the roadmap Phase 6 block).
+- A future AI session can answer "what's the next Phase 6 tranche?" by reading two files (this `tasks.md` and the roadmap Phase 6 block).
 - Each Phase 6 milestone PR has a single canonical place to mark progress (this `tasks.md`).
-- Five Phase 6 design decisions (tranching, connectome data source, gate discipline, fixed architecture-family scope, fixed behavioural scope) are recorded once, not re-derived per session.
+- Seven Phase 6 design decisions (tranching with explicit ordering, connectome data source, L1 plugin parity as real refactor work, tightened MUST architecture-family scope, fixed behavioural scope, mid-phase gate discipline, L2 connectome-substrate semantics) are recorded once, not re-derived per session.
 - The three mid-phase gate decisions are indexed from this change so a reader can see, at a glance, where each go/no-go landed in writing.
 - The tracking artefact decays gracefully: when the Phase 6 synthesis logbook publishes, this change archives alongside it.
 
@@ -16,26 +18,40 @@ Phase 6 (Connectome Substrate & Architecture Comparison) is a four-layer build (
 
 - Real-time progress dashboards (the roadmap status table + this tracker's status headers are enough).
 - Automated milestone status (humans/agents update the checklist manually as part of milestone PRs).
-- Replacing per-layer / per-milestone OpenSpec changes — those still happen; this scaffold is *additional* coordination.
-- Inventing the Phase 6 strategy — the strategy lives in the roadmap. This change records the *tracking discipline* around it.
-- GitHub Issues / Project boards — optional mirror, decided at PR time per milestone.
+- Replacing per-tranche / per-milestone OpenSpec changes — those still happen; this scaffold is *additional* coordination.
+- Inventing the Phase 6 strategy — the strategy lives in the roadmap. This change records the *tracking discipline* + the sub-roadmap-level scope decisions around it.
+- Pre-deciding implementation details that belong inside per-tranche changes (see § What This Change Explicitly Does Not Decide below).
 
 ## Design Decisions
 
-### Decision 1: Tranching policy — Phase 6 splits along the L0/L1/L2/L3 layer boundaries
+### Decision 1: Tranching policy — Phase 6 has eight tranches with deliberate ordering, not a monolithic L0 → L1 → L2 → L3 block
 
-Phase 6 is decomposed into tranches that map directly to the roadmap's four-layer stack:
+Phase 6 is decomposed into eight tranches. The ordering matters: corrected ASH/ADL nociception precedes the L2 first pass; env upgrades sit between two L2 passes deliberately so the env-upgrade delta is itself a finding.
 
-- **Tranche 1 — L0 only.** Connectome data import + validation + cross-checks + forward-pass smoke. No plugin work; no training; no behaviour evaluation. First OpenSpec change: `add-connectome-substrate`.
-- **Tranche 2 — L1 + first L2 attempt.** Architecture-plugin interface refactor; plugin-parity test; the first PPO-on-connectome training run that exercises L0+L1+L2 end-to-end. This tranche triggers **Gate 1** (month ~2 — L0 working in anger).
-- **Tranche 3 — L2 across the MUST architecture-family set.** Full weight-search sweep on all eight MUST families × three behaviours. Triggers **Gate 2** (month ~4-5 — L1 plugin parity proven) and feeds **Gate 3** (month ~7-8 — L2 results in hand).
-- **Tranche 4 — L3 NEAT topology search + supporting infrastructure.** TensorNEAT integration; matched-vs-asymmetric capacity head-to-head; the unconstrained-vs-connectome ranking.
-- **Tranche 5 — Cross-cutting substrate work.** Continuous-2D physics; Rung 2 chemical gradients with log-concentration adaptation kinetics; corrected ASH/ADL nociception; ≥1 real-worm validation. Some of this may interleave with Tranches 2-3 if a target behaviour needs it earlier (e.g. predator evasion needs the corrected nociception); the tracker accommodates re-sequencing without re-design.
-- **Tranche 6 — Phase 6 synthesis logbook.** Closes Phase 6; archives this change.
+| Tranche | Scope | Roadmap layer | Approx duration | Gate trigger |
+|---|---|---|---|---|
+| 1 | L0 connectome ingest — Cook 2019 via OpenWorm `cect`, vendored data, cross-validated against Witvliet 2021, smoke-test forward pass, no env wiring | L0 | 2-3 weeks | — |
+| 2 | L1 plugin refactor + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1** — basic PPO-on-connectome trainable on existing grid |
+| 3 | Corrected ASH/ADL contact-based nociception (owed correctness work per Logbook 011) | env-correctness | 1-2 weeks | — |
+| 4 | L2 initial pass — MUST architectures × 3 behaviours, grid-world substrate, corrected nociception | L2 (first pass) | 4-6 weeks | — |
+| 5 | Env upgrades — Rung 2 dynamic Fick's-law + log-concentration chemosensory adaptation + continuous 2D + continuous-action heads on existing brains | env-upgrade | 6-8 weeks | **Gate 2** — L1 plugin parity test (adding a 9th architecture ≤ 1 week) verified during this work |
+| 6 | L2 re-run on upgraded substrate; real-worm validation; SHOULD/MAY architectures evaluated opportunistically | L2 (final) | 4-6 weeks | **Gate 3** — L2 results across MUST set in hand |
+| 7 | L3 NEAT topology search on upgraded substrate | L3 | 6-10 weeks | — |
+| 8 | Phase 6 synthesis logbook | — | 1-2 weeks | — |
 
-**Why this split.** Each tranche has a separable failure mode and a separable pivot path. The L0 Risk-mitigation row ("if c302 takes > 2 months, drop to hand-curated subset") needs Tranche 1's evidence in isolation — bundling L0 with L1 buries the substrate-import diagnosis under a plugin-design diagnosis. Same logic at every layer: Gate 2 (L1 parity) is decidable only if L1 ships before the full L2 sweep starts.
+Total: 27-42 weeks — within the roadmap's 6-10-month aspirational range at the lower end, with realistic slack.
 
-**Alternative considered.** A single mega-change `add-phase6` covering all of L0+L1+L2+L3. Rejected because it would (a) be impossible to review and (b) defeat the per-gate decision discipline that Decision 3 below relies on.
+**Why this ordering** (load-bearing rationale; deviating requires amending this change):
+
+- **L0 before L1**: the L0 Risk-mitigation pivot ("if c302 takes > 2 months, drop to hand-curated subset") needs Tranche 1's evidence in isolation. Bundling L0 with L1 buries the substrate-import diagnosis under a plugin-design diagnosis.
+- **Corrected ASH/ADL (T3) before L2 first pass (T4)**: predator evasion is one of three Phase 6 behaviours; the corrected nociception is owed-correctness work per Logbook 011. Doing it after L2 first pass means rerunning every predator-evasion L2 cell.
+- **L2 first pass (T4) before env upgrades (T5)**: T4 produces a publishable intermediate result — connectome on the existing grid substrate, directly comparable to Phase 5's grid-world baseline. Without T4, the first L2 result has two confounded variables (new substrate + new env).
+- **Env upgrades (T5) between L2 first pass (T4) and L2 re-run (T6)**: this is the load-bearing ordering choice. The env-upgrade delta (Rung 2 + continuous-2D + continuous-action heads, T4→T6) becomes its own finding — "how much does the substrate upgrade change the architecture ranking?". Combining T4 and T6 into one L2 pass loses that delta entirely.
+- **Continuous-action heads in T5, not T4**: every existing PPO-family brain is discrete-action (4-action `DEFAULT_ACTIONS` per `packages/quantum-nematode/quantumnematode/brain/actions.py:8-31`). Gaussian-policy heads are a meaningful refactor; they live with the continuous-2D physics work in T5, not gating T4. T4 keeps the discrete 4-action substrate.
+- **Real-worm validation in T6, not standalone**: the validation needs defensible behavioural numbers from the upgraded substrate before comparing to Bargmann chemotaxis indices or escape latencies. Running it earlier (against the grid baseline) compares against a known-low-fidelity intermediate.
+- **L3 (T7) after T6**: NEAT topology search on the upgraded substrate uses the L2-final results as its baseline. Running T7 against the grid substrate would invalidate its conclusions the moment T5/T6 ship.
+
+**Alternative considered.** A single mega-change `add-phase6` covering all of L0+L1+L2+L3 (the roadmap's implicit framing). Rejected because it would be impossible to review, would defeat the per-gate decision discipline that Decision 6 below relies on, and would collapse the deliberate T4-vs-T6 env-delta finding into a single confounded L2 sweep.
 
 ### Decision 2: Connectome data source — Cook 2019 hermaphrodite via OpenWorm `cect` is L0 primary; c302/NeuroML is deferred to an export path
 
@@ -46,32 +62,44 @@ The L0 connectome import has two plausible primary sources:
 
 **Why this matters now and not inside `add-connectome-substrate`.** The Risk-mitigation row "L0 c302 import takes > 2 months → drop to hand-curated subset" assumes c302 is the import path. With Option A as primary, the failure mode tightens to "Cook 2019 via `cect` doesn't expose the metadata we need" — a much narrower diagnosis, and one where the hand-curated-subset pivot becomes a deliberate substrate-engineering decision rather than a c302-format escape valve. Recording the choice here means `add-connectome-substrate` can frame its scope around Option A from the start; it does not have to argue for it.
 
+**Cross-validation strategy**: Witvliet 2021 nerve-ring subset against Cook 2019 hermaphrodite (~50 lines of pandas — cheap; ships inside Tranche 1).
+
 **Export path remains in scope.** If a later Phase 6 sub-task needs to hand a topology to OpenWorm Sibernetic for body-physics validation, NeuroML/c302 returns as the export format. That's a different concern from import-time data quality and lives in the Future Directions arc.
 
-### Decision 3: Mid-phase gate discipline — every gate produces a written go/no-go inside the relevant OpenSpec change
+### Decision 3: L1 plugin parity is real refactor work, not "we already have a registry"
 
-The roadmap defines three mid-phase decision gates (see `docs/roadmap.md` § Phase 6 § Mid-phase decision gates):
+The codebase today has a `setup_brain_model()` dispatcher at `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` (a giant if/elif chain over the `BrainType` enum, ~3 lines per architecture) plus a `Brain` Protocol at `packages/quantum-nematode/quantumnematode/brain/arch/_brain.py:346-368` (with surface `run_brain` / `update_memory` / `prepare_episode` / `post_process_episode` / `copy`). So "swap in another brain" works today *if* the new brain is one of the existing 19. The roadmap's "≤ 1 week to add a new architecture" plugin-parity test is NOT met by the current dispatcher style — adding a new architecture today touches at least four files (enum, dispatcher, config class, YAML loader).
 
-- **Gate 1 (month ~2)**: L0 import working — connectome substrate loaded, validated, basic-MLP-PPO trainable on it.
-- **Gate 2 (month ~4-5)**: L1 plugin parity — adding a new architecture demonstrably ≤ 1 week of work.
-- **Gate 3 (month ~7-8)**: L2 results across architectures — weight-search results across the MUST architecture-family set and all three behaviours in hand.
+L1's job is twofold:
 
-Each gate is the decision boundary between a tranche and its successor. Each must produce a **written** go/no-go decision inside the relevant OpenSpec change's `tasks.md` or a dedicated decision section in its logbook — not a silent continuation, not "the next milestone just started so I guess Gate 1 passed". The `tasks.md` here indexes those decisions by linking to them once they land.
+1. **Refactor dispatcher → registry pattern.** Decorator-registration or entry-points style; the exact pattern is the L1 tranche's call (see § What This Change Explicitly Does Not Decide below).
+2. **Factor *topology* out from *learning rule*.** Today every `BrainType` entry is a fused (topology + rule) bundle (e.g. `LSTMPPOBrain` = LSTM topology + PPO rule). L0 connectome data needs to be a *topology* that PPO, spiking, and NEAT-evolved-topology+PPO can all consume — so L1 must factor topology away from the learning-rule bundle. This is the abstraction the connectome substrate breaks.
 
-**Why.** Phase 5's M4/M5/M6.x STOP verdicts were valuable specifically because the diagnosis was written down at the gate point — substrate constraint, architecture asymmetry, wrong abstraction. The same discipline applied at Phase 6's mid-phase gates protects against the failure mode where a layer "kind of works" and the project slides into the next layer without the underlying gate being clearly passed or pivoted.
+**What L1 does NOT change.** The Brain Protocol surface (`run_brain` / `update_memory` / `prepare_episode` / `post_process_episode` / `copy`) is the right plugin contract and does not need to change. L1 is *registry + topology/rule factoring*, not Protocol redesign.
 
-**Pivot path is part of the gate.** Each gate has a documented pivot (the Risk-mitigation rows). A gate that triggers its pivot is also a written decision — it produces an amended scope and a new tranche definition. "Gate FAILED → pivot to hand-curated subset" is a successful gate outcome by this design; only an undocumented slide past the gate is a failure of discipline.
+**Why this matters as a tracker-level decision.** A future session reading "L1 is the architecture-plugin interface" and looking at the existing `Brain` Protocol could reasonably conclude L1 is already done. Recording explicitly that L1 = registry refactor + topology/rule factoring prevents that misread and prevents L1's OpenSpec change from trying to "just add a connectome subclass" against the existing dispatcher.
 
-### Decision 4: Architecture-family scope is fixed at the roadmap-defined eight MUST + one MAY
+### Decision 4: Architecture-family MUST set tightened from eight to four
 
-Phase 6's L1 plugin parity test is meaningful only if the set of architecture families it accommodates is fixed. The roadmap pins this set at:
+The roadmap's initial MUST set is eight families (connectome-constrained, MLP-PPO, LSTM/GRU-PPO, spiking, reservoir, quantum, hybrid, NEAT-evolved). With the parallel L0-planning session we tightened this to four MUSTs + two SHOULDs + three MAYs:
 
-- **MUST (eight families):** connectome-constrained, MLP-PPO, LSTM/GRU-PPO, spiking (PPO-trained), reservoir, quantum (Phase 2 representatives), hybrid quantum-classical, NEAT-evolved.
-- **MAY (one family):** transformer / attention-based.
+| Family | Existing impl | Verdict | Rationale |
+|---|---|---|---|
+| Connectome-constrained | Not yet (Tranches 1-2) | **MUST** | Headline. The whole point of Phase 6. |
+| MLP-PPO | `MLPPPOBrain` | **MUST** | Strongest classical baseline; cheapest run; sanity anchor. |
+| LSTM/GRU-PPO | `LSTMPPOBrain` | **MUST** | Strongest temporal baseline (Phase 3 reached 94% L500); matched-capacity comparator for connectome (both have recurrent state). |
+| NEAT-evolved | Not yet (Tranche 7) | **MUST** | L3's whole point — answers "is the connectome a local optimum?" Can't drop. |
+| Quantum | `QVarCircuitBrain` et al. | **SHOULD** | Phase 2's 300-session campaign carries forward as baseline reference per the Architecture-Comparison Protocol. One quantum row at continuous-physics complexity is enough to confirm or refine that. |
+| Spiking | `SpikingReinforceBrain` | **SHOULD** | Bridge to Phase 7 L4 STDP. But Phase 0's 73.3% on much easier tasks isn't a strong precedent; demoted so Phase 6 doesn't gate on spiking-on-connectome training. If it doesn't train cleanly, document and move on. Phase 7 L4 (STDP — spiking's native plasticity rule) is where spiking-on-connectome actually belongs. |
+| Reservoir (`QRH`, `CRH`) | Yes | **MAY** | Phase 2 preserved QRH's +9.4pp pursuit advantage at low absolute performance. One row if cheap; not worth blocking on. |
+| Hybrid quantum-classical | `HybridQuantum`, `HybridClassical` | **MAY** | Phase 2 SOTA finding survives as baseline reference. One row if cheap. |
+| Transformer | Not yet | **MAY** | Unchanged from roadmap. |
+
+**Budget impact.** MUST × 3 behaviours × 4 seeds = **48 runs** (vs the roadmap-implied 96). SHOULD/MAY architectures are evaluated opportunistically in Tranche 6 if the substrate-change × architecture-family interaction looks scientifically worthwhile.
 
 **Why this matters as a tracker-level decision.** It's tempting to add a ninth architecture family mid-Phase-6 because some new variant looks interesting — Phase 0-3 added 19 architectures total under exactly this pressure. Phase 6's value proposition is the *comparison*, which requires that the set of compared rows is stable across the sweep. Expansion mid-phase invalidates already-completed L2/L3 results for the rows that ran first.
 
-**Mechanism.** A new family proposed mid-Phase-6 must amend *this* tracking change (a follow-up commit to `proposal.md` + `tasks.md`), not be added inside an individual milestone change. The amend forces the project to look at the cross-family budget impact (each new family is +N seeds × three behaviours × two layers of search) before the family is added.
+**Mechanism.** A new family proposed mid-Phase-6 must amend *this* tracking change (a follow-up commit to `proposal.md` + `design.md` + `tasks.md`), not be added inside an individual milestone change. Promoting a SHOULD/MAY family to MUST follows the same mechanism (spec Requirement 4 below). The amend forces the project to look at the cross-family budget impact (each new MUST family is +3 behaviours × 4 seeds = +12 runs, before NEAT topology search) before the family is added.
 
 ### Decision 5: Behavioural scope is fixed at three (klinotaxis, thermotaxis, predator evasion)
 
@@ -81,31 +109,74 @@ The same anti-scope-creep logic as Decision 4, applied on the behaviour axis. Ph
 
 **Mechanism.** Same as Decision 4 — a new behaviour must amend this tracking change. The amend forces the cross-tranche budget impact to be looked at before the behaviour is added to any milestone change.
 
+### Decision 6: Mid-phase gate discipline — every gate produces a written go/no-go inside the relevant OpenSpec change
+
+The roadmap defines three mid-phase decision gates (see `docs/roadmap.md` § Phase 6 § Mid-phase decision gates), mapped to tranche boundaries per Decision 1:
+
+- **Gate 1** (Tranche 2 close, month ~2-3 cumulative): L0 import working — connectome substrate loaded, validated, basic-MLP-PPO trainable on it via the L1 plugin interface.
+- **Gate 2** (Tranche 5 close, month ~4-5 cumulative): L1 plugin parity — adding a new architecture demonstrably ≤ 1 week of work, verified during the env-upgrades work in T5.
+- **Gate 3** (Tranche 6 close, month ~6-7 cumulative): L2 results across architectures — weight-search results across the four MUST families and all three behaviours in hand, on the upgraded substrate.
+
+Each gate is the decision boundary between a tranche and its successor. Each must produce a **written** go/no-go decision inside the relevant OpenSpec change's `tasks.md` or a dedicated decision section in its logbook — not a silent continuation, not "the next milestone just started so I guess Gate 1 passed". The `tasks.md` here indexes those decisions by linking to them once they land.
+
+**Why.** Phase 5's M4/M5/M6.x STOP verdicts were valuable specifically because the diagnosis was written down at the gate point — substrate constraint, architecture asymmetry, wrong abstraction. The same discipline applied at Phase 6's mid-phase gates protects against the failure mode where a layer "kind of works" and the project slides into the next layer without the underlying gate being clearly passed or pivoted.
+
+**Pivot path is part of the gate.** Each gate has a documented pivot (the Risk-mitigation rows). A gate that triggers its pivot is also a written decision — it produces an amended scope and a new tranche definition. "Gate FAILED → pivot to hand-curated subset" is a successful gate outcome by this design; only an undocumented slide past the gate is a failure of discipline.
+
+### Decision 7: L2 connectome-substrate semantics — strict-mask is the headline; soft-prior is the documented ablation
+
+What does "PPO-on-connectome" mean concretely, given that LSTMPPO-GRU + klinotaxis + nociception already reaches 94% L500 on pursuit-predators-large per Logbook 009?
+
+- **Today's LSTMPPO baseline** = generic LSTM (a few hundred neurons), fully-connected dense connectivity learned by gradient descent.
+- **L2 on connectome substrate** = 302 named neurons wired according to Cook 2019 adjacency, with synaptic counts as initial weight priors *or* as hard connectivity masks. PPO tunes weights but only along edges that exist in the wild-type wiring.
+
+Two design choices live inside L2; both ship in the same sweep:
+
+- **Strict-mask (default, headline run)**: connectivity fixed to Cook 2019 adjacency; PPO tunes weights only along existing edges; other weights pinned to zero. Tests whether the wild-type topology *can* support the behaviour.
+- **Soft-prior (documented ablation)**: synaptic counts initialise weights; PPO is free to grow new connections during training. Tests whether the topology is a useful *starting point* even if not a constraint.
+
+The headline L2 result uses **strict-mask** because that's the claim the connectome-ranking question wants: "the wild-type wiring supports behaviour X under PPO weight search." The soft-prior runs ship as a documented ablation in the same L2 sweep — they distinguish "the connectome's topology is right" from "the connectome's wiring is a useful prior even if not a constraint." Phase 5's existing LSTMPPO + klinotaxis + nociception result becomes one row of the comparison sweep (not work to redo) — it answers a different question ("how does an unconstrained LSTM compare?").
+
+**Why this matters as a tracker-level decision.** Without this distinction, "PPO on the connectome" is ambiguous between three things (strict-mask, soft-prior, and just-instantiating-302-LSTM-cells-and-ignoring-the-wiring); each is a different claim. Recording strict-mask as the headline means L2's OpenSpec change doesn't have to re-argue the claim being made, and it means Gate 3 evaluates against a single defined benchmark.
+
+## What This Change Explicitly Does Not Decide
+
+To keep this tracking change's authority bounded, the following are deliberately deferred to the relevant per-tranche OpenSpec changes:
+
+- **The L1 registry implementation pattern** (decorator vs entry-points vs config-driven) — the L1 tranche (Tranche 2) makes this call when it scopes the refactor.
+- **The exact Cook 2019 sub-file selection** (adjacency XLSX vs synapse-list CSV vs another `cect`-exposed format) — the L0 tranche (Tranche 1) makes this call after looking at what `cect` actually exposes.
+- **The continuous-action policy parameterisation** (Gaussian vs Beta vs Tanh-squashed Gaussian) — the env-upgrade tranche (Tranche 5) makes this call when continuous-action heads are designed.
+- **The real-worm validation dataset selection** (Bargmann chemotaxis indices vs mechanosensation escape latencies vs Kavli/Janelia Ca²⁺ correlation matrices) — the L2-final / validation tranche (Tranche 6) makes this call when the upgraded-substrate behavioural numbers are in hand.
+
+If any of these decisions becomes load-bearing for the cross-tranche plan (e.g. the L0 sub-file choice forces a particular L1 topology representation), the relevant per-tranche change should record the decision *and* amend this design.md to lift the decision up to the tracker-level.
+
 ## Tracking Strategy
 
 Three artefacts answer "where are we in Phase 6?":
 
 1. **`openspec/changes/phase6-tracking/tasks.md`** — sub-task checklist updated by every Phase 6 milestone PR.
-2. **`openspec/changes/<phase-6-milestone>/`** — per-milestone proposal/tasks/design/specs, archived on milestone merge.
-3. **`docs/roadmap.md` Phase 6 section** — layer-level status, updated as part of every Phase 6 milestone PR.
+2. **`openspec/changes/<phase-6-milestone>/`** — per-tranche / per-milestone proposal/tasks/design/specs, archived on milestone merge.
+3. **`docs/roadmap.md` Phase 6 section** — tranche-level status, updated as part of every Phase 6 milestone PR.
 
 A future AI session orients by:
 
-- Reading the roadmap Phase 6 block first (per-layer current status).
+- Reading the roadmap Phase 6 block first (per-tranche current status via the Phase 6 Tranche Tracker sub-section).
 - Reading this `tasks.md` for sub-task granularity.
 - Reading active `openspec/changes/<milestone>/` if a specific milestone is in flight.
 - Reading the latest published `docs/experiments/logbooks/0XX/` if a milestone has completed evaluation.
 
 ## Maintenance
 
-- Every Phase 6 milestone PR updates `tasks.md` (mark sub-tasks complete) and `docs/roadmap.md` Phase 6 Milestone Tracker (one-line status update).
-- This change does not archive until the Phase 6 synthesis logbook ships.
-- If Phase 6 deviates substantially from this plan (e.g. a tranche is dropped, gate criteria are softened, an architecture family is added or removed), update `tasks.md` + `proposal.md` + this `design.md` to reflect reality — the checklist is descriptive, not aspirational. Git history is the audit trail of the change.
+- Every Phase 6 milestone PR updates `tasks.md` (mark sub-tasks complete) and `docs/roadmap.md` Phase 6 Tranche Tracker (one-line status update).
+- This change does not archive until the Phase 6 synthesis logbook (Tranche 8) ships.
+- If Phase 6 deviates substantially from this plan (e.g. a tranche is dropped, gate criteria are softened, an architecture family is promoted or added, tranche ordering is changed), update `tasks.md` + `proposal.md` + this `design.md` to reflect reality — the checklist is descriptive, not aspirational. Git history is the audit trail of the change.
 
 ## Risks
 
-1. **The checklist drifts from reality if PRs forget to update it.** Mitigation: each per-milestone OpenSpec change's `tasks.md` includes "update phase6-tracking tasks.md" as an explicit sub-task; spec scenario 1 below makes this a requirement.
-2. **A mid-phase gate slides by without a written decision.** Mitigation: spec requirement 3 below makes the written gate decision a hard requirement; this `tasks.md` has explicit Gate 1 / Gate 2 / Gate 3 checkboxes that cannot be ticked without a link to the decision artefact.
-3. **The fixed architecture-family and behavioural scopes (Decisions 4 + 5) get expanded informally inside individual milestone changes, bypassing the amend mechanism.** Mitigation: reviewers of per-milestone PRs check the proposed architecture/behaviour set against this `proposal.md`; any addition must amend `proposal.md` first.
-4. **Tranche 5 (cross-cutting substrate work) gets dropped if Tranches 2-3 consume more time than budgeted.** Mitigation: Rung 2 gradients + corrected ASH/ADL nociception + ≥1 real-worm validation are roadmap exit criteria (MUST), not nice-to-haves; the tracker's Tranche 5 sub-tasks remain visible and unticked, and Gate 3 is the natural point to re-budget if Tranche 5 hasn't started.
-5. **Phase 6 overshoots 10 months and the Phase 6a/6b sub-phase split (roadmap Risk-mitigation row) is needed.** Mitigation: that split is a documented pivot, not a tracker failure. If triggered, this change amends to reflect 6a's exit criteria and 6b's deferred scope; archive happens on 6a's synthesis logbook publication and 6b inherits a fresh tracking change if scope warrants.
+1. **The checklist drifts from reality if PRs forget to update it.** Mitigation: each per-milestone OpenSpec change's `tasks.md` includes "update phase6-tracking tasks.md" as an explicit sub-task; spec Requirement 1 makes this a requirement.
+2. **A mid-phase gate slides by without a written decision.** Mitigation: spec Requirement 3 makes the written gate decision a hard requirement; this `tasks.md` has explicit Gate 1 / Gate 2 / Gate 3 checkboxes that cannot be ticked without a link to the decision artefact.
+3. **The fixed architecture-family scope (Decision 4) gets expanded informally inside individual milestone changes — either adding a ninth family or promoting a SHOULD/MAY to MUST.** Mitigation: spec Requirement 4 makes promotion / addition an amendment-blocking event; reviewers of per-tranche PRs check the proposed architecture set against this `design.md` Decision 4 table.
+4. **The deliberate tranche ordering (Decision 1) gets reshuffled informally — most likely combining T4 and T6 into one L2 sweep on the upgraded substrate, losing the env-upgrade delta finding.** Mitigation: spec Requirement 5 makes re-ordering an amendment-blocking event with explicit rationale required; this design's Decision 1 "Why this ordering" paragraph is the load-bearing reference.
+5. **Tranche 3 (corrected ASH/ADL) gets skipped because predator-evasion appears to work under the existing incorrect model.** Mitigation: Logbook 011 already flagged the existing nociception model as biologically wrong; the tracker's T3 sub-tasks remain visible and unticked, and the L2 first pass (T4) predator-evasion cells declare T3 as a hard dependency.
+6. **Tranche 5 (env upgrades) is the longest tranche (6-8 weeks) and absorbs scope creep — most likely 3D physics, Sibernetic interop, or aerotaxis/pheromone restoration.** Mitigation: Decision 5 fixes behavioural scope; the env-upgrade work is bounded to Rung 2 + continuous-2D + continuous-action heads. Anything beyond that defers to Phase 7 or Future Directions.
+7. **Phase 6 overshoots 10 months and the Phase 6a/6b sub-phase split (roadmap Risk-mitigation row) is needed.** Mitigation: that split is a documented pivot, not a tracker failure. If triggered, this change amends to reflect 6a's exit criteria and 6b's deferred scope; archive happens on 6a's synthesis logbook publication and 6b inherits a fresh tracking change if scope warrants. The natural 6a/6b cut is after T6 (Phase 6a = T1–T6; Phase 6b = T7 NEAT + T8 synthesis).
