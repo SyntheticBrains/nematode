@@ -50,8 +50,8 @@ and does not appear as a Phase 6 tranche.
 
 ## Tranche 1 — L0 Connectome Substrate
 
-**OpenSpec change**: `add-connectome-substrate` (in progress on branch `feat/connectome-substrate`)
-**Status**: 🟡 in progress
+**OpenSpec change**: `add-connectome-substrate` (complete; ready for archive post-merge)
+**Status**: ✅ complete
 **Roadmap layer**: L0
 **Approx duration**: 2-3 weeks
 **Bio fidelity**: HIGH (real wiring is the substrate)
@@ -74,9 +74,9 @@ separately-typed connections.
 - [x] T1.5 Vendor the connectome data (no network access at training time). Cook 2019 SI 5 + Witvliet 2020/2021 dataset 8 vendored under `data/connectome/` with LFS-tracking. `PROVENANCE.md` records per-file SHA256, source URLs, DOIs, paper citations, and the cect-mirror redistribution rationale.
 - [x] T1.6 Forward-pass smoke test: instantiate a trivial PPO-shaped weight set on the connectome topology (chemical synapses strict-masked + fixed gap-junction weights with fan-in normalisation), run a single forward pass, verify finite output + non-degenerate variance. Verified end-to-end via `uv run python -m quantumnematode.connectome.smoke`: 116 motor outputs, variance 0.69, PASS.
 - [x] T1.7 Unit + smoke tests for the data model and import pipeline; CI integration. 71 tests across 5 files (`test_loader.py`, `test_model.py`, `test_neurons.py`, `test_validate.py`, `test_smoke.py`); all pass in the default `uv run pytest -m "not nightly"` tier.
-- [ ] T1.8 T1↔T2 handshake: T1 publishes a signature-level data-model API sketch (not implementation — just the public method signatures + key dataclass shapes for chemical-synapse iteration, gap-junction iteration, sensor/motor neuron lookup) as part of the T1 logbook. T2's OpenSpec change MUST cite this sketch in its design.md when scoping the plugin Protocol consumption pattern. If T2's design surfaces an API mismatch that PPO/spiking/NEAT consumption can't accommodate, T1 amends — but the handshake review happens during T2 design, not at T1 close (T2's design is the consumer that can actually validate the API). This sub-task ticks when the sketch is published; T2's design review is where the API earns its keep.
-- [ ] T1.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T1 row.
-- [ ] T1.10 Publish T1 logbook (suggested: `docs/experiments/logbooks/0XX-connectome-substrate.md`). Feeds into Gate 1's evidence base (full Gate 1 decision lands at T2 close).
+- [x] T1.8 T1↔T2 handshake: T1 publishes a signature-level data-model API sketch as part of the T1 logbook. Published in [logbook 022 § T1↔T2 API sketch](../../../docs/experiments/logbooks/022-connectome-substrate.md). T2's design review will validate against this sketch.
+- [x] T1.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T1 row. Done.
+- [x] T1.10 Publish T1 logbook at [docs/experiments/logbooks/022-connectome-substrate.md](../../../docs/experiments/logbooks/022-connectome-substrate.md). Feeds into Gate 1's evidence base (full Gate 1 decision lands at T2 close).
 
 **T1 risk-mitigation pivot (per roadmap)**: if `cect` import / dataset access proves harder than expected (format incompatibility, missing metadata, unclear synaptic-weight provenance), drop to a hand-curated subset of the Cook 2019 connectome — sensory-interneuron-motor subgraph for the three target behaviours, ~50-100 neurons. The pivot decision is itself a written gate-style decision; the T1 OpenSpec change documents it.
 

@@ -93,29 +93,29 @@ Maps to T1.7 in the tracker.
 
 Per phase6-tracking T1.8: publish a signature-level API sketch in the T1 logbook for T2 plugin-design review.
 
-- [ ] 9.1 In the T1 logbook (created in Phase 10), include an "API sketch for T2 consumers" section with:
+- [x] 9.1 In the T1 logbook (created in Phase 10), include an "API sketch for T2 consumers" section with:
   - Public method signatures: `load_cook_2019_hermaphrodite() -> Connectome`, `load_witvliet_2021_adult() -> Connectome`, `cross_validate(primary, secondary) -> DivergenceReport`, `run_forward_pass(c, *, seed=0) -> np.ndarray`
   - Dataclass shapes for `Neuron`, `ChemicalSynapse`, `GapJunction`, `Connectome`
   - Iteration patterns for T2 consumers: how to iterate chemical synapses vs gap junctions separately; how to look up neuron `cell_class`; how strict-mask is applied
   - Explicit non-scope: position/morphology, peptidergic edges, sensor-projection mapping, motor-readout mapping
-- [ ] 9.2 Closes T1.8 — tick the matching T1.8 box in `phase6-tracking/tasks.md`
+- [x] 9.2 Closes T1.8 — tick the matching T1.8 box in `phase6-tracking/tasks.md`
 
 ## Phase 10 — T1 logbook (T1.10)
 
 Maps to T1.10 in the tracker: publish T1 logbook feeding Gate 1's evidence base.
 
-- [ ] 10.1 Create `docs/experiments/logbooks/022-connectome-substrate.md` (logbook 022, immediately following 021 Phase 5 synthesis)
-- [ ] 10.2 Sections: Implementation summary; Data-source decision (the cect / wormneuroatlas / direct-SI investigation); Cook 2019 import findings (neuron count, chemical-synapse count, gap-junction count vs published bounds); T1.4 cross-validation divergence summary; T1↔T2 API sketch (per Phase 9 above); Verdict — does T1 ship "real connectome loaded, validated, vendored, forward-passable" with no STOP signals
-- [ ] 10.3 Logbook is Gate 1 G1.a evidence per phase6-tracking design.md § Decision 6 § Gate 1. Full Gate 1 decision lands at T2 close
-- [ ] 10.4 Closes T1.10 — tick the matching T1.10 box in `phase6-tracking/tasks.md`
+- [x] 10.1 Create `docs/experiments/logbooks/022-connectome-substrate.md` (logbook 022, immediately following 021 Phase 5 synthesis)
+- [x] 10.2 Sections: Implementation summary; Data-source decision (the cect / wormneuroatlas / direct-SI investigation); Cook 2019 import findings (neuron count, chemical-synapse count, gap-junction count vs published bounds); T1.4 cross-validation divergence summary; T1↔T2 API sketch (per Phase 9 above); Verdict — does T1 ship "real connectome loaded, validated, vendored, forward-passable" with no STOP signals
+- [x] 10.3 Logbook is Gate 1 G1.a evidence per phase6-tracking design.md § Decision 6 § Gate 1. Full Gate 1 decision lands at T2 close
+- [x] 10.4 Closes T1.10 — tick the matching T1.10 box in `phase6-tracking/tasks.md`
 
 ## Phase 11 — Tracker + roadmap updates (T1.9)
 
 Maps to T1.9 in the tracker.
 
-- [ ] 11.1 Update `openspec/changes/phase6-tracking/tasks.md` Tranche 1 section: tick all T1.x sub-tasks; flip Tranche 1 status header from `🔲 not started` to `✅ complete`; update the `OpenSpec change` line to point at this change
-- [ ] 11.2 Update `docs/roadmap.md` Phase 6 Tranche Tracker — flip T1 row to `✅ complete` with a one-line summary referencing the T1 logbook from Phase 10
-- [ ] 11.3 Closes T1.9 — tick the matching T1.9 box in `phase6-tracking/tasks.md`
+- [x] 11.1 Update `openspec/changes/phase6-tracking/tasks.md` Tranche 1 section: tick all T1.x sub-tasks; flip Tranche 1 status header from `🔲 not started` to `✅ complete`; update the `OpenSpec change` line to point at this change
+- [x] 11.2 Update `docs/roadmap.md` Phase 6 Tranche Tracker — flip T1 row to `✅ complete` with a one-line summary referencing the T1 logbook from Phase 10
+- [x] 11.3 Closes T1.9 — tick the matching T1.9 box in `phase6-tracking/tasks.md`
 
 ## Phase 12 — Pre-PR verification
 
