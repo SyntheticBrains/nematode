@@ -59,7 +59,7 @@ ______________________________________________________________________
 | **3** | — | Temporal Sensing & Memory | ✅ COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A reaches 94% L500 on the hardest environment. Aerotaxis with 5-zone oxygen system |
 | **4** | — | Multi-Agent Complexity | ✅ COMPLETE | Pheromones, social dynamics, klinotaxis sensing. Temporal collective exploration +14.3%; social feeding +35% food under scarcity. Coordination did not produce genuine multi-agent complexity at the scales tested |
 | **5** | — | Evolution & Adaptation | ✅ COMPLETE (2026-05-23) | M3 Lamarckian inheritance is the headline-positive result. M4 Baldwin / M5 co-evolution / M6.x transgenerational memory closed with substrate-grounded STOP verdicts (architectural diagnoses, not implementation failures) |
-| **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🔲 PLANNED | First closed-loop learning + evolution on the real *C. elegans* connectome with a pluggable architecture interface. NEAT topology search ranks the wild-type connectome against evolved alternatives on three behaviours (klinotaxis, thermotaxis, predator evasion) |
+| **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🟡 IN PROGRESS | First closed-loop learning + evolution on the real *C. elegans* connectome with a pluggable architecture interface. NEAT topology search ranks the wild-type connectome against evolved alternatives on three behaviours (klinotaxis, thermotaxis, predator evasion) |
 | **7** | ~8-12 months from Phase 6 close | Deepen — plasticity + cross-species transfer | 🔲 PLANNED | Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome. *P. pacificus* transfer using Cook et al. 2025 connectome data. Optional biological-validation collaboration and paper drafts |
 
 ______________________________________________________________________
@@ -571,6 +571,29 @@ ______________________________________________________________________
 **Goal**: Build the platform on which learning and evolution operate on the real *C. elegans* 302-neuron connectome in a closed sensory-motor loop, and use it to rank the wild-type connectome against MLP, recurrent, spiking, reservoir, quantum, hybrid, and NEAT-evolved architectures on three nematode behaviours (klinotaxis, thermotaxis, predator evasion). The headline platform claim is *first closed-loop learning + evolution on the real C. elegans connectome with a pluggable architecture interface*.
 
 **Aspirational timeline**: ~6-10 months from Phase 5 close.
+
+#### Phase 6 Milestone Tracker
+
+Phase 6 is broken into four layers (L0 connectome substrate → L1 architecture-plugin → L2 PPO weight search → L3 NEAT topology search) plus cross-cutting substrate work (continuous-2D physics, Rung 2 chemical gradients, corrected ASH/ADL contact-based nociception, ≥1 real-worm validation) and a closing synthesis logbook. Three mid-phase decision gates (Gate 1 month ~2, Gate 2 month ~4-5, Gate 3 month ~7-8) protect execution at the layer level. The living sub-task checklist lives in [openspec/changes/phase6-tracking/tasks.md](../openspec/changes/phase6-tracking/tasks.md); design decisions (tranching policy, Cook 2019 via `cect` as the L0 import primary, mid-phase gate discipline, fixed architecture-family scope at eight MUST + one MAY, fixed behavioural scope at three) are recorded in that change's [proposal.md](../openspec/changes/phase6-tracking/proposal.md) and [design.md](../openspec/changes/phase6-tracking/design.md).
+
+| # | Layer / deliverable | Bio fidelity | Status |
+|---|--------------------|--------------|--------|
+| P6-0 | Phase 6 tracking scaffold | — | 🟡 in progress |
+| L0 | Connectome substrate (Cook 2019 hermaphrodite via OpenWorm `cect`) | HIGH | 🔲 not started |
+| Gate 1 | L0 import working? (month ~2) | — | 🔲 not started |
+| L1 | Architecture-plugin interface (`Brain` Protocol refactor + parity test) | — | 🔲 not started |
+| Gate 2 | L1 plugin parity achieved? (month ~4-5) | — | 🔲 not started |
+| L2 | Weight search (PPO et al.) across eight MUST architecture families × three behaviours | varies | 🔲 not started |
+| Gate 3 | L2 results across architectures? (month ~7-8) | — | 🔲 not started |
+| L3 | NEAT topology search; matched-capacity test of M5's architecture-asymmetry hypothesis | LOW | 🔲 not started |
+| T5-physics | Continuous 2D coordinates + continuous action space | — | 🔲 not started |
+| T5-gradients | Rung 2 chemical gradients (dynamic Fick's-law + log-concentration adaptation) | HIGH | 🔲 not started |
+| T5-nociception | Corrected ASH/ADL contact-based nociception | HIGH | 🔲 not started |
+| T5-validation | ≥1 model output quantitatively validated against published real-worm data | HIGH | 🔲 not started |
+| L4 | Biologically-plausible plasticity (STDP + neuromodulator-modulated) | HIGH | ⏭️ deferred to Phase 7 |
+| T6 | Phase 6 synthesis logbook | — | 🔲 not started |
+
+**How to orient**: read this tracker for the current layer, then [tasks.md](../openspec/changes/phase6-tracking/tasks.md) for sub-task detail, then any active per-layer / per-milestone OpenSpec change under `openspec/changes/` (archived changes live under `openspec/changes/archive/`). Open Phase 6 research questions are tracked in `tasks.md` under "Phase 6 Research Questions"; check there before assuming a Phase 6 design choice is settled. The three mid-phase gates each produce a written go/no-go decision inside the triggering layer's OpenSpec change — the tracker links to each decision once it lands.
 
 #### The layered platform
 
