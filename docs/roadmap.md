@@ -26,13 +26,12 @@ ______________________________________________________________________
 04. [Phase Roadmap](#phase-roadmap)
     - [Phase 0: Foundation & Baselines](#phase-0-foundation--baselines-complete) (COMPLETE)
     - [Phase 1: Sensory & Threat Complexity](#phase-1-sensory--threat-complexity-complete) (COMPLETE)
-    - [Phase 2: Architecture Analysis & Standardization](#phase-2-architecture-analysis--standardization-substantially-complete) (SUBSTANTIALLY COMPLETE)
+    - [Phase 2: Architecture Analysis & Standardization](#phase-2-architecture-analysis--standardization-complete) (COMPLETE)
     - [Phase 3: Temporal Sensing & Memory](#phase-3-temporal-sensing--memory)
     - [Phase 4: Multi-Agent Complexity](#phase-4-multi-agent-complexity)
     - [Phase 5: Evolution & Adaptation](#phase-5-evolution--adaptation)
     - [Phase 6: Connectome Substrate & Architecture Comparison](#phase-6-connectome-substrate--architecture-comparison)
-    - [Phase 7: Community, Validation & Publication](#phase-7-community-validation--publication)
-    - [Phase 8: Integration & Comprehensive Evaluation](#phase-8-integration--comprehensive-evaluation)
+    - [Phase 7: Deepen — Plasticity & Cross-Species Transfer](#phase-7-deepen--plasticity--cross-species-transfer)
 05. [Quantum Re-evaluation Checkpoints](#quantum-re-evaluation-checkpoints)
 06. [Complexity Dashboard](#complexity-dashboard)
 07. [Biological Fidelity Ladder](#biological-fidelity-ladder)
@@ -199,23 +198,18 @@ See [Current State — Phase 1](#phase-1--sensory--threat-complexity) for achiev
 
 ______________________________________________________________________
 
-### Phase 2: Architecture Analysis & Standardization (SUBSTANTIALLY COMPLETE)
+### Phase 2: Architecture Analysis & Standardization (COMPLETE)
 
 **Status**: ✅ 300-session quantum architecture campaign complete. Carries forward as baseline reference in Phase 6's architecture-comparison protocol.
 
 See [Current State — Phase 2](#phase-2--architecture-analysis) for the campaign summary; full results in [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md). Key outcomes:
 
-- 15 architecture variants systematically evaluated
-- Strategic conclusion: environment complexity below quantum advantage thresholds
-- Brain naming migration complete
-- Statistical framework operational
-- Clear complexity thresholds identified for quantum re-evaluation
+- 15 architecture variants systematically evaluated against matched-capacity classical baselines.
+- Established that grid-world complexity is below the threshold for quantum advantage on every variant tested.
+- Brain naming migration complete; paradigm-prefix scheme operational.
+- Statistical framework operational (paired-seed Wilcoxon, bootstrap CIs).
 
-**Remaining items** (moved to later phases):
-
-- Interpretability framework → Phase 7 (publication readiness)
-- Mechanism discovery protocol → Phase 7
-- First biological prediction tested → Phase 7 (external collaboration)
+Quantum architecture interpretability, mechanism discovery, and external biological-prediction validation are not separate Phase 2 deliverables — they fold into Phase 6's architecture-comparison protocol (with the 300-session campaign as baseline reference) and Phase 7's optional biological-validation collaboration.
 
 ______________________________________________________________________
 
@@ -722,116 +716,72 @@ The roadmap encodes GPU as the realistic baseline. The L3 implementation choices
 
 ______________________________________________________________________
 
-### Phase 7: Community, Validation & Publication
+### Phase 7: Deepen — Plasticity & Cross-Species Transfer
 
-**Goal**: Open-source launch, external validation, and publication campaign. Share the simulation, data, and findings with the research community.
+**Goal**: Add the L4 plasticity layer to the architecture-comparison platform (biologically-plausible learning rules on the connectome) and extend the comparison to a second nematode species (*P. pacificus*) using the Cook et al. 2025 connectome data. The headline framing is *deepen, don't broaden* — Phase 7 doesn't add new behaviours or new sensory modalities; it deepens the platform's biological-plausibility and species-coverage along the same three Phase 6 behaviours.
 
-**Aspirational timeline**: Q2-Q4 2027
+**Aspirational timeline**: ~8-12 months from Phase 6 close.
 
-**Note**: This phase runs partly in parallel with Phases 6-8. Community infrastructure (NematodeBench, docs, Docker) can begin before Phase 6 completes. Paper 1 (quantum evaluation) and Paper 2 (benchmark) can be drafted early. Paper 3 (connectome) depends on Phase 6 results. External collaboration outreach can begin at any time.
+#### Required deliverables (MUST)
 
-#### Deliverables
+1. **L4 Plasticity Layer**
 
-1. **NematodeBench Public Launch** [CORE]
+   Phase 6's L2 weight search uses PPO-family gradient learning. Phase 7's L4 adds biologically-plausible plasticity on the same connectome substrate, materialised in four sub-deliverables that must be designed together — STDP alone reproduces synaptic-level plasticity but misses the circuit-level behavioural plasticity the *C. elegans* literature is built around.
 
-   - Public benchmark suite with tasks spanning all complexity levels:
-     - Basic: chemotaxis, foraging (grid-world)
-     - Intermediate: thermotaxis, predator evasion, temporal sensing
-     - Advanced: multi-agent coordination, continuous locomotion
-   - Public leaderboard with standardized evaluation protocol
-   - Docker-based reproducibility (containerized environments, seed management)
-   - Submission guidelines and evaluation scripts
-   - Include the 300+ session quantum evaluation dataset as a baseline reference
-   - Target: Differentiated from standard RL benchmarks by biological grounding and validation targets
+   - **Vanilla STDP / Hebbian rules** on the connectome topology (~2-4 months software-only).
+   - **Diffusible-signal layer** modelling at least serotonin and dopamine concentrations as a function of internal state (food detection, sensory input, satiety where available).
+   - **Receptor-class metadata** on the connectome neurons — which neurons express which receptor classes. CeNGEN gene-expression data is the reference source. *C. elegans* has documented behavioural roles for 5 serotonin, 4 dopamine, 4 tyramine, and 3 octopamine receptor classes per WormBook.
+   - **Modulated STDP rules** — three-factor learning where the third factor is neuromodulator concentration. Receptor-class metadata determines which synapses see which modulators.
 
-2. **Publication Campaign**
+   Total scope: ~4-6 months software-only for vanilla STDP, ~6-8 months for full neuromodulator grounding. Loihi 2 / SpiNNaker 2 neuromorphic hardware deployment is a credible additional target if scope allows; the software-only path is fully sufficient for the headline claim.
 
-   - **Paper 1**: "Systematic Evaluation of Quantum Architectures for Biological Navigation: From Grid-World Parity to Enriched Environments" — The before/after contrast showing the 300+ session quantum campaign results at grid-world complexity, then what happens when environment complexity crosses thresholds. Valuable regardless of whether quantum shows advantage at higher complexity.
-   - **Paper 2**: "NematodeBench: A Biologically-Grounded Benchmark for Comparative Computational Neuroscience" — Benchmark paper introducing the task suite, biological validation methodology, and baseline results across architectures.
-   - **Paper 3**: "Connectome-Constrained Learning in C. elegans: Does Real Wiring Beat Arbitrary Architecture?" — Results from Phase 6 connectome experiments.
-   - Target venues: Nature Methods, NeurIPS, ICML, eLife, PNAS
+2. ***P. pacificus* Connectome Transfer**
 
-3. **External Collaboration**
+   Cook et al. 2025 (*Science*) published the full *P. pacificus* connectome with neuronal adjacency and connectivity data, accompanied by code (`stevenjcook/cook_et_al_2025_pristionchus`). Phase 7 uses this to ask: *do learned and evolved architectures from C. elegans transfer to P. pacificus's different connectome on shared tasks?*
 
-   - **C. elegans labs**: Biological prediction validation
-     - Target: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon)
-     - Deliverable: ≥1 model prediction tested with real C. elegans (escape latencies, thermotaxis precision, foraging efficiency)
-     - Collaboration model: We generate predictions → lab designs experiments → co-authored publication
-   - **Quantum hardware providers**: QPU benchmarks on enriched tasks
-     - IBM Quantum, Q-CTRL Fire Opal for error suppression
-     - Deploy best quantum architectures on real hardware with enriched tasks
-   - **OpenWorm**: Explore policy export → muscle control integration
-     - Test whether RL-trained policies can control OpenWorm's simulated body
+   - Same three behaviours as Phase 6 (klinotaxis, thermotaxis, predator evasion). Species is the independent variable — clean comparison.
+   - Import and validate *P. pacificus* connectome through the same L0 / L1 pipeline Phase 6 builds.
+   - Evaluate architecture-comparison sweep on the new species; compare results to Phase 6's *C. elegans* baseline.
+   - **MAY**: extend with one *pacificus*-distinctive behaviour (e.g., predatory-mouth-form switching, which *C. elegans* lacks) if connectome data and remaining scope support it.
 
-4. **Community Building**
+   Transferring to *C. briggsae* is **not** a Phase 7 deliverable. As of project planning, *C. briggsae* lacks a high-quality published connectome (chromosome-level genomes only); briggsae transfer becomes scoped only when reference data appears.
 
-   - Documentation: API docs, tutorials, architecture guides
-   - Contribution guidelines: How to add new brain architectures, environments, sensory modules
-   - Example notebooks: Reproduce key results, extend benchmarks
-   - Target: ≥3 external research groups engaging with NematodeBench
+#### Optional deliverables (MAY)
 
-#### Phase 7 Exit Criteria
+These are not Phase 7 exit criteria. The project may pursue any combination when evidence and context justify, but Phase 7 closes whether or not they ship.
 
-- ✅ NematodeBench launched with ≥1 external submission
-- ✅ ≥1 paper submitted to peer-reviewed venue
-- ✅ ≥1 external collaboration established (lab partnership or quantum hardware access)
-- ✅ 300+ session quantum evaluation dataset publicly available
-- ✅ Documentation sufficient for external researchers to run experiments independently
+- **Biological-validation collaboration.** Engage one *C. elegans* lab (Bargmann, Sengupta, Horvitz, Lockery, or a smaller group with relevant Ca²⁺ recording data) to test ≥ 1 model prediction against real worm data. At most one partnership if pursued — collaboration overhead grows non-linearly with multiple labs.
+- **Paper drafts and submissions.** A platform paper, a connectome-learning paper, and a fitness-landscape paper are all plausibly publishable from Phase 6+7 results; the project may write them when evidence justifies. No specific venues are promised.
+- **Neuromorphic deployment.** Loihi 2 / SpiNNaker 2 implementation of the L4 plasticity layer — credible exotic-hardware angle for STDP-on-connectome work.
+- **Reproducibility artefacts updated** to the Phase 7 platform state.
 
-#### Go/No-Go Decision
+#### Phase 7 exit criteria
 
-**GO if**: External interest demonstrated (submissions, citations, collaborations).
-**PIVOT if**: No external adoption → Focus on internal research value. Re-evaluate benchmark design and accessibility.
+**Required (MUST):**
 
-______________________________________________________________________
+- ✅ L4 plasticity layer operational: vanilla STDP/Hebbian rules + diffusible-signal layer + receptor-class metadata + modulated STDP, all on the connectome substrate, with results across the Phase 6 architecture-family set at the Phase 5/6 statistical bar.
+- ✅ *P. pacificus* connectome imported through L0 / L1; architecture-comparison sweep on the same three behaviours; quantitative comparison to *C. elegans* Phase 6 baseline.
 
-### Phase 8: Integration & Comprehensive Evaluation
+**Optional (MAY):**
 
-**Goal**: Full system integration and definitive quantum vs. classical comparison at maximum simulation complexity. Extract universal principles and scope future directions.
+- ⭐ Biological-validation collaboration completed; ≥ 1 model prediction tested against published or partner-lab worm data.
+- ⭐ Paper drafts in flight.
+- ⭐ Neuromorphic deployment demonstrated.
+- ⭐ Reproducibility artefacts current.
 
-**Aspirational timeline**: Late 2027+
+#### Risk-mitigation: failure modes and pivots
 
-#### Deliverables
+| Failure mode | Trigger | Pivot |
+|---|---|---|
+| **L4 implementation overshoots ~6 months** | STDP + neuromodulator grounding more complex than estimated; receptor-class metadata harder to integrate; modulated rules harder to debug than vanilla | **Split Phase 7 into 7a / 7b.** Phase 7a ships L4 standalone as the headline deliverable; Phase 7b carries pacificus transfer + optional MAY items as the follow-on. The decision criterion: if L4-on-connectome is not learning demonstrably by month 6, split. Phase 7 closes whether it lands as one phase or two. |
+| **Pacificus connectome data integration is problematic** | Cook et al. 2025 data is incomplete, format-incompatible, or has unclear synaptic-weight provenance once handled in detail | Sub-deliverable: produce the hand-curated *P. pacificus* subset that does work, document the gap, and ship transfer results on that subset. The cross-species transfer claim survives in restricted form. |
+| **L4 plasticity fails to learn on the connectome** | Modulated STDP doesn't reach the L2 PPO baselines on the three behaviours after reasonable hyperparameter search | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families."* Phase 7 closes with the negative result; future work picks up rule-family alternatives (e.g., reward-modulated Hebbian without spike timing). |
 
-1. **Full Integration**
+#### Go / No-go decision
 
-   - All systems running together: temporal sensing + multi-agent + continuous physics + memory + evolution
-   - Unified configuration system for combined scenarios
-   - Performance at scale: 5+ agents in continuous 2D with temporal sensing, memory, and predators
-
-2. **Definitive Quantum vs. Classical Comparison**
-
-   - Comprehensive evaluation at maximum complexity across all architecture families
-   - **If classical ceiling \<70%**: Full quantum architecture campaign v2 — systematic evaluation of QRH, QEF, HybridQuantum, connectome-quantum, and new architectures on enriched tasks
-   - **If classical still dominant**: Publish definitive characterisation: "Quantum advantage in biological RL requires complexity threshold X" — precise measurement of what's needed
-   - Either outcome is a valuable scientific contribution
-
-3. **Universal Principles Extraction**
-
-   - What computational principles emerge from the C. elegans deep dive?
-   - Identify domain-invariant insights: approach-avoidance conflicts, exploration-exploitation trade-offs, temporal credit assignment
-   - Mathematical formalisation of principles applicable beyond C. elegans
-   - Target: ≥3 universal principles documented and validated
-
-4. **Applied Directions** [Exploratory]
-
-   - Drug screening assays: Use simulation for compound screening (behavioral phenotyping)
-   - Neurodegeneration models: C. elegans models of Alzheimer's, Parkinson's (age-dependent behavioral changes)
-   - Brain-computer interfaces: Quantum-inspired neural decoding insights
-
-5. **Future Scoping**
-
-   - Organism transfer proof-of-concept: Simplified Drosophila (~100K neurons) to test principle generality
-   - 3D physics aspiration: Define requirements for full 3D substrate simulation
-   - Clinical applications: Drug discovery, behavioral assay automation
-   - Clear roadmap for post-project research directions
-
-#### Phase 8 Exit Criteria
-
-- ✅ Fully integrated simulation operational (all systems combined)
-- ✅ Definitive quantum vs. classical comparison at enriched complexity published
-- ✅ ≥3 universal principles documented with supporting evidence
-- ✅ Clear roadmap for post-project directions (organism transfer, 3D physics, clinical applications)
+- **GO if**: L4 lands on the connectome with results in hand, and pacificus transfer ships (or is well underway under the 7b pivot).
+- **PIVOT-split if**: L4 overshoots month-6 milestone — execute Phase 7a / 7b split per the Risk-mitigation table above.
+- **STOP if**: Both L4 implementation and pacificus transfer are infeasible at the substrate level — at which point the diagnosis itself is the Phase 7 deliverable, and follow-on work picks up alternative plasticity rule families or alternative connectome data sources.
 
 ______________________________________________________________________
 
