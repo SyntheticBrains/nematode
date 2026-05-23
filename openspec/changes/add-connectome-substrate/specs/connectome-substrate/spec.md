@@ -1,0 +1,141 @@
+## ADDED Requirements
+
+### Requirement: Connectome Data Loading
+
+The `quantumnematode.connectome` subpackage SHALL load the *C. elegans* connectome from vendored *Nature* Supplementary Information files via direct pandas parsing, without dependency on third-party connectome packages.
+
+#### Scenario: Loading the Cook 2019 hermaphrodite connectome
+
+- **GIVEN** the vendored `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` file is present (LFS-fetched)
+- **WHEN** `load_cook_2019_hermaphrodite()` is called
+- **THEN** a `Connectome` instance SHALL be returned
+- **AND** `len(connectome.neurons) == 302`
+- **AND** `len(connectome.chemical_synapses) > 5000` (Cook 2019's published bound is ~7700; loose lower bound catches load failures)
+- **AND** `len(connectome.gap_junctions) > 600` (sanity bound)
+- **AND** every entry in `chemical_synapses` and `gap_junctions` references neurons present in the `neurons` dict
+- **AND** the `source` field is `"cook_2019_hermaphrodite"` and `version` records the SI 5 publication metadata
+
+#### Scenario: Loading the Witvliet 2021 adult connectome
+
+- **GIVEN** the vendored `data/connectome/witvliet_2021_dataset8_adult.xlsx` file is present
+- **WHEN** `load_witvliet_2021_adult(dataset=8)` is called
+- **THEN** a `Connectome` instance SHALL be returned
+- **AND** `len(connectome.neurons)` is in the nerve-ring range (~150-200, smaller than Cook 2019's whole-animal 302)
+- **AND** cross-dataset name aliases (e.g. `RIA-L` → `RIAL`) SHALL be applied so the result matches Cook 2019's canonical naming
+
+#### Scenario: Loader produces deterministic output
+
+- **GIVEN** the same vendored data files
+- **WHEN** the loader is called twice in succession
+- **THEN** both `Connectome` instances SHALL be byte-equivalent (chemical synapses sorted by `(pre, post)`; gap junctions sorted by `(neuron_a, neuron_b)`; neurons in canonical order)
+
+### Requirement: Connection-Type Taxonomy (chemical synapses + gap junctions separately-typed)
+
+Per `openspec/changes/phase6-tracking/design.md` § Decision 7, the connectome data model SHALL expose chemical synapses (directed, learnable weight) and gap junctions (undirected, fixed weight = Cook 2019 count) as separately-typed connection categories. Extra-synaptic / peptidergic signalling SHALL NOT be represented in this data model (reserved for Phase 7 L4 plasticity).
+
+#### Scenario: Iterating chemical synapses
+
+- **GIVEN** a loaded `Connectome` instance
+- **WHEN** a downstream consumer iterates `connectome.chemical_synapses`
+- **THEN** each entry SHALL be a `ChemicalSynapse` with directed `pre` and `post` fields and a positive-integer `weight` (synapse count from Cook 2019)
+
+#### Scenario: Iterating gap junctions
+
+- **GIVEN** a loaded `Connectome` instance
+- **WHEN** a downstream consumer iterates `connectome.gap_junctions`
+- **THEN** each entry SHALL be a `GapJunction` with undirected `neuron_a` and `neuron_b` fields (alphabetically sorted: `neuron_a < neuron_b`) and a non-negative-integer `weight` (junction count from Cook 2019)
+- **AND** no `(a, b)` and `(b, a)` duplicate pair SHALL exist
+
+#### Scenario: Dual-edge case (AVA↔AVB) represented as two distinct entries
+
+This scenario codifies the load-bearing edge case from `phase6-tracking/design.md` § Decision 7.
+
+- **GIVEN** Cook 2019 reports BOTH a chemical synapse AND a gap junction between AVAL and AVBL (and similarly for many other neuron pairs)
+- **WHEN** the loaded `Connectome` is inspected
+- **THEN** the AVAL↔AVBL pair SHALL appear as ONE `ChemicalSynapse(pre="AVAL", post="AVBL", ...)` entry AND ONE `GapJunction(neuron_a="AVAL", neuron_b="AVBL", ...)` entry
+- **AND** there SHALL NOT be a single edge representation combining both weights into one entry with two weight attributes
+
+#### Scenario: No extra-synaptic / peptidergic edges
+
+- **GIVEN** a loaded `Connectome` instance
+- **WHEN** the data model is introspected
+- **THEN** there SHALL be no `ExtraSynaptic`, `Peptidergic`, `Monoaminergic`, or similar third connection-type category
+- **AND** if a future tranche requires extra-synaptic representation, that work SHALL land as an amendment to this capability and to `phase6-tracking/design.md` § Decision 7
+
+### Requirement: Neuron Metadata (302-entry hand-curated classification table)
+
+The connectome subpackage SHALL ship a hand-curated 302-neuron classification table (`NEURON_CLASSIFICATION`) sourced from Cook 2019 SI 1 cell-list and cross-checked against WormAtlas. Cell-class labels are drawn from `Literal["sensory", "interneuron", "motor", "muscle", "pharyngeal"]`. Neurotransmitter identity is included where known.
+
+#### Scenario: Classification table coverage
+
+- **GIVEN** the `connectome.neurons` module is imported
+- **WHEN** `NEURON_CLASSIFICATION` is inspected
+- **THEN** `len(NEURON_CLASSIFICATION) == 302` (asserted at module import time as a fail-fast guard)
+- **AND** every entry's `cell_class` SHALL be a valid `CellClass` value
+- **AND** coverage by class SHALL be in expected bands: sensory 60-80, interneuron 70-90, motor 80-100, pharyngeal ~20 (muscle is not in the 302-neuron set)
+
+#### Scenario: Canonical sensory neurons are classified correctly
+
+- **GIVEN** a loaded Cook 2019 `Connectome`
+- **WHEN** sensory neurons (ASEL, ASER, AFDL, AFDR, ASHL, ASHR, ADLL, ADLR, AWAL, AWAR, AWCL, AWCR, URXL, URXR, BAGL, BAGR) are looked up via `connectome.neurons[name].cell_class`
+- **THEN** every one SHALL be `"sensory"`
+
+#### Scenario: Canonical motor neurons are classified correctly
+
+- **GIVEN** a loaded Cook 2019 `Connectome`
+- **WHEN** motor neurons matching the prefix patterns `VB`, `DB`, `VA`, `DA`, `VC`, `DD` are looked up
+- **THEN** every one SHALL be `"motor"`
+
+### Requirement: Cross-Validation Against Witvliet 2021
+
+The connectome subpackage SHALL provide a `cross_validate(primary, secondary) -> DivergenceReport` function that diffs Cook 2019 hermaphrodite against Witvliet 2021 dataset 8 (adult) on the shared nerve-ring neuron subset, producing a divergence map for Gate 1 evidence.
+
+#### Scenario: Cross-validation produces a non-empty agreement set
+
+- **GIVEN** a loaded Cook 2019 hermaphrodite connectome and a loaded Witvliet 2021 dataset 8 connectome
+- **WHEN** `cross_validate(cook, witvliet)` is called
+- **THEN** a `DivergenceReport` SHALL be returned
+- **AND** `report.shared_neurons` SHALL be > 100 (the nerve-ring overlap; Witvliet 2021 covers ~180 neurons mostly within Cook 2019's 302)
+- **AND** `report.shared_pairs_agreement` SHALL be > 0 (the two datasets agree on at least some shared pairs)
+
+#### Scenario: Divergence map is documented
+
+- **GIVEN** a `DivergenceReport` returned from `cross_validate`
+- **WHEN** the report is inspected
+- **THEN** `report.cook_only_pairs` SHALL list chemical-synapse `(pre, post)` pairs that appear in Cook 2019 but not Witvliet 2021 dataset 8
+- **AND** `report.witvliet_only_pairs` SHALL list pairs that appear in Witvliet 2021 but not Cook 2019
+- **AND** `report.weight_divergence_summary` SHALL include mean and median weight-ratio statistics for the shared pairs
+- **AND** the T1 logbook SHALL include a textual summary of these divergences (e.g. plausible developmental-stage or lineage-tracing causes)
+
+### Requirement: Smoke-Test Forward Pass
+
+The connectome subpackage SHALL provide a `run_forward_pass(c, *, seed=0) -> np.ndarray` function that validates the data model can support a learned-weight forward computation. The smoke-test SHALL NOT instantiate any `Brain` Protocol implementation, register a new `BrainType` enum value, or touch the env (those concerns belong to T2 / L1).
+
+#### Scenario: Forward pass on the full Cook 2019 connectome
+
+- **GIVEN** a loaded Cook 2019 hermaphrodite `Connectome`
+- **WHEN** `run_forward_pass(c, seed=0)` is called
+- **THEN** the function SHALL return a finite `np.ndarray` of shape `(n_motor_neurons,)`
+- **AND** the output SHALL NOT contain NaN or Inf values
+- **AND** the output SHALL NOT be a degenerate constant vector (non-trivial activity through the network)
+
+#### Scenario: Chemical-synapse strict-mask applied
+
+- **GIVEN** a loaded `Connectome` with the chemical-synapse adjacency built into a learnable weight matrix `W_chem`
+- **WHEN** the forward pass is constructed
+- **THEN** every (i, j) pair where Cook 2019 reports no chemical synapse SHALL have `W_chem[i, j] == 0`
+- **AND** non-zero entries SHALL be sampled from a seeded random distribution (deterministic by `seed`)
+
+#### Scenario: Gap junctions participate at fixed Cook 2019 weights
+
+- **GIVEN** a loaded `Connectome`
+- **WHEN** the forward pass is constructed
+- **THEN** the gap-junction weight matrix SHALL use Cook 2019 junction counts directly (not learnable scalars, not unit weights — see `phase6-tracking/design.md` § Decision 7)
+- **AND** the gap-junction matrix SHALL be symmetric (gap junctions are undirected)
+
+#### Scenario: Sanity guard against silent load failure
+
+- **GIVEN** a deliberately-emptied `Connectome` (zero chemical synapses, zero gap junctions)
+- **WHEN** `run_forward_pass` is called
+- **THEN** the function SHALL raise an exception with a message indicating the connectome is empty
+- **AND** the exception SHALL NOT be silently swallowed by returning a degenerate output
