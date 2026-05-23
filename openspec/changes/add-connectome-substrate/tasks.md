@@ -121,13 +121,13 @@ Maps to T1.9 in the tracker.
 
 Standard Phase 5+ project convention.
 
-- [ ] 12.1 `openspec validate add-connectome-substrate --strict` clean
-- [ ] 12.2 `uv run pre-commit run --files <changed>` clean during iteration
-- [ ] 12.3 `uv run pre-commit run -a` clean before push
-- [ ] 12.4 `uv run pytest -m "not nightly"` green
-- [ ] 12.5 Confirm no `/Users/`, `/home/`, `C:\Users\` paths in any committed file (per `feedback_no_absolute_home_paths_in_commits.md`)
-- [ ] 12.6 Confirm vendored XLSX files are LFS-tracked: `git check-attr filter data/connectome/cook_2019_si5_connectome_adjacency.xlsx` reports `lfs` (per `feedback_logbook_artefact_stash_lfs_check.md`)
-- [ ] 12.7 Confirm `git diff --stat main` shows only the expected file set; no surprise edits in `packages/quantum-nematode/quantumnematode/brain/arch/`, `utils/brain_factory.py`, `env/env.py`, or `dtypes.py` (these are T2 territory; touching them in T1 would be scope creep)
+- [x] 12.1 `openspec validate add-connectome-substrate --strict` clean
+- [x] 12.2 `uv run pre-commit run --files <changed>` clean during iteration
+- [x] 12.3 `uv run pre-commit run -a` clean before push
+- [x] 12.4 `uv run pytest -m "not nightly"` green
+- [x] 12.5 Confirm no `/Users/`, `/home/`, `C:\Users\` paths in any committed file (per `feedback_no_absolute_home_paths_in_commits.md`)
+- [x] 12.6 Confirm vendored XLSX files are LFS-tracked: `git check-attr filter data/connectome/cook_2019_si5_connectome_adjacency.xlsx` reports `lfs` (per `feedback_logbook_artefact_stash_lfs_check.md`)
+- [x] 12.7 Confirm `git diff --stat main` shows only the expected file set; no surprise edits in `packages/quantum-nematode/quantumnematode/brain/arch/`, `utils/brain_factory.py`, `env/env.py`, or `dtypes.py` (these are T2 territory; touching them in T1 would be scope creep)
 
 ## Out-of-task actions
 
