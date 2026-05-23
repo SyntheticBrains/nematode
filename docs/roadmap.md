@@ -618,7 +618,7 @@ Aerotaxis (oxygen sensing), pheromone signalling, and multi-agent dynamics are *
 
 #### Architecture families in the comparison sweep
 
-The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks. The MUST / SHOULD / MAY classification below was tightened from the roadmap's initial eight-MUST framing during Phase 6 scoping; rationale lives in [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md). MUST × three behaviours × four seeds = 48 L2 runs (vs the roadmap's earlier-implied 96). SHOULD/MAY rows are evaluated opportunistically in Tranche 6 and do not gate any Phase 6 exit criterion.
+The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks. The MUST / SHOULD / MAY classification below was tightened from the roadmap's initial eight-MUST framing during Phase 6 scoping; rationale lives in [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md). MUST × three behaviours × four seeds = 48 L2 runs (vs the roadmap's earlier-implied 96). SHOULD/MAY rows are evaluated opportunistically in Tranche 7 and do not gate any Phase 6 exit criterion.
 
 | Family | Existing impl | Scope | Phase 6 role |
 |---|---|---|---|
@@ -678,7 +678,7 @@ Internal validation against public data is required at Phase 6 close; external l
 **Required (MUST):**
 
 - 🔲 L0 connectome substrate operational: ≥ 1 real connectome dataset (Cook 2019 or OpenWorm c302) imported, with documented topology and synaptic-weight provenance.
-- 🔲 L1 architecture-plugin interface accommodates the curated MUST set above. Plugin-parity test: adding a 9th architecture meets the file-count + no-per-architecture-branch checks documented in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" framing carries forward; the wall-clock target is documented but not load-bearing for the exit criterion).
+- 🔲 L1 architecture-plugin interface accommodates the curated MUST set above. Plugin-parity test: adding a new architecture family meets the file-count + no-per-architecture-branch checks documented in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" framing carries forward; the wall-clock target is documented but not load-bearing for the exit criterion).
 - 🔲 L2 weight-search results across all MUST architectures on all three behaviours, at the Phase 5 statistical bar (paired-seed, bootstrap CIs, n ≥ 4 seeds per condition).
 - 🔲 L3 NEAT topology-search results comparing the wild-type connectome to NEAT-evolved topologies on at least one behaviour, with the lag-matrix or equivalent discriminative instrument.
 - 🔲 Rung 2 chemical gradients (dynamic Fick's-law + source dynamics + signal-type diffusion coefficients) operational, paired with log-concentration chemosensory adaptation kinetics.

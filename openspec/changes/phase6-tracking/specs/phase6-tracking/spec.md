@@ -68,6 +68,18 @@ Each of the three roadmap-defined mid-phase decision gates (Gate 1 at the close 
 - **WHEN** a reviewer observes the missing criterion
 - **THEN** the gate SHALL be treated as not-yet-decided and the next tranche's PR SHALL be blocked until the logbook is amended to evaluate each criterion explicitly
 
+#### Scenario: Amendment mechanism — definition of "the gate fires" and recording rules
+
+This scenario anchors the normative content of `design.md` § Decision 6 § Amendment mechanism; design.md is rationale-only and references back here for enforceable rules.
+
+- **GIVEN** any Phase 6 mid-phase gate (Gate 1, Gate 2, or Gate 3)
+- **WHEN** the project needs to determine whether a Decision 6 criterion amendment is pre-fire (allowed) or post-fire (prohibited)
+- **THEN** "the gate fires" SHALL be defined as the moment the triggering tranche's logbook PR is opened with the gate-decision section drafted
+- **AND** an amendment commit landing before that PR opens (including a separate prior PR landing the previous day) SHALL be treated as pre-fire
+- **AND** an amendment commit landing in the same PR as the gate-decision draft, OR in any PR opened after that PR opens, SHALL be treated as post-fire
+- **AND** a Decision 6 amendment SHALL land as a separate commit (and SHALL NOT be bundled with the gate-decision-shipping PR diff), so amendments are visible independently of the verdicts they affect
+- **AND** when a gate decision evaluates against a pre-fire amended criterion, the triggering tranche's logbook SHALL record both the original criterion and the amended one
+
 #### Scenario: Gate criterion recalibrated before the gate fires (allowed)
 
 - **GIVEN** an in-flight tranche surfaces evidence that one of Decision 6's pre-registered criteria was empirically miscalibrated (e.g. T1 reveals the G1.c frozen-random-control baseline is itself unstable, or T2 reveals the G2.b "≤ 6 files" floor is too tight against the chosen registry pattern)
