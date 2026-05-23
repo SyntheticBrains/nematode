@@ -13,48 +13,48 @@ Phase 6 Tranche 2 (T2). Closes [Gate 1](../phase6-tracking/tasks.md). Sub-tasks 
 - [x] 1.7 Write `tests/quantumnematode_tests/brain/arch/test_registry.py`: register / get / list round-trip; duplicate-name detection; unknown-name lookup; consistency between registry and `BrainType` enum at import time.
 - [x] 1.8 Run `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registry.py -v` and confirm green.
 
-## 2. MLPPPO migration + byte-equivalence (T2.4 + T2.5 — Gate 1 G1.d MUST #1)
+## 2. MLPPPO migration (Gate 1 G1.d MUST #1)
 
-- [ ] 2.1 Capture pre-refactor MLPPPO byte-equivalence fixture: run [configs/scenarios/foraging/lstmppo_small_klinotaxis.yml](../../../configs/scenarios/foraging/lstmppo_small_klinotaxis.yml) with brain swapped to mlpppo, pinned seed, 10 episodes; serialise per-step action-probability tensors + per-episode parameter tensors as a Pickle fixture under `tests/quantumnematode_tests/brain/arch/test_data/mlpppo_pre_refactor.pkl`.
-- [ ] 2.2 Add `@register_brain("mlpppo", MLPPPOBrainConfig, BrainType.MLP_PPO, families=("classical",))` decorator to `MLPPPOBrain` in [packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py).
-- [ ] 2.3 Extract internal `topology` + `rule` references in `MLPPPOBrain.__init__` — minimal-edit: wrap the existing actor/critic MLPs in an `MLPTopology` adapter that delegates `forward(x)` to the existing forward path; wrap the existing PPO optimiser + loss code in a `PPORule` adapter that delegates `step(...)` to the existing learn path. **Do not rewrite call sites — wrap them.** Per [design.md § Decision 2](design.md), byte-equivalence falls out from preserving the tensor-op sequence.
-- [ ] 2.4 Write `tests/quantumnematode_tests/brain/arch/test_migration_byte_equivalence.py::test_mlpppo_byte_equivalence` — load fixture from 2.1, re-run identically against post-refactor brain via the registry, assert `torch.equal` on every captured tensor.
-- [ ] 2.5 Run `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_migration_byte_equivalence.py::test_mlpppo_byte_equivalence -v` and confirm green. **Migration validation gate**: if this fails, halt the migration and re-design [design.md § Decision 2](design.md) strategy.
+**Scope decision** (recorded at implementation start): topology/rule factoring is deferred to a follow-up change. T2 ships registration-only migration — each brain gets the `@register_brain(...)` decorator above its class and nothing else. Byte-equivalence is trivially preserved because no executing code changes. The `BrainTopology` + `LearningRule` Protocols ship as forward-compat scaffolding consumed directly by `ConnectomePPOBrain`. Byte-equivalence verification uses an in-process two-construct test (registry vs direct constructor with pinned seeds), not a persisted Pickle fixture.
 
-## 3. LSTMPPO migration + byte-equivalence (T2.4 + T2.5 — Gate 1 G1.d MUST #2)
+- [x] 2.1 Add `@register_brain("mlpppo", MLPPPOBrainConfig, BrainType.MLP_PPO, families=("classical",))` decorator to `MLPPPOBrain` in [packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py).
+- [x] 2.2 Write `tests/quantumnematode_tests/brain/arch/test_registration_equivalence.py::test_mlpppo_registry_equivalence` — instantiate the brain twice in one process (once via `instantiate_brain("mlpppo", cfg, ...)`, once via `MLPPPOBrain(config=cfg, ...)`); with pinned seeds, assert `torch.equal` on initial actor/critic weights + matching forward-pass outputs on a fixed synthetic input.
+- [x] 2.3 Run `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registration_equivalence.py::test_mlpppo_registry_equivalence -v` and confirm green. The existing [test_mlpppo.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_mlpppo.py) suite is the implicit pre-refactor anchor; both suites must remain green.
 
-- [ ] 3.1 Capture pre-refactor LSTMPPO byte-equivalence fixture: run [configs/scenarios/foraging/lstmppo_small_klinotaxis.yml](../../../configs/scenarios/foraging/lstmppo_small_klinotaxis.yml) unmodified, pinned seed, 10 episodes; serialise per-step action-probability tensors + LSTM hidden state + per-episode parameter tensors as a Pickle fixture under `tests/quantumnematode_tests/brain/arch/test_data/lstmppo_pre_refactor.pkl`.
-- [ ] 3.2 Add `@register_brain("lstmppo", LSTMPPOBrainConfig, BrainType.LSTM_PPO, families=("classical",))` decorator to `LSTMPPOBrain` in [packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py).
-- [ ] 3.3 Extract internal `topology` + `rule` references in `LSTMPPOBrain.__init__` (same wrap-not-rewrite pattern as MLPPPO); the LSTM hidden-state management remains owned by the topology adapter.
-- [ ] 3.4 Add `tests/quantumnematode_tests/brain/arch/test_migration_byte_equivalence.py::test_lstmppo_byte_equivalence` — load fixture from 3.1, re-run identically, assert `torch.equal` on every captured tensor + LSTM hidden state.
-- [ ] 3.5 Run the test and confirm green. **Migration validation gate**: if this fails, halt the migration.
+## 3. LSTMPPO migration (Gate 1 G1.d MUST #2)
 
-## 4. Seven classical / spiking brains migration (T2.4 + T2.5 — `atol=1e-7`)
+- [x] 3.1 Add `@register_brain("lstmppo", LSTMPPOBrainConfig, BrainType.LSTM_PPO, families=("classical",))` decorator to `LSTMPPOBrain` in [packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py).
+- [x] 3.2 Add `tests/quantumnematode_tests/brain/arch/test_registration_equivalence.py::test_lstmppo_registry_equivalence` — same pattern as MLPPPO with LSTM hidden state included in the equivalence assertion.
+- [x] 3.3 Run the test + the existing [test_lstmppo.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_lstmppo.py) suite; both must be green.
 
-- [ ] 4.1 Migrate `MLPReinforceBrain` ([mlpreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpreinforce.py)): add `@register_brain("mlpreinforce", MLPReinforceBrainConfig, BrainType.MLP_REINFORCE, families=("classical",))` + extract topology/rule references.
-- [ ] 4.2 Migrate `MLPDQNBrain` ([mlpdqn.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpdqn.py)): same pattern.
-- [ ] 4.3 Migrate `QRCBrain` ([qrc.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrc.py)): same pattern; `families=("classical",)` (QRC is classical reservoir despite the Q prefix).
-- [ ] 4.4 Migrate `CRHBrain` ([crh.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/crh.py)): same pattern.
-- [ ] 4.5 Migrate `CRHQLSTMBrain` ([crhqlstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/crhqlstm.py)): same pattern.
-- [ ] 4.6 Migrate `HybridClassicalBrain` ([hybridclassical.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py)): same pattern.
-- [ ] 4.7 Migrate `SpikingReinforceBrain` ([spikingreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/spikingreinforce.py)): same pattern; `families=("spiking",)`.
-- [ ] 4.8 Write `tests/quantumnematode_tests/brain/arch/test_migration_numerical_equivalence.py` — parametrised over the 8 classical/spiking arch names; for each, run a 5-step smoke training pre- and post-refactor with pinned seed, assert `torch.allclose(post, pre, rtol=0, atol=1e-7)` on parameter tensors.
-- [ ] 4.9 Run `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_migration_numerical_equivalence.py -v` and tabulate per-architecture pass/fail in `notes/migration-equivalence-results.md`. Any arch failing the tolerance: investigate, fix, or widen tolerance with written justification in the notes.
+## 4. Seven classical / spiking brains migration (decorator-only)
 
-## 5. Ten quantum + spiking-quantum brains migration (T2.4 + T2.5 — `atol=1e-7` with deterministic simulator)
+Per-architecture: add a `@register_brain(name, config_cls, brain_type, families=...)` decorator above the brain class. No other changes per the scope decision in § 2.
 
-- [ ] 5.1 Migrate `QVarCircuitBrain` ([qvarcircuit.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qvarcircuit.py)): add `@register_brain("qvarcircuit", QVarCircuitBrainConfig, BrainType.QVARCIRCUIT, families=("quantum",))` + extract topology/rule references.
-- [ ] 5.2 Migrate `QQLearningBrain` ([qqlearning.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qqlearning.py)): same pattern.
-- [ ] 5.3 Migrate `QRHBrain` ([qrh.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrh.py)): same pattern; `families=("classical", "quantum")` (reservoir + quantum hybrid).
-- [ ] 5.4 Migrate `QEFBrain` ([qef.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qef.py)): same pattern.
-- [ ] 5.5 Migrate `QSNNReinforceBrain` ([qsnnreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qsnnreinforce.py)): same pattern; `families=("quantum", "spiking")`.
-- [ ] 5.6 Migrate `QSNNPPOBrain` ([qsnnppo.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qsnnppo.py)): same pattern; `families=("quantum", "spiking")`.
-- [ ] 5.7 Migrate `HybridQuantumBrain` ([hybridquantum.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridquantum.py)): same pattern.
-- [ ] 5.8 Migrate `HybridQuantumCortexBrain` ([hybridquantumcortex.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridquantumcortex.py)): same pattern.
-- [ ] 5.9 Migrate `QLIFLSTMBrain` ([qliflstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qliflstm.py)): same pattern.
-- [ ] 5.10 Migrate `QRHQLSTMBrain` ([qrhqlstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrhqlstm.py)): same pattern.
-- [ ] 5.11 Extend `test_migration_numerical_equivalence.py` parametrisation to cover the 9 quantum/spiking-quantum arches. Configure their smoke fixtures to use a deterministic statevector simulator (per [design.md § Risk A](design.md)).
-- [ ] 5.12 Run the full parametrised test suite; for any arch exceeding `atol=1e-7`, widen tolerance to the fallback tier ("training-curve shape preserved within 5%") with written justification in `notes/migration-equivalence-results.md`.
+- [x] 4.1 Migrate `MLPReinforceBrain` ([mlpreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpreinforce.py)) — `families=("classical",)`.
+- [x] 4.2 Migrate `MLPDQNBrain` ([mlpdqn.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpdqn.py)) — `families=("classical",)`.
+- [x] 4.3 Migrate `QRCBrain` ([qrc.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrc.py)) — `families=("classical",)` (QRC is classical reservoir).
+- [x] 4.4 Migrate `CRHBrain` ([crh.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/crh.py)) — `families=("classical",)`.
+- [x] 4.5 Migrate `CRHQLSTMBrain` ([crhqlstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/crhqlstm.py)) — `families=("classical",)`.
+- [x] 4.6 Migrate `HybridClassicalBrain` ([hybridclassical.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py)) — `families=("classical",)`.
+- [x] 4.7 Migrate `SpikingReinforceBrain` ([spikingreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/spikingreinforce.py)) — `families=("spiking",)`.
+- [x] 4.8 Run the affected per-architecture test files; each must remain green.
+
+## 5. Ten quantum + spiking-quantum brains migration (decorator-only)
+
+Same per-architecture pattern as § 4.
+
+- [x] 5.1 Migrate `QVarCircuitBrain` ([qvarcircuit.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qvarcircuit.py)) — `families=("quantum",)`.
+- [x] 5.2 Migrate `QQLearningBrain` ([qqlearning.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qqlearning.py)) — `families=("quantum",)`.
+- [x] 5.3 Migrate `QRHBrain` ([qrh.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrh.py)) — `families=("quantum",)`.
+- [x] 5.4 Migrate `QEFBrain` ([qef.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qef.py)) — `families=("quantum",)`.
+- [x] 5.5 Migrate `QSNNReinforceBrain` ([qsnnreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qsnnreinforce.py)) — `families=("quantum", "spiking")`.
+- [x] 5.6 Migrate `QSNNPPOBrain` ([qsnnppo.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qsnnppo.py)) — `families=("quantum", "spiking")`.
+- [x] 5.7 Migrate `HybridQuantumBrain` ([hybridquantum.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridquantum.py)) — `families=("quantum",)`.
+- [x] 5.8 Migrate `HybridQuantumCortexBrain` ([hybridquantumcortex.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridquantumcortex.py)) — `families=("quantum",)`.
+- [x] 5.9 Migrate `QLIFLSTMBrain` ([qliflstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qliflstm.py)) — `families=("quantum",)`.
+- [x] 5.10 Migrate `QRHQLSTMBrain` ([qrhqlstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrhqlstm.py)) — `families=("quantum",)`.
+- [x] 5.11 Run the affected per-architecture test files; each must remain green.
 
 ## 6. Dispatcher + loader collapse (T2.2 + T2.4)
 

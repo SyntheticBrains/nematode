@@ -86,7 +86,8 @@ from quantumnematode.brain.arch._qlif_layers import (
     execute_qlif_layer_differentiable_reupload,
 )
 from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -598,6 +599,12 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
 # ──────────────────────────────────────────────────────────────────────
 
 
+@register_brain(
+    name="hybridquantumcortex",
+    config_cls=HybridQuantumCortexBrainConfig,
+    brain_type=BrainType.HYBRID_QUANTUM_CORTEX,
+    families=("quantum",),
+)
 class HybridQuantumCortexBrain(ClassicalBrain):
     """Hierarchical hybrid quantum brain with QSNN reflex + QSNN cortex + classical critic.
 

@@ -42,12 +42,13 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 from pydantic import Field, field_validator, model_validator
 
+from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._reservoir_hybrid_base import (
     MIN_READOUT_HIDDEN_DIM,
     ReservoirHybridBase,
     ReservoirHybridBaseConfig,
 )
-from quantumnematode.brain.arch.dtypes import DeviceType
+from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
@@ -227,6 +228,12 @@ class CRHBrainConfig(ReservoirHybridBaseConfig):
 # =============================================================================
 
 
+@register_brain(
+    name="crh",
+    config_cls=CRHBrainConfig,
+    brain_type=BrainType.CRH,
+    families=("classical",),
+)
 class CRHBrain(ReservoirHybridBase):
     """Classical Reservoir Hybrid brain architecture.
 

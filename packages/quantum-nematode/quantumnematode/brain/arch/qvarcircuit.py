@@ -86,7 +86,8 @@ from qiskit.circuit import Parameter
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch.dtypes import DEFAULT_SHOTS, BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import DEFAULT_SHOTS, BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
     SENSORY_MODULES,
@@ -228,6 +229,12 @@ class QVarCircuitBrainConfig(BrainConfig):
     )
 
 
+@register_brain(
+    name="qvarcircuit",
+    config_cls=QVarCircuitBrainConfig,
+    brain_type=BrainType.QVARCIRCUIT,
+    families=("quantum",),
+)
 class QVarCircuitBrain(QuantumBrain):
     """
     Modular quantum brain architecture.

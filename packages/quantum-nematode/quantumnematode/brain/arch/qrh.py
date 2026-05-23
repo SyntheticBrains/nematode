@@ -47,11 +47,12 @@ from pydantic import Field, field_validator, model_validator
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 
+from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._reservoir_hybrid_base import (
     ReservoirHybridBase,
     ReservoirHybridBaseConfig,
 )
-from quantumnematode.brain.arch.dtypes import DeviceType
+from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
@@ -235,6 +236,12 @@ class QRHBrainConfig(ReservoirHybridBaseConfig):
 # =============================================================================
 
 
+@register_brain(
+    name="qrh",
+    config_cls=QRHBrainConfig,
+    brain_type=BrainType.QRH,
+    families=("quantum",),
+)
 class QRHBrain(ReservoirHybridBase):
     """Quantum Reservoir Hybrid brain architecture.
 

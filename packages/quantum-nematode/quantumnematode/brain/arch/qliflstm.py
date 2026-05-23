@@ -68,7 +68,8 @@ from quantumnematode.brain.arch._qlif_layers import (
     encode_sensory_spikes,
 )
 from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -690,6 +691,12 @@ class QLIFLSTMBrainConfig(BrainConfig):
 # ──────────────────────────────────────────────────────────────────────
 
 
+@register_brain(
+    name="qliflstm",
+    config_cls=QLIFLSTMBrainConfig,
+    brain_type=BrainType.QLIF_LSTM,
+    families=("quantum",),
+)
 class QLIFLSTMBrain(ClassicalBrain):
     """Quantum QLIF-LSTM brain with recurrent PPO training.
 

@@ -66,7 +66,8 @@ from quantumnematode.brain.arch._qlif_layers import (
     execute_qlif_layer_differentiable_cached,
 )
 from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -516,6 +517,12 @@ class QSNNReinforceBrainConfig(BrainConfig):
         return v
 
 
+@register_brain(
+    name="qsnnreinforce",
+    config_cls=QSNNReinforceBrainConfig,
+    brain_type=BrainType.QSNN_REINFORCE,
+    families=("quantum", "spiking"),
+)
 class QSNNReinforceBrain(ClassicalBrain):
     """
     Quantum Spiking Neural Network brain architecture.

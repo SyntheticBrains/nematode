@@ -47,7 +47,8 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -145,6 +146,12 @@ class MLPPPOBrainConfig(BrainConfig):
     feature_gating: bool = False  # learnable sigmoid gate on expanded features
 
 
+@register_brain(
+    name="mlpppo",
+    config_cls=MLPPPOBrainConfig,
+    brain_type=BrainType.MLP_PPO,
+    families=("classical",),
+)
 class MLPPPOBrain(ClassicalBrain):
     """
     Proximal Policy Optimization (PPO) brain architecture.
