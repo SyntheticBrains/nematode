@@ -1082,69 +1082,97 @@ ______________________________________________________________________
 
 ## Future Directions
 
-Beyond the current roadmap phases, potential research directions include:
+Beyond Phase 6 and Phase 7, the following research directions are scoped as future work — each is a substantial programme in its own right, and each is gated on either Phase 6/7 evidence or external data availability. The roadmap deliberately does not schedule them.
 
-### 1. Organism Transfer
+### Cross-species expansion beyond *P. pacificus*
 
-- **Drosophila (fruit fly)**: ~100K neurons, similar sensory tasks, well-studied connectome (partial)
-- **Zebrafish larvae**: ~100K neurons, visual predator avoidance, schooling behavior
-- **Approach**: Transfer learned principles and architectural insights from C. elegans deep dive. Proof-of-concept, not full simulation.
+- ***C. briggsae* transfer**. Phase 7 covers *P. pacificus*; *C. briggsae* lacks a high-quality published connectome as of project planning (chromosome-level genomes only). Becomes a scoped phase once reference connectome data appears.
+- **Witvliet developmental connectomes**. The *C. elegans* developmental connectome series (Witvliet et al. 2021) supports a within-species temporal-transfer study: does the platform's L0+L2 setup reproduce documented developmental shifts in behaviour? Optional follow-on to Phase 7.
+- **Comparative connectomics community**. Engagement with the broader 2024-2026 connectomics wave — data interop first, scoped partnerships if specific questions emerge.
 
-### 2. Three-Dimensional Physics
+### Drosophila-scale connectome transfer
 
-- Full 3D substrate simulation (soil mechanics, agar surface, burrowing)
-- Fluid dynamics for movement in aqueous media
-- OpenWorm integration for body physics
-- Significantly harder computationally but most biologically realistic
+- *Drosophila* (~100K neurons) has a connectome dataset (FlyWire) and active connectome-execution-at-scale work (Sandia on Loihi 2 achieving >100× real-time). Transferring the platform to Drosophila scale is fundamentally a **neuromorphic-hardware question**, not a connectome-learning one — the scale-up needs different infrastructure than the *C. elegans* / *P. pacificus* work. Belongs in Future Directions, not on the Phase 7 critical path.
+- Worth distinguishing: FlyWire is the connectome dataset + execution-at-scale; NeuroMechFly / FlyWalker are separate 3D-embodied-fly research threads. The platform's plausible next-scale connectome target is the former, not the latter.
+- Zebrafish larvae (~100K neurons) is a structurally similar target — visual predator avoidance + schooling — with the same scale-up considerations.
 
-### 3. Clinical Applications
+### 3D environment + native body mechanics
 
-- Neurological disease models (C. elegans Alzheimer's, Parkinson's analogs)
-- Drug discovery: Compound screening via behavioral phenotyping
-- Aging studies: Age-dependent behavioral changes (C. elegans lifespan ~2-3 weeks)
+3D environment, native sinusoidal undulation, omega turns, and pirouettes are deferred to Future Directions. The platform's claim ("first closed-loop learning + evolution on the real *C. elegans* connectome with pluggable architectures") does not require them, and the *C. elegans* validation data is 2D-plate biology. If a future phase commits to 3D, technology selection should run as follows:
 
-### 4. Hybrid Behavioral-Cellular Models
+- **MuJoCo MJX** is the default choice — JAX backend, GPU-vectorisable, deterministic, headless-friendly, the de facto standard in embodied-RL-for-biology research.
+- **Brax** is the runner-up if raw throughput beats physics fidelity for the question at hand.
+- **OpenWorm Sibernetic** is the choice if the 3D need is specifically *C. elegans* fluid-coupled body mechanics — it's SPH-based, 2D + viscous-fluid, validated against real-worm movement.
+- **Game engines (Unity, Godot, Unreal) are off-table for this project.** They're optimised for interactive rendering at 60-120 FPS, not for batch RL training at evolution scale (thousands of parallel environments × thousands of generations × deterministic reproducibility). The compute cost-per-step and the reproducibility/headless requirements both work against them.
 
-- Combine behavioral abstraction with selective cellular models
-- Example: RL-trained behavioral foraging + detailed AFD neuron biophysics for thermotaxis
-- Cross-validation with OpenWorm's cellular-level predictions
+3D belongs to organisms whose behavioural repertoire is fundamentally 3D (Drosophila flight, fish swimming, mouse navigation), not to *C. elegans* on agar.
 
-### 5. Quantum Advantage for General AI
+### Energy / metabolic model
 
-- Extract insights: When does quantum help for RL tasks?
-- Apply findings to broader quantum ML research
-- Contribute to theoretical understanding of quantum computational advantage
+The current platform has no energy/metabolic model — satiety is abstract rather than ATP-based. Phase 6 and Phase 7's three behaviours (klinotaxis, thermotaxis, predator evasion) don't depend on internal energy state at the timescales the platform operates on, so this is not on the critical path. But several aspirational behaviours **do** require an energy / metabolic state representation:
 
-### 6. Ecological Co-Evolution
+- **Dauer transitions** (food-scarcity-induced larval state). Single biggest *C. elegans* behavioural transition not currently representable.
+- **Dwelling vs roaming**. Long-timescale foraging strategy modulation by food-detection state. Documented behavioural phenotype with neuromodulator-receptor mapping.
+- **Long-timescale foraging**. Resource-depletion + replenishment dynamics on bacterial-lawn substrates.
 
-- Add state to predators (HP, satiety, death-by-starvation, kill-replenishes-energy) so the Phase 5 frozen-weight Red Queen substrate gains coupled population dynamics
-- Lotka-Volterra-style oscillations: study whether predator-prey populations stabilise, oscillate, or collapse under learned policies
-- Phase 5's `PredatorBrain` Protocol (M1) and `MLPPPOPredatorBrain` (M5) already supply the policy substrate; the new work is env-side state machinery + reward shaping
-- Selection pressure shifts from "maximise kill-rate" to "maintain a viable population against prey escape velocity" — natural follow-up if Phase 5's co-evolution verdict motivates richer eco-dynamics
+The "all *C. elegans* behaviours" aspiration is implicitly gated on this gap being filled. Energy/metabolic implementation is itself substantial (~3-6 months software-only) and would warrant a scoped phase if pursued.
+
+### Applied directions
+
+Each of these is a multi-year research programme in its own right, requiring different funding, partnerships, and expertise than the Phase 6/7 platform work. They are scoped here as future direction headers, not as roadmap commitments.
+
+- **Drug screening assays**. Use the platform for compound screening via behavioural phenotyping. Requires the energy/metabolic model above + pharmacology partners.
+- **Neurodegeneration models**. *C. elegans* analogues of Alzheimer's, Parkinson's, ALS at the connectome level. Requires connectome perturbation tooling + neurodegeneration biology partnerships.
+- **Brain-computer interfaces**. Neural-decoding insights extracted from connectome-learning dynamics. Requires neural-recording partners.
+- **Aging studies**. Age-dependent behavioural changes (*C. elegans* lifespan ~2-3 weeks). Requires the energy/metabolic model + lifespan-modelling expertise.
+
+### Hybrid behavioural-cellular models
+
+Combine behavioural-level RL training with selective cellular-level biophysics — e.g., RL-trained behavioural foraging with detailed AFD-neuron biophysics for thermotaxis. Cross-validation point with OpenWorm's cellular-level predictions. Modest scoped follow-on; sits naturally adjacent to Phase 7's L4 plasticity work.
+
+### Ecological co-evolution
+
+Add state to predators (HP, satiety, death-by-starvation, kill-replenishes-energy) so the Phase 5 frozen-weight Red Queen substrate gains coupled population dynamics. Lotka-Volterra-style oscillations; whether predator-prey populations stabilise, oscillate, or collapse under learned policies. Phase 5's `PredatorBrain` Protocol (M1) and `MLPPPOPredatorBrain` (M5) already supply the policy substrate; the new work is environment-side state machinery + reward shaping. Selection pressure shifts from "maximise kill-rate" to "maintain a viable population against prey escape velocity" — natural follow-up if Phase 5's co-evolution verdict motivates richer eco-dynamics.
+
+### NematodeBench public launch
+
+NematodeBench exists as internal benchmark tooling and persists through Phase 6/7 as part of the architecture-comparison protocol's reproducibility scaffolding. A public-facing launch (external submissions, public leaderboard, community submission workflow) is moved to Future Directions: benchmarks crystallise mature communities; they don't bootstrap them. If Phase 6+7 results draw external interest and partnerships emerge organically, a public launch becomes a sensible follow-on. Until then, the benchmark infrastructure is internal tooling.
+
+### Computational principles emerging from the deep-dive
+
+The original "≥ 3 universal computational principles documented" framing of v3 is dropped — universal-principles extraction is an engineering-the-breakthrough pattern that tends to produce overclaiming. If Phase 6/7 results surface principles that generalise (e.g., specific architectural motifs that beat naive MLPs across all behaviours; specific evolutionary signatures of Baldwin-style canalisation on connectome topologies; specific plasticity-rule families that fail on connectome substrates), those emerge organically in the papers — they are not a scheduled deliverable.
 
 ______________________________________________________________________
 
 ## Technical Debt & Maintenance
 
-### Resolved (Phases 0-2)
+### Resolved through Phase 5
 
-- ~~QQLearningBrain completion~~ — Evaluated, not competitive; deprioritised
-- ~~MLPReinforceBrain loss bug~~ — Investigated and documented
-- ~~Grid size hardcoding~~ — Fixed
-- ~~Statistical analysis framework~~ — Implemented (confidence intervals, significance tests)
+- ~~QQLearningBrain completion~~ — evaluated, not competitive; deprioritised.
+- ~~MLPReinforceBrain loss bug~~ — investigated and documented.
+- ~~Grid size hardcoding~~ — fixed.
+- ~~Statistical analysis framework~~ — operational; paired-seed Wilcoxon and bootstrap CIs are the project-wide standard.
+- ~~Sensory input refactoring for temporal derivatives~~ — shipped in Phase 3 (STAM, dT/dt, dC/dt, dO₂/dt).
+- ~~Memory buffer architecture~~ — STAM buffers operational across all brain architectures.
 
-### Active (Address by Phase 3)
+### Active for Phase 6
 
-1. **Sensory input refactoring** — Current spatial gradient inputs need parallel temporal derivative infrastructure
-2. **Memory buffer architecture** — Design efficient STAM buffers compatible with all brain architectures
-3. **Visualization improvements** — Gradient flow viz, spike raster plots, attention maps
-4. **Documentation** — API documentation, tutorials, architecture guides (prerequisite for Phase 7)
+1. **L0 connectome substrate import path** — `c302` (OpenWorm, NeuroML 2 format) ingestion + validation + provenance documentation. Hand-curated Cook 2019 subset as fallback per Phase 6 Risk-mitigation.
+2. **L1 architecture-plugin interface** — clean `Brain` interface that admits MLP / recurrent / spiking / reservoir / quantum / hybrid / NEAT-evolved / connectome-constrained without per-architecture branching. Plugin-parity test (≤ 1 week new architecture).
+3. **Continuous action heads** — extend the existing PPO-family brains with Gaussian-policy continuous action heads; adapt quantum architectures with continuous-output circuits.
+4. **Corrected ASH/ADL contact-based nociception** — owed correctness work flagged in [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md); lands in Phase 6's sensory-physics stack.
+5. **Documentation** — API documentation, tutorials, architecture guides current to Phase 6 state. Required to keep the architecture-plugin interface usable for future contributors and to support reproducibility artefacts (Docker, evaluation scripts) as an optional MAY exit criterion.
 
-### Lower Priority (Address as needed)
+### Active for Phase 7
 
-5. **Code quality** — Address remaining Ruff/Pyright warnings, increase test coverage
-6. **Configuration system** — Hyperparameter search, experiment templates
-7. **Performance profiling** — Optimization for multi-agent and continuous physics workloads
+6. **L4 plasticity infrastructure** — STDP and Hebbian rule families on the connectome topology; diffusible-signal layer (serotonin, dopamine); receptor-class metadata from CeNGEN; three-factor modulated STDP. Substantial new code.
+7. ***P. pacificus* connectome integration** — Cook et al. 2025 data through the L0 / L1 pipeline; hand-curated subset as fallback per Phase 7 Risk-mitigation.
+
+### Lower priority (address as needed)
+
+08. **Code quality** — remaining Ruff / Pyright warnings; test coverage gaps.
+09. **Configuration system** — hyperparameter search templates; evolution-config schemas current to Phase 6+ work.
+10. **Performance profiling** — optimisation for continuous-physics + NEAT-population-search workloads.
 
 ______________________________________________________________________
 
