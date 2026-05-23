@@ -69,12 +69,12 @@ Maps to T1.4 in the tracker: cross-validation against Witvliet 2021 nerve-ring s
 
 Maps to T1.6 in the tracker: PPO-shaped forward pass on the connectome topology.
 
-- [ ] 7.1 Implement `connectome/smoke.py:run_forward_pass(c, *, seed=0) -> np.ndarray` per design.md Decision T1.5: build N×N chemical-synapse adjacency with random weights sampled from `N(0, 1/sqrt(fan_in))` where `fan_in` is the in-degree of each postsynaptic neuron (prevents tanh saturation given Cook 2019 has up to ~50 chemical inputs per neuron); non-existent edges pinned to zero (strict-mask). N×N gap-junction adjacency uses Cook 2019 counts as fixed weights
-- [ ] 7.2 Forward pass: `output = tanh((chemical_W + gap_W) @ input_x)`; return `output[motor_neuron_rows]`
-- [ ] 7.3 Sanity guard: raise if chemical-synapse adjacency has zero non-zero entries (catches silent load failures)
-- [ ] 7.4 Module exposes a way for tests to assert output has non-zero variance across motor-neuron rows (catches both degenerate constants AND fully-saturated ±1 outputs); the test itself lives in Phase 8
-- [ ] 7.5 Add `if __name__ == "__main__"` block so `uv run python -m quantumnematode.connectome.smoke` runs the forward pass and prints output shape + finite-value assertion result. This is the executable smoke-test from design.md Verification §
-- [ ] 7.6 Closes T1.6 — tick the matching T1.6 box in `phase6-tracking/tasks.md`
+- [x] 7.1 Implement `connectome/smoke.py:run_forward_pass(c, *, seed=0) -> np.ndarray` per design.md Decision T1.5: build N×N chemical-synapse adjacency with random weights sampled from `N(0, 1/sqrt(fan_in))` where `fan_in` is the in-degree of each postsynaptic neuron (prevents tanh saturation); non-existent edges pinned to zero (strict-mask). N×N gap-junction adjacency uses Cook 2019 counts as fixed weights, normalised by the same fan-in factor for scale comparability
+- [x] 7.2 Forward pass: `output = tanh((chemical_W + gap_W).T @ input_x)`; return `output[motor_neuron_rows]`
+- [x] 7.3 Sanity guard: raise if chemical-synapse adjacency has zero non-zero entries (catches silent load failures)
+- [x] 7.4 Module exposes a way for tests to assert output has non-zero variance across motor-neuron rows (catches both degenerate constants AND fully-saturated ±1 outputs); the test itself lives in Phase 8. Module exposes `_DEGENERATE_VARIANCE_THRESHOLD` constant for test reuse
+- [x] 7.5 Add `if __name__ == "__main__"` block so `uv run python -m quantumnematode.connectome.smoke` runs the forward pass and prints output shape + finite-value assertion result. Verified end-to-end: 116 motor outputs, variance 0.69, PASS
+- [x] 7.6 Closes T1.6 — tick the matching T1.6 box in `phase6-tracking/tasks.md`
 
 ## Phase 8 — Tests + CI integration (T1.7)
 
