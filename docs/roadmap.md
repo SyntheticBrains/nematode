@@ -59,7 +59,7 @@ ______________________________________________________________________
 | **3** | — | Temporal Sensing & Memory | ✅ COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A reaches 94% L500 on the hardest environment. Aerotaxis with 5-zone oxygen system |
 | **4** | — | Multi-Agent Complexity | ✅ COMPLETE | Pheromones, social dynamics, klinotaxis sensing. Temporal collective exploration +14.3%; social feeding +35% food under scarcity. Coordination did not produce genuine multi-agent complexity at the scales tested |
 | **5** | — | Evolution & Adaptation | ✅ COMPLETE (2026-05-23) | M3 Lamarckian inheritance is the headline-positive result. M4 Baldwin / M5 co-evolution / M6.x transgenerational memory closed with substrate-grounded STOP verdicts (architectural diagnoses, not implementation failures) |
-| **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🔲 PLANNED | First closed-loop learning + evolution on the real *C. elegans* connectome with a pluggable architecture interface. NEAT topology search ranks the wild-type connectome against evolved alternatives on three behaviours (klinotaxis, thermotaxis, predator evasion) |
+| **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🟡 IN PROGRESS | First closed-loop learning + evolution on the real *C. elegans* connectome with a pluggable architecture interface. NEAT topology search ranks the wild-type connectome against evolved alternatives on three behaviours (klinotaxis, thermotaxis, predator evasion) |
 | **7** | ~8-12 months from Phase 6 close | Deepen — plasticity + cross-species transfer | 🔲 PLANNED | Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome. *P. pacificus* transfer using Cook et al. 2025 connectome data. Optional biological-validation collaboration and paper drafts |
 
 ______________________________________________________________________
@@ -572,6 +572,26 @@ ______________________________________________________________________
 
 **Aspirational timeline**: ~6-10 months from Phase 5 close.
 
+#### Phase 6 Tranche Tracker
+
+Phase 6 is broken into nine tranches with deliberate ordering — L0 ingest (T1) → L1 plugin refactor (T2) → corrected ASH/ADL nociception (T3) → L2 first pass on grid substrate (T4) → platform refactor (T5: continuous-2D + continuous-action heads + plugin-parity verification) → env fidelity (T6: Rung 2 gradients + log-concentration adaptation) → L2 re-run on fully-upgraded substrate + real-worm validation (T7) → L3 NEAT (T8) → synthesis logbook (T9). Three mid-phase decision gates close T2 (Gate 1), T5 (Gate 2), and T7 (Gate 3), each with quantitative pre-registered pass criteria. The ordering is load-bearing: T3 precedes T4 so predator-evasion L2 cells run against corrected nociception from the start; T5 is split from T6 so Gate 2 closes against a single verifiable platform-refactor outcome rather than a bundled env-upgrade tranche; T5 + T6 sit between T4 and T7 so the env-upgrade delta is itself a Phase 6 finding. L4 (biologically-plausible plasticity) is deferred to Phase 7. The living sub-task checklist lives in [openspec/changes/phase6-tracking/tasks.md](../openspec/changes/phase6-tracking/tasks.md); seven design decisions (tranching, Cook 2019 via `cect` as L0 primary, L1 plugin-parity is real refactor work, four-MUST architecture-family scope, three-behaviour scope, mid-phase gate discipline with quantitative criteria, L2 connectome semantics with explicit connection-type taxonomy) are recorded in that change's [proposal.md](../openspec/changes/phase6-tracking/proposal.md) and [design.md](../openspec/changes/phase6-tracking/design.md).
+
+| Tranche | Scope | Roadmap layer | Approx duration | Gate trigger | Status |
+|---|---|---|---|---|---|
+| P6-0 | Phase 6 tracking scaffold (this change) | — | — | — | 🟡 in progress |
+| 1 | L0 connectome ingest — Cook 2019 via OpenWorm `cect`, vendored, cross-validated against Witvliet 2021, forward-pass smoke | L0 | 2-3 weeks | — | 🔲 not started |
+| 2 | L1 plugin refactor (dispatcher → registry + topology/rule factoring + 19-architecture migration with regression bar) + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1** | 🔲 not started |
+| 3 | Corrected ASH/ADL contact-based nociception (owed correctness work per Logbook 011) | env-correctness | 1-2 weeks | — | 🔲 not started |
+| 4 | L2 initial pass — four MUST architectures × three behaviours, grid substrate, chemical-synapse strict-mask connectome | L2 (first pass) | 4-6 weeks | — | 🔲 not started |
+| 5 | Platform refactor — continuous-2D coordinates + continuous-action heads on existing MUST brains; plugin-parity verified in practice | env-upgrade (platform) | 3-4 weeks | **Gate 2** | 🔲 not started |
+| 6 | Env fidelity — Rung 2 dynamic Fick's-law diffusion + log-concentration chemosensory adaptation kinetics | env-upgrade (fidelity) | 3-4 weeks | — | 🔲 not started |
+| 7 | L2 re-run on fully-upgraded substrate + real-worm validation; SHOULD/MAY architectures evaluated opportunistically | L2 (final) | 4-6 weeks | **Gate 3** | 🔲 not started |
+| 8 | L3 NEAT topology search on upgraded substrate; matched-capacity test of Phase 5 M5's architecture-asymmetry hypothesis | L3 | 6-10 weeks | — | 🔲 not started |
+| 9 | Phase 6 synthesis logbook | synthesis | 1-2 weeks | — | 🔲 not started |
+| — | L4 biologically-plausible plasticity (STDP + neuromodulator-modulated) | L4 | — | — | ⏭️ deferred to Phase 7 |
+
+**How to orient**: read this tracker for the current tranche, then [tasks.md](../openspec/changes/phase6-tracking/tasks.md) for sub-task detail, then any active per-tranche OpenSpec change under `openspec/changes/` (archived changes live under `openspec/changes/archive/`). Open Phase 6 research questions are tracked in `tasks.md` under "Phase 6 Research Questions"; check there before assuming a Phase 6 design choice is settled. The three mid-phase gates each produce a written go/no-go decision in the triggering tranche's published *logbook* (not in `tasks.md`, which is hard to amend post-archive) — the tracker links to each logbook decision once it lands. Each gate has quantitative pass criteria pre-registered in [openspec/changes/phase6-tracking/design.md § Decision 6](../openspec/changes/phase6-tracking/design.md).
+
 #### The layered platform
 
 Phase 6 is built as four layers (L0-L3) that together materialise the architecture-comparison sweep. L4 (biologically-plausible plasticity) is deferred to Phase 7 — Phase 6 stays on PPO-family learning rules so the layer stack remains tractable.
@@ -579,10 +599,12 @@ Phase 6 is built as four layers (L0-L3) that together materialise the architectu
 | Layer | What it is | Phase 6 commitment |
 |---|---|---|
 | **L0 — Connectome substrate** | Import *C. elegans* 302-neuron wiring (Cook et al. 2019 / OpenWorm c302 in NeuroML 2 format). Real synaptic adjacency. Defines the topology interface that pluggable brains conform to. | **MUST.** The headline claim doesn't exist without this. |
-| **L1 — Architecture-as-plugin** | A clean `Brain` interface where every architecture family conforms. The comparison is one experimental sweep, not a per-architecture re-implementation. Plugin parity test: adding a new architecture ≤ 1 week of work. | **MUST.** Without this, "swap in another brain" is words, not code. |
+| **L1 — Architecture-as-plugin** | A clean `Brain` interface where every architecture family conforms. The comparison is one experimental sweep, not a per-architecture re-implementation. Plugin parity test: adding a new architecture is bounded by an informal "≤ 1 week" target; the **load-bearing** parity checks are files-touched count + no per-architecture branches in the simulation/training loops (see [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) for the criterion details and the explicit demotion of the wall-clock target). | **MUST.** Without this, "swap in another brain" is words, not code. |
 | **L2 — Weight search (PPO et al.)** | Train weights on the connectome topology and on every comparison architecture. This is the *first closed-loop learning on the C. elegans connectome*. | **MUST.** Cheapest scientifically meaningful Phase 6 result. |
 | **L3 — Topology search (NEAT-style)** | Search topologies unconstrained, compare to the real connectome's topology. Tests "is the wild-type connectome a local optimum?" The architecture-asymmetry question Phase 5 M5 diagnosed re-emerges here under matched capacity. | **MUST.** Without this, the optimal-vs-connectome comparison has no "optimum" to compare against. |
 | **L4 — Plasticity / learning rules** | Biologically-plausible plasticity (STDP, neuromodulator-modulated three-factor STDP) on the connectome. The Nature-Neuroscience-tier claim. | **DEFERRED to Phase 7.** Substantial new code; clean L1 is a prerequisite. |
+
+> **Tranche note**: L2 ships as two passes per the Phase 6 Tranche Tracker above — a first pass (Tranche 4) on the existing grid substrate with corrected ASH/ADL nociception (Tranche 3), followed by the env-upgrade work split across two tranches (Tranche 5 platform refactor — continuous-2D coordinates + continuous-action heads on the existing PPO-family brains + plugin-parity verification; Tranche 6 env fidelity — Rung 2 chemical gradients + log-concentration chemosensory adaptation), then an L2 re-run on the fully-upgraded substrate plus real-worm validation (Tranche 7). The env-upgrade delta between the two L2 passes is a Phase 6 finding in its own right. L3 (Tranche 8) runs against the upgraded substrate. See [openspec/changes/phase6-tracking/design.md § Decision 1](../openspec/changes/phase6-tracking/design.md) for the load-bearing rationale (T5/T6 split places Gate 2 against a single verifiable platform outcome rather than a bundled env-upgrade tranche).
 
 #### Behavioural scope: three behaviours on a common substrate
 
@@ -596,19 +618,21 @@ Aerotaxis (oxygen sensing), pheromone signalling, and multi-agent dynamics are *
 
 #### Architecture families in the comparison sweep
 
-The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks.
+The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks. The MUST / SHOULD / MAY classification below was tightened from the roadmap's initial eight-MUST framing during Phase 6 scoping; rationale lives in [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md). MUST × three behaviours × four seeds = 48 L2 runs (vs the roadmap's earlier-implied 96). SHOULD/MAY rows are evaluated opportunistically in Tranche 7 and do not gate any Phase 6 exit criterion.
 
-| Family | Existing impl | Phase 6 role |
-|---|---|---|
-| **Connectome-constrained (302-neuron, Cook 2019)** | Not yet | **Focal architecture.** The wild-type topology with PPO-learned weights. The headline rank. |
-| **MLP-PPO** | `MLPPPOBrain` | Strongest classical baseline (Phase 2 SOTA on foraging). |
-| **LSTM / GRU-PPO** | `LSTMPPOBrain` | Strongest temporal baseline (Phase 3 reached 94% L500). |
-| **Spiking (PPO-trained)** | `SpikingReinforceBrain` | Bridge to L4. STDP is the spiking-network plasticity rule; without spiking in the comparison, L4 has no L2 precursor on the same substrate. |
-| **Reservoir** | `QRHBrain`, `CRHBrain` | Preserves Phase 2's pursuit-advantage finding (QRH +9.4pp). One row each; low marginal cost. |
-| **Quantum** | `QVarCircuitBrain`, `QEF`, others | Phase 2's 300-session campaign is the baseline reference; Phase 6 confirms (or refines) its findings on continuous-physics tasks. |
-| **Hybrid quantum-classical** | `HybridQuantum`, `HybridClassical` | Preserves Phase 2's SOTA finding (96.9% / 96.3%). One row to confirm at higher complexity. |
-| **NEAT-evolved (topology + weights)** | Not yet (L3 deliverable) | The unconstrained-optimal baseline against which the connectome is ranked. |
-| **Transformer / attention-based** | Not yet | ⭐ **MAY.** Optional addition if scope and engineering effort allow. Flagged so reviewers see it considered, not forgotten. |
+| Family | Existing impl | Scope | Phase 6 role |
+|---|---|---|---|
+| **Connectome-constrained (302-neuron, Cook 2019)** | Not yet | **MUST** | **Focal architecture.** The wild-type topology with PPO-learned weights. The headline rank. |
+| **MLP-PPO** | `MLPPPOBrain` | **MUST** | Strongest classical baseline (Phase 2 SOTA on foraging); cheapest run; sanity anchor. |
+| **LSTM / GRU-PPO** | `LSTMPPOBrain` | **MUST** | Strongest temporal baseline (Phase 3 reached 94% L500); matched-capacity comparator for connectome (both have recurrent state). |
+| **NEAT-evolved (topology + weights)** | Not yet (L3 deliverable) | **MUST** | The unconstrained-optimal baseline against which the connectome is ranked. L3's whole point — answers "is the connectome a local optimum?" |
+| **Quantum** | `QVarCircuitBrain`, `QEF`, others | **SHOULD** | Phase 2's 300-session campaign carries forward as baseline reference per the Architecture-Comparison Protocol. One quantum row at continuous-physics complexity is enough to confirm or refine that. |
+| **Spiking (PPO-trained)** | `SpikingReinforceBrain` | **SHOULD** | Bridge to L4. But Phase 0's 73.3% on much easier tasks isn't a strong precedent; demoted so Phase 6 doesn't gate on spiking-on-connectome training. Phase 7 L4 (STDP — spiking's native plasticity rule) is where spiking-on-connectome actually belongs. |
+| **Reservoir** | `QRHBrain`, `CRHBrain` | **MAY** | Phase 2 preserved QRH's +9.4pp pursuit advantage at low absolute performance. One row if cheap; not worth blocking on. |
+| **Hybrid quantum-classical** | `HybridQuantum`, `HybridClassical` | **MAY** | Phase 2 SOTA finding (96.9% / 96.3%) survives as baseline reference. One row to confirm at higher complexity if cheap. |
+| **Transformer / attention-based** | Not yet | **MAY** | ⭐ Optional addition if scope and engineering effort allow. Flagged so reviewers see it considered, not forgotten. |
+
+> **Anti-scope-creep**: promoting a SHOULD or MAY family to MUST (so that family's results gate a Phase 6 exit criterion) requires amending [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md) before the promoting tranche merges. Same for adding a tenth family beyond the nine listed here. The amendment must document the cross-tranche budget impact.
 
 #### Continuous environment + sensory physics
 
@@ -654,7 +678,7 @@ Internal validation against public data is required at Phase 6 close; external l
 **Required (MUST):**
 
 - 🔲 L0 connectome substrate operational: ≥ 1 real connectome dataset (Cook 2019 or OpenWorm c302) imported, with documented topology and synaptic-weight provenance.
-- 🔲 L1 architecture-plugin interface accommodates the curated MUST set above. Adding a 9th architecture is ≤ 1 week of work (the plugin-parity test).
+- 🔲 L1 architecture-plugin interface accommodates the curated MUST set above. Plugin-parity test: adding a new architecture family meets the file-count + no-per-architecture-branch checks documented in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" framing carries forward; the wall-clock target is documented but not load-bearing for the exit criterion).
 - 🔲 L2 weight-search results across all MUST architectures on all three behaviours, at the Phase 5 statistical bar (paired-seed, bootstrap CIs, n ≥ 4 seeds per condition).
 - 🔲 L3 NEAT topology-search results comparing the wild-type connectome to NEAT-evolved topologies on at least one behaviour, with the lag-matrix or equivalent discriminative instrument.
 - 🔲 Rung 2 chemical gradients (dynamic Fick's-law + source dynamics + signal-type diffusion coefficients) operational, paired with log-concentration chemosensory adaptation kinetics.
@@ -675,7 +699,7 @@ Papers and external collaboration are explicitly optional — the project may pu
 Phase 6 is long enough (~6-10 months) that mid-phase gates matter. Each gate produces a written go/no-go decision in the relevant OpenSpec change, not just an implicit continuation — the same discipline Phase 5 used.
 
 - **Gate 1 (month ~2): L0 import working?** Connectome substrate loaded, validated, and basic-MLP-PPO baseline trainable on it. If not, trigger the L0 hand-curated-subset pivot (see Risk-mitigation below).
-- **Gate 2 (month ~4-5): L1 plugin parity achieved?** Adding a new architecture demonstrably ≤ 1 week. If not, trigger the L1 refactor pivot.
+- **Gate 2 (month ~4-5): L1 plugin parity achieved?** Adding a new architecture clears the files-touched + no-per-architecture-branches checks documented in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" target carries forward but is not load-bearing). If not, trigger the L1 refactor pivot.
 - **Gate 3 (month ~7-8): L2 results across architectures?** Weight-search results across MUST architectures and all three behaviours in hand. If not, trigger the Phase 6a / Phase 6b sub-phase split.
 
 The hard phase boundary between Phase 5 and Phase 6 protects the narrative arc (no Phase 6 work begins until Phase 5 is synthesised); the mid-phase gates protect the execution (fail-fast at the architecture and substrate level, not at the phase level). Both are intentional.
@@ -930,7 +954,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 
 - Architecture-family coverage in the Phase 6+ sweep (MUST set per Phase 6's architecture-families table).
 - Statistical rigor: paired-seed Wilcoxon, bootstrap CIs, n ≥ 4 per condition.
-- Plugin-parity test: adding a new architecture to L1 demonstrably ≤ 1 week.
+- Plugin-parity test: adding a new architecture to L1 clears the files-touched + no-per-architecture-branches checks per [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" target; wall-clock not load-bearing).
 - Lag-matrix or equivalent discriminative instrument for matched-capacity comparisons.
 
 **Targets**:
@@ -994,7 +1018,7 @@ Three levels of success, each representing a coherent and publishable scientific
 The platform exists and produces a defensible architecture-comparison result.
 
 - **L0 connectome substrate operational** (at least the hand-curated subset under the L0 fallback pivot).
-- **L1 architecture-plugin interface** at plugin-parity (adding a new architecture ≤ 1 week).
+- **L1 architecture-plugin interface** at plugin-parity (adding a new architecture meets the parity checks in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md); informal "≤ 1 week" framing).
 - **L2 weight-search results** on ≥ 1 behaviour across ≥ 4 architectures of the MUST set.
 - **≥ 1 model output validated against published real-worm data.**
 - **Phase 5's STOP findings preserved** as documented substrate-grounded diagnoses with reusable methodology.
@@ -1153,7 +1177,7 @@ ______________________________________________________________________
 ### Active for Phase 6
 
 1. **L0 connectome substrate import path** — `c302` (OpenWorm, NeuroML 2 format) ingestion + validation + provenance documentation. Hand-curated Cook 2019 subset as fallback per Phase 6 Risk-mitigation.
-2. **L1 architecture-plugin interface** — clean `Brain` interface that admits MLP / recurrent / spiking / reservoir / quantum / hybrid / NEAT-evolved / connectome-constrained without per-architecture branching. Plugin-parity test (≤ 1 week new architecture).
+2. **L1 architecture-plugin interface** — clean `Brain` interface that admits MLP / recurrent / spiking / reservoir / quantum / hybrid / NEAT-evolved / connectome-constrained without per-architecture branching. Plugin-parity test per [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (files-touched + no-per-architecture-branches checks; informal "≤ 1 week" framing).
 3. **Continuous action heads** — extend the existing PPO-family brains with Gaussian-policy continuous action heads; adapt quantum architectures with continuous-output circuits.
 4. **Corrected ASH/ADL contact-based nociception** — owed correctness work flagged in [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md); lands in Phase 6's sensory-physics stack.
 5. **Documentation** — API documentation, tutorials, architecture guides current to Phase 6 state. Required to keep the architecture-plugin interface usable for future contributors and to support reproducibility artefacts (Docker, evaluation scripts) as an optional MAY exit criterion.
