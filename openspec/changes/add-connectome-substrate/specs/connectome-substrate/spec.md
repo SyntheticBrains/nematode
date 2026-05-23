@@ -10,8 +10,8 @@ The `quantumnematode.connectome` subpackage SHALL load the *C. elegans* connecto
 - **WHEN** `load_cook_2019_hermaphrodite()` is called
 - **THEN** a `Connectome` instance SHALL be returned
 - **AND** `len(connectome.neurons) == 302`
-- **AND** `len(connectome.chemical_synapses) > 5000` (loose lower bound; project docs at `docs/nematode_biology.md:644` cite ~7000 chemical synapses for Cook 2019 hermaphrodite — the exact count depends on edge-collation conventions)
-- **AND** `len(connectome.gap_junctions) > 600` (loose lower bound vs project-documented ~900)
+- **AND** `len(connectome.chemical_synapses) > 3000` (loose lower bound; the loader filters to the 302-neuron subset and excludes muscles/glia/end-organs that inflate the project-docs ~7000 figure at `docs/nematode_biology.md:644`. Implementation observed: 3709 neuron-to-neuron chemical synapses)
+- **AND** `len(connectome.gap_junctions) > 600` (loose lower bound; project docs cite ~900 total. Implementation observed: 1093 canonical gap junctions after merging the symmetric + asymmetric sheets)
 - **AND** every entry in `chemical_synapses` and `gap_junctions` references neurons present in the `neurons` dict
 - **AND** the `source` field is `"cook_2019_hermaphrodite"` and `version` records the SI 5 publication metadata
 
@@ -46,13 +46,13 @@ Per `openspec/changes/phase6-tracking/design.md` § Decision 7, the connectome d
 - **THEN** each entry SHALL be a `GapJunction` with undirected `neuron_a` and `neuron_b` fields (alphabetically sorted: `neuron_a < neuron_b`) and a non-negative-integer `weight` (junction count from Cook 2019)
 - **AND** no `(a, b)` and `(b, a)` duplicate pair SHALL exist
 
-#### Scenario: Dual-edge case (AVA↔AVB) represented as two distinct entries
+#### Scenario: Dual-edge case represented as two distinct entries
 
-This scenario codifies the load-bearing edge case from `phase6-tracking/design.md` § Decision 7.
+This scenario codifies the load-bearing edge case for the connection-type taxonomy: a neuron pair connected by both a chemical synapse AND a gap junction must appear as two distinct entries.
 
-- **GIVEN** Cook 2019 reports BOTH a chemical synapse AND a gap junction between AVAL and AVBL (and similarly for many other neuron pairs)
+- **GIVEN** Cook 2019 reports BOTH a chemical synapse AND a gap junction between AVAL and AVDL (one of many such pairs in the *C. elegans* connectome; AVAL↔AVAR, AVAR↔AVDR, AVBL↔AVBR are further examples)
 - **WHEN** the loaded `Connectome` is inspected
-- **THEN** the AVAL↔AVBL pair SHALL appear as ONE `ChemicalSynapse(pre="AVAL", post="AVBL", ...)` entry AND ONE `GapJunction(neuron_a="AVAL", neuron_b="AVBL", ...)` entry
+- **THEN** the AVAL↔AVDL pair SHALL appear as `ChemicalSynapse` entries (one per direction; the chemical synapse is directed) AND ONE `GapJunction(neuron_a="AVAL", neuron_b="AVDL", ...)` entry
 - **AND** there SHALL NOT be a single edge representation combining both weights into one entry with two weight attributes
 
 #### Scenario: No extra-synaptic / peptidergic edges
