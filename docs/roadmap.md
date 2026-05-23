@@ -138,7 +138,7 @@ The campaign carries forward as a baseline reference in Phase 6's architecture-c
 
 ### Phase 5 — Evolution & Adaptation
 
-Phase 5 closed 2026-05-23 with one headline-positive result and four substrate-grounded STOP verdicts. All five Phase 5 exit criteria are met with evidence; the STOP results are scientifically informative architectural diagnoses, not implementation failures, and the methodological yield from them carries directly into Phase 6 and Phase 7. See [Logbook 021](experiments/logbooks/021-phase5-synthesis.md) for the full synthesis.
+Phase 5 closed 2026-05-23 with one headline-positive result and three substrate-grounded STOP verdicts. All five Phase 5 exit criteria are met with evidence; the STOP results are scientifically informative architectural diagnoses, not implementation failures, and the methodological yield from them carries directly into Phase 6 and Phase 7. See [Logbook 021](experiments/logbooks/021-phase5-synthesis.md) for the full synthesis.
 
 - **M2 Hyperparameter Evolution** — GO. Four-arm CMA-ES then TPE campaign closed RQ1 on optimiser choice; +47pp / +79pp predator-arm acceleration on the M3 inheritance config. See [Logbook 012](experiments/logbooks/012-hyperparam-evolution-mlpppo-pilot.md).
 - **M3 Lamarckian Inheritance** — GO, headline-positive. Speed gate passes at +5.25 generations; +17.5pp F1-F3 mean retention on the M6.10 environment; n=8 paired-seed rerun confirms. The "learned behaviour becomes innate" exit criterion is satisfied; see [Logbook 013](experiments/logbooks/013-lamarckian-inheritance-pilot.md).
@@ -465,7 +465,7 @@ ______________________________________________________________________
 
 #### Phase 5 Milestone Tracker
 
-Phase 5 is broken into milestones M0–M8 plus a tracking scaffold (M-1). The living sub-task checklist lives in [openspec/changes/phase5-tracking/tasks.md](../openspec/changes/phase5-tracking/tasks.md); design decisions (pilot-first, no QVarCircuit backwards-compat, LSTMPPO+klinotaxis as first-class brain for M4/M5/M6) are recorded in that change's [proposal.md](../openspec/changes/phase5-tracking/proposal.md).
+Phase 5 is broken into milestones M0–M8 plus a tracking scaffold (M-1). The living sub-task checklist lives in [openspec/changes/archive/2026-05-23-phase5-tracking/tasks.md](../openspec/changes/archive/2026-05-23-phase5-tracking/tasks.md); design decisions (pilot-first, no QVarCircuit backwards-compat, LSTMPPO+klinotaxis as first-class brain for M4/M5/M6) are recorded in that change's [proposal.md](../openspec/changes/archive/2026-05-23-phase5-tracking/proposal.md).
 
 | # | Milestone | Bio fidelity | Status |
 |---|-----------|--------------|--------|
@@ -483,7 +483,7 @@ Phase 5 is broken into milestones M0–M8 plus a tracking scaffold (M-1). The li
 | M4.7 | Multi-task Baldwin retry | HIGH | 🔲 deferred — gated on M5 producing multi-task aggregation infrastructure or M5's secondary-Baldwin instrumentation coming back null with rising priority |
 | M8 | Phase 5 synthesis logbook | — | ✅ complete — all five Phase 5 exit criteria verified MET (two with substrate-grounded STOP caveats). See [logbook 021](experiments/logbooks/021-phase5-synthesis.md) |
 
-**How to orient**: read this tracker for the current milestone, then [tasks.md](../openspec/changes/phase5-tracking/tasks.md) for sub-task detail, then any active per-milestone OpenSpec change under `openspec/changes/` (archived changes live under `openspec/changes/archive/`). Open Phase 5 research questions are tracked in `tasks.md` under "Phase 5 Research Questions"; check there before assuming a Phase 5 design choice is settled.
+**How to orient**: read this tracker for the current milestone, then [tasks.md](../openspec/changes/archive/2026-05-23-phase5-tracking/tasks.md) for sub-task detail, then any active per-milestone OpenSpec change under `openspec/changes/` (archived changes live under `openspec/changes/archive/`). Open Phase 5 research questions are tracked in `tasks.md` under "Phase 5 Research Questions"; check there before assuming a Phase 5 design choice is settled.
 
 #### Phase 5 Results (May 2026)
 
@@ -653,13 +653,13 @@ Internal validation against public data is required at Phase 6 close; external l
 
 **Required (MUST):**
 
-- ✅ L0 connectome substrate operational: ≥ 1 real connectome dataset (Cook 2019 or OpenWorm c302) imported, with documented topology and synaptic-weight provenance.
-- ✅ L1 architecture-plugin interface accommodates the curated MUST set above. Adding a 9th architecture is ≤ 1 week of work (the plugin-parity test).
-- ✅ L2 weight-search results across all MUST architectures on all three behaviours, at the Phase 5 statistical bar (paired-seed, bootstrap CIs, n ≥ 4 seeds per condition).
-- ✅ L3 NEAT topology-search results comparing the wild-type connectome to NEAT-evolved topologies on at least one behaviour, with the lag-matrix or equivalent discriminative instrument.
-- ✅ Rung 2 chemical gradients (dynamic Fick's-law + source dynamics + signal-type diffusion coefficients) operational, paired with log-concentration chemosensory adaptation kinetics.
-- ✅ Corrected ASH/ADL contact-based nociception operational.
-- ✅ At least one model output quantitatively validated against published real-worm data.
+- 🔲 L0 connectome substrate operational: ≥ 1 real connectome dataset (Cook 2019 or OpenWorm c302) imported, with documented topology and synaptic-weight provenance.
+- 🔲 L1 architecture-plugin interface accommodates the curated MUST set above. Adding a 9th architecture is ≤ 1 week of work (the plugin-parity test).
+- 🔲 L2 weight-search results across all MUST architectures on all three behaviours, at the Phase 5 statistical bar (paired-seed, bootstrap CIs, n ≥ 4 seeds per condition).
+- 🔲 L3 NEAT topology-search results comparing the wild-type connectome to NEAT-evolved topologies on at least one behaviour, with the lag-matrix or equivalent discriminative instrument.
+- 🔲 Rung 2 chemical gradients (dynamic Fick's-law + source dynamics + signal-type diffusion coefficients) operational, paired with log-concentration chemosensory adaptation kinetics.
+- 🔲 Corrected ASH/ADL contact-based nociception operational.
+- 🔲 At least one model output quantitatively validated against published real-worm data.
 
 **Optional (MAY) — not phase exit criteria:**
 
@@ -702,7 +702,7 @@ Phase 5 ran on CPU. Phase 6's L3 (NEAT topology search across many candidates ×
 
 The roadmap encodes GPU as the realistic baseline. The L3 implementation choices (TensorNEAT, JAX vmap, batched fitness evaluation) flow from that.
 
-#### Go / No-go decision
+#### Go/No-Go Decision
 
 - **GO if**: L0+L1+L2 ship and the three mid-phase gates pass with results in hand. L3 either ships within Phase 6, or splits into Phase 6b under the sub-phase pivot.
 - **PIVOT-narrative if**: L3 shows the connectome competitive-but-not-dominant with evolved alternatives. The headline framing shifts toward connectome-primary; the platform claim is unchanged.
@@ -754,8 +754,8 @@ These are not Phase 7 exit criteria. The project may pursue any combination when
 
 **Required (MUST):**
 
-- ✅ L4 plasticity layer operational: vanilla STDP/Hebbian rules + diffusible-signal layer + receptor-class metadata + modulated STDP, all on the connectome substrate, with results across the Phase 6 architecture-family set at the Phase 5/6 statistical bar.
-- ✅ *P. pacificus* connectome imported through L0 / L1; architecture-comparison sweep on the same three behaviours; quantitative comparison to *C. elegans* Phase 6 baseline.
+- 🔲 L4 plasticity layer operational: vanilla STDP/Hebbian rules + diffusible-signal layer + receptor-class metadata + modulated STDP, all on the connectome substrate, with results across the Phase 6 architecture-family set at the Phase 5/6 statistical bar.
+- 🔲 *P. pacificus* connectome imported through L0 / L1; architecture-comparison sweep on the same three behaviours; quantitative comparison to *C. elegans* Phase 6 baseline.
 
 **Optional (MAY):**
 
@@ -772,7 +772,7 @@ These are not Phase 7 exit criteria. The project may pursue any combination when
 | **Pacificus connectome data integration is problematic** | Cook et al. 2025 data is incomplete, format-incompatible, or has unclear synaptic-weight provenance once handled in detail | Sub-deliverable: produce the hand-curated *P. pacificus* subset that does work, document the gap, and ship transfer results on that subset. The cross-species transfer claim survives in restricted form. |
 | **L4 plasticity fails to learn on the connectome** | Modulated STDP doesn't reach the L2 PPO baselines on the three behaviours after reasonable hyperparameter search | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families."* Phase 7 closes with the negative result; future work picks up rule-family alternatives (e.g., reward-modulated Hebbian without spike timing). |
 
-#### Go / No-go decision
+#### Go/No-Go Decision
 
 - **GO if**: L4 lands on the connectome with results in hand, and pacificus transfer ships (or is well underway under the 7b pivot).
 - **PIVOT-split if**: L4 overshoots month-6 milestone — execute Phase 7a / 7b split per the Risk-mitigation table above.
@@ -1001,7 +1001,7 @@ The platform exists and produces a defensible architecture-comparison result.
 
 ### Target success
 
-Phase 6-balanced ships cleanly; the first headline-positive result lands.
+Phase 6 ships cleanly; the first headline-positive result lands.
 
 - All Phase 6 MUST exit criteria met: L0+L1+L2+L3 operational across the full MUST architecture-family set, three behaviours, Rung 2 gradients + adaptation kinetics, corrected ASH/ADL nociception, real-worm validation.
 - A defensible answer to "is the wild-type connectome a local optimum?" lands, either as "yes, dominant" (connectome-primary headline) or "competitive but not dominant" (optimal-primary headline). Either framing is a contribution; the data picks the framing.
@@ -1205,7 +1205,7 @@ ______________________________________________________________________
 
 ## Conclusion
 
-This roadmap charts a milestone-based adaptive path from a Phase 5 close anchored in M3 Lamarckian inheritance (the positive headline) and four substrate-grounded STOP diagnoses (M4 Baldwin, M5 co-evolution, M6.x transgenerational memory — each surfacing a substrate or architecture finding that carries forward) toward a connectome-grounded architecture-comparison platform at Phase 6 and a biologically-plausible plasticity + cross-species deepening at Phase 7.
+This roadmap charts a milestone-based adaptive path from a Phase 5 close anchored in M3 Lamarckian inheritance (the positive headline) and three substrate-grounded STOP diagnoses (M4 Baldwin, M5 co-evolution, M6.x transgenerational memory — each surfacing a substrate or architecture finding that carries forward) toward a connectome-grounded architecture-comparison platform at Phase 6 and a biologically-plausible plasticity + cross-species deepening at Phase 7.
 
 The contribution is paired, not dual-goal:
 
