@@ -59,11 +59,11 @@ Maps to T1.3 in the tracker: import the Cook 2019 hermaphrodite connectome; veri
 
 Maps to T1.4 in the tracker: cross-validation against Witvliet 2021 nerve-ring subset.
 
-- [ ] 6.1 Implement `connectome/validate.py:validate_neuron_count(c) -> ValidationResult` — expects 302 for hermaphrodite
-- [ ] 6.2 Implement `validate_known_pathways(c) -> ValidationResult` — confirms at least one of three canonical sensory → interneuron → motor pathways from the Bargmann lab klinotaxis / thermotaxis / nociception literature is present: ASE → AIY → RIA → SMD (klinotaxis; Gray et al. 2005, Iino & Yoshida 2009), AFD → AIY → RIA → SMD (thermotaxis), or ASH → AVA → VA/DA (nociception). Validator passes if ≥ 1 of the three pathways traces successfully through the connectome
-- [ ] 6.3 Implement `cross_validate(primary, secondary) -> DivergenceReport` per design.md Decision T1.6: intersection of neurons; agreement / disagreement per shared (pre, post) pair; cook-only-pairs and witvliet-only-pairs; weight-divergence summary
-- [ ] 6.4 Implement `connectome/validate.py:DivergenceReport` pydantic model (fields per design.md Decision T1.6)
-- [ ] 6.5 Closes T1.4 — tick the matching T1.4 box in `phase6-tracking/tasks.md`
+- [x] 6.1 Implement `connectome/validate.py:validate_neuron_count(c) -> ValidationResult` — expects 302 for hermaphrodite (passes on Cook 2019)
+- [x] 6.2 Implement `validate_known_pathways(c) -> ValidationResult` — confirms at least one of three canonical sensory → interneuron → motor pathways traces. Passes on Cook 2019 with all three pathways traced (klinotaxis ASEL→AIYL→RIAL→SMDDL, thermotaxis AFDL→AIYL→RIAL→SMDDL, nociception ASHL→AVAL→VA1)
+- [x] 6.3 Implement `cross_validate(primary, secondary) -> DivergenceReport`: intersection of neurons; agreement / disagreement per shared (pre, post) pair; primary-only-pairs and secondary-only-pairs (capped at 50); weight-divergence summary (mean + median + n_pairs ratios). Observed Cook 2019 vs Witvliet 2021 ds8: 180 shared neurons, 1271 agreement / 1942 disagreement, weight ratio mean 0.86, median 0.57
+- [x] 6.4 Implement `connectome/validate.py:DivergenceReport` pydantic model + `ValidationResult` pydantic model
+- [x] 6.5 Closes T1.4 — tick the matching T1.4 box in `phase6-tracking/tasks.md`
 
 ## Phase 7 — Smoke-test forward pass (T1.6)
 
