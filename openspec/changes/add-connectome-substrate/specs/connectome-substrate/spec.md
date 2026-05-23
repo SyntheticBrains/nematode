@@ -20,8 +20,8 @@ The `quantumnematode.connectome` subpackage SHALL load the *C. elegans* connecto
 - **GIVEN** the vendored `data/connectome/witvliet_2020_dataset8_adult.xlsx` file is present
 - **WHEN** `load_witvliet_2021_adult()` is called
 - **THEN** a `Connectome` instance SHALL be returned
-- **AND** `len(connectome.neurons)` is in the nerve-ring range (~150-200, smaller than Cook 2019's whole-animal 302)
-- **AND** cross-dataset name aliases (e.g. `RIA-L` → `RIAL`) SHALL be applied so the result matches Cook 2019's canonical naming
+- **AND** `len(connectome.neurons)` is in the nerve-ring range (~150-200, smaller than Cook 2019's whole-animal 302; implementation observed 180)
+- **AND** the loader SHALL apply any cross-dataset name aliases via `CANONICAL_NAME_ALIASES` so the result matches Cook 2019's canonical naming. (In the initial vendored snapshot the Witvliet 2021 file uses Cook-compatible names directly, so `CANONICAL_NAME_ALIASES` is empty at L0; the hook is present for future alias-discovery in downstream tranches.)
 
 #### Scenario: Loader produces deterministic output
 
@@ -37,7 +37,7 @@ Per `openspec/changes/phase6-tracking/design.md` § Decision 7, the connectome d
 
 - **GIVEN** a loaded `Connectome` instance
 - **WHEN** a downstream consumer iterates `connectome.chemical_synapses`
-- **THEN** each entry SHALL be a `ChemicalSynapse` with directed `pre` and `post` fields and a positive-integer `weight` (synapse count from Cook 2019)
+- **THEN** each entry SHALL be a `ChemicalSynapse` with directed `pre` and `post` fields and a positive-integer `weight` (EM-derived serial-section count from Cook 2019; representing total connectivity including synapse number and size per the SI's documentation). Cook 2019 reports a small number of `pre == post` self-loops on the chemical adjacency diagonal (38 cells in the hermaphrodite); the loader preserves these as `ChemicalSynapse(pre=X, post=X)` entries
 
 #### Scenario: Iterating gap junctions
 
@@ -94,7 +94,9 @@ The connectome subpackage SHALL provide structural validators that confirm a loa
 
 - **GIVEN** a loaded Cook 2019 hermaphrodite `Connectome`
 - **WHEN** `validate_neuron_count(c)` is called
-- **THEN** the validator SHALL pass if `len(c.neurons) == 302` and SHALL fail with a descriptive error otherwise
+- **THEN** the validator SHALL return a `ValidationResult` with `passed == True` if `len(c.neurons) == 302` and `passed == False` otherwise
+- **AND** the result's `summary` SHALL describe the actual vs expected counts
+- **AND** the result's `details` dict SHALL include the `actual` and `expected` count integers (so callers can react to the verdict without re-parsing the summary string)
 
 #### Scenario: Known klinotaxis / thermotaxis / nociception pathway is present
 
@@ -112,17 +114,20 @@ The connectome subpackage SHALL provide a `cross_validate(primary, secondary) ->
 - **GIVEN** a loaded Cook 2019 hermaphrodite connectome and a loaded Witvliet 2021 dataset 8 connectome
 - **WHEN** `cross_validate(cook, witvliet)` is called
 - **THEN** a `DivergenceReport` SHALL be returned
-- **AND** `report.shared_neurons` SHALL be > 100 (the nerve-ring overlap; Witvliet 2021 covers ~180 neurons mostly within Cook 2019's 302)
-- **AND** `report.shared_pairs_agreement` SHALL be > 0 (the two datasets agree on at least some shared pairs)
+- **AND** `report.shared_neurons` SHALL be > 100 (the nerve-ring overlap; Witvliet 2021 covers ~180 neurons mostly within Cook 2019's 302; implementation observed exactly 180)
+- **AND** `report.shared_pairs_agreement` SHALL be > 0 (the two datasets agree on at least some shared pairs; implementation observed 1271 agreement / 1942 disagreement)
 
 #### Scenario: Divergence map is documented
 
-- **GIVEN** a `DivergenceReport` returned from `cross_validate`
+The report fields are named generically (`primary_*` / `secondary_*`) so the same type can compare any two `Connectome` instances, not just Cook-vs-Witvliet.
+
+- **GIVEN** a `DivergenceReport` returned from `cross_validate(primary, secondary)`
 - **WHEN** the report is inspected
-- **THEN** `report.cook_only_pairs` SHALL list chemical-synapse `(pre, post)` pairs that appear in Cook 2019 but not Witvliet 2021 dataset 8
-- **AND** `report.witvliet_only_pairs` SHALL list pairs that appear in Witvliet 2021 but not Cook 2019
-- **AND** `report.weight_divergence_summary` SHALL include mean and median weight-ratio statistics for the shared pairs
-- **AND** the T1 logbook SHALL include a textual summary of these divergences (e.g. plausible developmental-stage or lineage-tracing causes)
+- **THEN** `report.primary_source` and `report.secondary_source` SHALL hold the `source` field strings of the two input connectomes
+- **AND** `report.primary_only_pairs` SHALL list chemical-synapse `(pre, post)` pairs that appear in the primary connectome but not in the secondary (capped at `list_cap` entries, default 50)
+- **AND** `report.secondary_only_pairs` SHALL list pairs that appear in the secondary but not in the primary (also capped)
+- **AND** `report.weight_divergence_summary` SHALL include `n_pairs` always, and `mean` + `median` weight-ratio statistics when `n_pairs > 0`
+- **AND** the T1 logbook SHALL include a textual summary of these divergences (e.g. plausible developmental-stage or lineage-tracing causes; implementation observed weight ratio mean 0.86, median 0.57 — right-skewed, consistent with Witvliet's single-animal slice vs Cook's multi-animal aggregate)
 
 ### Requirement: Smoke-Test Forward Pass
 
@@ -148,7 +153,7 @@ The connectome subpackage SHALL provide a `run_forward_pass(c, *, seed=0) -> np.
 - **GIVEN** a loaded `Connectome`
 - **WHEN** the forward pass is constructed
 - **THEN** the gap-junction weight matrix SHALL use Cook 2019 junction counts directly (not learnable scalars, not unit weights — see `phase6-tracking/design.md` § Decision 7)
-- **AND** the gap-junction matrix SHALL be symmetric (gap junctions are undirected)
+- **AND** the unnormalised gap-junction weight matrix SHALL be symmetric (gap junctions are undirected). After the same fan-in normalisation that the chemical-synapse matrix uses (per-postsynaptic-column `1/sqrt(in_degree)`), the final per-column-scaled matrix may differ between `W[i,j]` and `W[j,i]` because each column is normalised by its own in-degree; the underlying junction-count adjacency it derives from remains symmetric, and the normalisation is applied consistently with the chemical matrix to keep the two connection types on a comparable scale
 
 #### Scenario: Sanity guard against silent load failure
 
