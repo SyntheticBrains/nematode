@@ -71,8 +71,8 @@ Each of the three roadmap-defined mid-phase decision gates (Gate 1 at the close 
 #### Scenario: Gate criterion recalibrated before the gate fires (allowed)
 
 - **GIVEN** an in-flight tranche surfaces evidence that one of Decision 6's pre-registered criteria was empirically miscalibrated (e.g. T1 reveals the G1.c frozen-random-control baseline is itself unstable, or T2 reveals the G2.b "≤ 6 files" floor is too tight against the chosen registry pattern)
-- **WHEN** the criterion is amended *before* the triggering tranche closes (i.e. before the gate fires)
-- **THEN** the amendment SHALL land as a commit to `design.md` § Decision 6 that names the criterion being recalibrated, the in-flight evidence motivating the change, and the alternative criterion that replaces it
+- **WHEN** the criterion is amended *before* the gate fires (definition: "fires" = the moment the triggering tranche's logbook PR is opened with the gate-decision section drafted; see `design.md` § Decision 6 § Amendment mechanism)
+- **THEN** the amendment SHALL land as a **separate prior PR** (not bundled with the gate-decision-shipping PR) that commits to `design.md` § Decision 6 the criterion being recalibrated, the in-flight evidence motivating the change, and the alternative criterion that replaces it
 - **AND** the triggering tranche's logbook gate-decision SHALL record both the original criterion and the amended one when evaluating
 
 #### Scenario: Gate criterion changed after the gate has fired (prohibited — goalpost-moving)
