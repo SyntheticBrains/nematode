@@ -32,9 +32,9 @@ ______________________________________________________________________
     - [Phase 5: Evolution & Adaptation](#phase-5-evolution--adaptation)
     - [Phase 6: Connectome Substrate & Architecture Comparison](#phase-6-connectome-substrate--architecture-comparison)
     - [Phase 7: Deepen — Plasticity & Cross-Species Transfer](#phase-7-deepen--plasticity--cross-species-transfer)
-05. [Quantum Re-evaluation Checkpoints](#quantum-re-evaluation-checkpoints)
+05. [Architecture-Comparison Protocol](#architecture-comparison-protocol)
 06. [Complexity Dashboard](#complexity-dashboard)
-07. [Biological Fidelity Ladder](#biological-fidelity-ladder)
+07. [Biological Fidelity](#biological-fidelity)
 08. [Adaptive Roadmap Philosophy](#adaptive-roadmap-philosophy)
 09. [Ongoing Validation Milestones](#ongoing-validation-milestones)
 10. [Success Metrics Framework](#success-metrics-framework)
@@ -785,124 +785,126 @@ These are not Phase 7 exit criteria. The project may pursue any combination when
 
 ______________________________________________________________________
 
-## Quantum Re-evaluation Checkpoints
+## Architecture-Comparison Protocol
 
-Instead of concentrating quantum work in a single phase, quantum re-evaluation is distributed across the roadmap as complexity milestones are reached:
+Phase 2's 300-session quantum architecture campaign — covering 15 quantum and hybrid variants against matched-capacity classical baselines — established that grid-world complexity is below the threshold for quantum advantage on every variant tested. Quantum is therefore *one architecture family among many* in the project's comparison sweep, not a separate goal or a separate phase.
 
-| Phase | Complexity Milestone | Quantum Re-evaluation | Rationale |
-|-------|---------------------|----------------------|-----------|
-| **3** | Non-Markovian temporal dependencies | Re-test QRH (temporal advantage), QEF on harder tasks | QRH showed genuine advantage on temporal pursuit; richer temporal structure may amplify |
-| **4** | Exponential multi-agent state space | Evaluate quantum game theory, entangled strategies | Strongest theoretical case for quantum advantage (quantum game theory) |
-| **6** | Continuous action/state + connectome | **MAJOR**: Full quantum campaign v2 if classical \<70% | All identified complexity thresholds potentially crossed |
-| **8** | Full integration | Definitive comparison at maximum complexity | Final answer on quantum advantage at this simulation scale |
+The architecture-comparison protocol consolidates this into a single mechanism, applied at Phase 6 and again at Phase 7:
 
-Each checkpoint follows the same protocol:
+1. Run the full architecture-family sweep (MLP, recurrent, spiking, reservoir, quantum, hybrid, connectome-constrained, NEAT-evolved) on the three target behaviours under the current substrate (Rung 2 chemical gradients, continuous 2D, corrected nociception at Phase 6; same plus L4 plasticity at Phase 7).
+2. Report results paired-seed at the Phase 5 statistical bar (Wilcoxon, bootstrap CIs, n ≥ 4 per condition).
+3. The 300-session campaign's results carry forward as **baseline reference data** — quantum families are not re-evaluated from scratch unless the substrate change (continuous physics, connectome topology, neuromodulator-modulated STDP) plausibly changes the comparison.
+4. If a future phase introduces a complexity dimension that *did* clear a quantum-advantage threshold in the Phase 2 campaign (e.g., long non-Markovian dependencies for QRH), revisit that family's evaluation at that phase. This is opportunistic, not scheduled.
 
-1. Establish classical baselines on enriched tasks
-2. Measure classical ceiling (post-convergence success rate)
-3. If ceiling \<threshold: launch targeted quantum evaluation
-4. If ceiling remains high: document and move to next checkpoint
+There is no separate "quantum checkpoint" gate, and no "if classical drops below 70% then launch a quantum campaign v2." The optionality of revisiting quantum at higher complexity is preserved through the architecture-family sweep itself.
 
 ______________________________________________________________________
 
 ## Complexity Dashboard
 
-A living metric tracking the five quantum advantage thresholds identified by the [strategic assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage):
+A snapshot of where the platform sits across five complexity dimensions, tracked across phases. Each dimension matters because the architecture comparison's interpretation depends on it (high-dimensional + non-Markovian observations test different architectural assumptions than low-dimensional Markovian ones), not because any one dimension is a quantum-advantage gate.
 
-| Dimension | Phase 2 (current) | Phase 3 target | Phase 4 target | Phase 6 target | Quantum threshold |
-|-----------|-------------------|----------------|----------------|----------------|-------------------|
-| **Input dimensionality** | 2-9D | ~15-20D | >30D | >50D (continuous) | >30D with cross-modal correlations |
-| **Partial observability** | Viewport only | Temporal memory limited | Multi-agent fog-of-war | Realistic sensing range | Information-theoretic limits on classical |
-| **Multi-agent** | 1 | 1 | 5-10 | 5-10 | 5+ interacting agents |
-| **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Full non-Markovian | Very long non-Markovian dependencies |
-| **Classical ceiling** | 94-98% | Target \<85% | Target \<75% | Target \<70% | \<70% on challenging tasks |
+| Dimension | Phase 0-2 | Phase 3 | Phase 4 | Phase 5 | Phase 6 target | Phase 7 target |
+|---|---|---|---|---|---|---|
+| **Input dimensionality** | 2-9D | ~15-20D | similar | similar | > 50D (continuous + sensory-physics) | similar; cross-species sensors |
+| **Partial observability** | Viewport only | STAM temporal memory | Multi-agent fog-of-war | Generational uncertainty | Realistic sensing range + connectome | Adds modulator-state observability |
+| **Multi-agent** | 1 | 1 | 5-10 | Single-agent populations | 1 (multi-agent deferred) | 1 (cross-species, not multi-agent) |
+| **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Cross-generational | Full non-Markovian + plasticity-shaped | STDP-modulated long-horizon |
+| **Classical ceiling on hardest task** | 94-98% (PPO foraging) | 94% (Mode A L500) | partially measured | n/a | TBD on continuous + connectome | TBD with plasticity |
 
-**Update protocol**: After each phase's classical baselines are established, update this dashboard with **measured** values (replacing the targets). Quantum checkpoints activate when thresholds are crossed. Classical ceiling targets are aspirational — the key criterion is measurable difficulty increase, not hitting a specific number.
+Update protocol: after each phase's results are in, this dashboard records *measured* values for that phase's columns and pencils-in targets for the next. The dashboard documents the substrate's complexity profile, not a quantum-advantage threshold; quantum architectures appear in the architecture-family sweep regardless of where the substrate sits on any one row.
 
 ______________________________________________________________________
 
-## Biological Fidelity Ladder
+## Biological Fidelity
 
-Progressive realism across the roadmap phases:
+### Current snapshot
 
-| Level | Phase | Fidelity Description |
-|-------|-------|---------------------|
+Where the platform sits across five fidelity dimensions, by phase. This view answers "what does the substrate actually look like today, and what is each forward phase deepening?" — the question the optimal-primary framing makes load-bearing.
+
+| Dimension | Phase 0-4 | Phase 5 | Phase 6 target | Phase 7 target | Future |
+|---|---|---|---|---|---|
+| **Connectome topology** | None (MLP/LSTM/etc.) | None | 302-neuron Cook 2019 / OpenWorm c302 | + *P. pacificus* (Cook 2025) | + briggsae (gated on data) |
+| **Sensory transduction** | Spatial gradient lookups | + klinotaxis head-sweep | Rung 2 dynamic Fick's-law + log-concentration adaptation kinetics | unchanged | + multi-species receptors |
+| **Plasticity rules** | PPO / DQN / Reinforce | + Lamarckian inheritance, hyperparameter evolution | L2 PPO + L3 NEAT topology search | + L4 STDP + neuromodulator-modulated STDP | + reward-modulated Hebbian; alt rule families |
+| **Body mechanics** | Discrete 4-action grid | Discrete | Continuous 2D + spatial scales; OpenWorm Sibernetic interop if needed | unchanged | Native undulation / omega turns / pirouettes; 3D |
+| **Environment** | Grid; static gradients | + multi-agent, pheromones | Rung 2 dynamic gradients; corrected ASH/ADL contact nociception | unchanged | Bacterial lawns; energy/metabolic state; population dynamics |
+
+### Trajectory ladder
+
+The platform progresses through six levels of progressive realism, each building on the previous:
+
+| Level | Phase | Fidelity description |
+|---|---|---|
 | **1** | 0-2 ✅ | Grid-world, spatial gradient sensing, stateless reflexes, single agent, discrete actions |
-| **2** | 3 | Temporal sensing (dT/dt, dC/dt, dO2/dt), short-term memory, non-Markovian decisions |
-| **3** | 4 | Multi-agent, pheromone communication, social dynamics, competitive/cooperative behaviors |
-| **4** | 5 | Evolved behaviors, transgenerational epigenetic memory, co-evolutionary arms races |
-| **5** | 6 | Continuous 2D physics, realistic locomotion, connectome-constrained 302-neuron architecture |
-| **6** | Future | 3D substrate (soil mechanics), full sensory suite, population dynamics, life cycle simulation |
+| **2** | 3 ✅ | Temporal sensing (dT/dt, dC/dt, dO₂/dt), short-term memory (STAM), non-Markovian decisions |
+| **3** | 4 ✅ | Multi-agent, pheromone communication, social dynamics, competitive/cooperative behaviours |
+| **4** | 5 ✅ | Evolved hyperparameters, Lamarckian inheritance, methodology for co-evolution and transgenerational memory |
+| **5** | 6 | Connectome-grounded learning + evolution + continuous 2D physics + corrected nociception + Rung 2 chemical gradients + chemosensory adaptation kinetics |
+| **5+** | 7 | + Biologically-plausible plasticity (STDP, neuromodulator-modulated) + cross-species transfer (*P. pacificus*) |
+| **6** | Future | 3D substrate (soil mechanics, fluid dynamics), native body mechanics, energy/metabolic model, population dynamics, life-cycle simulation, briggsae and other species |
 
-Each level builds on the previous, with the entire stack running simultaneously in later phases. Level 5 represents the target state for this roadmap; Level 6 is aspirational for future work.
+Level 5 + Level 5+ together represent the project's target state. Level 6 is aspirational — see Future Directions for the technology selection and gated dependencies.
 
 ______________________________________________________________________
 
 ## Adaptive Roadmap Philosophy
 
-This roadmap is designed to be **adaptive, not linear**. Each phase includes explicit go/no-go decision gates that allow the project to pivot based on empirical findings.
+This roadmap is **adaptive, not linear**. Each phase includes explicit go/no-go decision gates that allow the project to pivot based on empirical findings.
 
-### Decision Gate Principles
+### Decision gate principles
 
-1. **Evidence-driven**: Decisions based on experimental results, not assumptions
-2. **Fail fast**: If a key assumption fails, pivot immediately rather than continuing unproductively
-3. **Multiple paths to impact**: Alternative success modes if primary hypotheses don't hold
-4. **Scientific rigor**: Better to publish "quantum didn't work but here's why" than to force false claims
-5. **Quantum checkpoints, not quantum phases**: Quantum re-evaluation is distributed across the roadmap, triggered by complexity milestones rather than calendar dates
+1. **Evidence-driven.** Decisions are based on experimental results recorded in the per-milestone logbooks, not on assumptions or aspirational goals.
+2. **Fail-fast at the substrate and architecture level, not at the phase level.** Phase 6's three mid-phase gates (L0 working at month ~2, L1 plugin parity at ~4-5, L2 results at ~7-8) trigger documented pivots — not silent slides past missed milestones.
+3. **Hard phase boundaries between completed and in-flight phases.** No Phase N+1 work begins until Phase N is synthesised. Mid-phase gates protect execution; hard phase boundaries protect the narrative arc.
+4. **Multiple paths to impact.** Most milestones have alternative success modes: a positive substrate result is the headline; a substrate-grounded STOP diagnosis is a defensible and reusable methodology contribution. Phase 5 demonstrated both.
+5. **Scientific rigor over claim inflation.** STOP-with-diagnosis is the correct verdict when the experiment was honest but the substrate or architecture didn't support the question. Publishing "X didn't work and here is the architectural reason why" is a contribution; forcing a marginal positive result is not.
 
-### Potential Pivot Scenarios
+### Potential pivot scenarios
 
-- **Scenario 1: Quantum shows no advantage even at high complexity** → The C. elegans simulation is still the most complete ever built. Publish comprehensive characterisation of complexity thresholds. Focus on biological insights and computational neuroscience impact.
-- **Scenario 2: Multi-agent complexity too high** → Deepen single-agent biological fidelity (continuous physics, connectome, richer sensing) instead.
-- **Scenario 3: Temporal sensing doesn't increase difficulty** → Classical RNNs handle temporal derivatives trivially. Skip to multi-agent as the primary complexity driver.
-- **Scenario 4: Connectome doesn't improve performance** → Valuable negative result: "Evolution's wiring is not optimal for RL." Publish and continue with unconstrained architectures.
-- **Scenario 5: Continuous physics too expensive** → Keep continuous action space but simplify physics. The action space expansion alone may create sufficient complexity.
-- **Scenario 6: External collaboration fails** → Focus on simulation-only insights. Use published C. elegans behavioral datasets for validation instead of lab partnerships.
+- **Connectome competitive with NEAT-evolved topologies but not dominant** → headline framing shifts from optimal-primary to connectome-primary (a neuroscience finding rather than an architecture one). Platform claim is unchanged. See Phase 6 Risk-mitigation, "L3 produces no separation from connectome."
+- **L4 plasticity overshoots Phase 7 month-6 milestone** → Phase 7a / 7b split. 7a ships L4 standalone; 7b carries pacificus transfer + optional MAY items. See Phase 7 Risk-mitigation.
+- **L0 c302 connectome import is harder than expected** → hand-curated subset pivot (sensory-interneuron-motor subgraph). Platform claim survives in restricted form. See Phase 6 Risk-mitigation.
+- **Continuous physics doesn't increase task difficulty enough to matter** → keep continuous action space (necessary for the architecture comparison's validity) and accept that the comparison is fundamentally easier than initially modeled. The connectome ranking question doesn't require difficulty escalation to be scientifically interesting.
+- **External collaboration unavailable at Phase 7** → optional MAY items shift to internal-only execution. The platform paper and the connectome-learning paper are still draftable from internal Phase 6 + Phase 7 results without external validation.
+- **Cross-species transfer reveals fundamental incompatibility** → the *finding* is scientifically informative ("transfer breaks at this layer"); document and ship as a Phase 7 result rather than treating as a failure.
 
-Each pivot maintains scientific value and publishable outcomes.
+Each pivot maintains scientific value. The Phase 5 STOP pattern is the canonical example: M4 / M5 / M6.x all closed as substrate-grounded diagnoses with reusable methodology, not as silent failures.
 
-### External Dependency Risk Mitigation
+### External dependency risk mitigation
 
 | Dependency | Risk | Mitigation |
-|------------|------|------------|
-| **Neuroscience lab collaboration** (Phase 7) | Labs decline or slow response | Use published behavioral datasets; partner with smaller labs or citizen science projects |
-| **IBM Quantum access** (quantum checkpoints) | Queue times, access limits | Maintain simulator-first development; explore IonQ/Rigetti alternatives |
-| **OpenWorm integration** (Phase 7) | Project inactive or incompatible | Develop minimal integration in-house; focus on connectome data (publicly available) |
-| **External NematodeBench adoption** (Phase 7) | No uptake | Focus on internal research value; improve accessibility and documentation |
+|---|---|---|
+| **Neuroscience lab collaboration** (Phase 7 MAY) | Labs decline or slow response | Optional, not required. Use published behavioural datasets (Bargmann chemotaxis indices, Kavli Ca²⁺ recordings, BAAIWorm correlation matrices) for built-in real-worm validation at Phase 6 close. |
+| **OpenWorm c302 integration** (Phase 6 L0) | NeuroML format issues, missing metadata, unclear synaptic-weight provenance | Hand-curated subset of Cook 2019 connectome as L0 fallback (~50-100 neurons). Platform claim survives in restricted form. |
+| **Cook et al. 2025 pacificus data quality** (Phase 7) | Data incomplete or format-incompatible on detailed handling | Hand-curated *P. pacificus* subset; cross-species transfer claim survives on the subset. |
+| **GPU / HPC access for L3 NEAT** (Phase 6) | TensorNEAT-scale population search needs GPU; HPC allocation overhead | GPU is realistic baseline (consumer-class cards sufficient with TensorNEAT vectorisation). HPC is optional, pursue only when a specific Phase 7 stretch need justifies. |
+| **Neuromorphic deployment** (Phase 7 MAY) | Loihi 2 / SpiNNaker 2 access non-trivial | Software-only L4 path is fully sufficient for the headline claim. Neuromorphic is a stretch / publication enhancement, not a requirement. |
 
-### Adaptive Execution
+### Adaptive execution
 
-- **Phase reviews**: Assess progress against exit criteria at each phase boundary
-- **Complexity dashboard updates**: Measure and record quantum advantage thresholds after each phase
-- **Quantum checkpoints**: Triggered by measured complexity milestones, not calendar dates
-- **Open science**: Public benchmarks and preprints enable community feedback and course correction
+- **Per-milestone logbooks** with audit findings, statistical evidence, and explicit GO/PIVOT/STOP verdicts. Phase 5's logbooks 012-021 are the template.
+- **OpenSpec change per non-trivial milestone**, archived on close (proposal → design → tasks → implementation → verification → archive).
+- **Mid-phase decision gates** for long phases (Phase 6's three gates; Phase 7's L4-month-6 split criterion).
+- **Complexity dashboard updates** at each phase close — record measured values; document where the substrate sat.
+- **Architecture-comparison protocol** as the single mechanism that places quantum, classical, recurrent, spiking, reservoir, hybrid, NEAT-evolved, and connectome-constrained brains in one experimental sweep.
 
 ______________________________________________________________________
 
 ## Ongoing Validation Milestones
 
-Throughout all phases, the following validation activities occur continuously:
+Throughout all phases, biological validation against published *C. elegans* data is a continuous activity — not a Phase 7 deliverable held in reserve.
 
-### Biological Validation (Every Phase)
+### Biological validation (every phase)
 
-**Objective**: Ensure models align with real C. elegans biology and generate testable predictions.
+**Objective**: ensure model behaviours align with documented real-worm biology, and surface predictions that can be tested against published data without requiring an external lab partnership.
 
-- **Phases 0-2** ✅: Validated chemotaxis, thermotaxis, and predator evasion against published behavioral data
-- **Phase 3**: Validate temporal sensing against published dT/dt, dC/dt behavioral data
-- **Phase 4**: Validate social behaviors against aggregation and pheromone literature
-- **Phase 5**: Validate evolved behaviors against natural C. elegans adaptations
-- **Phase 6**: Validate locomotion statistics against real worm movement data
-- **Phase 7**: First experimental collaboration — model prediction tested with real C. elegans
-- **Phase 8**: Comprehensive biological validation across all behaviors
-
-### Quantum Hardware Validation (At Checkpoints)
-
-**Objective**: When quantum checkpoints activate, benchmark on real quantum devices.
-
-- **Phase 3 checkpoint**: If triggered, run QRH on IBM Quantum with temporal tasks
-- **Phase 6 checkpoint**: Major QPU deployment — all viable quantum architectures on enriched tasks
-- **Phase 8**: Production deployment pipeline for final comparison
-- **Error mitigation**: Q-CTRL Fire Opal integration for noise suppression
+- **Phases 0-2** ✅: chemotaxis, thermotaxis, and predator-evasion behaviours validated against published behavioural data.
+- **Phase 3** ✅: temporal sensing validated against published dT/dt / dC/dt sensitivity data.
+- **Phase 4** ✅: social-feeding and pheromone behaviours validated against aggregation literature.
+- **Phase 5** ✅: evolved-behaviour dynamics framed against natural *C. elegans* adaptation literature; M5 architecture-asymmetry diagnosis independently corroborated by external work (Resendez Prado, arXiv 2604.03565).
+- **Phase 6**: locomotion + chemotaxis behaviour quantitatively compared to real worm data as a phase exit criterion. ≥ 1 of: chemotaxis indices (Bargmann lab + others), escape latencies (mechanosensation literature), whole-brain Ca²⁺ correlation matrices (Kavli / Janelia open data). The corrected ASH/ADL nociception is the natural validation pair for escape latencies.
+- **Phase 7**: deepen biological validation with the L4 plasticity layer (does modulated STDP reproduce documented learning dynamics?) and with *P. pacificus* cross-species transfer. External lab partnership is optional (MAY); internal validation against published data is sufficient for the phase to close.
 
 ______________________________________________________________________
 
@@ -916,7 +918,7 @@ The project tracks success across 6 primary dimensions:
 
 **Metrics**:
 
-- Biological fidelity level achieved (see [Biological Fidelity Ladder](#biological-fidelity-ladder))
+- Biological fidelity level achieved (see [Biological Fidelity](#biological-fidelity))
 - Quantitative match to published C. elegans behavioral data (chemotaxis indices, escape latencies, aggregation patterns)
 - Number of biological predictions generated and tested
 
