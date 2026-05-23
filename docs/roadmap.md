@@ -95,106 +95,80 @@ ______________________________________________________________________
 
 ## Current State
 
-### Completed Phases Summary
+Phases 0-5 are complete. The platform now supports: 19 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, and hybrid families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6.
 
-#### Phase 0 (Foundation & Baselines) — COMPLETE
+### Phase 0 — Foundation & Baselines
 
-All required and stretch exit criteria met:
+- 6 brain architectures shipped: QVarCircuitBrain, QQLearningBrain, MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain, SpikingReinforceBrain.
+- PPO validated as classical SOTA (94-98% across thermotaxis configurations).
+- CMA-ES validated for quantum circuits (88% success, 4x better than gradient-based).
+- Spiking neural networks rewritten with surrogate gradient descent (73.3% success).
+- First IBM QPU deployment.
 
-- **6 brain architectures** implemented and benchmarked: QVarCircuitBrain, QQLearningBrain, MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain, SpikingReinforceBrain
-- **PPO validated** as classical SOTA (94-98% across thermotaxis configurations)
-- **CMA-ES validated** for quantum circuits (88% success, 4x better than gradient-based)
-- **Spiking neural networks** rewritten with surrogate gradient descent (73.3% success)
-- **IBM QPU deployment** complete (first quantum hardware run)
-- **14 benchmark categories** with automated experiment tracking
+### Phase 1 — Sensory & Threat Complexity
 
-#### Phase 1 (Sensory & Threat Complexity) — COMPLETE
+- Thermotaxis implemented with 9 configurations (3 sizes × 3 task variants); see [Logbook 007](experiments/logbooks/007-ppo-thermotaxis-baselines.md).
+- Mechanosensation (boundary + predator contact detection).
+- Stationary + pursuit predator types with configurable behaviour.
+- Health/HP system with damage, healing, and strategic trade-offs.
+- Oxygen sensing deferred to Phase 3 (paired with temporal sensing infrastructure).
 
-All core exit criteria met:
+### Phase 2 — Architecture Analysis
 
-- **Thermotaxis** implemented with 9 configurations (3 sizes × 3 task variants), all baselines established (see [Logbook 007](experiments/logbooks/007-ppo-thermotaxis-baselines.md))
-- **Mechanosensation** implemented (boundary + predator contact detection)
-- **Enhanced predators**: Stationary + pursuit types with configurable behaviors
-- **Health/HP system** with damage, healing, and strategic trade-offs
-- Oxygen sensing deferred to Phase 3 (pairs naturally with temporal sensing infrastructure)
+The 300-session quantum architecture campaign across 15 variants is the project's most comprehensive comparative evaluation of quantum architectures on biologically-grounded RL tasks to date (see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md)). It established two load-bearing findings:
 
-#### Phase 2 (Architecture Analysis) — SUBSTANTIALLY COMPLETE
+- **Grid-world complexity (2-9D observations, 4 discrete actions, ~10K effective states) is below the threshold at which any of the 15 quantum variants tested produced a genuine advantage over matched-capacity classical baselines.** HybridQuantum achieved 96.9% on pursuit, but the HybridClassical ablation matched at 96.3% — the curriculum and fusion drove performance, not the quantum component. QRH showed a +9.4pp pursuit advantage but at low absolute performance (41.2%).
+- **Statistical framework operational**; brain naming migrated to paradigm-prefix scheme; novel architectures evaluated include QRH, QEF, HybridQuantum, HybridClassical, QSNN, QRC, QSNN-PPO, HybridQuantumCortex, CRH, and variants.
 
-Core quantum evaluation complete, remaining items folded into later phases:
+The campaign carries forward as a baseline reference in Phase 6's architecture-comparison protocol. The 15-architecture results table is available in [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md); see [research/quantum-architectures.md](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for the full strategic assessment.
 
-- **300+ session quantum architecture campaign** across 15 architecture variants (see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md))
-- **Brain naming migration** to paradigm-prefix scheme complete
-- **Statistical framework** operational
-- **Novel architectures evaluated**: QRH, QEF, HybridQuantum, HybridClassical, QSNN, QRC, QSNN-PPO, QSNNReinforce A2C, HybridQuantumCortex, CRH, and variants
-- Remaining (folded into Phase 7): interpretability framework, mechanism discovery, biological predictions
+### Phase 3 — Temporal Sensing & Memory
 
-### Architecture Evaluation Results (Logbook 008)
+- Temporal Mode A (raw scalar + STAM memory buffer) reaches 94% L500 on the hardest environment, matching oracle at convergence.
+- LSTM/GRU PPO shipped as the 19th architecture; GRU outperforms LSTM by 3-40pp on temporal tasks.
+- Aerotaxis (5-zone oxygen field) with combined thermal+oxygen environments.
+- See [Logbook 009](experiments/logbooks/009-temporal-sensing-evaluation.md) and [Logbook 010](experiments/logbooks/010-aerotaxis-baselines.md).
 
-The 300+ session campaign across 15 architecture variants produced the following landscape (snapshot as of March 2026 — see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md) for full details):
+### Phase 4 — Multi-Agent Complexity
 
-```text
-GRADIENT-BASED ONLINE LEARNING EFFECTIVENESS (March 2026 snapshot)
-═══════════════════════════════════════════════════════════════════════════
+- 5-10 agent scaling operational. Pheromones (aggregation, alarm, food-marking) and social dynamics shipped.
+- Temporal collective exploration: +14.3% advantage. Social feeding: +35% food under scarcity. Coordination overhead: zero with proportional resources.
+- Klinotaxis sensing (head-sweep mode) shipped; pheromone signals were neutral on the campaign's tasks.
+- The campaign found no genuine multi-agent complexity at the scales tested (coordination resolved to resource allocation rather than game-theoretic interaction); see [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md).
 
-Architecture                      Foraging   Pursuit Pred   Viable?
-──────────────────────────────────────────────────────────────────────────
-QRC                               0%         0%             NO
-QSNN (Hebbian)                    0%         N/A            NO
-QSNN-PPO Hybrid                   N/A        0%             NO
-QVarCircuit (parameter-shift)     ~40%       Not tested     MARGINAL
-QSNN (Surrogate gradient)         73.9%      0%             PARTIAL
-QSNNReinforce A2C                 N/A        0.5%           NO
-QVarCircuit (CMA-ES)              99.8%      76.1%          NOT ONLINE
-QRH (quantum reservoir)           86.8%      41.2%          PARTIAL
-CRH (classical reservoir)         N/A        31.8%          PARTIAL (CTRL)
-QEF (entangled features)          N/A        93.0%          COMPETITIVE
-HybridQuantum                     91.0%      96.9%          YES (BEST)
-HybridClassical (ablation)        97.0%      96.3%          YES (CONTROL)
-SpikingReinforceBrain             73.3%      ~61%           UNRELIABLE
-MLPReinforceBrain                 95.1%      73.4%          YES
-MLPPPOBrain                       96.7%      94.5%          YES
-──────────────────────────────────────────────────────────────────────────
-```
+### Phase 5 — Evolution & Adaptation
 
-### Key Findings from Quantum Campaign
+Phase 5 closed 2026-05-23 with one headline-positive result and four substrate-grounded STOP verdicts. All five Phase 5 exit criteria are met with evidence; the STOP results are scientifically informative architectural diagnoses, not implementation failures, and the methodological yield from them carries directly into Phase 6 and Phase 7. See [Logbook 021](experiments/logbooks/021-phase5-synthesis.md) for the full synthesis.
 
-1. **HybridQuantum achieved SOTA (96.9%)** but classical ablation matches (96.3%) — the three-stage curriculum and mode-gated fusion drive performance, not the quantum component
-2. **QRH shows genuine quantum advantage** on pursuit predators (+9.4pp, Domingo-confirmed) but at low absolute performance (41.2%)
-3. **QEF competitive but not advantageous** — 24-phase optimisation, no significant improvement (p>0.05 on all tasks)
-4. **QA-7 (Quantum Plasticity)**: Classical baselines show zero backward forgetting (11/12 seeds BF=0.0) — environment too simple for quantum anti-forgetting hypothesis
-5. **Every trainable quantum component matches classical**: QLIF gates = classical gates, QEF ≈ MLP PPO, HybridQuantum ≈ HybridClassical
+- **M2 Hyperparameter Evolution** — GO. Four-arm CMA-ES then TPE campaign closed RQ1 on optimiser choice; +47pp / +79pp predator-arm acceleration on the M3 inheritance config. See [Logbook 012](experiments/logbooks/012-hyperparam-evolution-mlpppo-pilot.md).
+- **M3 Lamarckian Inheritance** — GO, headline-positive. Speed gate passes at +5.25 generations; +17.5pp F1-F3 mean retention on the M6.10 environment; n=8 paired-seed rerun confirms. The "learned behaviour becomes innate" exit criterion is satisfied; see [Logbook 013](experiments/logbooks/013-lamarckian-inheritance-pilot.md).
 
-### Strategic Conclusion
+### What we tried and stopped (Phase 5)
 
-Environment complexity (2-9D observations, 4 discrete actions, ~10K effective states) is fundamentally below the threshold for quantum advantage. See [quantum-architectures.md Strategic Assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for full analysis.
+Three Phase 5 themes — Baldwin effect, co-evolution arms races, transgenerational memory — produced **STOP verdicts as field-consistent substrate diagnoses**, not implementation failures. Each diagnosis pointed at the substrate or architecture rather than at the experimental protocol; each shipped reusable methodology; and two of the three carry their architectural question directly forward into Phase 6.
 
-**Path forward**: Advance biological fidelity to cross complexity thresholds, then re-evaluate quantum architectures at each milestone.
+- **M4 Baldwin Effect** — STOP after three iterations (M4 → M4.5 → M4.6). Diagnosis: **single-task K=50 PPO has no Baldwin axis** because the optimal strategy on a single task is innate good behaviour for that task — the opposite of what Baldwin canalisation selects for. The substrate constraint, not the algorithm, blocks the result. Multi-task aggregation infrastructure is the prerequisite for a clean Baldwin demonstration and is deferred. Methodology shipped: F1 evaluator, 4-way aggregator, 8-field config schemas, n=8 Lamarckian rerun extending M3. See [Logbook 014](experiments/logbooks/014-baldwin-inheritance-pilot.md) and [Logbook 015](experiments/logbooks/015-baldwin-iterative-evaluation.md).
+- **M5 Co-evolution Arms Race** — STOP after 13 single-seed lever ablations. Diagnosis: **LSTMPPO-prey-vs-MLPPPO-predator architecture asymmetry suppresses Red Queen entanglement** — own-vs-cross fitness lag delta stayed in the +0.017 to +0.024 range across all ablations, against a target of ≤−0.05. Independent corroboration arrived from Resendez Prado's [Personality Requires Struggle](https://arxiv.org/abs/2604.03565) (April 2026): "transparent regime" same-architecture self-play suppresses the heterogeneity needed for measurable Red Queen / Baldwin signal — the same hypothesis from a different group. The architecture-asymmetry question carries directly into Phase 6, where matched-capacity NEAT-vs-NEAT and connectome-vs-NEAT comparisons test it on continuous physics. Methodology shipped: lag-matrix cross-pairing instrument and cell-grid fair-test methodology, both reusable. See [Logbook 017](experiments/logbooks/017-coevolution-arms-race.md).
+- **M6 / M6.9+ / M6.13 Transgenerational Memory** — STOP across three pilot rounds. The `TransgenerationalInheritance` framework + `TransgenerationalMemory` dataclass + LSTMPPO `tei_prior` actor-logit hook ship as functional infrastructure, but no K value or substrate variant produced a positive memory effect. Diagnosis: **the bias-network logit-prior is the wrong abstraction for the wet-lab single-circuit excitability shift** documented in Kaletsky 2025 and the 2025 mammalian-TEI literature. This is a *substrate* finding — different from a hyperparameter or training failure — and points at Phase 6's connectome-substrate work as the natural next step. Pure-TEI K=0 was substrate-inert (cross-arm delta −49pp); substrate-on-top-of-Lamarckian at K=1000 showed zero acceleration; at K=200 showed −9.33pp active interference under fair-F0. See [Logbook 018](experiments/logbooks/018-transgenerational-memory.md), [Logbook 019](experiments/logbooks/019-transgenerational-memory-redesign.md), and [Logbook 020](experiments/logbooks/020-tei-prior-on-lamarckian.md).
 
-### Known Gaps & Technical Debt
+Two reusable methodology contributions ship unscooped: the **lag-matrix cross-pairing instrument** and the **cell-grid fair-test methodology**, both from [Logbook 017](experiments/logbooks/017-coevolution-arms-race.md). Independent corroboration of the M5 diagnosis arrived from outside the project during Phase 5 close-out.
 
-**Resolved from Phase 0:**
+### Known Gaps Carried into Phase 6+
 
-- ~~QQLearningBrain incomplete~~ — evaluated but not competitive; low priority
-- ~~No SOTA RL baselines~~ — PPO implemented and validated
-- ~~No real C. elegans behavioral datasets~~ — integrated for validation
+- **No connectome-constrained architecture** — Phase 6's focal deliverable.
+- **No biologically-plausible plasticity rules** — STDP and neuromodulator-modulated STDP are Phase 7's focal deliverable.
+- **No energy/metabolic model** (satiety is abstract, not ATP-based) — blocks dauer-state and dwelling-vs-roaming behaviours; flagged as a Future Directions prerequisite, not on the Phase 6/7 critical path.
+- **Discrete grid-world (not continuous physics)** — addressed in Phase 6 alongside Rung 2 chemical gradients and corrected ASH/ADL contact-based nociception (the latter is owed correctness work flagged in [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md)).
+- **No native body mechanics** (sinusoidal undulation, omega turns, pirouettes) — interop with OpenWorm/Sibernetic at the c302 boundary if needed; native implementation is not on the Phase 6 critical path.
+- **Multi-task aggregation infrastructure** — Baldwin prerequisite; revisits if a future phase commits to the Baldwin question.
 
-**Remaining:**
+### Research Questions for Phase 6+
 
-- No energy/metabolic model (satiety is abstract, not ATP-based)
-- No neuromodulation (dopamine/serotonin mentioned but not simulated)
-- Limited environmental diversity (no temporal dynamics beyond thermotaxis)
-- Sensory inputs are spatial gradient lookups, not temporal derivatives (biologically inaccurate)
-- ~~Single-agent only~~ — Multi-agent infrastructure implemented (Phase 4 Deliverable 1)
-- Discrete grid-world (not continuous physics)
-- No connectome-constrained architectures
-
-### Research Questions
-
-1. **Complexity Thresholds**: At what environment complexity do quantum approaches first outperform classical? (>30D inputs? Multi-agent? Non-Markovian? Continuous state spaces?)
-2. **Biological Fidelity**: Does increasing biological realism (temporal sensing, connectome topology, realistic locomotion) create computational problems that favour quantum approaches?
-3. **Connectome Advantage**: Does the real C. elegans wiring diagram produce better learning agents than arbitrary architectures?
-4. **Universal Principles**: What computational principles emerge from a deep C. elegans simulation that generalise to other domains?
-5. **Quantum Reservoir Memory**: Can QRH's demonstrated temporal advantage (pursuit predators) scale with richer temporal dependencies?
+1. **Connectome ranking.** How does the wild-type *C. elegans* connectome rank against unconstrained MLP/LSTM, NEAT-evolved topologies, and quantum architectures on klinotaxis, thermotaxis, and predator evasion when learning and evolution operate on a common substrate?
+2. **Connectome fitness landscape.** Is the wild-type connectome a local optimum on these behaviours, a basin, or a saddle? What synaptic-weight changes does evolution find when permitted to modify it?
+3. **Plasticity and the connectome.** Does biologically-plausible plasticity (STDP, neuromodulator-modulated STDP) on the real connectome reproduce dynamics that match published *C. elegans* learning data (chemotaxis indices, Ca²⁺ correlation matrices)?
+4. **Architecture asymmetry under matched capacity.** Phase 5 M5 diagnosed architecture asymmetry as the blocker for Red Queen entanglement. Does matched-capacity NEAT-vs-NEAT or connectome-vs-connectome co-evolution produce the dynamics that LSTMPPO-vs-MLPPPO suppressed?
+5. **Cross-species transfer.** Do learned/evolved architectures transfer from *C. elegans* to *P. pacificus* (Cook et al. 2025) on the shared behaviours? Where do they break, and what does that say about the connectome's role?
 
 ______________________________________________________________________
 
@@ -204,7 +178,7 @@ ______________________________________________________________________
 
 **Status**: ✅ All required and stretch exit criteria met.
 
-See [Current State](#completed-phases-summary) for achievements. Key breakthroughs:
+See [Current State — Phase 0](#phase-0--foundation--baselines) for achievements. Key breakthroughs:
 
 - Evolutionary optimization (CMA-ES) achieving 4x better performance than gradient-based on quantum circuits
 - Spiking neural network rewrite to surrogate gradient descent enabling viable learning
@@ -216,7 +190,7 @@ ______________________________________________________________________
 
 **Status**: ✅ All core exit criteria met. Oxygen sensing deferred to Phase 3.
 
-See [Current State](#completed-phases-summary) for achievements. Key deliverables:
+See [Current State — Phase 1](#phase-1--sensory--threat-complexity) for achievements. Key deliverables:
 
 - Thermotaxis system with 9 validated configurations (Logbook 007)
 - Mechanosensation with boundary and predator contact detection
@@ -227,9 +201,9 @@ ______________________________________________________________________
 
 ### Phase 2: Architecture Analysis & Standardization (SUBSTANTIALLY COMPLETE)
 
-**Status**: ✅ Core quantum evaluation complete (300+ sessions). Remaining items folded into Phases 7-8.
+**Status**: ✅ 300-session quantum architecture campaign complete. Carries forward as baseline reference in Phase 6's architecture-comparison protocol.
 
-See [Current State](#architecture-evaluation-results-logbook-008) for the full architecture landscape. Key outcomes:
+See [Current State — Phase 2](#phase-2--architecture-analysis) for the campaign summary; full results in [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md). Key outcomes:
 
 - 15 architecture variants systematically evaluated
 - Strategic conclusion: environment complexity below quantum advantage thresholds
