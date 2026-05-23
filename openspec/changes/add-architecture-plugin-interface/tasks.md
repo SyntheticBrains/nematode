@@ -4,14 +4,14 @@ Phase 6 Tranche 2 (T2). Closes [Gate 1](../phase6-tracking/tasks.md). Sub-tasks 
 
 ## 1. Registry + Protocol scaffolding (T2.1 + T2.2 + T2.3)
 
-- [ ] 1.1 Audit `setup_brain_model()` dispatcher and document the 19 elif branches in a short notes file at `openspec/changes/add-architecture-plugin-interface/notes/dispatcher-audit.md` (per [phase6-tracking/tasks.md T2.1](../phase6-tracking/tasks.md)). Cross-reference to the registry refactor plan.
-- [ ] 1.2 Create `packages/quantum-nematode/quantumnematode/brain/arch/_registry.py` with `@register_brain(name, config_cls, brain_type, families, topology_factory=None, rule_factory=None)` decorator, `instantiate_brain(name, config, **infra_kwargs) -> Brain`, `get_registration(name) -> Registration`, `list_registered_brains() -> set[str]`, and a `Registration` dataclass.
-- [ ] 1.3 Implement duplicate-name detection in `@register_brain(...)` — raise `ValueError` with identifying message if `name` is already registered.
-- [ ] 1.4 Implement unknown-name error in `instantiate_brain(...)` — raise `ValueError` listing available names.
-- [ ] 1.5 Create `packages/quantum-nematode/quantumnematode/brain/arch/_topology.py` with `BrainTopology` Protocol (`n_inputs`, `n_outputs`, `n_hidden`, `forward`, `apply_weight_mask`). Provide a default `IdentityMaskTopology` mixin for dense topologies (returns weights unchanged from `apply_weight_mask`).
-- [ ] 1.6 Create `packages/quantum-nematode/quantumnematode/brain/arch/_rule.py` with `LearningRule` Protocol (`step(topology, batch) -> RuleStepReport`, `reset_episode()`) and a `RuleStepReport` dataclass with loss + gradient-norm fields.
-- [ ] 1.7 Write `tests/quantumnematode_tests/brain/arch/test_registry.py`: register / get / list round-trip; duplicate-name detection; unknown-name lookup; consistency between registry and `BrainType` enum at import time.
-- [ ] 1.8 Run `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registry.py -v` and confirm green.
+- [x] 1.1 Audit `setup_brain_model()` dispatcher and document the 19 elif branches in a short notes file at `openspec/changes/add-architecture-plugin-interface/notes/dispatcher-audit.md` (per [phase6-tracking/tasks.md T2.1](../phase6-tracking/tasks.md)). Cross-reference to the registry refactor plan.
+- [x] 1.2 Create `packages/quantum-nematode/quantumnematode/brain/arch/_registry.py` with `@register_brain(name, config_cls, brain_type, families, topology_factory=None, rule_factory=None)` decorator, `instantiate_brain(name, config, **infra_kwargs) -> Brain`, `get_registration(name) -> Registration`, `list_registered_brains() -> set[str]`, and a `Registration` dataclass.
+- [x] 1.3 Implement duplicate-name detection in `@register_brain(...)` — raise `ValueError` with identifying message if `name` is already registered.
+- [x] 1.4 Implement unknown-name error in `instantiate_brain(...)` — raise `ValueError` listing available names.
+- [x] 1.5 Create `packages/quantum-nematode/quantumnematode/brain/arch/_topology.py` with `BrainTopology` Protocol (`n_inputs`, `n_outputs`, `n_hidden`, `forward`, `apply_weight_mask`). Provide a default `IdentityMaskTopology` mixin for dense topologies (returns weights unchanged from `apply_weight_mask`).
+- [x] 1.6 Create `packages/quantum-nematode/quantumnematode/brain/arch/_rule.py` with `LearningRule` Protocol (`step(topology, batch) -> RuleStepReport`, `reset_episode()`) and a `RuleStepReport` dataclass with loss + gradient-norm fields.
+- [x] 1.7 Write `tests/quantumnematode_tests/brain/arch/test_registry.py`: register / get / list round-trip; duplicate-name detection; unknown-name lookup; consistency between registry and `BrainType` enum at import time.
+- [x] 1.8 Run `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registry.py -v` and confirm green.
 
 ## 2. MLPPPO migration + byte-equivalence (T2.4 + T2.5 — Gate 1 G1.d MUST #1)
 
