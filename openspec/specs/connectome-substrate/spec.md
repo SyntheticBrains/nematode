@@ -2,7 +2,9 @@
 
 ## Purpose
 
-TBD - created by archiving change add-connectome-substrate. Update Purpose after archive.
+The `connectome-substrate` capability provides the *C. elegans* connectome data substrate that downstream brain architectures consume. It loads the Cook et al. 2019 hermaphrodite connectome (302 neurons; chemical synapses + gap junctions) and the Witvliet et al. 2021 adult dataset from vendored *Nature* Supplementary Information files, exposes them through a typed Pydantic data model that keeps chemical synapses and gap junctions as separately-typed connection categories, and ships a 302-entry neuron classification table with cross-validation + structural validators + a forward-pass smoke check.
+
+The substrate is the data foundation for closed-loop learning + evolution on the real *C. elegans* connectome. It does not implement any brain architecture itself — the data model is the topology interface that downstream architecture plugins conform to.
 
 ## Requirements
 
