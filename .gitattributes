@@ -10,3 +10,6 @@ artifacts/**/*.log   filter=lfs diff=lfs merge=lfs -text
 artifacts/**/*.csv   filter=lfs diff=lfs merge=lfs -text
 benchmarks/**/*.json filter=lfs diff=lfs merge=lfs -text
 configs/**/*.json    filter=lfs diff=lfs merge=lfs -text
+
+# Git LFS — connectome data (Phase 6 L0 connectome substrate)
+data/connectome/**/*.xlsx filter=lfs diff=lfs merge=lfs -text

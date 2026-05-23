@@ -39,7 +39,7 @@ The alternative — direct *Nature* Supplementary Information parsing with `pand
 **What we keep from cect-as-API-layer**:
 
 - The `syntype` distinction "Chemical" vs "GapJunction" (verified from `cect/Neurotransmitters.py`: `CHEMICAL_SYN_TYPE = "Chemical"`, `ELECTRICAL_SYN_TYPE = "GapJunction"`). This taxonomy carries forward into our `model.py` types directly.
-- The neuron-classification structure (sensory / interneuron / motor / muscle / pharyngeal). Sourced from Cook 2019 SI 1 (the cell-list table is the upstream source cect uses for its `cect.Cells` module).
+- The neuron-classification structure (sensory / interneuron / motor / muscle / pharyngeal). Sourced from cect's `Cells.py` MIT-licensed Python constants (Cook 2019 paper + WormAtlas are cect's own upstream attributions; Cook 2019 does NOT publish a discrete SI 1 cell-list XLSX).
 
 **What we drop**:
 
@@ -94,13 +94,15 @@ Cook 2019 SI 5 ("Connectome adjacency matrices") has the following sheet layout 
 - Each sheet is a presynaptic-row × postsynaptic-column adjacency matrix
 - Cell values are synapse counts (chemical) or gap-junction counts
 
-The loader reads the relevant two sheets for hermaphrodite (chemical + gap jn), walks the matrix non-zero cells, and emits `ChemicalSynapse` / `GapJunction` entries. The neuron name list comes from row + column headers cross-referenced against the SI 1 cell-list (which provides the 302-name canonical roster + cell_class metadata).
+The loader reads the relevant two sheets for hermaphrodite (chemical + gap jn), walks the matrix non-zero cells, and emits `ChemicalSynapse` / `GapJunction` entries. The neuron name list comes from row + column headers cross-referenced against `NEURON_CLASSIFICATION` from `connectome/neurons.py` (which provides the 302-name canonical roster + cell_class metadata).
 
 **Why this matters as a design decision**: the loader does NOT depend on cect's `read_data()` return shape (which we don't fully control). It depends on the *Nature* SI file's documented sheet structure (which is in a peer-reviewed published paper, stable for the lifetime of the project).
 
 ### Decision T1.4: Hand-curated neuron classification table in `neurons.py`
 
-The 302-neuron classification (sensory / interneuron / motor / muscle / pharyngeal) comes from Cook 2019 SI 1 cell-list table — the same upstream source `cect.Cells` uses internally. We extract it once at L0 implementation time and ship as a static dict in `connectome/neurons.py`. WormAtlas (wormatlas.org) is used as a cross-check during data extraction; any disagreement gets resolved by deferring to the Cook 2019 SI 1 canonical table and noting the WormAtlas variant in a code comment.
+The 302-neuron classification (sensory / interneuron / motor / muscle / pharyngeal) is derived from OpenWorm cect's MIT-licensed `Cells.py` constants (`SENSORY_NEURONS_COOK`, `INTERNEURONS_COOK`, `MOTORNEURONS_COOK`, head/sublateral/ventral-cord motor sub-lists, plus pharyngeal lists). cect's own module header attributes these to "supplementary info of Cook et al 2019" + WormAtlas. **Cook 2019 does NOT publish a discrete SI 1 cell-list XLSX file** — pre-implementation investigation found the classification is a *curation* spread across the paper's tables + figures + WormAtlas, with cect's `Cells.py` being the field-standard machine-readable codification.
+
+We extract the classification once at L0 implementation time, merge cect's per-category lists into our own static dict in `connectome/neurons.py`, and attach neurotransmitter identity from `cect.Neurotransmitters` + project `docs/nematode_biology.md`. The module docstring attributes the curation chain (this project → cect.Cells.py → Cook 2019 + WormAtlas). There is no runtime dependency on cect — our static dict is independent code that cites cect's MIT licence in PROVENANCE.md.
 
 **Format**:
 
@@ -113,9 +115,9 @@ NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]] = {
 }
 ```
 
-**Why a static dict, not parsed from SI 1 at runtime**: the 302-entry classification is essentially a constant for *C. elegans* (the connectome wiring is fixed; cell identities are canonical). Parsing it from SI 1 at every load adds runtime cost and a fragile dependency on SI 1's exact sheet structure. Ship it as code; bump it in a follow-up change if the field updates the classification.
+**Why a static dict, not derived at runtime from cect**: the 302-entry classification is essentially a constant for *C. elegans* (the connectome wiring is fixed; cell identities are canonical). Re-importing cect at runtime would drag in `pyneuroml`, `wormneuroatlas` (GPL-3.0), and other transitive deps for no benefit. Ship it as code; bump it in a follow-up change if the field updates the classification.
 
-**Coverage assertion**: tests assert exactly 302 entries with valid `cell_class` values (module-import-time `assert len(NEURON_CLASSIFICATION) == 302`); the T1 logbook reports the observed counts per class. No band-checking assertion is added in the test suite because cell-class boundaries are convention-dependent — Cook 2019 SI 1, WormAtlas, and the project's `docs/nematode_biology.md` (which states sensory ~40%, interneuron ~30%, motor ~30%) use slightly different boundary rules for polymodal / pharyngeal-vs-non-pharyngeal cells. The logbook records counts for forensic review; tests stay loose.
+**Coverage assertion**: tests assert exactly 302 entries with valid `cell_class` values (module-import-time `assert len(NEURON_CLASSIFICATION) == 302`); the T1 logbook reports the observed counts per class. No band-checking assertion is added in the test suite because cell-class boundaries are convention-dependent — Cook 2019, WormAtlas, and the project's `docs/nematode_biology.md` (which states sensory ~40%, interneuron ~30%, motor ~30%) use slightly different boundary rules for polymodal / pharyngeal-vs-non-pharyngeal cells. The logbook records counts for forensic review; tests stay loose.
 
 ### Decision T1.5: Smoke-test forward pass uses NumPy + chemical-synapse strict-mask
 
@@ -168,11 +170,12 @@ This is the G1.a evidence for phase6-tracking Gate 1. The full Gate 1 decision l
 
 ### Decision T1.7: Vendoring strategy + LFS
 
-Vendor three XLSX files under `data/connectome/`:
+Vendor two XLSX files under `data/connectome/`:
 
-- `cook_2019_si5_connectome_adjacency.xlsx` — Cook 2019 SI 5, sheet-per-(sex,connection-type)
-- `cook_2019_si1_cell_list.xlsx` — Cook 2019 SI 1 cell list (canonical 302-neuron roster + cell class)
-- `witvliet_2021_dataset8_adult.xlsx` — Witvliet 2021 dataset 8 (adult, nerve-ring)
+- `cook_2019_si5_connectome_adjacency.xlsx` — Cook 2019 SI 5, sheet-per-(sex,connection-type), ~4.4 MB
+- `witvliet_2020_dataset8_adult.xlsx` — Witvliet 2020/2021 dataset 8 (adult, nerve-ring), ~53 KB
+
+Both sourced from the OpenWorm cect repository's MIT-licensed mirror of the *Nature* SI files. Cook 2019 SI 1 is NOT vendored — the cell-list classification ships as code in `connectome/neurons.py` per Decision T1.4.
 
 All three are added to `.gitattributes` via `data/connectome/**/*.xlsx filter=lfs ...`. The existing `.gitattributes` only LFS-tracks `artifacts/`, `benchmarks/`, and `configs/`; the connectome data is the first reproducibility artefact under `data/`.
 

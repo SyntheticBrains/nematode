@@ -15,14 +15,13 @@ Phase 6 Tranche 1 (L0). Sub-task numbering matches `openspec/changes/phase6-trac
 
 Maps to `phase6-tracking/tasks.md` T1.1 (import-library + data-source decision, recording the chosen approach) + T1.5 (vendor + provenance — full scope, not partial).
 
-- [ ] 2.1 Create `data/connectome/` directory
-- [ ] 2.2 Vendor `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` (Cook 2019 *Nature* SI 5)
-- [ ] 2.3 Vendor `data/connectome/cook_2019_si1_cell_list.xlsx` (Cook 2019 *Nature* SI 1 cell list)
-- [ ] 2.4 Vendor `data/connectome/witvliet_2021_dataset8_adult.xlsx` (Witvliet 2021 dataset 8 adult)
-- [ ] 2.5 Update `.gitattributes` to add `data/connectome/**/*.xlsx filter=lfs diff=lfs merge=lfs -text`
-- [ ] 2.6 Verify each vendored file is LFS-tracked (`git check-attr filter <path>` reports `lfs`); regenerate index if needed
-- [ ] 2.7 Write `data/connectome/PROVENANCE.md` with per-file: source URL, DOI, SHA256, retrieval date, citation, redistribution rationale. Note the original cect filenames (e.g. `witvliet_2020_8 adult.xlsx`) for traceability against the vendored normalised names (e.g. `witvliet_2021_dataset8_adult.xlsx`)
-- [ ] 2.8 Closes T1.1 + T1.5 — tick the matching T1.1 + T1.5 boxes in `phase6-tracking/tasks.md`
+- [x] 2.1 Create `data/connectome/` directory
+- [x] 2.2 Vendor `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` (Cook 2019 *Nature* SI 5, ~4.4 MB; source: cect MIT-licensed mirror)
+- [x] 2.3 Vendor `data/connectome/witvliet_2020_dataset8_adult.xlsx` (Witvliet 2020/2021 dataset 8 adult, ~53 KB; source: cect MIT-licensed mirror)
+- [x] 2.4 Update `.gitattributes` to add `data/connectome/**/*.xlsx filter=lfs diff=lfs merge=lfs -text`
+- [x] 2.5 Verify each vendored file is LFS-tracked (`git check-attr filter <path>` reports `lfs`); regenerate index if needed
+- [x] 2.6 Write `data/connectome/PROVENANCE.md` with per-file: source URL (cect mirror), DOI of accompanying paper, SHA256, retrieval date, citation, redistribution rationale. Note the original cect filenames (e.g. `witvliet_2020_8 adult.xlsx`) for traceability against the vendored normalised names. Cook 2019 SI 1 is NOT vendored — there is no discrete cell-list XLSX in Cook 2019's published SIs; the 302-neuron classification ships as code in `connectome/neurons.py` derived from cect's MIT-licensed `Cells.py` constants (which themselves attribute Cook 2019 paper + WormAtlas)
+- [x] 2.7 Closes T1.1 + T1.5 — tick the matching T1.1 + T1.5 boxes in `phase6-tracking/tasks.md`
 
 ## Phase 3 — Data model (T1.2)
 
@@ -36,13 +35,14 @@ Maps to T1.2 in the tracker: connectome data model exposing chemical synapses + 
 
 ## Phase 4 — Neuron classification table (supports T1.2 + T1.3)
 
-302-neuron classification extracted from Cook 2019 SI 1 cell-list table. Static dict shipped as code per design.md Decision T1.4.
+302-neuron classification derived from OpenWorm cect's MIT-licensed `Cells.py` constants (which themselves attribute Cook 2019 paper + WormAtlas). Static dict shipped as code per design.md Decision T1.4. Cook 2019 does NOT publish a discrete SI 1 cell-list XLSX — cect's `Cells.py` is the de facto authoritative curation of the paper's classification.
 
-- [ ] 4.1 Extract neuron classification from `cook_2019_si1_cell_list.xlsx` into a working CSV (one-time data-prep step; CSV is intermediate, not committed)
-- [ ] 4.2 Cross-check classifications against WormAtlas; resolve any disagreement by deferring to Cook 2019 SI 1 with a comment noting WormAtlas variants
-- [ ] 4.3 Implement `connectome/neurons.py` with `NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]]` covering all 302 hermaphrodite neurons
-- [ ] 4.4 Add `CANONICAL_NAME_ALIASES: dict[str, str]` for cross-dataset name normalisation (e.g. `RIA-L` → `RIAL`) per design.md Risks #2
-- [ ] 4.5 Coverage assertion in module: assert `len(NEURON_CLASSIFICATION) == 302` at import time (fail-fast if a future edit drops an entry)
+- [ ] 4.1 Source cect's `Cells.py` constants (`SENSORY_NEURONS_COOK`, `INTERNEURONS_COOK`, `MOTORNEURONS_COOK`, `HEAD_MOTORNEURONS_COOK`, `SUBLATERAL_MOTORNEURONS_COOK`, `VENTRAL_CORD_MOTORNEURONS`, `HERM_SPECIFIC_MOTORNEURONS`, pharyngeal lists) from `https://raw.githubusercontent.com/openworm/ConnectomeToolbox/master/cect/Cells.py`. Save the source URL + commit SHA to PROVENANCE.md
+- [ ] 4.2 Manually merge the lists into a single `NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]]` covering all 302 hermaphrodite neurons. Cross-check by total count (must be exactly 302) and by spot-check (ASEL/ASER → sensory, AVAL/AVAR → interneuron, VB02 → motor)
+- [ ] 4.3 For each neuron, attach a neurotransmitter when known (Glutamate, GABA, Acetylcholine, Serotonin, Dopamine, etc.) from cect's neurotransmitter data and `docs/nematode_biology.md` § Neurotransmitter Systems. Default `None` where uncertain
+- [ ] 4.4 Implement `connectome/neurons.py` with `NEURON_CLASSIFICATION` + module docstring attributing the curation chain (this project → cect.Cells.py → Cook 2019 paper + WormAtlas)
+- [ ] 4.5 Add `CANONICAL_NAME_ALIASES: dict[str, str]` for cross-dataset name normalisation (e.g. `RIA-L` → `RIAL`) per design.md Risks #2
+- [ ] 4.6 Coverage assertion in module: assert `len(NEURON_CLASSIFICATION) == 302` at import time (fail-fast if a future edit drops an entry)
 
 ## Phase 5 — Loader (T1.3)
 
@@ -51,7 +51,7 @@ Maps to T1.3 in the tracker: import the Cook 2019 hermaphrodite connectome; veri
 - [ ] 5.1 Implement `connectome/loader.py:load_cook_2019_hermaphrodite()` reading the vendored SI 5 XLSX via `pd.read_excel(..., engine="openpyxl")`; iterate the two relevant sheets (`hermaphrodite chemical` + `hermaphrodite gap jn`) per design.md Decision T1.3
 - [ ] 5.2 Map XLSX row/column headers to neuron names; cross-reference against `NEURON_CLASSIFICATION` from Phase 4
 - [ ] 5.3 Emit `ChemicalSynapse` and `GapJunction` entries from non-zero cells in each sheet; populate `Connectome(neurons=..., chemical_synapses=..., gap_junctions=..., source=..., version=...)`
-- [ ] 5.4 Implement `connectome/loader.py:load_witvliet_2021_adult() -> Connectome` reading `witvliet_2021_dataset8_adult.xlsx` (single adult dataset is sufficient for T1.4 nerve-ring cross-validation); apply `CANONICAL_NAME_ALIASES` for cross-dataset name normalisation
+- [ ] 5.4 Implement `connectome/loader.py:load_witvliet_2021_adult() -> Connectome` reading `witvliet_2020_dataset8_adult.xlsx` (single adult dataset is sufficient for T1.4 nerve-ring cross-validation); apply `CANONICAL_NAME_ALIASES` for cross-dataset name normalisation
 - [ ] 5.5 Loader produces deterministic output: chemical synapses sorted by `(pre, post)`; gap junctions sorted by `(neuron_a, neuron_b)`; neurons in canonical order. Determinism matters for test stability + future caching
 - [ ] 5.6 Closes T1.3 — tick the matching T1.3 box in `phase6-tracking/tasks.md`
 
@@ -83,8 +83,8 @@ Maps to T1.7 in the tracker.
 - [ ] 8.1 Create `packages/quantum-nematode/tests/quantumnematode_tests/connectome/__init__.py`
 - [ ] 8.2 Implement `test_loader.py`: Cook 2019 loads with neuron count = 302; chemical-synapse count > 5000 (loose lower-bound sanity check — the Cook 2019 paper reports ~7000 chemical synapses per `docs/nematode_biology.md:644`; the exact count depends on edge-collation conventions); gap-junction count > 600 (loose bound vs ~900 documented); Witvliet 2021 adult loads with reduced neuron count (~150-200 nerve-ring); known sensory neurons (ASEL, ASER, AFDL, AFDR, ASHL, ASHR, ADLL, ADLR, AWAL, AWAR, AWCL, AWCR, URXL, URXR, BAGL, BAGR) present with `cell_class == "sensory"`; known motor neuron classes (VB, DB, VA, DA, VC, DD) present with `cell_class == "motor"`
 - [ ] 8.3 Implement `test_model.py`: pydantic field validation rejects zero-weight chemical synapses; AVA↔AVB dual-edge case present as one `ChemicalSynapse` AND one `GapJunction` (not one combined entry — per phase6-tracking Decision 7); no orphan synapses (every edge's pre/post/neuron_a/neuron_b exists in `neurons`)
-- [ ] 8.4 Implement `test_neurons.py`: `len(NEURON_CLASSIFICATION) == 302`; every entry has a valid `CellClass`. Coverage-by-class is NOT band-asserted (boundaries are convention-dependent — Cook 2019 SI 1, WormAtlas, and project docs use different rules for polymodal cells); test instead prints class counts for forensic review in the T1 logbook
-- [ ] 8.5 Implement `test_validate.py`: `validate_neuron_count` flags 301-neuron broken connectome; `validate_known_pathways` passes (≥ 1 of klinotaxis ASE → AIY → RIA → SMD, thermotaxis AFD → AIY → RIA → SMD, or nociception ASH → AVA → VA/DA traces successfully); `cross_validate(cook_2019_hermaphrodite, witvliet_2021_dataset8_adult)` produces non-empty agreement set and documented divergence map
+- [ ] 8.4 Implement `test_neurons.py`: `len(NEURON_CLASSIFICATION) == 302`; every entry has a valid `CellClass`. Coverage-by-class is NOT band-asserted (boundaries are convention-dependent — Cook 2019, WormAtlas, and project docs use different rules for polymodal cells); test instead prints class counts for forensic review in the T1 logbook
+- [ ] 8.5 Implement `test_validate.py`: `validate_neuron_count` flags 301-neuron broken connectome; `validate_known_pathways` passes (≥ 1 of klinotaxis ASE → AIY → RIA → SMD, thermotaxis AFD → AIY → RIA → SMD, or nociception ASH → AVA → VA/DA traces successfully); `cross_validate(cook_2019_hermaphrodite, witvliet_2020_dataset8_adult)` produces non-empty agreement set and documented divergence map
 - [ ] 8.6 Implement `test_smoke.py`: `run_forward_pass` returns finite output of expected motor-neuron shape; output has non-zero variance across motor-neuron rows (catches degenerate constants AND fully-saturated outputs); raises on a deliberately-emptied connectome
 - [ ] 8.7 Tests run in default pytest tier (`uv run pytest -m "not nightly"` includes them). LFS fetch happens before tests in CI via `git lfs pull` or implicit smudge — verify
 - [ ] 8.8 Closes T1.7 — tick the matching T1.7 box in `phase6-tracking/tasks.md`

@@ -21,8 +21,8 @@ Five Phase 6 design decisions from [phase6-tracking/design.md](../phase6-trackin
 Six files under `packages/quantum-nematode/quantumnematode/connectome/`:
 
 - `__init__.py` — public API surface for downstream consumers (T2 plugin design consumes this)
-- `model.py` — typed data model: `Neuron`, `ChemicalSynapse`, `GapJunction`, `Connectome`. Per Decision 7, chemical synapses and gap junctions are **separately-typed connection categories**; the dual-edge case (AVA↔AVB) is represented as two distinct edge entries with type metadata. Neuron `cell_class` is `Literal["sensory","interneuron","motor","muscle","pharyngeal"]` derived from Cook 2019 SI 1 cell-list metadata
-- `neurons.py` — hand-curated 302-neuron classification table sourced from Cook 2019 SI 1 cell-list + cross-checked against WormAtlas (wormatlas.org). Static dict mapping neuron name → `cell_class` + `neurotransmitter`. Becomes the canonical project reference for *C. elegans* neuron identities for the rest of Phase 6+
+- `model.py` — typed data model: `Neuron`, `ChemicalSynapse`, `GapJunction`, `Connectome`. Per Decision 7, chemical synapses and gap junctions are **separately-typed connection categories**; the dual-edge case (AVA↔AVB) is represented as two distinct edge entries with type metadata. Neuron `cell_class` is `Literal["sensory","interneuron","motor","muscle","pharyngeal"]` derived from `connectome/neurons.py` (see below)
+- `neurons.py` — 302-neuron classification table derived from OpenWorm cect's MIT-licensed `Cells.py` constants (`SENSORY_NEURONS_COOK`, `INTERNEURONS_COOK`, `MOTORNEURONS_COOK`, etc.), which cect itself attributes to Cook 2019 paper supplementary info + WormAtlas (wormatlas.org). Static Python dict mapping neuron name → `cell_class` + `neurotransmitter`. Becomes the canonical project reference for *C. elegans* neuron identities for the rest of Phase 6+. Cook 2019 does NOT publish a discrete SI 1 "cell list" file; cect's `Cells.py` is the de facto curation of the paper's classification, and we re-curate it into our own static dict (no runtime dependency on cect)
 - `loader.py` — `load_cook_2019_hermaphrodite()` and `load_witvliet_2021_adult()` returning `Connectome` instances. Reads the vendored XLSX files directly via pandas + openpyxl; constructs `Connectome` instances using the neuron classification dict in `neurons.py`. Pure stdlib + pandas — no third-party connectome dependency
 - `validate.py` — neuron-count check (302 hermaphrodite), known-pathway check (≥ 1 of three canonical sensory → interneuron → motor pathways from the Bargmann lab klinotaxis / thermotaxis / nociception literature: ASE → AIY → RIA → SMD, AFD → AIY → RIA → SMD, or ASH → AVA → VA/DA), cross-validation between Cook 2019 and Witvliet 2021 nerve-ring subset returning a `DivergenceReport`
 - `smoke.py` — instantiate a trivial PPO weight tensor over the connectome's chemical synapses (strict-mask: weights pinned to zero outside the wild-type adjacency), run a single forward pass on synthetic input, verify output shape + no NaNs/Infs. Per Decision 7, gap junctions participate at their fixed Cook 2019 counts in the forward pass
@@ -31,10 +31,11 @@ The forward-pass smoke check uses PPO-shaped weight matrices but does NOT instan
 
 ### 2. Vendored Connectome Data (Cook 2019 + Witvliet 2021 Nature Supplementary Information)
 
-- `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` — Cook 2019 SI 5 "Connectome adjacency matrices" XLSX, source for chemical-synapse and gap-junction adjacencies
-- `data/connectome/cook_2019_si1_cell_list.xlsx` — Cook 2019 SI 1 cell-list table, source for the neuron classification dict in `neurons.py`
-- `data/connectome/witvliet_2021_dataset8_adult.xlsx` — adult worm (dataset 8) from the Witvliet 2021 developmental connectome series, used for T1.4 nerve-ring cross-validation
-- `data/connectome/PROVENANCE.md` — per-file: source URL (Nature SI direct link), DOI of the paper the SI accompanies, SHA256, retrieval date, citation, redistribution rationale (academic research re-use of *Nature* SI is standard practice; we cite the paper)
+- `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` — Cook 2019 SI 5 "Connectome adjacency matrices" XLSX, source for chemical-synapse and gap-junction adjacencies (~4.4 MB)
+- `data/connectome/witvliet_2020_dataset8_adult.xlsx` — adult worm (dataset 8) from the Witvliet 2020/2021 developmental connectome series, used for T1.4 nerve-ring cross-validation (~53 KB)
+- `data/connectome/PROVENANCE.md` — per-file: source URL (OpenWorm cect MIT-licensed mirror), DOI of the paper the SI accompanies, SHA256, retrieval date, citation, redistribution rationale
+
+Note: Cook 2019 SI 1 is NOT vendored — there is no discrete "cell list" XLSX in Cook 2019's published SIs. The 302-neuron classification ships as code in `connectome/neurons.py` (derived from cect's `Cells.py` constants, which themselves attribute Cook 2019 paper + WormAtlas — see the `neurons.py` module header for the full attribution chain).
 
 ### 3. Two New Standard Dependencies (No Third-Party Connectome Package)
 
@@ -50,7 +51,7 @@ New directory `packages/quantum-nematode/tests/quantumnematode_tests/connectome/
 
 - `test_loader.py` — Cook 2019 + Witvliet 2021 load correctly; neuron count = 302; expected sensory neurons (ASE, AFD, ASH, ADL, AWA, AWC, URX, BAG) present with correct cell-class labels; expected motor-neuron classes (VB / DB / VA / DA / VC / DD) present
 - `test_model.py` — data-model invariants: no orphan synapses (every edge's pre/post neuron exists in `neurons`); chemical synapses and gap junctions are separately-iterable; the AVA↔AVB dual-edge case is represented as two distinct entries (one `ChemicalSynapse`, one `GapJunction`), not one entry; chemical-synapse weights are positive integers; gap-junction weights are non-negative integers
-- `test_neurons.py` — neuron-classification table has 302 entries; every entry has a valid `cell_class`. Coverage-by-class is NOT band-asserted in tests (boundaries are convention-dependent across Cook 2019 SI 1 / WormAtlas / project docs); the test prints class counts for forensic review in the T1 logbook
+- `test_neurons.py` — neuron-classification table has 302 entries; every entry has a valid `cell_class`. Coverage-by-class is NOT band-asserted in tests (boundaries are convention-dependent across Cook 2019 / WormAtlas / project docs); the test prints class counts for forensic review in the T1 logbook
 - `test_validate.py` — neuron-count validator flags an artificially-broken (e.g. 301-neuron) connectome; known-pathway validator passes if ≥ 1 of three Bargmann-lab canonical pathways traces successfully (klinotaxis ASE → AIY → RIA → SMD, thermotaxis AFD → AIY → RIA → SMD, or nociception ASH → AVA → VA/DA); `cross_validate(cook_2019, witvliet_2021_adult)` produces a `DivergenceReport` with non-empty agreement set and documented divergence map
 - `test_smoke.py` — `smoke.run_forward_pass()` returns finite output of expected shape; output has non-zero variance across motor-neuron rows (catches degenerate constants AND fully-saturated outputs); raises if connectome's chemical-synapse adjacency is zero-dense (sanity guard)
 
@@ -65,7 +66,7 @@ New directory `packages/quantum-nematode/tests/quantumnematode_tests/connectome/
 
 ## Capabilities
 
-**Added**: `connectome-substrate` (new) — five requirements covering: data loading from vendored *Nature* SI files, the connection-type taxonomy (chemical-synapse vs gap-junction separately-typed, AVA↔AVB-style dual-edge case represented as two entries), the neuron metadata surface (302-entry classification table sourced from Cook 2019 SI 1), cross-validation against Witvliet 2021 nerve-ring subset, and the smoke-test forward pass.
+**Added**: `connectome-substrate` (new) — six requirements covering: data loading from vendored *Nature* SI files, the connection-type taxonomy (chemical-synapse vs gap-junction separately-typed, AVA↔AVB-style dual-edge case represented as two entries), the neuron metadata surface (302-entry classification table derived from cect's MIT-licensed `Cells.py` — Cook 2019 paper + WormAtlas as upstream attribution), structural validators (neuron count + known-pathway tracing), cross-validation against Witvliet 2021 nerve-ring subset, and the smoke-test forward pass.
 
 ## Impact
 
@@ -75,9 +76,8 @@ New directory `packages/quantum-nematode/tests/quantumnematode_tests/connectome/
 
 **Data:**
 
-- `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` — vendored Nature SI, LFS-tracked
-- `data/connectome/cook_2019_si1_cell_list.xlsx` — vendored Nature SI, LFS-tracked
-- `data/connectome/witvliet_2021_dataset8_adult.xlsx` — vendored Nature SI, LFS-tracked
+- `data/connectome/cook_2019_si5_connectome_adjacency.xlsx` — vendored Cook 2019 *Nature* SI 5 (via cect MIT mirror), LFS-tracked, ~4.4 MB
+- `data/connectome/witvliet_2020_dataset8_adult.xlsx` — vendored Witvliet 2020/2021 dataset 8 adult (via cect MIT mirror), LFS-tracked, ~53 KB
 - `data/connectome/PROVENANCE.md` — provenance record
 
 **Configs:** None.

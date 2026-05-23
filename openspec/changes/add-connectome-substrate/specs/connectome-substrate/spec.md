@@ -17,7 +17,7 @@ The `quantumnematode.connectome` subpackage SHALL load the *C. elegans* connecto
 
 #### Scenario: Loading the Witvliet 2021 adult connectome
 
-- **GIVEN** the vendored `data/connectome/witvliet_2021_dataset8_adult.xlsx` file is present
+- **GIVEN** the vendored `data/connectome/witvliet_2020_dataset8_adult.xlsx` file is present
 - **WHEN** `load_witvliet_2021_adult()` is called
 - **THEN** a `Connectome` instance SHALL be returned
 - **AND** `len(connectome.neurons)` is in the nerve-ring range (~150-200, smaller than Cook 2019's whole-animal 302)
@@ -64,7 +64,7 @@ This scenario codifies the load-bearing edge case from `phase6-tracking/design.m
 
 ### Requirement: Neuron Metadata (302-entry hand-curated classification table)
 
-The connectome subpackage SHALL ship a hand-curated 302-neuron classification table (`NEURON_CLASSIFICATION`) sourced from Cook 2019 SI 1 cell-list and cross-checked against WormAtlas. Cell-class labels are drawn from `Literal["sensory", "interneuron", "motor", "muscle", "pharyngeal"]`. Neurotransmitter identity is included where known.
+The connectome subpackage SHALL ship a 302-neuron classification table (`NEURON_CLASSIFICATION`) derived from OpenWorm cect's MIT-licensed `Cells.py` constants (which themselves attribute Cook 2019 paper + WormAtlas). Cell-class labels are drawn from `Literal["sensory", "interneuron", "motor", "muscle", "pharyngeal"]`. Neurotransmitter identity is included where known.
 
 #### Scenario: Classification table coverage
 
@@ -72,7 +72,7 @@ The connectome subpackage SHALL ship a hand-curated 302-neuron classification ta
 - **WHEN** `NEURON_CLASSIFICATION` is inspected
 - **THEN** `len(NEURON_CLASSIFICATION) == 302` (asserted at module import time as a fail-fast guard)
 - **AND** every entry's `cell_class` SHALL be a valid `CellClass` value
-- **AND** coverage by class SHALL be reported in the T1 logbook as observed counts (no exact-band assertion in the test suite — class-boundary conventions differ between Cook 2019 SI 1, WormAtlas, and project docs for polymodal / pharyngeal-vs-non-pharyngeal cells)
+- **AND** coverage by class SHALL be reported in the T1 logbook as observed counts (no exact-band assertion in the test suite — class-boundary conventions differ between Cook 2019, WormAtlas, and project docs for polymodal / pharyngeal-vs-non-pharyngeal cells)
 
 #### Scenario: Canonical sensory neurons are classified correctly
 
