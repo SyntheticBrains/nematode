@@ -1,6 +1,6 @@
 # NematodeBench
 
-NematodeBench is the official benchmark system for the Quantum Nematode project. It provides a standardized framework for evaluating neural architectures in biologically-inspired navigation tasks.
+NematodeBench is the project's internal benchmark system. It provides a standardized framework for evaluating neural architectures in biologically-inspired navigation tasks, and acts as the reproducibility scaffolding (evaluation scripts, leaderboard, submission guidelines, Docker images) used by the architecture-comparison protocol described in [docs/roadmap.md](../roadmap.md). A public-facing community launch — external submissions, public leaderboard — is in Future Directions; the infrastructure documented here is the internal tooling that persists through Phase 6 and Phase 7.
 
 ## Documentation
 
