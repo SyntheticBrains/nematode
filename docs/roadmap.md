@@ -910,135 +910,119 @@ ______________________________________________________________________
 
 ## Success Metrics Framework
 
-The project tracks success across 6 primary dimensions:
+The project tracks success across five dimensions. Each dimension has metrics and per-phase targets that map to the platform contribution and the scientific contribution, not to a separate quantum-advantage goal.
 
 ### 1. Biological Fidelity
 
-**Definition**: How accurately the simulation captures real C. elegans behavior.
+**Definition**: how accurately the platform captures real *C. elegans* biology along the dimensions Phase 6+ commits to.
 
 **Metrics**:
 
-- Biological fidelity level achieved (see [Biological Fidelity](#biological-fidelity))
-- Quantitative match to published C. elegans behavioral data (chemotaxis indices, escape latencies, aggregation patterns)
-- Number of biological predictions generated and tested
+- Biological fidelity level achieved (see [Biological Fidelity](#biological-fidelity)).
+- Quantitative match to published *C. elegans* behavioural data — chemotaxis indices, escape latencies, whole-brain Ca²⁺ correlation matrices.
+- Number of model predictions surfaced and tested (against published data or partner-lab data).
 
 **Targets**:
 
-- **Phase 3**: Temporal sensing matches published dT/dt sensitivity data
-- **Phase 6**: Locomotion statistics match real C. elegans (speed, turn angle, reversal frequency)
-- **Phase 7**: ≥1 biological prediction tested experimentally
+- **Phase 6**: ≥ 1 model output quantitatively validated against published real-worm data (chemotaxis indices, escape latencies, or Ca²⁺ correlation) as a phase exit criterion.
+- **Phase 7**: deepens — L4 plasticity behaviour compared to documented *C. elegans* learning dynamics; cross-species behaviour compared between *C. elegans* and *P. pacificus*.
 
-### 2. Complexity Achievement
+### 2. Architecture Comparison
 
-**Definition**: Progress toward quantum advantage complexity thresholds.
+**Definition**: how rigorously the platform ranks the connectome against unconstrained, evolved, quantum, and hybrid architectures.
 
 **Metrics**:
 
-- Complexity dashboard values (5 dimensions)
-- Classical ceiling on hardest tasks
-- State/action space dimensionality
+- Architecture-family coverage in the Phase 6+ sweep (MUST set per Phase 6's architecture-families table).
+- Statistical rigor: paired-seed Wilcoxon, bootstrap CIs, n ≥ 4 per condition.
+- Plugin-parity test: adding a new architecture to L1 demonstrably ≤ 1 week.
+- Lag-matrix or equivalent discriminative instrument for matched-capacity comparisons.
 
 **Targets**:
 
-- **Phase 3**: Input dimensionality >15D, classical ceiling measurably lower than Phase 2 baseline (aspirational: \<85%)
-- **Phase 4**: Multi-agent ≥5, classical ceiling measurably lower than Phase 3 (aspirational: \<75%)
-- **Phase 6**: Continuous action space, classical ceiling measurably lower than Phase 4 (aspirational: \<70%)
+- **Phase 6**: L2 weight-search results across the MUST architecture-family set on all three behaviours, at the Phase 5 statistical bar. L3 NEAT topology-search results comparing wild-type connectome to NEAT-evolved on ≥ 1 behaviour.
+- **Phase 7**: same sweep with L4 plasticity added; cross-species transfer measured on the same architecture-family set.
 
-### 3. Architecture Insight
+### 3. Substrate Coverage
 
-**Definition**: Understanding of when and why architectures succeed or fail.
+**Definition**: which behaviours, sensors, and substrate dimensions the platform supports at phase close.
 
 **Metrics**:
 
-- Quantum advantage demonstrated (task count, effect size, significance)
-- Complexity threshold characterisation (precise boundaries)
-- Connectome advantage (constrained vs. unconstrained gap)
+- Behaviours operational on the connectome substrate (Phase 6 commits to three; Phase 7 retains the same three on a second species).
+- Sensory-physics fidelity rung achieved (Phase 6 commits to Rung 2: dynamic Fick's-law + log-concentration chemosensory adaptation kinetics).
+- Connectome species supported (Phase 6: *C. elegans*; Phase 7: + *P. pacificus*).
 
 **Targets**:
 
-- **Phase 6**: Connectome-constrained vs. unconstrained comparison with p < 0.05
-- **Phase 8**: Definitive quantum vs. classical comparison at maximum complexity
+- **Phase 6**: three behaviours × MUST architectures × continuous 2D + Rung 2 + corrected ASH/ADL nociception.
+- **Phase 7**: same three behaviours × MUST architectures + L4 × *C. elegans* and *P. pacificus*.
 
-### 4. Sample Efficiency
+### 4. Sample efficiency and convergence
 
-**Definition**: Episodes required to achieve target performance.
+**Definition**: how efficiently the architectures in the comparison reach the Phase 6+ behavioural targets.
 
 **Metrics**:
 
-- Episodes to convergence
-- Performance per 1000 timesteps
-- Memory utilisation efficiency (STAM/ITAM/LTAM impact)
+- Episodes to convergence per architecture family.
+- Generational convergence speed (evolutionary regimes).
+- Phase 5's Lamarckian-inheritance speed gate (+5.25 generations) carries forward as the methodological template for evolutionary efficiency comparisons.
 
 **Targets**:
 
-- **Phase 3**: Memory systems reduce sample complexity by ≥20%
-- **Phase 5**: Evolved architectures converge in 50% fewer episodes than hand-designed
+- **Phase 6**: report convergence statistics per architecture family on all three behaviours; identify whether the connectome family shows characteristic sample-efficiency differences from unconstrained alternatives.
+- **Phase 7**: compare L4 plasticity sample efficiency against L2 PPO on the same connectome substrate.
 
-### 5. Community Impact
+### 5. Robustness
 
-**Definition**: External adoption and scientific influence.
+**Definition**: performance under noise, missing sensors, or circuit ablation.
 
 **Metrics**:
 
-- NematodeBench external submissions
-- Citations to project publications
-- External research groups engaging
-- Open-source contributions (PRs from external researchers)
+- Sensor dropout robustness (10%, 20%, 50% sensors disabled).
+- Gaussian observation noise robustness.
+- Circuit-ablation graceful degradation (Phase 6+ connectome architectures — matches biological lesion data).
 
 **Targets**:
 
-- **Phase 7**: ≥3 external groups engaging, ≥1 paper submitted
-- **Phase 8**: ≥10 external groups, ≥100 citations
-
-### 6. Robustness
-
-**Definition**: Performance under noise, missing sensors, or adversarial conditions.
-
-**Metrics**:
-
-- Sensor dropout robustness (performance with 10%, 20%, 50% sensors disabled)
-- Noise robustness (Gaussian noise on observations)
-- Hardware noise tolerance (QPU performance vs. simulator)
-
-**Targets**:
-
-- **Phase 3**: ≥80% performance with 20% sensor dropout
-- **Phase 6**: Connectome architecture graceful degradation under circuit ablation (matches biological lesion data)
+- **Phase 6**: connectome architecture demonstrates graceful degradation under circuit ablation comparable to documented biological lesion studies (qualitative match acceptable; quantitative match is a stretch).
+- **Phase 7**: with L4 plasticity, test whether ablation-then-relearning approximates documented *C. elegans* recovery dynamics.
 
 ______________________________________________________________________
 
 ## Success Levels
 
-Three levels of success, each representing valuable scientific contribution:
+Three levels of success, each representing a coherent and publishable scientific contribution. Higher levels do not invalidate lower ones.
 
-### Minimum Viable Success
+### Minimum viable success
 
-*Primary metrics: Biological Fidelity, Architecture Insight*
+The platform exists and produces a defensible architecture-comparison result.
 
-- Highest-fidelity C. elegans behavioral simulation (temporal sensing, memory, multi-agent)
-- Comprehensive architecture comparison published (quantum negative result at grid-world complexity + enriched re-evaluation results)
-- NematodeBench operational with external adoption
-- Clear documentation of complexity thresholds for quantum advantage
+- **L0 connectome substrate operational** (at least the hand-curated subset under the L0 fallback pivot).
+- **L1 architecture-plugin interface** at plugin-parity (adding a new architecture ≤ 1 week).
+- **L2 weight-search results** on ≥ 1 behaviour across ≥ 4 architectures of the MUST set.
+- **≥ 1 model output validated against published real-worm data.**
+- **Phase 5's STOP findings preserved** as documented substrate-grounded diagnoses with reusable methodology.
 
-### Target Success
+### Target success
 
-*Primary metrics: Complexity Achievement, Community Impact*
+Phase 6-balanced ships cleanly; the first headline-positive result lands.
 
-- Continuous physics + connectome-constrained architectures operational
-- Classical complexity ceiling identified (where classical genuinely struggles)
-- Quantum advantage demonstrated on enriched tasks OR definitive characterisation of required complexity
-- ≥1 biological prediction validated experimentally with lab collaboration
-- ≥3 external research groups building on NematodeBench
+- All Phase 6 MUST exit criteria met: L0+L1+L2+L3 operational across the full MUST architecture-family set, three behaviours, Rung 2 gradients + adaptation kinetics, corrected ASH/ADL nociception, real-worm validation.
+- A defensible answer to "is the wild-type connectome a local optimum?" lands, either as "yes, dominant" (connectome-primary headline) or "competitive but not dominant" (optimal-primary headline). Either framing is a contribution; the data picks the framing.
+- Architecture-asymmetry question carried from Phase 5 M5 is tested under matched capacity (NEAT-vs-NEAT, connectome-vs-NEAT).
+- Phase 7 has begun and L4 is on a credible trajectory.
 
-### Stretch Success
+### Stretch success
 
-*Primary metrics: All dimensions at stretch targets*
+Phase 7 closes cleanly and external visibility follows.
 
-- Full 302-neuron connectome running in continuous environment with multi-agent dynamics
-- Universal computational principles extracted and validated
-- Quantum computational neuroscience recognised as research direction (workshop, special issue, or funding)
-- External research groups actively extending the project
-- Biological discoveries published in peer-reviewed journals
+- L4 plasticity (STDP + neuromodulator-modulated three-factor STDP) operational on the connectome with results across the architecture-family set.
+- *P. pacificus* cross-species transfer ships; behavioural transfer is measurable across species; the connectome's role in transfer is characterised.
+- At least one of the optional MAY items lands: biological-validation collaboration with a *C. elegans* lab; ≥ 1 paper drafted (platform paper, connectome-learning paper, or fitness-landscape paper); neuromorphic deployment demonstrated.
+- Reproducibility artefacts updated to current platform state.
+
+Publication, external collaboration, and community-launch metrics are not codified as success-level requirements — the project pursues them when evidence and context justify, not on a phase-locked schedule.
 
 ______________________________________________________________________
 
@@ -1046,63 +1030,53 @@ ______________________________________________________________________
 
 ### OpenWorm
 
-**Focus**: Cellular biophysics, muscle dynamics, 3D body simulation, full C. elegans digital twin
+**Focus**: cellular biophysics, muscle dynamics, 3D body simulation, *C. elegans* digital twin. Includes c302 (NeuroML-format connectome model) and Sibernetic (SPH-based body physics).
 
-**Relationship**: **Complementary with integration aspirations**
+**Relationship**: **substrate dependency** at Phase 6 L0 + **interop boundary** for body-mechanics fidelity if needed.
 
-**Differentiation**:
+OpenWorm has the connectome data and the body physics this project does not rebuild. The platform imports c302 as the canonical *C. elegans* topology source at Phase 6 L0 — OpenWorm is upstream infrastructure, not just a complementary project. If behavioural-fidelity claims later require native body mechanics, the platform interoperates with Sibernetic at the c302 boundary rather than re-implementing undulatory locomotion.
 
-- Quantum Nematode: Neural computation paradigms, behavioral optimization, quantum ML, RL-trained networks
-- OpenWorm: Cellular-level simulation, muscle physics, connectome-based biophysical modeling
+The Leeds physics group (Boyle, Bryden, Cohen) is complementary in the same way — best-in-class undulatory locomotion modelling, no learning or evolution. The platform interoperates with this body of work; it does not compete with it.
 
-**Integration Points**:
+### Izquierdo & Beer (klinotaxis arc, Indiana)
 
-1. Phase 6: Use the same connectome data (wiring diagram) but different approaches — we train weights via RL on the real topology; they simulate biophysics
-2. Phase 7: Explore exporting RL-trained policies to control OpenWorm's simulated muscles
-3. Cross-validation: Do our behaviorally-optimized networks predict the same circuit importance as their biophysical model?
+**Focus**: evolved minimal circuits for klinotaxis; ensemble-of-models integrating connectome data; information-flow analysis through evolved circuits.
 
-### WormBot
+**Relationship**: **closest conceptual neighbour, deliberate methodological divergence**.
 
-**Focus**: Hardware embodiment, real-world sensors, physical nematode-inspired robots
+Their evolved minimal circuits are not the real connectome — they are abstract neural networks that behave like worms. The platform's L3 NEAT topology search produces directly comparable "what would evolution find?" results; placing the wild-type connectome (Phase 6 L0) and NEAT-evolved topologies (L3) in the same comparison sweep is the methodological extension. Their information-flow analysis tooling is a natural future-direction interop target.
 
-**Relationship**: **Potential future validation platform**
+### Cook et al. — *P. pacificus* connectome (Science, 2025)
 
-**Integration Points** (Phase 7+):
+**Focus**: full *P. pacificus* connectome from two adult hermaphrodite heads; neuronal adjacency + connectivity data; published code (`stevenjcook/cook_et_al_2025_pristionchus`).
 
-1. Export optimized policies for robotic deployment
-2. Sim-to-real transfer testing
-3. Real-world benchmarks with physical sensors
+**Relationship**: **substrate dependency** at Phase 7 cross-species transfer.
 
-### Quantum Computing Ecosystem
+The 2025 data makes *C. elegans* → *P. pacificus* transfer feasible today with published reference data. *C. briggsae*, by contrast, lacks a high-quality published connectome as of project planning, so the briggsae direction stays in Future Directions until reference data appears.
 
-**IBM Quantum**: Hardware provider, Qiskit framework, QPU access
-**Q-CTRL**: Quantum error suppression (Fire Opal), circuit optimization
+### Comparative connectomics community
 
-**Engagement**: Benchmarking at quantum checkpoints (Phases 3, 4, 6, 8), not continuous hardware testing. Simulator-first development with QPU validation at milestones.
+Witvliet et al. 2021 (developmental connectomes); the dauer-connectome work (Nature Communications 2024); the broader 2024-2026 wave of cross-species connectome papers all provide reference data the platform can interoperate with as Phase 6+7 evidence accumulates. Engagement is data-flow first; partnership is optional.
 
-### Neuroscience Community
+### Neuroscience labs (Phase 7 MAY)
 
-**Target Labs**: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon)
+**Target labs (if collaboration is pursued)**: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon), or smaller groups with relevant Ca²⁺ recording data.
 
-**Collaboration Model** (Phase 7):
+**Collaboration model**: the platform generates model predictions from Phase 6+7 results; the lab designs and executes the targeted experiment; co-authored publication. At most one partnership if pursued — collaboration overhead grows non-linearly with multiple labs.
 
-1. We generate biological predictions from model analysis
-2. Lab designs and executes experiments
-3. Co-authored publications validating (or refuting) predictions
-4. Iterative: experimental results → model updates → new predictions
+Phase 6's built-in real-worm validation against published behavioural data is **not contingent on lab partnership** — internal validation against open datasets (Bargmann chemotaxis indices, Kavli / Janelia Ca²⁺ recordings, BAAIWorm correlation matrices) is sufficient for Phase 6 close.
 
-**Value Proposition**: Computational predictions guide experiments; access to novel analysis tools; high-impact co-authored publications.
+### Quantum computing ecosystem
 
-### NematodeBench Community
+The 300-session quantum architecture campaign (Phase 2) used IBM Quantum hardware (Qiskit), with Q-CTRL Fire Opal exercised for error suppression. The campaign's results survive as baseline reference data in Phase 6's architecture-comparison protocol. Continued quantum-hardware engagement is opportunistic — if a Phase 6 or Phase 7 substrate change plausibly affects the quantum-family comparison, a targeted re-evaluation is reasonable; otherwise the baseline reference is sufficient.
 
-**Goal**: Build an open-source community around biologically-grounded RL benchmarks.
+### Neuromorphic hardware (Phase 7 MAY)
 
-**Strategy**:
+Loihi 2 and SpiNNaker 2 are credible deployment targets for the L4 plasticity layer — they natively implement spiking + STDP at low power, and the *C. elegans* connectome at 302 neurons fits comfortably within their chip-scale. A neuromorphic-hardware deployment would be a tools/methods contribution in its own right, but the software-only L4 path is fully sufficient for Phase 7's headline claim.
 
-- Launch when simulation is sufficiently differentiated from standard RL benchmarks (Phase 7)
-- Provide Docker images, evaluation scripts, submission guidelines
-- Include the 300+ session quantum evaluation dataset as baseline reference
-- Tutorials for extending the benchmark with new architectures, environments, or biological models
+### NematodeBench
+
+The benchmark infrastructure (Docker images, evaluation scripts, leaderboard scaffolding, the 300-session campaign as reference data) persists as internal tooling — useful for reproducibility and for the architecture-comparison protocol itself. A public-facing community launch (external submissions, external leaderboard) is moved to Future Directions; benchmarks crystallise mature communities rather than bootstrap them.
 
 ______________________________________________________________________
 
