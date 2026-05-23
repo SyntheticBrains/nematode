@@ -44,9 +44,9 @@ and does not appear as a Phase 6 tranche.
 - [x] P6-0.6 Add Phase 6 Tranche Tracker sub-section to `docs/roadmap.md` Phase 6 block
 - [x] P6-0.7 Annotate `docs/roadmap.md` Phase 6 architecture-families table with MUST/SHOULD/MAY per [design.md § Decision 4](design.md)
 - [x] P6-0.8 Annotate `docs/roadmap.md` Phase 6 layered-platform table with the env-upgrade tranche note
-- [ ] P6-0.9 Validate change: `openspec validate phase6-tracking --strict`
-- [ ] P6-0.10 Run targeted `uv run pre-commit run --files <changed>` clean
-- [ ] P6-0.11 Open PR
+- [x] P6-0.9 Validate change: `openspec validate phase6-tracking --strict`
+- [x] P6-0.10 Run targeted `uv run pre-commit run --files <changed>` clean
+- [x] P6-0.11 Open PR
 
 ## Tranche 1 — L0 Connectome Substrate
 
