@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.env import Direction
+from quantumnematode.env.env import ContactZone
 
 if TYPE_CHECKING:
     from qiskit import QuantumCircuit
@@ -197,7 +198,34 @@ class BrainParams(BaseModel):
     )
     predator_contact: bool | None = Field(
         default=None,
-        description="True if agent is in physical contact with a predator.",
+        description=(
+            "True if agent is in physical contact with a predator. Legacy "
+            "boolean field consumed by the frozen nociception_* sensor modules "
+            "and the reward calculator's contact penalty. The biology-driven "
+            "predator_mechanosensation_* modules read predator_contact_intensity "
+            "(graded) + predator_contact_zone instead."
+        ),
+    )
+    predator_contact_intensity: float | None = Field(
+        default=None,
+        description=(
+            "Graded contact-mechanosensory intensity in [0, 1], consumed by "
+            "the predator_mechanosensation_* sensor modules. Computed as "
+            "max(0, 1 - manhattan_dist / damage_radius) so 1.0 is on-top-of "
+            "and 0.0 is at the damage-radius edge. Distinct from the boolean "
+            "predator_contact field (see above)."
+        ),
+    )
+    predator_contact_zone: ContactZone | None = Field(
+        default=None,
+        description=(
+            "Approach-direction zone of the nearest predator contact: ANTERIOR "
+            "(±45° of agent heading) maps to ASH/ALM/AVM and drives reversal; "
+            "POSTERIOR (±45° of opposite-of-heading) maps to PLM and drives "
+            "acceleration; LATERAL covers side approaches; NONE indicates no "
+            "contact. Consumed by the predator_mechanosensation_klinotaxis "
+            "module's 3-dim feature vector."
+        ),
     )
 
     # --- Homeostasis (internal state) ---
@@ -221,7 +249,23 @@ class BrainParams(BaseModel):
     )
     predator_concentration: float | None = Field(
         default=None,
-        description="Scalar predator signal at agent's position (tanh-normalized, no direction).",
+        description=(
+            "Scalar predator signal at agent's position (tanh-normalized, no "
+            "direction). Legacy field consumed by frozen nociception_temporal "
+            "/ nociception_klinotaxis modules; the new predator_chemosensation_* "
+            "modules read predator_distal_concentration instead."
+        ),
+    )
+    predator_distal_concentration: float | None = Field(
+        default=None,
+        description=(
+            "Distal-chemosensory predator signal (Liu et al. 2018 "
+            "sulfolipid-analogue) at agent's position. Consumed by the "
+            "predator_chemosensation_* sensor modules. Backed by "
+            "env.get_predator_sulfolipid_concentration which currently "
+            "delegates to the existing exp-decay sum; literature-calibrated "
+            "decay constant is a future-tranche concern."
+        ),
     )
     food_dconcentration_dt: float | None = Field(
         default=None,
@@ -229,7 +273,29 @@ class BrainParams(BaseModel):
     )
     predator_dconcentration_dt: float | None = Field(
         default=None,
-        description="Temporal derivative of predator concentration (Mode B derivative sensing).",
+        description=(
+            "Temporal derivative of predator concentration (Mode B derivative "
+            "sensing). Legacy field consumed by frozen nociception_* modules; "
+            "the new predator_chemosensation_* modules read "
+            "predator_distal_dconcentration_dt instead."
+        ),
+    )
+    predator_distal_dconcentration_dt: float | None = Field(
+        default=None,
+        description=(
+            "Temporal derivative of predator_distal_concentration produced by "
+            "the STAM predator_distal channel. Consumed by the "
+            "predator_chemosensation_temporal / klinotaxis sensor modules."
+        ),
+    )
+    predator_mechano_dintensity_dt: float | None = Field(
+        default=None,
+        description=(
+            "Temporal derivative of predator_contact_intensity produced by "
+            "the STAM predator_mechano channel. Consumed by the "
+            "predator_mechanosensation_temporal / klinotaxis sensor modules "
+            "to give the brain a habituation signal."
+        ),
     )
     temperature_ddt: float | None = Field(
         default=None,

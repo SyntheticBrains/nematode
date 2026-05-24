@@ -736,6 +736,13 @@ class SensingConfig(BaseModel):
     pheromone_food_mode: SensingMode = SensingMode.ORACLE
     pheromone_alarm_mode: SensingMode = SensingMode.ORACLE
     pheromone_aggregation_mode: SensingMode = SensingMode.ORACLE
+    # Biology-driven predator sensing modes. Independent of nociception_mode
+    # (which stays untouched for backward compatibility with archived
+    # configs that select legacy nociception_* sensor modules). Drive the
+    # apply_sensing_mode translation for the new predator_mechanosensation_*
+    # and predator_chemosensation_* sensor module families respectively.
+    predator_mechano_mode: SensingMode = SensingMode.ORACLE
+    predator_distal_mode: SensingMode = SensingMode.ORACLE
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
@@ -793,7 +800,13 @@ def apply_sensing_mode(
     list[str]
         Updated sensory module names with mode substitutions applied.
     """
-    # Map oracle module names to their mode config attribute
+    # Map oracle module names to their mode config attribute. Legacy
+    # families (food_chemotaxis, nociception, etc.) use bare names by
+    # historical convention — a holdover from before the project supported
+    # multiple sensing modes. New biology-driven families (predator-sensing)
+    # use an explicit `_oracle` suffix on the oracle variant so the mode
+    # is self-describing without requiring readers to know the legacy
+    # bare-name = oracle convention.
     mode_map: dict[str, SensingMode] = {
         "food_chemotaxis": sensing.chemotaxis_mode,
         "nociception": sensing.nociception_mode,
@@ -803,6 +816,12 @@ def apply_sensing_mode(
         "pheromone_alarm": sensing.pheromone_alarm_mode,
         "pheromone_aggregation": sensing.pheromone_aggregation_mode,
     }
+    # New-convention map keyed on the explicit `_oracle`-suffixed module name;
+    # the translation strips `_oracle` and re-appends the mode-specific suffix.
+    oracle_mode_map: dict[str, SensingMode] = {
+        "predator_mechanosensation_oracle": sensing.predator_mechano_mode,
+        "predator_chemosensation_oracle": sensing.predator_distal_mode,
+    }
 
     result = []
 
@@ -811,6 +830,14 @@ def apply_sensing_mode(
             mode = mode_map[module]
             suffix = _module_suffix_for_mode(mode)
             result.append(f"{module}{suffix}" if suffix else module)
+        elif module in oracle_mode_map:
+            mode = oracle_mode_map[module]
+            # Strip the explicit `_oracle` suffix, then re-append the
+            # mode-specific suffix. Under SensingMode.ORACLE this is a
+            # no-op (suffix == "") so the bare `_oracle` form passes through.
+            base = module.removesuffix("_oracle")
+            suffix = _module_suffix_for_mode(mode)
+            result.append(f"{base}_oracle" if not suffix else f"{base}{suffix}")
         else:
             result.append(module)
 
@@ -842,6 +869,11 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
         sensing.pheromone_food_mode,
         sensing.pheromone_alarm_mode,
         sensing.pheromone_aggregation_mode,
+        # Biology-driven predator sensing modes — included so configs that
+        # set predator_mechano_mode or predator_distal_mode to derivative /
+        # klinotaxis correctly trigger the STAM auto-enable path below.
+        sensing.predator_mechano_mode,
+        sensing.predator_distal_mode,
     )
     any_derivative = any(mode == SensingMode.DERIVATIVE for mode in all_modes)
     any_temporal = any(mode == SensingMode.TEMPORAL for mode in all_modes)

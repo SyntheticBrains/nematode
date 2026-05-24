@@ -10,7 +10,7 @@ check if the goal is reached, and render the environment.
 
 from abc import ABC, abstractmethod
 from dataclasses import field
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import ClassVar
 
 import numpy as np
@@ -82,6 +82,41 @@ class Direction(Enum):
     LEFT = "left"
     RIGHT = "right"
     STAY = "stay"
+
+
+class ContactZone(StrEnum):
+    """Predator-contact zones relative to the agent's heading.
+
+    Maps the predator's approach direction to one of four biologically-meaningful
+    receptive-field regions. ANTERIOR maps to the ASH/ALM/AVM nose+anterior-body
+    pathway that drives the reversal escape response; POSTERIOR maps to the PLM
+    posterior-body pathway that drives forward acceleration. LATERAL covers
+    side approaches that fall outside both cones; NONE indicates no contact.
+
+    The zone is inferred from the predator's relative bearing vs the agent's
+    forward heading on the grid (±45° cones for ANTERIOR and POSTERIOR, with
+    the diagonal-cardinal boundary case classified ANTERIOR to reflect ASH's
+    wide nose-touch receptive field). The agent on a single-cell grid has no
+    spatial extent so this is a behavioural proxy for the anatomical
+    head-vs-tail discrimination present in real worms — see the corresponding
+    spec for the modelling note.
+    """
+
+    NONE = "none"
+    ANTERIOR = "anterior"
+    POSTERIOR = "posterior"
+    LATERAL = "lateral"
+
+
+# Unit-vector grid offsets per agent heading. Mirrors _get_new_position_from
+# at module scope so contact-zone resolution can run without an env instance.
+_HEADING_OFFSET: dict[Direction, tuple[int, int]] = {
+    Direction.UP: (0, 1),
+    Direction.DOWN: (0, -1),
+    Direction.RIGHT: (1, 0),
+    Direction.LEFT: (-1, 0),
+    Direction.STAY: (0, 0),
+}
 
 
 class PredatorType(Enum):
@@ -2057,6 +2092,39 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 
+    def get_predator_sulfolipid_concentration(
+        self,
+        position: tuple[int, ...] | None = None,
+    ) -> float:
+        """Distal-chemosensory predator signal at position.
+
+        Biological framing: models the predator-secreted sulfolipid signal
+        documented by Liu et al. 2018 (*Nat. Commun.*), which *C. elegans*
+        detects at a distance via the ASH + ASI amphid chemosensory pathway
+        and uses to trigger escape behaviour before physical contact.
+
+        Implementation note: this method is a thin alias of
+        ``get_predator_concentration`` — the underlying exp-decay sum is a
+        placeholder for the sulfolipid signal, not a literature-calibrated
+        spatial-decay constant. Calibration against Liu et al. 2018's
+        plate-assay distances is a future-tranche concern. The alias exists
+        so the new predator-chemosensation sensor channel can read a
+        biologically-named field even though the env-side computation hasn't
+        been recalibrated yet.
+
+        Parameters
+        ----------
+        position : tuple[int, ...] | None
+            Position to query. Defaults to agent's current position.
+
+        Returns
+        -------
+        float
+            Sulfolipid-analogue predator concentration in [0, 1].
+            Returns 0.0 if predators are disabled.
+        """
+        return self.get_predator_concentration(position)
+
     def get_state(
         self,
         position: tuple[int, ...],
@@ -2477,6 +2545,87 @@ class DynamicForagingEnvironment(BaseEnvironment):
             The agent to check.
         """
         return self.is_agent_in_damage_radius_for(agent_id)
+
+    def get_agent_predator_contact_zone_for(  # noqa: PLR0911
+        self,
+        agent_id: str,
+    ) -> ContactZone:
+        """Classify a predator contact by approach direction relative to heading.
+
+        Note: PLR0911 (too many returns) is suppressed because the early
+        returns map cleanly to distinct biological cases (no-contact /
+        overlap / no-heading / dot-based zone resolution) and are clearer
+        than the equivalent nested branching.
+
+        Returns the contact zone for the predator closest to the agent (by
+        Manhattan distance) whose distance is within its own damage radius.
+        Approach direction is measured by the dot product between the
+        normalized predator-relative-position vector and the agent's forward
+        unit vector. With ±45° cones the cardinal cells classify as cleanly
+        ANTERIOR/POSTERIOR/LATERAL; diagonal cells sit on the cone boundary
+        and are classified ANTERIOR (forward bias reflecting ASH's wide
+        nose-touch receptive field).
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to check.
+
+        Returns
+        -------
+        ContactZone
+            NONE if no predator is within damage radius; otherwise ANTERIOR,
+            POSTERIOR, or LATERAL based on the predator's relative bearing.
+        """
+        if not self.predator.enabled or not self.predators:
+            return ContactZone.NONE
+
+        agent_state = self.agents[agent_id]
+        agent_pos = agent_state.position
+
+        # Find the nearest predator within its own damage radius; ties broken
+        # by predator-list order (stable across steps).
+        nearest_pred = None
+        nearest_dist = None
+        for pred in self.predators:
+            dx = pred.position[0] - agent_pos[0]
+            dy = pred.position[1] - agent_pos[1]
+            distance = abs(dx) + abs(dy)
+            if distance > pred.damage_radius:
+                continue
+            if nearest_dist is None or distance < nearest_dist:
+                nearest_pred = pred
+                nearest_dist = distance
+
+        if nearest_pred is None:
+            return ContactZone.NONE
+
+        # Overlap edge case: predator on top of agent → ANTERIOR by convention
+        # (the most-aversive interpretation; matches the "nose touch dominates
+        # body touch when both fire" pattern in the lateral-facilitation
+        # literature).
+        rel_dx = nearest_pred.position[0] - agent_pos[0]
+        rel_dy = nearest_pred.position[1] - agent_pos[1]
+        if rel_dx == 0 and rel_dy == 0:
+            return ContactZone.ANTERIOR
+
+        forward = _HEADING_OFFSET.get(agent_state.direction, (0, 0))
+        if forward == (0, 0):
+            # STAY heading or unrecognised direction → no anterior/posterior
+            # discrimination available; classify as LATERAL.
+            return ContactZone.LATERAL
+
+        # Dot product between normalized relative-position vector and the
+        # forward unit vector. ±45° cones correspond to |dot| > cos(45°),
+        # i.e. dot > √2/2 ≈ 0.7071 (anterior) or dot < -√2/2 (posterior).
+        rel_len = (rel_dx**2 + rel_dy**2) ** 0.5
+        dot = (rel_dx * forward[0] + rel_dy * forward[1]) / rel_len
+        cos45 = 0.7071067811865476
+        if dot >= cos45:
+            return ContactZone.ANTERIOR
+        if dot <= -cos45:
+            return ContactZone.POSTERIOR
+        return ContactZone.LATERAL
 
     # --- Health methods ---
 

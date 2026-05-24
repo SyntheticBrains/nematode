@@ -70,6 +70,22 @@ CHANNEL_REGISTRY: dict[str, STAMChannelDef] = {
         derivative_key="predator_dconcentration_dt",
         sensing_mode_attr="nociception_mode",
     ),
+    # Biology-driven predator sensing channels (see corresponding sensor
+    # modules predator_mechanosensation_* and predator_chemosensation_*).
+    # Activated only when a config explicitly selects new-family predator
+    # sensor modules — see resolve_active_channels(env, sensory_modules)
+    # for the gating rule. Configs that select legacy nociception_* modules
+    # continue to use the bare "predator" channel above unchanged.
+    "predator_mechano": STAMChannelDef(
+        name="predator_mechano",
+        derivative_key="predator_mechano_dintensity_dt",
+        sensing_mode_attr="predator_mechano_mode",
+    ),
+    "predator_distal": STAMChannelDef(
+        name="predator_distal",
+        derivative_key="predator_distal_dconcentration_dt",
+        sensing_mode_attr="predator_distal_mode",
+    ),
     "oxygen": STAMChannelDef(
         name="oxygen",
         derivative_key="oxygen_dconcentration_dt",
@@ -95,17 +111,32 @@ CHANNEL_REGISTRY: dict[str, STAMChannelDef] = {
 
 def resolve_active_channels(
     env: DynamicForagingEnvironment | None,
+    sensory_modules: tuple[str, ...] | list[str] | None = None,
 ) -> tuple[STAMChannelDef, ...]:
-    """Determine active STAM channels from environment configuration.
+    """Determine active STAM channels from environment + sensor-module config.
 
     Channels are included only when their corresponding environment feature
     is enabled. A foraging-only config gets 1 channel (food); a full config
     with thermotaxis, predators, aerotaxis, and all pheromones gets 7.
 
+    The predator-family channels follow a name-based selection rule so the
+    22 archived predator-evasion configs (which select legacy `nociception_*`
+    sensor modules) continue to activate only the legacy `predator` channel
+    and stay STAM-shape-stable. New configs that select
+    `predator_mechanosensation_*` or `predator_chemosensation_*` modules
+    activate the corresponding new channels (`predator_mechano` /
+    `predator_distal`) instead. When `sensory_modules` is None or the env
+    has no predator, only the legacy `predator` channel is considered
+    (matching pre-T3 behaviour exactly).
+
     Parameters
     ----------
     env : DynamicForagingEnvironment or None
         Environment instance. None returns food-only (1 channel).
+    sensory_modules : tuple[str, ...] or list[str] or None
+        Sensor-module names from the active config (used to gate the new
+        predator-family channels). None preserves pre-T3 behaviour:
+        legacy `predator` channel activates when env.predator.enabled.
 
     Returns
     -------
@@ -118,7 +149,25 @@ def resolve_active_channels(
         if env.thermotaxis.enabled:
             channels.append(CHANNEL_REGISTRY["temperature"])
         if env.predator.enabled:
-            channels.append(CHANNEL_REGISTRY["predator"])
+            module_names = tuple(sensory_modules) if sensory_modules is not None else ()
+            has_new_mechano = any(
+                name.startswith("predator_mechanosensation") for name in module_names
+            )
+            has_new_distal = any(
+                name.startswith("predator_chemosensation") for name in module_names
+            )
+            has_legacy = any(name.startswith("nociception") for name in module_names)
+            if has_new_mechano:
+                channels.append(CHANNEL_REGISTRY["predator_mechano"])
+            if has_new_distal:
+                channels.append(CHANNEL_REGISTRY["predator_distal"])
+            # Legacy channel activates whenever no new-family channel was
+            # selected (preserves pre-T3 byte-equivalent behaviour for
+            # archived configs) OR when legacy nociception_* is explicitly
+            # selected alongside the new channels (no rejection — STAM dim
+            # just grows).
+            if has_legacy or not (has_new_mechano or has_new_distal):
+                channels.append(CHANNEL_REGISTRY["predator"])
         if env.aerotaxis.enabled:
             channels.append(CHANNEL_REGISTRY["oxygen"])
         if env.pheromones.enabled:
@@ -130,7 +179,10 @@ def resolve_active_channels(
     return tuple(channels)
 
 
-def stam_dim_from_env(env: DynamicForagingEnvironment | None) -> int:
+def stam_dim_from_env(
+    env: DynamicForagingEnvironment | None,
+    sensory_modules: tuple[str, ...] | list[str] | None = None,
+) -> int:
     """Compute STAM memory dimension for a given environment.
 
     Convenience function combining resolve_active_channels + compute_memory_dim.
@@ -139,13 +191,21 @@ def stam_dim_from_env(env: DynamicForagingEnvironment | None) -> int:
     ----------
     env : DynamicForagingEnvironment or None
         Environment instance.
+    sensory_modules : tuple[str, ...] or list[str] or None
+        Sensor-module names from the active config — forwarded to
+        resolve_active_channels so configs that select biology-driven
+        predator modules (predator_mechanosensation_* /
+        predator_chemosensation_*) get the correct STAM channel count.
+        When None, the legacy `predator` channel is assumed (preserves
+        pre-T3 behaviour for callers that don't yet thread sensory_modules
+        through).
 
     Returns
     -------
     int
         STAM memory state dimension.
     """
-    return compute_memory_dim(len(resolve_active_channels(env)))
+    return compute_memory_dim(len(resolve_active_channels(env, sensory_modules)))
 
 
 def compute_memory_dim(num_channels: int) -> int:
