@@ -1015,6 +1015,11 @@ class QuantumNematodeAgent:
             predator_distal_dconcentration_dt=temporal.get(
                 "predator_distal_dconcentration_dt",
             ),
+            # Biology-driven predator mechanosensation temporal derivative
+            # (STAM-computed; intensity itself populated above with the zone)
+            predator_mechano_dintensity_dt=temporal.get(
+                "predator_mechano_dintensity_dt",
+            ),
             temperature_ddt=temporal.get("temperature_ddt"),
             stam_state=temporal.get("stam_state"),
             derivative_scale=sensing.derivative_scale,

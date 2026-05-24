@@ -35,6 +35,7 @@ import numpy as np
 
 from quantumnematode.brain.actions import Action
 from quantumnematode.env import Direction
+from quantumnematode.env.env import ContactZone
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -109,6 +110,18 @@ class ModuleName(StrEnum):
     PHEROMONE_FOOD_KLINOTAXIS = "pheromone_food_klinotaxis"
     PHEROMONE_ALARM_KLINOTAXIS = "pheromone_alarm_klinotaxis"
     PHEROMONE_AGGREGATION_KLINOTAXIS = "pheromone_aggregation_klinotaxis"
+
+    # Biology-driven predator sensing modules. Adopt an explicit `_oracle`
+    # suffix on the oracle variants so the mode is self-describing; the
+    # legacy bare-named convention (food_chemotaxis, nociception, etc.) is
+    # a historical accident from before multi-mode support and stays
+    # frozen in place. New modules going forward use explicit suffixes.
+    PREDATOR_MECHANOSENSATION_ORACLE = "predator_mechanosensation_oracle"
+    PREDATOR_MECHANOSENSATION_TEMPORAL = "predator_mechanosensation_temporal"
+    PREDATOR_MECHANOSENSATION_KLINOTAXIS = "predator_mechanosensation_klinotaxis"
+    PREDATOR_CHEMOSENSATION_ORACLE = "predator_chemosensation_oracle"
+    PREDATOR_CHEMOSENSATION_TEMPORAL = "predator_chemosensation_temporal"
+    PREDATOR_CHEMOSENSATION_KLINOTAXIS = "predator_chemosensation_klinotaxis"
 
 
 # =============================================================================
@@ -1089,6 +1102,123 @@ def _pheromone_aggregation_klinotaxis_core(params: BrainParams) -> CoreFeatures:
     return CoreFeatures(strength=strength, angle=angle, binary=binary)
 
 
+# =============================================================================
+# Predator-sensing biology extractors
+# =============================================================================
+# Two parallel channels:
+#   - mechanosensation: graded contact intensity + anterior/posterior/lateral zone
+#     (models ASH/ALM/AVM nose+anterior-body + PLM posterior-body pathways)
+#   - chemosensation: distal sulfolipid signal + temporal derivative + lateral
+#     (models ASH+ASI distal-chemosensory escape signal per Liu et al. 2018)
+# Each family ships oracle / temporal / klinotaxis variants matching the
+# existing food_chemotaxis* and nociception* triples.
+
+# Zone-to-angle mapping for the mechanosensation extractors. ANTERIOR maps to
+# +1.0 (the canonical "reversal" escape direction the angle field encodes for
+# direction-to-aversive-signal); POSTERIOR maps to -1.0 (forward-acceleration);
+# LATERAL/NONE map to 0.0 (no clear directional command). The brain learns
+# what the sign means; this is just a stable, biologically-motivated encoding.
+_ZONE_TO_ANGLE: dict[ContactZone, float] = {
+    ContactZone.ANTERIOR: 1.0,
+    ContactZone.POSTERIOR: -1.0,
+    ContactZone.LATERAL: 0.0,
+    ContactZone.NONE: 0.0,
+}
+
+
+def _predator_mechanosensation_oracle_core(params: BrainParams) -> CoreFeatures:
+    """Extract oracle mechanosensation features (graded intensity + zone-as-angle).
+
+    Mirrors ``_nociception_core`` but reads the new BrainParams fields
+    populated by the corrected biology pipeline. Intensity replaces the
+    boolean predator_contact (graded ASH response per Hilliard et al. 2005);
+    zone replaces the gradient-direction angle (anterior/posterior receptive
+    field discrimination per Pirri & Alkema 2012).
+    """
+    strength = float(params.predator_contact_intensity or 0.0)
+    zone = params.predator_contact_zone or ContactZone.NONE
+    angle = _ZONE_TO_ANGLE[zone]
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _predator_mechanosensation_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal mechanosensation features (intensity + dintensity/dt).
+
+    Pairs the graded contact intensity with its STAM-computed temporal
+    derivative — habituation kinetics fall out of the existing STAM
+    exponential decay (decay_rate=0.1 → half-life ≈ 7 steps, matching the
+    seconds-to-minutes ASH adaptation timescale documented by Hilliard 2005).
+    """
+    strength = float(params.predator_contact_intensity or 0.0)
+    # Temporal derivative is populated by the predator_mechano STAM channel
+    # under DERIVATIVE / KLINOTAXIS sensing modes; reads from a dedicated
+    # BrainParams field rather than reusing the legacy predator_dconcentration_dt
+    # so the two channels stay independent.
+    raw_deriv = float(params.predator_mechano_dintensity_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _predator_mechanosensation_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis mechanosensation features (intensity + zone + dintensity/dt).
+
+    The 3-dim klinotaxis variant: intensity (strength) + zone-as-angle
+    (anterior/posterior discrimination) + temporal derivative (habituation
+    signal). Biologically the most-faithful of the three variants.
+    """
+    strength = float(params.predator_contact_intensity or 0.0)
+    zone = params.predator_contact_zone or ContactZone.NONE
+    angle = _ZONE_TO_ANGLE[zone]
+    raw_deriv = float(params.predator_mechano_dintensity_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _predator_chemosensation_oracle_core(params: BrainParams) -> CoreFeatures:
+    """Extract oracle chemosensation features (distal concentration + gradient-direction).
+
+    Oracle-mode reads the env's spatial gradient direction toward the
+    predator (analogous to the legacy nociception_core but consuming the new
+    distal-concentration field). Useful for ablation against the temporal
+    and klinotaxis variants; the klinotaxis variant is the biologically-
+    preferred default per design.md § Decision T3.1.
+    """
+    strength = float(params.predator_distal_concentration or 0.0)
+    angle = _compute_relative_angle(
+        params.predator_gradient_direction,
+        params.agent_direction,
+    )
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _predator_chemosensation_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal chemosensation features (distal concentration + dC/dt).
+
+    Pairs the distal sulfolipid concentration with its STAM-computed temporal
+    derivative — the Liu et al. 2018 chemosensory escape signal in its
+    closest-to-biology form short of a literature-calibrated decay constant.
+    """
+    strength = float(params.predator_distal_concentration or 0.0)
+    raw_deriv = float(params.predator_distal_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _predator_chemosensation_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis chemosensation features (concentration + lateral + dC/dt).
+
+    Head-sweep variant of the distal-chemosensory channel — uses the
+    existing predator_lateral_gradient field (already populated under
+    klinotaxis mode) plus the new distal concentration + its STAM derivative.
+    """
+    strength = float(params.predator_distal_concentration or 0.0)
+    raw_lateral = float(params.predator_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+    raw_deriv = float(params.predator_distal_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
 # Register klinotaxis modules
 SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS] = SensoryModule(
     name=ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS,
@@ -1142,6 +1272,69 @@ SENSORY_MODULES[ModuleName.PHEROMONE_AGGREGATION_KLINOTAXIS] = SensoryModule(
     name=ModuleName.PHEROMONE_AGGREGATION_KLINOTAXIS,
     extract=_pheromone_aggregation_klinotaxis_core,
     description="Klinotaxis aggregation pheromone. Concentration + lateral gradient + dC/dt.",
+    classical_dim=3,
+)
+
+# Predator-sensing biology modules. Two parallel channels (mechanosensation
+# via ASH/ALM/AVM/PLM, distal chemosensation via ASH/ASI sulfolipid signal
+# per Liu et al. 2018) each ship oracle / temporal / klinotaxis variants.
+# Klinotaxis is the biologically-preferred default for new configs; oracle
+# and temporal ship for ablation. Legacy nociception_* modules stay frozen.
+SENSORY_MODULES[ModuleName.PREDATOR_MECHANOSENSATION_ORACLE] = SensoryModule(
+    name=ModuleName.PREDATOR_MECHANOSENSATION_ORACLE,
+    extract=_predator_mechanosensation_oracle_core,
+    description=(
+        "Oracle predator-mechanosensation (ASH / ALM / AVM / PLM). Graded "
+        "contact intensity + anterior/posterior/lateral zone encoded as angle. "
+        "Replaces the boolean predator_contact field with a graded ASH "
+        "response that supports habituation via STAM temporal averaging."
+    ),
+)
+SENSORY_MODULES[ModuleName.PREDATOR_MECHANOSENSATION_TEMPORAL] = SensoryModule(
+    name=ModuleName.PREDATOR_MECHANOSENSATION_TEMPORAL,
+    extract=_predator_mechanosensation_temporal_core,
+    description=(
+        "Temporal predator-mechanosensation. Graded contact intensity + "
+        "STAM-computed dintensity/dt. The temporal derivative encodes the "
+        "habituation signal documented by Hilliard et al. 2005."
+    ),
+)
+SENSORY_MODULES[ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+    extract=_predator_mechanosensation_klinotaxis_core,
+    description=(
+        "Klinotaxis predator-mechanosensation. 3-dim: graded intensity + "
+        "anterior/posterior zone + dintensity/dt. Biologically-preferred "
+        "default for new predator-evasion configs."
+    ),
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.PREDATOR_CHEMOSENSATION_ORACLE] = SensoryModule(
+    name=ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
+    extract=_predator_chemosensation_oracle_core,
+    description=(
+        "Oracle predator-chemosensation (ASH + ASI). Distal sulfolipid "
+        "concentration + spatial gradient direction toward predator. "
+        "Models the Liu et al. 2018 distal-chemosensory escape signal."
+    ),
+)
+SENSORY_MODULES[ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL] = SensoryModule(
+    name=ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL,
+    extract=_predator_chemosensation_temporal_core,
+    description=(
+        "Temporal predator-chemosensation. Distal sulfolipid concentration + "
+        "STAM-computed dC/dt. Closer-to-biology form of the Liu 2018 signal "
+        "short of a literature-calibrated decay constant (T6/T7 concern)."
+    ),
+)
+SENSORY_MODULES[ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+    extract=_predator_chemosensation_klinotaxis_core,
+    description=(
+        "Klinotaxis predator-chemosensation. 3-dim: distal concentration + "
+        "lateral gradient (head-sweep) + dC/dt. Biologically-preferred "
+        "default for new predator-evasion configs."
+    ),
     classical_dim=3,
 )
 

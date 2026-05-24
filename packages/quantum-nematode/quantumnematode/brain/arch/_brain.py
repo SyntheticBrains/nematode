@@ -288,6 +288,15 @@ class BrainParams(BaseModel):
             "predator_chemosensation_temporal / klinotaxis sensor modules."
         ),
     )
+    predator_mechano_dintensity_dt: float | None = Field(
+        default=None,
+        description=(
+            "Temporal derivative of predator_contact_intensity produced by "
+            "the STAM predator_mechano channel. Consumed by the "
+            "predator_mechanosensation_temporal / klinotaxis sensor modules "
+            "to give the brain a habituation signal."
+        ),
+    )
     temperature_ddt: float | None = Field(
         default=None,
         description="Temporal derivative of temperature (Mode B derivative sensing).",

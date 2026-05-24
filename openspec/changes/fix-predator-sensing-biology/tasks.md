@@ -47,31 +47,31 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 6. New sensor modules (T3.6)
 
-- [ ] 6.1 In [brain/modules.py](../../../packages/quantum-nematode/quantumnematode/brain/modules.py) `ModuleName` StrEnum, add six new entries (per [design.md § Decision T3.1](design.md) — new modules use explicit `_oracle` suffix on the oracle variant, unlike the legacy bare-named convention):
+- [x] 6.1 In [brain/modules.py](../../../packages/quantum-nematode/quantumnematode/brain/modules.py) `ModuleName` StrEnum, add six new entries (per [design.md § Decision T3.1](design.md) — new modules use explicit `_oracle` suffix on the oracle variant, unlike the legacy bare-named convention):
   - `PREDATOR_MECHANOSENSATION_ORACLE = "predator_mechanosensation_oracle"`
   - `PREDATOR_MECHANOSENSATION_TEMPORAL = "predator_mechanosensation_temporal"`
   - `PREDATOR_MECHANOSENSATION_KLINOTAXIS = "predator_mechanosensation_klinotaxis"`
   - `PREDATOR_CHEMOSENSATION_ORACLE = "predator_chemosensation_oracle"`
   - `PREDATOR_CHEMOSENSATION_TEMPORAL = "predator_chemosensation_temporal"`
   - `PREDATOR_CHEMOSENSATION_KLINOTAXIS = "predator_chemosensation_klinotaxis"`
-- [ ] 6.2 Implement six `_extract` core functions (one per ModuleName entry above). Patterns to mirror:
+- [x] 6.2 Implement six `_extract` core functions (one per ModuleName entry above). Patterns to mirror:
   - `_predator_mechanosensation_oracle_core` ← mirror `_nociception_core` (extract `predator_contact_intensity` + zone-as-angle, `classical_dim=2`)
   - `_predator_mechanosensation_temporal_core` ← mirror `_nociception_temporal_core` (extract intensity + dintensity_dt, classical_dim=2)
   - `_predator_mechanosensation_klinotaxis_core` ← mirror `_nociception_klinotaxis_core` (extract intensity + zone + dintensity_dt, classical_dim=3)
   - `_predator_chemosensation_oracle_core` ← mirror `_food_chemotaxis_core` (extract `predator_distal_concentration` + bearing-as-angle, classical_dim=2)
   - `_predator_chemosensation_temporal_core` ← mirror `_food_chemotaxis_temporal_core` (extract concentration + dconcentration_dt, classical_dim=2)
   - `_predator_chemosensation_klinotaxis_core` ← mirror `_food_chemotaxis_klinotaxis_core` (extract concentration + lateral + dconcentration_dt, classical_dim=3)
-- [ ] 6.3 Register all six modules in `SENSORY_MODULES`. Mirror the existing `food_chemotaxis*` triples for the chemosensation family and the existing `nociception*` triples for the mechanosensation family.
-- [ ] 6.4 Extend the `apply_sensing_mode` map in [utils/config_loader.py:797-805](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) so configs that list `predator_mechanosensation_oracle` get auto-substituted to `_temporal` / `_klinotaxis` based on `sensing.predator_mechano_mode`, and similarly for `predator_chemosensation_oracle` based on `sensing.predator_distal_mode`. The translation logic mirrors how `food_chemotaxis` → `food_chemotaxis_temporal` translation works today, just with explicit `_oracle` as the base name rather than the bare `food_chemotaxis`.
-- [ ] 6.5 Write `tests/quantumnematode_tests/brain/test_predator_modules.py`: six test classes (one per ModuleName), each asserting `extract` output shape, value range, and agent-direction-relative orientation. Mirror the patterns at [test_modules.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/brain/test_modules.py) and [test_klinotaxis_modules.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/brain/test_klinotaxis_modules.py).
-- [ ] 6.6 Run the new module tests + verify existing module tests are unaffected.
+- [x] 6.3 Register all six modules in `SENSORY_MODULES`. Mirror the existing `food_chemotaxis*` triples for the chemosensation family and the existing `nociception*` triples for the mechanosensation family.
+- [x] 6.4 Extend the `apply_sensing_mode` map in [utils/config_loader.py:797-805](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) so configs that list `predator_mechanosensation_oracle` get auto-substituted to `_temporal` / `_klinotaxis` based on `sensing.predator_mechano_mode`, and similarly for `predator_chemosensation_oracle` based on `sensing.predator_distal_mode`. *Shipped: new `oracle_mode_map` table keyed on `_oracle`-suffixed module names; translation strips `_oracle` then re-appends mode-specific suffix.*
+- [x] 6.5 Write `tests/quantumnematode_tests/brain/test_predator_modules.py`: six test classes (one per ModuleName), each asserting `extract` output shape, value range, and agent-direction-relative orientation. *Shipped: 24 tests — feature shape + value mapping + ANTERIOR/POSTERIOR/LATERAL/NONE zone mapping + registry presence.*
+- [x] 6.6 Run the new module tests + verify existing module tests are unaffected. *24 new tests pass; pre-commit clean.*
 
 ## 7. SensingConfig mode fields (T3.7)
 
-- [ ] 7.1 In [utils/config_loader.py](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) `SensingConfig` (line 724-761), add two new fields:
+- [x] 7.1 In [utils/config_loader.py](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) `SensingConfig` (line 724-761), add two new fields:
   - `predator_mechano_mode: SensingMode = SensingMode.ORACLE`
   - `predator_distal_mode: SensingMode = SensingMode.ORACLE`
-- [ ] 7.2 Keep `nociception_mode: SensingMode = SensingMode.ORACLE` field untouched. Existing `SensingMode` StrEnum unchanged.
+- [x] 7.2 Keep `nociception_mode: SensingMode = SensingMode.ORACLE` field untouched. Existing `SensingMode` StrEnum unchanged.
 - [ ] 7.3 Write `tests/quantumnematode_tests/utils/test_legacy_nociception_configs_load.py`: regression test that parametrises over every config under `configs/evolution/*klinotaxis*.yml` (and any other file naming legacy `nociception*` modules), asserting `configure_brain(load_simulation_config(...))` succeeds without error. Discover files at test-collection time (no hard-coded list).
 - [ ] 7.4 Run the new regression test on the 22 archived configs; verify all pass.
 
