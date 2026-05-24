@@ -1,12 +1,20 @@
-# Frozen-random-weights control variant of the connectome-PPO
-# klinotaxis-mode foraging configuration. Pairs with
-# ``connectome_ppo_klinotaxis.yml`` as the null baseline for the
-# load-bearing training-signal evaluation: identical env, identical
-# seed, identical brain topology, but PPO updates are disabled. The
-# training run must produce mean episode return at least 10% above this
-# frozen-control baseline on the last 25 episodes to demonstrate that
-# PPO weight tuning is adding signal over random initialisation on the
-# same connectome topology under klinotaxis-mode sensing.
+# Connectome-PPO klinotaxis-mode foraging configuration.
+#
+# This is the load-bearing variant for the connectome training-signal
+# evaluation: the env emits klinotaxis head-sweep features
+# (``food_concentration``, ``food_lateral_gradient``,
+# ``food_dconcentration_dt``) under ``chemotaxis_mode: klinotaxis``, and
+# the connectome brain's sensor projection consumes the 3-feature shape
+# via a 3x6 learnable gain matrix onto the same ASEL/ASER/AWCL/AWCR/AWAL/AWAR
+# canonical Bargmann-lab sensory pathway.
+#
+# Pairs with ``connectomeppo_small_frozen_control_klinotaxis.yml`` as the
+# paired-control training-signal evaluation. STAM is enabled per the
+# klinotaxis mode's temporal-history requirement (computes the
+# dC/dt derivative the brain needs).
+#
+# Episode budget: 500 episodes, single seed. Forks the MLP-PPO small
+# oracle config's env shape (20x20 grid, 5 foods, gradient decay 8.0).
 
 max_steps: 500
 brain:
@@ -18,11 +26,9 @@ brain:
     chemical_mask_mode: strict
     sensing_mode: klinotaxis  # 3-feature head-sweep input
     forward_pass_depth: 4
-    freeze_updates: true  # No-op the PPO update; weights stay byte-identical to init.
+    freeze_updates: false  # Learning run; the frozen-control variant sets this true.
 
-    # PPO hyperparameters held equal to the learning-run config so the
-    # action-sampling stream is matched. ``freeze_updates`` short-circuits
-    # the optimiser; these values are never consumed at runtime.
+    # PPO hyperparameters (mirror MLPPPOBrainConfig oracle baseline).
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95

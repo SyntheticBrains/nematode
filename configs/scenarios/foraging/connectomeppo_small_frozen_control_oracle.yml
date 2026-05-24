@@ -1,5 +1,5 @@
 # Frozen-random-weights control variant of the connectome-PPO oracle
-# foraging configuration. Pairs with ``connectome_ppo_oracle.yml`` as
+# foraging configuration. Pairs with ``connectomeppo_small_oracle.yml`` as
 # the null baseline for the early oracle-mode training-signal evaluation:
 # identical env, identical seed, identical brain topology, but PPO
 # updates are disabled. The training run must produce mean episode

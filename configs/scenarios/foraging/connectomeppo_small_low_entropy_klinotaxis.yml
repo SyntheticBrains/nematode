@@ -1,7 +1,7 @@
 # Connectome-PPO klinotaxis foraging — low-entropy variant for R2b
 # late-training-regression diagnostic.
 #
-# Identical to ``connectome_ppo_klinotaxis.yml`` except entropy_coef is
+# Identical to ``connectomeppo_small_klinotaxis.yml`` except entropy_coef is
 # 0.005 (1/4 of the original 0.02). Purpose: test whether the
 # late-training success-rate drop observed in R2 (ep 450-499 fell to
 # 76%) is driven by constant-entropy exploration occasionally knocking

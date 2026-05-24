@@ -22,7 +22,7 @@
 #     longer episode/training horizon
 #
 # Used as one of three head-to-head baselines in the connectome-PPO
-# Gate-1 evaluation. Apples-to-apples with ``connectome_ppo_klinotaxis.yml``
+# Gate-1 evaluation. Apples-to-apples with ``connectomeppo_small_klinotaxis.yml``
 # and ``lstmppo_small_klinotaxis.yml``.
 
 max_steps: 1000  # klinotaxis sensing benefits from longer rollouts

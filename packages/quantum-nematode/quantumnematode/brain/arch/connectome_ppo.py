@@ -314,28 +314,22 @@ class ConnectomeTopology(nn.Module):
 
         # Apply strict-mask to initial weights too (initialisation already
         # respects the mask above, but defence-in-depth).
-        self._project_chem_weights()
-
-    def _project_chem_weights(self) -> None:
-        """Zero out chemical weights along non-existent edges (in-place)."""
         with torch.no_grad():
-            self.w_chem.data.mul_(self.m_chem.to(self.w_chem.dtype))
+            self.w_chem.data.copy_(self.apply_weight_mask(self.w_chem.data))
 
-    def apply_weight_mask(self, *, mode: str) -> None:
-        """Project the chemical-synapse weights onto the strict-mask manifold.
+    def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
+        """Project a candidate weight tensor onto the strict-mask manifold.
 
-        Called by the brain after every optimiser step. Identity (no-op)
-        when ``mode == "soft_prior"`` — under that mode the mask serves
-        only as the initial-weight prior and PPO is free to grow new
-        edges.
+        Pure function: returns ``weights * M_chem`` so values along
+        non-existent chemical-synapse edges are zeroed. The caller owns
+        the policy of when to apply this (e.g. only under
+        ``chemical_mask_mode="strict"``) and is responsible for writing
+        the result back into the topology's parameter storage.
+
+        Conforms to the ``BrainTopology`` Protocol's pure-projector
+        contract: stateless, no in-place mutation of ``self``.
         """
-        if mode == "strict":
-            self._project_chem_weights()
-        elif mode == "soft_prior":
-            return
-        else:
-            msg = f"Unknown chemical_mask_mode: {mode!r}"
-            raise ValueError(msg)
+        return weights * self.m_chem.to(weights.dtype)
 
     def _pool_motor(self, h: torch.Tensor) -> torch.Tensor:
         """Mean-pool ``h`` over the four motor classes → 4-vector.
@@ -716,5 +710,13 @@ class ConnectomePPOBrain(ClassicalBrain):
                 )
                 self.optimizer.step()
 
-                # Strict-mask projection: zero out any non-existent edges.
-                self.topology.apply_weight_mask(mode=self.config.chemical_mask_mode)
+                # Strict-mask projection: under "strict" mode, zero out any
+                # non-existent edges that the optimiser step would have
+                # created. Under "soft_prior" mode, leave the weights as
+                # the optimiser left them (the mask is then only a
+                # initial-weight prior, and PPO is free to grow new edges).
+                if self.config.chemical_mask_mode == "strict":
+                    with torch.no_grad():
+                        self.topology.w_chem.data.copy_(
+                            self.topology.apply_weight_mask(self.topology.w_chem.data),
+                        )

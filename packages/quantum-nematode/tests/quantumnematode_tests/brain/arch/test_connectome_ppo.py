@@ -315,16 +315,38 @@ class TestStrictMaskInvariant:
 
 
 class TestSoftPriorMode:
-    def test_soft_prior_apply_mask_is_noop(self) -> None:
-        """``apply_weight_mask(mode='soft_prior')`` does not zero new edges.
+    def test_apply_weight_mask_is_pure_projector(self) -> None:
+        """``ConnectomeTopology.apply_weight_mask`` is a stateless projector.
 
-        Injects synthetic non-zero weights along ~M_chem edges, then
-        invokes the soft-prior projection: it must not zero them. Under
-        ``strict`` mode the same projection would zero them.
+        Returns ``weights * M_chem`` without mutating ``self``. Caller
+        owns the mode policy and the parameter-storage write-back.
+        """
+        brain = _make_brain()
+        not_mask = ~brain.topology.m_chem
+        candidate = torch.full_like(brain.topology.w_chem, 1.5)
+        # Snapshot the topology's own weights before invocation.
+        original_w = brain.topology.w_chem.detach().clone()
+
+        masked = brain.topology.apply_weight_mask(candidate)
+
+        # Pure projector: ``self.w_chem`` is unchanged by the call.
+        assert torch.equal(brain.topology.w_chem.detach(), original_w)
+        # Non-existent edges are zeroed in the returned tensor.
+        assert (masked * not_mask).abs().max().item() == 0.0
+        # Existing edges pass through unchanged.
+        assert torch.equal(masked * brain.topology.m_chem, candidate * brain.topology.m_chem)
+
+    def test_soft_prior_mode_does_not_project_after_ppo_step(self) -> None:
+        """Soft-prior skips post-step projection so ~M_chem weights survive.
+
+        Under ``chemical_mask_mode="soft_prior"`` the brain's update
+        loop does not project ``w_chem`` after the optimiser step, so
+        weights the optimiser placed along ~M_chem edges remain
+        non-zero. Strict mode would zero them.
         """
         brain = _make_brain(chemical_mask_mode="soft_prior")
         not_mask = ~brain.topology.m_chem
-        # Inject non-zero weights along ~M_chem in-place via masked-fill.
+        # Inject non-zero weights along ~M_chem to simulate optimiser drift.
         with torch.no_grad():
             brain.topology.w_chem.data = torch.where(
                 not_mask,
@@ -332,15 +354,29 @@ class TestSoftPriorMode:
                 brain.topology.w_chem.data,
             )
         before = (brain.topology.w_chem * not_mask).abs().max().item()
-        assert before > 0.0  # confirm injection worked
+        assert before > 0.0
 
-        brain.topology.apply_weight_mask(mode="soft_prior")
-        after_soft = (brain.topology.w_chem * not_mask).abs().max().item()
-        assert after_soft == before  # soft-prior is a no-op
+        # Drive a PPO update: under soft-prior, the brain skips the
+        # post-step projection, so ~M_chem weights stay non-zero.
+        self._drive_one_ppo_update(brain)
+        after = (brain.topology.w_chem * not_mask).abs().max().item()
+        assert after > 0.0
 
-        brain.topology.apply_weight_mask(mode="strict")
-        after_strict = (brain.topology.w_chem * not_mask).abs().max().item()
-        assert after_strict == 0.0  # strict zeros them
+    @staticmethod
+    def _drive_one_ppo_update(brain: ConnectomePPOBrain, n_steps: int = 8) -> None:
+        for step in range(n_steps):
+            params = _make_params(
+                strength=0.5 + 0.01 * step,
+                angle=0.1 * step,
+            )
+            brain.run_brain(
+                params,
+                reward=None,
+                input_data=None,
+                top_only=False,
+                top_randomize=False,
+            )
+            brain.learn(params, reward=0.1, episode_done=(step == n_steps - 1))
 
 
 # ──────────────────────────────────────────────────────────────────────────────

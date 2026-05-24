@@ -65,9 +65,9 @@ All 19 existing architectures registered:
 
 Six configs land alongside the brain for the evaluation:
 
-- `connectome_ppo_oracle.yml` + `_frozen_control.yml` — initial oracle-mode early-baseline.
-- `connectome_ppo_klinotaxis.yml` + `_frozen_control.yml` — main klinotaxis paired-control configs.
-- `connectome_ppo_klinotaxis_low_entropy.yml` — `entropy_coef: 0.005` diagnostic to test the entropy-schedule hypothesis (see § Gate 1 G1.c below).
+- `connectomeppo_small_oracle.yml` + `connectomeppo_small_frozen_control_oracle.yml` — initial oracle-mode early-baseline.
+- `connectomeppo_small_klinotaxis.yml` + `connectomeppo_small_frozen_control_klinotaxis.yml` — main klinotaxis paired-control configs.
+- `connectomeppo_small_low_entropy_klinotaxis.yml` — `entropy_coef: 0.005` diagnostic to test the entropy-schedule hypothesis (see § Gate 1 G1.c below).
 - `mlpppo_small_klinotaxis.yml` — inferred MLPPPO klinotaxis baseline for cross-architecture comparison (no prior canonical config existed at this env scale).
 
 ## Migration regression bar (Gate 1 G1.d)
@@ -156,7 +156,7 @@ Phase 6 Gate 1 has four sub-criteria pre-registered in [phase6-tracking/design.m
 | Criterion | Status | Evidence |
 |---|---|---|
 | G1.a — connectome loaded + cross-validation shipped | ✅ PASS | Logbook 022; Cook 2019 + Witvliet 2021 ingested, 302 neurons / 3709 chemical / 1093 gap junctions, cross-validated, vendored. |
-| G1.b — plugin registry instantiates MLP-PPO + connectome through same code path | ✅ PASS | Both `mlpppo_small_oracle.yml` and `connectome_ppo_klinotaxis.yml` resolve through the same `setup_brain_model() → instantiate_brain()` call chain. No per-arch branches in `scripts/run_simulation.py`. |
+| G1.b — plugin registry instantiates MLP-PPO + connectome through same code path | ✅ PASS | Both `mlpppo_small_oracle.yml` and `connectomeppo_small_klinotaxis.yml` resolve through the same `setup_brain_model() → instantiate_brain()` call chain. No per-arch branches in `scripts/run_simulation.py`. |
 | G1.c — PPO-on-connectome trains without NaNs, exceeds frozen-random control by ≥ 10%, monotonic improvement | ✅ PASS | R2b reference run: zero NaN/Inf over 500 episodes, 16.1× last-25 reward margin over frozen control, monotonic improvement on both reward (+2.53) and success rate (76% → 100%). |
 | G1.d — migration regression byte-equivalent for MLPPPO + LSTMPPO | ✅ PASS | In-process two-construct equivalence tests green; the registration-only migration changes no executing code in the brain modules. |
 
@@ -196,7 +196,7 @@ The architecture-asymmetry diagnosis from Phase 5 M5 ([Logbook 017](017-coevolut
 - **Tranche 3** — corrected ASH/ADL contact-based nociception per the open correctness work in [Logbook 011](011-multi-agent-evaluation.md). Adds two new sensor projections on the existing connectome topology + plugin interface.
 - **Tranche 4** — L2 first pass: four MUST architectures × three behaviours × four seeds on the existing grid substrate. The Gate-1 sweep test for "the comparison is one experimental sweep."
 - **Tranche 5** — platform refactor (continuous-2D + continuous-action heads). Where the L1 plugin-parity check (Gate 2 G2.b: files touched ≤ 6) is re-verified against a non-trivial cross-cutting change.
-- **Follow-up cleanup (optional, post-Tranche 4)** — promote `connectome_ppo_klinotaxis_low_entropy.yml` to the canonical klinotaxis config (drop the `_low_entropy` suffix) if the low-entropy choice continues to outperform.
+- **Follow-up cleanup (optional, post-Tranche 4)** — promote `connectomeppo_small_low_entropy_klinotaxis.yml` to the canonical klinotaxis config (drop the `_low_entropy` suffix) if the low-entropy choice continues to outperform.
 
 ## References
 
