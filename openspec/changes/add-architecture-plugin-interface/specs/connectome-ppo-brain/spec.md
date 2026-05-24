@@ -39,8 +39,10 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 #### Scenario: Sensor projection routes env input to canonical sensory neurons
 
 - **WHEN** `run_brain()` receives a `BrainParams` with food-chemotaxis input
-- **THEN** the food-chemotaxis signal SHALL be additively injected onto the ASE-left, ASE-right, AWC-left, AWC-right, AWA-left, and AWA-right sensory neurons' input vector
-- **AND** the injection SHALL be scaled by a per-input learnable gain (PPO-learnable scalar parameter, separate from the chemical-synapse weight matrix)
+- **THEN** the food-chemotaxis feature vector SHALL be additively injected onto the ASEL, ASER, AWCL, AWCR, AWAL, AWAR sensory neurons' input vector via a learnable gain matrix of shape `(n_food_features, 6)`
+- **AND** the gain matrix SHALL be PPO-learnable (separate from the chemical-synapse weight matrix)
+- **AND** the value of `n_food_features` SHALL be determined by the `sensing_mode` config field: `2` in `oracle` mode (features `[strength, angle]`), `3` in `klinotaxis` mode (features `[concentration, lateral_gradient, dC/dt]` matching the env-side klinotaxis sensory-module emission shape)
+- **AND** proprioception / mechanosensation / nociception sensor projections SHALL NOT be implemented at this revision — they are out of scope for the T2 connectome-PPO brain and ship in T3 (corrected ASH/ADL nociception) and T4 (sensor-projection ablation)
 
 #### Scenario: Motor readout aggregates motor-class activations
 
@@ -66,8 +68,9 @@ The brain SHALL be configured via a Pydantic `ConnectomePPOBrainConfig` model th
   - `connectome_source: Literal["cook_2019_hermaphrodite"]`
   - `enable_gap_junctions: bool` (default `True`)
   - `chemical_mask_mode: Literal["strict", "soft_prior"]` (default `"strict"`)
-  - `forward_pass_depth: int` (default `1`, must be ≥ 1)
+  - `forward_pass_depth: int` (default `4`, must be ≥ 1 — see the "Forward-pass depth K is configurable" scenario above for the rationale)
   - `freeze_updates: bool` (default `False`, drives the Gate 1 G1.c paired control)
+  - `sensing_mode: Literal["oracle", "klinotaxis"]` (default `"oracle"`) — controls the env-side feature shape consumed by the sensor projection. In `oracle` mode the brain reads `[food_gradient_strength, food_gradient_direction]` (2 features); in `klinotaxis` mode the brain reads `[food_concentration, food_lateral_gradient, food_dconcentration_dt]` (3 features) matching the env-side klinotaxis sensory-module emission shape. The learnable food-gain matrix is sized to match (`2 × 6` or `3 × 6`).
 - **AND** the config SHALL accept the PPO hyperparameters used by `MLPPPOBrainConfig` (learning rate, clip range, value-loss coefficient, entropy coefficient, gradient-clip norm, batch size, etc.)
 
 #### Scenario: Soft-prior mode allows new chemical edges to grow

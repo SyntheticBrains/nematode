@@ -208,26 +208,20 @@ The `BrainType` enum SHALL remain the canonical typed dispatch key and SHALL inc
 - **THEN** the config loader SHALL parse brain config using `QEFBrainConfig`
 - **AND** SHALL support all QEF-specific fields plus inherited ReservoirHybridBaseConfig fields
 
-#### Scenario: ConnectomePPO Brain Type Registration — deferred to follow-up PR
-
-> Not enforced in this PR. The `BrainType.CONNECTOMEPPO` enum member, its registration via `@register_brain("connectomeppo", ...)`, its inclusion in `CLASSICAL_BRAIN_TYPES`, and its inclusion in the `BRAIN_TYPES` Literal land together with the `ConnectomePPOBrain` implementation in the follow-up PR (see [tasks.md § 7](../../tasks.md)). The scenario is preserved here so the follow-up PR re-enables it without re-writing the spec.
+#### Scenario: ConnectomePPO Brain Type Registration
 
 - **WHEN** the brain type system is initialized
 - **THEN** `BrainType.CONNECTOMEPPO` SHALL exist with value `"connectomeppo"` in the BrainType enum
 - **AND** CONNECTOMEPPO SHALL be included in `CLASSICAL_BRAIN_TYPES`
 - **AND** `"connectomeppo"` SHALL be included in the `BRAIN_TYPES` Literal type alias
 
-#### Scenario: ConnectomePPO Brain Factory — deferred to follow-up PR
-
-> Not enforced in this PR. Lands with the `ConnectomePPOBrain` implementation in the follow-up PR.
+#### Scenario: ConnectomePPO Brain Factory
 
 - **WHEN** `instantiate_brain("connectomeppo", config)` is called
 - **THEN** the registry SHALL return a `ConnectomePPOBrain` instance
 - **AND** SHALL accept `ConnectomePPOBrainConfig` for configuration
 
-#### Scenario: ConnectomePPO Config Loading — deferred to follow-up PR
-
-> Not enforced in this PR. Lands with the `ConnectomePPOBrain` implementation in the follow-up PR.
+#### Scenario: ConnectomePPO Config Loading
 
 - **WHEN** a YAML config specifies `brain.name: connectomeppo`
 - **THEN** the config loader SHALL parse brain config using `ConnectomePPOBrainConfig`
