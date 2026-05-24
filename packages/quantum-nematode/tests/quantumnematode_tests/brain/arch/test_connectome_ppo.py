@@ -362,6 +362,55 @@ class TestSoftPriorMode:
         after = (brain.topology.w_chem * not_mask).abs().max().item()
         assert after > 0.0
 
+    def test_soft_prior_gradients_flow_through_non_wild_type_edges(self) -> None:
+        """Soft-prior must let gradients reach ~M_chem entries.
+
+        The forward pass uses raw ``w_chem`` (not ``w_chem * m_chem``) so
+        backprop produces non-zero gradients on edges outside the
+        wild-type adjacency — that's what lets the optimiser grow new
+        edges from a zero initialisation.
+        """
+        brain = _make_brain(chemical_mask_mode="soft_prior")
+        params = _make_params(strength=0.5, angle=0.3)
+        food_features = torch.from_numpy(brain.preprocess(params)).to(brain.device)
+
+        logits = brain.topology.forward(food_features)
+        # Scalar loss so backward populates ``w_chem.grad``.
+        logits.sum().backward()
+
+        not_mask = ~brain.topology.m_chem
+        grad = brain.topology.w_chem.grad
+        assert grad is not None
+        max_grad_off_mask = (grad * not_mask).abs().max().item()
+        assert max_grad_off_mask > 0.0, (
+            "Soft-prior must let gradients reach ~M_chem entries so the "
+            "optimiser can grow new edges; observed all-zero gradient there."
+        )
+
+    def test_strict_mode_pins_gradients_to_wild_type_edges(self) -> None:
+        """Strict mode pins gradients on ~M_chem to zero.
+
+        The forward pass uses ``w_chem * m_chem`` so backprop's chain
+        rule multiplies the upstream gradient by ``m_chem`` — zero on
+        non-wild-type entries. This is what guarantees ``w_chem`` data
+        on those entries never moves from the zero initialisation.
+        """
+        brain = _make_brain(chemical_mask_mode="strict")
+        params = _make_params(strength=0.5, angle=0.3)
+        food_features = torch.from_numpy(brain.preprocess(params)).to(brain.device)
+
+        logits = brain.topology.forward(food_features)
+        logits.sum().backward()
+
+        not_mask = ~brain.topology.m_chem
+        grad = brain.topology.w_chem.grad
+        assert grad is not None
+        max_grad_off_mask = (grad * not_mask).abs().max().item()
+        assert max_grad_off_mask == 0.0, (
+            "Strict mode must pin ~M_chem gradients to zero; "
+            f"observed max|grad| = {max_grad_off_mask}"
+        )
+
     @staticmethod
     def _drive_one_ppo_update(brain: ConnectomePPOBrain, n_steps: int = 8) -> None:
         for step in range(n_steps):

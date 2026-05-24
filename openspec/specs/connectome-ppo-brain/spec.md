@@ -24,9 +24,11 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 #### Scenario: Chemical-synapse strict-mask enforces wild-type adjacency
 
 - **GIVEN** a `ConnectomePPOBrain` constructed with `chemical_mask_mode: "strict"`
+- **WHEN** the topology forward pass evaluates the chemical drive term
+- **THEN** the forward SHALL use `W_chem * M_chem` so that backpropagation's chain rule pins gradients on positions where `M_chem[i, j] = False` to exactly zero
 - **WHEN** the PPO learning rule completes any gradient step on the chemical-synapse weight tensor
-- **THEN** the brain SHALL apply `topology.apply_weight_mask(...)` to project the updated weights onto the strict-mask
-- **AND** all weight values along non-existent chemical-synapse edges (where `M_chem[i, j] = False`) SHALL be exactly zero
+- **THEN** the brain SHALL additionally apply `topology.apply_weight_mask(...)` to project the updated weights onto the strict-mask (defence-in-depth; combined with the forward-pass masking this guarantees the strict-mask invariant holds across every training step)
+- **AND** all weight values along non-existent chemical-synapse edges (where `M_chem[i, j] = False`) SHALL be exactly zero at every step
 - **AND** weight values along existing edges SHALL be the unprojected PPO update value
 
 #### Scenario: Gap-junction weights remain fixed across PPO updates
@@ -84,9 +86,10 @@ The brain SHALL be configured via a Pydantic `ConnectomePPOBrainConfig` model th
 #### Scenario: Soft-prior mode allows new chemical edges to grow
 
 - **GIVEN** a `ConnectomePPOBrainConfig` with `chemical_mask_mode: "soft_prior"`
-- **WHEN** the PPO learning rule completes a gradient step
-- **THEN** `topology.apply_weight_mask(...)` SHALL be a no-op (the candidate weight tensor is returned unchanged)
-- **AND** new non-zero weights MAY appear along edges where `M_chem[i, j] = False`
+- **WHEN** the topology forward pass evaluates the chemical drive term
+- **THEN** the forward SHALL use the raw `W_chem` tensor (not `W_chem * M_chem`), so backpropagation produces non-zero gradients on every entry of `W_chem` — including positions where `M_chem[i, j] = False`
+- **AND** the brain's update loop SHALL skip the post-optimiser-step strict-mask projection (the projection only runs under `chemical_mask_mode: "strict"`)
+- **AND** new non-zero weights MAY therefore appear along edges where `M_chem[i, j] = False` as PPO optimises
 - **AND** the initial weight tensor SHALL still be initialised from the wild-type chemical-synapse adjacency (so the prior persists at the start of training)
 
 #### Scenario: Frozen-updates flag drives the Gate 1 G1.c paired control

@@ -161,6 +161,7 @@ class ConnectomeTopology(nn.Module):
         enable_gap_junctions: bool,
         forward_pass_depth: int,
         n_food_features: int,
+        enforce_strict_mask: bool,
         device: torch.device,
         rng: np.random.Generator,
     ) -> None:
@@ -174,6 +175,13 @@ class ConnectomeTopology(nn.Module):
         self.forward_pass_depth = forward_pass_depth
         self.enable_gap_junctions = enable_gap_junctions
         self.n_food_features = n_food_features
+        # When True, the forward pass multiplies ``w_chem`` by ``m_chem`` so
+        # gradients on non-wild-type edges are pinned to zero (and ``w_chem``
+        # data on those positions never moves from its zero init). When
+        # False, the forward pass uses raw ``w_chem`` so gradients flow
+        # through every entry — letting the optimiser grow new edges and
+        # treating the wild-type adjacency as an initial-weight prior only.
+        self.enforce_strict_mask = enforce_strict_mask
 
         # ── Index layout ────────────────────────────────────────────────
         self.neuron_names: list[str] = sorted(connectome.neurons)
@@ -381,10 +389,13 @@ class ConnectomeTopology(nn.Module):
 
         # K recurrent updates through chemical + gap-junction connectivity.
         # Each neuron's pre-activation = sum_pre(W[pre, post] * h[pre]) = (W.T @ h)[post].
-        masked_chem = self.w_chem * self.m_chem
+        # Under ``enforce_strict_mask`` the forward uses ``w_chem * m_chem`` so
+        # gradients on ~m_chem are zero; under soft-prior it uses raw
+        # ``w_chem`` so the optimiser can grow new edges from zero init.
+        chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
         for _ in range(self.forward_pass_depth):
-            preact = masked_chem.T @ h + gap_mat.T @ h
+            preact = chem_mat.T @ h + gap_mat.T @ h
             h = torch.tanh(preact)
 
         # Motor pooling + readout.
@@ -455,12 +466,16 @@ class ConnectomePPOBrain(ClassicalBrain):
         # Derive the per-mode food-feature count.
         self._n_food_features = _N_FOOD_FEATURES_BY_MODE[config.sensing_mode]
 
-        # Topology owns weight tensors + forward pass.
+        # Topology owns weight tensors + forward pass. ``enforce_strict_mask``
+        # is the structural choice that pins gradient flow to wild-type edges
+        # under "strict" mode; under "soft_prior" the forward uses raw
+        # ``w_chem`` so the optimiser can grow new edges.
         self.topology = ConnectomeTopology(
             connectome,
             enable_gap_junctions=config.enable_gap_junctions,
             forward_pass_depth=config.forward_pass_depth,
             n_food_features=self._n_food_features,
+            enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             device=self.device,
             rng=self.rng,
         ).to(self.device)
