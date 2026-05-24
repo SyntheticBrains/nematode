@@ -4,11 +4,11 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 1. Env-side contact-zone discrimination (T3.1)
 
-- [ ] 1.1 Add `ContactZone` enum to [packages/quantum-nematode/quantumnematode/env/env.py](../../../packages/quantum-nematode/quantumnematode/env/env.py) (or a sibling `env/predator.py` if env.py is already large) with members `NONE`, `ANTERIOR`, `POSTERIOR`, `LATERAL`. Use `StrEnum` for YAML-friendly serialisation.
-- [ ] 1.2 Implement `get_agent_predator_contact_zone_for(agent_id: str) -> ContactZone` on the env. Logic: if not in damage radius → `NONE`; else compute predator's relative bearing in agent-frame (using `agent_state.direction` per the existing `_compute_lateral_offsets` precedent at [agent.py:614-636](../../../packages/quantum-nematode/quantumnematode/agent/agent.py)); bucket per the ±45° / ±45° / lateral mapping documented in [design.md § Decision T3.3](design.md).
-- [ ] 1.3 Verify `is_agent_in_predator_contact_for(agent_id) -> bool` keeps its existing signature (returns True for any non-NONE zone). Legacy callers and SpikingReinforceBrain must continue working unchanged.
-- [ ] 1.4 Write `tests/quantumnematode_tests/env/test_predator_contact_zone.py`: 32 parameterised cases (predator at each of 8 surrounding cells × agent at each of 4 cardinal headings) asserting the expected zone. Plus 1 case asserting `NONE` outside damage radius.
-- [ ] 1.5 Run the new test + verify the existing `is_agent_in_predator_contact_for` tests still pass.
+- [x] 1.1 Add `ContactZone` enum to [packages/quantum-nematode/quantumnematode/env/env.py](../../../packages/quantum-nematode/quantumnematode/env/env.py) (or a sibling `env/predator.py` if env.py is already large) with members `NONE`, `ANTERIOR`, `POSTERIOR`, `LATERAL`. Use `StrEnum` for YAML-friendly serialisation.
+- [x] 1.2 Implement `get_agent_predator_contact_zone_for(agent_id: str) -> ContactZone` on the env. Logic: if not in damage radius → `NONE`; else compute predator's relative bearing in agent-frame (using `agent_state.direction` per the existing `_compute_lateral_offsets` precedent at [agent.py:614-636](../../../packages/quantum-nematode/quantumnematode/agent/agent.py)); bucket per the ±45° / ±45° / lateral mapping documented in [design.md § Decision T3.3](design.md).
+- [x] 1.3 Verify `is_agent_in_predator_contact_for(agent_id) -> bool` keeps its existing signature (returns True for any non-NONE zone). Legacy callers and SpikingReinforceBrain must continue working unchanged.
+- [x] 1.4 Write `tests/quantumnematode_tests/env/test_predator_contact_zone.py`: 32 parameterised cases (predator at each of 8 surrounding cells × agent at each of 4 cardinal headings) asserting the expected zone. Plus 1 case asserting `NONE` outside damage radius. *Shipped: 38 tests (16 cardinal + 16 diagonal + 4 edge cases + 2 back-compat).*
+- [x] 1.5 Run the new test + verify the existing `is_agent_in_predator_contact_for` tests still pass.
 
 ## 2. Env-side distal-chemo alias (T3.2)
 
