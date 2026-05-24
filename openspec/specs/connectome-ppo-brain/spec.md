@@ -2,7 +2,11 @@
 
 ## Purpose
 
-TBD - created by archiving change add-architecture-plugin-interface. Update Purpose after archive.
+The `connectome-ppo-brain` capability provides a PPO-trainable brain architecture whose topology is the wild-type *C. elegans* Cook 2019 hermaphrodite connectome consumed from the [connectome-substrate](../connectome-substrate/spec.md) capability. Chemical synapses are subject to a strict-mask: only edges present in the wild-type adjacency carry PPO-learnable weights, and non-existent edges remain pinned to zero across every optimiser step. Gap junctions are non-learnable, with weights fixed to Cook 2019 synapse counts and symmetric fan-in normalised at construction time.
+
+The brain registers through the [brain-architecture](../brain-architecture/spec.md) plugin registry as `connectomeppo` (`BrainType.CONNECTOMEPPO`, family `classical`) and is instantiable through the same `instantiate_brain(...)` code path as every other brain. Two `sensing_mode` variants ship: `oracle` consumes a 2-feature `[strength, angle]` food-chemotaxis vector, `klinotaxis` consumes the env-side klinotaxis sensory-module 3-feature emission `[concentration, lateral_gradient, dC/dt]`. Motor readout pools VB / DB / VA / DA motor-class activations and projects them to the 4-action `DEFAULT_ACTIONS` set via a learnable 4×4 matrix. Proprioception / mechanosensation / nociception projections are out of scope for this capability and live in downstream work.
+
+The capability is the first closed-loop learning result on the real *C. elegans* connectome in this codebase, and the first non-trivial consumer of the [brain-architecture](../brain-architecture/spec.md) `BrainTopology` Protocol.
 
 ## Requirements
 
