@@ -1,0 +1,63 @@
+# Frozen-random-weights control variant of the connectome-PPO oracle
+# foraging configuration. Pairs with ``connectome_ppo_oracle.yml`` as
+# the null baseline for the early oracle-mode training-signal evaluation:
+# identical env, identical seed, identical brain topology, but PPO
+# updates are disabled. The training run must produce mean episode
+# return at least 10% above this frozen-control baseline on the last
+# 25 episodes to demonstrate that PPO weight tuning is adding signal
+# over random initialisation on the same connectome topology.
+
+max_steps: 500
+brain:
+  name: connectomeppo
+  config:
+    seed: 2026
+    connectome_source: cook_2019_hermaphrodite
+    enable_gap_junctions: true
+    chemical_mask_mode: strict
+    forward_pass_depth: 4
+    freeze_updates: true  # No-op the PPO update; weights stay byte-identical to init.
+
+    # PPO hyperparameters held equal to the learning-run config so the
+    # action-sampling stream is matched. ``freeze_updates`` short-circuits
+    # the optimiser; these values are never consumed at runtime.
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0

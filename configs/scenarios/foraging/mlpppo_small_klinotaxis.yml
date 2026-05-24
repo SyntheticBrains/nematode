@@ -1,0 +1,87 @@
+# MLPPPO klinotaxis foraging — small configuration.
+#
+# Inferred baseline for the MLPPPO architecture under head-sweep sensing.
+# No prior published config existed; constructed by:
+#   - taking ``mlpppo_small_oracle.yml`` as the brain-hyperparameter base
+#     (the established MLPPPO oracle baseline at this env scale)
+#   - taking ``lstmppo_small_klinotaxis.yml`` as the env / sensing base
+#     (the established klinotaxis foraging env at this scale)
+#   - merging the two: klinotaxis sensing + STAM env settings on top of
+#     MLPPPO actor/critic, with proprioception added so the memoryless
+#     brain has heading context to correlate dC/dt with movement
+#
+# Differences from ``mlpppo_small_oracle.yml``:
+#   - ``chemotaxis_mode: klinotaxis`` (env emits concentration + lateral
+#     gradient + dC/dt instead of oracle gradient_strength/direction)
+#   - STAM enabled (provides dC/dt via temporal history)
+#   - sensory_modules includes proprioception (heading direction needed
+#     to correlate dC/dt with movement)
+#   - max_steps: 1000 (klinotaxis is harder; longer episodes match lstmppo
+#     klinotaxis budget)
+#   - entropy_coef bumped 0.02 → 0.03 to maintain exploration over the
+#     longer episode/training horizon
+#
+# Used as one of three head-to-head baselines in the connectome-PPO
+# Gate-1 evaluation. Apples-to-apples with ``connectome_ppo_klinotaxis.yml``
+# and ``lstmppo_small_klinotaxis.yml``.
+
+max_steps: 1000  # klinotaxis sensing benefits from longer rollouts
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    # PPO hyperparameters (mirror mlpppo_small_oracle baseline)
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.03  # slightly higher than oracle 0.02 — longer horizon needs more exploration
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_klinotaxis by env-sensing mode
+      - proprioception   # Heading direction so the brain can correlate dC/dt with movement
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis  # Head-sweep mode: concentration + lateral gradient + dC/dt
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0

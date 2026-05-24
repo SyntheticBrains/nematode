@@ -1,0 +1,77 @@
+# Connectome-PPO klinotaxis-mode foraging configuration.
+#
+# This is the load-bearing variant for the connectome training-signal
+# evaluation: the env emits klinotaxis head-sweep features
+# (``food_concentration``, ``food_lateral_gradient``,
+# ``food_dconcentration_dt``) under ``chemotaxis_mode: klinotaxis``, and
+# the connectome brain's sensor projection consumes the 3-feature shape
+# via a 3x6 learnable gain matrix onto the same ASEL/ASER/AWCL/AWCR/AWAL/AWAR
+# canonical Bargmann-lab sensory pathway.
+#
+# Pairs with ``connectome_ppo_klinotaxis_frozen_control.yml`` as the
+# paired-control training-signal evaluation. STAM is enabled per the
+# klinotaxis mode's temporal-history requirement (computes the
+# dC/dt derivative the brain needs).
+#
+# Episode budget: 500 episodes, single seed. Forks the MLP-PPO small
+# oracle config's env shape (20x20 grid, 5 foods, gradient decay 8.0).
+
+max_steps: 500
+brain:
+  name: connectomeppo
+  config:
+    seed: 2026
+    connectome_source: cook_2019_hermaphrodite
+    enable_gap_junctions: true
+    chemical_mask_mode: strict
+    sensing_mode: klinotaxis  # 3-feature head-sweep input
+    forward_pass_depth: 4
+    freeze_updates: false  # Learning run; the frozen-control variant sets this true.
+
+    # PPO hyperparameters (mirror MLPPPOBrainConfig oracle baseline).
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis  # Head-sweep mode: concentration + lateral gradient + dC/dt
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
