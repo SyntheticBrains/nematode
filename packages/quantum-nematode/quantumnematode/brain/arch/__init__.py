@@ -1,4 +1,13 @@
-"""Module for quantum brain architectures."""
+"""Module for quantum nematode brain architectures.
+
+Every architecture self-registers via a ``@register_brain`` decorator on
+its Brain class. The dispatcher in ``utils/brain_factory.py`` and the YAML
+loader in ``utils/config_loader.py`` both consume the registry rather than
+hand-maintained tables.
+
+To add a new architecture, see ``docs/architecture/plugin-developer-guide.md``
+for the walkthrough and the files-touched budget.
+"""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
 from ._registry import (
