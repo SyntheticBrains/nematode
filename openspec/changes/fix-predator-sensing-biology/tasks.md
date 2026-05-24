@@ -86,9 +86,9 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 9. Tracker + roadmap updates (T3.9)
 
-- [ ] 9.1 In [openspec/changes/phase6-tracking/tasks.md](../phase6-tracking/tasks.md), tick T3.1-T3.6 sub-tasks as work lands. Final pass to confirm all ticked.
-- [ ] 9.2 Add the T4 reward-ablation carry-forward sub-task. Specifically: extend the existing `T4 — Connectome-constrained`, `T4 — MLP-PPO`, `T4 — LSTM / GRU-PPO`, and `T4 — NEAT-evolved` sections with a sibling row each that records the reward-shape ablation per [design.md § Decision T3.7](design.md). Suggested wording: "T4.{arch}.predator_evasion_reward_ablation — compare existing `gradient_proximity` reward against `distal_chemo_penalty + binary_contact_damage_trigger` variant on the same architecture × seed grid".
-- [ ] 9.3 Flip [docs/roadmap.md](../../../docs/roadmap.md) Phase 6 Tranche Tracker T3 row from `🔲 not started` → `🟡 in progress` on first commit of this branch, and → `✅ complete` after the implementation PR merges. Add the logbook anchor link once T3.10 lands.
+- [x] 9.1 In [openspec/changes/phase6-tracking/tasks.md](../phase6-tracking/tasks.md), tick T3.1-T3.6 sub-tasks as work lands. Final pass to confirm all ticked. *All six T3 sub-tasks ticked with shipped-evidence pointers.*
+- [x] 9.2 Add the T4 reward-ablation carry-forward sub-task. Specifically: extend the existing `T4 — Connectome-constrained`, `T4 — MLP-PPO`, `T4 — LSTM / GRU-PPO`, and `T4 — NEAT-evolved` sections with a sibling row each that records the reward-shape ablation per [design.md § Decision T3.7](design.md). *Added four new `*_reward_ablation` sub-tasks alongside each `predator_evasion` row + the existing T4.0g convergence-rate study covers the joint sensor-encoding × reward-shape ablation space.*
+- [x] 9.3 Flip [docs/roadmap.md](../../../docs/roadmap.md) Phase 6 Tranche Tracker T3 row from `🔲 not started` → `🟡 in progress` on first commit of this branch, and → `✅ complete` after the implementation PR merges. Add the logbook anchor link once T3.10 lands. *Row flipped to 🟡 in progress with the revised "two-channel split" framing; the ✅ flip + logbook anchor lands after this PR merges.*
 
 ## 10. Logbook section (T3.10)
 

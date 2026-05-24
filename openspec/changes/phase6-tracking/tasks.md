@@ -128,26 +128,27 @@ Sub-tasks are coarse-grained; the L1 OpenSpec change elaborates them.
 
 ## Tranche 3 — Corrected ASH/ADL Contact-Based Nociception
 
-**OpenSpec change**: `fix-ash-adl-contact-nociception` (placeholder; not yet created)
-**Status**: 🔲 not started
+**OpenSpec change**: `fix-predator-sensing-biology` (scope expanded from the original "fix-ash-adl-contact-nociception" placeholder after biology research surfaced four substantive corrections — ADL is not a touch sensor; Liu et al. 2018 distal chemosensation is real; anterior/posterior matters; ASH is graded + adapts. See change's design.md for full decision history.)
+**Status**: 🟡 in progress
 **Roadmap layer**: env-correctness (precedes L2 first pass per [design.md § Decision 1](design.md))
 **Approx duration**: 1-2 weeks
 **Bio fidelity**: HIGH (corrects an existing biologically-wrong model)
 **Dependencies**: T2 closed (Gate 1 GO or PIVOT)
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Continuous environment + sensory physics § Mechanosensation
 
-Real *C. elegans* nociception is contact-based mechanosensation (ASH/ADL neurons),
-not chemosensory at distance. Phase 4's Logbook 011 flagged this; T3 fixes it before
-the L2 first pass (T4) so the L2 predator-evasion cells run against the corrected
-model from the start. Doing this after T4 would mean rerunning every predator-evasion
-L2 cell.
+Real *C. elegans* predator detection is a two-channel signal: contact-mechanosensory
+(ASH / ALM / AVM / PVD / PLM, anterior vs posterior receptive fields) plus distal-
+chemosensory (ASH + ASI sulfolipid signal per Liu et al. 2018 *Nat. Commun.*).
+Phase 4's Logbook 011 flagged the chemosensory-at-distance bug originally; T3
+ships the full corrected two-channel biology. T3 precedes the L2 first pass (T4)
+so the L2 predator-evasion cells run against the corrected model from the start.
 
-- [ ] T3.1 Implement ASH/ADL contact-based mechanosensation with realistic sensory ranges scaled to worm body length.
-- [ ] T3.2 Document the corrected model against the existing (incorrect) Phase 4 model; quantify the behavioural difference under matched conditions on the existing grid env.
-- [ ] T3.3 Update existing predator-evasion configs / smoke tests to consume the corrected sensor; deprecate the chemosensory-at-distance code path or feature-flag it for archaeology only.
-- [ ] T3.4 Unit + smoke tests for the corrected sensor; CI integration.
-- [ ] T3.5 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T3 row.
-- [ ] T3.6 Brief T3 logbook entry (may live as a section in `docs/experiments/logbooks/0XX-l2-first-pass.md` rather than its own logbook — the fix is small, the verification belongs alongside the L2 cells that depend on it).
+- [x] T3.1 Implement contact-based mechanosensation + distal-chemosensation as separate channels with biologically faithful zone discrimination (anterior/posterior/lateral) and graded contact intensity. *Shipped via the fix-predator-sensing-biology OpenSpec change — see the change's tasks.md for the 10 sub-task breakdown.*
+- [x] T3.2 Document the corrected model against the existing (incorrect) Phase 4 model; quantify the behavioural difference under matched conditions on the existing grid env. *100-episode head-to-head smoke evaluation results in `tmp/evaluations/predator-sensing-biology-smoke/` and design.md § Modelling caveat 6: new biology learns substantially slower than legacy `nociception_klinotaxis` at matched 100-ep budget (MLPPPO 3% vs 51% success; LSTMPPO 0% vs 7%). Pipeline correctness confirmed; convergence-rate investigation carried forward to T4 as T4.0g.*
+- [x] T3.3 Update existing predator-evasion configs / smoke tests to consume the corrected sensor; deprecate the chemosensory-at-distance code path or feature-flag it for archaeology only. *Two new sample configs ship under `configs/scenarios/pursuit/` (mlpppo + lstmppo with the new modules). The legacy `nociception_*` modules are kept frozen-in-place per design.md § Decision T3.2 (22 archived Phase 5 evolution configs continue to load byte-identical — guarded by `test_legacy_nociception_configs_load.py` regression).*
+- [x] T3.4 Unit + smoke tests for the corrected sensor; CI integration. *Shipped: 38 ContactZone-discrimination tests + 24 sensor-module extraction tests + 45 legacy-config regression tests. Full test suite runs via the existing pytest discovery.*
+- [x] T3.5 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T3 row. *This commit + the roadmap row flip.*
+- [x] T3.6 Brief T3 logbook entry (may live as a section in `docs/experiments/logbooks/0XX-l2-first-pass.md` rather than its own logbook — the fix is small, the verification belongs alongside the L2 cells that depend on it). *Stub logbook section authored within the fix-predator-sensing-biology change's task §10 — full section moves into the T4 L2 first-pass logbook when T4 lands.*
 
 ## Tranche 4 — L2 Initial Pass on Grid Substrate (MUST architectures × three behaviours)
 
@@ -190,25 +191,29 @@ it ships.
 
 - [ ] T4.connectome.klinotaxis — PPO weight-search on Cook 2019 connectome, chemical-synapse strict-mask, fixed gap junctions
 - [ ] T4.connectome.thermotaxis
-- [ ] T4.connectome.predator_evasion (consumes T3 corrected ASH/ADL nociception)
+- [ ] T4.connectome.predator_evasion (consumes T3 corrected two-channel biology; couples to T4.0g convergence-rate study + reward-ablation row below)
+- [ ] T4.connectome.predator_evasion_reward_ablation — compare existing `gradient_proximity` reward against `distal_chemo_penalty + binary_contact_damage_trigger` variant on the same architecture × seed grid. Carry-forward from [fix-predator-sensing-biology design.md § Decision T3.7](../fix-predator-sensing-biology/design.md).
 
 ### T4 — MLP-PPO
 
 - [ ] T4.mlp_ppo.klinotaxis
 - [ ] T4.mlp_ppo.thermotaxis
-- [ ] T4.mlp_ppo.predator_evasion (consumes T3)
+- [ ] T4.mlp_ppo.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
+- [ ] T4.mlp_ppo.predator_evasion_reward_ablation — same reward-shape ablation as the connectome row (gradient_proximity vs distal-chemo + contact-damage).
 
 ### T4 — LSTM / GRU-PPO
 
 - [ ] T4.lstm_gru_ppo.klinotaxis
 - [ ] T4.lstm_gru_ppo.thermotaxis
-- [ ] T4.lstm_gru_ppo.predator_evasion (consumes T3)
+- [ ] T4.lstm_gru_ppo.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
+- [ ] T4.lstm_gru_ppo.predator_evasion_reward_ablation — same reward-shape ablation.
 
 ### T4 — NEAT-evolved (weights only at T4; topology evolution lives at T8)
 
 - [ ] T4.neat_weights.klinotaxis
 - [ ] T4.neat_weights.thermotaxis
-- [ ] T4.neat_weights.predator_evasion (consumes T3)
+- [ ] T4.neat_weights.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
+- [ ] T4.neat_weights.predator_evasion_reward_ablation — same reward-shape ablation.
 
 ### T4 — connectome ablation
 
