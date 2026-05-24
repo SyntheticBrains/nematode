@@ -92,9 +92,9 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 10. Logbook section (T3.10)
 
-- [ ] 10.1 Per [phase6-tracking/tasks.md T3.6](../phase6-tracking/tasks.md), T3's verification + biology-change documentation lives as a section inside the T4 L2 first-pass logbook (`docs/experiments/logbooks/0XX-l2-first-pass.md`) rather than its own logbook. If that logbook doesn't exist yet at T3-merge time, author a placeholder stub with the T3 section pre-filled. If T4 lands later, T3's section moves into the canonical T4 logbook.
-- [ ] 10.2 Quantify the behavioural difference under matched conditions per [phase6-tracking/tasks.md T3.2](../phase6-tracking/tasks.md): run one of the new sample configs (e.g. `mlpppo_small_predator_evasion.yml`) with new sensors vs the equivalent existing klinotaxis-nociception config; record per-50-ep success curves + per-episode-mean reward over 100-200 ep; document the delta. This is "did the sensor correction change behaviour visibly?" not a full L2 evaluation (that's T4's job).
-- [ ] 10.3 Cross-link the T3 section from this OpenSpec change's archive entry once the change is archived post-merge.
+- [x] 10.1 Per [phase6-tracking/tasks.md T3.6](../phase6-tracking/tasks.md), T3's verification + biology-change documentation lives as a section inside the T4 L2 first-pass logbook (`docs/experiments/logbooks/024-l2-first-pass.md`) rather than its own logbook. *Shipped: logbook 024 authored as a stub with the T3 prerequisite section pre-filled. T4 body to be added when T4 begins.*
+- [x] 10.2 Quantify the behavioural difference under matched conditions per [phase6-tracking/tasks.md T3.2](../phase6-tracking/tasks.md). *100-episode head-to-head smoke evaluation completed and recorded in `tmp/evaluations/predator-sensing-biology-smoke/` + the logbook 024 T3 section. New biology learns visibly slower than legacy at matched 100-ep budget; recorded as a known finding, not a blocker.*
+- [N/A] 10.3 Cross-link the T3 section from this OpenSpec change's archive entry once the change is archived post-merge. *Deferred to post-merge archive step (the archive operation moves the change directory + spec deltas; updating the archive entry's logbook anchor is the natural next-session step).*
 
 ## 11. Pre-merge verification
 
