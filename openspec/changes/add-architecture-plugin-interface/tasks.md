@@ -116,9 +116,9 @@ Same per-architecture pattern as § 4.
 
 ## 12. Pre-merge verification
 
-- [ ] 12.1 Run full pre-commit on all changed files: `uv run pre-commit run --files <changed-files>`.
-- [ ] 12.2 Run the full quantum-nematode test suite: `uv run pytest -m "not nightly" packages/quantum-nematode/`. Triage any new failures.
-- [ ] 12.3 Run `openspec validate add-architecture-plugin-interface --strict` and confirm clean.
-- [ ] 12.4 Audit staged-file sizes vs `.gitattributes` LFS rules — flag any > 100 KB file not covered by an existing rule. The byte-equivalence pickle fixtures (originally planned, now superseded by in-process equivalence per § 2 scope decision) would have triggered this; no large binaries are expected post-decision.
-- [ ] 12.5 Scan staged content for absolute home paths (`/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing. Apply to every commit on the branch, not only the pre-merge gate.
+- [x] 12.1 Run full pre-commit on all changed files: `uv run pre-commit run --files <changed-files>`. *All hooks pass on the 22 branch-touched files.*
+- [x] 12.2 Run the full quantum-nematode test suite: `uv run pytest -m "not nightly" packages/quantum-nematode/`. Triage any new failures. *3279 passed, 1 skipped, 2 xfailed (pre-existing stale YAMLs from main); zero new failures.*
+- [x] 12.3 Run `openspec validate add-architecture-plugin-interface --strict` and confirm clean. *Validates clean.*
+- [x] 12.4 Audit staged-file sizes vs `.gitattributes` LFS rules — flag any > 100 KB file not covered by an existing rule. *Only pre-existing >100KB files (`docs/roadmap.md`, `config_loader.py`) are present; no new binaries.*
+- [x] 12.5 Scan staged content for absolute home paths (`/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing. Apply to every commit on the branch, not only the pre-merge gate. *Clean — only this task's description mentions the patterns it scans for.*
 - [ ] 12.6 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time — a prior approval doesn't authorise subsequent pushes.
