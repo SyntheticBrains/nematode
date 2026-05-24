@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel
 
@@ -116,6 +116,15 @@ def _family_set(family: str) -> set[BrainType]:
 # ``@register_brain(...)`` decorator. Read via ``__getattr__`` so the lookup
 # defers until the registry has been populated (which happens at import time
 # of ``brain.arch.__init__``, AFTER this module finishes loading).
+#
+# Static-checker-visible declarations: under ``TYPE_CHECKING`` we name the
+# attributes with their real ``set[BrainType]`` type so pyright / mypy
+# see the proper type at import sites (otherwise the ``__getattr__`` return
+# type ``object`` would propagate and break ``X in CLASSICAL_BRAIN_TYPES``).
+if TYPE_CHECKING:
+    QUANTUM_BRAIN_TYPES: set[BrainType]
+    CLASSICAL_BRAIN_TYPES: set[BrainType]
+    SPIKING_BRAIN_TYPES: set[BrainType]
 
 
 def __getattr__(name: str) -> object:
