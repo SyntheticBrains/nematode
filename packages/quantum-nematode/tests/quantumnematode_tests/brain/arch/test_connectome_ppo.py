@@ -28,7 +28,7 @@ from quantumnematode.brain.arch._registry import (
 from quantumnematode.brain.arch.connectome_ppo import (
     _MOTOR_CLASSES,
     _N_ACTIONS,
-    _N_FOOD_FEATURES,
+    _N_FOOD_FEATURES_BY_MODE,
     _SENSOR_NEURONS_FOOD,
     ConnectomePPOBrain,
     ConnectomePPOBrainConfig,
@@ -136,10 +136,25 @@ class TestGapJunctions:
 class TestSensorProjection:
     def test_food_gains_shape_matches_sensor_neuron_count(self) -> None:
         brain = _make_brain()
+        # Default sensing_mode is "oracle" → 2 features.
         assert brain.topology.food_gains.shape == (
-            _N_FOOD_FEATURES,
+            _N_FOOD_FEATURES_BY_MODE["oracle"],
             len(_SENSOR_NEURONS_FOOD),
         )
+
+    def test_food_gains_shape_klinotaxis(self) -> None:
+        brain = _make_brain(sensing_mode="klinotaxis")
+        assert brain.topology.food_gains.shape == (
+            _N_FOOD_FEATURES_BY_MODE["klinotaxis"],
+            len(_SENSOR_NEURONS_FOOD),
+        )
+
+    def test_preprocess_emits_correct_feature_count_per_mode(self) -> None:
+        brain_oracle = _make_brain()
+        brain_klino = _make_brain(sensing_mode="klinotaxis")
+        params = _make_params()
+        assert brain_oracle.preprocess(params).shape == (2,)
+        assert brain_klino.preprocess(params).shape == (3,)
 
     def test_food_gains_are_learnable(self) -> None:
         brain = _make_brain()

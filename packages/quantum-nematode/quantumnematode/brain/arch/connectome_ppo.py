@@ -74,9 +74,10 @@ _SENSOR_NEURONS_FOOD: tuple[str, ...] = (
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
 
-# Number of food-chemotaxis input features the brain consumes.
-# extract_classical_features([FOOD_CHEMOTAXIS]) returns [strength, angle].
-_N_FOOD_FEATURES = 2
+# Number of food-chemotaxis input features per sensing mode.
+# - oracle: [strength, angle]                      → 2 features
+# - klinotaxis: [concentration, lateral, dC/dt]    → 3 features
+_N_FOOD_FEATURES_BY_MODE: dict[str, int] = {"oracle": 2, "klinotaxis": 3}
 
 # Number of discrete actions.
 _N_ACTIONS = 4
@@ -93,6 +94,14 @@ class ConnectomePPOBrainConfig(BrainConfig):
     connectome_source: Literal["cook_2019_hermaphrodite"] = "cook_2019_hermaphrodite"
     enable_gap_junctions: bool = True
     chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"
+    # Sensing mode controls what env-side fields the sensor projection
+    # consumes. ``oracle`` reads ``[food_gradient_strength, food_gradient_direction]``
+    # directly (2 features, default env mode). ``klinotaxis`` reads
+    # ``[food_concentration, food_lateral_gradient, food_dconcentration_dt]``
+    # (3 features) — the biologically-faithful head-sweep mode emitted
+    # when the env YAML carries ``environment.sensing.chemotaxis_mode: klinotaxis``.
+    # The brain's ``food_gains`` matrix is sized to match.
+    sensing_mode: Literal["oracle", "klinotaxis"] = "oracle"
     # Forward-pass depth: number of chemical+gap-junction recurrence
     # iterations between sensor injection and motor pooling. The
     # canonical *C. elegans* klinotaxis pathway is roughly 4 hops
@@ -145,12 +154,13 @@ class ConnectomeTopology(nn.Module):
     food_gains: nn.Parameter
     readout: nn.Parameter
 
-    def __init__(  # noqa: C901, PLR0912, PLR0915 — one-time topology construction
+    def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
         connectome: Connectome,
         *,
         enable_gap_junctions: bool,
         forward_pass_depth: int,
+        n_food_features: int,
         device: torch.device,
         rng: np.random.Generator,
     ) -> None:
@@ -158,8 +168,12 @@ class ConnectomeTopology(nn.Module):
         if forward_pass_depth < 1:
             msg = f"forward_pass_depth must be >= 1, got {forward_pass_depth}"
             raise ValueError(msg)
+        if n_food_features < 1:
+            msg = f"n_food_features must be >= 1, got {n_food_features}"
+            raise ValueError(msg)
         self.forward_pass_depth = forward_pass_depth
         self.enable_gap_junctions = enable_gap_junctions
+        self.n_food_features = n_food_features
 
         # ── Index layout ────────────────────────────────────────────────
         self.neuron_names: list[str] = sorted(connectome.neurons)
@@ -249,12 +263,13 @@ class ConnectomeTopology(nn.Module):
             torch.tensor(food_indices, dtype=torch.long, device=device),
         )
         self.food_gains = nn.Parameter(
-            torch.zeros(_N_FOOD_FEATURES, len(_SENSOR_NEURONS_FOOD), device=device),
+            torch.zeros(n_food_features, len(_SENSOR_NEURONS_FOOD), device=device),
         )
         # Initialise gains so the food signal arrives at the sensory
         # neurons with comparable magnitude to other neural input. With
-        # 6 target neurons and strength/angle ∈ [-1, 1], unit-variance
-        # gains keep the injection in a range where tanh hasn't saturated.
+        # 6 target neurons and per-feature values in approximately [-1, 1],
+        # unit-variance gains keep the injection in a range where tanh
+        # hasn't saturated.
         nn.init.normal_(self.food_gains, mean=0.0, std=1.0)
 
         # ── Motor readout: VB/DB/VA/DA mean-pool → 4x4 learnable matrix ─
@@ -351,15 +366,16 @@ class ConnectomeTopology(nn.Module):
             need a value-head input over the full activation vector
             consume this directly without re-running the topology.
 
-        ``food_features`` is shape ``(2,)`` carrying ``[strength, angle]``
-        from the env's food-chemotaxis module. Sensor injection produces
-        the initial 302-vec hidden state; K recurrent updates iterate the
-        chemical + gap-junction sum through ``tanh``; motor pooling +
-        readout produce the action logits.
+        ``food_features`` is shape ``(self.n_food_features,)`` carrying
+        ``[strength, angle]`` in oracle mode or
+        ``[concentration, lateral, dC/dt]`` in klinotaxis mode. Sensor
+        injection produces the initial 302-vec hidden state; K recurrent
+        updates iterate the chemical + gap-junction sum through ``tanh``;
+        motor pooling + readout produce the action logits.
         """
-        if food_features.shape != (_N_FOOD_FEATURES,):
+        if food_features.shape != (self.n_food_features,):
             msg = (
-                f"food_features must have shape ({_N_FOOD_FEATURES},); "
+                f"food_features must have shape ({self.n_food_features},); "
                 f"got {tuple(food_features.shape)}"
             )
             raise ValueError(msg)
@@ -442,11 +458,15 @@ class ConnectomePPOBrain(ClassicalBrain):
             raise ValueError(msg)
         connectome = load_cook_2019_hermaphrodite()
 
+        # Derive the per-mode food-feature count.
+        self._n_food_features = _N_FOOD_FEATURES_BY_MODE[config.sensing_mode]
+
         # Topology owns weight tensors + forward pass.
         self.topology = ConnectomeTopology(
             connectome,
             enable_gap_junctions=config.enable_gap_junctions,
             forward_pass_depth=config.forward_pass_depth,
+            n_food_features=self._n_food_features,
             device=self.device,
             rng=self.rng,
         ).to(self.device)
@@ -493,17 +513,34 @@ class ConnectomePPOBrain(ClassicalBrain):
         return self._action_set
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Extract the 2-vector food-chemotaxis features used by the topology.
+        """Extract the food-chemotaxis feature vector for the topology.
 
-        Mirrors ``MLPPPOBrain.preprocess`` but hard-coded to food-chemotaxis
-        only (the spec's klinotaxis-focused sensor projection). Returns
-        ``[strength, angle]`` with strength clamped to [0, 1] and angle
-        normalised to [-1, 1].
+        Shape depends on ``config.sensing_mode``:
+
+        - ``oracle`` → ``[strength, angle]`` (2 features). ``strength`` is
+          the env's ``food_gradient_strength`` field (∈ [0, 1]); ``angle``
+          is ``food_gradient_direction`` (radians ∈ [-π, π]) normalised to
+          [-1, 1] by dividing by π.
+        - ``klinotaxis`` → ``[concentration, lateral, dC/dt]`` (3 features).
+          ``concentration`` is ``food_concentration`` (env-side scalar);
+          ``lateral`` is ``tanh(food_lateral_gradient * lateral_scale)``;
+          ``dC/dt`` is ``tanh(food_dconcentration_dt * derivative_scale)``.
+          These mirror the canonical klinotaxis sensory-module emission
+          shape so the env-side klinotaxis pipeline drives the brain
+          without re-implementing the head-sweep computation here.
         """
-        strength = float(params.food_gradient_strength or 0.0)
-        # Angle is in radians; map to [-1, 1] (the env emits ∈ [-π, π]).
-        angle = float(params.food_gradient_direction or 0.0) / np.pi
-        return np.array([strength, angle], dtype=np.float32)
+        if self.config.sensing_mode == "oracle":
+            strength = float(params.food_gradient_strength or 0.0)
+            angle = float(params.food_gradient_direction or 0.0) / np.pi
+            return np.array([strength, angle], dtype=np.float32)
+
+        # klinotaxis mode
+        strength = float(params.food_concentration or 0.0)
+        raw_lateral = float(params.food_lateral_gradient or 0.0)
+        lateral = float(np.tanh(raw_lateral * params.lateral_scale))
+        raw_deriv = float(params.food_dconcentration_dt or 0.0)
+        dcdt = float(np.tanh(raw_deriv * params.derivative_scale))
+        return np.array([strength, lateral, dcdt], dtype=np.float32)
 
     def run_brain(
         self,

@@ -15,6 +15,7 @@ from quantumnematode.agent import (
     SatietyConfig,
 )
 from quantumnematode.brain.arch import (
+    ConnectomePPOBrainConfig,
     CRHBrainConfig,
     CRHQLSTMBrainConfig,
     HybridClassicalBrainConfig,
@@ -121,6 +122,7 @@ BrainConfigType = (
     | CRHQLSTMBrainConfig
     | LSTMPPOBrainConfig
     | SpikingReinforceBrainConfig
+    | ConnectomePPOBrainConfig
 )
 
 # Type alias for predator movement patterns
