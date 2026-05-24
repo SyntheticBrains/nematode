@@ -770,6 +770,36 @@ class QuantumNematodeAgent:
         boundary_contact = self.env.is_agent_at_boundary_for(self.agent_id)
         predator_contact = self.env.is_agent_in_predator_contact_for(self.agent_id)
 
+        # Biology-driven predator-mechanosensation channel (graded intensity +
+        # anterior/posterior/lateral zone). Populated unconditionally when env
+        # predator is enabled so consumers can read the fields without depending
+        # on which sensor modules the brain has wired up.
+        predator_contact_intensity: float | None = None
+        predator_contact_zone = None
+        predator_distal_concentration: float | None = None
+        if self.env.predator.enabled:
+            predator_contact_zone = self.env.get_agent_predator_contact_zone_for(
+                self.agent_id,
+            )
+            predator_distal_concentration = self.env.get_predator_sulfolipid_concentration(
+                position=agent_pos,
+            )
+            # Graded intensity: max(0, 1 - manhattan_dist / damage_radius).
+            # Uses the predator with the smallest manhattan distance / largest
+            # damage-normalised intensity.
+            best_intensity = 0.0
+            for pred in self.env.predators:
+                if pred.damage_radius <= 0:
+                    continue
+                manhattan = abs(agent_pos[0] - pred.position[0]) + abs(
+                    agent_pos[1] - pred.position[1],
+                )
+                if manhattan > pred.damage_radius:
+                    continue
+                intensity = max(0.0, 1.0 - manhattan / pred.damage_radius)
+                best_intensity = max(best_intensity, intensity)
+            predator_contact_intensity = best_intensity
+
         # Health state
         health = agent_state.hp
         max_health = self.env.health.max_hp
@@ -892,6 +922,9 @@ class QuantumNematodeAgent:
             # Mechanosensation (physical contact)
             boundary_contact=boundary_contact,
             predator_contact=predator_contact,
+            # Biology-driven predator mechanosensation channel
+            predator_contact_intensity=predator_contact_intensity,
+            predator_contact_zone=predator_contact_zone,
             # Thermotaxis (temperature sensing)
             temperature=temperature,
             temperature_gradient_strength=temperature_gradient_strength,
@@ -925,6 +958,11 @@ class QuantumNematodeAgent:
             predator_concentration=temporal.get("predator_concentration"),
             food_dconcentration_dt=temporal.get("food_dconcentration_dt"),
             predator_dconcentration_dt=temporal.get("predator_dconcentration_dt"),
+            # Biology-driven predator chemosensation channel
+            predator_distal_concentration=predator_distal_concentration,
+            predator_distal_dconcentration_dt=temporal.get(
+                "predator_distal_dconcentration_dt",
+            ),
             temperature_ddt=temporal.get("temperature_ddt"),
             stam_state=temporal.get("stam_state"),
             derivative_scale=sensing.derivative_scale,

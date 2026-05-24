@@ -12,28 +12,28 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 2. Env-side distal-chemo alias (T3.2)
 
-- [ ] 2.1 Add `get_predator_sulfolipid_concentration(position: Position) -> float` method to env, delegating to `get_predator_concentration`. Docstring rebadges to "Liu et al. 2018 sulfolipid-analogue signal; exp-decay-sum placeholder; calibration deferred to T6/T7 per [design.md § Decision T3.5](design.md)".
-- [ ] 2.2 No new tests for this alias (it's a pure delegation); existing `get_predator_concentration` tests cover the behaviour.
+- [x] 2.1 Add `get_predator_sulfolipid_concentration(position: Position) -> float` method to env, delegating to `get_predator_concentration`. Docstring rebadges to "Liu et al. 2018 sulfolipid-analogue signal; exp-decay-sum placeholder; calibration deferred to T6/T7 per [design.md § Decision T3.5](design.md)".
+- [x] 2.2 No new tests for this alias (it's a pure delegation); existing `get_predator_concentration` tests cover the behaviour.
 
 ## 3. BrainParams field additions (T3.3)
 
-- [ ] 3.1 In [brain/arch/\_brain.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/_brain.py) `BrainParams`, add four new optional fields, all defaulting to `None`:
+- [x] 3.1 In [brain/arch/\_brain.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/_brain.py) `BrainParams`, add four new optional fields, all defaulting to `None`:
   - `predator_contact_intensity: float | None` — graded ASH response per [design.md § Decision T3.4](design.md), value ∈ [0, 1]
   - `predator_contact_zone: ContactZone | None` — anterior/posterior/lateral discrimination
   - `predator_distal_concentration: float | None` — sulfolipid-analogue concentration
   - `predator_distal_dconcentration_dt: float | None` — temporal derivative (populated by STAM)
-- [ ] 3.2 Keep legacy fields `predator_contact: bool | None`, `predator_concentration: float | None`, `predator_dconcentration_dt: float | None` untouched. Document in the field docstrings that these are the legacy paths consumed by `nociception_*` modules and the reward calculator.
-- [ ] 3.3 Import `ContactZone` from env into \_brain.py for the type annotation. Confirm no circular import (env imports BrainParams via `TYPE_CHECKING`).
+- [x] 3.2 Keep legacy fields `predator_contact: bool | None`, `predator_concentration: float | None`, `predator_dconcentration_dt: float | None` untouched. Document in the field docstrings that these are the legacy paths consumed by `nociception_*` modules and the reward calculator.
+- [x] 3.3 Import `ContactZone` from env into \_brain.py for the type annotation. Confirm no circular import (env imports BrainParams via `TYPE_CHECKING`).
 
 ## 4. Agent populates new BrainParams fields (T3.4)
 
-- [ ] 4.1 In [agent/agent.py](../../../packages/quantum-nematode/quantumnematode/agent/agent.py) (locate the `_create_brain_params` or equivalent function — exploration found field population around lines 730-815, 881-894), populate the four new BrainParams fields from env + STAM:
+- [x] 4.1 In [agent/agent.py](../../../packages/quantum-nematode/quantumnematode/agent/agent.py) (locate the `_create_brain_params` or equivalent function — exploration found field population around lines 730-815, 881-894), populate the four new BrainParams fields from env + STAM:
   - `predator_contact_intensity` from `max(0, 1 - manhattan_dist / damage_radius)` clipped to [0, 1] using existing distance computation
   - `predator_contact_zone` from `env.get_agent_predator_contact_zone_for(agent_id)`
   - `predator_distal_concentration` from `env.get_predator_sulfolipid_concentration(agent_pos)` (alias of `get_predator_concentration`)
-  - `predator_distal_dconcentration_dt` from STAM's `predator_distal` channel derivative output
-- [ ] 4.2 Verify population happens unconditionally when env predator is enabled (so T4.0c's ConnectomePPO consumer can read them even before the new sensor modules are wired into the brain's sensory_modules list).
-- [ ] 4.3 Verify legacy fields (`predator_contact`, `predator_concentration`, `predator_dconcentration_dt`) continue to be populated identically to today.
+  - `predator_distal_dconcentration_dt` from STAM's `predator_distal` channel derivative output (populated by Section 5)
+- [x] 4.2 Verify population happens unconditionally when env predator is enabled (so T4.0c's ConnectomePPO consumer can read them even before the new sensor modules are wired into the brain's sensory_modules list).
+- [x] 4.3 Verify legacy fields (`predator_contact`, `predator_concentration`, `predator_dconcentration_dt`) continue to be populated identically to today.
 
 ## 5. STAM channel split (T3.5)
 

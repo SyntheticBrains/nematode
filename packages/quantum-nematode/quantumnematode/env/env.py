@@ -2092,6 +2092,39 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 
+    def get_predator_sulfolipid_concentration(
+        self,
+        position: tuple[int, ...] | None = None,
+    ) -> float:
+        """Distal-chemosensory predator signal at position.
+
+        Biological framing: models the predator-secreted sulfolipid signal
+        documented by Liu et al. 2018 (*Nat. Commun.*), which *C. elegans*
+        detects at a distance via the ASH + ASI amphid chemosensory pathway
+        and uses to trigger escape behaviour before physical contact.
+
+        Implementation note: this method is a thin alias of
+        ``get_predator_concentration`` — the underlying exp-decay sum is a
+        placeholder for the sulfolipid signal, not a literature-calibrated
+        spatial-decay constant. Calibration against Liu et al. 2018's
+        plate-assay distances is a future-tranche concern. The alias exists
+        so the new predator-chemosensation sensor channel can read a
+        biologically-named field even though the env-side computation hasn't
+        been recalibrated yet.
+
+        Parameters
+        ----------
+        position : tuple[int, ...] | None
+            Position to query. Defaults to agent's current position.
+
+        Returns
+        -------
+        float
+            Sulfolipid-analogue predator concentration in [0, 1].
+            Returns 0.0 if predators are disabled.
+        """
+        return self.get_predator_concentration(position)
+
     def get_state(
         self,
         position: tuple[int, ...],
