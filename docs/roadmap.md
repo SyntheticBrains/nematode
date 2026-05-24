@@ -580,7 +580,7 @@ Phase 6 is broken into nine tranches with deliberate ordering — L0 ingest (T1)
 |---|---|---|---|---|---|
 | P6-0 | Phase 6 tracking scaffold (this change) | — | — | — | 🟡 in progress |
 | 1 | L0 connectome ingest — Cook 2019 hermaphrodite (302 neurons, 3709 chemical synapses, 1093 gap junctions) via direct *Nature* SI parsing; cross-validated against Witvliet 2021 nerve-ring (180 shared); forward-pass smoke + 71-test suite | L0 | 2-3 weeks | — | ✅ complete (logbook [022](experiments/logbooks/022-connectome-substrate.md)) |
-| 2 | L1 plugin refactor (dispatcher → registry + topology/rule factoring + 19-architecture migration with regression bar) + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1** | 🔲 not started |
+| 2 | L1 plugin refactor (dispatcher → registry + topology/rule factoring + 19-architecture migration with regression bar) + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1 — GO** | ✅ complete (logbook [023](experiments/logbooks/023-architecture-plugin-interface.md)) |
 | 3 | Corrected ASH/ADL contact-based nociception (owed correctness work per Logbook 011) | env-correctness | 1-2 weeks | — | 🔲 not started |
 | 4 | L2 initial pass — four MUST architectures × three behaviours, grid substrate, chemical-synapse strict-mask connectome | L2 (first pass) | 4-6 weeks | — | 🔲 not started |
 | 5 | Platform refactor — continuous-2D coordinates + continuous-action heads on existing MUST brains; plugin-parity verified in practice | env-upgrade (platform) | 3-4 weeks | **Gate 2** | 🔲 not started |
@@ -677,8 +677,8 @@ Internal validation against public data is required at Phase 6 close; external l
 
 **Required (MUST):**
 
-- 🔲 L0 connectome substrate operational: ≥ 1 real connectome dataset (Cook 2019 or OpenWorm c302) imported, with documented topology and synaptic-weight provenance.
-- 🔲 L1 architecture-plugin interface accommodates the curated MUST set above. Plugin-parity test: adding a new architecture family meets the file-count + no-per-architecture-branch checks documented in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" framing carries forward; the wall-clock target is documented but not load-bearing for the exit criterion).
+- ✅ L0 connectome substrate operational: Cook 2019 hermaphrodite connectome (302 neurons, 3709 chemical synapses, 1093 gap junctions) imported via direct *Nature* SI parsing; cross-validated against Witvliet 2021; vendored under `data/connectome/` with provenance documented. Logbook [022](experiments/logbooks/022-connectome-substrate.md).
+- ✅ L1 architecture-plugin interface ships as a decorator-registration registry; first 20-arch consumer (`ConnectomePPOBrain`) added in 5 files (≤ 6 budget) with no per-arch branches outside the new module + `_build_infra_kwargs`. Logbook [023](experiments/logbooks/023-architecture-plugin-interface.md). Gate 2 G2.b plugin-parity verification re-runs against the platform refactor in Tranche 5.
 - 🔲 L2 weight-search results across all MUST architectures on all three behaviours, at the Phase 5 statistical bar (paired-seed, bootstrap CIs, n ≥ 4 seeds per condition).
 - 🔲 L3 NEAT topology-search results comparing the wild-type connectome to NEAT-evolved topologies on at least one behaviour, with the lag-matrix or equivalent discriminative instrument.
 - 🔲 Rung 2 chemical gradients (dynamic Fick's-law + source dynamics + signal-type diffusion coefficients) operational, paired with log-concentration chemosensory adaptation kinetics.
@@ -698,7 +698,7 @@ Papers and external collaboration are explicitly optional — the project may pu
 
 Phase 6 is long enough (~6-10 months) that mid-phase gates matter. Each gate produces a written go/no-go decision in the relevant OpenSpec change, not just an implicit continuation — the same discipline Phase 5 used.
 
-- **Gate 1 (month ~2): L0 import working?** Connectome substrate loaded, validated, and basic-MLP-PPO baseline trainable on it. If not, trigger the L0 hand-curated-subset pivot (see Risk-mitigation below).
+- **Gate 1 (month ~2): L0 import working?** Connectome substrate loaded, validated, and basic-MLP-PPO baseline trainable on it. If not, trigger the L0 hand-curated-subset pivot (see Risk-mitigation below). *Outcome: **GO** (2026-05-24, logbook [023](experiments/logbooks/023-architecture-plugin-interface.md)). All four sub-criteria (G1.a–G1.d) pass: PPO-on-wild-type-Cook-2019-connectome reaches 100% sustained success on the last 100 episodes of klinotaxis foraging (R2b reference run); within 6 points of MLPPPO + LSTMPPO baselines on same task / env / seed; migration regression byte-equivalent for MLPPPO + LSTMPPO; no PIVOT to subset triggered.*
 - **Gate 2 (month ~4-5): L1 plugin parity achieved?** Adding a new architecture clears the files-touched + no-per-architecture-branches checks documented in [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/phase6-tracking/design.md) (informal "≤ 1 week" target carries forward but is not load-bearing). If not, trigger the L1 refactor pivot.
 - **Gate 3 (month ~7-8): L2 results across architectures?** Weight-search results across MUST architectures and all three behaviours in hand. If not, trigger the Phase 6a / Phase 6b sub-phase split.
 

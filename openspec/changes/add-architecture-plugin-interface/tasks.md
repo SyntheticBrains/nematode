@@ -110,9 +110,9 @@ Same per-architecture pattern as § 4.
 
 ## 11. Tracker + roadmap updates (T2.9)
 
-- [ ] 11.1 Tick [openspec/changes/phase6-tracking/tasks.md](../phase6-tracking/tasks.md) T2.1 through T2.10 sub-tasks as work lands (running edit as each section closes; final pass to confirm all ticked).
-- [ ] 11.2 Add Gate 1 decision link in [openspec/changes/phase6-tracking/tasks.md § Gate 1](../phase6-tracking/tasks.md): replace `[add link to the T2 logbook where the decision is recorded]` with the actual logbook 023 URL + section anchor. Tick the "Gate 1 decision recorded" + "Gate 1 decision link" checkboxes.
-- [ ] 11.3 Flip [docs/roadmap.md](../../../docs/roadmap.md) Phase 6 Tranche Tracker T2 row: `🟡 in progress` on first commit of this branch → `✅ complete` after Gate 1 decision is finalised. Update the Mid-Phase Decision Gates table with the Gate 1 outcome (GO/PIVOT/STOP) and a one-line summary.
+- [x] 11.1 Tick [openspec/changes/phase6-tracking/tasks.md](../phase6-tracking/tasks.md) T2.1 through T2.10 sub-tasks as work lands (running edit as each section closes; final pass to confirm all ticked).
+- [x] 11.2 Add Gate 1 decision link in [openspec/changes/phase6-tracking/tasks.md § Gate 1](../phase6-tracking/tasks.md): replace `[add link to the T2 logbook where the decision is recorded]` with the actual logbook 023 URL + section anchor. Tick the "Gate 1 decision recorded" + "Gate 1 decision link" checkboxes.
+- [x] 11.3 Flip [docs/roadmap.md](../../../docs/roadmap.md) Phase 6 Tranche Tracker T2 row: `🟡 in progress` on first commit of this branch → `✅ complete` after Gate 1 decision is finalised. Update the Mid-Phase Decision Gates table with the Gate 1 outcome (GO/PIVOT/STOP) and a one-line summary.
 
 ## 12. Pre-merge verification
 
