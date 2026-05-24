@@ -1,22 +1,22 @@
-# 024: L2 First Pass — Grid Substrate × Four MUST Architectures × Three Behaviours
+# 024: Corrected Biology-Driven Predator Sensing
 
-**Status**: stub. The T3 corrected biology-driven predator sensing surface lands first as the env-correctness prerequisite for the L2 first pass (per phase6-tracking design.md Decision 1). The full L2 evaluation (four MUST architectures × three behaviours × n ≥ 4 seeds, with the gradient_proximity-vs-distal-chemo reward ablation per T4.0g) is the body of this logbook and is authored when T4 work begins.
+**Status**: implementation complete. The corrected two-channel predator-sensing surface (contact-mechanosensory + distal-chemosensory) ships in place of the prior single chemosensory-at-distance `nociception` channel originally flagged in [Logbook 011](011-multi-agent-evaluation.md). This logbook is a stub that records the implementation outcomes; the cross-architecture empirical evaluation that consumes the corrected sensors lands in a follow-up logbook when that tranche of work begins.
 
-**Branch**: `feat/predator-sensing-biology` (T3) → `feat/l2-first-pass` or similar (T4, not yet created).
+**Branch**: `feat/predator-sensing-biology`.
 
-**OpenSpec changes**: `fix-predator-sensing-biology` (T3, this PR) → `add-l2-first-pass` or similar (T4, not yet created).
+**OpenSpec change**: `fix-predator-sensing-biology` (archived as `2026-05-24-fix-predator-sensing-biology`).
 
-**Date Started**: 2026-05-24 (T3 prerequisite section).
+**Date Started**: 2026-05-24.
 
-**Date Completed**: TBD (T4 body completes the logbook).
+**Date Completed**: 2026-05-24 (T3 implementation + verification).
 
-This stub records the T3 prerequisite work and the empirical findings T3 surfaced that T4 must consume. The L2 first-pass cells themselves (4 architectures × 3 behaviours, with all the canonical T4 ablations) land below the T3 section as a separate body when T4 begins.
+This logbook records what shipped and the empirical findings the implementation surfaced that future predator-evasion evaluations must consume.
 
-## T3 prerequisite: Corrected biology-driven predator sensing
+## Corrected biology-driven predator sensing
 
 ### Objective
 
-Replace the single chemosensory `nociception_klinotaxis` predator-detection channel — which Logbook 011 flagged as biologically wrong for the contact-based ASH/ALM/AVM/PLM nociception circuit — with a biologically-grounded two-channel model. Land the corrected env + BrainParams + STAM + sensor-module surface so the T4 L2 predator-evasion cells consume the right signal from the start instead of being re-run later.
+Replace the single chemosensory `nociception_klinotaxis` predator-detection channel — which Logbook 011 flagged as biologically wrong for the contact-based ASH/ALM/AVM/PLM nociception circuit — with a biologically-grounded two-channel model. Land the corrected env + BrainParams + STAM + sensor-module surface so future cross-architecture predator-evasion evaluations consume the right signal from the start instead of being re-run later.
 
 ### What shipped
 
@@ -44,7 +44,7 @@ Implementation across 11 commits on `feat/predator-sensing-biology`. Full archit
 | **LSTMPPO legacy** | `nociception_klinotaxis` (3-dim) | **7%** | 2.25 | -1.76 |
 | LSTMPPO new biology | mechano+chemo klinotaxis (6-dim) | 0% | 0.93 | -6.83 |
 
-Full results + per-episode breakdown in `tmp/evaluations/predator-sensing-biology-smoke/predator-sensing-biology-smoke_scratchpad.md`.
+Configs, command, and per-bin observations in [supporting/024/smoke-evaluation.md](supporting/024/smoke-evaluation.md).
 
 ### Verdict
 
@@ -72,6 +72,6 @@ Documented in [fix-predator-sensing-biology design.md § Modelling caveats](../.
 
 ______________________________________________________________________
 
-## L2 First-Pass Body (TBD — authored when T4 begins)
+## Follow-up evaluation work
 
-The full L2 evaluation (four MUST architectures × three behaviours × n ≥ 4 seeds + the T4.0g convergence-rate study + the T4.\*\_reward_ablation rows + the T4.0c sensor-projection ablation choice for connectome) lands as the body of this logbook below this stub when T4 starts. The T3 prerequisite section above becomes the "Background" or equivalent.
+The cross-architecture empirical evaluation that consumes this capability — four MUST architectures × three behaviours × n ≥ 4 seeds, plus the convergence-rate study and reward-shape ablation rows recorded as carry-forwards in [phase6-tracking/tasks.md](../../../openspec/changes/phase6-tracking/tasks.md) — is the work of a future tranche. When that tranche begins it will author its own logbook (or restructure this one); the implementation outcomes recorded above are the durable prerequisite findings either way.
