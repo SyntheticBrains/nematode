@@ -126,28 +126,19 @@ BrainConfigType = (
 # Type alias for predator movement patterns
 MovementPattern = Literal["stationary", "pursuit"]
 
-# Mapping of brain names to their config classes
-BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = {
-    "qvarcircuit": QVarCircuitBrainConfig,
-    "qqlearning": QQLearningBrainConfig,
-    "mlpreinforce": MLPReinforceBrainConfig,
-    "mlpppo": MLPPPOBrainConfig,
-    "mlpdqn": MLPDQNBrainConfig,
-    "spikingreinforce": SpikingReinforceBrainConfig,
-    "qrc": QRCBrainConfig,
-    "qrh": QRHBrainConfig,
-    "qef": QEFBrainConfig,
-    "crh": CRHBrainConfig,
-    "qsnnppo": QSNNPPOBrainConfig,
-    "qsnnreinforce": QSNNReinforceBrainConfig,
-    "hybridquantum": HybridQuantumBrainConfig,
-    "hybridclassical": HybridClassicalBrainConfig,
-    "hybridquantumcortex": HybridQuantumCortexBrainConfig,
-    "qliflstm": QLIFLSTMBrainConfig,
-    "qrhqlstm": QRHQLSTMBrainConfig,
-    "crhqlstm": CRHQLSTMBrainConfig,
-    "lstmppo": LSTMPPOBrainConfig,
-}
+
+# Mapping of brain names to their config classes — derived from the
+# brain plugin registry so adding a new architecture does not require an
+# entry here. The cast to ``type[BrainConfigType]`` is a narrowing for
+# static type-checkers: every registered ``config_cls`` is a member of
+# the ``BrainConfigType`` union at runtime by construction.
+def _build_brain_config_map() -> dict[str, type[BrainConfigType]]:
+    from quantumnematode.brain.arch._registry import get_all_registrations
+
+    return {name: reg.config_cls for name, reg in get_all_registrations().items()}  # type: ignore[misc]
+
+
+BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = _build_brain_config_map()
 
 
 def _resolve_brain_config[T: BrainConfigType](

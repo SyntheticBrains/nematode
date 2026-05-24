@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from quantumnematode.brain.arch._registry import (
     _REGISTRY,
     Registration,
-    assert_registry_matches_enum,
     family_members,
     get_all_registrations,
     get_registration,
@@ -212,28 +211,6 @@ def test_get_all_registrations_returns_copy() -> None:
     assert list_registered_brains() == {"mlpppo"}
 
 
-@pytest.mark.skip(
-    reason=(
-        "Enabled in the dispatcher/loader collapse step after every "
-        "architecture has been migrated behind the registry."
-    ),
-)
-def test_registry_matches_enum_after_full_import() -> None:
-    """After importing brain.arch, every BrainType maps to a registered name.
-
-    This is the load-bearing import-time invariant: every architecture
-    self-registers on import, and the set of registered names equals the
-    set of BrainType string values. ``assert_registry_matches_enum``
-    raises a descriptive exception on mismatch; this test simply invokes
-    it and asserts it does not raise.
-
-    NOTE: this test is enabled after every architecture has been migrated
-    behind the registry. Earlier in the migration sequence the registry
-    is intentionally a subset of the enum (architectures migrate one at a
-    time); only at the end of the migration does the registry equal the
-    enum.
-    """
-    # Importing brain.arch triggers all per-architecture decorators.
-    import quantumnematode.brain.arch  # noqa: F401
-
-    assert_registry_matches_enum()
+# Test for the registry-vs-enum invariant lives in a sibling module
+# (test_registry_enum_consistency.py) where it can see the production
+# registry state without colliding with the autouse fixture above.
