@@ -104,9 +104,9 @@ Same per-architecture pattern as § 4.
 
 ## 10. Logbook 023 + Gate 1 decision (T2.10)
 
-- [ ] 10.1 Create `docs/experiments/logbooks/023-architecture-plugin-interface.md` with sections: Implementation Summary, Migration Regression Bar Results (MLPPPO + LSTMPPO byte-equivalence proof; 17-architecture numerical-equivalence table), Gate 1 G1.c Paired-Control Measurement (learning + frozen control numbers + pass/fail verdict against the three conditions), Gate 1 Decision (GO/PIVOT/STOP with reasoning evaluating all four G1.a–G1.d criteria), T2↔T3 Handshake (the corrected ASH/ADL nociception in T3 consumes the new plugin interface; note any constraints).
-- [ ] 10.2 **Pause for user review** of the logbook before finalising the Gate 1 verdict. The project convention is that evaluation results and decision-gate verdicts are reviewed by the user before being written as final into a logbook; the verdict can be deferred to a follow-up edit.
-- [ ] 10.3 Finalise the Gate 1 decision verdict in the logbook after user review.
+- [x] 10.1 Create `docs/experiments/logbooks/023-architecture-plugin-interface.md` with sections: Implementation Summary, Migration Regression Bar Results (MLPPPO + LSTMPPO byte-equivalence proof; 17-architecture numerical-equivalence table), Gate 1 G1.c Paired-Control Measurement (learning + frozen control numbers + pass/fail verdict against the three conditions), Gate 1 Decision (GO/PIVOT/STOP with reasoning evaluating all four G1.a–G1.d criteria), T2↔T3 Handshake (the corrected ASH/ADL nociception in T3 consumes the new plugin interface; note any constraints).
+- [x] 10.2 **Pause for user review** of the logbook before finalising the Gate 1 verdict. User reviewed the R2/R2b/R2c/R2d four-way comparison and the draft verdict framing on 2026-05-24 before the logbook was finalised; "Proceed" approval recorded.
+- [x] 10.3 Finalise the Gate 1 decision verdict in the logbook after user review.
 
 ## 11. Tracker + roadmap updates (T2.9)
 
