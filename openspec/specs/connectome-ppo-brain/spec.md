@@ -1,6 +1,14 @@
-# connectome-ppo-brain Specification Delta
+# connectome-ppo-brain Specification
 
-## ADDED Requirements
+## Purpose
+
+The `connectome-ppo-brain` capability provides a PPO-trainable brain architecture whose topology is the wild-type *C. elegans* Cook 2019 hermaphrodite connectome consumed from the [connectome-substrate](../connectome-substrate/spec.md) capability. Chemical synapses are subject to a strict-mask: only edges present in the wild-type adjacency carry PPO-learnable weights, and non-existent edges remain pinned to zero across every optimiser step. Gap junctions are non-learnable, with weights fixed to Cook 2019 synapse counts and symmetric fan-in normalised at construction time.
+
+The brain registers through the [brain-architecture](../brain-architecture/spec.md) plugin registry as `connectomeppo` (`BrainType.CONNECTOMEPPO`, family `classical`) and is instantiable through the same `instantiate_brain(...)` code path as every other brain. Two `sensing_mode` variants ship: `oracle` consumes a 2-feature `[strength, angle]` food-chemotaxis vector, `klinotaxis` consumes the env-side klinotaxis sensory-module 3-feature emission `[concentration, lateral_gradient, dC/dt]`. Motor readout pools VB / DB / VA / DA motor-class activations and projects them to the 4-action `DEFAULT_ACTIONS` set via a learnable 4×4 matrix. Proprioception / mechanosensation / nociception projections are out of scope for this capability and live in downstream work.
+
+The capability is the first closed-loop learning result on the real *C. elegans* connectome in this codebase, and the first non-trivial consumer of the [brain-architecture](../brain-architecture/spec.md) `BrainTopology` Protocol.
+
+## Requirements
 
 ### Requirement: Connectome PPO Brain Architecture
 
@@ -16,9 +24,11 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 #### Scenario: Chemical-synapse strict-mask enforces wild-type adjacency
 
 - **GIVEN** a `ConnectomePPOBrain` constructed with `chemical_mask_mode: "strict"`
+- **WHEN** the topology forward pass evaluates the chemical drive term
+- **THEN** the forward SHALL use `W_chem * M_chem` so that backpropagation's chain rule pins gradients on positions where `M_chem[i, j] = False` to exactly zero
 - **WHEN** the PPO learning rule completes any gradient step on the chemical-synapse weight tensor
-- **THEN** the brain SHALL apply `topology.apply_weight_mask(...)` to project the updated weights onto the strict-mask
-- **AND** all weight values along non-existent chemical-synapse edges (where `M_chem[i, j] = False`) SHALL be exactly zero
+- **THEN** the brain SHALL additionally apply `topology.apply_weight_mask(...)` to project the updated weights onto the strict-mask (defence-in-depth; combined with the forward-pass masking this guarantees the strict-mask invariant holds across every training step)
+- **AND** all weight values along non-existent chemical-synapse edges (where `M_chem[i, j] = False`) SHALL be exactly zero at every step
 - **AND** weight values along existing edges SHALL be the unprojected PPO update value
 
 #### Scenario: Gap-junction weights remain fixed across PPO updates
@@ -32,14 +42,17 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 #### Scenario: Gap-junction fan-in normalisation at construction
 
 - **WHEN** the brain constructs the gap-junction weight tensor from `connectome.gap_junctions`
-- **THEN** each row `G_gap[i, :]` SHALL be scaled by `1 / max(1, sum(G_gap[i, :]))` so per-neuron total gap-junction input is bounded
+- **THEN** each entry `G_gap[i, j]` SHALL be divided by `sqrt(max(1, d_i) * max(1, d_j))` where `d_i` is the gap-junction degree (number of non-zero entries) of neuron `i`
+- **AND** the symmetric scaling SHALL preserve the symmetry `G_gap[a, b] == G_gap[b, a]` of the underlying bidirectional physics (a pure row-or-column scaling would break the symmetry constraint asserted by the "Gap-junction weights remain fixed across PPO updates" scenario above)
 - **AND** the scaling SHALL be applied exactly once at construction time
 
 #### Scenario: Sensor projection routes env input to canonical sensory neurons
 
 - **WHEN** `run_brain()` receives a `BrainParams` with food-chemotaxis input
-- **THEN** the food-chemotaxis signal SHALL be additively injected onto the ASE-left, ASE-right, AWC-left, AWC-right, AWA-left, and AWA-right sensory neurons' input vector
-- **AND** the injection SHALL be scaled by a per-input learnable gain (PPO-learnable scalar parameter, separate from the chemical-synapse weight matrix)
+- **THEN** the food-chemotaxis feature vector SHALL be additively injected onto the ASEL, ASER, AWCL, AWCR, AWAL, AWAR sensory neurons' input vector via a learnable gain matrix of shape `(n_food_features, 6)`
+- **AND** the gain matrix SHALL be PPO-learnable (separate from the chemical-synapse weight matrix)
+- **AND** the value of `n_food_features` SHALL be determined by the `sensing_mode` config field: `2` in `oracle` mode (features `[strength, angle]`), `3` in `klinotaxis` mode (features `[concentration, lateral_gradient, dC/dt]` matching the env-side klinotaxis sensory-module emission shape)
+- **AND** proprioception / mechanosensation / nociception sensor projections SHALL NOT be implemented at this revision — they are out of scope for the T2 connectome-PPO brain and ship in T3 (corrected ASH/ADL nociception) and T4 (sensor-projection ablation)
 
 #### Scenario: Motor readout aggregates motor-class activations
 
@@ -52,7 +65,7 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 
 - **WHEN** the brain config specifies `forward_pass_depth: K` for an integer K ≥ 1
 - **THEN** the forward pass SHALL iterate the connectome update `h = activation((W_chem * M_chem)ᵀ @ h + G_gapᵀ @ h)` exactly K times before the motor readout
-- **AND** the default value of K SHALL be 1
+- **AND** the default value of K SHALL be 4 to match the canonical klinotaxis pathway depth (sensory → primary-interneuron → command-interneuron → motor; K=1 produces a degenerate output because the food signal cannot reach motor neurons in one chemical-synapse hop)
 
 ### Requirement: ConnectomePPOBrainConfig
 
@@ -65,16 +78,18 @@ The brain SHALL be configured via a Pydantic `ConnectomePPOBrainConfig` model th
   - `connectome_source: Literal["cook_2019_hermaphrodite"]`
   - `enable_gap_junctions: bool` (default `True`)
   - `chemical_mask_mode: Literal["strict", "soft_prior"]` (default `"strict"`)
-  - `forward_pass_depth: int` (default `1`, must be ≥ 1)
+  - `forward_pass_depth: int` (default `4`, must be ≥ 1 — see the "Forward-pass depth K is configurable" scenario above for the rationale)
   - `freeze_updates: bool` (default `False`, drives the Gate 1 G1.c paired control)
+  - `sensing_mode: Literal["oracle", "klinotaxis"]` (default `"oracle"`) — controls the env-side feature shape consumed by the sensor projection. In `oracle` mode the brain reads `[food_gradient_strength, food_gradient_direction]` (2 features); in `klinotaxis` mode the brain reads `[food_concentration, food_lateral_gradient, food_dconcentration_dt]` (3 features) matching the env-side klinotaxis sensory-module emission shape. The learnable food-gain matrix is sized to match (`2 × 6` or `3 × 6`).
 - **AND** the config SHALL accept the PPO hyperparameters used by `MLPPPOBrainConfig` (learning rate, clip range, value-loss coefficient, entropy coefficient, gradient-clip norm, batch size, etc.)
 
 #### Scenario: Soft-prior mode allows new chemical edges to grow
 
 - **GIVEN** a `ConnectomePPOBrainConfig` with `chemical_mask_mode: "soft_prior"`
-- **WHEN** the PPO learning rule completes a gradient step
-- **THEN** `topology.apply_weight_mask(...)` SHALL be a no-op (the candidate weight tensor is returned unchanged)
-- **AND** new non-zero weights MAY appear along edges where `M_chem[i, j] = False`
+- **WHEN** the topology forward pass evaluates the chemical drive term
+- **THEN** the forward SHALL use the raw `W_chem` tensor (not `W_chem * M_chem`), so backpropagation produces non-zero gradients on every entry of `W_chem` — including positions where `M_chem[i, j] = False`
+- **AND** the brain's update loop SHALL skip the post-optimiser-step strict-mask projection (the projection only runs under `chemical_mask_mode: "strict"`)
+- **AND** new non-zero weights MAY therefore appear along edges where `M_chem[i, j] = False` as PPO optimises
 - **AND** the initial weight tensor SHALL still be initialised from the wild-type chemical-synapse adjacency (so the prior persists at the start of training)
 
 #### Scenario: Frozen-updates flag drives the Gate 1 G1.c paired control

@@ -1,4 +1,13 @@
-"""Module for quantum brain architectures."""
+"""Module for quantum nematode brain architectures.
+
+Every architecture self-registers via a ``@register_brain`` decorator on
+its Brain class. The dispatcher in ``utils/brain_factory.py`` and the YAML
+loader in ``utils/config_loader.py`` both consume the registry rather than
+hand-maintained tables.
+
+To add a new architecture, see ``docs/architecture/plugin-developer-guide.md``
+for the walkthrough and the files-touched budget.
+"""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
 from ._registry import (
@@ -14,6 +23,7 @@ from ._reservoir_hybrid_base import ReservoirHybridBase, ReservoirHybridBaseConf
 from ._reservoir_lstm_base import ReservoirLSTMBase, ReservoirLSTMBaseConfig
 from ._rule import LearningRule, RuleStepReport
 from ._topology import BrainTopology
+from .connectome_ppo import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from .crh import CRHBrain, CRHBrainConfig
 from .crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
@@ -50,6 +60,8 @@ __all__ = [
     "CRHQLSTMBrain",
     "CRHQLSTMBrainConfig",
     "ClassicalBrain",
+    "ConnectomePPOBrain",
+    "ConnectomePPOBrainConfig",
     "HybridClassicalBrain",
     "HybridClassicalBrainConfig",
     "HybridQuantumBrain",

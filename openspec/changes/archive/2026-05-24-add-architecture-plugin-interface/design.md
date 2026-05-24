@@ -147,14 +147,16 @@ The `ConnectomeTopology` consumed by `ConnectomePPOBrain` is constructed from a 
 **Gap-junction layer** (non-learnable, fan-in normalised):
 
 - 302 × 302 symmetric weight tensor `G_gap`. Built from `Connectome.gap_junctions` with `G_gap[a, b] = G_gap[b, a] = float(gj.weight)` (Cook 2019 counts as fixed weights per [phase6-tracking/design.md § Decision 7](../phase6-tracking/design.md)).
-- Fan-in normalisation: each row scaled by `1 / max(1, sum(G_gap[i, :]))` so total gap-junction input per neuron is bounded. Same scheme as the T1 [smoke.py](../../../packages/quantum-nematode/quantumnematode/connectome/smoke.py).
+- Fan-in normalisation: symmetric scaling — each entry `G[i, j]` is divided by `sqrt(max(1, d_i) * max(1, d_j))` where `d_i` is the gap-junction degree of neuron `i`. Symmetric scaling (rather than per-row scaling) preserves the bidirectional physics: `G_gap[a, b] == G_gap[b, a]` for every pair.
 - `G_gap.requires_grad = False`; never updated by the PPO rule.
 
 **Sensor projection** (env → connectome input):
 
-- `food_chemotaxis` env input → `ASE` (left + right) + `AWC` (left + right) + `AWA` (left + right) sensory neurons (canonical Bargmann-lab klinotaxis sensory pathway). The 1D chemotaxis gradient signal is broadcast to all six sensory neurons identically; differential left-right encoding is added in T5/T6 when continuous-2D coordinates make it meaningful.
-- `proprioception` env input → `AVA` + `AVB` command interneurons (driven by Bargmann-lab anatomical convention; the actual klinotaxis pathway routes proprioception through interneurons before reaching motor neurons).
-- Sensor inputs are placed onto the connectome via additive injection on the sensory neurons' activation vector, scaled by a per-input learnable gain (a single scalar each, registered as PPO-learnable parameters but separate from the chemical-synapse weight matrix).
+- `food_chemotaxis` env input → `ASEL` / `ASER` / `AWCL` / `AWCR` / `AWAL` / `AWAR` sensory neurons (canonical Bargmann-lab klinotaxis sensory pathway). Two `sensing_mode` variants ship:
+  - `oracle` (default) — 2 input features `[strength, angle]` from the env's oracle food gradient, broadcast to the 6 sensory neurons through a learnable `2 × 6` gain matrix.
+  - `klinotaxis` — 3 input features `[concentration, lateral_gradient, dC/dt]` matching the env-side klinotaxis sensory-module emission shape, projected through a learnable `3 × 6` gain matrix. This is the biologically faithful head-sweep variant; the env-side klinotaxis pipeline drives the brain without re-implementing head-sweep computation in the brain.
+- The `2 × 6` (oracle) or `3 × 6` (klinotaxis) gain matrix is a PPO-learnable parameter set, separate from the chemical-synapse weight matrix. Sensor inputs are placed onto the connectome via additive injection on the sensory neurons' activation vector.
+- Proprioception input was scoped in early design but **not** implemented in T2. The current scope is food chemotaxis only; proprioception / mechanosensation / nociception projections are deferred to T3 (corrected ASH/ADL nociception) and T4 (sensor-projection ablation per `T4.0c`).
 
 **Motor readout** (connectome → 4-action logits):
 
@@ -166,7 +168,7 @@ The `ConnectomeTopology` consumed by `ConnectomePPOBrain` is constructed from a 
 ```text
 sensory_input = sensor_projection(env_obs)           # 302-vec, mostly zeros
 h = sensory_input
-for _ in range(K):                                    # K = 1 in T2 default
+for _ in range(K):                                    # K = 4 default
     chem_drive = (W_chem * M_chem).T @ h              # 302-vec
     gap_drive  = G_gap.T @ h                          # 302-vec, fixed
     h = activation(chem_drive + gap_drive)            # tanh per neuron
@@ -174,13 +176,14 @@ motor_activations = motor_class_pool(h)               # 4-vec
 action_logits = readout @ motor_activations           # 4-vec → DEFAULT_ACTIONS
 ```
 
-K (forward-pass depth) is configurable; T2 default is K = 1 (matches the smoke-test forward-pass shape). T4 may sweep K as part of its sensor-projection ablation.
+K (forward-pass depth) is configurable; the default is K = 4 to match the canonical *C. elegans* klinotaxis pathway (sensory → primary-interneuron → command-interneuron → motor). K = 1 was considered during early drafts but rejected — at K = 1 the food signal cannot reach motor neurons in a single chemical-synapse hop, producing degenerate output. T4 may sweep K as part of its sensor-projection ablation.
 
 **Alternatives considered:**
 
 - **No sensor / motor projection layer; require the connectome topology to be self-sufficient**. Rejected: the connectome doesn't natively expose "the env observation" — sensor neurons need an input from outside the connectome to start the forward pass. Some adapter is biologically inevitable.
-- **Strict-mask the sensor/motor projection too** (don't allow learnable input gains). Rejected: makes the connectome brain untrainable at K=1 (no learnable parameters reach the chemical synapses through the sensor path). The strict-mask claim is specifically about the chemical-synapse adjacency, not about the env→connectome adapter.
+- **Strict-mask the sensor/motor projection too** (don't allow learnable input gains). Rejected: makes the connectome brain untrainable at any K (no learnable parameters reach the chemical synapses through the sensor path). The strict-mask claim is specifically about the chemical-synapse adjacency, not about the env→connectome adapter.
 - **Differential left/right chemotaxis encoding at T2 (anticipating continuous-2D)**. Rejected as premature: T2 ships on the discrete grid where left-right gradient differential is not exposed by the env. Add this in T5 when continuous-2D is available.
+- **K = 1 default**. Considered in early drafts (matched the smoke-test forward-pass shape) but rejected during implementation — empirical: K = 1 produces degenerate output because the food signal needs ≥ 4 chemical-synapse hops to reach motor neurons under the strict-mask wild-type adjacency. K = 4 was adopted as the default and validated through Gate 1 G1.c.
 
 ### Decision 5 — Migration regression-bar declaration
 
@@ -210,18 +213,18 @@ Per [phase6-tracking/design.md § Decision 6 § Gate 1](../phase6-tracking/desig
 
 **Smoke config**: `configs/scenarios/foraging/connectome_ppo_klinotaxis.yml`. Forked from [lstmppo_small_klinotaxis.yml](../../../configs/scenarios/foraging/lstmppo_small_klinotaxis.yml) with brain swapped to `connectomeppo`. Keeps STAM, keeps `chemotaxis_mode: klinotaxis`, keeps the same env/sensing/reward shape so the control comparison is apples-to-apples.
 
-**Episode budget**: 100 episodes (the Gate 1 floor). Single seed for the smoke decision (G1.c is a smoke check, not a statistical one; T4 runs the full n ≥ 4 seeds).
+**Episode budget**: ≥ 100 episodes (the Gate 1 floor). Single seed for the smoke decision (G1.c is a smoke check, not a statistical one; T4 runs the full n ≥ 4 seeds). *Shipped: 500-episode learning + 500-episode frozen-control under seed 2026 (the connectome forward pass turned out cheap enough at this scale that 500 fits the same wall-time budget; the longer run lets the gate criterion check converged-policy steady-state, not just early-training shape).*
 
 **Learning run**: standard PPO config (`learning_rate=3e-4`, batch-style hyperparameters mirrored from MLPPPO).
 
 **Frozen-random-weights control**: same brain config except PPO updates disabled. Implementation strategy:
 
-- A `freeze_updates: bool = False` flag on `ConnectomePPOBrainConfig`. When True, the PPO rule's `step()` is a no-op (gradient computation skipped; optimiser never invoked). Random initial weights persist across all 100 episodes.
+- A `freeze_updates: bool = False` flag on `ConnectomePPOBrainConfig`. When True, the PPO rule's `step()` is a no-op (gradient computation skipped; optimiser never invoked). Random initial weights persist across all 500 episodes.
 - Same RNG seed as the learning run (so the action sampling stream is identical given the same logits).
 
 **Pass conditions** (all required for Gate 1 G1.c GO):
 
-1. No NaNs or Infs in any per-step logit or parameter tensor across all 100 episodes (`torch.isfinite(...).all()` per step).
+1. No NaNs or Infs in any per-step logit or parameter tensor across all 500 episodes (`torch.isfinite(...).all()` per step).
 2. Last-25 mean episode return (learning run) ≥ 1.10 × last-25 mean episode return (frozen control). **The 10% margin is the load-bearing claim that PPO weight tuning is adding signal over the same connectome topology under random weights.**
 3. Last-25 mean episode return (learning run) > first-25 mean episode return (learning run). **Anti-collapse check: monotonic improvement signal across the run.**
 
@@ -277,20 +280,20 @@ These two hooks are purely additive and cost essentially nothing to T2's scope.
 T2 ships as a single OpenSpec change (single feature branch, single PR series within the change) per the user's confirmed scope decision. Implementation sequencing (drives the `tasks.md` ordering):
 
 1. **Scaffold the registry** — `_registry.py` + `_topology.py` + `_rule.py` modules, unit tests for the registry (register / instantiate / duplicate-name detection / unknown-name error).
-2. **Migrate MLPPPO** — decorator + internal topology/rule extraction. Capture byte-equivalence fixture pre-refactor; assert post-refactor. **Migration validation gate: if MLPPPO byte-equivalence fails, halt migration, re-design Decision 2's strategy.**
-3. **Migrate LSTMPPO** — same pattern. **Migration validation gate: if LSTMPPO byte-equivalence fails, halt migration.**
-4. **Migrate the 7 classical / spiking brains** — batch migration, numerical equivalence at `atol=1e-7`. Per-architecture pass/fail recorded.
-5. **Migrate the 10 quantum + spiking-quantum brains** — batch migration with the deterministic-simulator strategy from Risk A. Per-architecture pass/fail recorded; any failure escalates to the fallback tolerance tier.
+2. **Migrate MLPPPO** — decorator-only addition per the Decision 5 scope amendment (no internal topology/rule extraction at T2). In-process two-construct equivalence test instead of a pickle pre/post fixture: instantiate the brain via the registry and via the direct constructor under pinned seeds and assert byte-identical parameter tensors. **Migration validation gate: if MLPPPO equivalence fails, halt migration, re-design Decision 2's strategy.**
+3. **Migrate LSTMPPO** — same pattern. **Migration validation gate: if LSTMPPO equivalence fails, halt migration.**
+4. **Migrate the 7 classical / spiking brains** — batch decorator-only migration. The pre-existing per-architecture test suites remain green by construction (no executing code moves). Per-architecture pass/fail recorded.
+5. **Migrate the 10 quantum + spiking-quantum brains** — same batch pattern. Per-architecture pass/fail recorded; any unexpected drift escalates to the fallback tolerance tier from Risk A.
 6. **Implement `ConnectomePPOBrain`** — topology construction from `Connectome`, sensor projection, motor readout, PPO rule wiring. Unit tests for shape + finiteness + strict-mask invariant + gap-junction-frozen invariant.
 7. **G1.c smoke campaign** — run the klinotaxis learning + frozen-control pair; record measurements; evaluate Gate 1 G1.c pass conditions.
 8. **Plugin-developer documentation** — write the walkthrough; include the hypothetical-addition exercise per [phase6-tracking/tasks.md T2.7](../phase6-tracking/tasks.md).
 9. **Gate 1 decision** — write the GO/PIVOT/STOP decision in [logbook 023](../../../docs/experiments/logbooks/), evaluating all four G1.a–G1.d criteria. Tick T2 sub-tasks + Gate 1 decision link in [phase6-tracking/tasks.md](../phase6-tracking/tasks.md). Flip the Phase 6 Tranche Tracker T2 row to ✅ complete in [docs/roadmap.md](../../../docs/roadmap.md).
 
-**Rollback strategy**: T2 lands on a feature branch and merges via PR. Per-architecture migration is in separate commits so a single arch can be reverted independently. The pre-refactor byte-equivalence fixtures are committed under `tests/.../test_data/` and remain valid after a revert. If Gate 1 STOPs, the registry refactor still has standalone value (it's a clean dispatcher → registry refactor regardless of the connectome brain outcome); the connectome brain commits can be reverted, leaving the registry in place.
+**Rollback strategy**: T2 shipped as two feature branches merged via PR (`feat/architecture-plugin-interface` + `feat/connectome-ppo-brain`). Per-architecture migration is in separate commits so a single arch can be reverted independently. The in-process equivalence tests at `tests/quantumnematode_tests/brain/arch/test_registration_equivalence.py` remain valid after a revert (no external fixture files to maintain). If a follow-up STOP signal arrives, the registry refactor still has standalone value (it's a clean dispatcher → registry refactor regardless of the connectome brain outcome); the connectome brain commits can be reverted, leaving the registry in place.
 
 ## Open Questions
 
-- **What's the exact K (forward-pass depth) for `ConnectomeTopology`?** T2 defaults to K=1 for parity with the smoke-test forward-pass; T4's sensor-projection ablation may sweep K. The default is documented but not formally evaluated against alternatives in T2.
+- **What's the exact K (forward-pass depth) for `ConnectomeTopology`?** Resolved at implementation: K = 4, matching the canonical klinotaxis pathway depth (sensory → primary-interneuron → command-interneuron → motor). Early-draft K = 1 was rejected — the food signal cannot reach motor neurons in one chemical-synapse hop under the strict-mask, producing degenerate output. T4's sensor-projection ablation may sweep K further.
 - **Should the readout layer be PPO-learnable or frozen-random?** T2 defaults to PPO-learnable (matches the Bargmann-lab convention that motor readout is also plastic in vivo); a frozen-random readout is a possible T4-scope ablation. Decision 4 commits to PPO-learnable.
-- **What's the smoke-config seed?** TBD during implementation; whatever seed is chosen is committed to the YAML and used identically for the learning run + frozen control + byte-equivalence captures. Single-seed by design (G1.c is a smoke check).
-- **`np.allclose` vs `torch.allclose` for the 17-arch tolerance bar?** Both work; `torch.allclose` matches the existing test style. Will commit to `torch.allclose(rtol=0, atol=1e-7)` during implementation.
+- **What's the smoke-config seed?** Resolved at implementation: seed `2026`, pinned in `configs/scenarios/foraging/connectome_ppo_klinotaxis*.yml` and used identically for the learning run + frozen control. Single-seed by design (G1.c is a smoke check).
+- **`np.allclose` vs `torch.allclose` for the 17-arch tolerance bar?** Made moot by the Decision 5 scope amendment — the 17 architectures ship as decorator-only migrations with no executing code change, so the pre-existing per-architecture test suites are the contract; no new tolerance test was added.

@@ -31,7 +31,7 @@ Three new module files under `packages/quantum-nematode/quantumnematode/brain/ar
 
 Three modified module files:
 
-- `utils/brain_factory.py` — the 19-branch (1 `if` + 18 `elif`) `setup_brain_model()` dispatcher collapses to a thin shim that builds per-architecture infrastructure kwargs and delegates to `instantiate_brain(brain_type.value, brain_config, **infra_kwargs)`. The function signature is preserved exactly; the body shrinks from 459 LOC to ~170 LOC.
+- `utils/brain_factory.py` — the 19-branch (1 `if` + 18 `elif`) `setup_brain_model()` dispatcher collapses to a thin shim that builds per-architecture infrastructure kwargs and delegates to `instantiate_brain(brain_type.value, brain_config, **infra_kwargs)`. The function signature is preserved exactly; the file shrinks from 459 LOC to 240 LOC (~ 220 LOC removed).
 - `utils/config_loader.py` — `BRAIN_CONFIG_MAP` (formerly 19 hand-maintained entries) is now derived from the registry via `{name: reg.config_cls for name, reg in get_all_registrations().items()}`. `_resolve_brain_config` helper at [config_loader.py:153-216](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) is unchanged (still useful for raw-dict → Pydantic resolution).
 - `brain/arch/dtypes.py` — `BrainType` migrates from `Enum` to `StrEnum` (member values are already strings; the change makes `BrainType.MLP_PPO == "mlpppo"` evaluate True). `QUANTUM_BRAIN_TYPES` / `CLASSICAL_BRAIN_TYPES` / `SPIKING_BRAIN_TYPES` sets are now derived from registry `families` metadata via lazy module `__getattr__` (PEP 562), so adding a new architecture no longer requires editing these set literals. An architecture may carry multiple family tags (e.g. `QSNN_REINFORCE` is in both `QUANTUM_BRAIN_TYPES` and `SPIKING_BRAIN_TYPES`).
 
@@ -44,15 +44,15 @@ Wired into `brain/arch/__init__.py`:
 - Re-exports `register_brain`, `instantiate_brain`, `get_registration`, `list_registered_brains`, `get_all_registrations`, `BrainTopology`, `LearningRule`, `Registration`, `RuleStepReport`.
 - Invokes `assert_registry_matches_enum()` after all architecture modules have imported, so accidental enum/registry drift fails loudly at import time.
 
-### 2. Connectome-Constrained Brain (`connectome-ppo-brain` NEW) — follow-up PR
+### 2. Connectome-Constrained Brain (`connectome-ppo-brain` NEW)
 
-**Scope split (implementation-time amendment):** the work described in this subsection lands in a follow-up PR. The first PR ships the `brain-architecture` capability changes (§ 1 above); the follow-up PR ships everything in this subsection together with the klinotaxis smoke config (§ 3), the plugin-developer documentation (§ 5), the implementation logbook + Gate-1 decision (§ 6), and the tracker / roadmap updates (§ 7).
+**Scope split (retrospective):** the work in this subsection plus § 3 (klinotaxis smoke config), § 5 (plugin-developer documentation), § 6 (implementation logbook + Gate-1 decision), and § 7 (tracker / roadmap updates) landed on the `feat/connectome-ppo-brain` branch as a follow-up to the registry PR. Both branches merged into `main`; the OpenSpec change is now ready to archive.
 
 New module `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py`:
 
-- `ConnectomePPOBrain` class implementing the `Brain` Protocol. Topology built from `Connectome` (T1 data model) via the T1↔T2 API sketch iteration pattern: chemical-synapse strict-mask matrix from `Connectome.chemical_synapses` (302 × 302 sparse, weights PPO-learnable along existing edges, non-existent edges pinned to zero), gap-junction matrix from `Connectome.gap_junctions` (symmetric, fixed Cook 2019 counts, fan-in normalised — per the [smoke.py](../../../packages/quantum-nematode/quantumnematode/connectome/smoke.py) precedent).
-- `ConnectomePPOBrainConfig` (Pydantic): `connectome_source: Literal["cook_2019_hermaphrodite"]`, `enable_gap_junctions: bool = True`, `chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"`, plus PPO hyperparameters mirroring `MLPPPOBrainConfig`.
-- Sensor projection: food-chemotaxis input → ASE/AWC/AWA sensory neurons (canonical Bargmann-lab klinotaxis pathway; cross-references `validate_known_pathways` in [connectome/validate.py](../../../packages/quantum-nematode/quantumnematode/connectome/validate.py)). Motor readout: VB/DB/VA/DA motor classes aggregated to the 4-action `DEFAULT_ACTIONS` set ([brain/actions.py:20](../../../packages/quantum-nematode/quantumnematode/brain/actions.py)). This is the T2 default; the choice itself is a T4-scope ablation per [phase6-tracking/tasks.md T4.0c](../phase6-tracking/tasks.md).
+- `ConnectomePPOBrain` class implementing the `Brain` Protocol. Topology built from `Connectome` (T1 data model) via the T1↔T2 API sketch iteration pattern: chemical-synapse strict-mask matrix from `Connectome.chemical_synapses` (302 × 302 sparse, weights PPO-learnable along existing edges, non-existent edges pinned to zero), gap-junction matrix from `Connectome.gap_junctions` (symmetric fan-in normalisation `G[i, j] / sqrt(d_i * d_j)`, fixed Cook 2019 counts, non-learnable — per the [smoke.py](../../../packages/quantum-nematode/quantumnematode/connectome/smoke.py) precedent).
+- `ConnectomePPOBrainConfig` (Pydantic): `connectome_source: Literal["cook_2019_hermaphrodite"]`, `enable_gap_junctions: bool = True`, `chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"`, `forward_pass_depth: int = 4`, `freeze_updates: bool = False`, `sensing_mode: Literal["oracle", "klinotaxis"] = "oracle"` (the klinotaxis adapter was added late in implementation to consume the env-side klinotaxis sensory-module emission shape), plus PPO hyperparameters mirroring `MLPPPOBrainConfig`.
+- Sensor projection: food-chemotaxis input → ASEL / ASER / AWCL / AWCR / AWAL / AWAR sensory neurons (canonical Bargmann-lab klinotaxis pathway; cross-references `validate_known_pathways` in [connectome/validate.py](../../../packages/quantum-nematode/quantumnematode/connectome/validate.py)). Per-mode gain matrix: `2 × 6` in oracle mode, `3 × 6` in klinotaxis mode. Motor readout: VB / DB / VA / DA motor classes mean-pooled to a 4-vec then projected through a learnable 4×4 readout matrix to the 4-action `DEFAULT_ACTIONS` set ([brain/actions.py:20](../../../packages/quantum-nematode/quantumnematode/brain/actions.py)). The choice of sensor-neuron set + motor readout is the T2 default; the broader sensor-projection ablation lives at T4 per [phase6-tracking/tasks.md T4.0c](../phase6-tracking/tasks.md). Proprioception / mechanosensation / nociception are out of scope at T2 and ship in T3.
 - Strict-mask is the T2 default per Decision 7. Soft-prior is implemented but not used in T2's Gate 1 evaluation (it's a T4-scope ablation).
 
 ### 3. Klinotaxis Smoke Config (configs/)
@@ -63,17 +63,17 @@ New module `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.
 
 New tests under `packages/quantum-nematode/tests/quantumnematode_tests/`:
 
-**First PR (registry capability):**
+**Registry capability tests:**
 
 - `brain/arch/test_registry.py` — registry round-trip (register / get / list); duplicate-name detection; unknown-name error path; `instantiate_brain` round-trip with wrong-config-type rejection; `family_members` partitioning; `get_all_registrations` returns-a-copy invariant. Uses an autouse fixture to snapshot-and-clear the module-level registry around each test.
 - `brain/arch/test_registry_enum_consistency.py` — separate module (outside the autouse-fixture scope) that asserts `BrainType` enum string values equal the registered names at import time. Confirms the production-state invariant.
 - `brain/arch/test_registration_equivalence.py` — in-process equivalence test for MLPPPO + LSTMPPO. Instantiates each brain twice (direct constructor + via `instantiate_brain`) under pinned seeds, asserts byte-identical parameter tensors + matching chosen-action lists with `< 1e-12` probability divergence. Replaces the original pickle-fixture pre/post-refactor capture per the scope decision in [design.md Decision 5](design.md).
-- `utils/test_config_loader_yaml_compat.py` — parametrised over every YAML under [configs/scenarios/](../../../configs/scenarios/); asserts each loads to a valid brain config via `configure_brain(load_simulation_config(...))`. 189/191 pass on the post-refactor branch; 2 xfailed (`qrc_small_oracle.yml` and `qsnnreinforce_small_oracle.yml`) document pre-existing stale-YAML breakage on main.
+- `utils/test_config_loader_yaml_compat.py` — parametrised over every YAML under [configs/scenarios/](../../../configs/scenarios/); asserts each loads to a valid brain config via `configure_brain(load_simulation_config(...))`. Passes on the post-refactor branch; 2 xfailed (`qrc_small_oracle.yml` and `qsnnreinforce_small_oracle.yml`) document pre-existing stale-YAML breakage on main.
 
-**Follow-up PR (`connectome-ppo-brain` capability):**
+**`connectome-ppo-brain` capability tests:**
 
 - `brain/arch/test_topology_rule_protocols.py` — `BrainTopology` and `LearningRule` Protocol conformance for `ConnectomePPOBrain`.
-- `brain/arch/test_connectome_ppo.py` — `ConnectomePPOBrain` construction, forward-pass shape + finiteness, strict-mask invariant (no learnable weight along a non-existent edge), gap-junction weights frozen across PPO updates, sensor/motor projection sanity.
+- `brain/arch/test_connectome_ppo.py` — `ConnectomePPOBrain` construction, forward-pass shape + finiteness, strict-mask invariant (no learnable weight along a non-existent edge), gap-junction weights frozen across PPO updates, sensor/motor projection sanity (both `oracle` and `klinotaxis` `sensing_mode` variants).
 
 ### 5. Plugin-Developer Documentation
 
@@ -92,7 +92,7 @@ New tests under `packages/quantum-nematode/tests/quantumnematode_tests/`:
 
 ### New Capabilities
 
-- `connectome-ppo-brain`: PPO-trainable connectome-constrained brain using the Cook 2019 *C. elegans* connectome as fixed topology. Chemical synapses are strict-masked with PPO-learnable scalar weights along the wild-type adjacency; gap junctions carry fixed Cook 2019 counts as non-learnable bidirectional couplings (fan-in normalised). Sensor projection maps env chemotaxis/proprioception inputs to canonical Bargmann-lab sensory-neuron pathways; motor readout aggregates VB/DB/VA/DA motor-class activations to the discrete 4-action set. Soft-prior mode is implemented as an opt-in for T4-scope ablation.
+- `connectome-ppo-brain`: PPO-trainable connectome-constrained brain using the Cook 2019 *C. elegans* connectome as fixed topology. Chemical synapses are strict-masked with PPO-learnable scalar weights along the wild-type adjacency; gap junctions carry fixed Cook 2019 counts as non-learnable bidirectional couplings (symmetric fan-in normalised `G[i, j] / sqrt(d_i * d_j)`). Sensor projection maps the env food-chemotaxis signal to the canonical Bargmann-lab klinotaxis sensory-neuron pathway (ASEL / ASER / AWCL / AWCR / AWAL / AWAR) under two configurable `sensing_mode` variants — `oracle` (2 features: strength, angle) and `klinotaxis` (3 features: concentration, lateral gradient, dC/dt). Motor readout aggregates VB/DB/VA/DA motor-class activations to the discrete 4-action set via a learnable 4×4 readout matrix. Soft-prior mode is implemented as an opt-in for T4-scope ablation. Proprioception / mechanosensation / nociception sensor projections are out of scope at T2; ship in T3.
 
 ### Modified Capabilities
 
@@ -106,7 +106,7 @@ New tests under `packages/quantum-nematode/tests/quantumnematode_tests/`:
 - `packages/quantum-nematode/quantumnematode/brain/arch/_topology.py` — new `BrainTopology` Protocol (forward-compat scaffolding)
 - `packages/quantum-nematode/quantumnematode/brain/arch/_rule.py` — new `LearningRule` Protocol + `RuleStepReport` dataclass (forward-compat scaffolding)
 - `packages/quantum-nematode/quantumnematode/brain/arch/__init__.py` — re-exports updated for registry consumers; `assert_registry_matches_enum()` invoked at import
-- `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` — dispatcher collapsed (459 LOC → ~170 LOC; signature preserved)
+- `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` — dispatcher collapsed (459 LOC → 240 LOC; signature preserved)
 - `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — `BRAIN_CONFIG_MAP` derived from registry
 - `packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py` — `BrainType` migrated `Enum → StrEnum`; family sets derived from registry via lazy module `__getattr__`
 - 19 files at `packages/quantum-nematode/quantumnematode/brain/arch/<name>.py` — `@register_brain(...)` decorator added above the brain class + 2 import lines each; no other changes
