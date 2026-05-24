@@ -337,8 +337,19 @@ class ConnectomeTopology(nn.Module):
             pooled[k] = flat_acts[start:end].mean()
         return pooled
 
-    def forward(self, food_features: torch.Tensor) -> torch.Tensor:
-        """Compute 4 action logits from a 2-vector of food-chemotaxis features.
+    def forward_with_hidden(
+        self,
+        food_features: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute action logits AND the post-K hidden state in one pass.
+
+        Returns a tuple ``(logits, hidden)`` where:
+          - ``logits`` is shape ``(4,)`` — the 4 action logits after motor
+            pooling + readout.
+          - ``hidden`` is shape ``(302,)`` — the 302-dim activation vector
+            after K recurrent updates, BEFORE motor pooling. Callers that
+            need a value-head input over the full activation vector
+            consume this directly without re-running the topology.
 
         ``food_features`` is shape ``(2,)`` carrying ``[strength, angle]``
         from the env's food-chemotaxis module. Sensor injection produces
@@ -368,7 +379,19 @@ class ConnectomeTopology(nn.Module):
 
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
-        return self.readout @ motor_acts  # shape (4,)
+        logits = self.readout @ motor_acts  # shape (4,)
+        return logits, h
+
+    def forward(self, food_features: torch.Tensor) -> torch.Tensor:
+        """Compute 4 action logits from a 2-vector of food-chemotaxis features.
+
+        Thin shim over :meth:`forward_with_hidden` for callers that only
+        need the logits. Callers that also need the post-K hidden state
+        (e.g. for a value head) should call ``forward_with_hidden`` directly
+        to avoid recomputing the connectome forward.
+        """
+        logits, _ = self.forward_with_hidden(food_features)
+        return logits
 
     @property
     def learnable_parameters(self) -> list[nn.Parameter]:
@@ -485,40 +508,20 @@ class ConnectomePPOBrain(ClassicalBrain):
     def run_brain(
         self,
         params: BrainParams,
-        reward: float | None = None,
+        reward: float | None = None,  # noqa: ARG002 — reward delivered via ``learn``
         input_data: list[float] | None = None,  # noqa: ARG002
         *,
         top_only: bool,  # noqa: ARG002
         top_randomize: bool,  # noqa: ARG002
     ) -> list[ActionData]:
         """Sample an action via the connectome forward pass."""
-        if reward is not None:
-            self.pending_reward = reward
-
         state = self.preprocess(params)
         state_t = torch.from_numpy(state).to(self.device)
 
-        # Forward pass through topology.
-        logits = self.topology(state_t)
-
-        # Get critic value from the post-forward-pass 302-vec activation.
-        # Re-run the topology forward to capture the final hidden state.
-        # (Cheap: K=1 by default.)
-        with torch.no_grad():
-            h = torch.zeros(self.topology.n_neurons, device=self.device, dtype=state_t.dtype)
-            food_injection = state_t @ self.topology.food_gains
-            h = h.index_add(0, self.topology._food_neuron_indices, food_injection)  # noqa: SLF001 — brain accesses its own topology's internal index buffer
-            masked_chem = self.topology.w_chem * self.topology.m_chem
-            gap_mat = (
-                self.topology.g_gap
-                if self.topology.enable_gap_junctions
-                else torch.zeros_like(self.topology.g_gap)
-            )
-            for _ in range(self.topology.forward_pass_depth):
-                preact = masked_chem.T @ h + gap_mat.T @ h
-                h = torch.tanh(preact)
-        # Critic operates on the same 302-vec activation.
-        value = self.critic(h)
+        # Single forward pass produces both the action logits and the
+        # post-K 302-dim hidden state used by the critic.
+        logits, hidden = self.topology.forward_with_hidden(state_t)
+        value = self.critic(hidden)
 
         # Action distribution.
         probs = torch.softmax(logits, dim=-1)
@@ -564,15 +567,27 @@ class ConnectomePPOBrain(ClassicalBrain):
     ) -> None:
         """Add experience to the buffer; trigger a PPO update when full or at episode end."""
         if self._pending_state is not None:
+            # When ``_pending_state`` is set, ``run_brain`` populates
+            # ``_pending_action``, ``_pending_log_prob``, and
+            # ``_pending_value`` in the same call. The runtime guard
+            # surfaces any out-of-order use rather than silently
+            # substituting zeros.
+            if (
+                self._pending_action is None
+                or self._pending_log_prob is None
+                or self._pending_value is None
+            ):
+                msg = (
+                    "ConnectomePPOBrain.learn called with inconsistent pending "
+                    "state: _pending_state set but action/log_prob/value missing. "
+                    "Did the env call learn() before run_brain()?"
+                )
+                raise RuntimeError(msg)
             self.buffer.add(
                 state=self._pending_state,
-                action=self._pending_action or 0,
-                log_prob=self._pending_log_prob
-                if self._pending_log_prob is not None
-                else torch.tensor(0.0, device=self.device),
-                value=self._pending_value
-                if self._pending_value is not None
-                else torch.tensor([0.0], device=self.device),
+                action=self._pending_action,
+                log_prob=self._pending_log_prob,
+                value=self._pending_value,
                 reward=reward,
                 done=episode_done,
             )
@@ -629,34 +644,17 @@ class ConnectomePPOBrain(ClassicalBrain):
         for _ in range(self.num_epochs):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 # Per-step forward pass through the topology + critic.
-                # The topology forward operates on one state at a time; we
-                # loop over the minibatch (batch sizes are O(buffer / 4) so
-                # this stays acceptable on CPU).
+                # ``forward_with_hidden`` returns both the action logits
+                # and the post-K hidden state in one pass (no redundant
+                # connectome recompute for the critic).
                 states = batch["states"]
                 batch_size = states.shape[0]
                 new_logits = torch.empty(batch_size, _N_ACTIONS, device=self.device)
                 new_values = torch.empty(batch_size, device=self.device)
                 for k in range(batch_size):
-                    s_k = states[k]
-                    new_logits[k] = self.topology(s_k)
-                    # Reconstruct the post-forward hidden state for the critic.
-                    h = torch.zeros(
-                        self.topology.n_neurons,
-                        device=self.device,
-                        dtype=s_k.dtype,
-                    )
-                    food_injection = s_k @ self.topology.food_gains
-                    h = h.index_add(0, self.topology._food_neuron_indices, food_injection)  # noqa: SLF001 — brain accesses its own topology's internal index buffer
-                    masked_chem = self.topology.w_chem * self.topology.m_chem
-                    gap_mat = (
-                        self.topology.g_gap
-                        if self.topology.enable_gap_junctions
-                        else torch.zeros_like(self.topology.g_gap)
-                    )
-                    for _ in range(self.topology.forward_pass_depth):
-                        preact = masked_chem.T @ h + gap_mat.T @ h
-                        h = torch.tanh(preact)
-                    new_values[k] = self.critic(h).squeeze(-1)
+                    logits_k, hidden_k = self.topology.forward_with_hidden(states[k])
+                    new_logits[k] = logits_k
+                    new_values[k] = self.critic(hidden_k).squeeze(-1)
 
                 new_probs = torch.softmax(new_logits, dim=-1)
                 dist = torch.distributions.Categorical(new_probs)
