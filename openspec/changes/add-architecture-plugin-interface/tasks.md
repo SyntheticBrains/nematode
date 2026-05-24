@@ -119,6 +119,6 @@ Same per-architecture pattern as § 4.
 - [ ] 12.1 Run full pre-commit on all changed files: `uv run pre-commit run --files <changed-files>`.
 - [ ] 12.2 Run the full quantum-nematode test suite: `uv run pytest -m "not nightly" packages/quantum-nematode/`. Triage any new failures.
 - [ ] 12.3 Run `openspec validate add-architecture-plugin-interface --strict` and confirm clean.
-- [ ] 12.4 Audit staged-file sizes vs `.gitattributes` LFS rules — the byte-equivalence Pickle fixtures may approach 100 KB; flag any >100 KB file not covered by existing rules.
-- [ ] 12.5 Scan staged content for absolute home paths (e.g. `/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing.
-- [ ] 12.6 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time.
+- [ ] 12.4 Audit staged-file sizes vs `.gitattributes` LFS rules — flag any > 100 KB file not covered by an existing rule. The byte-equivalence pickle fixtures (originally planned, now superseded by in-process equivalence per § 2 scope decision) would have triggered this; no large binaries are expected post-decision.
+- [ ] 12.5 Scan staged content for absolute home paths (`/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing. Apply to every commit on the branch, not only the pre-merge gate.
+- [ ] 12.6 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time — a prior approval doesn't authorise subsequent pushes.

@@ -38,9 +38,28 @@ _STALE_YAMLS: frozenset[str] = frozenset(
 
 
 def _iter_scenario_yamls() -> list[Path]:
+    """Return the sorted list of scenario YAMLs; raise if none are found.
+
+    Returning an empty list would let parametrize silently collect zero
+    cases — a "no tests ran" outcome that pytest reports as passing. We
+    want a hard failure if the discovery is broken (e.g. configs/scenarios/
+    moved, the relative-paths chain to ``_CONFIGS_DIR`` is wrong).
+    """
     if not _CONFIGS_DIR.exists():
-        return []
-    return sorted(_CONFIGS_DIR.rglob("*.yml"))
+        msg = (
+            f"Scenario configs directory not found at {_CONFIGS_DIR}. "
+            f"The YAML compat regression cannot enumerate cases."
+        )
+        raise FileNotFoundError(msg)
+    paths = sorted(_CONFIGS_DIR.rglob("*.yml"))
+    if not paths:
+        msg = (
+            f"No scenario YAMLs found under {_CONFIGS_DIR}. "
+            f"The YAML compat regression would otherwise silently collect "
+            f"zero cases."
+        )
+        raise RuntimeError(msg)
+    return paths
 
 
 def test_brain_config_map_has_every_registered_brain() -> None:

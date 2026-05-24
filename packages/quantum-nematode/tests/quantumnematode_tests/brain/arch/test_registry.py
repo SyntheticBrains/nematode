@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from pydantic import BaseModel
 from quantumnematode.brain.arch._registry import (
@@ -17,6 +19,9 @@ from quantumnematode.brain.arch._registry import (
     register_brain,
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class _FakeBrainConfig(BrainConfig):
@@ -32,7 +37,7 @@ class _UnrelatedConfig(BaseModel):
 
 
 @pytest.fixture(autouse=True)
-def _isolated_registry():
+def _isolated_registry() -> Generator[None, None, None]:
     """Snapshot and restore the module-level registry per test.
 
     The registry is populated at import time by every architecture module

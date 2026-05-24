@@ -16,9 +16,11 @@ Stakeholders / downstream consumers:
 - **Evolution framework** ([scripts/run_evolution.py](../../../scripts/run_evolution.py), [evolution/](../../../packages/quantum-nematode/quantumnematode/evolution/)) consumes `BrainType` via `instantiate_brain_from_sim_config()` — must continue to work without modification.
 - **PredatorBrain factory** consumes `BrainType` for typed dispatch — must continue to work.
 - **YAML config consumers** (every scenario under [configs/scenarios/](../../../configs/scenarios/)) — all existing YAML must parse + load without modification.
-- **T3 (corrected ASH/ADL nociception)** ships immediately after T2 and will use the new plugin interface to register the corrected sensor pipeline.
-- **T4 (L2 first pass)** sweeps the four MUST architectures × three behaviours on the grid; depends on `ConnectomePPOBrain` being registered.
-- **T8 (NEAT topology search)** relies on the topology/rule factoring — NEAT-evolved topologies must plug into the same `LearningRule` (PPO) as fixed-topology MLP/LSTM/connectome.
+- **T3 (corrected ASH/ADL nociception)** is expected to ship after T2 and is designed to register the corrected sensor pipeline through the new plugin interface.
+- **T4 (L2 first pass)** sweeps the four candidate architectures × three behaviours on the grid; assumes `ConnectomePPOBrain` is registered when it runs.
+- **T8 (NEAT topology search)** assumes the topology/rule factoring is in place — NEAT-evolved topologies are designed to integrate with the same `LearningRule` (PPO) as fixed-topology MLP/LSTM/connectome.
+
+Normative requirements for the registry contract and the connectome brain live in the delta specs (`specs/brain-architecture/spec.md` and `specs/connectome-ppo-brain/spec.md`); this document records rationale and decisions rather than restating requirements.
 
 ## Goals / Non-Goals
 
