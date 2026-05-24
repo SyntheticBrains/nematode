@@ -89,6 +89,8 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
   "ANN",
   "ARG",
   "D100",
+  "D101",  # Some test classes are pure containers — docstring not informative
+  "D102",  # Test method names already describe the assertion
   "D104",
   "PLR2004",
   "S101",

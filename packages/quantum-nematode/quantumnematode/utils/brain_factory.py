@@ -143,6 +143,12 @@ def _build_infra_kwargs(  # noqa: PLR0911, PLR0913
     if brain_type is BrainType.SPIKING_REINFORCE:
         return {"input_dim": 4, "num_actions": 4, "device": device}
 
+    # Connectome-constrained PPO: 4-action discrete output via the
+    # topology's motor readout; the action count is fixed by the readout
+    # matrix shape (not configurable via ``num_actions``).
+    if brain_type is BrainType.CONNECTOMEPPO:
+        return {"device": device}
+
     # Default shape for every other architecture: 4-action discrete output
     # on the configured device. Suppresses the unused-parameter warning
     # for the kwargs the default-shape brains don't consume.

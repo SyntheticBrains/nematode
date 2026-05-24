@@ -32,7 +32,8 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 #### Scenario: Gap-junction fan-in normalisation at construction
 
 - **WHEN** the brain constructs the gap-junction weight tensor from `connectome.gap_junctions`
-- **THEN** each row `G_gap[i, :]` SHALL be scaled by `1 / max(1, sum(G_gap[i, :]))` so per-neuron total gap-junction input is bounded
+- **THEN** each entry `G_gap[i, j]` SHALL be divided by `sqrt(max(1, d_i) * max(1, d_j))` where `d_i` is the gap-junction degree (number of non-zero entries) of neuron `i`
+- **AND** the symmetric scaling SHALL preserve the symmetry `G_gap[a, b] == G_gap[b, a]` of the underlying bidirectional physics (a pure row-or-column scaling would break the symmetry constraint asserted by the "Gap-junction weights remain fixed across PPO updates" scenario above)
 - **AND** the scaling SHALL be applied exactly once at construction time
 
 #### Scenario: Sensor projection routes env input to canonical sensory neurons
@@ -52,7 +53,7 @@ The system SHALL provide a PPO-trainable brain whose topology is the *C. elegans
 
 - **WHEN** the brain config specifies `forward_pass_depth: K` for an integer K ≥ 1
 - **THEN** the forward pass SHALL iterate the connectome update `h = activation((W_chem * M_chem)ᵀ @ h + G_gapᵀ @ h)` exactly K times before the motor readout
-- **AND** the default value of K SHALL be 1
+- **AND** the default value of K SHALL be 4 to match the canonical klinotaxis pathway depth (sensory → primary-interneuron → command-interneuron → motor; K=1 produces a degenerate output because the food signal cannot reach motor neurons in one chemical-synapse hop)
 
 ### Requirement: ConnectomePPOBrainConfig
 
