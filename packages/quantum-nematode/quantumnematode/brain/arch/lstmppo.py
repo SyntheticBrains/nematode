@@ -46,7 +46,8 @@ if TYPE_CHECKING:
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -426,6 +427,12 @@ class _LSTMPPOCritic(nn.Module):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+@register_brain(
+    name="lstmppo",
+    config_cls=LSTMPPOBrainConfig,
+    brain_type=BrainType.LSTM_PPO,
+    families=("classical",),
+)
 class LSTMPPOBrain(ClassicalBrain):
     """LSTM/GRU-augmented PPO brain with chunk-based truncated BPTT.
 

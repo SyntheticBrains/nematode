@@ -37,7 +37,8 @@ from torch import nn, optim
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
     SENSORY_MODULES,
@@ -103,6 +104,12 @@ class QQLearningBrainConfig(BrainConfig):
     )
 
 
+@register_brain(
+    name="qqlearning",
+    config_cls=QQLearningBrainConfig,
+    brain_type=BrainType.QQLEARNING,
+    families=("quantum",),
+)
 class QQLearningBrain:
     """
     Quantum Modular Brain using Q-Learning with Experience Replay.

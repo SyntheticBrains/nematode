@@ -70,7 +70,8 @@ from quantumnematode.brain.arch._hybrid_common import (
     save_cortex_weights,
     update_cortex_learning_rates,
 )
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -366,6 +367,12 @@ class HybridClassicalBrainConfig(BrainConfig):
 # ──────────────────────────────────────────────────────────────────────
 
 
+@register_brain(
+    name="hybridclassical",
+    config_cls=HybridClassicalBrainConfig,
+    brain_type=BrainType.HYBRID_CLASSICAL,
+    families=("classical",),
+)
 class HybridClassicalBrain(ClassicalBrain):
     """Hierarchical hybrid classical brain — QSNN ablation control.
 

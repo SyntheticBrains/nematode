@@ -37,7 +37,8 @@ from torch import nn, optim  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
@@ -59,6 +60,12 @@ class MLPDQNBrainConfig(BrainConfig):
     batch_size: int = 32  # Batch size for training
 
 
+@register_brain(
+    name="mlpdqn",
+    config_cls=MLPDQNBrainConfig,
+    brain_type=BrainType.MLP_DQN,
+    families=("classical",),
+)
 class MLPDQNBrain(ClassicalBrain):
     """
     Q-learning based MLP brain architecture.

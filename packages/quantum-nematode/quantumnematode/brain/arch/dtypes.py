@@ -1,21 +1,26 @@
 """Define the types of brains used in the quantum nematode project."""
 
-from enum import Enum
-from typing import Literal
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel
 
 
-class BrainType(Enum):
+class BrainType(StrEnum):
     """Different types of brains.
 
     Naming convention: {Paradigm}{Architecture}_{Algorithm}
     - Q prefix = quantum
     - MLP prefix = classical multi-layer perceptron
     - Spiking prefix = spiking neural network
+
+    StrEnum semantics: ``BrainType.MLP_PPO == "mlpppo"`` is True; the enum
+    members ARE strings and can be compared to YAML brain-name keys
+    without ``.value`` extraction.
     """
 
-    # New canonical names
     QVARCIRCUIT = "qvarcircuit"
     QQLEARNING = "qqlearning"
     QRC = "qrc"
@@ -37,7 +42,7 @@ class BrainType(Enum):
     LSTM_PPO = "lstmppo"
 
 
-class DeviceType(Enum):
+class DeviceType(StrEnum):
     """
     Different types of devices for running processing for brains.
 
@@ -93,31 +98,52 @@ BRAIN_TYPES = Literal[
     BrainType.CRH_QLSTM,
     BrainType.LSTM_PPO,
 ]
-QUANTUM_BRAIN_TYPES: set[BrainType] = {
-    BrainType.QVARCIRCUIT,
-    BrainType.QQLEARNING,
-    BrainType.QRH,
-    BrainType.QSNN_REINFORCE,
-    BrainType.QSNN_PPO,
-    BrainType.HYBRID_QUANTUM,
-    BrainType.HYBRID_QUANTUM_CORTEX,
-    BrainType.QEF,
-    BrainType.QLIF_LSTM,
-    BrainType.QRH_QLSTM,
-}
-CLASSICAL_BRAIN_TYPES: set[BrainType] = {
-    BrainType.QRC,
-    BrainType.HYBRID_CLASSICAL,
-    BrainType.MLP_REINFORCE,
-    BrainType.MLP_DQN,
-    BrainType.MLP_PPO,
-    BrainType.CRH,
-    BrainType.CRH_QLSTM,
-    BrainType.LSTM_PPO,
-}
-SPIKING_BRAIN_TYPES: set[BrainType] = {
-    BrainType.SPIKING_REINFORCE,
-}
+
+
+def _family_set(family: str) -> set[BrainType]:
+    """Return the set of BrainType members whose registration carries ``family``.
+
+    Imports the registry lazily to avoid a circular import at module-load
+    time (the registry imports BrainType from this module).
+    """
+    from quantumnematode.brain.arch._registry import family_members
+
+    return family_members(family)
+
+
+# These set-valued aliases used to be hand-maintained. They are now derived
+# from the plugin-registry family tags carried by each architecture's
+# ``@register_brain(...)`` decorator. Read via ``__getattr__`` so the lookup
+# defers until the registry has been populated (which happens at import time
+# of ``brain.arch.__init__``, AFTER this module finishes loading).
+#
+# Static-checker-visible declarations: under ``TYPE_CHECKING`` we name the
+# attributes with their real ``set[BrainType]`` type so pyright / mypy
+# see the proper type at import sites (otherwise the ``__getattr__`` return
+# type ``object`` would propagate and break ``X in CLASSICAL_BRAIN_TYPES``).
+if TYPE_CHECKING:
+    QUANTUM_BRAIN_TYPES: set[BrainType]
+    CLASSICAL_BRAIN_TYPES: set[BrainType]
+    SPIKING_BRAIN_TYPES: set[BrainType]
+
+
+def __getattr__(name: str) -> object:
+    """Module-level lazy attribute lookup for the family sets.
+
+    ``QUANTUM_BRAIN_TYPES`` / ``CLASSICAL_BRAIN_TYPES`` / ``SPIKING_BRAIN_TYPES``
+    are computed on demand from the registry's family tags. Falling back via
+    ``__getattr__`` (PEP 562) defers the registry query until after every
+    architecture module has self-registered.
+    """
+    if name == "QUANTUM_BRAIN_TYPES":
+        return _family_set("quantum")
+    if name == "CLASSICAL_BRAIN_TYPES":
+        return _family_set("classical")
+    if name == "SPIKING_BRAIN_TYPES":
+        return _family_set("spiking")
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
 
 # Defaults
 DEFAULT_BRAIN_TYPE = BrainType.QVARCIRCUIT

@@ -12,10 +12,12 @@ from __future__ import annotations
 
 from pydantic import Field
 
+from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._reservoir_lstm_base import (
     ReservoirLSTMBase,
     ReservoirLSTMBaseConfig,
 )
+from quantumnematode.brain.arch.dtypes import BrainType
 from quantumnematode.brain.arch.qrh import QRHBrain, QRHBrainConfig
 
 
@@ -39,6 +41,12 @@ class QRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
     )
 
 
+@register_brain(
+    name="qrhqlstm",
+    config_cls=QRHQLSTMBrainConfig,
+    brain_type=BrainType.QRH_QLSTM,
+    families=("quantum",),
+)
 class QRHQLSTMBrain(ReservoirLSTMBase):
     """QRH quantum reservoir + QLIF-LSTM temporal readout.
 

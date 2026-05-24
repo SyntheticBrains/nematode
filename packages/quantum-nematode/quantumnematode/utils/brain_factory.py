@@ -2,35 +2,33 @@
 
 Consolidates brain instantiation logic used across entrypoint scripts
 (run_simulation.py, run_evolution.py) into a single reusable module.
+
+The ``setup_brain_model`` entry point composes two responsibilities:
+
+1. **Registry dispatch** — class lookup, config-type validation, and
+   instantiation are delegated to ``instantiate_brain`` in
+   :mod:`quantumnematode.brain.arch._registry`. Each architecture
+   self-registers via the ``@register_brain`` decorator on its Brain
+   class.
+2. **Infrastructure kwargs** — each architecture accepts a slightly
+   different subset of the global infrastructure context (``device``,
+   ``shots``, ``learning_rate``, ``parameter_initializer``,
+   ``gradient_method``, ``gradient_max_norm``, ``perf_mgmt``,
+   ``num_actions``, ``input_dim``). The kwargs subset is encoded
+   per-architecture in :func:`_build_infra_kwargs`; this is the one place
+   where the per-arch ``__init__`` signature shape is reflected.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from quantumnematode.brain.arch import (
     Brain,
-    CRHBrainConfig,
-    CRHQLSTMBrainConfig,
-    HybridClassicalBrainConfig,
-    HybridQuantumBrainConfig,
-    HybridQuantumCortexBrainConfig,
-    LSTMPPOBrainConfig,
-    MLPDQNBrainConfig,
-    MLPPPOBrainConfig,
-    MLPReinforceBrainConfig,
-    QEFBrainConfig,
-    QLIFLSTMBrainConfig,
-    QQLearningBrainConfig,
-    QRCBrainConfig,
-    QRHBrainConfig,
-    QRHQLSTMBrainConfig,
-    QSNNPPOBrainConfig,
-    QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
-    SpikingReinforceBrainConfig,
 )
-from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
+from quantumnematode.brain.arch._registry import instantiate_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod  # noqa: TC001
 from quantumnematode.optimizers.learning_rate import (
@@ -48,412 +46,189 @@ if TYPE_CHECKING:
     from qiskit_serverless.core.function import RunnableQiskitFunction
 
 
-def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
+_LearningRate = (
+    ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate
+)
+
+
+def _build_infra_kwargs(  # noqa: PLR0911, PLR0913
     brain_type: BrainType,
-    brain_config: QVarCircuitBrainConfig
-    | MLPReinforceBrainConfig
-    | MLPPPOBrainConfig
-    | MLPDQNBrainConfig
-    | QQLearningBrainConfig
-    | QRCBrainConfig
-    | QRHBrainConfig
-    | QEFBrainConfig
-    | CRHBrainConfig
-    | QSNNPPOBrainConfig
-    | QSNNReinforceBrainConfig
-    | HybridQuantumBrainConfig
-    | HybridQuantumCortexBrainConfig
-    | HybridClassicalBrainConfig
-    | QLIFLSTMBrainConfig
-    | QRHQLSTMBrainConfig
-    | CRHQLSTMBrainConfig
-    | LSTMPPOBrainConfig
-    | SpikingReinforceBrainConfig,
+    *,
+    brain_config: BrainConfig,
     shots: int,
-    qubits: int,  # noqa: ARG001
     device: DeviceType,
-    learning_rate: ConstantLearningRate
-    | DynamicLearningRate
-    | AdamLearningRate
-    | PerformanceBasedLearningRate,
+    learning_rate: _LearningRate,
+    gradient_method: GradientCalculationMethod,
+    gradient_max_norm: float | None,
+    parameter_initializer_config: ParameterInitializerConfig,
+    perf_mgmt: RunnableQiskitFunction | None,
+) -> dict[str, Any]:
+    """Build the per-architecture infrastructure kwargs dict.
+
+    Each architecture's ``__init__`` accepts a slightly different subset
+    of the global infrastructure context. This function is the canonical
+    place where those subsets are declared. Adding a new architecture
+    typically means adding one branch here OR — when the new architecture
+    matches the default shape — adding nothing here at all.
+    """
+    # Quantum-circuit architectures: validate learning-rate type, then
+    # forward the full quantum-infrastructure surface.
+    if brain_type is BrainType.QVARCIRCUIT:
+        if not isinstance(learning_rate, (DynamicLearningRate, ConstantLearningRate)):
+            msg = (
+                "The 'qvarcircuit' brain architecture requires a "
+                "DynamicLearningRate or ConstantLearningRate. "
+                f"Provided learning rate type: {type(learning_rate)}."
+            )
+            logger.error(msg)
+            raise ValueError(msg)
+        return {
+            "device": device,
+            "shots": shots,
+            "learning_rate": learning_rate,
+            "parameter_initializer": create_parameter_initializer_instance(
+                parameter_initializer_config,
+            ),
+            "gradient_method": gradient_method,
+            "gradient_max_norm": gradient_max_norm,
+            "perf_mgmt": perf_mgmt,
+        }
+    if brain_type is BrainType.QQLEARNING:
+        if not isinstance(learning_rate, DynamicLearningRate):
+            msg = (
+                "The 'qqlearning' brain architecture requires a DynamicLearningRate. "
+                f"Provided learning rate type: {type(learning_rate)}."
+            )
+            logger.error(msg)
+            raise ValueError(msg)
+        return {
+            "device": device,
+            "shots": shots,
+            "learning_rate": learning_rate,
+            "parameter_initializer": create_parameter_initializer_instance(
+                parameter_initializer_config,
+            ),
+        }
+
+    # Classical PPO / REINFORCE / DQN: parameter-initialiser plumbing.
+    if brain_type is BrainType.MLP_REINFORCE:
+        return {
+            "input_dim": 2,
+            "num_actions": 4,
+            "lr_scheduler": True,
+            "device": device,
+            "parameter_initializer": create_parameter_initializer_instance(
+                parameter_initializer_config,
+            ),
+        }
+    if brain_type is BrainType.MLP_PPO:
+        return {
+            "num_actions": 4,
+            "device": device,
+            "parameter_initializer": create_parameter_initializer_instance(
+                parameter_initializer_config,
+            ),
+        }
+    if brain_type is BrainType.MLP_DQN:
+        return {
+            "input_dim": 2,
+            "num_actions": 4,
+            "device": device,
+            "parameter_initializer": create_parameter_initializer_instance(
+                parameter_initializer_config,
+            ),
+        }
+
+    # Spiking REINFORCE takes an explicit ``input_dim=4``.
+    if brain_type is BrainType.SPIKING_REINFORCE:
+        return {"input_dim": 4, "num_actions": 4, "device": device}
+
+    # Default shape for every other architecture: 4-action discrete output
+    # on the configured device. Suppresses the unused-parameter warning
+    # for the kwargs the default-shape brains don't consume.
+    del brain_config, shots, learning_rate, gradient_method
+    del gradient_max_norm, parameter_initializer_config, perf_mgmt
+    return {"num_actions": 4, "device": device}
+
+
+def setup_brain_model(  # noqa: PLR0913
+    brain_type: BrainType,
+    brain_config: BrainConfig,
+    shots: int,
+    qubits: int,  # noqa: ARG001  — kept in signature for backward-compat with external callers
+    device: DeviceType,
+    learning_rate: _LearningRate,
     gradient_method: GradientCalculationMethod,
     gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
     perf_mgmt: RunnableQiskitFunction | None = None,
 ) -> Brain:
-    """Set up the brain model based on the specified brain type.
+    """Instantiate a brain by ``BrainType`` enum member.
 
-    Args:
-        brain_type: The type of brain architecture to use.
-        brain_config: Configuration for the brain architecture.
-        shots: The number of shots for quantum circuit execution.
-        qubits: The number of qubits (only for quantum brain architectures).
-        device: The device to use for simulation.
-        learning_rate: The learning rate configuration for the brain.
-        gradient_method: The gradient calculation method.
-        gradient_max_norm: Maximum gradient norm for clipping.
-        parameter_initializer_config: Configuration for parameter initialization.
-        perf_mgmt: Q-CTRL performance management function instance.
+    Public entry point preserved from the pre-registry signature. The
+    actual dispatch is delegated to the plugin registry; this function's
+    only job is mapping the global infrastructure context to the per-arch
+    ``__init__`` kwargs subset.
+
+    Parameters
+    ----------
+    brain_type
+        The brain architecture to instantiate. Must be a member of
+        :class:`BrainType` and registered via ``@register_brain``.
+    brain_config
+        Configuration for the brain architecture. Must be an instance of
+        the architecture's registered ``config_cls``.
+    shots
+        The number of shots for quantum circuit execution. Consumed only
+        by quantum-circuit architectures.
+    qubits
+        Unused at this layer (kept for backward-compat with external
+        callers; the per-architecture configs carry their own qubit count
+        when relevant).
+    device
+        The device to use for simulation.
+    learning_rate
+        The learning rate configuration for the brain. Only quantum-circuit
+        architectures (QVARCIRCUIT, QQLEARNING) consume this at the
+        infrastructure layer; classical brains read learning-rate fields
+        from their own config.
+    gradient_method
+        The gradient calculation method. Consumed only by QVARCIRCUIT.
+    gradient_max_norm
+        Maximum gradient norm for clipping. Consumed only by QVARCIRCUIT.
+    parameter_initializer_config
+        Configuration for parameter initialisation. Consumed by the
+        quantum-circuit and classical MLP families.
+    perf_mgmt
+        Q-CTRL performance management function instance. Consumed only by
+        QVARCIRCUIT.
 
     Returns
     -------
-        Brain: An instance of the selected brain model.
+    Brain
+        An instance of the selected brain model.
 
     Raises
     ------
-        ValueError: If an unknown brain type is provided.
+    ValueError
+        If ``brain_type`` is unknown to the registry, or ``brain_config``
+        is not an instance of the registered config class.
     """
-    if brain_type == BrainType.QVARCIRCUIT:
-        if not isinstance(brain_config, QVarCircuitBrainConfig):
-            error_message = (
-                "The 'qvarcircuit' brain architecture requires a QVarCircuitBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
+    infra_kwargs = _build_infra_kwargs(
+        brain_type,
+        brain_config=brain_config,
+        shots=shots,
+        device=device,
+        learning_rate=learning_rate,
+        gradient_method=gradient_method,
+        gradient_max_norm=gradient_max_norm,
+        parameter_initializer_config=parameter_initializer_config,
+        perf_mgmt=perf_mgmt,
+    )
+    return instantiate_brain(brain_type.value, brain_config, **infra_kwargs)
 
-        if not isinstance(learning_rate, (DynamicLearningRate, ConstantLearningRate)):
-            error_message = (
-                "The 'qvarcircuit' brain architecture requires a "
-                "DynamicLearningRate or ConstantLearningRate. "
-                f"Provided learning rate type: {type(learning_rate)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
 
-        from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain
-
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = QVarCircuitBrain(
-            config=brain_config,
-            device=device,
-            shots=shots,
-            learning_rate=learning_rate,
-            parameter_initializer=parameter_initializer,
-            gradient_method=gradient_method,
-            gradient_max_norm=gradient_max_norm,
-            perf_mgmt=perf_mgmt,
-        )
-    elif brain_type == BrainType.QQLEARNING:
-        if not isinstance(brain_config, QQLearningBrainConfig):
-            error_message = (
-                "The 'qqlearning' brain architecture requires a QQLearningBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        if not isinstance(learning_rate, DynamicLearningRate):
-            error_message = (
-                "The 'qqlearning' brain architecture requires a DynamicLearningRate. "
-                f"Provided learning rate type: {type(learning_rate)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        from quantumnematode.brain.arch.qqlearning import QQLearningBrain
-
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = QQLearningBrain(
-            config=brain_config,
-            device=device,
-            shots=shots,
-            learning_rate=learning_rate,
-            parameter_initializer=parameter_initializer,
-        )
-
-    elif brain_type == BrainType.MLP_REINFORCE:
-        from quantumnematode.brain.arch.mlpreinforce import MLPReinforceBrain
-
-        if not isinstance(brain_config, MLPReinforceBrainConfig):
-            error_message = (
-                "The 'mlpreinforce' brain architecture requires an MLPReinforceBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = MLPReinforceBrain(
-            config=brain_config,
-            input_dim=2,
-            num_actions=4,
-            lr_scheduler=True,
-            device=device,
-            parameter_initializer=parameter_initializer,
-        )
-    elif brain_type == BrainType.MLP_PPO:
-        from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
-
-        if not isinstance(brain_config, MLPPPOBrainConfig):
-            error_message = (
-                "The 'mlpppo' brain architecture requires a MLPPPOBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = MLPPPOBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-            parameter_initializer=parameter_initializer,
-        )
-    elif brain_type == BrainType.MLP_DQN:
-        from quantumnematode.brain.arch.mlpdqn import MLPDQNBrain
-
-        if not isinstance(brain_config, MLPDQNBrainConfig):
-            error_message = (
-                "The 'mlpdqn' brain architecture requires a MLPDQNBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = MLPDQNBrain(
-            config=brain_config,
-            input_dim=2,
-            num_actions=4,
-            device=device,
-            parameter_initializer=parameter_initializer,
-        )
-    elif brain_type == BrainType.SPIKING_REINFORCE:
-        from quantumnematode.brain.arch.spikingreinforce import SpikingReinforceBrain
-
-        if not isinstance(brain_config, SpikingReinforceBrainConfig):
-            error_message = (
-                "The 'spikingreinforce' brain architecture requires a SpikingReinforceBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = SpikingReinforceBrain(
-            config=brain_config,
-            input_dim=4,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QRC:
-        from quantumnematode.brain.arch.qrc import QRCBrain
-
-        if not isinstance(brain_config, QRCBrainConfig):
-            error_message = (
-                "The 'qrc' brain architecture requires a QRCBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QRCBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QRH:
-        from quantumnematode.brain.arch.qrh import QRHBrain
-
-        if not isinstance(brain_config, QRHBrainConfig):
-            error_message = (
-                "The 'qrh' brain architecture requires a QRHBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QRHBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QEF:
-        from quantumnematode.brain.arch.qef import QEFBrain
-
-        if not isinstance(brain_config, QEFBrainConfig):
-            error_message = (
-                "The 'qef' brain architecture requires a QEFBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QEFBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.CRH:
-        from quantumnematode.brain.arch.crh import CRHBrain
-
-        if not isinstance(brain_config, CRHBrainConfig):
-            error_message = (
-                "The 'crh' brain architecture requires a CRHBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = CRHBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QSNN_REINFORCE:
-        from quantumnematode.brain.arch.qsnnreinforce import QSNNReinforceBrain
-
-        if not isinstance(brain_config, QSNNReinforceBrainConfig):
-            error_message = (
-                "The 'qsnnreinforce' brain architecture requires a QSNNReinforceBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QSNNReinforceBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.HYBRID_QUANTUM:
-        from quantumnematode.brain.arch.hybridquantum import HybridQuantumBrain
-
-        if not isinstance(brain_config, HybridQuantumBrainConfig):
-            error_message = (
-                "The 'hybridquantum' brain architecture requires a HybridQuantumBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = HybridQuantumBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.HYBRID_QUANTUM_CORTEX:
-        from quantumnematode.brain.arch.hybridquantumcortex import HybridQuantumCortexBrain
-
-        if not isinstance(brain_config, HybridQuantumCortexBrainConfig):
-            error_message = (
-                "The 'hybridquantumcortex' brain architecture requires a "
-                "HybridQuantumCortexBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = HybridQuantumCortexBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.HYBRID_CLASSICAL:
-        from quantumnematode.brain.arch.hybridclassical import HybridClassicalBrain
-
-        if not isinstance(brain_config, HybridClassicalBrainConfig):
-            error_message = (
-                "The 'hybridclassical' brain architecture requires a "
-                "HybridClassicalBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = HybridClassicalBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QSNN_PPO:
-        from quantumnematode.brain.arch.qsnnppo import QSNNPPOBrain
-
-        if not isinstance(brain_config, QSNNPPOBrainConfig):
-            error_message = (
-                "The 'qsnnppo' brain architecture requires a QSNNPPOBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QSNNPPOBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QLIF_LSTM:
-        from quantumnematode.brain.arch.qliflstm import QLIFLSTMBrain
-
-        if not isinstance(brain_config, QLIFLSTMBrainConfig):
-            error_message = (
-                "The 'qliflstm' brain architecture requires a QLIFLSTMBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QLIFLSTMBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.QRH_QLSTM:
-        from quantumnematode.brain.arch.qrhqlstm import QRHQLSTMBrain
-
-        if not isinstance(brain_config, QRHQLSTMBrainConfig):
-            error_message = (
-                "The 'qrhqlstm' brain architecture requires a QRHQLSTMBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = QRHQLSTMBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.CRH_QLSTM:
-        from quantumnematode.brain.arch.crhqlstm import CRHQLSTMBrain
-
-        if not isinstance(brain_config, CRHQLSTMBrainConfig):
-            error_message = (
-                "The 'crhqlstm' brain architecture requires a CRHQLSTMBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = CRHQLSTMBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    elif brain_type == BrainType.LSTM_PPO:
-        from quantumnematode.brain.arch.lstmppo import LSTMPPOBrain
-
-        if not isinstance(brain_config, LSTMPPOBrainConfig):
-            error_message = (
-                "The 'lstmppo' brain architecture requires a LSTMPPOBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        brain = LSTMPPOBrain(
-            config=brain_config,
-            num_actions=4,
-            device=device,
-        )
-    else:
-        error_message = f"Unknown brain type: {brain_type}"
-        logger.error(error_message)
-        raise ValueError(error_message)
-
-    return brain
+# Keep the qvarcircuit-config import alive so type-checkers reading legacy
+# call sites that reference ``brain_factory.QVarCircuitBrainConfig`` continue
+# to type-check. It is also forwarded by some scripts via this module path.
+__all__ = ["QVarCircuitBrainConfig", "setup_brain_model"]

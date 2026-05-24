@@ -112,7 +112,7 @@ Sub-tasks are coarse-grained; the L1 OpenSpec change elaborates them.
 - [ ] T2.7 Plugin-parity test (methodology). Document the procedure (or CI integration test) for measuring "how long to add a new architecture family" — primary metrics are files-touched count + no-per-architecture-branches code-review verdict (Gate 2 G2.b + G2.c). Engineer-hours are recorded for future reference but are not a load-bearing pass criterion per Gate 2 G2.a. T2 establishes the methodology and runs the test once on a hypothetical addition; T5 re-runs it against the platform-refactor work as the real-world verification.
 - [ ] T2.8 Documentation: plugin-developer guide; "how to add a new architecture family — files to touch, no-branches discipline" walkthrough.
 - [ ] T2.9 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T2 row.
-- [ ] T2.10 Publish T2 logbook (suggested: `docs/experiments/logbooks/0XX-l1-plugin-interface.md`). Required reading material for Gate 1.
+- [ ] T2.10 Publish T2 logbook (suggested: `docs/experiments/logbooks/0XX-architecture-plugin-interface.md`). Required reading material for Gate 1.
 
 **T2 risk-mitigation pivot (per roadmap)**: if multiple architecture families need bespoke plumbing and the interface accumulates per-architecture branches, pause architecture-sweep work and spend 2-4 weeks refactoring L1 toward genuine plugin parity. Better to delay L2/L3 results than to ship a "platform" that isn't one.
 

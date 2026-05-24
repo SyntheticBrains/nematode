@@ -45,8 +45,9 @@ import torch
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._spiking_layers import OutputMode, SpikingPolicyNetwork
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
@@ -164,6 +165,12 @@ class SpikingReinforceBrainConfig(BrainConfig):
     update_frequency: int = 0
 
 
+@register_brain(
+    name="spikingreinforce",
+    config_cls=SpikingReinforceBrainConfig,
+    brain_type=BrainType.SPIKING_REINFORCE,
+    families=("spiking",),
+)
 class SpikingReinforceBrain(ClassicalBrain):
     """
     Spiking neural network brain with surrogate gradient descent.

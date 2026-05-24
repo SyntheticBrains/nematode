@@ -52,11 +52,12 @@ from qiskit.quantum_info import Statevector
 from torch import nn
 
 from quantumnematode.brain.arch._quantum_reservoir import build_readout_network
+from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._reservoir_hybrid_base import (
     ReservoirHybridBase,
     ReservoirHybridBaseConfig,
 )
-from quantumnematode.brain.arch.dtypes import DeviceType
+from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
@@ -324,6 +325,12 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
 # =============================================================================
 
 
+@register_brain(
+    name="qef",
+    config_cls=QEFBrainConfig,
+    brain_type=BrainType.QEF,
+    families=("quantum",),
+)
 class QEFBrain(ReservoirHybridBase):
     """Quantum Entangled Features brain architecture.
 

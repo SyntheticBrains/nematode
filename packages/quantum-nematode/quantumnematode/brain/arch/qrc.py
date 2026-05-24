@@ -44,7 +44,8 @@ from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._quantum_reservoir import build_readout_network
 from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend, run_circuit_shots
-from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
@@ -212,6 +213,15 @@ class QRCBrainConfig(BrainConfig):
         return v
 
 
+@register_brain(
+    name="qrc",
+    config_cls=QRCBrainConfig,
+    brain_type=BrainType.QRC,
+    # QRC pairs a fixed quantum reservoir circuit with a classical readout
+    # network; carries both family tags so quantum-family AND classical-readout
+    # lookups both surface it.
+    families=("quantum", "classical"),
+)
 class QRCBrain(ClassicalBrain):
     """
     Quantum Reservoir Computing brain architecture.

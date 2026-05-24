@@ -1,8 +1,19 @@
 """Module for quantum brain architectures."""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
+from ._registry import (
+    Registration,
+    assert_registry_matches_enum,
+    get_all_registrations,
+    get_registration,
+    instantiate_brain,
+    list_registered_brains,
+    register_brain,
+)
 from ._reservoir_hybrid_base import ReservoirHybridBase, ReservoirHybridBaseConfig
 from ._reservoir_lstm_base import ReservoirLSTMBase, ReservoirLSTMBaseConfig
+from ._rule import LearningRule, RuleStepReport
+from ._topology import BrainTopology
 from .crh import CRHBrain, CRHBrainConfig
 from .crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
@@ -23,10 +34,17 @@ from .qsnnreinforce import QSNNReinforceBrain, QSNNReinforceBrainConfig
 from .qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from .spikingreinforce import SpikingReinforceBrain, SpikingReinforceBrainConfig
 
+# Every architecture module has now been imported and has self-registered
+# via its ``@register_brain`` decorator. Verify the registry and the
+# ``BrainType`` enum agree; mismatch fails loudly at import time so any
+# accidental drift is caught immediately rather than at first dispatch.
+assert_registry_matches_enum()
+
 __all__ = [
     "Brain",
     "BrainData",
     "BrainParams",
+    "BrainTopology",
     "CRHBrain",
     "CRHBrainConfig",
     "CRHQLSTMBrain",
@@ -40,6 +58,7 @@ __all__ = [
     "HybridQuantumCortexBrainConfig",
     "LSTMPPOBrain",
     "LSTMPPOBrainConfig",
+    "LearningRule",
     "MLPDQNBrain",
     "MLPDQNBrainConfig",
     "MLPPPOBrain",
@@ -65,10 +84,17 @@ __all__ = [
     "QVarCircuitBrain",
     "QVarCircuitBrainConfig",
     "QuantumBrain",
+    "Registration",
     "ReservoirHybridBase",
     "ReservoirHybridBaseConfig",
     "ReservoirLSTMBase",
     "ReservoirLSTMBaseConfig",
+    "RuleStepReport",
     "SpikingReinforceBrain",
     "SpikingReinforceBrainConfig",
+    "get_all_registrations",
+    "get_registration",
+    "instantiate_brain",
+    "list_registered_brains",
+    "register_brain",
 ]
