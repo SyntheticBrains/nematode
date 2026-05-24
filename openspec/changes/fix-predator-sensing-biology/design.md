@@ -187,6 +187,10 @@ These are documented intentionally so future tranches know they're known limitat
 3. **SpikingReinforceBrain stays on legacy oracle predator gradient.** Known asymmetry in the T4 predator-evasion comparison — flagged in T4 design.md.
 4. **Reward stays env-coupled.** The biological-faithfulness reward shape lands as a T4 ablation, not as a T3 unilateral change.
 5. **ADL ascaroside pheromone channel is deferred to T6/T7.** The `pheromone_alarm_ascr` module name is reserved for that work.
+6. **The new two-channel biology learns substantially slower than the legacy single-channel `nociception_klinotaxis` at matched 100-episode training budgets.** Discovered during T3 Section 8 smoke evaluation on `mlpppo_small` and `lstmppo_small` predator-pursuit configs (results in `tmp/evaluations/predator-sensing-biology-smoke/`): MLPPPO converges to 51% success on legacy vs 3% on new biology; LSTMPPO 7% vs 0%. The new sensor surface works end-to-end (no crashes, gradient flow, training visible) but the convergence-rate gap is real. Two candidate causes worth investigating in T4:
+   - **Sparse contact-mechano signal.** `predator_contact_intensity` is 0.0 outside the damage radius — the brain must learn to mostly ignore the channel. Legacy `predator_concentration` (continuous exp-decay sum) is non-zero everywhere predators exist, providing dense signal.
+   - **Information redundancy across the two new channels.** Mechano + chemo share the predator-position information at the env layer but spread it across 6 input dims vs the legacy 3. More capacity needed for the same task without proportional information gain.
+     This caveat is *informative*, not blocking: the corrected biology is what T3 set out to deliver, and the convergence-rate question belongs in T4's empirical evaluation under matched compute + ablation against the existing `gradient_proximity` reward. See `T4.0g` carry-forward in [phase6-tracking/tasks.md](../phase6-tracking/tasks.md) for the explicit task pointer.
 
 ## Open questions
 
