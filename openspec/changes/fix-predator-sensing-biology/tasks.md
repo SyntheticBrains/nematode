@@ -98,9 +98,10 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 11. Pre-merge verification
 
-- [ ] 11.1 Run full pre-commit on all changed files: `uv run pre-commit run --files <changed-files>`.
-- [ ] 11.2 Run the full quantum-nematode test suite: `uv run pytest -m "not nightly" packages/quantum-nematode/`. Triage any new failures.
-- [ ] 11.3 Run `openspec validate fix-predator-sensing-biology --strict` and confirm clean.
-- [ ] 11.4 Audit staged-file sizes vs `.gitattributes` LFS rules — flag any > 100 KB file not covered by an existing rule.
-- [ ] 11.5 Scan staged content for absolute home paths (`/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing. Apply to every commit on the branch, not only the pre-merge gate.
-- [ ] 11.6 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time — a prior approval doesn't authorise subsequent pushes.
+- [x] 11.1 Run full pre-commit on all changed files: `uv run pre-commit run --files <changed-files>`. *All hooks pass on the 22 branch-touched files.*
+- [x] 11.2 Run the full quantum-nematode test suite: `uv run pytest -m "not nightly" packages/quantum-nematode/`. Triage any new failures. *3391 passed (+109 vs main: 38 zone + 24 module + 45 legacy-config regression + 2 incidental), 1 skipped, 2 xfailed (pre-existing stale YAMLs from main). Zero new failures.*
+- [x] 11.3 Run `openspec validate fix-predator-sensing-biology --strict` and confirm clean. *Both fix-predator-sensing-biology and phase6-tracking validate clean.*
+- [x] 11.4 Audit staged-file sizes vs `.gitattributes` LFS rules — flag any > 100 KB file not covered by an existing rule. *Only three >100KB files (`docs/roadmap.md`, `env/env.py`, `utils/config_loader.py`) are present; all pre-existing in main with small additive edits. No new binaries or large artefacts.*
+- [x] 11.5 Scan staged content for absolute home paths (`/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing. *Clean — only this task's description names the patterns it scans for.*
+- [x] 11.6 **Planning-doc terminology cleanup** — scan implementation `.py` + config `.yml` files for Tranche/Decision/Gate/Layer/OpenSpec/Milestone/Phase\\b leakage per the user feedback memory. *Five instances of "OpenSpec change" / "Phase 6 Tranche 3" leaked into two config headers + two test docstrings; cleaned up in same commit batch as the §11 verification ticks.*
+- [ ] 11.7 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time — a prior approval doesn't authorise subsequent pushes.

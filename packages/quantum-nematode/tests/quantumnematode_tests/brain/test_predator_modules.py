@@ -1,18 +1,22 @@
 """Tests for the six biology-driven predator sensor modules.
 
-Covers the two-channel split documented in the predator-sensing-biology
-OpenSpec change:
-- predator_mechanosensation_{oracle,temporal,klinotaxis}
-- predator_chemosensation_{oracle,temporal,klinotaxis}
+Covers the two-channel split:
+
+- ``predator_mechanosensation_{oracle,temporal,klinotaxis}`` — graded
+  contact intensity + anterior/posterior/lateral zone (ASH/ALM/AVM/PLM).
+- ``predator_chemosensation_{oracle,temporal,klinotaxis}`` — distal
+  sulfolipid concentration + lateral gradient + dC/dt (ASH + ASI per
+  Liu et al. 2018, *Nat. Commun.*).
 
 For each module:
+
 - output shape matches the declared classical_dim
 - field-to-feature mapping is correct (intensity/concentration → strength;
   zone or derivative → angle; klinotaxis variants emit a third feature)
 - agent-direction-relative orientation works as expected
 
-Patterns mirror tests/quantumnematode_tests/brain/test_modules.py and
-test_klinotaxis_modules.py.
+Patterns mirror ``tests/quantumnematode_tests/brain/test_modules.py`` and
+``test_klinotaxis_modules.py``.
 """
 
 from __future__ import annotations

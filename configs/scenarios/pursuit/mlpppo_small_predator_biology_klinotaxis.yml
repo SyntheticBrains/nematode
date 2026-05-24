@@ -1,18 +1,17 @@
 # Biology-Driven Predator Sensing — MLPPPO with Pursuit Predators
 #
 # MLPPPO equivalent of lstmppo_small_predator_biology_klinotaxis.yml — tests
-# the new two-channel predator-sensing model (predator_mechanosensation +
-# predator_chemosensation, both klinotaxis-mode) against a feed-forward
-# PPO baseline without recurrence.
+# the biologically-grounded two-channel predator-sensing model
+# (predator_mechanosensation + predator_chemosensation, both klinotaxis-mode)
+# against a feed-forward PPO baseline without recurrence.
 #
-# Replaces the legacy single-channel `nociception` sensor with the
-# corrected two-channel biology per the fix-predator-sensing-biology
-# OpenSpec change. Both channels run in klinotaxis mode (biologically-
-# preferred default; matches the Phase 5 empirical pattern).
+# Both channels run in klinotaxis mode (biologically-preferred default;
+# matches the empirical pattern already adopted by the legacy
+# nociception_klinotaxis variant for predator-evasion configs).
 #
-# Tranche-3 smoke config: confirms the new sensor surface works end-to-end
-# under a memoryless MLPPPO brain (with proprioception added so the brain
-# has heading context to correlate dC/dt with movement, mirroring the
+# Smoke config: confirms the new sensor surface works end-to-end under a
+# memoryless MLPPPO brain (with proprioception added so the brain has
+# heading context to correlate dC/dt with movement, mirroring the
 # mlpppo_small_klinotaxis foraging-only baseline).
 
 max_steps: 500

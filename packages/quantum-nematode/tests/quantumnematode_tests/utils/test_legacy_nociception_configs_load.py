@@ -1,18 +1,19 @@
 """Regression: archived configs that name legacy nociception_* modules still load.
 
-The Phase 6 Tranche 3 "fix-predator-sensing-biology" change adds new
-biology-driven predator sensor modules alongside the legacy
-`nociception` / `nociception_temporal` / `nociception_klinotaxis`
-modules — which stay in the registry forever as frozen historical
-record.
+The biology-driven predator sensor modules
+(``predator_mechanosensation_*`` / ``predator_chemosensation_*``) ship
+alongside the legacy ``nociception`` / ``nociception_temporal`` /
+``nociception_klinotaxis`` modules — which stay in the registry forever
+as frozen historical record.
 
 This regression test guards the frozen-legacy invariant: every archived
-config under `configs/evolution/` that names any `nociception*` module
-in its `brain.sensory_modules` list must continue to LOAD cleanly via
-YAML parsing, and every legacy module name it references must still be
-present in the SENSORY_MODULES registry. The Phase 5 reproducibility
-guarantee — every archived logbook can re-run its evolution arms
-byte-identically — depends on this.
+config under ``configs/evolution/`` that names any ``nociception*``
+module in its ``brain.sensory_modules`` list must continue to LOAD
+cleanly via YAML parsing, and every legacy module name it references
+must still be present in the SENSORY_MODULES registry. The earlier
+predator-evasion-config reproducibility guarantee — every archived
+logbook can re-run its evolution arms byte-identically — depends on
+this.
 """
 
 from __future__ import annotations

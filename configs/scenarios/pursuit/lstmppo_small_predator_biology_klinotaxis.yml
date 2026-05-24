@@ -1,8 +1,6 @@
 # Biology-Driven Predator Sensing — LSTM PPO GRU with Pursuit Predators
 #
-# Replaces the legacy single-channel `nociception` sensor with the
-# corrected two-channel biology documented in the fix-predator-sensing-biology
-# OpenSpec change:
+# Uses the biologically-grounded two-channel predator-sensing model:
 #
 #   - predator_mechanosensation: graded contact intensity + anterior /
 #     posterior / lateral zone (models ASH/ALM/AVM/PLM mechanosensory
@@ -13,12 +11,12 @@
 #
 # Both channels run in klinotaxis mode — the biologically-preferred default
 # for predator-evasion configs (matches the head-sweep sensing pattern
-# Phase 5 already adopted with the legacy nociception_klinotaxis variant).
+# already adopted by the legacy nociception_klinotaxis variant).
 #
-# This is a Tranche-3 smoke config: confirms the new sensor surface works
-# end-to-end through scripts/run_simulation.py and produces non-degenerate
-# training. The Tranche-4 L2 evaluation runs the full architecture-vs-
-# architecture sweep on equivalent configs.
+# Smoke config: confirms the new sensor surface works end-to-end through
+# scripts/run_simulation.py and produces non-degenerate training. The
+# full architecture-vs-architecture predator-evasion evaluation runs on
+# equivalent configs in a later evaluation tranche.
 
 max_steps: 1000
 brain:
