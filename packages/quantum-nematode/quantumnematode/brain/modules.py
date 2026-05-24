@@ -1447,6 +1447,21 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
             ModuleName.NOCICEPTION_KLINOTAXIS,
         ),
         (ModuleName.AEROTAXIS, ModuleName.AEROTAXIS_TEMPORAL, ModuleName.AEROTAXIS_KLINOTAXIS),
+        # Biology-driven predator-sensing channels — each adds its own STAM
+        # channel (predator_mechano / predator_distal in
+        # agent/stam.py:CHANNEL_REGISTRY). Independent from the legacy
+        # `predator` channel; configs that select both legacy and new
+        # families count both contributions.
+        (
+            ModuleName.PREDATOR_MECHANOSENSATION_ORACLE,
+            ModuleName.PREDATOR_MECHANOSENSATION_TEMPORAL,
+            ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+        ),
+        (
+            ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
+            ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL,
+            ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+        ),
     ]
     modules_set = set(modules)
     for mods in modality_triples:

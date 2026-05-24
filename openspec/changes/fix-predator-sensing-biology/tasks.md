@@ -77,12 +77,12 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 8. Sample configs (T3.8)
 
-- [ ] 8.1 Author 2-3 small predator-evasion smoke configs under `configs/scenarios/pursuit/` (or wherever existing predator-evasion configs live):
-  - `mlpppo_small_predator_evasion.yml` — mlpppo, small, predator enabled, sensory_modules includes `food_chemotaxis_klinotaxis` + `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis`. STAM enabled. Headless-runnable.
-  - `lstmppo_small_predator_evasion.yml` — same modules under LSTM-PPO.
-  - `connectomeppo_small_predator_evasion.yml` — **OPTIONAL** at T3, only if cheap. ConnectomePPO won't actually consume the new BrainParams fields until T4.0c wires the projection — but the config can still load and run with the brain emitting random-policy-shaped output. Defer if it adds noise.
-- [ ] 8.2 Verify each new config loads via `configure_brain(load_simulation_config(...))` and runs one episode headless via `uv run python scripts/run_simulation.py --config <new> --runs 1 --theme headless --episodes 5`.
-- [ ] 8.3 No learning required at this stage — these are integration-smoke configs for T4 to consume.
+- [x] 8.1 Author 2-3 small predator-evasion smoke configs under `configs/scenarios/pursuit/`:
+  - `mlpppo_small_predator_biology_klinotaxis.yml` — mlpppo, small, predator enabled, sensory_modules includes `food_chemotaxis` + `predator_mechanosensation_oracle` + `predator_chemosensation_oracle` + proprioception + stam. SensingConfig modes set to klinotaxis so the apply_sensing_mode translation maps the `_oracle`-suffixed names to `_klinotaxis`. Headless-runnable.
+  - `lstmppo_small_predator_biology_klinotaxis.yml` — same modules under LSTM-PPO (GRU recurrent variant matching the existing lstmppo_small_klinotaxis baseline).
+  - ConnectomePPO sample deferred (T4.0c owns the predator projection; this T3 already lands what T4.0c needs).
+- [x] 8.2 Verify each new config loads and runs at least one episode headless. *Both configs load + run end-to-end through `scripts/run_simulation.py`. Smoke surfaced one bug in `_infer_stam_dim_from_modules` (didn't know about the new module triples — under-counted STAM dim) which is fixed in the same commit.*
+- [x] 8.3 No learning required at this stage — these are integration-smoke configs for T4 to consume.
 
 ## 9. Tracker + roadmap updates (T3.9)
 
