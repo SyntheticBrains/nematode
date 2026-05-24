@@ -141,12 +141,14 @@ def _build_channel_fetchers(
         # Biology-driven predator-mechanosensation STAM channel reads the
         # graded contact intensity at the agent position. The intensity is
         # computed against the nearest predator's damage radius so STAM's
-        # temporal averaging produces the habituation kinetics described
-        # in design.md § Decision T3.4.
+        # temporal averaging produces the habituation kinetics that match
+        # the seconds-to-minutes ASH adaptation timescale documented by
+        # Hilliard et al. 2005 (EMBO J.).
         "predator_mechano": _make_predator_mechano_fetcher(env),
         # Distal-chemosensory STAM channel reads the sulfolipid alias
         # (delegates to existing exp-decay sum; literature-calibrated
-        # decay constant is a future-tranche concern).
+        # decay constant from Liu et al. 2018 plate-assay distances is
+        # a future env-fidelity concern, not implemented here).
         "predator_distal": lambda pos, _step: env.get_predator_sulfolipid_concentration(
             position=pos,
         ),

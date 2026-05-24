@@ -802,9 +802,11 @@ def apply_sensing_mode(
     """
     # Map oracle module names to their mode config attribute. Legacy
     # families (food_chemotaxis, nociception, etc.) use bare names by
-    # historical convention. New biology-driven families (predator-sensing
-    # introduced in T3) use explicit `_oracle` suffix on the oracle variant
-    # so the mode is self-describing — see design.md § Decision T3.1.
+    # historical convention — a holdover from before the project supported
+    # multiple sensing modes. New biology-driven families (predator-sensing)
+    # use an explicit `_oracle` suffix on the oracle variant so the mode
+    # is self-describing without requiring readers to know the legacy
+    # bare-name = oracle convention.
     mode_map: dict[str, SensingMode] = {
         "food_chemotaxis": sensing.chemotaxis_mode,
         "nociception": sensing.nociception_mode,

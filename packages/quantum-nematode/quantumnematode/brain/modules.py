@@ -1181,7 +1181,9 @@ def _predator_chemosensation_oracle_core(params: BrainParams) -> CoreFeatures:
     predator (analogous to the legacy nociception_core but consuming the new
     distal-concentration field). Useful for ablation against the temporal
     and klinotaxis variants; the klinotaxis variant is the biologically-
-    preferred default per design.md § Decision T3.1.
+    preferred default for new predator-evasion configs (matches the
+    head-sweep sensing pattern already adopted by the legacy
+    nociception_klinotaxis variant).
     """
     strength = float(params.predator_distal_concentration or 0.0)
     angle = _compute_relative_angle(
