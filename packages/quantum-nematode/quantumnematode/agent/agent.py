@@ -171,31 +171,49 @@ def _build_channel_fetchers(
     return [fetcher_map[ch.name] for ch in channels]
 
 
+def _predator_contact_intensity_at(
+    position: tuple[int, ...],
+    env: DynamicForagingEnvironment,
+) -> float:
+    """Graded contact intensity at ``position`` against env predators.
+
+    Returns `max(0, 1 - manhattan_dist / damage_radius)` against the
+    predator with the highest damage-normalised intensity (i.e. the
+    closest one within its own damage radius). Returns 0.0 when
+    predators are disabled, when there are no predators, or when no
+    predator is within its damage radius of ``position``.
+
+    Shared by the STAM `predator_mechano` channel fetcher and the
+    agent-side `_create_brain_params` BrainParams population so both
+    paths emit the same scalar at the same step.
+    """
+    if not env.predator.enabled or not env.predators:
+        return 0.0
+    best_intensity = 0.0
+    for pred in env.predators:
+        if pred.damage_radius <= 0:
+            continue
+        manhattan = abs(position[0] - pred.position[0]) + abs(
+            position[1] - pred.position[1],
+        )
+        if manhattan > pred.damage_radius:
+            continue
+        intensity = max(0.0, 1.0 - manhattan / pred.damage_radius)
+        best_intensity = max(best_intensity, intensity)
+    return best_intensity
+
+
 def _make_predator_mechano_fetcher(
     env: DynamicForagingEnvironment,
 ) -> ChannelFetcher:
     """Build a fetcher that returns graded contact intensity at the queried position.
 
-    Mirrors the agent-side intensity computation in `_create_brain_params`:
-    `max(0, 1 - manhattan_dist / damage_radius)` against the nearest
-    predator within its own damage radius; 0.0 otherwise.
+    Thin wrapper around :func:`_predator_contact_intensity_at` matching the
+    STAM `ChannelFetcher` signature (position, step).
     """
 
     def fetcher(position: tuple[int, ...], _step: int) -> float:
-        if not env.predator.enabled or not env.predators:
-            return 0.0
-        best_intensity = 0.0
-        for pred in env.predators:
-            if pred.damage_radius <= 0:
-                continue
-            manhattan = abs(position[0] - pred.position[0]) + abs(
-                position[1] - pred.position[1],
-            )
-            if manhattan > pred.damage_radius:
-                continue
-            intensity = max(0.0, 1.0 - manhattan / pred.damage_radius)
-            best_intensity = max(best_intensity, intensity)
-        return best_intensity
+        return _predator_contact_intensity_at(position, env)
 
     return fetcher
 
@@ -354,10 +372,28 @@ class QuantumNematodeAgent:
         self.satiety_config = satiety_config or SatietyConfig()
         self.sensing_config: SensingConfig = sensing_config or SensingConfig()
 
-        # Initialize STAM buffer when enabled — channels resolved from env config
+        # Pre-declare STAM state; the actual resolution happens after self.env
+        # is constructed below so resolve_active_channels sees a real env (and
+        # can therefore include env-conditional channels like predator).
         self._stam: STAMBuffer | None = None
         self._active_channels: tuple[STAMChannelDef, ...] = ()
         self._channel_fetchers: list[ChannelFetcher] = []
+        self._previous_position: tuple[int, ...] | None = None
+        self._last_heading: Direction = Direction.UP
+
+        if env is None:
+            self.env = DynamicForagingEnvironment(
+                grid_size=maze_grid_size,
+                max_body_length=max_body_length,
+                theme=theme,
+                rich_style_config=rich_style_config,
+            )
+        else:
+            self.env = env
+
+        # Resolve STAM channels against the final env (not the possibly-None
+        # constructor argument) so env-conditional channels (predator,
+        # thermotaxis, etc.) are correctly counted when sizing the buffer.
         if self.sensing_config.stam_enabled:
             from quantumnematode.agent.stam import resolve_active_channels
 
@@ -372,24 +408,12 @@ class QuantumNematodeAgent:
                 if brain_sensory_modules is not None
                 else None
             )
-            self._active_channels = resolve_active_channels(env, module_names)
+            self._active_channels = resolve_active_channels(self.env, module_names)
             self._stam = STAMBuffer(
                 buffer_size=self.sensing_config.stam_buffer_size,
                 decay_rate=self.sensing_config.stam_decay_rate,
                 num_channels=len(self._active_channels),
             )
-        self._previous_position: tuple[int, ...] | None = None
-        self._last_heading: Direction = Direction.UP
-
-        if env is None:
-            self.env = DynamicForagingEnvironment(
-                grid_size=maze_grid_size,
-                max_body_length=max_body_length,
-                theme=theme,
-                rich_style_config=rich_style_config,
-            )
-        else:
-            self.env = env
 
         # Build channel fetchers now that self.env is set
         if self._active_channels:
@@ -838,21 +862,14 @@ class QuantumNematodeAgent:
             predator_distal_concentration = self.env.get_predator_sulfolipid_concentration(
                 position=agent_pos,
             )
-            # Graded intensity: max(0, 1 - manhattan_dist / damage_radius).
-            # Uses the predator with the smallest manhattan distance / largest
-            # damage-normalised intensity.
-            best_intensity = 0.0
-            for pred in self.env.predators:
-                if pred.damage_radius <= 0:
-                    continue
-                manhattan = abs(agent_pos[0] - pred.position[0]) + abs(
-                    agent_pos[1] - pred.position[1],
-                )
-                if manhattan > pred.damage_radius:
-                    continue
-                intensity = max(0.0, 1.0 - manhattan / pred.damage_radius)
-                best_intensity = max(best_intensity, intensity)
-            predator_contact_intensity = best_intensity
+            # Graded intensity: max(0, 1 - manhattan_dist / damage_radius)
+            # against the predator with the highest damage-normalised
+            # intensity. Shared logic with the STAM predator_mechano
+            # channel fetcher — see `_predator_contact_intensity_at`.
+            predator_contact_intensity = _predator_contact_intensity_at(
+                agent_pos,
+                self.env,
+            )
 
         # Health state
         health = agent_state.hp

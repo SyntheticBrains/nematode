@@ -869,6 +869,11 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
         sensing.pheromone_food_mode,
         sensing.pheromone_alarm_mode,
         sensing.pheromone_aggregation_mode,
+        # Biology-driven predator sensing modes — included so configs that
+        # set predator_mechano_mode or predator_distal_mode to derivative /
+        # klinotaxis correctly trigger the STAM auto-enable path below.
+        sensing.predator_mechano_mode,
+        sensing.predator_distal_mode,
     )
     any_derivative = any(mode == SensingMode.DERIVATIVE for mode in all_modes)
     any_temporal = any(mode == SensingMode.TEMPORAL for mode in all_modes)

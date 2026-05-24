@@ -42,13 +42,13 @@ def _make_env() -> DynamicForagingEnvironment:
 # Cardinal cells are 1 step away (Manhattan distance 1).
 # Diagonal cells are 2 steps away in Manhattan distance but immediately
 # adjacent in Chebyshev distance (which is what touches at the corners).
-_CARDINAL_OFFSETS = {
+_CARDINAL_OFFSETS: dict[str, tuple[int, int]] = {
     "E": (1, 0),
     "W": (-1, 0),
     "N": (0, 1),
     "S": (0, -1),
 }
-_DIAGONAL_OFFSETS = {
+_DIAGONAL_OFFSETS: dict[str, tuple[int, int]] = {
     "NE": (1, 1),
     "NW": (-1, 1),
     "SE": (1, -1),

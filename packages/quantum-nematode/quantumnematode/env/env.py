@@ -2546,8 +2546,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         return self.is_agent_in_damage_radius_for(agent_id)
 
-    def get_agent_predator_contact_zone_for(self, agent_id: str) -> ContactZone:  # noqa: PLR0911 — early returns for distinct biological cases (no-contact / overlap / no-heading / dot-based) are clearer than a nested branch
+    def get_agent_predator_contact_zone_for(  # noqa: PLR0911
+        self,
+        agent_id: str,
+    ) -> ContactZone:
         """Classify a predator contact by approach direction relative to heading.
+
+        Note: PLR0911 (too many returns) is suppressed because the early
+        returns map cleanly to distinct biological cases (no-contact /
+        overlap / no-heading / dot-based zone resolution) and are clearer
+        than the equivalent nested branching.
 
         Returns the contact zone for the predator closest to the agent (by
         Manhattan distance) whose distance is within its own damage radius.

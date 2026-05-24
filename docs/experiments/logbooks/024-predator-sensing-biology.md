@@ -52,7 +52,7 @@ The corrected biology surface ships and works end-to-end: no crashes, gradient f
 
 ### T4 carry-forwards
 
-Three explicit T4 sub-tasks added to [phase6-tracking/tasks.md](../../../openspec/changes/phase6-tracking/tasks.md) following from T3 evidence:
+Five explicit T4 sub-tasks added to [phase6-tracking/tasks.md](../../../openspec/changes/phase6-tracking/tasks.md) following from T3 evidence (one `T4.0g` convergence-rate study + four `T4.*.predator_evasion_reward_ablation` sibling rows, one per MUST architecture):
 
 - **T4.0g** — investigate the new-biology predator-sensing convergence-rate gap. Run new-biology cells at canonical T4 compute budget; ablate the sparse-contact-signal hypothesis (try injecting distal sulfolipid concentration into the mechano-strength field when not in contact); ablate the information-redundancy hypothesis (try a single composite predator module emitting 4 dims instead of two parallel 3-dim modules); decide whether the gap is acceptable substrate-finding or whether sensor encoding needs revisiting before T7.
 - **T4.\*.predator_evasion_reward_ablation** — four new sibling sub-tasks (one per MUST architecture row) comparing the existing `gradient_proximity` reward against a proposed `distal_chemo_penalty + binary_contact_damage_trigger` variant. The joint sensor-encoding × reward-shape ablation space (T4.0g × these four rows) is the canonical T4 way to evaluate the new biology under matched compute.

@@ -65,7 +65,7 @@ Two failure modes worth flagging up-front for any re-run:
 The convergence-rate gap finding is recorded in three durable locations:
 
 - [Logbook 024 § Verdict](../../024-predator-sensing-biology.md#verdict).
-- The archived [fix-predator-sensing-biology design.md § Modelling caveat 6](../../../../openspec/changes/archive/2026-05-24-fix-predator-sensing-biology/design.md).
-- [phase6-tracking T4.0g](../../../../openspec/changes/phase6-tracking/tasks.md) (explicit follow-up sub-task with sparse-signal and information-redundancy hypotheses spelled out).
+- The archived [fix-predator-sensing-biology design.md § Modelling caveat 6](../../../../../openspec/changes/archive/2026-05-24-fix-predator-sensing-biology/design.md).
+- [phase6-tracking T4.0g](../../../../../openspec/changes/phase6-tracking/tasks.md) (explicit follow-up sub-task with sparse-signal and information-redundancy hypotheses spelled out).
 
 Future evaluation tranches own the empirical hypothesis tests against canonical compute budgets.

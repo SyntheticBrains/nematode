@@ -179,7 +179,10 @@ def resolve_active_channels(
     return tuple(channels)
 
 
-def stam_dim_from_env(env: DynamicForagingEnvironment | None) -> int:
+def stam_dim_from_env(
+    env: DynamicForagingEnvironment | None,
+    sensory_modules: tuple[str, ...] | list[str] | None = None,
+) -> int:
     """Compute STAM memory dimension for a given environment.
 
     Convenience function combining resolve_active_channels + compute_memory_dim.
@@ -188,13 +191,21 @@ def stam_dim_from_env(env: DynamicForagingEnvironment | None) -> int:
     ----------
     env : DynamicForagingEnvironment or None
         Environment instance.
+    sensory_modules : tuple[str, ...] or list[str] or None
+        Sensor-module names from the active config — forwarded to
+        resolve_active_channels so configs that select biology-driven
+        predator modules (predator_mechanosensation_* /
+        predator_chemosensation_*) get the correct STAM channel count.
+        When None, the legacy `predator` channel is assumed (preserves
+        pre-T3 behaviour for callers that don't yet thread sensory_modules
+        through).
 
     Returns
     -------
     int
         STAM memory state dimension.
     """
-    return compute_memory_dim(len(resolve_active_channels(env)))
+    return compute_memory_dim(len(resolve_active_channels(env, sensory_modules)))
 
 
 def compute_memory_dim(num_channels: int) -> int:

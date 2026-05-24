@@ -40,7 +40,7 @@ def _discover_legacy_configs() -> list[Path]:
     if not _EVOLUTION_CONFIGS_DIR.exists():
         return []
     matches: list[Path] = []
-    for path in sorted(_EVOLUTION_CONFIGS_DIR.glob("*.yml")):
+    for path in sorted(_EVOLUTION_CONFIGS_DIR.rglob("*.yml")):
         try:
             data = yaml.safe_load(path.read_text())
         except yaml.YAMLError:
