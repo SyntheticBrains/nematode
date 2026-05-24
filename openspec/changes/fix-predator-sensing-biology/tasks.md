@@ -72,8 +72,8 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
   - `predator_mechano_mode: SensingMode = SensingMode.ORACLE`
   - `predator_distal_mode: SensingMode = SensingMode.ORACLE`
 - [x] 7.2 Keep `nociception_mode: SensingMode = SensingMode.ORACLE` field untouched. Existing `SensingMode` StrEnum unchanged.
-- [ ] 7.3 Write `tests/quantumnematode_tests/utils/test_legacy_nociception_configs_load.py`: regression test that parametrises over every config under `configs/evolution/*klinotaxis*.yml` (and any other file naming legacy `nociception*` modules), asserting `configure_brain(load_simulation_config(...))` succeeds without error. Discover files at test-collection time (no hard-coded list).
-- [ ] 7.4 Run the new regression test on the 22 archived configs; verify all pass.
+- [x] 7.3 Write `tests/quantumnematode_tests/utils/test_legacy_nociception_configs_load.py`: regression test that parametrises over every config under `configs/evolution/` that names legacy `nociception*` modules in its `brain.config.sensory_modules`, asserting each parses as valid YAML and every legacy module name is still registered in `SENSORY_MODULES`. Discover files at test-collection time (no hard-coded list). *Lighter-touch than the original "configure_brain(...) succeeds" framing — evolution configs are not SimulationConfig-shaped, so the test asserts the load-bearing invariant (frozen legacy modules + valid YAML) rather than full brain construction; full construction is exercised by Section 8's integration smoke runs.*
+- [x] 7.4 Run the new regression test on the 22 archived configs; verify all pass. *Discovered 22 legacy configs; 45 parametrised assertions all pass.*
 
 ## 8. Sample configs (T3.8)
 
