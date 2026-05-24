@@ -138,6 +138,18 @@ def _build_channel_fetchers(
         "food": lambda pos, _step: env.get_food_concentration(position=pos),
         "temperature": lambda pos, _step: env.get_temperature(pos) or 0.0,
         "predator": lambda pos, _step: env.get_predator_concentration(position=pos),
+        # Biology-driven predator-mechanosensation STAM channel reads the
+        # graded contact intensity at the agent position. The intensity is
+        # computed against the nearest predator's damage radius so STAM's
+        # temporal averaging produces the habituation kinetics described
+        # in design.md § Decision T3.4.
+        "predator_mechano": _make_predator_mechano_fetcher(env),
+        # Distal-chemosensory STAM channel reads the sulfolipid alias
+        # (delegates to existing exp-decay sum; literature-calibrated
+        # decay constant is a future-tranche concern).
+        "predator_distal": lambda pos, _step: env.get_predator_sulfolipid_concentration(
+            position=pos,
+        ),
         "oxygen": lambda pos, _step: (
             env.get_oxygen_concentration(position=pos) if env.aerotaxis.enabled else 0.0
         ),
@@ -155,6 +167,35 @@ def _build_channel_fetchers(
         ),
     }
     return [fetcher_map[ch.name] for ch in channels]
+
+
+def _make_predator_mechano_fetcher(
+    env: DynamicForagingEnvironment,
+) -> ChannelFetcher:
+    """Build a fetcher that returns graded contact intensity at the queried position.
+
+    Mirrors the agent-side intensity computation in `_create_brain_params`:
+    `max(0, 1 - manhattan_dist / damage_radius)` against the nearest
+    predator within its own damage radius; 0.0 otherwise.
+    """
+
+    def fetcher(position: tuple[int, ...], _step: int) -> float:
+        if not env.predator.enabled or not env.predators:
+            return 0.0
+        best_intensity = 0.0
+        for pred in env.predators:
+            if pred.damage_radius <= 0:
+                continue
+            manhattan = abs(position[0] - pred.position[0]) + abs(
+                position[1] - pred.position[1],
+            )
+            if manhattan > pred.damage_radius:
+                continue
+            intensity = max(0.0, 1.0 - manhattan / pred.damage_radius)
+            best_intensity = max(best_intensity, intensity)
+        return best_intensity
+
+    return fetcher
 
 
 DEFAULT_SATIETY_INITIAL = 200.0
@@ -318,7 +359,18 @@ class QuantumNematodeAgent:
         if self.sensing_config.stam_enabled:
             from quantumnematode.agent.stam import resolve_active_channels
 
-            self._active_channels = resolve_active_channels(env)
+            # Pass brain's sensory_modules so the new predator-family STAM
+            # channels (predator_mechano / predator_distal) activate only
+            # when their corresponding sensor modules are selected. Falls
+            # back to None (= legacy behaviour: bare `predator` channel
+            # activates) when the brain doesn't expose sensory_modules.
+            brain_sensory_modules = getattr(brain, "sensory_modules", None)
+            module_names = (
+                tuple(str(m) for m in brain_sensory_modules)
+                if brain_sensory_modules is not None
+                else None
+            )
+            self._active_channels = resolve_active_channels(env, module_names)
             self._stam = STAMBuffer(
                 buffer_size=self.sensing_config.stam_buffer_size,
                 decay_rate=self.sensing_config.stam_decay_rate,

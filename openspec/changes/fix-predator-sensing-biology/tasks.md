@@ -37,13 +37,13 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 5. STAM channel split (T3.5)
 
-- [ ] 5.1 In [agent/stam.py](../../../packages/quantum-nematode/quantumnematode/agent/stam.py) `CHANNEL_REGISTRY` (around line 57-93), add two new `STAMChannelDef` entries:
+- [x] 5.1 In [agent/stam.py](../../../packages/quantum-nematode/quantumnematode/agent/stam.py) `CHANNEL_REGISTRY` (around line 57-93), add two new `STAMChannelDef` entries:
   - `predator_mechano`: `derivative_key="predator_mechano_dintensity_dt"`, `sensing_mode_attr="predator_mechano_mode"`
   - `predator_distal`: `derivative_key="predator_distal_dconcentration_dt"`, `sensing_mode_attr="predator_distal_mode"`
-- [ ] 5.2 Keep the legacy `predator` channel entry (`derivative_key="predator_dconcentration_dt"`, `sensing_mode_attr="nociception_mode"`) as a frozen alias. Add a comment marking it deprecated-but-load-bearing-for-archived-configs.
-- [ ] 5.3 Extend `resolve_active_channels(env, sensory_modules)` (or equivalent — exploration found `resolve_active_channels` at stam.py:96-130) to activate `predator_mechano` iff the active sensory_modules list contains a `predator_mechanosensation*` variant, and `predator_distal` iff it contains a `predator_chemosensation*` variant. `predator` (legacy) activates iff the list contains a `nociception*` variant.
-- [ ] 5.4 Pre-flight: `grep -rn "num_channels" packages/quantum-nematode` and verify no code path hardcodes the predator-channel count (exploration found none; defensive grep confirms).
-- [ ] 5.5 No new unit tests for STAM channel resolution beyond the integration-smoke pass at task 8 — existing STAM tests parameterise per-channel behaviour via the CHANNEL_REGISTRY, so adding two entries automatically extends the test matrix.
+- [x] 5.2 Keep the legacy `predator` channel entry (`derivative_key="predator_dconcentration_dt"`, `sensing_mode_attr="nociception_mode"`) as a frozen alias. Add a comment marking it deprecated-but-load-bearing-for-archived-configs.
+- [x] 5.3 Extend `resolve_active_channels(env, sensory_modules)` to activate `predator_mechano` iff the active sensory_modules list contains a `predator_mechanosensation*` variant, and `predator_distal` iff it contains a `predator_chemosensation*` variant. `predator` (legacy) activates whenever no new-family channel is selected (preserving pre-T3 byte-equivalent behaviour for the 22 archived configs) or when a `nociception*` module is explicitly selected alongside the new channels.
+- [x] 5.4 Pre-flight: `grep -rn "num_channels" packages/quantum-nematode` and verify no code path hardcodes the predator-channel count. *Confirmed clean — all references are dynamic (`len(self._active_channels)`) or take it as a parameter.*
+- [x] 5.5 No new unit tests for STAM channel resolution beyond the integration-smoke pass at task 8 — existing STAM tests parameterise per-channel behaviour via the CHANNEL_REGISTRY, so adding two entries automatically extends the test matrix. *766 env+agent tests pass after the change with zero regressions.*
 
 ## 6. New sensor modules (T3.6)
 
