@@ -14,8 +14,9 @@ per-architecture branches survive in the dispatcher or YAML loader.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
+
+from pydantic import BaseModel, ConfigDict
 
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType
 from quantumnematode.logging_config import logger
@@ -29,9 +30,10 @@ if TYPE_CHECKING:
 _BrainClsT = TypeVar("_BrainClsT", bound=type)
 
 
-@dataclass(frozen=True)
-class Registration:
+class Registration(BaseModel):
     """One registry entry binding a brain name to its types and metadata."""
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     name: str
     config_cls: type[BrainConfig]

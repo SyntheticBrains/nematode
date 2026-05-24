@@ -4,7 +4,7 @@
 import math
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -129,13 +129,17 @@ MovementPattern = Literal["stationary", "pursuit"]
 
 # Mapping of brain names to their config classes — derived from the
 # brain plugin registry so adding a new architecture does not require an
-# entry here. The cast to ``type[BrainConfigType]`` is a narrowing for
-# static type-checkers: every registered ``config_cls`` is a member of
-# the ``BrainConfigType`` union at runtime by construction.
+# entry here. The ``cast`` narrows ``type[BrainConfig]`` (the registry's
+# field type) to ``type[BrainConfigType]`` (this module's union over the
+# concrete config classes); every registered ``config_cls`` is a member
+# of the ``BrainConfigType`` union at runtime by construction.
 def _build_brain_config_map() -> dict[str, type[BrainConfigType]]:
     from quantumnematode.brain.arch._registry import get_all_registrations
 
-    return {name: reg.config_cls for name, reg in get_all_registrations().items()}  # type: ignore[misc]
+    return cast(
+        "dict[str, type[BrainConfigType]]",
+        {name: reg.config_cls for name, reg in get_all_registrations().items()},
+    )
 
 
 BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = _build_brain_config_map()

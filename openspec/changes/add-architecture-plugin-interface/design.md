@@ -26,11 +26,13 @@ Normative requirements for the registry contract and the connectome brain live i
 
 **Goals:**
 
-- Replace the 19-elif dispatcher with a registry pattern such that adding a new architecture touches ≤ 6 files and introduces zero per-architecture branches in `setup_brain_model()` / `BRAIN_CONFIG_MAP` / simulation loop / training loop. This is the Gate 2 G2.b + G2.c criteria T5 will verify against on a hypothetical new arch.
+These are the change's intent statements; the formal normative requirements live in [`specs/brain-architecture/spec.md`](specs/brain-architecture/spec.md) and [`specs/connectome-ppo-brain/spec.md`](specs/connectome-ppo-brain/spec.md).
+
+- Replace the 19-elif dispatcher with a registry pattern, with the intent that adding a new architecture should touch ≤ 6 files and introduce zero per-architecture branches in `setup_brain_model()` / `BRAIN_CONFIG_MAP` / simulation loop / training loop. The formal target for this intent is captured by the Gate 2 G2.b + G2.c criteria in [phase6-tracking/design.md § Decision 6](../phase6-tracking/design.md), which T5 verifies against on a hypothetical new architecture.
 - Factor *topology* out from *learning rule* so the T1 connectome data model is consumable as a `BrainTopology` by the existing PPO `LearningRule` (and, in T8, by NEAT-evolved topologies through the same `LearningRule`).
 - Ship `ConnectomePPOBrain` (chemical-synapse strict-mask + fixed gap-junction weights per Cook 2019 counts) as the first PPO-trainable architecture over the wild-type connectome. Wire it through the existing grid env + klinotaxis behaviour for the Gate 1 G1.c training-signal check.
-- Establish the migration regression bar: byte-equivalence for MLPPPO + LSTMPPO (G1.d MUST), `np.allclose(rtol=0, atol=1e-7)` parameter-tensor tolerance after a 5-step smoke training for the other 17.
-- Document the plugin-developer experience: a self-contained walkthrough of "how to add a new architecture family" with the ≤ 6 files rule called out explicitly.
+- Establish the migration regression bar: byte-equivalence for MLPPPO + LSTMPPO (the two Gate 1 G1.d candidate architectures, per [phase6-tracking/design.md § Decision 6](../phase6-tracking/design.md)), and `np.allclose(rtol=0, atol=1e-7)` parameter-tensor tolerance after a 5-step smoke training for the other 17.
+- Document the plugin-developer experience: a self-contained walkthrough of "how to add a new architecture family" with the ≤ 6 files target called out explicitly.
 - Close Gate 1 with a written GO / PIVOT / STOP decision in [logbook 023](../../../docs/experiments/logbooks/) evaluated against the four G1.a–G1.d criteria in [phase6-tracking/design.md § Decision 6](../phase6-tracking/design.md).
 
 **Non-Goals:**
@@ -194,7 +196,7 @@ Per [phase6-tracking/tasks.md T2.5](../phase6-tracking/tasks.md):
 - Assert the chosen-action list from `run_brain(...)` matches with action-probability divergence `< 1e-12` per action.
 - Failure mode: any divergence fails the test and blocks the change.
 
-**Other 17 architectures** (G1.d not required): no explicit numerical-equivalence test ships. The migration is purely additive (a metadata-only decorator above the class declaration), and the pre-existing per-architecture test suites under `tests/.../brain/arch/test_<name>.py` are the implicit contract — they continued to pass byte-for-byte across the migration commit (1061 brain/arch tests + the full 3245-test suite both green).
+**Other 17 architectures** (G1.d not required): no explicit numerical-equivalence test ships. The migration is purely additive (a metadata-only decorator above the class declaration), and the pre-existing per-architecture test suites under `tests/.../brain/arch/test_<name>.py` are the implicit contract — they continued to pass byte-for-byte across the migration commit (1061 brain/arch tests + the full 3246-test suite both green).
 
 **Alternatives considered (no longer load-bearing post-scope-decision):**
 

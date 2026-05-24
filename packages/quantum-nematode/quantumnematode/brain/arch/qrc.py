@@ -217,7 +217,10 @@ class QRCBrainConfig(BrainConfig):
     name="qrc",
     config_cls=QRCBrainConfig,
     brain_type=BrainType.QRC,
-    families=("classical",),
+    # QRC pairs a fixed quantum reservoir circuit with a classical readout
+    # network; carries both family tags so quantum-family AND classical-readout
+    # lookups both surface it.
+    families=("quantum", "classical"),
 )
 class QRCBrain(ClassicalBrain):
     """

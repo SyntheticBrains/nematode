@@ -9,15 +9,15 @@ that mutates the topology's learnable weights from collected experience.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from quantumnematode.brain.arch._topology import BrainTopology
 
 
-@dataclass
-class RuleStepReport:
+class RuleStepReport(BaseModel):
     """Summary of a single learning-rule step.
 
     Fields are optional because not every rule produces every component
@@ -29,7 +29,7 @@ class RuleStepReport:
     entropy: float | None = None
     total_loss: float | None = None
     grad_norm: float | None = None
-    extra: dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = Field(default_factory=dict)
 
 
 @runtime_checkable

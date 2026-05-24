@@ -19,7 +19,7 @@ Audit of `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` `set
 | 188 | MLP_PPO | MLPPPOBrainConfig | mlpppo | (classical,) |
 | 207 | MLP_DQN | MLPDQNBrainConfig | mlpdqn | (classical,) |
 | 227 | SPIKING_REINFORCE | SpikingReinforceBrainConfig | spikingreinforce | (spiking,) |
-| 244 | QRC | QRCBrainConfig | qrc | (classical,) |
+| 244 | QRC | QRCBrainConfig | qrc | (quantum, classical) |
 | 260 | QRH | QRHBrainConfig | qrh | (quantum,) |
 | 276 | QEF | QEFBrainConfig | qef | (quantum,) |
 | 292 | CRH | CRHBrainConfig | crh | (classical,) |

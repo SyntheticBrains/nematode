@@ -4,7 +4,7 @@ Phase 6 Tranche 2 (T2). Closes [Gate 1](../phase6-tracking/tasks.md). Sub-tasks 
 
 **PR-split decision (implementation-time amendment):** the work is split across two PRs against the same `feat/architecture-plugin-interface` branch lineage.
 
-- **First PR — registry capability**: § 1 through § 6 below (40 sub-tasks). Ships the brain plugin registry, the `BrainTopology` / `LearningRule` Protocols (as forward-compat scaffolding), the 19-architecture decorator-only migration, the `setup_brain_model` dispatcher collapse, the `BRAIN_CONFIG_MAP` registry derivation, and the `BrainType` migration to `StrEnum`. 3245 tests pass, 2 skipped, 2 xfailed (pre-existing stale YAMLs on main).
+- **First PR — registry capability**: § 1 through § 6 below (40 sub-tasks). Ships the brain plugin registry, the `BrainTopology` / `LearningRule` Protocols (as forward-compat scaffolding), the 19-architecture decorator-only migration, the `setup_brain_model` dispatcher collapse, the `BRAIN_CONFIG_MAP` registry derivation, and the `BrainType` migration to `StrEnum`. 3246 tests pass, 1 skipped, 2 xfailed (pre-existing stale YAMLs on main).
 - **Follow-up PR — `connectome-ppo-brain` capability + Gate 1 close**: § 7 through § 12 below (32 sub-tasks). Ships `ConnectomePPOBrain`, the klinotaxis smoke config, the plugin-developer documentation, the implementation logbook + Gate-1 decision, and the tracker / roadmap updates.
 
 The OpenSpec change remains open across the two PRs and is archived only after the follow-up PR merges.
@@ -40,7 +40,7 @@ Per-architecture: add a `@register_brain(name, config_cls, brain_type, families=
 
 - [x] 4.1 Migrate `MLPReinforceBrain` ([mlpreinforce.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpreinforce.py)) — `families=("classical",)`.
 - [x] 4.2 Migrate `MLPDQNBrain` ([mlpdqn.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpdqn.py)) — `families=("classical",)`.
-- [x] 4.3 Migrate `QRCBrain` ([qrc.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrc.py)) — `families=("classical",)` (QRC is classical reservoir).
+- [x] 4.3 Migrate `QRCBrain` ([qrc.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/qrc.py)) — `families=("quantum", "classical")` (QRC pairs a fixed quantum reservoir circuit with a classical readout network; multi-family registration surfaces it under both quantum and classical lookups).
 - [x] 4.4 Migrate `CRHBrain` ([crh.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/crh.py)) — `families=("classical",)`.
 - [x] 4.5 Migrate `CRHQLSTMBrain` ([crhqlstm.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/crhqlstm.py)) — `families=("classical",)`.
 - [x] 4.6 Migrate `HybridClassicalBrain` ([hybridclassical.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py)) — `families=("classical",)`.
