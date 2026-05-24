@@ -43,7 +43,7 @@ The Short-Term Associative Memory (STAM) registry SHALL provide two separate pre
 - **WHEN** `resolve_active_channels(env, sensory_modules)` is called with `env.predator.enabled = True`
 - **THEN** the resolver SHALL return the `predator_mechano` channel iff `sensory_modules` contains any variant of `predator_mechanosensation` (oracle / temporal / klinotaxis)
 - **AND** SHALL return the `predator_distal` channel iff `sensory_modules` contains any variant of `predator_chemosensation` (oracle / temporal / klinotaxis)
-- **AND** SHALL return the legacy `predator` channel iff `sensory_modules` contains any variant of `nociception` (oracle / temporal / klinotaxis)
+- **AND** SHALL return the legacy `predator` channel when **either** (a) `sensory_modules` contains any variant of `nociception` (oracle / temporal / klinotaxis), **or** (b) no new-family predator module (`predator_mechanosensation*` / `predator_chemosensation*`) is selected — the latter rule guards the byte-equivalent-load invariant for archived configs that pre-date the new-family modules and may pass `sensory_modules=None` or an empty list to `resolve_active_channels`
 - **AND** the three channels MAY all activate simultaneously if a config lists modules from multiple families (no rejection; STAM memory dim grows accordingly)
 
 #### Scenario: STAM dimension formula absorbs new channels
@@ -99,7 +99,8 @@ The existing `nociception` / `nociception_temporal` / `nociception_klinotaxis` m
 
 - **WHEN** a `BrainParams` instance is constructed with default arguments
 - **THEN** the legacy fields SHALL exist with defaults `predator_contact: bool | None = None`, `predator_concentration: float | None = None`, `predator_dconcentration_dt: float | None = None`, `predator_gradient_strength: float | None = None`, `predator_gradient_direction: float | None = None`, `predator_lateral_gradient: float | None = None`
-- **AND** four new fields SHALL exist with defaults `predator_contact_intensity: float | None = None`, `predator_contact_zone: ContactZone | None = None`, `predator_distal_concentration: float | None = None`, `predator_distal_dconcentration_dt: float | None = None`
+- **AND** five new fields SHALL exist with defaults `predator_contact_intensity: float | None = None`, `predator_contact_zone: ContactZone | None = None`, `predator_distal_concentration: float | None = None`, `predator_distal_dconcentration_dt: float | None = None`, `predator_mechano_dintensity_dt: float | None = None`
+- **AND** `predator_mechano_dintensity_dt` SHALL carry the STAM-computed temporal derivative of `predator_contact_intensity` for the mechanosensation temporal + klinotaxis sensor modules (independent of the legacy `predator_dconcentration_dt` field, which the legacy `nociception_*` modules continue to read)
 - **AND** populating the new fields SHALL NOT affect the legacy fields' values (and vice versa)
 
 ### Requirement: SensingConfig Mode Fields

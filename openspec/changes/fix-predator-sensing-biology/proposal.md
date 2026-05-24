@@ -46,7 +46,7 @@ What stays **out of T3 scope** (deferred):
 
 ### Modified Capabilities
 
-- `brain-architecture`: gains the new `BrainParams` fields (`predator_contact_intensity`, `predator_contact_zone`, `predator_distal_concentration`, `predator_distal_dconcentration_dt`). Legacy fields untouched. No change to the Brain Protocol surface; consumer brains pick up the new fields via the existing `sensory_modules` pipeline.
+- `brain-architecture`: gains five new `BrainParams` fields (`predator_contact_intensity`, `predator_contact_zone`, `predator_distal_concentration`, `predator_distal_dconcentration_dt`, `predator_mechano_dintensity_dt`). Legacy fields untouched. No change to the Brain Protocol surface; consumer brains pick up the new fields via the existing `sensory_modules` pipeline. The `predator_mechano_dintensity_dt` field carries the STAM-computed temporal derivative of `predator_contact_intensity` for the mechanosensation temporal + klinotaxis modules, independent of the legacy `predator_dconcentration_dt` field which legacy `nociception_*` modules continue to read.
 - `environment-simulation`: gains the `ContactZone` enum, `get_agent_predator_contact_zone_for(agent_id)` method, and the `get_predator_sulfolipid_concentration` alias (delegates to existing `get_predator_concentration`).
 - `configuration-system`: `SensingConfig` gains `predator_mechano_mode: SensingMode` and `predator_distal_mode: SensingMode`. Existing `nociception_mode: SensingMode` untouched.
 - `short-term-associative-memory`: STAM `CHANNEL_REGISTRY` gains `predator_mechano` + `predator_distal` channels. Legacy `predator` channel kept as deprecated alias.
@@ -71,7 +71,7 @@ What stays **out of T3 scope** (deferred):
 
 - `openspec/changes/phase6-tracking/tasks.md` — tick T3.1-T3.6 sub-tasks; add the T4 reward-ablation carry-forward row
 - `docs/roadmap.md` — Phase 6 Tranche Tracker T3 row flipped to ✅ complete after merge
-- A new section inside the T4 logbook (`docs/experiments/logbooks/0XX-l2-first-pass.md` when it's authored) — per phase6-tracking T3.6, T3 verification rides alongside the L2 cells that consume it, not its own logbook
+- A new section inside the T4 logbook stub at [`docs/experiments/logbooks/024-l2-first-pass.md`](../../../docs/experiments/logbooks/024-l2-first-pass.md) — per phase6-tracking T3.6, T3 verification rides alongside the L2 cells that consume it, not its own logbook. The T4 body lands below the T3 prerequisite section when T4 work begins.
 
 **Behavioural impact**:
 

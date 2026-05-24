@@ -17,21 +17,23 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 
 ## 3. BrainParams field additions (T3.3)
 
-- [x] 3.1 In [brain/arch/\_brain.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/_brain.py) `BrainParams`, add four new optional fields, all defaulting to `None`:
+- [x] 3.1 In [brain/arch/\_brain.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/_brain.py) `BrainParams`, add five new optional fields, all defaulting to `None`:
   - `predator_contact_intensity: float | None` — graded ASH response per [design.md § Decision T3.4](design.md), value ∈ [0, 1]
   - `predator_contact_zone: ContactZone | None` — anterior/posterior/lateral discrimination
   - `predator_distal_concentration: float | None` — sulfolipid-analogue concentration
-  - `predator_distal_dconcentration_dt: float | None` — temporal derivative (populated by STAM)
+  - `predator_distal_dconcentration_dt: float | None` — temporal derivative of `predator_distal_concentration` (populated by STAM `predator_distal` channel)
+  - `predator_mechano_dintensity_dt: float | None` — temporal derivative of `predator_contact_intensity` (populated by STAM `predator_mechano` channel; added late in implementation when the mechanosensation temporal + klinotaxis extractors needed a dedicated derivative field independent of the legacy `predator_dconcentration_dt`)
 - [x] 3.2 Keep legacy fields `predator_contact: bool | None`, `predator_concentration: float | None`, `predator_dconcentration_dt: float | None` untouched. Document in the field docstrings that these are the legacy paths consumed by `nociception_*` modules and the reward calculator.
 - [x] 3.3 Import `ContactZone` from env into \_brain.py for the type annotation. Confirm no circular import (env imports BrainParams via `TYPE_CHECKING`).
 
 ## 4. Agent populates new BrainParams fields (T3.4)
 
-- [x] 4.1 In [agent/agent.py](../../../packages/quantum-nematode/quantumnematode/agent/agent.py) (locate the `_create_brain_params` or equivalent function — exploration found field population around lines 730-815, 881-894), populate the four new BrainParams fields from env + STAM:
+- [x] 4.1 In [agent/agent.py](../../../packages/quantum-nematode/quantumnematode/agent/agent.py) (locate the `_create_brain_params` or equivalent function — exploration found field population around lines 730-815, 881-894), populate the five new BrainParams fields from env + STAM:
   - `predator_contact_intensity` from `max(0, 1 - manhattan_dist / damage_radius)` clipped to [0, 1] using existing distance computation
   - `predator_contact_zone` from `env.get_agent_predator_contact_zone_for(agent_id)`
   - `predator_distal_concentration` from `env.get_predator_sulfolipid_concentration(agent_pos)` (alias of `get_predator_concentration`)
   - `predator_distal_dconcentration_dt` from STAM's `predator_distal` channel derivative output (populated by Section 5)
+  - `predator_mechano_dintensity_dt` from STAM's `predator_mechano` channel derivative output (populated by Section 5)
 - [x] 4.2 Verify population happens unconditionally when env predator is enabled (so T4.0c's ConnectomePPO consumer can read them even before the new sensor modules are wired into the brain's sensory_modules list).
 - [x] 4.3 Verify legacy fields (`predator_contact`, `predator_concentration`, `predator_dconcentration_dt`) continue to be populated identically to today.
 
@@ -104,4 +106,4 @@ Phase 6 Tranche 3 (T3). Implements the corrected biology-driven two-channel pred
 - [x] 11.4 Audit staged-file sizes vs `.gitattributes` LFS rules — flag any > 100 KB file not covered by an existing rule. *Only three >100KB files (`docs/roadmap.md`, `env/env.py`, `utils/config_loader.py`) are present; all pre-existing in main with small additive edits. No new binaries or large artefacts.*
 - [x] 11.5 Scan staged content for absolute home paths (`/Users/...`, `/home/...`, `C:\\Users\\...`) and `file:///` URI prefixes; sanitise to repo-relative references before committing. *Clean — only this task's description names the patterns it scans for.*
 - [x] 11.6 **Planning-doc terminology cleanup** — scan implementation `.py` + config `.yml` files for Tranche/Decision/Gate/Layer/OpenSpec/Milestone/Phase\\b leakage per the user feedback memory. *Five instances of "OpenSpec change" / "Phase 6 Tranche 3" leaked into two config headers + two test docstrings; cleaned up in same commit batch as the §11 verification ticks.*
-- [ ] 11.7 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time — a prior approval doesn't authorise subsequent pushes.
+- [x] 11.7 **Pause for user authorisation** before `git push` or `gh pr create`. Per project convention, remote-state mutations require explicit user approval each time — a prior approval doesn't authorise subsequent pushes. *Pause observed: agent paused for explicit authorisation before push/PR-create steps. User reviewed the pre-push state on 2026-05-24 and approved proceeding. Tick lands ahead of the actual push so the change is archivable; the push itself is the next discrete action.*
