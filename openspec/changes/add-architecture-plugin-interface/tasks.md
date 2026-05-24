@@ -2,6 +2,13 @@
 
 Phase 6 Tranche 2 (T2). Closes [Gate 1](../phase6-tracking/tasks.md). Sub-tasks expand T2.1 through T2.10 from [phase6-tracking/tasks.md:106-115](../phase6-tracking/tasks.md) into a sequenced implementation checklist. Implementation order follows [design.md § Decision 7](design.md) (Migration sequencing) and [design.md § Migration Plan](design.md).
 
+**PR-split decision (implementation-time amendment):** the work is split across two PRs against the same `feat/architecture-plugin-interface` branch lineage.
+
+- **First PR — registry capability**: § 1 through § 6 below (40 sub-tasks). Ships the brain plugin registry, the `BrainTopology` / `LearningRule` Protocols (as forward-compat scaffolding), the 19-architecture decorator-only migration, the `setup_brain_model` dispatcher collapse, the `BRAIN_CONFIG_MAP` registry derivation, and the `BrainType` migration to `StrEnum`. 3245 tests pass, 2 skipped, 2 xfailed (pre-existing stale YAMLs on main).
+- **Follow-up PR — `connectome-ppo-brain` capability + Gate 1 close**: § 7 through § 12 below (32 sub-tasks). Ships `ConnectomePPOBrain`, the klinotaxis smoke config, the plugin-developer documentation, the implementation logbook + Gate-1 decision, and the tracker / roadmap updates.
+
+The OpenSpec change remains open across the two PRs and is archived only after the follow-up PR merges.
+
 ## 1. Registry + Protocol scaffolding (T2.1 + T2.2 + T2.3)
 
 - [x] 1.1 Audit `setup_brain_model()` dispatcher and document the 19 elif branches in a short notes file at `openspec/changes/add-architecture-plugin-interface/notes/dispatcher-audit.md` (per [phase6-tracking/tasks.md T2.1](../phase6-tracking/tasks.md)). Cross-reference to the registry refactor plan.

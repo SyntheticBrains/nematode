@@ -62,7 +62,7 @@ class MLPPPOBrain: ...
 brain = instantiate_brain(name="mlpppo", config=cfg, **infra_kwargs)
 ```
 
-The registry is a private module-level dict; entries are populated at import time when each `brain/arch/<name>.py` module is loaded. A top-level `_load_all_brains()` function in `brain/arch/__init__.py` imports every architecture module (currently 19, soon 20 with `connectome_ppo`) so the registry is fully populated before any consumer queries it. This matches the existing repo pattern: every architecture is already imported by `brain/arch/__init__.py` to re-export its config class.
+The registry is a private module-level dict; entries are populated at import time when each `brain/arch/<name>.py` module is loaded. `brain/arch/__init__.py` already imports every architecture module at the top level (to re-export the Brain + Config classes); those imports double as the registration trigger. After every architecture module has been imported, `__init__.py` invokes `assert_registry_matches_enum()` so any accidental enum/registry drift fails loudly at import time rather than at first dispatch.
 
 **Alternatives considered:**
 
@@ -107,9 +107,9 @@ class LearningRule(Protocol):
     def reset_episode(self) -> None: ...
 ```
 
-The 19 existing brains adopt these Protocols **internally** — each holds a `self.topology` and a `self.rule` reference inside its existing `__init__`. The external `Brain` Protocol methods (`run_brain`, `update_memory`, etc.) delegate to `self.topology.forward(...)` and `self.rule.step(...)`. No new public API is added on the Brain Protocol.
+**Scope decision (implementation-time amendment):** the per-brain topology/rule extraction originally specified here is deferred to a follow-up change. T2 ships the Protocols as forward-compat scaffolding consumed directly by the new `ConnectomePPOBrain`; the existing 19 brains are migrated decorator-only (no `self.topology` / `self.rule` extraction in their `__init__`). Byte-equivalence then becomes trivially preserved because no executing code changes — the decorator is metadata only. The follow-up change can refactor the 19 fused bundles when there is a concrete consumer of the factoring (e.g. T8 NEAT-evolved topology + PPO sharing the same rule with `ConnectomePPOBrain`).
 
-**Critical constraint**: for MLPPPO + LSTMPPO (the G1.d byte-equivalence MUSTs), the refactor must preserve the exact tensor ops sequence pre- and post-refactor. Strategy: keep the existing `forward` / `learn` method bodies intact; introduce `topology` and `rule` as thin reference-holding adapters that delegate to the existing methods, rather than rewriting the call sites. Byte-equivalence falls out for free because no tensor operation moves.
+The Protocols still ship under `_topology.py` and `_rule.py` and remain part of the public `brain.arch` surface. `ConnectomePPOBrain` (delivered in the follow-up change) implements `BrainTopology` directly with a non-trivial `apply_weight_mask` (chemical-synapse strict-mask).
 
 **Alternatives considered:**
 
@@ -182,24 +182,23 @@ K (forward-pass depth) is configurable; T2 default is K = 1 (matches the smoke-t
 
 Per [phase6-tracking/tasks.md T2.5](../phase6-tracking/tasks.md):
 
-**MLPPPO + LSTMPPO** (Gate 1 G1.d MUST): byte-equivalence on one smoke config each.
+**Scope decision (implementation-time amendment):** because Decision 2's scope decision reduced the migration to a decorator-only change (no per-brain `__init__` modification), the pickle-fixture pre/post-refactor capture became unnecessary. By construction no executing code moves; byte-equivalence reduces to "the registry-instantiated brain and the directly-constructed brain produce identical results under pinned seeds in the same process." That is what [test_registration_equivalence.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registration_equivalence.py) verifies.
 
-- Test pattern modelled on [test_predator_brain_byte_equivalence.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/env/test_predator_brain_byte_equivalence.py).
-- Pre-refactor: capture a 10-episode training trajectory + final parameter tensor on the smoke config with a fixed seed (committed as fixture data under `tests/.../test_data/`).
-- Post-refactor: re-run identically, assert exact `torch.equal` on every per-step output + per-episode parameter tensor.
-- Failure mode: any byte-level mismatch fails the test and blocks the change.
+**MLPPPO + LSTMPPO** (Gate 1 G1.d MUST): in-process equivalence test.
 
-**Other 17 architectures** (G1.d not required, but documented numerical equivalence): `np.allclose(rtol=0, atol=1e-7)` on parameter tensors after a 5-step smoke training.
+- Instantiate the brain twice in the same Python process: once via `MLPPPOBrain(config=cfg, device=DeviceType.CPU)` (direct), once via `instantiate_brain("mlpppo", cfg, device=DeviceType.CPU)` (registry).
+- Pin both `cfg.seed` and the global `torch` + `numpy` RNG before each forward pass.
+- Assert `torch.equal` on every actor / critic parameter tensor + (LSTM only) the recurrent module's weights.
+- Assert the chosen-action list from `run_brain(...)` matches with action-probability divergence `< 1e-12` per action.
+- Failure mode: any divergence fails the test and blocks the change.
 
-- The 5-step bar is short enough to run in CI per-architecture (< 30s per arch wall-clock) but long enough to surface accumulated drift.
-- `atol=1e-7` catches everything except floating-point reassociation (which is the only allowable drift from a pure mechanical refactor — and even reassociation should not occur in T2 since the tensor ops sequence is preserved per Decision 2).
-- Per-architecture pass/fail tabled in [logbook 023](../../../docs/experiments/logbooks/) at Gate 1 close. Any architecture failing the tolerance bar is investigated and either fixed or the tolerance is widened with explicit justification.
+**Other 17 architectures** (G1.d not required): no explicit numerical-equivalence test ships. The migration is purely additive (a metadata-only decorator above the class declaration), and the pre-existing per-architecture test suites under `tests/.../brain/arch/test_<name>.py` are the implicit contract — they continued to pass byte-for-byte across the migration commit (1061 brain/arch tests + the full 3245-test suite both green).
 
-**Alternatives considered:**
+**Alternatives considered (no longer load-bearing post-scope-decision):**
 
-- **Byte-equivalence on all 19**. Maximally rigorous. Rejected: quantum architectures (8 families) have non-deterministic QPU back-ends that even with `shots` fixed may have RNG reassociation; spiking architectures use surrogate gradients that can have subtle reassociation. Forcing byte-equivalence on these 8-9 architectures adds 1-2 weeks of debugging for marginal value beyond `atol=1e-7`.
-- **No tolerance bar at all, just "tests pass"**. Rejected: existing tests don't exercise per-step parameter trajectories; a refactor could change training dynamics subtly while still passing the existing assertions. The explicit tolerance bar is the load-bearing migration evidence.
-- **Behavioural smoke (training-curve shape preserved within 5%)**. Considered as a fallback for any architecture that fails `atol=1e-7`. Documented as the next-tier diagnostic but not the default bar.
+- **Pickle-fixture pre/post-refactor capture** — the original design here. Made redundant by the scope decision: nothing moves, so there is nothing for a pre/post-refactor comparison to surface that the in-process equivalence test does not already catch with a smaller blast radius.
+- **Parametrised numerical-equivalence test over all 17 non-MUST architectures** — also made redundant. If a brain's behaviour changed under the migration, its existing per-architecture test suite would fail. None did.
+- **Byte-equivalence on all 19**. Maximally rigorous; not pursued because the scope decision shifted the migration to decorator-only, removing the need for the rigour.
 
 ### Decision 6 — Gate 1 G1.c paired-control procedure
 

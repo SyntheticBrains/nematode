@@ -23,21 +23,30 @@ The migration regression bar follows Phase 5 M1's PredatorBrain refactor precede
 
 ### 1. Brain Plugin Registry (`brain-architecture` MODIFIED)
 
-Two new module files under `packages/quantum-nematode/quantumnematode/brain/arch/`:
+Three new module files under `packages/quantum-nematode/quantumnematode/brain/arch/`:
 
-- `_registry.py` — `@register_brain(name, config_cls)` decorator + `instantiate_brain(name, config, **kwargs) -> Brain` + registry inspection helpers. Each architecture's `brain/arch/<name>.py` self-registers at import time. Single source of truth for the (name, config_cls, brain_cls) mapping.
-- `_topology.py` + `_rule.py` — `BrainTopology` and `LearningRule` Protocols. `BrainTopology` exposes `n_inputs` / `n_outputs` / `n_hidden` / `forward(x)` / optional `apply_weight_mask(weights)`. `LearningRule` exposes optimiser, value head, replay buffer, gradient computation. The 19 existing brains' `__init__` extracts a `topology` + `rule` reference internally; the external Brain Protocol surface ([brain/arch/\_brain.py:346-368](../../../packages/quantum-nematode/quantumnematode/brain/arch/_brain.py)) does NOT change.
+- `_registry.py` — `@register_brain(name, config_cls, brain_type, families)` decorator + `instantiate_brain(name, config, **infra_kwargs) -> Brain` + registry inspection helpers (`get_registration`, `list_registered_brains`, `family_members`, `assert_registry_matches_enum`). Each architecture's `brain/arch/<name>.py` self-registers at import time. Single source of truth for the (name, config_cls, brain_cls, brain_type, families) mapping.
+- `_topology.py` — `BrainTopology` Protocol exposing `n_inputs` / `n_outputs` / `n_hidden` / `forward(x)` / `apply_weight_mask(weights)`. Forward-compat scaffolding consumed by the new `ConnectomePPOBrain` (delivered in the follow-up change); the existing 19 brains are migrated decorator-only.
+- `_rule.py` — `LearningRule` Protocol exposing `step(topology, batch) -> RuleStepReport` / `reset_episode()` + a `RuleStepReport` dataclass. Same forward-compat-scaffolding status as `BrainTopology`.
 
-Two modified module files:
+Three modified module files:
 
-- `utils/brain_factory.py` — the 19-elif `setup_brain_model()` dispatcher collapses to a single `instantiate_brain(...)` call. Backward-compatible signature retained (callers still pass `BrainType` + config); internal dispatch goes through the registry.
-- `utils/config_loader.py` — `BRAIN_CONFIG_MAP` (currently 19 hand-maintained entries) becomes a registry lookup. `_resolve_brain_config` helper at [config_loader.py:153-216](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) is unchanged (still useful for raw-dict → Pydantic resolution).
+- `utils/brain_factory.py` — the 19-branch (1 `if` + 18 `elif`) `setup_brain_model()` dispatcher collapses to a thin shim that builds per-architecture infrastructure kwargs and delegates to `instantiate_brain(brain_type.value, brain_config, **infra_kwargs)`. The function signature is preserved exactly; the body shrinks from 459 LOC to ~170 LOC.
+- `utils/config_loader.py` — `BRAIN_CONFIG_MAP` (formerly 19 hand-maintained entries) is now derived from the registry via `{name: reg.config_cls for name, reg in get_all_registrations().items()}`. `_resolve_brain_config` helper at [config_loader.py:153-216](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) is unchanged (still useful for raw-dict → Pydantic resolution).
+- `brain/arch/dtypes.py` — `BrainType` migrates from `Enum` to `StrEnum` (member values are already strings; the change makes `BrainType.MLP_PPO == "mlpppo"` evaluate True). `QUANTUM_BRAIN_TYPES` / `CLASSICAL_BRAIN_TYPES` / `SPIKING_BRAIN_TYPES` sets are now derived from registry `families` metadata via lazy module `__getattr__` (PEP 562), so adding a new architecture no longer requires editing these set literals. An architecture may carry multiple family tags (e.g. `QSNN_REINFORCE` is in both `QUANTUM_BRAIN_TYPES` and `SPIKING_BRAIN_TYPES`).
 
-One modified module — minimal-edit per architecture:
+Decorator-only edit per architecture (19 files):
 
-- Each of the 19 `brain/arch/<name>.py` files gets a `@register_brain("<name>", <Name>BrainConfig)` decorator on the Brain class. The `BrainType` enum at [brain/arch/dtypes.py](../../../packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py) stays for typed dispatch in evolution-framework + predator-brain callers, but its membership becomes registry-derived rather than hand-maintained.
+- Each `brain/arch/<name>.py` file gets a `@register_brain(name=..., config_cls=..., brain_type=..., families=...)` decorator on the Brain class. **No other code in the migrated brains changes** — per the scope decision documented in [tasks.md § 2](tasks.md), the per-brain topology/rule extraction is deferred to a follow-up change. Byte-equivalence is preserved by construction because no executing code moves.
 
-### 2. Connectome-Constrained Brain (`connectome-ppo-brain` NEW)
+Wired into `brain/arch/__init__.py`:
+
+- Re-exports `register_brain`, `instantiate_brain`, `get_registration`, `list_registered_brains`, `get_all_registrations`, `BrainTopology`, `LearningRule`, `Registration`, `RuleStepReport`.
+- Invokes `assert_registry_matches_enum()` after all architecture modules have imported, so accidental enum/registry drift fails loudly at import time.
+
+### 2. Connectome-Constrained Brain (`connectome-ppo-brain` NEW) — follow-up PR
+
+**Scope split (implementation-time amendment):** the work described in this subsection lands in a follow-up PR. The first PR ships the `brain-architecture` capability changes (§ 1 above); the follow-up PR ships everything in this subsection together with the klinotaxis smoke config (§ 3), the plugin-developer documentation (§ 5), the implementation logbook + Gate-1 decision (§ 6), and the tracker / roadmap updates (§ 7).
 
 New module `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py`:
 
@@ -52,13 +61,19 @@ New module `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.
 
 ### 4. Tests
 
-New tests under `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/`:
+New tests under `packages/quantum-nematode/tests/quantumnematode_tests/`:
 
-- `test_registry.py` — registry round-trip (register → instantiate → assert type); duplicate-name detection; unknown-name error path; the 19 existing architectures self-register at import time.
-- `test_topology_rule_protocols.py` — `BrainTopology` and `LearningRule` Protocol conformance for MLPPPO + LSTMPPO + ConnectomePPO (the three Gate 1 brains).
-- `test_connectome_ppo.py` — `ConnectomePPOBrain` construction, forward-pass shape + finiteness (mirrors connectome smoke test), strict-mask invariant (no learnable weight along a non-existent edge), gap-junction weights frozen across PPO updates, sensor/motor projection sanity.
-- `test_migration_byte_equivalence.py` — MLPPPO + LSTMPPO byte-equivalence pre-/post-refactor on one smoke config each. Mirrors [test_predator_brain_byte_equivalence.py](../../../packages/quantum-nematode/tests/quantumnematode_tests/env/test_predator_brain_byte_equivalence.py): pin RNG seeds, capture trajectory + parameter tensors, assert exact equality.
-- `test_migration_numerical_equivalence.py` — the other 17 architectures: `np.allclose(rtol=0, atol=1e-7)` on parameter tensors after a 5-step smoke training. Per-architecture pass/fail recorded; any architecture exceeding the tolerance fails this test with a captured tensor diff.
+**First PR (registry capability):**
+
+- `brain/arch/test_registry.py` — registry round-trip (register / get / list); duplicate-name detection; unknown-name error path; `instantiate_brain` round-trip with wrong-config-type rejection; `family_members` partitioning; `get_all_registrations` returns-a-copy invariant. Uses an autouse fixture to snapshot-and-clear the module-level registry around each test.
+- `brain/arch/test_registry_enum_consistency.py` — separate module (outside the autouse-fixture scope) that asserts `BrainType` enum string values equal the registered names at import time. Confirms the production-state invariant.
+- `brain/arch/test_registration_equivalence.py` — in-process equivalence test for MLPPPO + LSTMPPO. Instantiates each brain twice (direct constructor + via `instantiate_brain`) under pinned seeds, asserts byte-identical parameter tensors + matching chosen-action lists with `< 1e-12` probability divergence. Replaces the original pickle-fixture pre/post-refactor capture per the scope decision in [design.md Decision 5](design.md).
+- `utils/test_config_loader_yaml_compat.py` — parametrised over every YAML under [configs/scenarios/](../../../configs/scenarios/); asserts each loads to a valid brain config via `configure_brain(load_simulation_config(...))`. 189/191 pass on the post-refactor branch; 2 xfailed (`qrc_small_oracle.yml` and `qsnnreinforce_small_oracle.yml`) document pre-existing stale-YAML breakage on main.
+
+**Follow-up PR (`connectome-ppo-brain` capability):**
+
+- `brain/arch/test_topology_rule_protocols.py` — `BrainTopology` and `LearningRule` Protocol conformance for `ConnectomePPOBrain`.
+- `brain/arch/test_connectome_ppo.py` — `ConnectomePPOBrain` construction, forward-pass shape + finiteness, strict-mask invariant (no learnable weight along a non-existent edge), gap-junction weights frozen across PPO updates, sensor/motor projection sanity.
 
 ### 5. Plugin-Developer Documentation
 
@@ -85,17 +100,22 @@ New tests under `packages/quantum-nematode/tests/quantumnematode_tests/brain/arc
 
 ## Impact
 
-**Code:**
+**Code (first PR — registry capability):**
 
 - `packages/quantum-nematode/quantumnematode/brain/arch/_registry.py` — new registry module
-- `packages/quantum-nematode/quantumnematode/brain/arch/_topology.py` — new `BrainTopology` Protocol
-- `packages/quantum-nematode/quantumnematode/brain/arch/_rule.py` — new `LearningRule` Protocol
-- `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py` — new `ConnectomePPOBrain` + config
-- `packages/quantum-nematode/quantumnematode/brain/arch/__init__.py` — re-exports updated for registry consumers
-- `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` — dispatcher collapsed (459 LOC → expected ~50 LOC)
-- `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — `BRAIN_CONFIG_MAP` becomes registry lookup
-- `packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py` — `BrainType` membership registry-derived (enum kept for typed callers)
-- 19 files at `packages/quantum-nematode/quantumnematode/brain/arch/<name>.py` — `@register_brain(...)` decorator added; minimal internal refactor to extract topology + rule references
+- `packages/quantum-nematode/quantumnematode/brain/arch/_topology.py` — new `BrainTopology` Protocol (forward-compat scaffolding)
+- `packages/quantum-nematode/quantumnematode/brain/arch/_rule.py` — new `LearningRule` Protocol + `RuleStepReport` dataclass (forward-compat scaffolding)
+- `packages/quantum-nematode/quantumnematode/brain/arch/__init__.py` — re-exports updated for registry consumers; `assert_registry_matches_enum()` invoked at import
+- `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` — dispatcher collapsed (459 LOC → ~170 LOC; signature preserved)
+- `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — `BRAIN_CONFIG_MAP` derived from registry
+- `packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py` — `BrainType` migrated `Enum → StrEnum`; family sets derived from registry via lazy module `__getattr__`
+- 19 files at `packages/quantum-nematode/quantumnematode/brain/arch/<name>.py` — `@register_brain(...)` decorator added above the brain class + 2 import lines each; no other changes
+
+**Code (follow-up PR — `connectome-ppo-brain` capability):**
+
+- `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py` — new `ConnectomePPOBrain` + `ConnectomePPOBrainConfig` + `ConnectomeTopology`
+- `packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py` — add `BrainType.CONNECTOMEPPO = "connectomeppo"` enum member (paired with the registration so the consistency check never sees a transient mismatch)
+- `packages/quantum-nematode/quantumnematode/brain/arch/__init__.py` — re-export `ConnectomePPOBrain` + `ConnectomePPOBrainConfig`
 
 **Configs:**
 
@@ -103,13 +123,17 @@ New tests under `packages/quantum-nematode/tests/quantumnematode_tests/brain/arc
 
 **Dependencies:** None. The registry + Protocol work is pure-stdlib + existing torch/numpy. ConnectomePPOBrain consumes the T1 `connectome` subpackage (already shipped).
 
-**Tests:**
+**Tests (first PR — registry capability):**
 
 - `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registry.py` — new
+- `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registry_enum_consistency.py` — new
+- `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_registration_equivalence.py` — new (MLPPPO + LSTMPPO in-process equivalence)
+- `packages/quantum-nematode/tests/quantumnematode_tests/utils/test_config_loader_yaml_compat.py` — new (scenario-YAML registry-load regression)
+
+**Tests (follow-up PR — `connectome-ppo-brain` capability):**
+
 - `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_topology_rule_protocols.py` — new
 - `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_connectome_ppo.py` — new
-- `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_migration_byte_equivalence.py` — new (MLPPPO + LSTMPPO regression bar)
-- `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_migration_numerical_equivalence.py` — new (17 other architectures, `atol=1e-7`)
 
 **Docs:**
 
