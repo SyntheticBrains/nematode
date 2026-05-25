@@ -45,12 +45,17 @@ Runs concurrently with Section 2 below. Output: canonical sensor + reward locked
 ### 1d. Combined-behaviour small-klinotaxis configs per architecture (gated by Phase 0)
 
 - [ ] 1d.1 Create the new directory `configs/scenarios/foraging_predator_thermal/` (the directory name is pre-decided in design.md Decision 8; parallels the existing `oxygen_thermal_pursuit/` noun-modifier compound).
-- [ ] 1d.2 Author `{mlpppo,lstmppo,connectomeppo,feedforwardga}_small_combined_klinotaxis.yml` configs under the new directory. Each integrates food + predator + thermotaxis (no aerotaxis per `phase6-tracking/design.md` Decision 5). Reference shape: `configs/scenarios/oxygen_thermal_pursuit/mlpppo_large_oracle.yml`. Note `feedforwardga`'s config will need to live under `configs/evolution/` instead — confirm directory split is handled.
+- [ ] 1d.2 Author the four combined configs in their respective directories per design.md Decision 8's split:
+  - `configs/scenarios/foraging_predator_thermal/mlpppo_small_combined_klinotaxis.yml`
+  - `configs/scenarios/foraging_predator_thermal/lstmppo_small_combined_klinotaxis.yml`
+  - `configs/scenarios/foraging_predator_thermal/connectomeppo_small_combined_klinotaxis.yml`
+  - `configs/evolution/feedforwardga_small_combined_klinotaxis.yml` (separate directory because GA configs require an `evolution:` block and are launched via `scripts/run_evolution.py`)
+    Each integrates food + predator + thermotaxis (no aerotaxis per `phase6-tracking/design.md` Decision 5). Reference shape for the PPO configs: `configs/scenarios/oxygen_thermal_pursuit/mlpppo_large_oracle.yml` (with food + thermal + aerotaxis + predators); strip the aerotaxis primitives, scale down to small-klinotaxis-mode. Reference shape for the GA config: `configs/evolution/feedforwardga_foraging_small.yml` (from the `add-neat-weights-brain` dependency), extended with the predator + thermal env blocks.
 - [ ] 1d.3 Author the C1 (foraging-only) and C2 (foraging + predator) curriculum smokes per architecture. May reuse existing `configs/scenarios/foraging/` and `configs/scenarios/pursuit/` configs verbatim where the existing config matches what C1/C2 needs.
 
 ### 1e. Sample-config canonicalisation (T4.0e/f)
 
-- [ ] 1e.1 Promote the low-entropy klinotaxis config: copy the contents of `configs/scenarios/foraging/connectomeppo_small_low_entropy_klinotaxis.yml` (R2b reference run, `entropy_coef=0.005`) into the canonical `configs/scenarios/foraging/connectomeppo_small_klinotaxis.yml`. **KEEP** the `connectomeppo_small_low_entropy_klinotaxis.yml` file in place — it is referenced from logbook 023 R2 (the high-entropy drift case is the load-bearing evidence for why R2b exists; deleting the file breaks the link from a published logbook to a reproducible artefact). Update the header comment on the renamed canonical file to note "promoted from low_entropy variant on `<date>`; the high-entropy variant at `_low_entropy_klinotaxis.yml` is retained for logbook 023 R2 reproducibility."
+- [ ] 1e.1 Promote the low-entropy klinotaxis config: copy the contents of `configs/scenarios/foraging/connectomeppo_small_low_entropy_klinotaxis.yml` (R2b reference run, `entropy_coef=0.005`) into the canonical `configs/scenarios/foraging/connectomeppo_small_klinotaxis.yml`. After the copy the canonical file's `brain.config.entropy_coef` MUST be `0.005` (NOT `0.02` — the pre-existing value to-be-overwritten). **KEEP** the `connectomeppo_small_low_entropy_klinotaxis.yml` file in place — it is referenced from logbook 023 R2 (the high-entropy drift case is the load-bearing evidence for why R2b exists; deleting the file breaks the link from a published logbook to a reproducible artefact). Update the header comment on the renamed canonical file to note "promoted from low_entropy variant on `<date>`; the high-entropy variant at `_low_entropy_klinotaxis.yml` is retained for logbook 023 R2 reproducibility. `entropy_coef=0.005` is the locked canonical value per design.md § Decision 8 / Task 3.4 (T4.0d)."
 - [ ] 1e.2 Update `configs/scenarios/foraging/connectomeppo_small_frozen_control_klinotaxis.yml` to match the canonical `entropy_coef=0.005` (irrelevant under `freeze_updates: true` but kept for diff cleanliness).
 - [ ] 1e.3 Verify `configs/scenarios/foraging/mlpppo_small_klinotaxis.yml` has the provenance comment in its header (added at T2). Add if missing.
 
@@ -58,13 +63,14 @@ Runs concurrently with Section 2 below. Output: canonical sensor + reward locked
 
 - [ ] 1f.1 Amend `openspec/changes/phase6-tracking/tasks.md` § T4 row structure to reflect the integrated-C3 pattern (4 architectures × 1 integrated C3 each + curriculum smokes, NOT 4 architectures × 3 per-behaviour cells). Land this amendment synchronously with Section 3's MCC commitment so the tracker reads correctly throughout this change's implementation, NOT only at Phase 5 closeout.
 - [ ] 1f.2 Amend `openspec/changes/phase6-tracking/design.md` § Decision 6 G3.a wording: the existing "All 12 MUST cells in T7" language assumes T7 inherits the 12-cell pattern from T4. With this change collapsing T4 to integrated-C3 and T7 inheriting that pattern, G3.a SHALL be widened to "All 4 MUST architecture integrated-C3 cells in T7 with per-behaviour-component sub-metrics extracted per the architecture-comparison-protocol capability."
+- [ ] 1f.3 Re-run `openspec validate phase6-tracking --strict` after the amendments in 1f.1 + 1f.2 and verify clean. If validation surfaces structural issues (e.g. a tasks.md row format requirement), iterate until clean before proceeding to Section 2.
 
 ## 2. Phase 2 — Compute pre-flight (T4.0a)
 
 - [ ] 2.1 Run one canonical-budget klinotaxis run per architecture (4 runs × n=1 seed) on the cheapest cell (foraging-only C1). Use `--theme headless` for `scripts/run_simulation.py` invocations.
-- [ ] 2.2 Record wall-time per architecture in `tmp/evaluations/weight-search-architecture-ranking/weight-search-architecture-ranking_scratchpad.md` (create if not yet present).
-- [ ] 2.3 Extrapolate to full sweep: Phase 0 (~24) + Phase 2 (4) + Phase 4 curriculum (24) + Phase 4 ablations (20) + Phase 4.5 promotions (variable; 6 per promotion). Compare against the floor estimate of ~72 runs in design.md Decision 8.
-- [ ] 2.4 If wall-time projection diverges > 2× from phase6-tracking Decision 1's "4-6 weeks" estimate (whether due to per-run wall-time OR run-count growth), draft an amendment to phase6-tracking design.md Decision 1 (include the new estimate + the empirical basis). If within 2×, document the projection in this change's design.md as Phase 2 evidence.
+- [ ] 2.2 Record per-architecture per-run wall-time AND the assumed parallelism factor (e.g. "8 parallel workers on this machine") in `tmp/evaluations/weight-search-architecture-ranking/weight-search-architecture-ranking_scratchpad.md` (create if not yet present). Both numbers are load-bearing for Task 2.4's trigger arithmetic.
+- [ ] 2.3 Extrapolate to full sweep using the formula `wall_clock_weeks = (total_runs × per_run_hours) / (parallelism_factor × hours_per_week)`. Total runs: Phase 0 (~24) + Phase 2 (4) + Phase 4 curriculum (24) + Phase 4 ablations (20) + Phase 4.5 promotions (variable; 6 per promotion) ≈ 72 without promotions per design.md Decision 8. Reasonable `hours_per_week` is 168 (24/7 compute) or 40 (working-hours-only); pick + document.
+- [ ] 2.4 If wall-clock projection diverges > 2× from phase6-tracking Decision 1's "4-6 weeks" estimate, draft an amendment to phase6-tracking design.md Decision 1 (include the new wall-clock estimate + the per-run wall-time + parallelism factor + total-run-count breakdown — all three are evidence, not just total time). The trigger SHALL fire on the wall-clock metric NOT on per-run wall-time alone (if per-run time stays flat but parallelism assumption fails, the wall-clock blow-up still triggers the amendment). If within 2×, document the projection in this change's design.md as Phase 2 evidence.
 
 ## 3. Phase 3 — Planning decisions land in design.md
 
@@ -89,7 +95,7 @@ For each architecture (MLPPPO, LSTMPPO, FeedforwardGA, ConnectomePPO):
 
 - Run C2 (foraging + predator smoke, n=1). Record metrics.
 
-- **Before launching C3**: pick the per-architecture reward weights from C2 results per design.md Decision 7. Document the chosen weights in design.md (new section `## Per-architecture reward weights for C3`). Freeze the weights for C3.
+- **Before launching C3**: check the Decision 7 tuning trigger. **Default = use the global reward weights** (inherit from the closest existing config) — NO per-arch tuning. If the C2 result shows foraging-or-predator < 50% of at least one other arch's C2 result on the same metric, escalate: run C2 with a second seed (n=2 total for that arch) to confirm the imbalance isn't noise, then pick per-arch weights and document them in design.md (new section `## Per-architecture reward weights for C3`) with the C2 numbers + rationale. Freeze the weights for C3.
 
 - Run C3 (foraging + predator + thermotaxis, n=4 seeds). Record metrics.
 

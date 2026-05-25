@@ -56,6 +56,13 @@ The projection SHALL be PPO-learnable separately from the food projection and se
 - **THEN** the predator projection SHALL contribute zero additive input to `ASHL`, `ASHR`, `ASIL`, `ASIR`, `ALML`, `ALMR`, `AVM`, `PLML`, `PLMR`
 - **AND** the brain's behaviour SHALL be functionally equivalent to a `ConnectomePPOBrain` instance whose config omits predator-sensor modules (any RNG-stream perturbation from `nn.Parameter` construction is allowed; the test bar SHALL be "last-25-mean klinotaxis success within ±3 percentage points of the R2b reference baseline at the equivalent seed," not byte-identical activations)
 
+#### Scenario: ContactZone.NONE with active distal channel routes only distal, not mechano
+
+- **WHEN** `run_brain()` receives a `BrainParams` with `predator_contact_intensity == 0.0` AND `predator_contact_zone == ContactZone.NONE` AND `predator_distal_concentration > 0.0` (the agent is in-config for both channels but currently outside the predator's damage radius)
+- **THEN** the distal projection SHALL contribute non-zero additive input to `ASHL`, `ASHR`, `ASIL`, `ASIR` per the distal-chemosensation routing
+- **AND** the anterior + posterior + lateral mechanosensation projections SHALL contribute zero additive input to `ALML`, `ALMR`, `AVM`, `PLML`, `PLMR` (the gain matrices receive zero `predator_contact_intensity` so the multiplicative product is zero)
+- **AND** the brain SHALL NOT raise an exception when `predator_contact_zone == ContactZone.NONE` is the active zone (the routing logic SHALL treat `ContactZone.NONE` as "no mechano injection," consistent with the env-side semantics that NONE means "out of damage radius / no contact")
+
 #### Scenario: Predator projection does not affect food-projection or chemical-synapse weights
 
 - **GIVEN** a `ConnectomePPOBrain` config with both food-chemotaxis and predator sensor modules active

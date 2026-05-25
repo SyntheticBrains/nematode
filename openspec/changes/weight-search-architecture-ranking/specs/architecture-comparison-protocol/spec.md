@@ -76,7 +76,7 @@ A written architecture-promotion gate (Phase 4.5) SHALL land between Phase 4 cel
 - **WHEN** the Phase 4.5 gate runs
 - **THEN** this change's design.md SHALL be amended with a `## Phase 4.5 architecture-promotion gate` section
 - **AND** the section SHALL list each SHOULD/MAY candidate (quantum, spiking, reservoir, hybrid) with a GO or SKIP verdict and the rationale
-- **AND** SKIP rationales SHALL reference the criteria (compute fit, roadmap relevance, headline impact) and where applicable the Phase 6 Decision 4 SHOULD/MAY classification + deferral mechanism
+- **AND** SKIP rationales SHALL reference the criteria (compute fit, roadmap relevance, headline impact) and where applicable the Phase 6 Decision 4 SHOULD/MAY classification + deferral mechanism. **Operational definition of headline impact**: a candidate architecture has headline impact if, given the Phase 4 C3 results in hand, its plausible C3 performance range (per a back-of-envelope estimate from its Phase 2 forecast or its closest existing baseline) would change which architecture tops the ranking on ≥ 1 per-behaviour component. A candidate with no plausible scenario for topping any component-level ranking has no headline impact.
 
 #### Scenario: Promoted architectures run additional cells before Phase 5
 

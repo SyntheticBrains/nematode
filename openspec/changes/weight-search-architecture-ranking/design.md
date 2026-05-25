@@ -108,15 +108,18 @@ Per-cell raw artefacts (CSVs, per-cell summary tables, plots) that the logbook r
 
 **Why:** User instruction during planning ("do not make references to any files from `/tmp` directory since they don't persist"). Anything the logbook needs to reference must be promoted into `supporting/`. The scratchpads remain useful as in-flight working notes for the active evaluation effort.
 
-### Decision 7 — Per-architecture reward-weight tuning is allowed in C3 with PRE-C3 commitment + documentation
+### Decision 7 — Per-architecture reward-weight tuning is allowed in C3 with PRE-C3 commitment + documentation (default = use the global reward weights; tune ONLY with evidence)
 
 The integrated C3 cells run three reward components simultaneously (food, predator, thermal). Per-architecture reward-weight tuning may be needed to prevent one component from dominating an architecture's learning (e.g. an LSTM may need lower predator weighting than MLP to prevent predator-aversion overwhelming foraging). Such tuning is allowed but:
 
-1. The per-architecture reward weights SHALL be picked using C2 (foraging + predator) smoke results, BEFORE the n=4 C3 cell launches for that architecture.
-2. Once C3 launches for an architecture, the reward weights for that architecture's C3 cell SHALL be frozen — no mid-C3 retuning, even if early-episode metrics look bad.
-3. The chosen per-architecture reward weights SHALL be documented in this change's design.md as a deliberate per-cell deviation, with the rationale + the resulting reward weights captured per architecture, BEFORE C3 launches.
+1. **Default = no tuning.** Each architecture's C3 cell SHALL run with the documented global reward weights inherited from the closest existing config (e.g. `oxygen_thermal_pursuit/mlpppo_large_oracle.yml`'s reward block, scaled appropriately for the small variant). Per-architecture divergence from this default is the EXCEPTION, not the rule.
+2. **Tuning trigger.** Per-architecture reward weights MAY diverge from the global default only if BOTH (a) the C2 (foraging + predator) smoke result shows the architecture's foraging-or-predator metric is < 50% of the same metric on at least one other architecture's C2 result, AND (b) the per-arch divergence is supported by ≥ n=2 C2 seeds (a single C2 run is noisy enough that picking weights on it is fitting noise; if the trigger fires, re-run C2 with a second seed before committing).
+3. **Pre-C3 commitment.** Once the per-arch weights are chosen, they SHALL be documented in this change's design.md (new section `## Per-architecture reward weights for C3`) BEFORE the n=4 C3 cell launches for that architecture. The documentation SHALL include the rationale, the C2 numbers that triggered tuning, and the chosen weights.
+4. **No mid-C3 retuning.** Once C3 launches for an architecture, the reward weights for that architecture's C3 cell SHALL be frozen — no mid-C3 retuning, even if early-episode metrics look bad.
 
-**Why allow it:** Forcing identical reward weights across architectures with very different learning dynamics conflates "this architecture is bad at the task" with "the reward shape was wrong for this architecture." Allowing tuning while documenting it preserves the comparison's honesty (the reader can see exactly what each architecture optimised against) without forcing artificially identical conditions.
+**Why allow tuning at all:** Forcing identical reward weights across architectures with very different learning dynamics conflates "this architecture is bad at the task" with "the reward shape was wrong for this architecture." Allowing tuning while documenting it preserves the comparison's honesty (the reader can see exactly what each architecture optimised against) without forcing artificially identical conditions.
+
+**Why default to no tuning:** A single-seed C2 smoke is one noisy observation per architecture; routinely picking weights on it would fit noise and undermine the comparison's apples-to-apples-ness. The tuning trigger (item 2) requires both a large-magnitude C2 imbalance AND a second seed before tuning is allowed; this is the minimum evidence bar that justifies per-arch divergence.
 
 **Why pre-commit the weights:** Per-architecture tuning is the symmetric bias source to mid-Phase-4 MCC switching (Decision 2). Both bias sources are forestalled by pre-commitment. Tuning + pre-commitment + documentation is fine; tuning + retuning + silence is not.
 
@@ -126,7 +129,12 @@ The integrated C3 cells run three reward components simultaneously (food, predat
 
 **Bilateral broadcast convention.** Each L/R pair is counted as separate targets in the gain-matrix shape. The implementation MAY use one column per L/R member (identical initial values that diverge under PPO updates) OR a single shared column broadcast across L/R members — the choice is documented inline in `ConnectomePPOBrain` per the spec scenario.
 
-**Combined-config directory.** Phase 1d configs (food + predator + thermotaxis integrated; no aerotaxis) live at `configs/scenarios/foraging_predator_thermal/` — paralleling the existing `oxygen_thermal_pursuit/` (noun-modifier compound). Rejected alternative: `combined_klinotaxis/` (`klinotaxis` is a sensing mode, not an env class, and breaks the existing taxonomy). This change ships the new directory.
+**Combined-config directory split (PPO + GA cells live in different directories).** Phase 1d configs split across two directories deliberately, mirroring the existing `configs/scenarios/` vs `configs/evolution/` distinction:
+
+- **PPO architectures** (MLPPPO, LSTMPPO, ConnectomePPO) — three combined configs live at `configs/scenarios/foraging_predator_thermal/{mlpppo,lstmppo,connectomeppo}_small_combined_klinotaxis.yml`. This directory parallels the existing `oxygen_thermal_pursuit/` noun-modifier compound.
+- **GA architecture** (FeedforwardGA) — one combined config lives at `configs/evolution/feedforwardga_small_combined_klinotaxis.yml`. Evolution configs require an `evolution:` block per the `mlpppo_foraging_small.yml` precedent and are launched via `scripts/run_evolution.py`, NOT `scripts/run_simulation.py`. Putting the GA config under `configs/scenarios/` would break the launcher convention.
+
+Rejected alternative 1: `combined_klinotaxis/` (`klinotaxis` is a sensing mode, not an env class, and breaks the existing taxonomy). Rejected alternative 2: `configs/evolution/foraging_predator_thermal/` for the GA variant only — too much directory nesting for one file. The deliberate split is documented here AND in Task 1d.2 so downstream readers know to look in two places for the four combined configs.
 
 **Logbook number is 025.** Logbooks/ tops out at `024-predator-sensing-biology.md` (post-T3 merge); the next number is `025`. The Phase 5 logbook publication SHALL use `docs/experiments/logbooks/025-weight-search-architecture-ranking.md` and `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/`. Tasks 0.8, 6.5, 6.6 use 025 (not the `0XX-` placeholder).
 
