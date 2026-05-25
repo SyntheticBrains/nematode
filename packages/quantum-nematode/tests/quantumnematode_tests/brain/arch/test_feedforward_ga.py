@@ -107,6 +107,32 @@ class TestConstruction:
                 action_set=DEFAULT_ACTIONS[:2],  # only 2 actions
             )
 
+    def test_empty_sensory_modules_rejected(self) -> None:
+        """The field_validator rejects an empty sensory_modules list at config-time."""
+        import pytest
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="sensory_modules must be non-empty"):
+            FeedforwardGABrainConfig(sensory_modules=[], seed=_SEED)
+
+    def test_multi_module_input_dim_scales(self) -> None:
+        """input_dim scales with the number of sensory modules.
+
+        food_chemotaxis emits 2 classical features (strength + angle);
+        nociception emits another 2 ([predator_concentration,
+        predator_lateral]). Combined input_dim SHALL be 4, and the
+        first Linear layer SHALL reshape accordingly.
+        """
+        brain = _make_brain(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        assert brain.input_dim == 4
+        first_layer = next(iter(brain.policy.children()))
+        assert isinstance(first_layer, torch.nn.Linear)
+        assert first_layer.in_features == 4
+        # Output dim unchanged
+        assert brain.policy[-1].out_features == 4
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Registry + BrainType

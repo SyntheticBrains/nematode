@@ -7,6 +7,15 @@
 # hyperparameters live in the `evolution:` block per the project
 # convention.
 #
+# NOT a like-for-like fitness comparator with `mlpppo_foraging_small.yml`:
+# this config's foraging env is tuned slightly easier (foods_on_grid: 10,
+# target_foods_to_collect: 3 vs MLPPPO's 5/10) so the tiny smoke budget
+# produces non-degenerate fitness signal at seed 2026. Cross-brain
+# fitness comparisons SHOULD use a matched-env config family (the
+# `weight-search-architecture-ranking` change will author the
+# matched-comparator configs under `configs/scenarios/foraging_predator_thermal/`
+# and `configs/evolution/` per its own design.md Decision 8).
+#
 # DO NOT specify brain.config.weights_path — the framework forces it to
 # None (genome is the sole weight source).
 # DO NOT rely on brain.config.seed — the loop's --seed (or the per-evaluation
