@@ -108,13 +108,39 @@ Per-cell raw artefacts (CSVs, per-cell summary tables, plots) that the logbook r
 
 **Why:** User instruction during planning ("do not make references to any files from `/tmp` directory since they don't persist"). Anything the logbook needs to reference must be promoted into `supporting/`. The scratchpads remain useful as in-flight working notes for the active evaluation effort.
 
-### Decision 7 — Per-architecture reward-weight tuning is allowed in C3 with documented rationale
+### Decision 7 — Per-architecture reward-weight tuning is allowed in C3 with PRE-C3 commitment + documentation
 
-The integrated C3 cells run three reward components simultaneously (food, predator, thermal). Per-architecture reward-weight tuning may be needed to prevent one component from dominating an architecture's learning (e.g. an LSTM may need lower predator weighting than MLP to prevent predator-aversion overwhelming foraging). Such tuning is allowed but MUST be documented in this change's design.md as a deliberate per-cell deviation, with the rationale + the resulting reward weights captured per architecture.
+The integrated C3 cells run three reward components simultaneously (food, predator, thermal). Per-architecture reward-weight tuning may be needed to prevent one component from dominating an architecture's learning (e.g. an LSTM may need lower predator weighting than MLP to prevent predator-aversion overwhelming foraging). Such tuning is allowed but:
+
+1. The per-architecture reward weights SHALL be picked using C2 (foraging + predator) smoke results, BEFORE the n=4 C3 cell launches for that architecture.
+2. Once C3 launches for an architecture, the reward weights for that architecture's C3 cell SHALL be frozen — no mid-C3 retuning, even if early-episode metrics look bad.
+3. The chosen per-architecture reward weights SHALL be documented in this change's design.md as a deliberate per-cell deviation, with the rationale + the resulting reward weights captured per architecture, BEFORE C3 launches.
 
 **Why allow it:** Forcing identical reward weights across architectures with very different learning dynamics conflates "this architecture is bad at the task" with "the reward shape was wrong for this architecture." Allowing tuning while documenting it preserves the comparison's honesty (the reader can see exactly what each architecture optimised against) without forcing artificially identical conditions.
 
-**Why require documentation:** Silent per-architecture tuning is exactly the bias source that the BH-FDR commitment is designed to forestall. Tuning + documentation is fine; tuning + silence is not.
+**Why pre-commit the weights:** Per-architecture tuning is the symmetric bias source to mid-Phase-4 MCC switching (Decision 2). Both bias sources are forestalled by pre-commitment. Tuning + pre-commitment + documentation is fine; tuning + retuning + silence is not.
+
+### Decision 8 — Canonical neuron-name targets, bilateral broadcast convention, and combined-config directory pre-decided
+
+**Canonical predator-circuit neurons.** The Cook 2019 hermaphrodite connectome (consumed at [`packages/quantum-nematode/quantumnematode/connectome/neurons.py`](../../../packages/quantum-nematode/quantumnematode/connectome/neurons.py)) registers bilateral pairs with `L`/`R` suffixes as separate neurons. The canonical predator-circuit targets for the `predator_gains` projection are: `ASHL`, `ASHR`, `ASIL`, `ASIR` (distal-chemosensation, 4 targets); `ALML`, `ALMR`, `AVM` (anterior-contact, 3 targets — `AVM` is unilateral); `PLML`, `PLMR` (posterior-contact, 2 targets); `ALML` + `ALMR` + `PLML` + `PLMR` at half-weight (lateral-contact, 4 targets reusing the anterior + posterior gains). Gain-matrix shapes in `specs/connectome-ppo-brain/spec.md` reflect these counts.
+
+**Bilateral broadcast convention.** Each L/R pair is counted as separate targets in the gain-matrix shape. The implementation MAY use one column per L/R member (identical initial values that diverge under PPO updates) OR a single shared column broadcast across L/R members — the choice is documented inline in `ConnectomePPOBrain` per the spec scenario.
+
+**Combined-config directory.** Phase 1d configs (food + predator + thermotaxis integrated; no aerotaxis) live at `configs/scenarios/foraging_predator_thermal/` — paralleling the existing `oxygen_thermal_pursuit/` (noun-modifier compound). Rejected alternative: `combined_klinotaxis/` (`klinotaxis` is a sensing mode, not an env class, and breaks the existing taxonomy). This change ships the new directory.
+
+**Logbook number is 025.** Logbooks/ tops out at `024-predator-sensing-biology.md` (post-T3 merge); the next number is `025`. The Phase 5 logbook publication SHALL use `docs/experiments/logbooks/025-weight-search-architecture-ranking.md` and `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/`. Tasks 0.8, 6.5, 6.6 use 025 (not the `0XX-` placeholder).
+
+**Scope change vs phase6-tracking T4 (12 cells → 4 integrated cells).** The original `phase6-tracking/tasks.md` § T4 lists 12 per-behaviour cells (4 architectures × 3 behaviours). This change collapses to 4 integrated C3 cells (one per architecture, all three behaviours active) per Decision 1 + user instruction during planning. The 12-cell row structure in `phase6-tracking/tasks.md` is therefore stale once this change starts; Phase 3 SHALL amend `phase6-tracking/tasks.md` § T4 row structure synchronously with this change's design.md MCC commitment, NOT defer the amendment to Phase 5 closeout. Same scope-change implication for G3.a wording in `phase6-tracking/design.md` Decision 6 ("All 12 MUST cells in T7…") — T7 inherits the integrated-C3 pattern from this change and needs the G3.a wording widened. Phase 5 SHALL update Decision 6 wording in addition to the MCC default amendment.
+
+**Compute budget pre-estimate (sanity check before Phase 2).** Counting realistic floor:
+
+- Phase 0: 6+ matched-compute runs × n=4 seeds = ~24 runs
+- Phase 2 pre-flight: 4 runs
+- Phase 4 curriculum: 4 architectures × (1 C1 + 1 C2 + 4 C3 seeds) = 24 runs
+- Phase 4 ablations: 1 strict-vs-soft × n=4 + 4 reward-shape × n=4 = 20 runs
+- Phase 4.5 promotion (if any GO): +6 runs per promoted architecture
+
+Floor without promotions: **~72 canonical-budget runs**. With one promotion: ~78. Decision 1's "4-6 weeks" estimate in `phase6-tracking/design.md` predates this change's curriculum + ablation structure. Phase 2 SHALL produce a wall-time-per-run measurement and confirm the total fits the budget; Decision 1 SHALL be amended if the projection exceeds the "4-6 weeks" by > 2× regardless of which knob is the cause (the > 2× trigger in Task 2.4 covers both per-run wall-time and run-count growth).
 
 ## Risks / Trade-offs
 
@@ -125,7 +151,7 @@ The integrated C3 cells run three reward components simultaneously (food, predat
 | C1/C2 smokes pass on an architecture but C3 diverges (three-behaviour integration breaks one behaviour for that architecture) | After C1/C2 green on architecture X, X's C3 fails to learn or one behaviour collapses | Diagnose-and-fix on that architecture only. Per Decision 7, per-architecture reward-weight tuning is allowed with documentation. If unfixable, drop architecture from C3 and document the failure mode — better than misleading apples-to-oranges comparison. |
 | MCC strategy revisited mid-Phase 4 because variance differs > 3× across architectures | Forbidden by [`phase6-tracking/design.md § Decision 6`](../phase6-tracking/design.md) once Phase 4 starts | Forestalled by Decision 2 above (pre-commitment to BH-FDR). If reviewers request Holm-Bonferroni instead, default to BH-FDR with written justification — do not allow mid-Phase 4 changes. |
 | Phase 4.5 promotion criteria fire for an architecture mid-Phase 4 (compute headroom obvious before Phase 4 completes) | Phase 4 partial results suggest a SHOULD/MAY promotion is warranted | Defer the promotion to Phase 4.5's explicit decision moment regardless — running promotion mid-stream would silently inflate the comparison and break the MCC commitment's test count. Phase 4.5 happens after all Phase 4 C3 cells complete. |
-| Connectome predator projection wiring (Phase 1b) introduces a regression on the Gate 1 klinotaxis baseline (logbook 023's R2b result) | Phase 1b smoke run shows klinotaxis success rate drops materially below R2b | Pin the projection to the predator pathway only; the food projection from T2 is untouched. If a regression appears, the projection has accidentally affected the food path — diagnose before proceeding to Phase 1c. |
+| Connectome predator projection wiring (Phase 1b) introduces a regression on the Gate 1 klinotaxis baseline (logbook 023's R2b result) | Phase 1b smoke run shows last-25 mean klinotaxis success > 3 percentage points below R2b's reported baseline at the equivalent seed | Pin the projection to the predator pathway only; the food projection from T2 is untouched. The smoke bar is "within ±3pp of R2b" not "byte-identical activations" — adding `nn.Parameter` tensors perturbs PyTorch RNG-stream consumption order during `__init__` which can shift downstream `nn.init.normal_` draws on existing parameters by float-ulp amounts. If a >3pp regression appears, the projection has accidentally affected the food path — diagnose before proceeding to Phase 1c. |
 
 ## Migration Plan
 

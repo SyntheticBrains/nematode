@@ -4,44 +4,57 @@
 
 The `ConnectomePPOBrain` SHALL provide a learnable predator-sensor projection that routes the corrected two-channel predator-sensing biology (per the `predator-sensing-biology` capability) onto the canonical *C. elegans* mechanosensory + nociceptor neurons. This projection complements the food-chemotaxis projection shipped at T2 and lights up the connectome architecture for predator-evasion behaviours.
 
-The projection SHALL map:
+**Neuron-name convention.** The Cook 2019 hermaphrodite connectome (consumed at `packages/quantum-nematode/quantumnematode/connectome/neurons.py`) registers bilateral pairs as separate neurons with `L`/`R` suffixes. The canonical predator-circuit neurons are: `ASHL`, `ASHR` (polymodal nociceptors); `ASIL`, `ASIR` (distal sulfolipid sensors per Liu et al. 2018); `ALML`, `ALMR` (anterior touch receptors per Pirri & Alkema 2012); `AVM` (anterior touch receptor, **unilateral** — only one exists in the hermaphrodite); `PLML`, `PLMR` (posterior touch receptors).
 
-- **Distal-chemosensation** (`predator_distal_concentration` + `predator_distal_dconcentration_dt`) onto **ASH + ASI** sensory neurons. ASH is the canonical polymodal nociceptor (Hilliard et al. 2005); ASI carries the Liu et al. 2018 sulfolipid distal-chemosensory signal.
-- **Anterior-zone contact-mechanosensation** (`predator_contact_intensity` when `predator_contact_zone == ANTERIOR`, plus `predator_mechano_dintensity_dt`) onto **ALM + AVM** sensory neurons. ALM and AVM are the canonical anterior touch receptors (Pirri & Alkema 2012).
-- **Posterior-zone contact-mechanosensation** (same fields when `predator_contact_zone == POSTERIOR`) onto **PLM** sensory neurons. PLM is the canonical posterior touch receptor.
-- **Lateral-zone contact-mechanosensation** (same fields when `predator_contact_zone == LATERAL`) degenerately onto **ALM + PLM at half-weight** (no canonical lateral-only mechanosensor; ALM+PLM together carry the lateral signal).
+The projection maps each feature additively onto BOTH members of a bilateral pair via the same learnable gain (the implementation MAY share a single column of the gain matrix across L/R targets, or use distinct columns initialised identically — see "Bilateral broadcast convention" scenario below). The gain matrix dimensions in the scenarios below count each L/R member as a separate target column.
+
+The projection mapping:
+
+- **Distal-chemosensation** (`predator_distal_concentration` + `predator_distal_dconcentration_dt`, 2 features) onto **ASHL, ASHR, ASIL, ASIR** (4 targets).
+- **Anterior-zone contact-mechanosensation** (`predator_contact_intensity` when `predator_contact_zone == ContactZone.ANTERIOR`, plus `predator_mechano_dintensity_dt`, 2 features) onto **ALML, ALMR, AVM** (3 targets).
+- **Posterior-zone contact-mechanosensation** (same fields when `predator_contact_zone == ContactZone.POSTERIOR`, 2 features) onto **PLML, PLMR** (2 targets).
+- **Lateral-zone contact-mechanosensation** (same fields when `predator_contact_zone == ContactZone.LATERAL`, 2 features) degenerately onto **ALML, ALMR, PLML, PLMR at half-weight** (no canonical lateral-only mechanosensor; ALM + PLM together carry the lateral signal).
 
 The projection SHALL be PPO-learnable separately from the food projection and separately from the chemical-synapse weight matrix.
 
-#### Scenario: Distal-chemosensation routes to ASH + ASI
+#### Scenario: Bilateral broadcast convention
+
+- **GIVEN** the projection's gain matrix for any of the four routing targets above
+- **WHEN** the implementation constructs the gain matrix
+- **THEN** the matrix SHALL inject the feature additively onto BOTH members of a bilateral pair (L + R) using the same learnable gain magnitude at initialisation
+- **AND** the implementation MAY use either of two equivalent constructions: (a) one gain column per L/R member with identical initial values that diverge under PPO updates, OR (b) a single shared gain column broadcast across the L/R targets
+- **AND** the chosen construction SHALL be documented inline in `ConnectomePPOBrain` so future readers know which to expect; both choices conform to this requirement
+
+#### Scenario: Distal-chemosensation routes to ASHL + ASHR + ASIL + ASIR
 
 - **WHEN** `run_brain()` receives a `BrainParams` with `predator_distal_concentration` and `predator_distal_dconcentration_dt` populated by an active predator-distal sensor module
-- **THEN** these features SHALL be additively injected onto the ASH and ASI sensory neurons' input vector via a learnable gain matrix of shape `(2, 2)` (2 distal features × 2 sensory neurons)
+- **THEN** these 2 features SHALL be additively injected onto the `ASHL`, `ASHR`, `ASIL`, `ASIR` sensory neurons' input vector via a learnable gain matrix of shape `(2, 4)` (2 distal features × 4 sensory neurons, bilateral pairs counted separately per the convention above)
 - **AND** the gain matrix SHALL be PPO-learnable independently of the food-chemotaxis gain matrix and independently of the chemical-synapse weight matrix
 
-#### Scenario: Anterior-zone contact routes to ALM + AVM
+#### Scenario: Anterior-zone contact routes to ALML + ALMR + AVM
 
 - **WHEN** `run_brain()` receives a `BrainParams` with `predator_contact_intensity > 0` and `predator_contact_zone == ContactZone.ANTERIOR` (plus the derivative `predator_mechano_dintensity_dt`)
-- **THEN** these features (intensity + derivative) SHALL be additively injected onto the ALM and AVM sensory neurons' input vector via a learnable gain matrix of shape `(2, 2)`
+- **THEN** these 2 features (intensity + derivative) SHALL be additively injected onto the `ALML`, `ALMR`, `AVM` sensory neurons' input vector via a learnable gain matrix of shape `(2, 3)` (AVM is unilateral; ALM is bilateral)
 - **AND** the gain matrix SHALL be PPO-learnable independently of the other projections
 
-#### Scenario: Posterior-zone contact routes to PLM
+#### Scenario: Posterior-zone contact routes to PLML + PLMR
 
 - **WHEN** `run_brain()` receives a `BrainParams` with `predator_contact_intensity > 0` and `predator_contact_zone == ContactZone.POSTERIOR`
-- **THEN** the intensity + derivative features SHALL be additively injected onto the PLM sensory neuron's input scalar via a learnable gain matrix of shape `(2, 1)`
+- **THEN** the 2 features (intensity + derivative) SHALL be additively injected onto the `PLML`, `PLMR` sensory neurons' input vector via a learnable gain matrix of shape `(2, 2)`
 - **AND** the gain matrix SHALL be PPO-learnable independently of the other projections
 
-#### Scenario: Lateral-zone contact routes degenerately to ALM + PLM at half-weight
+#### Scenario: Lateral-zone contact routes degenerately to ALM + PLM bilaterally at half-weight
 
 - **WHEN** `run_brain()` receives a `BrainParams` with `predator_contact_intensity > 0` and `predator_contact_zone == ContactZone.LATERAL`
-- **THEN** the intensity + derivative features SHALL be additively injected onto BOTH the ALM and PLM sensory neurons' input vectors, each at half the learnable gain that the anterior/posterior projections use
+- **THEN** the 2 features (intensity + derivative) SHALL be additively injected onto `ALML`, `ALMR`, `PLML`, `PLMR` (4 targets), each at half the learnable gain that the anterior/posterior projections use
 - **AND** the half-weight factor SHALL be a fixed constant (not learnable) so the projection's degenerate routing remains explicit
+- **AND** the implementation SHALL reuse the existing anterior + posterior gain matrices scaled by 0.5 at injection time, rather than introducing a separate lateral-only gain matrix
 
 #### Scenario: No predator inputs leaves the projection inactive
 
 - **WHEN** `run_brain()` receives a `BrainParams` with `predator_contact_intensity == 0.0` AND `predator_distal_concentration == 0.0` (no predator-sensor modules active in the config)
-- **THEN** the predator projection SHALL contribute zero additive input to ASH, ASI, ALM, AVM, PLM
-- **AND** the brain's behaviour SHALL be byte-identical to a `ConnectomePPOBrain` instance whose config omits predator-sensor modules (the projection is inert when no predator signal exists)
+- **THEN** the predator projection SHALL contribute zero additive input to `ASHL`, `ASHR`, `ASIL`, `ASIR`, `ALML`, `ALMR`, `AVM`, `PLML`, `PLMR`
+- **AND** the brain's behaviour SHALL be functionally equivalent to a `ConnectomePPOBrain` instance whose config omits predator-sensor modules (any RNG-stream perturbation from `nn.Parameter` construction is allowed; the test bar SHALL be "last-25-mean klinotaxis success within ±3 percentage points of the R2b reference baseline at the equivalent seed," not byte-identical activations)
 
 #### Scenario: Predator projection does not affect food-projection or chemical-synapse weights
 

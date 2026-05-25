@@ -6,6 +6,8 @@ The `weight-search-architecture-ranking` change's Phase 0 investigation SHALL se
 
 This requirement establishes that "the canonical predator-evasion sensor + reward shape for Phase 4 onwards" is a deliberate, evidence-backed selection — not a default carried over silently from the corrected-biology shipping change. The selection is normative for downstream Phase 6 work: T7's L2 re-run on the upgraded substrate SHALL consume the same canonical variant unless the env-upgrade work plausibly invalidates it.
 
+**Relationship with the existing "Two-Channel Predator-Sensing Model" requirement.** The existing requirement (line 15 of the main spec) mandates two orthogonal sensor channels (contact-mechanosensory + distal-chemosensory) and is the load-bearing biological-fidelity claim for the predator-sensing-biology capability. The redundancy-ablation variant (single-channel composite `predator_biology_klinotaxis` module collapsing 6 dims to 4) is an explicitly non-two-channel encoding. If Phase 0 selects the composite as canonical, the implementer SHALL ALSO ship a `MODIFIED Requirements` delta to the "Two-Channel Predator-Sensing Model" requirement that documents the single-channel composite as an alternative valid encoding alongside (not replacing) the existing two-channel architecture. The sparse-signal ablation variant remains two-channel and would NOT require a MODIFIED delta. If Phase 0 selects either the existing two-channel baseline or the sparse-signal variant, no MODIFIED delta is needed.
+
 #### Scenario: Phase 0 investigation evaluates at minimum the four variant axes
 
 - **WHEN** the change's Phase 0 work completes
