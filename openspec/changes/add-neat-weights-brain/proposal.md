@@ -1,0 +1,36 @@
+# Proposal: Add NEAT-Weights Brain (`FeedforwardGABrain`)
+
+## Why
+
+The Phase 6 cross-architecture comparison sweep (Tranche 4 of `phase6-tracking`) needs four MUST architecture families to evaluate side-by-side, one of which is "NEAT-evolved weights" per `phase6-tracking/design.md` Decision 4. NEAT topology evolution lands at Tranche 8; this tranche only needs the weight-search variant. The repository already ships `GeneticAlgorithmOptimizer` ([`packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py:270-429`](../../../packages/quantum-nematode/quantumnematode/optimizers/evolutionary.py#L270-L429)), a full evolution loop ([`quantumnematode/evolution/`](../../../packages/quantum-nematode/quantumnematode/evolution/)) with `Genome` ([`evolution/genome.py:22`](../../../packages/quantum-nematode/quantumnematode/evolution/genome.py#L22)) + per-brain encoders in `ENCODER_REGISTRY` ([`evolution/encoders.py:370`](../../../packages/quantum-nematode/quantumnematode/evolution/encoders.py#L370)), the `WeightPersistence` protocol that brains opt into for evolution ([`brain/weights.py:55`](../../../packages/quantum-nematode/quantumnematode/brain/weights.py#L55)), and the `scripts/run_evolution.py` launcher. Adding `neat-python` as a new dependency would duplicate all of it. The honest minimal increment is a feed-forward brain with matched-capacity topology (mirroring MLPPPO small) whose weights are evolved by the existing GA optimiser.
+
+## What Changes
+
+- New brain class `FeedforwardGABrain` in `packages/quantum-nematode/quantumnematode/brain/arch/feedforward_ga.py` implementing the `Brain` Protocol from [`brain/arch/_brain.py:411-434`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_brain.py#L411-L434) AND the `WeightPersistence` Protocol from [`brain/weights.py:55`](../../../packages/quantum-nematode/quantumnematode/brain/weights.py#L55) so its weights can be serialised + restored by the evolution framework.
+- Brain self-registers via `@register_brain(name="feedforwardga", config_cls=FeedforwardGABrainConfig, brain_type=BrainType.FEEDFORWARDGA, families=("classical",))` per the decorator-registration pattern established by the just-archived `add-architecture-plugin-interface` change. Reference: `ConnectomePPOBrain`'s decorator at [`brain/arch/connectome_ppo.py:428-433`](../../../packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py#L428-L433).
+- Matched-capacity feed-forward topology: hidden width + layer count matching `MLPPPOBrain` small (`actor_hidden_dim=64`, `num_hidden_layers=2`) so the cross-architecture comparison isolates the weight-search-optimiser change (PPO vs GA) from a capacity confound.
+- New encoder `FeedforwardGAEncoder` registered in [`ENCODER_REGISTRY`](../../../packages/quantum-nematode/quantumnematode/evolution/encoders.py#L370) so the evolution loop can convert genomes ↔ brain weights. If the encoder subclasses `_ClassicalPPOEncoder` (the existing pattern used by `MLPPPOEncoder` + `LSTMPPOEncoder`), the brain MUST expose `_episode_count: int` and `_update_learning_rate()` attribute/method so `_ClassicalPPOEncoder.decode()` at [`encoders.py:305-306`](../../../packages/quantum-nematode/quantumnematode/evolution/encoders.py#L305-L306) finds them — either as a no-op shim (no LR scheduler in a GA brain) or by writing a fresh encoder base.
+- New `BrainType.FEEDFORWARDGA = "feedforwardga"` enum member at [`brain/arch/dtypes.py`](../../../packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py) + a new entry in the `BRAIN_TYPES` `Literal` (also at `dtypes.py`).
+- Brain config `FeedforwardGABrainConfig(BrainConfig)` exposes the topology shape (hidden_dim, num_hidden_layers, sensory_modules), NOT the GA hyperparameters. The GA hyperparameters live in the YAML `evolution:` block per the existing `configs/evolution/mlpppo_foraging_small.yml` precedent and are consumed by the evolution loop, not the brain.
+- `brain_factory.py` requires **no new code**: the `setup_brain_model()` factory ([`utils/brain_factory.py`](../../../packages/quantum-nematode/quantumnematode/utils/brain_factory.py)) has a default-shape fallthrough returning `{"num_actions": 4, "device": device}` (lines ~155-160 post-T2) that fits `FeedforwardGABrain`'s `__init__` (the brain takes only `config` + `device`, like `ConnectomePPOBrain`).
+- `config_loader.py` `BRAIN_CONFIG_MAP` requires **no new code** post-T2: it derives from the registry automatically.
+- One smoke config at `configs/evolution/feedforwardga_foraging_small.yml` mirroring [`configs/evolution/mlpppo_foraging_small.yml`](../../../configs/evolution/mlpppo_foraging_small.yml)'s structure: a `brain:` block + a required `evolution:` block (`algorithm: ga`, `generations`, `population_size`, `episodes_per_eval`, etc.). Runnable headlessly through `scripts/run_evolution.py --config <path> --seed 2026`. The launcher always runs headless; there is no `--theme` flag.
+- Unit + smoke tests at `packages/quantum-nematode/tests/quantumnematode_tests/brain/test_feedforward_ga.py`: Brain Protocol conformance, `WeightPersistence` Protocol conformance, forward-pass shape, encoder round-trip (genome → decoded brain forward-pass weight-identical to the source), end-to-end short-budget evolution run.
+
+## Capabilities
+
+### New Capabilities
+
+- `feedforward-ga-brain`: Feed-forward neural-network brain whose weights are evolved by the existing GA optimiser. Matched capacity to MLPPPO small. Consumed by the upcoming `weight-search-architecture-ranking` change as the GA-based weight-search comparator. Distinct from the future NEAT topology search (Tranche 8), which evolves both topology and weights via TensorNEAT.
+
+### Modified Capabilities
+
+None. `brain-architecture` (the L1 registry) is consumed via its existing decorator surface; `evolution-framework` (the GA optimiser + evolution loop + `ENCODER_REGISTRY`) is consumed via its existing public API by adding a new encoder, not by changing requirements. Neither requires requirements-level changes.
+
+## Impact
+
+- **New code**: ~1 brain module + ~1 encoder addition + ~1 enum entry + ~1 config file + ~1 test file. Estimated 300-500 LOC including tests. Touched files: `brain/arch/feedforward_ga.py` (new), `brain/arch/dtypes.py` (1 enum + 1 Literal entry), `brain/arch/__init__.py` (1 import), `evolution/encoders.py` (1 encoder class + 1 `ENCODER_REGISTRY` entry), `configs/evolution/feedforwardga_foraging_small.yml` (new), `tests/quantumnematode_tests/brain/test_feedforward_ga.py` (new). `brain_factory.py` + `config_loader.py` require **no edits**.
+- **New dependencies**: none. The GA optimiser and evolution-loop infrastructure already exist.
+- **Downstream**: the upcoming `weight-search-architecture-ranking` change depends on this brain being available in the registry + encoder registered. The GA C-cells in that comparison consume `configs/evolution/feedforwardga_*.yml` configs.
+- **Out of scope for this change**: NEAT topology evolution (Tranche 8, separate change), GPU-accelerated TensorNEAT integration (also Tranche 8), GA-evolved variants of other brain families (those would be follow-up changes if the cross-architecture comparison surfaces evidence GA is useful for them).
+- **Backward compatibility**: fully additive — no existing brain, config, or test is modified.
