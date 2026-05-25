@@ -26,6 +26,7 @@ from ._topology import BrainTopology
 from .connectome_ppo import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from .crh import CRHBrain, CRHBrainConfig
 from .crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
+from .feedforward_ga import FeedforwardGABrain, FeedforwardGABrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
@@ -62,6 +63,8 @@ __all__ = [
     "ClassicalBrain",
     "ConnectomePPOBrain",
     "ConnectomePPOBrainConfig",
+    "FeedforwardGABrain",
+    "FeedforwardGABrainConfig",
     "HybridClassicalBrain",
     "HybridClassicalBrainConfig",
     "HybridQuantumBrain",
