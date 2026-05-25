@@ -79,7 +79,9 @@ The `FeedforwardGABrain` SHALL integrate with the existing evolution-framework i
 - **GIVEN** a `FeedforwardGABrain` instance A with arbitrary weights
 - **WHEN** the encoder serialises A into a `Genome` and then decodes the same `Genome` into a fresh brain B
 - **THEN** B's weight tensors SHALL match A's weight tensors element-for-element within float32 ulp tolerance
-- **AND** B's `run_brain()` SHALL produce identical pre-sampling action logits to A's for the same `BrainParams` input (the forward pass is deterministic given identical weights and identical inputs; the post-softmax categorical sampling step is stochastic and intentionally NOT part of this scenario's comparison surface — tests SHALL compare logits, not sampled action indices)
+- **AND** B's `run_brain()` SHALL produce identical pre-sampling action logits to A's for the same `BrainParams` input
+
+> **Note on logits vs sampled actions.** The forward pass is deterministic given identical weights and identical inputs; the post-softmax categorical sampling step is stochastic and intentionally NOT part of this scenario's comparison surface. Tests SHALL compare logits, not sampled action indices.
 
 ### Requirement: FeedforwardGABrainConfig
 
