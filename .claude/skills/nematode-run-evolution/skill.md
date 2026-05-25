@@ -107,7 +107,7 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 ## Constraints
 
 - **Frozen weights only**: `EpisodicSuccessRate` runs episodes via `FrozenEvalRunner` which neuters `brain.learn` and `brain.update_memory`. The framework deliberately does not ship a learn-then-evaluate fitness in this version.
-- **Only `mlpppo` and `lstmppo` brains** are registered in `ENCODER_REGISTRY`. Running the script against a quantum-brain config (e.g. `qvarcircuit`) will fail with a clear error listing the registered names.
+- **Only `mlpppo`, `lstmppo`, and `feedforwardga` brains** are registered in `ENCODER_REGISTRY`. Running the script against a quantum-brain config (e.g. `qvarcircuit`) will fail with a clear error listing the registered names. `feedforwardga` uses the existing `GeneticAlgorithmOptimizer` (set `algorithm: ga` in the `evolution:` block) rather than CMA-ES; smoke config: `configs/evolution/feedforwardga_foraging_small.yml`.
 - **`--parallel N` uses `multiprocessing.Pool`**: workers fork the parent process. Don't run with `--parallel > os.cpu_count()`. Workers ignore SIGINT — Ctrl-C the parent to stop everything cleanly.
 
 ## Tips
