@@ -39,14 +39,13 @@ The `FeedforwardGABrain` SHALL implement the `WeightPersistence` protocol from `
 
 - **GIVEN** an instance of `FeedforwardGABrain` and a `components` dict captured from another instance with the same topology
 - **WHEN** `brain.load_weight_components(components)` is called
-- **THEN** the brain's network parameters SHALL match the source brain's parameters byte-for-byte after the call
-- **AND** the brain's `run_brain()` SHALL subsequently produce the same action logits as the source brain for the same `BrainParams` input (modulo stochastic sampling, which a seeded RNG controls)
+- **THEN** the brain's network parameters SHALL match the source brain's parameters element-for-element within float32 ulp tolerance after the call
+- **AND** the brain's `run_brain()` SHALL subsequently produce identical pre-sampling action logits to the source brain for the same `BrainParams` input
 
-#### Scenario: Brain provides PPO-attribute shims required by `_ClassicalPPOEncoder.decode()`
+#### Scenario: Brain supports encoder restoration via PPO-attribute shims
 
-- **GIVEN** the change subclasses the encoder from `_ClassicalPPOEncoder` (per design.md Decision 4)
-- **WHEN** the encoder's `decode()` method runs (per `packages/quantum-nematode/quantumnematode/evolution/encoders.py:305-306` which sets `brain._episode_count = 0` then calls `brain._update_learning_rate()`)
-- **THEN** the `FeedforwardGABrain` instance SHALL accept assignment to `_episode_count` (typed `int`, written to but not read by GA logic)
+- **WHEN** an encoder's `decode()` method assigns `brain._episode_count = 0` and then calls `brain._update_learning_rate()` (per the `_ClassicalPPOEncoder.decode()` contract at `packages/quantum-nematode/quantumnematode/evolution/encoders.py:305-306`)
+- **THEN** the `FeedforwardGABrain` instance SHALL accept assignment to `_episode_count` (typed `int`, written but not read by GA logic)
 - **AND** the `FeedforwardGABrain` SHALL expose a `_update_learning_rate()` method that is a no-op (GA brain has no LR scheduler)
 
 ### Requirement: GA-Based Weight Evolution Integration
@@ -80,7 +79,7 @@ The `FeedforwardGABrain` SHALL integrate with the existing evolution-framework i
 - **GIVEN** a `FeedforwardGABrain` instance A with arbitrary weights
 - **WHEN** the encoder serialises A into a `Genome` and then decodes the same `Genome` into a fresh brain B
 - **THEN** B's weight tensors SHALL match A's weight tensors element-for-element within float32 ulp tolerance
-- **AND** B's `run_brain()` output SHALL match A's `run_brain()` output for the same `BrainParams` input (deterministic forward pass, modulo stochastic sampling controlled by the brain's RNG seed)
+- **AND** B's `run_brain()` SHALL produce identical pre-sampling action logits to A's for the same `BrainParams` input (the forward pass is deterministic given identical weights and identical inputs; the post-softmax categorical sampling step is stochastic and intentionally NOT part of this scenario's comparison surface — tests SHALL compare logits, not sampled action indices)
 
 ### Requirement: FeedforwardGABrainConfig
 
@@ -92,7 +91,7 @@ The brain SHALL be configured via a Pydantic `FeedforwardGABrainConfig` model ex
 - **THEN** the config SHALL accept at minimum the following fields:
   - `hidden_dim: int` (default `64`, matches `MLPPPOBrainConfig.actor_hidden_dim` small default)
   - `num_hidden_layers: int` (default `2`, matches `MLPPPOBrainConfig.num_hidden_layers` small default)
-  - `sensory_modules: list[str]` (mirrors `MLPPPOBrainConfig.sensory_modules`; drives the input-dim inference at construction time)
+  - `sensory_modules: list[ModuleName]` (mirrors `MLPPPOBrainConfig.sensory_modules` at [`packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py:116`](../../../../packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L116); drives the input-dim inference at construction time via the existing `get_classical_feature_dimension()` helper which consumes `ModuleName` enum values)
 - **AND** the config SHALL be a `BrainConfig` subclass so it is consumed by the existing config-loading machinery
 
 #### Scenario: GA hyperparameters live in the evolution block, not the brain config

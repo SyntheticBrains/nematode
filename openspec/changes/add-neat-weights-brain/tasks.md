@@ -16,7 +16,7 @@
 ## 2. Implement `FeedforwardGABrain`
 
 - [ ] 2.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/feedforward_ga.py` with:
-  - `FeedforwardGABrainConfig(BrainConfig)` Pydantic model exposing the topology fields per the spec's `FeedforwardGABrainConfig` requirement (`hidden_dim: int = 64`, `num_hidden_layers: int = 2`, `sensory_modules: list[str]`). NO GA hyperparameters in this config.
+  - `FeedforwardGABrainConfig(BrainConfig)` Pydantic model exposing the topology fields per the spec's `FeedforwardGABrainConfig` requirement (`hidden_dim: int = 64`, `num_hidden_layers: int = 2`, `sensory_modules: list[ModuleName]` — match the `MLPPPOBrainConfig` type at `packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py:116`, NOT `list[str]`). NO GA hyperparameters in this config.
   - `FeedforwardGABrain(ClassicalBrain)` class implementing the Brain Protocol surface (`run_brain` / `update_memory` / `prepare_episode` / `post_process_episode` / `copy` + `history_data` / `latest_data`) AND the `WeightPersistence` Protocol (`get_weight_components` / `load_weight_components`).
   - Topology: `input_dim → hidden_dim → hidden_dim → 4` feed-forward with ReLU activations. Input dimensionality inferred from `sensory_modules` at construction time (mirror `MLPPPOBrain`'s pattern).
   - `run_brain()`: single forward pass → softmax → categorical sampling over `DEFAULT_ACTIONS`.
@@ -37,8 +37,8 @@
 
 ## 4. Smoke config
 
-- [ ] 4.1 Author `configs/evolution/feedforwardga_foraging_small.yml` mirroring `configs/evolution/mlpppo_foraging_small.yml`'s structure: `brain:` block with `name: feedforwardga` and `config:` (topology fields only — `hidden_dim`, `num_hidden_layers`, `sensory_modules`), plus `reward:`, `satiety:`, `environment:`, and a required `evolution:` block with `algorithm: ga`, `generations: 10`, `population_size: 8`, `episodes_per_eval: 3`, `parallel_workers: 1`, `checkpoint_every: 5`.
-- [ ] 4.2 Smoke-run via `uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --seed 2026`. Verify: completes without exception, per-generation fitness CSV produced, best-fitness shows non-degenerate variance across generations.
+- [ ] 4.1 Author `configs/evolution/feedforwardga_foraging_small.yml` mirroring `configs/evolution/mlpppo_foraging_small.yml`'s structure: `brain:` block with `name: feedforwardga` and `config:` (topology fields only — `hidden_dim`, `num_hidden_layers`, `sensory_modules`), plus `reward:`, `satiety:`, `environment:`, and a required `evolution:` block with `algorithm: ga`, `generations: 10`, `population_size: 8`, `episodes_per_eval: 3`, `parallel_workers: 1`, `checkpoint_every: 5`, AND the GA-specific hyperparameters `sigma0: 0.5`, `elite_fraction: 0.2`, `mutation_rate: 0.1`, `crossover_rate: 0.8` (defaults from `GeneticAlgorithmOptimizer.__init__`; including them explicitly demonstrates the brain-config-doesn't-carry-GA-knobs separation per the spec's `FeedforwardGABrainConfig` requirement).
+- [ ] 4.2 Smoke-run via `uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --seed 2026`. Verify: completes without exception; `evolution_results/<session-id>/history.csv` and `lineage.csv` artefacts are produced (the canonical evolution-framework artefact set per `scripts/run_evolution.py --output-dir` default); best-fitness shows non-degenerate variance across generations.
 
 ## 5. Tests
 
@@ -51,10 +51,11 @@
   - Test: `update_memory()` and `post_process_episode()` are no-ops — call each with a variety of arguments and assert weights are byte-identical before vs after.
 - [ ] 5.2 Run `uv run pytest -m "not nightly" packages/quantum-nematode/tests/quantumnematode_tests/brain/test_feedforward_ga.py` and verify all tests pass.
 
-## 6. Pre-merge verification
+## 6. Documentation + pre-merge verification
 
-- [ ] 6.1 Run `openspec validate add-neat-weights-brain --strict` and verify clean.
-- [ ] 6.2 Run targeted `uv run pre-commit run --files <changed-files>` and verify clean.
-- [ ] 6.3 Audit staged files for `/Users/`, `/home/`, `C:\\Users\\` absolute path leakage (per project memory feedback). Sanitise any found.
-- [ ] 6.4 Audit any > 100 KB artefacts against `.gitattributes` LFS rules (per project memory feedback).
-- [ ] 6.5 Ask user before pushing the branch or opening a PR.
+- [ ] 6.1 Update `.claude/skills/nematode-run-evolution/skill.md` Constraints section to add `feedforwardga` to the registered-brains list (the doc currently names only `mlpppo` + `lstmppo`).
+- [ ] 6.2 Run `openspec validate add-neat-weights-brain --strict` and verify clean.
+- [ ] 6.3 Run targeted `uv run pre-commit run --files <changed-files>` and verify clean.
+- [ ] 6.4 Audit staged files for `/Users/`, `/home/`, `C:\\Users\\` absolute path leakage (per project memory feedback). Sanitise any found.
+- [ ] 6.5 Audit any > 100 KB artefacts against `.gitattributes` LFS rules (per project memory feedback).
+- [ ] 6.6 Ask user before pushing the branch or opening a PR.
