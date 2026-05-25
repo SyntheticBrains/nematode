@@ -42,6 +42,8 @@ The C3 cross-architecture analysis SHALL compute paired-seed deltas with one-sid
 
 **Implementation note for the analysis script.** The existing utility `compute_cross_arm_delta_stats` at `scripts/campaigns/aggregate_m613_pilot.py:329-418` is M6.13-specific (its dict key is `(arm, seed, fundus_idx)` and it averages F1+ retention specifically). The analysis script in this change SHALL extract the reusable inner computation pattern (paired-seed delta → one-sided Wilcoxon → 80% bootstrap CI with seeded RNG, 1000 resamples) into a generic helper (e.g. `_paired_seed_wilcoxon_bootstrap(deltas: list[float]) -> dict`) that operates on a flat list of per-seed deltas, NOT directly call the M6.13 function. The bootstrap CI level (80%) and resample count (1000) constants from `aggregate_m613_pilot.py` SHALL be carried forward to preserve methodological consistency across the project.
 
+**Rationale for 80% bootstrap CIs (α=0.20).** The 80% CI level is set explicitly by `CROSS_ARM_BOOTSTRAP_CI_LEVEL = 0.80` in [`scripts/campaigns/aggregate_m613_pilot.py:98`](../../../../scripts/campaigns/aggregate_m613_pilot.py#L98) and [`scripts/campaigns/aggregate_m69_pilot.py:90`](../../../../scripts/campaigns/aggregate_m69_pilot.py#L90) (both with the inline comment `80% CI ⇒ alpha=0.20`); the M6.13 + M6.9 pilots established the precedent. The choice is a deliberate trade-off: narrower intervals than 95% CIs increase precision and discriminative power for exploratory paired-seed comparisons at the n≥4 sample sizes Phase 5 inherited as a floor, at the cost of reduced coverage probability. Carrying it forward here preserves comparability with prior project analyses and signals that this change's outputs are exploratory ranking evidence (intended to feed Gate 3, not to support stand-alone confirmatory claims). If a Gate 3 reviewer requests 95% CIs for a specific headline claim, the analysis script can rerun with `CROSS_ARM_BOOTSTRAP_CI_LEVEL = 0.95` against the same archived per-seed deltas — the choice is reversible at analysis time.
+
 #### Scenario: Paired-seed Wilcoxon + bootstrap CI is computed per architecture pair per metric
 
 - **GIVEN** four architecture C3 cells (connectome, mlp_ppo, lstm_gru_ppo, feedforward_ga) with n ≥ 4 paired seeds each
@@ -101,3 +103,36 @@ Per-cell raw artefacts (per-cell summary CSVs, plots, supporting tables) that th
 - **WHEN** the change's logbook is being authored
 - **THEN** any per-cell artefact the logbook needs to cite SHALL be copied into `docs/experiments/logbooks/supporting/<NNN>-weight-search-architecture-ranking/` before the logbook references it
 - **AND** the scratchpads themselves MAY remain in `tmp/` (working forensics) but SHALL NOT be cited from the logbook
+
+### Requirement: Per-architecture C3 reward-weight tuning discipline
+
+Each architecture's C3 cell SHALL run with the documented global reward weights (inherited from the closest existing reference config, e.g. `oxygen_thermal_pursuit/mlpppo_large_oracle.yml`'s reward block, scaled appropriately for the small variant) by default; per-architecture divergence is the exception, not the rule. Per-architecture reward weights MAY diverge from the global default only when BOTH (a) the architecture's C2 (foraging + predator) smoke result shows its foraging-or-predator metric below 50% of the same metric on at least one other architecture's C2 result, AND (b) the imbalance is supported by ≥ n=2 C2 seeds (a single C2 run is insufficient evidence). When tuning is triggered, the chosen per-arch reward weights SHALL be documented in the change's design.md (under a `## Per-architecture reward weights for C3` section) BEFORE the n≥4 C3 cell launches for that architecture, including the rationale, the C2 numbers that triggered tuning, and the chosen weights. Once C3 launches for an architecture, the reward weights for that architecture's C3 cell SHALL be frozen — no mid-C3 retuning is permitted, even if early-episode metrics look bad.
+
+#### Scenario: Default reward weights used when tuning trigger does not fire
+
+- **GIVEN** an architecture whose C2 smoke result shows its foraging-and-predator metrics within 50% of every other architecture's C2 result
+- **WHEN** the C3 cell config is authored
+- **THEN** the reward block SHALL match the global default reward weights inherited from the reference config
+- **AND** no per-arch entry SHALL be added to the `## Per-architecture reward weights for C3` section of design.md for this architecture
+
+#### Scenario: Tuning trigger requires both C2 imbalance AND a second seed
+
+- **GIVEN** an architecture whose first C2 seed shows a foraging-or-predator metric below 50% of at least one other architecture's first-seed C2 result
+- **WHEN** the implementer considers picking per-architecture reward weights
+- **THEN** a second C2 seed for that architecture SHALL be run before any per-arch weights are committed
+- **AND** the per-arch weights SHALL be committed only if the n=2 C2 mean confirms the >50% imbalance (a noisy single-seed result that doesn't replicate SHALL fall back to the global default)
+
+#### Scenario: Pre-C3 documentation lands before n=4 C3 launches
+
+- **GIVEN** the tuning trigger has fired for an architecture (n=2 C2 imbalance confirmed)
+- **WHEN** the n≥4 C3 cell for that architecture is queued to launch
+- **THEN** design.md SHALL contain a `## Per-architecture reward weights for C3` section entry for that architecture
+- **AND** the entry SHALL include the rationale, the C2 numbers that triggered tuning, and the chosen weights
+- **AND** C3 SHALL NOT launch for that architecture until the documentation is in place
+
+#### Scenario: No mid-C3 retuning
+
+- **GIVEN** a C3 cell that has begun execution for an architecture (any seed)
+- **WHEN** mid-run metrics suggest the reward weights are imbalanced
+- **THEN** the reward weights for any remaining seeds of that architecture's C3 cell SHALL remain frozen at the pre-launch values
+- **AND** any reward-weight change SHALL be deferred to a post-Phase-4 follow-up change (the no-retuning rule lasts until Phase 4 closes)

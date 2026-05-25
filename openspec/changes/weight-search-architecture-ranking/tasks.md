@@ -61,7 +61,7 @@ Runs concurrently with Section 2 below. Output: canonical sensor + reward locked
 
 ### 1f. Synchronise phase6-tracking with the integrated-C3 scope change
 
-- [ ] 1f.1 Amend `openspec/changes/phase6-tracking/tasks.md` § T4 row structure to reflect the integrated-C3 pattern (4 architectures × 1 integrated C3 each + curriculum smokes, NOT 4 architectures × 3 per-behaviour cells). Land this amendment synchronously with Section 3's MCC commitment so the tracker reads correctly throughout this change's implementation, NOT only at Phase 5 closeout.
+- [ ] 1f.1 Amend `openspec/changes/phase6-tracking/tasks.md` § T4 row structure to reflect the integrated-C3 pattern (4 architectures × 1 integrated C3 each + curriculum smokes, NOT 4 architectures × 3 per-behaviour cells). "Synchronous" here means **applied in the same commit/PR as Section 3's MCC commitment (Task 3.6)** — Task 1f.1 is listed in Phase 1 only because the substrate-readiness phase is the natural home for cross-change coordination work, not because it blocks on Phase 1 sub-tasks; the actual sequencing dependency is Task 3.6, and reviewers should expect 1f.1 + 1f.2 + 3.6 to land together in one PR rather than as three separate commits. The point is that the phase6-tracking tracker reads correctly throughout this change's implementation, NOT only at Phase 5 closeout.
 - [ ] 1f.2 Amend `openspec/changes/phase6-tracking/design.md` § Decision 6 G3.a wording: the existing "All 12 MUST cells in T7" language assumes T7 inherits the 12-cell pattern from T4. With this change collapsing T4 to integrated-C3 and T7 inheriting that pattern, G3.a SHALL be widened to "All 4 MUST architecture integrated-C3 cells in T7 with per-behaviour-component sub-metrics extracted per the architecture-comparison-protocol capability."
 - [ ] 1f.3 Re-run `openspec validate phase6-tracking --strict` after the amendments in 1f.1 + 1f.2 and verify clean. If validation surfaces structural issues (e.g. a tasks.md row format requirement), iterate until clean before proceeding to Section 2.
 
@@ -79,7 +79,7 @@ Runs concurrently with Section 2 below. Output: canonical sensor + reward locked
 - [ ] 3.3 **T4.0c** Add connectome sensor-projection + motor-readout section documenting the canonical food + predator projections (food shipped at T2; predator from Phase 1b with the bilateral-suffixed neuron names per design.md Decision 8).
 - [ ] 3.4 **T4.0d** Add entropy-schedule section locking `entropy_coef=0.005` for all `T4.connectome.*` cells; note per-architecture configs whether others need similar scrutiny.
 - [ ] 3.5 **T4.0e/f** Add config-canonicalisation note (already executed in 1e; documented here for traceability).
-- [ ] 3.6 **MCC commitment**: confirm Decision 2 (BH-FDR within-pass) lands in design.md AND in the `specs/architecture-comparison-protocol/spec.md` paired-seed-statistics requirement BEFORE Phase 4 launches.
+- [ ] 3.6 **MCC commitment**: confirm Decision 2 (BH-FDR within-pass) lands in design.md AND in the `specs/architecture-comparison-protocol/spec.md` paired-seed-statistics requirement BEFORE Phase 4 launches. Land this in the same commit/PR as Tasks 1f.1 + 1f.2 (the phase6-tracking T4 row-structure + G3.a wording amendments) so the tracker and the MCC commitment stay in sync.
 
 ## 4. Phase 4 — Curriculum + integrated comparison sweep
 
@@ -130,7 +130,7 @@ For each architecture (MLPPPO, LSTMPPO, FeedforwardGA, ConnectomePPO):
 - [ ] 6.9 Update `docs/roadmap.md` Phase 6 Tranche Tracker T4 row.
 - [ ] 6.10 Amend `openspec/changes/phase6-tracking/design.md § Decision 6` MCC default (Holm-Bonferroni → BH-FDR) AND confirm the G3.a wording amendment from Task 1f.2 still reflects the realised T4 outcomes. T7's inheritance of BH-FDR is captured in this amendment.
 
-## 7. Pre-merge verification
+## 7. Phase 7 — Pre-merge verification
 
 - [ ] 7.1 Run `openspec validate weight-search-architecture-ranking --strict` and verify clean.
 - [ ] 7.2 Run targeted `uv run pre-commit run --files <changed-files>` and verify clean. Targeted runs during iteration; full suite (`pre-commit run -a`) before push (per memory feedback).
