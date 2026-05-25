@@ -1,0 +1,77 @@
+# Evolution pilot config: FeedforwardGA + small oracle foraging
+#
+# Smallest viable evolution loop for the GA-evolved feed-forward brain —
+# used for framework smoke testing. Mirrors the structure of
+# `mlpppo_foraging_small.yml`; the brain block carries only topology
+# fields (the FeedforwardGABrainConfig surface), and all GA optimiser
+# hyperparameters live in the `evolution:` block per the project
+# convention.
+#
+# DO NOT specify brain.config.weights_path — the framework forces it to
+# None (genome is the sole weight source).
+# DO NOT rely on brain.config.seed — the loop's --seed (or the per-evaluation
+# seed derived from it) overrides BrainConfig.seed via the wrapper.
+
+max_steps: 500
+
+brain:
+  name: feedforwardga
+  config:
+    hidden_dim: 64
+    num_hidden_layers: 2
+    sensory_modules:
+      - food_chemotaxis
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    # Smoke-friendly: 10 foods on grid + target=3 (vs mlpppo's 5/10) makes
+    # episode success achievable with a random-init policy in some of the
+    # 8-individual population, which gives the GA a non-degenerate fitness
+    # signal at this tiny generation budget (10 generations × pop 8 ×
+    # 3 episodes/eval). Larger campaigns can tighten these.
+    foods_on_grid: 10
+    target_foods_to_collect: 3
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+# Evolution-specific knobs. CLI flags override these when explicitly passed.
+# GA hyperparameters live here (not in brain.config) per the convention
+# established by mlpppo_foraging_small.yml.
+evolution:
+  algorithm: ga
+  generations: 10
+  population_size: 8
+  episodes_per_eval: 3
+  parallel_workers: 1
+  checkpoint_every: 5
+  # GA optimiser hyperparameters (consumed by GeneticAlgorithmOptimizer).
+  # Sigma0 = Gaussian-mutation std + initial parameter range.
+  # Tournament size is hard-coded to 3 inside GeneticAlgorithmOptimizer
+  # (not configurable via the optimiser's public API).
+  sigma0: 0.5
+  elite_fraction: 0.2
+  mutation_rate: 0.1
+  crossover_rate: 0.8
