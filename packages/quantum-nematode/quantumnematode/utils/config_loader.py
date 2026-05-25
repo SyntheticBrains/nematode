@@ -18,6 +18,7 @@ from quantumnematode.brain.arch import (
     ConnectomePPOBrainConfig,
     CRHBrainConfig,
     CRHQLSTMBrainConfig,
+    FeedforwardGABrainConfig,
     HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
     HybridQuantumCortexBrainConfig,
@@ -123,6 +124,7 @@ BrainConfigType = (
     | LSTMPPOBrainConfig
     | SpikingReinforceBrainConfig
     | ConnectomePPOBrainConfig
+    | FeedforwardGABrainConfig
 )
 
 # Type alias for predator movement patterns

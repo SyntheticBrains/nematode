@@ -367,9 +367,24 @@ class LSTMPPOEncoder(_ClassicalPPOEncoder):
     brain_name = "lstmppo"
 
 
+class FeedforwardGAEncoder(_ClassicalPPOEncoder):
+    """Encoder for :class:`~quantumnematode.brain.arch.feedforward_ga.FeedforwardGABrain`.
+
+    Picks up the single ``policy`` weight component (the brain has no
+    critic and no optimizer state to evolve). The brain provides no-op
+    shims for ``_episode_count`` and ``_update_learning_rate()`` so the
+    inherited :class:`_ClassicalPPOEncoder.decode` flow works without
+    modification — see ``FeedforwardGABrain.__init__`` for the shim
+    rationale.
+    """
+
+    brain_name = "feedforwardga"
+
+
 ENCODER_REGISTRY: dict[str, type[GenomeEncoder]] = {
     MLPPPOEncoder.brain_name: MLPPPOEncoder,
     LSTMPPOEncoder.brain_name: LSTMPPOEncoder,
+    FeedforwardGAEncoder.brain_name: FeedforwardGAEncoder,
 }
 
 
