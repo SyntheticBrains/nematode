@@ -105,7 +105,12 @@ class FeedforwardGABrain(ClassicalBrain):
         self.input_dim = get_classical_feature_dimension(config.sensory_modules)
         self.num_actions = num_actions
         self.device = torch.device(device.to_torch_device_str())
-        self._action_set = action_set
+        # Defensive copy: prevent the caller from mutating the brain's action_set
+        # by mutating their own list reference after construction. The default
+        # value `DEFAULT_ACTIONS` is itself a module-level constant treated as
+        # immutable-by-convention by every other brain in the project, but
+        # copying makes the contract local to this brain regardless.
+        self._action_set = list(action_set)
         if len(self._action_set) != num_actions:
             msg = (
                 f"FeedforwardGABrain action_set must have exactly {num_actions} "
@@ -243,8 +248,20 @@ class FeedforwardGABrain(ClassicalBrain):
 
     @action_set.setter
     def action_set(self, actions: list[Action]) -> None:
-        """Set the list of actions."""
-        self._action_set = actions
+        """Set the list of actions.
+
+        The new list MUST contain exactly ``num_actions`` actions, matching
+        the network's output dimensionality. A defensive copy is taken so
+        the caller's list reference can be mutated independently of the
+        brain's action set.
+        """
+        if len(actions) != self.num_actions:
+            msg = (
+                f"FeedforwardGABrain action_set must have exactly {self.num_actions} "
+                f"actions; got {len(actions)}"
+            )
+            raise ValueError(msg)
+        self._action_set = list(actions)
 
     # ------------------------------------------------------------------
     # Weight persistence (WeightPersistence protocol)

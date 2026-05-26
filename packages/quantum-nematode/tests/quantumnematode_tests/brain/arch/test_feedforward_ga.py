@@ -14,6 +14,8 @@ BrainType + instantiate_brain dispatch.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import torch
 from quantumnematode.brain.actions import DEFAULT_ACTIONS
@@ -33,6 +35,9 @@ from quantumnematode.brain.arch.feedforward_ga import (
 )
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.brain.weights import WeightPersistence
+
+if TYPE_CHECKING:
+    from quantumnematode.utils.config_loader import SimulationConfig
 
 _SEED = 2026
 
@@ -114,6 +119,33 @@ class TestConstruction:
 
         with pytest.raises(ValidationError, match="sensory_modules must be non-empty"):
             FeedforwardGABrainConfig(sensory_modules=[], seed=_SEED)
+
+    def test_action_set_setter_rejects_length_mismatch(self) -> None:
+        """The action_set setter validates length against num_actions.
+
+        Without this guard, a caller could swap in a shorter list and the
+        next ``run_brain`` call would IndexError when sampling an action
+        index outside the new list's range.
+        """
+        import pytest
+
+        brain = _make_brain()
+        with pytest.raises(ValueError, match="action_set must have exactly"):
+            brain.action_set = DEFAULT_ACTIONS[:2]  # only 2 actions
+
+    def test_action_set_constructor_defensive_copy(self) -> None:
+        """Mutating the caller's action_set list after construction does NOT mutate the brain's."""
+        caller_list = list(DEFAULT_ACTIONS)
+        brain = FeedforwardGABrain(
+            config=_make_config(),
+            num_actions=4,
+            device=DeviceType.CPU,
+            action_set=caller_list,
+        )
+        original = list(brain.action_set)
+        # Mutate caller's reference — brain's _action_set should be untouched
+        caller_list.clear()
+        assert list(brain.action_set) == original
 
     def test_multi_module_input_dim_scales(self) -> None:
         """input_dim scales with the number of sensory modules.
@@ -377,7 +409,7 @@ class TestNoOpHooks:
 
 
 class TestEncoderRoundTrip:
-    def _make_sim_config(self):
+    def _make_sim_config(self) -> SimulationConfig:
         from quantumnematode.utils.config_loader import (
             BrainContainerConfig,
             SimulationConfig,

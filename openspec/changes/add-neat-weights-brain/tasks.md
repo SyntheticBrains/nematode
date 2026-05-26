@@ -53,7 +53,7 @@
 
 ## 6. Documentation + pre-merge verification
 
-- [x] 6.1 Update `.claude/skills/nematode-run-evolution/skill.md` Constraints section to add `feedforwardga` to the registered-brains list (the doc currently names only `mlpppo` + `lstmppo`). **NOTE**: `.claude/` is project-wide gitignored, so this update lives in the local working tree only and cannot ship in a PR — the skill doc is a per-user copy. Recorded here for completeness; the local update has been applied.
+- [x] 6.1 Update `.claude/skills/nematode-run-evolution/skill.md` Constraints section to add `feedforwardga` to the registered-brains list (the doc previously named only `mlpppo` + `lstmppo`). **NOTE**: although `.claude/` is project-wide gitignored, this specific file is tracked in git (it predates the gitignore entry — see `git ls-files .claude/skills/nematode-run-evolution/skill.md`), so the update IS included in this PR's tracked files and has been applied in the repo for this change.
 - [x] 6.2 Run `openspec validate add-neat-weights-brain --strict` and verify clean.
 - [x] 6.3 Run targeted `uv run pre-commit run --files <changed-files>` and verify clean.
 - [x] 6.4 Audit staged files for `/Users/`, `/home/`, `C:\\Users\\` absolute path leakage (per project memory feedback). No leaks found.
