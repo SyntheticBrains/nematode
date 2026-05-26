@@ -93,7 +93,7 @@ def test_hyperparam_encoder_not_in_brain_registry() -> None:
     """``HyperparameterEncoder`` is brain-agnostic; SHALL NOT pollute registry."""
     assert "hyperparam" not in ENCODER_REGISTRY
     # Registry SHALL only contain real brain-keyed encoder names
-    assert set(ENCODER_REGISTRY.keys()) == {"mlpppo", "lstmppo"}
+    assert set(ENCODER_REGISTRY.keys()) == {"mlpppo", "lstmppo", "feedforwardga"}
     # Encoder SHALL still be importable for programmatic callers
     enc = HyperparameterEncoder()
     assert enc.brain_name == ""  # empty string for brain-agnosticism
