@@ -243,8 +243,15 @@ class FeedforwardGABrain(ClassicalBrain):
 
     @property
     def action_set(self) -> list[Action]:
-        """Get the list of actions."""
-        return self._action_set
+        """Get the list of actions.
+
+        Returns a defensive copy so callers cannot mutate the internal list
+        in-place and bypass the setter's length-validation invariant (which
+        is load-bearing for ``run_brain``'s ``self._action_set[action_idx]``
+        index safety). To change the action set, assign via the setter
+        — that path validates length before swapping the internal reference.
+        """
+        return list(self._action_set)
 
     @action_set.setter
     def action_set(self, actions: list[Action]) -> None:

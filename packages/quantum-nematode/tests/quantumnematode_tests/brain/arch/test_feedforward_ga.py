@@ -147,6 +147,25 @@ class TestConstruction:
         caller_list.clear()
         assert list(brain.action_set) == original
 
+    def test_action_set_getter_defensive_copy(self) -> None:
+        """Mutating the value returned by the getter does NOT mutate the brain's internal list.
+
+        Without the getter's defensive copy, a caller could bypass the
+        setter's length validation by doing `brain.action_set.clear()`
+        or `.append(...)`, breaking the invariant that
+        `len(self._action_set) == self.num_actions` that run_brain's
+        action indexing relies on.
+        """
+        brain = _make_brain()
+        snapshot = list(brain.action_set)
+        # Mutate the returned list — internal state should survive
+        returned = brain.action_set
+        returned.clear()
+        returned.append(returned)  # type: ignore[arg-type] - intentional poison
+        # Brain's internal action set is still intact
+        assert list(brain.action_set) == snapshot
+        assert len(brain.action_set) == brain.num_actions
+
     def test_multi_module_input_dim_scales(self) -> None:
         """input_dim scales with the number of sensory modules.
 
