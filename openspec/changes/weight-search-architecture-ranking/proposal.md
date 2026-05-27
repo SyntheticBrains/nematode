@@ -12,7 +12,7 @@ T4 closes no gate by itself but produces three of Gate 3's four criteria's evide
 
 ### Phase 0 — Predator-sensing convergence investigation (T4.0g)
 
-Investigation-only; runs concurrently with Phase 1a/1b. Owns the empirical question the just-merged predator-sensing change deferred.
+Investigation-led; runs concurrently with Phase 1a/1b. Owns the empirical question the just-merged predator-sensing change deferred. Ships investigation results + the small code changes the investigation surfaces as load-bearing for Phase 4 (two implementation-bug fixes uncovered mid-investigation, three opt-in sensor/reward variants for future ablation work).
 
 - Run new vs legacy predator-sensor matched-compute baseline at canonical T4 budget (≥ 500 ep, n=4 seeds) on MLPPPO.
 - Ablate the "sparse contact signal" hypothesis with a variant injecting distal sulfolipid concentration into the mechano-strength field when not in contact.
@@ -20,6 +20,7 @@ Investigation-only; runs concurrently with Phase 1a/1b. Owns the empirical quest
 - Ablate reward shape: existing `gradient_proximity` vs `distal_chemo_penalty + binary_contact_damage_trigger`.
 - 2×2 best-sensor × {legacy reward, new reward} grid to map the joint space.
 - Lock canonical predator-evasion sensor encoding + reward shape for the comparison cells. Output: logbook section + 1-2 canonical config templates.
+- Ship + verify any bug fixes uncovered by the investigation (the convergence-gap diagnostic may surface latent implementation issues in the new-biology sensor or reward pathways; if so they get fixed + regression-tested as part of Phase 0 deliverables rather than deferred).
 
 ### Phase 1 — Substrate readiness
 
@@ -87,7 +88,7 @@ Explicit decision point between Phase 4 and Phase 5. Decide whether to promote S
 ## Impact
 
 - **Depends on**: `add-neat-weights-brain` change merged (this change's Phase 1a verifies the `feedforwardga` brain is registry-consumable; Phase 4's GA C-cells consume configs that instantiate it).
-- **New code**: Phase 1b adds the `predator_gains` projection to `ConnectomePPOBrain` (~50-100 LOC + tests). Phase 0 may add 1-2 ablation sensor-module variants under `quantumnematode/brain/modules.py` (each ~30-50 LOC + tests). Phase 5 may add an analysis script under `scripts/analysis/` that consumes the cross-cell evaluation CSVs.
+- **New code**: Phase 1b adds the `predator_gains` projection to `ConnectomePPOBrain` (~50-100 LOC + tests). Phase 0 shipped two opt-in ablation sensor modules (`predator_mechanosensation_klinotaxis_sparse_fix`, `predator_biology_klinotaxis` composite) + one opt-in reward variant (`reward_mode: distal_chemo_contact_trigger`) under `quantumnematode/brain/modules.py` + `quantumnematode/agent/reward_calculator.py` (~150 LOC + 16 tests across `test_predator_modules.py`, `test_reward_calculator.py`). Phase 0 also fixed two implementation bugs uncovered during the investigation: composite STAM channel recognition in `quantumnematode/agent/stam.py` (commit `c25588a1`, 5 regression tests), and `predator_lateral_gradient` silent silencing under new-biology configs in `quantumnematode/agent/agent.py` (commit `65a5b517`, 3 regression tests; load-bearing — closed the entire 44pp convergence gap). Phase 5 may add an analysis script under `scripts/analysis/` that consumes the cross-cell evaluation CSVs.
 - **New configs**: ~12 new small-klinotaxis configs (4 architectures × C1/C2/C3) + connectome-specific predator/thermotaxis configs + Phase 0 ablation configs. All under `configs/scenarios/`.
 - **No new external dependencies.** Reuses existing PPO, GA, evolution-loop, env, and statistical-test infrastructure.
 - **Compute footprint**: 4 architectures × (2 smokes + n=4 seeds) = ~24 simulation runs at canonical budget + ablations + Phase 0 sub-investigations. Phase 2 quantifies the wall-time projection.

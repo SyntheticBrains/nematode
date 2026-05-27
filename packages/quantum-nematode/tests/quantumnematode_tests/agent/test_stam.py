@@ -354,7 +354,7 @@ class TestSTAMChannelResolutionAgreesWithModuleInference:
                 ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
                 ModuleName.STAM,
             ],
-            # Legacy nociception alone (frozen pre-T3 path).
+            # Legacy nociception alone (frozen single-channel predator path).
             [
                 ModuleName.FOOD_CHEMOTAXIS,
                 ModuleName.NOCICEPTION_KLINOTAXIS,

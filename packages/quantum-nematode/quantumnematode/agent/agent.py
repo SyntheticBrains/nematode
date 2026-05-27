@@ -741,14 +741,11 @@ class QuantumNematodeAgent:
         # ``get_predator_concentration`` field so the value is identical
         # regardless of which gate fires; the dual gate exists because the
         # legacy ``nociception_klinotaxis`` module and the new
-        # ``predator_chemosensation_klinotaxis`` module both read this
-        # field, and the new module's sensing-mode knob is
-        # ``predator_distal_mode`` (not ``nociception_mode``). Until T3
-        # this field was only populated under the legacy gate, which
-        # silently broke the new chemo channel's directional input
-        # whenever a config selected the new module without also setting
-        # the legacy ``nociception_mode: klinotaxis`` (i.e. every new
-        # predator-biology config).
+        # ``predator_chemosensation_klinotaxis`` module both consume this
+        # field, but they expose different sensing-mode knobs
+        # (``nociception_mode`` vs ``predator_distal_mode``). A single-gate
+        # check on only one knob silently drops the directional signal
+        # whenever a config selects the other module's sensing-mode knob.
         if SensingMode.KLINOTAXIS in (
             sensing.nociception_mode,
             sensing.predator_distal_mode,

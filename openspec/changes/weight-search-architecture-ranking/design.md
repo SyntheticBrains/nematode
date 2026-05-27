@@ -139,13 +139,13 @@ Rejected alternative 1: `combined_klinotaxis/` (`klinotaxis` is a sensing mode, 
 
 **Compute budget pre-estimate (sanity check before Phase 2).** Counting realistic floor:
 
-- Phase 0: 6+ matched-compute runs × n=4 seeds = ~24 runs
+- Phase 0: **~40 canonical-budget runs actual** (2 Step A pre-flight at n=1 + 20 Step B at n=4 × 5 variants + 12 Step B re-run after Bug 1 fix at n=4 × 3 variants + 8 extended validation at n=4 × 2 variants). Pre-estimate was 6+ variants × n=4 seeds = ~24 runs; the overshoot reflects the unplanned re-run after the Bug 1 fix landed mid-investigation + the orthogonal-stack extended validation. Wall-clock impact ~8-10h across parallel batches, within the same order of magnitude as the pre-estimate.
 - Phase 2 pre-flight: 4 runs
 - Phase 4 curriculum: 4 architectures × (1 C1 + 1 C2 + 4 C3 seeds) = 24 runs
 - Phase 4 ablations: 1 strict-vs-soft × n=4 + 4 reward-shape × n=4 = 20 runs
 - Phase 4.5 promotion (if any GO): +6 runs per promoted architecture
 
-Floor without promotions: **~72 canonical-budget runs**. With one promotion: ~78. Decision 1's "4-6 weeks" estimate in [`phase6-tracking/design.md`](../phase6-tracking/design.md) predates this change's curriculum + ablation structure, so a sanity-check before any compute spend is warranted. Phase 2 will measure per-run wall-time and confirm the total fits the budget against the assumed parallelism factor; if projections exceed the "4-6 weeks" estimate by more than ~2× (whether driven by per-run wall-time growth, parallelism shortfall, or run-count growth), the team should amend Decision 1 rather than silently absorb the overrun. Task 2.4 owns the operational trigger arithmetic.
+Floor without promotions: **~88 canonical-budget runs** (40 Phase 0 actual + 48 Phase 2/4/4.5 estimate). With one promotion: ~94. Decision 1's "4-6 weeks" estimate in [`phase6-tracking/design.md`](../phase6-tracking/design.md) predates this change's curriculum + ablation structure, so a sanity-check before any compute spend is warranted. Phase 2 will measure per-run wall-time and confirm the total fits the budget against the assumed parallelism factor; if projections exceed the "4-6 weeks" estimate by more than ~2× (whether driven by per-run wall-time growth, parallelism shortfall, or run-count growth), the team should amend Decision 1 rather than silently absorb the overrun. Task 2.4 owns the operational trigger arithmetic.
 
 ## Phase 0 canonical-variant selection
 
@@ -214,7 +214,7 @@ No migration needed for the analysis scripts (additive under `scripts/analysis/`
 
 ## Open Questions
 
-1. **Phase 0 sensor + reward winners.** Settled during Phase 0 execution; documented as a Phase 0 logbook section. Not blocking design-finalisation because the canonical choices land empirically.
+1. **Phase 0 sensor + reward winners.** **Settled** — see § "Phase 0 canonical-variant selection" above. Canonical = `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis` sensors + `reward_mode: distal_chemo_contact_trigger`, beating legacy by +14pp last-25 mean success at n=4 × 500 ep. Phase 0 also uncovered + fixed two implementation bugs (composite STAM channel recognition; `predator_lateral_gradient` silent silencing) — the second was load-bearing and closed the entire convergence gap.
 2. **Per-architecture reward weights for C3.** Settled per-architecture during Phase 4 with documented rationale per Decision 7. Some architectures may need none; others may need explicit tuning. Captured in design.md amendment + per-cell config commits.
 3. **Compute-budget projection.** Settled at Phase 2; informs T4.0a in design.md.
 4. **Phase 4.5 GO/SKIP per candidate architecture.** Settled at Phase 4.5; documented in this design.md.
