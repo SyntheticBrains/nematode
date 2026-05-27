@@ -205,12 +205,136 @@ class TestPredatorChemosensationKlinotaxis:
 
 
 # =============================================================================
+# Ablation modules — sparse-signal mechanosensation variant
+# =============================================================================
+
+
+class TestPredatorMechanosensationKlinotaxisSparseFix:
+    module = SENSORY_MODULES[ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX]
+
+    def test_classical_dim_is_three(self) -> None:
+        assert self.module.classical_dim == 3
+
+    def test_in_contact_emits_intensity_as_strength(self) -> None:
+        """When in contact (zone != NONE), behaves identically to the canonical channel."""
+        params = _make_params(
+            predator_contact_intensity=0.8,
+            predator_contact_zone=ContactZone.ANTERIOR,
+            predator_distal_concentration=0.3,  # Ignored when in contact.
+            predator_mechano_dintensity_dt=0.02,
+            derivative_scale=50.0,
+        )
+        features = self.module.extract(params)
+        # In-contact: strength = predator_contact_intensity (NOT distal).
+        assert features.strength == pytest.approx(0.8)
+        assert features.angle == pytest.approx(1.0)  # ANTERIOR → +1.0
+        assert features.binary == pytest.approx(np.tanh(1.0))
+
+    def test_off_contact_substitutes_distal_concentration_for_strength(self) -> None:
+        """When ContactZone.NONE, strength falls back to distal concentration."""
+        params = _make_params(
+            predator_contact_intensity=0.0,  # Off-contact.
+            predator_contact_zone=ContactZone.NONE,
+            predator_distal_concentration=0.42,  # Should appear as strength.
+            predator_mechano_dintensity_dt=0.0,
+        )
+        features = self.module.extract(params)
+        # Off-contact: strength = distal concentration (canonical channel would emit 0.0).
+        assert features.strength == pytest.approx(0.42)
+        # Angle still encodes the zone; NONE → 0.0 (matches canonical).
+        assert features.angle == pytest.approx(0.0)
+
+    def test_off_contact_with_zero_distal_emits_zero_strength(self) -> None:
+        """When neither in-contact nor near a predator, strength is 0 (matches canonical)."""
+        params = _make_params()  # All fields default to None / 0.
+        features = self.module.extract(params)
+        assert features.strength == pytest.approx(0.0)
+        assert features.angle == pytest.approx(0.0)
+
+    def test_posterior_contact_emits_intensity_not_distal(self) -> None:
+        """Contact zone POSTERIOR also routes to canonical intensity."""
+        params = _make_params(
+            predator_contact_intensity=0.5,
+            predator_contact_zone=ContactZone.POSTERIOR,
+            predator_distal_concentration=0.9,  # Ignored — in contact.
+        )
+        features = self.module.extract(params)
+        assert features.strength == pytest.approx(0.5)
+        assert features.angle == pytest.approx(-1.0)  # POSTERIOR → -1.0
+
+
+# =============================================================================
+# Ablation modules — composite single-channel predator biology
+# =============================================================================
+
+
+class TestPredatorBiologyKlinotaxisComposite:
+    module = SENSORY_MODULES[ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS]
+
+    def test_classical_dim_is_four(self) -> None:
+        """Composite collapses the canonical 3+3=6 to a single 4-dim block."""
+        assert self.module.classical_dim == 4
+
+    def test_to_classical_emits_all_four_fields(self) -> None:
+        params = _make_params(
+            predator_contact_intensity=0.8,
+            predator_contact_zone=ContactZone.ANTERIOR,
+            predator_distal_concentration=0.42,
+            predator_distal_dconcentration_dt=0.02,
+            derivative_scale=50.0,
+        )
+        features = self.module.to_classical(params)
+        assert features.shape == (4,)
+        assert features[0] == pytest.approx(0.8)  # intensity
+        assert features[1] == pytest.approx(1.0)  # zone_as_angle (ANTERIOR)
+        assert features[2] == pytest.approx(0.42)  # distal_concentration
+        # tanh(0.02 * 50) = tanh(1.0)
+        assert features[3] == pytest.approx(np.tanh(1.0))
+
+    def test_no_predator_signal_emits_zero_vector(self) -> None:
+        params = _make_params()  # All predator fields default to None.
+        features = self.module.to_classical(params)
+        assert features.shape == (4,)
+        np.testing.assert_array_equal(features, np.zeros(4, dtype=np.float32))
+
+    def test_off_contact_with_distal_signal_emits_only_distal_components(self) -> None:
+        """Composite distinguishes in-contact from near-but-not-in-contact."""
+        params = _make_params(
+            predator_contact_intensity=0.0,
+            predator_contact_zone=ContactZone.NONE,
+            predator_distal_concentration=0.55,
+            predator_distal_dconcentration_dt=0.0,
+        )
+        features = self.module.to_classical(params)
+        assert features[0] == pytest.approx(0.0)  # intensity off
+        assert features[1] == pytest.approx(0.0)  # zone NONE → 0
+        assert features[2] == pytest.approx(0.55)  # distal_concentration on
+        assert features[3] == pytest.approx(0.0)  # no derivative
+
+    def test_to_quantum_compresses_to_three_floats(self) -> None:
+        """Quantum encoding drops the derivative; emits 3-float gate angles."""
+        params = _make_params(
+            predator_contact_intensity=0.5,
+            predator_contact_zone=ContactZone.POSTERIOR,
+            predator_distal_concentration=0.8,
+            predator_distal_dconcentration_dt=0.02,  # Dropped by to_quantum.
+        )
+        quantum = self.module.to_quantum(params)
+        assert quantum.shape == (3,)
+        # Rescaled [0,1] → [-π/2, π/2]:
+        assert quantum[0] == pytest.approx(0.5 * np.pi - np.pi / 2)  # intensity
+        assert quantum[1] == pytest.approx(0.8 * np.pi - np.pi / 2)  # distal
+        # zone POSTERIOR = -1.0 → -π/2
+        assert quantum[2] == pytest.approx(-1.0 * np.pi / 2)
+
+
+# =============================================================================
 # Registry presence
 # =============================================================================
 
 
 class TestRegistryPresence:
-    """All six new ModuleName entries are registered in SENSORY_MODULES."""
+    """All eight predator-sensor ModuleName entries are registered in SENSORY_MODULES."""
 
     @pytest.mark.parametrize(
         "module_name",
@@ -218,9 +342,11 @@ class TestRegistryPresence:
             ModuleName.PREDATOR_MECHANOSENSATION_ORACLE,
             ModuleName.PREDATOR_MECHANOSENSATION_TEMPORAL,
             ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+            ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX,
             ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
             ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL,
             ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+            ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
         ],
     )
     def test_module_registered(self, module_name: ModuleName) -> None:

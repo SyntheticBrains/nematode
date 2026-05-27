@@ -293,9 +293,26 @@ class RewardConfig(BaseModel):
     #   attractor (the gradient penalty applies anywhere the agent is in
     #   the predator's exp-decay field, not just at contact). The
     #   contact penalty is preserved.
+    # - ``"distal_chemo_contact_trigger"``: separates the predator-reward
+    #   signal into two distinct biologically-motivated terms — a
+    #   continuous distal-chemo penalty proportional to
+    #   ``env.get_predator_concentration(agent_pos)`` (the same field
+    #   the distal-chemosensory channel reads, so reward + sensor share a
+    #   consistent "distance to predator" axis), plus a binary discrete
+    #   penalty fired ONLY at actual contact damage (``is_agent_in_danger``).
+    #   Drops the distance-scaled evasion term (no "moving away" reward)
+    #   and the flat fallback. Conceptually: continuous aversion to
+    #   proximity + sharp pain at contact, matching the dual-channel
+    #   predator-sensing biology (distal chemo + contact mechano) on the
+    #   reward side.
     #
     # Configs that don't set the field stay byte-equivalent (default).
-    reward_mode: Literal["default", "gradient_only", "gradient_proximity"] = "default"
+    reward_mode: Literal[
+        "default",
+        "gradient_only",
+        "gradient_proximity",
+        "distal_chemo_contact_trigger",
+    ] = "default"
 
 
 class ManyworldsModeConfig(BaseModel):
