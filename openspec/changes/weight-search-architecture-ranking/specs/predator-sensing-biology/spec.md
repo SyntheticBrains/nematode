@@ -27,6 +27,15 @@ This requirement establishes that "the canonical predator-evasion sensor + rewar
 - **AND** Phase 4 C-curriculum configs SHALL consume only the canonical variant
 - **AND** non-canonical variants SHALL NOT appear in Phase 4 C-cells (they MAY remain available as opt-in modules for future ablation work)
 
+#### Scenario: Canonical variant selected (Phase 0 outcome)
+
+- **GIVEN** Phase 0 investigation completed 2026-05-27 with 40 canonical-budget runs (n=4 seeds × 500 episodes × 6 variants on MLPPPO small + klinotaxis sensing)
+- **WHEN** the canonical variant is selected per the preceding scenario
+- **THEN** the canonical sensor encoding SHALL be the two-channel-as-shipped variant: `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis` (the canonical biology-default new-biology sensor pair shipped by `fix-predator-sensing-biology`)
+- **AND** the canonical reward shape SHALL be `reward_mode: distal_chemo_contact_trigger` (the new dual-mechanism reward shipped in this change — continuous distal-chemo penalty via `env.get_predator_concentration` + binary contact damage trigger at `dist <= 1`, with distance-scaled evasion and flat-fallback paths dropped)
+- **AND** Phase 4 C-curriculum predator-evasion configs SHALL use both jointly (sensors + reward); neither alone produces the +14pp gain over legacy nociception_klinotaxis observed in Phase 0 ranking
+- **AND** the rationale documented in design.md § "Phase 0 canonical-variant selection" SHALL cite at minimum: Phase 0 ranking placing this combination first at 81.0% ± 5.0 last-25 mean success vs legacy 67.0% ± 7.6 (+14pp); lowest death rate of all variants (18.0% vs legacy 32.0%); tightest variance of all variants; orthogonal stacking with the sparse_fix sensor variant (B0.6) does not compound (78.0% ± 6.9, within noise of B0.5); composite single-channel variant is structurally inferior (16.0% pre- and post-Bug-1-fix, confirming `lateral_gradient` is load-bearing for klinotaxis predator-evasion)
+
 #### Scenario: Canonical variant becomes the carry-forward for Phase 6 downstream work
 
 - **GIVEN** the change's design.md documents the canonical variant
