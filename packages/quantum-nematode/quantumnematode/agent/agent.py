@@ -735,7 +735,24 @@ class QuantumNematodeAgent:
             right_c = self.env.get_food_concentration(position=right_pos)
             result["food_lateral_gradient"] = right_c - left_c
 
-        if sensing.nociception_mode == SensingMode.KLINOTAXIS:
+        # Predator lateral gradient: populated when EITHER the legacy
+        # nociception klinotaxis path OR the new biology-driven distal-chemo
+        # klinotaxis path is active. Both paths read the same env-side
+        # ``get_predator_concentration`` field so the value is identical
+        # regardless of which gate fires; the dual gate exists because the
+        # legacy ``nociception_klinotaxis`` module and the new
+        # ``predator_chemosensation_klinotaxis`` module both read this
+        # field, and the new module's sensing-mode knob is
+        # ``predator_distal_mode`` (not ``nociception_mode``). Until T3
+        # this field was only populated under the legacy gate, which
+        # silently broke the new chemo channel's directional input
+        # whenever a config selected the new module without also setting
+        # the legacy ``nociception_mode: klinotaxis`` (i.e. every new
+        # predator-biology config).
+        if SensingMode.KLINOTAXIS in (
+            sensing.nociception_mode,
+            sensing.predator_distal_mode,
+        ):
             left_c = self.env.get_predator_concentration(position=left_pos)
             right_c = self.env.get_predator_concentration(position=right_pos)
             result["predator_lateral_gradient"] = right_c - left_c

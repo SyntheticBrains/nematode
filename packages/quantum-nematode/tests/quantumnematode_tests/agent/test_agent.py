@@ -452,3 +452,94 @@ class TestTemporalSensingIntegration:
         # Nociception oracle: gradient still available (from separated_grads)
         # Note: predator_concentration is None because nociception_mode is oracle
         assert params.predator_concentration is None
+
+
+class TestPredatorLateralGradientPopulation:
+    """Regression: dual-gate test for predator_lateral_gradient population.
+
+    The lateral_gradient field must be populated under EITHER legacy
+    nociception klinotaxis OR new biology-driven distal-chemo klinotaxis.
+
+    Pre-fix bug: the lateral-gradient computation was gated solely on
+    ``nociception_mode == KLINOTAXIS``. New-biology configs that select
+    ``predator_chemosensation_klinotaxis`` set ``predator_distal_mode:
+    klinotaxis`` but leave ``nociception_mode`` at its ORACLE default —
+    so the lateral_gradient field was silently None, and the chemo
+    channel's directional ``angle`` feature collapsed to 0.0. The brain
+    had no head-sweep directional information about predators despite
+    the chemo channel claiming klinotaxis mode.
+    """
+
+    def _create_predator_agent(
+        self,
+        sensing_config: "SensingConfig",
+    ) -> QuantumNematodeAgent:
+        from quantumnematode.brain.actions import Action
+        from quantumnematode.env.env import PredatorParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(
+                foods_on_grid=5,
+                target_foods_to_collect=8,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+            ),
+            predator=PredatorParams(
+                enabled=True,
+                count=2,
+                gradient_decay_constant=10.0,
+                gradient_strength=1.0,
+            ),
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            seed=42,
+        )
+        brain_config = QVarCircuitBrainConfig(seed=42)
+        brain = QVarCircuitBrain(brain_config)
+        return QuantumNematodeAgent(
+            brain=brain,
+            env=env,
+            sensing_config=sensing_config,
+        )
+
+    def test_legacy_nociception_klinotaxis_populates_lateral_gradient(self) -> None:
+        """Legacy gate (the pre-fix code path) still works after the dual-gate change."""
+        sensing = SensingConfig(
+            nociception_mode=SensingMode.KLINOTAXIS,
+            stam_enabled=True,
+        )
+        agent = self._create_predator_agent(sensing)
+        params = agent._create_brain_params()
+        assert params.predator_lateral_gradient is not None
+
+    def test_new_biology_distal_klinotaxis_populates_lateral_gradient(self) -> None:
+        """New biology gate populates lateral_gradient even when nociception_mode is ORACLE.
+
+        This is the bug-fix regression: pre-fix, the lateral_gradient was
+        None under this config because only the legacy nociception gate
+        existed. The new chemo channel relies on this field for its angle
+        feature.
+        """
+        sensing = SensingConfig(
+            nociception_mode=SensingMode.ORACLE,  # Default — the legacy gate does NOT fire
+            predator_distal_mode=SensingMode.KLINOTAXIS,  # New gate MUST fire
+            stam_enabled=True,
+        )
+        agent = self._create_predator_agent(sensing)
+        params = agent._create_brain_params()
+        assert params.predator_lateral_gradient is not None, (
+            "predator_lateral_gradient must populate under predator_distal_mode == KLINOTAXIS; "
+            "pre-fix bug left this field None, silently breaking the chemo channel's angle feature."
+        )
+
+    def test_both_gates_off_leaves_lateral_gradient_none(self) -> None:
+        """When neither klinotaxis gate fires, lateral_gradient stays None (default)."""
+        sensing = SensingConfig(
+            nociception_mode=SensingMode.ORACLE,
+            predator_distal_mode=SensingMode.ORACLE,
+            stam_enabled=True,
+        )
+        agent = self._create_predator_agent(sensing)
+        params = agent._create_brain_params()
+        assert params.predator_lateral_gradient is None
