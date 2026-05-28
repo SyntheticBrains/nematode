@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
-from quantumnematode.agent.stam import STAMBuffer
+from quantumnematode.agent.stam import (
+    STAMBuffer,
+    resolve_active_channels,
+    stam_dim_from_env,
+)
+from quantumnematode.brain.modules import (
+    ModuleName,
+    _infer_stam_dim_from_modules,
+)
 
 
 class TestSTAMBufferBasics:
@@ -292,3 +302,124 @@ class TestEpisodeReset:
         state = buf.get_memory_state()
         assert state[0] == pytest.approx(0.5)  # Fresh value, not influenced by pre-reset
         assert len(buf) == 1
+
+
+def _make_predator_env(
+    *,
+    thermotaxis_enabled: bool = False,
+    aerotaxis_enabled: bool = False,
+) -> Mock:
+    """Build a minimal env stub with predator enabled."""
+    env = Mock()
+    env.thermotaxis = Mock(enabled=thermotaxis_enabled)
+    env.aerotaxis = Mock(enabled=aerotaxis_enabled)
+    env.pheromones = Mock(enabled=False)
+    env.predator = Mock(enabled=True)
+    return env
+
+
+class TestSTAMChannelResolutionAgreesWithModuleInference:
+    """Regression: env-resolved STAM dim must agree with module-list inference.
+
+    Brain-side construction calls ``_infer_stam_dim_from_modules`` (fallback
+    when env is not available); runtime calls ``stam_dim_from_env`` (when env
+    is). If the two disagree, the brain's first Linear layer is sized for a
+    different input than the runtime feeds it, producing a shape-mismatch
+    crash on the first forward pass. Every legal combination of new
+    predator-sensor modules must produce the same dim from both functions.
+
+    This regression test was added after the composite ``predator_biology_klinotaxis``
+    module shipped without a corresponding ``resolve_active_channels`` entry,
+    causing the brain to be built for 3 STAM channels (food + mechano +
+    distal) while the env resolved to 2 (food + legacy predator fallback)
+    — silent until forward pass when shape mismatch fires.
+    """
+
+    @pytest.mark.parametrize(
+        "modules",
+        [
+            # Canonical two-channel new biology.
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+            # Sparse-fix mechano variant + canonical chemo.
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX,
+                ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+            # Composite single-channel (replaces both mechano + chemo).
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+            # Composite + canonical mechano: dedupe path adds only the distal
+            # channel since the canonical mechano triple is already counted.
+            # Exercises the `if not any(... mechano_triple)` guard at
+            # brain/modules.py:_infer_stam_dim_from_modules.
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+            # Composite + both canonical channels: dedupe path adds neither
+            # mechano nor distal since both triples are already counted.
+            # Exercises both dedupe guards simultaneously — without them the
+            # brain would build for 5 STAM channels (food + mechano + distal
+            # + composite's mechano + composite's distal) vs env-resolved 3.
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+            # Legacy nociception alone (frozen single-channel predator path).
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+        ],
+    )
+    def test_env_and_module_inference_agree(self, modules: list[ModuleName]) -> None:
+        """For each module combination, env-resolved dim equals module-inferred dim."""
+        env = _make_predator_env()
+        module_names = [m.value for m in modules]
+        env_dim = stam_dim_from_env(env, sensory_modules=module_names)
+        module_dim = _infer_stam_dim_from_modules(modules)
+        assert env_dim == module_dim, (
+            f"STAM-dim disagreement for {module_names}: env={env_dim}, modules={module_dim}"
+        )
+
+    def test_composite_activates_both_new_predator_channels(self) -> None:
+        """Composite alone must activate predator_mechano AND predator_distal channels.
+
+        Without this, the composite is silently ignored by
+        ``resolve_active_channels``, the fallback legacy ``predator``
+        channel activates instead, and the env populates the legacy
+        ``predator_concentration`` field while the composite's distal
+        fields stay None — meaning the composite emits a 4-dim vector
+        with the distal columns silently zero on every step.
+        """
+        env = _make_predator_env()
+        channels = resolve_active_channels(
+            env,
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS.value,
+                ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS.value,
+                ModuleName.STAM.value,
+            ],
+        )
+        channel_names = [c.name for c in channels]
+        assert "predator_mechano" in channel_names
+        assert "predator_distal" in channel_names
+        # The legacy fallback SHALL NOT activate when the composite covers
+        # both new channels.
+        assert "predator" not in channel_names

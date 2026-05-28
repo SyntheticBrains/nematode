@@ -13,6 +13,17 @@
 # memoryless MLPPPO brain (with proprioception added so the brain has
 # heading context to correlate dC/dt with movement, mirroring the
 # mlpppo_small_klinotaxis foraging-only baseline).
+#
+# Reward: distal_chemo_contact_trigger. Continuous distal-chemo penalty
+# via env.get_predator_concentration + binary contact damage trigger at
+# dist <= 1, with distance-scaled evasion and flat-fallback paths dropped.
+# This mirrors the dual-channel sensor split (continuous distal aversion
+# matching the chemo channel + sharp contact pain matching the mechano
+# channel) on the reward side. Empirically: at n=4 × 500ep this pairing
+# scores 81.0% ± 5.0 last-25 mean success, beating legacy
+# nociception_klinotaxis by +14pp with the lowest death rate (18% vs 32%)
+# and tightest variance of all six variants evaluated; full ranking
+# under docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/.
 
 max_steps: 500
 brain:
@@ -42,6 +53,7 @@ brain:
 body_length: 2
 
 reward:
+  reward_mode: distal_chemo_contact_trigger
   reward_goal: 2.0
   reward_distance_scale: 0.5
   reward_exploration: 0.05

@@ -119,9 +119,13 @@ class ModuleName(StrEnum):
     PREDATOR_MECHANOSENSATION_ORACLE = "predator_mechanosensation_oracle"
     PREDATOR_MECHANOSENSATION_TEMPORAL = "predator_mechanosensation_temporal"
     PREDATOR_MECHANOSENSATION_KLINOTAXIS = "predator_mechanosensation_klinotaxis"
+    PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX = (
+        "predator_mechanosensation_klinotaxis_sparse_fix"
+    )
     PREDATOR_CHEMOSENSATION_ORACLE = "predator_chemosensation_oracle"
     PREDATOR_CHEMOSENSATION_TEMPORAL = "predator_chemosensation_temporal"
     PREDATOR_CHEMOSENSATION_KLINOTAXIS = "predator_chemosensation_klinotaxis"
+    PREDATOR_BIOLOGY_KLINOTAXIS = "predator_biology_klinotaxis"
 
 
 # =============================================================================
@@ -613,6 +617,61 @@ class SensoryModule:
         if self.classical_dim == 3:  # noqa: PLR2004
             return np.array([core.strength, core.angle, core.binary], dtype=np.float32)
         return np.array([core.strength, core.angle], dtype=np.float32)
+
+
+@dataclass
+class PredatorBiologyCompositeModule(SensoryModule):
+    """Composite single-channel module emitting all four predator-biology features.
+
+    Unlike the canonical two-channel split (mechanosensation_klinotaxis +
+    chemosensation_klinotaxis, 3+3 = 6 dims), the composite collapses to a
+    single 4-dim feature vector ``[intensity, zone_as_angle, distal_concentration,
+    dconcentration_dt]``. The same env-side fields drive both encodings;
+    the composite tests whether collapsing the 6-dim representation reduces
+    redundancy without losing predator-evasion-relevant information.
+
+    classical_dim is 4 (not 2 or 3); the standard ``CoreFeatures``-driven
+    ``to_classical`` doesn't support 4 dims, so this subclass overrides it.
+    """
+
+    classical_dim: int = 4
+
+    def to_classical(self, params: BrainParams) -> np.ndarray:
+        """Return the 4-dim composite predator-biology feature vector."""
+        intensity = float(params.predator_contact_intensity or 0.0)
+        zone = params.predator_contact_zone or ContactZone.NONE
+        zone_as_angle = _ZONE_TO_ANGLE[zone]
+        distal_concentration = float(params.predator_distal_concentration or 0.0)
+        raw_distal_deriv = float(params.predator_distal_dconcentration_dt or 0.0)
+        dconcentration_dt = float(
+            np.tanh(raw_distal_deriv * params.derivative_scale),
+        )
+        return np.array(
+            [intensity, zone_as_angle, distal_concentration, dconcentration_dt],
+            dtype=np.float32,
+        )
+
+    def to_quantum(self, params: BrainParams) -> np.ndarray:
+        """Compress the 4-dim composite to a 3-float quantum encoding.
+
+        Mirrors the STAM compression pattern: pick three semantically
+        independent scalars and rescale to [-π/2, π/2] for quantum gates.
+        intensity → rx, distal_concentration → ry, zone_as_angle → rz.
+        The derivative is dropped (quantum brains can't easily exploit
+        per-step temporal signal).
+        """
+        intensity = float(params.predator_contact_intensity or 0.0)
+        distal_concentration = float(params.predator_distal_concentration or 0.0)
+        zone = params.predator_contact_zone or ContactZone.NONE
+        zone_as_angle = _ZONE_TO_ANGLE[zone]
+        return np.array(
+            [
+                intensity * np.pi - np.pi / 2,  # [0,1] → [-π/2, π/2]
+                distal_concentration * np.pi - np.pi / 2,
+                zone_as_angle * np.pi / 2,  # [-1,1] → [-π/2, π/2]
+            ],
+            dtype=np.float32,
+        )
 
 
 @dataclass
@@ -1221,6 +1280,41 @@ def _predator_chemosensation_klinotaxis_core(params: BrainParams) -> CoreFeature
     return CoreFeatures(strength=strength, angle=angle, binary=binary)
 
 
+def _predator_mechanosensation_klinotaxis_sparse_fix_core(
+    params: BrainParams,
+) -> CoreFeatures:
+    """Dense-signal mechanosensation variant: falls back to distal concentration off-contact.
+
+    Identical to the canonical klinotaxis mechanosensation core when in
+    contact (``ContactZone != NONE``): emits graded ``predator_contact_intensity``
+    as strength. When out of contact (``ContactZone.NONE``, the agent is
+    outside any predator's damage radius), the strength field is filled
+    with ``predator_distal_concentration`` instead of the canonical 0.0.
+
+    The zone-as-angle field stays at ``_ZONE_TO_ANGLE[NONE] = 0.0`` off-contact,
+    so the brain can still discriminate "in contact" from "near but not in
+    contact" via the angle: any non-zero zone-angle is unambiguous contact.
+
+    Rationale: the canonical mechanosensation channel is ``0.0`` outside
+    the damage radius, which empirically appears to leave the brain
+    unable to learn that the mechano channel carries any signal at all
+    (the channel is effectively unobserved on most steps). Injecting the
+    distal concentration into the strength field when off-contact gives
+    the brain a dense always-on signal that varies with predator proximity
+    while preserving the in-contact intensity gradation.
+    """
+    contact_intensity = float(params.predator_contact_intensity or 0.0)
+    zone = params.predator_contact_zone or ContactZone.NONE
+    distal_concentration = float(params.predator_distal_concentration or 0.0)
+    # Off-contact: substitute distal concentration. In-contact: use the
+    # canonical intensity (always >= 0).
+    strength = distal_concentration if zone == ContactZone.NONE else contact_intensity
+    angle = _ZONE_TO_ANGLE[zone]
+    raw_deriv = float(params.predator_mechano_dintensity_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
 # Register klinotaxis modules
 SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS] = SensoryModule(
     name=ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS,
@@ -1311,6 +1405,18 @@ SENSORY_MODULES[ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS] = SensoryModule
     ),
     classical_dim=3,
 )
+SENSORY_MODULES[ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX] = SensoryModule(
+    name=ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX,
+    extract=_predator_mechanosensation_klinotaxis_sparse_fix_core,
+    description=(
+        "Klinotaxis predator-mechanosensation with off-contact distal fallback. "
+        "3-dim: strength (= contact intensity when ContactZone != NONE, else "
+        "distal concentration) + zone-as-angle + dintensity/dt. Replaces the "
+        "canonical channel's off-contact zero with a continuous distal signal "
+        "so the brain has a dense always-on predator-proximity input."
+    ),
+    classical_dim=3,
+)
 SENSORY_MODULES[ModuleName.PREDATOR_CHEMOSENSATION_ORACLE] = SensoryModule(
     name=ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
     extract=_predator_chemosensation_oracle_core,
@@ -1338,6 +1444,18 @@ SENSORY_MODULES[ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS] = SensoryModule(
         "default for new predator-evasion configs."
     ),
     classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS] = PredatorBiologyCompositeModule(
+    name=ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
+    extract=lambda _params: CoreFeatures(),  # Not used — overridden by to_classical/to_quantum
+    description=(
+        "Composite predator-biology single channel. 4-dim: "
+        "[intensity, zone_as_angle, distal_concentration, dconcentration_dt]. "
+        "Collapses the canonical two-channel split (mechano + chemo, 3+3=6 dim) "
+        "into one 4-dim block; same underlying env-side fields drive both, but "
+        "the composite tests whether the 6-dim representation is redundantly "
+        "encoded for the brain's needs."
+    ),
 )
 
 SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(
@@ -1458,6 +1576,8 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
             ModuleName.PREDATOR_MECHANOSENSATION_ORACLE,
             ModuleName.PREDATOR_MECHANOSENSATION_TEMPORAL,
             ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+            # Sparse-signal variant uses the same underlying mechano STAM channel.
+            ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX,
         ),
         (
             ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
@@ -1468,6 +1588,29 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
     modules_set = set(modules)
     for mods in modality_triples:
         if any(m in modules_set for m in mods):
+            num_channels += 1
+
+    # Composite predator-biology module pulls from both the mechano AND the
+    # distal STAM channels (it just collapses the brain-side encoding to a
+    # single 4-dim block; env-side both channels still fire). Count it as
+    # adding both channels — but only if the canonical mechano + distal
+    # modules aren't already counted above (additive overlap would
+    # double-count).
+    if ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS in modules_set:
+        mechano_triple = (
+            ModuleName.PREDATOR_MECHANOSENSATION_ORACLE,
+            ModuleName.PREDATOR_MECHANOSENSATION_TEMPORAL,
+            ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+            ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS_SPARSE_FIX,
+        )
+        distal_triple = (
+            ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
+            ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL,
+            ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+        )
+        if not any(m in modules_set for m in mechano_triple):
+            num_channels += 1
+        if not any(m in modules_set for m in distal_triple):
             num_channels += 1
 
     # Pheromone channels: when any pheromone module is present, food+alarm

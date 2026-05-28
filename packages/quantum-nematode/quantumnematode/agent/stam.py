@@ -150,11 +150,21 @@ def resolve_active_channels(
             channels.append(CHANNEL_REGISTRY["temperature"])
         if env.predator.enabled:
             module_names = tuple(sensory_modules) if sensory_modules is not None else ()
-            has_new_mechano = any(
-                name.startswith("predator_mechanosensation") for name in module_names
+            # Composite predator-biology module pulls from BOTH the env's
+            # contact-mechano and distal-chemo state, so it activates both
+            # new STAM channels even though it doesn't share a name prefix
+            # with the canonical predator_mechanosensation_* /
+            # predator_chemosensation_* families.
+            has_composite_biology = any(
+                name == "predator_biology_klinotaxis" for name in module_names
             )
-            has_new_distal = any(
-                name.startswith("predator_chemosensation") for name in module_names
+            has_new_mechano = (
+                any(name.startswith("predator_mechanosensation") for name in module_names)
+                or has_composite_biology
+            )
+            has_new_distal = (
+                any(name.startswith("predator_chemosensation") for name in module_names)
+                or has_composite_biology
             )
             has_legacy = any(name.startswith("nociception") for name in module_names)
             if has_new_mechano:

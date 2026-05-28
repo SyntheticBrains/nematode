@@ -139,19 +139,64 @@ Rejected alternative 1: `combined_klinotaxis/` (`klinotaxis` is a sensing mode, 
 
 **Compute budget pre-estimate (sanity check before Phase 2).** Counting realistic floor:
 
-- Phase 0: 6+ matched-compute runs × n=4 seeds = ~24 runs
+- Phase 0: **~40 canonical-budget runs actual** (2 Step A pre-flight at n=1 + 20 Step B at n=4 × 5 variants + 12 Step B re-run after Bug 1 fix at n=4 × 3 variants + 8 extended validation at n=4 × 2 variants). Pre-estimate was 6+ variants × n=4 seeds = ~24 runs; the overshoot reflects the unplanned re-run after the Bug 1 fix landed mid-investigation + the orthogonal-stack extended validation. Wall-clock impact ~8-10h across parallel batches, within the same order of magnitude as the pre-estimate.
 - Phase 2 pre-flight: 4 runs
 - Phase 4 curriculum: 4 architectures × (1 C1 + 1 C2 + 4 C3 seeds) = 24 runs
 - Phase 4 ablations: 1 strict-vs-soft × n=4 + 4 reward-shape × n=4 = 20 runs
 - Phase 4.5 promotion (if any GO): +6 runs per promoted architecture
 
-Floor without promotions: **~72 canonical-budget runs**. With one promotion: ~78. Decision 1's "4-6 weeks" estimate in [`phase6-tracking/design.md`](../phase6-tracking/design.md) predates this change's curriculum + ablation structure, so a sanity-check before any compute spend is warranted. Phase 2 will measure per-run wall-time and confirm the total fits the budget against the assumed parallelism factor; if projections exceed the "4-6 weeks" estimate by more than ~2× (whether driven by per-run wall-time growth, parallelism shortfall, or run-count growth), the team should amend Decision 1 rather than silently absorb the overrun. Task 2.4 owns the operational trigger arithmetic.
+Floor without promotions: **~88 canonical-budget runs** (40 Phase 0 actual + 48 Phase 2/4/4.5 estimate). With one promotion: ~94. Decision 1's "4-6 weeks" estimate in [`phase6-tracking/design.md`](../phase6-tracking/design.md) predates this change's curriculum + ablation structure, so a sanity-check before any compute spend is warranted. Phase 2 will measure per-run wall-time and confirm the total fits the budget against the assumed parallelism factor; if projections exceed the "4-6 weeks" estimate by more than ~2× (whether driven by per-run wall-time growth, parallelism shortfall, or run-count growth), the team should amend Decision 1 rather than silently absorb the overrun. Task 2.4 owns the operational trigger arithmetic.
+
+## Phase 0 canonical-variant selection
+
+Phase 0 (Tasks 0.1-0.8, the predator-sensing convergence investigation deferred from `fix-predator-sensing-biology` Modelling caveat 6) ran 40 canonical-budget simulation runs across 6 sensor + reward variants at n=4 seeds × 500 episodes on MLPPPO small + klinotaxis sensing on the existing grid env with pursuit predators. The investigation surfaced two implementation bugs and ranked 6 candidate variants for the canonical predator-evasion sensor + reward locked for Phase 4.
+
+### Bugs uncovered + fixed
+
+- **STAM composite channel recognition** (commit `c25588a1`): the composite `predator_biology_klinotaxis` sensor module shipped without recognition in `agent/stam.py:resolve_active_channels`, causing the brain-side STAM dim (9, counting both new channels) to disagree with the env-side STAM dim (7, falling back to legacy `predator` channel) and crashing the first forward pass with `mat1 and mat2 shapes cannot be multiplied (1x16 and 18x64)`. Fix: explicit recognition of `predator_biology_klinotaxis` activates both `predator_mechano` and `predator_distal` STAM channels.
+- **Bug 1: predator_lateral_gradient silent silencing under new-biology configs** (commit `65a5b517`): `agent.py:_compute_temporal_data` gated `predator_lateral_gradient` population on the legacy `nociception_mode == KLINOTAXIS`. New-biology configs set `predator_distal_mode: klinotaxis` (the new field name) but leave `nociception_mode` at its ORACLE default; the lateral gradient field was therefore silently None, and the chemo channel's directional `angle` feature collapsed to 0.0. **The brain literally had no head-sweep directional information about predators** despite the chemo channel claiming klinotaxis mode. This single bug explained essentially the entire 44pp convergence gap observed in Phase 0 Step A (A2 new biology 23% vs A1 legacy 67%). Fix: dual gate (legacy OR new) — both paths feed the same env-side `get_predator_concentration` field; the dual gate just removes the silent silencing of the new path.
+
+Bug 2 (the documented `predator_sulfolipid_concentration` placeholder alias of `predator_concentration`) is explicitly deferred to T6/T7 per archived `fix-predator-sensing-biology/design.md` Decision T3.5. Post-Bug-1-fix the corrected biology is structurally bio-faithful (right neurons, right channels, right signal contracts) and outperforms legacy by 14pp; further bio-fidelity work is not blocking Phase 4.
+
+### Final ranking (n=4 seeds × 500 episodes, last-25 mean success, all post-Bug-1-fix)
+
+| Rank | Variant | last-25 success | death rate |
+|---|---|---|---|
+| 🏆 **1** | **B0.5 canonical sensors + `distal_chemo_contact_trigger` reward** | **81.0% ± 5.0** | **18.0%** |
+| 2 | B0.6 sparse_fix sensor + `distal_chemo_contact_trigger` reward | 78.0% ± 6.9 | 22.0% |
+| 3 | B0.3 sparse_fix sensor + default reward | 73.0% ± 6.0 | 27.0% |
+| 4 | A1 legacy `nociception_klinotaxis` (reference) | 67.0% ± 7.6 | 32.0% |
+| 5 | A2 canonical new biology + default reward | 65.0% ± 16.1 | 32.0% |
+| 6 | B0.4 composite single-channel | 16.0% ± 7.3 | 83.0% |
+
+### Canonical lock
+
+The Phase 4 C-curriculum predator-evasion cells carry forward the following selected default (the normative `SHALL` lives in the spec's "Canonical variant selected (Phase 0 outcome)" scenario):
+
+- **Sensors**: `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis` (the canonical two-channel new biology, biology-default per `fix-predator-sensing-biology` Decision T3.1)
+- **Reward**: `reward_mode: distal_chemo_contact_trigger` (new dual-mechanism reward shipped in this change — continuous distal-chemo penalty via `env.get_predator_concentration` + binary contact damage trigger at `dist <= 1`)
+
+**Rationale**:
+
+- **Beats legacy by +14pp** (81% vs 67% last-25 success) with the **tightest variance** of all variants (5.0 std vs A1's 7.6). The corrected biology is fully viable when its directional signal is properly wired post-Bug-1.
+- **Lowest death rate** of all variants (18% vs A1's 32%) — predator-evasion is meaningfully better, not just food-collection.
+- **Biological fidelity**: uses the corrected two-channel sensors as designed (no sensor ablations), and the reward shape mirrors the dual-channel sensor split (continuous distal aversion via the chemo pathway + sharp contact pain via the mechano pathway).
+- **Design simplicity**: only the reward mode differs from the A2 baseline; the sensor configuration is unmodified canonical biology.
+- **Orthogonal stacking does not compound** (Finding 1 above: B0.6 sparse_fix sensor + new reward scores 78% vs B0.5's 81%, Δ=-3pp within noise). The sparse-fix sensor's "always-on distal fallback off-contact" becomes redundant once the new reward provides a continuous distal-chemo penalty — the brain sees the same information from two channels with no compounding gain. B0.5 is the simpler choice.
+- **Composite single-channel is structurally inferior** (Finding 2 above: B0.4 score is 16% both pre- and post-Bug-1 — Δ=0pp). It dropped `lateral_gradient` from its 4-dim output by design, so Bug 1 never affected it, and the brain has no head-sweep directional info via the composite's encoding. Confirms `lateral_gradient` is load-bearing for klinotaxis predator-evasion. Composite is not viable.
+
+### Carry-forward implications for downstream tranches
+
+- **T7 (L2 re-run on upgraded substrate)** is expected to consume the same selected default (canonical two-channel sensors + `distal_chemo_contact_trigger` reward) unless the env-upgrade work plausibly invalidates the Phase 0 evidence. The normative carry-forward `SHALL` lives in `predator-sensing-biology` spec § "Canonical variant becomes the carry-forward for Phase 6 downstream work".
+- **T6/T7 owns the deferred Bug 2 work** (literature-calibrated sulfolipid decay constant per Liu et al. 2018 plate-assay distances) per `fix-predator-sensing-biology/design.md` Decision T3.5. Post-Bug-1 the corrected biology is bio-faithful at the structural level; the sulfolipid calibration is an env-fidelity refinement, not a Phase 4 blocker.
+
+Phase 0 forensics (per-variant per-seed CSV summaries + scratchpad) persist at `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/`.
 
 ## Risks / Trade-offs
 
 | Risk | Trigger | Mitigation / Pivot |
 |---|---|---|
-| Phase 0 fails to close the convergence-rate gap (no sensor variant + reward shape gets within 0.5σ of legacy at canonical T4 budget) | After 4-6 Phase 0 sub-investigations, no variant clears the threshold | Accept gap as substrate finding. Choose between (a) raising predator-cell episode budget specifically (per-row annotation in design.md) if doubling the budget closes the band, or (b) dropping predator-evasion from this change (8-cell comparison ships; predator becomes a follow-up change). Decision criterion in design.md before Phase 0 starts. |
+| ~~Phase 0 fails to close the convergence-rate gap (no sensor variant + reward shape gets within 0.5σ of legacy at canonical T4 budget)~~ **RESOLVED** | After 4-6 Phase 0 sub-investigations, no variant clears the threshold | **Did not fire.** Phase 0 overshot legacy by +14pp (B0.5 canonical sensors + new reward 81.0% ± 5.0 vs legacy 67.0% ± 7.6). The mitigations (raise predator-cell budget; drop predator from this change) were not needed. See § "Phase 0 canonical-variant selection" — the convergence gap was a `predator_lateral_gradient` silent-silencing bug (commit `65a5b517`), not a substrate finding. |
 | Connectome wall-time makes the C3 sweep infeasible | Phase 2 projects > 14 days wall-time at n=4 across the 4 C3 cells | Apply Decision 1 amendment mechanism: either (a) n=3 on the most expensive C3 cell with documented per-cell rationale, or (b) reduce `forward_pass_depth` from 4 to 3 on the connectome cell (degradation noted; stronger pivot). Do not silently extend schedule. |
 | C1/C2 smokes pass on an architecture but C3 diverges (three-behaviour integration breaks one behaviour for that architecture) | After C1/C2 green on architecture X, X's C3 fails to learn or one behaviour collapses | Diagnose-and-fix on that architecture only. Per Decision 7, per-architecture reward-weight tuning is allowed with documentation. If unfixable, drop architecture from C3 and document the failure mode — better than misleading apples-to-oranges comparison. |
 | MCC strategy revisited mid-Phase 4 because variance differs > 3× across architectures | Forbidden by [`phase6-tracking/design.md § Decision 6`](../phase6-tracking/design.md) once Phase 4 starts | Forestalled by Decision 2 above (pre-commitment to BH-FDR). If reviewers request Holm-Bonferroni instead, default to BH-FDR with written justification — do not allow mid-Phase 4 changes. |
@@ -169,7 +214,7 @@ No migration needed for the analysis scripts (additive under `scripts/analysis/`
 
 ## Open Questions
 
-1. **Phase 0 sensor + reward winners.** Settled during Phase 0 execution; documented as a Phase 0 logbook section. Not blocking design-finalisation because the canonical choices land empirically.
+1. **Phase 0 sensor + reward winners.** **Settled** — see § "Phase 0 canonical-variant selection" above. Canonical = `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis` sensors + `reward_mode: distal_chemo_contact_trigger`, beating legacy by +14pp last-25 mean success at n=4 × 500 ep. Phase 0 also uncovered + fixed two implementation bugs (composite STAM channel recognition; `predator_lateral_gradient` silent silencing) — the second was load-bearing and closed the entire convergence gap.
 2. **Per-architecture reward weights for C3.** Settled per-architecture during Phase 4 with documented rationale per Decision 7. Some architectures may need none; others may need explicit tuning. Captured in design.md amendment + per-cell config commits.
 3. **Compute-budget projection.** Settled at Phase 2; informs T4.0a in design.md.
 4. **Phase 4.5 GO/SKIP per candidate architecture.** Settled at Phase 4.5; documented in this design.md.

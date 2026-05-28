@@ -17,6 +17,15 @@
 # scripts/run_simulation.py and produces non-degenerate training. The
 # full architecture-vs-architecture predator-evasion evaluation runs on
 # equivalent configs in a later evaluation tranche.
+#
+# Reward: distal_chemo_contact_trigger. Continuous distal-chemo penalty
+# via env.get_predator_concentration + binary contact damage trigger at
+# dist <= 1. Mirrors the dual-channel sensor split on the reward side.
+# Pairing chosen on MLPPPO empirical evidence (+14pp over legacy at n=4
+# × 500ep) — see docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/.
+# Not yet validated on LSTMPPO at canonical Phase 4 budget; per-architecture
+# re-evaluation may revise this if Phase 4 surfaces evidence that LSTM's
+# recurrence interacts differently with the dual-mechanism reward shape.
 
 max_steps: 1000
 brain:
@@ -62,6 +71,7 @@ brain:
 body_length: 2
 
 reward:
+  reward_mode: distal_chemo_contact_trigger
   reward_goal: 2.0
   reward_distance_scale: 0.5
   reward_exploration: 0.05

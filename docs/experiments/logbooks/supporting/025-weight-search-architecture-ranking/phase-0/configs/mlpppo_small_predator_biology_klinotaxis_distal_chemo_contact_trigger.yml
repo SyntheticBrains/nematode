@@ -1,0 +1,106 @@
+# Phase 0 Step B — B0.5 reward ablation
+#
+# Forks `configs/scenarios/pursuit/mlpppo_small_predator_biology_klinotaxis.yml`
+# (canonical two-channel new-biology, Step A's A2 baseline at 16% last-25
+# success). Sensors stay byte-identical to A2 (canonical two-channel
+# mechano + chemo, both klinotaxis). The only change: reward_mode is
+# explicitly set to distal_chemo_contact_trigger instead of inheriting
+# RewardConfig's "default" mode (distance-scaled evasion + flat
+# fallback). distal_chemo_contact_trigger combines a continuous
+# distal-chemo penalty (env.get_predator_concentration, same field
+# gradient_proximity reads) with the load-bearing binary contact
+# damage trigger (dist<=1 penalty inside is_in_danger), dropping the
+# distance-scaled and flat-fallback paths. Tests the "reward shape
+# isolates contact pain from distal aversion" hypothesis from
+# fix-predator-sensing-biology design.md Modelling caveat 6.
+#
+# Reproducibility artefact for the Phase 0 canonical winner (B0.5):
+# canonical two-channel new biology + distal_chemo_contact_trigger reward,
+# 81.0% ± 5.0 last-25 mean success (n=4 seeds × 500 episodes), beating
+# legacy nociception_klinotaxis by +14pp.
+# Persisted under docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/configs/.
+# The canonical pursuit configs at configs/scenarios/pursuit/{mlpppo,lstmppo}_small_predator_biology_klinotaxis.yml
+# carry the canonical reward (reward_mode: distal_chemo_contact_trigger)
+# for production use; this artefact freezes the exact Phase 0 evaluation form.
+
+max_steps: 500
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis                          # food (3 dim klinotaxis)
+      - predator_mechanosensation_klinotaxis     # canonical mechano (3 dim)
+      - predator_chemosensation_klinotaxis       # canonical chemo (3 dim)
+      - proprioception
+      - stam
+
+body_length: 2
+
+reward:
+  reward_mode: distal_chemo_contact_trigger    # CHANGED from "default" mode (RewardConfig default)
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0

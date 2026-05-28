@@ -1,0 +1,119 @@
+# Phase 0 Step B — B0.6 orthogonal sensor + reward stack
+#
+# Stacks the two highest-performing post-Bug-1-fix variants from Step B:
+#
+#   - SENSOR: sparse-fix mechanosensation (from B0.3, post-fix 73.0% ± 6.0)
+#     — strength field falls back to predator_distal_concentration when
+#     ContactZone.NONE, replacing the canonical channel's mostly-zero
+#     off-contact signal with a dense always-on predator-proximity input.
+#     Chemo channel stays canonical (now correctly populated post Bug 1 fix).
+#
+#   - REWARD: distal_chemo_contact_trigger (from B0.5, post-fix 81.0% ± 5.0)
+#     — continuous distal-chemo penalty (env.get_predator_concentration) +
+#     binary contact damage trigger (dist<=1 inside is_in_danger). Drops
+#     the distance-scaled evasion term + flat fallback. Conceptually
+#     splits the predator-reward signal into two biologically-motivated
+#     terms matching the dual-channel sensor biology on the reward side.
+#
+# Tests the "do the two best individual changes compound?" question.
+# Both changes target orthogonal axes (sensor encoding vs reward shape),
+# so a positive interaction would mean the dense always-on mechano
+# signal + the dual-mechanism reward together exceed either alone.
+#
+# Reference comparators (n=4 seeds each, all post-Bug-1-fix):
+#   - A1 legacy nociception_klinotaxis: 67.0% ± 7.6
+#   - A2 canonical new biology + default reward: 65.0% ± 16.1
+#   - B0.3 sparse_fix sensor + default reward: 73.0% ± 6.0
+#   - B0.5 canonical sensor + new reward: 81.0% ± 5.0  ← current best
+#
+# If B0.6 > B0.5 by >5pp the canonical updates to B0.6; otherwise B0.5
+# stays as the simpler choice (only the reward changed; biology-default
+# mechano).
+#
+# Reproducibility artefact for the Phase 0 orthogonal-stack extended
+# validation (B0.6). Persisted under
+# docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/configs/.
+# Not promoted into configs/scenarios/ — scored 78.0% ± 6.9 (within noise of
+# canonical B0.5's 81.0%), so the simpler canonical sensors win.
+
+max_steps: 500
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis                                    # food (3 dim klinotaxis)
+      - predator_mechanosensation_klinotaxis_sparse_fix    # sparse-fix mechano (3 dim)
+      - predator_chemosensation_klinotaxis                 # canonical chemo (3 dim, lateral_gradient populated post-fix)
+      - proprioception
+      - stam
+
+body_length: 2
+
+reward:
+  reward_mode: distal_chemo_contact_trigger    # B0.5's reward (vs default's distance-scaled evasion)
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0

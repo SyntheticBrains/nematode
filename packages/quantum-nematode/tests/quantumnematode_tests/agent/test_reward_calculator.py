@@ -644,6 +644,102 @@ class TestGradientOnlyRewardMode:
         assert r_prox == pytest.approx(-0.135)
         assert r_only == pytest.approx(-0.01)
 
+    # -----------------------------------------------------------------
+    # distal_chemo_contact_trigger mode
+    # -----------------------------------------------------------------
+
+    def test_distal_chemo_contact_trigger_emits_distal_penalty_outside_danger(self) -> None:
+        """Outside damage radius, only the continuous distal-chemo penalty fires."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="distal_chemo_contact_trigger",
+        )
+        env = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(3, 5)],
+            in_danger=False,
+            concentration=0.4,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        # Distal penalty 0.4 * 0.5 = 0.2; step penalty 0.01. Total = -0.21.
+        # Matches gradient_proximity in this regime (both fire the same distal penalty).
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.21)
+
+    def test_distal_chemo_contact_trigger_stacks_distal_and_contact(self) -> None:
+        """In-contact, distal penalty + binary contact penalty both fire."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="distal_chemo_contact_trigger",
+        )
+        env = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(5, 5)],
+            in_danger=True,
+            concentration=1.0,
+        )
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (5, 5)]
+
+        # Distal penalty: 1.0 * 0.5 = 0.5. Contact penalty (dist=0, in_danger=True):
+        # -0.5. Step penalty: 0.01. Total = -1.01.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-1.01)
+
+    def test_distal_chemo_contact_trigger_drops_distance_scaled_term(self) -> None:
+        """Distance-scaled (curr_dist - prev_dist) evasion term SHALL NOT fire.
+
+        Discriminator vs ``default``: moving away from predator (in danger zone) gets
+        zero distance-scaled reward under distal_chemo_contact_trigger; default gets
+        a positive reward of penalty * (curr_dist - prev_dist).
+        """
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="distal_chemo_contact_trigger",
+        )
+        env = self._make_predator_env_with_concentration(
+            [6, 5],  # dist 3 from predator
+            [(3, 5)],
+            in_danger=True,
+            concentration=0.0,  # pin to zero to isolate the distance-scaled term
+        )
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (6, 5)]  # prev_dist=2, curr_dist=3 (moving away)
+
+        # default would give: 0.5 * (3 - 2) = +0.5 evasion - 0.01 step = +0.49
+        # distal_chemo_contact_trigger drops the distance-scaled term;
+        # also no contact (dist > 1) so no contact penalty; concentration=0 → no distal.
+        # Only step penalty fires.
+        reward = calculator.calculate_reward(env, path)
+        assert reward == pytest.approx(-0.01)
+
+    def test_distal_chemo_contact_trigger_drops_flat_fallback(self) -> None:
+        """First-step flat fallback (default mode's elif) SHALL NOT fire."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+            reward_mode="distal_chemo_contact_trigger",
+        )
+        env = self._make_predator_env_with_concentration(
+            [5, 5],
+            [(3, 5)],
+            in_danger=True,
+            concentration=0.0,  # isolate the fallback path
+        )
+        # Only one step in path → curr_pred_dist branch's `len(path) > 1` fails,
+        # so default mode would hit the `elif` flat-fallback. Triggered mode shouldn't.
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+        # Only step penalty fires.
+        assert reward == pytest.approx(-0.01)
+
 
 class TestTemperatureAvoidanceReward:
     """Test distance-scaled temperature avoidance reward."""

@@ -293,9 +293,26 @@ class RewardConfig(BaseModel):
     #   attractor (the gradient penalty applies anywhere the agent is in
     #   the predator's exp-decay field, not just at contact). The
     #   contact penalty is preserved.
+    # - ``"distal_chemo_contact_trigger"``: separates the predator-reward
+    #   signal into two distinct biologically-motivated terms — a
+    #   continuous distal-chemo penalty proportional to
+    #   ``env.get_predator_concentration(agent_pos)`` (the same field
+    #   the distal-chemosensory channel reads, so reward + sensor share a
+    #   consistent "distance to predator" axis), plus a binary discrete
+    #   penalty fired ONLY at actual contact damage (``is_agent_in_danger``).
+    #   Drops the distance-scaled evasion term (no "moving away" reward)
+    #   and the flat fallback. Conceptually: continuous aversion to
+    #   proximity + sharp pain at contact, matching the dual-channel
+    #   predator-sensing biology (distal chemo + contact mechano) on the
+    #   reward side.
     #
     # Configs that don't set the field stay byte-equivalent (default).
-    reward_mode: Literal["default", "gradient_only", "gradient_proximity"] = "default"
+    reward_mode: Literal[
+        "default",
+        "gradient_only",
+        "gradient_proximity",
+        "distal_chemo_contact_trigger",
+    ] = "default"
 
 
 class ManyworldsModeConfig(BaseModel):
@@ -689,10 +706,17 @@ class QuantumNematodeAgent:
                 )
             )
 
-        # (a2) Klinotaxis: compute lateral gradients from head-sweep sampling
+        # (a2) Klinotaxis: compute lateral gradients from head-sweep sampling.
+        # Includes ``predator_distal_mode`` so a chemo-only-klinotaxis predator
+        # config (no other klinotaxis knob set) still triggers head-sweep
+        # offset computation; without it, the inner predator gate below would
+        # sample ``get_predator_concentration`` at the same position twice
+        # (left_pos == right_pos == agent_pos) and silently emit a constant
+        # zero lateral gradient.
         any_klinotaxis = SensingMode.KLINOTAXIS in (
             sensing.chemotaxis_mode,
             sensing.nociception_mode,
+            sensing.predator_distal_mode,
             sensing.thermotaxis_mode,
             sensing.aerotaxis_mode,
             pheromone_food_mode,
@@ -718,7 +742,21 @@ class QuantumNematodeAgent:
             right_c = self.env.get_food_concentration(position=right_pos)
             result["food_lateral_gradient"] = right_c - left_c
 
-        if sensing.nociception_mode == SensingMode.KLINOTAXIS:
+        # Predator lateral gradient: populated when EITHER the legacy
+        # nociception klinotaxis path OR the new biology-driven distal-chemo
+        # klinotaxis path is active. Both paths read the same env-side
+        # ``get_predator_concentration`` field so the value is identical
+        # regardless of which gate fires; the dual gate exists because the
+        # legacy ``nociception_klinotaxis`` module and the new
+        # ``predator_chemosensation_klinotaxis`` module both consume this
+        # field, but they expose different sensing-mode knobs
+        # (``nociception_mode`` vs ``predator_distal_mode``). A single-gate
+        # check on only one knob silently drops the directional signal
+        # whenever a config selects the other module's sensing-mode knob.
+        if SensingMode.KLINOTAXIS in (
+            sensing.nociception_mode,
+            sensing.predator_distal_mode,
+        ):
             left_c = self.env.get_predator_concentration(position=left_pos)
             right_c = self.env.get_predator_concentration(position=right_pos)
             result["predator_lateral_gradient"] = right_c - left_c
