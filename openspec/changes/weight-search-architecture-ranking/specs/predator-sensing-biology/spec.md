@@ -29,7 +29,7 @@ This requirement establishes that "the canonical predator-evasion sensor + rewar
 
 #### Scenario: Canonical variant selected (Phase 0 outcome)
 
-- **GIVEN** Phase 0 investigation completed 2026-05-27 with 40 canonical-budget runs (n=4 seeds × 500 episodes × 6 variants on MLPPPO small + klinotaxis sensing)
+- **GIVEN** Phase 0 investigation completed 2026-05-27 with 40 canonical-budget runs across 6 sensor + reward variants on MLPPPO small + klinotaxis sensing (n=4 seeds × 500 episodes per variant; 2 Step A pre-flight + 20 Step B pre-fix + 12 Step B re-run after Bug 1 fix + 8 extended-validation)
 - **WHEN** the canonical variant is selected per the preceding scenario
 - **THEN** the canonical sensor encoding SHALL be the two-channel-as-shipped variant: `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis` (the canonical biology-default new-biology sensor pair shipped by `fix-predator-sensing-biology`)
 - **AND** the canonical reward shape SHALL be `reward_mode: distal_chemo_contact_trigger` (the new dual-mechanism reward shipped in this change — continuous distal-chemo penalty via `env.get_predator_concentration` + binary contact damage trigger at `dist <= 1`, with distance-scaled evasion and flat-fallback paths dropped)

@@ -354,6 +354,28 @@ class TestSTAMChannelResolutionAgreesWithModuleInference:
                 ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
                 ModuleName.STAM,
             ],
+            # Composite + canonical mechano: dedupe path adds only the distal
+            # channel since the canonical mechano triple is already counted.
+            # Exercises the `if not any(... mechano_triple)` guard at
+            # brain/modules.py:_infer_stam_dim_from_modules.
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
+            # Composite + both canonical channels: dedupe path adds neither
+            # mechano nor distal since both triples are already counted.
+            # Exercises both dedupe guards simultaneously — without them the
+            # brain would build for 5 STAM channels (food + mechano + distal
+            # + composite's mechano + composite's distal) vs env-resolved 3.
+            [
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
+                ModuleName.PREDATOR_BIOLOGY_KLINOTAXIS,
+                ModuleName.STAM,
+            ],
             # Legacy nociception alone (frozen single-channel predator path).
             [
                 ModuleName.FOOD_CHEMOTAXIS,
