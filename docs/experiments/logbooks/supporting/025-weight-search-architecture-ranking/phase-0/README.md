@@ -41,18 +41,16 @@ The `distal_chemo_contact_trigger` reward replaces the default `gradient_proximi
 
 ### Configs
 
-Phase 0 variants use one-shot evaluation configs co-located under `tmp/evaluations/weight-search-architecture-ranking/phase-0/`:
+The five Phase 0 evaluation YAMLs (legacy A1 control + four ablation variants B0.3–B0.6) are persisted alongside this README at `./configs/` as reproducibility artefacts. A2 reuses the canonical pursuit config under `configs/scenarios/pursuit/` (which post-Phase 0 has been updated to use `reward_mode: distal_chemo_contact_trigger` as the canonical reward — to reproduce the A2 pre-Phase-0 baseline form, remove that one line from the canonical pursuit config).
 
 | Variant | Config |
 |---|---|
-| A1 | `tmp/evaluations/predator-sensing-biology-smoke/mlpppo_small_legacy_nociception_klinotaxis_control.yml` |
-| A2 | `configs/scenarios/pursuit/mlpppo_small_predator_biology_klinotaxis.yml` |
-| B0.3 | `tmp/evaluations/weight-search-architecture-ranking/phase-0/mlpppo_small_predator_sparse_fix_klinotaxis.yml` |
-| B0.4 | `tmp/evaluations/weight-search-architecture-ranking/phase-0/mlpppo_small_predator_composite_klinotaxis.yml` |
-| B0.5 | `tmp/evaluations/weight-search-architecture-ranking/phase-0/mlpppo_small_predator_biology_klinotaxis_distal_chemo_contact_trigger.yml` |
-| B0.6 | `tmp/evaluations/weight-search-architecture-ranking/phase-0/mlpppo_small_predator_sparse_fix_distal_chemo_contact_trigger_klinotaxis.yml` |
-
-A1, A2 reuse the committed configs (the legacy A1 control is a one-shot tmp/ artefact reproducible per the [supporting/024 reproducibility notes](../../024/smoke-evaluation.md#reproducibility-check)). B0.3-B0.6 are one-shot tmp/ artefacts; the parameters required to reproduce them are documented inline in each config's header comments.
+| A1 | [`./configs/mlpppo_small_legacy_nociception_klinotaxis_control.yml`](./configs/mlpppo_small_legacy_nociception_klinotaxis_control.yml) |
+| A2 | [`configs/scenarios/pursuit/mlpppo_small_predator_biology_klinotaxis.yml`](../../../../../../configs/scenarios/pursuit/mlpppo_small_predator_biology_klinotaxis.yml) (canonical pursuit config; per note above, the A2 baseline used the pre-Phase-0 default-reward form) |
+| B0.3 | [`./configs/mlpppo_small_predator_sparse_fix_klinotaxis.yml`](./configs/mlpppo_small_predator_sparse_fix_klinotaxis.yml) |
+| B0.4 | [`./configs/mlpppo_small_predator_composite_klinotaxis.yml`](./configs/mlpppo_small_predator_composite_klinotaxis.yml) |
+| B0.5 | [`./configs/mlpppo_small_predator_biology_klinotaxis_distal_chemo_contact_trigger.yml`](./configs/mlpppo_small_predator_biology_klinotaxis_distal_chemo_contact_trigger.yml) (canonical winner) |
+| B0.6 | [`./configs/mlpppo_small_predator_sparse_fix_distal_chemo_contact_trigger_klinotaxis.yml`](./configs/mlpppo_small_predator_sparse_fix_distal_chemo_contact_trigger_klinotaxis.yml) |
 
 ### Command (per run)
 
@@ -180,7 +178,6 @@ Orthogonal stacking (B0.6) does not compound, so the sparse_fix sensor variant i
 
 ## Related artefacts
 
-- Living scratchpad (uncommitted): [`tmp/evaluations/weight-search-architecture-ranking/phase-0/phase-0_scratchpad.md`](../../../../../../tmp/evaluations/weight-search-architecture-ranking/phase-0/phase-0_scratchpad.md) — full per-step launch records, task IDs, raw output paths.
 - [Phase 0 canonical-variant selection in `design.md`](../../../../../../openspec/changes/weight-search-architecture-ranking/design.md) — the normative selection record.
 - [Spec scenario "Canonical variant selected (Phase 0 outcome)"](../../../../../../openspec/changes/weight-search-architecture-ranking/specs/predator-sensing-biology/spec.md) — the spec-level lock.
 - [Archived `fix-predator-sensing-biology` Modelling caveat 6](../../../../../../openspec/changes/archive/2026-05-24-fix-predator-sensing-biology/design.md) — the original deferred question.
