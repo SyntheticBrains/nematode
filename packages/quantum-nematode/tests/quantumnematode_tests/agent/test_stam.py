@@ -304,7 +304,11 @@ class TestEpisodeReset:
         assert len(buf) == 1
 
 
-def _make_predator_env(*, thermotaxis_enabled: bool = False, aerotaxis_enabled: bool = False):
+def _make_predator_env(
+    *,
+    thermotaxis_enabled: bool = False,
+    aerotaxis_enabled: bool = False,
+) -> Mock:
     """Build a minimal env stub with predator enabled."""
     env = Mock()
     env.thermotaxis = Mock(enabled=thermotaxis_enabled)

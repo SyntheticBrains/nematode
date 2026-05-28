@@ -706,10 +706,17 @@ class QuantumNematodeAgent:
                 )
             )
 
-        # (a2) Klinotaxis: compute lateral gradients from head-sweep sampling
+        # (a2) Klinotaxis: compute lateral gradients from head-sweep sampling.
+        # Includes ``predator_distal_mode`` so a chemo-only-klinotaxis predator
+        # config (no other klinotaxis knob set) still triggers head-sweep
+        # offset computation; without it, the inner predator gate below would
+        # sample ``get_predator_concentration`` at the same position twice
+        # (left_pos == right_pos == agent_pos) and silently emit a constant
+        # zero lateral gradient.
         any_klinotaxis = SensingMode.KLINOTAXIS in (
             sensing.chemotaxis_mode,
             sensing.nociception_mode,
+            sensing.predator_distal_mode,
             sensing.thermotaxis_mode,
             sensing.aerotaxis_mode,
             pheromone_food_mode,

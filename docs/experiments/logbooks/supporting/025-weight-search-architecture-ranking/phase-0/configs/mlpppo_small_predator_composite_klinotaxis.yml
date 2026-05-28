@@ -48,6 +48,7 @@ brain:
 body_length: 2
 
 reward:
+  reward_mode: default  # Explicit pin for reproducibility of B0.4 (default reward = legacy distance-scaled evasion + flat fallback).
   reward_goal: 2.0
   reward_distance_scale: 0.5
   reward_exploration: 0.05

@@ -171,7 +171,7 @@ Bug 2 (the documented `predator_sulfolipid_concentration` placeholder alias of `
 
 ### Canonical lock
 
-**Phase 4 C-curriculum predator-evasion cells SHALL use:**
+The Phase 4 C-curriculum predator-evasion cells carry forward the following selected default (the normative `SHALL` lives in the spec's "Canonical variant selected (Phase 0 outcome)" scenario):
 
 - **Sensors**: `predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis` (the canonical two-channel new biology, biology-default per `fix-predator-sensing-biology` Decision T3.1)
 - **Reward**: `reward_mode: distal_chemo_contact_trigger` (new dual-mechanism reward shipped in this change — continuous distal-chemo penalty via `env.get_predator_concentration` + binary contact damage trigger at `dist <= 1`)
@@ -187,7 +187,7 @@ Bug 2 (the documented `predator_sulfolipid_concentration` placeholder alias of `
 
 ### Carry-forward implications for downstream tranches
 
-- **T7 (L2 re-run on upgraded substrate)** SHALL consume the same canonical (canonical two-channel sensors + `distal_chemo_contact_trigger` reward) unless the env-upgrade work plausibly invalidates the Phase 0 evidence (per `predator-sensing-biology` spec § "Canonical variant becomes the carry-forward for Phase 6 downstream work").
+- **T7 (L2 re-run on upgraded substrate)** is expected to consume the same selected default (canonical two-channel sensors + `distal_chemo_contact_trigger` reward) unless the env-upgrade work plausibly invalidates the Phase 0 evidence. The normative carry-forward `SHALL` lives in `predator-sensing-biology` spec § "Canonical variant becomes the carry-forward for Phase 6 downstream work".
 - **T6/T7 owns the deferred Bug 2 work** (literature-calibrated sulfolipid decay constant per Liu et al. 2018 plate-assay distances) per `fix-predator-sensing-biology/design.md` Decision T3.5. Post-Bug-1 the corrected biology is bio-faithful at the structural level; the sulfolipid calibration is an env-fidelity refinement, not a Phase 4 blocker.
 
 Phase 0 forensics (per-variant per-seed CSV summaries + scratchpad) persist at `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/`.

@@ -520,17 +520,36 @@ class TestPredatorLateralGradientPopulation:
         None under this config because only the legacy nociception gate
         existed. The new chemo channel relies on this field for its angle
         feature.
+
+        The test also asserts the lateral gradient is computed at OFFSET
+        positions (not at the agent's own position twice) by stubbing
+        ``env.get_predator_concentration`` to return a position-dependent
+        value and verifying the resulting gradient is non-zero. Pre-fix,
+        this catches the latent failure where head-sweep offsets stay at
+        ``agent_pos`` when no other klinotaxis knob fires.
         """
         sensing = SensingConfig(
-            nociception_mode=SensingMode.ORACLE,  # Default — the legacy gate does NOT fire
+            chemotaxis_mode=SensingMode.ORACLE,  # Don't let food klinotaxis mask the bug
+            nociception_mode=SensingMode.ORACLE,  # Legacy gate does NOT fire
             predator_distal_mode=SensingMode.KLINOTAXIS,  # New gate MUST fire
             stam_enabled=True,
         )
         agent = self._create_predator_agent(sensing)
+        # Stub the env field to a position-dependent value so a non-zero
+        # gradient only emerges when head-sweep offsets actually differ.
+        agent.env.get_predator_concentration = lambda position=None: float(  # type: ignore[method-assign]
+            (position or agent.env.agent_pos)[0],
+        )
         params = agent._create_brain_params()
         assert params.predator_lateral_gradient is not None, (
             "predator_lateral_gradient must populate under predator_distal_mode == KLINOTAXIS; "
             "pre-fix bug left this field None, silently breaking the chemo channel's angle feature."
+        )
+        assert params.predator_lateral_gradient != 0.0, (
+            "predator_lateral_gradient must be computed at OFFSET positions "
+            "(left_pos != right_pos != agent_pos); a zero value here indicates "
+            "the head-sweep offset computation was skipped, leaving both samples "
+            "at agent_pos."
         )
 
     def test_both_gates_off_leaves_lateral_gradient_none(self) -> None:
