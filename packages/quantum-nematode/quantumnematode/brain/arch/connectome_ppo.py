@@ -37,6 +37,7 @@ from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -69,6 +70,32 @@ _SENSOR_NEURONS_FOOD: tuple[str, ...] = (
     "AWAL",
     "AWAR",
 )
+
+# Sensory neurons that receive predator-evasion injection. Bargmann/Liu/Pirri
+# canonical wiring: distal sulfolipid signal lights up ASH (polymodal
+# nociceptors) + ASI (Liu et al. 2018 distal sensors); contact mechanosensation
+# routes by approach direction — ALM/AVM (anterior touch, reversal-driving),
+# PLM (posterior touch, acceleration-driving); lateral approach has no
+# canonical mechanosensor, so ALM+PLM together carry it at half-weight.
+_SENSOR_NEURONS_PREDATOR_DISTAL: tuple[str, ...] = ("ASHL", "ASHR", "ASIL", "ASIR")
+_SENSOR_NEURONS_PREDATOR_ANTERIOR: tuple[str, ...] = ("ALML", "ALMR", "AVM")
+_SENSOR_NEURONS_PREDATOR_POSTERIOR: tuple[str, ...] = ("PLML", "PLMR")
+
+# Lateral-zone routing: reuses anterior + posterior gains scaled by this
+# fixed (non-learnable) factor. ALML/ALMR receive the first 2 columns of
+# the anterior gain matrix (AVM is excluded — unilateral, not part of the
+# bilateral lateral pathway); PLML/PLMR receive the full posterior matrix.
+_LATERAL_HALF_WEIGHT: float = 0.5
+
+# Predator feature counts: distal mirrors the env-side
+# predator_distal_concentration + its dC/dt derivative; mechano mirrors
+# predator_contact_intensity + its intensity-derivative. Both are 2-vectors.
+_N_PREDATOR_DISTAL_FEATURES: int = 2
+_N_PREDATOR_MECHANO_FEATURES: int = 2
+
+# One-hot encoding of ContactZone for the buffered state vector:
+# index 0 = NONE, 1 = ANTERIOR, 2 = POSTERIOR, 3 = LATERAL.
+_N_CONTACT_ZONES: int = 4
 
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
@@ -109,6 +136,15 @@ class ConnectomePPOBrainConfig(BrainConfig):
     # produces a degenerate output because the food signal cannot reach
     # motor neurons in one chemical-synapse hop.
     forward_pass_depth: int = 4
+    # Opt-in predator-sensor projection: routes the corrected two-channel
+    # predator-sensing biology (distal-chemo onto ASH+ASI; contact-mechano
+    # onto ALM/AVM/PLM by ContactZone) into the connectome via three
+    # additional learnable gain matrices. Default off so foraging-only
+    # configs (e.g. the Gate 1 R2b reference run) construct byte-identical
+    # parameter sets to pre-projection builds; opting in adds an
+    # ``nn.Parameter`` allocation pass that perturbs the RNG-stream
+    # consumption order but does not introduce activation drift.
+    enable_predator_projection: bool = False
     freeze_updates: bool = False
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
@@ -153,6 +189,11 @@ class ConnectomeTopology(nn.Module):
     w_chem: nn.Parameter
     food_gains: nn.Parameter
     readout: nn.Parameter
+    # Predator projection (allocated only when ``enable_predator_projection``).
+    _predator_distal_neuron_indices: torch.Tensor
+    _predator_anterior_neuron_indices: torch.Tensor
+    _predator_posterior_neuron_indices: torch.Tensor
+    _predator_lateral_alm_indices: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -162,6 +203,7 @@ class ConnectomeTopology(nn.Module):
         forward_pass_depth: int,
         n_food_features: int,
         enforce_strict_mask: bool,
+        enable_predator_projection: bool,
         device: torch.device,
         rng: np.random.Generator,
     ) -> None:
@@ -175,6 +217,7 @@ class ConnectomeTopology(nn.Module):
         self.forward_pass_depth = forward_pass_depth
         self.enable_gap_junctions = enable_gap_junctions
         self.n_food_features = n_food_features
+        self.enable_predator_projection = enable_predator_projection
         # When True, the forward pass multiplies ``w_chem`` by ``m_chem`` so
         # gradients on non-wild-type edges are pinned to zero (and ``w_chem``
         # data on those positions never moves from its zero init). When
@@ -320,6 +363,97 @@ class ConnectomeTopology(nn.Module):
         # whole upstream pipeline is small (one 302-vec → 4-vec readout).
         nn.init.orthogonal_(self.readout, gain=1.0)
 
+        # ── Predator-sensor projection (opt-in) ─────────────────────────
+        # Three learnable gain matrices route the corrected two-channel
+        # predator-sensing biology into the connectome:
+        #   distal-chemo (2 features) -> ASHL+ASHR+ASIL+ASIR  (2x4 gain)
+        #   anterior contact (2 feat) -> ALML+ALMR+AVM        (2x3 gain)
+        #   posterior contact (2 feat) -> PLML+PLMR           (2x2 gain)
+        # Lateral-zone contact reuses anterior + posterior gains scaled by
+        # ``_LATERAL_HALF_WEIGHT`` (a fixed constant, not learnable) per
+        # the spec — degenerate routing because the connectome has no
+        # canonical lateral-only mechanosensor neuron.
+        #
+        # Bilateral broadcast: independent learnable column per L/R member
+        # (e.g. ASHL and ASHR each have their own column in the distal
+        # gain matrix) initialised to identical values. Mirrors the
+        # food_gains layout and lets PPO updates discover L/R asymmetries
+        # that real *C. elegans* sensory pairs develop through experience
+        # (Hobert-lab AWC/ASE asymmetry literature).
+        #
+        # Constructed AFTER the food + readout init so flipping
+        # ``enable_predator_projection`` from False → True does not perturb
+        # the food-path RNG-stream order: a foraging-only configuration
+        # (predator off) consumes the same RNG draws regardless of whether
+        # this branch is compiled in.
+        if enable_predator_projection:
+            distal_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_DISTAL]
+            anterior_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_ANTERIOR]
+            posterior_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_POSTERIOR]
+            # Lateral routing: ALML+ALMR receive the first 2 columns of the
+            # anterior gain matrix scaled by ``_LATERAL_HALF_WEIGHT``; AVM is
+            # excluded because the lateral pathway is bilateral. PLML+PLMR
+            # receive the full posterior matrix scaled by ``_LATERAL_HALF_WEIGHT``.
+            lateral_alm_indices = [self._idx[name] for name in ("ALML", "ALMR")]
+            # Validate every target neuron exists in the connectome registry.
+            for name in (
+                *_SENSOR_NEURONS_PREDATOR_DISTAL,
+                *_SENSOR_NEURONS_PREDATOR_ANTERIOR,
+                *_SENSOR_NEURONS_PREDATOR_POSTERIOR,
+            ):
+                if name not in self._idx:
+                    msg = (
+                        f"Predator-projection neuron {name!r} not present in "
+                        f"connectome (have {self.n_neurons} neurons; this is a "
+                        "connectome-data bug)."
+                    )
+                    raise ValueError(msg)
+            self.register_buffer(
+                "_predator_distal_neuron_indices",
+                torch.tensor(distal_indices, dtype=torch.long, device=device),
+            )
+            self.register_buffer(
+                "_predator_anterior_neuron_indices",
+                torch.tensor(anterior_indices, dtype=torch.long, device=device),
+            )
+            self.register_buffer(
+                "_predator_posterior_neuron_indices",
+                torch.tensor(posterior_indices, dtype=torch.long, device=device),
+            )
+            self.register_buffer(
+                "_predator_lateral_alm_indices",
+                torch.tensor(lateral_alm_indices, dtype=torch.long, device=device),
+            )
+            # Gain matrices: small-magnitude init (std=0.1, not 1.0 like
+            # food_gains) so the projection starts close to inert and PPO
+            # ramps it up if predator signal is informative. Stronger init
+            # would dominate the food signal at step 1 on configs where
+            # both projections are active simultaneously.
+            self.predator_distal_gains = nn.Parameter(
+                torch.zeros(
+                    _N_PREDATOR_DISTAL_FEATURES,
+                    len(_SENSOR_NEURONS_PREDATOR_DISTAL),
+                    device=device,
+                ),
+            )
+            self.predator_anterior_gains = nn.Parameter(
+                torch.zeros(
+                    _N_PREDATOR_MECHANO_FEATURES,
+                    len(_SENSOR_NEURONS_PREDATOR_ANTERIOR),
+                    device=device,
+                ),
+            )
+            self.predator_posterior_gains = nn.Parameter(
+                torch.zeros(
+                    _N_PREDATOR_MECHANO_FEATURES,
+                    len(_SENSOR_NEURONS_PREDATOR_POSTERIOR),
+                    device=device,
+                ),
+            )
+            nn.init.normal_(self.predator_distal_gains, mean=0.0, std=0.1)
+            nn.init.normal_(self.predator_anterior_gains, mean=0.0, std=0.1)
+            nn.init.normal_(self.predator_posterior_gains, mean=0.0, std=0.1)
+
         # Apply strict-mask to initial weights too (initialisation already
         # respects the mask above, but defence-in-depth).
         with torch.no_grad():
@@ -354,9 +488,61 @@ class ConnectomeTopology(nn.Module):
             pooled[k] = flat_acts[start:end].mean()
         return pooled
 
+    def _inject_predator(
+        self,
+        h: torch.Tensor,
+        predator_distal_features: torch.Tensor | None,
+        predator_mechano_features: torch.Tensor | None,
+        predator_contact_zone: ContactZone | None,
+    ) -> torch.Tensor:
+        """Apply the predator-sensor projection onto ``h``.
+
+        Distal-chemo injection fires whenever ``predator_distal_features``
+        is provided. Mechano injection fires only when both
+        ``predator_mechano_features`` and a non-NONE ``predator_contact_zone``
+        are provided — ``ContactZone.NONE`` means "out of damage radius /
+        no contact" and produces zero mechano injection per the spec.
+
+        Lateral routing reuses the anterior + posterior gain matrices
+        scaled by ``_LATERAL_HALF_WEIGHT`` rather than introducing a
+        separate lateral-only gain matrix. ALML/ALMR receive the first
+        two columns of the anterior matrix (AVM is excluded — unilateral,
+        not part of the bilateral lateral pathway); PLML/PLMR receive
+        the full posterior matrix.
+        """
+        if predator_distal_features is not None:
+            distal_inj = predator_distal_features @ self.predator_distal_gains
+            h = h.index_add(0, self._predator_distal_neuron_indices, distal_inj)
+
+        if predator_mechano_features is not None and predator_contact_zone not in (
+            None,
+            ContactZone.NONE,
+        ):
+            if predator_contact_zone == ContactZone.ANTERIOR:
+                ant_inj = predator_mechano_features @ self.predator_anterior_gains
+                h = h.index_add(0, self._predator_anterior_neuron_indices, ant_inj)
+            elif predator_contact_zone == ContactZone.POSTERIOR:
+                post_inj = predator_mechano_features @ self.predator_posterior_gains
+                h = h.index_add(0, self._predator_posterior_neuron_indices, post_inj)
+            elif predator_contact_zone == ContactZone.LATERAL:
+                # ALML/ALMR receive first 2 columns of anterior @ half-weight.
+                ant_inj = (
+                    predator_mechano_features @ self.predator_anterior_gains
+                ) * _LATERAL_HALF_WEIGHT
+                h = h.index_add(0, self._predator_lateral_alm_indices, ant_inj[:2])
+                # PLML/PLMR receive posterior @ half-weight.
+                post_inj = (
+                    predator_mechano_features @ self.predator_posterior_gains
+                ) * _LATERAL_HALF_WEIGHT
+                h = h.index_add(0, self._predator_posterior_neuron_indices, post_inj)
+        return h
+
     def forward_with_hidden(
         self,
         food_features: torch.Tensor,
+        predator_distal_features: torch.Tensor | None = None,
+        predator_mechano_features: torch.Tensor | None = None,
+        predator_contact_zone: ContactZone | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute action logits AND the post-K hidden state in one pass.
 
@@ -374,6 +560,13 @@ class ConnectomeTopology(nn.Module):
         injection produces the initial 302-vec hidden state; K recurrent
         updates iterate the chemical + gap-junction sum through ``tanh``;
         motor pooling + readout produce the action logits.
+
+        Predator parameters are only consumed when the topology was
+        constructed with ``enable_predator_projection=True`` AND the
+        corresponding tensor is non-None. Distal-chemo injection always
+        fires when ``predator_distal_features`` is provided; mechano
+        injection fires only when ``predator_mechano_features`` AND a
+        non-NONE ``predator_contact_zone`` are provided.
         """
         if food_features.shape != (self.n_food_features,):
             msg = (
@@ -386,6 +579,15 @@ class ConnectomeTopology(nn.Module):
         h = torch.zeros(self.n_neurons, device=food_features.device, dtype=food_features.dtype)
         food_injection = food_features @ self.food_gains  # shape (6,)
         h = h.index_add(0, self._food_neuron_indices, food_injection)
+
+        # Predator-sensor injection (no-op when projection disabled).
+        if self.enable_predator_projection:
+            h = self._inject_predator(
+                h,
+                predator_distal_features,
+                predator_mechano_features,
+                predator_contact_zone,
+            )
 
         # K recurrent updates through chemical + gap-junction connectivity.
         # Each neuron's pre-activation = sum_pre(W[pre, post] * h[pre]) = (W.T @ h)[post].
@@ -403,7 +605,13 @@ class ConnectomeTopology(nn.Module):
         logits = self.readout @ motor_acts  # shape (4,)
         return logits, h
 
-    def forward(self, food_features: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        food_features: torch.Tensor,
+        predator_distal_features: torch.Tensor | None = None,
+        predator_mechano_features: torch.Tensor | None = None,
+        predator_contact_zone: ContactZone | None = None,
+    ) -> torch.Tensor:
         """Compute 4 action logits from a 2-vector of food-chemotaxis features.
 
         Thin shim over :meth:`forward_with_hidden` for callers that only
@@ -411,13 +619,34 @@ class ConnectomeTopology(nn.Module):
         (e.g. for a value head) should call ``forward_with_hidden`` directly
         to avoid recomputing the connectome forward.
         """
-        logits, _ = self.forward_with_hidden(food_features)
+        logits, _ = self.forward_with_hidden(
+            food_features,
+            predator_distal_features=predator_distal_features,
+            predator_mechano_features=predator_mechano_features,
+            predator_contact_zone=predator_contact_zone,
+        )
         return logits
 
     @property
     def learnable_parameters(self) -> list[nn.Parameter]:
-        """Return the PPO-learnable parameter tensors only."""
-        return [self.w_chem, self.food_gains, self.readout]
+        """Return the PPO-learnable parameter tensors only.
+
+        Includes the predator gain matrices only when the projection was
+        constructed (``enable_predator_projection=True`` at init). Foraging-
+        only configs do not allocate the predator parameters, so the
+        optimiser sees byte-identical parameter sets to pre-projection
+        builds.
+        """
+        params = [self.w_chem, self.food_gains, self.readout]
+        if self.enable_predator_projection:
+            params.extend(
+                [
+                    self.predator_distal_gains,
+                    self.predator_anterior_gains,
+                    self.predator_posterior_gains,
+                ],
+            )
+        return params
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -476,6 +705,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             forward_pass_depth=config.forward_pass_depth,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
+            enable_predator_projection=config.enable_predator_projection,
             device=self.device,
             rng=self.rng,
         ).to(self.device)
@@ -522,27 +752,37 @@ class ConnectomePPOBrain(ClassicalBrain):
         return self._action_set
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Extract the food-chemotaxis feature vector for the topology.
+        """Extract the per-step feature vector for the topology.
 
-        Shape depends on ``config.sensing_mode``:
+        Food-only layout (``enable_predator_projection=False``):
 
         - ``oracle`` → ``[strength, angle]`` (2 features). ``strength`` is
           the env's ``food_gradient_strength`` field (∈ [0, 1]); ``angle``
           is ``food_gradient_direction`` (radians ∈ [-π, π]) normalised to
           [-1, 1] by dividing by π.
         - ``klinotaxis`` → ``[concentration, lateral, dC/dt]`` (3 features).
-          ``concentration`` is ``food_concentration`` (env-side scalar);
-          ``lateral`` is ``tanh(food_lateral_gradient * lateral_scale)``;
-          ``dC/dt`` is ``tanh(food_dconcentration_dt * derivative_scale)``.
-          These mirror the canonical klinotaxis sensory-module emission
-          shape so the env-side klinotaxis pipeline drives the brain
-          without re-implementing the head-sweep computation here.
+
+        With predator projection enabled, the vector is extended with:
+        ``[predator_distal_concentration, predator_distal_dconcentration_dt,
+        predator_contact_intensity, predator_mechano_dintensity_dt,
+        zone_NONE, zone_ANTERIOR, zone_POSTERIOR, zone_LATERAL]`` (8 extra
+        features; the zone slots are a one-hot of ``ContactZone``). Slots
+        default to 0 (and zone defaults to NONE) when the corresponding
+        ``BrainParams`` fields are unset — so a predator-enabled brain
+        running on a config without active predator sensors produces zero
+        injection at the predator path.
         """
+        food = self._extract_food_features(params)
+        if not self.config.enable_predator_projection:
+            return food
+        predator = self._extract_predator_features(params)
+        return np.concatenate([food, predator]).astype(np.float32)
+
+    def _extract_food_features(self, params: BrainParams) -> np.ndarray:
         if self.config.sensing_mode == "oracle":
             strength = float(params.food_gradient_strength or 0.0)
             angle = float(params.food_gradient_direction or 0.0) / np.pi
             return np.array([strength, angle], dtype=np.float32)
-
         # klinotaxis mode
         strength = float(params.food_concentration or 0.0)
         raw_lateral = float(params.food_lateral_gradient or 0.0)
@@ -550,6 +790,55 @@ class ConnectomePPOBrain(ClassicalBrain):
         raw_deriv = float(params.food_dconcentration_dt or 0.0)
         dcdt = float(np.tanh(raw_deriv * params.derivative_scale))
         return np.array([strength, lateral, dcdt], dtype=np.float32)
+
+    def _extract_predator_features(self, params: BrainParams) -> np.ndarray:
+        """Pack predator features + one-hot zone into an 8-vector."""
+        distal_c = float(params.predator_distal_concentration or 0.0)
+        distal_dc = float(params.predator_distal_dconcentration_dt or 0.0)
+        contact_i = float(params.predator_contact_intensity or 0.0)
+        mechano_di = float(params.predator_mechano_dintensity_dt or 0.0)
+        zone = params.predator_contact_zone or ContactZone.NONE
+        zone_onehot = np.zeros(_N_CONTACT_ZONES, dtype=np.float32)
+        zone_idx = {
+            ContactZone.NONE: 0,
+            ContactZone.ANTERIOR: 1,
+            ContactZone.POSTERIOR: 2,
+            ContactZone.LATERAL: 3,
+        }[zone]
+        zone_onehot[zone_idx] = 1.0
+        return np.concatenate(
+            [
+                np.array([distal_c, distal_dc, contact_i, mechano_di], dtype=np.float32),
+                zone_onehot,
+            ],
+        )
+
+    def _unpack_state(
+        self,
+        state_t: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None, ContactZone | None]:
+        """Split a buffered state tensor back into the forward-pass inputs.
+
+        When the projection is disabled the state vector is the
+        food-feature vector unchanged. When enabled, the state vector
+        carries food + predator + one-hot-zone slots laid out by
+        :meth:`preprocess` / :meth:`_extract_predator_features`; this
+        helper reverses that layout for the topology call.
+        """
+        if not self.config.enable_predator_projection:
+            return state_t, None, None, None
+        n_food = self._n_food_features
+        food = state_t[:n_food]
+        distal = state_t[n_food : n_food + _N_PREDATOR_DISTAL_FEATURES]
+        mech_start = n_food + _N_PREDATOR_DISTAL_FEATURES
+        mechano = state_t[mech_start : mech_start + _N_PREDATOR_MECHANO_FEATURES]
+        zone_start = mech_start + _N_PREDATOR_MECHANO_FEATURES
+        zone_onehot = state_t[zone_start : zone_start + _N_CONTACT_ZONES]
+        zone_idx = int(torch.argmax(zone_onehot).item())
+        zone = (ContactZone.NONE, ContactZone.ANTERIOR, ContactZone.POSTERIOR, ContactZone.LATERAL)[
+            zone_idx
+        ]
+        return food, distal, mechano, zone
 
     def run_brain(
         self,
@@ -565,8 +854,18 @@ class ConnectomePPOBrain(ClassicalBrain):
         state_t = torch.from_numpy(state).to(self.device)
 
         # Single forward pass produces both the action logits and the
-        # post-K 302-dim hidden state used by the critic.
-        logits, hidden = self.topology.forward_with_hidden(state_t)
+        # post-K 302-dim hidden state used by the critic. When the
+        # predator projection is enabled, ``_unpack_state`` splits the
+        # buffered state vector back into the four forward-pass inputs;
+        # otherwise predator inputs stay None and the topology runs the
+        # food-only path unchanged.
+        food, distal, mechano, zone = self._unpack_state(state_t)
+        logits, hidden = self.topology.forward_with_hidden(
+            food,
+            predator_distal_features=distal,
+            predator_mechano_features=mechano,
+            predator_contact_zone=zone,
+        )
         value = self.critic(hidden)
 
         # Action distribution.
@@ -698,7 +997,13 @@ class ConnectomePPOBrain(ClassicalBrain):
                 new_logits = torch.empty(batch_size, _N_ACTIONS, device=self.device)
                 new_values = torch.empty(batch_size, device=self.device)
                 for k in range(batch_size):
-                    logits_k, hidden_k = self.topology.forward_with_hidden(states[k])
+                    food_k, distal_k, mechano_k, zone_k = self._unpack_state(states[k])
+                    logits_k, hidden_k = self.topology.forward_with_hidden(
+                        food_k,
+                        predator_distal_features=distal_k,
+                        predator_mechano_features=mechano_k,
+                        predator_contact_zone=zone_k,
+                    )
                     new_logits[k] = logits_k
                     new_values[k] = self.critic(hidden_k).squeeze(-1)
 
