@@ -140,10 +140,10 @@ class ConnectomePPOBrainConfig(BrainConfig):
     # predator-sensing biology (distal-chemo onto ASH+ASI; contact-mechano
     # onto ALM/AVM/PLM by ContactZone) into the connectome via three
     # additional learnable gain matrices. Default off so foraging-only
-    # configs (e.g. the Gate 1 R2b reference run) construct byte-identical
-    # parameter sets to pre-projection builds; opting in adds an
-    # ``nn.Parameter`` allocation pass that perturbs the RNG-stream
-    # consumption order but does not introduce activation drift.
+    # configs construct byte-identical parameter sets to pre-projection
+    # builds; opting in adds an ``nn.Parameter`` allocation pass that
+    # perturbs the RNG-stream consumption order but does not introduce
+    # activation drift on the food path.
     enable_predator_projection: bool = False
     freeze_updates: bool = False
 

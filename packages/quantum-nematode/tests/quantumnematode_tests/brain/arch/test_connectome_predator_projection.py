@@ -1,8 +1,6 @@
 """Unit tests for the ConnectomePPOBrain predator-sensor projection.
 
-Covers the spec scenarios at
-``openspec/changes/weight-search-architecture-ranking/specs/connectome-ppo-brain/spec.md``
-§ "Connectome PPO Predator Sensor Projection":
+Covers:
 
 - Bilateral broadcast convention (one column per L/R member, identical init)
 - Distal-chemo routes to ASHL + ASHR + ASIL + ASIR (gain shape (2, 4))
@@ -252,6 +250,36 @@ class TestNoPredatorInputsLeavesProjectionInactive:
         # are provided.
         assert torch.equal(hidden_no_predator, hidden_explicit_none)
 
+    def test_zero_filled_features_match_no_features_at_zone_none(self) -> None:
+        """Real ``preprocess`` pipeline emits zero-filled tensors + zone=NONE.
+
+        When the projection is enabled but the env has no predator (or the
+        predator BrainParams fields are unset), ``_extract_predator_features``
+        produces ``[0.0, 0.0]`` for both distal and mechano + a zone one-hot
+        with NONE active. The resulting forward pass must be byte-identical
+        to the same brain called with all-None predator inputs: distal injects
+        ``zeros @ gains = zeros`` (no-op); mechano gate is closed by
+        ``zone == ContactZone.NONE`` (no-op).
+        """
+        brain = _make_predator_brain(forward_pass_depth=4)
+        food = _baseline_food_features()
+        zero_distal = torch.zeros(2, dtype=torch.float32)
+        zero_mechano = torch.zeros(2, dtype=torch.float32)
+
+        _, hidden_zero_filled = brain.topology.forward_with_hidden(
+            food,
+            predator_distal_features=zero_distal,
+            predator_mechano_features=zero_mechano,
+            predator_contact_zone=ContactZone.NONE,
+        )
+        _, hidden_none = brain.topology.forward_with_hidden(food)
+        assert torch.equal(hidden_zero_filled, hidden_none), (
+            "Zero-filled predator features at zone=NONE should produce "
+            "byte-identical activations to the no-predator-features path; "
+            "any drift indicates the predator code path is silently mutating "
+            "the food-only baseline."
+        )
+
 
 class TestContactZoneNoneRoutesDistalOnly:
     """Spec scenario: ContactZone.NONE with active distal → distal only."""
@@ -325,13 +353,14 @@ class TestLearnableParametersExposesPredatorGains:
 
 
 class TestForagingOnlyByteIdentityVsPrePredatorBuild:
-    """Spec scenario: foraging-only configs preserve the R2b baseline.
+    """Foraging-only configs preserve the pre-projection food path byte-identically.
 
     With ``enable_predator_projection=False`` (the default), the topology
     allocates zero predator-related ``nn.Parameter`` objects, so the RNG-
     stream consumption order during ``__init__`` is byte-identical to
-    pre-projection builds. This is the structural invariant that makes
-    the R2b ±3pp smoke criterion trivially satisfiable.
+    pre-projection builds. This is the structural invariant that lets
+    existing foraging configs ship unchanged when the projection feature
+    is added.
     """
 
     def test_predator_off_topology_has_no_predator_attributes(self) -> None:
