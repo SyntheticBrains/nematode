@@ -172,8 +172,10 @@ Decide](design.md) if T4 planning sees the M4.5-style variance argument).
 T4 produces a publishable intermediate result — connectome-on-grid is directly
 comparable to Phase 5's grid-world baseline. The env-upgrade delta lands at T7.
 
-12 MUST cells (4 families × 3 behaviours). Each cell is its own training run; tick as
-it ships.
+4 MUST integrated-C3 cells (one per family; all three behaviours active in one run) +
+C1/C2 curriculum smokes + C3 ablations, per the integrated-C3 restructure (amended
+2026-05-30 by `weight-search-architecture-ranking`; see the T4 cell-structure section
+below). Each cell is its own training run; tick as it ships.
 
 ### T4 — planning sub-tasks
 
@@ -182,46 +184,37 @@ it ships.
 - [ ] T4.0a Per-cell wall-time estimate. After T2's first PPO-on-connectome training run, extrapolate to a wall-time estimate per cell; revise Decision 1's "4-6 weeks" if the projection diverges by > 2× and amend `design.md` per the Decision-1 amendment mechanism.
 - [ ] T4.0b Per-cell seed-count decision. Phase 5 inherited floor is n ≥ 4; rationale per cell if n > 4 (M4.5 precedent — n = 8 if SE on the chosen primary metric is > 0.5× the gate threshold for that metric at n=4).
 - [ ] T4.0c Sensor-projection + motor-readout ablation choice for the connectome-constrained family (per Decision 7: these are T4-scope ablations inside the connectome row, not separate MUST families). Document the chosen sensor→sensory-neuron mapping and motor-output readout in the T4 OpenSpec change's design.md.
-- [ ] T4.0d **Connectome PPO entropy schedule.** T2's R2 → R2b empirical evidence (logbook [023](../../../docs/experiments/logbooks/023-architecture-plugin-interface.md)): constant `entropy_coef=0.02` triggers late-training drift on the connectome architecture (success collapses from sustained 100% to 52% by ep 475-499); `entropy_coef=0.005` eliminates the drift. T4's `T4.connectome.*` cells MUST pick either a documented constant `entropy_coef ≤ 0.005` or an entropy decay schedule. Document the choice in the T4 OpenSpec change's design.md alongside T4.0c. The same scrutiny may apply to other architectures running klinotaxis-mode sensing — note in T4's per-architecture configs whether an entropy decay is needed.
+- [ ] T4.0d **Connectome PPO entropy schedule.** T2's R2 → R2b empirical evidence (logbook [023](../../../docs/experiments/logbooks/023-architecture-plugin-interface.md)): constant `entropy_coef=0.02` triggers late-training drift on the connectome architecture (success collapses from sustained 100% to 52% by ep 475-499); `entropy_coef=0.005` eliminates the drift. T4's `T4.connectome.c3_integrated` cell MUST pick either a documented constant `entropy_coef ≤ 0.005` or an entropy decay schedule. Document the choice in the T4 OpenSpec change's design.md alongside T4.0c. The same scrutiny may apply to other architectures running klinotaxis-mode sensing — note in T4's per-architecture configs whether an entropy decay is needed.
 - [ ] T4.0e **Promote connectome klinotaxis low-entropy variant to canonical.** Three klinotaxis configs ship from T2: `connectomeppo_small_klinotaxis.yml` (`entropy_coef=0.02`, has the drift), `connectomeppo_small_low_entropy_klinotaxis.yml` (`entropy_coef=0.005`, the R2b reference run), `connectomeppo_small_frozen_control_klinotaxis.yml`. The low-entropy variant strictly outperforms; before the T4 sweep starts, swap the canonical config's `entropy_coef` to 0.005 and drop the `_low_entropy_` variant (or rename the low-entropy variant in place and drop the high-entropy one). The frozen-control config keeps `entropy_coef=0.02` (irrelevant under `freeze_updates: true`) but should be updated to match canonical for diff cleanliness.
-- [ ] T4.0f **Acknowledge `mlpppo_small_klinotaxis.yml` as a new canonical baseline.** T2 inferred the first MLPPPO klinotaxis foraging config (`entropy_coef=0.03`, `max_steps=1000`, `sensory_modules: [food_chemotaxis, proprioception]`); validated at 98.4% success first-try. T4's `T4.mlp_ppo.klinotaxis` row consumes this directly. The config header documents its provenance ("inferred at T2 from `mlpppo_small_oracle.yml` PPO hyperparams + `lstmppo_small_klinotaxis.yml` env settings"); no further changes needed unless T4.0b's seed-count decision raises n.
-- [ ] T4.0g **Investigate new-biology predator-sensing convergence-rate gap.** T3 Section 8 smoke evaluation surfaced that the corrected two-channel predator sensors (`predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis`) learn substantially slower than the legacy single-channel `nociception_klinotaxis` at matched 100-episode training budgets on pursuit predators: MLPPPO 3% vs 51% success; LSTMPPO 0% vs 7%. Two candidate root causes flagged in [fix-predator-sensing-biology design.md § Modelling caveat 6](../fix-predator-sensing-biology/design.md): (a) sparse contact-mechano signal (`predator_contact_intensity` is 0.0 outside damage radius — most steps), and (b) information redundancy across the two channels (6 input dims for the predator-position information the legacy encodes in 3). T4 must: (i) run new-biology predator-evasion cells at the same compute budget as legacy and quantify the gap on the canonical T4 evaluation metrics; (ii) ablate the sparse-signal hypothesis by trying a variant that puts the distal sulfolipid concentration into the mechanosensation strength field when not in contact (acts as a "predator-proximity-with-zone" signal); (iii) decide whether the convergence-rate gap is acceptable (the corrected biology *is* a harder learning problem on the same env, and that's itself a substrate finding worth recording) or whether the sensor encoding needs revisiting before T7. Coupled with the existing reward-shape ablation (gradient_proximity vs distal-chemo + contact-damage) inside each `T4.*.predator_evasion` cell. Out-of-scope clarification: this is *not* a T3 bug; T3's job was to ship the corrected biology surface, and it does — the surface is well-tested, the env-side semantics are correct, and the brain pipeline consumes the new channels cleanly. T4 owns the empirical evaluation under matched compute. *Resolved by the `weight-search-architecture-ranking` change's Phase 0 (merged 2026-05-28): root cause was a silent `predator_lateral_gradient` gating bug (single-knob check on `nociception_mode` only), not a substrate finding. Post-fix the canonical two-channel sensors + new `distal_chemo_contact_trigger` reward beat legacy by +14pp at n=4 × 500ep on MLPPPO. Forensics: [supporting/025-weight-search-architecture-ranking/phase-0/](../../../docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/). Checkbox tick batched with the other T4.0 ticks at Phase 5 closeout per the change's Task 6.8.*
+- [ ] T4.0f **Acknowledge `mlpppo_small_klinotaxis.yml` as a new canonical baseline.** T2 inferred the first MLPPPO klinotaxis foraging config (`entropy_coef=0.03`, `max_steps=1000`, `sensory_modules: [food_chemotaxis, proprioception]`); validated at 98.4% success first-try. T4's `T4.mlp_ppo.c3_integrated` cell consumes this directly (the foraging component). The config header documents its provenance ("inferred at T2 from `mlpppo_small_oracle.yml` PPO hyperparams + `lstmppo_small_klinotaxis.yml` env settings"); no further changes needed unless T4.0b's seed-count decision raises n.
+- [ ] T4.0g **Investigate new-biology predator-sensing convergence-rate gap.** T3 Section 8 smoke evaluation surfaced that the corrected two-channel predator sensors (`predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis`) learn substantially slower than the legacy single-channel `nociception_klinotaxis` at matched 100-episode training budgets on pursuit predators: MLPPPO 3% vs 51% success; LSTMPPO 0% vs 7%. Two candidate root causes flagged in [fix-predator-sensing-biology design.md § Modelling caveat 6](../fix-predator-sensing-biology/design.md): (a) sparse contact-mechano signal (`predator_contact_intensity` is 0.0 outside damage radius — most steps), and (b) information redundancy across the two channels (6 input dims for the predator-position information the legacy encodes in 3). T4 must: (i) run new-biology predator-evasion cells at the same compute budget as legacy and quantify the gap on the canonical T4 evaluation metrics; (ii) ablate the sparse-signal hypothesis by trying a variant that puts the distal sulfolipid concentration into the mechanosensation strength field when not in contact (acts as a "predator-proximity-with-zone" signal); (iii) decide whether the convergence-rate gap is acceptable (the corrected biology *is* a harder learning problem on the same env, and that's itself a substrate finding worth recording) or whether the sensor encoding needs revisiting before T7. Coupled with the existing reward-shape ablation (gradient_proximity vs distal-chemo + contact-damage) on each `T4.*.c3_integrated` cell's predator-evasion component. Out-of-scope clarification: this is *not* a T3 bug; T3's job was to ship the corrected biology surface, and it does — the surface is well-tested, the env-side semantics are correct, and the brain pipeline consumes the new channels cleanly. T4 owns the empirical evaluation under matched compute. *Resolved by the `weight-search-architecture-ranking` change's Phase 0 (merged 2026-05-28): root cause was a silent `predator_lateral_gradient` gating bug (single-knob check on `nociception_mode` only), not a substrate finding. Post-fix the canonical two-channel sensors + new `distal_chemo_contact_trigger` reward beat legacy by +14pp at n=4 × 500ep on MLPPPO. Forensics: [supporting/025-weight-search-architecture-ranking/phase-0/](../../../docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/). Checkbox tick batched with the other T4.0 ticks at Phase 5 closeout per the change's Task 6.8.*
 
-### T4 — Connectome-constrained (focal architecture)
+### T4 — cell structure (integrated-C3 pattern; amended 2026-05-30 by `weight-search-architecture-ranking`)
 
-- [ ] T4.connectome.klinotaxis — PPO weight-search on Cook 2019 connectome, chemical-synapse strict-mask, fixed gap junctions
-- [ ] T4.connectome.thermotaxis
-- [ ] T4.connectome.predator_evasion (consumes T3 corrected two-channel biology; couples to T4.0g convergence-rate study + reward-ablation row below)
-- [ ] T4.connectome.predator_evasion_reward_ablation — compare existing `gradient_proximity` reward against `distal_chemo_penalty + binary_contact_damage_trigger` variant on the same architecture × seed grid. Carry-forward from [fix-predator-sensing-biology design.md § Decision T3.7](../fix-predator-sensing-biology/design.md).
+**Amended from the original 4-families × 3-behaviours (12-cell) pattern to the integrated-C3 pattern** by the [`weight-search-architecture-ranking`](../weight-search-architecture-ranking/design.md) change (per its design.md Decision 8 + the user's "all behaviours in one config" decision). Each architecture runs ONE integrated C3 cell — food + predator + thermotaxis active **simultaneously** in one simulation, n ≥ 4 seeds — preceded by cheap C1 (foraging-only) + C2 (foraging+predator) curriculum smokes (n=1) for per-architecture de-risking. Per-behaviour-component sub-metrics (foraging success / predator survival / thermotaxis isotherm-tracking) are **extracted** from the integrated C3 runs per the `architecture-comparison-protocol` capability — NOT run as separate per-behaviour cells. The n ≥ 4 seed floor (Phase 5 inheritance) is preserved verbatim; only the cell SHAPE changes (12 per-behaviour → 4 integrated).
 
-### T4 — MLP-PPO
+The four MUST architecture families: connectome-constrained PPO (focal), MLP-PPO, LSTM/GRU-PPO, FeedforwardGA (GA-evolved weights on a fixed feed-forward topology via `run_evolution.py`; genuine NEAT topology evolution lives at T8).
 
-- [ ] T4.mlp_ppo.klinotaxis
-- [ ] T4.mlp_ppo.thermotaxis
-- [ ] T4.mlp_ppo.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
-- [ ] T4.mlp_ppo.predator_evasion_reward_ablation — same reward-shape ablation as the connectome row (gradient_proximity vs distal-chemo + contact-damage).
+### T4 — integrated-C3 primary cells (one per architecture, n ≥ 4 seeds)
 
-### T4 — LSTM / GRU-PPO
+- [ ] T4.connectome.c3_integrated — Cook 2019 connectome (chemical-synapse strict-mask, fixed gap junctions) on the combined food+predator+thermotaxis cell. Focal architecture. Consumes T3 corrected two-channel predator biology + the connectome predator/thermotaxis projections.
+- [ ] T4.mlp_ppo.c3_integrated
+- [ ] T4.lstm_gru_ppo.c3_integrated
+- [ ] T4.feedforward_ga.c3_integrated — GA-evolved weights on a fixed feed-forward topology.
 
-- [ ] T4.lstm_gru_ppo.klinotaxis
-- [ ] T4.lstm_gru_ppo.thermotaxis
-- [ ] T4.lstm_gru_ppo.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
-- [ ] T4.lstm_gru_ppo.predator_evasion_reward_ablation — same reward-shape ablation.
+### T4 — curriculum smokes (per architecture, n=1; de-risk before the n ≥ 4 C3 cells)
 
-### T4 — NEAT-evolved (weights only at T4; topology evolution lives at T8)
+- [ ] T4.\*.c1_foraging — foraging-only smoke per architecture (may reuse existing `configs/scenarios/foraging/` klinotaxis configs).
+- [ ] T4.\*.c2_foraging_predator — foraging+predator smoke per architecture (may reuse the `configs/scenarios/pursuit/` predator-biology configs).
 
-- [ ] T4.neat_weights.klinotaxis
-- [ ] T4.neat_weights.thermotaxis
-- [ ] T4.neat_weights.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
-- [ ] T4.neat_weights.predator_evasion_reward_ablation — same reward-shape ablation.
+### T4 — C3 ablations
 
-### T4 — connectome ablation
-
-- [ ] T4.connectome_soft_prior.\* — documented ablation per [design.md § Decision 7](design.md): chemical-synapse counts as weight initialisation only; PPO free to grow new connections (gap junctions still fixed). Compared head-to-head with strict-mask on at least one behaviour (klinotaxis is the natural first).
+- [ ] T4.\*.c3_reward_ablation — per-family reward-shape ablation ON the integrated C3 substrate: existing `gradient_proximity` vs `distal_chemo_penalty + binary_contact_damage_trigger`. Carry-forward from [fix-predator-sensing-biology design.md § Decision T3.7](../fix-predator-sensing-biology/design.md) + Phase 0's 2×2 outcome.
+- [ ] T4.connectome_soft_prior.c3 — connectome strict-mask vs soft-prior ablation per [design.md § Decision 7](design.md) (chemical-synapse counts as weight initialisation only; PPO free to grow new connections; gap junctions still fixed). Run on the integrated C3 substrate.
 
 ### T4 — cross-architecture analysis + logbook
 
-- [ ] T4.analysis.ranking — paired-seed Wilcoxon + bootstrap CIs across the four MUST families × three behaviours on the grid substrate. The first architecture-comparison ranking.
+- [ ] T4.analysis.ranking — paired-seed Wilcoxon + bootstrap CIs across the four MUST families' integrated-C3 cells on the grid substrate, with per-behaviour-component sub-metrics extracted per the `architecture-comparison-protocol` capability. BH-FDR multiple-comparisons correction within-pass (per the `weight-search-architecture-ranking` MCC commitment). The first architecture-comparison ranking.
 - [ ] T4.analysis.connectome_grid_ranking — explicit answer to "where does the wild-type connectome (chemical-synapse strict-mask) rank under PPO weight search on the existing grid substrate?"
 - [ ] T4.analysis.strict_vs_soft — strict-mask vs soft-prior delta on at least one behaviour.
 - [ ] T4.logbook — publish T4 logbook (suggested: `docs/experiments/logbooks/0XX-l2-first-pass.md`). Feeds Gate 3's evidence base together with T7.
@@ -323,22 +316,18 @@ the full upgrade stack), and opportunistically evaluates SHOULD/MAY architecture
 
 T7 closes Gate 3.
 
-### T7 — MUST architectures × three behaviours on upgraded substrate
+### T7 — MUST architectures (integrated-C3) on upgraded substrate
 
-12 cells, same MUST families × behaviours as T4 but on the upgraded substrate:
+4 integrated-C3 cells (one per MUST family; all three behaviours active in one run),
+inheriting T4's integrated-C3 shape but on the upgraded substrate. Per-behaviour-component
+sub-metrics (foraging / predator survival / thermotaxis isotherm-tracking) are extracted
+from each integrated run per the `architecture-comparison-protocol` capability (same as T4):
 
-- [ ] T7.connectome.klinotaxis — chemical-synapse strict-mask, fixed gap junctions, continuous-2D + continuous-action + Rung 2 gradients
-- [ ] T7.connectome.thermotaxis
-- [ ] T7.connectome.predator_evasion
-- [ ] T7.mlp_ppo.klinotaxis
-- [ ] T7.mlp_ppo.thermotaxis
-- [ ] T7.mlp_ppo.predator_evasion
-- [ ] T7.lstm_gru_ppo.klinotaxis
-- [ ] T7.lstm_gru_ppo.thermotaxis
-- [ ] T7.lstm_gru_ppo.predator_evasion
-- [ ] T7.neat_weights.klinotaxis
-- [ ] T7.neat_weights.thermotaxis
-- [ ] T7.neat_weights.predator_evasion
+- [ ] T7.connectome.c3_integrated — chemical-synapse strict-mask, fixed gap junctions, continuous-2D + continuous-action + Rung 2 gradients
+- [ ] T7.mlp_ppo.c3_integrated
+- [ ] T7.lstm_gru_ppo.c3_integrated
+- [ ] T7.neat_weights.c3_integrated — GA-evolved weights on a fixed feed-forward topology
+- [ ] T7.\*.c3_reward_ablation + T7.connectome_soft_prior.c3 — the same C3 ablations as T4, re-run on the upgraded substrate
 
 ### T7 — SHOULD architectures (opportunistic, not gating)
 
@@ -359,7 +348,7 @@ T7 closes Gate 3.
 
 ### T7 — cross-architecture analysis + env-upgrade delta + logbook
 
-- [ ] T7.analysis.ranking_upgraded — paired-seed Wilcoxon + bootstrap 95% CIs across the 12 MUST cells (per Gate 3 G3.a). Multiple-comparisons strategy applied consistently with T4 per the documented choice in the T4 OpenSpec change's design.md (default Holm-Bonferroni within-pass, but the T4 design may argue for BH-FDR or experiment-wide correction; whichever T4 commits to is the strategy T7 reuses).
+- [ ] T7.analysis.ranking_upgraded — paired-seed Wilcoxon + bootstrap 95% CIs across the 4 MUST integrated-C3 cells with per-behaviour-component sub-metrics extracted (per Gate 3 G3.a). Multiple-comparisons strategy applied consistently with T4: BH-FDR within-pass, the strategy the `weight-search-architecture-ranking` change committed for T4 and T7 inherits.
 - [ ] T7.analysis.env_delta — head-to-head T4-grid vs T7-upgraded ranking delta (RQ5). The load-bearing finding that justifies the deliberate T4-vs-T7 split per [design.md § Decision 1](design.md).
 - [ ] T7.analysis.connectome_final_ranking — explicit answer to "where does the wild-type connectome (chemical-synapse strict-mask) rank under PPO weight search on the upgraded substrate?" (per Gate 3 G3.b — "failed to train" is STOP, not tie).
 - [ ] T7.logbook — publish T7 logbook (suggested: `docs/experiments/logbooks/0XX-l2-final-pass.md`). Required reading material for Gate 3.
@@ -370,10 +359,10 @@ T7 closes Gate 3.
 
 **Trigger**: T7 closed with the cross-architecture ranking on the upgraded substrate + real-worm validation in hand.
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Mid-phase decision gates § Gate 3.
-**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 3](design.md) for the full criterion set (G3.a all 12 MUST cells at Phase 5 statistical bar with the documented multiple-comparisons strategy declared in the T4 OpenSpec change's design.md and applied consistently to T4 and T7; G3.b connectome lands in the ranking with a clear wins/ties/loses verdict per behaviour; G3.c env-upgrade delta analysis shipped; G3.d real-worm validation shipped with quantitative agreement + CIs).
+**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 3](design.md) for the full criterion set (G3.a all 4 MUST integrated-C3 cells at Phase 5 statistical bar with per-behaviour sub-metrics extracted, under the BH-FDR multiple-comparisons strategy committed in the T4 OpenSpec change's design.md and applied consistently to T4 and T7; G3.b connectome lands in the ranking with a clear wins/ties/loses verdict per behaviour; G3.c env-upgrade delta analysis shipped; G3.d real-worm validation shipped with quantitative agreement + CIs).
 **Decision must be written in**: the T7 OpenSpec change's published logbook (likely the T7 logbook itself). This tracker links to the decision once it lands.
 
-- [ ] **Gate 3 decision recorded**: all 12 MUST cells (G3.a) AND connectome ranking clear (G3.b) AND env-upgrade delta (G3.c) AND real-worm validation (G3.d) → GO to T8. Partial MUST coverage (1-2 cells missing) → PIVOT-scope: Phase 6a (T1–T7) ships, Phase 6b (T8 NEAT + T9 synthesis) becomes follow-on. Phase 6 overshoots 10 months cumulative → PIVOT-scope for delivery reasons (same 6a/6b split). Fewer than half MUST cells reach the statistical bar after T7 risk-mitigation pivot → STOP (publishable negative result; Phase 7 L4 inherits substrate-engineering question).
+- [ ] **Gate 3 decision recorded**: all 4 MUST integrated-C3 cells (G3.a) AND connectome ranking clear (G3.b) AND env-upgrade delta (G3.c) AND real-worm validation (G3.d) → GO to T8. Partial MUST coverage (1-2 cells missing) → PIVOT-scope: Phase 6a (T1–T7) ships, Phase 6b (T8 NEAT + T9 synthesis) becomes follow-on. Phase 6 overshoots 10 months cumulative → PIVOT-scope for delivery reasons (same 6a/6b split). Fewer than half MUST cells reach the statistical bar after T7 risk-mitigation pivot → STOP (publishable negative result; Phase 7 L4 inherits substrate-engineering question).
 - [ ] **Gate 3 decision link**: [add link to the T7 logbook where the decision is recorded]
 
 ## Tranche 8 — L3 NEAT Topology Search on Upgraded Substrate
@@ -469,5 +458,5 @@ project to work upfront.
 
 **Status**: open — settles during T4 planning
 **Roadmap reference**: roadmap § Phase 6 § Compute / infrastructure planning
-**Trigger**: T2's first PPO-on-connectome training run produces one real wall-time data point. T4 planning (T4.0a) extrapolates to a per-cell estimate × 12 cells × 2 L2 passes (T4 + T7), checks against available GPU budget, and either confirms Decision 1's "4-6 weeks per L2 pass" estimate or amends Decision 1 + this tracker.
+**Trigger**: T2's first PPO-on-connectome training run produces one real wall-time data point. T4 planning (T4.0a) extrapolates to a per-cell estimate × 4 integrated-C3 cells (+ curriculum smokes + ablations) × 2 L2 passes (T4 + T7), checks against available GPU budget, and either confirms Decision 1's "4-6 weeks per L2 pass" estimate or amends Decision 1 + this tracker. *(T4.0a outcome, 2026-05-30: compute is ~hours, far within the estimate; no amendment — see the `weight-search-architecture-ranking` design.md § Compute budget.)*
 **Recorded by**: T4 OpenSpec change's design.md; amends this tracker if Decision 1 estimates diverge by > 2×.

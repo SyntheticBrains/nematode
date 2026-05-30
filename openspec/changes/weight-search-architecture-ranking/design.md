@@ -202,6 +202,65 @@ The Phase 4 C-curriculum predator-evasion cells carry forward the following sele
 
 Phase 0 forensics (per-variant per-seed CSV summaries + scratchpad) persist at `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/`.
 
+## Phase 2-3 — Compute pre-flight + T4 planning decisions
+
+Phase 2 ran single-seed (seed 2026) canonical-budget pre-flight probes across the curriculum (C1 foraging / C2 foraging+predator / C3 combined) per architecture, EXTENDED beyond the planned C1-only wall-time runs to also probe C2/C3 learnability — the classical-brain calibration-canary approach (MLPPPO fastest + Phase 0-validated; LSTMPPO cross-check for the integrated cell). This surfaced a load-bearing budget finding before the n ≥ 4 sweep committed.
+
+### Pre-flight learnability (T4.0b budget evidence)
+
+Last-25 success, seed 2026, canonical budget:
+
+| Cell | MLPPPO | LSTMPPO | Connectome |
+|---|---|---|---|
+| C1 foraging (500ep) | 100% | 98% | 92% (R2b reproduced) |
+| C2 foraging+predator (500ep) | 92% | 80% | 16% |
+| C3 combined (500ep) | 68% | **0%** | *(see 1000ep)* |
+| C3 combined (1000ep) | *(over-trained)* | **96%** | **80%** (plateaued) |
+
+**Finding — the C3 episode budget is the load-bearing knob, not the env difficulty.** The integrated C3 cell is well-calibrated (learnable + discriminating; no env softening needed). But the **recurrent** architectures (LSTMPPO GRU; connectome K=4) converge much slower than feed-forward MLPPPO: LSTMPPO C3 is 0% at 500ep but **96% at 1000ep** — best of any architecture on the hardest cell, realising the recurrence advantage. At 500ep LSTMPPO would have spuriously ranked LAST on the cell where it is actually BEST — a catastrophic ranking inversion. (Verified this is NOT an entropy/lr-schedule artefact: budget-matched schedules at 500ep still gave 0%.)
+
+### Decision — C3 primary-cell budget = 1000 episodes (T4.0b)
+
+The C3 primary cells run at **1000 episodes** (not the 500 of Phase 0); all four architectures' C3 cells use the same 1000ep budget for env parity — MLPPPO/connectome are merely over-trained (harmless). The normative budget requirement lives in the `architecture-comparison-protocol` spec § "Convergence-Aware Budget and Dual-Metric Comparison" (the budget is set to the slowest-converging architecture's convergence point); this paragraph is the supporting rationale + the pre-flight evidence for the 1000ep value. The C1/C2 curriculum smokes (n=1) stay at 500ep. The connectome may need MORE than 1000ep (its C2 was only 16% at 500ep — slowest-converging architecture); the connectome C3 pre-flight read + any budget bump is recorded in the Phase 2 scratchpad and the compute-budget subsection below. **Seed count (T4.0b)**: floor n ≥ 4 per Phase 5 inheritance; raise to n = 8 on a cell only if its primary-metric SE exceeds 0.5× the gate threshold at n = 4 (M4.5 precedent).
+
+### T4.0c — Connectome sensor-projection + motor-readout
+
+The connectome consumes all three behaviours via learnable additive projections onto canonical sensory neurons (food → ASE/AWC/AWA, shipped at T2; predator → ASH/ASI distal + ALM/AVM/PLM contact, Phase 1b; thermotaxis → AFD, Phase 1c) — see Decision 8 for the neuron-name targets + bilateral-broadcast convention, and the `connectome-ppo-brain` spec for the projection requirements. Motor readout: VB/DB/VA/DA motor-class mean-pool → learnable 4×4 readout (unchanged since T2). No ablation of the projections by default (Decision 4).
+
+### T4.0d — Entropy schedule
+
+All `connectome` C-cells lock `entropy_coef = 0.005` (the logbook 023 R2b value that eliminates the late-training drift constant `0.02` causes). Shipped in the canonical configs via Phase 1e. The pre-flight confirmed the other architectures do not show the same drift at their canonical schedules on C1/C2 (MLPPPO constant 0.02; LSTMPPO decay 0.02→0.005), so no per-architecture entropy change is forced beyond the connectome lock.
+
+### T4.0e/f — Config canonicalisation
+
+Executed in Phase 1e: `connectomeppo_small_klinotaxis.yml` promoted to `entropy_coef = 0.005` (+ frozen-control matched); `mlpppo_small_klinotaxis.yml` provenance acknowledged (no change). Documented here for traceability.
+
+### MCC commitment (Task 3.6)
+
+BH-FDR within-pass is committed in Decision 2 (above) AND in the `architecture-comparison-protocol` spec's "Paired-Seed Statistics with BH-FDR Multiple-Comparisons Correction" requirement, both authored before any Phase 4 cell launches. The `phase6-tracking` G3.a wording (Task 1f.2) was amended to inherit BH-FDR, resolving its prior "default Holm-Bonferroni, deferred to T4 planning" note.
+
+### Connectome speed-optimisation flagged as the immediate next step (before Phase 4)
+
+The pre-flight measured the connectome at ~10× the per-run wall-time of MLPPPO (the C1 foraging run: connectome ~600s vs MLPPPO ~60s at 500ep on this machine). The connectome PPO update runs an un-vectorised per-sample Python loop (`for k in range(batch_size)` calling the 302-neuron forward individually), where ~90% of connectome forward passes occur and which is batchable. Because the sweep is connectome-dominated AND the connectome needs the most episodes (slowest convergence), a **safe speed optimisation of the connectome brain (vectorise the update loop; validate R2b byte-identity preserved) is the recommended immediate next PR before the Phase 4 sweep**, following the prior brain-optimisation precedent (logbooks 001/003 + supporting/008). The compute-budget subsection below uses the CURRENT un-optimised connectome time as a conservative upper bound; the perf PR will re-measure and tighten it.
+
+### Compute budget (T4.0a) — Phase 2 projection
+
+Measured per-run wall-times (seed 2026, under 6-way parallel contention = conservative upper bound). Primary C3 cells at the locked 1000ep budget: connectome 744s, LSTMPPO 205s, MLPPPO ~110s, GA ~230s (generations-based). C1/C2 smokes at 500ep: connectome 603s/249s, others 60-173s.
+
+Extrapolating the Phase 4 sweep under the integrated-C3 structure (n=4): C3 primary (4 arch × 4 seeds) + reward-shape ablation (4 × 4) + connectome soft-prior (4) at 1000ep + C1/C2 smokes (4 arch × 2 × n=1) at 500ep ≈ **~4 hours sequential compute, ~1 hour wall-clock at 4× parallelism**, connectome-dominated (~60% of the total).
+
+**Decision-1 trigger (Task 2.4): does NOT fire.** The compute projection (~hours) is far WITHIN — not >2× over — phase6-tracking Decision 1's "4-6 weeks" T4 estimate. That estimate is **tranche calendar time** (config authoring + the human-in-the-loop calibration this pre-flight exemplifies + analysis + logbook), of which raw compute is a small fraction. No Decision-1 amendment is needed; the bottleneck for the tranche is iteration latency, not total compute — which is exactly why the connectome speed optimisation (flagged above) pays off (it shortens every connectome calibration cycle), even though total compute is not schedule-critical.
+
+### Convergence definition + dual-metric comparison + adaptive budget (Phase 4/5 methodology)
+
+**Convergence (plateau-based).** A brain has *converged* on a cell when its rolling success rate has plateaued — operationally, when **last-25 mean success ≈ last-100 mean success within ±5 percentage points** (the trailing-100-episode window is stable). Convergence is NOT success: a brain may plateau at a low ceiling (a valid architectural finding) or a high one. The pre-flight validates the check — at 1000ep, LSTMPPO C3 (96% last-25 / 95% last-100) and connectome C3 (80% / 81%) are both plateaued; at 500ep both were still climbing (not converged), which is why 500ep mis-measured them.
+
+**Budget is set to the slowest converger.** The C3 primary-cell budget (1000ep) is chosen so ALL evaluated architectures reach their plateau, so the comparison is plateau-vs-plateau, not arbitrary-cutoff-vs-arbitrary-cutoff. For GA the analogue is generations-to-fitness-plateau (the same ±5pp-over-trailing-window test on the per-generation best fitness).
+
+**Adaptive-budget trigger.** If any cell's run does NOT plateau by its budget (last-25 still rising vs last-100 beyond the ±5pp band), that is the trigger to **extend the run total and rerun** — and, for env parity, extend the same cell for ALL architectures (or report at a common everyone-converged budget). Adding a SHOULD/MAY architecture later → set the budget to the max convergence point across all included architectures and rerun affected cells. This makes "converged budget" a checked condition per Phase 4 cell, not a fixed assumption.
+
+**The comparison reports two dimensions (standard RL benchmarking).** (1) **Asymptotic performance** — the plateau level (last-25 at the converged budget): *how good*. (2) **Sample efficiency** — episodes (or GA generations) to reach 90% of plateau: *how fast*. Two architectures can share a plateau but differ in sample efficiency (the pre-flight already shows MLPPPO converging fastest as a feed-forward learner, the recurrent architectures slower but to higher plateaus). Both feed the Phase 5 ranking + the `architecture-comparison-protocol` analysis.
+
 ## Risks / Trade-offs
 
 | Risk | Trigger | Mitigation / Pivot |
@@ -212,6 +271,7 @@ Phase 0 forensics (per-variant per-seed CSV summaries + scratchpad) persist at `
 | MCC strategy revisited mid-Phase 4 because variance differs > 3× across architectures | Forbidden by [`phase6-tracking/design.md § Decision 6`](../phase6-tracking/design.md) once Phase 4 starts | Forestalled by Decision 2 above (pre-commitment to BH-FDR). If reviewers request Holm-Bonferroni instead, default to BH-FDR with written justification — do not allow mid-Phase 4 changes. |
 | Phase 4.5 promotion criteria fire for an architecture mid-Phase 4 (compute headroom obvious before Phase 4 completes) | Phase 4 partial results suggest a SHOULD/MAY promotion is warranted | Defer the promotion to Phase 4.5's explicit decision moment regardless — running promotion mid-stream would silently inflate the comparison and break the MCC commitment's test count. Phase 4.5 happens after all Phase 4 C3 cells complete. |
 | Connectome predator projection wiring (Phase 1b) introduces a regression on the Gate 1 klinotaxis baseline (logbook 023's R2b result) | Phase 1b smoke run shows last-25 mean klinotaxis success > 3 percentage points below R2b's reported baseline at the equivalent seed | Pin the projection to the predator pathway only; the food projection from T2 is untouched. The smoke bar is "within ±3pp of R2b" not "byte-identical activations" — adding `nn.Parameter` tensors perturbs PyTorch RNG-stream consumption order during `__init__` which can shift downstream `nn.init.normal_` draws on existing parameters by float-ulp amounts. If a >3pp regression appears, the projection has accidentally affected the food path — diagnose before proceeding to Phase 1c. |
+| **Architectures not equally / fully optimised → the ranking partly reflects tuning effort, not pure architecture** (the standard "did you tune the baselines fairly?" architecture-comparison critique) | Any brain shows obvious suboptimality or a major failure during the sweep — e.g. catastrophic non-convergence like the pre-flight LSTMPPO-C3-at-500ep collapse (0%) or the connectome's under-budgeted C2 read (16% at 500ep, still climbing) | The comparison is **best-effort under a consistent, documented tuning protocol**, NOT provably-optimal per architecture (exhaustive per-architecture optimisation is unbounded and never definitively "done"). Three mitigations already in place: (a) the **convergence-aware budget** removes the "didn't-converge" confound — we compare plateaus, not arbitrary cutoffs, so a slow learner is not mistaken for a weak one (exactly the LSTMPPO-500ep trap); (b) the **classical-brain calibration canary + curriculum diagnostic ladder** catch major *fixable* failures before the n≥4 sweep (already caught the LSTMPPO + connectome budget issues); (c) **Decision 7** allows documented per-architecture hyperparameter tuning at equal effort. Obvious suboptimality / major failures ARE fixed during the evaluation; we do not ship a ranking where a brain fails on a fixable config issue. Residual non-exhaustive optimisation is recorded as an **explicit limitation in the Phase 5 logbook** (and any publication) — the honest, standard framing. The connectome speed optimisation (flagged as the next PR) also lowers the cost of each per-architecture tuning cycle, making "equal tuning effort" more affordable for the slowest brain. |
 
 ## Migration Plan
 

@@ -36,6 +36,32 @@ The C3 primary cell SHALL run all three Phase 6 behaviours simultaneously in one
 - **THEN** the analysis pipeline SHALL extract per-episode foods-collected, predator-survival-rate, and isotherm-tracking metric from the single integrated run
 - **AND** the ranking SHALL be reported both on the combined overall metric AND on the per-behaviour components, so the "where does architecture X rank?" question can be answered per behaviour as well as overall
 
+### Requirement: Convergence-Aware Budget and Dual-Metric Comparison
+
+The episode budget for the C3 primary cells SHALL be set so that every evaluated architecture reaches a plateau (converges) on the cell, so the comparison is plateau-vs-plateau rather than arbitrary-cutoff-vs-arbitrary-cutoff. A run is considered **converged** when its trailing-window success rate is stable: the last-25-mean success is within ±5 percentage points of the last-100-mean success. Convergence is distinct from success — an architecture MAY converge to a low plateau (its ceiling, a valid finding) or a high one. For GA cells the analogue is generations-to-fitness-plateau under the same ±5pp trailing-window test on per-generation best fitness.
+
+The cross-architecture comparison SHALL report two dimensions: **asymptotic performance** (the converged plateau level — last-25 mean at the converged budget) AND **sample efficiency** (the number of episodes, or GA generations, to reach 90% of the plateau level). Two architectures MAY share an asymptotic plateau yet differ in sample efficiency; both dimensions feed the ranking.
+
+#### Scenario: C3 budget is set to the slowest-converging architecture
+
+- **GIVEN** the set of architectures to be compared on the C3 cell
+- **WHEN** the C3 episode budget is chosen
+- **THEN** the budget SHALL be at least the convergence point (per the ±5pp trailing-window test) of the slowest-converging architecture in the set
+- **AND** the Phase 2 pre-flight evidence for that budget SHALL be recorded (the weight-search-architecture-ranking change sets it to 1000 episodes based on its pre-flight: recurrent architectures — LSTMPPO, connectome — plateau by 1000ep but not by 500ep)
+
+#### Scenario: Non-plateau triggers a budget extension and rerun
+
+- **WHEN** a C3 cell's run does NOT satisfy the convergence test at its budget (last-25 mean still diverges from last-100 mean by more than ±5pp, indicating it is still climbing)
+- **THEN** that is a trigger to extend the episode (or generation) budget and rerun the cell
+- **AND** for env parity the SAME extended budget SHALL be applied to all architectures' instances of that cell (or the comparison SHALL be reported at a common budget at which all have converged)
+- **AND** when a SHOULD/MAY architecture is added after the initial budget is set, the budget SHALL be re-evaluated against the new architecture's convergence point and affected cells rerun if it converges slower
+
+#### Scenario: Both asymptotic performance and sample efficiency are reported
+
+- **WHEN** the Phase 5 ranking is computed
+- **THEN** each architecture's C3 result SHALL report the asymptotic plateau level (last-25 mean at the converged budget) AND the sample efficiency (episodes/generations to 90% of plateau)
+- **AND** the ranking narrative SHALL distinguish "converged to a higher plateau" from "converged faster" as separate comparative claims
+
 ### Requirement: Paired-Seed Statistics with BH-FDR Multiple-Comparisons Correction
 
 The C3 cross-architecture analysis SHALL compute paired-seed deltas with one-sided Wilcoxon signed-rank tests and 80% bootstrap CIs (1000 resamples, seeded RNG) for each architecture pair on each per-behaviour component and on the combined metric. The resulting p-values SHALL be corrected via Benjamini-Hochberg FDR at α=0.05 across the **realised** active test set within this change's Phase 4 evaluation (the realised set MAY be smaller than the planned set if Phase 4 risk-mitigation drops an architecture mid-stream). The MCC strategy SHALL be committed in this change's design.md before any Phase 4 cell launches; mid-Phase 4 strategy changes SHALL be forbidden.
