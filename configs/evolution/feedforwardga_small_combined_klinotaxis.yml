@@ -1,0 +1,124 @@
+# Combined-behaviour C3 cell — FeedforwardGA (food + predator + thermotaxis, klinotaxis).
+#
+# The GA-evolved-weights member of the cross-architecture comparison. Shares
+# the SAME env + reward block as the three PPO C3 cells under
+# configs/scenarios/foraging_predator_thermal/ — only the brain + the
+# learning regime (GA weight evolution vs PPO gradient descent) differ. Lives
+# under configs/evolution/ because GA configs carry an `evolution:` block and
+# are launched via scripts/run_evolution.py (NOT run_simulation.py), per the
+# project convention established by feedforwardga_foraging_small.yml.
+#
+# Composition + lethal-thermal/predator tuning: identical to
+# foraging_predator_thermal/mlpppo_small_combined_klinotaxis.yml (predator_damage
+# 6.0, penalty_health_damage 0.0, lethal thermal gradient 1.5; carried forward
+# from logbook 007 + thermal_pursuit/mlpppo_small_oracle.yml). The matched env
+# (foods_on_grid 6 / target 10) is the comparison env, NOT the easier
+# foods 10 / target 3 smoke env in feedforwardga_foraging_small.yml.
+#
+# The `evolution:` block here is a modest default; the Phase 4 primary-cell run
+# sets the real generation/population/seed budget via CLI flags (which override
+# these). DO NOT set brain.config.weights_path (the framework forces it None;
+# the genome is the sole weight source) and DO NOT rely on brain.config.seed
+# (the loop's --seed overrides it).
+
+max_steps: 500
+
+brain:
+  name: feedforwardga
+  config:
+    hidden_dim: 64
+    num_hidden_layers: 2
+    sensory_modules:
+      - food_chemotaxis                  # Auto-translated to food_chemotaxis_klinotaxis
+      - predator_mechanosensation_oracle # Auto-translated to predator_mechanosensation_klinotaxis
+      - predator_chemosensation_oracle   # Auto-translated to predator_chemosensation_klinotaxis
+      - thermotaxis                       # Auto-translated to thermotaxis_klinotaxis
+      - proprioception
+      - stam
+
+body_length: 2
+
+reward:
+  reward_mode: distal_chemo_contact_trigger
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_temperature_proximity: 0.0
+  penalty_health_damage: 0.0  # Disabled in combined cell (conflicts with thermal HP-damage signal).
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    thermotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 6.0  # Tuned down from the predator-only cell's 20.0 for the stacked combined lethality.
+    food_healing: 10.0
+
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0  # Temperature at grid center (spawn point)
+    gradient_direction: 0.0
+    gradient_strength: 1.5   # LETHAL: 1.5°C/cell -> grid edges reach ~35°C (danger/lethal zone)
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    comfort_delta: 5.0       # Comfort: 15-25°C
+    discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
+    danger_delta: 15.0       # Danger: 5-10°C or 30-35°C
+
+evolution:
+  algorithm: ga
+  generations: 30
+  population_size: 16
+  episodes_per_eval: 3
+  parallel_workers: 1
+  checkpoint_every: 10
+  sigma0: 0.5
+  elite_fraction: 0.2
+  mutation_rate: 0.1
+  crossover_rate: 0.8
