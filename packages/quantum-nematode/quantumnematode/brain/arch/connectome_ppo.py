@@ -383,6 +383,13 @@ class ConnectomeTopology(nn.Module):
             "_motor_class_boundaries",
             torch.tensor(boundaries, dtype=torch.long, device=device),
         )
+        # Python-int slice bounds for the motor classes, cached at construction
+        # so ``_pool_motor`` does not call ``.item()`` per forward (each such
+        # call forces a CPU sync). Numerically identical to slicing by the
+        # buffer's values — just without the per-step synchronisation.
+        self._motor_class_slices: list[tuple[int, int]] = [
+            (boundaries[k], boundaries[k + 1]) for k in range(_N_ACTIONS)
+        ]
         self.readout = nn.Parameter(torch.zeros(_N_ACTIONS, _N_ACTIONS, device=device))
         # Stronger orthogonal init so the initial policy isn't a constant
         # uniform across actions. ``gain=1.0`` is the standard PPO-actor
@@ -539,19 +546,19 @@ class ConnectomeTopology(nn.Module):
         return weights * self.m_chem.to(weights.dtype)
 
     def _pool_motor(self, h: torch.Tensor) -> torch.Tensor:
-        """Mean-pool ``h`` over the four motor classes → 4-vector.
+        """Mean-pool ``h`` over the four motor classes → ``(4,)`` or ``(B, 4)``.
 
-        Vectorised: index ``h`` at the flat motor indices, then take
-        per-class mean using boundaries.
+        Pools over the LAST dim, so it handles both a single ``(302,)`` hidden
+        state and a batched ``(B, 302)`` one. Uses the Python-int class slices
+        cached at construction, so there is no per-call ``.item()`` CPU sync.
+        Numerically identical to the prior per-class mean.
         """
-        flat_acts = h.index_select(0, self._motor_flat_indices)
-        boundaries = self._motor_class_boundaries
-        pooled = torch.empty(_N_ACTIONS, device=h.device, dtype=h.dtype)
-        for k in range(_N_ACTIONS):
-            start = int(boundaries[k].item())
-            end = int(boundaries[k + 1].item())
-            pooled[k] = flat_acts[start:end].mean()
-        return pooled
+        last_dim = h.dim() - 1
+        flat_acts = h.index_select(last_dim, self._motor_flat_indices)
+        means = [
+            flat_acts[..., start:end].mean(dim=last_dim) for start, end in self._motor_class_slices
+        ]
+        return torch.stack(means, dim=last_dim)
 
     def _inject_predator(
         self,
@@ -696,6 +703,132 @@ class ConnectomeTopology(nn.Module):
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
         logits = self.readout @ motor_acts  # shape (4,)
+        return logits, h
+
+    def _inject_predator_batched(
+        self,
+        h: torch.Tensor,
+        predator_distal_features: torch.Tensor | None,
+        predator_mechano_features: torch.Tensor | None,
+        contact_zone_onehot: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Batched predator injection — mathematically equal to per-sample.
+
+        ``h`` is ``(B, 302)``; the feature tensors are ``(B, ·)``;
+        ``contact_zone_onehot`` is ``(B, 4)`` (columns NONE/ANTERIOR/POSTERIOR/
+        LATERAL). The per-sample :meth:`_inject_predator` branches on the
+        active zone; this version computes every zone's injection for the
+        whole batch and zeroes the inactive ones with the one-hot mask, so
+        each sample receives exactly its zone's contribution (adding ``0.0``
+        is exact in float, so the masked terms do not perturb).
+        """
+        if predator_distal_features is not None:
+            distal_inj = predator_distal_features @ self.predator_distal_gains  # (B, 4)
+            h = h.index_add(1, self._predator_distal_neuron_indices, distal_inj)
+
+        if predator_mechano_features is not None and contact_zone_onehot is not None:
+            ant_mask = contact_zone_onehot[:, 1:2]  # ANTERIOR  (B, 1)
+            post_mask = contact_zone_onehot[:, 2:3]  # POSTERIOR (B, 1)
+            lat_mask = contact_zone_onehot[:, 3:4]  # LATERAL   (B, 1)
+            ant_full = predator_mechano_features @ self.predator_anterior_gains  # (B, 3)
+            post_full = predator_mechano_features @ self.predator_posterior_gains  # (B, 2)
+            # ANTERIOR zone → full anterior gains onto ALML/ALMR/AVM.
+            h = h.index_add(1, self._predator_anterior_neuron_indices, ant_full * ant_mask)
+            # POSTERIOR zone → full posterior gains onto PLML/PLMR.
+            h = h.index_add(1, self._predator_posterior_neuron_indices, post_full * post_mask)
+            # LATERAL zone → anterior[:, :2] and posterior at half-weight onto
+            # ALML/ALMR and PLML/PLMR (AVM excluded — unilateral).
+            h = h.index_add(
+                1,
+                self._predator_lateral_alm_indices,
+                (ant_full[:, :2] * _LATERAL_HALF_WEIGHT) * lat_mask,
+            )
+            h = h.index_add(
+                1,
+                self._predator_posterior_neuron_indices,
+                (post_full * _LATERAL_HALF_WEIGHT) * lat_mask,
+            )
+        return h
+
+    def _inject_thermotaxis_batched(
+        self,
+        h: torch.Tensor,
+        thermotaxis_features: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Batched thermotaxis injection onto AFDL/AFDR (``h`` is ``(B, 302)``)."""
+        if thermotaxis_features is not None:
+            thermo_inj = thermotaxis_features @ self.thermotaxis_gains  # (B, 2)
+            h = h.index_add(1, self._thermotaxis_neuron_indices, thermo_inj)
+        return h
+
+    def forward_with_hidden_batched(
+        self,
+        food_features: torch.Tensor,
+        predator_distal_features: torch.Tensor | None = None,
+        predator_mechano_features: torch.Tensor | None = None,
+        contact_zone_onehot: torch.Tensor | None = None,
+        thermotaxis_features: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Batched analogue of :meth:`forward_with_hidden`.
+
+        Processes ``B`` samples in one pass: ``food_features`` is
+        ``(B, n_food_features)`` and the optional predator/thermotaxis tensors
+        are ``(B, ·)`` (``contact_zone_onehot`` is the ``(B, 4)`` zone one-hot,
+        consumed directly by the masked predator injection). Returns
+        ``(logits, hidden)`` of shapes ``(B, 4)`` and ``(B, 302)``.
+
+        Mathematically equivalent to calling :meth:`forward_with_hidden` once
+        per sample, but the recurrence becomes a single ``(B, 302) @ (302, 302)``
+        matmul per depth-step instead of B separate matvecs — the load-bearing
+        speedup for the PPO update. Float results differ from the per-sample
+        path by accumulation-order ulps (batched matmul vs matvec); validated
+        equivalent within float32 tolerance by the equivalence test suite.
+        """
+        batched_ndim = 2  # (B, n_food_features)
+        if food_features.ndim != batched_ndim or food_features.shape[1] != self.n_food_features:
+            msg = (
+                f"food_features must have shape (B, {self.n_food_features}); "
+                f"got {tuple(food_features.shape)}"
+            )
+            raise ValueError(msg)
+
+        batch = food_features.shape[0]
+        h = torch.zeros(
+            batch,
+            self.n_neurons,
+            device=food_features.device,
+            dtype=food_features.dtype,
+        )
+        food_injection = food_features @ self.food_gains  # (B, 6)
+        h = h.index_add(1, self._food_neuron_indices, food_injection)
+
+        if self.enable_predator_projection:
+            h = self._inject_predator_batched(
+                h,
+                predator_distal_features,
+                predator_mechano_features,
+                contact_zone_onehot,
+            )
+        if self.enable_thermotaxis_projection:
+            h = self._inject_thermotaxis_batched(h, thermotaxis_features)
+
+        # K recurrent updates. Single-sample uses ``chem_mat.T @ h`` for a
+        # 302-vec ``h``; for a ``(B, 302)`` batch the equivalent is
+        # ``h @ chem_mat`` (preact[b, post] = sum_pre chem[pre, post] * h[b, pre]).
+        # The mask multiply happens once per minibatch here (vs once per sample
+        # in the old loop). NOTE: ``h @ gap_mat`` (no transpose) equals the
+        # single-sample ``gap_mat.T @ h`` only because ``g_gap`` is constructed
+        # symmetric (gap junctions are bidirectional); the chem term needs no
+        # such assumption (``h @ chem_mat == chem_mat.T @ h`` for any matrix).
+        # If gap junctions ever become directional, transpose ``gap_mat`` here.
+        chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
+        gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
+        for _ in range(self.forward_pass_depth):
+            preact = h @ chem_mat + h @ gap_mat
+            h = torch.tanh(preact)
+
+        motor_acts = self._pool_motor(h)  # (B, 4)
+        logits = motor_acts @ self.readout.T  # (B, 4)
         return logits, h
 
     def forward(
@@ -988,6 +1121,46 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         return food, distal, mechano, zone, thermo
 
+    def _unpack_state_batched(
+        self,
+        states: torch.Tensor,
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor | None,
+        torch.Tensor | None,
+        torch.Tensor | None,
+        torch.Tensor | None,
+    ]:
+        """Batched :meth:`_unpack_state` for the PPO update.
+
+        ``states`` is ``(B, state_dim)``; returns ``(food, predator_distal,
+        predator_mechano, contact_zone_onehot, thermotaxis)`` sliced along dim
+        1. Unlike the single-sample version, the contact zone is returned as
+        the raw ``(B, 4)`` one-hot (not decoded to a ``ContactZone`` enum) —
+        :meth:`forward_with_hidden_batched` consumes the one-hot directly for
+        its masked injection.
+        """
+        n_food = self._n_food_features
+        food = states[:, :n_food]
+        offset = n_food
+
+        distal: torch.Tensor | None = None
+        mechano: torch.Tensor | None = None
+        zone_onehot: torch.Tensor | None = None
+        if self.config.enable_predator_projection:
+            distal = states[:, offset : offset + _N_PREDATOR_DISTAL_FEATURES]
+            mech_start = offset + _N_PREDATOR_DISTAL_FEATURES
+            mechano = states[:, mech_start : mech_start + _N_PREDATOR_MECHANO_FEATURES]
+            zone_start = mech_start + _N_PREDATOR_MECHANO_FEATURES
+            zone_onehot = states[:, zone_start : zone_start + _N_CONTACT_ZONES]
+            offset = zone_start + _N_CONTACT_ZONES
+
+        thermo: torch.Tensor | None = None
+        if self.config.enable_thermotaxis_projection:
+            thermo = states[:, offset : offset + _N_THERMOTAXIS_FEATURES]
+
+        return food, distal, mechano, zone_onehot, thermo
+
     def run_brain(
         self,
         params: BrainParams,
@@ -1136,25 +1309,23 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         for _ in range(self.num_epochs):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
-                # Per-step forward pass through the topology + critic.
-                # ``forward_with_hidden`` returns both the action logits
-                # and the post-K hidden state in one pass (no redundant
-                # connectome recompute for the critic).
+                # Batched forward pass through the topology + critic. The
+                # minibatch's states are unpacked + run in ONE batched
+                # connectome forward (and the post-K hidden states feed the
+                # critic in one call) — replacing the prior per-sample Python
+                # loop, where ~90% of connectome forward passes occurred.
                 states = batch["states"]
-                batch_size = states.shape[0]
-                new_logits = torch.empty(batch_size, _N_ACTIONS, device=self.device)
-                new_values = torch.empty(batch_size, device=self.device)
-                for k in range(batch_size):
-                    food_k, distal_k, mechano_k, zone_k, thermo_k = self._unpack_state(states[k])
-                    logits_k, hidden_k = self.topology.forward_with_hidden(
-                        food_k,
-                        predator_distal_features=distal_k,
-                        predator_mechano_features=mechano_k,
-                        predator_contact_zone=zone_k,
-                        thermotaxis_features=thermo_k,
-                    )
-                    new_logits[k] = logits_k
-                    new_values[k] = self.critic(hidden_k).squeeze(-1)
+                food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = self._unpack_state_batched(
+                    states,
+                )
+                new_logits, hidden = self.topology.forward_with_hidden_batched(
+                    food_b,
+                    predator_distal_features=distal_b,
+                    predator_mechano_features=mechano_b,
+                    contact_zone_onehot=zone_onehot_b,
+                    thermotaxis_features=thermo_b,
+                )
+                new_values = self.critic(hidden).squeeze(-1)
 
                 new_probs = torch.softmax(new_logits, dim=-1)
                 dist = torch.distributions.Categorical(new_probs)
