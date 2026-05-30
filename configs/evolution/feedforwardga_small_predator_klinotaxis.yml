@@ -15,6 +15,14 @@
 # Drop thermotaxis from foraging_predator_thermal/...combined... to get this C2;
 # add it back (+ combined-cell tuning) to get C3.
 #
+# LAUNCH WITH `--fitness progress`. With lethal predators, the binary
+# full-clear success_rate (run_evolution.py default) is flat 0.0 for every
+# random-init genome → zero selection gradient → the GA never bootstraps
+# (observed: best/mean/std fitness all 0.0 across all 30 generations).
+# EpisodicProgressFitness grades partial foraging + survival so selection has a
+# signal. The cross-architecture ranking still uses full-clear success extracted
+# from the evolved champion (so the comparison stays apples-to-apples on outcome).
+#
 # DO NOT set brain.config.weights_path (forced None); DO NOT rely on
 # brain.config.seed (the loop's --seed overrides it).
 

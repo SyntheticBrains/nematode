@@ -1,5 +1,7 @@
 """Tests for :mod:`quantumnematode.evolution.fitness`."""
 
+# pyright: reportPrivateUsage=false
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +13,15 @@ import pytest
 from quantumnematode.agent.runners import StandardEpisodeRunner
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
 from quantumnematode.evolution.encoders import MLPPPOEncoder
-from quantumnematode.evolution.fitness import EpisodicSuccessRate, FrozenEvalRunner
+from quantumnematode.evolution.fitness import (
+    _PROGRESS_FOOD_WEIGHT,
+    _PROGRESS_SURVIVAL_WEIGHT,
+    EpisodicProgressFitness,
+    EpisodicSuccessRate,
+    FitnessFunction,
+    FrozenEvalRunner,
+    _progress_score,
+)
 from quantumnematode.report.dtypes import TerminationReason
 from quantumnematode.utils.config_loader import SimulationConfig, load_simulation_config
 
@@ -300,3 +310,257 @@ def test_build_agent_threads_max_body_length() -> None:
         f"sim_config.body_length={sim_config.body_length} — "
         "_build_agent regressed: episodes 1+ will silently switch body length"
     )
+
+
+# ---------------------------------------------------------------------------
+# EpisodicProgressFitness — graded scoring (_progress_score, pure)
+# ---------------------------------------------------------------------------
+
+
+class TestProgressScore:
+    """The pure per-episode graded scorer ``_progress_score``.
+
+    All grading logic lives here, tested with synthetic numbers (no env/agent),
+    so the algorithm is pinned independently of the run wiring.
+    """
+
+    def test_full_clear_is_the_apex(self) -> None:
+        """``COMPLETED_ALL_FOOD`` SHALL score exactly 1.0 regardless of steps."""
+        for steps in (0, 1, 250, 500, 10_000):
+            assert (
+                _progress_score(
+                    termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                    foods_collected=10,
+                    target_foods=10,
+                    steps=steps,
+                    max_steps=500,
+                )
+                == 1.0
+            )
+
+    def test_nonclear_is_strictly_below_apex(self) -> None:
+        """Any non-``COMPLETED_ALL_FOOD`` termination SHALL score < 1.0.
+
+        Even the best non-clear (one food short, full survival) stays below the
+        full-clear apex, so a champion that clears is always preferred.
+        """
+        best_nonclear = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=9,
+            target_foods=10,
+            steps=500,
+            max_steps=500,
+        )
+        assert best_nonclear < 1.0
+
+    def test_exact_blend_value(self) -> None:
+        """A non-clear SHALL equal ``FOOD_W*food_frac + SURVIVAL_W*survival_frac``."""
+        score = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=5,
+            target_foods=10,
+            steps=250,
+            max_steps=500,
+        )
+        expected = _PROGRESS_FOOD_WEIGHT * 0.5 + _PROGRESS_SURVIVAL_WEIGHT * 0.5
+        assert score == pytest.approx(expected)
+
+    def test_monotonic_in_food(self) -> None:
+        """More food (survival held fixed) SHALL score strictly higher."""
+        more = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=5,
+            target_foods=10,
+            steps=100,
+            max_steps=500,
+        )
+        less = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=2,
+            target_foods=10,
+            steps=100,
+            max_steps=500,
+        )
+        assert more > less
+
+    def test_monotonic_in_survival(self) -> None:
+        """Longer survival (food held fixed) SHALL score strictly higher."""
+        longer = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=2,
+            target_foods=10,
+            steps=400,
+            max_steps=500,
+        )
+        shorter = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=2,
+            target_foods=10,
+            steps=100,
+            max_steps=500,
+        )
+        assert longer > shorter
+
+    def test_survival_breaks_the_zero_food_deadlock(self) -> None:
+        """Zero-food genomes SHALL still be separable by survival time.
+
+        This is the property that lets the GA bootstrap under lethal predators:
+        when EVERY genome eats zero food, the survival term keeps the landscape
+        non-flat (a genome that survives longer scores higher than one that dies
+        instantly), so selection still has a gradient. A genome that dies
+        instantly with no food scores exactly 0.0.
+        """
+        survived = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=0,
+            target_foods=10,
+            steps=100,
+            max_steps=500,
+        )
+        died_instantly = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=0,
+            target_foods=10,
+            steps=0,
+            max_steps=500,
+        )
+        assert survived > died_instantly
+        assert died_instantly == 0.0
+
+    def test_graceful_degradation_on_zero_denominators(self) -> None:
+        """``target_foods <= 0`` / ``max_steps <= 0`` SHALL not raise and treat the term as 0."""
+        # target_foods == 0 → food term contributes 0; survival still counts.
+        only_survival = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=0,
+            target_foods=0,
+            steps=250,
+            max_steps=500,
+        )
+        assert only_survival == pytest.approx(_PROGRESS_SURVIVAL_WEIGHT * 0.5)
+        # Both denominators zero → score 0.0 (no division error).
+        assert (
+            _progress_score(
+                termination_reason=TerminationReason.HEALTH_DEPLETED,
+                foods_collected=0,
+                target_foods=0,
+                steps=0,
+                max_steps=0,
+            )
+            == 0.0
+        )
+
+    def test_fractions_clamped_so_score_never_exceeds_apex(self) -> None:
+        """Over-counted foods/steps SHALL clamp so a non-clear never exceeds 1.0."""
+        score = _progress_score(
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
+            foods_collected=15,  # > target — defensive clamp to 1.0
+            target_foods=10,
+            steps=999,  # > max_steps — defensive clamp to 1.0
+            max_steps=500,
+        )
+        assert score == pytest.approx(_PROGRESS_FOOD_WEIGHT + _PROGRESS_SURVIVAL_WEIGHT)
+        assert score <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# EpisodicProgressFitness — wiring (real eval)
+# ---------------------------------------------------------------------------
+
+
+class TestEpisodicProgressFitness:
+    """The graded fitness end-to-end against a real foraging eval."""
+
+    def test_satisfies_fitness_protocol(self) -> None:
+        """``EpisodicProgressFitness`` SHALL satisfy the runtime-checkable Protocol."""
+        assert isinstance(EpisodicProgressFitness(), FitnessFunction)
+
+    def test_rejects_zero_episodes(self) -> None:
+        """Zero or negative episodes SHALL raise ValueError (mirrors success_rate)."""
+        sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
+        fitness = EpisodicProgressFitness()
+        with pytest.raises(ValueError, match="episodes must be positive"):
+            fitness.evaluate(genome, sim_config, encoder, episodes=0, seed=42)
+
+    def test_returns_unit_interval_float(self) -> None:
+        """Fitness SHALL be a finite float in [0.0, 1.0] for an arbitrary genome."""
+        sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
+        score = EpisodicProgressFitness().evaluate(genome, sim_config, encoder, episodes=2, seed=42)
+        assert isinstance(score, float)
+        assert 0.0 <= score <= 1.0
+
+    def test_deterministic_for_seeded_genome(self) -> None:
+        """Same genome + same seed SHALL produce byte-identical graded fitness."""
+        sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
+        fitness = EpisodicProgressFitness()
+        a = fitness.evaluate(genome, sim_config, encoder, episodes=2, seed=42)
+        b = fitness.evaluate(genome, sim_config, encoder, episodes=2, seed=42)
+        assert a == b
+
+    def test_grades_at_or_above_success_rate(self) -> None:
+        """Graded fitness SHALL be >= binary success on the SAME (genome, seed).
+
+        Per episode the graded score is >= the success indicator (a clear scores
+        1.0 under both; a non-clear scores >= 0 graded == 0 success), so the
+        means satisfy ``graded >= success``. Combined with ``graded > 0`` (a
+        random genome survives some steps ⇒ the survival term fires), this proves
+        the wiring reads real per-episode progress — not just the success rate.
+        """
+        sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
+        graded = EpisodicProgressFitness().evaluate(genome, sim_config, encoder, episodes=4, seed=7)
+        success = EpisodicSuccessRate().evaluate(genome, sim_config, encoder, episodes=4, seed=7)
+        assert graded >= success
+        assert graded > 0.0
+
+    def test_per_episode_tracker_does_not_accumulate(self) -> None:
+        """Each episode's score SHALL read the per-episode foods/steps, not the cumulative.
+
+        ``EpisodicProgressFitness`` is the first fitness to read
+        ``agent.episode_foods_collected`` / ``episode_steps`` across the
+        ``episodes_per_eval`` loop (``EpisodicSuccessRate`` reads only the
+        returned ``EpisodeResult.termination_reason``), so the per-episode tracker
+        reset is a NEW dependency no other test exercises. If
+        ``reset_environment`` ever stops zeroing the tracker, foods/steps would
+        accumulate (episode 2 reads ep1+ep2 …), silently inflating food-fraction
+        toward the 1.0 clamp.
+
+        We patch the runner to INCREMENT the tracker by a fixed amount per call
+        (mimicking how a real episode accrues onto a freshly-reset tracker) and
+        capture what ``_progress_score`` receives each episode. Correct reset ⇒
+        every episode reads the SAME fixed amount; a broken reset ⇒ the captured
+        values grow monotonically (2, 4, 6 …).
+        """
+        from quantumnematode.agent.runners import EpisodeResult
+        from quantumnematode.evolution import fitness as fitness_module
+
+        per_call_foods, per_call_steps = 2, 50
+        captured: list[tuple[int, int]] = []
+
+        def fake_run(agent, _reward_config, _max_steps):
+            # Accrue onto the (freshly reset, for ep>0) tracker, as a real episode would.
+            agent._episode_tracker.data.foods_collected += per_call_foods
+            agent._episode_tracker.data.steps += per_call_steps
+            return EpisodeResult(
+                agent_path=[(0, 0)],
+                termination_reason=TerminationReason.HEALTH_DEPLETED,
+                food_history=None,
+            )
+
+        real_progress_score = fitness_module._progress_score
+
+        def spy_progress_score(**kwargs: object) -> float:
+            captured.append((kwargs["foods_collected"], kwargs["steps"]))  # type: ignore[arg-type]
+            return real_progress_score(**kwargs)  # type: ignore[arg-type]
+
+        sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
+        with (
+            patch.object(FrozenEvalRunner, "run", side_effect=fake_run),
+            patch.object(fitness_module, "_progress_score", side_effect=spy_progress_score),
+        ):
+            EpisodicProgressFitness().evaluate(genome, sim_config, encoder, episodes=3, seed=42)
+
+        # Per-episode reset ⇒ every episode reads exactly the fixed increment.
+        # A regressed reset would read (2,50),(4,100),(6,150).
+        assert captured == [(per_call_foods, per_call_steps)] * 3, (
+            f"tracker accumulated across episodes (reset regressed): {captured}"
+        )

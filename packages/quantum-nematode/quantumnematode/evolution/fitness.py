@@ -333,6 +333,163 @@ class EpisodicSuccessRate:
 
 
 # ---------------------------------------------------------------------------
+# EpisodicProgressFitness — graded (dense) frozen-weight fitness
+# ---------------------------------------------------------------------------
+
+# Weights for the graded per-episode score. Food progress strongly dominates so
+# the selection ordering tracks the foraging objective; survival is a SMALL
+# secondary signal that keeps the landscape non-flat in the hardest regime —
+# when no genome in the population ever eats under lethal-predator pressure
+# (every food-fraction == 0), survival time is the only thing left to select on,
+# so the GA can still bootstrap. Prey-side analogue of
+# predator_fitness.PredatorEpisodicKillRate's secondary proximity signal.
+#
+# Why 0.9/0.1 (not a larger survival weight): on the integrated C3 cell (lethal
+# predators + lethal thermal), too much survival weight creates a hide-and-survive
+# local optimum — a genome maximises score by NOT foraging (a shaping sweep found
+# weight 0.2 left the C3 champion eating ~0.08/10 food while surviving ~99% of the
+# episode). Dropping survival to 0.1 roughly tripled C3 foraging (n=3 confirmation:
+# food-fraction 0.122 vs 0.050 at 0.2). 0.1 (vs an even smaller 0.05) keeps a safer
+# cold-start margin for the deadlock-breaker. See the design.md "GA selection
+# signal" section for the sweep evidence.
+_PROGRESS_FOOD_WEIGHT = 0.9
+_PROGRESS_SURVIVAL_WEIGHT = 0.1
+
+
+def _progress_score(
+    *,
+    termination_reason: TerminationReason,
+    foods_collected: int,
+    target_foods: int,
+    steps: int,
+    max_steps: int,
+) -> float:
+    """Graded per-episode score in ``[0.0, 1.0]``; full-clear is the strict apex.
+
+    - A ``COMPLETED_ALL_FOOD`` episode scores exactly ``1.0`` — identical to
+      :class:`EpisodicSuccessRate`'s notion of success, so a champion that fully
+      clears scores the same under both fitnesses.
+    - Any other termination scores
+      ``FOOD_WEIGHT * (foods_collected / target_foods)
+        + SURVIVAL_WEIGHT * (steps / max_steps)``, which is strictly ``< 1.0``
+      (a non-clear has ``foods_collected < target_foods`` so the food term is
+      ``< FOOD_WEIGHT``, and the survival term is ``<= SURVIVAL_WEIGHT``). This
+      makes the fitness DENSE: eating more food, or surviving longer before a
+      lethal termination, scores higher — even when NO individual ever clears.
+
+    ``target_foods <= 0`` or ``max_steps <= 0`` degrade gracefully (the
+    corresponding fraction is treated as ``0.0``); the fractions are clamped to
+    ``1.0`` defensively so a mis-instrumented count can never exceed the apex.
+    """
+    if termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
+        return 1.0
+    food_fraction = min(foods_collected / target_foods, 1.0) if target_foods > 0 else 0.0
+    survival_fraction = min(steps / max_steps, 1.0) if max_steps > 0 else 0.0
+    return _PROGRESS_FOOD_WEIGHT * food_fraction + _PROGRESS_SURVIVAL_WEIGHT * survival_fraction
+
+
+class EpisodicProgressFitness:
+    """Graded frozen-weight fitness: mean per-episode foraging progress.
+
+    A denser-signal sibling of :class:`EpisodicSuccessRate` for tasks where the
+    binary full-clear success rate is too sparse to evolve against. Under lethal
+    predators, no random-init genome ever clears all food, so
+    ``EpisodicSuccessRate`` returns ``0.0`` for every individual →
+    ``std_fitness == 0`` every generation → the GA has no selection gradient and
+    never bootstraps (observed: the GA foraging+predator smoke sat flat at
+    ``0.0`` across all 30 generations). PPO architectures avoid this because they
+    train against a dense per-step reward; the GA sees only the episodic fitness,
+    so the fitness itself must carry the gradient.
+
+    Per episode (via :func:`_progress_score`): ``COMPLETED_ALL_FOOD`` scores
+    ``1.0`` (the apex, identical to ``EpisodicSuccessRate``); otherwise a
+    weighted blend of food-fraction (primary) + survival-fraction (secondary,
+    deadlock-breaking). Returns the mean over ``episodes`` in ``[0.0, 1.0]``.
+
+    The cross-architecture comparison still RANKS architectures on full-clear
+    success (extracted from the evolved champion the same way as the PPO cells);
+    this graded fitness is only the SELECTION signal that lets the GA reach a
+    competitive champion — restoring parity with the dense reward the PPO
+    architectures already train against.
+
+    Structure mirrors :meth:`EpisodicSuccessRate.evaluate` exactly (decode →
+    optional warm-start → build env/agent → per-episode seeded loop with reset);
+    the ONLY difference is the per-episode scoring.
+    """
+
+    def evaluate(  # noqa: PLR0913 — inheritance kwargs mirror the FitnessFunction family ABI
+        self,
+        genome: Genome,
+        sim_config: SimulationConfig,
+        encoder: GenomeEncoder,
+        *,
+        episodes: int,
+        seed: int,
+        warm_start_path_override: Path | None = None,
+        weight_capture_path: Path | None = None,  # noqa: ARG002 — accepted for ABI symmetry
+        tei_prior_source: tuple[Path, float, int] | None = None,  # noqa: ARG002 — same
+    ) -> float:
+        """Run ``episodes`` frozen episodes and return the mean graded progress.
+
+        The inheritance kwargs mirror :meth:`EpisodicSuccessRate.evaluate`'s
+        surface so the loop's uniform dispatch can pass them regardless of which
+        fitness is active. ``warm_start_path_override`` is honoured (load weights
+        after decode); ``weight_capture_path`` + ``tei_prior_source`` are
+        frozen-weight-incompatible and ignored (the CLI guard rejects
+        ``inheritance != none`` with ``--fitness progress``, mirroring
+        ``success_rate``).
+        """
+        if episodes <= 0:
+            msg = f"episodes must be positive, got {episodes}"
+            raise ValueError(msg)
+
+        brain = encoder.decode(genome, sim_config, seed=seed)
+        if warm_start_path_override is not None:
+            load_weights(brain, warm_start_path_override)
+
+        if sim_config.environment is None:
+            msg = "EpisodicProgressFitness.evaluate requires sim_config.environment to be set."
+            raise ValueError(msg)
+        env = create_env_from_config(
+            sim_config.environment,
+            seed=seed,
+            theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
+        )
+
+        agent = _build_agent(brain, env, sim_config)
+        runner = FrozenEvalRunner()
+
+        if sim_config.reward is None:
+            msg = "EpisodicProgressFitness.evaluate requires sim_config.reward to be set."
+            raise ValueError(msg)
+        max_steps = sim_config.max_steps if sim_config.max_steps is not None else 500
+
+        total_score = 0.0
+        for ep_idx in range(episodes):
+            # Per-episode seed derivation + env reset: identical to
+            # EpisodicSuccessRate so the two fitnesses see the same episode
+            # stream for a given (genome, seed).
+            run_seed = derive_run_seed(seed, ep_idx)
+            set_global_seed(run_seed)
+            if ep_idx > 0:
+                agent.env.seed = run_seed
+                agent.env.rng = get_rng(run_seed)
+                agent.reset_environment()
+            result = runner.run(agent, sim_config.reward, max_steps)
+            # Read the per-episode outcome BEFORE the next iteration's reset.
+            total_score += _progress_score(
+                termination_reason=result.termination_reason,
+                foods_collected=agent.episode_foods_collected,
+                target_foods=agent.env.foraging.target_foods_to_collect,
+                steps=agent.episode_steps,
+                max_steps=max_steps,
+            )
+
+        return total_score / episodes
+
+
+# ---------------------------------------------------------------------------
 # LearnedPerformanceFitness
 # ---------------------------------------------------------------------------
 
