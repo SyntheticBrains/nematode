@@ -97,6 +97,23 @@ _N_PREDATOR_MECHANO_FEATURES: int = 2
 # index 0 = NONE, 1 = ANTERIOR, 2 = POSTERIOR, 3 = LATERAL.
 _N_CONTACT_ZONES: int = 4
 
+# Sensory neurons that receive thermotaxis injection. AFD (AFDL/AFDR) is
+# the canonical dominant *C. elegans* thermosensor (Mori & Ohshima 1995;
+# ~0.01°C sensitivity, ablation abolishes thermotaxis). Targeting AFD
+# alone follows the same primary-role-only convention the food projection
+# (ASE/AWC/AWA) and predator projection (ASH/ASI/ALM/PLM) already use —
+# secondary thermosensory contributors (AWC per Kuhara et al. 2008; AWB,
+# ASI) are deliberately not modelled here. AWC's dual odor+temperature
+# role is a polymodal-integration refinement deferred to a dedicated
+# future change (it would also revisit ASH/AWA dual roles consistently
+# across all projections, rather than entangle food + thermo through AWC
+# ad-hoc here).
+_SENSOR_NEURONS_THERMOTAXIS: tuple[str, ...] = ("AFDL", "AFDR")
+
+# Thermotaxis feature count (klinotaxis head-sweep, mirrors the env-side
+# thermotaxis_klinotaxis sensory module): [temp_deviation, lateral, dT/dt].
+_N_THERMOTAXIS_FEATURES: int = 3
+
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
@@ -145,6 +162,13 @@ class ConnectomePPOBrainConfig(BrainConfig):
     # perturbs the RNG-stream consumption order but does not introduce
     # activation drift on the food path.
     enable_predator_projection: bool = False
+    # Opt-in thermotaxis-sensor projection: routes the klinotaxis
+    # temperature signal (deviation + lateral head-sweep gradient + dT/dt)
+    # onto the AFD thermosensory pair (AFDL/AFDR) via one learnable gain
+    # matrix. Default off for the same byte-identity reason as the predator
+    # projection; constructed after the predator block so flipping it on
+    # perturbs neither the food nor the predator RNG-stream order.
+    enable_thermotaxis_projection: bool = False
     freeze_updates: bool = False
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
@@ -194,6 +218,8 @@ class ConnectomeTopology(nn.Module):
     _predator_anterior_neuron_indices: torch.Tensor
     _predator_posterior_neuron_indices: torch.Tensor
     _predator_lateral_alm_indices: torch.Tensor
+    # Thermotaxis projection (allocated only when ``enable_thermotaxis_projection``).
+    _thermotaxis_neuron_indices: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -204,6 +230,7 @@ class ConnectomeTopology(nn.Module):
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
+        enable_thermotaxis_projection: bool,
         device: torch.device,
         rng: np.random.Generator,
     ) -> None:
@@ -218,6 +245,7 @@ class ConnectomeTopology(nn.Module):
         self.enable_gap_junctions = enable_gap_junctions
         self.n_food_features = n_food_features
         self.enable_predator_projection = enable_predator_projection
+        self.enable_thermotaxis_projection = enable_thermotaxis_projection
         # When True, the forward pass multiplies ``w_chem`` by ``m_chem`` so
         # gradients on non-wild-type edges are pinned to zero (and ``w_chem``
         # data on those positions never moves from its zero init). When
@@ -459,6 +487,38 @@ class ConnectomeTopology(nn.Module):
             nn.init.normal_(self.predator_anterior_gains, mean=0.0, std=0.1)
             nn.init.normal_(self.predator_posterior_gains, mean=0.0, std=0.1)
 
+        # ── Thermotaxis-sensor projection (opt-in) ──────────────────────
+        # One learnable gain matrix routes the klinotaxis temperature signal
+        # (deviation + lateral head-sweep gradient + dT/dt, 3 features) onto
+        # the AFD thermosensory pair (AFDL/AFDR) — shape (3, 2). Same
+        # bilateral-broadcast convention (one independent column per L/R
+        # member, identical small-magnitude init) and the same post-predator
+        # construction order as the predator projection, so flipping this
+        # flag on perturbs neither the food nor the predator RNG-stream order.
+        if enable_thermotaxis_projection:
+            # Validate before indexing (mirrors the predator block).
+            for name in _SENSOR_NEURONS_THERMOTAXIS:
+                if name not in self._idx:
+                    msg = (
+                        f"Thermotaxis-projection neuron {name!r} not present in "
+                        f"connectome (have {self.n_neurons} neurons; this is a "
+                        "connectome-data bug)."
+                    )
+                    raise ValueError(msg)
+            thermotaxis_indices = [self._idx[name] for name in _SENSOR_NEURONS_THERMOTAXIS]
+            self.register_buffer(
+                "_thermotaxis_neuron_indices",
+                torch.tensor(thermotaxis_indices, dtype=torch.long, device=device),
+            )
+            self.thermotaxis_gains = nn.Parameter(
+                torch.zeros(
+                    _N_THERMOTAXIS_FEATURES,
+                    len(_SENSOR_NEURONS_THERMOTAXIS),
+                    device=device,
+                ),
+            )
+            nn.init.normal_(self.thermotaxis_gains, mean=0.0, std=0.1)
+
         # Apply strict-mask to initial weights too (initialisation already
         # respects the mask above, but defence-in-depth).
         with torch.no_grad():
@@ -542,12 +602,31 @@ class ConnectomeTopology(nn.Module):
                 h = h.index_add(0, self._predator_posterior_neuron_indices, post_inj)
         return h
 
+    def _inject_thermotaxis(
+        self,
+        h: torch.Tensor,
+        thermotaxis_features: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Apply the thermotaxis-sensor projection onto ``h``.
+
+        Injects the 3-feature klinotaxis temperature vector
+        (``[deviation, lateral, dT/dt]``) onto the AFD pair (AFDL/AFDR)
+        via the ``(3, 2)`` gain matrix. Fires whenever
+        ``thermotaxis_features`` is provided; a zero-filled vector
+        (no thermal stimulus) produces zero injection.
+        """
+        if thermotaxis_features is not None:
+            thermo_inj = thermotaxis_features @ self.thermotaxis_gains
+            h = h.index_add(0, self._thermotaxis_neuron_indices, thermo_inj)
+        return h
+
     def forward_with_hidden(
         self,
         food_features: torch.Tensor,
         predator_distal_features: torch.Tensor | None = None,
         predator_mechano_features: torch.Tensor | None = None,
         predator_contact_zone: ContactZone | None = None,
+        thermotaxis_features: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute action logits AND the post-K hidden state in one pass.
 
@@ -572,6 +651,11 @@ class ConnectomeTopology(nn.Module):
         fires when ``predator_distal_features`` is provided; mechano
         injection fires only when ``predator_mechano_features`` AND a
         non-NONE ``predator_contact_zone`` are provided.
+
+        ``thermotaxis_features`` is only consumed when the topology was
+        constructed with ``enable_thermotaxis_projection=True`` AND the
+        tensor is non-None; it injects the 3-feature temperature vector
+        onto the AFD pair.
         """
         if food_features.shape != (self.n_food_features,):
             msg = (
@@ -593,6 +677,10 @@ class ConnectomeTopology(nn.Module):
                 predator_mechano_features,
                 predator_contact_zone,
             )
+
+        # Thermotaxis-sensor injection (no-op when projection disabled).
+        if self.enable_thermotaxis_projection:
+            h = self._inject_thermotaxis(h, thermotaxis_features)
 
         # K recurrent updates through chemical + gap-junction connectivity.
         # Each neuron's pre-activation = sum_pre(W[pre, post] * h[pre]) = (W.T @ h)[post].
@@ -616,6 +704,7 @@ class ConnectomeTopology(nn.Module):
         predator_distal_features: torch.Tensor | None = None,
         predator_mechano_features: torch.Tensor | None = None,
         predator_contact_zone: ContactZone | None = None,
+        thermotaxis_features: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Compute 4 action logits from a 2-vector of food-chemotaxis features.
 
@@ -629,6 +718,7 @@ class ConnectomeTopology(nn.Module):
             predator_distal_features=predator_distal_features,
             predator_mechano_features=predator_mechano_features,
             predator_contact_zone=predator_contact_zone,
+            thermotaxis_features=thermotaxis_features,
         )
         return logits
 
@@ -636,11 +726,12 @@ class ConnectomeTopology(nn.Module):
     def learnable_parameters(self) -> list[nn.Parameter]:
         """Return the PPO-learnable parameter tensors only.
 
-        Includes the predator gain matrices only when the projection was
-        constructed (``enable_predator_projection=True`` at init). Foraging-
-        only configs do not allocate the predator parameters, so the
-        optimiser sees byte-identical parameter sets to pre-projection
-        builds.
+        Includes the predator gain matrices only when the predator
+        projection was constructed (``enable_predator_projection=True``)
+        and the thermotaxis gain matrix only when the thermotaxis
+        projection was constructed (``enable_thermotaxis_projection=True``).
+        Foraging-only configs allocate neither, so the optimiser sees
+        byte-identical parameter sets to pre-projection builds.
         """
         params = [self.w_chem, self.food_gains, self.readout]
         if self.enable_predator_projection:
@@ -651,6 +742,8 @@ class ConnectomeTopology(nn.Module):
                     self.predator_posterior_gains,
                 ],
             )
+        if self.enable_thermotaxis_projection:
+            params.append(self.thermotaxis_gains)
         return params
 
 
@@ -711,6 +804,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,
+            enable_thermotaxis_projection=config.enable_thermotaxis_projection,
             device=self.device,
             rng=self.rng,
         ).to(self.device)
@@ -776,12 +870,21 @@ class ConnectomePPOBrain(ClassicalBrain):
         ``BrainParams`` fields are unset — so a predator-enabled brain
         running on a config without active predator sensors produces zero
         injection at the predator path.
+
+        With thermotaxis projection enabled, the vector is further extended
+        with ``[temp_deviation, temperature_lateral_gradient, temperature_ddt]``
+        (3 features), appended AFTER any predator slots. Same zero-default
+        semantics: an isothermal / no-thermal-stimulus step produces a
+        zero-filled thermo block.
         """
-        food = self._extract_food_features(params)
-        if not self.config.enable_predator_projection:
-            return food
-        predator = self._extract_predator_features(params)
-        return np.concatenate([food, predator]).astype(np.float32)
+        parts = [self._extract_food_features(params)]
+        if self.config.enable_predator_projection:
+            parts.append(self._extract_predator_features(params))
+        if self.config.enable_thermotaxis_projection:
+            parts.append(self._extract_thermotaxis_features(params))
+        if len(parts) == 1:
+            return parts[0]
+        return np.concatenate(parts).astype(np.float32)
 
     def _extract_food_features(self, params: BrainParams) -> np.ndarray:
         if self.config.sensing_mode == "oracle":
@@ -818,32 +921,72 @@ class ConnectomePPOBrain(ClassicalBrain):
             ],
         )
 
+    def _extract_thermotaxis_features(self, params: BrainParams) -> np.ndarray:
+        """Pack klinotaxis thermotaxis features into a 3-vector.
+
+        Mirrors the env-side ``thermotaxis_klinotaxis`` sensory module:
+        ``[temp_deviation, lateral, dT/dt]`` where ``temp_deviation`` is
+        ``clip((temperature - cultivation_temp) / 15, -1, 1)``. A step with
+        no thermal stimulus (``temperature is None``) yields all zeros.
+        """
+        if params.temperature is None:
+            return np.zeros(_N_THERMOTAXIS_FEATURES, dtype=np.float32)
+        cultivation = (
+            20.0 if params.cultivation_temperature is None else params.cultivation_temperature
+        )
+        deviation = float(np.clip((params.temperature - cultivation) / 15.0, -1.0, 1.0))
+        raw_lateral = float(params.temperature_lateral_gradient or 0.0)
+        lateral = float(np.tanh(raw_lateral * params.lateral_scale))
+        raw_deriv = float(params.temperature_ddt or 0.0)
+        dtdt = float(np.tanh(raw_deriv * params.derivative_scale))
+        return np.array([deviation, lateral, dtdt], dtype=np.float32)
+
     def _unpack_state(
         self,
         state_t: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None, ContactZone | None]:
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor | None,
+        torch.Tensor | None,
+        ContactZone | None,
+        torch.Tensor | None,
+    ]:
         """Split a buffered state tensor back into the forward-pass inputs.
 
-        When the projection is disabled the state vector is the
-        food-feature vector unchanged. When enabled, the state vector
-        carries food + predator + one-hot-zone slots laid out by
-        :meth:`preprocess` / :meth:`_extract_predator_features`; this
-        helper reverses that layout for the topology call.
+        Returns ``(food, predator_distal, predator_mechano, contact_zone,
+        thermotaxis)``. The state vector is laid out by :meth:`preprocess`
+        as ``[food] + [predator(8) if enabled] + [thermo(3) if enabled]``;
+        this helper reverses that layout. Disabled blocks return ``None``
+        (and ``contact_zone`` returns ``None`` when the predator block is
+        absent) so the topology runs only the active projections.
         """
-        if not self.config.enable_predator_projection:
-            return state_t, None, None, None
         n_food = self._n_food_features
         food = state_t[:n_food]
-        distal = state_t[n_food : n_food + _N_PREDATOR_DISTAL_FEATURES]
-        mech_start = n_food + _N_PREDATOR_DISTAL_FEATURES
-        mechano = state_t[mech_start : mech_start + _N_PREDATOR_MECHANO_FEATURES]
-        zone_start = mech_start + _N_PREDATOR_MECHANO_FEATURES
-        zone_onehot = state_t[zone_start : zone_start + _N_CONTACT_ZONES]
-        zone_idx = int(torch.argmax(zone_onehot).item())
-        zone = (ContactZone.NONE, ContactZone.ANTERIOR, ContactZone.POSTERIOR, ContactZone.LATERAL)[
-            zone_idx
-        ]
-        return food, distal, mechano, zone
+        offset = n_food
+
+        distal: torch.Tensor | None = None
+        mechano: torch.Tensor | None = None
+        zone: ContactZone | None = None
+        if self.config.enable_predator_projection:
+            distal = state_t[offset : offset + _N_PREDATOR_DISTAL_FEATURES]
+            mech_start = offset + _N_PREDATOR_DISTAL_FEATURES
+            mechano = state_t[mech_start : mech_start + _N_PREDATOR_MECHANO_FEATURES]
+            zone_start = mech_start + _N_PREDATOR_MECHANO_FEATURES
+            zone_onehot = state_t[zone_start : zone_start + _N_CONTACT_ZONES]
+            zone_idx = int(torch.argmax(zone_onehot).item())
+            zone = (
+                ContactZone.NONE,
+                ContactZone.ANTERIOR,
+                ContactZone.POSTERIOR,
+                ContactZone.LATERAL,
+            )[zone_idx]
+            offset = zone_start + _N_CONTACT_ZONES
+
+        thermo: torch.Tensor | None = None
+        if self.config.enable_thermotaxis_projection:
+            thermo = state_t[offset : offset + _N_THERMOTAXIS_FEATURES]
+
+        return food, distal, mechano, zone, thermo
 
     def run_brain(
         self,
@@ -859,17 +1002,17 @@ class ConnectomePPOBrain(ClassicalBrain):
         state_t = torch.from_numpy(state).to(self.device)
 
         # Single forward pass produces both the action logits and the
-        # post-K 302-dim hidden state used by the critic. When the
-        # predator projection is enabled, ``_unpack_state`` splits the
-        # buffered state vector back into the four forward-pass inputs;
-        # otherwise predator inputs stay None and the topology runs the
-        # food-only path unchanged.
-        food, distal, mechano, zone = self._unpack_state(state_t)
+        # post-K 302-dim hidden state used by the critic. ``_unpack_state``
+        # splits the buffered state vector back into the active projections'
+        # forward-pass inputs; disabled projections stay None and the
+        # topology runs only the active paths.
+        food, distal, mechano, zone, thermo = self._unpack_state(state_t)
         logits, hidden = self.topology.forward_with_hidden(
             food,
             predator_distal_features=distal,
             predator_mechano_features=mechano,
             predator_contact_zone=zone,
+            thermotaxis_features=thermo,
         )
         value = self.critic(hidden)
 
@@ -1002,12 +1145,13 @@ class ConnectomePPOBrain(ClassicalBrain):
                 new_logits = torch.empty(batch_size, _N_ACTIONS, device=self.device)
                 new_values = torch.empty(batch_size, device=self.device)
                 for k in range(batch_size):
-                    food_k, distal_k, mechano_k, zone_k = self._unpack_state(states[k])
+                    food_k, distal_k, mechano_k, zone_k, thermo_k = self._unpack_state(states[k])
                     logits_k, hidden_k = self.topology.forward_with_hidden(
                         food_k,
                         predator_distal_features=distal_k,
                         predator_mechano_features=mechano_k,
                         predator_contact_zone=zone_k,
+                        thermotaxis_features=thermo_k,
                     )
                     new_logits[k] = logits_k
                     new_values[k] = self.critic(hidden_k).squeeze(-1)

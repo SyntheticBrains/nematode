@@ -1,0 +1,105 @@
+# Connectome-PPO predator-evasion configuration (klinotaxis sensing).
+#
+# Wires the Cook 2019 connectome brain to the canonical two-channel
+# predator-sensing biology + the canonical predator-evasion reward. The
+# env emits the klinotaxis head-sweep predator features
+# (predator_distal_concentration + dC/dt onto ASH+ASI; predator_contact_intensity
+# + zone onto ALM/AVM/PLM) and the connectome brain consumes them through
+# the learnable predator_gains projection (enable_predator_projection: true).
+#
+# Sensor + reward pairing is the empirical Phase 0 winner: on MLPPPO the
+# two-channel sensors + distal_chemo_contact_trigger reward beat legacy
+# nociception_klinotaxis by +14pp (81.0% +/- 5.0 vs 67.0% +/- 7.6 last-25
+# mean success) with the lowest death rate (18% vs 32%) and tightest
+# variance of all six variants evaluated; full ranking under
+# docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/.
+# Not yet validated on the connectome substrate at canonical budget;
+# per-architecture re-evaluation may revise this if the connectome's
+# constrained topology interacts differently with the dual-channel surface.
+#
+# Mirrors the structure of
+# configs/scenarios/foraging/connectomeppo_small_klinotaxis.yml (brain
+# block + env shape) extended with the predator env blocks from
+# configs/scenarios/pursuit/mlpppo_small_predator_biology_klinotaxis.yml.
+
+max_steps: 500
+brain:
+  name: connectomeppo
+  config:
+    seed: 2026
+    connectome_source: cook_2019_hermaphrodite
+    enable_gap_junctions: true
+    chemical_mask_mode: strict
+    sensing_mode: klinotaxis  # 3-feature head-sweep food input
+    enable_predator_projection: true  # routes ASH/ASI distal + ALM/AVM/PLM contact
+    forward_pass_depth: 4
+    freeze_updates: false
+    entropy_coef: 0.005  # canonical low-entropy lock (logbook 023 R2b)
+
+    # PPO hyperparameters (mirror the connectome klinotaxis foraging baseline).
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+body_length: 2
+
+reward:
+  reward_mode: distal_chemo_contact_trigger
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
