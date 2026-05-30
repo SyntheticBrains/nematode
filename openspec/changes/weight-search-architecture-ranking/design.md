@@ -214,8 +214,8 @@ Last-25 success, seed 2026, canonical budget:
 |---|---|---|---|
 | C1 foraging (500ep) | 100% | 98% | 92% (R2b reproduced) |
 | C2 foraging+predator (500ep) | 92% | 80% | 16% |
-| C3 combined (500ep) | 68% | **0%** | _(see 1000ep)_ |
-| C3 combined (1000ep) | _(over-trained)_ | **96%** | _(pre-flight, in scratchpad)_ |
+| C3 combined (500ep) | 68% | **0%** | *(see 1000ep)* |
+| C3 combined (1000ep) | *(over-trained)* | **96%** | **80%** (plateaued) |
 
 **Finding — the C3 episode budget is the load-bearing knob, not the env difficulty.** The integrated C3 cell is well-calibrated (learnable + discriminating; no env softening needed). But the **recurrent** architectures (LSTMPPO GRU; connectome K=4) converge much slower than feed-forward MLPPPO: LSTMPPO C3 is 0% at 500ep but **96% at 1000ep** — best of any architecture on the hardest cell, realising the recurrence advantage. At 500ep LSTMPPO would have spuriously ranked LAST on the cell where it is actually BEST — a catastrophic ranking inversion. (Verified this is NOT an entropy/lr-schedule artefact: budget-matched schedules at 500ep still gave 0%.)
 
