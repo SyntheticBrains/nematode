@@ -45,6 +45,7 @@ import numpy as np
 from pydantic import ValidationError
 from quantumnematode.evolution import (
     BaldwinInheritance,
+    EpisodicProgressFitness,
     EpisodicSuccessRate,
     EvolutionLoop,
     InheritanceStrategy,
@@ -172,14 +173,19 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--fitness",
         type=str,
-        choices=["success_rate", "learned_performance"],
+        choices=["success_rate", "progress", "learned_performance"],
         default="success_rate",
         help=(
             "Fitness function to evolve against. 'success_rate' "
-            "(EpisodicSuccessRate, the default) is frozen-weight "
-            "evaluation. 'learned_performance' (LearnedPerformanceFitness) "
-            "runs K training episodes followed by L frozen eval episodes "
-            "per genome — only valid with hyperparam_schema set."
+            "(EpisodicSuccessRate, the default) is frozen-weight binary "
+            "full-clear success. 'progress' (EpisodicProgressFitness) is a "
+            "graded frozen-weight variant (full-clear=1.0, else food-fraction "
+            "+ survival) — use it when binary success is too sparse to evolve "
+            "against (e.g. foraging under lethal predators, where no random "
+            "genome ever fully clears). 'learned_performance' "
+            "(LearnedPerformanceFitness) runs K training episodes followed by "
+            "L frozen eval episodes per genome — only valid with "
+            "hyperparam_schema set."
         ),
     )
     return parser.parse_args()
@@ -400,6 +406,11 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
             )
             return 1
         fitness = LearnedPerformanceFitness()
+    elif args.fitness == "progress":
+        # Graded frozen-weight fitness (food-fraction + survival). Same
+        # frozen-weight contract as success_rate (no train phase), so it shares
+        # success_rate's inheritance-incompatibility guard below.
+        fitness = EpisodicProgressFitness()
     else:
         fitness = EpisodicSuccessRate()
 
@@ -417,19 +428,21 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
     # Catch the combination at startup with a clear pointer to
     # --fitness learned_performance. EvolutionConfig validators don't
     # see the --fitness flag, so this guard belongs in the CLI.
-    if evolution_config.inheritance != "none" and args.fitness == "success_rate":
+    if evolution_config.inheritance != "none" and args.fitness in ("success_rate", "progress"):
         logger.error(
-            "evolution.inheritance is %r but --fitness success_rate (the "
-            "default) is selected. Inheritance writes per-genome weight "
+            "evolution.inheritance is %r but --fitness %s is selected. "
+            "Inheritance writes per-genome weight "
             "checkpoints (Lamarckian), records elite-parent lineage "
             "from the trained-elite-fitness signal (Baldwin), or "
             "extracts the F0 elite's substrate via a telemetry pass "
             "(transgenerational) — all of which require a non-zero "
-            "train phase. EpisodicSuccessRate is frozen-weight and "
-            "has no train phase. Use --fitness learned_performance, "
+            "train phase. EpisodicSuccessRate and EpisodicProgressFitness are "
+            "both frozen-weight and have no train phase. Use "
+            "--fitness learned_performance, "
             "or set inheritance: none in the evolution: block (or via "
             "--inheritance none).",
             evolution_config.inheritance,
+            args.fitness,
         )
         return 1
 

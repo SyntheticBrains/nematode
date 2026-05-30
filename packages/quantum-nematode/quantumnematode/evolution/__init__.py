@@ -19,6 +19,7 @@ from quantumnematode.evolution.encoders import (
     select_encoder,
 )
 from quantumnematode.evolution.fitness import (
+    EpisodicProgressFitness,
     EpisodicSuccessRate,
     FitnessFunction,
     FrozenEvalRunner,
@@ -44,6 +45,7 @@ __all__ = [
     "ENCODER_REGISTRY",
     "NON_GENOME_COMPONENTS",
     "BaldwinInheritance",
+    "EpisodicProgressFitness",
     "EpisodicSuccessRate",
     "EvolutionLoop",
     "FitnessFunction",

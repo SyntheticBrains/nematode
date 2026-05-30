@@ -502,6 +502,37 @@ class QuantumNematodeAgent:
             return True
         return self.current_satiety <= threshold * self.max_satiety
 
+    @property
+    def episode_foods_collected(self) -> int:
+        """Foods collected in the current (or just-terminated) episode.
+
+        The same per-episode count the renderer reports as ``Eaten: X/Y`` and
+        that resets on every ``reset_environment``. Read by frozen-weight
+        fitness functions (e.g. graded foraging-progress fitness) immediately
+        after an episode terminates, before the next reset.
+
+        Returns
+        -------
+        int
+            Number of foods collected this episode.
+        """
+        return self._episode_tracker.foods_collected
+
+    @property
+    def episode_steps(self) -> int:
+        """Steps taken in the current (or just-terminated) episode.
+
+        A survival proxy (longer survival ⇒ more steps before a lethal
+        termination), read alongside :attr:`episode_foods_collected` by
+        frozen-weight fitness functions.
+
+        Returns
+        -------
+        int
+            Number of steps taken this episode.
+        """
+        return self._episode_tracker.steps
+
     def run_episode(
         self,
         reward_config: RewardConfig,
