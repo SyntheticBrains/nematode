@@ -387,19 +387,16 @@ class ConnectomeTopology(nn.Module):
         # (predator off) consumes the same RNG draws regardless of whether
         # this branch is compiled in.
         if enable_predator_projection:
-            distal_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_DISTAL]
-            anterior_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_ANTERIOR]
-            posterior_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_POSTERIOR]
-            # Lateral routing: ALML+ALMR receive the first 2 columns of the
-            # anterior gain matrix scaled by ``_LATERAL_HALF_WEIGHT``; AVM is
-            # excluded because the lateral pathway is bilateral. PLML+PLMR
-            # receive the full posterior matrix scaled by ``_LATERAL_HALF_WEIGHT``.
-            lateral_alm_indices = [self._idx[name] for name in ("ALML", "ALMR")]
-            # Validate every target neuron exists in the connectome registry.
+            # Validate every target neuron exists in the connectome registry
+            # BEFORE indexing — a missing name would otherwise raise a bare
+            # KeyError from the list-comp below, masking the helpful
+            # "connectome-data bug" diagnostic.
             for name in (
                 *_SENSOR_NEURONS_PREDATOR_DISTAL,
                 *_SENSOR_NEURONS_PREDATOR_ANTERIOR,
                 *_SENSOR_NEURONS_PREDATOR_POSTERIOR,
+                "ALML",
+                "ALMR",
             ):
                 if name not in self._idx:
                     msg = (
@@ -408,6 +405,14 @@ class ConnectomeTopology(nn.Module):
                         "connectome-data bug)."
                     )
                     raise ValueError(msg)
+            distal_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_DISTAL]
+            anterior_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_ANTERIOR]
+            posterior_indices = [self._idx[name] for name in _SENSOR_NEURONS_PREDATOR_POSTERIOR]
+            # Lateral routing: ALML+ALMR receive the first 2 columns of the
+            # anterior gain matrix scaled by ``_LATERAL_HALF_WEIGHT``; AVM is
+            # excluded because the lateral pathway is bilateral. PLML+PLMR
+            # receive the full posterior matrix scaled by ``_LATERAL_HALF_WEIGHT``.
+            lateral_alm_indices = [self._idx[name] for name in ("ALML", "ALMR")]
             self.register_buffer(
                 "_predator_distal_neuron_indices",
                 torch.tensor(distal_indices, dtype=torch.long, device=device),

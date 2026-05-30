@@ -206,24 +206,35 @@ class TestLateralContactRouting:
     def test_lateral_alm_injection_is_half_of_anterior_alm_injection(self) -> None:
         """Lateral routing reuses anterior gains scaled by ``_LATERAL_HALF_WEIGHT``.
 
-        With the same mechano features and the same seeded init of
-        ``predator_anterior_gains``, the lateral injection at ALML must
-        be exactly half the anterior-only injection at ALML.
+        Drives the topology with the same mechano features through both
+        the ANTERIOR and LATERAL branches of ``_inject_predator`` and
+        asserts the LATERAL-branch injection at ALML equals the
+        ANTERIOR-branch injection at ALML times ``_LATERAL_HALF_WEIGHT``.
+        This actually exercises the LATERAL code path (vs computing the
+        half-weight relationship in test-only python, which would not
+        catch a bug in the LATERAL branch's gain reuse).
         """
         brain = _make_predator_brain(forward_pass_depth=1)
         mechano = torch.tensor([0.8, 0.3], dtype=torch.float32)
+        alml_idx = brain.topology._idx["ALML"]
 
-        # Read the raw pre-tanh injection at ALML by manually computing
-        # the matmul (avoids the tanh nonlinearity that makes the
-        # "half-of" relationship harder to assert directly).
-        anterior_inj = mechano @ brain.topology.predator_anterior_gains  # shape (3,)
-        anterior_alml_inj = float(anterior_inj[0].item())  # ALML is column 0
-        lateral_alml_inj = anterior_alml_inj * _LATERAL_HALF_WEIGHT
-        # Sanity check: the spec mandates the half-weight factor is a
-        # fixed constant. Asserting the constant matches the spec value.
+        # Sanity check: the spec mandates the half-weight factor is a fixed constant.
         assert _LATERAL_HALF_WEIGHT == 0.5
-        # The ratio of lateral-to-anterior injection at ALML is exactly 0.5.
-        assert lateral_alml_inj == pytest.approx(anterior_alml_inj * 0.5)
+
+        # Drive the ANTERIOR branch and read the raw injected ALML activation.
+        h_anterior = _raw_injection(brain, mechano=mechano, zone=ContactZone.ANTERIOR)
+        h_baseline = _raw_injection(brain)
+        anterior_alml_inj = float((h_anterior[alml_idx] - h_baseline[alml_idx]).item())
+
+        # Drive the LATERAL branch with the same mechano features.
+        h_lateral = _raw_injection(brain, mechano=mechano, zone=ContactZone.LATERAL)
+        lateral_alml_inj = float((h_lateral[alml_idx] - h_baseline[alml_idx]).item())
+
+        # The LATERAL injection at ALML must be exactly half the ANTERIOR
+        # injection at ALML — proves the LATERAL branch reuses the anterior
+        # gain matrix scaled by _LATERAL_HALF_WEIGHT (not a separate matrix
+        # and not an unscaled reuse).
+        assert lateral_alml_inj == pytest.approx(anterior_alml_inj * _LATERAL_HALF_WEIGHT)
 
 
 class TestNoPredatorInputsLeavesProjectionInactive:
