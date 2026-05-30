@@ -420,9 +420,11 @@ class TestPreprocessPacksPredatorSlotsCorrectly:
         state = brain.preprocess(params)
         # 3 food + 2 distal + 2 mechano + 4 zone-one-hot = 11.
         assert state.shape == (11,)
-        # Round-trip via ``_unpack_state``.
+        # Round-trip via ``_unpack_state`` (5-tuple; thermo is None when the
+        # thermotaxis projection is disabled).
         state_t = torch.from_numpy(state)
-        food, distal, mechano, zone = brain._unpack_state(state_t)
+        food, distal, mechano, zone, thermo = brain._unpack_state(state_t)
+        assert thermo is None
         assert food.shape == (3,)
         assert distal is not None
         assert distal.shape == (2,)
@@ -443,5 +445,5 @@ class TestPreprocessPacksPredatorSlotsCorrectly:
         )
         state = brain.preprocess(params)
         state_t = torch.from_numpy(state)
-        _food, _distal, _mechano, zone = brain._unpack_state(state_t)
+        _food, _distal, _mechano, zone, _thermo = brain._unpack_state(state_t)
         assert zone == ContactZone.NONE

@@ -69,3 +69,42 @@ The projection SHALL be PPO-learnable separately from the food projection and se
 - **WHEN** PPO updates run for any number of steps
 - **THEN** the food-projection gain matrix's training trajectory SHALL be independent of the predator-projection gain matrices' values (no shared parameter tensor; gradients flow through disjoint parameter sets)
 - **AND** the chemical-synapse weight matrix's strict-mask invariant SHALL continue to hold (the predator projection adds input to sensory neurons but does not introduce new chemical-synapse edges)
+
+### Requirement: Connectome PPO Thermotaxis Sensor Projection
+
+The `ConnectomePPOBrain` SHALL provide a learnable thermotaxis-sensor projection that routes the klinotaxis temperature signal onto the canonical *C. elegans* thermosensory neurons. This complements the food-chemotaxis projection (shipped at T2) and the predator projection, and lights up the connectome architecture for thermotaxis behaviours — a prerequisite for the integrated food + predator + thermotaxis comparison cells.
+
+**Neuron-name convention.** The canonical thermosensory neurons are `AFDL`, `AFDR` — the AFD bilateral pair, the dominant *C. elegans* thermosensor (Mori & Ohshima 1995; ~0.01°C sensitivity). Targeting AFD alone follows the same primary-role-only convention the food projection (ASE/AWC/AWA) and predator projection (ASH/ASI/ALM/PLM) use. Secondary thermosensory contributors (AWC per Kuhara et al. 2008; AWB; ASI) are deliberately NOT modelled — AWC's dual odor+temperature role is a polymodal-integration refinement deferred to later cellular-realism work.
+
+The projection consumes the klinotaxis temperature feature triple `[temp_deviation, temperature_lateral_gradient, temperature_ddt]` (mirroring the env-side `thermotaxis_klinotaxis` sensory module), where `temp_deviation = clip((temperature − cultivation_temperature) / 15, −1, 1)`. The projection is opt-in via the `enable_thermotaxis_projection` config flag (default off so foraging-only configs construct byte-identical parameter sets to pre-projection builds), and is PPO-learnable separately from the food, predator, and chemical-synapse weight matrices.
+
+#### Scenario: Thermotaxis features route to AFDL + AFDR
+
+- **WHEN** `run_brain()` receives a `BrainParams` with `temperature` populated and `enable_thermotaxis_projection=True`
+- **THEN** the 3 thermotaxis features SHALL be additively injected onto the `AFDL`, `AFDR` sensory neurons' input vector via a learnable gain matrix of shape `(3, 2)` (3 thermo features × 2 AFD targets, bilateral pair counted separately)
+- **AND** the gain matrix SHALL be PPO-learnable independently of the food, predator, and chemical-synapse weight matrices
+
+#### Scenario: Bilateral broadcast convention (thermotaxis)
+
+- **GIVEN** the thermotaxis gain matrix
+- **WHEN** the implementation constructs the matrix
+- **THEN** it SHALL use one independent learnable column per L/R member (AFDL, AFDR) initialised to identical small-magnitude values that diverge under PPO updates — the same option-(a) construction the food and predator projections use
+
+#### Scenario: No thermotaxis inputs leaves the projection inactive
+
+- **WHEN** `run_brain()` receives a `BrainParams` with `temperature == None` (no thermal stimulus / isothermal-with-unset-temperature) under `enable_thermotaxis_projection=True`
+- **THEN** the thermotaxis projection SHALL contribute zero additive input to `AFDL`, `AFDR` (the gain matrix receives a zero-filled feature vector so the product is zero)
+- **AND** the brain SHALL NOT raise an exception
+
+#### Scenario: Foraging-only configs preserve the pre-projection food path
+
+- **WHEN** a `ConnectomePPOBrain` is constructed with `enable_thermotaxis_projection=False` (the default)
+- **THEN** the topology SHALL allocate zero thermotaxis-related `nn.Parameter` objects
+- **AND** the brain's behaviour SHALL be functionally equivalent to a build predating the thermotaxis projection (any RNG-stream perturbation is disallowed because no thermotaxis parameters are allocated; the foraging-only parameter set is byte-identical)
+
+#### Scenario: Thermotaxis projection does not affect food/predator-projection or chemical-synapse weights
+
+- **GIVEN** a `ConnectomePPOBrain` config with food, predator, and thermotaxis projections all active
+- **WHEN** PPO updates run for any number of steps
+- **THEN** the thermotaxis gain matrix's training trajectory SHALL be independent of the food + predator gain matrices' values (no shared parameter tensor; gradients flow through disjoint parameter sets)
+- **AND** the chemical-synapse weight matrix's strict-mask invariant SHALL continue to hold (the thermotaxis projection adds input to AFD sensory neurons but does not introduce new chemical-synapse edges)
