@@ -187,41 +187,32 @@ it ships.
 - [ ] T4.0f **Acknowledge `mlpppo_small_klinotaxis.yml` as a new canonical baseline.** T2 inferred the first MLPPPO klinotaxis foraging config (`entropy_coef=0.03`, `max_steps=1000`, `sensory_modules: [food_chemotaxis, proprioception]`); validated at 98.4% success first-try. T4's `T4.mlp_ppo.klinotaxis` row consumes this directly. The config header documents its provenance ("inferred at T2 from `mlpppo_small_oracle.yml` PPO hyperparams + `lstmppo_small_klinotaxis.yml` env settings"); no further changes needed unless T4.0b's seed-count decision raises n.
 - [ ] T4.0g **Investigate new-biology predator-sensing convergence-rate gap.** T3 Section 8 smoke evaluation surfaced that the corrected two-channel predator sensors (`predator_mechanosensation_klinotaxis` + `predator_chemosensation_klinotaxis`) learn substantially slower than the legacy single-channel `nociception_klinotaxis` at matched 100-episode training budgets on pursuit predators: MLPPPO 3% vs 51% success; LSTMPPO 0% vs 7%. Two candidate root causes flagged in [fix-predator-sensing-biology design.md § Modelling caveat 6](../fix-predator-sensing-biology/design.md): (a) sparse contact-mechano signal (`predator_contact_intensity` is 0.0 outside damage radius — most steps), and (b) information redundancy across the two channels (6 input dims for the predator-position information the legacy encodes in 3). T4 must: (i) run new-biology predator-evasion cells at the same compute budget as legacy and quantify the gap on the canonical T4 evaluation metrics; (ii) ablate the sparse-signal hypothesis by trying a variant that puts the distal sulfolipid concentration into the mechanosensation strength field when not in contact (acts as a "predator-proximity-with-zone" signal); (iii) decide whether the convergence-rate gap is acceptable (the corrected biology *is* a harder learning problem on the same env, and that's itself a substrate finding worth recording) or whether the sensor encoding needs revisiting before T7. Coupled with the existing reward-shape ablation (gradient_proximity vs distal-chemo + contact-damage) inside each `T4.*.predator_evasion` cell. Out-of-scope clarification: this is *not* a T3 bug; T3's job was to ship the corrected biology surface, and it does — the surface is well-tested, the env-side semantics are correct, and the brain pipeline consumes the new channels cleanly. T4 owns the empirical evaluation under matched compute. *Resolved by the `weight-search-architecture-ranking` change's Phase 0 (merged 2026-05-28): root cause was a silent `predator_lateral_gradient` gating bug (single-knob check on `nociception_mode` only), not a substrate finding. Post-fix the canonical two-channel sensors + new `distal_chemo_contact_trigger` reward beat legacy by +14pp at n=4 × 500ep on MLPPPO. Forensics: [supporting/025-weight-search-architecture-ranking/phase-0/](../../../docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/phase-0/). Checkbox tick batched with the other T4.0 ticks at Phase 5 closeout per the change's Task 6.8.*
 
-### T4 — Connectome-constrained (focal architecture)
+### T4 — cell structure (integrated-C3 pattern; amended 2026-05-30 by `weight-search-architecture-ranking`)
 
-- [ ] T4.connectome.klinotaxis — PPO weight-search on Cook 2019 connectome, chemical-synapse strict-mask, fixed gap junctions
-- [ ] T4.connectome.thermotaxis
-- [ ] T4.connectome.predator_evasion (consumes T3 corrected two-channel biology; couples to T4.0g convergence-rate study + reward-ablation row below)
-- [ ] T4.connectome.predator_evasion_reward_ablation — compare existing `gradient_proximity` reward against `distal_chemo_penalty + binary_contact_damage_trigger` variant on the same architecture × seed grid. Carry-forward from [fix-predator-sensing-biology design.md § Decision T3.7](../fix-predator-sensing-biology/design.md).
+**Amended from the original 4-families × 3-behaviours (12-cell) pattern to the integrated-C3 pattern** by the [`weight-search-architecture-ranking`](../weight-search-architecture-ranking/design.md) change (per its design.md Decision 8 + the user's "all behaviours in one config" decision). Each architecture runs ONE integrated C3 cell — food + predator + thermotaxis active **simultaneously** in one simulation, n ≥ 4 seeds — preceded by cheap C1 (foraging-only) + C2 (foraging+predator) curriculum smokes (n=1) for per-architecture de-risking. Per-behaviour-component sub-metrics (foraging success / predator survival / thermotaxis isotherm-tracking) are **extracted** from the integrated C3 runs per the `architecture-comparison-protocol` capability — NOT run as separate per-behaviour cells. The n ≥ 4 seed floor (Phase 5 inheritance) is preserved verbatim; only the cell SHAPE changes (12 per-behaviour → 4 integrated).
 
-### T4 — MLP-PPO
+The four MUST architecture families: connectome-constrained PPO (focal), MLP-PPO, LSTM/GRU-PPO, FeedforwardGA (GA-evolved weights on a fixed feed-forward topology via `run_evolution.py`; genuine NEAT topology evolution lives at T8).
 
-- [ ] T4.mlp_ppo.klinotaxis
-- [ ] T4.mlp_ppo.thermotaxis
-- [ ] T4.mlp_ppo.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
-- [ ] T4.mlp_ppo.predator_evasion_reward_ablation — same reward-shape ablation as the connectome row (gradient_proximity vs distal-chemo + contact-damage).
+### T4 — integrated-C3 primary cells (one per architecture, n ≥ 4 seeds)
 
-### T4 — LSTM / GRU-PPO
+- [ ] T4.connectome.c3_integrated — Cook 2019 connectome (chemical-synapse strict-mask, fixed gap junctions) on the combined food+predator+thermotaxis cell. Focal architecture. Consumes T3 corrected two-channel predator biology + the connectome predator/thermotaxis projections.
+- [ ] T4.mlp_ppo.c3_integrated
+- [ ] T4.lstm_gru_ppo.c3_integrated
+- [ ] T4.feedforward_ga.c3_integrated — GA-evolved weights on a fixed feed-forward topology.
 
-- [ ] T4.lstm_gru_ppo.klinotaxis
-- [ ] T4.lstm_gru_ppo.thermotaxis
-- [ ] T4.lstm_gru_ppo.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
-- [ ] T4.lstm_gru_ppo.predator_evasion_reward_ablation — same reward-shape ablation.
+### T4 — curriculum smokes (per architecture, n=1; de-risk before the n ≥ 4 C3 cells)
 
-### T4 — NEAT-evolved (weights only at T4; topology evolution lives at T8)
+- [ ] T4.\*.c1_foraging — foraging-only smoke per architecture (may reuse existing `configs/scenarios/foraging/` klinotaxis configs).
+- [ ] T4.\*.c2_foraging_predator — foraging+predator smoke per architecture (may reuse the `configs/scenarios/pursuit/` predator-biology configs).
 
-- [ ] T4.neat_weights.klinotaxis
-- [ ] T4.neat_weights.thermotaxis
-- [ ] T4.neat_weights.predator_evasion (consumes T3; couples to T4.0g + reward-ablation row below)
-- [ ] T4.neat_weights.predator_evasion_reward_ablation — same reward-shape ablation.
+### T4 — C3 ablations
 
-### T4 — connectome ablation
-
-- [ ] T4.connectome_soft_prior.\* — documented ablation per [design.md § Decision 7](design.md): chemical-synapse counts as weight initialisation only; PPO free to grow new connections (gap junctions still fixed). Compared head-to-head with strict-mask on at least one behaviour (klinotaxis is the natural first).
+- [ ] T4.\*.c3_reward_ablation — per-family reward-shape ablation ON the integrated C3 substrate: existing `gradient_proximity` vs `distal_chemo_penalty + binary_contact_damage_trigger`. Carry-forward from [fix-predator-sensing-biology design.md § Decision T3.7](../fix-predator-sensing-biology/design.md) + Phase 0's 2×2 outcome.
+- [ ] T4.connectome_soft_prior.c3 — connectome strict-mask vs soft-prior ablation per [design.md § Decision 7](design.md) (chemical-synapse counts as weight initialisation only; PPO free to grow new connections; gap junctions still fixed). Run on the integrated C3 substrate.
 
 ### T4 — cross-architecture analysis + logbook
 
-- [ ] T4.analysis.ranking — paired-seed Wilcoxon + bootstrap CIs across the four MUST families × three behaviours on the grid substrate. The first architecture-comparison ranking.
+- [ ] T4.analysis.ranking — paired-seed Wilcoxon + bootstrap CIs across the four MUST families' integrated-C3 cells on the grid substrate, with per-behaviour-component sub-metrics extracted per the `architecture-comparison-protocol` capability. BH-FDR multiple-comparisons correction within-pass (per the `weight-search-architecture-ranking` MCC commitment). The first architecture-comparison ranking.
 - [ ] T4.analysis.connectome_grid_ranking — explicit answer to "where does the wild-type connectome (chemical-synapse strict-mask) rank under PPO weight search on the existing grid substrate?"
 - [ ] T4.analysis.strict_vs_soft — strict-mask vs soft-prior delta on at least one behaviour.
 - [ ] T4.logbook — publish T4 logbook (suggested: `docs/experiments/logbooks/0XX-l2-first-pass.md`). Feeds Gate 3's evidence base together with T7.
