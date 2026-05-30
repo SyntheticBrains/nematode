@@ -28,8 +28,8 @@ Runs concurrently with Section 2 below. Output: canonical sensor + reward locked
 
 ### 1a. FeedforwardGABrain integration verification
 
-- [ ] 1a.1 Verify `add-neat-weights-brain` change is merged; pull latest `main`.
-- [ ] 1a.2 Run a single short smoke via `uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --seed 2026 --generations 5`. Confirm the brain instantiates through the L1 registry without per-architecture branches and produces standard evolution-framework artefacts. Note: `scripts/run_evolution.py` always runs headless; there is no `--theme` flag.
+- [x] 1a.1 Verify `add-neat-weights-brain` change is merged; pull latest `main`. **Verified**: merged + archived as `openspec/changes/archive/2026-05-26-add-neat-weights-brain` (PR #187); `FeedforwardGABrain`/`FeedforwardGABrainConfig` registered in `brain/arch/__init__.py` on `main`.
+- [x] 1a.2 Run a single short smoke via `uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --seed 2026 --generations 5`. Confirm the brain instantiates through the L1 registry without per-architecture branches and produces standard evolution-framework artefacts. Note: `scripts/run_evolution.py` always runs headless; there is no `--theme` flag. **Result**: 5 generations completed at seed 2026, best fitness 1.000000 (non-degenerate evolution), standard artefacts produced (best_params.json, checkpoint.pkl, history.csv, lineage.csv, per_gen_elites.jsonl). The GA brain instantiates through the L1 registry without per-architecture branches.
 
 ### 1b. ConnectomePPOBrain predator-gains projection
 
