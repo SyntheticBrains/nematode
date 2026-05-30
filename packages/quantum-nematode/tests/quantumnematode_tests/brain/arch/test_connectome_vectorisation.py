@@ -6,7 +6,7 @@ float accumulation vs B separate matvecs, so the two paths are NOT bit-identical
 but ARE mathematically equivalent. These tests assert the batched path matches
 the single-sample path within float32 tolerance, across all four projection
 configurations + every ContactZone, so a real wiring bug (not just float
-reordering) would be caught far tighter than the end-to-end R2b ±3pp bar.
+reordering) is caught far tighter than any end-to-end training-success check.
 """
 
 # pyright: reportPrivateUsage=false

@@ -781,8 +781,8 @@ class ConnectomeTopology(nn.Module):
         per sample, but the recurrence becomes a single ``(B, 302) @ (302, 302)``
         matmul per depth-step instead of B separate matvecs — the load-bearing
         speedup for the PPO update. Float results differ from the per-sample
-        path by accumulation-order ulps (batched matmul vs matvec), validated
-        equivalent within tolerance + the R2b ±3pp regression bar.
+        path by accumulation-order ulps (batched matmul vs matvec); validated
+        equivalent within float32 tolerance by the equivalence test suite.
         """
         batched_ndim = 2  # (B, n_food_features)
         if food_features.ndim != batched_ndim or food_features.shape[1] != self.n_food_features:
@@ -816,7 +816,11 @@ class ConnectomeTopology(nn.Module):
         # 302-vec ``h``; for a ``(B, 302)`` batch the equivalent is
         # ``h @ chem_mat`` (preact[b, post] = sum_pre chem[pre, post] * h[b, pre]).
         # The mask multiply happens once per minibatch here (vs once per sample
-        # in the old loop).
+        # in the old loop). NOTE: ``h @ gap_mat`` (no transpose) equals the
+        # single-sample ``gap_mat.T @ h`` only because ``g_gap`` is constructed
+        # symmetric (gap junctions are bidirectional); the chem term needs no
+        # such assumption (``h @ chem_mat == chem_mat.T @ h`` for any matrix).
+        # If gap junctions ever become directional, transpose ``gap_mat`` here.
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
         for _ in range(self.forward_pass_depth):
