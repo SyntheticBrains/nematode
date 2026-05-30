@@ -27,7 +27,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    entropy_coef: 0.02
+    entropy_coef: 0.005  # Matches canonical (logbook 023 R2b); irrelevant under freeze_updates, kept for diff cleanliness.
     learning_rate: 0.001
     rollout_buffer_size: 256
     num_epochs: 10

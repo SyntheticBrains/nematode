@@ -1,0 +1,132 @@
+# Combined-behaviour C3 cell — MLPPPO (food + predator + thermotaxis, klinotaxis).
+#
+# The integrated, ranked configuration for the cross-architecture comparison:
+# all three Phase 6 behaviours active in one simulation. Each architecture's
+# C3 cell shares this identical env + reward block — only the brain differs —
+# so the comparison measures how well each brain juggles competing pressures.
+#
+# Composition:
+#   - Food chemotaxis (klinotaxis head-sweep).
+#   - Predator evasion via the Phase 0 canonical two-channel biology
+#     (predator_mechanosensation_klinotaxis + predator_chemosensation_klinotaxis)
+#     + the Phase 0 canonical reward (reward_mode: distal_chemo_contact_trigger).
+#   - Thermotaxis via the AFD klinotaxis head-sweep, with a LETHAL thermal
+#     gradient (gradient_strength 1.5; danger/lethal HP-damage zones active).
+#
+# Lethal-thermal + predator tuning carried forward from the prior canonical
+# combined thermal+pursuit baseline (logbook 007 + the legacy
+# configs/scenarios/thermal_pursuit/mlpppo_small_oracle.yml):
+#   - predator_damage 6.0 (tuned DOWN from the predator-only cell's 20.0 so the
+#     stacked predator + lethal-thermal lethality stays learnable — logbook 007
+#     tuned 12->8->6 to keep HP deaths acceptable).
+#   - penalty_health_damage 0.0 (disabled per logbook 007: it conflicts with the
+#     thermal HP-damage signal; the predator reward signal comes from
+#     penalty_predator_proximity via distal_chemo_contact_trigger, NOT from
+#     penalty_health_damage, so zeroing it does not weaken predator evasion).
+#   - comfort_reward/discomfort_penalty 0.0 (rely on the HP-damage signal;
+#     prevents the agent parking in the comfort zone instead of foraging).
+#
+# C3 is the hardest cell; per-cell difficulty (predator_damage, thermal
+# gradient) is a documented Phase 4 calibration point if the combined
+# death-rate starves the behavioural signal.
+
+max_steps: 500
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis                  # Auto-translated to food_chemotaxis_klinotaxis
+      - predator_mechanosensation_oracle # Auto-translated to predator_mechanosensation_klinotaxis
+      - predator_chemosensation_oracle   # Auto-translated to predator_chemosensation_klinotaxis
+      - thermotaxis                       # Auto-translated to thermotaxis_klinotaxis
+      - proprioception
+      - stam
+
+body_length: 2
+
+reward:
+  reward_mode: distal_chemo_contact_trigger
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_temperature_proximity: 0.0
+  penalty_health_damage: 0.0  # Disabled in combined cell (conflicts with thermal HP-damage signal).
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    thermotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 6.0  # Tuned down from the predator-only cell's 20.0 for the stacked combined lethality.
+    food_healing: 10.0
+
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0  # Temperature at grid center (spawn point)
+    gradient_direction: 0.0
+    gradient_strength: 1.5   # LETHAL: 1.5°C/cell -> grid edges reach ~35°C (danger/lethal zone)
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    comfort_delta: 5.0       # Comfort: 15-25°C
+    discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
+    danger_delta: 15.0       # Danger: 5-10°C or 30-35°C

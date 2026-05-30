@@ -15,6 +15,15 @@
 #
 # Episode budget: 500 episodes, single seed. Forks the MLP-PPO small
 # oracle config's env shape (20x20 grid, 5 foods, gradient decay 8.0).
+#
+# Canonical entropy_coef = 0.005 (promoted from the low-entropy variant on
+# 2026-05-30 per logbook 023 § Recommendations). The original 0.02 caused
+# late-training success-rate drift (logbook 023 R2: last-25 fell to 52%);
+# 0.005 (logbook 023 R2b) eliminated it. The connectomeppo_small_low_entropy_klinotaxis.yml
+# file is retained because logbook 023 links to it as the R2b diagnostic
+# artefact (deleting it breaks that link); it now carries the same 0.005
+# value as this canonical. The R2 high-entropy case (entropy_coef: 0.02)
+# is reproducible by value — it is documented in logbook 023's R2 row.
 
 max_steps: 500
 brain:
@@ -33,7 +42,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    entropy_coef: 0.02
+    entropy_coef: 0.005  # Canonical low-entropy lock (logbook 023 R2b); promoted 2026-05-30.
     learning_rate: 0.001
     rollout_buffer_size: 256
     num_epochs: 10
