@@ -114,6 +114,12 @@ class LSTMPPOBrainConfig(BrainConfig):
     # cases that would prevent the brain from training at all.
     weight_init_scale: float = Field(default=1.0, ge=0.1, le=5.0)
 
+    # When True, replace nn.GRU/nn.LSTM with a LayerNorm recurrent cell
+    # (LayerNorm on the gate pre-activations, Ba et al. 2016) to prevent
+    # recurrent-state saturation. Default False = byte-identical to the
+    # plain PyTorch rnn.
+    recurrent_layernorm: bool = False
+
     # LR scheduling
     lr_warmup_episodes: int = 0
     lr_warmup_start: float | None = None
@@ -406,6 +412,73 @@ def _compute_tei_bias(
     return bias_delta
 
 
+class LayerNormRecurrent(nn.Module):
+    """Single-layer GRU/LSTM with LayerNorm on the gate pre-activations.
+
+    Drop-in for ``nn.GRU``/``nn.LSTM`` (num_layers=1, batch_first=False) as used by
+    :class:`LSTMPPOBrain`. LayerNorm on the input-to-hidden and hidden-to-hidden gate
+    contributions (Ba et al. 2016) keeps the recurrent dynamics from saturating during
+    training — plain PyTorch GRU/LSTM saturate on a large fraction of seeds for this
+    task, collapsing the policy to a frozen degenerate output. Parameters are named
+    ``weight_ih``/``weight_hh`` so the brain's orthogonal-init pass also applies.
+    """
+
+    def __init__(self, input_size: int, hidden_size: int, *, is_gru: bool) -> None:
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.is_gru = is_gru
+        n_gates = 3 if is_gru else 4
+        self.weight_ih = nn.Parameter(torch.empty(n_gates * hidden_size, input_size))
+        self.weight_hh = nn.Parameter(torch.empty(n_gates * hidden_size, hidden_size))
+        self.ln_ih = nn.LayerNorm(n_gates * hidden_size)
+        self.ln_hh = nn.LayerNorm(n_gates * hidden_size)
+        self.ln_c = None if is_gru else nn.LayerNorm(hidden_size)
+        nn.init.xavier_uniform_(self.weight_ih)
+        for k in range(n_gates):
+            nn.init.orthogonal_(self.weight_hh.data[k * hidden_size : (k + 1) * hidden_size])
+
+    def forward(
+        self,
+        x_seq: torch.Tensor,
+        hidden: torch.Tensor | tuple[torch.Tensor, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor | tuple[torch.Tensor, torch.Tensor]]:
+        """Roll the recurrent cell over the sequence; returns (output, new hidden)."""
+        # x_seq: (seq_len, batch, input_size). hidden: (1, batch, hidden) for GRU,
+        # ((1,batch,hidden),(1,batch,hidden)) for LSTM. Returns (output (seq_len,batch,
+        # hidden), h_new) [GRU] or (output, (h_new, c_new)) [LSTM] — same as nn.GRU/LSTM.
+        if self.is_gru:
+            h = hidden.squeeze(0)  # type: ignore[union-attr]
+            c = None
+        else:
+            h0, c0 = hidden  # type: ignore[misc]
+            h = h0.squeeze(0)
+            c = c0.squeeze(0)
+        outputs = []
+        for x_t in x_seq:  # x_t: (batch, input_size)
+            gi = self.ln_ih(x_t @ self.weight_ih.t())  # (batch, n_gates*hidden)
+            gh = self.ln_hh(h @ self.weight_hh.t())
+            if self.is_gru:
+                i_r, i_z, i_n = gi.chunk(3, dim=-1)
+                h_r, h_z, h_n = gh.chunk(3, dim=-1)
+                r = torch.sigmoid(i_r + h_r)
+                z = torch.sigmoid(i_z + h_z)
+                n = torch.tanh(i_n + r * h_n)
+                h = (1.0 - z) * n + z * h
+            else:
+                i, f, g, o = (gi + gh).chunk(4, dim=-1)
+                i = torch.sigmoid(i)
+                f = torch.sigmoid(f)
+                g = torch.tanh(g)
+                o = torch.sigmoid(o)
+                c = f * c + i * g  # type: ignore[operator]  # c is Tensor in the LSTM branch
+                h = o * torch.tanh(self.ln_c(c))  # type: ignore[misc]
+            outputs.append(h)
+        output = torch.stack(outputs, dim=0)
+        if self.is_gru:
+            return output, h.unsqueeze(0)
+        return output, (h.unsqueeze(0), c.unsqueeze(0))  # type: ignore[union-attr]
+
+
 class _LSTMPPOCritic(nn.Module):
     """MLP critic network for LSTM PPO."""
 
@@ -483,14 +556,21 @@ class LSTMPPOBrain(ClassicalBrain):
         self.feature_norm = nn.LayerNorm(self.input_dim).to(self.device)
 
         # LSTM or GRU
-        rnn_cls = nn.GRU if config.rnn_type == "gru" else nn.LSTM
-        self.rnn = rnn_cls(
-            input_size=self.input_dim,
-            hidden_size=config.lstm_hidden_dim,
-            num_layers=1,
-            batch_first=False,
-        ).to(self.device)
         self._is_gru = config.rnn_type == "gru"
+        if config.recurrent_layernorm:
+            self.rnn = LayerNormRecurrent(
+                self.input_dim,
+                config.lstm_hidden_dim,
+                is_gru=self._is_gru,
+            ).to(self.device)
+        else:
+            rnn_cls = nn.GRU if config.rnn_type == "gru" else nn.LSTM
+            self.rnn = rnn_cls(
+                input_size=self.input_dim,
+                hidden_size=config.lstm_hidden_dim,
+                num_layers=1,
+                batch_first=False,
+            ).to(self.device)
 
         # Actor MLP: h_t → action logits
         actor_layers: list[nn.Module] = [
@@ -640,8 +720,14 @@ class LSTMPPOBrain(ClassicalBrain):
         Baldwin/hyperparameter-evolution arms.  The actor's output
         layer keeps a fixed ``gain=0.01`` (deliberate small init for
         stable initial policy — the standard PPO trick) regardless
-        of ``weight_init_scale``.  The LSTM/GRU module (``self.rnn``)
-        is not touched here; it uses PyTorch's default init.
+        of ``weight_init_scale``.  The recurrent core (``self.rnn``) gets
+        orthogonal hidden-to-hidden init (per gate block) + Xavier
+        input-to-hidden + zeroed biases — textbook RNN-stability practice
+        (Saxe et al. 2014).  PyTorch's default uniform recurrent init left
+        the GRU/LSTM prone to recurrent-state saturation, which on a large
+        fraction of seeds collapsed the policy to a frozen degenerate output
+        (zero exploration → inert gradient → no learning); orthogonal
+        recurrent init removes that init-sensitivity.
         """
         scale = self.config.weight_init_scale
         hidden_gain = float(np.sqrt(2)) * scale
@@ -662,6 +748,33 @@ class LSTMPPOBrain(ClassicalBrain):
             nn.init.orthogonal_(last_layer.weight, gain=0.01)
             if last_layer.bias is not None:
                 nn.init.constant_(last_layer.bias, 0.0)
+
+        # Recurrent core (self.rnn): orthogonal hidden-to-hidden init.
+        self._init_recurrent_weights()
+
+    def _init_recurrent_weights(self) -> None:
+        """Orthogonal init for the recurrent (hidden-to-hidden) weights.
+
+        The part PyTorch leaves at uniform init and the part that most needs
+        orthogonality to avoid recurrent-state saturation. The GRU/LSTM stack
+        their gates in one ``(n_gates*hidden, hidden)`` matrix; each
+        ``(hidden, hidden)`` gate block is orthogonalised separately.
+        Input-to-hidden uses Xavier; biases zeroed. ``n_gates`` = 3 (GRU) /
+        4 (LSTM). Applies to both ``nn.GRU``/``nn.LSTM`` and the
+        :class:`LayerNormRecurrent` cell (same ``weight_ih``/``weight_hh``
+        parameter names; the cell's ``ln_*`` params are left at LayerNorm
+        defaults).
+        """
+        n_gates = 3 if self._is_gru else 4
+        for name, param in self.rnn.named_parameters():
+            if "weight_hh" in name:
+                hidden = param.shape[1]
+                for g in range(n_gates):
+                    nn.init.orthogonal_(param.data[g * hidden : (g + 1) * hidden])
+            elif "weight_ih" in name:
+                nn.init.xavier_uniform_(param.data)
+            elif "bias" in name:
+                nn.init.constant_(param.data, 0.0)
 
     # ──────────────────────────────────────────────────────────────────
     # Feature Extraction
