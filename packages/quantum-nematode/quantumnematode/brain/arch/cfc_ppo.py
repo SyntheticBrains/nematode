@@ -169,6 +169,33 @@ class CfCBrainConfig(BrainConfig):
             raise ValueError(msg)
         return self
 
+    @model_validator(mode="after")
+    def _validate_entropy_schedule(self) -> CfCBrainConfig:
+        """Require ``entropy_coef_end`` and ``entropy_decay_episodes`` to be set as a pair.
+
+        Setting only one silently disabled annealing (the flat fallback), which is a
+        quiet misconfiguration. Reject the half-set case here so ``_get_entropy_coef``
+        can trust the invariant: either both are ``None`` (flat) or both are set with
+        a positive decay window (anneal).
+        """
+        end = self.entropy_coef_end
+        decay = self.entropy_decay_episodes
+        if (end is None) != (decay is None):
+            msg = (
+                "entropy_coef_end and entropy_decay_episodes must be set together: "
+                "provide both to anneal, or neither for a flat schedule "
+                f"(got entropy_coef_end={end}, entropy_decay_episodes={decay})"
+            )
+            raise ValueError(msg)
+        if end is not None and decay is not None:
+            if end < 0.0:
+                msg = f"entropy_coef_end must be >= 0.0, got {end}"
+                raise ValueError(msg)
+            if decay < 1:
+                msg = f"entropy_decay_episodes must be >= 1 when annealing, got {decay}"
+                raise ValueError(msg)
+        return self
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Rollout Buffer
@@ -696,8 +723,8 @@ class CfCPPOBrain(ClassicalBrain):
         """
         end = self.config.entropy_coef_end
         decay = self.config.entropy_decay_episodes
-        if end is None or decay is None or decay <= 0:
-            return self.config.entropy_coef
+        if end is None or decay is None:
+            return self.config.entropy_coef  # flat schedule (validated: both None together)
         frac = min(1.0, self._episode_count / decay)
         return self.config.entropy_coef + frac * (end - self.config.entropy_coef)
 

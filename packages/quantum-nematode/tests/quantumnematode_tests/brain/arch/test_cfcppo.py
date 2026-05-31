@@ -813,3 +813,25 @@ class TestEntropySchedule:
         assert brain._get_entropy_coef() == pytest.approx(0.02)
         brain._episode_count = 1200  # past the decay window -> clamped at the floor
         assert brain._get_entropy_coef() == pytest.approx(0.02)
+
+    def test_end_without_decay_raises(self) -> None:
+        """entropy_coef_end without entropy_decay_episodes is rejected (no silent flat fallback)."""
+        with pytest.raises(ValueError, match="must be set together"):
+            _make_brain(entropy_coef_end=0.02)
+
+    def test_decay_without_end_raises(self) -> None:
+        """entropy_decay_episodes without entropy_coef_end is rejected (no silent flat fallback)."""
+        with pytest.raises(ValueError, match="must be set together"):
+            _make_brain(entropy_decay_episodes=800)
+
+    def test_non_positive_decay_raises(self) -> None:
+        """A non-positive decay window with a set floor is rejected (0 and negative)."""
+        with pytest.raises(ValueError, match="when annealing"):
+            _make_brain(entropy_coef_end=0.02, entropy_decay_episodes=0)
+        with pytest.raises(ValueError, match="when annealing"):
+            _make_brain(entropy_coef_end=0.02, entropy_decay_episodes=-1)
+
+    def test_negative_end_raises(self) -> None:
+        """A negative entropy floor is rejected."""
+        with pytest.raises(ValueError, match="entropy_coef_end must be >="):
+            _make_brain(entropy_coef_end=-0.01, entropy_decay_episodes=800)
