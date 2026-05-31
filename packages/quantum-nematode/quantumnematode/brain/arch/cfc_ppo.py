@@ -117,6 +117,8 @@ class CfCBrainConfig(BrainConfig):
     gae_lambda: float = 0.95
     value_loss_coef: float = 0.5
     entropy_coef: float = 0.01
+    entropy_coef_end: float | None = None  # anneal target (with entropy_decay_episodes)
+    entropy_decay_episodes: int | None = None  # episodes to anneal entropy_coef over
     rollout_buffer_size: int = 512
     num_epochs: int = 4
     max_grad_norm: float = 0.5
@@ -165,6 +167,33 @@ class CfCBrainConfig(BrainConfig):
         if self.critic_lr <= 0.0:
             msg = f"critic_lr must be > 0.0, got {self.critic_lr}"
             raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_entropy_schedule(self) -> CfCBrainConfig:
+        """Require ``entropy_coef_end`` and ``entropy_decay_episodes`` to be set as a pair.
+
+        Setting only one silently disabled annealing (the flat fallback), which is a
+        quiet misconfiguration. Reject the half-set case here so ``_get_entropy_coef``
+        can trust the invariant: either both are ``None`` (flat) or both are set with
+        a positive decay window (anneal).
+        """
+        end = self.entropy_coef_end
+        decay = self.entropy_decay_episodes
+        if (end is None) != (decay is None):
+            msg = (
+                "entropy_coef_end and entropy_decay_episodes must be set together: "
+                "provide both to anneal, or neither for a flat schedule "
+                f"(got entropy_coef_end={end}, entropy_decay_episodes={decay})"
+            )
+            raise ValueError(msg)
+        if end is not None and decay is not None:
+            if end < 0.0:
+                msg = f"entropy_coef_end must be >= 0.0, got {end}"
+                raise ValueError(msg)
+            if decay < 1:
+                msg = f"entropy_decay_episodes must be >= 1 when annealing, got {decay}"
+                raise ValueError(msg)
         return self
 
 
@@ -683,6 +712,22 @@ class CfCPPOBrain(ClassicalBrain):
             self._perform_ppo_update()
             self.buffer.reset()
 
+    def _get_entropy_coef(self) -> float:
+        """Return the current entropy coefficient (linearly annealed if configured, else flat).
+
+        With ``entropy_coef_end`` and ``entropy_decay_episodes`` set, the coefficient
+        decays linearly from ``entropy_coef`` to ``entropy_coef_end`` over the first
+        ``entropy_decay_episodes`` episodes, then holds at ``entropy_coef_end``. High
+        early entropy breaks the dead-exploration basin; lower late entropy lets the
+        converged policy peak.
+        """
+        end = self.config.entropy_coef_end
+        decay = self.config.entropy_decay_episodes
+        if end is None or decay is None:
+            return self.config.entropy_coef  # flat schedule (validated: both None together)
+        frac = min(1.0, self._episode_count / decay)
+        return self.config.entropy_coef + frac * (end - self.config.entropy_coef)
+
     def _perform_ppo_update(self) -> None:  # noqa: PLR0915
         """Perform a PPO update with chunk-based truncated BPTT."""
         if len(self.buffer) == 0:
@@ -712,7 +757,7 @@ class CfCPPOBrain(ClassicalBrain):
         )
 
         buffer_len = len(self.buffer)
-        entropy_coef = self.config.entropy_coef
+        entropy_coef = self._get_entropy_coef()
 
         total_policy_loss = 0.0
         total_value_loss = 0.0
