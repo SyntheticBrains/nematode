@@ -790,3 +790,26 @@ class TestProtocolMethods:
         # Setter rejects a wrong-length list.
         with pytest.raises(ValueError, match="action_set must have exactly"):
             brain.action_set = DEFAULT_ACTIONS[:2]
+
+
+class TestEntropySchedule:
+    """The entropy coefficient is flat by default and linearly annealed when configured."""
+
+    def test_flat_when_no_end(self) -> None:
+        """With entropy_coef_end unset, the coefficient stays flat at entropy_coef."""
+        brain = _make_brain(entropy_coef=0.05)
+        assert brain._get_entropy_coef() == pytest.approx(0.05)
+        brain._episode_count = 500
+        assert brain._get_entropy_coef() == pytest.approx(0.05)
+
+    def test_linear_anneal_then_holds(self) -> None:
+        """entropy_coef_end + entropy_decay_episodes -> linear anneal, then hold at the floor."""
+        brain = _make_brain(entropy_coef=0.08, entropy_coef_end=0.02, entropy_decay_episodes=800)
+        brain._episode_count = 0
+        assert brain._get_entropy_coef() == pytest.approx(0.08)
+        brain._episode_count = 400
+        assert brain._get_entropy_coef() == pytest.approx(0.05)
+        brain._episode_count = 800
+        assert brain._get_entropy_coef() == pytest.approx(0.02)
+        brain._episode_count = 1200  # past the decay window -> clamped at the floor
+        assert brain._get_entropy_coef() == pytest.approx(0.02)
