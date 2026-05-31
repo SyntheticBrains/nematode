@@ -15,11 +15,26 @@
 # (foods_on_grid 6 / target 10) is the comparison env, NOT the easier
 # foods 10 / target 3 smoke env in feedforwardga_foraging_small.yml.
 #
-# The `evolution:` block here is a modest default; the Phase 4 primary-cell run
-# sets the real generation/population/seed budget via CLI flags (which override
-# these). DO NOT set brain.config.weights_path (the framework forces it None;
-# the genome is the sole weight source) and DO NOT rely on brain.config.seed
-# (the loop's --seed overrides it).
+# OPTIMISER: vanilla GA (`algorithm: ga`) — the existing GeneticAlgorithmOptimizer
+# (mu+lambda, tournament selection, Gaussian mutation, uniform crossover). This is
+# the design-intended weight-search comparator: it isolates the optimiser-family
+# contrast (PPO gradient ascent vs GA population search) on a topology matched to
+# MLPPPO small (hidden_dim 64, 2 layers, no critic). A separable-CMA-ES variant
+# was screened as a fairer high-D search but TIED this GA at matched budget
+# (champion ~0.92 vs ~0.96 foods/10), so the simpler design-intended GA is
+# canonical and the sep-CMA result stands as a robustness check — the low ceiling
+# is optimiser-agnostic (a fundamental limit of gradient-free search in ~6084-D),
+# not an artefact of the GA operator.
+#
+# BUDGET: the `evolution:` block below is the CANONICAL FAIR BUDGET, not a smoke.
+# population_size 64 is the load-bearing lever — the pop-16 smoke prematurely
+# converges (~0.26 champion foods); 4x population is what lifts the GA off that
+# floor. generations 80 is generous margin over the GA's gen~40-50 plateau, so a
+# "GA ranks last" verdict cannot be dismissed as under-budgeting (the sep-CMA tie
+# at pop 64 / gen 100 corroborates the plateau is real). The n-seed sweep overrides
+# only --seed per run. DO NOT set brain.config.weights_path (the framework forces
+# it None; the genome is the sole weight source) and DO NOT rely on
+# brain.config.seed (the loop's --seed overrides it).
 #
 # LAUNCH WITH `--fitness progress`. This is the ranked GA cell, and it stacks
 # lethal predators AND lethal thermal — binary full-clear success_rate
@@ -123,10 +138,10 @@ environment:
 
 evolution:
   algorithm: ga
-  generations: 30
-  population_size: 16
+  generations: 80          # generous margin over the GA's gen~40-50 plateau
+  population_size: 64       # 4x the smoke's 16 — the lever off premature convergence
   episodes_per_eval: 3
-  parallel_workers: 1
+  parallel_workers: 6
   checkpoint_every: 10
   sigma0: 0.5
   elite_fraction: 0.2

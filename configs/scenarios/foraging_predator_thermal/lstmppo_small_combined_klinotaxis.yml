@@ -15,8 +15,9 @@
 #
 # Env parity: max_steps 500 (matching mlpppo/connectome C3 cells + the Phase 0
 # evaluation budget), NOT the LSTMPPO predator config's 1000 — the C3 env must
-# be identical across architectures for a fair comparison. The brain block
-# keeps the LSTMPPO canonical hyperparameters (gru, entropy decay schedule).
+# be identical across architectures for a fair comparison. The brain block uses
+# the GRU + LayerNorm recurrent-stability stack (see the brain.config comment) —
+# the LSTMPPO is otherwise init-unstable (~50% seed-collapse) on this cell.
 
 max_steps: 500
 brain:
@@ -42,14 +43,21 @@ brain:
     num_epochs: 4
     max_grad_norm: 0.5
 
-    entropy_coef: 0.02
-    entropy_coef_end: 0.005
-    entropy_decay_episodes: 800
+    # Recurrent-stability stack that takes the LSTMPPO from ~50% seed-collapse to
+    # 0/8 on this integrated cell (see logbook supporting docs for the screen):
+    #   - recurrent_layernorm: LayerNorm-GRU cell prevents recurrent-state
+    #     saturation throughout training (PR #195; LN-LSTM was far worse, 7/8).
+    #   - higher entropy 0.05 -> 0.02 breaks the residual dead-exploration basin
+    #     where the policy never explores enough to find a reward signal.
+    #   - flat LR (schedule removed) at actor_lr/critic_lr 0.0003: the prior
+    #     decay-over-1500ep schedule never reached its floor in a 1000ep run, and
+    #     trained at a persistently high LR. (orthogonal recurrent init is now
+    #     always applied by the brain, PR #195.)
+    recurrent_layernorm: true
 
-    lr_warmup_episodes: 50
-    lr_warmup_start: 0.00003
-    lr_decay_episodes: 1500
-    lr_decay_end: 0.00003
+    entropy_coef: 0.05
+    entropy_coef_end: 0.02
+    entropy_decay_episodes: 800
 
     sensory_modules:
       - food_chemotaxis                  # Auto-translated to food_chemotaxis_klinotaxis
