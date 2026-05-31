@@ -41,7 +41,7 @@ References
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 import numpy as np
 import torch
@@ -128,7 +128,7 @@ class CfCBrainConfig(BrainConfig):
     device_type: DeviceType = DeviceType.CPU
 
     @model_validator(mode="after")
-    def _validate_config(self) -> CfCBrainConfig:
+    def _validate_config(self) -> CfCBrainConfig:  # noqa: C901
         if self.sensory_modules is None or len(self.sensory_modules) == 0:
             msg = "sensory_modules is required and must be non-empty for CfCPPOBrain"
             raise ValueError(msg)
@@ -147,12 +147,49 @@ class CfCBrainConfig(BrainConfig):
         if not 0.0 <= self.ncp_sparsity < 1.0:
             msg = f"ncp_sparsity must be in [0.0, 1.0), got {self.ncp_sparsity}"
             raise ValueError(msg)
+        if self.actor_hidden_dim < 1:
+            msg = f"actor_hidden_dim must be >= 1, got {self.actor_hidden_dim}"
+            raise ValueError(msg)
+        if self.critic_hidden_dim < 1:
+            msg = f"critic_hidden_dim must be >= 1, got {self.critic_hidden_dim}"
+            raise ValueError(msg)
+        if self.actor_num_layers < 1:
+            msg = f"actor_num_layers must be >= 1, got {self.actor_num_layers}"
+            raise ValueError(msg)
+        if self.critic_num_layers < 1:
+            msg = f"critic_num_layers must be >= 1, got {self.critic_num_layers}"
+            raise ValueError(msg)
+        if self.actor_lr <= 0.0:
+            msg = f"actor_lr must be > 0.0, got {self.actor_lr}"
+            raise ValueError(msg)
+        if self.critic_lr <= 0.0:
+            msg = f"critic_lr must be > 0.0, got {self.critic_lr}"
+            raise ValueError(msg)
         return self
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Rollout Buffer
 # ──────────────────────────────────────────────────────────────────────────────
+
+
+class ChunkBatch(TypedDict):
+    """Typed payload yielded by ``CfCPPORolloutBuffer.get_sequential_chunks``.
+
+    ``features`` is a list of per-step feature vectors and ``dones`` a list of
+    per-step terminal flags (both indexed by step within the chunk); the
+    remaining tensor fields are slices over the chunk.
+    """
+
+    start: int
+    end: int
+    h_init: torch.Tensor
+    features: list[np.ndarray]
+    actions: torch.Tensor
+    old_log_probs: torch.Tensor
+    returns: torch.Tensor
+    advantages: torch.Tensor
+    dones: list[bool]
 
 
 class CfCPPORolloutBuffer:
@@ -243,7 +280,7 @@ class CfCPPORolloutBuffer:
         chunk_length: int,
         returns: torch.Tensor,
         advantages: torch.Tensor,
-    ) -> Iterator[dict]:
+    ) -> Iterator[ChunkBatch]:
         """Generate sequential chunks for truncated BPTT.
 
         Splits the buffer into chunks of chunk_length steps. Each chunk carries
@@ -715,7 +752,7 @@ class CfCPPOBrain(ClassicalBrain):
                     logits = self._logits_from_hidden(motor_out, h)
                     action_probs = torch.softmax(logits, dim=-1)
 
-                    action_idx = chunk["actions"][step_idx].item()
+                    action_idx = int(chunk["actions"][step_idx].item())
                     log_prob = torch.log(action_probs[action_idx] + 1e-8)
                     log_probs_list.append(log_prob)
 

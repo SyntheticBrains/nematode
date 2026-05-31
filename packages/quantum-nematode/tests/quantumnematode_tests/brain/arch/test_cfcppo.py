@@ -150,6 +150,21 @@ class TestCfCBrainConfig:
         with pytest.raises(ValueError, match="ncp_sparsity"):
             CfCBrainConfig(sensory_modules=SENSORY_MODULES, ncp_sparsity=1.0)
 
+    def test_invalid_network_and_lr_params(self) -> None:
+        """Non-positive actor/critic sizes, layer counts, and learning rates are rejected."""
+        with pytest.raises(ValueError, match="actor_hidden_dim"):
+            CfCBrainConfig(sensory_modules=SENSORY_MODULES, actor_hidden_dim=0)
+        with pytest.raises(ValueError, match="critic_hidden_dim"):
+            CfCBrainConfig(sensory_modules=SENSORY_MODULES, critic_hidden_dim=0)
+        with pytest.raises(ValueError, match="actor_num_layers"):
+            CfCBrainConfig(sensory_modules=SENSORY_MODULES, actor_num_layers=0)
+        with pytest.raises(ValueError, match="critic_num_layers"):
+            CfCBrainConfig(sensory_modules=SENSORY_MODULES, critic_num_layers=0)
+        with pytest.raises(ValueError, match="actor_lr"):
+            CfCBrainConfig(sensory_modules=SENSORY_MODULES, actor_lr=0.0)
+        with pytest.raises(ValueError, match="critic_lr"):
+            CfCBrainConfig(sensory_modules=SENSORY_MODULES, critic_lr=-0.1)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Registry + BrainType + Protocol conformance (task 5.1)

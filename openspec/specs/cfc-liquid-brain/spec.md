@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-cfc-liquid-brain. Update Purpose after archive.
+This specification defines the **CfC (Closed-form Continuous-time) liquid brain** capability — a classical, continuous-time recurrent brain architecture (`CfCPPOBrain`, registry name `cfcppo`) whose recurrent core is a CfC network wired with a Neural Circuit Policy `AutoNCP` (sensory → interneuron → command → motor) graph and trained with PPO. It provides the *C. elegans-inspired* liquid / continuous-time row of the cross-architecture comparison, as a structured-wiring foil to the wild-type-connectome and dense-recurrence (LSTM/GRU) brains. The capability was introduced by the archived change `add-cfc-liquid-brain`; this document is its canonical record of required behaviour — the architecture (configurable motor-direct or MLP actor head, critic on the recurrent hidden state, truncated-BPTT PPO), weight persistence, and plugin-registry registration. Audience: developers extending the brain-architecture plugin layer and authors of the cross-architecture comparison.
 
 ## Requirements
 
