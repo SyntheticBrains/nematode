@@ -577,6 +577,15 @@ wheels = [
 ]
 
 [[package]]
+name = "future"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/b2/4140c69c6a66432916b26158687e821ba631a4c9273c474343badf84d3ba/future-1.0.0.tar.gz", hash = "sha256:bd2968309307861edae1458a4f8a4f3598c03be43b97521076aebf5d94c07b05", size = 1228490, upload-time = "2024-02-21T11:52:38.461Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl", hash = "sha256:929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216", size = 491326, upload-time = "2024-02-21T11:52:35.956Z" },
+]
+
+[[package]]
 name = "google-api-core"
 version = "2.28.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1043,6 +1052,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/46/e2/348cd32faad84eaf1d20cce80e2bb0ef8d312c55bca1f7fa9865e7770aaf/multidict-6.7.0-cp312-cp312-win_amd64.whl", hash = "sha256:92abb658ef2d7ef22ac9f8bb88e8b6c3e571671534e029359b6d9e845923eb1b", size = 46073, upload-time = "2025-10-06T14:49:50.28Z" },
     { url = "https://files.pythonhosted.org/packages/25/ec/aad2613c1910dce907480e0c3aa306905830f25df2e54ccc9dea450cb5aa/multidict-6.7.0-cp312-cp312-win_arm64.whl", hash = "sha256:490dab541a6a642ce1a9d61a4781656b346a55c13038f0b1244653828e3a83ec", size = 43226, upload-time = "2025-10-06T14:49:52.304Z" },
     { url = "https://files.pythonhosted.org/packages/b7/da/7d22601b625e241d4f23ef1ebff8acfc60da633c9e7e7922e24d10f592b3/multidict-6.7.0-py3-none-any.whl", hash = "sha256:394fc5c42a333c9ffc3e421a4c85e08580d990e08b99f6bf35b4132114c5dcb3", size = 12317, upload-time = "2025-10-06T14:52:29.272Z" },
+]
+
+[[package]]
+name = "ncps"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "future" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/23/dded6d24dee306f89794a6d17dacbe18d9b9394e161ba80a6759abfeb4da/ncps-1.0.1.tar.gz", hash = "sha256:fd791104318201de3b0e2e524577e3222435706d0e5368009b8ae2a9f3d1618f", size = 38115, upload-time = "2024-08-14T13:38:30.892Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/cb/3e7c0b5f0d1dfeea92dbe99a77d4831ac8e871a985c779479cc804aa665f/ncps-1.0.1-py3-none-any.whl", hash = "sha256:249b2a62c38608df62d454fe20f4e880f74c27ef97ea3a45e101d47b1b273fb5", size = 60299, upload-time = "2024-08-14T13:38:29.456Z" },
 ]
 
 [[package]]
@@ -2063,6 +2085,7 @@ dependencies = [
     { name = "cma" },
     { name = "ipykernel" },
     { name = "matplotlib" },
+    { name = "ncps" },
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "optuna" },
@@ -2100,6 +2123,7 @@ requires-dist = [
     { name = "cma", specifier = ">=4.0.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "matplotlib", specifier = ">=3.10.1" },
+    { name = "ncps", specifier = ">=1.0.1" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "optuna", specifier = ">=4.0.0" },

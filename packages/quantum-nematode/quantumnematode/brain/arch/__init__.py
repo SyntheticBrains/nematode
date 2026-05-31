@@ -23,6 +23,7 @@ from ._reservoir_hybrid_base import ReservoirHybridBase, ReservoirHybridBaseConf
 from ._reservoir_lstm_base import ReservoirLSTMBase, ReservoirLSTMBaseConfig
 from ._rule import LearningRule, RuleStepReport
 from ._topology import BrainTopology
+from .cfc_ppo import CfCBrainConfig, CfCPPOBrain
 from .connectome_ppo import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from .crh import CRHBrain, CRHBrainConfig
 from .crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
@@ -60,6 +61,8 @@ __all__ = [
     "CRHBrainConfig",
     "CRHQLSTMBrain",
     "CRHQLSTMBrainConfig",
+    "CfCBrainConfig",
+    "CfCPPOBrain",
     "ClassicalBrain",
     "ConnectomePPOBrain",
     "ConnectomePPOBrainConfig",
