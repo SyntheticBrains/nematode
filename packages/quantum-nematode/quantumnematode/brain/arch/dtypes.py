@@ -42,6 +42,7 @@ class BrainType(StrEnum):
     LSTM_PPO = "lstmppo"
     CONNECTOMEPPO = "connectomeppo"
     FEEDFORWARDGA = "feedforwardga"
+    CFC_PPO = "cfcppo"
 
 
 class DeviceType(StrEnum):
@@ -101,6 +102,7 @@ BRAIN_TYPES = Literal[
     BrainType.LSTM_PPO,
     BrainType.CONNECTOMEPPO,
     BrainType.FEEDFORWARDGA,
+    BrainType.CFC_PPO,
 ]
 
 

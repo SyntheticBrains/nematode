@@ -43,6 +43,7 @@ dependencies = [
     "optuna>=4.0.0",
     "pandas>=2.2",
     "openpyxl>=3.1",
+    "ncps>=1.0.1",
 ]
 
 [project.urls]
