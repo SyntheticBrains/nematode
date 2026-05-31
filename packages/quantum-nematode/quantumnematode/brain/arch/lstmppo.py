@@ -116,8 +116,11 @@ class LSTMPPOBrainConfig(BrainConfig):
 
     # When True, replace nn.GRU/nn.LSTM with a LayerNorm recurrent cell
     # (LayerNorm on the gate pre-activations, Ba et al. 2016) to prevent
-    # recurrent-state saturation. Default False = byte-identical to the
-    # plain PyTorch rnn.
+    # recurrent-state saturation. The flag selects the cell TYPE only — when
+    # False (default) the recurrent core is the plain nn.GRU/nn.LSTM module, but
+    # its recurrent weights are still orthogonally re-initialised by
+    # _init_recurrent_weights (as for every recurrent core here), so it is NOT
+    # byte-identical to a default-(uniform-)init PyTorch rnn.
     recurrent_layernorm: bool = False
 
     # LR scheduling
