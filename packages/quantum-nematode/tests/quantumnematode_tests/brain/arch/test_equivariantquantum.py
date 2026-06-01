@@ -12,6 +12,7 @@ and the config validators.
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 import numpy as np
@@ -184,6 +185,22 @@ def test_predator_mechanosensation_zone_is_even() -> None:
     assert module_parity_pattern(ModuleName.PREDATOR_MECHANOSENSATION_KLINOTAXIS, 3) == [1, 1, 1]
 
 
+def test_temporal_derivative_is_even() -> None:
+    """``*_temporal`` modules have a temporal-derivative angle (Z2-even), not a lateral gradient.
+
+    Index 1 of a temporal module is ``tanh(dC/dt)`` — a spatial left-right mirror leaves a scalar
+    concentration's time-derivative unchanged, so it must be even, NOT sign-flipping.
+    """
+    for module in (
+        ModuleName.FOOD_CHEMOTAXIS_TEMPORAL,
+        ModuleName.THERMOTAXIS_TEMPORAL,
+        ModuleName.NOCICEPTION_TEMPORAL,
+        ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL,
+    ):
+        assert module_parity_pattern(module, 2) == [1, 1]
+        assert bool((parity_vector([module]) > 0).all())
+
+
 def test_mirror_consistency_all_headings() -> None:
     """A left-right mirror flips the food angle with the same parity for every heading.
 
@@ -282,13 +299,15 @@ def test_entanglement_is_load_bearing() -> None:
     """Removing the IsingXX/IsingZZ couplings changes the action-logit distribution."""
     brain = make_brain()
     actor: EquivariantQuantumActor = brain.actor
+    separable_actor = copy.deepcopy(actor)  # mutate a copy, not the shared actor
+    with torch.no_grad():
+        separable_actor.xx.zero_()
+        separable_actor.zz.zero_()
     rng = np.random.default_rng(0)
     x = torch.tensor(rng.standard_normal((8, brain.input_dim)).astype(np.float32))
     with torch.no_grad():
         full, _ = actor(x)
-        actor.xx.zero_()
-        actor.zz.zero_()
-        separable, _ = actor(x)
+        separable, _ = separable_actor(x)
     assert (full - separable).abs().max().item() > 1e-3
 
 

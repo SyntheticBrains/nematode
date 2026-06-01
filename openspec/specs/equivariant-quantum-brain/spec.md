@@ -2,7 +2,13 @@
 
 ## Purpose
 
-TBD - created by archiving change add-equivariant-quantum-brain. Update Purpose after archive.
+The bilateral-Z2-equivariant quantum brain provides a genuinely-quantum PPO actor — trained
+parameterised-quantum-circuit weights with load-bearing entanglement — whose policy is exactly
+equivariant under the left-right bilateral mirror (*C. elegans*' body symmetry and the natural symmetry
+of klinotaxis): the mirror swaps the `LEFT`/`RIGHT` action logits and fixes `FORWARD`/`STAY`. It is
+included in the cross-architecture comparison as a principled inductive-bias study — explicitly **not** a
+quantum-advantage claim — with config-flagged ablation siblings (`equivariant`, `quantum`) that attribute
+any measured effect to the symmetry prior and to the quantum circuit separately.
 
 ## Requirements
 

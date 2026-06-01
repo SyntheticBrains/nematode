@@ -76,28 +76,26 @@ MAX_QUBITS = 10
 MIN_K_EVEN = 3  # readout needs 3 distinct even observables (FORWARD, STAY, LEFT/RIGHT-shared)
 PARAM_INIT_STD = 0.1
 
-# Modules whose feature index 1 ("angle") is a left-right LATERAL gradient
-# (``tanh(right - left)``) and therefore Z2-ODD under the bilateral mirror. Every
-# other feature (strengths, temporal derivatives, the predator-mechano fore-aft
-# zone, proprioception, STAM) is Z2-EVEN. Validated empirically by the
-# mirror-consistency test.
+# Modules whose feature index 1 ("angle") is a left-right LATERAL gradient and
+# therefore Z2-ODD under the bilateral mirror: oracle modules encode an egocentric
+# bearing angle (``_compute_relative_angle``, flips under the mirror); klinotaxis
+# modules encode a lateral difference (``tanh(right - left)``). Every other feature
+# is Z2-EVEN — strengths, the predator-mechano fore-aft zone, proprioception, STAM,
+# and crucially the ``*_temporal`` modules whose index-1 is a TEMPORAL DERIVATIVE
+# (``tanh(dC/dt)``), which a spatial left-right reflection leaves unchanged.
+# Validated empirically by the mirror-consistency tests.
 _LATERAL_GRADIENT_MODULES = frozenset(
     {
         ModuleName.FOOD_CHEMOTAXIS,
         ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS,
-        ModuleName.FOOD_CHEMOTAXIS_TEMPORAL,
         ModuleName.THERMOTAXIS,
         ModuleName.THERMOTAXIS_KLINOTAXIS,
-        ModuleName.THERMOTAXIS_TEMPORAL,
         ModuleName.NOCICEPTION,
         ModuleName.NOCICEPTION_KLINOTAXIS,
-        ModuleName.NOCICEPTION_TEMPORAL,
         ModuleName.AEROTAXIS,
         ModuleName.AEROTAXIS_KLINOTAXIS,
-        ModuleName.AEROTAXIS_TEMPORAL,
         ModuleName.PREDATOR_CHEMOSENSATION_ORACLE,
         ModuleName.PREDATOR_CHEMOSENSATION_KLINOTAXIS,
-        ModuleName.PREDATOR_CHEMOSENSATION_TEMPORAL,
     },
 )
 
@@ -286,9 +284,9 @@ class EquivariantQuantumActor(nn.Module):
                 (self.k_even + i, self.k_even + i + 1) for i in range(k_odd - 1)
             ]
             self.xx = nn.Parameter(torch.randn(num_layers, len(self.xx_pairs)) * PARAM_INIT_STD)
-            self.zz = nn.Parameter(
-                torch.randn(num_layers, max(1, len(self.zz_pairs))) * PARAM_INIT_STD,
-            )
+            # zz_pairs is always non-empty: the validator enforces k_even >= 3, so the even
+            # block alone contributes >= 2 same-parity pairs.
+            self.zz = nn.Parameter(torch.randn(num_layers, len(self.zz_pairs)) * PARAM_INIT_STD)
             self.even_scale = nn.Parameter(torch.ones(3))  # FORWARD, STAY, LEFT/RIGHT-shared
             self.even_bias = nn.Parameter(torch.zeros(3))
             self.odd_scale = nn.Parameter(torch.ones(1))  # no bias -> stays Z2-odd
@@ -504,6 +502,13 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
     ) -> tuple[int, torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]:
         """Sample an action and estimate value for a single state."""
         xt = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+        if xt.shape[-1] != self.input_dim:
+            msg = (
+                f"observation dim {xt.shape[-1]} != input_dim {self.input_dim} — the STAM-dim "
+                "context likely differs between brain construction and runtime "
+                "(see set_stam_dim_context / stam_dim_from_env)"
+            )
+            raise ValueError(msg)
         logits, latent = self.actor(xt)
         value = self.critic(latent.detach()).reshape(1)
         probs = torch.softmax(logits, dim=-1).squeeze(0)
