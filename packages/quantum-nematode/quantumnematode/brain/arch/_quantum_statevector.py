@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import torch
 
-_COMPLEX = torch.complex64
+_COMPLEX: torch.dtype = torch.complex64
 
 
 def _as_complex(real_tensor: torch.Tensor) -> torch.Tensor:

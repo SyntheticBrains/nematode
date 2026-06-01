@@ -183,7 +183,13 @@ class EquivariantQuantumPPOBrainConfig(BrainConfig):
         return v
 
     @model_validator(mode="after")
-    def _validate_config(self) -> EquivariantQuantumPPOBrainConfig:
+    def _validate_config(self) -> EquivariantQuantumPPOBrainConfig:  # noqa: C901 — flat guard chain
+        if not self.equivariant and not self.quantum:
+            msg = (
+                "at least one of `equivariant` or `quantum` must be true: equivariant=False with "
+                "quantum=False would build an equivariant-classical actor, contradicting the flags"
+            )
+            raise ValueError(msg)
         if not (0 < self.k_odd < self.num_qubits):
             msg = (
                 f"k_odd must satisfy 0 < k_odd < num_qubits, "
@@ -207,6 +213,15 @@ class EquivariantQuantumPPOBrainConfig(BrainConfig):
             raise ValueError(msg)
         if not (0 < self.clip_epsilon < 1):
             msg = f"clip_epsilon must be in (0, 1), got {self.clip_epsilon}"
+            raise ValueError(msg)
+        if self.num_epochs < 1 or self.num_minibatches < 1 or self.rollout_buffer_size < 1:
+            msg = (
+                "num_epochs, num_minibatches, and rollout_buffer_size must each be >= 1 "
+                f"(got {self.num_epochs}, {self.num_minibatches}, {self.rollout_buffer_size})"
+            )
+            raise ValueError(msg)
+        if self.max_grad_norm < 0:
+            msg = f"max_grad_norm must be non-negative, got {self.max_grad_norm}"
             raise ValueError(msg)
         # Paired entropy-schedule fields: set both or neither.
         end, eps = self.entropy_coef_end, self.entropy_decay_episodes
@@ -400,7 +415,9 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
         self.input_dim = get_classical_feature_dimension(config.sensory_modules)
         self.device = torch.device(device.to_torch_device_str())
         self.num_actions = num_actions
-        self._action_set = action_set
+        self._action_set = list(
+            action_set,
+        )  # copy so the shared DEFAULT_ACTIONS isn't held by reference
 
         # Observation parity vector (aligned with extract_classical_features ordering).
         self.parity = parity_vector(config.sensory_modules)
@@ -621,7 +638,9 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
                 total_value_loss += value_loss.item()
                 num_updates += 1
         if num_updates > 0:
-            self.latest_data.loss = total_policy_loss / num_updates
+            avg_policy_loss = total_policy_loss / num_updates
+            self.latest_data.loss = avg_policy_loss
+            self.history_data.losses.append(avg_policy_loss)
 
     def update_memory(self, reward: float | None = None) -> None:
         """No-op (PPO is on-policy)."""
@@ -689,7 +708,7 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
 
     @action_set.setter
     def action_set(self, actions: list[Action]) -> None:
-        self._action_set = actions
+        self._action_set = list(actions)  # copy so external mutable references aren't held
 
     def build_brain(self) -> None:
         """Not applicable (the circuit is built at construction)."""

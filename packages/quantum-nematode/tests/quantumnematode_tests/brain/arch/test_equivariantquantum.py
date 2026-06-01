@@ -364,6 +364,20 @@ def test_qubit_budget_validator() -> None:
         EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, num_qubits=12, k_odd=1)
 
 
+def test_both_ablation_flags_false_rejected() -> None:
+    """equivariant=False with quantum=False is rejected (it would mismatch the declared flags)."""
+    with pytest.raises(ValueError, match="at least one of"):
+        EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, equivariant=False, quantum=False)
+
+
+def test_ppo_field_validators() -> None:
+    """Zero/invalid PPO loop fields are rejected so training cannot be silently disabled."""
+    with pytest.raises(ValueError, match="num_epochs"):
+        EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, num_epochs=0)
+    with pytest.raises(ValueError, match="max_grad_norm"):
+        EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, max_grad_norm=-1.0)
+
+
 def test_registry_registration() -> None:
     """The brain is registered under its BrainType and loads from the registry."""
     from quantumnematode.brain.arch._registry import get_registration
