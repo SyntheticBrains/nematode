@@ -100,6 +100,11 @@ class SpikingPPOBrainConfig(BrainConfig):
     adapt_scale_init: float = 0.1
     readout_decay_init: float = 0.9
 
+    # Actor head: "spike" (leaky-integrator readout, default) | "mlp" (MLP on the hidden membrane)
+    actor_head: str = "spike"
+    actor_hidden_dim: int = 64
+    actor_num_layers: int = 2
+
     # Surrogate gradient (slope schedulable as a pair)
     surrogate_slope: float = 2.0
     surrogate_slope_end: float | None = None  # anneal target (with anneal_episodes)
@@ -173,6 +178,15 @@ class SpikingPPOBrainConfig(BrainConfig):
             raise ValueError(msg)
         if self.critic_lr <= 0.0:
             msg = f"critic_lr must be > 0.0, got {self.critic_lr}"
+            raise ValueError(msg)
+        if self.actor_head not in ("spike", "mlp"):
+            msg = f"actor_head must be 'spike' or 'mlp', got {self.actor_head!r}"
+            raise ValueError(msg)
+        if self.actor_hidden_dim < 1:
+            msg = f"actor_hidden_dim must be >= 1, got {self.actor_hidden_dim}"
+            raise ValueError(msg)
+        if self.actor_num_layers < 1:
+            msg = f"actor_num_layers must be >= 1, got {self.actor_num_layers}"
             raise ValueError(msg)
         return self
 
@@ -525,6 +539,18 @@ class SpikingPPOBrain(ClassicalBrain):
             readout_decay_init=config.readout_decay_init,
         ).to(self.device)
 
+        # Optional MLP actor head reading the hidden membrane v (mirrors CfC's mlp head).
+        # When set, logits come from this MLP instead of the leaky-integrator readout.
+        self.actor_mlp: nn.Sequential | None = None
+        if config.actor_head == "mlp":
+            mlp_layers: list[nn.Module] = []
+            in_dim = self.hidden_size
+            for _ in range(max(1, config.actor_num_layers - 1)):
+                mlp_layers += [nn.Linear(in_dim, config.actor_hidden_dim), nn.ReLU()]
+                in_dim = config.actor_hidden_dim
+            mlp_layers.append(nn.Linear(in_dim, num_actions))
+            self.actor_mlp = nn.Sequential(*mlp_layers).to(self.device)
+
         # Critic MLP on the detached hidden membrane.
         self.critic = _SpikingPPOCritic(
             input_dim=self.hidden_size,
@@ -656,7 +682,10 @@ class SpikingPPOBrain(ClassicalBrain):
             # Integrate the top layer's spikes into the readout membrane.
             _, membrane = self.readout(layer_input, membrane)
 
-        logits = membrane.squeeze(0)
+        if self.actor_mlp is not None:
+            logits = self.actor_mlp(new_v[-1]).squeeze(0)
+        else:
+            logits = membrane.squeeze(0)
         new_state: NeuronState = {"v": new_v, "a": new_a, "s": new_s, "m": membrane}
         return logits, new_state
 
@@ -673,6 +702,8 @@ class SpikingPPOBrain(ClassicalBrain):
         params += list(self.encoder.parameters())
         params += list(self.hidden_layers.parameters())
         params += list(self.readout.parameters())
+        if self.actor_mlp is not None:
+            params += list(self.actor_mlp.parameters())
         return params
 
     # ──────────────────────────────────────────────────────────────────
@@ -1003,6 +1034,8 @@ class SpikingPPOBrain(ClassicalBrain):
             learnable decay/adaptation params).
         ``"readout"``
             Leaky-integrator readout state_dict.
+        ``"actor_mlp"``
+            MLP actor-head state_dict (present only when ``actor_head == "mlp"``).
         ``"critic"``
             Critic MLP state_dict.
         ``"actor_optimizer"``
@@ -1050,6 +1083,12 @@ class SpikingPPOBrain(ClassicalBrain):
                 state={"episode_count": self._episode_count},
             ),
         }
+        # The MLP actor head exists only when actor_head == "mlp".
+        if self.actor_mlp is not None:
+            all_components["actor_mlp"] = WeightComponent(
+                name="actor_mlp",
+                state=self.actor_mlp.state_dict(),
+            )
 
         if components is None:
             return all_components
@@ -1060,7 +1099,7 @@ class SpikingPPOBrain(ClassicalBrain):
             raise ValueError(msg)
         return {k: v for k, v in all_components.items() if k in components}
 
-    def load_weight_components(
+    def load_weight_components(  # noqa: C901
         self,
         components: dict[str, WeightComponent],
     ) -> None:
@@ -1074,6 +1113,10 @@ class SpikingPPOBrain(ClassicalBrain):
             self.hidden_layers.load_state_dict(components["hidden_layers"].state)
         if "readout" in components:
             self.readout.load_state_dict(components["readout"].state)
+        # Graceful: load the MLP head only when this brain also has one (same-mode
+        # round-trip); an absent component or a cross-mode restore is a no-op.
+        if "actor_mlp" in components and self.actor_mlp is not None:
+            self.actor_mlp.load_state_dict(components["actor_mlp"].state)
         if "critic" in components:
             self.critic.load_state_dict(components["critic"].state)
 
