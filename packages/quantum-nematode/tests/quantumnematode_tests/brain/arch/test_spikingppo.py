@@ -1283,9 +1283,7 @@ class TestMLPActorHead:
         # mode-specific (param sets differ by head), so a full cross-mode restore is unsupported
         # by construction — load the shared network components.
         network = {
-            k: v
-            for k, v in spike_comps.items()
-            if k not in {"actor_optimizer", "critic_optimizer"}
+            k: v for k, v in spike_comps.items() if k not in {"actor_optimizer", "critic_optimizer"}
         }
         mlp_brain = _make_brain(actor_head="mlp")
         mlp_brain.load_weight_components(network)  # actor_mlp absent -> no-op, must not error
