@@ -10,14 +10,15 @@
   LIF membrane state is single-state just like the CfC hidden state, so this change mirrors CfC's
   machinery almost verbatim and swaps only the recurrent core.
 - **Spiking substrate** ([`brain/arch/_spiking_layers.py`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_spiking_layers.py)):
-  `SurrogateGradientSpike` (custom fast-sigmoid surrogate autograd fn), `LIFLayer` (Euler-integrated
+  `SurrogateGradientSpike` (custom sigmoid-derivative surrogate autograd fn, slope α), `LIFLayer` (Euler-integrated
   LIF over an `nn.Linear`), and `PopulationEncoder` are fully tested and reused. This change adds the
   recurrent + adaptive dynamics on top rather than taking an SNN-library dependency.
 - **`spikingreinforce`** ([`brain/arch/spikingreinforce.py`](../../../packages/quantum-nematode/quantumnematode/brain/arch/spikingreinforce.py))
   is **not** reused: REINFORCE (no critic/GAE/clip) over a fixed 4-D input blind to thermotaxis /
   klinotaxis / short-term memory. It stays as the legacy `spikingreinforce` arm; the new brain is a
   separate registration.
-- The recipe is settled by a pre-build investigation (`spiking_investigation_2026-06-01.md`).
+- The recipe is settled by a pre-build investigation (literature survey + codebase forensics; the key
+  papers are cited in the decisions below).
 
 ## Decision 1 — Recurrent adaptive-LIF core, one tick per env-step (carried membrane state)
 
@@ -39,7 +40,9 @@ partially-observable tasks with the *lowest* cross-seed variance and no training
 relevant to this cell's known init-variance fragility. **Why one tick per step?** GRSN and SpikeGym
 both run one spiking update per RL transition (state carried, like an RNN) and lose no learnability;
 it keeps cost at ~1.5–2.5× MLP (LSTM/CfC territory) so the n-seed sweep fits in hours, versus 4–8×
-for inner-tick unrolling. `timesteps_per_step` is exposed (default 1; 2 is the only cheap bump).
+for inner-tick unrolling. `timesteps_per_step` is exposed (default 1; 2 is the only cheap bump); for
+`timesteps_per_step > 1` the encoded input current is held constant across the inner ticks while the
+membrane/adaptation integrate, and the recurrent spike-feedback advances once per env-step.
 
 **Scope of "adaptive" here.** This first cut implements learnable decay + adaptive threshold + a
 recurrent spike-feedback current — *not* full GRSN-style GRU gating of the recurrent current. The
@@ -51,11 +54,11 @@ load-bearing parts.
 
 The hidden layer is the **spiking actor**. A **non-spiking leaky-integrator** output layer integrates
 the hidden spikes into a carried output membrane `m ← β_out ⊙ m + W_out · s`, and the action logits are
-that output membrane (`output_mode: "membrane"`, the default; smooth membrane gives better policy
-gradients than binary spikes). This is the standard SNN RL/classification readout (leaky-integrator
-output neurons). The deployed policy is the spiking actor; the readout is a linear integrator — this is
-the field-standard definition of a spiking RL agent. `output_mode` is configurable (`"membrane"` |
-`"spike_rate"`) for an in-brain ablation.
+that output membrane (smooth membrane gives better policy gradients than binary spikes). This is the
+standard SNN RL/classification readout (leaky-integrator output neurons). The deployed policy is the
+spiking actor; the readout is a linear integrator — this is the field-standard definition of a spiking
+RL agent. The first cut is **membrane-only** (no `output_mode` knob): a spike-rate readout is degenerate
+at the default one-tick-per-step and would conflict with the non-spiking readout, so it is a follow-up.
 
 ## Decision 3 — Plain-ANN critic on the detached membrane state
 
@@ -75,10 +78,12 @@ average out — the opposite of the wall-time budget. `PopulationEncoder` (Gauss
 documented fallback if the actor cannot represent the gradients in de-risk — a cheap swap with the best
 control pedigree, but it multiplies input dimensionality, so it is not the first cut.
 
-## Decision 5 — Fast-sigmoid surrogate, shallow slope, optional episode-based slope schedule
+## Decision 5 — Sigmoid-family surrogate, shallow slope, optional episode-based slope schedule
 
-Spikes are non-differentiable; training uses the reused `SurrogateGradientSpike` (fast-sigmoid) with a
-**shallow** slope `surrogate_slope: float = 2.0`. A shallow slope trains better in RL and is a direct
+Spikes are non-differentiable; training uses the reused `SurrogateGradientSpike` (the in-repo
+sigmoid-derivative surrogate, slope α) with a **shallow** slope `surrogate_slope: float = 2.0` (passed as
+α at each forward so it is runtime-schedulable; a Zenke fast-sigmoid is an equivalent drop-in if ever
+wanted). A shallow slope trains better in RL and is a direct
 mitigation for the old spiking brain's early gradient explosion. An **optional** episode-based schedule
 sharpens the slope as training progresses (`surrogate_slope_end` + `surrogate_slope_anneal_episodes`,
 both `None` → flat) — shallow while exploring, sharper while fine-tuning. The two schedule fields are

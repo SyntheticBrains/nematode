@@ -15,8 +15,8 @@ and consumes a fixed 4-D input (`food_strength`, `food_angle`, `predator_strengt
 that is structurally blind to thermotaxis, klinotaxis lateral gradients, and short-term memory — so it
 cannot represent the C3 sensory stack. Reusing it would measure old code on an incompatible substrate.
 
-A pre-build literature + codebase investigation (`spiking_investigation_2026-06-01.md`) settled the
-recipe. The decisive correction over a naive feedforward-LIF port: the core is a **recurrent
+A pre-build investigation (literature survey + codebase forensics) settled the recipe. The decisive
+correction over a naive feedforward-LIF port: the core is a **recurrent
 adaptive-LIF** that carries membrane state across env-steps at one tick per step (GRSN, AAAI 2025) —
 the cell is partially observable and the comparison's leaders (LSTM / CfC) win on memory, so a
 memoryless feedforward LIF would be structurally handicapped. The investigation also records an honest
@@ -32,8 +32,8 @@ config and the ranked evaluation live downstream in the comparison, not here.
 
 - **New brain** `SpikingPPOBrain` (`name: spikingppo`, `brain_type: SPIKING_PPO`, `families: ("spiking",)`):
   a **recurrent adaptive leaky-integrate-and-fire (LIF)** core — learnable membrane decay, soft reset, a
-  spike-feedback recurrent current, and a fast-sigmoid surrogate gradient — that carries its membrane
-  state across env-steps (one LIF tick per step). A learnable direct-current input encoder feeds the
+  spike-feedback recurrent current, and the in-repo sigmoid-family surrogate gradient — that carries its
+  membrane state across env-steps (one LIF tick per step). A learnable direct-current input encoder feeds the
   core; a non-spiking leaky-integrator readout produces the action logits (the **spiking actor**); a
   plain-ANN critic estimates value from the detached membrane state. Trained with PPO over
   truncated-BPTT sequence chunks, mirroring the `CfCPPOBrain` machinery (single recurrent state). The

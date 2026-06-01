@@ -3,7 +3,8 @@
 ## 1. Substrate + enum
 
 - [ ] 1.1 Extend the in-repo spiking substrate (`brain/arch/_spiking_layers.py` or a sibling module):
-      reuse `SurrogateGradientSpike` (fast-sigmoid, parameterised slope) as-is; add a
+      reuse `SurrogateGradientSpike` (the in-repo sigmoid-derivative surrogate; pass the slope α per
+      forward so it is runtime-schedulable) as-is; add a
       **recurrent adaptive-LIF** cell — learnable per-neuron decay `β = σ(raw_β)`, adaptive threshold
       `θ = v_threshold + adapt_scale ⊙ a`, recurrent spike-feedback current `W_rec · s_prev`, soft reset
       — that carries `(v, a, s)` across calls (one tick per call). Add a non-spiking leaky-integrator
@@ -17,8 +18,7 @@
 - [ ] 2.1 Add `SpikingPPOBrainConfig(BrainConfig)` with: `sensory_modules` (validated non-empty);
       core — `hidden_size: int = 64`, `num_hidden_layers: int = 1`, `timesteps_per_step: int = 1`,
       `v_threshold: float = 1.0`, `membrane_decay_init: float = 0.9`, `adaptation_decay_init: float = 0.9`,
-      `adapt_scale_init: float = 0.1`, `output_mode: str = "membrane"` (`"membrane"` | `"spike_rate"`),
-      `readout_decay_init: float = 0.9`, `input_encoding: str = "current"` (`"current"` | `"population"`);
+      `adapt_scale_init: float = 0.1`, `readout_decay_init: float = 0.9`;
       surrogate — `surrogate_slope: float = 2.0`, `surrogate_slope_end: float | None = None`,
       `surrogate_slope_anneal_episodes: int | None = None`; critic — `critic_hidden_dim: int = 64`,
       `critic_num_layers: int = 2`; PPO — `actor_lr: float = 0.0003`, `critic_lr: float = 0.0003`,
@@ -47,15 +47,17 @@
 - [ ] 3.4 `preprocess` (reuse `extract_classical_features`), `run_brain` (feature_norm → encode current →
       recurrent LIF → readout membrane → logits → softmax → Categorical sample; stash pending
       features/action/log_prob/value/neuron-state), `learn` (append to buffer; on full → PPO update;
-      reset), `post_process_episode`, `update_memory`, `copy`, `action_set` getter/setter with length
-      validation, `build_brain`/`update_parameters` as the base requires.
+      reset), `post_process_episode` (increments the `_episode_count` the schedules read, mirroring CfC),
+      `update_memory`, `copy` (may raise `NotImplementedError`, mirroring CfC), `action_set` getter/setter
+      with length validation, `build_brain`/`update_parameters` as the base requires.
 - [ ] 3.5 `SpikingPPORolloutBuffer` + `_perform_ppo_update` mirroring `CfCPPOBrain` (GAE; truncated-BPTT
       replay of the spiking core over `bptt_chunk_length` chunks recomputing log-probs/values through the
       surrogate; PPO clip objective + entropy bonus + value loss; `max_grad_norm`; `num_epochs`). Single
       per-step neuron state stored (detached at chunk boundaries). Reset neuron state at episode `dones`.
 - [ ] 3.6 `_get_entropy_coef()` (reuse the CfC linear-anneal schedule) and `_get_surrogate_slope()`
-      (analogous episode-based schedule; flat when the pair is unset), consumed in the PPO update /
-      forward pass respectively.
+      (analogous episode-based schedule; flat when the pair is unset): the entropy coef is consumed in the
+      PPO update; the surrogate slope α is applied in the spike surrogate's backward, exercised during the
+      BPTT replay.
 - [ ] 3.7 `WeightPersistence`: `get_weight_components` / `load_weight_components` for the input encoder,
       recurrent core (recurrent weights + learnable decay/adaptation params), readout, critic, both
       optimizers, and a training-state counter. Per-step neuron state is NOT persisted.
@@ -87,6 +89,9 @@
 - [ ] 5.8 Schedule validators: `entropy_coef_end` / `entropy_decay_episodes` and `surrogate_slope_end` /
       `surrogate_slope_anneal_episodes` each reject a half-set pair with a clear error; flat when unset;
       anneal-then-hold when set.
+- [ ] 5.9 Non-degenerate variance: over a sample of ≥ 100 forward passes with non-zero gradients, the
+      4-action logit variance is strictly > 0 and the policy does not collapse to a constant action
+      (covers the spec's variance scenario; mirror CfC's `TestVariance`).
 
 ## 6. Smoke config + verification
 

@@ -5,7 +5,7 @@
 The system SHALL provide a recurrent spiking brain `SpikingPPOBrain` (config `name: spikingppo`,
 `brain_type: SPIKING_PPO`) whose core is a **recurrent adaptive leaky-integrate-and-fire (LIF)** layer —
 a learnable per-neuron membrane decay, an adaptive firing threshold, a recurrent spike-feedback current,
-and a fast-sigmoid surrogate gradient — that carries its membrane state across env-steps (one LIF update
+and a sigmoid-family surrogate gradient — that carries its membrane state across env-steps (one LIF update
 per step). A learnable direct-current encoder SHALL feed the core; a **non-spiking leaky-integrator**
 readout SHALL produce the action logits over the 4-action `DEFAULT_ACTIONS` set (the spiking actor); and
 a plain-ANN critic SHALL estimate state value from the detached membrane state. The brain SHALL be
