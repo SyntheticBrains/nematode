@@ -1210,3 +1210,106 @@ class TestLeakyIntegratorReadout:
         decay = float(ro.readout_decay.detach())
         assert 0.0 < decay < 1.0
         assert decay == pytest.approx(0.8, abs=1e-4)
+
+
+class TestMLPActorHead:
+    """The configurable MLP actor head (``actor_head: "mlp"``) reads the hidden membrane."""
+
+    def test_default_spike_builds_no_actor_mlp(self) -> None:
+        """The default actor_head 'spike' builds no actor MLP (backward-compatible)."""
+        brain = _make_brain()
+        assert brain.config.actor_head == "spike"
+        assert brain.actor_mlp is None
+
+    def test_mlp_head_builds_and_forward(self) -> None:
+        """actor_head 'mlp' builds the actor MLP and produces finite logits over the action set."""
+        brain = _make_brain(actor_head="mlp")
+        assert brain.actor_mlp is not None
+        logits = _logits(brain, _make_params(0.6))
+        assert logits.shape == (brain.num_actions,)
+        assert torch.isfinite(logits).all()
+
+    def test_mlp_head_ppo_gradient_flows_via_decay(self) -> None:
+        """A PPO update under the MLP head flows gradient into the recurrent spiking core.
+
+        Asserts on ``raw_membrane_decay`` (flows through the smooth surrogate regardless of
+        spike density) rather than the recurrent weight (whose grad scales with spike density).
+        """
+        brain = _make_brain(actor_head="mlp", rollout_buffer_size=16, bptt_chunk_length=8)
+        brain.prepare_episode()
+        rng = np.random.default_rng(5)
+        for step in range(16):
+            params = _make_params(float(rng.uniform(0.1, 0.9)))
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=float(rng.uniform(-1.0, 1.0)), episode_done=(step == 15))
+        cell = _first_cell(brain)
+        assert cell.raw_membrane_decay.grad is not None
+        assert torch.isfinite(cell.raw_membrane_decay.grad).all()
+        assert torch.any(cell.raw_membrane_decay.grad != 0), (
+            "membrane decay got zero gradient — the MLP-head policy gradient did not reach the core"
+        )
+        assert cell.recurrent.weight.grad is not None
+        assert torch.isfinite(cell.recurrent.weight.grad).all()
+        for p in brain._actor_parameters():
+            assert torch.isfinite(p).all()
+
+    def test_mlp_head_weight_round_trip(self) -> None:
+        """Round-trip in mlp mode → identical logits (covers the actor_mlp component)."""
+        brain1 = _make_brain(actor_head="mlp")
+        brain1.prepare_episode()
+        params = _make_params()
+        for step in range(32):
+            brain1.run_brain(params, top_only=False, top_randomize=False)
+            brain1.learn(params, reward=0.1, episode_done=(step == 31))
+        brain1.post_process_episode()
+
+        components = brain1.get_weight_components()
+        assert "actor_mlp" in components
+        # brain2 starts from DIFFERENT weights (seed 999) so the identity depends on the load.
+        brain2 = _make_brain(actor_head="mlp", seed=999)
+        brain2.load_weight_components(components)
+
+        brain1.prepare_episode()
+        brain2.prepare_episode()
+        p = _make_params(0.7)
+        torch.testing.assert_close(_logits(brain1, p), _logits(brain2, p))
+
+    def test_spike_mode_no_component_and_absent_actor_mlp_loads_gracefully(self) -> None:
+        """A genuine spike-mode checkpoint (no actor_mlp) loads into an mlp brain without error."""
+        spike_comps = _make_brain().get_weight_components()  # default = spike mode
+        assert "actor_mlp" not in spike_comps
+        # Cross-mode load: the spike checkpoint genuinely lacks actor_mlp, so the mlp brain
+        # keeps its init MLP head (the S2 graceful contract). The actor/critic optimizers are
+        # mode-specific (param sets differ by head), so a full cross-mode restore is unsupported
+        # by construction — load the shared network components.
+        network = {
+            k: v
+            for k, v in spike_comps.items()
+            if k not in {"actor_optimizer", "critic_optimizer"}
+        }
+        mlp_brain = _make_brain(actor_head="mlp")
+        mlp_brain.load_weight_components(network)  # actor_mlp absent -> no-op, must not error
+
+    def test_invalid_actor_head_rejected(self) -> None:
+        """actor_head outside {spike, mlp} raises a clear error."""
+        with pytest.raises(ValueError, match="actor_head must be"):
+            _make_brain(actor_head="bogus")
+
+    def test_invalid_actor_dims_rejected(self) -> None:
+        """Non-positive actor MLP dimensions are rejected."""
+        with pytest.raises(ValueError, match="actor_hidden_dim must be"):
+            _make_brain(actor_head="mlp", actor_hidden_dim=0)
+        with pytest.raises(ValueError, match="actor_num_layers must be"):
+            _make_brain(actor_head="mlp", actor_num_layers=0)
+
+    def test_actor_num_layers_controls_depth(self) -> None:
+        """actor_num_layers is honoured: N hidden layers -> N+1 Linears (matches CfC/LSTM)."""
+
+        def n_linears(brain: SpikingPPOBrain) -> int:
+            assert brain.actor_mlp is not None
+            return sum(1 for m in brain.actor_mlp if isinstance(m, torch.nn.Linear))
+
+        one = _make_brain(actor_head="mlp", actor_num_layers=1)
+        two = _make_brain(actor_head="mlp", actor_num_layers=2)
+        assert n_linears(one) == 2  # 1 hidden + output Linear
+        assert n_linears(two) == 3  # 2 hidden + output Linear
