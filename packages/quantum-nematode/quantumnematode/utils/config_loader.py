@@ -36,6 +36,7 @@ from quantumnematode.brain.arch import (
     QSNNPPOBrainConfig,
     QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
+    SpikingPPOBrainConfig,
     SpikingReinforceBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
@@ -127,6 +128,7 @@ BrainConfigType = (
     | ConnectomePPOBrainConfig
     | FeedforwardGABrainConfig
     | CfCBrainConfig
+    | SpikingPPOBrainConfig
 )
 
 # Type alias for predator movement patterns

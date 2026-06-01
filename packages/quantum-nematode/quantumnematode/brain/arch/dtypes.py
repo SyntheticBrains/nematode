@@ -43,6 +43,7 @@ class BrainType(StrEnum):
     CONNECTOMEPPO = "connectomeppo"
     FEEDFORWARDGA = "feedforwardga"
     CFC_PPO = "cfcppo"
+    SPIKING_PPO = "spikingppo"
 
 
 class DeviceType(StrEnum):
@@ -103,6 +104,7 @@ BRAIN_TYPES = Literal[
     BrainType.CONNECTOMEPPO,
     BrainType.FEEDFORWARDGA,
     BrainType.CFC_PPO,
+    BrainType.SPIKING_PPO,
 ]
 
 
