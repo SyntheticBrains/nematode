@@ -119,14 +119,26 @@ def parity_vector(modules: list[ModuleName]) -> np.ndarray:
 
     ``extract_classical_features`` sorts modules by ``m.value`` and concatenates each
     module's ``to_classical`` output, so the parity vector is built in that same
-    sorted order. Validated against env reflection by the mirror-consistency test.
+    sorted order — and its total length matches ``get_classical_feature_dimension``.
+    STAM is context-dependent (its runtime length is set by ``set_stam_dim_context``
+    from the env), so STAM absorbs the context-aware remainder; STAM channels are all
+    Z2-even. Validated against env reflection by the mirror-consistency test.
     """
     sorted_modules = sorted(modules, key=lambda m: m.value)
+    total = get_classical_feature_dimension(modules)  # context-aware (matches extract)
+    non_stam_dims: dict[ModuleName, int] = {}
+    for module in sorted_modules:
+        if module == ModuleName.STAM:
+            continue
+        sensory_module = SENSORY_MODULES.get(module)
+        non_stam_dims[module] = sensory_module.classical_dim if sensory_module is not None else 2
+    stam_dim = max(0, total - sum(non_stam_dims.values()))  # context-aware STAM length
     parities: list[int] = []
     for module in sorted_modules:
-        sensory_module = SENSORY_MODULES.get(module)
-        dim = sensory_module.classical_dim if sensory_module is not None else 2
-        parities.extend(module_parity_pattern(module, dim))
+        if module == ModuleName.STAM:
+            parities.extend([1] * stam_dim)  # STAM channels are all Z2-even
+        else:
+            parities.extend(module_parity_pattern(module, non_stam_dims[module]))
     return np.array(parities, dtype=np.float32)
 
 
@@ -394,6 +406,12 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
 
         # Observation parity vector (aligned with extract_classical_features ordering).
         self.parity = parity_vector(config.sensory_modules)
+        if len(self.parity) != self.input_dim:
+            msg = (
+                f"parity vector length {len(self.parity)} != input_dim {self.input_dim}; "
+                "the parity assignment is misaligned with extract_classical_features"
+            )
+            raise ValueError(msg)
         num_odd_inputs = int((self.parity < 0).sum())
         if config.k_odd > num_odd_inputs:
             logger.warning(

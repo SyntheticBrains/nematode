@@ -1,0 +1,88 @@
+# Klinotaxis Sensing - Equivariant Quantum PPO Brain - Dynamic Foraging Environment - Small Configuration
+# Smoke config proving the bilateral-Z2-equivariant quantum brain trains end-to-end on klinotaxis foraging.
+#
+# Architecture: Features -> equivariant parity-block pre-encoder -> U_R-invariant reference state
+#               (H on odd qubits) -> Z2-equivariant re-uploading quantum circuit (IsingXX/IsingZZ
+#               entanglers) -> equivariant Pauli readout (LEFT<->RIGHT swap under the mirror) / Critic MLP.
+# Training: PPO via backprop through an in-repo torch statevector simulator (no parameter-shift).
+#
+# This is a genuinely-quantum arm (trained circuit parameters + load-bearing entanglement) framed as a
+# representational / inductive-bias study, NOT a quantum-advantage claim: at a few simulated qubits no
+# quantum advantage is expected on a classical-data control task. The two ablation flags isolate the
+# contributions — set `equivariant: false` for the unstructured PQC control (no symmetry prior) or
+# `quantum: false` for the equivariant-classical control (no quantum circuit).
+#
+# Foraging-only klinotaxis exposes a single odd (left-right lateral-gradient) feature, so k_odd: 1 and a
+# small num_qubits avoid a rank-deficient odd block (k_even = num_qubits - k_odd = 3 satisfies the
+# 3-even-observable readout).
+
+max_steps: 1000
+brain:
+  name: equivariantquantum
+  config:
+    # Circuit: num_qubits = k_even (3) + k_odd (1); data re-uploading layers
+    num_qubits: 4
+    k_odd: 1
+    num_layers: 2
+
+    # Ablation flags (defaults shown; flip for the attribution controls)
+    equivariant: true
+    quantum: true
+
+    # Critic MLP (on the detached latent)
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+    # Separate learning rates (flat — no schedule)
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    # PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_klinotaxis
+      - proprioception   # Heading direction — invariant under the bilateral mirror
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 400.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis  # Mode C: scalar + lateral gradient + dC/dt
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
