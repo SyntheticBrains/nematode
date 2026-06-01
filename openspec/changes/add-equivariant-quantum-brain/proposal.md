@@ -70,8 +70,8 @@ comparison change.
 - **Smoke config** `configs/scenarios/foraging/equivariantquantum_small_klinotaxis.yml` proving the
   brain trains end-to-end on klinotaxis foraging.
 - **Tests** under `tests/quantumnematode_tests/brain/arch/test_equivariantquantum.py`, including a
-  **mirror-consistency test** (empirically derives the observation parity vector from the real sensory
-  code) and an **end-to-end policy-equivariance test**.
+  **mirror-consistency test** (validates the assigned observation parity vector against the live sensory
+  code by reflecting the inputs across all four headings) and an **end-to-end policy-equivariance test**.
 
 ## Impact
 
@@ -80,8 +80,9 @@ comparison change.
   (`extract_classical_features`), the PPO + rollout-buffer + GAE machinery pattern (mirroring the other
   PPO brains), and the `entropy_coef_end` / `entropy_decay_episodes` anneal hook.
 - **Reuses / corrects**: the design depends on a **verified** observation parity vector — the predator
-  *mechanosensation* zone feature is fore-aft (Z₂-**even**), not sign-flipping; all parities are
-  re-derived empirically by the mirror-consistency test rather than hand-assigned.
+  *mechanosensation* zone feature is fore-aft (Z₂-**even**), not sign-flipping; the parity is assigned
+  from the module layout, sized to align with `get_classical_feature_dimension` (STAM absorbs the env-set
+  context remainder), and validated against the live sensory code by the mirror-consistency test.
 - **Out of scope** (downstream or follow-ups): the combined-behaviour C3 cell config and the ranked
   cross-architecture evaluation (the comparison change); the `phase6-tracking` Decision-4 amendment that
   promotes the quantum family from SHOULD-in-T7 to an evaluated arm here; richer symmetry groups (the

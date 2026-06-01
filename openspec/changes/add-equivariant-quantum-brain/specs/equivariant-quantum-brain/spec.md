@@ -80,19 +80,19 @@ unchanged. The observation parity vector `p` SHALL be derived empirically from t
 hand-assigned), and any feature that does not transform as a clean `±1` SHALL be symmetrised or routed as
 an even side-input with the deviation recorded.
 
-#### Scenario: Observation parity vector is derived by a mirror-consistency check across all headings
+#### Scenario: The observation parity vector is validated by a mirror-consistency check across all headings
 
-- **GIVEN** environment states for each of the four agent headings (UP/DOWN/LEFT/RIGHT) and the
-  observations they produce
-- **WHEN** each environment is reflected across the agent's forward (egocentric left–right) axis and the
-  observation is recomputed
-- **THEN** the reflected observation SHALL equal `R · obs` for the derived parity vector `p` (within
-  floating-point tolerance), with the lateral-gradient *angle* features assigned `−1` and the
-  strength / temporal-derivative / fore-aft-zone / proprioception features assigned `+1`
-- **AND** the derived `p` SHALL be identical across all four headings (confirming `R = diag(p)` is a
-  valid heading-independent operator); a feature whose parity is heading-dependent SHALL fail the test
-- **AND** any feature that transforms as neither `+1` nor `−1` SHALL be flagged and handled
-  (symmetrised or routed as even), not silently mis-typed
+- **GIVEN** the parity vector `p` assigned from the sensory-module layout (each lateral-gradient *angle*
+  feature `−1`; strength / temporal-derivative / fore-aft-zone / proprioception / STAM features `+1`),
+  sized so `len(p)` matches `get_classical_feature_dimension`
+- **WHEN** the sensory inputs are reflected across the agent's forward (egocentric left–right) axis for
+  each of the four agent headings (UP/DOWN/LEFT/RIGHT) and the observation is recomputed via the live
+  feature-extraction pipeline
+- **THEN** the recomputed observation SHALL equal `R · obs` for the single assigned `p` (within
+  floating-point tolerance) for every heading — confirming `R = diag(p)` is heading-independent
+- **AND** any feature that does not transform as its assigned `±1` SHALL fail the test (catching drift
+  between the assigned parity and the live sensory code)
+- **AND** a construction-time guard SHALL fail loudly if `len(p) != input_dim`
 
 #### Scenario: The policy is exactly mirror-equivariant end-to-end
 
@@ -150,9 +150,9 @@ restored (checkpoint round-trip).
 
 - **GIVEN** an instance of `EquivariantQuantumPPOBrain`
 - **WHEN** `brain.get_weight_components()` is called
-- **THEN** the returned dict SHALL contain entries for the pre-encoder, the quantum circuit parameters,
-  the readout, and the critic, each a `WeightComponent` carrying a `state` dict of named `torch.Tensor`
-  parameters
+- **THEN** the returned dict SHALL contain an `actor` component (the pre-encoder + quantum circuit
+  parameters + readout scales, as a single module state) and a `critic` component — plus `optimizer` and
+  `training_state` — each a `WeightComponent` carrying a `state` dict of named `torch.Tensor` parameters
 - **AND WHEN** a second brain with identical topology loads that output via `load_weight_components()`
 - **THEN** the two brains SHALL produce identical action logits for the same input (within
   floating-point tolerance)

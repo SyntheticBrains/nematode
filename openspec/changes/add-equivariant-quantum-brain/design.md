@@ -38,18 +38,20 @@ The symmetry group is `Z₂ = {e, r}` (`r` = left–right mirror, `r² = e`). It
   - **Z₂-even (`p = +1`, invariant)**: all *strength* and *temporal-derivative* features; the predator
     **mechanosensation zone** angle (anterior/posterior is a **fore-aft** axis — unchanged by a
     left–right mirror; this corrects a naive "sign-flip" assignment); proprioception (the mirror fixes
-    the agent's own heading axis by construction); and STAM channels per their buffered quantity's parity.
+    the agent's own heading axis by construction); and STAM channels (treated as uniformly even).
 
-**The parity vector `p` is not hand-assigned — it is derived empirically** by a **mirror-consistency
-test** (Decision 10): construct env states **across all four headings (UP/DOWN/LEFT/RIGHT)**, reflect
-each across the agent's forward axis, recompute the observation, and read off which features are
-invariant (`+1`), sign-flipped (`−1`), or neither. The derived `p` SHALL be **identical across all four
-headings** — this is what makes `R = diag(p)` a valid *heading-independent* operator (it empirically
-confirms the proprioception-is-even claim rather than assuming it); a feature whose parity is
-heading-dependent SHALL fail the test. Any feature that does not transform as a clean `±1` (e.g. an
-ambiguous STAM channel) is
-**symmetrised** (projected onto its even part) or routed as an even side-input, with the deviation logged.
-This makes the construction robust to the exact sensory implementation.
+**The parity vector `p` is assigned from the sensory-module layout, then validated against the live
+sensory code.** `parity_vector(modules)` builds `p` in `extract_classical_features` order (modules sorted
+by value): the lateral-gradient *angle* feature (index 1) of each lateral-gradient module is `−1`; every
+other feature — strengths, temporal derivatives, the predator-mechano fore-aft zone, and proprioception —
+is `+1`; **STAM is treated as uniformly even** and sized to **absorb the context-aware remainder** so that
+`len(p)` matches `get_classical_feature_dimension` (which reads the env-set STAM-dim context via
+`set_stam_dim_context`). A construction-time guard fails loudly if `len(p) ≠ input_dim`. The assignment is
+then **validated by a mirror-consistency test** (Decision 10) that reflects the sensory inputs across the
+agent's forward axis for **all four headings (UP/DOWN/LEFT/RIGHT)** and asserts the recomputed observation
+equals `R·obs` for the single `p` — empirically confirming `R` is heading-independent (including the
+proprioception-is-even and predator-mechano-zone-is-even claims) and catching any drift between the
+assigned parity and the live sensory implementation.
 
 ## Decision 2 — Equivariant classical pre-encoder (parity-block linear map)
 
@@ -152,8 +154,10 @@ reported** — not "beats the field". This protects against goalpost-moving and 
 
 Two tests are load-bearing design artifacts:
 
-- **Mirror-consistency** (Decision 1): derive `p` empirically from the real sensory code; fail if a
-  feature claimed even/odd does not transform as `±1` (catches sensory-code drift).
+- **Mirror-consistency** (Decision 1): reflect the sensory inputs across the agent's forward axis for all
+  four headings and assert the recomputed observation equals `R·obs` for the assigned `p`; fail if any
+  feature does not transform as its assigned `±1` (catches drift between the assigned parity and the live
+  sensory code).
 - **End-to-end policy equivariance**: for random inputs `s`, assert
   `softmax(logits(R·s)) == ρ_A(r)·softmax(logits(s))` within tolerance (the `LEFT`/`RIGHT` entries swap,
   `FORWARD`/`STAY` fixed). This must hold for the `equivariant: true` brain and the equivariant-classical
@@ -172,9 +176,10 @@ scales, critic). No `ENCODER_REGISTRY` entry — this brain is PPO-trained, not 
 - **Entanglement turns out non-load-bearing** (the `IsingXX/ZZ` ablation matches the product-state
   circuit). This is itself a reportable finding (consistent with the gridworld-PPO literature), not a
   failure — documented, not hidden.
-- **STAM channels lack clean parity.** Mitigated by the mirror-consistency test's symmetrise-or-route
-  fallback (Decision 1); worst case the quantum cell uses a STAM-free observation, documented as a
-  per-brain interface choice driven by the qubit budget.
+- **STAM channels assumed uniformly even.** If a STAM channel were actually odd under the mirror, the
+  policy's equivariance would be imperfect on that channel; this is guarded by the mirror-consistency test
+  (extendable to STAM-bearing configs) and the runtime `len(p) == input_dim` guard. Worst case the quantum
+  cell uses a STAM-free observation, documented as a per-brain interface choice driven by the qubit budget.
 - **Statevector simulator correctness.** Mitigated by validating against Qiskit on fixed circuits and by
   the equivariance tests (a buggy simulator would break exact equivariance).
 - **Qubit budget vs observation width.** The equivariant pre-encoder compresses to `num_qubits`; if

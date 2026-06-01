@@ -2,14 +2,14 @@
 
 ## 1. Symmetry derivation + enum
 
-- [x] 1.1 Implement the **mirror-consistency helper**: for **each of the four headings
-  (UP/DOWN/LEFT/RIGHT)**, build an env state, reflect it across the agent's egocentric forward axis,
-  recompute the observation via the live sensory pipeline, and derive the parity vector `p ∈ {+1,−1}^d`
-  per feature. Assert `p` is **identical across all four headings** (fail if any feature's parity is
-  heading-dependent). Flag any feature that transforms as neither `+1` nor `−1`; symmetrise it (project
-  onto its even part) or route it as an even side-input, logging the deviation. Confirm the expected
-  assignment: the 3 lateral-gradient *angle* features → `−1`; strengths, temporal-derivatives,
-  predator-mechano fore-aft zone, and proprioception → `+1`.
+- [x] 1.1 Implement `parity_vector(modules)`: assign `p ∈ {+1,−1}^d` from the sensory-module layout in
+  `extract_classical_features` order — each lateral-gradient *angle* feature (index 1) → `−1`; strengths,
+  temporal-derivatives, the predator-mechano fore-aft zone, proprioception, and STAM → `+1`; size it so
+  `len(p)` matches `get_classical_feature_dimension` (STAM absorbs the env-set context remainder). Validate
+  it with a **mirror-consistency test**: for **each of the four headings (UP/DOWN/LEFT/RIGHT)**, reflect
+  the sensory inputs across the agent's forward axis, recompute the observation via the live pipeline, and
+  assert it equals `R·obs` for the single `p` (fail if any feature does not transform as its assigned
+  `±1`). A construction-time guard fails loudly if `len(p) != input_dim`.
 - [x] 1.2 Add `EQUIVARIANT_QUANTUM_PPO` to the `BrainType` enum in `brain/arch/dtypes.py` (value
   `"equivariantquantum"`) and to the `BRAIN_TYPES` `Literal`. (`families=("quantum",)` auto-populates
   the quantum family set via the registry.)
@@ -66,8 +66,9 @@
   `action_set` setter (mirroring cfc/spiking; `copy()` may raise `NotImplementedError` per those
   precedents); PPO `learn()` with rollout buffer + GAE + clipped surrogate + entropy bonus (+ anneal) +
   value loss + grad-norm clip, mirroring the other PPO arms.
-- [x] 4.8 `WeightPersistence`: `get_weight_components()` / `load_weight_components()` over pre-encoder,
-  quantum params, readout scales, critic.
+- [x] 4.8 `WeightPersistence`: `get_weight_components()` / `load_weight_components()` over `actor`
+  (pre-encoder + circuit params + readout scales, as one module state), `critic`, `optimizer`, and
+  `training_state`.
 
 ## 5. Registration
 
@@ -89,9 +90,10 @@
 
 ## 7. Tests (`tests/quantumnematode_tests/brain/arch/test_equivariantquantum.py`)
 
-- [x] 7.1 **Mirror-consistency** (all four headings): reflected env ⇒ recomputed observation equals
-  `R·obs`; lateral-gradient angles flip, the rest invariant; the derived `p` is identical across
-  UP/DOWN/LEFT/RIGHT; any non-`±1` feature is flagged/handled.
+- [x] 7.1 **Mirror-consistency** (all four headings): reflect the sensory inputs across the forward axis,
+  recompute via the live pipeline, and assert it equals `R·obs` for the single assigned `p` (lateral-
+  gradient angle flips, the rest invariant) for UP/DOWN/LEFT/RIGHT; fail on any feature not matching its
+  assigned `±1`.
 - [x] 7.2 **End-to-end policy equivariance** (`equivariant: true`): `P(LEFT|s)=P(RIGHT|R·s)` &
   `FORWARD`/`STAY` fixed, over ≥100 random inputs; **and** the classical-equivariant ablation passes the
   same check; **and** the non-equivariant ablation does **not** (guard that it is genuinely unstructured).
