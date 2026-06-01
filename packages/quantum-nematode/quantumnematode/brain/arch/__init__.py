@@ -27,6 +27,7 @@ from .cfc_ppo import CfCBrainConfig, CfCPPOBrain
 from .connectome_ppo import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from .crh import CRHBrain, CRHBrainConfig
 from .crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
+from .equivariant_quantum import EquivariantQuantumPPOBrain, EquivariantQuantumPPOBrainConfig
 from .feedforward_ga import FeedforwardGABrain, FeedforwardGABrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
@@ -67,6 +68,8 @@ __all__ = [
     "ClassicalBrain",
     "ConnectomePPOBrain",
     "ConnectomePPOBrainConfig",
+    "EquivariantQuantumPPOBrain",
+    "EquivariantQuantumPPOBrainConfig",
     "FeedforwardGABrain",
     "FeedforwardGABrainConfig",
     "HybridClassicalBrain",
