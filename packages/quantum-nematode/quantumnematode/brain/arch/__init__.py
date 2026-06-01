@@ -44,6 +44,7 @@ from .qrhqlstm import QRHQLSTMBrain, QRHQLSTMBrainConfig
 from .qsnnppo import QSNNPPOBrain, QSNNPPOBrainConfig
 from .qsnnreinforce import QSNNReinforceBrain, QSNNReinforceBrainConfig
 from .qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
+from .spiking_ppo import SpikingPPOBrain, SpikingPPOBrainConfig
 from .spikingreinforce import SpikingReinforceBrain, SpikingReinforceBrainConfig
 
 # Every architecture module has now been imported and has self-registered
@@ -108,6 +109,8 @@ __all__ = [
     "ReservoirLSTMBase",
     "ReservoirLSTMBaseConfig",
     "RuleStepReport",
+    "SpikingPPOBrain",
+    "SpikingPPOBrainConfig",
     "SpikingReinforceBrain",
     "SpikingReinforceBrainConfig",
     "get_all_registrations",
