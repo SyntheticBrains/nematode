@@ -44,7 +44,10 @@ as CfC defaults to `"motor"` and opts into `"mlp"`.
 
 The actor MLP's parameters join `_actor_parameters()` (so they are in the actor optimizer and the
 `max_grad_norm` clip) and are exposed/loaded via `WeightPersistence` under an `"actor_mlp"` component (only
-when present). `actor_head` is validated to `{"spike", "mlp"}` in the existing `_validate_config`. The
+when present). Weight round-trip assumes the same `actor_head` mode (as in the comparison's curriculum
+warm-start, which saves and restores an `mlp` brain); `load_weight_components` tolerates an absent
+`"actor_mlp"` component (restoring into spike mode is simply a no-op for that head) rather than
+hard-requiring it. `actor_head` is validated to `{"spike", "mlp"}` in the existing `_validate_config`. The
 per-step neuron state is unchanged (the MLP is stateless).
 
 ## Risks
@@ -52,5 +55,5 @@ per-step neuron state is unchanged (the MLP is stateless).
 | Risk | Mitigation |
 |---|---|
 | MLP head changes the default behaviour | Default is `"spike"`; the MLP path is constructed only when `actor_head == "mlp"`. A test asserts the spike-head default builds no actor MLP. |
-| Weight round-trip misses the new component | `WeightPersistence` includes `"actor_mlp"` when present; a test round-trips logits in `mlp` mode. |
+| Weight round-trip misses the new component / cross-mode load | `WeightPersistence` includes `"actor_mlp"` when present and the load tolerates its absence (same-mode round-trip assumed); a test round-trips logits in `mlp` mode. |
 | Unknown `actor_head` silently mis-builds | `_validate_config` rejects values outside `{"spike", "mlp"}` with a clear error; a test asserts it. |

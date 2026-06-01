@@ -19,7 +19,9 @@
 - [ ] 2.3 In `_actor_parameters()`, append `self.actor_mlp.parameters()` when present (so it is in the
       actor optimizer + `max_grad_norm` clip).
 - [ ] 2.4 In `WeightPersistence` (`get_weight_components` / `load_weight_components`), expose/load an
-      `"actor_mlp"` component when present. Per-step neuron state unchanged.
+      `"actor_mlp"` component when present; `load_weight_components` SHALL tolerate an absent `actor_mlp`
+      entry (same-mode round-trip assumed; restoring into spike mode must not error). Per-step neuron
+      state unchanged.
 - [ ] 2.5 No milestone/tracking labels in code or docstrings.
 
 ## 3. Tests (`tests/quantumnematode_tests/brain/arch/test_spikingppo.py`)
@@ -27,8 +29,9 @@
 - [ ] 3.1 Default `actor_head: "spike"` builds no `actor_mlp`; forward-pass + PPO update unchanged
       (existing tests still green).
 - [ ] 3.2 `actor_head: "mlp"`: builds the actor MLP; forward-pass shapes (logits `(num_actions,)`, finite);
-      a PPO update runs and gradient flows through the surrogate into the recurrent core (recurrent
-      weight grad finite/non-zero), params finite.
+      a PPO update runs and gradient flows through the surrogate into the recurrent core — assert the
+      learnable membrane decay (`raw_membrane_decay`) grad is finite + non-zero (spike-density-independent,
+      per the multi-layer-test lesson); the recurrent weight grad need only be finite. Params stay finite.
 - [ ] 3.3 Weight `get`/`load` round-trip in `mlp` mode → identical logits for the same input + neuron state
       (covers the `"actor_mlp"` component).
 - [ ] 3.4 `_validate_config` rejects `actor_head` not in `{"spike", "mlp"}` with a clear error.
