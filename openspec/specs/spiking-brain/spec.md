@@ -1,8 +1,11 @@
 # spiking-brain Specification
 
 ## Purpose
-TBD - created by archiving change add-spiking-ppo-brain. Update Purpose after archive.
+
+This specification defines the **spiking neural-network brain** capability — a recurrent adaptive leaky-integrate-and-fire (LIF) brain (`SpikingPPOBrain`, registry name `spikingppo`) whose core carries spiking membrane state across env-steps (learnable per-neuron decay, adaptive firing threshold, a recurrent spike-feedback current, soft reset, sigmoid-derivative surrogate gradient). A learnable direct-current encoder feeds the core, a non-spiking leaky-integrator reads out the action logits (the spiking actor), a plain-ANN critic estimates value from the detached membrane state, and training is PPO over truncated-BPTT sequence chunks. It provides the neuromorphic / event-driven row of the cross-architecture comparison, alongside the wild-type-connectome and continuous-time (CfC) brains; it is built by extending the in-repo spiking substrate with no SNN-library dependency. The capability was introduced by the archived change `add-spiking-ppo-brain`; this document is its canonical record of required behaviour — the architecture, weight persistence, and plugin-registry registration. Audience: developers extending the brain-architecture plugin layer and authors of the cross-architecture comparison.
+
 ## Requirements
+
 ### Requirement: Spiking Brain Architecture
 
 The system SHALL provide a recurrent spiking brain `SpikingPPOBrain` (config `name: spikingppo`,
@@ -110,4 +113,3 @@ per-architecture conditional branch.
 - **WHEN** a simulation config names brain `spikingppo`
 - **THEN** the launcher SHALL instantiate `SpikingPPOBrain` via the registry lookup
 - **AND** no per-architecture conditional SHALL be required in the launcher or brain factory
-

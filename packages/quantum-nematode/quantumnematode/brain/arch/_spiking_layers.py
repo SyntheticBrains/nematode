@@ -373,7 +373,9 @@ class RecurrentAdaptiveLIFCell(nn.Module):
     Parameters
     ----------
     input_dim : int
-        Dimensionality of the encoded input current ``x``.
+        Unused by the recurrent core — the input current arrives already encoded at
+        ``num_neurons`` width (the encoder lives in the brain). Retained only for
+        constructor-signature parity with :class:`LIFLayer`.
     num_neurons : int
         Number of recurrent LIF units.
     v_threshold : float
@@ -406,6 +408,8 @@ class RecurrentAdaptiveLIFCell(nn.Module):
         adapt_scale_init: float = 0.1,
     ) -> None:
         super().__init__()
+        # input_dim is not read in forward (the current is pre-encoded to num_neurons
+        # width); kept only for interface parity with LIFLayer.
         self.input_dim = input_dim
         self.num_neurons = num_neurons
         self.v_threshold: float = v_threshold

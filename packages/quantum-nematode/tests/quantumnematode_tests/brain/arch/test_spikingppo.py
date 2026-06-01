@@ -552,6 +552,62 @@ class TestPPOUpdate:
         assert raw_decay.grad is not None
         assert torch.isfinite(raw_decay.grad).all()
 
+    def test_multilayer_ppo_update_trains_every_layer(self) -> None:
+        """With num_hidden_layers=2, a PPO update flows gradient into EVERY stacked cell.
+
+        Guards the multi-layer BPTT replay (the nested tick/layer loop): a regression
+        that drove only the first layer would leave the second layer's surrogate-only
+        recurrent weights at zero/None gradient while every other test still passed.
+        """
+        brain = _make_brain(num_hidden_layers=2, rollout_buffer_size=16, bptt_chunk_length=8)
+        brain.prepare_episode()
+        rng = np.random.default_rng(2)
+        for step in range(16):
+            params = _make_params(float(rng.uniform(0.1, 0.9)))
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=float(rng.uniform(-1.0, 1.0)), episode_done=(step == 15))
+
+        assert len(brain.hidden_layers) == 2
+        for layer_idx, layer in enumerate(brain.hidden_layers):
+            assert isinstance(layer, RecurrentAdaptiveLIFCell)
+            # raw_membrane_decay receives gradient through the (smooth) surrogate whenever
+            # the cell participates in the forward/backward — a spike-density-independent
+            # signal that the multi-layer replay genuinely DRIVES this stacked cell (a
+            # regression that skipped the second layer would leave it None/zero here).
+            beta_grad = layer.raw_membrane_decay.grad
+            assert beta_grad is not None, f"Layer {layer_idx} was not driven (no gradient)"
+            assert torch.isfinite(beta_grad).all()
+            assert torch.any(beta_grad != 0), f"Layer {layer_idx} got zero gradient — not trained"
+            # The recurrent spike-feedback weights are wired into the graph and stay finite
+            # (their magnitude depends on this layer's spike density, so non-zero is not
+            # asserted for deeper, sparser-firing layers).
+            rec_grad = layer.recurrent.weight.grad
+            assert rec_grad is not None
+            assert torch.isfinite(rec_grad).all()
+
+    def test_multitick_ppo_update_leaves_params_finite(self) -> None:
+        """With timesteps_per_step=2, the inner-tick unroll trains without blowing up.
+
+        Exercises the inner-tick loop (constant input current held across ticks, the
+        recurrence advancing each tick) through a full PPO update.
+        """
+        brain = _make_brain(timesteps_per_step=2, rollout_buffer_size=16, bptt_chunk_length=8)
+        brain.prepare_episode()
+        rng = np.random.default_rng(3)
+        for step in range(16):
+            params = _make_params(float(rng.uniform(0.1, 0.9)))
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=float(rng.uniform(-1.0, 1.0)), episode_done=(step == 15))
+
+        assert brain.history_data.losses, "Expected a PPO update to have run"
+        cell = _first_cell(brain)
+        assert cell.recurrent.weight.grad is not None
+        assert torch.isfinite(cell.recurrent.weight.grad).all()
+        for p in brain.hidden_layers.parameters():
+            assert torch.isfinite(p).all()
+        for p in brain.readout.parameters():
+            assert torch.isfinite(p).all()
+
     def test_ppo_replays_over_chunks(self) -> None:
         """A buffer larger than the chunk length yields multiple BPTT chunks."""
         buf = SpikingPPORolloutBuffer(buffer_size=16, device=torch.device("cpu"))
@@ -630,7 +686,9 @@ class TestWeightPersistence:
         """Round-trip identity holds after advancing both brains' state identically."""
         brain1 = _make_brain()
         components = brain1.get_weight_components()
-        brain2 = _make_brain()
+        # brain2 starts from DIFFERENT weights (seed 999) so the round-trip identity
+        # genuinely depends on load_weight_components (not on a shared init seed).
+        brain2 = _make_brain(seed=999)
         brain2.load_weight_components(components)
 
         brain1.prepare_episode()
