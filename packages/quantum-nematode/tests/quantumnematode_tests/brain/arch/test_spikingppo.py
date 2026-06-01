@@ -1275,14 +1275,20 @@ class TestMLPActorHead:
         torch.testing.assert_close(_logits(brain1, p), _logits(brain2, p))
 
     def test_spike_mode_no_component_and_absent_actor_mlp_loads_gracefully(self) -> None:
-        """Spike mode exposes no actor_mlp; an mlp brain tolerates components lacking actor_mlp."""
-        assert "actor_mlp" not in _make_brain().get_weight_components()
-        # An older checkpoint may lack the actor_mlp component; the mlp brain must load the
-        # rest and keep its init MLP head without error (the S2 graceful-load contract).
+        """A genuine spike-mode checkpoint (no actor_mlp) loads into an mlp brain without error."""
+        spike_comps = _make_brain().get_weight_components()  # default = spike mode
+        assert "actor_mlp" not in spike_comps
+        # Cross-mode load: the spike checkpoint genuinely lacks actor_mlp, so the mlp brain
+        # keeps its init MLP head (the S2 graceful contract). The actor/critic optimizers are
+        # mode-specific (param sets differ by head), so a full cross-mode restore is unsupported
+        # by construction — load the shared network components.
+        network = {
+            k: v
+            for k, v in spike_comps.items()
+            if k not in {"actor_optimizer", "critic_optimizer"}
+        }
         mlp_brain = _make_brain(actor_head="mlp")
-        comps = mlp_brain.get_weight_components()
-        del comps["actor_mlp"]
-        mlp_brain.load_weight_components(comps)  # actor_mlp absent -> no-op, must not error
+        mlp_brain.load_weight_components(network)  # actor_mlp absent -> no-op, must not error
 
     def test_invalid_actor_head_rejected(self) -> None:
         """actor_head outside {spike, mlp} raises a clear error."""
