@@ -2328,6 +2328,8 @@ _ARCHITECTURE_CHANGING_FIELDS: frozenset[str] = frozenset(
         "critic_num_layers",
         "lstm_hidden_dim",
         "rnn_type",
+        # CfC / SpikingPPO: the actor head selection adds/removes the actor MLP.
+        "actor_head",
     },
 )
 
