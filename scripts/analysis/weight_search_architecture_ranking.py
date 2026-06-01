@@ -40,11 +40,17 @@ PHASE4 = REPO / "tmp/evaluations/weight-search-architecture-ranking/phase-4"
 EXPERIMENTS = REPO / "experiments"
 ANALYSIS = PHASE4 / "analysis"
 C3 = PHASE4 / "c3"  # n=4 location — reused byte-unchanged mlpppo/connectome 42-45 only
-C3_N8 = PHASE4 / "c3-n8"  # n=8 fresh runs (all lstmppo + cfcppo + ga; mlpppo/connectome 46-49)
+C3_N8 = (
+    PHASE4 / "c3-n8"
+)  # n=8 fresh runs (all lstmppo + cfcppo + spikingppo + ga; mlpppo/connectome 46-49)
 SEEDS = (42, 43, 44, 45, 46, 47, 48, 49)
 REUSE_SEEDS = (42, 43, 44, 45)  # seeds reused from the n=4 c3/ location for unchanged configs
-PPO_ARCHS = ("mlpppo", "lstmppo", "connectomeppo", "cfcppo")
-ALL_FRESH_ARCHS = ("lstmppo", "cfcppo")  # always c3-n8 (config changed / new arch — no c3/ reuse)
+PPO_ARCHS = ("mlpppo", "lstmppo", "connectomeppo", "cfcppo", "spikingppo")
+ALL_FRESH_ARCHS = (
+    "lstmppo",
+    "cfcppo",
+    "spikingppo",
+)  # always c3-n8 (config changed / new arch — no c3/ reuse)
 BOOTSTRAP_RESAMPLES = 1000
 CI_LEVEL = 0.80
 _EPS = 1e-12
