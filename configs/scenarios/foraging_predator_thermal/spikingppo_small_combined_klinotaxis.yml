@@ -1,0 +1,154 @@
+# Combined-behaviour C3 cell — Spiking (recurrent adaptive-LIF) brain (food + predator + thermotaxis, klinotaxis).
+#
+# The spiking / neuromorphic member of the cross-architecture comparison. Shares an IDENTICAL env +
+# reward block with the other C3 cells (mlpppo / lstmppo / connectomeppo / cfcppo) under
+# configs/scenarios/foraging_predator_thermal/ — only the brain block differs — so the comparison
+# measures how well each brain juggles the competing pressures.
+#
+# Brain: a recurrent adaptive leaky-integrate-and-fire core (learnable per-neuron decay, adaptive
+# threshold, recurrent spike-feedback current, subtractive soft reset, sigmoid-derivative surrogate)
+# carrying membrane state across env-steps at one tick/step; a learnable direct-current encoder feeds it,
+# and an MLP actor head reads the hidden membrane for the action logits (actor_head: mlp — load-bearing;
+# the default spike readout cannot learn this cell). A plain-ANN critic reads the detached hidden
+# membrane. Trained with truncated-BPTT PPO. The spiking core has a long (~2400-ep) dead-exploration
+# warmup before it ignites on the lethal cell, then climbs to a top-of-field ~92% from-scratch plateau
+# (~5500 ep) — it needs ~5-6x the gradient arms' episode budget, supplied via the sweep --runs.
+#
+# Composition + lethal-thermal/predator tuning: identical to
+# foraging_predator_thermal/mlpppo_small_combined_klinotaxis.yml (see that file's header for the full
+# rationale: Phase 0 canonical two-channel predator biology + distal_chemo_contact_trigger reward,
+# LETHAL thermal gradient 1.5, predator_damage 6.0, penalty_health_damage 0.0). max_steps 500 matches
+# the other C3 cells (env parity); the n-seed sweep sets the EXTENDED episode budget (~7000, for the
+# spiking arm's slow convergence) via --runs and ranks on the post-convergence plateau.
+
+max_steps: 500
+brain:
+  name: spikingppo
+  config:
+    # Recurrent adaptive-LIF core (carried membrane state, one tick per env-step)
+    hidden_size: 64
+    num_hidden_layers: 1
+    timesteps_per_step: 1
+    v_threshold: 1.0
+    membrane_decay_init: 0.9
+    adaptation_decay_init: 0.9
+    adapt_scale_init: 0.1
+    readout_decay_init: 0.9
+
+    # Actor head: MLP on the hidden membrane (LOAD-BEARING — the default leaky-integrator spike
+    # readout cannot learn this cell at all; the MLP head reaches a top-of-field ~92% plateau).
+    actor_head: mlp
+    actor_hidden_dim: 64
+    actor_num_layers: 2
+
+    # Surrogate gradient (shallow slope; flat schedule by default)
+    surrogate_slope: 2.0
+
+    # Critic MLP on the detached hidden membrane
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+    # Flat learning rates (no schedule)
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    # PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    # Entropy anneal 0.08 -> 0.02 over 2000 ep (SUSTAINED exploration). Unlike the gradient arms, the
+    # spiking core has a long (~2400-ep) dead-exploration warmup before it ignites on this lethal cell;
+    # sustaining high entropy through the warmup keeps it exploring until it bootstraps, then the low
+    # floor lets the converged policy peak. From-scratch it then plateaus ~92% by ~5500 ep (top of the
+    # field) — it just needs ~5-6x the episode budget the gradient arms do (see the sweep --runs below).
+    entropy_coef: 0.08
+    entropy_coef_end: 0.02
+    entropy_decay_episodes: 2000
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+    bptt_chunk_length: 64
+
+    sensory_modules:
+      - food_chemotaxis                  # Auto-translated to food_chemotaxis_klinotaxis
+      - predator_mechanosensation_oracle # Auto-translated to predator_mechanosensation_klinotaxis
+      - predator_chemosensation_oracle   # Auto-translated to predator_chemosensation_klinotaxis
+      - thermotaxis                       # Auto-translated to thermotaxis_klinotaxis
+      - proprioception
+      - stam
+
+body_length: 2
+
+reward:
+  reward_mode: distal_chemo_contact_trigger
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_temperature_proximity: 0.0
+  penalty_health_damage: 0.0  # Disabled in combined cell (conflicts with thermal HP-damage signal).
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    thermotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 6.0  # Tuned down from the predator-only cell's 20.0 for the stacked combined lethality.
+    food_healing: 10.0
+
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0  # Temperature at grid center (spawn point)
+    gradient_direction: 0.0
+    gradient_strength: 1.5   # LETHAL: 1.5°C/cell -> grid edges reach ~35°C (danger/lethal zone)
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    comfort_delta: 5.0       # Comfort: 15-25°C
+    discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
+    danger_delta: 15.0       # Danger: 5-10°C or 30-35°C
