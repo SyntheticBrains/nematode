@@ -58,7 +58,12 @@
   mode-specific: an `mlp` brain's actor optimizer covers the actor MLP, a `spike` brain's does not). The
   S2 graceful contract is therefore scoped to an **absent `actor_mlp` component** (skipped, MLP keeps its
   init) — the test exercises exactly that, not a full `mlp`→`spike` restore.
-- **The actor MLP is built inline** in `__init__` (kept self-contained) rather than reusing CfC's
-  `_build_actor_mlp`, to avoid cross-brain coupling.
+- **The actor MLP is built inline** in `__init__` using the same depth convention as CfC/LSTM's actor
+  heads (`actor_num_layers` hidden layers => num_layers + 1 Linears, honoured at 1) — self-contained but
+  semantically consistent across brains. (Branch review caught an earlier `max(1, n-1)` floor that made
+  `actor_num_layers=1` and `=2` identical; a `test_actor_num_layers_controls_depth` test now pins it.)
+- **`actor_head` added to `config_loader._ARCHITECTURE_CHANGING_FIELDS`** (branch review) so the
+  warm-start / Lamarckian-inheritance guard rejects evolving the head — selecting it adds/removes the
+  actor MLP. The shared field name also closes the pre-existing CfC gap.
 - **End-to-end smoke (seed 42, 300 ep foraging, `actor_head: "mlp"`): 90.67% success** — trains
   non-degenerately and faster/higher than the spike head's foraging smoke (31% overall).

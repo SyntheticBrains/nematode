@@ -1295,3 +1295,15 @@ class TestMLPActorHead:
             _make_brain(actor_head="mlp", actor_hidden_dim=0)
         with pytest.raises(ValueError, match="actor_num_layers must be"):
             _make_brain(actor_head="mlp", actor_num_layers=0)
+
+    def test_actor_num_layers_controls_depth(self) -> None:
+        """actor_num_layers is honoured: N hidden layers -> N+1 Linears (matches CfC/LSTM)."""
+
+        def n_linears(brain: SpikingPPOBrain) -> int:
+            assert brain.actor_mlp is not None
+            return sum(1 for m in brain.actor_mlp if isinstance(m, torch.nn.Linear))
+
+        one = _make_brain(actor_head="mlp", actor_num_layers=1)
+        two = _make_brain(actor_head="mlp", actor_num_layers=2)
+        assert n_linears(one) == 2  # 1 hidden + output Linear
+        assert n_linears(two) == 3  # 2 hidden + output Linear

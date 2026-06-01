@@ -543,12 +543,18 @@ class SpikingPPOBrain(ClassicalBrain):
         # When set, logits come from this MLP instead of the leaky-integrator readout.
         self.actor_mlp: nn.Sequential | None = None
         if config.actor_head == "mlp":
-            mlp_layers: list[nn.Module] = []
-            in_dim = self.hidden_size
-            for _ in range(max(1, config.actor_num_layers - 1)):
-                mlp_layers += [nn.Linear(in_dim, config.actor_hidden_dim), nn.ReLU()]
-                in_dim = config.actor_hidden_dim
-            mlp_layers.append(nn.Linear(in_dim, num_actions))
+            # Same depth convention as the CfC / LSTM actor heads: `actor_num_layers`
+            # hidden layers (=> num_layers + 1 Linears), honoured at 1.
+            mlp_layers: list[nn.Module] = [
+                nn.Linear(self.hidden_size, config.actor_hidden_dim),
+                nn.ReLU(),
+            ]
+            for _ in range(config.actor_num_layers - 1):
+                mlp_layers += [
+                    nn.Linear(config.actor_hidden_dim, config.actor_hidden_dim),
+                    nn.ReLU(),
+                ]
+            mlp_layers.append(nn.Linear(config.actor_hidden_dim, num_actions))
             self.actor_mlp = nn.Sequential(*mlp_layers).to(self.device)
 
         # Critic MLP on the detached hidden membrane.
