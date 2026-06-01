@@ -42,7 +42,8 @@ both run one spiking update per RL transition (state carried, like an RNN) and l
 it keeps cost at ~1.5–2.5× MLP (LSTM/CfC territory) so the n-seed sweep fits in hours, versus 4–8×
 for inner-tick unrolling. `timesteps_per_step` is exposed (default 1; 2 is the only cheap bump); for
 `timesteps_per_step > 1` the encoded input current is held constant across the inner ticks while the
-membrane/adaptation integrate, and the recurrent spike-feedback advances once per env-step.
+membrane/adaptation integrate and the recurrent spike-feedback advances each inner tick (the spikes
+feed back continuously).
 
 **Scope of "adaptive" here.** This first cut implements learnable decay + adaptive threshold + a
 recurrent spike-feedback current — *not* full GRSN-style GRU gating of the recurrent current. The
