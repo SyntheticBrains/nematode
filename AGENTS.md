@@ -30,7 +30,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 ## Key Directories
 
 - `packages/quantum-nematode/quantumnematode/` — Main source code
-  - `brain/arch/` — 23 brain architectures: qvarcircuit, qqlearning, qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm, hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn, mlpppo, lstmppo, spikingreinforce, connectomeppo, feedforwardga, cfcppo, spikingppo. Plug-in registry: each Brain self-registers via `@register_brain`; see [docs/architecture/plugin-developer-guide.md](docs/architecture/plugin-developer-guide.md) for how to add a new one.
+  - `brain/arch/` — 24 brain architectures: qvarcircuit, qqlearning, qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm, hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn, mlpppo, lstmppo, spikingreinforce, connectomeppo, feedforwardga, cfcppo, spikingppo, equivariantquantum. Plug-in registry: each Brain self-registers via `@register_brain`; see [docs/architecture/plugin-developer-guide.md](docs/architecture/plugin-developer-guide.md) for how to add a new one.
   - `env/` — Environment simulation
   - `agent/` — Agent orchestration, rewards, metrics
   - `experiment/` — Experiment tracking and benchmarking
