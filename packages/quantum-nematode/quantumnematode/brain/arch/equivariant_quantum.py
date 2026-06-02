@@ -151,6 +151,9 @@ class EquivariantQuantumPPOBrainConfig(BrainConfig):
     # Ablation flags
     equivariant: bool = True
     quantum: bool = True
+    # When quantum=False, use a richer (Z2-symmetrised full-MLP) classical-equivariant actor instead
+    # of the default thin odd path — a fair-baseline control for the quantum-vs-classical delta.
+    classical_rich: bool = False
 
     # Critic
     critic_hidden_dim: int = DEFAULT_CRITIC_HIDDEN_DIM
@@ -274,6 +277,7 @@ class EquivariantQuantumActor(nn.Module):
         quantum: bool,
         critic_hidden_dim: int,
         device: torch.device,
+        classical_rich: bool = False,
     ) -> None:
         super().__init__()
         self.num_qubits = num_qubits
@@ -282,6 +286,7 @@ class EquivariantQuantumActor(nn.Module):
         self.num_layers = num_layers
         self.equivariant = equivariant
         self.quantum = quantum
+        self.classical_rich = classical_rich
         self.device = device
         self.even_qubits = list(range(self.k_even))
         self.odd_qubits = list(range(self.k_even, num_qubits))
@@ -315,12 +320,30 @@ class EquivariantQuantumActor(nn.Module):
         else:  # equivariant classical ablation
             out_parity = np.array([1] * self.k_even + [-1] * k_odd, dtype=np.float32)
             self.pre = _ParityLinear(in_parity, out_parity)
-            self.even_mlp = nn.Sequential(
-                nn.Linear(self.k_even + k_odd, critic_hidden_dim),
-                nn.ReLU(),
-                nn.Linear(critic_hidden_dim, 3),
-            )
-            self.odd_lin = nn.Linear(k_odd, 1, bias=False)
+            if classical_rich:
+                # Fair-baseline control: two full MLPs over the complete latent (e, o), made exactly
+                # equivariant by Z2 group-averaging. The odd path then depends richly on all the
+                # even context, matching the quantum readout's expressivity.
+                in_dim = self.k_even + k_odd
+
+                def _mlp(out_dim: int) -> nn.Sequential:
+                    return nn.Sequential(
+                        nn.Linear(in_dim, critic_hidden_dim),
+                        nn.ReLU(),
+                        nn.Linear(critic_hidden_dim, critic_hidden_dim),
+                        nn.ReLU(),
+                        nn.Linear(critic_hidden_dim, out_dim),
+                    )
+
+                self.rich_even_mlp = _mlp(3)  # f -> (FORWARD, STAY, LEFT/RIGHT-shared)
+                self.rich_odd_mlp = _mlp(1)  # g -> odd LEFT/RIGHT scalar
+            else:
+                self.even_mlp = nn.Sequential(
+                    nn.Linear(self.k_even + k_odd, critic_hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(critic_hidden_dim, 3),
+                )
+                self.odd_lin = nn.Linear(k_odd, 1, bias=False)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Return ``(logits, latent)`` with logits ordered [FORWARD, LEFT, RIGHT, STAY]."""
@@ -380,10 +403,19 @@ class EquivariantQuantumActor(nn.Module):
     def _equivariant_classical_logits(self, latent: torch.Tensor) -> torch.Tensor:
         e = latent[:, : self.k_even]
         o = latent[:, self.k_even :]
-        even_in = torch.cat([e, o * o], dim=-1)  # all Z2-even
-        h = self.even_mlp(even_in)  # (B, 3): FORWARD, STAY, LEFT/RIGHT-shared
-        odd = torch.tanh(self.odd_lin(o)).squeeze(-1)  # Z2-odd (tanh odd, linear no-bias odd)
-        a_forward, a_stay, a_lr = h[:, 0], h[:, 1], h[:, 2]
+        if self.classical_rich:
+            # Z2 group-averaging: even = (f(e,o)+f(e,-o))/2, odd = (g(e,o)-g(e,-o))/2 — exactly
+            # equivariant for any MLPs f, g, with a rich odd path over the full (e, o) latent.
+            x_pos = torch.cat([e, o], dim=-1)
+            x_neg = torch.cat([e, -o], dim=-1)
+            even = 0.5 * (self.rich_even_mlp(x_pos) + self.rich_even_mlp(x_neg))  # (B, 3) Z2-even
+            odd = 0.5 * (self.rich_odd_mlp(x_pos) - self.rich_odd_mlp(x_neg)).squeeze(-1)  # Z2-odd
+            a_forward, a_stay, a_lr = even[:, 0], even[:, 1], even[:, 2]
+        else:
+            even_in = torch.cat([e, o * o], dim=-1)  # all Z2-even
+            h = self.even_mlp(even_in)  # (B, 3): FORWARD, STAY, LEFT/RIGHT-shared
+            odd = torch.tanh(self.odd_lin(o)).squeeze(-1)  # Z2-odd (tanh odd, linear no-bias odd)
+            a_forward, a_stay, a_lr = h[:, 0], h[:, 1], h[:, 2]
         return torch.stack([a_forward, a_lr + odd, a_lr - odd, a_stay], dim=-1)
 
 
@@ -457,6 +489,7 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
             quantum=config.quantum,
             critic_hidden_dim=config.critic_hidden_dim,
             device=self.device,
+            classical_rich=config.classical_rich,
         ).to(self.device)
 
         self.critic = self._build_critic(config).to(self.device)

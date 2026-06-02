@@ -45,11 +45,12 @@ C3_N8 = (
 )  # n=8 fresh runs (all lstmppo + cfcppo + spikingppo + ga; mlpppo/connectome 46-49)
 SEEDS = (42, 43, 44, 45, 46, 47, 48, 49)
 REUSE_SEEDS = (42, 43, 44, 45)  # seeds reused from the n=4 c3/ location for unchanged configs
-PPO_ARCHS = ("mlpppo", "lstmppo", "connectomeppo", "cfcppo", "spikingppo")
+PPO_ARCHS = ("mlpppo", "lstmppo", "connectomeppo", "cfcppo", "spikingppo", "equivariantquantum")
 ALL_FRESH_ARCHS = (
     "lstmppo",
     "cfcppo",
     "spikingppo",
+    "equivariantquantum",
 )  # always c3-n8 (config changed / new arch — no c3/ reuse)
 BOOTSTRAP_RESAMPLES = 1000
 CI_LEVEL = 0.80

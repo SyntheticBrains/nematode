@@ -254,6 +254,11 @@ def test_classical_equivariant_ablation_is_equivariant() -> None:
     assert _max_swap_error(make_brain(quantum=False)) < 1e-4
 
 
+def test_rich_classical_ablation_is_equivariant() -> None:
+    """The rich (Z2-symmetrised full-MLP) classical-equivariant control is exactly equivariant."""
+    assert _max_swap_error(make_brain(quantum=False, classical_rich=True)) < 1e-4
+
+
 def test_unstructured_ablation_is_not_equivariant() -> None:
     """The equivariant=False (unstructured PQC) ablation is genuinely NOT equivariant."""
     assert _max_swap_error(make_brain(equivariant=False)) > 1e-2
