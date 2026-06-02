@@ -154,6 +154,10 @@ class EquivariantQuantumPPOBrainConfig(BrainConfig):
     # When quantum=False, use a richer (Z2-symmetrised full-MLP) classical-equivariant actor instead
     # of the default thin odd path — a fair-baseline control for the quantum-vs-classical delta.
     classical_rich: bool = False
+    # With classical_rich=True, set classical_symmetrise=False to drop the Z2 symmetry (plain
+    # pre-encoder + direct MLP, NOT equivariant) at matched capacity — the symmetry-prior control
+    # that isolates equivariance from architecture.
+    classical_symmetrise: bool = True
 
     # Critic
     critic_hidden_dim: int = DEFAULT_CRITIC_HIDDEN_DIM
@@ -278,6 +282,7 @@ class EquivariantQuantumActor(nn.Module):
         critic_hidden_dim: int,
         device: torch.device,
         classical_rich: bool = False,
+        classical_symmetrise: bool = True,
     ) -> None:
         super().__init__()
         self.num_qubits = num_qubits
@@ -287,6 +292,7 @@ class EquivariantQuantumActor(nn.Module):
         self.equivariant = equivariant
         self.quantum = quantum
         self.classical_rich = classical_rich
+        self.classical_symmetrise = classical_symmetrise
         self.device = device
         self.even_qubits = list(range(self.k_even))
         self.odd_qubits = list(range(self.k_even, num_qubits))
@@ -317,9 +323,12 @@ class EquivariantQuantumActor(nn.Module):
             self.u_rz = nn.Parameter(torch.randn(num_layers, num_qubits) * PARAM_INIT_STD)
             self.cz_pairs = [(i, i + 1) for i in range(num_qubits - 1)]
             self.head = nn.Linear(num_qubits, 4)
-        else:  # equivariant classical ablation
-            out_parity = np.array([1] * self.k_even + [-1] * k_odd, dtype=np.float32)
-            self.pre = _ParityLinear(in_parity, out_parity)
+        else:  # classical ablation (equivariant unless classical_symmetrise=False)
+            if classical_symmetrise:
+                out_parity = np.array([1] * self.k_even + [-1] * k_odd, dtype=np.float32)
+                self.pre = _ParityLinear(in_parity, out_parity)
+            else:  # plain (non-equivariant) pre-encoder — the symmetry-prior control
+                self.pre = nn.Linear(len(in_parity), num_qubits)
             if classical_rich:
                 # Fair-baseline control: two full MLPs over the complete latent (e, o), made exactly
                 # equivariant by Z2 group-averaging. The odd path then depends richly on all the
@@ -401,17 +410,25 @@ class EquivariantQuantumActor(nn.Module):
         return self.head(z)
 
     def _equivariant_classical_logits(self, latent: torch.Tensor) -> torch.Tensor:
-        e = latent[:, : self.k_even]
-        o = latent[:, self.k_even :]
-        if self.classical_rich:
+        if self.classical_rich and not self.classical_symmetrise:
+            # Symmetry-prior control: same rich MLPs applied DIRECTLY (no Z2 group-averaging,
+            # plain pre-encoder) -> NOT equivariant, matched capacity.
+            even = self.rich_even_mlp(latent)
+            odd = self.rich_odd_mlp(latent).squeeze(-1)
+            a_forward, a_stay, a_lr = even[:, 0], even[:, 1], even[:, 2]
+        elif self.classical_rich:
             # Z2 group-averaging: even = (f(e,o)+f(e,-o))/2, odd = (g(e,o)-g(e,-o))/2 — exactly
             # equivariant for any MLPs f, g, with a rich odd path over the full (e, o) latent.
+            e = latent[:, : self.k_even]
+            o = latent[:, self.k_even :]
             x_pos = torch.cat([e, o], dim=-1)
             x_neg = torch.cat([e, -o], dim=-1)
             even = 0.5 * (self.rich_even_mlp(x_pos) + self.rich_even_mlp(x_neg))  # (B, 3) Z2-even
             odd = 0.5 * (self.rich_odd_mlp(x_pos) - self.rich_odd_mlp(x_neg)).squeeze(-1)  # Z2-odd
             a_forward, a_stay, a_lr = even[:, 0], even[:, 1], even[:, 2]
         else:
+            e = latent[:, : self.k_even]
+            o = latent[:, self.k_even :]
             even_in = torch.cat([e, o * o], dim=-1)  # all Z2-even
             h = self.even_mlp(even_in)  # (B, 3): FORWARD, STAY, LEFT/RIGHT-shared
             odd = torch.tanh(self.odd_lin(o)).squeeze(-1)  # Z2-odd (tanh odd, linear no-bias odd)
@@ -490,6 +507,7 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
             critic_hidden_dim=config.critic_hidden_dim,
             device=self.device,
             classical_rich=config.classical_rich,
+            classical_symmetrise=config.classical_symmetrise,
         ).to(self.device)
 
         self.critic = self._build_critic(config).to(self.device)
