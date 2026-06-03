@@ -167,10 +167,58 @@ defensible result in this arc.
 6. **Methodology**: the genuinely-quantum arm is a clean *negative* on advantage, delivered with
    controlled attribution (fair-baseline + matched-capacity audits) rather than an over-claim.
 
+## Limitations
+
+**The comparison ran in a reactive task regime, which under-tests memory — the axis on which these
+architectures most differ.** The cell uses respawning food (`no_respawn` defaults false, so the grid
+stays full) with a readable local gradient, making foraging a reactive hill-climb. A follow-up robustness
+arc (n=4, MLP vs LSTM/GRU) deliberately stressed memory to test whether the four-way tie is genuine or a
+task artefact:
+
+1. **Larger grid (100×100, dense)** — the MLP↔LSTM gap *narrows* from 10.5pp to ~3pp (MLP 81.8, LSTM 84.9
+   post-conv): the memoryless arm becomes *more* competitive, not less. Grid size is not the lever.
+2. **Sparse depleting search (100×100, 6 foods, `no_respawn`, food-only reward)** — built so foraging
+   requires search, not hill-climbing. No memory advantage: the arms converge to ~the same level (MLP 4.26,
+   LSTM 4.06 foods/6, last-500ep); the GRU is just slower to learn the sparse reward.
+3. **STAM memory-depth ablation (same MLP brain, buffer 2 vs 8 vs 30)** — flat (4.36 / 4.25 / 4.26). Memory
+   depth beyond a single step is irrelevant.
+
+**What we can claim (defensible):** across these tasks — grid size, food sparsity, and memory depth —
+architecture does not affect performance. They are solvable with the local gradient plus a one-step
+temporal derivative, which klinotaxis sensing builds in (via STAM) and every architecture therefore
+shares; recurrence and deeper memory add nothing.
+
+**Precision caveat:** klinotaxis sensing *requires* STAM (the `dC/dt` is computed from its buffer;
+`stam_enabled: false` is auto-overridden — `config_loader.py:891`), so the "memoryless" MLP was never
+memoryless — it always carried STAM short-term memory, and buffer-2 (a one-step derivative) was the floor.
+The depth ablation therefore shows memory *beyond one step* is irrelevant, **not** that memory is. A truly
+zero-memory baseline would require switching to (non-biological) oracle sensing.
+
+**What we do NOT claim (open hypothesis):** this *may* reflect a broader property — that *C. elegans*'s
+behavioural ecology is largely reactive and plasticity-based, leaving little within-episode working-memory
+demand for recurrence to exploit. We have **not** established that: plausible counterexamples
+(area-restricted search after food loss; limited spatial return) remain untested, and a biologically-valid
+within-episode working-memory task is itself hard to construct — realistic hazards/sensing are
+sensed-and-avoided *reactively*, and *C. elegans*'s well-established memory is short-horizon temporal
+integration (STAM-covered) or cross-episode plasticity (supplied by the training itself). We frame it as an
+open question, not a conclusion.
+
+**Regime-invariant findings are unaffected:** the no-quantum-advantage result (parameter-matched controls)
+and the GA collapse do not depend on the task stressing memory. The comparison *does* discriminate where
+the biology creates real differences (GA 0%; connectome significantly mid-pack). What ties is the top
+cluster's working-memory axis — which no task in this family exercises.
+
 ## Next Steps
 
 - This 7-arch grid ranking is the **baseline T7 (continuous-physics upgrade) will measure against** for
   the env-upgrade delta.
+- **T7 env design** (see Limitations): foraging does not discriminate these architectures, so T7 should
+  not expect it to; separating them would need a task demanding memory beyond the one-step derivative,
+  which — per the open hypothesis — may have no biologically-valid form. Two *optional* follow-ups if the
+  question is worth pressing: (a) a literature investigation into *C. elegans* within-episode memory
+  behaviours (area-restricted-search timescales, spatial-memory evidence) to firm up or refute the open
+  hypothesis; (b) an explicitly-artificial, non-biological bit-memory positive control, purely to confirm
+  the comparison can separate working memory in principle.
 - **RQ4 (quantum)**: settled negative on advantage at this complexity; if revisited, it belongs at the T7
   continuous-physics substrate (per `phase6-tracking` Decision 4), not the grid.
 - Optional: a deeper symmetry study (multiple symmetry groups / harder cells) if the small equivariant
