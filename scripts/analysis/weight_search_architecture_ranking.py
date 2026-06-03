@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import re
+import warnings
 from itertools import combinations
 from pathlib import Path
 
@@ -127,7 +128,15 @@ def _experiment_id(out_path: Path) -> str | None:
 
 
 def _ppo_run_metrics(out_path: Path) -> dict | None:
-    """Load one PPO run's metrics from its experiment JSON (mapped via the .out id)."""
+    """Load one PPO run's metrics from its experiment JSON (mapped via the .out id).
+
+    Returns ``None`` only when the run is genuinely missing — no ``.out``, no
+    ``Experiment ID`` line, or no experiment JSON. The caller treats ``None`` as a
+    missing seed; ``load_primary`` warns so a shrunken ``n`` is never silent. A
+    present run whose ``post_convergence_success_rate`` is null (it never reached a
+    convergence plateau) is a real 0%-post-convergence data point — kept, not
+    dropped, because dropping a non-converged run would inflate a weak arm's mean.
+    """
     eid = _experiment_id(out_path)
     if eid is None:
         return None
@@ -138,8 +147,11 @@ def _ppo_run_metrics(out_path: Path) -> dict | None:
     enc = r.get("avg_predator_encounters")
     evas = r.get("avg_successful_evasions")
     evasion_rate = (evas / enc * 100.0) if (enc and enc > 0) else None
+    # Null post_convergence_success_rate == "ran but never converged" -> a genuine
+    # 0% post-convergence plateau (a real low score), NOT a missing run.
+    pcsr = r.get("post_convergence_success_rate")
     return {
-        "success": (r.get("post_convergence_success_rate") or 0.0) * 100.0,
+        "success": (pcsr if pcsr is not None else 0.0) * 100.0,
         "overall_success": (r.get("success_rate") or 0.0) * 100.0,
         "foods": r.get("avg_foods_collected"),
         "evasion_rate": evasion_rate,
@@ -161,14 +173,28 @@ def _c3_out_path(arch: str, seed: int) -> Path:
 
 
 def load_primary() -> dict[str, dict[int, dict]]:
-    """Return {arch: {seed: metrics}} for the C3 primary cells."""
+    """Return {arch: {seed: metrics}} for the C3 primary cells.
+
+    Warns (rather than silently dropping) when a PPO arm is missing any expected
+    seed, so a shrunken ``n`` can never distort a cross-arch mean unnoticed.
+    """
     table: dict[str, dict[int, dict]] = {}
     for arch in PPO_ARCHS:
         table[arch] = {}
+        missing: list[int] = []
         for seed in SEEDS:
             m = _ppo_run_metrics(_c3_out_path(arch, seed))
             if m:
                 table[arch][seed] = m
+            else:
+                missing.append(seed)
+        if missing:
+            warnings.warn(
+                f"{arch}: {len(missing)}/{len(SEEDS)} C3 seeds missing (seeds {missing}); "
+                f"mean computed on n={len(table[arch])}, not n={len(SEEDS)}. "
+                "Pairwise deltas use only common seeds.",
+                stacklevel=2,
+            )
     # GA primary from the precomputed champion eval.
     ga_path = ANALYSIS / "ga_c3_results.json"
     if ga_path.exists():
