@@ -1,0 +1,50 @@
+{
+  "42": {
+    "mean_foods": 0.33,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 3.3000000000000003
+  },
+  "43": {
+    "mean_foods": 1.67,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 16.7
+  },
+  "44": {
+    "mean_foods": 0.5,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 5.0
+  },
+  "45": {
+    "mean_foods": 0.33,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 3.3000000000000003
+  },
+  "46": {
+    "mean_foods": 1.33,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 13.3
+  },
+  "47": {
+    "mean_foods": 1.92,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 19.2
+  },
+  "48": {
+    "mean_foods": 3.25,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 32.5
+  },
+  "49": {
+    "mean_foods": 1.0,
+    "target": 10,
+    "full_clear_rate": 0.0,
+    "foods_frac": 10.0
+  }
+}
