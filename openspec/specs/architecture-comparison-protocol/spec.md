@@ -1,4 +1,10 @@
-## ADDED Requirements
+# architecture-comparison-protocol Specification
+
+## Purpose
+
+Defines the methodology for fair, statistically-rigorous cross-architecture brain comparisons: the curriculum-then-integrated cell structure, the convergence-aware plateau-performance ranking metric (`post_convergence_success_rate`), paired-seed one-sided Wilcoxon + bootstrap CIs with BH-FDR multiple-comparisons correction, the architecture-promotion gate, the controlled-attribution requirement for promoted structured-prior (e.g. quantum / equivariant) architectures, and the logbook supporting-data persistence discipline.
+
+## Requirements
 
 ### Requirement: Curriculum-Then-Integrated Cell Structure
 
@@ -36,11 +42,18 @@ The C3 primary cell SHALL run all three Phase 6 behaviours simultaneously in one
 - **THEN** the analysis pipeline SHALL extract per-episode foods-collected, predator-survival-rate, and isotherm-tracking metric from the single integrated run
 - **AND** the ranking SHALL be reported both on the combined overall metric AND on the per-behaviour components, so the "where does architecture X rank?" question can be answered per behaviour as well as overall
 
-### Requirement: Convergence-Aware Budget and Dual-Metric Comparison
+### Requirement: Convergence-Aware Budget and Plateau-Performance Metric
 
-The episode budget for the C3 primary cells SHALL be set so that every evaluated architecture reaches a plateau (converges) on the cell, so the comparison is plateau-vs-plateau rather than arbitrary-cutoff-vs-arbitrary-cutoff. A run is considered **converged** when its trailing-window success rate is stable: the last-25-mean success is within ±5 percentage points of the last-100-mean success. Convergence is distinct from success — an architecture MAY converge to a low plateau (its ceiling, a valid finding) or a high one. For GA cells the analogue is generations-to-fitness-plateau under the same ±5pp trailing-window test on per-generation best fitness.
+The episode budget for the C3 primary cells SHALL be set so that every evaluated architecture reaches a plateau (converges) on the cell, so the comparison is plateau-vs-plateau rather than arbitrary-cutoff-vs-arbitrary-cutoff.
 
-The cross-architecture comparison SHALL report two dimensions: **asymptotic performance** (the converged plateau level — last-25 mean at the converged budget) AND **sample efficiency** (the number of episodes, or GA generations, to reach 90% of the plateau level). Two architectures MAY share an asymptotic plateau yet differ in sample efficiency; both dimensions feed the ranking.
+Two distinct convergence operations are used (they are NOT the same test):
+
+- **Budget-setting convergence** (Phase 2 pre-flight): a run is converged for budget-selection purposes when its trailing-window success rate is stable — last-25-mean success within ±5 percentage points of last-100-mean success. This test selects the C3 budget (it set 1000 episodes: the recurrent architectures plateau by 1000ep but not 500ep).
+- **Ranked-metric plateau detection** (Phase 5 analysis): the ranked metric is **`post_convergence_success_rate`** — the full-clear (`COMPLETED_ALL_FOOD`) rate averaged over the post-convergence plateau, where the plateau onset is found by `detect_convergence` ([`packages/quantum-nematode/quantumnematode/benchmark/convergence.py`](../../../../packages/quantum-nematode/quantumnematode/benchmark/convergence.py)): the earliest 10-run window whose success-rate variance is below 0.05 AND whose mean success exceeds 0.5, requiring ≥ 30 total runs; the metric averages success from that onset to the end of the run.
+
+The ranked metric SHALL be `post_convergence_success_rate`, NOT a fixed last-N window mean. The fixed-window choice was deliberately rejected during implementation because the evaluated arms have very different warm-up lengths — the from-scratch spiking and quantum arms have long dead-exploration warm-ups on this lethal cell, so a fixed last-N (e.g. last-25) window would mis-measure the slow-igniting arms relative to the fast learners; ranking on the detected post-convergence plateau is the fair comparison. (Overall `success_rate`, which includes the warm-up, is retained alongside in the per-seed export for reference.) For GA cells the analogue is the evolved-champion full-clear rate over a frozen eval. Convergence is distinct from success — an architecture MAY converge to a low plateau (its ceiling, a valid finding) or a high one.
+
+**Sample-efficiency reporting (realised scope).** The primary cross-architecture ranking is on asymptotic plateau performance (`post_convergence_success_rate`). Sample efficiency / warm-up length is reported **descriptively** — the per-500-episode full-clear-rate trajectory in the logbook illustrates the long-warm-up-then-ignition shape of the slow arms — rather than as a computed per-architecture "episodes-to-90%-of-plateau" metric. This is a deliberate realised simplification: the asymptotic ranking is the load-bearing result, with the warm-up trajectory as qualitative context. A future pass (e.g. the T7 re-run) MAY add the computed sample-efficiency dimension.
 
 #### Scenario: C3 budget is set to the slowest-converging architecture
 
@@ -52,19 +65,20 @@ The cross-architecture comparison SHALL report two dimensions: **asymptotic perf
 #### Scenario: Non-plateau triggers a budget extension and rerun
 
 - **WHEN** a C3 cell's run does NOT satisfy the convergence test at its budget (last-25 mean still diverges from last-100 mean by more than ±5pp, indicating it is still climbing)
-- **THEN** that is a trigger to extend the episode (or generation) budget and rerun the cell
-- **AND** for env parity the SAME extended budget SHALL be applied to all architectures' instances of that cell (or the comparison SHALL be reported at a common budget at which all have converged)
-- **AND** when a SHOULD/MAY architecture is added after the initial budget is set, the budget SHALL be re-evaluated against the new architecture's convergence point and affected cells rerun if it converges slower
+- **THEN** that is a trigger to extend the episode (or generation) budget for that architecture and rerun until it reaches its plateau
+- **AND** because the ranked metric is the post-convergence plateau (`post_convergence_success_rate`), the comparison is plateau-vs-plateau even when arms reach their plateaus at different episode budgets — a uniform episode budget across arms is therefore NOT required, provided every arm's run has reached its plateau (the convergence detector confirms this per run; an arm that never converges is excluded / flagged, not mis-compared against a fixed cutoff). (Realised: the four MUST cells ran at 1000ep; the from-scratch promoted arms — spiking, equivariant-quantum — ran up to 4000ep for their longer warm-ups; all are compared on their detected plateaus.)
+- **AND** when a SHOULD/MAY architecture is added after the initial budget is set, its budget SHALL be set to its own convergence point (extended as needed); the plateau metric normalises across budgets, so the already-converged cells are NOT force-rerun at a uniform budget
 
-#### Scenario: Both asymptotic performance and sample efficiency are reported
+#### Scenario: Asymptotic plateau performance is the ranked metric; warm-up is reported descriptively
 
 - **WHEN** the Phase 5 ranking is computed
-- **THEN** each architecture's C3 result SHALL report the asymptotic plateau level (last-25 mean at the converged budget) AND the sample efficiency (episodes/generations to 90% of plateau)
-- **AND** the ranking narrative SHALL distinguish "converged to a higher plateau" from "converged faster" as separate comparative claims
+- **THEN** each architecture's C3 result SHALL report `post_convergence_success_rate` (the detected-plateau full-clear rate) as the ranked asymptotic metric
+- **AND** the warm-up / sample-efficiency dimension SHALL be reported descriptively (the per-500-episode clear-rate trajectory) rather than as a computed episodes-to-90%-of-plateau number
+- **AND** the ranking narrative MAY note where a "converged to a higher plateau" claim is distinct from a "converged faster" observation
 
 ### Requirement: Paired-Seed Statistics with BH-FDR Multiple-Comparisons Correction
 
-The C3 cross-architecture analysis SHALL compute paired-seed deltas with one-sided Wilcoxon signed-rank tests and 80% bootstrap CIs (1000 resamples, seeded RNG) for each architecture pair on each per-behaviour component and on the combined metric. The resulting p-values SHALL be corrected via Benjamini-Hochberg FDR at α=0.05 across the **realised** active test set within this change's Phase 4 evaluation (the realised set MAY be smaller than the planned set if Phase 4 risk-mitigation drops an architecture mid-stream). The MCC strategy SHALL be committed in this change's design.md before any Phase 4 cell launches; mid-Phase 4 strategy changes SHALL be forbidden.
+The C3 cross-architecture analysis SHALL compute paired-seed deltas with one-sided Wilcoxon signed-rank tests and 80% bootstrap CIs (1000 resamples, seeded RNG) for each architecture pair. The **BH-FDR family** (the set of p-values corrected together via Benjamini-Hochberg FDR at α=0.05) is the cross-architecture pairwise comparisons on the **primary ranked metric** (`post_convergence_success_rate`) across the realised architecture set. The realised set is the four MUST families plus any Phase 4.5 promotions — realised as **7 architectures → C(7,2) = 21 pairs** (it MAY differ from the planned four-family set: larger if Phase 4.5 promotes SHOULD/MAY architectures, smaller if Phase 4 risk-mitigation drops one). The per-behaviour sub-metrics (foraging foods, predator-evasion rate, thermal-comfort) and the connectome wins/ties/losses verdict are reported as **descriptive** paired-seed deltas (Wilcoxon p + 80% bootstrap CI) and are NOT folded into the BH-FDR family — the family is held to the single headline ranking metric so the correction stays interpretable. The MCC strategy SHALL be committed in this change's design.md before any Phase 4 cell launches; mid-Phase 4 strategy changes SHALL be forbidden.
 
 **Implementation note for the analysis script.** The existing utility `compute_cross_arm_delta_stats` at `scripts/campaigns/aggregate_m613_pilot.py:329-418` is M6.13-specific (its dict key is `(arm, seed, fundus_idx)` and it averages F1+ retention specifically). The analysis script in this change SHALL extract the reusable inner computation pattern (paired-seed delta → one-sided Wilcoxon → 80% bootstrap CI with seeded RNG, 1000 resamples) into a generic helper (e.g. `_paired_seed_wilcoxon_bootstrap(deltas: list[float]) -> dict`) that operates on a flat list of per-seed deltas, NOT directly call the M6.13 function. The bootstrap CI level (80%) and resample count (1000) constants from `aggregate_m613_pilot.py` SHALL be carried forward to preserve methodological consistency across the project.
 
@@ -72,19 +86,19 @@ The C3 cross-architecture analysis SHALL compute paired-seed deltas with one-sid
 
 #### Scenario: Paired-seed Wilcoxon + bootstrap CI is computed per architecture pair per metric
 
-- **GIVEN** four architecture C3 cells (connectome, mlp_ppo, lstm_gru_ppo, feedforward_ga) with n ≥ 4 paired seeds each
+- **GIVEN** the realised architecture C3 cells (the four MUST families connectome / mlp_ppo / lstm_gru_ppo / feedforward_ga, plus any Phase 4.5 promotions — realised: 7 architectures) with n ≥ 4 paired seeds each (n = 8 in the realised run)
 - **WHEN** the analysis script runs
-- **THEN** for each pair of architectures (A, B) and each metric M, the script SHALL compute the per-seed delta `metric(A, seed) - metric(B, seed)`
+- **THEN** for each pair of architectures (A, B) on the primary ranked metric, the script SHALL compute the per-seed delta `metric(A, seed) - metric(B, seed)`
 - **AND** report the mean delta, the one-sided Wilcoxon p-value (alternative: A > B), and the 80% bootstrap CI of the mean delta
 - **AND** the bootstrap RNG SHALL be seeded (deterministic across re-runs)
 
 #### Scenario: BH-FDR correction applied across the active test set
 
-- **GIVEN** a set of N paired-comparison p-values from the analysis above
+- **GIVEN** the set of N paired-comparison p-values on the primary ranked metric (`post_convergence_success_rate`) across the realised architecture set
 - **WHEN** the analysis script applies multiple-comparisons correction
-- **THEN** the script SHALL apply Benjamini-Hochberg FDR at α=0.05 across all N tests within Phase 4
+- **THEN** the script SHALL apply Benjamini-Hochberg FDR at α=0.05 across all N pairwise tests within Phase 4
 - **AND** report both the raw p-value and the BH-adjusted q-value per comparison
-- **AND** the active test set SHALL include all per-pair per-metric tests across the C3 cells (4 architectures × 4 component metrics × C(4,2) = 6 pairs = up to 24 tests if all four architectures complete and four metrics are reported)
+- **AND** the active test set SHALL be the cross-architecture pairwise comparisons on the primary metric across the realised set (realised: 7 architectures → C(7,2) = 21 pairs); the per-behaviour sub-metric deltas and the connectome verdict are reported descriptively (uncorrected) alongside, not folded into the FDR family
 
 #### Scenario: MCC strategy is pre-committed and immutable mid-Phase 4
 
@@ -98,12 +112,15 @@ The C3 cross-architecture analysis SHALL compute paired-seed deltas with one-sid
 
 A written architecture-promotion gate (Phase 4.5) SHALL land between Phase 4 cell completion and Phase 5 analysis publication. The gate SHALL decide, per SHOULD/MAY architecture candidate from [phase6-tracking design.md § Decision 4](../../../phase6-tracking/design.md) (quantum, spiking, reservoir, hybrid), whether to promote that architecture into the comparison before publishing. The decision per candidate SHALL be GO (promote, run additional cells before Phase 5) or SKIP (do not promote; document the rationale). The verdict per candidate SHALL be landed in this change's design.md as a written decision moment, not a silent extension or contraction of scope.
 
+The gate MAY additionally evaluate a candidate family that is NOT in the Decision 4 SHOULD/MAY table. If such an off-list family is promoted (GO), its verdict SHALL record that adding it is a [phase6-tracking § Decision 4](../../../phase6-tracking/design.md) amendment event — a scope note flagging that the Decision 4 table should absorb the family at the next synthesis — so the off-list promotion is explicit, not silent. (Realised: CfC, a liquid / closed-form-continuous-time recurrent network, was promoted GO off the Decision 4 list with such a scope note.)
+
 #### Scenario: Phase 4.5 records a per-candidate verdict in design.md
 
 - **GIVEN** all Phase 4 C3 cells complete (4 MUST architectures × 1 C3 each)
 - **WHEN** the Phase 4.5 gate runs
 - **THEN** this change's design.md SHALL be amended with a `## Phase 4.5 architecture-promotion gate` section
 - **AND** the section SHALL list each SHOULD/MAY candidate (quantum, spiking, reservoir, hybrid) with a GO or SKIP verdict and the rationale
+- **AND** any promoted family NOT in the Decision 4 SHOULD/MAY table SHALL also appear with a GO/SKIP verdict and a Decision-4 scope note (realised: CfC, GO, off-list)
 - **AND** SKIP rationales SHALL reference the criteria (compute fit, roadmap relevance, headline impact) and where applicable the Phase 6 Decision 4 SHOULD/MAY classification + deferral mechanism. **Operational definition of headline impact**: a candidate architecture has headline impact if, given the Phase 4 C3 results in hand, its plausible C3 performance range (per a back-of-envelope estimate from its Phase 2 forecast or its closest existing baseline) would change which architecture tops the ranking on ≥ 1 per-behaviour component. A candidate with no plausible scenario for topping any component-level ranking has no headline impact.
 
 #### Scenario: Promoted architectures run additional cells before Phase 5
@@ -112,6 +129,32 @@ A written architecture-promotion gate (Phase 4.5) SHALL land between Phase 4 cel
 - **WHEN** Phase 5 analysis is queued
 - **THEN** architecture X's C1 + C2 + C3 cells SHALL be launched and complete before the cross-cell analysis runs
 - **AND** the MCC active test set SHALL include the additional pairs introduced by X's C3 cell
+
+### Requirement: Controlled Attribution for a Promoted Structured-Prior Architecture
+
+When a promoted architecture carries a non-trivial inductive bias (e.g. a quantum circuit, or a hard-coded symmetry / equivariance prior) and lands at or near the top of the C3 ranking, its apparent advantage SHALL be attributed via matched-capacity control arms BEFORE any architecture-specific advantage is claimed in the logbook. A raw rank is not a claim of advantage: the headline payload for such an architecture is the **controlled-attribution delta**, not its position in the ranking.
+
+The control set SHALL isolate each candidate source of advantage at matched capacity:
+
+- A **fair classical control** that reproduces the architecture's inductive bias in a conventional substrate at matched parameter capacity (e.g. for an equivariant quantum actor: a classical actor with the same equivariance prior and a comparable parameter count). The promoted-arch-minus-fair-control delta isolates the genuinely-exotic component (e.g. the quantum circuit) from the inductive bias it shares with the control.
+- A **structure-ablation control** at matched capacity that removes the structural prior (e.g. drops the symmetry / equivariance) while holding capacity fixed. The structure-present-minus-structure-ablated delta isolates the structural prior's contribution.
+
+A control that is weaker than a plain baseline (e.g. a starved sub-capacity MLP) SHALL NOT be used to claim an advantage — a positive delta against an under-capacity control is an artifact, not a result, and the logbook SHALL flag it as such if it is reported.
+
+#### Scenario: A leading structured-prior arm reports controlled-attribution deltas, not just its rank
+
+- **GIVEN** a Phase 4.5-promoted architecture with a non-trivial inductive bias that lands at or near the top of the C3 ranking
+- **WHEN** the logbook reports its result
+- **THEN** the logbook SHALL report the promoted-arch-minus-fair-classical-control delta (isolating the exotic component) AND the structure-present-minus-structure-ablated delta (isolating the prior), each with paired-seed Wilcoxon p + bootstrap CI
+- **AND** any advantage claim SHALL be supported by those controlled deltas, not by the raw rank or by a delta against an under-capacity control
+- **AND** if a delta against an under-capacity control is shown, the logbook SHALL flag it as an artifact
+
+#### Scenario: Realised quantum-arm attribution
+
+- **GIVEN** the equivariant-quantum arm (a bilateral-Z₂-equivariant parameterised quantum circuit) was promoted and led the C3 ranking
+- **WHEN** its attribution is computed
+- **THEN** the control set SHALL include: an unstructured-quantum arm; a thin classical-equivariant arm (an under-capacity control, flagged as such); a matched-capacity rich classical-equivariant arm (the fair control); and a matched-capacity rich classical non-equivariant arm (the structure-ablation control) — the latter two implemented via the `classical_rich` / `classical_symmetrise` flags on the equivariant-quantum brain
+- **AND** the realised verdict SHALL be recorded: quantum minus fair-classical = −1.9 (ns — **no quantum advantage**); the +24.6 delta against the thin control is an artifact; matched-capacity symmetry deltas +1.5 (classical) / +2.4 (quantum) are both ns (**no significant symmetry effect**)
 
 ### Requirement: Logbook Supporting Data Persistence Discipline
 

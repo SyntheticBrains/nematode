@@ -254,6 +254,17 @@ def test_classical_equivariant_ablation_is_equivariant() -> None:
     assert _max_swap_error(make_brain(quantum=False)) < 1e-4
 
 
+def test_rich_classical_ablation_is_equivariant() -> None:
+    """The rich (Z2-symmetrised full-MLP) classical-equivariant control is exactly equivariant."""
+    assert _max_swap_error(make_brain(quantum=False, classical_rich=True)) < 1e-4
+
+
+def test_nonsymmetrised_rich_classical_is_not_equivariant() -> None:
+    """The symmetry-prior control (classical_symmetrise=False) is NOT equivariant."""
+    brain = make_brain(quantum=False, classical_rich=True, classical_symmetrise=False)
+    assert _max_swap_error(brain) > 1e-2
+
+
 def test_unstructured_ablation_is_not_equivariant() -> None:
     """The equivariant=False (unstructured PQC) ablation is genuinely NOT equivariant."""
     assert _max_swap_error(make_brain(equivariant=False)) > 1e-2
@@ -356,6 +367,20 @@ def test_k_even_floor_validator() -> None:
     """k_even = num_qubits - k_odd must be >= 3 for the equivariant readout."""
     with pytest.raises(ValueError, match="k_even"):
         EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, num_qubits=4, k_odd=2)
+
+
+def test_classical_flags_ignored_under_quantum_validator() -> None:
+    """`classical_*` control flags are rejected under quantum=True (they'd be ignored)."""
+    with pytest.raises(ValueError, match="classical_rich"):
+        EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, quantum=True, classical_rich=True)
+    with pytest.raises(ValueError, match="classical_rich"):
+        EquivariantQuantumPPOBrainConfig(
+            sensory_modules=MODS,
+            quantum=True,
+            classical_symmetrise=False,
+        )
+    # The default quantum config (classical flags at defaults) is NOT rejected.
+    EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, quantum=True)
 
 
 def test_qubit_budget_validator() -> None:

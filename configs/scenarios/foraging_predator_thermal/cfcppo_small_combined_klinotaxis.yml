@@ -1,70 +1,72 @@
-# Combined-behaviour C3 cell — LSTMPPO/GRU (food + predator + thermotaxis, klinotaxis).
+# Combined-behaviour C3 cell — CfC / liquid brain (food + predator + thermotaxis, klinotaxis).
 #
-# The integrated, ranked configuration for the cross-architecture comparison.
-# Shares an IDENTICAL env + reward block with the other three C3 cells
-# (mlpppo / connectomeppo / feedforwardga) — only the brain block differs —
-# so the comparison measures how well each brain juggles competing pressures.
+# The CfC (Closed-form Continuous-time + AutoNCP, Neural Circuit Policy) member of the
+# cross-architecture comparison. Shares an IDENTICAL env + reward block with the other
+# C3 cells (mlpppo / lstmppo / connectomeppo) under configs/scenarios/foraging_predator_thermal/
+# — only the brain block differs — so the comparison measures how well each brain juggles
+# the competing pressures.
+#
+# ACTOR HEAD = mlp (capacity fallback), NOT the NCP-authentic motor-direct head. A single-seed
+# de-risk on this exact cell showed the motor head fails (0% full-clear — the AutoNCP motor
+# output is bounded, so even with the learnable logit temperature it is too constrained for
+# the integrated multi-objective cell), while the mlp head (a small actor MLP on the recurrent
+# hidden state) learns it. At n=8 the mlp head is recurrent-init-variant (bimodal, 3/8 collapse at
+# flat low entropy); the entropy peak-anneal in the brain block (see entropy_coef below) fully
+# stabilises it -> 84.4 +/- 9.5, 0/8 collapse (co-top of the comparison, tied with LSTMPPO).
+# The motor head is retained in the brain as a documented within-CfC ablation.
 #
 # Composition + lethal-thermal/predator tuning: identical to
-# foraging_predator_thermal/mlpppo_small_combined_klinotaxis.yml (see that
-# file's header for the full rationale). Briefly: Phase 0 canonical two-channel
-# predator biology + distal_chemo_contact_trigger reward, LETHAL thermal
-# gradient (1.5), predator_damage 6.0 + penalty_health_damage 0.0 carried
-# forward from the prior canonical combined thermal+pursuit baseline
-# (logbook 007 + thermal_pursuit/mlpppo_small_oracle.yml).
-#
-# Env parity: max_steps 500 (matching mlpppo/connectome C3 cells + the Phase 0
-# evaluation budget), NOT the LSTMPPO predator config's 1000 — the C3 env must
-# be identical across architectures for a fair comparison. The brain block uses
-# the GRU + LayerNorm recurrent-stability stack (see the brain.config comment) —
-# the LSTMPPO is otherwise init-unstable (~50% seed-collapse) on this cell.
+# foraging_predator_thermal/mlpppo_small_combined_klinotaxis.yml (see that file's header for
+# the full rationale: Phase 0 canonical two-channel predator biology +
+# distal_chemo_contact_trigger reward, LETHAL thermal gradient 1.5, predator_damage 6.0,
+# penalty_health_damage 0.0). max_steps 500 matches the other C3 cells (env parity); the
+# n-seed sweep sets the episode budget (1000) via --runs.
 
 max_steps: 500
 brain:
-  name: lstmppo
+  name: cfcppo
   config:
-    rnn_type: gru
-    lstm_hidden_dim: 64
+    # CfC + AutoNCP recurrent core
+    units: 32
+    ncp_sparsity: 0.5
+    cfc_mode: default
     bptt_chunk_length: 64
 
+    # Actor head: mlp (the de-risked representative for this cell; motor head under-powered here)
+    actor_head: mlp
     actor_hidden_dim: 64
-    critic_hidden_dim: 128
     actor_num_layers: 2
+    motor_logit_scale_init: 1.0  # unused in mlp mode; kept for the motor-head ablation
+
+    # Critic MLP on the detached hidden state
+    critic_hidden_dim: 64
     critic_num_layers: 2
 
+    # Flat learning rates (no schedule)
     actor_lr: 0.0003
     critic_lr: 0.0003
 
+    # PPO hyperparameters
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
+    # Entropy peak-anneal (0.08 -> 0.02 over 800 ep). The recurrent CfC is init-variant on this
+    # cell at flat low entropy (baseline 3/8 collapse): high early entropy forces the late-escaping
+    # seeds out of the dead-exploration basin before the decay, then the low floor lets the
+    # converged policy peak. n=8: 84.4 +/- 9.5, 0/8 collapse (was 54.9 +/- 40.6 at flat 0.01).
+    entropy_coef: 0.08
+    entropy_coef_end: 0.02
+    entropy_decay_episodes: 800
     rollout_buffer_size: 512
     num_epochs: 4
     max_grad_norm: 0.5
-
-    # Recurrent-stability stack that takes the LSTMPPO from ~50% seed-collapse to
-    # 0/8 on this integrated cell (see logbook supporting docs for the screen):
-    #   - recurrent_layernorm: LayerNorm-GRU cell prevents recurrent-state
-    #     saturation throughout training (PR #195; LN-LSTM was far worse, 7/8).
-    #   - higher entropy 0.05 -> 0.02 breaks the residual dead-exploration basin
-    #     where the policy never explores enough to find a reward signal.
-    #   - flat LR (schedule removed) at actor_lr/critic_lr 0.0003: the prior
-    #     decay-over-1500ep schedule never reached its floor in a 1000ep run, and
-    #     trained at a persistently high LR. (orthogonal recurrent init is now
-    #     always applied by the brain, PR #195.)
-    recurrent_layernorm: true
-
-    entropy_coef: 0.05
-    entropy_coef_end: 0.02
-    entropy_decay_episodes: 800
 
     sensory_modules:
       - food_chemotaxis                  # Auto-translated to food_chemotaxis_klinotaxis
       - predator_mechanosensation_oracle # Auto-translated to predator_mechanosensation_klinotaxis
       - predator_chemosensation_oracle   # Auto-translated to predator_chemosensation_klinotaxis
       - thermotaxis                       # Auto-translated to thermotaxis_klinotaxis
-      - mechanosensation
       - proprioception
       - stam
 

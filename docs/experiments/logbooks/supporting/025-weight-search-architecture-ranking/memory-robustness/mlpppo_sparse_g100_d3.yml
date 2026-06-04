@@ -1,0 +1,75 @@
+# Sparse-search foraging memory test — MLPPPO (memoryless baseline).
+#
+# 100x100, 6 foods, no_respawn, short-range gradient (decay 3.0 ~6-8 cell catch
+# radius) -> most of the map is a dead zone -> foraging is search-then-exploit,
+# not hill-climbing. Foraging-only (no predators/thermal) isolates the
+# search-vs-memory effect. reward_exploration=0 so coverage is NOT externally
+# rewarded; food is the only reward, so dead-zone search must come from the
+# agent, not a coverage bonus.
+#
+# Goldilocks from the 300-ep difficulty sweep: MLP plateaus ~3.94/6 foods
+# (clearly sub-optimal, still learning) -> headroom for a memory-guided searcher.
+# MLP and LSTM share this IDENTICAL env + reward block; only the brain differs.
+# Primary metric: avg_foods_collected (graded search efficiency); all-clear
+# success is secondary (rare/noisy on a hard sparse env).
+
+max_steps: 2000
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis   # Auto-translated to food_chemotaxis_klinotaxis
+      - proprioception
+      - stam
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.0
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 1500.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 100
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 6
+    min_food_distance: 20
+    agent_exclusion_radius: 12
+    gradient_decay_constant: 3.0
+    gradient_strength: 1.0
+    no_respawn: true

@@ -4,7 +4,7 @@
 
 **Version**: 4.0
 
-**Last Updated**: 2026-05-23
+**Last Updated**: 2026-06-04
 
 **Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
@@ -164,7 +164,7 @@ Two reusable methodology contributions ship unscooped: the **lag-matrix cross-pa
 
 ### Research Questions for Phase 6+
 
-1. **Connectome ranking.** How does the wild-type *C. elegans* connectome rank against unconstrained MLP/LSTM, NEAT-evolved topologies, and quantum architectures on klinotaxis, thermotaxis, and predator evasion when learning and evolution operate on a common substrate?
+1. **Connectome ranking.** How does the wild-type *C. elegans* connectome rank against unconstrained MLP/LSTM, NEAT-evolved topologies, and quantum architectures on klinotaxis, thermotaxis, and predator evasion when learning and evolution operate on a common substrate? *(Partial grid-substrate answer in [Logbook 025](experiments/logbooks/025-weight-search-architecture-ranking.md): on the integrated C3 cell the connectome ranks mid-pack — competitive on foraging, behind on predator evasion — below a tied top cluster of quantum/CfC/spiking/LSTM; the quantum arm shows no advantage under controlled attribution. Full answer awaits the T7 continuous-substrate re-run.)*
 2. **Connectome fitness landscape.** Is the wild-type connectome a local optimum on these behaviours, a basin, or a saddle? What synaptic-weight changes does evolution find when permitted to modify it?
 3. **Plasticity and the connectome.** Does biologically-plausible plasticity (STDP, neuromodulator-modulated STDP) on the real connectome reproduce dynamics that match published *C. elegans* learning data (chemotaxis indices, Ca²⁺ correlation matrices)?
 4. **Architecture asymmetry under matched capacity.** Phase 5 M5 diagnosed architecture asymmetry as the blocker for Red Queen entanglement. Does matched-capacity NEAT-vs-NEAT or connectome-vs-connectome co-evolution produce the dynamics that LSTMPPO-vs-MLPPPO suppressed?
@@ -582,7 +582,7 @@ Phase 6 is broken into nine tranches with deliberate ordering — L0 ingest (T1)
 | 1 | L0 connectome ingest — Cook 2019 hermaphrodite (302 neurons, 3709 chemical synapses, 1093 gap junctions) via direct *Nature* SI parsing; cross-validated against Witvliet 2021 nerve-ring (180 shared); forward-pass smoke + 71-test suite | L0 | 2-3 weeks | — | ✅ complete (logbook [022](experiments/logbooks/022-connectome-substrate.md)) |
 | 2 | L1 plugin refactor (dispatcher → registry + topology/rule factoring + 19-architecture migration with regression bar) + connectome-as-brain wired through existing grid env | L1 | 3-5 weeks | **Gate 1 — GO** | ✅ complete (logbook [023](experiments/logbooks/023-architecture-plugin-interface.md)) |
 | 3 | Corrected biology-driven predator sensing — two-channel split (contact-mechanosensory ASH/ALM/AVM/PLM + distal-chemosensory ASH/ASI sulfolipid per Liu et al. 2018) replacing the single chemosensory-at-distance `nociception` model flagged in Logbook 011 | env-correctness | 1-2 weeks | — | ✅ complete (logbook [024](experiments/logbooks/024-predator-sensing-biology.md)) |
-| 4 | L2 initial pass — four MUST architectures × three behaviours, grid substrate, chemical-synapse strict-mask connectome | L2 (first pass) | 4-6 weeks | — | 🔲 not started |
+| 4 | L2 initial pass — one integrated grid-substrate C3 cell (food + predator + thermotaxis active simultaneously, n=8 paired seeds), chemical-synapse strict-mask connectome; 4 MUST families + 3 Phase-4.5 promotions (quantum, spiking, CfC) = 7 families, per-behaviour sub-metrics extracted | L2 (first pass) | 4-6 weeks | — | ✅ complete (logbook [025](experiments/logbooks/025-weight-search-architecture-ranking.md)) |
 | 5 | Platform refactor — continuous-2D coordinates + continuous-action heads on existing MUST brains; plugin-parity verified in practice | env-upgrade (platform) | 3-4 weeks | **Gate 2** | 🔲 not started |
 | 6 | Env fidelity — Rung 2 dynamic Fick's-law diffusion + log-concentration chemosensory adaptation kinetics | env-upgrade (fidelity) | 3-4 weeks | — | 🔲 not started |
 | 7 | L2 re-run on fully-upgraded substrate + real-worm validation; SHOULD/MAY architectures evaluated opportunistically | L2 (final) | 4-6 weeks | **Gate 3** | 🔲 not started |
@@ -816,6 +816,8 @@ The architecture-comparison protocol consolidates this into a single mechanism, 
 4. If a future phase introduces a complexity dimension that *did* clear a quantum-advantage threshold in the Phase 2 campaign (e.g., long non-Markovian dependencies for QRH), revisit that family's evaluation at that phase. This is opportunistic, not scheduled.
 
 There is no separate "quantum checkpoint" gate, and no "if classical drops below 70% then launch a quantum campaign v2." The optionality of revisiting quantum at higher complexity is preserved through the architecture-family sweep itself.
+
+**T4 grid ranking complete (2026-06-03, [Logbook 025](experiments/logbooks/025-weight-search-architecture-ranking.md)).** The first L2 pass — 7 architecture families on the integrated grid-world C3 cell (food + predator + thermotaxis, n=8 paired seeds, post-convergence full-clear) — is done. A four-way top cluster (equivariant-quantum 86.0, CfC 84.4, spiking 84.2, LSTM 83.6) is statistically tied; the wild-type connectome ranks **mid-pack** (75.6 — competitive on foraging, behind on predator evasion); GA collapses (0.0). A genuinely-quantum (simulated) bilateral-symmetry-equivariant-circuit arm is the numerical leader, but controlled attribution — a matched-capacity fair classical-equivariant control plus a matched-capacity symmetry control — shows **no quantum-circuit advantage and no significant symmetry effect**, a controlled on-task confirmation of the Phase 2 / Logbook 008 baseline (the naive "+24.6 quantum-beats-classical" delta was a weak-baseline artifact). This grid ranking is the reference the T7 continuous-substrate re-run measures its env-upgrade delta against; **full Gate 3 closes at T7** (this is partial, grid-only evidence).
 
 ______________________________________________________________________
 

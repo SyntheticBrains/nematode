@@ -91,7 +91,7 @@ Runs concurrently with Section 2 below. Output: canonical sensor + reward locked
 
 ### 4a. Create Phase 4 evaluation scratchpad
 
-- [ ] 4a.1 Create `tmp/evaluations/weight-search-architecture-ranking/weight-search-architecture-ranking_scratchpad.md` with sections: purpose, per-architecture status table, per-cell metrics, decisions taken mid-sweep.
+- [x] 4a.1 Create `tmp/evaluations/weight-search-architecture-ranking/weight-search-architecture-ranking_scratchpad.md` with sections: purpose, per-architecture status table, per-cell metrics, decisions taken mid-sweep. **Done**: scratchpad present (carries Phase 2 pre-flight, the spiking + quantum C3 forensics, and the n=8 ranking + ablation-attribution sections).
 
 ### 4b. C1 + C2 + C3 per architecture (use `nematode-run-experiments` skill where parallel groups fit)
 
@@ -105,41 +105,41 @@ For each architecture (MLPPPO, LSTMPPO, FeedforwardGA, ConnectomePPO):
 
 - Run C3 (foraging + predator + thermotaxis, n=4 seeds). Record metrics.
 
-- [ ] 4b.1 MLPPPO: C1 → C2 → freeze reward weights → C3.
+- [x] 4b.1 MLPPPO: C1 → C2 → freeze reward weights → C3. **Done**: C3 cell ran (n=8), 73.1% post-conv; no per-arch reward tuning needed (Decision 7 trigger did not fire — global weights used).
 
-- [ ] 4b.2 LSTMPPO: C1 → C2 → freeze reward weights → C3.
+- [x] 4b.2 LSTMPPO: C1 → C2 → freeze reward weights → C3. **Done**: C3 cell ran (n=8), 83.6% post-conv; global reward weights.
 
-- [ ] 4b.3 FeedforwardGA: C1 → C2 → freeze reward weights → C3.
+- [x] 4b.3 FeedforwardGA: C1 → C2 → freeze reward weights → C3. **Done**: C3 cell ran (n=8) but **collapses to 0.0%** — GA-on-fixed-topology does not solve the integrated lethal cell (recorded as a finding).
 
-- [ ] 4b.4 ConnectomePPO: C1 → C2 → freeze reward weights → C3.
+- [x] 4b.4 ConnectomePPO: C1 → C2 → freeze reward weights → C3. **Done**: C3 cell ran (n=8), 75.6% post-conv (mid-pack); global reward weights.
 
 ### 4c. Ablations (on C3 substrate)
 
-- [ ] 4c.1 **Strict-mask vs soft-prior** on the connectome C3 cell — second connectome C3 run with `chemical_mask_mode: "soft_prior"`. Same n=4 seeds.
-- [ ] 4c.2 **Per-family predator reward-shape ablation** — for each architecture, run the C3 cell with the non-canonical reward variant chosen in Phase 0. 4 architectures × 1 ablation cell × n=4 seeds = 16 additional runs.
+- [x] 4c.1 **Strict-mask vs soft-prior** on the connectome C3 cell — second connectome C3 run with `chemical_mask_mode: "soft_prior"`. Same n=4 seeds. **Done**: `softprior-connectomeppo` ablation ran (see `phase-4/ablations/`).
+- [x] 4c.2 **Per-family predator reward-shape ablation** — for each architecture, run the C3 cell with the non-canonical reward variant chosen in Phase 0. 4 architectures × 1 ablation cell × n=4 seeds = 16 additional runs. **Done (3/4 archs)**: `gradprox-{mlpppo,lstmppo,connectomeppo}` ran (the `gradient_proximity` non-canonical reward); FeedforwardGA omitted — it collapses to 0.0% on the canonical C3 cell, so a reward-shape ablation on it is uninformative.
 
 ## 5. Phase 4.5 — Architecture-promotion gate
 
-- [ ] 5.1 Per SHOULD/MAY candidate (quantum, spiking, reservoir, hybrid), document a GO or SKIP verdict in this change's design.md (new section `## Phase 4.5 architecture-promotion gate`). Include rationale citing the (a) compute-fit, (b) roadmap-relevance, (c) headline-impact criteria from design.md Decision 3.
-- [ ] 5.2 For each GO verdict: queue and run the C1 + C2 + C3 cells for that architecture per Section 4b (with the same C2-results-inform-C3-reward-weights pattern). Run any ablations from Section 4c.
+- [x] 5.1 Per SHOULD/MAY candidate (quantum, spiking, reservoir, hybrid), document a GO or SKIP verdict in this change's design.md (new section `## Phase 4.5 architecture-promotion gate`). Include rationale citing the (a) compute-fit, (b) roadmap-relevance, (c) headline-impact criteria from design.md Decision 3. **Done**: § "Phase 4.5 architecture-promotion gate" — quantum GO, spiking GO, reservoir SKIP, hybrid SKIP, each citing criteria (a)/(b)/(c). Also documents CfC as a GO **off** the Decision 4 SHOULD/MAY list (a liquid-network family) with an explicit scope note (Decision-4 table to absorb it at T7/T9 synthesis), so the actual 7-family scope is recorded honestly rather than folded in silently.
+- [x] 5.2 For each GO verdict: queue and run the C1 + C2 + C3 cells for that architecture per Section 4b (with the same C2-results-inform-C3-reward-weights pattern). Run any ablations from Section 4c. **Done**: three GO promotions ran C3 at n=8 — CfC (84.4%), spiking (84.2%), equivariant-quantum (86.0%); the quantum arm additionally ran 4 controlled attribution arms (unstructured / thin-classical / rich-classical-equivariant / rich-classical-non-equivariant) per `phase-4/ablations/`.
 
 ## 6. Phase 5 — Cross-architecture analysis + logbook
 
-- [ ] 6.1 Author analysis script under `scripts/analysis/weight_search_architecture_ranking.py` consuming the C3 (and any Phase 4.5 promoted) per-cell CSV exports. Extract the reusable inner computation pattern (paired-seed delta → one-sided Wilcoxon → 80% bootstrap CI with seeded RNG, 1000 resamples) from `scripts/campaigns/aggregate_m613_pilot.py:329-418` (which is M6.13-specific with a 4-tuple-keyed dict) into a generic `_paired_seed_wilcoxon_bootstrap(deltas: list[float]) -> dict` helper. Add BH-FDR correction across the **realised** active test set per Decision 2 (the realised set may be smaller than the planned set if Phase 4 risk-mitigation drops an architecture).
-- [ ] 6.2 Run analysis. Output: per-pair-per-metric delta + p + BH-q + bootstrap CI as CSVs under `tmp/evaluations/weight-search-architecture-ranking/analysis/`.
-- [ ] 6.3 Generate per-behaviour-component ranking tables (foraging success, predator survival, isotherm-tracking) + overall combined ranking.
-- [ ] 6.4 Generate the connectome verdict: per-behaviour wins/ties/losses vs each other architecture.
-- [ ] 6.5 Promote analysis CSVs + summary tables + plots into `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/`.
-- [ ] 6.6 Author the logbook at `docs/experiments/logbooks/025-weight-search-architecture-ranking.md`. Reference `supporting/*` paths only (never `tmp/*`). Cover: methodology summary, per-architecture C1/C2/C3 results, ablation results, cross-architecture ranking, connectome verdict, env-upgrade-delta baseline data (the publishable intermediate result T7 will measure against).
-- [ ] 6.7 Pause for user review of evaluations + Gate 3 verdict-implication discussion BEFORE finalising the logbook (per memory feedback).
-- [ ] 6.8 Update `openspec/changes/phase6-tracking/tasks.md` T4 rows to reflect this change's outcomes. Tick T4.0a-g; tick the integrated-C3 rows (which Phase 1f.1 amended into the tracker at change start).
-- [ ] 6.9 Update `docs/roadmap.md` Phase 6 Tranche Tracker T4 row.
-- [ ] 6.10 Amend `openspec/changes/phase6-tracking/design.md § Decision 6` MCC default (Holm-Bonferroni → BH-FDR) AND confirm the G3.a wording amendment from Task 1f.2 still reflects the realised T4 outcomes. T7's inheritance of BH-FDR is captured in this amendment.
+- [x] 6.1 Author analysis script under `scripts/analysis/weight_search_architecture_ranking.py` consuming the C3 (and any Phase 4.5 promoted) per-cell CSV exports. Extract the reusable inner computation pattern (paired-seed delta → one-sided Wilcoxon → 80% bootstrap CI with seeded RNG, 1000 resamples) from `scripts/campaigns/aggregate_m613_pilot.py:329-418` (which is M6.13-specific with a 4-tuple-keyed dict) into a generic `_paired_seed_wilcoxon_bootstrap(deltas: list[float]) -> dict` helper. Add BH-FDR correction across the **realised** active test set per Decision 2 (the realised set may be smaller than the planned set if Phase 4 risk-mitigation drops an architecture). **Done**: script ships `paired_seed_wilcoxon_bootstrap` + `bh_fdr`; reads per-seed `.out` → experiment JSON → `post_convergence_success_rate`; all 7 realised arms wired in (PPO_ARCHS + ALL_FRESH_ARCHS).
+- [x] 6.2 Run analysis. Output: per-pair-per-metric delta + p + BH-q + bootstrap CI as CSVs under `tmp/evaluations/weight-search-architecture-ranking/analysis/`. **Done**: full 7-arch ranking + 21-pair matrix + per-behaviour sub-metrics + connectome verdict; exports under `phase-4/analysis/`.
+- [x] 6.3 Generate per-behaviour-component ranking tables (foraging success, predator survival, isotherm-tracking) + overall combined ranking. **Done**: per-behaviour sub-metric table (foraging foods / evasion % / thermal comfort) + the overall post-conv ranking, in the analysis output + logbook.
+- [x] 6.4 Generate the connectome verdict: per-behaviour wins/ties/losses vs each other architecture. **Done**: connectome ranks mid-pack — ~tie on foraging, behind on predator evasion (vs MLP Δ−12.5, vs LSTM Δ−7.5); in the analysis output + logbook § "Connectome verdict".
+- [x] 6.5 Promote analysis CSVs + summary tables + plots into `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/`. **Done**: per-seed ranking CSV + quantum-attribution CSV + cross-arch pairwise JSON under `supporting/025/phase-4/analysis/`, plus the markdown summary-table appendix. (No static plots — the appendix tables serve; small text artefacts, no LFS concern.)
+- [x] 6.6 Author the logbook at `docs/experiments/logbooks/025-weight-search-architecture-ranking.md`. Reference `supporting/*` paths only (never `tmp/*`). Cover: methodology summary, per-architecture C1/C2/C3 results, ablation results, cross-architecture ranking, connectome verdict, env-upgrade-delta baseline data (the publishable intermediate result T7 will measure against). **Done**: logbook 025 published (commit 7f91bd28) — references `supporting/*` only; the quantum-arm controlled attribution (no advantage; no significant symmetry effect) is the methodology centrepiece.
+- [x] 6.7 Pause for user review of evaluations + Gate 3 verdict-implication discussion BEFORE finalising the logbook (per memory feedback). **Done**: each evaluation (ranking, fairness audit, symmetry control) was reviewed with the user as it landed; the logbook verdict + roadmap update were approved before commit.
+- [x] 6.8 Update `openspec/changes/phase6-tracking/tasks.md` T4 rows to reflect this change's outcomes. Tick T4.0a-g; tick the integrated-C3 rows (which Phase 1f.1 amended into the tracker at change start). **Done**: all T4 rows ticked (T4.0a-g planning sub-tasks + 4 integrated-C3 cells + curriculum smokes + 2 ablations + 4 analysis/logbook rows), each with a one-line realised outcome; a consolidated "T4 realised + closed (2026-06-03)" banner heads the T4 section pointing to Logbook 025. Gate 3 rows deliberately NOT ticked — Gate 3 closes at T7.
+- [x] 6.9 Update `docs/roadmap.md` Phase 6 Tranche Tracker T4 row. **Done**: T4 row status → ✅ complete (logbook 025); scope text refreshed from the stale "four MUST × three behaviours" to the realised integrated-C3 framing (7 families = 4 MUST + 3 Phase-4.5 promotions, per-behaviour sub-metrics extracted).
+- [x] 6.10 Amend `openspec/changes/phase6-tracking/design.md § Decision 6` MCC default (Holm-Bonferroni → BH-FDR) AND confirm the G3.a wording amendment from Task 1f.2 still reflects the realised T4 outcomes. T7's inheritance of BH-FDR is captured in this amendment. **Done**: the default→BH-FDR amendment was already folded into G3.a at Task 1f.2 (no separate Holm-Bonferroni default statement existed elsewhere in Decision 6; the roadmap names no MCC default). Added a dated post-realisation confirmation clause to G3.a (T4 shipped BH-FDR across the realised 7-family/21-pair set; T7 inheritance stands; additive, not a recalibration — Gate 3 unfired). Resolved this change's Open Question 5 accordingly.
 
 ## 7. Phase 7 — Pre-merge verification
 
-- [ ] 7.1 Run `openspec validate weight-search-architecture-ranking --strict` and verify clean.
-- [ ] 7.2 Run targeted `uv run pre-commit run --files <changed-files>` and verify clean. Targeted runs during iteration; full suite (`pre-commit run -a`) before push (per memory feedback).
-- [ ] 7.3 Audit staged files for `/Users/`, `/home/`, `C:\\Users\\` absolute path leakage (per project memory feedback). Sanitise any found.
-- [ ] 7.4 Audit any > 100 KB artefacts under `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/` against `.gitattributes` LFS rules (per project memory feedback). Promote to LFS if needed.
-- [ ] 7.5 Ask user before pushing the branch or opening a PR.
+- [x] 7.1 Run `openspec validate weight-search-architecture-ranking --strict` and verify clean. **Done**: `Change 'weight-search-architecture-ranking' is valid` (and `phase6-tracking` re-validated clean after the 6.8/6.10 amendments).
+- [x] 7.2 Run targeted `uv run pre-commit run --files <changed-files>` and verify clean. Targeted runs during iteration; full suite (`pre-commit run -a`) before push (per memory feedback). **Done**: targeted run on the 5 doc-sync files green, then full `pre-commit run -a` green (large-files / end-of-files / yaml / toml / mdformat / markdownlint / ruff check / ruff format / pyright / tests — all Passed).
+- [x] 7.3 Audit staged files for `/Users/`, `/home/`, `C:\\Users\\` absolute path leakage (per project memory feedback). Sanitise any found. **Done**: working-tree diff scanned — no home-dir path leakage in added lines.
+- [x] 7.4 Audit any > 100 KB artefacts under `docs/experiments/logbooks/supporting/025-weight-search-architecture-ranking/` against `.gitattributes` LFS rules (per project memory feedback). Promote to LFS if needed. **Done**: all promoted artefacts are small text (per-seed/attribution CSVs ~1 KB, pairwise JSON ~10 KB) — none > 100 KB; no LFS promotion needed.
+- [x] 7.5 Ask user before pushing the branch or opening a PR. **Pre-authorized**: the user instructed "you can tick 7.5 in advance once all the other tasks are done" — granting the push + PR for this specific change once 5.1/6.8/6.9/6.10/7.1/7.2/7.3 landed. All landed; pushing the branch + opening the comparison PR under that authorization.
