@@ -197,6 +197,14 @@ class EquivariantQuantumPPOBrainConfig(BrainConfig):
                 "quantum=False would build an equivariant-classical actor, contradicting the flags"
             )
             raise ValueError(msg)
+        if self.quantum and (self.classical_rich or not self.classical_symmetrise):
+            msg = (
+                "`classical_rich` / `classical_symmetrise` configure the classical-control "
+                "actor and are ignored when `quantum=True`; set `quantum=False` to use them "
+                f"(got quantum=True, classical_rich={self.classical_rich}, "
+                f"classical_symmetrise={self.classical_symmetrise})"
+            )
+            raise ValueError(msg)
         if not (0 < self.k_odd < self.num_qubits):
             msg = (
                 f"k_odd must satisfy 0 < k_odd < num_qubits, "

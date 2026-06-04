@@ -4,7 +4,7 @@
 
 **Version**: 4.0
 
-**Last Updated**: 2026-05-23
+**Last Updated**: 2026-06-04
 
 **Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 

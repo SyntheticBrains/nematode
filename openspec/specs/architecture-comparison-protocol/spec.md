@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change weight-search-architecture-ranking. Update Purpose after archive.
+Defines the methodology for fair, statistically-rigorous cross-architecture brain comparisons: the curriculum-then-integrated cell structure, the convergence-aware plateau-performance ranking metric (`post_convergence_success_rate`), paired-seed one-sided Wilcoxon + bootstrap CIs with BH-FDR multiple-comparisons correction, the architecture-promotion gate, the controlled-attribution requirement for promoted structured-prior (e.g. quantum / equivariant) architectures, and the logbook supporting-data persistence discipline.
 
 ## Requirements
 

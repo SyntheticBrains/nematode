@@ -369,6 +369,20 @@ def test_k_even_floor_validator() -> None:
         EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, num_qubits=4, k_odd=2)
 
 
+def test_classical_flags_ignored_under_quantum_validator() -> None:
+    """`classical_*` control flags are rejected under quantum=True (they'd be ignored)."""
+    with pytest.raises(ValueError, match="classical_rich"):
+        EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, quantum=True, classical_rich=True)
+    with pytest.raises(ValueError, match="classical_rich"):
+        EquivariantQuantumPPOBrainConfig(
+            sensory_modules=MODS,
+            quantum=True,
+            classical_symmetrise=False,
+        )
+    # The default quantum config (classical flags at defaults) is NOT rejected.
+    EquivariantQuantumPPOBrainConfig(sensory_modules=MODS, quantum=True)
+
+
 def test_qubit_budget_validator() -> None:
     """num_qubits is capped at the statevector budget."""
     with pytest.raises(ValueError, match="num_qubits"):

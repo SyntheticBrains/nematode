@@ -235,6 +235,6 @@ EXP 1's large-grid configs live under `configs/scenarios/foraging_predator_therm
 - **Phase 0** (predator-sensing canonicalisation): [supporting/025/phase-0](supporting/025-weight-search-architecture-ranking/phase-0/README.md).
 - **C3 configs**: `configs/scenarios/foraging_predator_thermal/*_small_combined_klinotaxis.yml` (one per
   arm); the quantum arm + its ablation siblings under the same directory
-  (`equivariantquantum_small_combined_klinotaxis*.yml`).
+  (`equivariantquantum_small_combined_*.yml`).
 - **Quantum brain**: `packages/quantum-nematode/quantumnematode/brain/arch/equivariant_quantum.py` +
   `_quantum_statevector.py`; spec archived under `2026-06-01-add-equivariant-quantum-brain`.
