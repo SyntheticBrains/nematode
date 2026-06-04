@@ -208,6 +208,10 @@ and the GA collapse do not depend on the task stressing memory. The comparison *
 the biology creates real differences (GA 0%; connectome significantly mid-pack). What ties is the top
 cluster's working-memory axis — which no task in this family exercises.
 
+*Reproducibility (configs + run commands + per-seed results for all three experiments):*
+[supporting/025/memory-robustness/](supporting/025-weight-search-architecture-ranking/memory-robustness/README.md).
+EXP 1's large-grid configs live under `configs/scenarios/foraging_predator_thermal/*_large_combined_klinotaxis.yml`.
+
 ## Next Steps
 
 - This 7-arch grid ranking is the **baseline T7 (continuous-physics upgrade) will measure against** for
