@@ -390,7 +390,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 
-- **Connectome Substrate** (in progress): Closed-loop learning and evolution on the real *C. elegans* connectome (302 neurons, Cook et al. 2019) as a focal architecture, with NEAT topology search ranking the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion
+- **Connectome Architecture Comparison** (in progress): Closed-loop learning and evolution on the real *C. elegans* connectome (302 neurons, Cook et al. 2019) as a focal architecture, with NEAT topology search ranking the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion
 - **Plasticity & Cross-Species Transfer**: Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome, and *P. pacificus* transfer using Cook et al. 2025 connectome data
 - **Continuous Physics**: Continuous 2D movement and realistic locomotion
 - **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
