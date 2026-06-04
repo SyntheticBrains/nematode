@@ -22,15 +22,18 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
 - ✅ **Classical ML Alternatives**: REINFORCE, PPO, DQN, LSTM/GRU PPO, and spiking neural network brain architectures
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
+- ✅ **Evolutionary Optimization & Inheritance**: CMA-ES, genetic algorithms, and TPE hyperparameter search, plus Lamarckian weight inheritance, Baldwin-effect, and predator-prey co-evolution
+- ✅ **Connectome Substrate**: Connectome-constrained brains on the real *C. elegans* wiring diagram (302 neurons, Cook et al. 2019) with chemical synapses and gap junctions
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
 - ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
 - ✅ **Interactive Workflows**: CLI scripts with flexible configuration
 - ✅ **Multi-Agent Visualization**: Real-time Pygame rendering of multi-agent simulations with per-agent colored sprites, viewport agent switching, and pheromone concentration overlays
+- ✅ **Pluggable Architecture Interface**: Self-registering `@register_brain` plug-in registry for adding new brain architectures as comparable rows in one experimental sweep
 - 🚧 **Expandable Framework**: Modular design for research and experimentation
 
 ## 🧠 Brain Architectures
 
-Choose from 19 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 24 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
@@ -44,6 +47,7 @@ Choose from 19 brain architectures spanning quantum, classical, hybrid, and biol
 - **QEFBrain** (qef): Quantum entangled features — parameterized quantum circuit with configurable cross-modal entanglement topology (modality-paired, ring, random), Z+ZZ+cos/sin feature extraction, and PPO-trained classical readout
 - **QRHQLSTMBrain** (qrhqlstm): QRH quantum reservoir with QLIF-LSTM temporal readout — reservoir feature extraction + recurrent PPO with truncated BPTT
 - **CRHQLSTMBrain** (crhqlstm): CRH classical reservoir with QLIF-LSTM temporal readout — classical reservoir ablation companion to QRH-QLSTM
+- **EquivariantQuantumPPOBrain** (equivariantquantum): Z2-equivariant parameterized quantum circuit with data re-uploading and odd/even-parity latent split, PPO-trained — ships with classical-equivariant and symmetry-prior ablation controls to isolate the equivariance and quantum contributions
 
 **Hybrid (Quantum + Classical):**
 
@@ -58,10 +62,14 @@ Choose from 19 brain architectures spanning quantum, classical, hybrid, and biol
 - **LSTMPPOBrain** (lstmppo): LSTM/GRU-augmented PPO with chunk-based truncated BPTT, separate actor/critic optimizers, and entropy decay — designed for temporal sensing tasks where memoryless MLP processing is insufficient. GRU variant recommended (outperforms LSTM across all evaluated environments)
 - **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
+- **CfCPPOBrain** (cfcppo): CfC (Closed-form Continuous-time) liquid neural network with AutoNCP wiring and continuous-time recurrent dynamics, PPO-trained — an alternative recurrent substrate for temporal sensing
+- **FeedforwardGABrain** (feedforwardga): Feed-forward network whose weights are evolved by the genetic-algorithm optimizer (gradient-free), with graded episodic-progress fitness for sparse-reward cells
 
 **Biologically-Inspired:**
 
 - **SpikingReinforceBrain** (spikingreinforce): Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
+- **SpikingPPOBrain** (spikingppo): Recurrent adaptive-LIF spiking network with a configurable MLP actor head, trained via PPO
+- **ConnectomePPOBrain** (connectomeppo): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 hermaphrodite — chemical synapses + gap junctions) with biologically-faithful sensor→interneuron→motor projections and multi-hop recurrence
 
 For full architecture comparison and benchmarks, see [quantum-architectures.md](docs/research/quantum-architectures.md) and [logbook 008](docs/experiments/logbooks/008-quantum-brain-evaluation.md).
 
@@ -371,6 +379,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Recently Completed
 
+- **Evolution & Inheritance**: CMA-ES, genetic-algorithm, and TPE optimization plus Lamarckian weight inheritance across generations (the headline-positive Phase 5 result), with Baldwin-effect, predator-prey co-evolution arms-race, and transgenerational-memory studies
+- **Pluggable Architecture Interface**: Self-registering `@register_brain` plug-in registry admitting MLP, recurrent, spiking, reservoir, quantum, hybrid, GA-evolved, and connectome-constrained brains as comparable rows in one experimental sweep
 - **Multi-Agent Simulations**: Cooperative and competitive foraging with pheromone communication (food-marking, alarm, aggregation), social feeding (npr-1 mediated satiety modulation), food competition policies, collective behavior metrics (aggregation index, alarm evasion, food sharing), and real-time Pygame visualization with per-agent colored sprites and pheromone overlays
 - **Temporal Sensing**: Biologically-accurate sensing replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with STAM temporal memory buffers
 - **LSTM/GRU PPO Brain**: Recurrent architecture with chunk-based truncated BPTT for temporal sensing tasks — achieves oracle-level converged performance with scalar-only sensing
@@ -380,8 +390,9 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 
-- **Evolution & Breeding**: Genetic algorithms, Baldwin effect, co-evolution of predators and prey
-- **Continuous Physics & Connectome**: Continuous 2D movement, realistic locomotion, 302-neuron connectome-constrained architectures
+- **Connectome Architecture Comparison** (in progress): Closed-loop learning and evolution on the real *C. elegans* connectome (302 neurons, Cook et al. 2019) as a focal architecture, with NEAT topology search ranking the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion
+- **Plasticity & Cross-Species Transfer**: Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome, and *P. pacificus* transfer using Cook et al. 2025 connectome data
+- **Continuous Physics**: Continuous 2D movement and realistic locomotion
 - **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
 - **Real-World Validation**: WormBot deployment, C. elegans lab collaborations, cross-organism transfer (Drosophila, zebrafish)
 
@@ -404,8 +415,8 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ### Areas We Need Help With
 
 - **Quantum Algorithm Development**: New quantum learning techniques for foraging
+- **Connectome & Plasticity**: Connectome-constrained architectures, biologically-plausible plasticity (STDP + neuromodulation), and cross-species transfer
 - **Foraging Environment Extensions**: Food quality variations, food spatial persistence, continuous action spaces
-- **Multi-Agent Evolution**: Genetic algorithms, co-evolution, predator-prey dynamics
 - **Visualization Enhancements**: Agent trail visualization, frame recording/video export, heatmaps
 - **Documentation**: Tutorials and examples for dynamic environments
 - **Testing**: Performance benchmarks and foraging strategy analysis

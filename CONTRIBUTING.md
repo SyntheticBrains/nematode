@@ -137,7 +137,7 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 19 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 24 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
@@ -151,39 +151,56 @@ The project supports 19 brain architectures across quantum, hybrid, classical, a
 08. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
 09. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout (ablation companion to QRH-QLSTM)
 10. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
+11. **EquivariantQuantumPPOBrain** (`equivariantquantum`): Z2-equivariant data-re-uploading circuit with odd/even-parity latent split and PPO; ships classical-equivariant + symmetry-prior ablation controls
 
 **Hybrid (quantum + classical):**
 
-11. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
-12. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
-13. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
+12. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
+13. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
+14. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
 
 **Classical:**
 
-14. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
-15. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
-16. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
-17. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
-18. **LSTMPPOBrain** (`lstmppo`): LSTM/GRU-augmented PPO with chunk-based truncated BPTT — designed for temporal sensing tasks
+15. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
+16. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
+17. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
+18. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
+19. **LSTMPPOBrain** (`lstmppo`): LSTM/GRU-augmented PPO with chunk-based truncated BPTT — designed for temporal sensing tasks
+20. **CfCPPOBrain** (`cfcppo`): CfC (Closed-form Continuous-time) liquid network with AutoNCP wiring and continuous-time recurrence, PPO-trained
+21. **FeedforwardGABrain** (`feedforwardga`): Feed-forward network with weights evolved by the GA optimizer (gradient-free); graded episodic-progress fitness for sparse-reward cells
 
 **Biologically-Inspired:**
 
-19. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+22. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+23. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
+24. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
 
-Each brain architecture follows a common interface defined in `quantumnematode.brain.arch`.
+Each brain architecture self-registers via the `@register_brain` decorator and follows a common interface defined in `quantumnematode.brain.arch`. See the [Plugin Developer Guide](docs/architecture/plugin-developer-guide.md) for how to add a new one.
 
 ## 🔧 Development Workflows
 
 ### Running Tests
 
-The project has three tiers of tests:
+The project has four tiers of tests:
 
 #### Unit & Integration Tests (default)
 
-Run automatically on every commit (pre-commit hook) and PR:
+Fast in-process tests. The pre-commit hook runs only this fast tier (excluding `slow`, `smoke`, and `nightly`); run the full non-nightly set after substantive changes:
 
 ```bash
-uv run pytest
+# Fast pre-commit subset
+uv run pytest -m "not smoke and not nightly and not slow"
+
+# Everything except nightly (includes slow + smoke) — run after substantive changes
+uv run pytest -m "not nightly"
+```
+
+#### Slow Integration Tests
+
+Heavy in-process integration (e.g. real `EvolutionLoop` runs). Excluded from the pre-commit hook; run before pushing, especially when touching `evolution/`:
+
+```bash
+uv run pytest -m slow -v
 ```
 
 #### Smoke Tests
@@ -416,7 +433,8 @@ docs/experiments/
     ├── 002-evolutionary-parameter-search.md
     ├── 003-spiking-brain-optimization.md
     ├── ...
-    ├── 008-quantum-brain-evaluation.md
+    ├── 025-weight-search-architecture-ranking.md
+    ├── 026-connectome-forward-vectorisation.md
     └── supporting/              # Detailed appendix data per logbook
         ├── 003/
         └── 008/
@@ -478,44 +496,51 @@ uv run python scripts/run_evolution.py \
   --generations 50
 ```
 
+#### Related Evolution & Analysis Scripts
+
+The `scripts/` directory also includes:
+
+- `run_coevolution.py` — predator-prey co-evolution arms-race campaigns (`CoevolutionLoop`)
+- `run_plasticity_test.py` / `compare_plasticity_results.py` — sequential multi-objective ("plasticity") training and cross-architecture comparison
+- `experiment_query.py` — query and compare tracked experiments
+- `benchmark_submit.py` / `evaluate_submission.py` — submit and validate benchmark results
+- `extract_runs.py`, `export_screenshot.py`, `qef_mi_analysis.py`, `qrh_mi_analysis.py` — artifact extraction, rendering, and mutual-information analysis helpers
+- `manage_jobs.py` — check the status of IBM Quantum / Q-CTRL Qiskit Function jobs by ID
+
 ### Adding New Features
 
-#### Adding a New Brain Architecture
+Brains are added through a self-registering plug-in registry, so adding one
+no longer requires editing a central dispatch. The [Plugin Developer
+Guide](docs/architecture/plugin-developer-guide.md) walks through the full
+workflow; the essentials:
 
-1. Create a new file in `packages/quantum-nematode/quantumnematode/brain/arch/`
-2. Inherit from appropriate base class (`QuantumBrain` or `ClassicalBrain`)
-3. Implement required methods:
-   - `run_brain()`: Execute brain and return actions
-   - `learn()`: Update parameters based on rewards
-   - `update_parameters()`: Low-level parameter updates
-
-Example structure:
+1. Create a new module in `packages/quantum-nematode/quantumnematode/brain/arch/`
+2. Define a Pydantic config class inheriting from `BrainConfig`
+3. Define your brain inheriting from the appropriate base (`QuantumBrain` or `ClassicalBrain`) and decorate it with `@register_brain` so it self-registers at import time:
 
 ```python
-from quantumnematode.brain.arch import QuantumBrain
+from quantumnematode.brain.arch import ClassicalBrain
+from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType
 
-class MyNewBrain(QuantumBrain):
-    def run_brain(self, params, reward=None, **kwargs):
-        # Implement brain execution logic
-        pass
-    
-    def learn(self, params, reward, **kwargs):
-        # Implement learning logic
-        pass
-```
-
-4. Add configuration class:
-
-```python
-from quantumnematode.brain.arch.dtypes import BrainConfig
 
 class MyNewBrainConfig(BrainConfig):
     # Define configuration parameters
-    pass
+    ...
+
+
+@register_brain(
+    name="mynewbrain",              # must equal BrainType.MYNEWBRAIN.value
+    config_cls=MyNewBrainConfig,
+    brain_type=BrainType.MYNEWBRAIN,
+    families=("classical",),        # e.g. "classical", "quantum", "spiking"
+)
+class MyNewBrain(ClassicalBrain):
+    ...
 ```
 
-5. Update `__init__.py` files to export new classes
-6. Add tests in the appropriate test directory
+4. Add the matching `BrainType` enum member and wire the module into `brain/arch/__init__.py` and the config loader (see the guide for the exact files)
+5. Add tests in the appropriate test directory
 
 #### Adding New Quantum Modules
 
