@@ -8,6 +8,8 @@ MUST update this file to mark sub-tasks complete as part of its diff.
 status lives in the **Status** header of each tranche section (matches the roadmap
 Phase 6 Tranche Tracker emoji column).
 
+> **Mid-phase checkpoint (2026-06-04, post-T4 / [Logbook 025](../../../docs/experiments/logbooks/025-weight-search-architecture-ranking.md)).** A roadmap checkpoint re-scoped the remaining tranches against the T4 evidence + a 2023–2026 research scan; full rationale in [design.md § Mid-phase checkpoint amendments](design.md). Net pre-fire amendments (Gates 2/3 not yet fired): CfC promoted SHOULD→MUST (5 MUST families); T6 dynamic-diffusion PDE descoped to a stretch goal (effort → adaptive sensor); T7 intent re-scoped (no ranking-separation promise; behavioural-chemotaxis-first validation; GA cell repair-or-drop); T8 gains degree-preserving rewired-null controls + a learnable-gap-junction variant; peptidergic deferral reframed as an explicit primary limitation. The affected T5–T9 sub-tasks below carry inline `(amended 2026-06-04)` notes.
+
 ## Phase 6 Tranche Map
 
 Phase 6 has nine tranches with deliberate ordering. See
@@ -22,9 +24,9 @@ why T7 holds real-worm validation; why T8 runs against the upgraded substrate).
 | 3 | Corrected ASH/ADL contact-based nociception (owed correctness work per Logbook 011) | env-correctness | 1-2 weeks | — |
 | 4 | L2 initial pass — MUST architectures × 3 behaviours, grid-world substrate, corrected nociception | L2 (first pass) | 4-6 weeks | — |
 | 5 | Platform refactor — continuous-2D coordinates + continuous-action heads on existing MUST brains; plugin-parity verification | env-upgrade (platform) | 3-4 weeks | **Gate 2** — L1 plugin parity primary checks: ≤ 6 files touched + no per-architecture branches when adding a new architecture family during this work; engineer-hours documented but not load-bearing |
-| 6 | Env fidelity — Rung 2 dynamic Fick's-law diffusion + log-concentration chemosensory adaptation kinetics | env-upgrade (fidelity) | 3-4 weeks | — |
-| 7 | L2 re-run on fully-upgraded substrate; real-worm validation; SHOULD/MAY architectures evaluated opportunistically | L2 (final) | 4-6 weeks | **Gate 3** — L2 results across MUST set in hand (see Gate 3 § below for quantitative criteria) |
-| 8 | L3 NEAT topology search on upgraded substrate | L3 | 6-10 weeks | — |
+| 6 | Env fidelity — signal-type-specific *static* Fick gradients + adaptive-threshold/biphasic chemosensory sensor (dynamic-diffusion PDE descoped to a stretch goal 2026-06-04) | env-upgrade (fidelity) | 3-4 weeks | — |
+| 7 | L2 re-run on fully-upgraded substrate (5 MUST cells incl. CfC); real-worm validation (behavioural-chemotaxis-first); SHOULD/MAY architectures evaluated opportunistically | L2 (final) | 4-6 weeks | **Gate 3** — L2 results across MUST set in hand (see Gate 3 § below for quantitative criteria) |
+| 8 | L3 NEAT topology search on upgraded substrate, incl. degree-preserving rewired-null controls | L3 | 6-10 weeks | — |
 | 9 | Phase 6 synthesis logbook | — | 1-2 weeks | — |
 
 Total: 27-42 weeks. L4 (biologically-plausible plasticity) is deferred to Phase 7
@@ -278,7 +280,7 @@ T5 closes Gate 2.
 - [ ] **Gate 2 decision recorded**: ≤ 6 files touched (G2.b PRIMARY) AND no per-architecture branches (G2.c PRIMARY) AND continuous-substrate floor check passes (G2.d ≥ 50% of T4 baseline) → GO. G2.a engineer-hours recorded for future reference. G2.b OR G2.c fails → L1 refactor PIVOT (T5 amends to add 2-4 weeks of L1 refactor work before re-evaluating Gate 2). Post-pivot, plugin interface still fundamentally incompatible with one or more MUST families → STOP (connectome-specific interface scoped; parity test not met).
 - [ ] **Gate 2 decision link**: [add link to the T5 logbook where the decision is recorded]
 
-## Tranche 6 — Env Fidelity (Rung 2 dynamic Fick's-law + log-concentration chemosensory adaptation)
+## Tranche 6 — Env Fidelity (static Fick-shaped gradients + adaptive chemosensory sensor; dynamic diffusion descoped to stretch)
 
 **OpenSpec change**: `add-rung2-chemical-gradients` (placeholder; not yet created)
 **Status**: 🔲 not started
@@ -288,18 +290,16 @@ T5 closes Gate 2.
 **Dependencies**: T5 closed (continuous-2D substrate is the platform Rung 2 deposits gradients onto)
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Continuous environment + sensory physics § Chemical-gradient fidelity
 
-Rung 2 has **two coupled components** — environment dynamics AND chemosensory
-adaptation kinetics. They MUST be designed together (per roadmap: "without
-log-concentration adaptation on the sensory side, the gradient realism is wasted").
+**Rebalanced 2026-06-04 (see banner + design.md checkpoint note).** The 2023–2026 chemotaxis-literature scan found that no published C. elegans behavioural model uses a live time-evolving diffusion PDE — a single-point sensor cannot perceive global field dynamics on assay timescales — and that the field's fidelity budget goes into the *sensor* (adaptive-threshold / biphasic LN dynamics: Kato et al. 2014 *Neuron*; Levy & Bargmann 2020 *Neuron* "hyper-Weber"), of which plain log-concentration is an under-powered special case. T6 therefore ships **static signal-type-specific Fick-shaped gradient geometry + a proper adaptive sensor** as the gating work, and treats the dynamic-diffusion PDE + source dynamics as a **stretch goal** justified only by a concrete behavioural need.
 
-- [ ] T6.gradients.1 Heat-equation diffusion (∂C/∂t = D∇²C) on the continuous-2D substrate with signal-type-specific D values (food vs pheromone vs CO₂).
-- [ ] T6.gradients.2 Source dynamics — depletion when worms feed; source replenishment; decay terms for short-lived signals.
-- [ ] T6.gradients.3 Log-concentration chemosensory adaptation kinetics on AWC/AWA/ASE-style sensors. Coupled component; ships with T6.gradients.1+.2.
-- [ ] T6.gradients.4 Cross-tranche dependency: T7 klinotaxis + thermotaxis evaluations use Rung 2 gradients.
-- [ ] T6.analysis — quantify the env-fidelity gain (Rung 2 vs Rung 0 chemical-gradient quality on a smoke task; chemosensory adaptation transient on a step-input test).
+- [ ] T6.sensor.1 **(PRIMARY)** Adaptive-threshold / biphasic chemosensory sensor on AWC/AWA/ASE-style sensors (background-tracking adaptive threshold or biphasic LN filter; log-concentration is a documented special-case baseline, not the headline). *Was T6.gradients.3, promoted to the primary deliverable 2026-06-04.*
+- [ ] T6.gradients.1 Signal-type-specific D values (food vs pheromone vs CO₂) setting **static** Fick-shaped gradient geometry on the continuous-2D substrate (frozen analytic Fick solution at assay time — the field-standard form). *Descoped 2026-06-04 from a live `∂C/∂t = D∇²C` solve.*
+- [ ] T6.gradients.2 **(STRETCH)** Dynamic diffusion (time-evolving `∂C/∂t = D∇²C`) + source dynamics (depletion when worms feed; replenishment; decay terms). Pursue only if a concrete behavioural need exists — the strongest such need is **depletion-driven area-restricted search**, the one biologically-plausible route to the within-episode-memory demand the reactive T4 regime lacked (Logbook 025 Limitations). Record the justification if invoked. *Demoted from gating to stretch 2026-06-04.*
+- [ ] T6.gradients.4 Cross-tranche dependency: T7 klinotaxis + thermotaxis evaluations use the T6 gradients + adaptive sensor.
+- [ ] T6.analysis — quantify the env-fidelity gain (static Fick-shaped vs Rung 0 gradient geometry on a smoke task; **adaptation transient on a step-input test — the load-bearing sensor check**, vs the prior log-concentration baseline).
 - [ ] T6.logbook — publish T6 logbook (suggested: `docs/experiments/logbooks/0XX-rung2-gradients.md`). Required reading material before T7.
 
-**T6 risk-mitigation**: if Rung 2 needs M4-style iteration (Rung 2.5, Rung 2.6 — most likely the chemosensory adaptation kinetics need parameter sweeps), T6 amends to add iteration sub-tranches without re-opening Gate 2. The L2 re-run (T7) just measures a slightly narrower env-upgrade scope and the env-upgrade delta (T4→T7) reports that scope explicitly. Stay bounded to Rung 2 + log-concentration adaptation; 3D physics, Sibernetic interop, aerotaxis/pheromone restoration, and multi-agent are all explicitly out of scope (Decision 5 + roadmap Future Directions).
+**T6 risk-mitigation**: if the adaptive sensor needs M4-style iteration (parameter sweeps on the adaptation kinetics), T6 amends to add iteration sub-tranches without re-opening Gate 2. The L2 re-run (T7) just measures the realised env-upgrade scope and the env-upgrade delta (T4→T7) reports it explicitly. Stay bounded; 3D physics, Sibernetic interop, aerotaxis/pheromone restoration, and multi-agent are all explicitly out of scope (Decision 5 + roadmap Future Directions). The dynamic-diffusion stretch goal (T6.gradients.2) is the most likely scope-creep target — keep it gated behind an explicit behavioural justification.
 
 ## Tranche 7 — L2 Re-run on Fully-Upgraded Substrate + Real-Worm Validation
 
@@ -312,28 +312,31 @@ log-concentration adaptation on the sensory side, the gradient realism is wasted
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § The layered platform § L2 + § Built-in real-worm validation
 
 T7 re-runs the L2 sweep on the fully-upgraded substrate (continuous-2D + continuous-
-action + Rung 2 gradients + log-concentration adaptation + corrected ASH/ADL), ships
+action + static Fick-shaped gradients + adaptive chemosensory sensor + corrected ASH/ADL), ships
 the real-worm validation (now defensible because the behavioural numbers come from
 the full upgrade stack), and opportunistically evaluates SHOULD/MAY architectures.
+
+**Intent re-scoped 2026-06-04 (see banner).** Logbook 025's reactive-regime limitation found that across grid size, food sparsity, and memory depth, architecture does *not* discriminate on foraging — the top cluster ties on a working-memory axis no task in this family exercises, and the chemotaxis literature says a single-point sensor cannot perceive the added continuous-physics dynamics either. So **T7 is NOT expected to change the ranking**, and must not be sold as "the substrate upgrade that finally separates the architectures." Its load-bearing deliverables are: (a) the **env-upgrade delta (RQ5)** — a ≈null delta is a publishable finding ("substrate complexity below the threshold for differential architecture advantage"), not a failure; (b) credible **behavioural real-worm validation**, which continuous-2D makes possible; (c) the **continuous-physics platform claim**. If genuine architecture separation is wanted, the only evidence-supported lever is a deliberately memory-demanding task (Logbook 025's artificial bit-memory positive control, or T6's optional depletion-driven area-restricted search) — both optional, both flagged as possibly having no biologically-valid form.
 
 T7 closes Gate 3.
 
 ### T7 — MUST architectures (integrated-C3) on upgraded substrate
 
-4 integrated-C3 cells (one per MUST family; all three behaviours active in one run),
-inheriting T4's integrated-C3 shape but on the upgraded substrate. Per-behaviour-component
+**5 integrated-C3 cells** (one per MUST family; all three behaviours active in one run),
+inheriting T4's integrated-C3 shape but on the upgraded substrate. *Was 4; CfC promoted to MUST 2026-06-04 (see banner + Decision 4).* Per-behaviour-component
 sub-metrics (foraging / predator survival / thermotaxis isotherm-tracking) are extracted
 from each integrated run per the `architecture-comparison-protocol` capability (same as T4):
 
-- [ ] T7.connectome.c3_integrated — chemical-synapse strict-mask, fixed gap junctions, continuous-2D + continuous-action + Rung 2 gradients
+- [ ] T7.connectome.c3_integrated — chemical-synapse strict-mask, fixed gap junctions, continuous-2D + continuous-action + static Fick gradients + adaptive sensor
 - [ ] T7.mlp_ppo.c3_integrated
 - [ ] T7.lstm_gru_ppo.c3_integrated
-- [ ] T7.neat_weights.c3_integrated — GA-evolved weights on a fixed feed-forward topology
+- [ ] T7.cfc.c3_integrated — *added 2026-06-04 (CfC promoted to MUST); co-top T4 performer, worm-derived liquid-net lineage*
+- [ ] T7.neat_weights.c3_integrated — GA-evolved weights on a fixed feed-forward topology. **Repair-or-drop decision required before T7 launch** *(amended 2026-06-04)*: this cell collapsed to **0%** at T4 (GA-on-fixed-topology does not solve the integrated lethal cell — Logbook 025). Re-running it as-is on the upgraded substrate will almost certainly collapse again and waste compute. Before T7: either repair the GA setup (graded fitness / curriculum staging), or drop the cell and document T4's 0% as the standing GA verdict (genuine NEAT topology evolution at T8 is the real evolutionary-search test), or replace with the T8 NEAT brain if available early. Whichever path is chosen, record it in the T7 logbook.
 - [ ] T7.\*.c3_reward_ablation + T7.connectome_soft_prior.c3 — the same C3 ablations as T4, re-run on the upgraded substrate
 
 ### T7 — SHOULD architectures (opportunistic, not gating)
 
-- [ ] T7.quantum.\* — one quantum row at continuous-physics complexity (Phase 2 baseline reference; SHOULD per [design.md § Decision 4](design.md)).
+- [ ] T7.quantum.\* — one quantum row at continuous-physics complexity (SHOULD per [design.md § Decision 4](design.md)). *Note (2026-06-04): RQ4 settled negative at T4 under controlled attribution (Logbook 025 — fair matched-capacity classical control matches the quantum circuit, no advantage). This row tests only whether the higher complexity of continuous physics crosses the quantum-advantage threshold (Logbook 008 framing); low priority, keep cheap.*
 - [ ] T7.spiking.\* — opportunistic; if PPO-trained spiking doesn't train cleanly on the connectome, document the failure mode and defer to Phase 7 L4 STDP work.
 
 ### T7 — MAY architectures (opportunistic, not gating)
@@ -344,7 +347,7 @@ from each integrated run per the `architecture-comparison-protocol` capability (
 
 ### T7 — real-worm validation
 
-- [ ] T7.validation.1 Choose validation target — chemotaxis indices à la Bargmann / mechanosensation escape latencies / whole-brain Ca²⁺ correlation matrices à la Kavli/Janelia. Selection deliberately deferred to this tranche per [design.md § What This Change Explicitly Does Not Decide](design.md).
+- [ ] T7.validation.1 Choose validation target. **Recommended ordering by defensibility-per-effort (amended 2026-06-04):** (1) **behavioural chemotaxis metrics — PRIMARY**: turn-rate vs dC/dt (Pierce-Shimomura, Morse & Lockery 1999) + curving-rate vs bearing (Iino & Yoshida 2009) — exactly the RL worm's output, public, no neuron-identity mapping; (2) mechanosensation force-graded reversal probability (Goodman lab 2017) — tertiary, natural pair for the corrected ASH/ADL; (3) whole-brain Ca²⁺ correlation matrices (Kato 2015 OSF; Atanas 2023 DANDI) — secondary, higher effort + a category-mismatch caveat for a behavioural model (prefer behaviour-encoding-tuning comparison à la CePNEM; the prior "BAAIWorm 92.4% fidelity" claim is unverifiable — actual is MSE 0.076 on a 65-neuron matrix vs Uzel 2022). Final selection still made in this tranche per [design.md § What This Change Explicitly Does Not Decide](design.md), but lead with the behavioural-chemotaxis target unless a strong reason emerges.
 - [ ] T7.validation.2 Implement the comparison pipeline: extract the model's analogue of the chosen real-worm metric; document data source + version; record the comparison procedure.
 - [ ] T7.validation.3 Run the comparison; report quantitative agreement with confidence intervals. Required for Phase 6 exit (MUST in the roadmap).
 
@@ -361,10 +364,10 @@ from each integrated run per the `architecture-comparison-protocol` capability (
 
 **Trigger**: T7 closed with the cross-architecture ranking on the upgraded substrate + real-worm validation in hand.
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Mid-phase decision gates § Gate 3.
-**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 3](design.md) for the full criterion set (G3.a all 4 MUST integrated-C3 cells at Phase 5 statistical bar with per-behaviour sub-metrics extracted, under the BH-FDR multiple-comparisons strategy committed in the T4 OpenSpec change's design.md and applied consistently to T4 and T7; G3.b connectome lands in the ranking with a clear wins/ties/loses verdict per behaviour; G3.c env-upgrade delta analysis shipped; G3.d real-worm validation shipped with quantitative agreement + CIs).
+**Quantitative pass criteria**: see [design.md § Decision 6 § Gate 3](design.md) for the full criterion set (G3.a all 5 MUST integrated-C3 cells at Phase 5 statistical bar with per-behaviour sub-metrics extracted *(was 4; CfC promoted to MUST 2026-06-04)*, under the BH-FDR multiple-comparisons strategy committed in the T4 OpenSpec change's design.md and applied consistently to T4 and T7; G3.b connectome lands in the ranking with a clear wins/ties/loses verdict per behaviour; G3.c env-upgrade delta analysis shipped; G3.d real-worm validation shipped with quantitative agreement + CIs).
 **Decision must be written in**: the T7 OpenSpec change's published logbook (likely the T7 logbook itself). This tracker links to the decision once it lands.
 
-- [ ] **Gate 3 decision recorded**: all 4 MUST integrated-C3 cells (G3.a) AND connectome ranking clear (G3.b) AND env-upgrade delta (G3.c) AND real-worm validation (G3.d) → GO to T8. Partial MUST coverage (1-2 cells missing) → PIVOT-scope: Phase 6a (T1–T7) ships, Phase 6b (T8 NEAT + T9 synthesis) becomes follow-on. Phase 6 overshoots 10 months cumulative → PIVOT-scope for delivery reasons (same 6a/6b split). Fewer than half MUST cells reach the statistical bar after T7 risk-mitigation pivot → STOP (publishable negative result; Phase 7 L4 inherits substrate-engineering question).
+- [ ] **Gate 3 decision recorded**: all 5 MUST integrated-C3 cells (G3.a) AND connectome ranking clear (G3.b) AND env-upgrade delta (G3.c) AND real-worm validation (G3.d) → GO to T8. Partial MUST coverage (1-2 cells missing) → PIVOT-scope: Phase 6a (T1–T7) ships, Phase 6b (T8 NEAT + T9 synthesis) becomes follow-on. Phase 6 overshoots 10 months cumulative → PIVOT-scope for delivery reasons (same 6a/6b split). Fewer than half MUST cells reach the statistical bar after T7 risk-mitigation pivot → STOP (publishable negative result; Phase 7 L4 inherits substrate-engineering question).
 - [ ] **Gate 3 decision link**: [add link to the T7 logbook where the decision is recorded]
 
 ## Tranche 8 — L3 NEAT Topology Search on Upgraded Substrate
@@ -385,11 +388,13 @@ co-evolution vs asymmetric NEAT-vs-MLP is a clean falsification test.
 
 Coarse-grained sub-tasks below; the T8 OpenSpec change elaborates them.
 
-- [ ] T8.1 Integrate TensorNEAT (GPU-accelerated NEAT, JAX/vmap; ~500× speedup over neat-python documented in the field).
+- [ ] T8.1 Integrate TensorNEAT (GPU-accelerated NEAT, JAX/vmap; ~500× speedup over neat-python — confirmed: GECCO 2024 Best Paper, Wang et al.; ACM TELO 2025). *Operational caveats (2026-06-04 scan): no semver releases — **pin a commit hash** for reproducibility; it couples to specific Brax/gymnax versions — budget for the source-install path. No newer GPU-NEAT library supersedes it.*
 - [ ] T8.2 NEAT topology + weight evolution on the L1 plugin interface from T2. Plugin should accommodate NEAT-evolved topologies as natively as it accommodates fixed-topology architectures (the topology/rule factoring from T2 pays off here).
 - [ ] T8.3 Topology-vs-connectome head-to-head on at least one behaviour on the upgraded substrate (klinotaxis is the natural first).
+- [ ] T8.3b **Degree-preserving rewired-null controls (CRITICAL — added 2026-06-04).** Compare the wild-type connectome not only against NEAT-evolved / MLP topologies but against **degree-preserving rewired-connectome nulls under matched initialisation + matched training budget**. Dhiman 2026 (*Topological Sensitivity in Connectome-Constrained Neural Networks*, flyvis pipeline) showed the connectome's apparent advantage **does not survive proper controls** — shared init erases the loss advantage, degree-preserving rewiring erases the activity advantage. Without this control any "connectome wins/ties topology" verdict is confounded. This is the same controlled-attribution discipline the T4 quantum arm used (fair baseline + matched capacity), applied to the topology axis. A random-rewiring null is *not* sufficient (it is the weak baseline Dhiman flags); the null must preserve the degree sequence (ideally degree + sparsity).
+- [ ] T8.3c **Learnable-gap-junction topology variant (added 2026-06-04).** Run the connectome with gap-junction weights made learnable (optionally constrained to anatomical proportions per Cao et al. 2025) as a documented variant alongside the strict-mask headline. Tests one candidate cause of the connectome's T4 predator-evasion gap (real C. elegans gap junctions are plastic — Bhattacharya & Hobert 2019; Choi et al. 2020). Per [design.md § Decision 7](design.md) + Risk 8, this does NOT change the strict-mask headline; it is an attribution ablation.
 - [ ] T8.4 Matched-capacity NEAT-vs-NEAT vs asymmetric NEAT-vs-MLP (Phase 5 M5 follow-up). Uses the lag-matrix instrument from Phase 5 logbook 017.
-- [ ] T8.5 Cross-architecture analysis: "is the wild-type connectome a local optimum?" Cross-references the T7 connectome ranking with the T8 NEAT-evolved baseline.
+- [ ] T8.5 Cross-architecture analysis: "is the wild-type connectome a local optimum?" Cross-references the T7 connectome ranking with the T8 NEAT-evolved baseline **and the T8.3b rewired-null controls** — the verdict is only credible relative to the degree-preserving nulls, not to NEAT/MLP alone. *Note: T4's FeedforwardGA collapse to 0% (Logbook 025) is a yellow flag for evolutionary search on the integrated lethal cell; genuine NEAT (topology+weights) is more capable than GA-on-fixed-topology, but budget for graded-fitness / curriculum staging.*
 - [ ] T8.6 Update this checklist + `docs/roadmap.md` Phase 6 Tranche Tracker T8 row.
 - [ ] T8.7 Publish T8 logbook (suggested: `docs/experiments/logbooks/0XX-l3-neat-topology-search.md`).
 
@@ -405,7 +410,7 @@ Coarse-grained sub-tasks below; the T8 OpenSpec change elaborates them.
 **Roadmap reference**: `docs/roadmap.md` § Phase 6 § Phase 6 exit criteria
 
 - [ ] T9.1 Walk through each Phase 6 exit criterion (the seven MUSTs in the roadmap) with evidence: L0 substrate operational (T1), L1 plugin parity (T2 + verified at T5), L2 results across MUST architectures × three behaviours at the Phase 5 statistical bar (T7), L3 NEAT topology-search results (T8), Rung 2 chemical gradients operational (T6), corrected ASH/ADL nociception operational (T3), ≥ 1 real-worm validation (T7).
-- [ ] T9.2 Document the connectome ranking honestly. The roadmap pre-commits to a framing pivot: connectome-primary if connectome wins decisively; optimal-primary if connectome is competitive-but-not-dominant. Whichever the data supports.
+- [ ] T9.2 Document the connectome ranking honestly. The roadmap pre-commits to a framing pivot: connectome-primary if connectome wins decisively; optimal-primary if connectome is competitive-but-not-dominant. Whichever the data supports. **Framing anchors (added 2026-06-04):** (a) position the work as the *C. elegans / RL-behaviour* analogue of Lappalainen et al. 2024 *Nature* (connectome-constrained networks predict neural activity in the fly visual system) — the strongest credibility precedent; (b) report solution **degeneracy** — a connectome under-constrains dynamics, so the n=8 PPO weight solutions are one of many that fit the same wiring (Beiran & Litwin-Kumar 2025 *Nat. Neurosci.*); do not present one weight set as "the" biological solution; (c) state the **wired-chemical-synapse-only** scope as an explicit primary limitation — the missing peptidergic/neuromodulatory layer (Ripoll-Sánchez et al. 2023; Dag et al. 2025 *PRX Life*) and fixed-vs-plastic gap junctions are candidate causes of the connectome's evasion gap alongside "no recurrent memory", and the T8.3c learnable-gap-junction variant tests one of them.
 - [ ] T9.3 Document negative findings honestly (Phase 5 precedent). If any L2 / L3 cell came back STOP, the diagnosis is itself a publishable contribution.
 - [ ] T9.4 Quantify the env-upgrade delta (T4-grid vs T7-upgraded ranking change) as a standalone result. This was a load-bearing reason for the deliberate T4-vs-T7 split per [design.md § Decision 1](design.md); the synthesis should foreground it.
 - [ ] T9.5 Phase 7 trigger recommendation: which Phase 7 priorities (L4 plasticity / *P. pacificus* transfer / publication / collaboration) are best-supported by Phase 6 evidence.
@@ -454,6 +459,7 @@ project to work upfront.
 **Status**: open — produced as a T7 deliverable (T7.analysis.env_delta) and foregrounded at T9.4
 **Roadmap reference**: implicit in `docs/roadmap.md` § Phase 6 § Architecture-comparison protocol
 **Trigger**: T4 and T7 both shipped. The interesting outcomes are (a) ranking is stable across substrate change — substrate complexity is below the threshold for differential architecture advantage; (b) ranking shifts — some architectures (likely temporal / continuous-action-native) benefit disproportionately from continuous-2D + Rung 2, others (likely connectome under strict-mask) don't. Either outcome is publishable; (b) reinforces the Phase 6 "platform" claim more strongly.
+**Prior expectation (added 2026-06-04)**: outcome (a) — *stable ranking, ≈null delta* — is now the expected result, not a coin-flip. Logbook 025's reactive-regime finding (architecture doesn't discriminate on foraging across grid size / sparsity / memory depth) plus the chemotaxis-literature finding (a single-point sensor can't perceive added field dynamics) both point at the substrate upgrade *not* moving the ranking. A ≈null delta is a publishable finding; T7 should be scoped to report it as one rather than treated as a failure to separate the architectures.
 **Recorded by**: T7 produces the analysis (T7.analysis.env_delta); T9.4 foregrounds it in the synthesis logbook.
 
 ### RQ6: Compute budget per L2 cell
