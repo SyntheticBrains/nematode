@@ -9,11 +9,10 @@ the continuous-action-heads work.
 
 from __future__ import annotations
 
-import numpy as np
 import torch
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
-    categorical_sample_numpy,
+    categorical_logprob_entropy_torch,
     categorical_sample_torch,
     ppo_clip_policy_loss,
 )
@@ -70,32 +69,40 @@ class TestCategoricalEvaluateTorch:
         assert torch.equal(entropy, entropy_ref)
 
 
-class TestCategoricalSampleNumpy:
-    """The numpy-backend sampler must match the inline LSTM-PPO / CfC-PPO path."""
+class TestCategoricalLogprobEntropyTorch:
+    """The given-action log-prob/entropy helper (LSTM/CfC update path)."""
 
-    def test_matches_inline_rng_choice_and_manual_logprob(self) -> None:
-        probs = np.array([0.1, 0.2, 0.3, 0.4])
+    def test_matches_inline_categorical_for_given_action(self) -> None:
+        logits = torch.tensor([0.5, -1.2, 0.3, 0.9])
+        action = 2
 
-        # Inline reference.
-        rng_ref = np.random.default_rng(42)
-        n_actions = len(probs)
-        action_ref = int(rng_ref.choice(n_actions, p=probs))
-        log_prob_ref = float(np.log(probs[action_ref]))
+        probs_ref = torch.softmax(logits, dim=-1)
+        dist_ref = torch.distributions.Categorical(probs_ref)
+        log_prob_ref = dist_ref.log_prob(torch.tensor(action))
+        entropy_ref = dist_ref.entropy()
 
-        # Helper, same seed → same RNG stream.
-        rng = np.random.default_rng(42)
-        action, log_prob = categorical_sample_numpy(probs, rng)
+        log_prob, entropy, probs = categorical_logprob_entropy_torch(logits, action)
 
-        assert action == action_ref
-        assert log_prob == log_prob_ref
+        assert torch.equal(log_prob, log_prob_ref)
+        assert torch.equal(entropy, entropy_ref)
+        assert torch.equal(probs, probs_ref)
 
-    def test_rng_stream_is_consumed_identically(self) -> None:
-        probs = np.array([0.25, 0.25, 0.25, 0.25])
-        rng_ref = np.random.default_rng(7)
-        ref = [int(rng_ref.choice(4, p=probs)) for _ in range(5)]
-        rng = np.random.default_rng(7)
-        got = [categorical_sample_numpy(probs, rng)[0] for _ in range(5)]
-        assert got == ref
+    def test_is_differentiable(self) -> None:
+        logits = torch.tensor([0.5, -1.2, 0.3, 0.9], requires_grad=True)
+        log_prob, entropy, _ = categorical_logprob_entropy_torch(logits, 1)
+        (log_prob + entropy).backward()
+        assert logits.grad is not None
+        assert torch.isfinite(logits.grad).all()
+
+    def test_close_to_manual_log_softmax_within_tolerance(self) -> None:
+        # Option B tolerance: torch log-prob vs the manual log(softmax)+eps the
+        # LSTM/CfC brains used. Deviation is float32 round-off for taken actions.
+        logits = torch.tensor([1.3, -0.4, 0.8, 0.1])
+        probs = torch.softmax(logits, dim=-1)
+        for action in range(4):
+            manual = float(torch.log(probs[action] + 1e-8))
+            log_prob, _, _ = categorical_logprob_entropy_torch(logits, action)
+            assert abs(float(log_prob) - manual) < 1e-5
 
 
 class TestPPOClipPolicyLoss:

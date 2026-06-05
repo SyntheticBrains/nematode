@@ -7,13 +7,18 @@ each brain's *exact* numerics so the migration onto this module is
 byte-equivalent (see ``add-continuous-2d-and-action-heads`` design.md D6 and the
 migration-regression bar).
 
-Two discrete sampling backends are provided because the existing brains use two
-different RNG streams, and byte-equivalence requires preserving each:
+The brains use two different RNG streams, and the migration preserves each
+(design.md D6 "Option B"):
 
-- ``categorical_sample_torch`` / ``categorical_evaluate_torch`` mirror the
-  ``torch.distributions.Categorical`` path used by MLP-PPO and connectome-PPO.
-- ``categorical_sample_numpy`` mirrors the ``numpy`` ``rng.choice`` + manual
-  log-prob path used by LSTM-PPO and CfC-PPO.
+- MLP-PPO and connectome-PPO use ``torch.distributions.Categorical`` end to end
+  → ``categorical_sample_torch`` (rollout) + ``categorical_evaluate_torch``
+  (update). Byte-exact.
+- LSTM-PPO and CfC-PPO sample via ``numpy`` ``rng.choice`` (kept inline so the
+  sampled-action trajectory is byte-identical) but route their log-probability
+  and entropy through ``categorical_logprob_entropy_torch`` (rollout, per given
+  action) and ``categorical_evaluate_torch`` (update). This replaces their manual
+  ``log(softmax)`` / ``-sum(p*log p)`` with torch's numerically-stabler equivalents;
+  measured deviation on the taken action is ~1e-7 (float32 round-off).
 
 The continuous (tanh-squashed Gaussian) policy operations are added by the
 continuous-action-heads work and live alongside these.
@@ -26,12 +31,11 @@ modules and would invert the dependency / risk an import cycle), following the
 
 from __future__ import annotations
 
-import numpy as np
 import torch
 
 __all__ = [
     "categorical_evaluate_torch",
-    "categorical_sample_numpy",
+    "categorical_logprob_entropy_torch",
     "categorical_sample_torch",
     "ppo_clip_policy_loss",
 ]
@@ -88,28 +92,36 @@ def categorical_evaluate_torch(
     return dist.log_prob(actions), dist.entropy().mean()
 
 
-def categorical_sample_numpy(
-    probs: np.ndarray,
-    rng: np.random.Generator,
-) -> tuple[int, float]:
-    """Sample a discrete action via ``numpy`` ``rng.choice`` + manual log-prob.
+def categorical_logprob_entropy_torch(
+    logits: torch.Tensor,
+    action: int,
+    *,
+    device: torch.device | str | None = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Torch ``Categorical`` log-prob + entropy for a GIVEN action (no sampling).
 
-    Mirrors the LSTM-PPO / CfC-PPO sampling path (numpy RNG stream). The manual
-    ``log(probs[idx])`` is used rather than a torch distribution so the numeric
-    expression and RNG stream match the existing brains for byte-equivalence.
+    Used by LSTM-PPO and CfC-PPO, which sample the action index via their inline
+    ``numpy`` ``rng.choice`` (kept verbatim so the trajectory is byte-identical),
+    then compute the log-probability and entropy here via torch — replacing their
+    manual ``log(softmax)`` / ``-sum(p*log p)`` with the numerically-stabler torch
+    equivalents (shared with the update path). Differentiable: usable inside the
+    BPTT update loop as well as at rollout time.
 
     Args:
-        probs: 1-D action probabilities summing to 1.
-        rng: The brain's ``numpy`` generator (its RNG stream is preserved).
+        logits: Raw action logits (1-D over the action set).
+        action: The (already-sampled or stored) action index to score.
+        device: Device for the action tensor; defaults to ``logits.device``.
 
     Returns
     -------
-        ``(action_idx, log_prob)``.
+        ``(log_prob, entropy, probs)``.
     """
-    n_actions = len(probs)
-    action = int(rng.choice(n_actions, p=probs))
-    log_prob = float(np.log(probs[action]))
-    return action, log_prob
+    probs = torch.softmax(logits, dim=-1)
+    dist = torch.distributions.Categorical(probs)
+    target_device = device if device is not None else logits.device
+    log_prob = dist.log_prob(torch.tensor(action, device=target_device))
+    entropy = dist.entropy()
+    return log_prob, entropy, probs
 
 
 def ppo_clip_policy_loss(
