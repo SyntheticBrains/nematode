@@ -104,6 +104,21 @@ class TestCategoricalLogprobEntropyTorch:
             log_prob, _, _ = categorical_logprob_entropy_torch(logits, action)
             assert abs(float(log_prob) - manual) < 1e-5
 
+    def test_entropy_close_to_manual_within_tolerance(self) -> None:
+        # Option B tolerance: torch entropy vs the manual -sum(p*log(p+1e-10))
+        # the LSTM/CfC/spiking brains used. Includes a saturated case to lock in
+        # the no-log(0)/NaN guarantee (torch's Categorical.entropy clamps log).
+        for logits in (
+            torch.tensor([1.3, -0.4, 0.8, 0.1]),  # diffuse
+            torch.tensor([6.0, -2.0, 0.0, -1.0]),  # peaked
+            torch.tensor([60.0, 0.0, 0.0, -30.0]),  # saturated (a prob underflows)
+        ):
+            probs = torch.softmax(logits, dim=-1)
+            manual = float(-torch.sum(probs * torch.log(probs + 1e-10)))
+            _, entropy, _ = categorical_logprob_entropy_torch(logits, 0)
+            assert torch.isfinite(entropy)
+            assert abs(float(entropy) - manual) < 1e-5
+
 
 class TestPPOClipPolicyLoss:
     """The shared clipped surrogate must match the inline per-brain term."""
