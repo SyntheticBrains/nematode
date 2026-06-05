@@ -39,6 +39,16 @@ def _state(env: Continuous2DEnvironment):
     return env.agents[DEFAULT_AGENT_ID]
 
 
+class TestContinuousActionsSignal:
+    def test_continuous_env_reports_true(self) -> None:
+        assert _env().continuous_actions is True
+
+    def test_grid_env_reports_false(self) -> None:
+        from quantumnematode.env.env import DynamicForagingEnvironment
+
+        assert DynamicForagingEnvironment(grid_size=10).continuous_actions is False
+
+
 class TestInit:
     def test_float_position_centred(self) -> None:
         env = _env(world=20.0)

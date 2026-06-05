@@ -74,6 +74,11 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         )
         self._init_continuous_positions()
 
+    @property
+    def continuous_actions(self) -> bool:
+        """Continuous-2D expects continuous ``(speed, turn)`` actions."""
+        return True
+
     def _init_continuous_positions(self) -> None:
         """Seed every agent's float position at the world centre, heading +x."""
         centre = self.continuous.world_size_mm / 2.0

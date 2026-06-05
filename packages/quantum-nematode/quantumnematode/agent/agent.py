@@ -1325,22 +1325,43 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        self.env = DynamicForagingEnvironment(
-            grid_size=self.env.grid_size,
-            viewport_size=self.env.viewport_size,
-            max_body_length=self.max_body_length,
-            theme=self.env.theme,
-            rich_style_config=self.env.rich_style_config,
-            # Preserve params from original env
-            foraging=self.env.foraging,
-            predator=self.env.predator,
-            health=self.env.health,
-            thermotaxis=self.env.thermotaxis,
-            aerotaxis=self.env.aerotaxis,
-            pheromones=self.env.pheromones,
-            # Reproducibility: preserve seed from original environment
-            seed=self.env.seed,
-        )
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        if isinstance(self.env, Continuous2DEnvironment):
+            # Continuous-2D substrate: recreate the SAME env type (not the grid
+            # parent) so the continuous params + float positions survive the reset.
+            # Without this the env would silently revert to grid after the first run.
+            self.env = Continuous2DEnvironment(
+                continuous=self.env.continuous,
+                viewport_size=self.env.viewport_size,
+                max_body_length=self.max_body_length,
+                theme=self.env.theme,
+                rich_style_config=self.env.rich_style_config,
+                foraging=self.env.foraging,
+                predator=self.env.predator,
+                health=self.env.health,
+                thermotaxis=self.env.thermotaxis,
+                aerotaxis=self.env.aerotaxis,
+                pheromones=self.env.pheromones,
+                seed=self.env.seed,
+            )
+        else:
+            self.env = DynamicForagingEnvironment(
+                grid_size=self.env.grid_size,
+                viewport_size=self.env.viewport_size,
+                max_body_length=self.max_body_length,
+                theme=self.env.theme,
+                rich_style_config=self.env.rich_style_config,
+                # Preserve params from original env
+                foraging=self.env.foraging,
+                predator=self.env.predator,
+                health=self.env.health,
+                thermotaxis=self.env.thermotaxis,
+                aerotaxis=self.env.aerotaxis,
+                pheromones=self.env.pheromones,
+                # Reproducibility: preserve seed from original environment
+                seed=self.env.seed,
+            )
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation
         self.food_history = [list(self.env.foods)]
