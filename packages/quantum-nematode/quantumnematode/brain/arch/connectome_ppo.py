@@ -33,6 +33,11 @@ from torch import nn, optim
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
+    categorical_sample_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
@@ -1189,11 +1194,12 @@ class ConnectomePPOBrain(ClassicalBrain):
         )
         value = self.critic(hidden)
 
-        # Action distribution.
-        probs = torch.softmax(logits, dim=-1)
-        dist = torch.distributions.Categorical(probs)
-        action_idx = int(dist.sample().item())
-        log_prob = dist.log_prob(torch.tensor(action_idx, device=self.device))
+        # Action distribution via the shared discrete policy helper (byte-equivalent
+        # to the prior inline softmax → Categorical → sample/log_prob).
+        action_idx, log_prob, _entropy, probs = categorical_sample_torch(
+            logits,
+            device=self.device,
+        )
 
         action_name = self._action_set[action_idx]
 
@@ -1327,18 +1333,18 @@ class ConnectomePPOBrain(ClassicalBrain):
                 )
                 new_values = self.critic(hidden).squeeze(-1)
 
-                new_probs = torch.softmax(new_logits, dim=-1)
-                dist = torch.distributions.Categorical(new_probs)
-                new_log_probs = dist.log_prob(batch["actions"])
-                entropy = dist.entropy().mean()
-
-                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
-                    * batch["advantages"]
+                # Shared discrete policy helpers (byte-equivalent to the prior inline
+                # Categorical re-eval + clipped surrogate).
+                new_log_probs, entropy = categorical_evaluate_torch(
+                    new_logits,
+                    batch["actions"],
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    batch["old_log_probs"],
+                    batch["advantages"],
+                    self.clip_epsilon,
+                )
                 value_loss = nn.functional.mse_loss(new_values, batch["returns"])
                 loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
 
