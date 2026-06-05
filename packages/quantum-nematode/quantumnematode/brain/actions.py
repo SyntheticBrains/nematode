@@ -39,7 +39,7 @@ class ActionData(BaseModel):  # pragma: no cover
     ----------
     state : str
         The current state of the agent.
-    action : str
+    action : Action
         The discrete action taken by the agent (grid substrate).
     probability : float
         The probability of taking the action in the current state.
