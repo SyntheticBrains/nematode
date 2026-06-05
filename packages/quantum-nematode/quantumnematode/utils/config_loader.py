@@ -908,11 +908,45 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
     return sensing
 
 
+class Continuous2DConfig(BaseModel):
+    """Continuous-2D substrate parameters (physical scale: ~1 mm worm body).
+
+    Used only when ``EnvironmentConfig.env_type == "continuous_2d"``. Defaults are
+    biologically grounded and documented below; all are tunable. Rationale: wild
+    *C. elegans* assays are on cm-scale agar plates with a ~1 mm adult body, and a
+    single-point chemosensor that perceives a local concentration + its derivative
+    (see the T5/T6 design notes). These set the geometry the worm navigates; they
+    are not load-bearing scientific claims.
+    """
+
+    # Square arena edge length in mm. ~5 cm plate region; aligns with a
+    # grid_size≈50 substrate at ~1 mm per former cell so episode lengths stay
+    # comparable to the T4 grid baseline.
+    world_size_mm: float = 50.0
+    # Adult C. elegans body length ≈ 1 mm — the reference unit for the others.
+    body_length_mm: float = 1.0
+    # Max forward displacement per step ≈ 1 body length (parity with the grid's
+    # one-cell-per-step granularity); continuous speed scales 0..this.
+    max_step_mm: float = 1.0
+    # Food is consumed when the worm is within this Euclidean radius (~1 body
+    # length of the nose), replacing exact grid-cell-equality consumption.
+    capture_radius_mm: float = 1.0
+    # Klinotaxis lateral head-sweep amplitude ≈ ½ body length, replacing the
+    # fixed ±1-cell offset; the worm samples concentration at ±this perpendicular
+    # to its heading.
+    sweep_amplitude_mm: float = 0.5
+
+
 class EnvironmentConfig(BaseModel):
     """Configuration for the dynamic foraging environment."""
 
     grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
+
+    # Substrate selector: the discrete grid (default, unchanged) or the
+    # continuous-2D substrate (T5). See Continuous2DConfig for its parameters.
+    env_type: Literal["grid", "continuous_2d"] = "grid"
+    continuous: Continuous2DConfig | None = None
 
     # Nested configuration subsections
     foraging: ForagingConfig | None = None
@@ -923,6 +957,10 @@ class EnvironmentConfig(BaseModel):
     pheromones: PheromoneConfig | None = None
     social_feeding: SocialFeedingConfig | None = None
     sensing: SensingConfig | None = None
+
+    def get_continuous_config(self) -> Continuous2DConfig:
+        """Get continuous-2D configuration with defaults."""
+        return self.continuous or Continuous2DConfig()
 
     def get_foraging_config(self) -> ForagingConfig:
         """Get foraging configuration with defaults."""
