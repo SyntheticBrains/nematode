@@ -61,6 +61,10 @@ if TYPE_CHECKING:
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._spiking_layers import (
     LeakyIntegratorReadout,
@@ -743,12 +747,17 @@ class SpikingPPOBrain(ClassicalBrain):
         # Update the carried neuron state.
         self.neuron_state = new_state
 
-        # Sample action.
+        # Sample action (numpy RNG kept verbatim — trajectory byte-identical).
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
         action_name = self.action_set[action_idx]
 
-        # Log probability.
-        log_prob = float(np.log(action_probs[action_idx] + 1e-8))
+        # Log probability via the shared torch helper (Option B): sampler above
+        # unchanged; log-prob moves onto torch's stabler log_softmax (~1e-7).
+        log_prob_t, _entropy_t, _probs_t = categorical_logprob_entropy_torch(
+            logits,
+            int(action_idx),
+        )
+        log_prob = float(log_prob_t)
 
         # Critic value (detached hidden membrane).
         with torch.no_grad():
@@ -910,13 +919,15 @@ class SpikingPPOBrain(ClassicalBrain):
 
                     # Spiking core forward (differentiable, surrogate slope).
                     logits, state = self._core_forward(features_t, state, slope)
-                    action_probs = torch.softmax(logits, dim=-1)
 
+                    # Shared torch log-prob/entropy for the stored action (Option B;
+                    # differentiable, used inside the BPTT loop).
                     action_idx = int(chunk["actions"][step_idx].item())
-                    log_prob = torch.log(action_probs[action_idx] + 1e-8)
+                    log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                        logits,
+                        action_idx,
+                    )
                     log_probs_list.append(log_prob)
-
-                    entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-10))
                     entropies_list.append(entropy)
 
                     # Critic (detached hidden membrane).
@@ -930,18 +941,15 @@ class SpikingPPOBrain(ClassicalBrain):
                 mean_entropy = torch.stack(entropies_list).mean()
                 values = torch.stack(values_list)
 
-                # PPO policy loss.
+                # PPO policy loss via the shared clipped surrogate (byte-identical
+                # to the prior inline surr1/surr2/min). ``ratio`` kept for clip-frac.
                 ratio = torch.exp(new_log_probs - chunk["old_log_probs"])
-                surr1 = ratio * chunk["advantages"]
-                surr2 = (
-                    torch.clamp(
-                        ratio,
-                        1 - self.config.clip_epsilon,
-                        1 + self.config.clip_epsilon,
-                    )
-                    * chunk["advantages"]
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    chunk["old_log_probs"],
+                    chunk["advantages"],
+                    self.config.clip_epsilon,
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
 
                 with torch.no_grad():
                     clip_frac = (

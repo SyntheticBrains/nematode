@@ -59,3 +59,4 @@
 ## 8. SHOULD/MAY continuous heads (opportunistic, NOT gating Gate 2)
 
 - [ ] 8.1 Continuous-output adaptation for SHOULD/MAY families (quantum, spiking, reservoir, hybrid) as opportunity allows; document any that don't adapt cleanly and defer.
+- [x] 8.0 **Pull-forward discrete-path migration for the two SHOULD T7 comparison rows** (so their continuous heads build on the shared module). `equivariant_quantum` migrated **byte-exact** (torch path) and `spiking_ppo` migrated **Option B** (numpy sampler verbatim, torch log-prob/entropy/surrogate, ~1e-7). 116 tests green. The broader consolidation of the remaining PPO-family brains (hybrids via `_hybrid_common`, reservoir family via the two reservoir bases, `qsnnppo`/`qsnnreinforce`/`qliflstm`, + REINFORCE brains) is tracked in a separate GitHub issue, NOT this change.

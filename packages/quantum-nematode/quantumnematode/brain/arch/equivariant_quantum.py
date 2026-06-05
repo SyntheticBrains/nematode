@@ -44,6 +44,11 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch import _quantum_statevector as sv
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
+    categorical_sample_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
@@ -587,12 +592,19 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
             raise ValueError(msg)
         logits, latent = self.actor(xt)
         value = self.critic(latent.detach()).reshape(1)
-        probs = torch.softmax(logits, dim=-1).squeeze(0)
-        dist = torch.distributions.Categorical(probs)
+        # Shared discrete policy helper (byte-equivalent to the prior inline
+        # softmax → Categorical → sample/log_prob/entropy on the squeezed logits).
+        logits_1d = logits.squeeze(0)
         if action is None:
-            action = int(dist.sample().item())
-        log_prob = dist.log_prob(torch.tensor(action, device=self.device))
-        entropy = dist.entropy()
+            action, log_prob, entropy, probs = categorical_sample_torch(
+                logits_1d,
+                device=self.device,
+            )
+        else:
+            probs = torch.softmax(logits_1d, dim=-1)
+            dist = torch.distributions.Categorical(probs)
+            log_prob = dist.log_prob(torch.tensor(action, device=self.device))
+            entropy = dist.entropy()
         probs_np = probs.detach().cpu().numpy()
         self.current_probabilities = probs_np
         return action, log_prob, entropy, value, probs_np
@@ -675,17 +687,15 @@ class EquivariantQuantumPPOBrain(ClassicalBrain):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 logits, latent = self.actor(batch["states"])
                 values = self.critic(latent.detach()).squeeze(-1)
-                probs = torch.softmax(logits, dim=-1)
-                dist = torch.distributions.Categorical(probs)
-                new_log_probs = dist.log_prob(batch["actions"])
-                entropy = dist.entropy().mean()
-                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
-                    * batch["advantages"]
+                # Shared discrete policy helpers (byte-equivalent to the prior inline
+                # Categorical re-eval + clipped surrogate).
+                new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    batch["old_log_probs"],
+                    batch["advantages"],
+                    self.clip_epsilon,
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
                 value_loss = nn.functional.mse_loss(values, batch["returns"])
                 loss = policy_loss + self.value_loss_coef * value_loss - entropy_coef * entropy
                 self.optimizer.zero_grad()
