@@ -227,8 +227,8 @@ The four MUST architecture families: connectome-constrained PPO (focal), MLP-PPO
 
 ## Tranche 5 — Platform Refactor (continuous-2D coordinates + continuous-action heads + parity verification)
 
-**OpenSpec change**: `add-continuous-2d-and-action-heads` (placeholder; not yet created)
-**Status**: 🔲 not started
+**OpenSpec change**: [`add-continuous-2d-and-action-heads`](../add-continuous-2d-and-action-heads/proposal.md) (authored + spec-reviewed 2026-06-05; strict-valid; implementation not yet started)
+**Status**: 🔲 not started (planning complete)
 **Roadmap layer**: env-upgrade (platform) (sits between T4 and T7 per [design.md § Decision 1](design.md) so the env-upgrade delta is itself a finding; split from the env-fidelity work in T6)
 **Approx duration**: 3-4 weeks
 **Bio fidelity**: MEDIUM (matches plate-arena geometry; chemical-gradient fidelity ships in T6)
