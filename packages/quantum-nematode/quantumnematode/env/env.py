@@ -514,6 +514,14 @@ class AgentState:
         Aerotaxis comfort zone step counter.
     total_aerotaxis_steps : int
         Total steps with aerotaxis active.
+    pos_continuous : tuple[float, float] | None
+        Continuous-2D float position (the truth on the continuous substrate). The
+        integer ``position`` is kept as a rounded discretized view for inherited
+        grid-coupled readers. ``None`` on the discrete grid substrate. Additive and
+        optional so the grid env's integer type contract is unchanged.
+    heading_rad : float
+        Continuous-2D heading angle in radians (continuous-substrate kinematics).
+        Unused on the discrete grid (which tracks heading via ``direction``).
     """
 
     agent_id: str
@@ -528,6 +536,9 @@ class AgentState:
     total_thermotaxis_steps: int = 0
     steps_in_oxygen_comfort_zone: int = 0
     total_aerotaxis_steps: int = 0
+    # Continuous-2D substrate (T5): additive, optional — None/unused on the grid.
+    pos_continuous: tuple[float, float] | None = None
+    heading_rad: float = 0.0
 
 
 class Predator:
