@@ -227,8 +227,8 @@ The four MUST architecture families: connectome-constrained PPO (focal), MLP-PPO
 
 ## Tranche 5 — Platform Refactor (continuous-2D coordinates + continuous-action heads + parity verification)
 
-**OpenSpec change**: `add-continuous-2d-and-action-heads` (placeholder; not yet created)
-**Status**: 🔲 not started
+**OpenSpec change**: [`add-continuous-2d-and-action-heads`](../add-continuous-2d-and-action-heads/proposal.md) (authored + spec-reviewed 2026-06-05; strict-valid; part-1 — shared policy module + brain migrations — implemented in PR #205; §3–§8 remain)
+**Status**: 🔶 in progress (part-1 implemented)
 **Roadmap layer**: env-upgrade (platform) (sits between T4 and T7 per [design.md § Decision 1](design.md) so the env-upgrade delta is itself a finding; split from the env-fidelity work in T6)
 **Approx duration**: 3-4 weeks
 **Bio fidelity**: MEDIUM (matches plate-arena geometry; chemical-gradient fidelity ships in T6)
@@ -296,6 +296,7 @@ T5 closes Gate 2.
 - [ ] T6.gradients.1 Signal-type-specific D values (food vs pheromone vs CO₂) setting **static** Fick-shaped gradient geometry on the continuous-2D substrate (frozen analytic Fick solution at assay time — the field-standard form). *Descoped 2026-06-04 from a live `∂C/∂t = D∇²C` solve.*
 - [ ] T6.gradients.2 **(STRETCH)** Dynamic diffusion (time-evolving `∂C/∂t = D∇²C`) + source dynamics (depletion when worms feed; replenishment; decay terms). Pursue only if a concrete behavioural need exists — the strongest such need is **depletion-driven area-restricted search**, the one biologically-plausible route to the within-episode-memory demand the reactive T4 regime lacked (Logbook 025 Limitations). Record the justification if invoked. *Demoted from gating to stretch 2026-06-04.*
 - [ ] T6.gradients.4 Cross-tranche dependency: T7 klinotaxis + thermotaxis evaluations use the T6 gradients + adaptive sensor.
+- [ ] T6.render **Continuous-substrate fidelity renderer (seed task — flesh out at T6 scoping).** Add a non-headless renderer for the continuous-2D substrate so the new fidelity can be inspected manually and demonstrated to others. *Approach (from the 2026-06-05 T5 planning discussion):* **adapt the existing pygame `PIXEL` renderer** (`env/pygame_renderer.py`, `env/theme.py`, `env/sprites.py`) to continuous coordinates — replace the cell-snapping `_cell_to_pixel` with a `world→pixel` map, blit sprites at sub-cell positions, add a continuous theme value/flag; then layer fidelity overlays: concentration-field heatmap (food / predator / thermal / static-Fick gradients via `surfarray`+colormap), gradient vectors, sensor/contact zones, adaptive-sensor state. Reuse `scripts/export_screenshot.py` for frame export → gif/mp4 (async demos); use matplotlib only for static logbook/validation figures (trajectory + field heatmap + quiver), not the live path. *Why here and not T5:* the fidelity this visualises (static Fick gradients + adaptive sensor) first exists in T6; pygame chosen because continuous coords are simpler in it than the grid path and it reuses the existing sprites/themes/export. Non-gating for T6's analysis gate; feeds the T7 real-worm-validation figures. Avoid a web/game-engine stack (against the batch/headless/reproducibility posture).
 - [ ] T6.analysis — quantify the env-fidelity gain (static Fick-shaped vs Rung 0 gradient geometry on a smoke task; **adaptation transient on a step-input test — the load-bearing sensor check**, vs the prior log-concentration baseline).
 - [ ] T6.logbook — publish T6 logbook (suggested: `docs/experiments/logbooks/0XX-rung2-gradients.md`). Required reading material before T7.
 
