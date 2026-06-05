@@ -22,6 +22,7 @@ from quantumnematode.env.env import (
     AgentState,
     DynamicForagingEnvironment,
 )
+from quantumnematode.logging_config import logger
 
 
 @dataclass
@@ -128,3 +129,54 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         (not the discrete `move_agent`) when the environment is continuous-2D.
         """
         self._kinematic_move(self.agents[agent_id], speed, turn)
+
+    # ----- §3.4: capture-radius food consumption + Euclidean distances -----
+    # Food sources remain on the integer lattice within the continuous arena
+    # (inherited placement); the worm and capture are fully continuous. Float
+    # food placement is deferred to avoid the `self.foods: list[tuple[int,int]]`
+    # type ripple (same class of change as the position-type refinement).
+
+    def _agent_xy(self, agent_id: str) -> tuple[float, float]:
+        """Return the agent's continuous position (float truth, falling back to the int view)."""
+        state = self.agents[agent_id]
+        if state.pos_continuous is not None:
+            return state.pos_continuous
+        return (float(state.position[0]), float(state.position[1]))
+
+    def reached_goal_for(self, agent_id: str) -> bool:
+        """Return True if the agent is within the capture radius (Euclidean) of any food."""
+        agent_x, agent_y = self._agent_xy(agent_id)
+        radius = self.continuous.capture_radius_mm
+        return any(
+            math.hypot(agent_x - food_x, agent_y - food_y) <= radius
+            for food_x, food_y in self.foods
+        )
+
+    def consume_food_for(self, agent_id: str) -> tuple[int, int] | None:
+        """Consume the nearest food within the capture radius, respawn, and return it."""
+        agent_x, agent_y = self._agent_xy(agent_id)
+        nearest: tuple[int, int] | None = None
+        nearest_distance = self.continuous.capture_radius_mm
+        for food in self.foods:
+            distance = math.hypot(agent_x - food[0], agent_y - food[1])
+            if distance <= nearest_distance:
+                nearest, nearest_distance = food, distance
+        if nearest is not None:
+            self.foods.remove(nearest)
+            logger.info(f"Food consumed near {nearest} by {agent_id} (continuous-2D)")
+            self.spawn_food()
+            return nearest
+        return None
+
+    def get_nearest_food_distance_for(self, agent_id: str) -> int | None:
+        """Return the Euclidean distance (rounded) to the nearest food, or None."""
+        if not self.foods:
+            return None
+        agent_x, agent_y = self._agent_xy(agent_id)
+        return min(
+            round(math.hypot(agent_x - food_x, agent_y - food_y)) for food_x, food_y in self.foods
+        )
+
+    def get_nearest_food_distance(self) -> int | None:
+        """Return the Euclidean distance (rounded) to the nearest food for the default agent."""
+        return self.get_nearest_food_distance_for(DEFAULT_AGENT_ID)

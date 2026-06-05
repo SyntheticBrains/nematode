@@ -15,9 +15,17 @@ from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuou
 from quantumnematode.env.env import DEFAULT_AGENT_ID
 
 
-def _env(world: float = 20.0, max_step: float = 1.0) -> Continuous2DEnvironment:
+def _env(
+    world: float = 20.0,
+    max_step: float = 1.0,
+    capture_radius: float = 1.0,
+) -> Continuous2DEnvironment:
     return Continuous2DEnvironment(
-        continuous=Continuous2DParams(world_size_mm=world, max_step_mm=max_step),
+        continuous=Continuous2DParams(
+            world_size_mm=world,
+            max_step_mm=max_step,
+            capture_radius_mm=capture_radius,
+        ),
     )
 
 
@@ -101,3 +109,50 @@ class TestKinematicMovement:
         assert st.position == env._discretise(_pos(env))
         assert 0 <= st.position[0] <= env.grid_size - 1
         assert 0 <= st.position[1] <= env.grid_size - 1
+
+
+class TestCaptureRadius:
+    def test_reached_goal_within_radius(self) -> None:
+        env = _env(capture_radius=1.0)
+        _state(env).pos_continuous = (10.0, 10.0)
+        env.foods = [(11, 10)]  # distance 1.0 == radius → reached
+        assert env.reached_goal_for(DEFAULT_AGENT_ID) is True
+
+    def test_reached_goal_outside_radius(self) -> None:
+        env = _env(capture_radius=1.0)
+        _state(env).pos_continuous = (10.0, 10.0)
+        env.foods = [(13, 10)]  # distance 3.0 > radius → not reached
+        assert env.reached_goal_for(DEFAULT_AGENT_ID) is False
+
+    def test_consume_within_radius_returns_and_removes(self) -> None:
+        env = _env(capture_radius=1.0)
+        _state(env).pos_continuous = (10.4, 10.0)
+        env.foods = [(11, 10)]  # distance 0.6 ≤ radius
+        consumed = env.consume_food_for(DEFAULT_AGENT_ID)
+        assert consumed == (11, 10)
+        assert (11, 10) not in env.foods  # removed (a respawn may add elsewhere)
+
+    def test_consume_outside_radius_returns_none(self) -> None:
+        env = _env(capture_radius=1.0)
+        _state(env).pos_continuous = (10.0, 10.0)
+        env.foods = [(13, 10)]
+        assert env.consume_food_for(DEFAULT_AGENT_ID) is None
+        assert (13, 10) in env.foods  # untouched
+
+    def test_consume_picks_nearest_within_radius(self) -> None:
+        env = _env(capture_radius=2.0)
+        _state(env).pos_continuous = (10.0, 10.0)
+        env.foods = [(12, 10), (11, 10)]  # distances 2.0 and 1.0 → nearest is (11,10)
+        assert env.consume_food_for(DEFAULT_AGENT_ID) == (11, 10)
+
+    def test_nearest_food_distance_is_euclidean(self) -> None:
+        env = _env()
+        _state(env).pos_continuous = (10.0, 10.0)
+        env.foods = [(13, 14)]  # Euclidean 5.0 (not Manhattan 7)
+        assert env.get_nearest_food_distance_for(DEFAULT_AGENT_ID) == 5
+        assert env.get_nearest_food_distance() == 5
+
+    def test_nearest_food_distance_none_when_empty(self) -> None:
+        env = _env()
+        env.foods = []
+        assert env.get_nearest_food_distance_for(DEFAULT_AGENT_ID) is None
