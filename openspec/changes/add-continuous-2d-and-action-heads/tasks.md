@@ -7,11 +7,11 @@
 
 ## 2. Migrate MUST brains to the shared module + regression bar (GATE before continuous work)
 
-- [ ] 2.1 Migrate MLP-PPO discrete path onto `_policy.py`.
+- [x] 2.1 Migrate MLP-PPO discrete path onto `_policy.py`. *(Done: `get_action_and_value` sampling → `categorical_sample_torch`; `_perform_standard_ppo_update` → `categorical_evaluate_torch` + `ppo_clip_policy_loss`. Byte-equivalent: golden regression `test_mlpppo_policy_migration.py` (fixed `config.seed`) + full `test_mlpppo.py` suite green — 66 tests.)*
 - [ ] 2.2 Migrate LSTM-PPO discrete path onto `_policy.py` (handle the TEI-bias-shape coupling).
 - [ ] 2.3 Migrate CfC-PPO discrete path onto `_policy.py` (handle the AutoNCP motor-count coupling).
 - [ ] 2.4 Migrate connectome-PPO discrete path onto `_policy.py`.
-- [ ] 2.5 Migration-regression bar: byte-equivalence for MLP-PPO + LSTM-PPO on one fixed-seed discrete smoke config each (pre/post); CfC + connectome within a declared, documented seeded-RNG tolerance. Record results; do not proceed to §4 until green.
+- [ ] 2.5 Migration-regression bar: byte-equivalence for MLP-PPO + LSTM-PPO on one fixed-seed discrete smoke config each (pre/post); CfC + connectome within a declared, documented seeded-RNG tolerance. Record results; do not proceed to §4 until green. *(MLP-PPO ✓ byte-equivalent via fixed-`config.seed` golden + full suite. Finding: brains entropy-seed at construction unless `config.seed` is set — the golden pins it. Byte-equivalence is also guaranteed by composition: `test_policy.py` proves the helpers are `torch.equal` to the inline ops. LSTM/CfC/connectome pending.)*
 
 ## 3. Continuous-2D environment + config discriminator
 
