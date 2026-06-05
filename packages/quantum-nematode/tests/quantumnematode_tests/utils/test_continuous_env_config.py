@@ -7,7 +7,11 @@ continuous fields parse with documented defaults, and explicit overrides load.
 
 from __future__ import annotations
 
-from quantumnematode.utils.config_loader import Continuous2DConfig, EnvironmentConfig
+from quantumnematode.utils.config_loader import (
+    Continuous2DConfig,
+    EnvironmentConfig,
+    create_env_from_config,
+)
 
 
 class TestContinuous2DConfig:
@@ -62,3 +66,26 @@ class TestEnvironmentConfigEnvType:
 
         with pytest.raises(ValidationError):
             EnvironmentConfig(env_type="hexgrid")  # type: ignore[arg-type]
+
+
+class TestFactoryDispatch:
+    """`create_env_from_config` selects the env class from `env_type` (§3.2)."""
+
+    def test_grid_by_default(self) -> None:
+        from quantumnematode.env.env import DynamicForagingEnvironment
+
+        env = create_env_from_config(EnvironmentConfig(grid_size=10))
+        assert type(env) is DynamicForagingEnvironment  # exact grid type, not the subclass
+
+    def test_continuous_2d_selected(self) -> None:
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        env = create_env_from_config(
+            EnvironmentConfig(
+                env_type="continuous_2d",
+                continuous=Continuous2DConfig(world_size_mm=24.0),
+            ),
+        )
+        assert isinstance(env, Continuous2DEnvironment)
+        assert env.continuous.world_size_mm == 24.0
+        assert env.grid_size == 24  # extent derived from world_size_mm

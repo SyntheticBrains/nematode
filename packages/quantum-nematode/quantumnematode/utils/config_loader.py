@@ -2776,6 +2776,37 @@ def create_env_from_config(
     pheromone_config = env_config.get_pheromone_config()
     social_feeding_config = env_config.get_social_feeding_config()
 
+    if env_config.env_type == "continuous_2d":
+        # Continuous-2D substrate (T5): subclass of DynamicForagingEnvironment, so
+        # the EnvironmentType alias (= DynamicForagingEnvironment) already covers it.
+        # grid_size is derived from world_size_mm inside the continuous env.
+        from quantumnematode.env.continuous_2d import (
+            Continuous2DEnvironment,
+            Continuous2DParams,
+        )
+
+        continuous_config = env_config.get_continuous_config()
+        return Continuous2DEnvironment(
+            continuous=Continuous2DParams(
+                world_size_mm=continuous_config.world_size_mm,
+                body_length_mm=continuous_config.body_length_mm,
+                max_step_mm=continuous_config.max_step_mm,
+                capture_radius_mm=continuous_config.capture_radius_mm,
+                sweep_amplitude_mm=continuous_config.sweep_amplitude_mm,
+            ),
+            viewport_size=env_config.viewport_size,
+            max_body_length=max_body_length if max_body_length is not None else 6,
+            theme=theme if theme is not None else ThemeEnum.ASCII,
+            seed=seed,
+            foraging=foraging_config.to_params(),
+            predator=predator_config.to_params(),
+            health=health_config.to_params(),
+            thermotaxis=thermotaxis_config.to_params(),
+            aerotaxis=aerotaxis_config.to_params(),
+            pheromones=pheromone_config.to_params(),
+            social_feeding=social_feeding_config.to_params(),
+        )
+
     return DynamicForagingEnvironment(
         grid_size=env_config.grid_size,
         viewport_size=env_config.viewport_size,
