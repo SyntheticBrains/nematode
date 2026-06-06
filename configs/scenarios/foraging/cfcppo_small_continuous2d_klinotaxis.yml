@@ -1,0 +1,93 @@
+# CfCPPO continuous-action klinotaxis foraging on the continuous-2D substrate.
+#
+# Continuous-action counterpart of ``cfcppo_small_klinotaxis.yml``: the same
+# CfC + AutoNCP recurrent core + klinotaxis sensing, but on the continuous-2D
+# environment (``env_type: continuous_2d``) with the continuous tanh-squashed
+# Gaussian action head (``action_mode: continuous``). The brain emits a
+# normalized ``(speed, turn)`` vector; the environment rescales it to physical
+# mm / radians.
+#
+# Tuning note (single-seed, 300-500 runs): continuous CfC uses the **mlp** actor
+# head, not the motor-direct head — the motor head's learnable ``logit_scale``
+# multiplies the Gaussian *mean* and PPO drives it up, pushing the action to tanh
+# saturation (mlp foraged ~2x the motor head: 261 vs 125 eaten / 500). Entropy is
+# kept at 0.01 (raising it to 0.03 hurt CfC, unlike LSTM). The single-seed signal
+# is still noisy and declines late; a proper multi-seed tune is deferred to the
+# Gate-2 floor-check / evaluation campaign.
+
+max_steps: 400  # continuous-2D klinotaxis; shorter than the grid baseline for a fast signal
+brain:
+  name: cfcppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    units: 32
+    ncp_sparsity: 0.5
+    cfc_mode: default
+    bptt_chunk_length: 64
+
+    # Actor head: MLP on the recurrent hidden state (better than the motor-direct
+    # head for continuous control — see the tuning note above).
+    actor_head: mlp
+    actor_hidden_dim: 64
+    actor_num_layers: 2
+
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    rollout_buffer_size: 256
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_klinotaxis by env-sensing mode
+      - proprioception   # Heading context so the brain can correlate dC/dt with movement
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 1.0
+    sweep_amplitude_mm: 0.5
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
