@@ -40,9 +40,11 @@ def _state(env: Continuous2DEnvironment):
 
 
 class TestDiscreteFallbackCoherence:
-    """A discrete action on the continuous env stays coherent: the float position
-    (read by capture/reward) mirrors the moved integer cell (read by sensing).
-    This is the fallback path for a discrete brain on a continuous env.
+    """Discrete action on the continuous env stays coherent.
+
+    The float position (read by capture/reward) mirrors the moved integer cell
+    (read by sensing). This is the fallback path for a discrete brain on a
+    continuous env.
     """
 
     def test_discrete_move_syncs_pos_continuous(self) -> None:
