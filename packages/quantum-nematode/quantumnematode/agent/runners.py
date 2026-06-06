@@ -717,7 +717,16 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             top_action = action[0]
 
-            agent.env.move_agent(top_action.action)
+            # Dispatch on the env's action mode (env-driven, not brain-coupled):
+            # continuous-2D consumes the (speed, turn) vector; the grid consumes the
+            # discrete Action. A continuous brain emits `continuous` (added in §4);
+            # the discrete fallback runs when no continuous vector is present.
+            from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+            if isinstance(agent.env, Continuous2DEnvironment) and top_action.continuous is not None:
+                agent.env.move_agent_continuous(*top_action.continuous)
+            else:
+                agent.env.move_agent(top_action.action)
 
             # Track step (will add satiety later if dynamic environment)
             agent._episode_tracker.track_step()
@@ -797,9 +806,13 @@ class StandardEpisodeRunner(EpisodeRunner):
             # runs this loop ~1000 times per episode, so the saved string
             # formatting is visible in 30-60 s LSTMPPO episodes.
             if logger.isEnabledFor(logging.INFO):
+                action_repr = (
+                    top_action.action.value
+                    if top_action.action is not None
+                    else top_action.continuous
+                )
                 logger.info(
-                    f"Step {agent._episode_tracker.steps}: "
-                    f"Action={top_action.action.value}, Reward={reward}",
+                    f"Step {agent._episode_tracker.steps}: Action={action_repr}, Reward={reward}",
                 )
 
                 # Log cumulative reward and average reward per step
@@ -916,6 +929,16 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
         # Get configuration
         config: ManyworldsModeConfig = kwargs.get("config", ManyworldsModeConfig())  # type: ignore[assignment]
         show_last_frame_only: bool = kwargs.get("show_last_frame_only", False)
+
+        # Many-worlds (superposition) mode relies on env.copy(), which on the
+        # continuous-2D substrate would lose the continuous type + params (the
+        # copy() override is future work). Fail clearly until then; single-world
+        # runs are the supported path for the continuous substrate.
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        if isinstance(agent.env, Continuous2DEnvironment):
+            msg = "Many-worlds mode is not yet supported on the continuous-2D substrate."
+            raise NotImplementedError(msg)
 
         # Initialize many-worlds mode
         agent.env.current_direction = Direction.UP
