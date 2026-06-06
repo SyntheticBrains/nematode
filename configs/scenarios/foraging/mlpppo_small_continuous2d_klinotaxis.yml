@@ -6,8 +6,14 @@
 # head (``action_mode: continuous``). The brain emits a normalized ``(speed, turn)``
 # vector; the environment rescales it to physical mm / radians.
 #
-# Used as the MLPPPO arm of the continuous-substrate smoke training (learning
-# signal: last-quarter > first-quarter return).
+# Used as the MLPPPO arm of the Gate-2 G2.d floor check.
+#
+# entropy_coef tuning (G2.d calibration, scratchpad R5/R6): continuous PPO needs
+# a HIGHER entropy than the discrete grid (0.03) — at 0.03 the policy ramps to
+# ~0.76 foods/ep by ~run 150 then COLLAPSES to ~0.18 (exploration / log_std dies).
+# At 0.10 the collapse is arrested: foraging ramps from ~0 and sustains ~0.4
+# foods/ep over the full 500-ep budget. (The grid scale is ~9.5 foods/ep —
+# continuous-2D is much harder; G2.d is a "didn't break training" floor.)
 
 max_steps: 400  # continuous-2D klinotaxis; shorter than the grid baseline for a fast signal
 brain:
@@ -24,7 +30,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    entropy_coef: 0.03
+    entropy_coef: 0.1  # continuous needs higher entropy than discrete — see header (G2.d R5/R6)
     learning_rate: 0.001
     rollout_buffer_size: 256
     num_epochs: 10
