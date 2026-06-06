@@ -78,3 +78,22 @@ class TestMLPPPOContinuousSmoke:
         params = [*brain.actor.parameters(), *brain.critic.parameters(), brain.log_std]
         for param in params:
             assert torch.isfinite(param).all()
+
+    def test_log_std_persists_across_save_load(self) -> None:
+        """The continuous log-std survives a weight save/load round-trip.
+
+        Without persistence a reloaded continuous brain (frozen eval, checkpoint
+        resume) would silently reset its exploration scale to the default.
+        """
+        brain = _continuous_agent().brain
+        assert isinstance(brain, MLPPPOBrain)
+        with torch.no_grad():
+            brain.log_std.copy_(torch.tensor([-0.7, 0.3]))
+
+        components = brain.get_weight_components()
+        assert "log_std" in components
+
+        reloaded = _continuous_agent().brain
+        assert isinstance(reloaded, MLPPPOBrain)
+        reloaded.load_weight_components(components)
+        assert torch.allclose(reloaded.log_std, torch.tensor([-0.7, 0.3]))

@@ -1,0 +1,77 @@
+# MLPPPO continuous-action klinotaxis foraging on the continuous-2D substrate.
+#
+# The continuous-action counterpart of ``mlpppo_small_klinotaxis.yml``: the same
+# klinotaxis sensing + MLPPPO actor/critic, but on the continuous-2D environment
+# (``env_type: continuous_2d``) with the continuous tanh-squashed Gaussian action
+# head (``action_mode: continuous``). The brain emits a normalized ``(speed, turn)``
+# vector; the environment rescales it to physical mm / radians.
+#
+# Used as the MLPPPO arm of the continuous-substrate smoke training (learning
+# signal: last-quarter > first-quarter return).
+
+max_steps: 400  # continuous-2D klinotaxis; shorter than the grid baseline for a fast signal
+brain:
+  name: mlpppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    # PPO hyperparameters (mirror the grid klinotaxis baseline)
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.03
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_klinotaxis by env-sensing mode
+      - proprioception   # Heading context so the brain can correlate dC/dt with movement
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 1.0
+    sweep_amplitude_mm: 0.5
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis  # Head-sweep mode: concentration + lateral gradient + dC/dt
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0

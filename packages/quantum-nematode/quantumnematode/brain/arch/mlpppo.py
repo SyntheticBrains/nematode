@@ -767,6 +767,8 @@ class MLPPPOBrain(ClassicalBrain):
             Joint optimizer state_dict.
         ``"training_state"``
             Episode count and other training metadata.
+        ``"log_std"``
+            Continuous-mode learnable log-std (only in continuous action mode).
         """
         from quantumnematode.brain.weights import WeightComponent
 
@@ -793,6 +795,12 @@ class MLPPPOBrain(ClassicalBrain):
             all_components["gate_weights"] = WeightComponent(
                 name="gate_weights",
                 state={"gate_weights": self.gate_weights.data.clone()},
+            )
+
+        if self.continuous:
+            all_components["log_std"] = WeightComponent(
+                name="log_std",
+                state={"log_std": self.log_std.data.clone()},
             )
 
         if components is None:
@@ -822,6 +830,10 @@ class MLPPPOBrain(ClassicalBrain):
         # Gate weights
         if "gate_weights" in components and self._feature_gating:
             self.gate_weights.data.copy_(components["gate_weights"].state["gate_weights"])
+
+        # Continuous-mode learnable log-std
+        if "log_std" in components and self.continuous:
+            self.log_std.data.copy_(components["log_std"].state["log_std"])
 
         # Optimizer state only after networks succeed
         if "optimizer" in components:
