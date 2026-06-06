@@ -21,6 +21,19 @@ _CONTINUOUS_DIM = 2
 
 
 def _config(*, continuous: bool) -> TransformerPPOBrainConfig:
+    """Build a small TransformerPPOBrainConfig for fast smoke tests.
+
+    Parameters
+    ----------
+    continuous : bool
+        If True, select the continuous (tanh-Gaussian) action head; otherwise
+        the discrete (categorical) head.
+
+    Returns
+    -------
+    TransformerPPOBrainConfig
+        A compact config (small window/encoder + small rollout buffer).
+    """
     return TransformerPPOBrainConfig(
         sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.PROPRIOCEPTION],
         action_mode="continuous" if continuous else "discrete",

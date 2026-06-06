@@ -156,7 +156,9 @@ class TransformerPPOBrain(ClassicalBrain):
         self.config = config
         self.device = torch.device(device.to_torch_device_str())
         self.num_actions = num_actions
-        self._action_set = action_set
+        # Defensive copy so the shared module-level DEFAULT_ACTIONS (the default
+        # arg) can't be mutated across instances (matches CfC/connectome).
+        self._action_set = list(action_set)
         self.window_size = config.window_size
 
         # PPO hyperparameters
@@ -536,7 +538,7 @@ class TransformerPPOBrain(ClassicalBrain):
 
     @action_set.setter
     def action_set(self, actions: list[Action]) -> None:
-        self._action_set = actions
+        self._action_set = list(actions)
 
     def build_brain(self) -> None:
         """Not applicable to TransformerPPOBrain."""
