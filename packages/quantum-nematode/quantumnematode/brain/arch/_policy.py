@@ -4,11 +4,9 @@ This module factors the action sampling, log-probability, entropy, and PPO
 surrogate terms out of the per-brain copy-paste (MLP-PPO, LSTM-PPO, CfC-PPO,
 connectome-PPO each re-implemented these independently). The helpers preserve
 each brain's *exact* numerics so the migration onto this module is
-byte-equivalent (see ``add-continuous-2d-and-action-heads`` design.md D6 and the
-migration-regression bar).
+byte-equivalent.
 
-The brains use two different RNG streams, and the migration preserves each
-(design.md D6 "Option B"):
+The brains use two different RNG streams, and the migration preserves each:
 
 - MLP-PPO and connectome-PPO use ``torch.distributions.Categorical`` end to end
   → ``categorical_sample_torch`` (rollout) + ``categorical_evaluate_torch``
