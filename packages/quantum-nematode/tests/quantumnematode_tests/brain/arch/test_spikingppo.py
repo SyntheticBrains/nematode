@@ -473,7 +473,9 @@ class TestVariance:
             )
             all_logits.append(_logits(brain, params))
             result = brain.run_brain(params, top_only=False, top_randomize=False)
-            sampled_actions.append(result[0].action)
+            action = result[0].action
+            assert action is not None  # discrete brain always emits an action
+            sampled_actions.append(action)
 
         stacked = torch.stack(all_logits)  # (128, num_actions)
         variance = stacked.var(dim=0)

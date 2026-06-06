@@ -99,6 +99,8 @@ def test_mlpppo_registry_equivalence() -> None:
     # The chosen-action list must match exactly with byte-identical probabilities.
     assert len(actions_direct) == len(actions_registry)
     for a_d, a_r in zip(actions_direct, actions_registry, strict=True):
+        assert a_d.action is not None  # discrete brain always emits an action
+        assert a_r.action is not None
         assert a_d.action is a_r.action, (
             f"Chosen action diverged: {a_d.action.value} vs {a_r.action.value}"
         )
@@ -156,6 +158,8 @@ def test_lstmppo_registry_equivalence() -> None:
 
     assert len(actions_direct) == len(actions_registry)
     for a_d, a_r in zip(actions_direct, actions_registry, strict=True):
+        assert a_d.action is not None  # discrete brain always emits an action
+        assert a_r.action is not None
         assert a_d.action is a_r.action, (
             f"Chosen action diverged: {a_d.action.value} vs {a_r.action.value}"
         )
