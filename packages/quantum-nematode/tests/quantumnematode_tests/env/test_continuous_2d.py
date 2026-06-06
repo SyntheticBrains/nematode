@@ -39,14 +39,28 @@ def _state(env: Continuous2DEnvironment):
     return env.agents[DEFAULT_AGENT_ID]
 
 
-class TestContinuousActionsSignal:
-    def test_continuous_env_reports_true(self) -> None:
-        assert _env().continuous_actions is True
+class TestDiscreteFallbackCoherence:
+    """A discrete action on the continuous env stays coherent: the float position
+    (read by capture/reward) mirrors the moved integer cell (read by sensing).
+    This is the fallback path for a discrete brain on a continuous env.
+    """
 
-    def test_grid_env_reports_false(self) -> None:
-        from quantumnematode.env.env import DynamicForagingEnvironment
+    def test_discrete_move_syncs_pos_continuous(self) -> None:
+        from quantumnematode.brain.actions import Action
 
-        assert DynamicForagingEnvironment(grid_size=10).continuous_actions is False
+        env = _env(world=20.0)
+        env.move_agent(Action.FORWARD)  # discrete fallback (inherited _apply_movement)
+        st = _state(env)
+        assert st.pos_continuous == (float(st.position[0]), float(st.position[1]))
+
+    def test_discrete_move_capture_reflects_new_position(self) -> None:
+        from quantumnematode.brain.actions import Action
+
+        env = _env(world=20.0, capture_radius=1.0)
+        env.move_agent(Action.FORWARD)
+        st = _state(env)
+        env.foods = [st.position]  # food at the worm's new cell
+        assert env.reached_goal_for(DEFAULT_AGENT_ID) is True  # capture follows the move
 
 
 class TestInit:
@@ -184,7 +198,6 @@ class TestGridSubstrateUnchanged:
 
         env = create_env_from_config(EnvironmentConfig(grid_size=12))
         assert type(env) is DynamicForagingEnvironment  # not the continuous subclass
-        assert env.continuous_actions is False
 
     def test_grid_discrete_move_is_one_cell(self) -> None:
         from quantumnematode.brain.actions import Action

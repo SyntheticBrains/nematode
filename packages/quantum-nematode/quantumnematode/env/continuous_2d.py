@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from quantumnematode.env.env import (
     DEFAULT_AGENT_ID,
@@ -23,6 +24,9 @@ from quantumnematode.env.env import (
     DynamicForagingEnvironment,
 )
 from quantumnematode.logging_config import logger
+
+if TYPE_CHECKING:
+    from quantumnematode.brain.actions import Action
 
 
 @dataclass
@@ -74,10 +78,21 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         )
         self._init_continuous_positions()
 
-    @property
-    def continuous_actions(self) -> bool:
-        """Continuous-2D expects continuous ``(speed, turn)`` actions."""
-        return True
+    def _apply_movement(self, agent_state: AgentState, action: Action) -> None:
+        """Apply a discrete action, then re-sync the continuous float position.
+
+        This is the discrete-action fallback path (used when a discrete-action brain
+        runs on the continuous substrate — continuous heads are a later phase). It
+        runs the inherited grid move, then mirrors the resulting integer ``position``
+        into ``pos_continuous`` so sensing and capture (which read the float truth)
+        stay coherent with the worm's actual cell. Continuous-action brains use
+        ``move_agent_continuous`` / ``_kinematic_move`` instead and never reach here.
+        """
+        super()._apply_movement(agent_state, action)
+        agent_state.pos_continuous = (
+            float(agent_state.position[0]),
+            float(agent_state.position[1]),
+        )
 
     def _init_continuous_positions(self) -> None:
         """Seed every agent's float position at the world centre, heading +x."""

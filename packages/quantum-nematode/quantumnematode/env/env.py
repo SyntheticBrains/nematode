@@ -937,16 +937,6 @@ class BaseEnvironment(ABC):
         """
         return self.agents[agent_id]
 
-    @property
-    def continuous_actions(self) -> bool:
-        """Whether this environment expects continuous ``(speed, turn)`` actions.
-
-        ``False`` on the discrete grid substrate (a discrete ``Action``); ``True`` on
-        the continuous-2D substrate. The runner and agent dispatch on this so the
-        decision is env-driven, not brain-coupled (Gate-2 no-per-architecture-branch).
-        """
-        return False
-
     @abstractmethod
     def get_state(
         self,

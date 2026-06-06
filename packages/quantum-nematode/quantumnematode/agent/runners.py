@@ -720,25 +720,26 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             top_action = action[0]
 
-            # Dispatch on the env's action mode (env-driven, not brain-coupled):
-            # continuous-2D consumes the (speed, turn) vector; the grid consumes the
-            # discrete Action. A continuous brain emits `continuous` (added in §4);
-            # the discrete fallback runs when no continuous vector is present.
+            # Dispatch on the env type (env-driven, not brain-coupled — Gate-2-safe):
+            # the continuous-2D env consumes the (speed, turn) vector; the grid env
+            # consumes the discrete Action. A continuous-action brain emits
+            # `continuous` (a later phase); when it doesn't, the continuous env's
+            # _apply_movement runs a coherent discrete move (it re-syncs the float
+            # position), so the fallback is well-defined.
             from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
             if isinstance(agent.env, Continuous2DEnvironment):
                 if top_action.continuous is not None:
                     agent.env.move_agent_continuous(*top_action.continuous)
                 else:
-                    # Continuous-2D env but the brain emitted a discrete action:
-                    # continuous heads (§4) are not yet active. Fall back to a
-                    # discrete move and warn once so the half-state isn't silent.
+                    # Continuous env, discrete brain: continuous-action heads are not
+                    # active yet. Use a (coherent) discrete move and warn once.
                     if not self._warned_discrete_on_continuous:
                         logger.warning(
                             "Continuous-2D environment received a discrete action "
                             "(no (speed, turn) vector). Continuous-action heads are not "
-                            "active for this brain; falling back to discrete movement. "
-                            "This is expected until the continuous brain heads land.",
+                            "active for this brain; using discrete movement on the "
+                            "continuous substrate. Continuous heads land in a later phase.",
                         )
                         self._warned_discrete_on_continuous = True
                     agent.env.move_agent(top_action.action)
