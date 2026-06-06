@@ -57,6 +57,18 @@ class TestTransformerWiring:
         assert brain.actor.out_features == _CONTINUOUS_DIM
         assert brain.log_std.shape == (_CONTINUOUS_DIM,)
 
+    def test_indivisible_d_model_rejected(self) -> None:
+        """`d_model` not divisible by `nhead` fails fast at config validation."""
+        import pytest
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="divisible by nhead"):
+            TransformerPPOBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                d_model=64,
+                nhead=5,
+            )
+
 
 class TestTemporalWindow:
     """The rolling window is front-zero-padded and reset per episode."""

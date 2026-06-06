@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
+from pydantic import model_validator
 from torch import nn, optim
 
 if TYPE_CHECKING:
@@ -100,6 +101,20 @@ class TransformerPPOBrainConfig(BrainConfig):
 
     # Device
     device_type: DeviceType = DeviceType.CPU
+
+    @model_validator(mode="after")
+    def _validate_dims(self) -> TransformerPPOBrainConfig:
+        """Fail fast on invalid encoder geometry (clearer than torch's assertion)."""
+        if self.d_model % self.nhead != 0:
+            msg = (
+                f"d_model ({self.d_model}) must be divisible by nhead ({self.nhead}) "
+                "for multi-head attention"
+            )
+            raise ValueError(msg)
+        if self.window_size < 1:
+            msg = f"window_size must be >= 1, got {self.window_size}"
+            raise ValueError(msg)
+        return self
 
 
 # ──────────────────────────────────────────────────────────────────────────────
