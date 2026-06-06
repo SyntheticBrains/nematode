@@ -443,6 +443,10 @@ class QuantumNematodeAgent:
         self._last_heading: Direction = Direction.UP
 
         if env is None:
+            # Default substrate is the discrete grid. The continuous-2D substrate
+            # is opt-in: callers pass an explicit ``env=Continuous2DEnvironment(...)``
+            # (built via ``create_env_from_config`` from ``env_type: continuous_2d``),
+            # so this default-construction path is never reached on a continuous run.
             self.env = DynamicForagingEnvironment(
                 grid_size=maze_grid_size,
                 max_body_length=max_body_length,

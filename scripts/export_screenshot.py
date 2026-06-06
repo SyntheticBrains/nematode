@@ -4,6 +4,10 @@ Creates staged environments with food, predators, temperature zones,
 and nematodes with body segments, then saves rendered frames as PNG
 images. Supports both single-agent and multi-agent modes.
 
+Grid-only asset tool: it constructs `DynamicForagingEnvironment` directly for the
+Pygame grid renderer. The continuous-2D substrate is not screenshotted here — its
+renderer is deferred (T6.render, headless-first), so there is nothing to draw yet.
+
 Usage:
     python scripts/export_screenshot.py [output_path]
     python scripts/export_screenshot.py --multi-agent [output_path]
