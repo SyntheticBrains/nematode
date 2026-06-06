@@ -39,19 +39,19 @@ class ActionData(BaseModel):  # pragma: no cover
     ----------
     state : str
         The current state of the agent.
-    action : Action
-        The discrete action taken by the agent (grid substrate).
+    action : Action | None
+        The discrete action taken by the agent (grid substrate), or ``None`` in
+        continuous mode where the action is carried by ``continuous`` instead.
     probability : float
         The probability of taking the action in the current state.
     continuous : tuple[float, float] | None
         The continuous action ``(speed, turn)`` on the continuous-2D substrate,
-        or ``None`` on the discrete grid substrate. Additive and optional so the
-        discrete path is unaffected; the continuous-consumption dispatch (and any
-        relaxation of ``action`` to optional) lands with the continuous-2D
-        environment wiring.
+        or ``None`` on the discrete grid substrate. On the continuous substrate the
+        values are normalized (``speed ∈ [0, 1]``, ``turn ∈ [-1, 1]``); the
+        environment rescales them to physical units.
     """
 
     state: str
-    action: Action
+    action: Action | None = None
     probability: float
     continuous: tuple[float, float] | None = None

@@ -639,7 +639,11 @@ class MultiAgentSimulation:
             # ── 2. MOVEMENT ──────────────────────────────────────
             for agent in alive:
                 aid = agent.agent_id
-                self.env.move_agent_for(aid, actions[aid].action)
+                action = actions[aid].action
+                if action is None:
+                    msg = "Continuous actions are not supported in multi-agent mode"
+                    raise NotImplementedError(msg)
+                self.env.move_agent_for(aid, action)
                 agent._episode_tracker.track_step()
 
                 # Update path and food history

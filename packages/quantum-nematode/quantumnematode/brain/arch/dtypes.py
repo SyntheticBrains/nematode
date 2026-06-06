@@ -80,6 +80,12 @@ class BrainConfig(BaseModel):
 
     seed: int | None = None  # Random seed for reproducibility
     weights_path: str | None = None  # Path to load pre-trained weights from
+    # Action-policy mode: ``discrete`` (categorical over the action set, default,
+    # for the grid substrate) or ``continuous`` (tanh-squashed Gaussian over a
+    # normalized ``(speed, turn)`` vector, for the continuous-2D substrate). Brains
+    # that implement a continuous head read this; the physical rescale lives in the
+    # environment, so the emitted action is substrate-independent.
+    action_mode: Literal["discrete", "continuous"] = "discrete"
 
 
 BRAIN_TYPES = Literal[

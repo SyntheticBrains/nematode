@@ -189,9 +189,29 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
     ) -> None:
         """Apply a continuous ``(speed, turn)`` action to the given agent.
 
-        The continuous-substrate analogue of `move_agent`; the runner calls this
-        (not the discrete `move_agent`) when the environment is continuous-2D.
+        The continuous-substrate analogue of `move_agent`, in physical units. Tests
+        and direct callers use this; continuous-action brains emit a normalized
+        action and go through `move_agent_normalized`.
         """
+        self._kinematic_move(self.agents[agent_id], speed, turn)
+
+    def move_agent_normalized(
+        self,
+        speed_norm: float,
+        turn_norm: float,
+        agent_id: str = DEFAULT_AGENT_ID,
+    ) -> None:
+        """Apply a normalized continuous action, rescaling to physical units.
+
+        Continuous-action brains emit a substrate-independent normalized action
+        (``speed_norm ∈ [0, 1]``, ``turn_norm ∈ [-1, 1]``); this maps it to physical
+        ``speed ∈ [0, max_step_mm]`` and ``turn ∈ [-π, π]`` before the kinematic
+        update, keeping the physical scale in the environment (the brain stays
+        env-agnostic). ``_kinematic_move`` re-clamps speed and wraps turn as a
+        safety net.
+        """
+        speed = speed_norm * self.continuous.max_step_mm
+        turn = turn_norm * math.pi
         self._kinematic_move(self.agents[agent_id], speed, turn)
 
     # ----- capture-radius food consumption + Euclidean distances -----

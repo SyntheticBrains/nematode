@@ -284,7 +284,12 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
         # Handle last value is ActionData
         elif isinstance(last_values[0], ActionData):
             probs = [a.probability if isinstance(a, ActionData) else np.nan for a in last_values]
-            actions = [a.action if isinstance(a, ActionData) else "" for a in last_values]
+            actions = [
+                (a.action.value if a.action is not None else "")
+                if isinstance(a, ActionData)
+                else ""
+                for a in last_values
+            ]
             plt.figure(figsize=(10, 6))
             plt.plot(runs, probs, marker="o", color="orange", label="Probability (last step)")
             for run, prob, action in zip(runs, probs, actions, strict=False):

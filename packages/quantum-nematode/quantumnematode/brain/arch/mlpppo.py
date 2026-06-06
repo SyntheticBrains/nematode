@@ -47,8 +47,11 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
+    CONTINUOUS_ACTION_DIM,
     categorical_evaluate_torch,
     categorical_sample_torch,
+    continuous_evaluate_tanh_gaussian,
+    continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
@@ -165,7 +168,7 @@ class MLPPPOBrain(ClassicalBrain):
     This is a SOTA classical baseline for comparison with quantum approaches.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         config: MLPPPOBrainConfig,
         num_actions: int = 4,
@@ -205,6 +208,16 @@ class MLPPPOBrain(ClassicalBrain):
         self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set
 
+        # Action mode: discrete (categorical over the action set) or continuous
+        # (tanh-squashed Gaussian over a normalized (speed, turn) vector). In
+        # continuous mode the actor outputs the Gaussian mean and a state-
+        # independent learnable log-std; the environment rescales the normalized
+        # action to physical units.
+        self.continuous = config.action_mode == "continuous"
+        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
+        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        actor_output_dim = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
+
         # Store config
         self.config = config
         self.gamma = config.gamma
@@ -223,9 +236,13 @@ class MLPPPOBrain(ClassicalBrain):
         self.actor = self._build_network(
             config.actor_hidden_dim,
             config.num_hidden_layers,
-            output_dim=num_actions,
+            output_dim=actor_output_dim,
             input_dim_override=self.input_dim,
         ).to(self.device)
+
+        # Continuous mode: state-independent learnable log-std (one per action dim).
+        if self.continuous:
+            self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
         self.critic = self._build_network(
             config.critic_hidden_dim,
@@ -252,10 +269,18 @@ class MLPPPOBrain(ClassicalBrain):
         params = list(self.actor.parameters()) + list(self.critic.parameters())
         if self._feature_gating:
             params.append(self.gate_weights)
+        if self.continuous:
+            params.append(self.log_std)
         self.optimizer = optim.Adam(params, lr=config.learning_rate)
 
-        # Rollout buffer (pass RNG for reproducible minibatch shuffling)
-        self.buffer = RolloutBuffer(config.rollout_buffer_size, self.device, rng=self.rng)
+        # Rollout buffer (pass RNG for reproducible minibatch shuffling). In
+        # continuous mode it stores the per-step pre-squash sample vectors.
+        self.buffer = RolloutBuffer(
+            config.rollout_buffer_size,
+            self.device,
+            rng=self.rng,
+            continuous_actions=self.continuous,
+        )
 
         # State tracking
         self.training = True
@@ -510,6 +535,9 @@ class MLPPPOBrain(ClassicalBrain):
 
         x = self.preprocess(params)
 
+        if self.continuous:
+            return self._run_brain_continuous(x)
+
         # Get action and value
         action_idx, log_prob, _entropy, value = self.get_action_and_value(x)
         action_name = self.action_set[action_idx]
@@ -544,6 +572,47 @@ class MLPPPOBrain(ClassicalBrain):
         self.history_data.probabilities.append(float(probs_np[action_idx]))
 
         return [ActionData(state=action_name, action=action_name, probability=probs_np[action_idx])]
+
+    def _run_brain_continuous(self, x: np.ndarray) -> list[ActionData]:
+        """Continuous-mode forward: sample a normalized ``(speed, turn)`` action.
+
+        Samples from the tanh-squashed Gaussian head and stores the pre-squash
+        sample for the PPO update. The emitted action is normalized
+        (``speed ∈ [0, 1]``, ``turn ∈ [-1, 1]``); the environment rescales it.
+        """
+        features = self._apply_torch_gating(
+            torch.tensor(x, dtype=torch.float32, device=self.device),
+        )
+        mean = self.actor(features)
+        value = self.critic(features)
+        self.last_value = value
+
+        action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
+            mean,
+            self.log_std,
+            self._action_low,
+            self._action_high,
+        )
+        continuous_action = (float(action_vec[0]), float(action_vec[1]))
+
+        # Store current step info for the buffer (added when the reward arrives);
+        # the stored action is the pre-squash sample for re-scoring in the update.
+        self._pending_state = x
+        self._pending_action = pre_tanh.detach().cpu().numpy()
+        self._pending_log_prob = log_prob.detach()
+        self._pending_value = value
+        self.current_probabilities = None
+
+        action_data = ActionData(
+            state="continuous",
+            action=None,
+            probability=float(torch.exp(log_prob.detach())),
+            continuous=continuous_action,
+        )
+        self.latest_data.action = action_data
+        self.history_data.actions.append(action_data)
+        self.history_data.probabilities.append(action_data.probability)
+        return [action_data]
 
     def learn(
         self,
@@ -608,12 +677,23 @@ class MLPPPOBrain(ClassicalBrain):
         for _ in range(self.num_epochs):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 gated_states = self._apply_torch_gating(batch["states"])
-                logits = self.actor(gated_states)
                 values = self.critic(gated_states).squeeze(-1)
 
-                # Shared discrete policy helpers (byte-equivalent to the prior inline
-                # Categorical re-eval + clipped surrogate).
-                new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
+                # Re-score actions under the current policy via the shared module:
+                # discrete (Categorical) or continuous (tanh-Gaussian, re-scoring the
+                # stored pre-squash samples). Clipped surrogate is shared.
+                if self.continuous:
+                    mean = self.actor(gated_states)
+                    new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
+                        mean,
+                        self.log_std,
+                        batch["actions"],
+                        self._action_low,
+                        self._action_high,
+                    )
+                else:
+                    logits = self.actor(gated_states)
+                    new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
                 policy_loss = ppo_clip_policy_loss(
                     new_log_probs,
                     batch["old_log_probs"],
@@ -628,6 +708,8 @@ class MLPPPOBrain(ClassicalBrain):
                 all_params = list(self.actor.parameters()) + list(self.critic.parameters())
                 if self._feature_gating:
                     all_params.append(self.gate_weights)
+                if self.continuous:
+                    all_params.append(self.log_std)
                 nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
                 self.optimizer.step()
 
