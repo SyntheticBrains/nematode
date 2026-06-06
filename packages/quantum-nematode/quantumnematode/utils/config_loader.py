@@ -39,6 +39,7 @@ from quantumnematode.brain.arch import (
     QVarCircuitBrainConfig,
     SpikingPPOBrainConfig,
     SpikingReinforceBrainConfig,
+    TransformerPPOBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
 from quantumnematode.dtypes import OxygenSpot, TemperatureSpot
@@ -131,6 +132,7 @@ BrainConfigType = (
     | CfCBrainConfig
     | SpikingPPOBrainConfig
     | EquivariantQuantumPPOBrainConfig
+    | TransformerPPOBrainConfig
 )
 
 # Type alias for predator movement patterns
