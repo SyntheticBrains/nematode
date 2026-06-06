@@ -8,8 +8,8 @@ weights along wild-type edges only) and gap junctions non-learnable
 Sensor projection: food-chemotaxis input → ASEL/ASER/AWCL/AWCR/AWAL/AWAR
 sensory neurons via additive injection scaled by per-input learnable
 gains. Motor readout: VB/DB/VA/DA motor-class activations mean-pooled
-into a 4-vector, then projected to the discrete 4-action set via a
-learnable 4x4 readout matrix.
+into a 4-vector, then projected via a learnable readout matrix to either the
+discrete 4-action logits (4x4) or the 2-D continuous Gaussian mean (2x4).
 
 Forward pass (single step): repeat K times before motor readout::
 
@@ -365,7 +365,8 @@ class ConnectomeTopology(nn.Module):
         # hasn't saturated.
         nn.init.normal_(self.food_gains, mean=0.0, std=1.0)
 
-        # ── Motor readout: VB/DB/VA/DA mean-pool → 4x4 learnable matrix ─
+        # ── Motor readout: VB/DB/VA/DA mean-pool → learnable matrix ─
+        # (4x4 → discrete logits, or 2x4 → continuous Gaussian mean)
         motor_class_indices: dict[str, list[int]] = {cls: [] for cls in _MOTOR_CLASSES}
         for name in self.neuron_names:
             cls = connectome.neurons[name].cell_class
@@ -722,7 +723,8 @@ class ConnectomeTopology(nn.Module):
 
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
-        logits = self.readout @ motor_acts  # shape (4,)
+        # (num_actions,) discrete logits, or (2,) continuous Gaussian mean.
+        logits = self.readout @ motor_acts
         return logits, h
 
     def _inject_predator_batched(
@@ -848,7 +850,8 @@ class ConnectomeTopology(nn.Module):
             h = torch.tanh(preact)
 
         motor_acts = self._pool_motor(h)  # (B, 4)
-        logits = motor_acts @ self.readout.T  # (B, 4)
+        # (B, num_actions) discrete logits, or (B, 2) continuous Gaussian mean.
+        logits = motor_acts @ self.readout.T
         return logits, h
 
     def forward(
