@@ -374,9 +374,7 @@ class TransformerPPOBrain(ClassicalBrain):
                 done=episode_done,
             )
 
-        if self.buffer.is_full() or (
-            episode_done and len(self.buffer) >= self.num_minibatches
-        ):
+        if self.buffer.is_full() or (episode_done and len(self.buffer) >= self.num_minibatches):
             self._perform_ppo_update()
             self.buffer.reset()
 
