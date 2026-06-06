@@ -47,7 +47,10 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
+    CONTINUOUS_ACTION_DIM,
     categorical_logprob_entropy_torch,
+    continuous_evaluate_tanh_gaussian,
+    continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._registry import register_brain
@@ -176,16 +179,22 @@ class LSTMPPORolloutBuffer:
         buffer_size: int,
         device: torch.device,
         rng: np.random.Generator | None = None,
+        *,
+        continuous_actions: bool = False,
     ) -> None:
         self.buffer_size = buffer_size
         self.device = device
         self.rng = rng if rng is not None else np.random.default_rng()
+        # Discrete (default): actions are int indices stored as ``torch.long``.
+        # Continuous: actions are the per-step pre-squash sample vectors stored
+        # as ``torch.float32`` of shape ``(chunk, action_dim)``.
+        self.continuous_actions = continuous_actions
         self.reset()
 
     def reset(self) -> None:
         """Clear all stored experience."""
         self.features: list[np.ndarray] = []
-        self.actions: list[int] = []
+        self.actions: list[int | np.ndarray] = []
         self.log_probs: list[float] = []
         self.values: list[float] = []
         self.rewards: list[float] = []
@@ -206,7 +215,7 @@ class LSTMPPORolloutBuffer:
     def add(  # noqa: PLR0913
         self,
         features: np.ndarray,
-        action: int,
+        action: int | np.ndarray,
         log_prob: float,
         value: float,
         reward: float,
@@ -278,7 +287,14 @@ class LSTMPPORolloutBuffer:
         # Shuffle chunk order for PPO
         chunk_order = self.rng.permutation(len(chunk_starts))
 
-        actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
+        if self.continuous_actions:
+            actions = torch.tensor(
+                np.array(self.actions),
+                dtype=torch.float32,
+                device=self.device,
+            )
+        else:
+            actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
         old_log_probs = torch.tensor(
             self.log_probs,
             dtype=torch.float32,
@@ -537,6 +553,13 @@ class LSTMPPOBrain(ClassicalBrain):
         self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set
 
+        # Action mode: discrete (categorical) or continuous (tanh-squashed Gaussian
+        # over a normalized (speed, turn) vector; the env rescales to physical units).
+        self.continuous = config.action_mode == "continuous"
+        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
+        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        actor_output_dim = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
+
         # Seeding
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
@@ -589,8 +612,12 @@ class LSTMPPOBrain(ClassicalBrain):
                 nn.Linear(config.actor_hidden_dim, config.actor_hidden_dim),
                 nn.ReLU(),
             ]
-        actor_layers.append(nn.Linear(config.actor_hidden_dim, num_actions))
+        actor_layers.append(nn.Linear(config.actor_hidden_dim, actor_output_dim))
         self.actor = nn.Sequential(*actor_layers).to(self.device)
+
+        # Continuous mode: state-independent learnable log-std (one per action dim).
+        if self.continuous:
+            self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
         # Critic MLP: h_t.detach() → value
         self.critic = _LSTMPPOCritic(
@@ -604,13 +631,15 @@ class LSTMPPOBrain(ClassicalBrain):
 
         # ── Optimizers ──
 
-        # Actor optimizer: LSTM/GRU + LayerNorm + actor MLP
-        self.actor_optimizer = torch.optim.Adam(
+        # Actor optimizer: LSTM/GRU + LayerNorm + actor MLP (+ log-std in continuous mode)
+        actor_params = (
             list(self.rnn.parameters())
             + list(self.feature_norm.parameters())
-            + list(self.actor.parameters()),
-            lr=config.actor_lr,
+            + list(self.actor.parameters())
         )
+        if self.continuous:
+            actor_params.append(self.log_std)
+        self.actor_optimizer = torch.optim.Adam(actor_params, lr=config.actor_lr)
         # Critic optimizer: critic MLP only
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(),
@@ -677,6 +706,7 @@ class LSTMPPOBrain(ClassicalBrain):
             config.rollout_buffer_size,
             self.device,
             rng=self.rng,
+            continuous_actions=self.continuous,
         )
 
         # ── Hidden state ──
@@ -692,7 +722,7 @@ class LSTMPPOBrain(ClassicalBrain):
 
         # Pending step data (stored in run_brain, consumed in learn)
         self._pending_features: np.ndarray | None = None
-        self._pending_action: int = 0
+        self._pending_action: int | np.ndarray = 0
         self._pending_log_prob: float = 0.0
         self._pending_value: float = 0.0
         self._pending_h_state: torch.Tensor = self.h_t.squeeze(0).squeeze(0).clone()
@@ -867,6 +897,11 @@ class LSTMPPOBrain(ClassicalBrain):
         self.h_t = h_new
         self.c_t = c_new
 
+        if self.continuous:
+            # Continuous mode bypasses the TEI/logit bias path (TEI biases discrete
+            # logits, which don't exist here).
+            return self._run_brain_continuous_step(h_out, features, h_pre, c_pre)
+
         # Freeze the tei_prior snapshot on the rollout's first step so
         # ``_check_tei_prior_snapshot`` can detect mid-window mutation.
         if not self._tei_prior_rollout_snapshot_active:
@@ -933,6 +968,69 @@ class LSTMPPOBrain(ClassicalBrain):
 
         return [self.latest_data.action]
 
+    def _run_brain_continuous_step(
+        self,
+        h_out: torch.Tensor,
+        features: np.ndarray,
+        h_pre: torch.Tensor,
+        c_pre: torch.Tensor | None,
+    ) -> list[ActionData]:
+        """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
+
+        Parameters
+        ----------
+        h_out : torch.Tensor
+            The recurrent output for the current step.
+        features : np.ndarray
+            Preprocessed sensory features (stored for the BPTT replay).
+        h_pre, c_pre : torch.Tensor | None
+            The pre-step hidden/cell states (stored for chunk replay).
+
+        Returns
+        -------
+        list[ActionData]
+            A single-element list whose ``continuous`` carries the normalized
+            ``(speed, turn)`` action.
+
+        Notes
+        -----
+        Samples from the tanh-squashed Gaussian head and stores the pre-squash
+        sample for the PPO update; the environment rescales the normalized action
+        to physical units. The TEI/logit-bias path is skipped (no logits here).
+        """
+        with torch.no_grad():
+            mean = self.actor(h_out)
+            action_vec, log_prob_t, _entropy_t, pre_tanh = continuous_sample_tanh_gaussian(
+                mean,
+                self.log_std,
+                self._action_low,
+                self._action_high,
+            )
+            value = self.critic(h_out.detach()).item()
+
+        continuous_action = (action_vec[0].item(), action_vec[1].item())
+
+        self._pending_features = features
+        self._pending_action = pre_tanh.detach().cpu().numpy()
+        self._pending_log_prob = float(log_prob_t)
+        self._pending_value = value
+        self._pending_h_state = h_pre
+        self._pending_c_state = c_pre
+        self._pending_bias = None  # no TEI bias in continuous mode
+
+        self.current_probabilities = None
+        action_data = ActionData(
+            state="continuous",
+            action=None,
+            probability=torch.exp(log_prob_t.detach()).item(),
+            continuous=continuous_action,
+        )
+        self.latest_data.action = action_data
+        self.history_data.actions.append(action_data)
+        self.history_data.probabilities.append(action_data.probability)
+        self._step_count += 1
+        return [action_data]
+
     def learn(
         self,
         params: BrainParams,  # noqa: ARG002
@@ -967,7 +1065,7 @@ class LSTMPPOBrain(ClassicalBrain):
             self.buffer.reset()
             self._reset_tei_prior_rollout_snapshot()
 
-    def _perform_ppo_update(self) -> None:  # noqa: PLR0915
+    def _perform_ppo_update(self) -> None:  # noqa: PLR0915, PLR0912, C901
         """Perform PPO update with chunk-based truncated BPTT."""
         if len(self.buffer) == 0:
             return
@@ -1038,22 +1136,34 @@ class LSTMPPOBrain(ClassicalBrain):
                     # RNN forward (differentiable)
                     h_out, h, c = self._rnn_forward(normalized, h, c)
 
-                    # Actor: replay the per-step bias captured at
-                    # sampling time so the PPO ratio is exact under
-                    # sensory-conditional bias-networks. ``.to(device)``
-                    # handles the case where the snapshot was captured
-                    # on a different device than the live forward pass.
-                    logits = self.actor(h_out)
-                    step_bias = chunk["biases"][step_idx]
-                    if step_bias is not None:
-                        logits = logits + step_bias.to(logits.device)
-                    # Shared torch log-prob/entropy for the stored action
-                    # (differentiable, used inside the BPTT loop).
-                    action_idx = chunk["actions"][step_idx].item()
-                    log_prob, entropy, _probs = categorical_logprob_entropy_torch(
-                        logits,
-                        int(action_idx),
-                    )
+                    if self.continuous:
+                        # Re-score the stored pre-squash sample under the current
+                        # policy (no TEI bias in continuous mode).
+                        mean = self.actor(h_out)
+                        log_prob, entropy = continuous_evaluate_tanh_gaussian(
+                            mean,
+                            self.log_std,
+                            chunk["actions"][step_idx],
+                            self._action_low,
+                            self._action_high,
+                        )
+                    else:
+                        # Actor: replay the per-step bias captured at
+                        # sampling time so the PPO ratio is exact under
+                        # sensory-conditional bias-networks. ``.to(device)``
+                        # handles the case where the snapshot was captured
+                        # on a different device than the live forward pass.
+                        logits = self.actor(h_out)
+                        step_bias = chunk["biases"][step_idx]
+                        if step_bias is not None:
+                            logits = logits + step_bias.to(logits.device)
+                        # Shared torch log-prob/entropy for the stored action
+                        # (differentiable, used inside the BPTT loop).
+                        action_idx = chunk["actions"][step_idx].item()
+                        log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                            logits,
+                            int(action_idx),
+                        )
                     log_probs_list.append(log_prob)
                     entropies_list.append(entropy)
 
@@ -1094,10 +1204,15 @@ class LSTMPPOBrain(ClassicalBrain):
                 actor_loss = policy_loss - entropy_coef * mean_entropy
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
-                torch.nn.utils.clip_grad_norm_(
+                actor_clip_params = (
                     list(self.rnn.parameters())
                     + list(self.actor.parameters())
-                    + list(self.feature_norm.parameters()),
+                    + list(self.feature_norm.parameters())
+                )
+                if self.continuous:
+                    actor_clip_params.append(self.log_std)
+                torch.nn.utils.clip_grad_norm_(
+                    actor_clip_params,
                     self.config.max_grad_norm,
                 )
                 self.actor_optimizer.step()
@@ -1378,6 +1493,12 @@ class LSTMPPOBrain(ClassicalBrain):
             ),
         }
 
+        if self.continuous:
+            all_components["log_std"] = WeightComponent(
+                name="log_std",
+                state={"log_std": self.log_std.data.clone()},
+            )
+
         if components is None:
             return all_components
 
@@ -1401,6 +1522,8 @@ class LSTMPPOBrain(ClassicalBrain):
             self.actor.load_state_dict(components["policy"].state)
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
+        if "log_std" in components and self.continuous:
+            self.log_std.data.copy_(components["log_std"].state["log_std"])
 
         # Optimizers after networks
         if "actor_optimizer" in components:
