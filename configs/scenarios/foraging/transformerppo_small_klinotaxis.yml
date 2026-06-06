@@ -1,0 +1,73 @@
+# TransformerPPO klinotaxis foraging — small configuration (discrete grid).
+#
+# The Transformer (temporal-window self-attention) brain on the established
+# klinotaxis grid env — an attention-based temporal-memory comparator alongside
+# the LSTM/CfC recurrent baselines. Discrete action head. Env / sensing mirror
+# ``mlpppo_small_klinotaxis.yml``; the transformer attends over a rolling window
+# of the last ``window_size`` per-step feature vectors.
+
+max_steps: 1000
+brain:
+  name: transformerppo
+  config:
+    # Temporal window + encoder
+    window_size: 16
+    d_model: 64
+    nhead: 4
+    num_encoder_layers: 2
+    dim_feedforward: 128
+    dropout: 0.0
+
+    critic_hidden_dim: 64
+
+    # PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.03  # klinotaxis benefits from sustained exploration
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 4
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_klinotaxis by env-sensing mode
+      - proprioception   # Heading context so the brain can correlate dC/dt with movement
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
