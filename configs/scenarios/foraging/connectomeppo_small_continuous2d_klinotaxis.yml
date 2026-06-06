@@ -9,11 +9,13 @@
 # readout and unchanged. The brain emits a normalized ``(speed, turn)`` vector;
 # the environment rescales it to physical mm / radians.
 #
-# Tuning note: entropy_coef is set to 0.03 (vs the discrete klinotaxis lock of
-# 0.005) because continuous policies collapse under low entropy (see the
-# continuous-2d-action-heads evaluation R1-R4). This is an UNTUNED starting point
-# — a proper multi-seed connectome-continuous tune is deferred to the Gate-2
-# floor-check / evaluation campaign.
+# Tuning note (G2.d calibration, scratchpad R5/R6): entropy_coef is 0.10 — much
+# higher than the discrete klinotaxis lock (0.005), because continuous policies
+# collapse under low entropy (the MLP canary ramps then collapses at 0.03). At
+# 0.10 the connectome trains stably on continuous-2D (foraging ramps ~0.12 → ~0.3
+# foods/ep over 500 ep, no collapse) — a weak-but-positive learning signal that
+# clears the G2.d "didn't break training" floor. Foraging is far below the grid
+# scale (~9.5 foods/ep); continuous-2D is much harder, and G2.d is not a ranking.
 
 max_steps: 400  # continuous-2D klinotaxis; shorter than the grid baseline for a fast signal
 brain:
@@ -32,7 +34,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    entropy_coef: 0.03  # higher than the discrete lock (0.005) — continuous collapses at low entropy
+    entropy_coef: 0.1  # continuous needs higher entropy than discrete — see header (G2.d R5/R6)
     learning_rate: 0.001
     rollout_buffer_size: 256
     num_epochs: 10
