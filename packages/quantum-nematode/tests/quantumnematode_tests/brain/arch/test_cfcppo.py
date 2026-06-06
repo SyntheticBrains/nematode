@@ -256,9 +256,12 @@ class TestConstructionMotorHead:
             assert id(p) in actor_params
 
     def test_too_small_units_raises_clear_error(self) -> None:
-        """Units <= num_actions + 2 raises a clear AutoNCP-minimum error."""
-        # num_actions=4 -> need units > 6; units=6 must raise.
-        with pytest.raises(ValueError, match="units > num_actions"):
+        """Units <= motor_count + 2 raises a clear AutoNCP-minimum error.
+
+        In discrete mode ``motor_count == num_actions`` (here 4), so units=6 must
+        raise (need units > 6).
+        """
+        with pytest.raises(ValueError, match="units > motor_count"):
             _make_brain(units=6)
 
     def test_action_set_length_must_match_num_actions(self) -> None:

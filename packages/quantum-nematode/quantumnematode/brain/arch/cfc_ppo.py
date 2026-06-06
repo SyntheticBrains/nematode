@@ -60,7 +60,10 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
+    CONTINUOUS_ACTION_DIM,
     categorical_logprob_entropy_torch,
+    continuous_evaluate_tanh_gaussian,
+    continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._registry import register_brain
@@ -238,16 +241,21 @@ class CfCPPORolloutBuffer:
         buffer_size: int,
         device: torch.device,
         rng: np.random.Generator | None = None,
+        *,
+        continuous_actions: bool = False,
     ) -> None:
         self.buffer_size = buffer_size
         self.device = device
         self.rng = rng if rng is not None else np.random.default_rng()
+        # Discrete (default): int action indices stored as ``torch.long``.
+        # Continuous: per-step pre-squash sample vectors stored as ``torch.float32``.
+        self.continuous_actions = continuous_actions
         self.reset()
 
     def reset(self) -> None:
         """Clear all stored experience."""
         self.features: list[np.ndarray] = []
-        self.actions: list[int] = []
+        self.actions: list[int | np.ndarray] = []
         self.log_probs: list[float] = []
         self.values: list[float] = []
         self.rewards: list[float] = []
@@ -258,7 +266,7 @@ class CfCPPORolloutBuffer:
     def add(  # noqa: PLR0913
         self,
         features: np.ndarray,
-        action: int,
+        action: int | np.ndarray,
         log_prob: float,
         value: float,
         reward: float,
@@ -326,7 +334,14 @@ class CfCPPORolloutBuffer:
         # Shuffle chunk order for PPO
         chunk_order = self.rng.permutation(len(chunk_starts))
 
-        actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
+        if self.continuous_actions:
+            actions = torch.tensor(
+                np.array(self.actions),
+                dtype=torch.float32,
+                device=self.device,
+            )
+        else:
+            actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
         old_log_probs = torch.tensor(
             self.log_probs,
             dtype=torch.float32,
@@ -429,14 +444,23 @@ class CfCPPOBrain(ClassicalBrain):
             )
             raise ValueError(msg)
 
+        # Action mode: discrete (categorical) or continuous (tanh-squashed Gaussian
+        # over a normalized (speed, turn) vector; the env rescales to physical
+        # units). In continuous mode the AutoNCP motor pool + head produce the 2-D
+        # Gaussian mean, so the motor count is the continuous action dim.
+        self.continuous = config.action_mode == "continuous"
+        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
+        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        motor_count = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
+
         # Validate the AutoNCP minimum-units requirement up front with a clear
         # message — AutoNCP itself raises a less specific ValueError.
-        if config.units <= num_actions + _AUTONCP_MIN_UNITS_MARGIN:
+        if config.units <= motor_count + _AUTONCP_MIN_UNITS_MARGIN:
             msg = (
-                f"CfCPPOBrain requires units > num_actions + {_AUTONCP_MIN_UNITS_MARGIN} "
+                f"CfCPPOBrain requires units > motor_count + {_AUTONCP_MIN_UNITS_MARGIN} "
                 f"(the AutoNCP minimum-units requirement); got units={config.units}, "
-                f"num_actions={num_actions} "
-                f"(need units > {num_actions + _AUTONCP_MIN_UNITS_MARGIN})."
+                f"motor_count={motor_count} "
+                f"(need units > {motor_count + _AUTONCP_MIN_UNITS_MARGIN})."
             )
             raise ValueError(msg)
 
@@ -469,7 +493,8 @@ class CfCPPOBrain(ClassicalBrain):
         self.feature_norm = nn.LayerNorm(self.input_dim).to(self.device)
 
         # CfC recurrent core with the connectome-structured AutoNCP wiring.
-        wiring = AutoNCP(config.units, num_actions, sparsity_level=config.ncp_sparsity)
+        # ``motor_count`` motor neurons → discrete logits OR the continuous mean.
+        wiring = AutoNCP(config.units, motor_count, sparsity_level=config.ncp_sparsity)
         self.cfc = CfC(self.input_dim, wiring, mode=config.cfc_mode).to(self.device)
 
         # Actor head.
@@ -488,8 +513,12 @@ class CfCPPOBrain(ClassicalBrain):
                 input_dim=config.units,
                 hidden_dim=config.actor_hidden_dim,
                 num_layers=config.actor_num_layers,
-                output_dim=num_actions,
+                output_dim=motor_count,
             ).to(self.device)
+
+        # Continuous mode: state-independent learnable log-std (one per action dim).
+        if self.continuous:
+            self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
         # Critic MLP on the detached hidden state.
         self.critic = _CfCPPOCritic(
@@ -500,15 +529,12 @@ class CfCPPOBrain(ClassicalBrain):
 
         # ── Optimizers ──
 
-        # Actor optimizer: CfC core + input LayerNorm + (logit_scale | actor MLP).
-        actor_params: list[nn.Parameter] = list(self.cfc.parameters()) + list(
-            self.feature_norm.parameters(),
+        # Actor optimizer: CfC core + input LayerNorm + (logit_scale | actor MLP)
+        # + log_std in continuous mode (shared with the grad-clip param list).
+        self.actor_optimizer = torch.optim.Adam(
+            self._actor_parameters(),
+            lr=config.actor_lr,
         )
-        if self.logit_scale is not None:
-            actor_params.append(self.logit_scale)
-        if self.actor is not None:
-            actor_params += list(self.actor.parameters())
-        self.actor_optimizer = torch.optim.Adam(actor_params, lr=config.actor_lr)
         # Critic optimizer: critic MLP only.
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(),
@@ -520,6 +546,7 @@ class CfCPPOBrain(ClassicalBrain):
             config.rollout_buffer_size,
             self.device,
             rng=self.rng,
+            continuous_actions=self.continuous,
         )
 
         # ── Hidden state ──
@@ -533,13 +560,13 @@ class CfCPPOBrain(ClassicalBrain):
 
         # Pending step data (stored in run_brain, consumed in learn)
         self._pending_features: np.ndarray | None = None
-        self._pending_action: int = 0
+        self._pending_action: int | np.ndarray = 0
         self._pending_log_prob: float = 0.0
         self._pending_value: float = 0.0
         self._pending_h_state: torch.Tensor = self.h_t.squeeze(0).clone()
 
         # Parameter count logging
-        actor_param_count = sum(p.numel() for p in actor_params)
+        actor_param_count = sum(p.numel() for p in self._actor_parameters())
         critic_param_count = sum(p.numel() for p in self.critic.parameters())
         logger.info(
             f"CfCPPOBrain initialized: actor_head={self.actor_head}, "
@@ -615,6 +642,8 @@ class CfCPPOBrain(ClassicalBrain):
             params.append(self.logit_scale)
         if self.actor is not None:
             params += list(self.actor.parameters())
+        if self.continuous:
+            params.append(self.log_std)
         return params
 
     # ──────────────────────────────────────────────────────────────────
@@ -642,11 +671,19 @@ class CfCPPOBrain(ClassicalBrain):
         with torch.no_grad():
             normalized = self.feature_norm(features_t)
             motor_out, h_new = self._cfc_forward(normalized, self.h_t)
-            logits = self._logits_from_hidden(motor_out, h_new)
-            action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
+            head_out = self._logits_from_hidden(motor_out, h_new)
+            value = self.critic(h_new.squeeze(0).detach()).item()
 
         # Update hidden state.
         self.h_t = h_new
+
+        if self.continuous:
+            # ``head_out`` is the 2-D Gaussian mean; sample a normalized
+            # ``(speed, turn)`` (the env rescales to physical units).
+            return self._run_brain_continuous_step(head_out, features, h_pre, value)
+
+        logits = head_out
+        action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
 
         # Sample action (numpy RNG kept verbatim — trajectory byte-identical).
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
@@ -660,10 +697,6 @@ class CfCPPOBrain(ClassicalBrain):
             int(action_idx),
         )
         log_prob = float(log_prob_t)
-
-        # Critic value (detached hidden state).
-        with torch.no_grad():
-            value = self.critic(h_new.squeeze(0).detach()).item()
 
         # Store pending data for learn().
         self._pending_features = features
@@ -693,6 +726,66 @@ class CfCPPOBrain(ClassicalBrain):
             )
 
         return [self.latest_data.action]
+
+    def _run_brain_continuous_step(
+        self,
+        mean: torch.Tensor,
+        features: np.ndarray,
+        h_pre: torch.Tensor,
+        value: float,
+    ) -> list[ActionData]:
+        """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
+
+        Parameters
+        ----------
+        mean : torch.Tensor
+            The 2-D Gaussian mean from the motor/MLP head.
+        features : np.ndarray
+            Preprocessed sensory features (stored for the BPTT replay).
+        h_pre : torch.Tensor
+            The pre-step hidden state (stored for chunk replay).
+        value : float
+            The critic value estimate for the current step.
+
+        Returns
+        -------
+        list[ActionData]
+            A single-element list whose ``continuous`` carries the normalized
+            ``(speed, turn)`` action.
+
+        Notes
+        -----
+        Samples from the tanh-squashed Gaussian head and stores the pre-squash
+        sample for the PPO update; the environment rescales the normalized action
+        to physical units.
+        """
+        with torch.no_grad():
+            action_vec, log_prob_t, _entropy_t, pre_tanh = continuous_sample_tanh_gaussian(
+                mean,
+                self.log_std,
+                self._action_low,
+                self._action_high,
+            )
+        continuous_action = (action_vec[0].item(), action_vec[1].item())
+
+        self._pending_features = features
+        self._pending_action = pre_tanh.detach().cpu().numpy()
+        self._pending_log_prob = float(log_prob_t)
+        self._pending_value = value
+        self._pending_h_state = h_pre
+
+        self.current_probabilities = None
+        action_data = ActionData(
+            state="continuous",
+            action=None,
+            probability=torch.exp(log_prob_t.detach()).item(),
+            continuous=continuous_action,
+        )
+        self.latest_data.action = action_data
+        self.history_data.actions.append(action_data)
+        self.history_data.probabilities.append(action_data.probability)
+        self._step_count += 1
+        return [action_data]
 
     def learn(
         self,
@@ -804,15 +897,24 @@ class CfCPPOBrain(ClassicalBrain):
 
                     # CfC forward (differentiable).
                     motor_out, h = self._cfc_forward(normalized, h)
-                    logits = self._logits_from_hidden(motor_out, h)
+                    head_out = self._logits_from_hidden(motor_out, h)
 
                     # Shared torch log-prob/entropy for the stored action
                     # (differentiable, used inside the BPTT loop).
-                    action_idx = int(chunk["actions"][step_idx].item())
-                    log_prob, entropy, _probs = categorical_logprob_entropy_torch(
-                        logits,
-                        action_idx,
-                    )
+                    if self.continuous:
+                        log_prob, entropy = continuous_evaluate_tanh_gaussian(
+                            head_out,
+                            self.log_std,
+                            chunk["actions"][step_idx],
+                            self._action_low,
+                            self._action_high,
+                        )
+                    else:
+                        action_idx = int(chunk["actions"][step_idx].item())
+                        log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                            head_out,
+                            action_idx,
+                        )
                     log_probs_list.append(log_prob)
                     entropies_list.append(entropy)
 
@@ -983,6 +1085,12 @@ class CfCPPOBrain(ClassicalBrain):
             ),
         }
 
+        if self.continuous:
+            all_components["log_std"] = WeightComponent(
+                name="log_std",
+                state={"log_std": self.log_std.data.clone()},
+            )
+
         if components is None:
             return all_components
 
@@ -992,7 +1100,7 @@ class CfCPPOBrain(ClassicalBrain):
             raise ValueError(msg)
         return {k: v for k, v in all_components.items() if k in components}
 
-    def load_weight_components(
+    def load_weight_components(  # noqa: C901
         self,
         components: dict[str, WeightComponent],
     ) -> None:
@@ -1015,6 +1123,8 @@ class CfCPPOBrain(ClassicalBrain):
                 self.actor.load_state_dict(actor_state)
         if "critic" in components:
             self.critic.load_state_dict(components["critic"].state)
+        if "log_std" in components and self.continuous:
+            self.log_std.data.copy_(components["log_std"].state["log_std"])
 
         # Optimizers after networks.
         if "actor_optimizer" in components:
