@@ -207,13 +207,17 @@ class TestCopyPreservesContinuousState:
         # Move off-centre so the float position + heading are non-default.
         env.move_agent_continuous(1.5, math.pi / 3)
         src = _state(env)
+        # Snapshot the source value (pos_continuous is a tuple, so this is by
+        # value) — `src` itself aliases the live env state, so comparing against
+        # `src.pos_continuous` after the move would be tautological.
+        pos_before = src.pos_continuous
         clone = env.copy()
         cloned = clone.agents[DEFAULT_AGENT_ID]
-        assert cloned.pos_continuous == src.pos_continuous
+        assert cloned.pos_continuous == pos_before
         assert cloned.heading_rad == src.heading_rad
         # And the clone is independent — moving it leaves the source untouched.
         clone.move_agent_continuous(1.0, 0.0)
-        assert _state(env).pos_continuous == src.pos_continuous
+        assert _state(env).pos_continuous == pos_before
 
 
 class TestGridSubstrateUnchanged:
