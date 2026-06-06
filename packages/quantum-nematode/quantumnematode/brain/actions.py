@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class Action(StrEnum):  # pragma: no cover
@@ -39,19 +39,42 @@ class ActionData(BaseModel):  # pragma: no cover
     ----------
     state : str
         The current state of the agent.
-    action : Action
-        The discrete action taken by the agent (grid substrate).
+    action : Action | None
+        The discrete action taken by the agent (grid substrate), or ``None`` in
+        continuous mode where the action is carried by ``continuous`` instead.
     probability : float
         The probability of taking the action in the current state.
     continuous : tuple[float, float] | None
         The continuous action ``(speed, turn)`` on the continuous-2D substrate,
-        or ``None`` on the discrete grid substrate. Additive and optional so the
-        discrete path is unaffected; the continuous-consumption dispatch (and any
-        relaxation of ``action`` to optional) lands with the continuous-2D
-        environment wiring.
+        or ``None`` on the discrete grid substrate. On the continuous substrate the
+        values are normalized (``speed ∈ [0, 1]``, ``turn ∈ [-1, 1]``); the
+        environment rescales them to physical units.
     """
 
     state: str
-    action: Action
+    action: Action | None = None
     probability: float
     continuous: tuple[float, float] | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_action_payload(self) -> "ActionData":
+        """Require exactly one of ``action`` (discrete) or ``continuous`` (continuous-2D).
+
+        Returns
+        -------
+        ActionData
+            The validated instance.
+
+        Raises
+        ------
+        ValueError
+            If both ``action`` and ``continuous`` are set, or neither is.
+        """
+        if (self.action is None) == (self.continuous is None):
+            msg = (
+                "ActionData requires exactly one of `action` (discrete) or "
+                "`continuous` (continuous-2D) to be set, not both or neither; "
+                f"got action={self.action!r}, continuous={self.continuous!r}."
+            )
+            raise ValueError(msg)
+        return self

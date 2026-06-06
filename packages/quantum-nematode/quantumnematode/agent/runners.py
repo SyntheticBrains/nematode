@@ -730,7 +730,9 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             if isinstance(agent.env, Continuous2DEnvironment):
                 if top_action.continuous is not None:
-                    agent.env.move_agent_continuous(
+                    # Continuous-action brains emit a normalized (speed, turn); the
+                    # env rescales to physical units.
+                    agent.env.move_agent_normalized(
                         *top_action.continuous,
                         agent_id=agent.agent_id,
                     )

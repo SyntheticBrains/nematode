@@ -121,7 +121,9 @@ def test_strong_bias_elevates_action_0_probability_above_chance_floor() -> None:
             top_randomize=False,
         )
         # ActionData.action is the sampled action enum; map back to its index.
-        action_idx = brain.action_set.index(actions[0].action)
+        action = actions[0].action
+        assert action is not None  # discrete brain always emits an action
+        action_idx = brain.action_set.index(action)
         if action_idx == 0:
             action_0_count += 1
 
@@ -593,7 +595,9 @@ def test_substrate_bias_network_elevates_target_action() -> None:
             top_only=False,
             top_randomize=False,
         )
-        action_counts[brain.action_set.index(actions[0].action)] += 1
+        action = actions[0].action
+        assert action is not None  # discrete brain always emits an action
+        action_counts[brain.action_set.index(action)] += 1
     p_action_2 = action_counts[2] / n_steps
     assert p_action_2 > 0.5, f"action-2 frequency {p_action_2} not above 0.5"
 

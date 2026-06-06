@@ -26,16 +26,22 @@ class RolloutBuffer:
         buffer_size: int,
         device: torch.device,
         rng: np.random.Generator | None = None,
+        *,
+        continuous_actions: bool = False,
     ) -> None:
         self.buffer_size = buffer_size
         self.device = device
         self.rng = rng if rng is not None else np.random.default_rng()
+        # Discrete (default): actions are int indices stored as ``torch.long``.
+        # Continuous: actions are the per-step pre-squash sample vectors
+        # (``pre_tanh``, shape ``(action_dim,)``) stored as ``torch.float32``.
+        self.continuous_actions = continuous_actions
         self.reset()
 
     def reset(self) -> None:
         """Clear all stored experience."""
         self.states: list[np.ndarray] = []
-        self.actions: list[int] = []
+        self.actions: list[int | np.ndarray] = []
         self.log_probs: list[torch.Tensor] = []
         self.values: list[torch.Tensor] = []
         self.rewards: list[float] = []
@@ -45,7 +51,7 @@ class RolloutBuffer:
     def add(  # noqa: PLR0913
         self,
         state: np.ndarray,
-        action: int,
+        action: int | np.ndarray,
         log_prob: torch.Tensor,
         value: torch.Tensor,
         reward: float,
@@ -104,7 +110,15 @@ class RolloutBuffer:
         minibatch_size = max(1, batch_size // num_minibatches)
 
         states = torch.tensor(np.array(self.states), dtype=torch.float32, device=self.device)
-        actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
+        if self.continuous_actions:
+            # Stored pre-squash sample vectors → (batch, action_dim) float tensor.
+            actions = torch.tensor(
+                np.array(self.actions),
+                dtype=torch.float32,
+                device=self.device,
+            )
+        else:
+            actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
         old_log_probs = torch.stack(self.log_probs)
 
         # Normalize advantages

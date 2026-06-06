@@ -356,7 +356,9 @@ class TestRunBrain:
                 top_only=False,
                 top_randomize=False,
             )
-            sampled_actions.append(result[0].action)
+            action = result[0].action
+            assert action is not None  # discrete brain always emits an action
+            sampled_actions.append(action)
 
         stacked = torch.stack(all_logits)  # (128, 4)
         # Variance across the 128 samples, per action
