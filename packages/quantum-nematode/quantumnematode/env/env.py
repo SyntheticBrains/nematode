@@ -514,6 +514,14 @@ class AgentState:
         Aerotaxis comfort zone step counter.
     total_aerotaxis_steps : int
         Total steps with aerotaxis active.
+    pos_continuous : tuple[float, float] | None
+        Continuous-2D float position (the truth on the continuous substrate). The
+        integer ``position`` is kept as a rounded discretized view for inherited
+        grid-coupled readers. ``None`` on the discrete grid substrate. Additive and
+        optional so the grid env's integer type contract is unchanged.
+    heading_rad : float
+        Continuous-2D heading angle in radians (continuous-substrate kinematics).
+        Unused on the discrete grid (which tracks heading via ``direction``).
     """
 
     agent_id: str
@@ -528,6 +536,9 @@ class AgentState:
     total_thermotaxis_steps: int = 0
     steps_in_oxygen_comfort_zone: int = 0
     total_aerotaxis_steps: int = 0
+    # Continuous-2D substrate: additive, optional — None/unused on the grid.
+    pos_continuous: tuple[float, float] | None = None
+    heading_rad: float = 0.0
 
 
 class Predator:
@@ -3970,6 +3981,32 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return [*cleaned_lines, ""]
 
+    def _new_like(self) -> "DynamicForagingEnvironment":
+        """Construct a fresh same-type env carrying this env's *configuration* only.
+
+        Constructor hook used by `copy()`. Subclasses (e.g. the continuous-2D env)
+        override this so a clone is built as their own type with their own substrate
+        parameters; `copy()` then transfers the runtime state (foods, RNG, agents,
+        predators, …) into whatever instance this returns.
+        """
+        return DynamicForagingEnvironment(
+            grid_size=self.grid_size,
+            start_pos=(self.agent_pos[0], self.agent_pos[1]),
+            viewport_size=self.viewport_size,
+            max_body_length=len(self.body),
+            theme=self.theme,
+            action_set=self.action_set,
+            rich_style_config=self.rich_style_config,
+            seed=self.seed,
+            foraging=self.foraging,
+            predator=self.predator,
+            health=self.health,
+            thermotaxis=self.thermotaxis,
+            aerotaxis=self.aerotaxis,
+            pheromones=self.pheromones,
+            social_feeding=self.social_feeding,
+        )
+
     def copy(self) -> "DynamicForagingEnvironment":
         """
         Create a deep copy of the DynamicForagingEnvironment.
@@ -3992,23 +4029,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Manyworlds mode does not currently support multi-agent pheromone state
         branching; this is a known limitation to be addressed if needed.
         """
-        new_env = DynamicForagingEnvironment(
-            grid_size=self.grid_size,
-            start_pos=(self.agent_pos[0], self.agent_pos[1]),
-            viewport_size=self.viewport_size,
-            max_body_length=len(self.body),
-            theme=self.theme,
-            action_set=self.action_set,
-            rich_style_config=self.rich_style_config,
-            seed=self.seed,
-            foraging=self.foraging,
-            predator=self.predator,
-            health=self.health,
-            thermotaxis=self.thermotaxis,
-            aerotaxis=self.aerotaxis,
-            pheromones=self.pheromones,
-            social_feeding=self.social_feeding,
-        )
+        new_env = self._new_like()
         new_env.foods = self.foods.copy()
         # Copy RNG state for reproducibility. We construct a fresh
         # Generator from the same seed and then transfer the source
@@ -4037,6 +4058,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 total_thermotaxis_steps=state.total_thermotaxis_steps,
                 steps_in_oxygen_comfort_zone=state.steps_in_oxygen_comfort_zone,
                 total_aerotaxis_steps=state.total_aerotaxis_steps,
+                # Continuous-2D float position + heading (None / 0.0 on the grid
+                # substrate); preserved so a copied continuous env keeps its worm
+                # where it was rather than dropping back to the integer view.
+                pos_continuous=state.pos_continuous,
+                heading_rad=state.heading_rad,
             )
         if self.predator.enabled:
             # Preserve source predator_id, brain state, AND per-predator
@@ -4052,7 +4078,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
             # boundaries (env-snapshot, evolution-loop replay).
             new_env.predators = []
             for p in self.predators:
-                cloned = new_env._make_predator(
+                # Same-class private call: cloning predators into a sibling env.
+                # (`new_env` is now built via `_new_like()`, so ruff no longer
+                # infers its type from a direct constructor — hence the explicit
+                # suppression for this legitimate self-type access.)
+                cloned = new_env._make_predator(  # noqa: SLF001
                     predator_id=p.predator_id,
                     position=p.position,
                     movement_accumulator=p.movement_accumulator,

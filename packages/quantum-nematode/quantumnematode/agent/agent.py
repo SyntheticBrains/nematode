@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -107,6 +108,49 @@ def _compute_lateral_offsets(
         # STAY: default to UP-like offsets (caller should use _last_heading)
         left = (max(0, x - 1), y)
         right = (min(max_idx, x + 1), y)
+    return left, right
+
+
+def _continuous_lateral_offsets(
+    position: tuple[int, int],
+    heading_rad: float,
+    sweep: int,
+    grid_size: int,
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Compute left/right head-sweep sample cells for a continuous heading.
+
+    Samples the integer cells ``sweep`` cells to the left (+90deg) and right (-90deg) of
+    ``heading_rad``, clamped to grid bounds. Sources + sensing live on the integer
+    lattice within the continuous arena (the worm moves continuously); this matches
+    ``_compute_lateral_offsets`` at cardinal headings and rotates smoothly otherwise.
+
+    Parameters
+    ----------
+    position : tuple[int, int]
+        The worm's (rounded) integer cell.
+    heading_rad : float
+        Continuous heading angle in radians.
+    sweep : int
+        Lateral sweep in cells (>= 1).
+    grid_size : int
+        Coordinate extent for boundary clamping.
+
+    Returns
+    -------
+    tuple[tuple[int, int], tuple[int, int]]
+        ``(left_position, right_position)`` clamped to ``[0, grid_size - 1]``.
+    """
+    perp_x = -math.sin(heading_rad)
+    perp_y = math.cos(heading_rad)
+    max_idx = grid_size - 1
+    left = (
+        min(max_idx, max(0, round(position[0] + sweep * perp_x))),
+        min(max_idx, max(0, round(position[1] + sweep * perp_y))),
+    )
+    right = (
+        min(max_idx, max(0, round(position[0] - sweep * perp_x))),
+        min(max_idx, max(0, round(position[1] - sweep * perp_y))),
+    )
     return left, right
 
 
@@ -756,15 +800,28 @@ class QuantumNematodeAgent:
         )
         if any_klinotaxis:
             agent_state = self.env.agents[self.agent_id]
-            heading = agent_state.direction
-            if heading != Direction.STAY:
-                self._last_heading = heading
-            effective_heading = self._last_heading
-            left_pos, right_pos = _compute_lateral_offsets(
-                effective_heading,
-                agent_pos,
-                self.env.grid_size,
-            )
+            from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+            if isinstance(self.env, Continuous2DEnvironment):
+                # Continuous heading: sample integer cells perpendicular to
+                # heading_rad (>= 1-cell sweep). See `_continuous_lateral_offsets`.
+                sweep = max(1, round(self.env.continuous.sweep_amplitude_mm))
+                left_pos, right_pos = _continuous_lateral_offsets(
+                    agent_pos,
+                    agent_state.heading_rad,
+                    sweep,
+                    self.env.grid_size,
+                )
+            else:
+                heading = agent_state.direction
+                if heading != Direction.STAY:
+                    self._last_heading = heading
+                effective_heading = self._last_heading
+                left_pos, right_pos = _compute_lateral_offsets(
+                    effective_heading,
+                    agent_pos,
+                    self.env.grid_size,
+                )
         else:
             left_pos = right_pos = agent_pos  # unused, avoids unbound variable
 
@@ -1325,22 +1382,43 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        self.env = DynamicForagingEnvironment(
-            grid_size=self.env.grid_size,
-            viewport_size=self.env.viewport_size,
-            max_body_length=self.max_body_length,
-            theme=self.env.theme,
-            rich_style_config=self.env.rich_style_config,
-            # Preserve params from original env
-            foraging=self.env.foraging,
-            predator=self.env.predator,
-            health=self.env.health,
-            thermotaxis=self.env.thermotaxis,
-            aerotaxis=self.env.aerotaxis,
-            pheromones=self.env.pheromones,
-            # Reproducibility: preserve seed from original environment
-            seed=self.env.seed,
-        )
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        if isinstance(self.env, Continuous2DEnvironment):
+            # Continuous-2D substrate: recreate the SAME env type (not the grid
+            # parent) so the continuous params + float positions survive the reset.
+            # Without this the env would silently revert to grid after the first run.
+            self.env = Continuous2DEnvironment(
+                continuous=self.env.continuous,
+                viewport_size=self.env.viewport_size,
+                max_body_length=self.max_body_length,
+                theme=self.env.theme,
+                rich_style_config=self.env.rich_style_config,
+                foraging=self.env.foraging,
+                predator=self.env.predator,
+                health=self.env.health,
+                thermotaxis=self.env.thermotaxis,
+                aerotaxis=self.env.aerotaxis,
+                pheromones=self.env.pheromones,
+                seed=self.env.seed,
+            )
+        else:
+            self.env = DynamicForagingEnvironment(
+                grid_size=self.env.grid_size,
+                viewport_size=self.env.viewport_size,
+                max_body_length=self.max_body_length,
+                theme=self.env.theme,
+                rich_style_config=self.env.rich_style_config,
+                # Preserve params from original env
+                foraging=self.env.foraging,
+                predator=self.env.predator,
+                health=self.env.health,
+                thermotaxis=self.env.thermotaxis,
+                aerotaxis=self.env.aerotaxis,
+                pheromones=self.env.pheromones,
+                # Reproducibility: preserve seed from original environment
+                seed=self.env.seed,
+            )
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation
         self.food_history = [list(self.env.foods)]

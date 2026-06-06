@@ -1,9 +1,8 @@
 """Byte-equivalence regression for the MLP-PPO migration onto ``_policy.py``.
 
-The shared action-policy module (T5 §1) replaced MLP-PPO's inline
+The shared action-policy module replaced MLP-PPO's inline
 ``softmax → Categorical → sample/log_prob/entropy``. The migration MUST be
-byte-exact for MLP-PPO (``add-continuous-2d-and-action-heads`` design.md D6 — no
-declared tolerance permitted for this brain).
+byte-exact for MLP-PPO — no declared tolerance permitted for this brain.
 
 This asserts the migrated `get_action_and_value` sampling path is **bitwise
 identical to the inline reference ops it replaced**, computed in the SAME run on

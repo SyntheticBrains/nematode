@@ -140,6 +140,9 @@ class StandardEpisodeRunner(EpisodeRunner):
 
     def __init__(self) -> None:
         """Initialize the standard episode runner."""
+        # One-time guard: warn if a continuous-2D env runs with a discrete brain
+        # (continuous-action heads not yet implemented) so the fallback isn't silent.
+        self._warned_discrete_on_continuous = False
 
     def _terminate_episode(  # noqa: PLR0913
         self,
@@ -717,7 +720,34 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             top_action = action[0]
 
-            agent.env.move_agent(top_action.action)
+            # Dispatch on the env type (env-driven, not brain-coupled): the
+            # continuous-2D env consumes the (speed, turn) vector; the grid env
+            # consumes the discrete Action. A continuous-action brain emits
+            # `continuous`; when it doesn't, the continuous env's _apply_movement
+            # runs a coherent discrete move (it re-syncs the float position), so
+            # the fallback is well-defined.
+            from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+            if isinstance(agent.env, Continuous2DEnvironment):
+                if top_action.continuous is not None:
+                    agent.env.move_agent_continuous(
+                        *top_action.continuous,
+                        agent_id=agent.agent_id,
+                    )
+                else:
+                    # Continuous env, discrete brain: continuous-action heads are not
+                    # active yet. Use a (coherent) discrete move and warn once.
+                    if not self._warned_discrete_on_continuous:
+                        logger.warning(
+                            "Continuous-2D environment received a discrete action "
+                            "(no (speed, turn) vector). Continuous-action heads are not "
+                            "active for this brain; using discrete movement on the "
+                            "continuous substrate.",
+                        )
+                        self._warned_discrete_on_continuous = True
+                    agent.env.move_agent_for(agent.agent_id, top_action.action)
+            else:
+                agent.env.move_agent_for(agent.agent_id, top_action.action)
 
             # Track step (will add satiety later if dynamic environment)
             agent._episode_tracker.track_step()
@@ -797,9 +827,13 @@ class StandardEpisodeRunner(EpisodeRunner):
             # runs this loop ~1000 times per episode, so the saved string
             # formatting is visible in 30-60 s LSTMPPO episodes.
             if logger.isEnabledFor(logging.INFO):
+                action_repr = (
+                    top_action.action.value
+                    if top_action.action is not None
+                    else top_action.continuous
+                )
                 logger.info(
-                    f"Step {agent._episode_tracker.steps}: "
-                    f"Action={top_action.action.value}, Reward={reward}",
+                    f"Step {agent._episode_tracker.steps}: Action={action_repr}, Reward={reward}",
                 )
 
                 # Log cumulative reward and average reward per step
@@ -916,6 +950,16 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
         # Get configuration
         config: ManyworldsModeConfig = kwargs.get("config", ManyworldsModeConfig())  # type: ignore[assignment]
         show_last_frame_only: bool = kwargs.get("show_last_frame_only", False)
+
+        # Many-worlds (superposition) mode relies on env.copy(), which on the
+        # continuous-2D substrate would lose the continuous type + params (the
+        # copy() override is future work). Fail clearly until then; single-world
+        # runs are the supported path for the continuous substrate.
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        if isinstance(agent.env, Continuous2DEnvironment):
+            msg = "Many-worlds mode is not yet supported on the continuous-2D substrate."
+            raise NotImplementedError(msg)
 
         # Initialize many-worlds mode
         agent.env.current_direction = Direction.UP

@@ -908,11 +908,48 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
     return sensing
 
 
+class Continuous2DConfig(BaseModel):
+    """Continuous-2D substrate parameters (physical scale: ~1 mm worm body).
+
+    Used only when ``EnvironmentConfig.env_type == "continuous_2d"``. Defaults are
+    biologically grounded and documented below; all are tunable. Rationale: wild
+    *C. elegans* assays are on cm-scale agar plates with a ~1 mm adult body, and a
+    single-point chemosensor perceives a local concentration + its derivative.
+    These set the geometry the worm navigates; they are not load-bearing
+    scientific claims.
+    """
+
+    # Square arena edge length in mm. ~5 cm plate region; aligns with a
+    # grid_size≈50 substrate at ~1 mm per former cell so episode lengths stay
+    # comparable to the T4 grid baseline. Must be positive (it sizes the arena
+    # and the derived integer extent).
+    world_size_mm: float = Field(default=50.0, gt=0.0)
+    # Adult C. elegans body length ≈ 1 mm — the reference unit for the others.
+    body_length_mm: float = Field(default=1.0, gt=0.0)
+    # Max forward displacement per step ≈ 1 body length (parity with the grid's
+    # one-cell-per-step granularity); continuous speed scales 0..this. Zero (a
+    # frozen worm) is permitted; negatives are not.
+    max_step_mm: float = Field(default=1.0, ge=0.0)
+    # Food is consumed when the worm is within this Euclidean radius (~1 body
+    # length of the nose), replacing exact grid-cell-equality consumption.
+    # Non-negative (zero means point-exact capture).
+    capture_radius_mm: float = Field(default=1.0, ge=0.0)
+    # Klinotaxis lateral head-sweep amplitude ≈ ½ body length, replacing the
+    # fixed ±1-cell offset; the worm samples concentration at ±this perpendicular
+    # to its heading. Non-negative (zero disables the lateral sweep).
+    sweep_amplitude_mm: float = Field(default=0.5, ge=0.0)
+
+
 class EnvironmentConfig(BaseModel):
     """Configuration for the dynamic foraging environment."""
 
     grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
+
+    # Substrate selector: the discrete grid (default, unchanged) or the
+    # continuous-2D substrate. See Continuous2DConfig for its parameters.
+    env_type: Literal["grid", "continuous_2d"] = "grid"
+    continuous: Continuous2DConfig | None = None
 
     # Nested configuration subsections
     foraging: ForagingConfig | None = None
@@ -923,6 +960,28 @@ class EnvironmentConfig(BaseModel):
     pheromones: PheromoneConfig | None = None
     social_feeding: SocialFeedingConfig | None = None
     sensing: SensingConfig | None = None
+
+    @model_validator(mode="after")
+    def _validate_continuous_env_type(self) -> "EnvironmentConfig":
+        """Reject a `continuous` block paired with a non-continuous `env_type`.
+
+        A `continuous: …` section only takes effect when `env_type ==
+        "continuous_2d"` (see `create_env_from_config`). Silently ignoring it on a
+        grid run hides a misconfigured YAML, so fail fast instead.
+        """
+        if self.continuous is not None and self.env_type != "continuous_2d":
+            msg = (
+                "EnvironmentConfig.continuous is set but env_type is "
+                f"{self.env_type!r}; a continuous-2D parameter block requires "
+                'env_type: "continuous_2d". Remove the continuous block or set '
+                "the matching env_type."
+            )
+            raise ValueError(msg)
+        return self
+
+    def get_continuous_config(self) -> Continuous2DConfig:
+        """Get continuous-2D configuration with defaults."""
+        return self.continuous or Continuous2DConfig()
 
     def get_foraging_config(self) -> ForagingConfig:
         """Get foraging configuration with defaults."""
@@ -2737,6 +2796,37 @@ def create_env_from_config(
     aerotaxis_config = env_config.get_aerotaxis_config()
     pheromone_config = env_config.get_pheromone_config()
     social_feeding_config = env_config.get_social_feeding_config()
+
+    if env_config.env_type == "continuous_2d":
+        # Continuous-2D substrate: subclass of DynamicForagingEnvironment, so the
+        # EnvironmentType alias (= DynamicForagingEnvironment) already covers it.
+        # grid_size is derived from world_size_mm inside the continuous env.
+        from quantumnematode.env.continuous_2d import (
+            Continuous2DEnvironment,
+            Continuous2DParams,
+        )
+
+        continuous_config = env_config.get_continuous_config()
+        return Continuous2DEnvironment(
+            continuous=Continuous2DParams(
+                world_size_mm=continuous_config.world_size_mm,
+                body_length_mm=continuous_config.body_length_mm,
+                max_step_mm=continuous_config.max_step_mm,
+                capture_radius_mm=continuous_config.capture_radius_mm,
+                sweep_amplitude_mm=continuous_config.sweep_amplitude_mm,
+            ),
+            viewport_size=env_config.viewport_size,
+            max_body_length=max_body_length if max_body_length is not None else 6,
+            theme=theme if theme is not None else ThemeEnum.ASCII,
+            seed=seed,
+            foraging=foraging_config.to_params(),
+            predator=predator_config.to_params(),
+            health=health_config.to_params(),
+            thermotaxis=thermotaxis_config.to_params(),
+            aerotaxis=aerotaxis_config.to_params(),
+            pheromones=pheromone_config.to_params(),
+            social_feeding=social_feeding_config.to_params(),
+        )
 
     return DynamicForagingEnvironment(
         grid_size=env_config.grid_size,

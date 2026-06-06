@@ -1,10 +1,8 @@
 """Unit tests for the shared action-policy helpers (`brain/arch/_policy.py`).
 
-Covers the discrete-mode scenarios at
-``openspec/changes/add-continuous-2d-and-action-heads/specs/continuous-action-policy/spec.md``:
-the helpers must reproduce the per-brain inline numerics exactly (byte-equivalent
-migration). Continuous (tanh-squashed Gaussian) helpers are tested when added by
-the continuous-action-heads work.
+Covers the discrete-mode scenarios: the helpers must reproduce the per-brain
+inline numerics exactly (byte-equivalent migration). Continuous (tanh-squashed
+Gaussian) helpers are tested when added by the continuous-action-heads work.
 """
 
 from __future__ import annotations
@@ -95,7 +93,7 @@ class TestCategoricalLogprobEntropyTorch:
         assert torch.isfinite(logits.grad).all()
 
     def test_close_to_manual_log_softmax_within_tolerance(self) -> None:
-        # Option B tolerance: torch log-prob vs the manual log(softmax)+eps the
+        # Tolerance: torch log-prob vs the manual log(softmax)+eps the
         # LSTM/CfC brains used. Deviation is float32 round-off for taken actions.
         logits = torch.tensor([1.3, -0.4, 0.8, 0.1])
         probs = torch.softmax(logits, dim=-1)
@@ -105,7 +103,7 @@ class TestCategoricalLogprobEntropyTorch:
             assert abs(float(log_prob) - manual) < 1e-5
 
     def test_entropy_close_to_manual_within_tolerance(self) -> None:
-        # Option B tolerance: torch entropy vs the manual -sum(p*log(p+1e-10))
+        # Tolerance: torch entropy vs the manual -sum(p*log(p+1e-10))
         # the LSTM/CfC/spiking brains used. Includes a saturated case to lock in
         # the no-log(0)/NaN guarantee (torch's Categorical.entropy clamps log).
         for logits in (
