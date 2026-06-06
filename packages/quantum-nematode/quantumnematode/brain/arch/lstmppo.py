@@ -889,7 +889,7 @@ class LSTMPPOBrain(ClassicalBrain):
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
         action_name = self.action_set[action_idx]
 
-        # Log probability via the shared torch helper (Option B): the numpy
+        # Log probability via the shared torch helper: the numpy
         # sampler above is unchanged so the trajectory is byte-identical; the
         # log-prob moves off the manual log(softmax)+eps onto torch's stabler
         # log_softmax (~1e-7 deviation), consistent with the update path below.
@@ -1047,8 +1047,8 @@ class LSTMPPOBrain(ClassicalBrain):
                     step_bias = chunk["biases"][step_idx]
                     if step_bias is not None:
                         logits = logits + step_bias.to(logits.device)
-                    # Shared torch log-prob/entropy for the stored action (Option B;
-                    # differentiable, used inside the BPTT loop).
+                    # Shared torch log-prob/entropy for the stored action
+                    # (differentiable, used inside the BPTT loop).
                     action_idx = chunk["actions"][step_idx].item()
                     log_prob, entropy, _probs = categorical_logprob_entropy_torch(
                         logits,

@@ -652,8 +652,8 @@ class CfCPPOBrain(ClassicalBrain):
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
         action_name = self.action_set[action_idx]
 
-        # Log probability via the shared torch helper (Option B): sampler above
-        # unchanged; log-prob moves off manual log(softmax)+eps onto torch's
+        # Log probability via the shared torch helper: the numpy sampler above is
+        # unchanged; the log-prob moves off manual log(softmax)+eps onto torch's
         # stabler log_softmax (~1e-7 deviation), consistent with the update path.
         log_prob_t, _entropy_t, _probs_t = categorical_logprob_entropy_torch(
             logits,
@@ -806,8 +806,8 @@ class CfCPPOBrain(ClassicalBrain):
                     motor_out, h = self._cfc_forward(normalized, h)
                     logits = self._logits_from_hidden(motor_out, h)
 
-                    # Shared torch log-prob/entropy for the stored action (Option B;
-                    # differentiable, used inside the BPTT loop).
+                    # Shared torch log-prob/entropy for the stored action
+                    # (differentiable, used inside the BPTT loop).
                     action_idx = int(chunk["actions"][step_idx].item())
                     log_prob, entropy, _probs = categorical_logprob_entropy_torch(
                         logits,
