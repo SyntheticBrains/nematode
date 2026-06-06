@@ -33,7 +33,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from 24 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 25 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
@@ -63,6 +63,7 @@ Choose from 24 brain architectures spanning quantum, classical, hybrid, and biol
 - **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
 - **CfCPPOBrain** (cfcppo): CfC (Closed-form Continuous-time) liquid neural network with AutoNCP wiring and continuous-time recurrent dynamics, PPO-trained — an alternative recurrent substrate for temporal sensing
+- **TransformerPPOBrain** (transformerppo): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — an attention-based temporal-memory comparator to the recurrent (LSTM/CfC) substrates
 - **FeedforwardGABrain** (feedforwardga): Feed-forward network whose weights are evolved by the genetic-algorithm optimizer (gradient-free), with graded episodic-progress fitness for sparse-reward cells
 
 **Biologically-Inspired:**

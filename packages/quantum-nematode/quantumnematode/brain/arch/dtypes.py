@@ -45,6 +45,7 @@ class BrainType(StrEnum):
     CFC_PPO = "cfcppo"
     SPIKING_PPO = "spikingppo"
     EQUIVARIANT_QUANTUM_PPO = "equivariantquantum"
+    TRANSFORMER_PPO = "transformerppo"
 
 
 class DeviceType(StrEnum):
@@ -113,6 +114,7 @@ BRAIN_TYPES = Literal[
     BrainType.CFC_PPO,
     BrainType.SPIKING_PPO,
     BrainType.EQUIVARIANT_QUANTUM_PPO,
+    BrainType.TRANSFORMER_PPO,
 ]
 
 

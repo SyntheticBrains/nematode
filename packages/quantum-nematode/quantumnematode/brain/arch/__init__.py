@@ -47,6 +47,7 @@ from .qsnnreinforce import QSNNReinforceBrain, QSNNReinforceBrainConfig
 from .qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from .spiking_ppo import SpikingPPOBrain, SpikingPPOBrainConfig
 from .spikingreinforce import SpikingReinforceBrain, SpikingReinforceBrainConfig
+from .transformer_ppo import TransformerPPOBrain, TransformerPPOBrainConfig
 
 # Every architecture module has now been imported and has self-registered
 # via its ``@register_brain`` decorator. Verify the registry and the
@@ -116,6 +117,8 @@ __all__ = [
     "SpikingPPOBrainConfig",
     "SpikingReinforceBrain",
     "SpikingReinforceBrainConfig",
+    "TransformerPPOBrain",
+    "TransformerPPOBrainConfig",
     "get_all_registrations",
     "get_registration",
     "instantiate_brain",

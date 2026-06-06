@@ -137,7 +137,7 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 24 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 25 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
@@ -174,6 +174,7 @@ The project supports 24 brain architectures across quantum, hybrid, classical, a
 22. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
 23. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
 24. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
+25. **TransformerPPOBrain** (`transformerppo`): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — attention-based temporal-memory comparator to the LSTM/CfC recurrent substrates
 
 Each brain architecture self-registers via the `@register_brain` decorator and follows a common interface defined in `quantumnematode.brain.arch`. See the [Plugin Developer Guide](docs/architecture/plugin-developer-guide.md) for how to add a new one.
 
