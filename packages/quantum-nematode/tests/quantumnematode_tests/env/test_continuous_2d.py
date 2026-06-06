@@ -1,9 +1,9 @@
-"""Unit tests for the continuous-2D environment kinematics (T5 §3.3).
+"""Unit tests for the continuous-2D environment.
 
-Covers the `continuous-2d-environment` spec scenarios reachable without the
-runner: float-position init, kinematic `(speed, turn)` movement, speed clamping,
-world-bound clamping, heading wrap, and point-worm body. Capture-radius /
-placement / Euclidean (§3.4) and klinotaxis sampling (§3.5) are tested when added.
+Covers the behaviours reachable without the runner: float-position init,
+kinematic `(speed, turn)` movement, speed clamping, world-bound clamping, heading
+wrap, point-worm body, capture-radius food, Euclidean distances, the coherent
+discrete-action fallback, and the grid-substrate regression smoke.
 """
 
 from __future__ import annotations
@@ -185,7 +185,7 @@ class TestCaptureRadius:
 
 
 class TestGridSubstrateUnchanged:
-    """§3.7: the grid substrate is byte-unaffected by the continuous additions.
+    """The grid substrate is byte-unaffected by the continuous additions.
 
     A focused regression smoke; the broader grid behaviour is covered by the full
     env + agent suites (~800 tests) that pass unchanged alongside this change.

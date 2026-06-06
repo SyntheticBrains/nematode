@@ -1,11 +1,10 @@
-"""Continuous-2D foraging environment (Phase 6 Tranche 5).
+"""Continuous-2D foraging environment.
 
 `Continuous2DEnvironment` subclasses `DynamicForagingEnvironment` and overrides
-only the grid-coupled behaviours — kinematic ``(speed, turn)`` movement here;
-capture-radius food consumption, continuous source placement, and Euclidean
-distances follow — so the already-continuous sensing / source / state machinery
-is reused (see the change design.md D1 and GitHub issue #206 for the eventual
-god-class decomposition).
+only the grid-coupled behaviours — kinematic ``(speed, turn)`` movement,
+capture-radius food consumption, and Euclidean distances — so the
+already-continuous sensing / source / state machinery is reused. (Decomposing the
+shared machinery into composable strategies is tracked in GitHub issue #206.)
 
 Positions: the float truth lives in ``AgentState.pos_continuous``; the integer
 ``AgentState.position`` is kept as a rounded discretized view for any inherited
@@ -82,7 +81,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         """Apply a discrete action, then re-sync the continuous float position.
 
         This is the discrete-action fallback path (used when a discrete-action brain
-        runs on the continuous substrate — continuous heads are a later phase). It
+        runs on the continuous substrate — continuous-action heads are not yet
+        implemented). It
         runs the inherited grid move, then mirrors the resulting integer ``position``
         into ``pos_continuous`` so sensing and capture (which read the float truth)
         stay coherent with the worm's actual cell. Continuous-action brains use
@@ -150,7 +150,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         """
         self._kinematic_move(self.agents[agent_id], speed, turn)
 
-    # ----- §3.4: capture-radius food consumption + Euclidean distances -----
+    # ----- capture-radius food consumption + Euclidean distances -----
     # Food sources remain on the integer lattice within the continuous arena
     # (inherited placement); the worm and capture are fully continuous. Float
     # food placement is deferred to avoid the `self.foods: list[tuple[int,int]]`

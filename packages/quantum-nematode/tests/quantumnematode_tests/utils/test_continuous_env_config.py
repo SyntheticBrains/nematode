@@ -1,8 +1,8 @@
-"""Tests for the continuous-2D environment configuration (T5 §3.1).
+"""Tests for the continuous-2D environment configuration.
 
-Covers the `configuration-system` spec scenarios for the continuous-2D fields:
-the `env_type` discriminator defaults to grid (existing configs unchanged), the
-continuous fields parse with documented defaults, and explicit overrides load.
+Covers the continuous-2D config fields: the `env_type` discriminator defaults to
+grid (existing configs unchanged), the continuous fields parse with documented
+defaults, explicit overrides load, and the factory selects the right env class.
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ class TestEnvironmentConfigEnvType:
 
 
 class TestFactoryDispatch:
-    """`create_env_from_config` selects the env class from `env_type` (§3.2)."""
+    """`create_env_from_config` selects the env class from `env_type`."""
 
     def test_grid_by_default(self) -> None:
         from quantumnematode.env.env import DynamicForagingEnvironment

@@ -1,4 +1,4 @@
-"""Unit tests for continuous-heading klinotaxis lateral sampling (T5 §3.5).
+"""Unit tests for continuous-heading klinotaxis lateral sampling.
 
 `_continuous_lateral_offsets` samples the integer cells perpendicular to a
 continuous heading. It must match the grid `_compute_lateral_offsets` at the four

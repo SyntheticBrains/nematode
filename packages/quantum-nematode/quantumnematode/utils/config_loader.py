@@ -914,9 +914,9 @@ class Continuous2DConfig(BaseModel):
     Used only when ``EnvironmentConfig.env_type == "continuous_2d"``. Defaults are
     biologically grounded and documented below; all are tunable. Rationale: wild
     *C. elegans* assays are on cm-scale agar plates with a ~1 mm adult body, and a
-    single-point chemosensor that perceives a local concentration + its derivative
-    (see the T5/T6 design notes). These set the geometry the worm navigates; they
-    are not load-bearing scientific claims.
+    single-point chemosensor perceives a local concentration + its derivative.
+    These set the geometry the worm navigates; they are not load-bearing
+    scientific claims.
     """
 
     # Square arena edge length in mm. ~5 cm plate region; aligns with a
@@ -944,7 +944,7 @@ class EnvironmentConfig(BaseModel):
     viewport_size: tuple[int, int] = (11, 11)
 
     # Substrate selector: the discrete grid (default, unchanged) or the
-    # continuous-2D substrate (T5). See Continuous2DConfig for its parameters.
+    # continuous-2D substrate. See Continuous2DConfig for its parameters.
     env_type: Literal["grid", "continuous_2d"] = "grid"
     continuous: Continuous2DConfig | None = None
 
@@ -2777,8 +2777,8 @@ def create_env_from_config(
     social_feeding_config = env_config.get_social_feeding_config()
 
     if env_config.env_type == "continuous_2d":
-        # Continuous-2D substrate (T5): subclass of DynamicForagingEnvironment, so
-        # the EnvironmentType alias (= DynamicForagingEnvironment) already covers it.
+        # Continuous-2D substrate: subclass of DynamicForagingEnvironment, so the
+        # EnvironmentType alias (= DynamicForagingEnvironment) already covers it.
         # grid_size is derived from world_size_mm inside the continuous env.
         from quantumnematode.env.continuous_2d import (
             Continuous2DEnvironment,

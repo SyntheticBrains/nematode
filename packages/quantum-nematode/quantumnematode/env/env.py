@@ -536,7 +536,7 @@ class AgentState:
     total_thermotaxis_steps: int = 0
     steps_in_oxygen_comfort_zone: int = 0
     total_aerotaxis_steps: int = 0
-    # Continuous-2D substrate (T5): additive, optional — None/unused on the grid.
+    # Continuous-2D substrate: additive, optional — None/unused on the grid.
     pos_continuous: tuple[float, float] | None = None
     heading_rad: float = 0.0
 

@@ -141,7 +141,7 @@ class StandardEpisodeRunner(EpisodeRunner):
     def __init__(self) -> None:
         """Initialize the standard episode runner."""
         # One-time guard: warn if a continuous-2D env runs with a discrete brain
-        # (continuous heads land in §4); avoids a silent grid-style-moves half-state.
+        # (continuous-action heads not yet implemented) so the fallback isn't silent.
         self._warned_discrete_on_continuous = False
 
     def _terminate_episode(  # noqa: PLR0913
@@ -720,12 +720,12 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             top_action = action[0]
 
-            # Dispatch on the env type (env-driven, not brain-coupled — Gate-2-safe):
-            # the continuous-2D env consumes the (speed, turn) vector; the grid env
+            # Dispatch on the env type (env-driven, not brain-coupled): the
+            # continuous-2D env consumes the (speed, turn) vector; the grid env
             # consumes the discrete Action. A continuous-action brain emits
-            # `continuous` (a later phase); when it doesn't, the continuous env's
-            # _apply_movement runs a coherent discrete move (it re-syncs the float
-            # position), so the fallback is well-defined.
+            # `continuous`; when it doesn't, the continuous env's _apply_movement
+            # runs a coherent discrete move (it re-syncs the float position), so
+            # the fallback is well-defined.
             from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
             if isinstance(agent.env, Continuous2DEnvironment):
@@ -739,7 +739,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                             "Continuous-2D environment received a discrete action "
                             "(no (speed, turn) vector). Continuous-action heads are not "
                             "active for this brain; using discrete movement on the "
-                            "continuous substrate. Continuous heads land in a later phase.",
+                            "continuous substrate.",
                         )
                         self._warned_discrete_on_continuous = True
                     agent.env.move_agent(top_action.action)
