@@ -14,7 +14,7 @@ grid-coupled reader, so the grid env's integer type contract is untouched.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from quantumnematode.env.env import (
@@ -77,6 +77,47 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         )
         self._init_continuous_positions()
 
+    def _new_like(self) -> Continuous2DEnvironment:
+        """Construct a fresh `Continuous2DEnvironment` with this env's configuration.
+
+        Overrides the base constructor hook so `copy()` clones as the continuous-2D
+        subclass (preserving the `Continuous2DParams` substrate), not the grid base.
+        Runtime state (foods, RNG, agents, predators, …) is transferred by the
+        inherited `copy()`.
+        """
+        return Continuous2DEnvironment(
+            continuous=replace(self.continuous),
+            start_pos=(self.agent_pos[0], self.agent_pos[1]),
+            viewport_size=self.viewport_size,
+            max_body_length=len(self.body),
+            theme=self.theme,
+            action_set=self.action_set,
+            rich_style_config=self.rich_style_config,
+            seed=self.seed,
+            foraging=self.foraging,
+            predator=self.predator,
+            health=self.health,
+            thermotaxis=self.thermotaxis,
+            aerotaxis=self.aerotaxis,
+            pheromones=self.pheromones,
+            social_feeding=self.social_feeding,
+        )
+
+    def copy(self) -> Continuous2DEnvironment:
+        """Deep-copy as a `Continuous2DEnvironment` (preserves continuous params + state).
+
+        Delegates to the inherited `copy()`, which builds the new instance via the
+        overridden `_new_like()` (so the substrate type and parameters survive) and
+        transfers all runtime state, including each agent's `pos_continuous` /
+        `heading_rad`.
+        """
+        new_env = super().copy()
+        # `_new_like()` guarantees the concrete type; narrow it for the type checker.
+        if not isinstance(new_env, Continuous2DEnvironment):  # pragma: no cover - defensive
+            msg = f"Expected Continuous2DEnvironment from copy(), got {type(new_env).__name__}"
+            raise TypeError(msg)
+        return new_env
+
     def _apply_movement(self, agent_state: AgentState, action: Action) -> None:
         """Apply a discrete action, then re-sync the continuous float position.
 
@@ -125,9 +166,12 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         heading = _wrap_to_pi(agent_state.heading_rad + float(turn))
         agent_state.heading_rad = heading
 
+        # Float truth is the origin; if it's somehow unset, fall back to the
+        # integer grid view (which is always synced) — NOT the world centre, which
+        # would teleport the worm to the middle of the arena on its first move.
         origin = agent_state.pos_continuous or (
-            self.continuous.world_size_mm / 2.0,
-            self.continuous.world_size_mm / 2.0,
+            float(agent_state.position[0]),
+            float(agent_state.position[1]),
         )
         world = self.continuous.world_size_mm
         new_x = min(world, max(0.0, origin[0] + speed * math.cos(heading)))

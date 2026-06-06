@@ -921,20 +921,23 @@ class Continuous2DConfig(BaseModel):
 
     # Square arena edge length in mm. ~5 cm plate region; aligns with a
     # grid_size≈50 substrate at ~1 mm per former cell so episode lengths stay
-    # comparable to the T4 grid baseline.
-    world_size_mm: float = 50.0
+    # comparable to the T4 grid baseline. Must be positive (it sizes the arena
+    # and the derived integer extent).
+    world_size_mm: float = Field(default=50.0, gt=0.0)
     # Adult C. elegans body length ≈ 1 mm — the reference unit for the others.
-    body_length_mm: float = 1.0
+    body_length_mm: float = Field(default=1.0, gt=0.0)
     # Max forward displacement per step ≈ 1 body length (parity with the grid's
-    # one-cell-per-step granularity); continuous speed scales 0..this.
-    max_step_mm: float = 1.0
+    # one-cell-per-step granularity); continuous speed scales 0..this. Zero (a
+    # frozen worm) is permitted; negatives are not.
+    max_step_mm: float = Field(default=1.0, ge=0.0)
     # Food is consumed when the worm is within this Euclidean radius (~1 body
     # length of the nose), replacing exact grid-cell-equality consumption.
-    capture_radius_mm: float = 1.0
+    # Non-negative (zero means point-exact capture).
+    capture_radius_mm: float = Field(default=1.0, ge=0.0)
     # Klinotaxis lateral head-sweep amplitude ≈ ½ body length, replacing the
     # fixed ±1-cell offset; the worm samples concentration at ±this perpendicular
-    # to its heading.
-    sweep_amplitude_mm: float = 0.5
+    # to its heading. Non-negative (zero disables the lateral sweep).
+    sweep_amplitude_mm: float = Field(default=0.5, ge=0.0)
 
 
 class EnvironmentConfig(BaseModel):
@@ -957,6 +960,24 @@ class EnvironmentConfig(BaseModel):
     pheromones: PheromoneConfig | None = None
     social_feeding: SocialFeedingConfig | None = None
     sensing: SensingConfig | None = None
+
+    @model_validator(mode="after")
+    def _validate_continuous_env_type(self) -> "EnvironmentConfig":
+        """Reject a `continuous` block paired with a non-continuous `env_type`.
+
+        A `continuous: …` section only takes effect when `env_type ==
+        "continuous_2d"` (see `create_env_from_config`). Silently ignoring it on a
+        grid run hides a misconfigured YAML, so fail fast instead.
+        """
+        if self.continuous is not None and self.env_type != "continuous_2d":
+            msg = (
+                "EnvironmentConfig.continuous is set but env_type is "
+                f"{self.env_type!r}; a continuous-2D parameter block requires "
+                'env_type: "continuous_2d". Remove the continuous block or set '
+                "the matching env_type."
+            )
+            raise ValueError(msg)
+        return self
 
     def get_continuous_config(self) -> Continuous2DConfig:
         """Get continuous-2D configuration with defaults."""

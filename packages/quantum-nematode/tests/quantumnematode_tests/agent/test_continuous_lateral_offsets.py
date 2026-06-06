@@ -16,12 +16,15 @@ from quantumnematode.agent.agent import (
 )
 from quantumnematode.env.env import Direction
 
-_POS = (10, 10)
-_GRID = 20
+_POS: tuple[int, int] = (10, 10)
+_GRID: int = 20
 
 
 class TestMatchesGridAtCardinals:
+    """Continuous sampling reduces to the grid offsets at the four cardinal headings."""
+
     def test_up(self) -> None:
+        """Heading +y (π/2) matches `Direction.UP`'s lateral offsets."""
         assert _continuous_lateral_offsets(_POS, math.pi / 2, 1, _GRID) == _compute_lateral_offsets(
             Direction.UP,
             _POS,
@@ -29,6 +32,7 @@ class TestMatchesGridAtCardinals:
         )
 
     def test_right(self) -> None:
+        """Heading +x (0) matches `Direction.RIGHT`'s lateral offsets."""
         assert _continuous_lateral_offsets(_POS, 0.0, 1, _GRID) == _compute_lateral_offsets(
             Direction.RIGHT,
             _POS,
@@ -36,6 +40,7 @@ class TestMatchesGridAtCardinals:
         )
 
     def test_down(self) -> None:
+        """Heading -y (-π/2) matches `Direction.DOWN`'s lateral offsets."""
         assert _continuous_lateral_offsets(
             _POS,
             -math.pi / 2,
@@ -48,6 +53,7 @@ class TestMatchesGridAtCardinals:
         )
 
     def test_left(self) -> None:
+        """Heading -x (π) matches `Direction.LEFT`'s lateral offsets."""
         assert _continuous_lateral_offsets(_POS, math.pi, 1, _GRID) == _compute_lateral_offsets(
             Direction.LEFT,
             _POS,
@@ -56,18 +62,22 @@ class TestMatchesGridAtCardinals:
 
 
 class TestRotatesAndClamps:
+    """Off-cardinal headings rotate the sample cells and stay clamped to bounds."""
+
     def test_diagonal_heading(self) -> None:
-        # Heading up-right (45°): left is up-left, right is down-right.
+        """A 45° heading puts the left sample up-left and the right sample down-right."""
         left, right = _continuous_lateral_offsets(_POS, math.pi / 4, 1, _GRID)
         assert left == (9, 11)
         assert right == (11, 9)
 
     def test_sweep_scales_offset(self) -> None:
+        """A larger sweep amplitude widens the perpendicular sample spacing."""
         left, right = _continuous_lateral_offsets(_POS, math.pi / 2, 3, _GRID)  # UP, sweep 3
         assert left == (7, 10)
         assert right == (13, 10)
 
     def test_clamped_to_bounds(self) -> None:
+        """A sample that would fall outside the grid clamps to the world edge."""
         # At the left edge, an upward heading's left sample clamps to x=0.
         left, _right = _continuous_lateral_offsets((0, 10), math.pi / 2, 3, _GRID)
         assert left[0] == 0

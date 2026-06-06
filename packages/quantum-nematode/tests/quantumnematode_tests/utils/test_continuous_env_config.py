@@ -89,3 +89,14 @@ class TestFactoryDispatch:
         assert isinstance(env, Continuous2DEnvironment)
         assert env.continuous.world_size_mm == 24.0
         assert env.grid_size == 24  # extent derived from world_size_mm
+
+    def test_continuous_2d_without_block_uses_default_config(self) -> None:
+        # No `continuous:` block — the factory must still build a continuous env
+        # via `get_continuous_config()` (the canonical default), NOT read the
+        # (None) `continuous` field directly.
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        config = EnvironmentConfig(env_type="continuous_2d")
+        env = create_env_from_config(config)
+        assert isinstance(env, Continuous2DEnvironment)
+        assert env.continuous.world_size_mm == config.get_continuous_config().world_size_mm

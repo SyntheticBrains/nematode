@@ -730,7 +730,10 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             if isinstance(agent.env, Continuous2DEnvironment):
                 if top_action.continuous is not None:
-                    agent.env.move_agent_continuous(*top_action.continuous)
+                    agent.env.move_agent_continuous(
+                        *top_action.continuous,
+                        agent_id=agent.agent_id,
+                    )
                 else:
                     # Continuous env, discrete brain: continuous-action heads are not
                     # active yet. Use a (coherent) discrete move and warn once.
@@ -742,9 +745,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                             "continuous substrate.",
                         )
                         self._warned_discrete_on_continuous = True
-                    agent.env.move_agent(top_action.action)
+                    agent.env.move_agent_for(agent.agent_id, top_action.action)
             else:
-                agent.env.move_agent(top_action.action)
+                agent.env.move_agent_for(agent.agent_id, top_action.action)
 
             # Track step (will add satiety later if dynamic environment)
             agent._episode_tracker.track_step()

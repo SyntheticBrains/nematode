@@ -2,7 +2,9 @@
 
 ### Requirement: Continuous-2D coordinate substrate
 
-The system SHALL provide a continuous-2D environment in which agent position, food sources, and predators are represented as real-valued `(x, y)` coordinates within world bounds expressed in physical units (millimetres), distinct from and selectable alongside the discrete grid environment. The grid environment SHALL remain unchanged and byte-stable.
+The system SHALL provide a continuous-2D environment in which the **agent position** is represented as real-valued `(x, y)` coordinates within world bounds expressed in physical units (millimetres), distinct from and selectable alongside the discrete grid environment. In this iteration **food sources and predators are positioned on the integer lattice** (discrete integer `(x, y)` coordinates within the world bounds in millimetres); the worm, its movement, capture, and distances are fully continuous. The grid environment SHALL remain unchanged and byte-stable.
+
+> Implementation note (non-normative): continuous real-valued *source* coordinates (float food/predator placement) are deferred to a future iteration — they would ripple the `self.foods: list[tuple[int, int]]` type — so sources remain lattice-positioned within the continuous arena for now.
 
 #### Scenario: Float agent position
 

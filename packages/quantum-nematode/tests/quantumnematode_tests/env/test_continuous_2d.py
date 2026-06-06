@@ -12,7 +12,7 @@ import math
 
 import pytest
 from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
-from quantumnematode.env.env import DEFAULT_AGENT_ID
+from quantumnematode.env.env import DEFAULT_AGENT_ID, AgentState
 
 
 def _env(
@@ -35,7 +35,7 @@ def _pos(env: Continuous2DEnvironment) -> tuple[float, float]:
     return pc
 
 
-def _state(env: Continuous2DEnvironment):
+def _state(env: Continuous2DEnvironment) -> AgentState:
     return env.agents[DEFAULT_AGENT_ID]
 
 
@@ -182,6 +182,38 @@ class TestCaptureRadius:
         env = _env()
         env.foods = []
         assert env.get_nearest_food_distance_for(DEFAULT_AGENT_ID) is None
+
+
+class TestCopyPreservesContinuousState:
+    """`copy()` clones as the subclass and keeps the continuous position/heading.
+
+    The continuous env has no runtime `copy()` caller yet (many-worlds is guarded
+    off on this substrate), so these lock in the override + field-preservation
+    behaviour the many-worlds-on-continuous path will depend on.
+    """
+
+    def test_copy_returns_continuous_subclass_with_same_params(self) -> None:
+        env = _env(world=24.0, max_step=2.0, capture_radius=1.5)
+        clone = env.copy()
+        assert isinstance(clone, Continuous2DEnvironment)
+        assert clone is not env
+        assert clone.continuous.world_size_mm == 24.0
+        assert clone.continuous.max_step_mm == 2.0
+        assert clone.continuous.capture_radius_mm == 1.5
+        assert clone.grid_size == env.grid_size
+
+    def test_copy_preserves_pos_continuous_and_heading(self) -> None:
+        env = _env(world=20.0, max_step=2.0)
+        # Move off-centre so the float position + heading are non-default.
+        env.move_agent_continuous(1.5, math.pi / 3)
+        src = _state(env)
+        clone = env.copy()
+        cloned = clone.agents[DEFAULT_AGENT_ID]
+        assert cloned.pos_continuous == src.pos_continuous
+        assert cloned.heading_rad == src.heading_rad
+        # And the clone is independent — moving it leaves the source untouched.
+        clone.move_agent_continuous(1.0, 0.0)
+        assert _state(env).pos_continuous == src.pos_continuous
 
 
 class TestGridSubstrateUnchanged:
