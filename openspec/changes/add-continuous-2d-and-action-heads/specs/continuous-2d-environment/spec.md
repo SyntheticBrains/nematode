@@ -47,30 +47,30 @@ The continuous-2D environment SHALL consume a food source when the agent is with
 - **WHEN** the agent is farther than the capture radius from every food source
 - **THEN** no food is consumed that step
 
-### Requirement: Continuous source placement and Euclidean fields
+### Requirement: Source placement and Euclidean fields
 
-The continuous-2D environment SHALL place food and predator sources by continuous sampling over the world bounds (not integer grid sampling) and SHALL compute all spatial distances (pheromone, predator-mechano contact, nearest-food) using Euclidean distance.
+The continuous-2D environment SHALL place food and predator sources within the world bounds and SHALL compute food capture and nearest-food distance using Euclidean distance (not Manhattan). *(Implementation note, 2026-06-06: in this iteration sources sit on the **integer lattice within the continuous arena** — the worm and capture are fully continuous; float source placement is deferred to avoid the `self.foods: list[tuple[int, int]]` type ripple, and true continuous fields are the T6 Rung-2 env-fidelity work.)*
 
-#### Scenario: Continuous placement
+#### Scenario: Sources within bounds
 
 - **WHEN** sources are initialised in the continuous-2D environment
-- **THEN** their coordinates are drawn from a continuous distribution over the world bounds and respect the existing minimum-separation validity checks
+- **THEN** their coordinates lie within the world bounds and respect the existing minimum-separation validity checks (on the integer lattice within the arena in this iteration)
 
 #### Scenario: Euclidean distances
 
-- **WHEN** any spatial distance is computed in the continuous-2D environment
-- **THEN** it uses Euclidean distance, including for pheromone concentration, predator-mechanosensory contact intensity, and nearest-food queries
+- **WHEN** food capture or nearest-food distance is computed in the continuous-2D environment
+- **THEN** it uses Euclidean distance (replacing the grid's Manhattan distance)
 
-### Requirement: Physically-scaled klinotaxis sensing on continuous coordinates
+### Requirement: Heading-aware klinotaxis sensing on the continuous substrate
 
-Klinotaxis (head-sweep) sensing in the continuous-2D environment SHALL sample lateral concentrations at offsets scaled to a physical sweep amplitude (a fraction of body length) around the agent's continuous position and heading, rather than at fixed ±1 grid-cell offsets, and SHALL feed STAM the resulting continuous readings.
+Klinotaxis (head-sweep) sensing in the continuous-2D environment SHALL sample lateral concentrations perpendicular to the agent's continuous heading (`heading_rad`), scaled by the configured sweep amplitude (≥ 1 cell), rather than at the grid's fixed cardinal ±1-cell offsets, so the directional gradient rotates with the continuous heading, and SHALL feed STAM the resulting readings. *(Implementation note, 2026-06-06: samples the **integer cells** perpendicular to the heading — sources + sensing live on the integer lattice within the continuous arena (the worm itself moves continuously); true continuous-field sampling is the T6 Rung-2 work.)*
 
-#### Scenario: Continuous lateral sampling
+#### Scenario: Heading-aware lateral sampling
 
 - **WHEN** klinotaxis sensing runs in the continuous-2D environment
-- **THEN** left/right concentrations are sampled at continuous lateral offsets of the configured sweep amplitude relative to heading, and `dC` is the right-minus-left difference at those offsets
+- **THEN** left/right samples are taken perpendicular to `heading_rad` (matching the grid offsets at cardinal headings, rotating smoothly otherwise), and `dC` is the right-minus-left difference
 
-#### Scenario: STAM receives continuous readings
+#### Scenario: STAM receives the readings
 
-- **WHEN** continuous lateral readings are produced
-- **THEN** STAM records them without integer-cell coercion and the dC/dt temporal derivative is computed from the continuous history
+- **WHEN** lateral readings are produced
+- **THEN** STAM records them and computes the dC/dt temporal derivative from its history
