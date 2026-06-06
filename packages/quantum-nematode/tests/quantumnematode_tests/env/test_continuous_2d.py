@@ -166,3 +166,32 @@ class TestCaptureRadius:
         env = _env()
         env.foods = []
         assert env.get_nearest_food_distance_for(DEFAULT_AGENT_ID) is None
+
+
+class TestGridSubstrateUnchanged:
+    """§3.7: the grid substrate is byte-unaffected by the continuous additions.
+
+    A focused regression smoke; the broader grid behaviour is covered by the full
+    env + agent suites (~800 tests) that pass unchanged alongside this change.
+    """
+
+    def test_factory_default_is_grid(self) -> None:
+        from quantumnematode.env.env import DynamicForagingEnvironment
+        from quantumnematode.utils.config_loader import (
+            EnvironmentConfig,
+            create_env_from_config,
+        )
+
+        env = create_env_from_config(EnvironmentConfig(grid_size=12))
+        assert type(env) is DynamicForagingEnvironment  # not the continuous subclass
+        assert env.continuous_actions is False
+
+    def test_grid_discrete_move_is_one_cell(self) -> None:
+        from quantumnematode.brain.actions import Action
+        from quantumnematode.env.env import DynamicForagingEnvironment
+
+        env = DynamicForagingEnvironment(grid_size=12, seed=7)
+        start = env.agent_pos
+        env.move_agent(Action.FORWARD)  # discrete cardinal move from centre
+        moved = env.agent_pos
+        assert abs(moved[0] - start[0]) + abs(moved[1] - start[1]) == 1

@@ -140,6 +140,9 @@ class StandardEpisodeRunner(EpisodeRunner):
 
     def __init__(self) -> None:
         """Initialize the standard episode runner."""
+        # One-time guard: warn if a continuous-2D env runs with a discrete brain
+        # (continuous heads land in §4); avoids a silent grid-style-moves half-state.
+        self._warned_discrete_on_continuous = False
 
     def _terminate_episode(  # noqa: PLR0913
         self,
@@ -723,8 +726,22 @@ class StandardEpisodeRunner(EpisodeRunner):
             # the discrete fallback runs when no continuous vector is present.
             from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
-            if isinstance(agent.env, Continuous2DEnvironment) and top_action.continuous is not None:
-                agent.env.move_agent_continuous(*top_action.continuous)
+            if isinstance(agent.env, Continuous2DEnvironment):
+                if top_action.continuous is not None:
+                    agent.env.move_agent_continuous(*top_action.continuous)
+                else:
+                    # Continuous-2D env but the brain emitted a discrete action:
+                    # continuous heads (§4) are not yet active. Fall back to a
+                    # discrete move and warn once so the half-state isn't silent.
+                    if not self._warned_discrete_on_continuous:
+                        logger.warning(
+                            "Continuous-2D environment received a discrete action "
+                            "(no (speed, turn) vector). Continuous-action heads are not "
+                            "active for this brain; falling back to discrete movement. "
+                            "This is expected until the continuous brain heads land.",
+                        )
+                        self._warned_discrete_on_continuous = True
+                    agent.env.move_agent(top_action.action)
             else:
                 agent.env.move_agent(top_action.action)
 
