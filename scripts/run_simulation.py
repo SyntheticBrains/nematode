@@ -21,14 +21,7 @@ from quantumnematode.agent import (
     QuantumNematodeAgent,
     SatietyConfig,
 )
-from quantumnematode.brain.arch import (
-    MLPDQNBrainConfig,
-    MLPPPOBrainConfig,
-    MLPReinforceBrainConfig,
-    QQLearningBrainConfig,
-    QVarCircuitBrainConfig,
-    SpikingReinforceBrainConfig,
-)
+from quantumnematode.brain.arch._registry import get_registration
 from quantumnematode.brain.arch.dtypes import (
     DEFAULT_BRAIN_TYPE,
     DEFAULT_QUBITS,
@@ -283,19 +276,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     theme = Theme(args.theme)
     optimize_quantum_performance = args.optimize
 
-    match brain_type:
-        case BrainType.QVARCIRCUIT:
-            brain_config = QVarCircuitBrainConfig(seed=simulation_seed)
-        case BrainType.MLP_REINFORCE:
-            brain_config = MLPReinforceBrainConfig(seed=simulation_seed)
-        case BrainType.MLP_PPO:
-            brain_config = MLPPPOBrainConfig(seed=simulation_seed)
-        case BrainType.MLP_DQN:
-            brain_config = MLPDQNBrainConfig(seed=simulation_seed)
-        case BrainType.QQLEARNING:
-            brain_config = QQLearningBrainConfig(seed=simulation_seed)
-        case BrainType.SPIKING_REINFORCE:
-            brain_config = SpikingReinforceBrainConfig(seed=simulation_seed)
+    # CLI-default brain config: registry-driven, with NO per-architecture branch —
+    # every brain self-registers its config class, so a new architecture (e.g. the
+    # transformer) needs no `case` here. Overwritten below when a config file is
+    # supplied. Brains whose config requires fields (e.g. `sensory_modules`) must be
+    # run via `--config`; constructing their seed-only default here raises a clear
+    # pydantic ValidationError rather than the previous stale silent fall-through.
+    brain_config = get_registration(brain_type.value).config_cls(seed=simulation_seed)
 
     # Authenticate and setup Q-CTRL if needed
     perf_mgmt = None
