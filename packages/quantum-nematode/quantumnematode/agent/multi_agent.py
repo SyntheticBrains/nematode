@@ -637,13 +637,19 @@ class MultiAgentSimulation:
                 actions[aid] = brain_output[0]
 
             # ── 2. MOVEMENT ──────────────────────────────────────
+            # Pre-check before mutating any agent: continuous actions are not
+            # supported here, so reject up front (collecting the validated discrete
+            # actions) to avoid partial state mutation.
+            discrete_actions = {}
             for agent in alive:
-                aid = agent.agent_id
-                action = actions[aid].action
+                action = actions[agent.agent_id].action
                 if action is None:
                     msg = "Continuous actions are not supported in multi-agent mode"
                     raise NotImplementedError(msg)
-                self.env.move_agent_for(aid, action)
+                discrete_actions[agent.agent_id] = action
+            for agent in alive:
+                aid = agent.agent_id
+                self.env.move_agent_for(aid, discrete_actions[aid])
                 agent._episode_tracker.track_step()
 
                 # Update path and food history

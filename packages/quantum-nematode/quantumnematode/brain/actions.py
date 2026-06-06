@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class Action(StrEnum):  # pragma: no cover
@@ -55,3 +55,26 @@ class ActionData(BaseModel):  # pragma: no cover
     action: Action | None = None
     probability: float
     continuous: tuple[float, float] | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_action_payload(self) -> "ActionData":
+        """Require exactly one of ``action`` (discrete) or ``continuous`` (continuous-2D).
+
+        Returns
+        -------
+        ActionData
+            The validated instance.
+
+        Raises
+        ------
+        ValueError
+            If both ``action`` and ``continuous`` are set, or neither is.
+        """
+        if (self.action is None) == (self.continuous is None):
+            msg = (
+                "ActionData requires exactly one of `action` (discrete) or "
+                "`continuous` (continuous-2D) to be set, not both or neither; "
+                f"got action={self.action!r}, continuous={self.continuous!r}."
+            )
+            raise ValueError(msg)
+        return self

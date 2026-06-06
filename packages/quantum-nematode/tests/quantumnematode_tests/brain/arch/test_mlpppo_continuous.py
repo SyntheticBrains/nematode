@@ -20,6 +20,14 @@ from quantumnematode.env.env import DEFAULT_AGENT_ID
 
 
 def _continuous_agent() -> QuantumNematodeAgent:
+    """Build a continuous-mode MLP-PPO agent on a small continuous-2D env.
+
+    Returns
+    -------
+    QuantumNematodeAgent
+        An agent whose brain is in continuous action mode, wired to a small
+        `Continuous2DEnvironment` for fast smoke training.
+    """
     config = MLPPPOBrainConfig(
         sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         action_mode="continuous",

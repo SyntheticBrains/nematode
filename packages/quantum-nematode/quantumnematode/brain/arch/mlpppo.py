@@ -576,9 +576,23 @@ class MLPPPOBrain(ClassicalBrain):
     def _run_brain_continuous(self, x: np.ndarray) -> list[ActionData]:
         """Continuous-mode forward: sample a normalized ``(speed, turn)`` action.
 
+        Parameters
+        ----------
+        x : np.ndarray
+            Preprocessed sensory feature vector for the current step.
+
+        Returns
+        -------
+        list[ActionData]
+            A single-element list whose `ActionData.continuous` carries the
+            normalized ``(speed, turn)`` action.
+
+        Notes
+        -----
         Samples from the tanh-squashed Gaussian head and stores the pre-squash
-        sample for the PPO update. The emitted action is normalized
-        (``speed ∈ [0, 1]``, ``turn ∈ [-1, 1]``); the environment rescales it.
+        sample (`pre_tanh`) for re-scoring in the PPO update. The emitted action
+        is normalized (``speed ∈ [0, 1]``, ``turn ∈ [-1, 1]``); the environment
+        rescales it to physical units.
         """
         features = self._apply_torch_gating(
             torch.tensor(x, dtype=torch.float32, device=self.device),
@@ -593,7 +607,7 @@ class MLPPPOBrain(ClassicalBrain):
             self._action_low,
             self._action_high,
         )
-        continuous_action = (float(action_vec[0]), float(action_vec[1]))
+        continuous_action = (action_vec[0].item(), action_vec[1].item())
 
         # Store current step info for the buffer (added when the reward arrives);
         # the stored action is the pre-squash sample for re-scoring in the update.
@@ -606,7 +620,7 @@ class MLPPPOBrain(ClassicalBrain):
         action_data = ActionData(
             state="continuous",
             action=None,
-            probability=float(torch.exp(log_prob.detach())),
+            probability=torch.exp(log_prob.detach()).item(),
             continuous=continuous_action,
         )
         self.latest_data.action = action_data

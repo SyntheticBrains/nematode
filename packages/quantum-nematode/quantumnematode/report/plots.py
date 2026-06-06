@@ -285,7 +285,7 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
         elif isinstance(last_values[0], ActionData):
             probs = [a.probability if isinstance(a, ActionData) else np.nan for a in last_values]
             actions = [
-                (a.action.value if a.action is not None else "")
+                (a.action.value if a.action is not None else str(a.continuous))
                 if isinstance(a, ActionData)
                 else ""
                 for a in last_values

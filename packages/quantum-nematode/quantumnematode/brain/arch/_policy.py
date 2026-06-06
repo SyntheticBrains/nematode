@@ -52,14 +52,14 @@ __all__ = [
 ]
 
 # Continuous (tanh-squashed Gaussian) action dimension: ``(speed, turn)``.
-CONTINUOUS_ACTION_DIM = 2
+CONTINUOUS_ACTION_DIM: int = 2
 
 # Log-std clamp range. Keeps the Gaussian strictly positive and bounded so
 # sampling / log-prob / entropy stay finite (no collapse to a delta, no blow-up).
-CONTINUOUS_LOG_STD_MIN = -5.0
-CONTINUOUS_LOG_STD_MAX = 2.0
+CONTINUOUS_LOG_STD_MIN: float = -5.0
+CONTINUOUS_LOG_STD_MAX: float = 2.0
 
-_LOG_2 = math.log(2.0)
+_LOG_2: float = math.log(2.0)
 
 
 def categorical_sample_torch(
@@ -239,14 +239,20 @@ def continuous_sample_tanh_gaussian(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Sample a bounded continuous action from a tanh-squashed Gaussian.
 
-    Args:
-        mean: Gaussian mean per action dim, shape ``(…, action_dim)``.
-        log_std: Gaussian log-std per action dim (clamped internally).
-        action_low: Lower action bound per dim (e.g. ``[0, -π]``).
-        action_high: Upper action bound per dim (e.g. ``[max_speed, π]``).
+    Parameters
+    ----------
+    mean : torch.Tensor
+        Gaussian mean per action dim, shape ``(…, action_dim)``.
+    log_std : torch.Tensor
+        Gaussian log-std per action dim (clamped internally).
+    action_low : torch.Tensor
+        Lower action bound per dim (e.g. ``[0, -1]``).
+    action_high : torch.Tensor
+        Upper action bound per dim (e.g. ``[1, 1]``).
 
     Returns
     -------
+    tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
         ``(action, log_prob, entropy, pre_tanh)`` — ``action`` is the bounded
         ``(speed, turn)`` vector; ``log_prob`` is Jacobian-corrected; ``entropy``
         is the base-Normal differential entropy (the squashed entropy has no
@@ -276,15 +282,22 @@ def continuous_evaluate_tanh_gaussian(
     stored ``pre_tanh`` samples and the *current* policy parameters, return the
     Jacobian-corrected log-probs and the mean base-Normal entropy.
 
-    Args:
-        mean: Batched Gaussian mean, shape ``(batch, action_dim)``.
-        log_std: Batched (or broadcastable) log-std (clamped internally).
-        pre_tanh: Stored pre-squash samples, shape ``(batch, action_dim)``.
-        action_low: Lower action bound per dim.
-        action_high: Upper action bound per dim.
+    Parameters
+    ----------
+    mean : torch.Tensor
+        Batched Gaussian mean, shape ``(batch, action_dim)``.
+    log_std : torch.Tensor
+        Batched (or broadcastable) log-std (clamped internally).
+    pre_tanh : torch.Tensor
+        Stored pre-squash samples, shape ``(batch, action_dim)``.
+    action_low : torch.Tensor
+        Lower action bound per dim.
+    action_high : torch.Tensor
+        Upper action bound per dim.
 
     Returns
     -------
+    tuple[torch.Tensor, torch.Tensor]
         ``(log_probs, mean_entropy)`` where ``log_probs`` has shape ``(batch,)``.
     """
     std = torch.exp(clamp_continuous_log_std(log_std))

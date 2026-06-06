@@ -20,8 +20,8 @@ from quantumnematode.brain.arch._policy import (
 )
 
 # Physical action bounds: speed in [0, 1], turn in [-pi, pi].
-_LOW = torch.tensor([0.0, -math.pi])
-_HIGH = torch.tensor([1.0, math.pi])
+_LOW: torch.Tensor = torch.tensor([0.0, -math.pi])
+_HIGH: torch.Tensor = torch.tensor([1.0, math.pi])
 
 
 class TestBoundedSampling:
