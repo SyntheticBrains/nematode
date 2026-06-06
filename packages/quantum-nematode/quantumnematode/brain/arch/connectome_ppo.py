@@ -8,8 +8,8 @@ weights along wild-type edges only) and gap junctions non-learnable
 Sensor projection: food-chemotaxis input → ASEL/ASER/AWCL/AWCR/AWAL/AWAR
 sensory neurons via additive injection scaled by per-input learnable
 gains. Motor readout: VB/DB/VA/DA motor-class activations mean-pooled
-into a 4-vector, then projected to the discrete 4-action set via a
-learnable 4x4 readout matrix.
+into a 4-vector, then projected via a learnable readout matrix to either the
+discrete 4-action logits (4x4) or the 2-D continuous Gaussian mean (2x4).
 
 Forward pass (single step): repeat K times before motor readout::
 
@@ -34,8 +34,11 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
+    CONTINUOUS_ACTION_DIM,
     categorical_evaluate_torch,
     categorical_sample_torch,
+    continuous_evaluate_tanh_gaussian,
+    continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
@@ -238,8 +241,14 @@ class ConnectomeTopology(nn.Module):
         enable_thermotaxis_projection: bool,
         device: torch.device,
         rng: np.random.Generator,
+        continuous: bool = False,
     ) -> None:
         super().__init__()
+        # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
+        # Gaussian mean (instead of 4 discrete logits) + a learnable log-std. The
+        # chemical strict-mask / gap junctions are upstream of the readout and
+        # untouched by the output mode.
+        self.continuous = continuous
         if forward_pass_depth < 1:
             msg = f"forward_pass_depth must be >= 1, got {forward_pass_depth}"
             raise ValueError(msg)
@@ -356,7 +365,8 @@ class ConnectomeTopology(nn.Module):
         # hasn't saturated.
         nn.init.normal_(self.food_gains, mean=0.0, std=1.0)
 
-        # ── Motor readout: VB/DB/VA/DA mean-pool → 4x4 learnable matrix ─
+        # ── Motor readout: VB/DB/VA/DA mean-pool → learnable matrix ─
+        # (4x4 → discrete logits, or 2x4 → continuous Gaussian mean)
         motor_class_indices: dict[str, list[int]] = {cls: [] for cls in _MOTOR_CLASSES}
         for name in self.neuron_names:
             cls = connectome.neurons[name].cell_class
@@ -395,13 +405,19 @@ class ConnectomeTopology(nn.Module):
         self._motor_class_slices: list[tuple[int, int]] = [
             (boundaries[k], boundaries[k + 1]) for k in range(_N_ACTIONS)
         ]
-        self.readout = nn.Parameter(torch.zeros(_N_ACTIONS, _N_ACTIONS, device=device))
+        # Readout maps the 4 motor classes → action outputs: 4 discrete logits,
+        # or the 2-D continuous Gaussian mean.
+        readout_out_dim = CONTINUOUS_ACTION_DIM if continuous else _N_ACTIONS
+        self.readout = nn.Parameter(torch.zeros(readout_out_dim, _N_ACTIONS, device=device))
         # Stronger orthogonal init so the initial policy isn't a constant
         # uniform across actions. ``gain=1.0`` is the standard PPO-actor
         # initial-gain choice; the small ``0.01`` PPO stable-policy trick
         # produces a degenerate-uniform initial policy here because the
         # whole upstream pipeline is small (one 302-vec → 4-vec readout).
         nn.init.orthogonal_(self.readout, gain=1.0)
+        # Continuous mode: state-independent learnable log-std (one per action dim).
+        if continuous:
+            self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=device))
 
         # ── Predator-sensor projection (opt-in) ─────────────────────────
         # Three learnable gain matrices route the corrected two-channel
@@ -707,7 +723,8 @@ class ConnectomeTopology(nn.Module):
 
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
-        logits = self.readout @ motor_acts  # shape (4,)
+        # (num_actions,) discrete logits, or (2,) continuous Gaussian mean.
+        logits = self.readout @ motor_acts
         return logits, h
 
     def _inject_predator_batched(
@@ -833,7 +850,8 @@ class ConnectomeTopology(nn.Module):
             h = torch.tanh(preact)
 
         motor_acts = self._pool_motor(h)  # (B, 4)
-        logits = motor_acts @ self.readout.T  # (B, 4)
+        # (B, num_actions) discrete logits, or (B, 2) continuous Gaussian mean.
+        logits = motor_acts @ self.readout.T
         return logits, h
 
     def forward(
@@ -882,6 +900,8 @@ class ConnectomeTopology(nn.Module):
             )
         if self.enable_thermotaxis_projection:
             params.append(self.thermotaxis_gains)
+        if self.continuous:
+            params.append(self.log_std)
         return params
 
 
@@ -914,6 +934,11 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         self.config = config
         self.device = torch.device(device.to_torch_device_str())
+        # Action mode: discrete (categorical) or continuous (tanh-squashed Gaussian
+        # over a normalized (speed, turn) vector; the env rescales to physical units).
+        self.continuous = config.action_mode == "continuous"
+        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
+        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
         self._action_set = action_set if action_set is not None else list(DEFAULT_ACTIONS)
         if len(self._action_set) != _N_ACTIONS:
             msg = (
@@ -945,6 +970,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             enable_thermotaxis_projection=config.enable_thermotaxis_projection,
             device=self.device,
             rng=self.rng,
+            continuous=self.continuous,
         ).to(self.device)
 
         # Critic: scalar value head over the same 302-dim activation vector.
@@ -967,7 +993,12 @@ class ConnectomePPOBrain(ClassicalBrain):
         self.max_grad_norm = config.max_grad_norm
 
         # Rollout buffer.
-        self.buffer = RolloutBuffer(config.rollout_buffer_size, self.device, rng=self.rng)
+        self.buffer = RolloutBuffer(
+            config.rollout_buffer_size,
+            self.device,
+            rng=self.rng,
+            continuous_actions=self.continuous,
+        )
 
         # Brain Protocol state.
         self.history_data = BrainHistoryData()
@@ -977,7 +1008,7 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         # Per-step pending data (added to buffer when next reward arrives).
         self._pending_state: np.ndarray | None = None
-        self._pending_action: int | None = None
+        self._pending_action: int | np.ndarray | None = None
         self._pending_log_prob: torch.Tensor | None = None
         self._pending_value: torch.Tensor | None = None
 
@@ -1185,7 +1216,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         # forward-pass inputs; disabled projections stay None and the
         # topology runs only the active paths.
         food, distal, mechano, zone, thermo = self._unpack_state(state_t)
-        logits, hidden = self.topology.forward_with_hidden(
+        head_out, hidden = self.topology.forward_with_hidden(
             food,
             predator_distal_features=distal,
             predator_mechano_features=mechano,
@@ -1193,11 +1224,15 @@ class ConnectomePPOBrain(ClassicalBrain):
             thermotaxis_features=thermo,
         )
         value = self.critic(hidden)
+        self.last_value = value
+
+        if self.continuous:
+            return self._run_brain_continuous(head_out, state, value)
 
         # Action distribution via the shared discrete policy helper (byte-equivalent
         # to the prior inline softmax → Categorical → sample/log_prob).
         action_idx, log_prob, _entropy, probs = categorical_sample_torch(
-            logits,
+            head_out,
             device=self.device,
         )
 
@@ -1208,7 +1243,6 @@ class ConnectomePPOBrain(ClassicalBrain):
         self._pending_action = action_idx
         self._pending_log_prob = log_prob
         self._pending_value = value
-        self.last_value = value
 
         probs_np = probs.detach().cpu().numpy()
         self.current_probabilities = probs_np
@@ -1229,6 +1263,61 @@ class ConnectomePPOBrain(ClassicalBrain):
                 probability=float(probs_np[action_idx]),
             ),
         ]
+
+    def _run_brain_continuous(
+        self,
+        mean: torch.Tensor,
+        state: np.ndarray,
+        value: torch.Tensor,
+    ) -> list[ActionData]:
+        """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
+
+        Parameters
+        ----------
+        mean : torch.Tensor
+            The 2-D Gaussian mean from the motor readout.
+        state : np.ndarray
+            Preprocessed state (stored for the PPO update's batched re-forward).
+        value : torch.Tensor
+            The critic value estimate for the current step.
+
+        Returns
+        -------
+        list[ActionData]
+            A single-element list whose ``continuous`` carries the normalized
+            ``(speed, turn)`` action.
+
+        Notes
+        -----
+        Samples from the tanh-squashed Gaussian head and stores the pre-squash
+        sample for the PPO update; the environment rescales the normalized action
+        to physical units. The chemical strict-mask / gap junctions are upstream of
+        the readout and unaffected.
+        """
+        action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
+            mean,
+            self.topology.log_std,
+            self._action_low,
+            self._action_high,
+        )
+        continuous_action = (action_vec[0].item(), action_vec[1].item())
+
+        self._pending_state = state
+        self._pending_action = pre_tanh.detach().cpu().numpy()
+        self._pending_log_prob = log_prob
+        self._pending_value = value
+        self.current_probabilities = None
+
+        action_data = ActionData(
+            state="continuous",
+            action=None,
+            probability=torch.exp(log_prob.detach()).item(),
+            continuous=continuous_action,
+        )
+        self.latest_data.action = action_data
+        self.history_data.actions.append(action_data)
+        self.history_data.probabilities.append(action_data.probability)
+        return [action_data]
 
     def learn(
         self,
@@ -1324,7 +1413,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = self._unpack_state_batched(
                     states,
                 )
-                new_logits, hidden = self.topology.forward_with_hidden_batched(
+                new_head_out, hidden = self.topology.forward_with_hidden_batched(
                     food_b,
                     predator_distal_features=distal_b,
                     predator_mechano_features=mechano_b,
@@ -1333,12 +1422,22 @@ class ConnectomePPOBrain(ClassicalBrain):
                 )
                 new_values = self.critic(hidden).squeeze(-1)
 
-                # Shared discrete policy helpers (byte-equivalent to the prior inline
-                # Categorical re-eval + clipped surrogate).
-                new_log_probs, entropy = categorical_evaluate_torch(
-                    new_logits,
-                    batch["actions"],
-                )
+                # Re-score actions under the current policy via the shared module:
+                # discrete (Categorical) or continuous (tanh-Gaussian re-scoring the
+                # stored pre-squash samples). Clipped surrogate is shared.
+                if self.continuous:
+                    new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
+                        new_head_out,
+                        self.topology.log_std,
+                        batch["actions"],
+                        self._action_low,
+                        self._action_high,
+                    )
+                else:
+                    new_log_probs, entropy = categorical_evaluate_torch(
+                        new_head_out,
+                        batch["actions"],
+                    )
                 policy_loss = ppo_clip_policy_loss(
                     new_log_probs,
                     batch["old_log_probs"],
