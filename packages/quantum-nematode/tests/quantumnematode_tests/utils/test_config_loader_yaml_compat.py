@@ -110,3 +110,56 @@ def test_scenario_yaml_loads_via_registry(config_path: Path) -> None:
         f"configure_brain produced {type(brain_config).__name__}, "
         f"expected {registered_cls.__name__} per BRAIN_CONFIG_MAP['{sim_config.brain.name}']"
     )
+
+
+class TestContinuousActionConfigParsing:
+    """The continuous-action config fields parse, validate, and build end-to-end."""
+
+    def test_action_mode_defaults_to_discrete(self) -> None:
+        """A brain config with no `action_mode` defaults to discrete (grid unchanged)."""
+        from quantumnematode.brain.arch import MLPPPOBrainConfig
+        from quantumnematode.brain.modules import ModuleName
+
+        config = MLPPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
+        assert config.action_mode == "discrete"
+
+    def test_action_mode_continuous_parses(self) -> None:
+        """`action_mode: continuous` is accepted; an unknown mode is rejected."""
+        from pydantic import ValidationError
+        from quantumnematode.brain.arch import MLPPPOBrainConfig
+        from quantumnematode.brain.modules import ModuleName
+
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            action_mode="continuous",
+        )
+        assert config.action_mode == "continuous"
+
+        with pytest.raises(ValidationError):
+            MLPPPOBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                action_mode="bogus",  # type: ignore[arg-type]
+            )
+
+    def test_continuous_2d_action_config_loads_and_builds(self) -> None:
+        """The shipped continuous-2D klinotaxis YAML parses + builds env and brain config."""
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+        from quantumnematode.utils.config_loader import create_env_from_config
+
+        path = _CONFIGS_DIR / "foraging" / "mlpppo_small_continuous2d_klinotaxis.yml"
+        sim_config = load_simulation_config(str(path))
+
+        # Continuous-action config field parsed on the brain side.
+        assert sim_config.brain is not None
+        assert sim_config.brain.config.action_mode == "continuous"
+
+        # Continuous-2D env fields parsed + the factory builds the right env type.
+        assert sim_config.environment is not None
+        assert sim_config.environment.env_type == "continuous_2d"
+        env = create_env_from_config(sim_config.environment)
+        assert isinstance(env, Continuous2DEnvironment)
+        assert env.continuous.world_size_mm == 20.0
+
+        # The brain config resolves to the continuous mode end-to-end.
+        brain_config = configure_brain(sim_config)
+        assert brain_config.action_mode == "continuous"
