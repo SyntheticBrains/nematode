@@ -380,7 +380,7 @@ from each integrated run per the `architecture-comparison-protocol` capability (
 
 ### T7 — cross-architecture analysis + env-upgrade delta + logbook
 
-- [ ] T7.analysis.ranking_upgraded — paired-seed Wilcoxon + bootstrap 95% CIs across the 4 MUST integrated-C3 cells with per-behaviour-component sub-metrics extracted (per Gate 3 G3.a). Multiple-comparisons strategy applied consistently with T4: BH-FDR within-pass, the strategy the `weight-search-architecture-ranking` change committed for T4 and T7 inherits.
+- [ ] T7.analysis.ranking_upgraded — paired-seed Wilcoxon + bootstrap 95% CIs across the 6 MUST integrated-C3 cells with per-behaviour-component sub-metrics extracted (per Gate 3 G3.a). Multiple-comparisons strategy applied consistently with T4: BH-FDR within-pass, the strategy the `weight-search-architecture-ranking` change committed for T4 and T7 inherits.
 - [ ] T7.analysis.env_delta — head-to-head T4-grid vs T7-upgraded ranking delta (RQ5). The load-bearing finding that justifies the deliberate T4-vs-T7 split per [design.md § Decision 1](design.md).
 - [ ] T7.analysis.connectome_final_ranking — explicit answer to "where does the wild-type connectome (chemical-synapse strict-mask) rank under PPO weight search on the upgraded substrate?" (per Gate 3 G3.b — "failed to train" is STOP, not tie).
 - [ ] T7.logbook — publish T7 logbook (suggested: `docs/experiments/logbooks/0XX-l2-final-pass.md`). Required reading material for Gate 3.
