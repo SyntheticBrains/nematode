@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from pydantic import BaseModel
 
+from quantumnematode.agent.adaptive_sensor import AdaptiveChemosensor
 from quantumnematode.agent.stam import STAMBuffer, STAMChannelDef
 from quantumnematode.agent.tracker import EpisodeTracker
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
@@ -109,6 +110,16 @@ def _compute_lateral_offsets(
         left = (max(0, x - 1), y)
         right = (min(max_idx, x + 1), y)
     return left, right
+
+
+def _food_cells(foods: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Snap food source positions to integer cells for the food-history record.
+
+    Food sources are integer cells on the grid substrate and real-valued on the
+    continuous-2D substrate; the food-history reporting record is cell-resolution
+    (the worm senses the real float sources via the env field, not this record).
+    """
+    return [(round(fx), round(fy)) for fx, fy in foods]
 
 
 def _continuous_lateral_offsets(
@@ -486,10 +497,23 @@ class QuantumNematodeAgent:
         if self._active_channels:
             self._channel_fetchers = _build_channel_fetchers(self.env, self._active_channels)
 
+        # Adaptive-threshold / biphasic chemosensory sensor (Rung-2). Stateful
+        # (per-channel background tracker), so it lives on the agent like STAM.
+        # Disabled by default → the chemosensory pipeline is byte-identical.
+        self._adaptive_food: AdaptiveChemosensor | None = None
+        if self.sensing_config.adaptive_chemosensor_enabled:
+            self._adaptive_food = AdaptiveChemosensor(
+                readout=self.sensing_config.adaptive_chemosensor_readout,
+                alpha=self.sensing_config.adaptive_chemosensor_alpha,
+                eps=self.sensing_config.adaptive_chemosensor_epsilon,
+            )
+
         _init_pos = self.env.agents[self.agent_id].position
         self.path: list[GridPosition] = [(_init_pos[0], _init_pos[1])]
-        # Track food positions at each step for chemotaxis validation
-        self.food_history: FoodHistory = [list(self.env.foods)]
+        # Track food positions at each step for chemotaxis validation. The history
+        # is a cell-resolution reporting record (snap the continuous-2D float
+        # sources); the worm senses the real float sources via the env field.
+        self.food_history: FoodHistory = [_food_cells(self.env.foods)]
         self.max_body_length = min(
             self.env.grid_size - 1,
             max_body_length,
@@ -940,6 +964,18 @@ class QuantumNematodeAgent:
                         result[ch_def.derivative_key] = self._stam.compute_temporal_derivative(idx)
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
+
+        # Adaptive chemosensory transform (Rung-2). Applied as a dedicated step on
+        # the food/chemosensory channel only, after the raw concentration + the
+        # STAM-derived derivative are in hand. The configured readout reshapes
+        # exactly one channel (strength or derivative); the other is unchanged.
+        # Disabled → byte-identical to the non-adaptive pipeline.
+        if self._adaptive_food is not None and "food_concentration" in result:
+            raw_c = float(result.get("food_concentration", 0.0))
+            raw_d = float(result.get("food_dconcentration_dt", 0.0))
+            strength_out, derivative_out = self._adaptive_food.adapt(raw_c, raw_d)
+            result["food_concentration"] = strength_out
+            result["food_dconcentration_dt"] = derivative_out
 
         return result
 
@@ -1431,8 +1467,8 @@ class QuantumNematodeAgent:
                 seed=self.env.seed,
             )
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
-        # Track food positions at each step for chemotaxis validation
-        self.food_history = [list(self.env.foods)]
+        # Track food positions at each step for chemotaxis validation (cell-snapped).
+        self.food_history = [_food_cells(self.env.foods)]
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
@@ -1447,6 +1483,10 @@ class QuantumNematodeAgent:
 
         # Reset episode tracker
         self._episode_tracker.reset()
+
+        # Reset the adaptive chemosensory background so each episode starts fresh.
+        if self._adaptive_food is not None:
+            self._adaptive_food.reset()
 
         logger.info("Environment reset. Retaining learned data.")
 

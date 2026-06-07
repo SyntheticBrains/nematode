@@ -767,6 +767,17 @@ class SensingConfig(BaseModel):
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
+    # Adaptive-threshold / biphasic chemosensory sensor (Rung-2 env fidelity).
+    # Disabled by default → the chemosensory pipeline is byte-identical to the
+    # non-adaptive (tanh) baseline. Applies to chemosensory channels only.
+    # ``adaptive_chemosensor_readout`` also fixes the channel interaction:
+    # ``fold_change`` reshapes the derivative/turning channel ((dC/dt)/(C+eps));
+    # ``contrast`` reshapes the magnitude/strength channel ((C-B)/(C+B+eps));
+    # ``log`` is the log(1+C) baseline (documented ablation comparator).
+    adaptive_chemosensor_enabled: bool = False
+    adaptive_chemosensor_readout: Literal["fold_change", "contrast", "log"] = "fold_change"
+    adaptive_chemosensor_alpha: float = Field(default=0.1, gt=0.0, le=1.0)
+    adaptive_chemosensor_epsilon: float = Field(default=1e-3, gt=0.0)
     derivative_scale: float = Field(
         default=50.0,
         gt=0.0,
