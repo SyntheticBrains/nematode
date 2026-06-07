@@ -6,6 +6,12 @@ from quantumnematode.dtypes import (
     PositionPath,
 )
 
+from .adaptive_sensor import (
+    StepInputResult,
+    run_step_input,
+    weber_invariance_peaks,
+    weber_spread,
+)
 from .chemotaxis import (
     ChemotaxisMetrics,
     ValidationLevel,
@@ -30,6 +36,7 @@ __all__ = [
     "Position",
     "PositionFoodHistory",
     "PositionPath",
+    "StepInputResult",
     "ValidationLevel",
     "ValidationResult",
     "calculate_chemotaxis_index",
@@ -37,4 +44,7 @@ __all__ = [
     "calculate_chemotaxis_metrics",
     "calculate_chemotaxis_metrics_stepwise",
     "load_chemotaxis_dataset",
+    "run_step_input",
+    "weber_invariance_peaks",
+    "weber_spread",
 ]
