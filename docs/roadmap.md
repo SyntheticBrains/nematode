@@ -618,7 +618,7 @@ Aerotaxis (oxygen sensing), pheromone signalling, and multi-agent dynamics are *
 
 #### Architecture families in the comparison sweep
 
-The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks. The MUST / SHOULD / MAY classification below was tightened from the roadmap's initial eight-MUST framing during Phase 6 scoping, then CfC was promoted SHOULD→MUST at the 2026-06-04 mid-phase checkpoint (now five MUST families); rationale lives in [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md). Under the realised integrated-C3 cell shape (one cell per family, n=8, per-behaviour sub-metrics extracted), that is five MUST integrated-C3 cells per L2 pass (T4 + T7). SHOULD/MAY rows are evaluated opportunistically in Tranche 7 and do not gate any Phase 6 exit criterion.
+The L1 plugin interface accommodates this curated set. The list is not "all 19 existing architectures" — Phase 6 picks the representatives that test the load-bearing questions and leaves historical variants in their Phase 0-3 logbooks. The MUST / SHOULD / MAY classification below was tightened from the roadmap's initial eight-MUST framing during Phase 6 scoping, then CfC was promoted SHOULD→MUST at the 2026-06-04 mid-phase checkpoint, and Transformer MAY→MUST at the 2026-06-07 post-T5 checkpoint (now six MUST families); rationale lives in [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md). Under the realised integrated-C3 cell shape (one cell per family, n=8, per-behaviour sub-metrics extracted), that is six MUST integrated-C3 cells at T7 (T4 ran five — Transformer was built at T5, so it has no T4 grid cell unless one is back-filled). SHOULD/MAY rows are evaluated opportunistically in Tranche 7 and do not gate any Phase 6 exit criterion.
 
 | Family | Existing impl | Scope | Phase 6 role |
 |---|---|---|---|
@@ -631,7 +631,7 @@ The L1 plugin interface accommodates this curated set. The list is not "all 19 e
 | **Spiking (PPO-trained)** | `SpikingReinforceBrain` | **SHOULD** | Bridge to L4. But Phase 0's 73.3% on much easier tasks isn't a strong precedent; demoted so Phase 6 doesn't gate on spiking-on-connectome training. Phase 7 L4 (STDP — spiking's native plasticity rule) is where spiking-on-connectome actually belongs. |
 | **Reservoir** | `QRHBrain`, `CRHBrain` | **MAY** | Phase 2 preserved QRH's +9.4pp pursuit advantage at low absolute performance. One row if cheap; not worth blocking on. |
 | **Hybrid quantum-classical** | `HybridQuantum`, `HybridClassical` | **MAY** | Phase 2 SOTA finding (96.9% / 96.3%) survives as baseline reference. One row to confirm at higher complexity if cheap. |
-| **Transformer / attention-based** | Not yet | **MAY** | ⭐ Optional addition if scope and engineering effort allow. Flagged so reviewers see it considered, not forgotten. |
+| **Transformer / attention-based** | `TransformerPPOBrain` (built at T5) | **MUST** *(promoted 2026-06-07)* | Temporal-window self-attention, built + validated at T5 as the Gate-2 parity vehicle (5-file addition; clean discrete-klinotaxis learning; continuous head already wired). Promoted from MAY because it is the strongest working-memory / long-context comparator — the axis Logbook 025 found the top cluster ties on — and the marginal engineering is near-zero. First-class T7 integrated-C3 row. See [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md). |
 
 > **Anti-scope-creep**: promoting a SHOULD or MAY family to MUST (so that family's results gate a Phase 6 exit criterion) requires amending [openspec/changes/phase6-tracking/design.md § Decision 4](../openspec/changes/phase6-tracking/design.md) before the promoting tranche merges. Same for adding a tenth family beyond the nine listed here. The amendment must document the cross-tranche budget impact.
 
@@ -690,7 +690,6 @@ Internal validation against public data is required at Phase 6 close; external l
 
 **Optional (MAY) — not phase exit criteria:**
 
-- ⭐ Transformer / attention-based architecture added to the comparison sweep.
 - ⭐ Connectome-learning platform paper drafted.
 - ⭐ Connectome fitness-landscape science paper drafted.
 - ⭐ Reproducibility artefacts (Docker, evaluation scripts) updated to current Phase 6 state.
