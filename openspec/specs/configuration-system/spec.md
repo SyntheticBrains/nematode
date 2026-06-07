@@ -729,3 +729,55 @@ Scenario configs SHALL exist for multi-agent evaluation campaigns.
 - Temporal mode configs with LSTM PPO GRU, Phase 3 proven brain hyperparams, and variants with/without pheromone modules
 - Extreme scarcity configs (1 food, high decay) for social feeding evaluation
 - Proportional food configs (food scaled to agent count) for coordination overhead measurement
+
+### Requirement: Continuous-2D environment configuration
+
+The configuration system SHALL accept an environment-type discriminator and continuous-2D environment fields — world bounds (physical units), worm body length scale, per-step maximum displacement, food capture radius, and klinotaxis head-sweep amplitude — validated with documented defaults, while existing grid configurations remain valid unchanged.
+
+#### Scenario: Continuous-2D config parsed
+
+- **WHEN** a YAML config specifies `environment.env_type: continuous_2d` with an `environment.continuous` block
+- **THEN** the config loads into the typed configuration model (`Continuous2DConfig`), parsing, validating, and defaulting each continuous field:
+  - `world_size_mm` — square arena edge length in mm; float, default `50.0`, must be `> 0`
+  - `body_length_mm` — reference worm body-length scale in mm; float, default `1.0`, must be `> 0`
+  - `max_step_mm` — maximum forward displacement per step in mm; float, default `1.0`, must be `>= 0`
+  - `capture_radius_mm` — Euclidean food-capture radius in mm; float, default `1.0`, must be `>= 0`
+  - `sweep_amplitude_mm` — klinotaxis head-sweep amplitude in mm; float, default `0.5`, must be `>= 0`
+- **AND** a value violating a field's type or range SHALL be rejected, and a `continuous` block paired with a non-`continuous_2d` `env_type` SHALL be rejected
+
+#### Scenario: Example continuous-2D schema loads to the typed model
+
+- **GIVEN** the example YAML below
+- **WHEN** the configuration is loaded
+- **THEN** the typed `Continuous2DConfig` fields equal the provided values (`world_size_mm == 20.0`, `body_length_mm == 1.0`, `max_step_mm == 1.0`, `capture_radius_mm == 1.0`, `sweep_amplitude_mm == 0.5`)
+- **AND** any field omitted from the YAML takes its documented default
+
+```yaml
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 1.0
+    sweep_amplitude_mm: 0.5
+```
+
+#### Scenario: Existing grid configs unchanged
+
+- **WHEN** an existing grid scenario YAML (no environment-type field) is loaded
+- **THEN** it loads and behaves exactly as before this change
+
+### Requirement: Continuous-action configuration
+
+The configuration system SHALL accept continuous-action policy settings (action mode, action bounds for speed and turn, and Gaussian log-std parameterisation/clamp) for PPO-family brains, defaulting to discrete on the grid substrate.
+
+#### Scenario: Continuous-action settings parsed
+
+- **WHEN** a config selects the continuous-action mode with action bounds
+- **THEN** the brain config loads with the continuous-action settings and the bounds are applied to the tanh-squashed Gaussian head
+
+#### Scenario: Discrete default preserved
+
+- **WHEN** a config does not specify continuous-action settings
+- **THEN** the brain defaults to discrete action behaviour, unchanged from before this change
