@@ -183,6 +183,51 @@ class TestCaptureRadius:
         env.foods = []
         assert env.get_nearest_food_distance_for(DEFAULT_AGENT_ID) is None
 
+    def test_nearest_food_distance_is_unrounded(self) -> None:
+        """Distance is the true Euclidean value, not rounded to int (Rung-2)."""
+        env = _env()
+        _state(env).pos_continuous = (10.4, 10.0)  # fractional worm position
+        env.foods = [(12, 10)]  # distance 1.6 (round would give 2)
+        dist = env.get_nearest_food_distance_for(DEFAULT_AGENT_ID)
+        assert dist == pytest.approx(1.6)
+
+
+class TestFloatSourcePlacement:
+    """Rung-2: continuous-2D food sources are placed at real-valued coordinates."""
+
+    def _seeded_env(self) -> Continuous2DEnvironment:
+        from quantumnematode.env.env import ForagingParams
+
+        return Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=30.0),
+            foraging=ForagingParams(foods_on_grid=6, min_food_distance=2),
+            seed=123,
+        )
+
+    def test_sources_are_within_bounds(self) -> None:
+        env = self._seeded_env()
+        upper = float(env.grid_size - 1)
+        assert len(env.foods) > 0
+        for fx, fy in env.foods:
+            assert 0.0 <= fx <= upper
+            assert 0.0 <= fy <= upper
+
+    def test_sources_are_real_valued(self) -> None:
+        """At least one source has a fractional coordinate (off the integer lattice)."""
+        env = self._seeded_env()
+        assert any(fx != int(fx) or fy != int(fy) for fx, fy in env.foods)
+
+    def test_candidate_generator_returns_python_floats_in_bounds(self) -> None:
+        """The overridden candidate generator yields real-valued in-bounds coords."""
+        env = self._seeded_env()
+        upper = float(env.grid_size - 1)
+        for _ in range(20):
+            fx, fy = env._generate_food_candidate()
+            assert isinstance(fx, float)
+            assert isinstance(fy, float)
+            assert 0.0 <= fx <= upper
+            assert 0.0 <= fy <= upper
+
 
 class TestCopyPreservesContinuousState:
     """`copy()` clones as the subclass and keeps the continuous position/heading.

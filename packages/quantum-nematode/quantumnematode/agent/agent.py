@@ -112,44 +112,46 @@ def _compute_lateral_offsets(
 
 
 def _continuous_lateral_offsets(
-    position: tuple[int, int],
+    position: tuple[float, float],
     heading_rad: float,
-    sweep: int,
+    sweep: float,
     grid_size: int,
-) -> tuple[tuple[int, int], tuple[int, int]]:
-    """Compute left/right head-sweep sample cells for a continuous heading.
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Compute left/right head-sweep sample points for a continuous heading.
 
-    Samples the integer cells ``sweep`` cells to the left (+90deg) and right (-90deg) of
-    ``heading_rad``, clamped to grid bounds. Sources + sensing live on the integer
-    lattice within the continuous arena (the worm moves continuously); this matches
-    ``_compute_lateral_offsets`` at cardinal headings and rotates smoothly otherwise.
+    Samples the real-valued points ``sweep`` to the left (+90deg) and right (-90deg) of
+    ``heading_rad`` from the worm's continuous position, clamped to the arena bounds.
+    The points are **not** snapped to integer cells — they are evaluated against the
+    continuous concentration field (Rung-2 env fidelity); this matches
+    ``_compute_lateral_offsets`` at cardinal headings (where the offsets are
+    integer-valued) and rotates smoothly otherwise.
 
     Parameters
     ----------
-    position : tuple[int, int]
-        The worm's (rounded) integer cell.
+    position : tuple[float, float]
+        The worm's continuous ``(x, y)`` position.
     heading_rad : float
         Continuous heading angle in radians.
-    sweep : int
-        Lateral sweep in cells (>= 1).
+    sweep : float
+        Lateral sweep amplitude (>= 1).
     grid_size : int
         Coordinate extent for boundary clamping.
 
     Returns
     -------
-    tuple[tuple[int, int], tuple[int, int]]
+    tuple[tuple[float, float], tuple[float, float]]
         ``(left_position, right_position)`` clamped to ``[0, grid_size - 1]``.
     """
     perp_x = -math.sin(heading_rad)
     perp_y = math.cos(heading_rad)
-    max_idx = grid_size - 1
+    upper = float(grid_size - 1)
     left = (
-        min(max_idx, max(0, round(position[0] + sweep * perp_x))),
-        min(max_idx, max(0, round(position[1] + sweep * perp_y))),
+        min(upper, max(0.0, position[0] + sweep * perp_x)),
+        min(upper, max(0.0, position[1] + sweep * perp_y)),
     )
     right = (
-        min(max_idx, max(0, round(position[0] - sweep * perp_x))),
-        min(max_idx, max(0, round(position[1] - sweep * perp_y))),
+        min(upper, max(0.0, position[0] - sweep * perp_x)),
+        min(upper, max(0.0, position[1] - sweep * perp_y)),
     )
     return left, right
 
@@ -807,11 +809,16 @@ class QuantumNematodeAgent:
             from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
             if isinstance(self.env, Continuous2DEnvironment):
-                # Continuous heading: sample integer cells perpendicular to
-                # heading_rad (>= 1-cell sweep). See `_continuous_lateral_offsets`.
-                sweep = max(1, round(self.env.continuous.sweep_amplitude_mm))
+                # Continuous heading: sample real-valued points perpendicular to
+                # heading_rad (>= 1 sweep) against the continuous field — no
+                # integer-cell snap. See `_continuous_lateral_offsets`.
+                sweep = max(1.0, float(self.env.continuous.sweep_amplitude_mm))
+                origin = agent_state.pos_continuous or (
+                    float(agent_pos[0]),
+                    float(agent_pos[1]),
+                )
                 left_pos, right_pos = _continuous_lateral_offsets(
-                    agent_pos,
+                    origin,
                     agent_state.heading_rad,
                     sweep,
                     self.env.grid_size,

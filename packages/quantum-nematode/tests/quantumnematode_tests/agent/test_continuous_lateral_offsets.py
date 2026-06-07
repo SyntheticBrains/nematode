@@ -1,22 +1,25 @@
 """Unit tests for continuous-heading klinotaxis lateral sampling.
 
-`_continuous_lateral_offsets` samples the integer cells perpendicular to a
-continuous heading. It must match the grid `_compute_lateral_offsets` at the four
-cardinal headings (so grid behaviour is unchanged where they coincide) and rotate
-smoothly for non-cardinal headings.
+`_continuous_lateral_offsets` samples real-valued points perpendicular to a
+continuous heading (no integer-cell snapping — Rung-2 continuous-field sampling).
+It must match the grid `_compute_lateral_offsets` at the four cardinal headings
+(where the offsets are integer-valued, so grid behaviour is unchanged where they
+coincide) and rotate smoothly for non-cardinal headings.
 """
 
 from __future__ import annotations
 
 import math
 
+import pytest
 from quantumnematode.agent.agent import (
     _compute_lateral_offsets,
     _continuous_lateral_offsets,
 )
 from quantumnematode.env.env import Direction
 
-_POS: tuple[int, int] = (10, 10)
+_POS: tuple[float, float] = (10.0, 10.0)
+_IPOS: tuple[int, int] = (10, 10)  # integer position for the grid offsets comparator
 _GRID: int = 20
 
 
@@ -27,7 +30,7 @@ class TestMatchesGridAtCardinals:
         """Heading +y (π/2) matches `Direction.UP`'s lateral offsets."""
         assert _continuous_lateral_offsets(_POS, math.pi / 2, 1, _GRID) == _compute_lateral_offsets(
             Direction.UP,
-            _POS,
+            _IPOS,
             _GRID,
         )
 
@@ -35,7 +38,7 @@ class TestMatchesGridAtCardinals:
         """Heading +x (0) matches `Direction.RIGHT`'s lateral offsets."""
         assert _continuous_lateral_offsets(_POS, 0.0, 1, _GRID) == _compute_lateral_offsets(
             Direction.RIGHT,
-            _POS,
+            _IPOS,
             _GRID,
         )
 
@@ -48,7 +51,7 @@ class TestMatchesGridAtCardinals:
             _GRID,
         ) == _compute_lateral_offsets(
             Direction.DOWN,
-            _POS,
+            _IPOS,
             _GRID,
         )
 
@@ -56,7 +59,7 @@ class TestMatchesGridAtCardinals:
         """Heading -x (π) matches `Direction.LEFT`'s lateral offsets."""
         assert _continuous_lateral_offsets(_POS, math.pi, 1, _GRID) == _compute_lateral_offsets(
             Direction.LEFT,
-            _POS,
+            _IPOS,
             _GRID,
         )
 
@@ -65,10 +68,14 @@ class TestRotatesAndClamps:
     """Off-cardinal headings rotate the sample cells and stay clamped to bounds."""
 
     def test_diagonal_heading(self) -> None:
-        """A 45° heading puts the left sample up-left and the right sample down-right."""
+        """A 45° heading puts the left sample up-left and the right sample down-right.
+
+        Real-valued (un-snapped) sample points: ±sweep·(cos45°, sin45°) from centre.
+        """
         left, right = _continuous_lateral_offsets(_POS, math.pi / 4, 1, _GRID)
-        assert left == (9, 11)
-        assert right == (11, 9)
+        half_diag = math.sqrt(0.5)  # sin/cos of 45°
+        assert left == pytest.approx((10.0 - half_diag, 10.0 + half_diag))
+        assert right == pytest.approx((10.0 + half_diag, 10.0 - half_diag))
 
     def test_sweep_scales_offset(self) -> None:
         """A larger sweep amplitude widens the perpendicular sample spacing."""

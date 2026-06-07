@@ -17,7 +17,12 @@ from enum import Enum
 import numpy as np
 from pydantic.dataclasses import dataclass
 
-from quantumnematode.dtypes import GradientPolar, GradientVector, GridPosition, TemperatureSpot
+from quantumnematode.dtypes import (
+    GradientPolar,
+    GradientVector,
+    Position,
+    TemperatureSpot,
+)
 
 
 class TemperatureZone(Enum):
@@ -116,7 +121,7 @@ class TemperatureField:
         if self.cold_spots is None:
             self.cold_spots = []
 
-    def get_temperature(self, position: GridPosition) -> float:
+    def get_temperature(self, position: Position) -> float:
         """
         Compute temperature at a given position.
 
@@ -160,7 +165,7 @@ class TemperatureField:
 
         return float(temp)
 
-    def get_gradient(self, position: GridPosition) -> GradientVector:
+    def get_gradient(self, position: Position) -> GradientVector:
         """
         Compute temperature gradient vector at a given position.
 
@@ -193,7 +198,7 @@ class TemperatureField:
 
         return float(dx), float(dy)
 
-    def get_gradient_polar(self, position: GridPosition) -> GradientPolar:
+    def get_gradient_polar(self, position: Position) -> GradientPolar:
         """
         Compute temperature gradient in polar coordinates.
 

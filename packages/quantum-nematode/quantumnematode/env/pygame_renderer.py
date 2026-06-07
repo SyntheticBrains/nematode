@@ -377,7 +377,7 @@ class PygameRenderer:
         food_sprite = self._sprites["food"]
         for food_pos in env.foods:
             if _in_view(food_pos[0], food_pos[1]):
-                px, py = self._cell_to_pixel(food_pos[0], food_pos[1], viewport)
+                px, py = self._cell_to_pixel(round(food_pos[0]), round(food_pos[1]), viewport)
                 self._screen.blit(food_sprite, (px, py))
 
         # Predators
@@ -720,7 +720,7 @@ class PygameRenderer:
         food_sprite = self._sprites["food"]
         for food_pos in env.foods:
             if _in_view(food_pos[0], food_pos[1]):
-                px, py = self._cell_to_pixel(food_pos[0], food_pos[1], viewport)
+                px, py = self._cell_to_pixel(round(food_pos[0]), round(food_pos[1]), viewport)
                 self._screen.blit(food_sprite, (px, py))
 
         # Predators
