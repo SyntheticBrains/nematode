@@ -4,7 +4,7 @@
 
 Define the requirements for the Classical Reservoir Hybrid (CRH) brain architecture. CRH uses a fixed classical Echo State Network (ESN) reservoir with configurable feature channels and a PPO-trained classical actor-critic readout. It serves as both a quantum ablation control for QRH (matching feature dimension and architecture) and a standalone benchmark architecture filling the "classical fixed reservoir + PPO readout" niche.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: CRH Brain Architecture
 

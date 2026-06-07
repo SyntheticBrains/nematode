@@ -1,6 +1,10 @@
 # temporal-sensing Specification
 
-## ADDED Requirements
+## Purpose
+
+Enable biologically realistic temporal sensing by allowing each gradient-based modality (chemotaxis, thermotaxis, nociception, aerotaxis) to operate in oracle, temporal, or derivative mode, replacing spatial-gradient oracle inputs with scalar values and their temporal derivatives. This lets agents infer gradients from movement history while preserving backward compatibility and transparency across all brain architectures.
+
+## Requirements
 
 ### Requirement: Sensing Mode Selection
 

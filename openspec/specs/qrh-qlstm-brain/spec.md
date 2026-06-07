@@ -1,4 +1,10 @@
-## ADDED Requirements
+# qrh-qlstm-brain Specification
+
+## Purpose
+
+Defines the `qrhqlstm` brain: a quantum reinforcement-learning agent that combines a fixed QRH quantum reservoir as a feature extractor with a QLIF-LSTM temporal readout and an actor-critic head trained via truncated-BPTT recurrent PPO. It specifies the brain's registration, configuration, architecture, training, and lifecycle so it can be selected and run from YAML config.
+
+## Requirements
 
 ### Requirement: QRH-QLSTM brain type registration
 

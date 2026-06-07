@@ -277,6 +277,8 @@ The system SHALL provide three preset configurations for curriculum learning: sm
 
 ### Requirement: Brain Architecture Compatibility
 
+Any existing brain type SHALL operate unchanged with a dynamic environment, receiving the same observation format and producing the same action outputs without requiring brain code changes.
+
 #### Scenario: Brain Architecture Compatibility
 
 - **GIVEN** any existing brain type (modular, qmodular, mlp, qmlp, spiking)
@@ -664,8 +666,6 @@ The system SHALL use consistent, documented symbols for predators across all ren
 
 <!-- Synced from change: add-temporal-sensing-and-stam -->
 
-## ADDED Requirements
-
 ### Requirement: Scalar Food Concentration
 
 The environment SHALL compute scalar food concentration at a given position as the sum of exponential decay magnitudes from all active food sources, without directional information.
@@ -803,13 +803,17 @@ The environment SHALL manage per-agent mutable state via an `AgentState` datacla
 
 ### Requirement: Agent Registry
 
+The environment SHALL maintain a registry of agents keyed by agent_id and SHALL register new agents with minimum-separation spawn placement.
+
+#### Scenario: Registry Structure and Registration
+
 - `self.agents`: `dict[str, AgentState]` keyed by agent_id
 - `add_agent(agent_id, position, max_body_length, min_distance)` creates and registers agents
 - Poisson disk sampling with minimum separation for spawn placement
 
 ### Requirement: Position-Parameterized Methods
 
-All environment methods provide `*_for(agent_id)` variants: `move_agent_for`, `reached_goal_for`, `consume_food_for`, `apply_predator_damage_for`, `apply_temperature_effects_for`, `apply_oxygen_effects_for`, `is_agent_at_boundary_for`, `is_agent_in_damage_radius_for`, `get_separated_gradients_for`, etc.
+All environment methods SHALL provide `*_for(agent_id)` variants: `move_agent_for`, `reached_goal_for`, `consume_food_for`, `apply_predator_damage_for`, `apply_temperature_effects_for`, `apply_oxygen_effects_for`, `is_agent_at_boundary_for`, `is_agent_in_damage_radius_for`, `get_separated_gradients_for`, etc.
 
 #### Scenario: Backward Compatible Originals
 
@@ -817,13 +821,17 @@ All environment methods provide `*_for(agent_id)` variants: `move_agent_for`, `r
 
 ### Requirement: Predator Multi-Target Pursuit
 
+Pursuit predators SHALL chase the nearest alive agent by Manhattan distance, excluding terminated agents from targeting.
+
+#### Scenario: Nearest-Target Pursuit
+
 - Pursuit predators chase the nearest alive agent (Manhattan distance)
 - Terminated agents excluded from targeting
 - Single-agent: identical to current behavior
 
 ### Requirement: Pheromone Field System
 
-Dynamic pheromone concentration fields using point-source exponential decay.
+The environment SHALL provide dynamic pheromone concentration fields using point-source exponential decay.
 
 #### Scenario: Concentration
 
@@ -840,6 +848,10 @@ Dynamic pheromone concentration fields using point-source exponential decay.
 
 ### Requirement: Pheromone Emission
 
+The environment SHALL emit pheromone sources for food consumption, predator damage, and aggregation, and SHALL be a no-op when pheromones are disabled or the field is not configured.
+
+#### Scenario: Emission Triggers
+
 - `emit_food_pheromone()`: adds FOOD_MARKING source on food consumption
 - `emit_alarm_pheromone()`: adds ALARM source on predator damage
 - `emit_aggregation_pheromone()`: adds AGGREGATION source (continuous, every step)
@@ -847,7 +859,7 @@ Dynamic pheromone concentration fields using point-source exponential decay.
 
 ### Requirement: Social Feeding System
 
-Satiety decay reduction when agents are near conspecifics (npr-1 mediated).
+The environment SHALL reduce satiety decay when agents are near conspecifics (npr-1 mediated).
 
 #### Scenario: Social Phenotype
 
@@ -863,7 +875,7 @@ Satiety decay reduction when agents are near conspecifics (npr-1 mediated).
 
 ### Requirement: Aggregation Pheromone Field
 
-Third PheromoneType (AGGREGATION) with continuous emission by all alive agents.
+The environment SHALL provide a third PheromoneType (AGGREGATION) with continuous emission by all alive agents.
 
 #### Scenario: Field Creation
 
@@ -874,6 +886,10 @@ Third PheromoneType (AGGREGATION) with continuous emission by all alive agents.
 - `update_pheromone_fields()` prunes aggregation field alongside food and alarm
 
 ### Requirement: Satiety Decay Multiplier
+
+`SatietyManager.decay_satiety` SHALL accept a multiplier that scales the satiety decay rate, defaulting to preserve original behavior.
+
+#### Scenario: Multiplier Scaling
 
 - `SatietyManager.decay_satiety(multiplier=1.0)` — default preserves original behavior
 - Multiplier < 1.0 reduces decay; > 1.0 increases; clamped at zero

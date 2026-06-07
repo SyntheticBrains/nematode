@@ -1,12 +1,14 @@
-# qrh-brain Specification (Delta)
+# qrh-brain Specification
 
 ## Purpose
 
 Refactor QRHBrain to inherit from ReservoirHybridBase, extracting shared PPO readout infrastructure into the base class. No behavioral changes to QRH.
 
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: QRH Inheritance Refactor
+
+QRHBrain SHALL inherit from `ReservoirHybridBase` and QRHBrainConfig SHALL inherit from `ReservoirHybridBaseConfig`, with shared PPO readout infrastructure provided by the base classes while preserving identical behavior to the pre-refactor version.
 
 #### Scenario: QRH Inherits from ReservoirHybridBase
 

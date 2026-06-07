@@ -1,48 +1,66 @@
+# klinotaxis-sensing Specification
+
 ## Purpose
 
 Defines requirements for klinotaxis (head-sweep) sensing mode providing local spatial gradient information via lateral concentration sampling, enabling biologically accurate chemotaxis and pheromone trail-following.
 
-## ADDED Requirement: Klinotaxis Sensing Mode
+## Requirements
 
-- WHEN `SensingMode.KLINOTAXIS` is selected for a modality
+### Requirement: Klinotaxis Sensing Mode
 
-- THEN the system SHALL sample concentration at the agent's position (center), 1 cell perpendicular-left of heading (left), and 1 cell perpendicular-right of heading (right)
+When `SensingMode.KLINOTAXIS` is selected for a modality, the system SHALL sample concentration at the agent's center, perpendicular-left, and perpendicular-right positions, compute the lateral gradient as `right - left`, compute the temporal derivative via STAM, and auto-enable STAM whenever any modality uses klinotaxis.
 
-- AND the lateral gradient SHALL be computed as `right - left`
+#### Scenario: Lateral and temporal sampling under klinotaxis
 
-- AND the temporal derivative SHALL be computed via STAM (same as derivative mode)
+- **WHEN** `SensingMode.KLINOTAXIS` is selected for a modality
 
-- AND STAM SHALL be auto-enabled when any modality uses klinotaxis
+- **THEN** the system SHALL sample concentration at the agent's position (center), 1 cell perpendicular-left of heading (left), and 1 cell perpendicular-right of heading (right)
 
-## ADDED Requirement: Head-Sweep Geometry
+- **AND** the lateral gradient SHALL be computed as `right - left`
 
-- WHEN computing lateral offsets for a given heading direction
+- **AND** the temporal derivative SHALL be computed via STAM (same as derivative mode)
 
-- THEN UP heading SHALL use left=(x-1,y), right=(x+1,y)
+- **AND** STAM SHALL be auto-enabled when any modality uses klinotaxis
 
-- AND RIGHT heading SHALL use left=(x,y+1), right=(x,y-1)
+### Requirement: Head-Sweep Geometry
 
-- AND DOWN heading SHALL use left=(x+1,y), right=(x-1,y)
+When computing lateral offsets for a given heading direction, the system SHALL apply the heading-specific left/right offsets, reuse the last non-STAY heading for STAY, and clamp all positions to grid bounds [0, grid_size-1].
 
-- AND LEFT heading SHALL use left=(x,y-1), right=(x,y+1)
+#### Scenario: Heading-specific lateral offsets
 
-- AND STAY heading SHALL use the last non-STAY heading direction
+- **WHEN** computing lateral offsets for a given heading direction
 
-- AND positions SHALL be clamped to grid bounds [0, grid_size-1]
+- **THEN** UP heading SHALL use left=(x-1,y), right=(x+1,y)
 
-## ADDED Requirement: Klinotaxis Sensory Modules
+- **AND** RIGHT heading SHALL use left=(x,y+1), right=(x,y-1)
 
-- WHEN a klinotaxis sensory module extracts features
+- **AND** DOWN heading SHALL use left=(x+1,y), right=(x-1,y)
 
-- THEN it SHALL produce CoreFeatures with classical_dim=3:
+- **AND** LEFT heading SHALL use left=(x,y-1), right=(x,y+1)
+
+- **AND** STAY heading SHALL use the last non-STAY heading direction
+
+- **AND** positions SHALL be clamped to grid bounds [0, grid_size-1]
+
+### Requirement: Klinotaxis Sensory Modules
+
+Klinotaxis sensory modules SHALL produce CoreFeatures with classical_dim=3 (strength, angle, binary), and `apply_sensing_mode()` SHALL substitute the configured oracle modules with their klinotaxis variants.
+
+#### Scenario: Feature extraction produces classical_dim=3
+
+- **WHEN** a klinotaxis sensory module extracts features
+
+- **THEN** it SHALL produce CoreFeatures with classical_dim=3:
 
   - strength: scalar concentration at agent position (same as temporal)
   - angle: `tanh(lateral_gradient * lateral_scale)` normalized to [-1, 1]
   - binary: `tanh(dC/dt * derivative_scale)` normalized to [-1, 1]
 
-- WHEN the following oracle modules are configured with klinotaxis mode
+#### Scenario: Oracle module substitution to klinotaxis variants
 
-- THEN `apply_sensing_mode()` SHALL substitute them as follows:
+- **WHEN** the following oracle modules are configured with klinotaxis mode
+
+- **THEN** `apply_sensing_mode()` SHALL substitute them as follows:
 
   - `food_chemotaxis` → `food_chemotaxis_klinotaxis`
   - `nociception` → `nociception_klinotaxis`
@@ -52,33 +70,45 @@ Defines requirements for klinotaxis (head-sweep) sensing mode providing local sp
   - `pheromone_alarm` → `pheromone_alarm_klinotaxis`
   - `pheromone_aggregation` → `pheromone_aggregation_klinotaxis`
 
-## MODIFIED Requirement: apply_sensing_mode Substitution
+### Requirement: apply_sensing_mode Substitution
 
-- WHEN `apply_sensing_mode()` processes a module name
+When `apply_sensing_mode()` processes a module name, it SHALL use explicit mode matching to select the klinotaxis, temporal, or original oracle module, and SHALL preserve existing TEMPORAL and DERIVATIVE mode behavior exactly.
 
-- THEN it SHALL use explicit mode matching:
+#### Scenario: Explicit mode matching for module selection
+
+- **WHEN** `apply_sensing_mode()` processes a module name
+
+- **THEN** it SHALL use explicit mode matching:
 
   - `== KLINOTAXIS` → `*_klinotaxis` module
   - `!= ORACLE and != KLINOTAXIS` → `*_temporal` module (covers TEMPORAL + DERIVATIVE)
   - `== ORACLE` → original oracle module
 
-- AND existing TEMPORAL and DERIVATIVE mode behavior SHALL be preserved exactly
+- **AND** existing TEMPORAL and DERIVATIVE mode behavior SHALL be preserved exactly
 
-## ADDED Requirement: Lateral Scale Configuration
+### Requirement: Lateral Scale Configuration
 
-- WHEN `lateral_scale` is configured on SensingConfig
+When `lateral_scale` is configured on SensingConfig, it SHALL be a positive float (default 50.0), SHALL be passed to BrainParams for use by klinotaxis sensory modules, and SHALL be independent of `derivative_scale`.
 
-- THEN it SHALL be a positive float (default 50.0)
+#### Scenario: lateral_scale configuration and propagation
 
-- AND it SHALL be passed to BrainParams for use by klinotaxis sensory modules
+- **WHEN** `lateral_scale` is configured on SensingConfig
 
-- AND it SHALL be independent of `derivative_scale`
+- **THEN** it SHALL be a positive float (default 50.0)
 
-## ADDED Requirement: BrainParams Lateral Gradient Fields
+- **AND** it SHALL be passed to BrainParams for use by klinotaxis sensory modules
 
-- WHEN klinotaxis mode is active for a modality
+- **AND** it SHALL be independent of `derivative_scale`
 
-- THEN BrainParams SHALL include the corresponding lateral gradient field:
+### Requirement: BrainParams Lateral Gradient Fields
+
+When klinotaxis mode is active for a modality, BrainParams SHALL include the corresponding lateral gradient field, and all lateral gradient fields SHALL default to None when klinotaxis is not active.
+
+#### Scenario: Lateral gradient fields per modality
+
+- **WHEN** klinotaxis mode is active for a modality
+
+- **THEN** BrainParams SHALL include the corresponding lateral gradient field:
 
   - `food_lateral_gradient: float | None`
   - `predator_lateral_gradient: float | None`
@@ -88,4 +118,4 @@ Defines requirements for klinotaxis (head-sweep) sensing mode providing local sp
   - `pheromone_alarm_lateral_gradient: float | None`
   - `pheromone_aggregation_lateral_gradient: float | None`
 
-- AND all lateral gradient fields SHALL default to None when klinotaxis is not active
+- **AND** all lateral gradient fields SHALL default to None when klinotaxis is not active

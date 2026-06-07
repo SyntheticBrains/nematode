@@ -6,7 +6,7 @@ Define the requirements for the QSNN-PPO brain architecture. QSNN-PPO pairs a Qu
 
 The QSNN actor reuses shared QLIF neuron infrastructure from `_qlif_layers.py`.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: QSNN-PPO Brain Architecture
 

@@ -6,7 +6,7 @@ Define the requirements for the Quantum Spiking Neural Network (QSNN) brain arch
 
 The QSNN Reinforce variant (`QSNNReinforceBrain`) uses REINFORCE policy gradient with surrogate gradient backward pass. Shared QLIF neuron infrastructure is extracted into `_qlif_layers.py` for reuse by other QSNN variants.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: QSNN Brain Architecture
 

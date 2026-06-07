@@ -4,7 +4,7 @@
 
 Define the QEF (Quantum Entangled Features) brain architecture — an entangled PQC feature extractor with configurable cross-modal entanglement topology, hybrid input, learnable feature gating, and classical PPO actor-critic readout.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: QEF Circuit Construction
 

@@ -443,8 +443,6 @@ The configuration system SHALL support an aerotaxis configuration section for de
 - **THEN** both SHALL be parsed and initialized independently
 - **AND** both OxygenField and TemperatureField SHALL coexist in the environment
 
-## ADDED Requirements
-
 ### Requirement: Sensing Configuration Schema
 
 The configuration system SHALL support a sensing configuration section for selecting sensing modes and STAM parameters.
@@ -637,6 +635,8 @@ The configuration system SHALL support an optional `multi_agent` section for mul
 
 ### Requirement: Multi-Agent Config Parameters
 
+The configuration system SHALL apply default values for multi-agent parameters (`food_competition`, `social_detection_radius`, `termination_policy`, `min_agent_distance`) when they are not explicitly specified.
+
 #### Scenario: Default Parameters
 
 - `food_competition` defaults to "first_arrival" (valid: "first_arrival", "random")
@@ -646,7 +646,7 @@ The configuration system SHALL support an optional `multi_agent` section for mul
 
 ### Requirement: Per-Agent Configuration
 
-Each agent supports: `id`, `brain`, `weights_path`, `social_phenotype`.
+The configuration system SHALL support per-agent configuration where each agent accepts `id`, `brain`, `weights_path`, and `social_phenotype` fields.
 
 #### Scenario: Shared vs Per-Agent Config
 
@@ -655,10 +655,16 @@ Each agent supports: `id`, `brain`, `weights_path`, `social_phenotype`.
 
 ### Requirement: Multi-Agent Model Persistence
 
+The system SHALL persist per-agent model files for multi-agent runs while preserving the single-agent persistence filename.
+
+#### Scenario: Model File Naming
+
 - Multi-agent saves: `final_agent_0.pt`, `final_agent_1.pt`, etc.
 - Single-agent saves: `final.pt` (unchanged)
 
 ### Requirement: Multi-Agent CSV Export
+
+The system SHALL export per-agent results and an aggregate summary as CSV files for multi-agent runs.
 
 #### Scenario: Per-Agent Results
 
@@ -684,11 +690,19 @@ The environment config SHALL support pheromone parameters.
 
 ### Requirement: SensingConfig Pheromone and Aggregation Modes
 
+The configuration system SHALL support pheromone and aggregation sensing modes on `SensingConfig`, defaulting them to ORACLE and translating them to temporal variants with STAM auto-enabled for non-oracle modes.
+
+#### Scenario: Pheromone and Aggregation Mode Handling
+
 - `pheromone_food_mode`, `pheromone_alarm_mode`, `pheromone_aggregation_mode` all default to ORACLE
 - `apply_sensing_mode()` translates oracle modules to temporal variants when non-oracle
 - `validate_sensing_config()` auto-enables STAM for derivative/temporal modes
 
 ### Requirement: Social Feeding Configuration
+
+The configuration system SHALL support an `environment.social_feeding` block with `enabled`, `decay_reduction`, and `solitary_decay` fields, applying the documented defaults and sharing its detection radius with `multi_agent.social_detection_radius`.
+
+#### Scenario: Social Feeding Block
 
 - `environment.social_feeding` block with `enabled`, `decay_reduction`, `solitary_decay`
 - Defaults: disabled, decay_reduction=0.7, solitary_decay=1.0
@@ -696,12 +710,18 @@ The environment config SHALL support pheromone parameters.
 
 ### Requirement: Per-Agent Social Phenotype
 
+The configuration system SHALL support a per-agent `AgentConfig.social_phenotype` field accepting "social" (default) or "solitary", defaulting all agents to "social" in homogeneous configs.
+
+#### Scenario: Social Phenotype Field
+
 - `AgentConfig.social_phenotype`: "social" (default) or "solitary"
 - Homogeneous configs default all agents to "social"
 
 ### Requirement: Evaluation Scenario Configs
 
 Scenario configs SHALL exist for multi-agent evaluation campaigns.
+
+#### Scenario: Evaluation Campaign Configs
 
 - Single-agent baselines for both oracle and temporal modes with environment params matching multi-agent configs
 - Agent scaling series (1, 2, 5, 10 agents) on identical grid with identical parameters
