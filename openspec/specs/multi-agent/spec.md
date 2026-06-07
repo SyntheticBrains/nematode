@@ -26,6 +26,8 @@ The system SHALL provide a `MultiAgentSimulation` orchestrator that coordinates 
 
 ### Requirement: Food Competition Resolution
 
+The system SHALL resolve contested food (multiple agents on the same food position) according to the configured competition policy, while agents at different food positions consume independently.
+
 #### Scenario: FIRST_ARRIVAL Policy
 
 - Lexicographically first agent_id wins contested food
@@ -39,6 +41,8 @@ The system SHALL provide a `MultiAgentSimulation` orchestrator that coordinates 
 - Agents at different food positions consume independently (no competition event)
 
 ### Requirement: Agent Termination Policy
+
+The system SHALL apply the configured termination policy (Freeze, Remove, or End All) when an agent terminates, determining whether the agent remains on the grid, is removed, or ends the episode for all agents.
 
 #### Scenario: Freeze (Default)
 
@@ -55,11 +59,17 @@ The system SHALL provide a `MultiAgentSimulation` orchestrator that coordinates 
 
 ### Requirement: Social Proximity Detection
 
+The system SHALL count nearby agents per agent within `social_detection_radius` (Manhattan distance), excluding self and the "default" placeholder, counting frozen agents but not removed agents.
+
+#### Scenario: Proximity Counting
+
 - Nearby agents counted per agent within `social_detection_radius` (Manhattan distance)
 - Self excluded; "default" placeholder excluded
 - Frozen agents counted; removed agents not counted
 
 ### Requirement: Pheromone Emission in Step Loop
+
+The system SHALL emit pheromones during the step loop — food-marking on consumption, alarm on predator damage, and continuous aggregation — and SHALL update the pheromone fields once per step, with all emission and update behavior a no-op when the corresponding feature is disabled.
 
 #### Scenario: Food-Marking on Consumption
 
@@ -79,6 +89,8 @@ The system SHALL provide a `MultiAgentSimulation` orchestrator that coordinates 
 - `update_pheromone_fields(current_step)` called once per step; no-op when pheromones disabled
 
 ### Requirement: Social Feeding in Step Loop
+
+The system SHALL apply social feeding satiety-decay reduction during the step loop when social feeding is enabled and an agent has nearby agents, using the phenotype-appropriate multiplier and incrementing the `social_feeding_events` counter when applied.
 
 #### Scenario: Decay Reduction
 
@@ -177,9 +189,17 @@ The env-side `apply_predator_damage_for` applies a fixed damage tick without ide
 
 ### Requirement: CSV Export of Collective Metrics
 
+The system SHALL export collective metrics to `multi_agent_summary.csv` with the specified columns.
+
+#### Scenario: Summary CSV Columns
+
 - `multi_agent_summary.csv` columns include: run, total_food, competition_events, proximity_events, alive_at_end, mean_success, gini, social_feeding_events, aggregation_index, alarm_evasion_events, food_sharing_events
 
 ### Requirement: Agent Spawn Placement
+
+The system SHALL place agents using Poisson disk sampling with `min_agent_distance` separation, never spawning on food or predator positions, and SHALL fall back to random valid positions on dense grids.
+
+#### Scenario: Placement Strategy
 
 - Poisson disk sampling with `min_agent_distance` separation
 - No agent spawns on food or predator positions
@@ -187,9 +207,17 @@ The env-side `apply_predator_damage_for` applies a fixed damage tick without ide
 
 ### Requirement: Grid Size Validation
 
+The system SHALL enforce a minimum grid size of `max(5, ceil(5 * sqrt(num_agents)))`.
+
+#### Scenario: Minimum Grid Size
+
 - Minimum: `max(5, ceil(5 * sqrt(num_agents)))`
 
 ### Requirement: Reproducible Seeding
+
+The system SHALL derive deterministic per-agent sub-seeds via `blake2b(session_seed + agent_id)` so that runs are reproducible, including that the FIRST_ARRIVAL policy awards the same agent the same contested food across reruns.
+
+#### Scenario: Deterministic Seeding
 
 - Per-agent sub-seeds: `blake2b(session_seed + agent_id)` deterministic
 - FIRST_ARRIVAL policy: same agent wins same contested food across reruns
@@ -197,6 +225,8 @@ The env-side `apply_predator_damage_for` applies a fixed damage tick without ide
 ### Requirement: Territorial Index Metric
 
 MultiAgentEpisodeResult SHALL include a territorial index measuring spatial foraging specialization.
+
+#### Scenario: Territorial Index Computation
 
 - Gini coefficient of per-agent foraging spreads (mean Manhattan distance of food collection positions from centroid)
 - Value in \[0, 1\]: 0 = equal foraging patterns, 1 = maximal specialization
@@ -207,11 +237,17 @@ MultiAgentEpisodeResult SHALL include a territorial index measuring spatial fora
 
 MultiAgentEpisodeResult SHALL include an alarm response rate measuring causal reaction to alarm pheromone emissions.
 
+#### Scenario: Alarm Response Rate Computation
+
 - When alarm emitted at step T by agent A, count nearby agents (within `social_detection_radius`) that change direction within ALARM_RESPONSE_WINDOW (5) steps
 - Rate = direction changes / opportunities; 0.0 when no opportunities
 - Emitting agent excluded from response opportunities
 
 ### Requirement: CSV Export of Evaluation Metrics
+
+The system SHALL include the territorial-index, alarm-response-rate, and per-simulation evaluation columns in the exported CSV files.
+
+#### Scenario: Evaluation CSV Columns
 
 - `multi_agent_summary.csv` SHALL include `territorial_index` and `alarm_response_rate` columns
 - `simulation_results.csv` SHALL include `config_name`, `total_reward`, `success`, `satiety_remaining`, `foods_available` columns

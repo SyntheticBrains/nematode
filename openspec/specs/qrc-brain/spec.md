@@ -4,7 +4,7 @@
 
 Define the requirements for the Quantum Reservoir Computing (QRC) brain architecture. QRC uses a fixed random quantum reservoir circuit to generate rich feature representations, with only a classical readout network trained via gradient descent. This architecture inherently avoids barren plateau issues that affect parameterized quantum circuits.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: QRC Brain Architecture
 

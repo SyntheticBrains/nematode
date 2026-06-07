@@ -1,4 +1,10 @@
-## ADDED Requirements
+# crh-qlstm-brain Specification
+
+## Purpose
+
+Provide a CRH-QLSTM brain that pairs a classical CRH reservoir (Echo State Network) feature extractor with a QLIF-LSTM temporal readout, sharing all non-reservoir behavior with QRH-QLSTM so the two can serve as a controlled quantum-vs-classical reservoir ablation.
+
+## Requirements
 
 ### Requirement: CRH-QLSTM brain type registration
 

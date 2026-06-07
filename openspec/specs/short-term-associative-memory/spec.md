@@ -1,6 +1,10 @@
 # short-term-associative-memory Specification
 
-## ADDED Requirements
+## Purpose
+
+Provide a short-term associative memory (STAM) that maintains an exponential-decay buffer of recent sensory readings, movements, and actions, and exposes a fixed-size memory state vector (weighted means, temporal derivatives, movement deltas, and action variety) for neural-network input via the sensory module framework.
+
+## Requirements
 
 ### Requirement: STAM Buffer Storage
 

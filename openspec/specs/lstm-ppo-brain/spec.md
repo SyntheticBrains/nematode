@@ -1,6 +1,10 @@
 # lstm-ppo-brain Specification
 
-## ADDED Requirements
+## Purpose
+
+Provide an LSTM/GRU-augmented PPO brain that processes sensory features through a recurrent layer before actor/critic heads, maintaining hidden state across steps within episodes and training via chunk-based truncated backpropagation through time.
+
+## Requirements
 
 ### Requirement: LSTM PPO Brain Architecture
 

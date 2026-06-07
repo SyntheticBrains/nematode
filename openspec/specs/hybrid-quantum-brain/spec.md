@@ -4,7 +4,7 @@
 
 Define the requirements for the Hierarchical Hybrid Quantum Brain architecture that combines a QSNN reflex layer (QLIF quantum circuits with surrogate gradient REINFORCE) with a classical cortex MLP (PPO training) for multi-objective decision-making. The architecture uses mode-gated fusion to let the cortex modulate trust in the quantum reflex, enabling both reactive foraging and strategic predator evasion.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Hierarchical Architecture
 
