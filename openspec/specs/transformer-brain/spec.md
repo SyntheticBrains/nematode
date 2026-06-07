@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-continuous-2d-and-action-heads. Update Purpose after archive.
+Defines the Transformer/attention-based PPO brain: a plugin architecture that processes a temporal window of recent observations via self-attention before its actor/critic heads, registered through the L1 plugin interface and selectable by name like any other brain. It serves both as a temporal-comparison architecture and as the Gate-2 plugin-parity verification vehicle — demonstrating that a new architecture family can be added within the files-touched budget and with no per-architecture branches in the simulation or training loops.
 
 ## Requirements
 

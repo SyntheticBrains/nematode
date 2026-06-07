@@ -892,7 +892,8 @@ The environment SHALL provide a third PheromoneType (AGGREGATION) with continuou
 #### Scenario: Multiplier Scaling
 
 - `SatietyManager.decay_satiety(multiplier=1.0)` — default preserves original behavior
-- Multiplier < 1.0 reduces decay; > 1.0 increases; clamped at zero
+- Multiplier < 1.0 reduces decay; > 1.0 increases (the multiplier itself must be non-negative)
+- The resulting satiety value after applying decay is clamped to a minimum of 0.0 (preventing negative satiety); the clamp applies to the satiety, not the multiplier
 
 ### Requirement: Environment-type selection
 

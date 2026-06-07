@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-continuous-2d-and-action-heads. Update Purpose after archive.
+Defines the shared action-policy module that standardises action selection across all PPO-family brains, providing both a discrete (categorical) mode and a continuous (tanh-squashed Gaussian) mode behind one interface so brains do not each re-implement sampling, log-probability, entropy, and PPO surrogate terms. It governs the continuous-action contract — bounded `(speed, turn)` actions, Jacobian-corrected log-probabilities, and a finite, log-std-clamped Gaussian — and how continuous actions flow from brain through the runner to the environment without per-architecture branching, keeping brains environment-scale-agnostic.
 
 ## Requirements
 
@@ -22,14 +22,14 @@ The system SHALL provide a single shared action-policy module that all PPO-famil
 
 ### Requirement: Tanh-squashed Gaussian continuous policy
 
-The continuous mode SHALL parameterise a diagonal Gaussian over a 2-dimensional action, squash samples through `tanh`, and affine-rescale to the action ranges `speed ∈ [0, max]` and `turn ∈ [−π, π]`, applying the log-det-Jacobian correction to the log-probability.
+The continuous mode SHALL parameterise a diagonal Gaussian over a 2-dimensional action, squash samples through `tanh`, and affine-rescale to the action ranges `speed ∈ [0, max]` (where `max` is the continuous-2D environment's configured `max_step_mm`) and `turn ∈ [−π, π]`, applying the log-det-Jacobian correction to the log-probability.
 
-> Implementation note (2026-06-06, non-normative): the rescale is **split** across the policy and the environment (see design.md D5). The brain's policy squashes to a *normalized* action (`speed ∈ [0, 1]`, `turn ∈ [-1, 1]`) and applies the tanh + normalized-affine log-det-Jacobian; `Continuous2DEnvironment.move_agent_normalized` applies the *physical* rescale (`× max_step_mm`, `× π`). This keeps brains env-scale-agnostic and the physical scale where movement semantics live; it is PPO-equivalent because the physical affine is a constant that cancels in the importance ratio. The system-level observable below (the action applied to the env lies in `[0, max] × [−π, π]`) is satisfied at the environment boundary.
+> Implementation note (2026-06-06, non-normative): the rescale is **split** across the policy and the environment. The brain's policy squashes to a *normalized* action (`speed ∈ [0, 1]`, `turn ∈ [-1, 1]`) and applies the tanh + normalized-affine log-det-Jacobian; `Continuous2DEnvironment.move_agent_normalized` applies the *physical* rescale (`× max_step_mm`, `× π`). This keeps brains env-scale-agnostic and the physical scale where movement semantics live; it is PPO-equivalent because the physical affine is a constant that cancels in the importance ratio. The system-level observable below (the action applied to the env lies in `[0, max] × [−π, π]`) is satisfied at the environment boundary.
 
 #### Scenario: Bounded sampled actions
 
-- **WHEN** a continuous action is sampled
-- **THEN** `speed` lies within `[0, max]` and `turn` lies within `[−π, π]`
+- **WHEN** a continuous action is sampled and applied to the environment
+- **THEN** `speed` lies within `[0, max_step_mm]` (the configured per-step maximum displacement from the continuous-2D environment configuration) and `turn` lies within `[−π, π]`
 
 #### Scenario: Jacobian-corrected log-probability
 

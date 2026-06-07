@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-continuous-2d-and-action-heads. Update Purpose after archive.
+Defines the continuous-2D foraging environment: a square, millimetre-scale arena in which the worm's position, movement, food capture, and distances are real-valued (continuous), offered as an alternative substrate to the discrete grid environment and selected via the environment-type discriminator. It models *C. elegans* navigation on a cm-scale plate with a ~1 mm body, giving continuous-action PPO brains a kinematic `(speed, turn)` movement model with Euclidean capture and heading-aware klinotaxis sensing. It is consumed by the simulation/agent runners and continuous-action brains, and guarantees the discrete grid environment remains unchanged and byte-stable.
 
 ## Requirements
 
@@ -39,7 +39,7 @@ The continuous-2D environment SHALL translate a continuous action `(speed, turn)
 #### Scenario: World-bound clamping
 
 - **WHEN** a movement would take the agent outside the world bounds
-- **THEN** the agent is clamped to the bounds (or the step is rejected) without raising, and the episode continues
+- **THEN** the agent's new position is clamped per-axis to `[0, world_size_mm]` — it advances as far as the bound allows (partial movement), the step is **not** rejected, no error is raised, and the episode continues
 
 ### Requirement: Capture-radius food consumption
 
@@ -62,7 +62,7 @@ The continuous-2D environment SHALL place food and predator sources within the w
 #### Scenario: Sources within bounds
 
 - **WHEN** sources are initialised in the continuous-2D environment
-- **THEN** their coordinates lie within the world bounds and respect the existing minimum-separation validity checks (on the integer lattice within the arena in this iteration)
+- **THEN** their coordinates lie within the world bounds and respect the existing minimum-separation validity checks
 
 #### Scenario: Euclidean distances
 

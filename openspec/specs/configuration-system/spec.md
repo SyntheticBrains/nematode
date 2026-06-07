@@ -736,8 +736,32 @@ The configuration system SHALL accept an environment-type discriminator and cont
 
 #### Scenario: Continuous-2D config parsed
 
-- **WHEN** a YAML config specifies the continuous-2D environment type with continuous fields
-- **THEN** the config loads into the typed configuration model with the continuous fields populated (or defaulted) and validated
+- **WHEN** a YAML config specifies `environment.env_type: continuous_2d` with an `environment.continuous` block
+- **THEN** the config loads into the typed configuration model (`Continuous2DConfig`), parsing, validating, and defaulting each continuous field:
+  - `world_size_mm` — square arena edge length in mm; float, default `50.0`, must be `> 0`
+  - `body_length_mm` — reference worm body-length scale in mm; float, default `1.0`, must be `> 0`
+  - `max_step_mm` — maximum forward displacement per step in mm; float, default `1.0`, must be `>= 0`
+  - `capture_radius_mm` — Euclidean food-capture radius in mm; float, default `1.0`, must be `>= 0`
+  - `sweep_amplitude_mm` — klinotaxis head-sweep amplitude in mm; float, default `0.5`, must be `>= 0`
+- **AND** a value violating a field's type or range SHALL be rejected, and a `continuous` block paired with a non-`continuous_2d` `env_type` SHALL be rejected
+
+#### Scenario: Example continuous-2D schema loads to the typed model
+
+- **GIVEN** the example YAML below
+- **WHEN** the configuration is loaded
+- **THEN** the typed `Continuous2DConfig` fields equal the provided values (`world_size_mm == 20.0`, `body_length_mm == 1.0`, `max_step_mm == 1.0`, `capture_radius_mm == 1.0`, `sweep_amplitude_mm == 0.5`)
+- **AND** any field omitted from the YAML takes its documented default
+
+```yaml
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 1.0
+    sweep_amplitude_mm: 0.5
+```
 
 #### Scenario: Existing grid configs unchanged
 
