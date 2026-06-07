@@ -665,6 +665,10 @@ class StandardEpisodeRunner(EpisodeRunner):
         # Reset STAM buffer for new episode (no cross-episode memory)
         if agent._stam is not None:
             agent._stam.reset()
+        # Reset the adaptive chemosensory background too (same per-episode boundary
+        # as STAM — otherwise the background leaks across reused episodes).
+        if agent._adaptive_food is not None:
+            agent._adaptive_food.reset()
         agent._previous_position = None
         agent._last_heading = Direction.UP
 
