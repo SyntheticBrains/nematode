@@ -24,6 +24,9 @@ SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 
 SIMULATION_CONFIGS = [
     "scenarios/foraging/mlpppo_small_oracle.yml",
+    # Continuous-2D substrate guard (T5): keeps the new env_type + continuous
+    # action head parsing + running on the standard MLP-PPO arm.
+    "scenarios/foraging/mlpppo_small_continuous2d_klinotaxis.yml",
     "scenarios/foraging/mlpreinforce_small_oracle.yml",
     "scenarios/foraging/spikingreinforce_small_oracle.yml",
     "special/qvarcircuit_foraging_small_validate_oracle.yml",
