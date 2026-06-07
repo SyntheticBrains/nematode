@@ -180,6 +180,94 @@ class TestGradientSuperposition:
                 assert 0.0 < ratio < 1.0
 
 
+class TestFickGradientGeometry:
+    """Rung-2 static Fick-shaped (Gaussian) chemical-gradient field geometry."""
+
+    def _env(self, foraging: ForagingParams) -> DynamicForagingEnvironment:
+        return DynamicForagingEnvironment(
+            grid_size=40,
+            start_pos=(20, 20),
+            foraging=foraging,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+    def test_exponential_mode_is_byte_stable_default(self):
+        """Default (exponential) mode matches the hand-computed Rung-0 kernel exactly."""
+        env = self._env(
+            ForagingParams(foods_on_grid=0, gradient_decay_constant=8.0, gradient_strength=1.0),
+        )
+        env.foods = [(30, 20)]  # distance 10 east of (20, 20)
+        distance = 10.0
+        expected_raw = 1.0 * np.exp(-distance / 8.0)
+        expected = float(np.tanh(expected_raw * 1.0))
+        assert env.get_food_concentration((20, 20)) == expected
+
+    def test_fick_mode_uses_gaussian_kernel(self):
+        """Fick mode evaluates strength * exp(-(r/L)**2) with L = decay (D unset)."""
+        env = self._env(
+            ForagingParams(
+                foods_on_grid=0,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+                gradient_field_mode="fick",
+            ),
+        )
+        env.foods = [(30, 20)]
+        distance = 10.0
+        expected_raw = 1.0 * np.exp(-((distance / 8.0) ** 2))
+        expected = float(np.tanh(expected_raw * 1.0))
+        assert env.get_food_concentration((20, 20)) == expected
+
+    def test_fick_differs_from_exponential(self):
+        """At the same distance/scale the Gaussian and exponential kernels differ."""
+        common = {"foods_on_grid": 0, "gradient_decay_constant": 8.0, "gradient_strength": 1.0}
+        exp_env = self._env(ForagingParams(**common))
+        fick_env = self._env(ForagingParams(**common, gradient_field_mode="fick"))
+        exp_env.foods = fick_env.foods = [(30, 20)]
+        assert exp_env.get_food_concentration((20, 20)) != fick_env.get_food_concentration((20, 20))
+
+    def test_fick_at_source_returns_strength(self):
+        """On the source (distance 0) both modes saturate to strength (pre-tanh)."""
+        env = self._env(
+            ForagingParams(foods_on_grid=0, gradient_strength=1.0, gradient_field_mode="fick"),
+        )
+        env.foods = [(20, 20)]
+        # tanh(1.0) is the on-source value
+        assert env.get_food_concentration((20, 20)) == pytest.approx(float(np.tanh(1.0)))
+
+    def test_per_signal_diffusion_coefficient_sets_spread(self):
+        """Larger D → broader Gaussian → higher concentration at a fixed distance."""
+        narrow = self._env(
+            ForagingParams(
+                foods_on_grid=0,
+                gradient_field_mode="fick",
+                diffusion_coefficient=4.0,
+                assay_time=1.0,
+            ),
+        )
+        broad = self._env(
+            ForagingParams(
+                foods_on_grid=0,
+                gradient_field_mode="fick",
+                diffusion_coefficient=16.0,
+                assay_time=1.0,
+            ),
+        )
+        narrow.foods = broad.foods = [(30, 20)]
+        assert broad.get_food_concentration((20, 20)) > narrow.get_food_concentration((20, 20))
+
+    def test_fick_length_from_diffusion_coefficient(self):
+        """fick_length() == sqrt(4 * D * assay_time) when D is set."""
+        params = ForagingParams(diffusion_coefficient=9.0, assay_time=1.0)
+        assert params.fick_length() == pytest.approx((4.0 * 9.0 * 1.0) ** 0.5)
+
+    def test_fick_length_falls_back_to_decay_constant(self):
+        """fick_length() falls back to gradient_decay_constant when D is unset."""
+        params = ForagingParams(gradient_decay_constant=8.0)
+        assert params.fick_length() == 8.0
+
+
 class TestPoissonDiskSampling:
     """Test cases for Poisson disk sampling food distribution."""
 

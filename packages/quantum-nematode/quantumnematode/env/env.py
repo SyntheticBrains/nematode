@@ -204,6 +204,27 @@ class ForagingParams:
     no_respawn: bool = False
     satiety_food_threshold: float | None = None
     min_food_predator_distance: int = 0
+    # Chemical-gradient field mode (Rung-2 env fidelity). ``exponential`` is the
+    # Rung-0 default and keeps every existing/grid config byte-stable;
+    # ``fick`` selects the frozen analytic Fick (Gaussian) kernel
+    # ``strength * exp(-(r / L)**2)`` with diffusion length
+    # ``L = sqrt(4 * D * assay_time)`` (or ``gradient_decay_constant`` when
+    # ``diffusion_coefficient`` is unset). Applies to the food/chemical field
+    # only; the predator field retains the exponential kernel.
+    gradient_field_mode: str = "exponential"
+    diffusion_coefficient: float | None = None
+    assay_time: float = 1.0
+
+    def fick_length(self) -> float:
+        """Fick diffusion length ``sqrt(4 * D * assay_time)`` for the Gaussian kernel.
+
+        Falls back to ``gradient_decay_constant`` (interpreted as the diffusion
+        length directly) when ``diffusion_coefficient`` is unset, preserving
+        continuity with the tuned exponential ``decay`` scale.
+        """
+        if self.diffusion_coefficient is not None:
+            return float((4.0 * self.diffusion_coefficient * self.assay_time) ** 0.5)
+        return float(self.gradient_decay_constant)
 
 
 @dataclass
@@ -1934,6 +1955,31 @@ class DynamicForagingEnvironment(BaseEnvironment):
         logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
+    def _food_field_magnitude(self, distance: float) -> float:
+        """Per-source food/chemical field magnitude at ``distance`` from a source.
+
+        Two selectable field modes (``foraging.gradient_field_mode``):
+
+        - ``exponential`` (default, Rung-0; legacy + grid byte-stable): the
+          kernel ``strength * exp(-distance / decay_constant)``.
+        - ``fick`` (Rung-2): the frozen analytic Fick (Gaussian) kernel
+          ``strength * exp(-(distance / L)**2)`` with diffusion length
+          ``L = sqrt(4 * D * assay_time)`` (or ``decay_constant`` when ``D`` is
+          unset). Per-signal ``D`` sets distinct geometry (larger ``D`` → broader
+          gradient).
+
+        At ``distance == 0`` both modes return ``strength`` (``exp(0) == 1``).
+        Applies to the food/chemical field only; the predator field keeps the
+        exponential kernel.
+        """
+        foraging = self.foraging
+        if foraging.gradient_field_mode == "fick":
+            length = foraging.fick_length()
+            return float(foraging.gradient_strength * np.exp(-((distance / length) ** 2)))
+        return float(
+            foraging.gradient_strength * np.exp(-distance / foraging.gradient_decay_constant),
+        )
+
     def _compute_food_gradient_vector(
         self,
         position: tuple[int, ...],
@@ -1962,10 +2008,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             if distance == 0:
                 continue
 
-            # Exponential decay gradient (positive/attractive)
-            strength = self.foraging.gradient_strength * np.exp(
-                -distance / self.foraging.gradient_decay_constant,
-            )
+            # Food/chemical field magnitude (exponential Rung-0 or Fick Rung-2)
+            strength = self._food_field_magnitude(distance)
 
             # Compute direction vector
             direction = np.arctan2(dy, dx)
@@ -2053,9 +2097,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 raw_concentration += self.foraging.gradient_strength
                 continue
 
-            raw_concentration += self.foraging.gradient_strength * np.exp(
-                -distance / self.foraging.gradient_decay_constant,
-            )
+            raw_concentration += self._food_field_magnitude(distance)
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 

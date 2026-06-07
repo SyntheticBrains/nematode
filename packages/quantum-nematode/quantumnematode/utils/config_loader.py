@@ -288,6 +288,14 @@ class ForagingConfig(BaseModel):
     food_hotspot_decay: float = Field(default=8.0, gt=0.0)
     no_respawn: bool = False
     satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
+    # Chemical-gradient field mode (Rung-2 env fidelity). ``exponential`` is the
+    # default and keeps every existing/grid config byte-stable; ``fick`` selects
+    # the frozen analytic Fick (Gaussian) kernel with diffusion length
+    # ``sqrt(4 * diffusion_coefficient * assay_time)`` (or ``gradient_decay_constant``
+    # when ``diffusion_coefficient`` is unset). Food/chemical field only.
+    gradient_field_mode: Literal["exponential", "fick"] = "exponential"
+    diffusion_coefficient: float | None = Field(default=None, gt=0.0)
+    assay_time: float = Field(default=1.0, gt=0.0)
     # Minimum Euclidean distance from any predator at which food may
     # spawn. Default 0 preserves the original food-placement
     # behaviour where food can spawn anywhere a predator is not
@@ -323,6 +331,9 @@ class ForagingConfig(BaseModel):
             no_respawn=self.no_respawn,
             satiety_food_threshold=self.satiety_food_threshold,
             min_food_predator_distance=self.min_food_predator_distance,
+            gradient_field_mode=self.gradient_field_mode,
+            diffusion_coefficient=self.diffusion_coefficient,
+            assay_time=self.assay_time,
         )
 
 
