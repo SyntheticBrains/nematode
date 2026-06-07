@@ -77,7 +77,7 @@
 - [x] 7.2 Publish the T5 logbook (`docs/experiments/logbooks/0XX-platform-refactor.md`) with the parity verification + floor-check evidence. *(→ `027-platform-refactor-continuous-2d.md`.)*
 - [x] 7.3 Record the Gate 2 GO/PIVOT/STOP decision in the T5 logbook against G2.a–G2.d; PIVOT trigger if G2.b OR G2.c fails; STOP trigger if post-pivot the interface is still incompatible with a MUST family. *(GO recorded — G2.b/G2.c PASS, G2.d PASS, neither PIVOT trigger fired, STOP N/A.)*
 - [x] 7.4 Update `openspec/changes/phase6-tracking/tasks.md` T5 rows + the Gate 2 decision link; flip the `docs/roadmap.md` Phase 6 Tranche Tracker T5 row + Gate 2 outcome. **Also reflect the T5 deferrals in the tracker so they are not missed:** (a) add float source placement + Euclidean pheromone/predator-mechano distance (T5 §3.4) to the **T6** scope row; (b) confirm the **T7** row's "SHOULD/MAY opportunistic" line covers the deferred §8.1 continuous heads, and record the §6 entropy-~0.10 continuous-stability lesson + the continuous-head inventory (5 ready: MLP/LSTM/CfC/connectome/transformer) as T7-prep context. *(Done: tracker T5 status + Gate-2 decision/link, T6.physics.1 + T7.prep.{continuous_tuning,should_may_continuous} added; roadmap T5 row + Gate 2 outcome flipped to GO.)*
-- [ ] 7.5 `openspec validate add-continuous-2d-and-action-heads --strict` clean; targeted `pre-commit run --files <changed>` clean; full `pre-commit run -a` before push.
+- [x] 7.5 `openspec validate add-continuous-2d-and-action-heads --strict` clean; targeted `pre-commit run --files <changed>` clean; full `pre-commit run -a` before push. *(All three green.)*
 
 ## 8. SHOULD/MAY continuous heads (opportunistic, NOT gating Gate 2)
 
