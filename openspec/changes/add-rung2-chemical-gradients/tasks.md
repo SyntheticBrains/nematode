@@ -8,9 +8,9 @@ validation, and logbook. Tick the corresponding tracker row as each lands.
 
 ## 1. Static Fick-shaped gradient geometry (env field)
 
-- [ ] 1.1 Add a **field-mode** selector for chemical signals (exponential-decay = default/legacy; `fick` = new) wired through the configuration system; default preserves current behaviour.
-- [ ] 1.2 Implement the frozen analytic Gaussian Fick kernel `C(r) = A·exp(−r²/(4·D·t_assay))` as the `fick` kernel in the concentration + gradient-vector computations (`env/env.py` `get_food_concentration` / `_compute_*_gradient_vector`), parameterised by per-signal `D` and `t_assay`; map the existing `gradient_decay_constant` to `√(4·D·t_assay)` for continuity.
-- [ ] 1.3 Per-signal `D` configuration (food, and pheromone/CO₂ placeholders) in `configs/scenarios/`; document calibration so the food field's spread stays near the tuned continuous `decay≈8`.
+- [ ] 1.1 Add a **field-mode** selector for chemical signals (exponential-decay = default/legacy; `fick` = new) on `ForagingConfig` (`config_loader.py:276`, alongside `gradient_decay_constant`/`gradient_strength`); default preserves current behaviour. Chemical fields only — the predator concentration field stays exponential (predators-on-continuous not yet exercised).
+- [ ] 1.2 Implement the frozen analytic Gaussian Fick kernel `C(r) = A·exp(−r²/(4·D·t_assay))` as the `fick` kernel in the food/chemical concentration + gradient-vector computations (`env/env.py` `get_food_concentration` / `_compute_food_gradient_vector`), parameterised by per-signal `D` and `t_assay`; map the existing `gradient_decay_constant` to `√(4·D·t_assay)` for continuity.
+- [ ] 1.3 Per-signal `D` + `t_assay` configuration (food, and pheromone/CO₂ placeholders) on `ForagingConfig`/the relevant signal configs; document calibration so the food field's spread stays near the tuned continuous `decay≈8`.
 - [ ] 1.4 Grid byte-stability regression: discrete-grid + legacy (exponential) field values unchanged (test).
 - [ ] 1.5 Unit tests: Fick kernel shape, per-signal `D` → distinct spread, mode selection.
 
@@ -22,10 +22,10 @@ validation, and logbook. Tick the corresponding tracker row as each lands.
 
 ## 3. Adaptive chemosensory sensor (PRIMARY)
 
-- [ ] 3.1 Background tracker: leaky integrator `B_t = (1−α)·B_{t−1} + α·C_t` per chemosensory channel, reusing the STAM leaky-buffer machinery (`agent/stam.py`) rather than a new buffer.
-- [ ] 3.2 Adaptive readout modes (config-selectable): (a) derivative-channel **fold-change** `(dC/dt)/C`; (b) instantaneous **magnitude contrast** `(C−B)/(C+B+ε)`; (c) **log-concentration** baseline. Default = derivative-channel fold-change.
-- [ ] 3.3 Channel-interaction wiring at the klinotaxis core-feature stage (`brain/modules.py`): fold-change reshapes the `binary` (dC/dt) field; magnitude-contrast supplies the `strength` field; composes with `SensingMode` (klinotaxis + adaptive stack); disabled → current non-adaptive pipeline byte-identical.
-- [ ] 3.4 Config surface: enable flag, readout mode, channel-interaction mode (explicit), `α`/`τ`, `ε`; sample config(s) on the continuous substrate.
+- [ ] 3.1 Background tracker: a **shared leaky-integrator utility** `B_t = (1−α)·B_{t−1} + α·C_t` per chemosensory channel, following STAM's exponential-decay pattern (optionally factored out of `STAMBuffer`). NB: `STAMBuffer` exposes no public baseline API (the weighted mean is private to `get_memory_state`), so author/extract the utility rather than calling a STAM baseline method.
+- [ ] 3.2 Adaptive readout modes (config-selectable): (a) derivative-channel **fold-change** `(dC/dt)/(C+ε)` — the `+ε` (or `/(B+ε)`) is required, raw `/C` is singular at `C≈0`; (b) instantaneous **magnitude contrast** `(C−B)/(C+B+ε)`; (c) **log-concentration** baseline. Default = derivative-channel fold-change.
+- [ ] 3.3 Channel-interaction wiring at the klinotaxis core-feature stage (`brain/modules.py`): apply ONLY to chemosensory cores (`_food_chemotaxis_klinotaxis_core`, plus pheromone-chemo cores where active — NOT thermo/nociception/predator). The `*_klinotaxis_core` logic is duplicated across ~9 functions with no chokepoint, so add a shared helper or apply narrowly. Fold-change reshapes the `binary` (dC/dt) field; magnitude-contrast supplies the `strength` field; composes with `SensingMode` (klinotaxis + adaptive stack); disabled → current non-adaptive pipeline byte-identical.
+- [ ] 3.4 Config surface on `SensingConfig` (`config_loader.py:734`): enable flag, readout mode, channel-interaction mode (explicit), `α`/`τ`, `ε`; extend `validate_sensing_config` (`:861`) for any interlocks; sample config(s) on the continuous substrate.
 - [ ] 3.5 Tests: relative coding vs background; relaxation as background catches up; each readout mode; explicit channel-interaction applied; disabled-path equivalence.
 
 ## 4. Adaptive-sensor iteration sub-tranche (bounded; only if the step-input gate underfits)

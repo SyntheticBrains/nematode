@@ -2,7 +2,7 @@
 
 ### Requirement: Klinotaxis Sensory Modules
 
-Klinotaxis sensory modules SHALL produce CoreFeatures with classical_dim=3 (strength, angle, binary), and `apply_sensing_mode()` SHALL substitute the configured oracle modules with their klinotaxis variants. When the adaptive chemosensory sensor (the `chemical-gradient-fidelity` capability) is enabled for a chemical channel, the `strength` and/or `binary` (temporal-derivative) fields SHALL carry the adaptive transform's output per the configured channel-interaction mode; when it is disabled, the fields retain their current non-adaptive definitions.
+Klinotaxis sensory modules SHALL produce CoreFeatures with classical_dim=3 (strength, angle, binary), and `apply_sensing_mode()` SHALL substitute the configured oracle modules with their klinotaxis variants. When the adaptive chemosensory sensor (the `chemical-gradient-fidelity` capability) is enabled for a **chemosensory channel** (`food_chemotaxis`, and the pheromone / CO₂ channels where active — NOT thermotaxis, nociception, or predator mechano/chemosensation), the `strength` and/or `binary` (temporal-derivative) fields of that channel SHALL carry the adaptive transform's output per the configured channel-interaction mode; when it is disabled, the fields retain their current non-adaptive definitions. The per-channel klinotaxis core feature logic is currently duplicated across the per-channel `*_klinotaxis_core` functions (no shared chokepoint), so the adaptive transform SHALL be applied via a shared helper or applied narrowly to the chemosensory cores — it SHALL NOT alter non-chemosensory channels.
 
 #### Scenario: Feature extraction produces classical_dim=3
 
