@@ -266,12 +266,12 @@ def _export_multi_agent(output_path: str) -> None:
 
 def _export_continuous(output_path: str) -> None:
     """Render a continuous-2D substrate frame and save it as PNG."""
-    import math
     import os
 
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     import pygame
     import quantumnematode.brain  # noqa: F401  # warm import (avoids env-first circular import)
+    from quantumnematode.agent.agent import _continuous_lateral_offsets
     from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
     from quantumnematode.env.env import (
         ForagingParams,
@@ -335,9 +335,14 @@ def _export_continuous(output_path: str) -> None:
     agent_state = env.agents["default"]
     pos = agent_state.pos_continuous or (float(ax), float(ay))
     sweep = float(env.continuous.sweep_amplitude_mm)
-    perp_x, perp_y = -math.sin(agent_state.heading_rad), math.cos(agent_state.heading_rad)
-    left_sample = (pos[0] + sweep * perp_x, pos[1] + sweep * perp_y)
-    right_sample = (pos[0] - sweep * perp_x, pos[1] - sweep * perp_y)
+    # Use the same clamped helper the runtime snapshot builder uses, so the
+    # exported sample points match a live render (and stay in-bounds).
+    left_sample, right_sample = _continuous_lateral_offsets(
+        pos,
+        agent_state.heading_rad,
+        sweep,
+        env.grid_size,
+    )
 
     temperature = env.get_temperature()
     zone = env.get_temperature_zone()
