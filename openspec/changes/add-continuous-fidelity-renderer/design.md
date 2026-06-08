@@ -52,7 +52,6 @@ y-inversion. Subclassing would force fragile overrides of nearly every method. I
 renderer re-implements them in continuous coordinates (the status-bar field-formatting can be
 extracted to a shared free function to avoid divergence; the zone overlays become arena-region
 fills rather than the grid's 32×32 per-cell blits). It provides its own `_world_to_pixel(x, y)`:
-provides its own `_world_to_pixel(x, y)`:
 
 ```text
 px = x * pixels_per_mm
