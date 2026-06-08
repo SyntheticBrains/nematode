@@ -72,7 +72,7 @@ The Gaussian is flatter near the source and falls off faster in the tail — the
 physical diffusion profile, vs the exponential placeholder.
 
 End-to-end: a 3-run headless smoke on
-`mlpppo_small_continuous2d_rung2_klinotaxis.yml` (fick gradients + fold-change
+`mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml` (fick gradients + fold-change
 adaptive sensor + float sources) runs clean (no NaN/crash); behavioural performance
 is untrained-smoke-level and out of scope here — multi-seed tuning of the
 readout / adaptation rate against the finalized substrate is **T7-prep**.
@@ -114,4 +114,4 @@ T7 L2 re-run.
 
 - Change: [`add-rung2-chemical-gradients`](../../../openspec/changes/add-rung2-chemical-gradients/).
 - Sensor + validation: `agent/adaptive_sensor.py`, `validation/adaptive_sensor.py`.
-- Sample config: `configs/scenarios/foraging/mlpppo_small_continuous2d_rung2_klinotaxis.yml`.
+- Sample config: `configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml`.

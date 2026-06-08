@@ -1,4 +1,4 @@
-"""Adaptive-threshold / biphasic chemosensory sensor (Rung-2 env fidelity).
+"""Adaptive-threshold / biphasic chemosensory sensor.
 
 Models *C. elegans* chemosensory adaptation (Kato et al. 2014 *Neuron*; Levy &
 Bargmann 2020 *Neuron* "hyper-Weber"): the chemosensory signal is coded **relative

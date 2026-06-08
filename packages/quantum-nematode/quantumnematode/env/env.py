@@ -204,8 +204,8 @@ class ForagingParams:
     no_respawn: bool = False
     satiety_food_threshold: float | None = None
     min_food_predator_distance: int = 0
-    # Chemical-gradient field mode (Rung-2 env fidelity). ``exponential`` is the
-    # Rung-0 default and keeps every existing/grid config byte-stable;
+    # Chemical-gradient field mode. ``exponential`` is the default and keeps every
+    # existing/grid config byte-stable;
     # ``fick`` selects the frozen analytic Fick (Gaussian) kernel
     # ``strength * exp(-(r / L)**2)`` with diffusion length
     # ``L = sqrt(4 * D * assay_time)`` (or ``gradient_decay_constant`` when
@@ -1968,9 +1968,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Two selectable field modes (``foraging.gradient_field_mode``):
 
-        - ``exponential`` (default, Rung-0; legacy + grid byte-stable): the
+        - ``exponential`` (default; legacy + grid byte-stable): the
           kernel ``strength * exp(-distance / decay_constant)``.
-        - ``fick`` (Rung-2): the frozen analytic Fick (Gaussian) kernel
+        - ``fick``: the frozen analytic Fick (Gaussian) kernel
           ``strength * exp(-(distance / L)**2)`` with diffusion length
           ``L = sqrt(4 * D * assay_time)`` (or ``decay_constant`` when ``D`` is
           unset). Per-signal ``D`` sets distinct geometry (larger ``D`` → broader
@@ -2016,7 +2016,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             if distance == 0:
                 continue
 
-            # Food/chemical field magnitude (exponential Rung-0 or Fick Rung-2)
+            # Food/chemical field magnitude (exponential or Fick)
             strength = self._food_field_magnitude(distance)
 
             # Compute direction vector

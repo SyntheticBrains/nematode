@@ -133,7 +133,7 @@ def _continuous_lateral_offsets(
     Samples the real-valued points ``sweep`` to the left (+90deg) and right (-90deg) of
     ``heading_rad`` from the worm's continuous position, clamped to the arena bounds.
     The points are **not** snapped to integer cells — they are evaluated against the
-    continuous concentration field (Rung-2 env fidelity); this matches
+    continuous concentration field; this matches
     ``_compute_lateral_offsets`` at cardinal headings (where the offsets are
     integer-valued) and rotates smoothly otherwise.
 
@@ -497,7 +497,7 @@ class QuantumNematodeAgent:
         if self._active_channels:
             self._channel_fetchers = _build_channel_fetchers(self.env, self._active_channels)
 
-        # Adaptive-threshold / biphasic chemosensory sensor (Rung-2). Stateful
+        # Adaptive-threshold / biphasic chemosensory sensor. Stateful
         # (per-channel background tracker), so it lives on the agent like STAM.
         # Disabled by default → the chemosensory pipeline is byte-identical.
         self._adaptive_food: AdaptiveChemosensor | None = None
@@ -965,7 +965,7 @@ class QuantumNematodeAgent:
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
 
-        # Adaptive chemosensory transform (Rung-2). Applied as a dedicated step on
+        # Adaptive chemosensory transform. Applied as a dedicated step on
         # the food/chemosensory channel only, after the raw concentration + the
         # STAM-derived derivative are in hand. The configured readout reshapes
         # exactly one channel (strength or derivative); the other is unchanged.

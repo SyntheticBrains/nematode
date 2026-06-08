@@ -236,7 +236,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
 
     # ----- float source placement + capture-radius consumption + Euclidean -----
     # Food sources are placed at real-valued coordinates within the continuous
-    # arena (Rung-2 env fidelity); the worm, capture, and distances are fully
+    # arena; the worm, capture, and distances are fully
     # continuous. The float source type is confined to this subclass (it overrides
     # only candidate generation), so the grid base keeps its integer source type.
 

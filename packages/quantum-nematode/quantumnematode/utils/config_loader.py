@@ -288,7 +288,7 @@ class ForagingConfig(BaseModel):
     food_hotspot_decay: float = Field(default=8.0, gt=0.0)
     no_respawn: bool = False
     satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
-    # Chemical-gradient field mode (Rung-2 env fidelity). ``exponential`` is the
+    # Chemical-gradient field mode. ``exponential`` is the
     # default and keeps every existing/grid config byte-stable; ``fick`` selects
     # the frozen analytic Fick (Gaussian) kernel with diffusion length
     # ``sqrt(4 * diffusion_coefficient * assay_time)`` (or ``gradient_decay_constant``
@@ -767,7 +767,7 @@ class SensingConfig(BaseModel):
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
-    # Adaptive-threshold / biphasic chemosensory sensor (Rung-2 env fidelity).
+    # Adaptive-threshold / biphasic chemosensory sensor.
     # Disabled by default → the chemosensory pipeline is byte-identical to the
     # non-adaptive (tanh) baseline. Applies to chemosensory channels only.
     # ``adaptive_chemosensor_readout`` also fixes the channel interaction:

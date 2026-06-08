@@ -1,13 +1,12 @@
 """Step-input adaptation-transient validation for the adaptive chemosensory sensor.
 
-The **load-bearing** T6 acceptance check (design.md D7): drive a concentration
-**step input** to the sensor in isolation and measure the **adaptation transient**
-(a peak response on the step, then relaxation toward baseline as the background
-tracker catches up), and quantify **Weber-like invariance** of the peak to the
-absolute background level — the hyper-Weber signature (Kato et al. 2014; Levy &
-Bargmann 2020). Both are reported **against the log-concentration baseline**, which
-has no background tracking and therefore neither relaxes nor stays background-
-invariant.
+Drives a concentration **step input** to the sensor in isolation and measures the
+**adaptation transient** (a peak response on the step, then relaxation toward
+baseline as the background tracker catches up), and quantifies **Weber-like
+invariance** of the peak to the absolute background level — the hyper-Weber
+signature (Kato et al. 2014; Levy & Bargmann 2020). Both are reported **against the
+log-concentration baseline**, which has no background tracking and therefore neither
+relaxes nor stays background-invariant.
 """
 
 from __future__ import annotations
