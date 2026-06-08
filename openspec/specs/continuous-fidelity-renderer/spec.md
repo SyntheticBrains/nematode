@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-continuous-fidelity-renderer. Update Purpose after archive.
+Defines the continuous-2D substrate fidelity renderer: a pygame renderer (a sibling of the grid `PygameRenderer`) selected via `Theme.PIXEL_CONTINUOUS` that draws the continuous-2D arena at sub-cell fidelity so continuous runs can be inspected, demonstrated, and turned into spatial figures. It maps real-valued world coordinates to pixels through a camera-aware `world→pixel` transform with a configurable zoom — a full-arena plate view by default plus a keyboard-toggleable agent-following camera — and ports the grid renderer's feature parity (background, temperature/oxygen/toxic zones, status bar) to continuous coordinates. Over that it overlays the chemosensory fidelity: a concentration-field heatmap, a gradient quiver, klinotaxis + predator sensor zones, and the adaptive-sensor readout. The renderer is fed a frozen `ContinuousRenderState` snapshot so it stays decoupled from agent internals, and the capability also provides a single-frame PNG export and offline matplotlib figure helpers (trajectory / field heatmap / gradient quiver) for logbook and validation figures.
 
 ## Requirements
 
