@@ -30,8 +30,8 @@ export/figures, then tests.
 
 ## 4. Export + offline figures
 
-- [ ] 4.1 `scripts/export_screenshot.py`: `_export_continuous(output_path)` (set `SDL_VIDEODRIVER=dummy`, stage a `Continuous2DEnvironment`, render one frame, `pygame.image.save`); update the module docstring + a `--continuous` flag.
-- [ ] 4.2 New `report/continuous_figures.py`: `plot_trajectory`, `plot_field_heatmap` (matplotlib `imshow` over the lattice), `plot_gradient_quiver` (matplotlib `quiver`) — headless static figures for logbooks.
+- [x] 4.1 `scripts/export_screenshot.py`: `_export_continuous(output_path)` (set `SDL_VIDEODRIVER=dummy`, stage a `Continuous2DEnvironment`, render one frame, `pygame.image.save`); update the module docstring + a `--continuous` flag.
+- [x] 4.2 New `report/continuous_figures.py`: `plot_trajectory`, `plot_field_heatmap` (matplotlib `imshow` over the lattice), `plot_gradient_quiver` (matplotlib `quiver`) — headless static figures for logbooks.
 
 ## 5. Tests
 

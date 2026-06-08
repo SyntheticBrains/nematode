@@ -1,20 +1,24 @@
-"""Export screenshots of the Pixel theme renderer.
+"""Export screenshots of the Pixel theme renderers.
 
 Creates staged environments with food, predators, temperature zones,
 and nematodes with body segments, then saves rendered frames as PNG
-images. Supports both single-agent and multi-agent modes.
+images. Supports the single-agent grid renderer, the multi-agent grid renderer,
+and the continuous-2D substrate renderer.
 
-Grid-only asset tool: it constructs `DynamicForagingEnvironment` directly for the
-Pygame grid renderer. The continuous-2D substrate is not screenshotted here — its
-renderer is deferred (T6.render, headless-first), so there is nothing to draw yet.
+The grid modes construct `DynamicForagingEnvironment` directly for the Pygame grid
+renderer; the continuous mode stages a `Continuous2DEnvironment` and renders one
+frame through `Continuous2DRenderer` (sub-cell worm, concentration heatmap, sensor
+overlays).
 
 Usage:
     python scripts/export_screenshot.py [output_path]
     python scripts/export_screenshot.py --multi-agent [output_path]
+    python scripts/export_screenshot.py --continuous [output_path]
 
 Default output:
     Single-agent: docs/assets/images/pixel_theme.png
     Multi-agent:  docs/assets/images/pixel_theme_multi_agent.png
+    Continuous:   docs/assets/images/pixel_continuous_theme.png
 """
 
 from __future__ import annotations
@@ -260,6 +264,121 @@ def _export_multi_agent(output_path: str) -> None:
     renderer.close()
 
 
+def _export_continuous(output_path: str) -> None:
+    """Render a continuous-2D substrate frame and save it as PNG."""
+    import math
+    import os
+
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    import pygame
+    import quantumnematode.brain  # noqa: F401  # warm import (avoids env-first circular import)
+    from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
+    from quantumnematode.env.env import (
+        ForagingParams,
+        HealthParams,
+        Predator,
+        PredatorParams,
+        PredatorType,
+        ThermotaxisParams,
+    )
+    from quantumnematode.env.pygame_renderer import Continuous2DRenderer, ContinuousRenderState
+    from quantumnematode.env.theme import Theme
+
+    world = 40.0
+    env = Continuous2DEnvironment(
+        continuous=Continuous2DParams(world_size_mm=world, sweep_amplitude_mm=1.5),
+        theme=Theme.PIXEL_CONTINUOUS,
+        seed=42,
+        foraging=ForagingParams(foods_on_grid=4, target_foods_to_collect=10),
+        predator=PredatorParams(
+            enabled=True,
+            count=1,
+            predator_type=PredatorType.STATIONARY,
+            damage_radius=3,
+        ),
+        health=HealthParams(max_hp=100.0),
+        thermotaxis=ThermotaxisParams(
+            enabled=True,
+            cultivation_temperature=20.0,
+            base_temperature=20.0,
+            gradient_strength=0.3,
+            gradient_direction=45.0,
+            comfort_delta=3.0,
+            discomfort_delta=6.0,
+            danger_delta=10.0,
+        ),
+    )
+
+    # Walk the worm off-centre so the heading line and sub-cell pose are visible.
+    for _ in range(6):
+        env.move_agent_normalized(speed_norm=0.9, turn_norm=0.08)
+
+    ax, ay = env._agent_xy("default")
+    # `foods` is int-annotated but stores real-valued sources at runtime on the
+    # continuous substrate (see Continuous2DEnvironment); float coords are intended.
+    env.foods = [  # type: ignore[assignment]
+        (ax + 6.4, ay + 3.2),
+        (ax - 5.1, ay + 7.7),
+        (ax + 8.3, ay - 4.6),
+        (ax - 7.2, ay - 6.1),
+    ]
+    env.predators = [
+        Predator(
+            position=(round(ax + 9), round(ay + 9)),
+            predator_type=PredatorType.STATIONARY,
+            speed=0.0,
+            detection_radius=6,
+            damage_radius=3,
+        ),
+    ]
+
+    agent_state = env.agents["default"]
+    pos = agent_state.pos_continuous or (float(ax), float(ay))
+    sweep = float(env.continuous.sweep_amplitude_mm)
+    perp_x, perp_y = -math.sin(agent_state.heading_rad), math.cos(agent_state.heading_rad)
+    left_sample = (pos[0] + sweep * perp_x, pos[1] + sweep * perp_y)
+    right_sample = (pos[0] - sweep * perp_x, pos[1] - sweep * perp_y)
+
+    temperature = env.get_temperature()
+    zone = env.get_temperature_zone()
+    zone_name = zone.value.upper().replace("_", " ") if zone else None
+
+    state = ContinuousRenderState(
+        pos=pos,
+        heading_rad=agent_state.heading_rad,
+        left_sample=left_sample,
+        right_sample=right_sample,
+        sweep=sweep,
+        adaptive_background=0.18,
+        adaptive_readout=0.42,
+        adaptive_mode="contrast",
+        step=45,
+        max_steps=500,
+        foods_collected=2,
+        target_foods=10,
+        health=75.0,
+        max_health=100.0,
+        satiety=60.0,
+        max_satiety=100.0,
+        in_danger=False,
+        temperature=temperature,
+        zone_name=zone_name,
+        oxygen=None,
+        oxygen_zone_name=None,
+    )
+
+    pygame.init()
+    renderer = Continuous2DRenderer(world_size_mm=world)
+    renderer.render_frame(env, state, session_text="Session:\nContinuous-2D demo\n")
+
+    from pathlib import Path
+
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    pygame.image.save(renderer._screen, output_path)
+    print(f"Continuous screenshot saved to {output_path}")
+    renderer.close()
+
+
 def main() -> None:
     """Parse arguments and export screenshot(s)."""
     parser = argparse.ArgumentParser(description="Export Pixel theme screenshots.")
@@ -273,6 +392,11 @@ def main() -> None:
         "--multi-agent",
         action="store_true",
         help="Export a multi-agent screenshot instead of single-agent.",
+    )
+    parser.add_argument(
+        "--continuous",
+        action="store_true",
+        help="Export a continuous-2D substrate screenshot instead of single-agent grid.",
     )
     parser.add_argument(
         "--both",
@@ -289,6 +413,10 @@ def main() -> None:
     if args.both:
         _export_single_agent("docs/assets/images/pixel_theme.png")
         _export_multi_agent("docs/assets/images/pixel_theme_multi_agent.png")
+    elif args.continuous:
+        _export_continuous(
+            args.output_path or "docs/assets/images/pixel_continuous_theme.png",
+        )
     elif args.multi_agent:
         _export_multi_agent(
             args.output_path or "docs/assets/images/pixel_theme_multi_agent.png",
