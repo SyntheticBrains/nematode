@@ -257,7 +257,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             and foraging.food_hotspot_bias > 0
             and self.rng.random() < foraging.food_hotspot_bias
         ):
-            return self._sample_hotspot_candidate()
+            hx, hy = self._sample_hotspot_candidate()
+            return (float(hx), float(hy))
         upper = float(self.grid_size - 1)
         return (float(self.rng.uniform(0.0, upper)), float(self.rng.uniform(0.0, upper)))
 

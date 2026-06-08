@@ -137,7 +137,7 @@ class OxygenField:
 
         Parameters
         ----------
-        position : GridPosition
+        position : Position
             (x, y) position to query.
 
         Returns
@@ -180,7 +180,7 @@ class OxygenField:
 
         Parameters
         ----------
-        position : GridPosition
+        position : Position
             (x, y) position to query gradient at.
 
         Returns
@@ -208,7 +208,7 @@ class OxygenField:
 
         Parameters
         ----------
-        position : GridPosition
+        position : Position
             (x, y) position to query gradient at.
 
         Returns

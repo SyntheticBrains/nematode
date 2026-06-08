@@ -1165,9 +1165,11 @@ class BaseEnvironment(ABC):
             grid = [[symbols.empty for _ in range(self.grid_size)] for _ in range(self.grid_size)]
 
             for goal in goals:
-                # Goals may be real-valued on the continuous-2D substrate; snap to
-                # a cell for this cell-based grid render.
-                grid[round(goal[1])][round(goal[0])] = symbols.goal
+                # Goals may be real-valued on the continuous-2D substrate; snap to a
+                # cell and clamp to bounds for this cell-based grid render.
+                gx = max(0, min(self.grid_size - 1, round(goal[0])))
+                gy = max(0, min(self.grid_size - 1, round(goal[1])))
+                grid[gy][gx] = symbols.goal
 
             for segment in self.body:
                 grid[segment[1]][segment[0]] = symbols.body

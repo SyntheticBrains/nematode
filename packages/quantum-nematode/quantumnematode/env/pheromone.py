@@ -131,7 +131,7 @@ class PheromoneField:
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : tuple[float, float]
             Grid position to query.
         current_step : int
             Current simulation step (for temporal decay calculation).
@@ -166,7 +166,7 @@ class PheromoneField:
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : tuple[float, float]
             Grid position to query.
         current_step : int
             Current simulation step.
@@ -192,7 +192,7 @@ class PheromoneField:
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : tuple[float, float]
             Grid position to query.
         current_step : int
             Current simulation step.

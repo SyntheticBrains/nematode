@@ -144,7 +144,7 @@ def _continuous_lateral_offsets(
     heading_rad : float
         Continuous heading angle in radians.
     sweep : float
-        Lateral sweep amplitude (>= 1).
+        Lateral sweep amplitude (in coordinate units; honoured as configured).
     grid_size : int
         Coordinate extent for boundary clamping.
 
@@ -834,9 +834,11 @@ class QuantumNematodeAgent:
 
             if isinstance(self.env, Continuous2DEnvironment):
                 # Continuous heading: sample real-valued points perpendicular to
-                # heading_rad (>= 1 sweep) against the continuous field — no
-                # integer-cell snap. See `_continuous_lateral_offsets`.
-                sweep = max(1.0, float(self.env.continuous.sweep_amplitude_mm))
+                # heading_rad against the continuous field — no integer-cell snap.
+                # Honour the configured sweep amplitude (sub-cell sweeps are
+                # meaningful on the continuous substrate). See
+                # `_continuous_lateral_offsets`.
+                sweep = float(self.env.continuous.sweep_amplitude_mm)
                 origin = agent_state.pos_continuous or (
                     float(agent_pos[0]),
                     float(agent_pos[1]),

@@ -376,8 +376,11 @@ class PygameRenderer:
         # Food
         food_sprite = self._sprites["food"]
         for food_pos in env.foods:
-            if _in_view(food_pos[0], food_pos[1]):
-                px, py = self._cell_to_pixel(round(food_pos[0]), round(food_pos[1]), viewport)
+            # Snap real-valued (continuous-2D) sources to a cell, then view-test and
+            # place that same cell so edge sources don't disappear.
+            fx, fy = round(food_pos[0]), round(food_pos[1])
+            if _in_view(fx, fy):
+                px, py = self._cell_to_pixel(fx, fy, viewport)
                 self._screen.blit(food_sprite, (px, py))
 
         # Predators
@@ -719,8 +722,11 @@ class PygameRenderer:
         # Food
         food_sprite = self._sprites["food"]
         for food_pos in env.foods:
-            if _in_view(food_pos[0], food_pos[1]):
-                px, py = self._cell_to_pixel(round(food_pos[0]), round(food_pos[1]), viewport)
+            # Snap real-valued (continuous-2D) sources to a cell, then view-test and
+            # place that same cell so edge sources don't disappear.
+            fx, fy = round(food_pos[0]), round(food_pos[1])
+            if _in_view(fx, fy):
+                px, py = self._cell_to_pixel(fx, fy, viewport)
                 self._screen.blit(food_sprite, (px, py))
 
         # Predators
