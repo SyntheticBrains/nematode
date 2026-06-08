@@ -35,10 +35,10 @@ export/figures, then tests.
 
 ## 5. Tests
 
-- [ ] 5.1 `tests/.../env/test_continuous_renderer.py` (guard with the existing `requires_pygame` skip + `SDL_VIDEODRIVER=dummy`): `_world_to_pixel` math (origin / corner / centre, y-inversion, zoom scaling).
-- [ ] 5.2 Snapshot builder: left/right klinotaxis sample points match a direct `_continuous_lateral_offsets` call for a known `(pos, heading, sweep)`; `AdaptiveChemosensor.background` returns the integrator background.
-- [ ] 5.3 Smoke render: build the renderer (dummy driver) + render one frame on a staged `Continuous2DEnvironment`; assert no exception + expected `_screen` dimensions.
-- [ ] 5.4 Offline figures: generate trajectory / heatmap / quiver PNGs headlessly; assert files written + non-empty.
+- [x] 5.1 `tests/.../env/test_continuous_renderer.py` (guard with the existing `requires_pygame` skip + `SDL_VIDEODRIVER=dummy`): `_world_to_pixel` math (origin / corner / centre, y-inversion, zoom scaling).
+- [x] 5.2 Snapshot builder: left/right klinotaxis sample points match a direct `_continuous_lateral_offsets` call for a known `(pos, heading, sweep)`; `AdaptiveChemosensor.background` returns the integrator background.
+- [x] 5.3 Smoke render: build the renderer (dummy driver) + render one frame on a staged `Continuous2DEnvironment`; assert no exception + expected `_screen` dimensions.
+- [x] 5.4 Offline figures: generate trajectory / heatmap / quiver PNGs headlessly; assert files written + non-empty.
 
 ## 6. Docs, tracker, pre-merge gate
 
