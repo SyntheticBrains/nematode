@@ -61,4 +61,4 @@ validation, and logbook. Tick the corresponding tracker row as each lands.
 
 - [x] 8.1 `openspec validate add-rung2-chemical-gradients --strict` clean; full test suite (`uv run pytest -m "not nightly"`) green.
 - [x] 8.2 Targeted `pre-commit run --files <changed>` clean; full `pre-commit run -a` before push.
-- [ ] 8.3 Open PR; link the T6 logbook.
+- [x] 8.3 Open PR; link the T6 logbook.
