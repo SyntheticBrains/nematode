@@ -42,6 +42,6 @@ export/figures, then tests.
 
 ## 6. Docs, tracker, pre-merge gate
 
-- [ ] 6.1 Tick `phase6-tracking` **T6.render** + the roadmap T6 row note (renderer no longer deferred); brief usage note (the `--theme pixel_continuous` command + `--continuous` screenshot).
+- [x] 6.1 Tick `phase6-tracking` **T6.render** + the roadmap T6 row note (renderer no longer deferred); brief usage note (the `--theme pixel_continuous` command + `--continuous` screenshot).
 - [ ] 6.2 `openspec validate add-continuous-fidelity-renderer --strict` clean; full suite (`uv run pytest -m "not nightly"`) green.
 - [ ] 6.3 Targeted `pre-commit run --files <changed>` clean; full `pre-commit run -a` before push; open PR.

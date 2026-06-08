@@ -137,11 +137,30 @@ populated on both discrete and continuous-action paths).
   module. Existing `PIXEL`/`headless`/text themes and the grid renderer are unchanged.
 - Rollback: `--theme pixel`/`headless` continue to work exactly as before.
 
-## Open Questions
+## Open Questions (resolved during implementation)
 
-- **Zoom config location** — `pixels_per_mm` on the renderer constructor (renderer-local) vs on
-  `Continuous2DParams` (config-exposed). Lean renderer-local with an optional config override;
-  decide during implementation (affects whether `continuous-2d-environment` is a modified
-  capability).
-- **Heatmap default field + colormap** — food + a perceptually-uniform map (viridis);
-  finalise during implementation.
+- **Zoom config location** — **resolved: renderer-local.** `pixels_per_mm` is a
+  `Continuous2DRenderer` constructor argument (default `DEFAULT_PIXELS_PER_MM = 12.0` → a 50 mm
+  plate at 600×600 + status bar). No config-exposed override was added, so
+  `continuous-2d-environment` is **not** a modified capability (matches the proposal).
+- **Heatmap default field + colormap** — **resolved: food + viridis.** The default selected
+  field is `get_food_concentration`; the colormap is `viridis`. The heatmap is **on by default**
+  (it is the primary reason the renderer exists) and toggled with `H`; the field is cycled with
+  `F` (food → predator → temperature → oxygen → pheromone). The gradient quiver is **off by
+  default** and toggled with `G` (perf).
+
+## Implementation notes / deviations
+
+- `render_frame(env, state, *, session_text=None)` takes the env plus a frozen
+  `ContinuousRenderState`, instead of the grid renderer's many keyword status fields — the
+  snapshot already carries them.
+- Shared-helper extractions to keep the two renderers from diverging:
+  `build_run_status_lines(...)` (status-bar field formatting, used by both) and
+  `sprites.zone_overlay_color(name)` (the categorical zone RGBA map, used by both
+  `create_zone_overlay` and the continuous zone fills).
+- Zone fills use a single arena-sized `SRCALPHA` overlay filled per 1 mm cell (one surface,
+  one blit) rather than per-cell cached surfaces; the toxic zone is a filled disc at
+  `damage_radius·zoom`.
+- Heatmap caching keys on `(field, source-signature, lattice_n)` where the source signature is
+  the food positions (food field) or predator positions (predator field), else a static marker —
+  so the lattice re-samples only when the field's sources change.
