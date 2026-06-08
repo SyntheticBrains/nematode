@@ -16,16 +16,17 @@ export/figures, then tests.
 ## 2. Continuous renderer skeleton + grid-renderer parity
 
 - [ ] 2.1 New sibling `Continuous2DRenderer` (`env/pygame_renderer.py`): `__init__(world_size_mm, pixels_per_mm=~12, ...)`, full-arena window sizing, `_world_to_pixel(x, y)` (mm→pixel, y-inversion). Grid `PygameRenderer` byte-unchanged.
-- [ ] 2.2 Parity layers ported to continuous coords, reusing the shared module helpers: background; temperature zones; oxygen zones; stationary-predator toxic zones; the full status bar (`_render_status_bar` fields). Reuse `create_zone_overlay` colours + the status-bar text logic.
+- [ ] 2.2 Parity layers ported to continuous coords: background; temperature zones; oxygen zones; stationary-predator toxic zones; the full status bar. Reuse `create_zone_overlay` *colours* (zone overlays become arena-region fills, not 32×32 cell blits); the status bar + zone overlays are `PygameRenderer` *methods*, so re-implement them for continuous coords (optionally extract the status-bar field-formatting to a shared free function to avoid divergence).
 - [ ] 2.3 Entities: food + predator sprites blit centered at `_world_to_pixel`; the worm as a marker + heading line from `heading_rad`.
 - [ ] 2.4 `agent/agent.py`: render-dispatch branch for `Theme.PIXEL_CONTINUOUS` → `_get_continuous_renderer()` + `_render_step_continuous()` (builds the `ContinuousRenderState` snapshot — calls `_continuous_lateral_offsets`, reads the adaptive accessor). Mirrors `_get_pygame_renderer`/`_render_step_pygame`.
 
 ## 3. Fidelity overlays
 
-- [ ] 3.1 Concentration heatmap: sample a selectable field getter over an N×N lattice (default food, N~64) → `matplotlib.cm` colormap → `pygame.surfarray` surface → scaled alpha-blit. Bounded N; keyboard-selectable field.
-- [ ] 3.2 Gradient quiver: coarse lattice (~12×12) → `get_separated_gradients` arrows scaled by strength; keyboard-toggle (mirror the pheromone `P` toggle), default off.
+- [ ] 3.1 Concentration heatmap: sample a selectable field getter over an N×N lattice (default food, N~64) → `matplotlib.cm` colormap → `pygame.surfarray` surface → scaled alpha-blit. **Cache the sampled lattice** and recompute only on a source-change signal (food consumed/respawned, predators moved) or a field-selector switch — not every frame.
+- [ ] 3.2 Gradient quiver: coarse lattice (~12×12) → `get_separated_gradients` arrows scaled by strength; default off.
 - [ ] 3.3 Sensor zones: klinotaxis left/right sample points (from the snapshot) + sweep marker; predator detection/damage rings (`pygame.draw.circle` at radius·zoom); optional contact cone.
 - [ ] 3.4 Adaptive-sensor readout appended to the status bar (background, readout, mode) from the snapshot.
+- [ ] 3.5 **Keyboard + window event handling for the continuous renderer** (NEW — the single-agent renderer has none today; the grid pheromone `P`-toggle is multi-agent-only): window-close (follow the existing `pump_events` shape) + a quiver toggle key + optional heatmap-toggle / field-selector keys.
 
 ## 4. Export + offline figures
 

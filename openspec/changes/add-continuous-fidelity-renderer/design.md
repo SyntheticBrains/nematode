@@ -45,8 +45,13 @@ orchestrator, so the renderer never reads agent internals.
 
 `PygameRenderer`'s methods are hardwired to the integer scrolling viewport and the cell-count
 y-inversion. Subclassing would force fragile overrides of nearly every method. Instead add a
-**sibling** `Continuous2DRenderer` in the same module that reuses the module-level helpers
-(`create_sprites`, `create_zone_overlay`, `draw_body_segment`, the status-bar text logic) and
+**sibling** `Continuous2DRenderer` in the same module. It reuses the module-level helper
+*functions* (`create_sprites`, `draw_body_segment`, and the `create_zone_overlay` zone
+*colours*); the status bar and zone overlays are renderer *methods* on `PygameRenderer`
+(`_render_status_bar`, `_render_temperature_zones`, …) — not free helpers — so the continuous
+renderer re-implements them in continuous coordinates (the status-bar field-formatting can be
+extracted to a shared free function to avoid divergence; the zone overlays become arena-region
+fills rather than the grid's 32×32 per-cell blits). It provides its own `_world_to_pixel(x, y)`:
 provides its own `_world_to_pixel(x, y)`:
 
 ```text
@@ -66,7 +71,11 @@ Sample the selected field getter over an N×N lattice spanning the arena, normal
 `matplotlib.cm` colormap → RGBA uint8 array → `pygame.surfarray.make_surface` → scale to the
 window → alpha-blit. This is the dense-array analogue of the existing per-cell alpha-blit
 pattern (`_render_temperature_zones`, `_render_pheromone_overlay`). N is configurable (default
-~64) to bound the per-frame field-call cost. The field is selectable (food default; also
+~64) to bound the per-frame field-call cost. **Caching:** an N×N lattice is ~N² field calls per
+frame, each summing over all sources — too much at 30 FPS to recompute every frame. The field
+is static within an episode except when sources change (food consumed/respawned, predators
+move), so **cache the sampled lattice and recompute only on a source-change signal** (or on a
+coarse cadence / the selected-field switch). The field is selectable (food default; also
 predator / temperature / oxygen / pheromone). **Note:** the heatmap (raw field value) and the
 ported categorical *zone* bands (comfort/danger) are complementary and both selectable, so they
 don't collide by default.
@@ -82,11 +91,17 @@ fields/foods/predators) — never `agent` privates. To avoid reaching into `_int
 public `AdaptiveChemosensor.background` property (delegating to the already-public
 `LeakyIntegrator.background`) and a `last_readout` field set in `adapt()`.
 
-### D4 — Gradient quiver is coarse + keyboard-toggleable, off by default
+### D4 — Gradient quiver is coarse + keyboard-toggleable, off by default; the continuous renderer needs its own keyboard event handling
 
 A full-resolution quiver would issue O(N²) field calls per frame at 30 FPS. Use a coarse
-lattice (e.g. 12×12) and gate it behind a keyboard toggle (mirroring the existing pheromone
-`P`-key toggle), default off, so the live path stays responsive.
+lattice (e.g. 12×12), default off, gated behind a keyboard toggle.
+
+**Caveat:** the keyboard-toggle the grid renderer has (the pheromone `P`-key) lives only in the
+**multi-agent** event pump (`_pump_multi_agent_events`); the **single-agent** path
+(`render_frame` / `pump_events`) only handles window-close. So the continuous (single-agent)
+renderer must **add its own keyboard event handling** — this is new code, not a reuse: a key
+toggle for the quiver, and (optionally) keys to switch the heatmap field and toggle the heatmap.
+The window-close handling can follow the existing `pump_events` shape.
 
 ### D5 — PNG + matplotlib figures now; gif/mp4 deferred
 
