@@ -1106,7 +1106,7 @@ class MultiAgentSimulation:
         def manhattan(predator) -> int:  # noqa: ANN001 — local helper
             return abs(predator.position[0] - ax) + abs(predator.position[1] - ay)
 
-        # Phase 1: covering predators (those whose damage_radius covers the agent).
+        # Prefer covering predators (those whose damage_radius covers the agent).
         covering = [p for p in self.env.predators if manhattan(p) <= p.damage_radius]
         if covering:
             # Closest by Manhattan; lex tie-break on predator_id.

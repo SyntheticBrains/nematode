@@ -945,8 +945,8 @@ class Continuous2DConfig(BaseModel):
 
     # Square arena edge length in mm. ~5 cm plate region; aligns with a
     # grid_size≈50 substrate at ~1 mm per former cell so episode lengths stay
-    # comparable to the T4 grid baseline. Must be positive (it sizes the arena
-    # and the derived integer extent).
+    # comparable to the discrete grid baseline. Must be positive (it sizes the
+    # arena and the derived integer extent).
     world_size_mm: float = Field(default=50.0, gt=0.0)
     # Adult C. elegans body length ≈ 1 mm — the reference unit for the others.
     body_length_mm: float = Field(default=1.0, gt=0.0)
