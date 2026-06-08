@@ -300,6 +300,30 @@ Multi-agent simulations render all agents with distinct colors. The viewport fol
 | `1`-`9` | Jump to agent by number |
 | `P` | Toggle pheromone concentration overlay (food=green, alarm=red, aggregation=blue) |
 
+### Continuous-2D Substrate
+
+The continuous-2D substrate renders with a dedicated fidelity renderer
+(`--theme pixel_continuous`): the worm moves at sub-cell resolution on a full-arena
+plate view, with a concentration-field heatmap, gradient/sensor overlays, and the
+adaptive-sensor readout. Run it with:
+
+```bash
+uv run ./scripts/run_simulation.py \
+  --config configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml \
+  --theme pixel_continuous
+```
+
+![Continuous-2D Pixel Theme](docs/assets/images/pixel_continuous_theme.png)
+
+**Controls:**
+
+| Key | Action |
+|-----|--------|
+| `H` | Toggle the concentration-field heatmap |
+| `F` | Cycle the heatmap field (food → predator → temperature → oxygen → pheromone) |
+| `G` | Toggle the gradient quiver (up-gradient arrows; off by default) |
+| `C` | Toggle the camera (full-arena plate ↔ agent-following zoom) |
+
 ### Entities
 
 | Entity | Visual | Biological Basis |

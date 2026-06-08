@@ -66,8 +66,10 @@ class ContinuousRenderState:
 
     pos: tuple[float, float]
     heading_rad: float
-    # Klinotaxis head-sweep sample points (left/right of heading at `sweep`); None
-    # when klinotaxis sensing is not active.
+    # Klinotaxis head-sweep sample points (left/right of heading at `sweep`). The
+    # continuous agent always populates these (the sweep geometry is meaningful
+    # regardless of the active sensing mode); the optional type lets a caller pass
+    # None to suppress the sample markers.
     left_sample: tuple[float, float] | None
     right_sample: tuple[float, float] | None
     sweep: float
@@ -1417,8 +1419,13 @@ class Continuous2DRenderer:
         self,
         env: DynamicForagingEnvironment,
         field_name: str,
+        step: int,
     ) -> Any:  # noqa: ANN401
-        """Return a ``(x, y) -> float`` sampler for the selected heatmap field."""
+        """Return a ``(x, y) -> float`` sampler for the selected heatmap field.
+
+        ``step`` is the current episode step — required for the time-varying
+        pheromone field (it applies temporal decay keyed on the query step).
+        """
         if field_name == "predator":
             return env.get_predator_concentration
         if field_name == "temperature":
@@ -1427,20 +1434,29 @@ class Continuous2DRenderer:
             return lambda pos: env.get_oxygen_concentration(pos) or 0.0
         if field_name == "pheromone" and env.pheromone_field_food is not None:
             field = env.pheromone_field_food
-            return lambda pos: field.get_concentration(pos, 0)
+            return lambda pos: field.get_concentration(pos, step)
         # Default / fallback: food concentration.
         return env.get_food_concentration
 
-    def _heatmap_cache_key(self, env: DynamicForagingEnvironment, field_name: str) -> tuple:
+    def _heatmap_cache_key(
+        self,
+        env: DynamicForagingEnvironment,
+        field_name: str,
+        step: int,
+    ) -> tuple:
         """Cache key keyed on the field and the sources that define it.
 
-        The field is static within an episode except when its sources change, so we
-        recompute the (expensive) lattice sampling only when this key changes.
+        The food/predator/thermal/oxygen fields are static within an episode except
+        when their sources change, so the (expensive) lattice sampling is recomputed
+        only when this key changes. The pheromone field is time-varying (deposits +
+        temporal decay), so its key includes ``step`` to recompute every frame.
         """
         if field_name == "food":
             sig: Any = tuple(sorted((round(fx, 3), round(fy, 3)) for fx, fy in env.foods))
         elif field_name == "predator":
             sig = tuple(sorted((p.position[0], p.position[1]) for p in env.predators))
+        elif field_name == "pheromone":
+            sig = ("step", step)  # time-varying → rebuild each step
         else:
             sig = "static"
         return (field_name, sig, self._heatmap_n)
@@ -1448,7 +1464,7 @@ class Continuous2DRenderer:
     def _render_heatmap(
         self,
         env: DynamicForagingEnvironment,
-        state: ContinuousRenderState,  # noqa: ARG002
+        state: ContinuousRenderState,
     ) -> None:
         """Sample the selected field over a lattice → colormap → alpha-blit.
 
@@ -1456,9 +1472,9 @@ class Continuous2DRenderer:
         field's sources change (see :meth:`_heatmap_cache_key`).
         """
         field_name = HEATMAP_FIELDS[self._heatmap_field_idx]
-        key = self._heatmap_cache_key(env, field_name)
+        key = self._heatmap_cache_key(env, field_name, state.step)
         if self._heatmap_cache is None or self._heatmap_cache[0] != key:
-            surface = self._build_heatmap_surface(env, field_name)
+            surface = self._build_heatmap_surface(env, field_name, state.step)
             self._heatmap_cache = (key, surface)
         base_surf = self._heatmap_cache[1]  # full-arena RGB surface (no baked alpha)
         if not self._camera_following:
@@ -1482,12 +1498,13 @@ class Continuous2DRenderer:
         self,
         env: DynamicForagingEnvironment,
         field_name: str,
+        step: int,
     ) -> Any:  # noqa: ANN401
-        """Build the scaled, alpha-tagged heatmap surface for one field."""
+        """Build the full-arena RGB heatmap surface for one field at ``step``."""
         import matplotlib as mpl
         import numpy as np
 
-        getter = self._heatmap_getter(env, field_name)
+        getter = self._heatmap_getter(env, field_name, step)
         n = self._heatmap_n
         world = self._world_size_mm
         values = np.zeros((n, n), dtype=float)  # indexed [i_x][j_y] (j=0 → top)

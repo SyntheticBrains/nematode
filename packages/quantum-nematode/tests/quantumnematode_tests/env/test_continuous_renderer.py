@@ -200,13 +200,73 @@ class TestFollowCamera:
         try:
             renderer._follow_enabled = True
             renderer.render_frame(env, self._state_at((0.5, 0.5)))
-            # The plate origin stays in-frame (camera clamped, didn't scroll past 0).
-            ox, oy = renderer._world_to_pixel(0.0, 0.0)
-            assert 0 <= ox <= renderer._arena_px
-            assert 0 <= oy <= renderer._arena_px
-            # The worm is off-centre because the camera clamped to the corner.
+            # Clamped to the corner: the plate origin maps exactly to the
+            # bottom-left pixel (camera did NOT scroll past 0 — without clamping
+            # cam_x0 would be negative and the origin would land at positive x).
+            assert renderer._world_to_pixel(0.0, 0.0) == (0, renderer._arena_px)
+            # The worm is therefore off-centre (pulled toward the corner).
             cx, _ = renderer._world_to_pixel(0.5, 0.5)
             assert cx < renderer._arena_px // 2
+        finally:
+            renderer.close()
+
+    def test_following_with_heatmap_crops_without_error(self) -> None:
+        """Follow + heatmap exercises the subsurface crop/scale path at a plate edge."""
+        from quantumnematode.env.pygame_renderer import Continuous2DRenderer
+
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=50.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        renderer = Continuous2DRenderer(world_size_mm=50.0, pixels_per_mm=12.0)
+        try:
+            renderer._follow_enabled = True
+            assert renderer._heatmap_enabled  # on by default → crop path runs
+            # Interior, then a corner (the crop rect clamps hardest at the edge).
+            for pos in ((25.0, 25.0), (0.5, 0.5), (49.5, 49.5)):
+                renderer.render_frame(env, self._state_at(pos))
+            assert renderer._camera_following
+        finally:
+            renderer.close()
+
+
+@requires_pygame
+class TestHeatmapCacheKey:
+    """The heatmap cache invalidation: dynamic pheromone vs static thermal/oxygen."""
+
+    def _renderer(self) -> Any:
+        from quantumnematode.env.pygame_renderer import Continuous2DRenderer
+
+        return Continuous2DRenderer(world_size_mm=30.0, pixels_per_mm=12.0)
+
+    def test_pheromone_key_varies_with_step(self) -> None:
+        """The time-varying pheromone field rebuilds each step (key includes step)."""
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=30.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        renderer = self._renderer()
+        try:
+            key_a = renderer._heatmap_cache_key(env, "pheromone", 5)
+            key_b = renderer._heatmap_cache_key(env, "pheromone", 6)
+            assert key_a != key_b
+        finally:
+            renderer.close()
+
+    def test_static_field_key_is_step_invariant(self) -> None:
+        """Static fields (temperature) keep one key across steps so the cache holds."""
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=30.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        renderer = self._renderer()
+        try:
+            key_a = renderer._heatmap_cache_key(env, "temperature", 5)
+            key_b = renderer._heatmap_cache_key(env, "temperature", 6)
+            assert key_a == key_b
         finally:
             renderer.close()
 
