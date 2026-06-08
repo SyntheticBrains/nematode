@@ -36,6 +36,13 @@ orchestrator, so the renderer never reads agent internals.
 - gif/mp4 animation export (would add a media-encoding dependency) — deferred.
 - Multi-agent-continuous rendering — deferred (needs a parallel snapshot builder in
   `multi_agent.py`).
+- **Continuous-native predator kinematics** — out of scope. `Continuous2DEnvironment` overrides
+  only the worm's movement/capture/distances; predators inherit the grid env's integer-cell
+  Manhattan `update_predators` and chase the worm's *discretised* position. The renderer draws
+  them faithfully at their true integer positions, so **pursuit predators move in whole-1 mm
+  cell steps (visually quantised / "janky") next to the smoothly-gliding worm** — a substrate
+  limitation, not a render bug. Stationary predators are unaffected (they don't move). Making
+  pursuit predators move in continuous `(speed, heading)` space is a tracked follow-up.
 - Any change to the grid `PygameRenderer` behaviour (it stays byte-unchanged), the headless
   path, 3D, or a web/game-engine stack.
 
