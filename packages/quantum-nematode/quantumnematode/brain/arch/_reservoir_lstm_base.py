@@ -796,12 +796,12 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
 
         ep = self._episode_count
 
-        # Phase 1: Warmup
+        # Stage 1: Warmup
         if self.lr_warmup_episodes and ep < self.lr_warmup_episodes:
             progress = ep / self.lr_warmup_episodes
             return self.lr_warmup_start + progress * (self.base_actor_lr - self.lr_warmup_start)
 
-        # Phase 2: Decay (offset by warmup duration)
+        # Stage 2: Decay (offset by warmup duration)
         if self.lr_decay_episodes is not None:
             warmup = self.lr_warmup_episodes or 0
             decay_ep = ep - warmup

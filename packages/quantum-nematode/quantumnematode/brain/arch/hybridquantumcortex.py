@@ -9,7 +9,7 @@ expressivity.
 
 Status: HALTED after 9 rounds (32 sessions, 14,600 episodes). The QSNN cortex
 under REINFORCE with surrogate gradients hit a ~40-45% ceiling on 2-predator
-pursuit. See logbook 008 for full evaluation.
+pursuit.
 
 Architecture::
 
