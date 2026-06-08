@@ -51,6 +51,44 @@ class AgentRenderState:
     color_index: int  # index into AGENT_COLOR_PALETTE (cycles via % 8)
 
 
+@dataclass(frozen=True)
+class ContinuousRenderState:
+    """Lightweight snapshot of continuous-substrate state for rendering.
+
+    Built by the agent before each continuous render call (mirrors the
+    ``AgentRenderState`` decoupling pattern). Keeps ``Continuous2DRenderer``
+    decoupled from the agent's internal sensor objects: the renderer reads pose,
+    klinotaxis sample points, and adaptive-sensor state from this snapshot and the
+    environment only — never from agent private attributes.
+    """
+
+    pos: tuple[float, float]
+    heading_rad: float
+    # Klinotaxis head-sweep sample points (left/right of heading at `sweep`); None
+    # when klinotaxis sensing is not active.
+    left_sample: tuple[float, float] | None
+    right_sample: tuple[float, float] | None
+    sweep: float
+    # Adaptive chemosensory sensor state (None when the sensor is disabled).
+    adaptive_background: float | None
+    adaptive_readout: float | None
+    adaptive_mode: str | None
+    # Status-bar fields (mirror the grid renderer's status bar).
+    step: int
+    max_steps: int
+    foods_collected: int
+    target_foods: int
+    health: float
+    max_health: float
+    satiety: float
+    max_satiety: float
+    in_danger: bool
+    temperature: float | None
+    zone_name: str | None
+    oxygen: float | None
+    oxygen_zone_name: str | None
+
+
 # Minimum pheromone concentration to render an overlay cell
 PHEROMONE_RENDER_THRESHOLD = 0.01
 

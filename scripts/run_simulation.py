@@ -181,6 +181,7 @@ def parse_arguments() -> argparse.Namespace:
         default=DEFAULT_THEME.value,
         choices=[
             Theme.PIXEL.value,
+            Theme.PIXEL_CONTINUOUS.value,
             Theme.ASCII.value,
             Theme.EMOJI.value,
             Theme.UNICODE.value,
@@ -190,6 +191,7 @@ def parse_arguments() -> argparse.Namespace:
             Theme.HEADLESS.value,
         ],
         help="Maze rendering theme: 'pixel' (default), "
+        "'pixel_continuous' (continuous-2D substrate renderer with fidelity overlays), "
         "'ascii', 'emoji', 'unicode', 'colored_ascii', 'rich', 'emoji_rich', "
         "or 'headless' (no rendering — fastest for batch training).",
     )
@@ -615,9 +617,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
             logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
-            # Log full environment render (use EMOJI for PIXEL since it has no text output)
+            # Log full environment render (use EMOJI for pixel themes since they have
+            # no text output)
             logger.info("Initial environment state (full render):")
-            log_theme = Theme.EMOJI if theme == Theme.PIXEL else None
+            log_theme = Theme.EMOJI if theme in (Theme.PIXEL, Theme.PIXEL_CONTINUOUS) else None
             full_render = agent.env.render_full(theme_override=log_theme)
             for line in full_render:
                 logger.info(line)
