@@ -23,8 +23,9 @@ orchestrator, so the renderer never reads agent internals.
 
 **Goals:**
 
-- A continuous-substrate pygame renderer with sub-cell worm motion, a full-arena plate view,
-  configurable zoom, and at least full feature-parity with the grid renderer.
+- A continuous-substrate pygame renderer with sub-cell worm motion, a full-arena plate view
+  (plus an optional agent-following camera), configurable zoom, and at least full
+  feature-parity with the grid renderer.
 - Four fidelity overlays (concentration heatmap, gradient quiver, klinotaxis + predator sensor
   zones, adaptive-sensor readout).
 - Decoupling from agent internals via a frozen render-state snapshot + a public adaptive
