@@ -209,6 +209,28 @@ class TestSmokeRender:
         finally:
             renderer.close()
 
+    def test_narrow_window_wraps_status_and_grows(self) -> None:
+        """A narrow window wraps long status lines and grows its height to fit them."""
+        from quantumnematode.env.pygame_renderer import (
+            STATUS_BAR_HEIGHT,
+            Continuous2DRenderer,
+        )
+
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=20.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        # 20 mm @ 12 px/mm = 240 px wide — too narrow for the adaptive + hint lines.
+        renderer = Continuous2DRenderer(world_size_mm=20.0, pixels_per_mm=12.0)
+        try:
+            renderer.render_frame(env, _make_state(adaptive_mode="fold_change"))
+            _, height = renderer._screen.get_size()
+            # The status region exceeds the base height → lines wrapped onto extra rows.
+            assert height - renderer._arena_px > STATUS_BAR_HEIGHT
+        finally:
+            renderer.close()
+
     def test_render_with_quiver_enabled(self) -> None:
         """The gradient quiver overlay renders without raising."""
         from quantumnematode.env.pygame_renderer import Continuous2DRenderer

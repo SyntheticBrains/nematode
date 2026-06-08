@@ -149,6 +149,46 @@ def build_run_status_lines(  # noqa: PLR0913
     return lines
 
 
+def wrap_status_line(
+    font: Any,  # noqa: ANN401
+    text: str,
+    color: tuple[int, int, int],
+    max_width: int,
+) -> list[tuple[str, tuple[int, int, int]]]:
+    """Word-wrap a status line to ``max_width`` pixels using ``font``.
+
+    Falls back to character-level breaking for single tokens wider than
+    ``max_width``. Mirrors the grid renderer's ``_wrap_text`` so a narrow window
+    overflows status text onto extra rows instead of clipping it on the right.
+    """
+    antialias = True
+    words = text.split()
+    result: list[tuple[str, tuple[int, int, int]]] = []
+    current_line = ""
+    for word in words:
+        candidate = f"{current_line} {word}".strip()
+        if font.render(candidate, antialias, color).get_width() <= max_width:
+            current_line = candidate
+            continue
+        if current_line:
+            result.append((current_line, color))
+        if font.render(word, antialias, color).get_width() > max_width:
+            chunk = ""
+            for ch in word:
+                if font.render(chunk + ch, antialias, color).get_width() > max_width:
+                    if chunk:
+                        result.append((chunk, color))
+                    chunk = ch
+                else:
+                    chunk += ch
+            current_line = chunk
+        else:
+            current_line = word
+    if current_line:
+        result.append((current_line, color))
+    return result or [("", color)]
+
+
 class PygameRenderer:
     """Renders the nematode simulation using Pygame with layered surfaces.
 
@@ -1570,7 +1610,18 @@ class Continuous2DRenderer:
                 STATUS_OVERLAY_HINT_COLOR,
             ),
         )
-        return lines
+
+        # Wrap to the (square, often narrow) window width so long lines — the
+        # adaptive readout and the key hint — overflow onto extra rows instead of
+        # clipping on the right; _resize_if_needed then grows the window height.
+        max_text_width = self._width - STATUS_PADDING * 2
+        wrapped: list[tuple[str, tuple[int, int, int]]] = []
+        for text, color in lines:
+            if not text:
+                wrapped.append(("", color))
+                continue
+            wrapped.extend(wrap_status_line(self._font, text, color, max_text_width))
+        return wrapped
 
     def _resize_if_needed(self, line_count: int) -> None:
         """Grow the window if the status bar needs more than ``STATUS_BAR_HEIGHT``."""
