@@ -19,8 +19,8 @@ renderer and the `HEADLESS` path SHALL be unaffected.
 ### Requirement: World-to-pixel mapping with full-arena view and zoom
 
 The continuous renderer SHALL map real-valued world coordinates (millimetres) to pixels via a
-`world→pixel` transform with a configurable pixels-per-mm zoom, render the **whole arena**
-without an agent-following scroll, and invert the y-axis (world y-up → screen y-down) over the
+`world→pixel` transform with a configurable pixels-per-mm zoom, render the **whole arena** by
+default (no agent-following scroll), and invert the y-axis (world y-up → screen y-down) over the
 world height. The worm SHALL be drawn at its real-valued `pos_continuous` (sub-cell), not
 snapped to a grid cell.
 
@@ -29,10 +29,33 @@ snapped to a grid cell.
 - **WHEN** the worm is at a fractional position (e.g. `(10.4, 20.7)` mm)
 - **THEN** it SHALL be drawn at the corresponding sub-cell pixel location (not rounded to a cell)
 
-#### Scenario: Full arena visible
+#### Scenario: Full arena visible by default
 
 - **WHEN** the renderer is created for a `world_size_mm` arena
-- **THEN** the drawing surface SHALL span the whole arena (`world_size_mm * pixels_per_mm` per side, plus the status bar) with no scrolling viewport
+- **THEN** the drawing surface SHALL span the whole arena (`world_size_mm * pixels_per_mm` per side, plus the status bar), showing the whole plate with no scrolling viewport
+
+### Requirement: Agent-following camera toggle
+
+The continuous renderer SHALL provide a keyboard-toggleable agent-following camera in addition
+to the default full-arena view. When following, the `world→pixel` transform SHALL zoom in and
+keep the worm centred, clamped so the view never shows past the plate edges; all layers (zones,
+heatmap, sensor overlays, entities) SHALL transform consistently with the active camera. This
+keeps the worm legible on large worlds where it is a small dot in the full-arena view.
+
+#### Scenario: Following centres the worm
+
+- **WHEN** the agent-following camera is toggled on and the worm is away from the plate edges
+- **THEN** the worm SHALL be drawn at the centre of the arena viewport at the zoomed scale, and the other layers SHALL align to the same camera
+
+#### Scenario: Camera clamps at the plate edge
+
+- **WHEN** the agent-following camera is on and the worm is near a plate edge
+- **THEN** the view SHALL clamp so it does not show past the arena bounds (the worm moves off-centre rather than revealing out-of-plate space)
+
+#### Scenario: Default is full-arena
+
+- **WHEN** the renderer starts
+- **THEN** the camera SHALL be the full-arena view until the follow toggle is pressed
 
 ### Requirement: Grid-renderer feature parity
 

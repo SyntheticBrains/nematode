@@ -23,8 +23,9 @@ orchestrator, so the renderer never reads agent internals.
 
 **Goals:**
 
-- A continuous-substrate pygame renderer with sub-cell worm motion, a full-arena plate view,
-  configurable zoom, and at least full feature-parity with the grid renderer.
+- A continuous-substrate pygame renderer with sub-cell worm motion, a full-arena plate view
+  (plus an optional agent-following camera), configurable zoom, and at least full
+  feature-parity with the grid renderer.
 - Four fidelity overlays (concentration heatmap, gradient quiver, klinotaxis + predator sensor
   zones, adaptive-sensor readout).
 - Decoupling from agent internals via a frozen render-state snapshot + a public adaptive
@@ -36,6 +37,13 @@ orchestrator, so the renderer never reads agent internals.
 - gif/mp4 animation export (would add a media-encoding dependency) — deferred.
 - Multi-agent-continuous rendering — deferred (needs a parallel snapshot builder in
   `multi_agent.py`).
+- **Continuous-native predator kinematics** — out of scope. `Continuous2DEnvironment` overrides
+  only the worm's movement/capture/distances; predators inherit the grid env's integer-cell
+  Manhattan `update_predators` and chase the worm's *discretised* position. The renderer draws
+  them faithfully at their true integer positions, so **pursuit predators move in whole-1 mm
+  cell steps (visually quantised / "janky") next to the smoothly-gliding worm** — a substrate
+  limitation, not a render bug. Stationary predators are unaffected (they don't move). Making
+  pursuit predators move in continuous `(speed, heading)` space is a tracked follow-up.
 - Any change to the grid `PygameRenderer` behaviour (it stays byte-unchanged), the headless
   path, 3D, or a web/game-engine stack.
 
@@ -58,11 +66,23 @@ px = x * pixels_per_mm
 py = (world_size_mm - y) * pixels_per_mm   # y-up → y-down over the world height
 ```
 
-The view is the **whole arena** (no agent-following scroll — the worm is a point on a plate),
+The **default** view is the whole arena (no scroll — the worm is a point on a plate),
 window = `world_size_mm * pixels_per_mm` square + `STATUS_BAR_HEIGHT`. `pixels_per_mm` is a
 constructor arg (default ~12 → a 600×600 plate) so zoom is tunable. **Alternative rejected:**
 extending `_cell_to_pixel` to accept floats — it still carries the scrolling-viewport semantics
 that are wrong for a plate view.
+
+`_world_to_pixel` is **camera-aware**: `px = (x - cam_x0) * active_ppm`,
+`py = (cam_y_top - y) * active_ppm`. In the default full-arena view `cam_x0 = 0`,
+`cam_y_top = world_size_mm`, `active_ppm = pixels_per_mm`. A `C` key toggles an **agent-following
+camera** (`_update_camera`): `active_ppm = pixels_per_mm * FOLLOW_ZOOM_FACTOR` (2.5×) over a
+`world / FOLLOW_ZOOM_FACTOR` mm window centred on the worm and clamped to the plate edges (falls
+back to full-arena when the zoomed window would exceed the plate). Because every layer already
+routes through `_world_to_pixel` (and radii/sprite sizes through `active_ppm`), the whole scene
+follows uniformly; the cached full-arena heatmap surface is cropped to the visible window and
+scaled up (no re-sample). This keeps the worm legible on large worlds where the full-arena view
+renders it as a small dot — supporting **both** the whole-plate field view and a zoomed
+worm-centred view.
 
 ### D2 — Concentration heatmap via field-sampling + matplotlib colormap + `surfarray`
 
@@ -137,11 +157,30 @@ populated on both discrete and continuous-action paths).
   module. Existing `PIXEL`/`headless`/text themes and the grid renderer are unchanged.
 - Rollback: `--theme pixel`/`headless` continue to work exactly as before.
 
-## Open Questions
+## Open Questions (resolved during implementation)
 
-- **Zoom config location** — `pixels_per_mm` on the renderer constructor (renderer-local) vs on
-  `Continuous2DParams` (config-exposed). Lean renderer-local with an optional config override;
-  decide during implementation (affects whether `continuous-2d-environment` is a modified
-  capability).
-- **Heatmap default field + colormap** — food + a perceptually-uniform map (viridis);
-  finalise during implementation.
+- **Zoom config location** — **resolved: renderer-local.** `pixels_per_mm` is a
+  `Continuous2DRenderer` constructor argument (default `DEFAULT_PIXELS_PER_MM = 12.0` → a 50 mm
+  plate at 600×600 + status bar). No config-exposed override was added, so
+  `continuous-2d-environment` is **not** a modified capability (matches the proposal).
+- **Heatmap default field + colormap** — **resolved: food + viridis.** The default selected
+  field is `get_food_concentration`; the colormap is `viridis`. The heatmap is **on by default**
+  (it is the primary reason the renderer exists) and toggled with `H`; the field is cycled with
+  `F` (food → predator → temperature → oxygen → pheromone). The gradient quiver is **off by
+  default** and toggled with `G` (perf).
+
+## Implementation notes / deviations
+
+- `render_frame(env, state, *, session_text=None)` takes the env plus a frozen
+  `ContinuousRenderState`, instead of the grid renderer's many keyword status fields — the
+  snapshot already carries them.
+- Shared-helper extractions to keep the two renderers from diverging:
+  `build_run_status_lines(...)` (status-bar field formatting, used by both) and
+  `sprites.zone_overlay_color(name)` (the categorical zone RGBA map, used by both
+  `create_zone_overlay` and the continuous zone fills).
+- Zone fills use a single arena-sized `SRCALPHA` overlay filled per 1 mm cell (one surface,
+  one blit) rather than per-cell cached surfaces; the toxic zone is a filled disc at
+  `damage_radius·zoom`.
+- Heatmap caching keys on `(field, source-signature, lattice_n)` where the source signature is
+  the food positions (food field) or predator positions (predator field), else a static marker —
+  so the lattice re-samples only when the field's sources change.

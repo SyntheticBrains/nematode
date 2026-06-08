@@ -92,27 +92,47 @@ class AdaptiveChemosensor:
     alpha: float = 0.1
     eps: float = 1e-3
     _integrator: LeakyIntegrator = field(init=False)
+    last_readout: float | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         """Initialise the per-channel background tracker."""
         self._integrator = LeakyIntegrator(self.alpha)
 
+    @property
+    def background(self) -> float:
+        """The current tracked background concentration (0.0 before the first sample).
+
+        Public accessor delegating to the leaky integrator so callers (e.g. a
+        renderer snapshot builder) never reach into the private integrator state.
+        """
+        return self._integrator.background
+
     def reset(self) -> None:
         """Reset the background tracker (episode boundary)."""
         self._integrator.reset()
+        self.last_readout = None
 
     def adapt(self, concentration: float, derivative: float) -> tuple[float, float]:
         """Update the background and return the adapted ``(strength, derivative)``.
 
         Exactly one channel is reshaped per the configured ``readout``; the other
-        retains its non-adaptive value.
+        retains its non-adaptive value. The reshaped channel's value is also cached
+        in :attr:`last_readout` for read-only inspection (e.g. rendering).
         """
         background = self._integrator.update(concentration)
         if self.readout == READOUT_FOLD_CHANGE:
-            return concentration, fold_change_readout(derivative, concentration, self.eps)
+            readout = fold_change_readout(derivative, concentration, self.eps)
+            self.last_readout = readout
+            return concentration, readout
         if self.readout == READOUT_CONTRAST:
-            return magnitude_contrast_readout(concentration, background, self.eps), derivative
+            readout = magnitude_contrast_readout(concentration, background, self.eps)
+            self.last_readout = readout
+            return readout, derivative
         if self.readout == READOUT_LOG:
-            return log_concentration_readout(concentration), derivative
+            readout = log_concentration_readout(concentration)
+            self.last_readout = readout
+            return readout, derivative
         # Unknown readout: behave as a no-op (defensive; config is Literal-validated).
+        # Clear the cached readout so a stale value can't leak into a snapshot.
+        self.last_readout = None
         return concentration, derivative

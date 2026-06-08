@@ -15,6 +15,7 @@ class Theme(StrEnum):
     RICH = "rich"
     EMOJI_RICH = "emoji_rich"
     PIXEL = "pixel"
+    PIXEL_CONTINUOUS = "pixel_continuous"
     HEADLESS = "headless"
 
 
@@ -286,6 +287,20 @@ THEME_SYMBOLS = {
     ),
     # PIXEL theme uses Pygame renderer; symbols are placeholders for fallback only
     Theme.PIXEL: ThemeSymbolSet(
+        goal="*",
+        body="O",
+        up="^",
+        down="v",
+        left="<",
+        right=">",
+        empty=".",
+        predator="#",
+        predator_stationary="X",
+        predator_pursuit="@",
+    ),
+    # PIXEL_CONTINUOUS theme uses the continuous-substrate Pygame renderer;
+    # symbols are placeholders for fallback only (mirrors the PIXEL block)
+    Theme.PIXEL_CONTINUOUS: ThemeSymbolSet(
         goal="*",
         body="O",
         up="^",
