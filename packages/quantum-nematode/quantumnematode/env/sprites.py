@@ -64,6 +64,31 @@ ZONE_LETHAL_HYPEROXIA = (40, 180, 220, 90)  # bright cyan
 # Toxic zone overlay
 ZONE_TOXIC = (140, 60, 180, 80)
 
+# Zone-name → RGBA colour map (shared by the grid and continuous renderers so the
+# categorical zone colours never diverge between them).
+ZONE_OVERLAY_COLORS: dict[str, tuple[int, int, int, int]] = {
+    "lethal_cold": ZONE_LETHAL_COLD,
+    "danger_cold": ZONE_DANGER_COLD,
+    "discomfort_cold": ZONE_DISCOMFORT_COLD,
+    "comfort": ZONE_COMFORT,
+    "discomfort_hot": ZONE_DISCOMFORT_HOT,
+    "danger_hot": ZONE_DANGER_HOT,
+    "lethal_hot": ZONE_LETHAL_HOT,
+    "toxic": ZONE_TOXIC,
+    # Oxygen zones
+    "lethal_hypoxia": ZONE_LETHAL_HYPOXIA,
+    "danger_hypoxia": ZONE_DANGER_HYPOXIA,
+    "comfort_oxygen": ZONE_COMFORT_OXYGEN,
+    "danger_hyperoxia": ZONE_DANGER_HYPEROXIA,
+    "lethal_hyperoxia": ZONE_LETHAL_HYPEROXIA,
+}
+
+
+def zone_overlay_color(zone_name: str) -> tuple[int, int, int, int]:
+    """Return the RGBA overlay colour for a zone name (transparent comfort default)."""
+    return ZONE_OVERLAY_COLORS.get(zone_name, ZONE_COMFORT)
+
+
 # Multi-agent color palette (8 distinct colors for agent differentiation)
 # Index 0 is neutral white (identity tint) preserving original cream sprites.
 # Indices cycle for >8 agents.
@@ -428,23 +453,7 @@ def create_zone_overlay(
     Any
         A CELL_SIZE x CELL_SIZE SRCALPHA surface with the zone tint.
     """
-    color_map = {
-        "lethal_cold": ZONE_LETHAL_COLD,
-        "danger_cold": ZONE_DANGER_COLD,
-        "discomfort_cold": ZONE_DISCOMFORT_COLD,
-        "comfort": ZONE_COMFORT,
-        "discomfort_hot": ZONE_DISCOMFORT_HOT,
-        "danger_hot": ZONE_DANGER_HOT,
-        "lethal_hot": ZONE_LETHAL_HOT,
-        "toxic": ZONE_TOXIC,
-        # Oxygen zones
-        "lethal_hypoxia": ZONE_LETHAL_HYPOXIA,
-        "danger_hypoxia": ZONE_DANGER_HYPOXIA,
-        "comfort_oxygen": ZONE_COMFORT_OXYGEN,
-        "danger_hyperoxia": ZONE_DANGER_HYPEROXIA,
-        "lethal_hyperoxia": ZONE_LETHAL_HYPEROXIA,
-    }
-    rgba = color_map.get(zone_name, ZONE_COMFORT)
+    rgba = zone_overlay_color(zone_name)
     surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     surf.fill(rgba)
     return surf

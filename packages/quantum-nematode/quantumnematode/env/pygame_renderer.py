@@ -17,12 +17,14 @@ from typing import TYPE_CHECKING, Any
 from quantumnematode.env.sprites import (
     AGENT_COLOR_PALETTE,
     CELL_SIZE,
+    SOIL_COLOR,
     create_dead_agent_overlay,
     create_sprites,
     create_tinted_head_sprites,
     create_zone_overlay,
     draw_body_segment,
     tint_body_colors,
+    zone_overlay_color,
 )
 from quantumnematode.logging_config import logger
 
@@ -104,6 +106,47 @@ STATUS_PADDING = 8
 
 # Window title
 WINDOW_TITLE = "Quantum Nematode - Pixel Theme"
+WINDOW_TITLE_CONTINUOUS = "Quantum Nematode - Continuous-2D"
+
+
+def build_run_status_lines(  # noqa: PLR0913
+    *,
+    step: int,
+    max_steps: int,
+    foods_collected: int,
+    target_foods: int,
+    health: float,
+    max_health: float,
+    satiety: float,
+    max_satiety: float,
+    in_danger: bool,
+    temperature: float | None,
+    zone_name: str | None,
+    oxygen: float | None,
+    oxygen_zone_name: str | None,
+) -> list[tuple[str, tuple[int, int, int]]]:
+    """Build the run-level status-bar lines shared by the grid and continuous renderers.
+
+    Returns the ``(text, colour)`` lines for the run section (step, food, HP,
+    satiety, danger state, temperature, oxygen) so both renderers format these
+    fields identically. Session-level text and renderer-specific extras (e.g. the
+    continuous adaptive-sensor readout) are appended by the caller.
+    """
+    lines: list[tuple[str, tuple[int, int, int]]] = [
+        ("Run:", STATUS_TEXT_COLOR),
+        (f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR),
+        (f"Food: {foods_collected}/{target_foods}", STATUS_TEXT_COLOR),
+        (f"HP: {health:.0f}/{max_health:.0f}", STATUS_TEXT_COLOR),
+        (f"Satiety: {satiety:.0f}/{max_satiety:.0f}", STATUS_TEXT_COLOR),
+    ]
+    danger_text = "IN DANGER" if in_danger else "SAFE"
+    danger_color = STATUS_DANGER_COLOR if in_danger else STATUS_SAFE_COLOR
+    lines.append((f"Status: {danger_text}", danger_color))
+    if temperature is not None and zone_name:
+        lines.append((f"Temp: {temperature:.1f}C ({zone_name})", STATUS_TEXT_COLOR))
+    if oxygen is not None and oxygen_zone_name:
+        lines.append((f"O2: {oxygen:.1f}% ({oxygen_zone_name})", STATUS_TEXT_COLOR))
+    return lines
 
 
 class PygameRenderer:
@@ -538,22 +581,24 @@ class PygameRenderer:
             # Separator
             lines.append(("", STATUS_TEXT_COLOR))
 
-        # Run-level info
-        lines.append(("Run:", STATUS_TEXT_COLOR))
-        lines.append((f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR))
-        lines.append((f"Food: {foods_collected}/{target_foods}", STATUS_TEXT_COLOR))
-        lines.append((f"HP: {health:.0f}/{max_health:.0f}", STATUS_TEXT_COLOR))
-        lines.append((f"Satiety: {satiety:.0f}/{max_satiety:.0f}", STATUS_TEXT_COLOR))
-
-        danger_text = "IN DANGER" if in_danger else "SAFE"
-        danger_color = STATUS_DANGER_COLOR if in_danger else STATUS_SAFE_COLOR
-        lines.append((f"Status: {danger_text}", danger_color))
-
-        if temperature is not None and zone_name:
-            lines.append((f"Temp: {temperature:.1f}C ({zone_name})", STATUS_TEXT_COLOR))
-
-        if oxygen is not None and oxygen_zone_name:
-            lines.append((f"O2: {oxygen:.1f}% ({oxygen_zone_name})", STATUS_TEXT_COLOR))
+        # Run-level info (shared formatting with the continuous renderer)
+        lines.extend(
+            build_run_status_lines(
+                step=step,
+                max_steps=max_steps,
+                foods_collected=foods_collected,
+                target_foods=target_foods,
+                health=health,
+                max_health=max_health,
+                satiety=satiety,
+                max_satiety=max_satiety,
+                in_danger=in_danger,
+                temperature=temperature,
+                zone_name=zone_name,
+                oxygen=oxygen,
+                oxygen_zone_name=oxygen_zone_name,
+            ),
+        )
 
         line_height = STATUS_FONT_SIZE + 2
         antialias = True
@@ -1007,3 +1052,558 @@ class PygameRenderer:
             self._closed = True
             self._pg.quit()
             logger.info("PygameRenderer closed.")
+
+
+# ── Continuous-2D substrate renderer ──────────────────────────────────────────
+
+# Default zoom: ~12 px/mm → a 50 mm plate renders at 600x600 + status bar.
+DEFAULT_PIXELS_PER_MM = 12.0
+# Heatmap lattice resolution (bounds the per-(re)sample field-call cost).
+HEATMAP_LATTICE_N = 64
+# Coarse quiver lattice (kept small — gradient is O(sources) per sample).
+QUIVER_LATTICE_N = 12
+# Minimum food-gradient strength below which a quiver arrow is not drawn.
+QUIVER_MIN_STRENGTH = 1e-3
+# Uniform alpha for the field heatmap blit (keeps entities/zones readable).
+HEATMAP_ALPHA = 130
+# Heatmap colormap (perceptually uniform).
+HEATMAP_COLORMAP = "viridis"
+# Selectable heatmap fields, in cycle order (food is the default first entry).
+HEATMAP_FIELDS = ("food", "predator", "temperature", "oxygen", "pheromone")
+
+# Worm / sensor overlay colours.
+WORM_MARKER_COLOR = (220, 195, 160)
+WORM_OUTLINE_COLOR = (120, 95, 60)
+WORM_HEADING_COLOR = (255, 230, 180)
+KLINOTAXIS_SAMPLE_COLOR = (120, 200, 255)
+PREDATOR_DETECTION_RING_COLOR = (200, 160, 220)
+PREDATOR_DAMAGE_RING_COLOR = (220, 70, 70)
+QUIVER_ARROW_COLOR = (120, 230, 140)
+STATUS_OVERLAY_HINT_COLOR = (150, 150, 170)
+
+
+class Continuous2DRenderer:
+    """Renders the continuous-2D substrate with sub-cell fidelity.
+
+    A sibling of :class:`PygameRenderer` (not a subclass — the grid renderer's
+    methods are hardwired to the integer scrolling viewport and ``_cell_to_pixel``
+    y-inversion). The view is the **whole arena** (no agent-following scroll): the
+    worm is a point on a plate. Real-valued world coordinates (millimetres) map to
+    pixels via :meth:`_world_to_pixel` with a configurable ``pixels_per_mm`` zoom.
+
+    The renderer reads only the per-step :class:`ContinuousRenderState` snapshot and
+    the environment (for fields, foods, predators) — never agent internals.
+
+    Layers (back → front): background, temperature / oxygen / toxic zones,
+    concentration heatmap, gradient quiver, klinotaxis + predator sensor zones,
+    entities (food / predators / worm), status bar.
+
+    Parameters
+    ----------
+    world_size_mm : float
+        Side length of the square arena, in millimetres.
+    pixels_per_mm : float
+        Zoom: screen pixels per millimetre (default ``DEFAULT_PIXELS_PER_MM``).
+    heatmap_n : int
+        Heatmap lattice resolution per side (default ``HEATMAP_LATTICE_N``).
+    """
+
+    def __init__(
+        self,
+        world_size_mm: float,
+        *,
+        pixels_per_mm: float = DEFAULT_PIXELS_PER_MM,
+        heatmap_n: int = HEATMAP_LATTICE_N,
+    ) -> None:
+        import pygame
+
+        self._pg = pygame
+        self._world_size_mm = float(world_size_mm)
+        self._pixels_per_mm = float(pixels_per_mm)
+        self._grid_size = round(world_size_mm)
+        self._heatmap_n = max(2, heatmap_n)
+
+        self._arena_px = max(1, round(self._world_size_mm * self._pixels_per_mm))
+        self._width = self._arena_px
+        self._height = self._arena_px + STATUS_BAR_HEIGHT
+
+        pygame.init()
+        self._screen = pygame.display.set_mode((self._width, self._height))
+        pygame.display.set_caption(WINDOW_TITLE_CONTINUOUS)
+        self._clock = pygame.time.Clock()
+        self._font = pygame.font.SysFont("monospace", STATUS_FONT_SIZE)
+
+        # Entity sprites scaled to a sub-cell marker size (~2 mm across).
+        sprites = create_sprites(pygame)
+        entity_px = max(10, round(2.0 * self._pixels_per_mm))
+        self._entity_px = entity_px
+        self._scaled_sprites: dict[str, Any] = {
+            key: pygame.transform.smoothscale(sprites[key], (entity_px, entity_px))
+            for key in ("food", "predator_random", "predator_stationary", "predator_pursuit")
+        }
+        self._worm_radius_px = max(4, round(0.6 * self._pixels_per_mm))
+
+        # Overlay toggle state (heatmap on by default; quiver off for perf).
+        self._heatmap_enabled = True
+        self._quiver_enabled = False
+        self._heatmap_field_idx = 0
+        self._heatmap_cache: tuple[Any, Any] | None = None  # (cache_key, surface)
+
+        self._closed = False
+        self._last_status_line_count = 0
+        logger.info(
+            f"Continuous2DRenderer initialized: {self._width}x{self._height} "
+            f"({self._world_size_mm:.0f}mm @ {self._pixels_per_mm:.1f}px/mm)",
+        )
+
+    @property
+    def closed(self) -> bool:
+        """Whether the window has been closed."""
+        return self._closed
+
+    def _world_to_pixel(self, x: float, y: float) -> tuple[int, int]:
+        """Map a real-valued world point (mm, y-up) to a screen pixel (y-down).
+
+        ``px = x * pixels_per_mm``;
+        ``py = (world_size_mm - y) * pixels_per_mm`` (world y-up → screen y-down over
+        the world height). No agent-following scroll: the whole arena is in view.
+        """
+        px = x * self._pixels_per_mm
+        py = (self._world_size_mm - y) * self._pixels_per_mm
+        return round(px), round(py)
+
+    def _cell_rect(self, gx: int, gy: int) -> tuple[int, int, int, int]:
+        """Pixel rect (x, y, w, h) covering the 1 mm cell centred at ``(gx, gy)``."""
+        px0, py0 = self._world_to_pixel(gx - 0.5, gy + 0.5)  # top-left (y inverted)
+        px1, py1 = self._world_to_pixel(gx + 0.5, gy - 0.5)  # bottom-right
+        return (px0, py0, max(1, px1 - px0), max(1, py1 - py0))
+
+    def pump_events(self) -> bool:
+        """Process Pygame events. Returns False if the window was closed.
+
+        Keyboard toggles (single-agent renderers have none today, so this is new):
+        ``H`` heatmap on/off, ``F`` cycle heatmap field, ``G`` gradient quiver
+        on/off. Window-close follows the grid renderer's ``pump_events`` shape.
+        """
+        for event in self._pg.event.get():
+            if event.type == self._pg.QUIT:
+                self.close()
+                return False
+            if event.type != self._pg.KEYDOWN:
+                continue
+            if event.key == self._pg.K_h:
+                self._heatmap_enabled = not self._heatmap_enabled
+            elif event.key == self._pg.K_g:
+                self._quiver_enabled = not self._quiver_enabled
+            elif event.key == self._pg.K_f:
+                self._heatmap_field_idx = (self._heatmap_field_idx + 1) % len(HEATMAP_FIELDS)
+                self._heatmap_cache = None  # field changed → invalidate cache
+        return True
+
+    def render_frame(
+        self,
+        env: DynamicForagingEnvironment,
+        state: ContinuousRenderState,
+        *,
+        session_text: str | None = None,
+    ) -> None:
+        """Render one complete continuous-substrate frame from a state snapshot."""
+        if self._closed:
+            return
+        if not self.pump_events():
+            return
+
+        status_lines = self._build_status_lines(state, session_text)
+        self._resize_if_needed(len(status_lines))
+
+        self._screen.fill(STATUS_BG_COLOR)
+        self._screen.fill(SOIL_COLOR, (0, 0, self._arena_px, self._arena_px))
+
+        self._render_temperature_zones(env)
+        self._render_oxygen_zones(env)
+        self._render_toxic_zones(env)
+        if self._heatmap_enabled:
+            self._render_heatmap(env, state)
+        if self._quiver_enabled:
+            self._render_quiver(env)
+        self._render_sensor_zones(env, state)
+        self._render_entities(env, state)
+        self._blit_status_lines(status_lines)
+
+        self._pg.display.flip()
+        self._clock.tick(30)
+
+    # ── Parity layers (ported to continuous coordinates) ──────────────────────
+
+    def _render_temperature_zones(self, env: DynamicForagingEnvironment) -> None:
+        """Fill temperature comfort/danger zones over the arena (categorical colours)."""
+        if not env.thermotaxis.enabled or env.temperature_field is None:
+            return
+
+        from quantumnematode.env.temperature import TemperatureZone, TemperatureZoneThresholds
+
+        thresholds = TemperatureZoneThresholds(
+            comfort_delta=env.thermotaxis.comfort_delta,
+            discomfort_delta=env.thermotaxis.discomfort_delta,
+            danger_delta=env.thermotaxis.danger_delta,
+        )
+        zone_to_name = {
+            TemperatureZone.LETHAL_COLD: "lethal_cold",
+            TemperatureZone.DANGER_COLD: "danger_cold",
+            TemperatureZone.DISCOMFORT_COLD: "discomfort_cold",
+            TemperatureZone.DISCOMFORT_HOT: "discomfort_hot",
+            TemperatureZone.DANGER_HOT: "danger_hot",
+            TemperatureZone.LETHAL_HOT: "lethal_hot",
+        }
+        overlay = self._pg.Surface((self._arena_px, self._arena_px), self._pg.SRCALPHA)
+        for gy in range(self._grid_size):
+            for gx in range(self._grid_size):
+                temp = env.temperature_field.get_temperature((gx, gy))
+                zone = env.temperature_field.get_zone(
+                    temp,
+                    env.thermotaxis.cultivation_temperature,
+                    thresholds,
+                )
+                name = zone_to_name.get(zone)
+                if name is not None:
+                    overlay.fill(zone_overlay_color(name), self._cell_rect(gx, gy))
+        self._screen.blit(overlay, (0, 0))
+
+    def _render_oxygen_zones(self, env: DynamicForagingEnvironment) -> None:
+        """Fill oxygen comfort/danger zones over the arena (categorical colours)."""
+        if not env.aerotaxis.enabled:
+            return
+
+        from quantumnematode.env.oxygen import OxygenZone
+
+        zone_to_name = {
+            OxygenZone.LETHAL_HYPOXIA: "lethal_hypoxia",
+            OxygenZone.DANGER_HYPOXIA: "danger_hypoxia",
+            OxygenZone.DANGER_HYPEROXIA: "danger_hyperoxia",
+            OxygenZone.LETHAL_HYPEROXIA: "lethal_hyperoxia",
+        }
+        overlay = self._pg.Surface((self._arena_px, self._arena_px), self._pg.SRCALPHA)
+        for gy in range(self._grid_size):
+            for gx in range(self._grid_size):
+                zone = env.get_oxygen_zone((gx, gy))
+                name = zone_to_name.get(zone) if zone is not None else None
+                if name is not None:
+                    overlay.fill(zone_overlay_color(name), self._cell_rect(gx, gy))
+        self._screen.blit(overlay, (0, 0))
+
+    def _render_toxic_zones(self, env: DynamicForagingEnvironment) -> None:
+        """Fill stationary-predator toxic (damage-radius) discs over the arena."""
+        if not env.predator.enabled:
+            return
+
+        from quantumnematode.env.env import PredatorType
+
+        overlay = self._pg.Surface((self._arena_px, self._arena_px), self._pg.SRCALPHA)
+        drew = False
+        for pred in env.predators:
+            if pred.predator_type != PredatorType.STATIONARY or pred.damage_radius <= 0:
+                continue
+            cx, cy = self._world_to_pixel(float(pred.position[0]), float(pred.position[1]))
+            radius_px = max(1, round(pred.damage_radius * self._pixels_per_mm))
+            self._pg.draw.circle(overlay, zone_overlay_color("toxic"), (cx, cy), radius_px)
+            drew = True
+        if drew:
+            self._screen.blit(overlay, (0, 0))
+
+    # ── Fidelity overlays ─────────────────────────────────────────────────────
+
+    def _heatmap_getter(
+        self,
+        env: DynamicForagingEnvironment,
+        field_name: str,
+    ) -> Any:  # noqa: ANN401
+        """Return a ``(x, y) -> float`` sampler for the selected heatmap field."""
+        if field_name == "predator":
+            return env.get_predator_concentration
+        if field_name == "temperature":
+            return lambda pos: env.get_temperature(pos) or 0.0
+        if field_name == "oxygen":
+            return lambda pos: env.get_oxygen_concentration(pos) or 0.0
+        if field_name == "pheromone" and env.pheromone_field_food is not None:
+            field = env.pheromone_field_food
+            return lambda pos: field.get_concentration(pos, 0)
+        # Default / fallback: food concentration.
+        return env.get_food_concentration
+
+    def _heatmap_cache_key(self, env: DynamicForagingEnvironment, field_name: str) -> tuple:
+        """Cache key keyed on the field and the sources that define it.
+
+        The field is static within an episode except when its sources change, so we
+        recompute the (expensive) lattice sampling only when this key changes.
+        """
+        if field_name == "food":
+            sig: Any = tuple(sorted((round(fx, 3), round(fy, 3)) for fx, fy in env.foods))
+        elif field_name == "predator":
+            sig = tuple(sorted((p.position[0], p.position[1]) for p in env.predators))
+        else:
+            sig = "static"
+        return (field_name, sig, self._heatmap_n)
+
+    def _render_heatmap(
+        self,
+        env: DynamicForagingEnvironment,
+        state: ContinuousRenderState,  # noqa: ARG002
+    ) -> None:
+        """Sample the selected field over a lattice → colormap → alpha-blit.
+
+        The sampled-and-colormapped surface is cached and only recomputed when the
+        field's sources change (see :meth:`_heatmap_cache_key`).
+        """
+        field_name = HEATMAP_FIELDS[self._heatmap_field_idx]
+        key = self._heatmap_cache_key(env, field_name)
+        if self._heatmap_cache is None or self._heatmap_cache[0] != key:
+            surface = self._build_heatmap_surface(env, field_name)
+            self._heatmap_cache = (key, surface)
+        self._screen.blit(self._heatmap_cache[1], (0, 0))
+
+    def _build_heatmap_surface(
+        self,
+        env: DynamicForagingEnvironment,
+        field_name: str,
+    ) -> Any:  # noqa: ANN401
+        """Build the scaled, alpha-tagged heatmap surface for one field."""
+        import matplotlib as mpl
+        import numpy as np
+
+        getter = self._heatmap_getter(env, field_name)
+        n = self._heatmap_n
+        world = self._world_size_mm
+        values = np.zeros((n, n), dtype=float)  # indexed [i_x][j_y] (j=0 → top)
+        for i in range(n):
+            x = world * i / (n - 1)
+            for j in range(n):
+                y = world * (1.0 - j / (n - 1))
+                values[i, j] = float(getter((x, y)))
+
+        vmin = float(values.min())
+        vmax = float(values.max())
+        norm = (values - vmin) / (vmax - vmin) if vmax > vmin else np.zeros_like(values)
+        cmap = mpl.colormaps[HEATMAP_COLORMAP]
+        rgb = (cmap(norm)[:, :, :3] * 255).astype(np.uint8)  # (n, n, 3), [i_x][j_y]
+
+        surf = self._pg.surfarray.make_surface(rgb)
+        surf = self._pg.transform.smoothscale(surf, (self._arena_px, self._arena_px))
+        surf.set_alpha(HEATMAP_ALPHA)
+        return surf
+
+    def _render_quiver(self, env: DynamicForagingEnvironment) -> None:
+        """Draw coarse up-gradient food arrows scaled by gradient strength."""
+        import math
+
+        n = QUIVER_LATTICE_N
+        world = self._world_size_mm
+        spacing_px = self._arena_px / n
+        max_len = spacing_px * 0.9
+        for i in range(n):
+            x = world * (i + 0.5) / n
+            for j in range(n):
+                y = world * (j + 0.5) / n
+                grad = env.get_separated_gradients((x, y), disable_log=True)  # type: ignore[arg-type]
+                strength = float(grad.get("food_gradient_strength", 0.0))
+                if strength <= QUIVER_MIN_STRENGTH:
+                    continue
+                direction = float(grad.get("food_gradient_direction", 0.0))
+                cx, cy = self._world_to_pixel(x, y)
+                length = max_len * min(1.0, strength)
+                # World y-up → screen y-down: negate the y-component.
+                ex = cx + math.cos(direction) * length
+                ey = cy - math.sin(direction) * length
+                self._pg.draw.line(self._screen, QUIVER_ARROW_COLOR, (cx, cy), (ex, ey), 1)
+                self._draw_arrowhead(cx, cy, ex, ey, length)
+
+    def _draw_arrowhead(
+        self,
+        cx: float,
+        cy: float,
+        ex: float,
+        ey: float,
+        length: float,
+    ) -> None:
+        """Draw a small two-line arrowhead at ``(ex, ey)`` pointing away from origin."""
+        import math
+
+        head = max(2.0, length * 0.3)
+        angle = math.atan2(ey - cy, ex - cx)
+        for sign in (1, -1):
+            a = angle + sign * (math.pi * 0.8)
+            self._pg.draw.line(
+                self._screen,
+                QUIVER_ARROW_COLOR,
+                (ex, ey),
+                (ex + math.cos(a) * head, ey + math.sin(a) * head),
+                1,
+            )
+
+    def _render_sensor_zones(
+        self,
+        env: DynamicForagingEnvironment,
+        state: ContinuousRenderState,
+    ) -> None:
+        """Draw klinotaxis sample points and predator detection/damage rings."""
+        # Klinotaxis head-sweep sample points (left/right of heading).
+        for sample in (state.left_sample, state.right_sample):
+            if sample is None:
+                continue
+            sx, sy = self._world_to_pixel(sample[0], sample[1])
+            self._pg.draw.circle(self._screen, KLINOTAXIS_SAMPLE_COLOR, (sx, sy), 3)
+            self._pg.draw.circle(self._screen, (30, 30, 40), (sx, sy), 3, 1)
+
+        # Predator detection / damage range rings.
+        if env.predator.enabled:
+            for pred in env.predators:
+                cx, cy = self._world_to_pixel(
+                    float(pred.position[0]),
+                    float(pred.position[1]),
+                )
+                if pred.detection_radius > 0:
+                    self._pg.draw.circle(
+                        self._screen,
+                        PREDATOR_DETECTION_RING_COLOR,
+                        (cx, cy),
+                        max(1, round(pred.detection_radius * self._pixels_per_mm)),
+                        1,
+                    )
+                if pred.damage_radius > 0:
+                    self._pg.draw.circle(
+                        self._screen,
+                        PREDATOR_DAMAGE_RING_COLOR,
+                        (cx, cy),
+                        max(1, round(pred.damage_radius * self._pixels_per_mm)),
+                        1,
+                    )
+
+    def _render_entities(
+        self,
+        env: DynamicForagingEnvironment,
+        state: ContinuousRenderState,
+    ) -> None:
+        """Draw food / predator sprites and the worm (marker + heading line)."""
+        import math
+
+        half = self._entity_px // 2
+        food_sprite = self._scaled_sprites["food"]
+        for food in env.foods:
+            cx, cy = self._world_to_pixel(float(food[0]), float(food[1]))
+            self._screen.blit(food_sprite, (cx - half, cy - half))
+
+        if env.predator.enabled:
+            from quantumnematode.env.env import PredatorType
+
+            for pred in env.predators:
+                if pred.predator_type == PredatorType.STATIONARY:
+                    sprite = self._scaled_sprites["predator_stationary"]
+                elif pred.predator_type == PredatorType.PURSUIT:
+                    sprite = self._scaled_sprites["predator_pursuit"]
+                else:
+                    sprite = self._scaled_sprites["predator_random"]
+                cx, cy = self._world_to_pixel(
+                    float(pred.position[0]),
+                    float(pred.position[1]),
+                )
+                self._screen.blit(sprite, (cx - half, cy - half))
+
+        # Worm: filled marker + heading line (continuous heading_rad).
+        wx, wy = self._world_to_pixel(state.pos[0], state.pos[1])
+        self._pg.draw.circle(self._screen, WORM_MARKER_COLOR, (wx, wy), self._worm_radius_px)
+        self._pg.draw.circle(self._screen, WORM_OUTLINE_COLOR, (wx, wy), self._worm_radius_px, 1)
+        heading_len = self._worm_radius_px + max(6, round(1.2 * self._pixels_per_mm))
+        hx = wx + math.cos(state.heading_rad) * heading_len
+        hy = wy - math.sin(state.heading_rad) * heading_len  # world y-up → screen y-down
+        self._pg.draw.line(self._screen, WORM_HEADING_COLOR, (wx, wy), (hx, hy), 2)
+
+    # ── Status bar ────────────────────────────────────────────────────────────
+
+    def _build_status_lines(
+        self,
+        state: ContinuousRenderState,
+        session_text: str | None,
+    ) -> list[tuple[str, tuple[int, int, int]]]:
+        """Build status-bar lines: session text, shared run lines, adaptive readout, hints."""
+        lines: list[tuple[str, tuple[int, int, int]]] = []
+        if session_text:
+            for raw_line in session_text.strip().splitlines():
+                stripped = raw_line.strip()
+                if stripped and not stripped.startswith("--"):
+                    lines.append((stripped, STATUS_SESSION_COLOR))
+            lines.append(("", STATUS_TEXT_COLOR))
+
+        lines.extend(
+            build_run_status_lines(
+                step=state.step,
+                max_steps=state.max_steps,
+                foods_collected=state.foods_collected,
+                target_foods=state.target_foods,
+                health=state.health,
+                max_health=state.max_health,
+                satiety=state.satiety,
+                max_satiety=state.max_satiety,
+                in_danger=state.in_danger,
+                temperature=state.temperature,
+                zone_name=state.zone_name,
+                oxygen=state.oxygen,
+                oxygen_zone_name=state.oxygen_zone_name,
+            ),
+        )
+
+        # Adaptive-sensor readout (omitted when the sensor is disabled).
+        if state.adaptive_mode is not None:
+            bg = state.adaptive_background if state.adaptive_background is not None else 0.0
+            readout = state.adaptive_readout if state.adaptive_readout is not None else 0.0
+            lines.append(
+                (
+                    f"Adaptive[{state.adaptive_mode}]: B={bg:.3f} r={readout:.3f}",
+                    STATUS_TEXT_COLOR,
+                ),
+            )
+
+        field_name = HEATMAP_FIELDS[self._heatmap_field_idx]
+        heatmap_state = f"{field_name} ON" if self._heatmap_enabled else "OFF"
+        quiver_state = "ON" if self._quiver_enabled else "OFF"
+        lines.append(
+            (
+                f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}",
+                STATUS_OVERLAY_HINT_COLOR,
+            ),
+        )
+        return lines
+
+    def _resize_if_needed(self, line_count: int) -> None:
+        """Grow the window if the status bar needs more than ``STATUS_BAR_HEIGHT``."""
+        if line_count <= self._last_status_line_count:
+            return
+        self._last_status_line_count = line_count
+        line_height = STATUS_FONT_SIZE + 2
+        needed_height = line_count * line_height + 8
+        if needed_height > STATUS_BAR_HEIGHT:
+            self._height = self._arena_px + needed_height
+            self._screen = self._pg.display.set_mode((self._width, self._height))
+
+    def _blit_status_lines(
+        self,
+        lines: list[tuple[str, tuple[int, int, int]]],
+    ) -> None:
+        """Blit the status bar below the arena."""
+        bar_y = self._arena_px
+        self._pg.draw.rect(
+            self._screen,
+            STATUS_BG_COLOR,
+            (0, bar_y, self._width, self._height - bar_y),
+        )
+        line_height = STATUS_FONT_SIZE + 2
+        antialias = True
+        for i, (text, color) in enumerate(lines):
+            if text:
+                text_surf = self._font.render(text, antialias, color)
+                self._screen.blit(text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height))
+
+    def close(self) -> None:
+        """Clean up Pygame resources."""
+        if not self._closed:
+            self._closed = True
+            self._pg.quit()
+            logger.info("Continuous2DRenderer closed.")

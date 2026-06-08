@@ -28,7 +28,7 @@ from quantumnematode.report.dtypes import PerformanceMetrics
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
     from quantumnematode.agent.runners import EpisodeResult
-    from quantumnematode.env.pygame_renderer import PygameRenderer
+    from quantumnematode.env.pygame_renderer import Continuous2DRenderer, PygameRenderer
     from quantumnematode.utils.config_loader import SensingConfig
 
 # Defaults
@@ -1252,7 +1252,7 @@ class QuantumNematodeAgent:
             ),
         )
 
-    def _render_step(
+    def _render_step(  # noqa: C901
         self,
         max_steps: int,
         render_text: str | None = None,
@@ -1276,6 +1276,11 @@ class QuantumNematodeAgent:
         # Pygame rendering for PIXEL theme
         if self.env.theme == Theme.PIXEL:
             self._render_step_pygame(max_steps, render_text=render_text)
+            return
+
+        # Continuous-substrate rendering for PIXEL_CONTINUOUS theme
+        if self.env.theme == Theme.PIXEL_CONTINUOUS:
+            self._render_step_continuous(max_steps, render_text=render_text)
             return
 
         # Clear screen if showing last frame only
@@ -1336,9 +1341,11 @@ class QuantumNematodeAgent:
 
     @property
     def pygame_renderer_closed(self) -> bool:
-        """Whether the Pygame renderer window has been closed by the user."""
+        """Whether a Pygame renderer window (grid or continuous) has been closed."""
         if hasattr(self, "_pygame_renderer") and self._pygame_renderer is not None:
             return self._pygame_renderer.closed
+        if hasattr(self, "_continuous_renderer") and self._continuous_renderer is not None:
+            return self._continuous_renderer.closed
         return False
 
     def _render_step_pygame(
@@ -1384,6 +1391,117 @@ class QuantumNematodeAgent:
             oxygen_zone_name=oxygen_zone_name,
             session_text=render_text,
         )
+
+    def _get_continuous_renderer(self) -> Continuous2DRenderer:
+        """Lazily initialize and return the continuous-substrate renderer."""
+        if not hasattr(self, "_continuous_renderer") or self._continuous_renderer is None:
+            from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+            if not isinstance(self.env, Continuous2DEnvironment):
+                msg = (
+                    "The pixel_continuous theme requires a continuous-2D environment. "
+                    "Use --theme pixel for the grid substrate."
+                )
+                raise TypeError(msg)
+            try:
+                from quantumnematode.env.pygame_renderer import Continuous2DRenderer
+
+                self._continuous_renderer = Continuous2DRenderer(
+                    world_size_mm=self.env.continuous.world_size_mm,
+                )
+            except Exception as exc:  # pragma: no cover
+                msg = (
+                    "pixel_continuous theme requires pygame with an available video "
+                    "backend. Use --theme headless (no rendering) or --theme ascii (text)."
+                )
+                raise RuntimeError(msg) from exc
+        return self._continuous_renderer
+
+    def _render_step_continuous(
+        self,
+        max_steps: int,
+        render_text: str | None = None,
+    ) -> None:
+        """Render the current step using the continuous-substrate renderer.
+
+        Builds a frozen ``ContinuousRenderState`` snapshot (the renderer reads only
+        the snapshot + env, never agent internals): worm pose, the klinotaxis
+        head-sweep sample points (via ``_continuous_lateral_offsets``), and the
+        adaptive-sensor state (via the public ``AdaptiveChemosensor.background`` /
+        ``last_readout`` accessors).
+        """
+        renderer = self._get_continuous_renderer()
+        if renderer.closed:
+            return
+
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+        from quantumnematode.env.pygame_renderer import ContinuousRenderState
+
+        if not isinstance(self.env, Continuous2DEnvironment):  # pragma: no cover - defensive
+            return  # renderer creation already validated the substrate
+
+        agent_state = self.env.agents[self.agent_id]
+        pos = agent_state.pos_continuous or (
+            float(agent_state.position[0]),
+            float(agent_state.position[1]),
+        )
+        sweep = float(self.env.continuous.sweep_amplitude_mm)
+        left_sample, right_sample = _continuous_lateral_offsets(
+            pos,
+            agent_state.heading_rad,
+            sweep,
+            self.env.grid_size,
+        )
+
+        adaptive_background: float | None = None
+        adaptive_readout: float | None = None
+        adaptive_mode: str | None = None
+        if self._adaptive_food is not None:
+            adaptive_background = self._adaptive_food.background
+            adaptive_readout = self._adaptive_food.last_readout
+            adaptive_mode = self._adaptive_food.readout
+
+        temperature: float | None = None
+        zone_name: str | None = None
+        if self.env.thermotaxis.enabled:
+            temperature = self.env.get_temperature()
+            zone = self.env.get_temperature_zone()
+            if zone is not None:
+                zone_name = zone.value.upper().replace("_", " ")
+
+        oxygen: float | None = None
+        oxygen_zone_name: str | None = None
+        if self.env.aerotaxis.enabled:
+            oxygen = self.env.get_oxygen_concentration()
+            o2_zone = self.env.get_oxygen_zone()
+            if o2_zone is not None:
+                oxygen_zone_name = o2_zone.value.upper().replace("_", " ")
+
+        state = ContinuousRenderState(
+            pos=pos,
+            heading_rad=agent_state.heading_rad,
+            left_sample=left_sample,
+            right_sample=right_sample,
+            sweep=sweep,
+            adaptive_background=adaptive_background,
+            adaptive_readout=adaptive_readout,
+            adaptive_mode=adaptive_mode,
+            step=self._episode_tracker.steps,
+            max_steps=max_steps,
+            foods_collected=self._episode_tracker.foods_collected,
+            target_foods=self.env.foraging.target_foods_to_collect,
+            health=self.env.agent_hp,
+            max_health=self.env.health.max_hp,
+            satiety=self.current_satiety,
+            max_satiety=self.max_satiety,
+            in_danger=self.env.is_agent_in_danger() if self.env.predator.enabled else False,
+            temperature=temperature,
+            zone_name=zone_name,
+            oxygen=oxygen,
+            oxygen_zone_name=oxygen_zone_name,
+        )
+
+        renderer.render_frame(self.env, state, session_text=render_text)
 
     def calculate_reward(  # noqa: PLR0913
         self,
