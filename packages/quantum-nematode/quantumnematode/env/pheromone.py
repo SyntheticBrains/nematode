@@ -121,7 +121,7 @@ class PheromoneField:
 
     def get_concentration(
         self,
-        position: tuple[int, int],
+        position: tuple[float, float],
         current_step: int,
     ) -> float:
         """Compute pheromone concentration at a position.
@@ -131,7 +131,7 @@ class PheromoneField:
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : tuple[float, float]
             Grid position to query.
         current_step : int
             Current simulation step (for temporal decay calculation).
@@ -159,14 +159,14 @@ class PheromoneField:
 
     def get_gradient(
         self,
-        position: tuple[int, int],
+        position: tuple[float, float],
         current_step: int,
     ) -> tuple[float, float]:
         """Compute pheromone gradient via central differences.
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : tuple[float, float]
             Grid position to query.
         current_step : int
             Current simulation step.
@@ -185,14 +185,14 @@ class PheromoneField:
 
     def get_gradient_polar(
         self,
-        position: tuple[int, int],
+        position: tuple[float, float],
         current_step: int,
     ) -> tuple[float, float]:
         """Compute pheromone gradient in polar coordinates.
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : tuple[float, float]
             Grid position to query.
         current_step : int
             Current simulation step.

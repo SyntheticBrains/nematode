@@ -234,11 +234,33 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         turn = turn_norm * math.pi
         self._kinematic_move(self.agents[agent_id], speed, turn)
 
-    # ----- capture-radius food consumption + Euclidean distances -----
-    # Food sources remain on the integer lattice within the continuous arena
-    # (inherited placement); the worm and capture are fully continuous. Float
-    # food placement is deferred to avoid the `self.foods: list[tuple[int,int]]`
-    # type ripple (same class of change as the position-type refinement).
+    # ----- float source placement + capture-radius consumption + Euclidean -----
+    # Food sources are placed at real-valued coordinates within the continuous
+    # arena; the worm, capture, and distances are fully
+    # continuous. The float source type is confined to this subclass (it overrides
+    # only candidate generation), so the grid base keeps its integer source type.
+
+    def _generate_food_candidate(self) -> tuple[float, float]:  # type: ignore[override]
+        """Generate a real-valued food candidate within the continuous arena.
+
+        Overrides the grid base's integer-lattice candidate generation so food
+        sources are placed at float coordinates. The hotspot-bias path is reused
+        (hotspots stay integer-cell — rarely used on the continuous substrate);
+        otherwise the candidate is uniform float in ``[0, grid_size - 1]``, the
+        same coordinate range the inherited validity / Poisson-disk machinery
+        expects. All validity checks (`_is_valid_food_position`) are Euclidean and
+        float-safe.
+        """
+        foraging = self.foraging
+        if (
+            foraging.food_hotspots
+            and foraging.food_hotspot_bias > 0
+            and self.rng.random() < foraging.food_hotspot_bias
+        ):
+            hx, hy = self._sample_hotspot_candidate()
+            return (float(hx), float(hy))
+        upper = float(self.grid_size - 1)
+        return (float(self.rng.uniform(0.0, upper)), float(self.rng.uniform(0.0, upper)))
 
     def _agent_xy(self, agent_id: str) -> tuple[float, float]:
         """Return the agent's continuous position (float truth, falling back to the int view)."""
@@ -272,15 +294,13 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             return nearest
         return None
 
-    def get_nearest_food_distance_for(self, agent_id: str) -> int | None:
-        """Return the Euclidean distance (rounded) to the nearest food, or None."""
+    def get_nearest_food_distance_for(self, agent_id: str) -> float | None:  # type: ignore[override]
+        """Return the true (un-rounded) Euclidean distance to the nearest food, or None."""
         if not self.foods:
             return None
         agent_x, agent_y = self._agent_xy(agent_id)
-        return min(
-            round(math.hypot(agent_x - food_x, agent_y - food_y)) for food_x, food_y in self.foods
-        )
+        return min(math.hypot(agent_x - food_x, agent_y - food_y) for food_x, food_y in self.foods)
 
-    def get_nearest_food_distance(self) -> int | None:
-        """Return the Euclidean distance (rounded) to the nearest food for the default agent."""
+    def get_nearest_food_distance(self) -> float | None:  # type: ignore[override]
+        """Return the true Euclidean distance to the nearest food for the default agent."""
         return self.get_nearest_food_distance_for(DEFAULT_AGENT_ID)

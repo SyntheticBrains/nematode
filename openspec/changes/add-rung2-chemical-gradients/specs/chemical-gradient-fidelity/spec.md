@@ -33,6 +33,8 @@ When the adaptive chemosensory sensor is enabled for a chemical channel, the sys
 - **WHEN** the adaptive sensor is configured
 - **THEN** the configuration SHALL state whether adaptation **reshapes the existing derivative/turning channel** (fold-change) or **adds a standalone contrast magnitude channel**, and the system SHALL apply exactly the configured interaction (these are distinct behavioural contracts, not interchangeable tunings); the default SHALL be derivative-channel fold-change
 
+*(As-built: the channel interaction is stated by the single `adaptive_chemosensor_readout` enum — `fold_change` ⇒ derivative channel, `contrast` ⇒ magnitude channel, `log` ⇒ magnitude baseline. This tranche wires the **food** chemosensory channel; pheromone / CO₂-chemo channels are a follow-up since those behaviours are deferred.)*
+
 #### Scenario: Log-concentration baseline mode available
 
 - **WHEN** the log-concentration baseline mode is selected

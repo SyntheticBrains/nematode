@@ -28,7 +28,7 @@ from enum import Enum
 import numpy as np
 from pydantic.dataclasses import dataclass
 
-from quantumnematode.dtypes import GradientPolar, GradientVector, GridPosition, OxygenSpot
+from quantumnematode.dtypes import GradientPolar, GradientVector, OxygenSpot, Position
 
 # Atmospheric oxygen maximum (%)
 MAX_OXYGEN = 21.0
@@ -128,7 +128,7 @@ class OxygenField:
         if self.low_oxygen_spots is None:
             self.low_oxygen_spots = []
 
-    def get_oxygen(self, position: GridPosition) -> float:
+    def get_oxygen(self, position: Position) -> float:
         """
         Compute oxygen concentration at a given position.
 
@@ -137,7 +137,7 @@ class OxygenField:
 
         Parameters
         ----------
-        position : GridPosition
+        position : Position
             (x, y) position to query.
 
         Returns
@@ -170,7 +170,7 @@ class OxygenField:
 
         return float(np.clip(o2, MIN_OXYGEN, MAX_OXYGEN))
 
-    def get_gradient(self, position: GridPosition) -> GradientVector:
+    def get_gradient(self, position: Position) -> GradientVector:
         """
         Compute oxygen gradient vector at a given position.
 
@@ -180,7 +180,7 @@ class OxygenField:
 
         Parameters
         ----------
-        position : GridPosition
+        position : Position
             (x, y) position to query gradient at.
 
         Returns
@@ -202,13 +202,13 @@ class OxygenField:
 
         return float(dx), float(dy)
 
-    def get_gradient_polar(self, position: GridPosition) -> GradientPolar:
+    def get_gradient_polar(self, position: Position) -> GradientPolar:
         """
         Compute oxygen gradient in polar coordinates.
 
         Parameters
         ----------
-        position : GridPosition
+        position : Position
             (x, y) position to query gradient at.
 
         Returns

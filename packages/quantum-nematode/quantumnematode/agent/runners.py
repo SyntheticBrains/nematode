@@ -665,6 +665,10 @@ class StandardEpisodeRunner(EpisodeRunner):
         # Reset STAM buffer for new episode (no cross-episode memory)
         if agent._stam is not None:
             agent._stam.reset()
+        # Reset the adaptive chemosensory background too (same per-episode boundary
+        # as STAM — otherwise the background leaks across reused episodes).
+        if agent._adaptive_food is not None:
+            agent._adaptive_food.reset()
         agent._previous_position = None
         agent._last_heading = Direction.UP
 
@@ -818,8 +822,9 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             pos: GridPosition = (agent.env.agent_pos[0], agent.env.agent_pos[1])
             agent.path.append(pos)
-            # Track food positions for chemotaxis validation
-            agent.food_history.append(list(agent.env.foods))
+            # Track food positions for chemotaxis validation (cell-snapped record;
+            # continuous-2D sources are real-valued, the worm senses the real field).
+            agent.food_history.append([(round(fx), round(fy)) for fx, fy in agent.env.foods])
 
             # Track step for food distance efficiency calculation
             agent._food_handler.track_step()

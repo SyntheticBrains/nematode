@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from pydantic import BaseModel
 
+from quantumnematode.agent.adaptive_sensor import AdaptiveChemosensor
 from quantumnematode.agent.stam import STAMBuffer, STAMChannelDef
 from quantumnematode.agent.tracker import EpisodeTracker
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
@@ -111,45 +112,57 @@ def _compute_lateral_offsets(
     return left, right
 
 
-def _continuous_lateral_offsets(
-    position: tuple[int, int],
-    heading_rad: float,
-    sweep: int,
-    grid_size: int,
-) -> tuple[tuple[int, int], tuple[int, int]]:
-    """Compute left/right head-sweep sample cells for a continuous heading.
+def _food_cells(foods: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Snap food source positions to integer cells for the food-history record.
 
-    Samples the integer cells ``sweep`` cells to the left (+90deg) and right (-90deg) of
-    ``heading_rad``, clamped to grid bounds. Sources + sensing live on the integer
-    lattice within the continuous arena (the worm moves continuously); this matches
-    ``_compute_lateral_offsets`` at cardinal headings and rotates smoothly otherwise.
+    Food sources are integer cells on the grid substrate and real-valued on the
+    continuous-2D substrate; the food-history reporting record is cell-resolution
+    (the worm senses the real float sources via the env field, not this record).
+    """
+    return [(round(fx), round(fy)) for fx, fy in foods]
+
+
+def _continuous_lateral_offsets(
+    position: tuple[float, float],
+    heading_rad: float,
+    sweep: float,
+    grid_size: int,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Compute left/right head-sweep sample points for a continuous heading.
+
+    Samples the real-valued points ``sweep`` to the left (+90deg) and right (-90deg) of
+    ``heading_rad`` from the worm's continuous position, clamped to the arena bounds.
+    The points are **not** snapped to integer cells — they are evaluated against the
+    continuous concentration field; this matches
+    ``_compute_lateral_offsets`` at cardinal headings (where the offsets are
+    integer-valued) and rotates smoothly otherwise.
 
     Parameters
     ----------
-    position : tuple[int, int]
-        The worm's (rounded) integer cell.
+    position : tuple[float, float]
+        The worm's continuous ``(x, y)`` position.
     heading_rad : float
         Continuous heading angle in radians.
-    sweep : int
-        Lateral sweep in cells (>= 1).
+    sweep : float
+        Lateral sweep amplitude (in coordinate units; honoured as configured).
     grid_size : int
         Coordinate extent for boundary clamping.
 
     Returns
     -------
-    tuple[tuple[int, int], tuple[int, int]]
+    tuple[tuple[float, float], tuple[float, float]]
         ``(left_position, right_position)`` clamped to ``[0, grid_size - 1]``.
     """
     perp_x = -math.sin(heading_rad)
     perp_y = math.cos(heading_rad)
-    max_idx = grid_size - 1
+    upper = float(grid_size - 1)
     left = (
-        min(max_idx, max(0, round(position[0] + sweep * perp_x))),
-        min(max_idx, max(0, round(position[1] + sweep * perp_y))),
+        min(upper, max(0.0, position[0] + sweep * perp_x)),
+        min(upper, max(0.0, position[1] + sweep * perp_y)),
     )
     right = (
-        min(max_idx, max(0, round(position[0] - sweep * perp_x))),
-        min(max_idx, max(0, round(position[1] - sweep * perp_y))),
+        min(upper, max(0.0, position[0] - sweep * perp_x)),
+        min(upper, max(0.0, position[1] - sweep * perp_y)),
     )
     return left, right
 
@@ -484,10 +497,23 @@ class QuantumNematodeAgent:
         if self._active_channels:
             self._channel_fetchers = _build_channel_fetchers(self.env, self._active_channels)
 
+        # Adaptive-threshold / biphasic chemosensory sensor. Stateful
+        # (per-channel background tracker), so it lives on the agent like STAM.
+        # Disabled by default → the chemosensory pipeline is byte-identical.
+        self._adaptive_food: AdaptiveChemosensor | None = None
+        if self.sensing_config.adaptive_chemosensor_enabled:
+            self._adaptive_food = AdaptiveChemosensor(
+                readout=self.sensing_config.adaptive_chemosensor_readout,
+                alpha=self.sensing_config.adaptive_chemosensor_alpha,
+                eps=self.sensing_config.adaptive_chemosensor_epsilon,
+            )
+
         _init_pos = self.env.agents[self.agent_id].position
         self.path: list[GridPosition] = [(_init_pos[0], _init_pos[1])]
-        # Track food positions at each step for chemotaxis validation
-        self.food_history: FoodHistory = [list(self.env.foods)]
+        # Track food positions at each step for chemotaxis validation. The history
+        # is a cell-resolution reporting record (snap the continuous-2D float
+        # sources); the worm senses the real float sources via the env field.
+        self.food_history: FoodHistory = [_food_cells(self.env.foods)]
         self.max_body_length = min(
             self.env.grid_size - 1,
             max_body_length,
@@ -807,11 +833,18 @@ class QuantumNematodeAgent:
             from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
             if isinstance(self.env, Continuous2DEnvironment):
-                # Continuous heading: sample integer cells perpendicular to
-                # heading_rad (>= 1-cell sweep). See `_continuous_lateral_offsets`.
-                sweep = max(1, round(self.env.continuous.sweep_amplitude_mm))
+                # Continuous heading: sample real-valued points perpendicular to
+                # heading_rad against the continuous field — no integer-cell snap.
+                # Honour the configured sweep amplitude (sub-cell sweeps are
+                # meaningful on the continuous substrate). See
+                # `_continuous_lateral_offsets`.
+                sweep = float(self.env.continuous.sweep_amplitude_mm)
+                origin = agent_state.pos_continuous or (
+                    float(agent_pos[0]),
+                    float(agent_pos[1]),
+                )
                 left_pos, right_pos = _continuous_lateral_offsets(
-                    agent_pos,
+                    origin,
                     agent_state.heading_rad,
                     sweep,
                     self.env.grid_size,
@@ -933,6 +966,18 @@ class QuantumNematodeAgent:
                         result[ch_def.derivative_key] = self._stam.compute_temporal_derivative(idx)
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
+
+        # Adaptive chemosensory transform. Applied as a dedicated step on
+        # the food/chemosensory channel only, after the raw concentration + the
+        # STAM-derived derivative are in hand. The configured readout reshapes
+        # exactly one channel (strength or derivative); the other is unchanged.
+        # Disabled → byte-identical to the non-adaptive pipeline.
+        if self._adaptive_food is not None and "food_concentration" in result:
+            raw_c = float(result.get("food_concentration", 0.0))
+            raw_d = float(result.get("food_dconcentration_dt", 0.0))
+            strength_out, derivative_out = self._adaptive_food.adapt(raw_c, raw_d)
+            result["food_concentration"] = strength_out
+            result["food_dconcentration_dt"] = derivative_out
 
         return result
 
@@ -1424,8 +1469,8 @@ class QuantumNematodeAgent:
                 seed=self.env.seed,
             )
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
-        # Track food positions at each step for chemotaxis validation
-        self.food_history = [list(self.env.foods)]
+        # Track food positions at each step for chemotaxis validation (cell-snapped).
+        self.food_history = [_food_cells(self.env.foods)]
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
@@ -1440,6 +1485,10 @@ class QuantumNematodeAgent:
 
         # Reset episode tracker
         self._episode_tracker.reset()
+
+        # Reset the adaptive chemosensory background so each episode starts fresh.
+        if self._adaptive_food is not None:
+            self._adaptive_food.reset()
 
         logger.info("Environment reset. Retaining learned data.")
 

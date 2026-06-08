@@ -588,6 +588,9 @@ class MultiAgentSimulation:
             agent.brain.prepare_episode()
             if agent._stam is not None:
                 agent._stam.reset()
+            # Reset the adaptive chemosensory background per episode (as STAM).
+            if agent._adaptive_food is not None:
+                agent._adaptive_food.reset()
             agent._previous_position = None
             agent._food_handler.reset()
             agent._satiety_manager.reset()
@@ -652,10 +655,12 @@ class MultiAgentSimulation:
                 self.env.move_agent_for(aid, discrete_actions[aid])
                 agent._episode_tracker.track_step()
 
-                # Update path and food history
+                # Update path and food history. Snap continuous-2D float sources to
+                # cells for the int-typed history record (matches the single-agent
+                # runner; the worm senses the real float field, not this record).
                 pos = self.env.agents[aid].position
                 agent.path.append((pos[0], pos[1]))
-                agent.food_history.append(list(self.env.foods))
+                agent.food_history.append([(round(fx), round(fy)) for fx, fy in self.env.foods])
                 agent._food_handler.track_step()
 
             # ── 2b. AGGREGATION PHEROMONE EMISSION ───────────────
@@ -1101,7 +1106,7 @@ class MultiAgentSimulation:
         def manhattan(predator) -> int:  # noqa: ANN001 — local helper
             return abs(predator.position[0] - ax) + abs(predator.position[1] - ay)
 
-        # Phase 1: covering predators (those whose damage_radius covers the agent).
+        # Prefer covering predators (those whose damage_radius covers the agent).
         covering = [p for p in self.env.predators if manhattan(p) <= p.damage_radius]
         if covering:
             # Closest by Manhattan; lex tie-break on predator_id.

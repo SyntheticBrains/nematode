@@ -288,6 +288,14 @@ class ForagingConfig(BaseModel):
     food_hotspot_decay: float = Field(default=8.0, gt=0.0)
     no_respawn: bool = False
     satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
+    # Chemical-gradient field mode. ``exponential`` is the
+    # default and keeps every existing/grid config byte-stable; ``fick`` selects
+    # the frozen analytic Fick (Gaussian) kernel with diffusion length
+    # ``sqrt(4 * diffusion_coefficient * assay_time)`` (or ``gradient_decay_constant``
+    # when ``diffusion_coefficient`` is unset). Food/chemical field only.
+    gradient_field_mode: Literal["exponential", "fick"] = "exponential"
+    diffusion_coefficient: float | None = Field(default=None, gt=0.0)
+    assay_time: float = Field(default=1.0, gt=0.0)
     # Minimum Euclidean distance from any predator at which food may
     # spawn. Default 0 preserves the original food-placement
     # behaviour where food can spawn anywhere a predator is not
@@ -323,6 +331,9 @@ class ForagingConfig(BaseModel):
             no_respawn=self.no_respawn,
             satiety_food_threshold=self.satiety_food_threshold,
             min_food_predator_distance=self.min_food_predator_distance,
+            gradient_field_mode=self.gradient_field_mode,
+            diffusion_coefficient=self.diffusion_coefficient,
+            assay_time=self.assay_time,
         )
 
 
@@ -756,6 +767,17 @@ class SensingConfig(BaseModel):
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
+    # Adaptive-threshold / biphasic chemosensory sensor.
+    # Disabled by default → the chemosensory pipeline is byte-identical to the
+    # non-adaptive (tanh) baseline. Applies to chemosensory channels only.
+    # ``adaptive_chemosensor_readout`` also fixes the channel interaction:
+    # ``fold_change`` reshapes the derivative/turning channel ((dC/dt)/(C+eps));
+    # ``contrast`` reshapes the magnitude/strength channel ((C-B)/(C+B+eps));
+    # ``log`` is the log(1+C) baseline (documented ablation comparator).
+    adaptive_chemosensor_enabled: bool = False
+    adaptive_chemosensor_readout: Literal["fold_change", "contrast", "log"] = "fold_change"
+    adaptive_chemosensor_alpha: float = Field(default=0.1, gt=0.0, le=1.0)
+    adaptive_chemosensor_epsilon: float = Field(default=1e-3, gt=0.0)
     derivative_scale: float = Field(
         default=50.0,
         gt=0.0,
@@ -923,8 +945,8 @@ class Continuous2DConfig(BaseModel):
 
     # Square arena edge length in mm. ~5 cm plate region; aligns with a
     # grid_size≈50 substrate at ~1 mm per former cell so episode lengths stay
-    # comparable to the T4 grid baseline. Must be positive (it sizes the arena
-    # and the derived integer extent).
+    # comparable to the discrete grid baseline. Must be positive (it sizes the
+    # arena and the derived integer extent).
     world_size_mm: float = Field(default=50.0, gt=0.0)
     # Adult C. elegans body length ≈ 1 mm — the reference unit for the others.
     body_length_mm: float = Field(default=1.0, gt=0.0)

@@ -24,8 +24,8 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
 from quantumnematode.dtypes import (
     FoodHotspot,
     GradientPolar,
-    GridPosition,
     OxygenSpot,
+    Position,
     TemperatureSpot,
 )
 from quantumnematode.env.oxygen import (
@@ -204,6 +204,27 @@ class ForagingParams:
     no_respawn: bool = False
     satiety_food_threshold: float | None = None
     min_food_predator_distance: int = 0
+    # Chemical-gradient field mode. ``exponential`` is the default and keeps every
+    # existing/grid config byte-stable;
+    # ``fick`` selects the frozen analytic Fick (Gaussian) kernel
+    # ``strength * exp(-(r / L)**2)`` with diffusion length
+    # ``L = sqrt(4 * D * assay_time)`` (or ``gradient_decay_constant`` when
+    # ``diffusion_coefficient`` is unset). Applies to the food/chemical field
+    # only; the predator field retains the exponential kernel.
+    gradient_field_mode: str = "exponential"
+    diffusion_coefficient: float | None = None
+    assay_time: float = 1.0
+
+    def fick_length(self) -> float:
+        """Fick diffusion length ``sqrt(4 * D * assay_time)`` for the Gaussian kernel.
+
+        Falls back to ``gradient_decay_constant`` (interpreted as the diffusion
+        length directly) when ``diffusion_coefficient`` is unset, preserving
+        continuity with the tuned exponential ``decay`` scale.
+        """
+        if self.diffusion_coefficient is not None:
+            return float((4.0 * self.diffusion_coefficient * self.assay_time) ** 0.5)
+        return float(self.gradient_decay_constant)
 
 
 @dataclass
@@ -1117,12 +1138,14 @@ class BaseEnvironment(ABC):
             height = max_y - min_y
             grid = [[symbols.empty for _ in range(width)] for _ in range(height)]
 
-            # Mark goals (only if in viewport)
+            # Mark goals (only if in viewport). Goals may be real-valued on the
+            # continuous-2D substrate; snap to a cell first, then bounds-check the
+            # snapped cell (rounding a near-edge float must not index out of range).
             for goal in goals:
-                if min_x <= goal[0] < max_x and min_y <= goal[1] < max_y:
-                    grid_y = goal[1] - min_y
-                    grid_x = goal[0] - min_x
-                    grid[grid_y][grid_x] = symbols.goal
+                goal_x = round(goal[0])
+                goal_y = round(goal[1])
+                if min_x <= goal_x < max_x and min_y <= goal_y < max_y:
+                    grid[goal_y - min_y][goal_x - min_x] = symbols.goal
 
             # Mark body (only if in viewport)
             for segment in self.body:
@@ -1142,7 +1165,11 @@ class BaseEnvironment(ABC):
             grid = [[symbols.empty for _ in range(self.grid_size)] for _ in range(self.grid_size)]
 
             for goal in goals:
-                grid[goal[1]][goal[0]] = symbols.goal
+                # Goals may be real-valued on the continuous-2D substrate; snap to a
+                # cell and clamp to bounds for this cell-based grid render.
+                gx = max(0, min(self.grid_size - 1, round(goal[0])))
+                gy = max(0, min(self.grid_size - 1, round(goal[1])))
+                grid[gy][gx] = symbols.goal
 
             for segment in self.body:
                 grid[segment[1]][segment[0]] = symbols.body
@@ -1414,6 +1441,10 @@ class DynamicForagingEnvironment(BaseEnvironment):
         #   ``_initialize_predators`` consume from ``self.rng``;
         #   reversing them would shift seed-replay outputs for every
         #   existing config).
+        # Annotated as integer cells (the grid contract). The continuous-2D
+        # subclass places real-valued sources at runtime via an overridden
+        # candidate generator; the float values are coordinate-compatible
+        # (every consumer does Euclidean/arithmetic, not lattice indexing).
         self.foods: list[tuple[int, int]] = []
         self.predators: list[Predator] = []
         if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
@@ -1934,6 +1965,31 @@ class DynamicForagingEnvironment(BaseEnvironment):
         logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
+    def _food_field_magnitude(self, distance: float) -> float:
+        """Per-source food/chemical field magnitude at ``distance`` from a source.
+
+        Two selectable field modes (``foraging.gradient_field_mode``):
+
+        - ``exponential`` (default; legacy + grid byte-stable): the
+          kernel ``strength * exp(-distance / decay_constant)``.
+        - ``fick``: the frozen analytic Fick (Gaussian) kernel
+          ``strength * exp(-(distance / L)**2)`` with diffusion length
+          ``L = sqrt(4 * D * assay_time)`` (or ``decay_constant`` when ``D`` is
+          unset). Per-signal ``D`` sets distinct geometry (larger ``D`` → broader
+          gradient).
+
+        At ``distance == 0`` both modes return ``strength`` (``exp(0) == 1``).
+        Applies to the food/chemical field only; the predator field keeps the
+        exponential kernel.
+        """
+        foraging = self.foraging
+        if foraging.gradient_field_mode == "fick":
+            length = foraging.fick_length()
+            return float(foraging.gradient_strength * np.exp(-((distance / length) ** 2)))
+        return float(
+            foraging.gradient_strength * np.exp(-distance / foraging.gradient_decay_constant),
+        )
+
     def _compute_food_gradient_vector(
         self,
         position: tuple[int, ...],
@@ -1962,10 +2018,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             if distance == 0:
                 continue
 
-            # Exponential decay gradient (positive/attractive)
-            strength = self.foraging.gradient_strength * np.exp(
-                -distance / self.foraging.gradient_decay_constant,
-            )
+            # Food/chemical field magnitude (exponential or Fick)
+            strength = self._food_field_magnitude(distance)
 
             # Compute direction vector
             direction = np.arctan2(dy, dx)
@@ -2020,7 +2074,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_food_concentration(
         self,
-        position: tuple[int, ...] | None = None,
+        position: Position | None = None,
     ) -> float:
         """Scalar food concentration at position (no directional information).
 
@@ -2053,15 +2107,13 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 raw_concentration += self.foraging.gradient_strength
                 continue
 
-            raw_concentration += self.foraging.gradient_strength * np.exp(
-                -distance / self.foraging.gradient_decay_constant,
-            )
+            raw_concentration += self._food_field_magnitude(distance)
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 
     def get_predator_concentration(
         self,
-        position: tuple[int, ...] | None = None,
+        position: Position | None = None,
     ) -> float:
         """Scalar predator danger signal at position (no directional information).
 
@@ -2105,7 +2157,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_predator_sulfolipid_concentration(
         self,
-        position: tuple[int, ...] | None = None,
+        position: Position | None = None,
     ) -> float:
         """Distal-chemosensory predator signal at position.
 
@@ -2855,7 +2907,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_pheromone_food_concentration(
         self,
-        position: tuple[int, int] | None = None,
+        position: Position | None = None,
         current_step: int = 0,
     ) -> float:
         """Get food-marking pheromone concentration at a position."""
@@ -2866,7 +2918,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_pheromone_alarm_concentration(
         self,
-        position: tuple[int, int] | None = None,
+        position: Position | None = None,
         current_step: int = 0,
     ) -> float:
         """Get alarm pheromone concentration at a position."""
@@ -2877,7 +2929,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_pheromone_food_gradient(
         self,
-        position: tuple[int, int] | None = None,
+        position: Position | None = None,
         current_step: int = 0,
     ) -> GradientPolar | None:
         """Get food-marking pheromone gradient in polar coordinates."""
@@ -2888,7 +2940,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_pheromone_alarm_gradient(
         self,
-        position: tuple[int, int] | None = None,
+        position: Position | None = None,
         current_step: int = 0,
     ) -> GradientPolar | None:
         """Get alarm pheromone gradient in polar coordinates."""
@@ -2993,7 +3045,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_pheromone_aggregation_concentration(
         self,
-        position: tuple[int, int] | None = None,
+        position: Position | None = None,
         current_step: int = 0,
     ) -> float:
         """Get aggregation pheromone concentration at a position."""
@@ -3004,7 +3056,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_pheromone_aggregation_gradient(
         self,
-        position: tuple[int, int] | None = None,
+        position: Position | None = None,
         current_step: int = 0,
     ) -> tuple[float, float] | None:
         """Get aggregation pheromone gradient (magnitude, direction) in polar coords."""
@@ -3195,7 +3247,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
     # Thermotaxis Methods
     # -------------------------------------------------------------------------
 
-    def get_temperature(self, position: GridPosition | None = None) -> float | None:
+    def get_temperature(self, position: Position | None = None) -> float | None:
         """
         Get temperature at a position (or agent position if not specified).
 
@@ -3211,12 +3263,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         if not self.thermotaxis.enabled or self.temperature_field is None:
             return None
-        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
+        pos: Position = position or (self.agent_pos[0], self.agent_pos[1])
         return self.temperature_field.get_temperature(pos)
 
     def get_temperature_gradient(
         self,
-        position: GridPosition | None = None,
+        position: Position | None = None,
     ) -> GradientPolar | None:
         """
         Get temperature gradient (magnitude, direction) at a position.
@@ -3234,12 +3286,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         if not self.thermotaxis.enabled or self.temperature_field is None:
             return None
-        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
+        pos: Position = position or (self.agent_pos[0], self.agent_pos[1])
         return self.temperature_field.get_gradient_polar(pos)
 
     def get_temperature_zone(
         self,
-        position: GridPosition | None = None,
+        position: Position | None = None,
     ) -> TemperatureZone | None:
         """
         Get the temperature zone at a position.
@@ -3375,7 +3427,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
     # Aerotaxis (oxygen sensing) methods
     # =========================================================================
 
-    def get_oxygen(self, position: GridPosition | None = None) -> float | None:
+    def get_oxygen(self, position: Position | None = None) -> float | None:
         """
         Get oxygen concentration at a position (or agent position if not specified).
 
@@ -3391,12 +3443,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         if not self.aerotaxis.enabled or self._oxygen_field is None:
             return None
-        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
+        pos: Position = position or (self.agent_pos[0], self.agent_pos[1])
         return self._oxygen_field.get_oxygen(pos)
 
     def get_oxygen_gradient(
         self,
-        position: GridPosition | None = None,
+        position: Position | None = None,
     ) -> GradientPolar | None:
         """
         Get oxygen gradient (magnitude, direction) at a position.
@@ -3414,12 +3466,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         if not self.aerotaxis.enabled or self._oxygen_field is None:
             return None
-        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
+        pos: Position = position or (self.agent_pos[0], self.agent_pos[1])
         return self._oxygen_field.get_gradient_polar(pos)
 
     def get_oxygen_zone(
         self,
-        position: GridPosition | None = None,
+        position: Position | None = None,
     ) -> OxygenZone | None:
         """
         Get the oxygen zone at a position.
@@ -3452,7 +3504,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_oxygen_concentration(
         self,
-        position: GridPosition | None = None,
+        position: Position | None = None,
     ) -> float | None:
         """
         Get scalar oxygen concentration at a position.
