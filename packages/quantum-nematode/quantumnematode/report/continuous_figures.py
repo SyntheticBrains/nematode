@@ -9,13 +9,13 @@ the environment's field getters directly. Time-series plots stay in
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from matplotlib import pyplot as plt
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from quantumnematode.env.env import DynamicForagingEnvironment
@@ -117,7 +117,7 @@ def plot_trajectory(
     return output_path
 
 
-def plot_field_heatmap(
+def plot_field_heatmap(  # noqa: PLR0913
     env: DynamicForagingEnvironment,
     output_path: Path,
     *,
