@@ -1106,6 +1106,9 @@ QUIVER_LATTICE_N = 12
 QUIVER_MIN_STRENGTH = 1e-3
 # Uniform alpha for the field heatmap blit (keeps entities/zones readable).
 HEATMAP_ALPHA = 130
+# Zoom multiplier for the optional agent-following camera (vs the base full-arena
+# zoom). The followed view shows ``world / FOLLOW_ZOOM_FACTOR`` mm around the worm.
+FOLLOW_ZOOM_FACTOR = 2.5
 # Heatmap colormap (perceptually uniform).
 HEATMAP_COLORMAP = "viridis"
 # Selectable heatmap fields, in cycle order (food is the default first entry).
@@ -1127,9 +1130,12 @@ class Continuous2DRenderer:
 
     A sibling of :class:`PygameRenderer` (not a subclass — the grid renderer's
     methods are hardwired to the integer scrolling viewport and ``_cell_to_pixel``
-    y-inversion). The view is the **whole arena** (no agent-following scroll): the
-    worm is a point on a plate. Real-valued world coordinates (millimetres) map to
-    pixels via :meth:`_world_to_pixel` with a configurable ``pixels_per_mm`` zoom.
+    y-inversion). The default view is the **whole arena** (no scroll): the worm is a
+    point on a plate. A keyboard toggle (``C``) switches to an **agent-following**
+    zoomed view that scrolls to keep the worm centred (clamped to the plate edges) —
+    useful on large worlds where the worm is a small dot in the full-arena view.
+    Real-valued world coordinates (millimetres) map to pixels via
+    :meth:`_world_to_pixel`, which is camera-aware (full-arena or following).
 
     The renderer reads only the per-step :class:`ContinuousRenderState` snapshot and
     the environment (for fields, foods, predators) — never agent internals.
@@ -1173,15 +1179,23 @@ class Continuous2DRenderer:
         self._clock = pygame.time.Clock()
         self._font = pygame.font.SysFont("monospace", STATUS_FONT_SIZE)
 
-        # Entity sprites scaled to a sub-cell marker size (~2 mm across).
+        # Raw entity sprites; scaled copies are cached per active pixels-per-mm
+        # (the camera changes the effective zoom when following).
         sprites = create_sprites(pygame)
-        entity_px = max(10, round(2.0 * self._pixels_per_mm))
-        self._entity_px = entity_px
-        self._scaled_sprites: dict[str, Any] = {
-            key: pygame.transform.smoothscale(sprites[key], (entity_px, entity_px))
+        self._raw_sprites: dict[str, Any] = {
+            key: sprites[key]
             for key in ("food", "predator_random", "predator_stationary", "predator_pursuit")
         }
-        self._worm_radius_px = max(4, round(0.6 * self._pixels_per_mm))
+        self._sprite_cache: dict[int, dict[str, Any]] = {}
+
+        # Camera state: full-arena by default; `C` toggles agent-following. The
+        # active pixels-per-mm and the camera origin (world coords mapping to the
+        # top-left of the arena viewport) are recomputed each frame in
+        # `_update_camera`.
+        self._follow_enabled = False
+        self._active_ppm = self._pixels_per_mm
+        self._cam_x0 = 0.0
+        self._cam_y_top = self._world_size_mm
 
         # Overlay toggle state (heatmap on by default; quiver off for perf).
         self._heatmap_enabled = True
@@ -1204,13 +1218,56 @@ class Continuous2DRenderer:
     def _world_to_pixel(self, x: float, y: float) -> tuple[int, int]:
         """Map a real-valued world point (mm, y-up) to a screen pixel (y-down).
 
-        ``px = x * pixels_per_mm``;
-        ``py = (world_size_mm - y) * pixels_per_mm`` (world y-up → screen y-down over
-        the world height). No agent-following scroll: the whole arena is in view.
+        Camera-aware: ``px = (x - cam_x0) * active_ppm``;
+        ``py = (cam_y_top - y) * active_ppm`` (world y-up → screen y-down). In the
+        default full-arena view ``cam_x0 = 0``, ``cam_y_top = world_size_mm`` and
+        ``active_ppm = pixels_per_mm`` (the whole arena is in view); when following,
+        the camera origin and zoom track the worm (see :meth:`_update_camera`).
         """
-        px = x * self._pixels_per_mm
-        py = (self._world_size_mm - y) * self._pixels_per_mm
+        px = (x - self._cam_x0) * self._active_ppm
+        py = (self._cam_y_top - y) * self._active_ppm
         return round(px), round(py)
+
+    def _update_camera(self, state: ContinuousRenderState) -> None:
+        """Recompute the active zoom + camera origin for this frame.
+
+        Full-arena (default, or when the followed view would exceed the plate):
+        the whole arena maps to the viewport. Following: a
+        ``world / FOLLOW_ZOOM_FACTOR`` mm window centred on the worm, clamped so it
+        never shows past the plate edges.
+        """
+        base = self._pixels_per_mm
+        if not self._follow_enabled:
+            self._active_ppm, self._cam_x0, self._cam_y_top = base, 0.0, self._world_size_mm
+            return
+        active_ppm = base * FOLLOW_ZOOM_FACTOR
+        view_mm = self._arena_px / active_ppm
+        if view_mm >= self._world_size_mm:  # zoom would exceed the plate → full arena
+            self._active_ppm, self._cam_x0, self._cam_y_top = base, 0.0, self._world_size_mm
+            return
+        half = view_mm / 2.0
+        cam_cx = min(self._world_size_mm - half, max(half, state.pos[0]))
+        cam_cy = min(self._world_size_mm - half, max(half, state.pos[1]))
+        self._active_ppm = active_ppm
+        self._cam_x0 = cam_cx - half
+        self._cam_y_top = cam_cy + half
+
+    @property
+    def _camera_following(self) -> bool:
+        """Whether the active camera is the zoomed agent-following view."""
+        return self._active_ppm != self._pixels_per_mm
+
+    def _sprites_for(self, ppm: float) -> tuple[dict[str, Any], int]:
+        """Return entity sprites scaled for ``ppm`` (cached) and the marker size."""
+        entity_px = max(10, round(2.0 * ppm))
+        cached = self._sprite_cache.get(entity_px)
+        if cached is None:
+            cached = {
+                key: self._pg.transform.smoothscale(raw, (entity_px, entity_px))
+                for key, raw in self._raw_sprites.items()
+            }
+            self._sprite_cache[entity_px] = cached
+        return cached, entity_px
 
     def _cell_rect(self, gx: int, gy: int) -> tuple[int, int, int, int]:
         """Pixel rect (x, y, w, h) covering the 1 mm cell centred at ``(gx, gy)``."""
@@ -1223,7 +1280,8 @@ class Continuous2DRenderer:
 
         Keyboard toggles (single-agent renderers have none today, so this is new):
         ``H`` heatmap on/off, ``F`` cycle heatmap field, ``G`` gradient quiver
-        on/off. Window-close follows the grid renderer's ``pump_events`` shape.
+        on/off, ``C`` full-arena/agent-following camera. Window-close follows the
+        grid renderer's ``pump_events`` shape.
         """
         for event in self._pg.event.get():
             if event.type == self._pg.QUIT:
@@ -1235,6 +1293,8 @@ class Continuous2DRenderer:
                 self._heatmap_enabled = not self._heatmap_enabled
             elif event.key == self._pg.K_g:
                 self._quiver_enabled = not self._quiver_enabled
+            elif event.key == self._pg.K_c:
+                self._follow_enabled = not self._follow_enabled
             elif event.key == self._pg.K_f:
                 self._heatmap_field_idx = (self._heatmap_field_idx + 1) % len(HEATMAP_FIELDS)
                 self._heatmap_cache = None  # field changed → invalidate cache
@@ -1253,6 +1313,7 @@ class Continuous2DRenderer:
         if not self.pump_events():
             return
 
+        self._update_camera(state)
         status_lines = self._build_status_lines(state, session_text)
         self._resize_if_needed(len(status_lines))
 
@@ -1344,7 +1405,7 @@ class Continuous2DRenderer:
             if pred.predator_type != PredatorType.STATIONARY or pred.damage_radius <= 0:
                 continue
             cx, cy = self._world_to_pixel(float(pred.position[0]), float(pred.position[1]))
-            radius_px = max(1, round(pred.damage_radius * self._pixels_per_mm))
+            radius_px = max(1, round(pred.damage_radius * self._active_ppm))
             self._pg.draw.circle(overlay, zone_overlay_color("toxic"), (cx, cy), radius_px)
             drew = True
         if drew:
@@ -1399,7 +1460,23 @@ class Continuous2DRenderer:
         if self._heatmap_cache is None or self._heatmap_cache[0] != key:
             surface = self._build_heatmap_surface(env, field_name)
             self._heatmap_cache = (key, surface)
-        self._screen.blit(self._heatmap_cache[1], (0, 0))
+        base_surf = self._heatmap_cache[1]  # full-arena RGB surface (no baked alpha)
+        if not self._camera_following:
+            base_surf.set_alpha(HEATMAP_ALPHA)
+            self._screen.blit(base_surf, (0, 0))
+            return
+        # Following: crop the cached full-arena surface to the visible world window
+        # and scale it up to fill the viewport (reuses the cache — no re-sample).
+        scale = self._arena_px / self._world_size_mm  # cached px per mm
+        view_mm = self._arena_px / self._active_ppm
+        top_mm = self._world_size_mm - self._cam_y_top
+        sx0 = max(0, min(self._arena_px - 1, round(self._cam_x0 * scale)))
+        sy0 = max(0, min(self._arena_px - 1, round(top_mm * scale)))
+        side = max(1, min(self._arena_px - max(sx0, sy0), round(view_mm * scale)))
+        sub = base_surf.subsurface((sx0, sy0, side, side))
+        scaled = self._pg.transform.smoothscale(sub, (self._arena_px, self._arena_px))
+        scaled.set_alpha(HEATMAP_ALPHA)
+        self._screen.blit(scaled, (0, 0))
 
     def _build_heatmap_surface(
         self,
@@ -1427,9 +1504,9 @@ class Continuous2DRenderer:
         rgb = (cmap(norm)[:, :, :3] * 255).astype(np.uint8)  # (n, n, 3), [i_x][j_y]
 
         surf = self._pg.surfarray.make_surface(rgb)
-        surf = self._pg.transform.smoothscale(surf, (self._arena_px, self._arena_px))
-        surf.set_alpha(HEATMAP_ALPHA)
-        return surf
+        # Full-arena RGB surface (no baked alpha — the alpha is applied at blit time,
+        # so the cache can be cropped/scaled for the following camera).
+        return self._pg.transform.smoothscale(surf, (self._arena_px, self._arena_px))
 
     def _render_quiver(self, env: DynamicForagingEnvironment) -> None:
         """Draw coarse up-gradient food arrows scaled by gradient strength."""
@@ -1505,7 +1582,7 @@ class Continuous2DRenderer:
                         self._screen,
                         PREDATOR_DETECTION_RING_COLOR,
                         (cx, cy),
-                        max(1, round(pred.detection_radius * self._pixels_per_mm)),
+                        max(1, round(pred.detection_radius * self._active_ppm)),
                         1,
                     )
                 if pred.damage_radius > 0:
@@ -1513,7 +1590,7 @@ class Continuous2DRenderer:
                         self._screen,
                         PREDATOR_DAMAGE_RING_COLOR,
                         (cx, cy),
-                        max(1, round(pred.damage_radius * self._pixels_per_mm)),
+                        max(1, round(pred.damage_radius * self._active_ppm)),
                         1,
                     )
 
@@ -1525,8 +1602,9 @@ class Continuous2DRenderer:
         """Draw food / predator sprites and the worm (marker + heading line)."""
         import math
 
-        half = self._entity_px // 2
-        food_sprite = self._scaled_sprites["food"]
+        sprites, entity_px = self._sprites_for(self._active_ppm)
+        half = entity_px // 2
+        food_sprite = sprites["food"]
         for food in env.foods:
             cx, cy = self._world_to_pixel(float(food[0]), float(food[1]))
             self._screen.blit(food_sprite, (cx - half, cy - half))
@@ -1536,22 +1614,24 @@ class Continuous2DRenderer:
 
             for pred in env.predators:
                 if pred.predator_type == PredatorType.STATIONARY:
-                    sprite = self._scaled_sprites["predator_stationary"]
+                    sprite = sprites["predator_stationary"]
                 elif pred.predator_type == PredatorType.PURSUIT:
-                    sprite = self._scaled_sprites["predator_pursuit"]
+                    sprite = sprites["predator_pursuit"]
                 else:
-                    sprite = self._scaled_sprites["predator_random"]
+                    sprite = sprites["predator_random"]
                 cx, cy = self._world_to_pixel(
                     float(pred.position[0]),
                     float(pred.position[1]),
                 )
                 self._screen.blit(sprite, (cx - half, cy - half))
 
-        # Worm: filled marker + heading line (continuous heading_rad).
+        # Worm: filled marker + heading line (continuous heading_rad), sized to the
+        # active (camera) zoom so it grows in the following view.
+        worm_radius = max(4, round(0.6 * self._active_ppm))
         wx, wy = self._world_to_pixel(state.pos[0], state.pos[1])
-        self._pg.draw.circle(self._screen, WORM_MARKER_COLOR, (wx, wy), self._worm_radius_px)
-        self._pg.draw.circle(self._screen, WORM_OUTLINE_COLOR, (wx, wy), self._worm_radius_px, 1)
-        heading_len = self._worm_radius_px + max(6, round(1.2 * self._pixels_per_mm))
+        self._pg.draw.circle(self._screen, WORM_MARKER_COLOR, (wx, wy), worm_radius)
+        self._pg.draw.circle(self._screen, WORM_OUTLINE_COLOR, (wx, wy), worm_radius, 1)
+        heading_len = worm_radius + max(6, round(1.2 * self._active_ppm))
         hx = wx + math.cos(state.heading_rad) * heading_len
         hy = wy - math.sin(state.heading_rad) * heading_len  # world y-up → screen y-down
         self._pg.draw.line(self._screen, WORM_HEADING_COLOR, (wx, wy), (hx, hy), 2)
@@ -1604,9 +1684,11 @@ class Continuous2DRenderer:
         field_name = HEATMAP_FIELDS[self._heatmap_field_idx]
         heatmap_state = f"{field_name} ON" if self._heatmap_enabled else "OFF"
         quiver_state = "ON" if self._quiver_enabled else "OFF"
+        camera_state = "follow" if self._follow_enabled else "arena"
         lines.append(
             (
-                f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}",
+                f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}  "
+                f"[C]amera: {camera_state}",
                 STATUS_OVERLAY_HINT_COLOR,
             ),
         )

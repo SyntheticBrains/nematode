@@ -65,11 +65,23 @@ px = x * pixels_per_mm
 py = (world_size_mm - y) * pixels_per_mm   # y-up → y-down over the world height
 ```
 
-The view is the **whole arena** (no agent-following scroll — the worm is a point on a plate),
+The **default** view is the whole arena (no scroll — the worm is a point on a plate),
 window = `world_size_mm * pixels_per_mm` square + `STATUS_BAR_HEIGHT`. `pixels_per_mm` is a
 constructor arg (default ~12 → a 600×600 plate) so zoom is tunable. **Alternative rejected:**
 extending `_cell_to_pixel` to accept floats — it still carries the scrolling-viewport semantics
 that are wrong for a plate view.
+
+`_world_to_pixel` is **camera-aware**: `px = (x - cam_x0) * active_ppm`,
+`py = (cam_y_top - y) * active_ppm`. In the default full-arena view `cam_x0 = 0`,
+`cam_y_top = world_size_mm`, `active_ppm = pixels_per_mm`. A `C` key toggles an **agent-following
+camera** (`_update_camera`): `active_ppm = pixels_per_mm * FOLLOW_ZOOM_FACTOR` (2.5×) over a
+`world / FOLLOW_ZOOM_FACTOR` mm window centred on the worm and clamped to the plate edges (falls
+back to full-arena when the zoomed window would exceed the plate). Because every layer already
+routes through `_world_to_pixel` (and radii/sprite sizes through `active_ppm`), the whole scene
+follows uniformly; the cached full-arena heatmap surface is cropped to the visible window and
+scaled up (no re-sample). This keeps the worm legible on large worlds where the full-arena view
+renders it as a small dot — supporting **both** the whole-plate field view and a zoomed
+worm-centred view.
 
 ### D2 — Concentration heatmap via field-sampling + matplotlib colormap + `surfarray`
 

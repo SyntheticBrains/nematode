@@ -142,6 +142,75 @@ class TestWorldToPixel:
             renderer.close()
 
 
+@requires_pygame
+class TestFollowCamera:
+    """The agent-following camera toggle: centring, edge clamping, default off."""
+
+    def _state_at(self, pos: tuple[float, float]) -> Any:
+        return _make_state(pos=pos)
+
+    def test_default_is_full_arena(self) -> None:
+        """The camera starts in the full-arena view (worm at its true pixel)."""
+        from quantumnematode.env.pygame_renderer import Continuous2DRenderer
+
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=50.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        renderer = Continuous2DRenderer(world_size_mm=50.0, pixels_per_mm=12.0)
+        try:
+            renderer.render_frame(env, self._state_at((10.0, 10.0)))
+            assert not renderer._camera_following
+            assert renderer._world_to_pixel(10.0, 10.0) == (120, 480)  # 10*12, (50-10)*12
+        finally:
+            renderer.close()
+
+    def test_following_centres_worm(self) -> None:
+        """With follow on and the worm interior, it maps to the viewport centre."""
+        from quantumnematode.env.pygame_renderer import Continuous2DRenderer
+
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=50.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        renderer = Continuous2DRenderer(world_size_mm=50.0, pixels_per_mm=12.0)
+        try:
+            renderer._follow_enabled = True
+            renderer.render_frame(env, self._state_at((25.0, 25.0)))
+            assert renderer._camera_following
+            cx, cy = renderer._world_to_pixel(25.0, 25.0)
+            centre = renderer._arena_px // 2
+            assert abs(cx - centre) <= 1
+            assert abs(cy - centre) <= 1
+        finally:
+            renderer.close()
+
+    def test_following_clamps_at_edge(self) -> None:
+        """Near a plate corner the camera clamps (worm moves off-centre, no out-of-plate)."""
+        from quantumnematode.env.pygame_renderer import Continuous2DRenderer
+
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=50.0),
+            theme=Theme.PIXEL_CONTINUOUS,
+            seed=1,
+        )
+        renderer = Continuous2DRenderer(world_size_mm=50.0, pixels_per_mm=12.0)
+        try:
+            renderer._follow_enabled = True
+            renderer.render_frame(env, self._state_at((0.5, 0.5)))
+            # The plate origin stays in-frame (camera clamped, didn't scroll past 0).
+            ox, oy = renderer._world_to_pixel(0.0, 0.0)
+            assert 0 <= ox <= renderer._arena_px
+            assert 0 <= oy <= renderer._arena_px
+            # The worm is off-centre because the camera clamped to the corner.
+            cx, _ = renderer._world_to_pixel(0.5, 0.5)
+            assert cx < renderer._arena_px // 2
+        finally:
+            renderer.close()
+
+
 class TestSnapshotGeometry:
     """The klinotaxis sample geometry and adaptive accessor the snapshot relies on."""
 

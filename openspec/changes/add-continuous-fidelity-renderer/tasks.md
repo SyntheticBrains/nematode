@@ -27,6 +27,7 @@ export/figures, then tests.
 - [x] 3.3 Sensor zones: klinotaxis left/right sample points (from the snapshot) + sweep marker; predator detection/damage rings (`pygame.draw.circle` at radius·zoom); optional contact cone.
 - [x] 3.4 Adaptive-sensor readout appended to the status bar (background, readout, mode) from the snapshot.
 - [x] 3.5 **Keyboard + window event handling for the continuous renderer** (NEW — the single-agent renderer has none today; the grid pheromone `P`-toggle is multi-agent-only): window-close (follow the existing `pump_events` shape) + a quiver toggle key + optional heatmap-toggle / field-selector keys.
+- [x] 3.6 **Agent-following camera toggle** (`C`, added in manual-review follow-up): camera-aware `_world_to_pixel` (`_update_camera`) zooming `FOLLOW_ZOOM_FACTOR`× and centring on the worm, clamped to the plate edges; all layers + radii/sprite sizes route through the active zoom; the cached heatmap is cropped+scaled to the followed window. Default stays full-arena. Status hint + tests.
 
 ## 4. Export + offline figures
 
