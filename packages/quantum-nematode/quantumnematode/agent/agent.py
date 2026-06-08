@@ -1341,12 +1341,17 @@ class QuantumNematodeAgent:
 
     @property
     def pygame_renderer_closed(self) -> bool:
-        """Whether a Pygame renderer window (grid or continuous) has been closed."""
-        if hasattr(self, "_pygame_renderer") and self._pygame_renderer is not None:
-            return self._pygame_renderer.closed
-        if hasattr(self, "_continuous_renderer") and self._continuous_renderer is not None:
-            return self._continuous_renderer.closed
-        return False
+        """Whether a Pygame renderer window (grid or continuous) has been closed.
+
+        Returns True if *either* renderer exists and is closed (a single agent uses
+        only one, but the combined check avoids masking a closed continuous renderer
+        if both were ever present).
+        """
+        grid = getattr(self, "_pygame_renderer", None)
+        continuous = getattr(self, "_continuous_renderer", None)
+        grid_closed = grid is not None and grid.closed
+        continuous_closed = continuous is not None and continuous.closed
+        return bool(grid_closed or continuous_closed)
 
     def _render_step_pygame(
         self,

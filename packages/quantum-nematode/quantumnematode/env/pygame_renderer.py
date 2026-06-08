@@ -1701,7 +1701,9 @@ class Continuous2DRenderer:
         field_name = HEATMAP_FIELDS[self._heatmap_field_idx]
         heatmap_state = f"{field_name} ON" if self._heatmap_enabled else "OFF"
         quiver_state = "ON" if self._quiver_enabled else "OFF"
-        camera_state = "follow" if self._follow_enabled else "arena"
+        # Use the *effective* camera (not the toggle) so the label is correct when
+        # `_update_camera` falls back to full-arena (e.g. zoom would exceed the plate).
+        camera_state = "follow" if self._camera_following else "arena"
         lines.append(
             (
                 f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}  "

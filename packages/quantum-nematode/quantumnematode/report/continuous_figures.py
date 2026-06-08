@@ -9,7 +9,7 @@ the environment's field getters directly. Time-series plots stay in
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -38,14 +38,21 @@ def _field_getter(
     env: DynamicForagingEnvironment,
     field: str,
 ) -> Callable[[tuple[float, float]], float]:
-    """Return a ``(x, y) -> float`` sampler for the named field (food default)."""
+    """Return a ``(x, y) -> float`` sampler for the named field.
+
+    Raises ``ValueError`` for an unrecognised field name rather than silently
+    defaulting (so caller typos surface immediately).
+    """
+    if field == "food":
+        return env.get_food_concentration
     if field == "predator":
         return env.get_predator_concentration
     if field == "temperature":
         return lambda pos: env.get_temperature(pos) or 0.0
     if field == "oxygen":
         return lambda pos: env.get_oxygen_concentration(pos) or 0.0
-    return env.get_food_concentration
+    msg = f"Unsupported heatmap field {field!r} (expected food/predator/temperature/oxygen)."
+    raise ValueError(msg)
 
 
 def _sample_field(
@@ -53,8 +60,29 @@ def _sample_field(
     field: str,
     world: float,
     resolution: int,
-) -> Any:  # noqa: ANN401 - returns a numpy array
-    """Sample ``field`` over a ``resolution`` x ``resolution`` lattice (row 0 = y=0)."""
+) -> np.ndarray:
+    """Sample ``field`` over a square lattice spanning the arena.
+
+    Parameters
+    ----------
+    env : DynamicForagingEnvironment
+        Environment whose field getter is sampled.
+    field : str
+        Field name (food / predator / temperature / oxygen).
+    world : float
+        Arena side length (mm).
+    resolution : int
+        Lattice resolution per side; must be >= 2.
+
+    Returns
+    -------
+    numpy.ndarray
+        ``(resolution, resolution)`` float array of sampled values, indexed
+        ``[row=y][col=x]`` with row 0 at ``y = 0``.
+    """
+    if resolution < 2:  # noqa: PLR2004 - a lattice needs at least 2 points per side
+        msg = f"resolution must be >= 2, got {resolution}."
+        raise ValueError(msg)
     getter = _field_getter(env, field)
     values = np.zeros((resolution, resolution), dtype=float)  # [row=y][col=x]
     for j in range(resolution):

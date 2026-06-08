@@ -105,6 +105,16 @@ class TestAdaptiveChemosensor:
         strength, _ = s.adapt(concentration=0.8, derivative=0.0)
         assert strength == pytest.approx(0.0, abs=1e-2)
 
+    def test_unknown_readout_clears_last_readout(self) -> None:
+        # Defensive no-op path: an unknown readout must not leak a stale cached value.
+        s = AdaptiveChemosensor(readout=READOUT_CONTRAST, alpha=0.5)
+        s.adapt(concentration=0.8, derivative=0.1)
+        assert s.last_readout is not None
+        s.readout = "bogus"
+        strength, derivative = s.adapt(concentration=0.5, derivative=0.2)
+        assert (strength, derivative) == (0.5, 0.2)  # passthrough
+        assert s.last_readout is None
+
 
 class TestAgentWiring:
     """The sensing config plumbs the adaptive sensor onto the agent (or not)."""

@@ -133,4 +133,6 @@ class AdaptiveChemosensor:
             self.last_readout = readout
             return readout, derivative
         # Unknown readout: behave as a no-op (defensive; config is Literal-validated).
+        # Clear the cached readout so a stale value can't leak into a snapshot.
+        self.last_readout = None
         return concentration, derivative

@@ -45,7 +45,7 @@ validation, and logbook. Tick the corresponding tracker row as each lands.
 
 - [x] 5.1 `world→pixel` map replacing the cell-snapping `_cell_to_pixel` for a continuous render path (`env/pygame_renderer.py`); sub-cell sprite blit; continuous theme flag (`env/theme.py`). *(Done — `Continuous2DRenderer` + `Theme.PIXEL_CONTINUOUS` in `add-continuous-fidelity-renderer`.)*
 - [x] 5.2 Fidelity overlays: concentration-field heatmap (`surfarray` + colormap, reusing the zone-overlay alpha-blit template in `env/sprites.py`), gradient vectors, sensor/contact zones, adaptive-sensor state. *(Done — heatmap, gradient quiver, klinotaxis + predator detection/damage rings, adaptive-sensor readout.)*
-- [x] 5.3 Frame export via `scripts/export_screenshot.py` (gif/mp4); matplotlib only for static logbook/validation figures. Smoke-render one continuous episode. *(Done — continuous PNG export + `report/continuous_figures.py` (trajectory/heatmap/quiver) + a smoke-render test. **gif/mp4 remains a documented follow-up** — it would add an `imageio`/`ffmpeg` dependency.)*
+- [x] 5.3 Frame export via `scripts/export_screenshot.py` (single-frame **PNG**; gif/mp4 deferred); matplotlib only for static logbook/validation figures. Smoke-render one continuous episode. *(Done — continuous PNG export + `report/continuous_figures.py` (trajectory/heatmap/quiver) + a smoke-render test. **gif/mp4 remains a documented follow-up** — it would add an `imageio`/`ffmpeg` dependency.)*
 
 ## 6. Analysis + validation (the T6 gate)
 

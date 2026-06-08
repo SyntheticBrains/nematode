@@ -388,17 +388,20 @@ def main() -> None:
         default=None,
         help="Output PNG path (default depends on mode).",
     )
-    parser.add_argument(
+    # The mode flags are mutually exclusive — argparse rejects invalid combinations
+    # (e.g. --both --continuous) immediately instead of silently picking one.
+    mode = parser.add_mutually_exclusive_group(required=False)
+    mode.add_argument(
         "--multi-agent",
         action="store_true",
         help="Export a multi-agent screenshot instead of single-agent.",
     )
-    parser.add_argument(
+    mode.add_argument(
         "--continuous",
         action="store_true",
         help="Export a continuous-2D substrate screenshot instead of single-agent grid.",
     )
-    parser.add_argument(
+    mode.add_argument(
         "--both",
         action="store_true",
         help="Export both single-agent and multi-agent screenshots.",

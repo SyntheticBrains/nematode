@@ -431,3 +431,17 @@ class TestOfflineFigures:
         cf.plot_gradient_quiver(self._env(), out, resolution=8)
         assert out.exists()
         assert out.stat().st_size > 0
+
+    def test_unknown_field_raises(self, tmp_path: Path) -> None:
+        """An unrecognised heatmap field raises rather than silently defaulting to food."""
+        from quantumnematode.report import continuous_figures as cf
+
+        with pytest.raises(ValueError, match="Unsupported heatmap field"):
+            cf.plot_field_heatmap(self._env(), tmp_path / "x.png", field="bogus")
+
+    def test_resolution_below_two_raises(self, tmp_path: Path) -> None:
+        """A degenerate lattice resolution is rejected (avoids a divide-by-zero)."""
+        from quantumnematode.report import continuous_figures as cf
+
+        with pytest.raises(ValueError, match="resolution must be >= 2"):
+            cf.plot_field_heatmap(self._env(), tmp_path / "x.png", resolution=1)
