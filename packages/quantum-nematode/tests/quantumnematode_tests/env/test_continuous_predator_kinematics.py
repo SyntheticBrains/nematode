@@ -108,7 +108,7 @@ class TestContinuousMovement:
         assert 0.0 <= nx <= _WORLD
         assert 0.0 <= ny <= _WORLD
 
-    def test_world_bound_clamping(self) -> None:
+    def test_world_bound_clamping_x_axis(self) -> None:
         env = _env(detection=50, damage=0)
         _set_agent(env, (40.0, 15.0))  # off-arena target → heading +x toward the wall
         pred = _pred(env)
@@ -120,6 +120,51 @@ class TestContinuousMovement:
         nx, ny = pred.pos_continuous
         assert nx == pytest.approx(_WORLD)  # clamped at the bound (partial move)
         assert 0.0 <= ny <= _WORLD
+
+    def test_world_bound_clamping_y_axis(self) -> None:
+        env = _env(detection=50, damage=0)
+        _set_agent(env, (15.0, 40.0))  # off-arena target → heading +y toward the wall
+        pred = _pred(env)
+        pred.pos_continuous = (15.0, 29.8)
+        pred.heading_rad = 0.0
+
+        env.update_predators()
+
+        nx, ny = pred.pos_continuous
+        assert ny == pytest.approx(_WORLD)  # per-axis y clamp at the bound
+        assert 0.0 <= nx <= _WORLD
+
+
+class TestMultiAgentPursuit:
+    def test_pursuit_targets_nearest_alive_agent(self) -> None:
+        env = _env(detection=50)
+        # Register a second agent; place predator nearer to agent "a2".
+        env.add_agent("a2", position=(1, 1))
+        env.agents[DEFAULT_AGENT_ID].pos_continuous = (2.0, 18.0)
+        env.agents["a2"].pos_continuous = (2.0, 2.0)
+        pred = _pred(env)
+        pred.pos_continuous = (2.0, 5.0)  # closer to a2 (dist 3) than default (dist 13)
+        pred.heading_rad = 0.0
+
+        env.update_predators()
+
+        # Steered toward a2 (-y, bearing about -pi/2), not the farther default agent (+y).
+        assert pred.heading_rad == pytest.approx(math.atan2(2.0 - 5.0, 0.0))
+
+    def test_dead_agent_excluded_from_targets(self) -> None:
+        env = _env(detection=50)
+        env.add_agent("a2", position=(1, 1))
+        env.agents[DEFAULT_AGENT_ID].pos_continuous = (2.0, 18.0)
+        env.agents["a2"].pos_continuous = (2.0, 2.0)
+        env.agents["a2"].alive = False  # nearest, but dead → ignored
+        pred = _pred(env)
+        pred.pos_continuous = (2.0, 5.0)
+        pred.heading_rad = 0.0
+
+        env.update_predators()
+
+        # Only the (living) default agent remains a target → steer +y toward it.
+        assert pred.heading_rad == pytest.approx(math.atan2(18.0 - 5.0, 0.0))
 
 
 class TestEuclideanDetection:
@@ -173,6 +218,14 @@ class TestContactZoneContinuousHeading:
         env = _env(detection=50, damage=5)
         _set_agent(env, (10.0, 10.0), heading=math.pi / 2.0)
         _pred(env).pos_continuous = (10.0, 12.0)
+
+        assert env.get_agent_predator_contact_zone_for(DEFAULT_AGENT_ID) == ContactZone.ANTERIOR
+
+    def test_overlap_classified_anterior(self) -> None:
+        # Predator exactly on the worm (rel_len == 0) → ANTERIOR by convention.
+        env = _env(detection=50, damage=5)
+        _set_agent(env, (10.0, 10.0), heading=0.0)
+        _pred(env).pos_continuous = (10.0, 10.0)
 
         assert env.get_agent_predator_contact_zone_for(DEFAULT_AGENT_ID) == ContactZone.ANTERIOR
 

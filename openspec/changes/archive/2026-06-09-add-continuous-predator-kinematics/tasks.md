@@ -28,7 +28,7 @@
 
 ## 5. Renderer follow-through
 
-- [x] 5.1 Make the continuous renderer reflect the smooth float motion: `Continuous2DRenderer._render_entities` (predator sprites) and the predator detection/damage-ring drawing both currently read the integer `pred.position` via `_world_to_pixel(float(pred.position[0]), ...)` — switch them to read `pred.pos_continuous` (fallback `position`). Without this the physics is smooth but predators still render quantised (the motivating visible jank persists). No "jank workaround" exists to remove; this is the substantive renderer edit.
+- [x] 5.1 Make the continuous renderer reflect the smooth float motion: `Continuous2DRenderer._render_entities` (predator sprites) and the predator detection/damage-ring drawing both currently read the integer `pred.position` via `_world_to_pixel(float(pred.position[0]), ...)` — switch them to read `pred.pos_continuous` (fallback `position`). Without this the physics is smooth but predators still render quantised (the motivating visible jank persists). No "jank workaround" exists to remove; this is the substantive renderer edit. *As-built: also updated the third `Continuous2DRenderer` predator-position site, `_render_toxic_zones` (stationary-predator damage discs), which the branch review caught still reading the integer `position`.*
 
 ## 6. Tests
 
@@ -38,6 +38,7 @@
 - [x] 6.4 Contact-zone geometry: predator dead ahead → ANTERIOR, behind → POSTERIOR, abeam → LATERAL, using `heading_rad`.
 - [x] 6.5 Float spawn: predators spawn at non-integer coordinates within bounds and outside the min-separation radius.
 - [x] 6.6 Grid byte-stability: the existing predator byte-equivalence suite still passes (grid path unchanged).
+- [x] 6.7 *(branch-review additions)* Multi-agent pursuit targets the nearest **alive** agent (dead agents excluded); contact-zone overlap (`rel_len == 0`) → ANTERIOR; per-axis y-bound clamping.
 
 ## 7. Validation + gates
 

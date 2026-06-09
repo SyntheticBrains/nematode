@@ -149,6 +149,30 @@ T7 C2 predator smoke (it is called out in `phase6-tracking` T7.prep).
   `pos_continuous` → set the integer view from the float truth in one helper after every
   move/spawn, exactly mirroring the agent's `_apply_movement`/`_discretise` pattern.
 
+## Known limitations (deferred — surfaced by the branch review)
+
+This change makes the predator **detection / damage / contact-zone gates** Euclidean on
+the continuous substrate. Two adjacent predator-distance consumers still use
+integer-Manhattan distance and are **deliberately not changed here**:
+
+- **Predator-evasion reward shaping stays Manhattan.** The danger *gate*
+  (`is_agent_in_danger_for`) is now Euclidean, but the distance feeding the
+  distance-scaled evasion term and the `dist ≤ 1` contact penalty comes from
+  `get_nearest_predator_distance_for` (Manhattan) and the reward calculator's own
+  integer `pred.position` `prev_pred_dist`. These are **not** independently overridable:
+  overriding only the env method would mix a Euclidean `curr` with a Manhattan `prev` and
+  corrupt the evasion-gradient sign, so a coherent fix must edit the shared,
+  brain-agnostic `reward_calculator` — a **reward-path change** the RQ5 guardrail keeps
+  out of T7 pre-work. Deferred; the predator-evasion reward shaping therefore remains
+  integer-Manhattan on the continuous substrate and is a **validate-don't-retune** item
+  for the T7 C2 smoke.
+- **Multi-agent kill attribution stays Manhattan.** `multi_agent._attribute_kill_to_predator`
+  filters "covering" predators by Manhattan ≤ `damage_radius`, while the kill is now
+  triggered by the Euclidean damage gate — so a Euclidean-in-range / Manhattan-out-of-range
+  predator falls through to the global-closest fallback. Per-predator **kill-stat only**
+  (no behavioural/learning effect); deferred to the multi-agent-continuous follow-up
+  (alongside the renderer's single-agent scope).
+
 ## Migration Plan
 
 No data migration. Behaviour change is gated on the continuous-2D environment type;

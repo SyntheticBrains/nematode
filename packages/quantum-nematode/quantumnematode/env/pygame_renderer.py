@@ -1406,7 +1406,8 @@ class Continuous2DRenderer:
         for pred in env.predators:
             if pred.predator_type != PredatorType.STATIONARY or pred.damage_radius <= 0:
                 continue
-            cx, cy = self._world_to_pixel(float(pred.position[0]), float(pred.position[1]))
+            px, py = pred.pos_continuous or (float(pred.position[0]), float(pred.position[1]))
+            cx, cy = self._world_to_pixel(px, py)
             radius_px = max(1, round(pred.damage_radius * self._active_ppm))
             self._pg.draw.circle(overlay, zone_overlay_color("toxic"), (cx, cy), radius_px)
             drew = True
