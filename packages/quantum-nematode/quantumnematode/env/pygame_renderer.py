@@ -1406,7 +1406,8 @@ class Continuous2DRenderer:
         for pred in env.predators:
             if pred.predator_type != PredatorType.STATIONARY or pred.damage_radius <= 0:
                 continue
-            cx, cy = self._world_to_pixel(float(pred.position[0]), float(pred.position[1]))
+            px, py = pred.pos_continuous or (float(pred.position[0]), float(pred.position[1]))
+            cx, cy = self._world_to_pixel(px, py)
             radius_px = max(1, round(pred.damage_radius * self._active_ppm))
             self._pg.draw.circle(overlay, zone_overlay_color("toxic"), (cx, cy), radius_px)
             drew = True
@@ -1590,10 +1591,11 @@ class Continuous2DRenderer:
         # Predator detection / damage range rings.
         if env.predator.enabled:
             for pred in env.predators:
-                cx, cy = self._world_to_pixel(
+                px, py = pred.pos_continuous or (
                     float(pred.position[0]),
                     float(pred.position[1]),
                 )
+                cx, cy = self._world_to_pixel(px, py)
                 if pred.detection_radius > 0:
                     self._pg.draw.circle(
                         self._screen,
@@ -1636,10 +1638,11 @@ class Continuous2DRenderer:
                     sprite = sprites["predator_pursuit"]
                 else:
                     sprite = sprites["predator_random"]
-                cx, cy = self._world_to_pixel(
+                px, py = pred.pos_continuous or (
                     float(pred.position[0]),
                     float(pred.position[1]),
                 )
+                cx, cy = self._world_to_pixel(px, py)
                 self._screen.blit(sprite, (cx - half, cy - half))
 
         # Worm: filled marker + heading line (continuous heading_rad), sized to the
