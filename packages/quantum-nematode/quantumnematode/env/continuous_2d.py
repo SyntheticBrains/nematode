@@ -20,12 +20,19 @@ from typing import TYPE_CHECKING
 from quantumnematode.env.env import (
     DEFAULT_AGENT_ID,
     AgentState,
+    ContactZone,
     DynamicForagingEnvironment,
+    PredatorType,
 )
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.brain.actions import Action
+    from quantumnematode.env.env import Predator
+
+# Per-step heading perturbation for wandering (non-pursuing) continuous predators
+# (±45°), the continuous analogue of the grid wanderer's random cardinal turn.
+_PREDATOR_WANDER_RAD = math.pi / 4.0
 
 
 @dataclass
@@ -304,3 +311,201 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
     def get_nearest_food_distance(self) -> float | None:  # type: ignore[override]
         """Return the true Euclidean distance to the nearest food for the default agent."""
         return self.get_nearest_food_distance_for(DEFAULT_AGENT_ID)
+
+    # ----- continuous predator kinematics + Euclidean detection/damage ----------
+    # On the continuous substrate predators move with continuous ``(speed, heading)``
+    # kinematics and their detection / damage / contact geometry is Euclidean against
+    # the worm's float ``pos_continuous`` — replacing the inherited integer-Manhattan
+    # model. The grid base keeps its byte-stable integer model (these overrides are
+    # subclass-only; the additive ``Predator.pos_continuous`` / ``heading_rad`` fields
+    # are unread on the grid).
+
+    def _predator_xy(self, pred: Predator) -> tuple[float, float]:
+        """Return a predator's continuous position (float truth, falling back to the int view)."""
+        if pred.pos_continuous is not None:
+            return pred.pos_continuous
+        return (float(pred.position[0]), float(pred.position[1]))
+
+    def _initialize_predators(self) -> None:
+        """Initialise predators at float coordinates within the continuous arena.
+
+        Mirrors the grid base's spawn loop (Euclidean min-separation from the agent,
+        ``MAX_POISSON_ATTEMPTS`` retries) but samples real-valued coordinates and
+        seeds each predator's continuous position + a random initial heading; the
+        integer ``position`` is the rounded, clamped view. Predator placement is float
+        on the continuous substrate (the grid base keeps integer-lattice placement).
+        """
+        from quantumnematode.env.env import MAX_POISSON_ATTEMPTS
+
+        self.predators = []
+        min_spawn_distance = max(
+            self.predator.detection_radius,
+            self.predator.damage_radius,
+        )
+        upper = float(self.grid_size - 1)
+        ax, ay = self._agent_xy(DEFAULT_AGENT_ID)
+        for i in range(self.predator.count):
+            predator_id = f"predator_{i}"
+            candidate = (0.0, 0.0)
+            for _ in range(MAX_POISSON_ATTEMPTS):
+                candidate = (
+                    float(self.rng.uniform(0.0, upper)),
+                    float(self.rng.uniform(0.0, upper)),
+                )
+                if math.hypot(candidate[0] - ax, candidate[1] - ay) > min_spawn_distance:
+                    break
+            else:
+                logger.warning(
+                    f"Could not find safe spawn position for predator {predator_id} "
+                    f"after {MAX_POISSON_ATTEMPTS} attempts (continuous-2D). "
+                    f"Spawning at {candidate} anyway.",
+                )
+            self.predators.append(self._spawn_continuous_predator(predator_id, candidate))
+
+    def _spawn_continuous_predator(
+        self,
+        predator_id: str,
+        pos: tuple[float, float],
+    ) -> Predator:
+        """Build one predator at a float position with a random initial heading."""
+        pred = self._make_predator(
+            predator_id=predator_id,
+            position=self._discretise(pos),
+        )
+        pred.pos_continuous = pos
+        pred.heading_rad = float(self.rng.uniform(-math.pi, math.pi))
+        return pred
+
+    def update_predators(self, step_index: int = 0) -> None:  # noqa: ARG002
+        """Move every predator with continuous ``(speed, heading)`` kinematics.
+
+        Pursuit predators with an agent inside their (Euclidean) detection radius steer
+        toward the nearest agent's float position and advance; predators with no target
+        wander; stationary predators do not move. Bypasses the cardinal ``PredatorBrain``
+        (the analytic rule is sufficient for pursue/wander/stationary). ``step_index`` is
+        unused on the continuous path (no time-aware predator brain).
+        """
+        if not self.predator.enabled:
+            return
+        alive_xy = [self._agent_xy(aid) for aid, a in self.agents.items() if a.alive]
+        for pred in self.predators:
+            self._move_predator_continuous(pred, alive_xy)
+
+    def _move_predator_continuous(
+        self,
+        pred: Predator,
+        agent_positions: list[tuple[float, float]],
+    ) -> None:
+        """Apply one continuous kinematic step to a single predator."""
+        if pred.predator_type == PredatorType.STATIONARY:
+            return
+
+        origin = self._predator_xy(pred)
+
+        target: tuple[float, float] | None = None
+        if agent_positions:
+            target = min(
+                agent_positions,
+                key=lambda p: math.hypot(origin[0] - p[0], origin[1] - p[1]),
+            )
+        is_pursuing = (
+            pred.predator_type == PredatorType.PURSUIT
+            and target is not None
+            and math.hypot(origin[0] - target[0], origin[1] - target[1])
+            <= pred.detection_radius
+        )
+
+        if is_pursuing and target is not None:
+            heading = math.atan2(target[1] - origin[1], target[0] - origin[0])
+        else:
+            heading = _wrap_to_pi(
+                pred.heading_rad
+                + float(self.rng.uniform(-_PREDATOR_WANDER_RAD, _PREDATOR_WANDER_RAD)),
+            )
+        pred.heading_rad = heading
+
+        step = pred.speed * self.continuous.max_step_mm
+        world = self.continuous.world_size_mm
+        new_x = min(world, max(0.0, origin[0] + step * math.cos(heading)))
+        new_y = min(world, max(0.0, origin[1] + step * math.sin(heading)))
+        pred.pos_continuous = (new_x, new_y)
+        pred.position = self._discretise((new_x, new_y))
+        if math.hypot(new_x - origin[0], new_y - origin[1]) > 1e-9:  # noqa: PLR2004
+            pred.distance_traveled += 1
+
+    def is_agent_in_danger_for(self, agent_id: str) -> bool:
+        """Return True if the agent is within (Euclidean) detection radius of any predator."""
+        if not self.predator.enabled:
+            return False
+        ax, ay = self._agent_xy(agent_id)
+        # Env-level detection radius (matches the grid base's danger check, which uses
+        # the shared `self.predator.detection_radius` rather than the per-predator value
+        # used by pursuit steering).
+        radius = self.predator.detection_radius
+        return any(
+            math.hypot(ax - px, ay - py) <= radius
+            for px, py in (self._predator_xy(pred) for pred in self.predators)
+        )
+
+    def is_agent_in_damage_radius_for(self, agent_id: str) -> bool:
+        """Return True if the agent is within any predator's (Euclidean) damage radius."""
+        if not self.predator.enabled:
+            return False
+        ax, ay = self._agent_xy(agent_id)
+        for pred in self.predators:
+            px, py = self._predator_xy(pred)
+            if math.hypot(ax - px, ay - py) <= pred.damage_radius:
+                logger.debug(
+                    f"Agent {agent_id} in damage radius of {pred.predator_type.value} "
+                    f"predator at {(px, py)} (continuous-2D)",
+                )
+                return True
+        return False
+
+    def get_agent_predator_contact_zone_for(self, agent_id: str) -> ContactZone:
+        """Classify the nearest in-damage-radius predator contact by continuous heading.
+
+        Euclidean analogue of the grid contact-zone method: selects the nearest predator
+        within its own damage radius by Euclidean distance, then classifies the approach
+        cone via the dot product of the predator→agent unit vector and the worm's
+        continuous forward unit vector ``(cos heading_rad, sin heading_rad)``, retaining
+        the ±45° anterior/lateral/posterior cones (diagonal boundary → ANTERIOR).
+        """
+        if not self.predator.enabled or not self.predators:
+            return ContactZone.NONE
+
+        agent_state = self.agents[agent_id]
+        ax, ay = self._agent_xy(agent_id)
+
+        nearest_pred: Predator | None = None
+        nearest_dist: float | None = None
+        for pred in self.predators:
+            px, py = self._predator_xy(pred)
+            distance = math.hypot(ax - px, ay - py)
+            if distance > pred.damage_radius:
+                continue
+            if nearest_dist is None or distance < nearest_dist:
+                nearest_pred, nearest_dist = pred, distance
+
+        if nearest_pred is None:
+            return ContactZone.NONE
+
+        px, py = self._predator_xy(nearest_pred)
+        rel_dx, rel_dy = px - ax, py - ay
+        rel_len = math.hypot(rel_dx, rel_dy)
+        if rel_len == 0.0:
+            # Overlap → ANTERIOR by convention (nose-touch dominance).
+            return ContactZone.ANTERIOR
+
+        # Worm forward unit vector (world y-up), the same `heading_rad` convention as
+        # `_kinematic_move`. The forward vector is already unit-length, so the dot
+        # product is the cosine of the approach angle.
+        forward_x = math.cos(agent_state.heading_rad)
+        forward_y = math.sin(agent_state.heading_rad)
+        dot = (rel_dx * forward_x + rel_dy * forward_y) / rel_len
+        cos45 = 0.7071067811865476
+        if dot >= cos45:
+            return ContactZone.ANTERIOR
+        if dot <= -cos45:
+            return ContactZone.POSTERIOR
+        return ContactZone.LATERAL

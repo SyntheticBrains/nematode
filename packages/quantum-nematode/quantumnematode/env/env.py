@@ -584,6 +584,15 @@ class Predator:
     damage_radius : int
         Distance at which this predator deals damage (when health system enabled).
         Stationary predators typically have larger damage_radius (toxic zones).
+    pos_continuous : tuple[float, float] | None
+        Continuous-2D float position (the truth on the continuous substrate). The
+        integer ``position`` is kept as a rounded, clamped view for inherited
+        grid-coupled readers. ``None`` on the discrete grid substrate (where the
+        integer ``position`` is the truth and this field is never read). Additive
+        and optional so the grid ``Predator`` type contract is unchanged.
+    heading_rad : float
+        Continuous-2D heading angle in radians (continuous-substrate kinematics).
+        Unused on the discrete grid (which moves via cardinal actions).
     """
 
     def __init__(  # noqa: PLR0913
@@ -596,6 +605,8 @@ class Predator:
         damage_radius: int = 0,
         predator_id: str = "predator_0",
         brain: PredatorBrain | None = None,
+        pos_continuous: tuple[float, float] | None = None,
+        heading_rad: float = 0.0,
     ) -> None:
         """
         Initialize a predator.
@@ -630,6 +641,9 @@ class Predator:
         self.damage_radius = damage_radius
         self.predator_id = predator_id
         self.brain: PredatorBrain = brain if brain is not None else HeuristicPredatorBrain()
+        # Continuous-2D substrate state (None/0.0 and unread on the discrete grid).
+        self.pos_continuous = pos_continuous
+        self.heading_rad = heading_rad
         # Per-predator metric counters (populated by the harness; surfaced
         # in MultiAgentEpisodeResult).
         self.kills: int = 0
@@ -4152,6 +4166,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 cloned.kills = p.kills
                 cloned.prey_proximity_steps = p.prey_proximity_steps
                 cloned.distance_traveled = p.distance_traveled
+                # Preserve continuous-2D state so it survives env.copy()
+                # instead of resetting (which would teleport continuous
+                # predators on mid-episode snapshots). None/0.0 on the grid.
+                cloned.pos_continuous = p.pos_continuous
+                cloned.heading_rad = p.heading_rad
                 new_env.predators.append(cloned)
         return new_env
 
