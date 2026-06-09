@@ -161,3 +161,8 @@ reverting the subclass overrides and the additive `Predator` fields.
 - Should the wander heading-perturbation magnitude be configurable, or is a fixed
   default sufficient for the T7 bring-up? (Lean: fixed default now; expose only if the
   predator smoke shows wander behaviour matters.)
+- `PredatorParams.detection_radius` / `damage_radius` are typed `int`. On the continuous
+  substrate they are read as Euclidean-mm thresholds, which integers satisfy (e.g. an
+  `8` value → an 8 mm disc on a 50 mm plate). Fractional/sub-mm radii would require
+  widening these to `float` in the config + dataclass — **out of scope** here; flag it
+  only if the T7 predator smoke needs sub-mm precision.

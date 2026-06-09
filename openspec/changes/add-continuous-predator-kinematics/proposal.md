@@ -69,9 +69,10 @@ predator bring-up smoke depends on it, so this is the first T7-prep item.
     `_initialize_predators` (float spawn), continuous predator movement in
     `update_predators`, and Euclidean `is_agent_in_danger_for` /
     `is_agent_in_damage_radius_for` / `get_agent_predator_contact_zone_for`.
-  - `packages/quantum-nematode/quantumnematode/env/pygame_renderer.py` — the
-    continuous renderer can drop the visual-jank workaround once predators move smoothly
-    (predator sprites + detection/damage rings already read float-capable positions).
+  - `packages/quantum-nematode/quantumnematode/env/pygame_renderer.py` — point the
+    continuous renderer's predator sprites + detection/damage rings at `pred.pos_continuous`
+    (they currently read the integer `pred.position`) so the smooth motion is actually
+    drawn rather than re-quantised at render time.
 - **Tests:** new continuous-predator movement/detection/damage tests under
   `tests/quantumnematode_tests/env/`; existing integer-grid predator byte-equivalence
   suite must stay green (grid path untouched).

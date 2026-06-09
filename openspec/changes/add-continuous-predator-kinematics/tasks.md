@@ -1,32 +1,34 @@
 ## 1. Predator continuous state (additive, grid byte-stable)
 
 - [ ] 1.1 Add optional `pos_continuous: tuple[float, float] | None = None` and continuous `heading_rad: float = 0.0` fields to `Predator` (env.py), documented as continuous-substrate-only (None/unused on the grid).
-- [ ] 1.2 Add a small helper on `Predator` (or `Continuous2DEnvironment`) that sets the integer `position` as the `round()`-and-`[0, grid_size-1]`-clamped view of `pos_continuous`, mirroring the agent `_discretise` pattern. Used after every continuous spawn/move.
-- [ ] 1.3 Confirm the grid path never reads the new fields; run the predator byte-equivalence suite to prove the grid `Predator`/movement is unchanged.
+- [ ] 1.2 Thread the new `pos_continuous`/`heading_rad` fields through `_make_predator` (new optional kwargs) **and** `copy()`, mirroring how `speed`/`detection_radius`/`damage_radius` are threaded, so they survive env `copy()` (which happens mid-episode for some brains/parallel paths) — otherwise continuous predators reset/teleport on copy.
+- [ ] 1.3 Add a small helper on `Predator` (or `Continuous2DEnvironment`) that sets the integer `position` as the `round()`-and-`[0, grid_size-1]`-clamped view of `pos_continuous`, mirroring the agent `_discretise` pattern. Used after every continuous spawn/move.
+- [ ] 1.4 Confirm the grid path never reads the new fields; run the predator byte-equivalence suite to prove the grid `Predator`/movement/`copy()` are unchanged.
 
 ## 2. Float predator placement (continuous override)
 
-- [ ] 2.1 Override `_initialize_predators` in `Continuous2DEnvironment` to sample candidate predator coordinates as real-valued floats in `[0, world_size_mm)` via `self.rng`, retaining the existing Euclidean min-separation-from-agent spawn check; set `pos_continuous` + synced integer `position` + initial `heading_rad`.
-- [ ] 2.2 Reuse `_make_predator` for construction (carry detection/damage radii + speed); ensure stationary vs pursuit typing is preserved.
+- [ ] 2.1 Override `_initialize_predators` in `Continuous2DEnvironment` to sample candidate predator coordinates as real-valued floats in `[0, world_size_mm)` via `self.rng`, retaining the existing Euclidean min-separation-from-agent spawn check (reuse the `MAX_POISSON_ATTEMPTS` retry loop); set `pos_continuous` + initial `heading_rad`, and the synced integer `position` view.
+- [ ] 2.2 Construct via `_make_predator` (carry detection/damage radii + speed; stationary vs pursuit typing preserved). Pass the **rounded int** as `position` to satisfy its `tuple[int, int]` contract, then set the float `pos_continuous`/`heading_rad` (via the new `_make_predator` kwargs from 1.2, or post-construction).
 
 ## 3. Continuous predator kinematics (continuous override)
 
-- [ ] 3.1 Override predator movement on the continuous substrate (override `update_predators`, or a continuous `update_position` path) so it bypasses the cardinal `PredatorBrain` and applies the analytic `(speed, heading)` rule from design D3.
-- [ ] 3.2 Pursuit: when an agent is within the Euclidean `detection_radius`, orient `heading_rad` toward the bearing to the nearest agent's `pos_continuous`, then advance by `speed · max_step_mm` along the new heading.
+- [ ] 3.1 Override predator movement on the continuous substrate (override `update_predators`, or a continuous `update_position` path) so it bypasses the cardinal `PredatorBrain` and applies the analytic `(speed, heading)` rule from design D3. Gather agent **float** positions (`pos_continuous`, fallback integer `position`) for nearest-target selection — the base `update_predators` builds integer `alive_positions`, which the continuous path must not use. Covers the multi-agent path (same method).
+- [ ] 3.2 Pursuit: when an agent is within the **per-predator** Euclidean `self.detection_radius`, orient `heading_rad` toward the bearing to the nearest agent's `pos_continuous`, then advance by `speed · max_step_mm` along the new heading.
 - [ ] 3.3 Wander: when no agent is in range (and not stationary), perturb `heading_rad` by a bounded random angle from `self.rng`, then advance by `speed · max_step_mm`.
 - [ ] 3.4 Stationary predators do not move (early return preserved). Drop the integer `movement_accumulator` multi-step logic on the continuous path (speed scales displacement directly).
 - [ ] 3.5 Clamp the new position per-axis to `[0, world_size_mm]` (partial move, no rejection/error), then sync the integer `position` view (task 1.2).
 
 ## 4. Euclidean detection / damage / contact zones (continuous override)
 
-- [ ] 4.1 Override `is_agent_in_danger_for` in `Continuous2DEnvironment` to use `math.hypot` between predator `pos_continuous` and agent `pos_continuous` vs `detection_radius` (Euclidean-mm).
+- [ ] 4.1 Override `is_agent_in_danger_for` in `Continuous2DEnvironment` to use `math.hypot` between predator `pos_continuous` and agent `pos_continuous` vs the **env-level** `self.predator.detection_radius` (Euclidean-mm) — preserving the base method's env-level source (note the deliberate asymmetry vs the per-predator radius used by pursuit steering in 3.2).
 - [ ] 4.2 Override `is_agent_in_damage_radius_for` to use the same Euclidean distance vs each predator's `damage_radius`.
-- [ ] 4.3 Override `get_agent_predator_contact_zone_for` to (a) select the nearest predator within its damage radius by Euclidean distance and (b) classify the approach cone using the worm's continuous forward unit vector from `heading_rad` (same convention as `_kinematic_move`/the renderer), retaining the ±45° anterior/lateral/posterior cones.
-- [ ] 4.4 Confirm the predator-evasion reward formula is untouched (only the distance metric changes — RQ5 guardrail).
+- [ ] 4.3 Override `get_agent_predator_contact_zone_for` to (a) select the nearest predator within its damage radius by Euclidean distance and (b) classify the approach cone using the worm's continuous forward unit vector `(cos heading_rad, sin heading_rad)` in world coords (same convention as `_kinematic_move`), retaining the ±45° anterior/lateral/posterior cones.
+- [ ] 4.4 In all three overrides, fall back to the agent's integer `position` when `pos_continuous` is `None` (defensive — should not occur on the continuous substrate).
+- [ ] 4.5 Confirm the predator-evasion reward formula is untouched (only the distance metric changes — RQ5 guardrail).
 
 ## 5. Renderer follow-through
 
-- [ ] 5.1 Remove/relax any continuous-renderer visual-jank workaround for quantised predators now that predator motion is smooth; confirm predator sprites + detection/damage rings read the float-capable position correctly.
+- [ ] 5.1 Make the continuous renderer reflect the smooth float motion: `Continuous2DRenderer._render_entities` (predator sprites) and the predator detection/damage-ring drawing both currently read the integer `pred.position` via `_world_to_pixel(float(pred.position[0]), ...)` — switch them to read `pred.pos_continuous` (fallback `position`). Without this the physics is smooth but predators still render quantised (the motivating visible jank persists). No "jank workaround" exists to remove; this is the substantive renderer edit.
 
 ## 6. Tests
 
