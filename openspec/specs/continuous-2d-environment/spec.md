@@ -8,9 +8,7 @@ Defines the continuous-2D foraging environment: a square, millimetre-scale arena
 
 ### Requirement: Continuous-2D coordinate substrate
 
-The system SHALL provide a continuous-2D environment in which the **agent position** is represented as real-valued `(x, y)` coordinates within world bounds expressed in physical units (millimetres), distinct from and selectable alongside the discrete grid environment. In this iteration **food sources and predators are positioned on the integer lattice** (discrete integer `(x, y)` coordinates within the world bounds in millimetres); the worm, its movement, capture, and distances are fully continuous. The grid environment SHALL remain unchanged and byte-stable.
-
-> Implementation note (non-normative): continuous real-valued *source* coordinates (float food/predator placement) are deferred to a future iteration — they would ripple the `self.foods: list[tuple[int, int]]` type — so sources remain lattice-positioned within the continuous arena for now.
+The system SHALL provide a continuous-2D environment in which the **agent position** is represented as real-valued `(x, y)` coordinates within world bounds expressed in physical units (millimetres), distinct from and selectable alongside the discrete grid environment. The worm, its movement, capture, and distances are fully continuous; **source placement and Euclidean distances are specified in the *Source placement and Euclidean fields* requirement below**. The grid environment SHALL remain unchanged and byte-stable.
 
 #### Scenario: Float agent position
 
@@ -57,11 +55,11 @@ The continuous-2D environment SHALL consume a food source when the agent is with
 
 ### Requirement: Source placement and Euclidean fields
 
-The continuous-2D environment SHALL place food and predator sources at **real-valued (float) coordinates** within the world bounds and SHALL compute food capture and nearest-food distance using **true Euclidean distance** (not Manhattan, and **not** rounded to integer). The float source coordinates are confined to the continuous-2D environment; the discrete grid environment retains integer source coordinates and remains byte-stable.
+The continuous-2D environment SHALL place **food sources** at **real-valued (float) coordinates** within the world bounds and SHALL compute food capture and nearest-food distance using **true Euclidean distance** (not Manhattan, and **not** rounded to integer). **Predator** placement and movement remain on the integer lattice in this iteration (predators-on-continuous are not yet exercised; continuous predator kinematics + Euclidean detection/damage are scheduled for T7 prep). The float source coordinates are confined to the continuous-2D environment; the discrete grid environment retains integer source coordinates and remains byte-stable.
 
-#### Scenario: Sources within bounds
+#### Scenario: Food sources within bounds
 
-- **WHEN** sources are initialised in the continuous-2D environment
+- **WHEN** food sources are initialised in the continuous-2D environment
 - **THEN** their coordinates are real-valued, lie within the world bounds, and respect the existing minimum-separation validity checks
 
 #### Scenario: Euclidean distances
