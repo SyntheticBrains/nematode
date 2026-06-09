@@ -57,26 +57,36 @@ The continuous-2D environment SHALL consume a food source when the agent is with
 
 ### Requirement: Source placement and Euclidean fields
 
-The continuous-2D environment SHALL place food and predator sources within the world bounds and SHALL compute food capture and nearest-food distance using Euclidean distance (not Manhattan). *(Implementation note, 2026-06-06: in this iteration sources sit on the **integer lattice within the continuous arena** — the worm and capture are fully continuous; float source placement is deferred to avoid the `self.foods: list[tuple[int, int]]` type ripple, and true continuous fields are the T6 Rung-2 env-fidelity work.)*
+The continuous-2D environment SHALL place food and predator sources at **real-valued (float) coordinates** within the world bounds and SHALL compute food capture and nearest-food distance using **true Euclidean distance** (not Manhattan, and **not** rounded to integer). The float source coordinates are confined to the continuous-2D environment; the discrete grid environment retains integer source coordinates and remains byte-stable.
 
 #### Scenario: Sources within bounds
 
 - **WHEN** sources are initialised in the continuous-2D environment
-- **THEN** their coordinates lie within the world bounds and respect the existing minimum-separation validity checks
+- **THEN** their coordinates are real-valued, lie within the world bounds, and respect the existing minimum-separation validity checks
 
 #### Scenario: Euclidean distances
 
 - **WHEN** food capture or nearest-food distance is computed in the continuous-2D environment
-- **THEN** it uses Euclidean distance (replacing the grid's Manhattan distance)
+- **THEN** it uses real-valued Euclidean distance (replacing the grid's Manhattan distance and without integer rounding of the result)
+
+#### Scenario: Grid environment unchanged
+
+- **WHEN** the discrete grid environment places or measures sources
+- **THEN** it retains integer source coordinates and Manhattan distance, byte-stable against the pre-change behaviour
 
 ### Requirement: Heading-aware klinotaxis sensing on the continuous substrate
 
-Klinotaxis (head-sweep) sensing in the continuous-2D environment SHALL sample lateral concentrations perpendicular to the agent's continuous heading (`heading_rad`), scaled by the configured sweep amplitude (≥ 1 cell), rather than at the grid's fixed cardinal ±1-cell offsets, so the directional gradient rotates with the continuous heading, and SHALL feed STAM the resulting readings. *(Implementation note, 2026-06-06: samples the **integer cells** perpendicular to the heading — sources + sensing live on the integer lattice within the continuous arena (the worm itself moves continuously); true continuous-field sampling is the T6 Rung-2 work.)*
+Klinotaxis (head-sweep) sensing in the continuous-2D environment SHALL sample lateral concentrations perpendicular to the agent's continuous heading (`heading_rad`), scaled by the configured sweep amplitude (honoured as configured, including sub-cell amplitudes), rather than at the grid's fixed cardinal ±1-cell offsets, so the directional gradient rotates with the continuous heading, and SHALL feed STAM the resulting readings. Lateral samples SHALL be evaluated against the **continuous concentration field at real-valued sample positions** (no integer-cell snapping of the sample points).
 
 #### Scenario: Heading-aware lateral sampling
 
 - **WHEN** klinotaxis sensing runs in the continuous-2D environment
-- **THEN** left/right samples are taken perpendicular to `heading_rad` (matching the grid offsets at cardinal headings, rotating smoothly otherwise), and `dC` is the right-minus-left difference
+- **THEN** left/right samples are taken perpendicular to `heading_rad` (matching the grid offsets at cardinal headings, rotating smoothly otherwise) at real-valued sample positions, and `dC` is the right-minus-left difference
+
+#### Scenario: Continuous-field sampling
+
+- **WHEN** a lateral sample position is evaluated
+- **THEN** the concentration is read from the continuous field at the real-valued position, without snapping the sample point to an integer cell
 
 #### Scenario: STAM receives the readings
 
