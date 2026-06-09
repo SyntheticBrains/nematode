@@ -64,7 +64,8 @@ predator bring-up smoke depends on it, so this is the first T7-prep item.
 
 - **Code:**
   - `packages/quantum-nematode/quantumnematode/env/env.py` — additive `Predator`
-    `pos_continuous` field (+ float-aware kinematic helper); no change to the grid path.
+    `pos_continuous` + `heading_rad` fields and their preservation in `copy()`; no
+    change to the grid path (the continuous kinematics helpers live in the subclass).
   - `packages/quantum-nematode/quantumnematode/env/continuous_2d.py` — new overrides:
     `_initialize_predators` (float spawn), continuous predator movement in
     `update_predators`, and Euclidean `is_agent_in_danger_for` /

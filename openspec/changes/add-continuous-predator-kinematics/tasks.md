@@ -1,14 +1,14 @@
 ## 1. Predator continuous state (additive, grid byte-stable)
 
 - [x] 1.1 Add optional `pos_continuous: tuple[float, float] | None = None` and continuous `heading_rad: float = 0.0` fields to `Predator` (env.py), documented as continuous-substrate-only (None/unused on the grid).
-- [x] 1.2 Thread the new `pos_continuous`/`heading_rad` fields through `_make_predator` (new optional kwargs) **and** `copy()`, mirroring how `speed`/`detection_radius`/`damage_radius` are threaded, so they survive env `copy()` (which happens mid-episode for some brains/parallel paths) — otherwise continuous predators reset/teleport on copy.
-- [x] 1.3 Add a small helper on `Predator` (or `Continuous2DEnvironment`) that sets the integer `position` as the `round()`-and-`[0, grid_size-1]`-clamped view of `pos_continuous`, mirroring the agent `_discretise` pattern. Used after every continuous spawn/move.
+- [x] 1.2 Preserve the new `pos_continuous`/`heading_rad` fields across env `copy()` (which happens mid-episode for some brains/parallel paths) — otherwise continuous predators reset/teleport on copy. *As-built: set post-construction in `copy()` alongside the runtime metric counters (`kills`/`distance_traveled`), and in the subclass spawn helper `_spawn_continuous_predator`, rather than adding `_make_predator` kwargs — matching the existing state-vs-config split in `copy()`.*
+- [x] 1.3 Keep the integer `position` as the `round()`-and-`[0, grid_size-1]`-clamped view of `pos_continuous` after every continuous spawn/move. *As-built: reuse the existing `Continuous2DEnvironment._discretise` (already used for the agent) rather than adding a new helper.*
 - [x] 1.4 Confirm the grid path never reads the new fields; run the predator byte-equivalence suite to prove the grid `Predator`/movement/`copy()` are unchanged.
 
 ## 2. Float predator placement (continuous override)
 
 - [x] 2.1 Override `_initialize_predators` in `Continuous2DEnvironment` to sample candidate predator coordinates as real-valued floats in `[0, world_size_mm)` via `self.rng`, retaining the existing Euclidean min-separation-from-agent spawn check (reuse the `MAX_POISSON_ATTEMPTS` retry loop); set `pos_continuous` + initial `heading_rad`, and the synced integer `position` view.
-- [x] 2.2 Construct via `_make_predator` (carry detection/damage radii + speed; stationary vs pursuit typing preserved). Pass the **rounded int** as `position` to satisfy its `tuple[int, int]` contract, then set the float `pos_continuous`/`heading_rad` (via the new `_make_predator` kwargs from 1.2, or post-construction).
+- [x] 2.2 Construct via `_make_predator` (carry detection/damage radii + speed; stationary vs pursuit typing preserved). Pass the **rounded int** as `position` to satisfy its `tuple[int, int]` contract, then set the float `pos_continuous` + a random initial `heading_rad` post-construction (the `_spawn_continuous_predator` helper).
 
 ## 3. Continuous predator kinematics (continuous override)
 
