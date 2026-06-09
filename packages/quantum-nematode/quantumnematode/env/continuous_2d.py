@@ -411,8 +411,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         is_pursuing = (
             pred.predator_type == PredatorType.PURSUIT
             and target is not None
-            and math.hypot(origin[0] - target[0], origin[1] - target[1])
-            <= pred.detection_radius
+            and math.hypot(origin[0] - target[0], origin[1] - target[1]) <= pred.detection_radius
         )
 
         if is_pursuing and target is not None:
