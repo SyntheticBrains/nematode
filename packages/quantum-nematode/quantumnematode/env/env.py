@@ -1670,9 +1670,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             predators = getattr(self, "predators", None)
             if predators:
                 for pred in predators:
-                    pred_dist = np.sqrt(
-                        (pos[0] - pred.position[0]) ** 2 + (pos[1] - pred.position[1]) ** 2,
-                    )
+                    px, py = self._predator_xy(pred)
+                    pred_dist = np.sqrt((pos[0] - px) ** 2 + (pos[1] - py) ** 2)
                     if pred_dist < self.foraging.min_food_predator_distance:
                         return False
 
@@ -2042,6 +2041,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return vector_x, vector_y
 
+    def _predator_xy(self, pred: Predator) -> tuple[float, float]:
+        """Return the coordinates used for a predator's distance/field computations.
+
+        Base (grid) implementation returns the integer ``position`` as floats — the
+        grid truth. The continuous-2D subclass overrides this to return the float
+        ``pos_continuous`` so predator sensing fields, detection, damage, and contact
+        all read the same continuous coordinates as movement and rendering.
+        """
+        return (float(pred.position[0]), float(pred.position[1]))
+
     def _compute_predator_gradient_vector(
         self,
         position: tuple[int, ...],
@@ -2067,8 +2076,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             return vector_x, vector_y
 
         for pred in self.predators:
-            dx = pred.position[0] - position[0]
-            dy = pred.position[1] - position[1]
+            px, py = self._predator_xy(pred)
+            dx = px - position[0]
+            dy = py - position[1]
             distance = np.sqrt(dx**2 + dy**2)
 
             if distance == 0:
@@ -2155,8 +2165,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         raw_concentration = 0.0
         for pred in self.predators:
-            dx = pred.position[0] - position[0]
-            dy = pred.position[1] - position[1]
+            px, py = self._predator_xy(pred)
+            dx = px - position[0]
+            dy = py - position[1]
             distance = np.sqrt(dx**2 + dy**2)
 
             if distance == 0:

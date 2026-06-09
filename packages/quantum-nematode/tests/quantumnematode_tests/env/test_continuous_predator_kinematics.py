@@ -264,6 +264,54 @@ class TestCopyPreservesContinuousState:
             assert cloned.heading_rad == original.heading_rad
 
 
+class TestDiscreteFallbackHeading:
+    def test_discrete_move_syncs_heading_to_direction(self) -> None:
+        from quantumnematode.brain.actions import Action
+        from quantumnematode.env.env import _HEADING_OFFSET
+
+        env = _env()
+        state = env.agents[DEFAULT_AGENT_ID]
+        assert state.heading_rad == 0.0  # initial facing +x
+
+        env.move_agent(Action.LEFT)  # a turning action changes the discrete direction
+
+        ox, oy = _HEADING_OFFSET[state.direction]
+        assert (ox, oy) != (1, 0), "expected the discrete facing to have changed"
+        # heading_rad must follow the new discrete facing (same _HEADING_OFFSET source).
+        assert state.heading_rad == pytest.approx(math.atan2(oy, ox))
+
+    def test_contact_zone_correct_after_discrete_move(self) -> None:
+        from quantumnematode.brain.actions import Action
+        from quantumnematode.env.env import _HEADING_OFFSET
+
+        env = _env(detection=50, damage=5)
+        env.move_agent(Action.LEFT)  # turn so the facing is no longer +x
+        state = env.agents[DEFAULT_AGENT_ID]
+        assert state.pos_continuous is not None
+        ax, ay = state.pos_continuous
+        ox, oy = _HEADING_OFFSET[state.direction]
+        _pred(env).pos_continuous = (ax + ox, ay + oy)  # one unit dead ahead of the new facing
+
+        # With a stale heading_rad (0.0) this predator would mis-classify as LATERAL.
+        assert env.get_agent_predator_contact_zone_for(DEFAULT_AGENT_ID) == ContactZone.ANTERIOR
+
+
+class TestPredatorFieldUsesFloatPosition:
+    def test_predator_concentration_uses_subcell_position(self) -> None:
+        # Two predator float positions that round to the SAME integer cell (12, 10):
+        # identical under the old integer-snap, distinct under float coordinates.
+        env = _env(detection=0, damage=0)
+        pred = _pred(env)
+        query = (10.0, 10.0)
+
+        pred.pos_continuous = (11.6, 10.0)  # 1.6 mm from the query point
+        c_near = env.get_predator_concentration(query)
+        pred.pos_continuous = (12.4, 10.0)  # 2.4 mm, but rounds to the same cell
+        c_far = env.get_predator_concentration(query)
+
+        assert c_near > c_far  # sub-cell distance is resolved (float coords, not integer-snapped)
+
+
 class TestGridPathUnchanged:
     def test_grid_predator_fields_stay_unused(self) -> None:
         # A grid Predator carries the additive fields at their defaults and the grid

@@ -152,8 +152,14 @@ T7 C2 predator smoke (it is called out in `phase6-tracking` T7.prep).
 ## Known limitations (deferred — surfaced by the branch review)
 
 This change makes the predator **detection / damage / contact-zone gates** Euclidean on
-the continuous substrate. Two adjacent predator-distance consumers still use
-integer-Manhattan distance and are **deliberately not changed here**:
+the continuous substrate, and (PR-review follow-up) routes the predator **distal-sensing
+fields** (`_compute_predator_gradient_vector`, `get_predator_concentration` /
+`get_predator_sulfolipid_concentration`) and the food-spawn separation check through a
+base `_predator_xy` hook so they read the same float `pos_continuous` as movement and
+rendering (these were already Euclidean-distance, just integer-snapped). The discrete-
+action fallback also now mirrors the worm's facing into `heading_rad` so the contact-zone
+classifier is correct after `move_agent()`. Two adjacent predator-distance consumers
+still use integer-Manhattan distance and are **deliberately not changed here**:
 
 - **Predator-evasion reward shaping stays Manhattan.** The danger *gate*
   (`is_agent_in_danger_for`) is now Euclidean, but the distance feeding the

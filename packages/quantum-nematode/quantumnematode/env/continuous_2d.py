@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from quantumnematode.env.env import (
+    _HEADING_OFFSET,
     DEFAULT_AGENT_ID,
     AgentState,
     ContactZone,
@@ -141,6 +142,14 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             float(agent_state.position[0]),
             float(agent_state.position[1]),
         )
+        # Mirror the discrete facing into the continuous heading so heading-aware
+        # readers (e.g. the Euclidean contact-zone classifier) use the correct facing
+        # after a discrete-action move. Derived from the same `_HEADING_OFFSET` the grid
+        # contact-zone uses, so the two conventions stay consistent. STAY (zero offset)
+        # leaves the heading unchanged.
+        offset = _HEADING_OFFSET.get(agent_state.direction, (0, 0))
+        if offset != (0, 0):
+            agent_state.heading_rad = math.atan2(offset[1], offset[0])
 
     def _init_continuous_positions(self) -> None:
         """Seed every agent's float position at the world centre, heading +x."""
@@ -321,7 +330,12 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
     # are unread on the grid).
 
     def _predator_xy(self, pred: Predator) -> tuple[float, float]:
-        """Return a predator's continuous position (float truth, falling back to the int view)."""
+        """Return a predator's continuous position (float truth, falling back to the int view).
+
+        Overrides the base integer-view helper so predator sensing fields, detection,
+        damage, and contact all read the same continuous coordinates as movement and
+        rendering.
+        """
         if pred.pos_continuous is not None:
             return pred.pos_continuous
         return (float(pred.position[0]), float(pred.position[1]))
