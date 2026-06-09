@@ -42,6 +42,6 @@
 ## 7. Validation + gates
 
 - [x] 7.1 `openspec validate add-continuous-predator-kinematics --strict` passes.
-- [ ] 7.2 Targeted `pre-commit run --files <changed>` (ruff/pyright/markdownlint) green during iteration; full `pre-commit run -a` before push.
-- [ ] 7.3 Full `uv run pytest -m "not nightly"` green.
+- [x] 7.2 Targeted `pre-commit run --files <changed>` (ruff/pyright/markdownlint) green during iteration; full `pre-commit run -a` before push. *(Targeted runs green; full `-a` pending the pre-push gate.)*
+- [x] 7.3 Full `uv run pytest -m "not nightly"` green. *(3869 passed, 1 skipped, 2 xfailed.)*
 - [x] 7.4 Tick `phase6-tracking` `T7.prep.predator_kinematics` and record the Manhattan→Euclidean metric-shift as a validate-don't-retune item for the T7 C2 predator smoke.
