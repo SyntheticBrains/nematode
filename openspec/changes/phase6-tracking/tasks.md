@@ -286,8 +286,8 @@ T5 closes Gate 2.
 
 ## Tranche 6 — Env Fidelity (static Fick-shaped gradients + adaptive chemosensory sensor; dynamic diffusion descoped to stretch)
 
-**OpenSpec change**: `add-rung2-chemical-gradients` (placeholder; not yet created)
-**Status**: 🔲 not started
+**OpenSpec change**: [`add-rung2-chemical-gradients`](../archive/2026-06-09-add-rung2-chemical-gradients/proposal.md) (archived 2026-06-09; promoted the `chemical-gradient-fidelity` capability + amended `continuous-2d-environment` / `klinotaxis-sensing`)
+**Status**: 🟢 complete — T6 closed (gating scope). Static signal-specific Fick-shaped gradient geometry + the adaptive/biphasic chemosensory sensor shipped; the load-bearing step-input adaptation-transient gate passed (Weber spread 0.0056 adaptive vs 1.639 log) and float source placement + Euclidean fields landed (T6.physics.1) — [logbook 028](../../../docs/experiments/logbooks/028-rung2-gradients-adaptive-sensor.md). The fidelity renderer (T6.render) landed non-gating via `add-continuous-fidelity-renderer`. **Carried forward:** dynamic-diffusion PDE remains the gated STRETCH (T6.gradients.2); continuous predator kinematics + Euclidean detection/damage moved to T7-prep (`T7.prep.predator_kinematics`).
 **Roadmap layer**: env-upgrade (fidelity) (separated from T5 platform refactor per [design.md § Decision 1](design.md) so T6 can iterate without re-opening Gate 2)
 **Approx duration**: 3-4 weeks (allowing for M4-style iteration if Rung 2.5 or 2.6 ends up needed)
 **Bio fidelity**: HIGH (matches the computational-chemotaxis field's actual fidelity standard)
