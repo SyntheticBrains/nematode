@@ -7,8 +7,21 @@
 #     ((dC/dt)/(C+eps)), the literature-faithful hyper-Weber readout.
 #
 # Continuous-action PPO needs a higher entropy_coef (~0.10) than the discrete grid to
-# keep the tanh-Gaussian log_std off the clamp floor. The readout / adaptation rate
-# are single-seed reference values here and warrant multi-seed tuning.
+# keep the tanh-Gaussian log_std off the clamp floor.
+#
+# Calibrated for T7 (T7.prep.foraging_calibration; forensics in
+# tmp/evaluations/t7-continuous-prep/ -> T7 logbook):
+#   - adaptive_chemosensor_epsilon: 0.1 (NOT the 0.001 default — at 0.001 the
+#     (dC/dt)/(C+eps) readout amplifies ~1000x at C~0 and foraging collapses; 0.1
+#     forages on par with tanh). NB adaptive_chemosensor_alpha is a no-op under the
+#     fold_change readout (the background it controls is only used by `contrast`).
+#   - capture_radius_mm: 2.0 — body/patch scale (a ~4 mm bacterial patch, more
+#     faithful than a 1 mm point). The Fick Gaussian has a flat top (near-zero
+#     gradient at the source), so a 1 mm point-capture is unlearnable; patch-scale
+#     capture lets the worm capture where the field still has gradient. Lifts MLP
+#     ~3x (n=10 median 0.63) and connectome ~2.2x (0.64, tight), keeping the
+#     high-fidelity Fick + adaptive substrate.
+# Residual seed-fragility (continuous tanh-Gaussian log_std) -> T7.prep.continuous_tuning.
 
 max_steps: 400
 brain:
@@ -57,7 +70,7 @@ environment:
     world_size_mm: 20.0
     body_length_mm: 1.0
     max_step_mm: 1.0
-    capture_radius_mm: 1.0
+    capture_radius_mm: 2.0  # body/patch scale (calibrated — see header)
     sweep_amplitude_mm: 0.5
 
   viewport_size: [11, 11]
@@ -70,8 +83,8 @@ environment:
     # Adaptive chemosensory sensor: fold-change on the derivative channel.
     adaptive_chemosensor_enabled: true
     adaptive_chemosensor_readout: fold_change
-    adaptive_chemosensor_alpha: 0.1
-    adaptive_chemosensor_epsilon: 0.001
+    adaptive_chemosensor_alpha: 0.1  # no-op under fold_change (only `contrast` uses the background)
+    adaptive_chemosensor_epsilon: 0.1  # calibrated (0.001 collapses foraging — see header)
 
   foraging:
     foods_on_grid: 5
