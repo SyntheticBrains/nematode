@@ -995,6 +995,11 @@ class Continuous2DConfig(BaseModel):
     # fixed ±1-cell offset; the worm samples concentration at ±this perpendicular
     # to its heading. Non-negative (zero disables the lateral sweep).
     sweep_amplitude_mm: float = Field(default=0.5, ge=0.0)
+    # Body/contact-scale Euclidean damage radius (mm) applied on the continuous
+    # substrate when a predator's configured ``damage_radius`` is <= 0 (the integer
+    # grid "same-cell" default, unreachable as a Euclidean distance). Default ≈ 1
+    # body length. Configurable for predator-difficulty calibration.
+    predator_damage_radius_mm: float = Field(default=1.0, ge=0.0)
 
 
 class EnvironmentConfig(BaseModel):
@@ -2871,6 +2876,7 @@ def create_env_from_config(
                 max_step_mm=continuous_config.max_step_mm,
                 capture_radius_mm=continuous_config.capture_radius_mm,
                 sweep_amplitude_mm=continuous_config.sweep_amplitude_mm,
+                predator_damage_radius_mm=continuous_config.predator_damage_radius_mm,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,
