@@ -161,6 +161,7 @@ Two reusable methodology contributions ship unscooped: the **lag-matrix cross-pa
 - **Discrete grid-world (not continuous physics)** — addressed in Phase 6 alongside Rung 2 chemical gradients and corrected ASH/ADL contact-based nociception (the latter is owed correctness work flagged in [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md)).
 - **No native body mechanics** (sinusoidal undulation, omega turns, pirouettes) — interop with OpenWorm/Sibernetic at the c302 boundary if needed; native implementation is not on the Phase 6 critical path.
 - **Multi-task aggregation infrastructure** — Baldwin prerequisite; revisits if a future phase commits to the Baldwin question.
+- **Dynamic-diffusion / source-dynamics chemical fields** — Phase 6's Fick gradients (T6) are *static* (frozen at assay time). Carried forward, decomposed: **(a) source dynamics** (food/chemical depletion → within-episode field change) is the biological route to area-restricted search / within-episode memory — held as the conditional `T7.separation.ars_depletion` task, gated on the bit-memory positive control; **(b) the full `∂C/∂t = D∇²C` PDE** is phase-7-depth, lowest priority (no behavioural model uses a live PDE — a point sensor can't perceive global field dynamics). Plus **per-signal `D` literature calibration** (food / predator sulfolipid via Liu et al. 2018 / CO₂): Phase 6 (`extend-fick-chemical-fields`) ships the Fick *mechanism* with tuned-scale defaults; biologically-grounded `D` values are phase-7 fidelity polish.
 
 ### Research Questions for Phase 6+
 
