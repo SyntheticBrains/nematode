@@ -94,6 +94,7 @@ def field_magnitude(
         return float(strength * np.exp(-((distance / fick_length) ** 2)))
     return float(strength * np.exp(-distance / decay))
 
+
 # Type aliases
 type Viewport = tuple[int, int, int, int]
 """Viewport bounds as (min_x, min_y, max_x, max_y) in world coordinates."""

@@ -11,7 +11,7 @@
 ## 3. Mode-aware predator field
 
 - [x] 3.1 Add `_predator_field_magnitude(distance)` on the env, calling the shared helper with the predator params (mode / decay / strength / `fick_length()`).
-- [x] 3.2 Route `get_predator_concentration` through `_predator_field_magnitude` (replace the inline `exp(−distance/decay)`; preserve the `distance == 0 → strength` boundary). `get_predator_sulfolipid_concentration` (its alias) inherits Fick for free.
+- [x] 3.2 Route `get_predator_concentration` through `_predator_field_magnitude` (replace the inline `exp(−distance/decay)`). *As-built: the explicit `distance == 0 → strength` special-case was **removed** — the kernel returns `strength` at distance 0, so the boundary is preserved implicitly (byte-identical).* `get_predator_sulfolipid_concentration` (its alias) inherits Fick for free.
 - [x] 3.3 Route `_compute_predator_gradient_vector` through `_predator_field_magnitude` for the per-source magnitude (keep the negative/repulsive sign + the `arctan2` direction; skip `distance == 0`).
 - [x] 3.4 Confirm temperature / oxygen / pheromone fields are **untouched** (out of scope).
 
@@ -25,6 +25,6 @@
 ## 5. Validation + gates
 
 - [x] 5.1 `openspec validate extend-fick-chemical-fields --strict` passes.
-- [ ] 5.2 Targeted `pre-commit run --files <changed>` green during iteration; full `pre-commit run -a` before push.
+- [x] 5.2 Targeted `pre-commit run --files <changed>` green during iteration; full `pre-commit run -a` before push. *(Full `-a` green: ruff/pyright + full suite pass; ruff-format applied one PEP8 blank line.)*
 - [x] 5.3 Full `uv run pytest -m "not nightly"` green. *(3885 passed, 1 skipped, 2 xfailed. Plus an end-to-end headless smoke — `tmp/verify_predator_fick.yml`: predators with `gradient_field_mode: fick` + `diffusion_coefficient: 3.0` + `predator_chemosensation_klinotaxis` sensing — runs clean, exercising the config→env→Fick-predator-field→sensing path.)*
 - [x] 5.4 Tick `phase6-tracking` `T7.prep.fick_chemical_fields` (predator-sulfolipid done; pheromone / CO₂ + per-signal-`D` calibration remain noted follow-ups).
