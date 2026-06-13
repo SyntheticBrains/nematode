@@ -366,6 +366,26 @@ class TestPredatorFickGradientGeometry:
         assert with_d.fick_length() == pytest.approx((4.0 * 9.0 * 1.0) ** 0.5)
         assert PredatorParams(gradient_decay_constant=8.0).fick_length() == 8.0
 
+    def test_fick_length_rejects_nonpositive_inputs(self):
+        """fick_length() raises on non-positive D / assay_time / decay-fallback."""
+        with pytest.raises(ValueError, match="diffusion_coefficient > 0"):
+            PredatorParams(diffusion_coefficient=0.0).fick_length()
+        with pytest.raises(ValueError, match="assay_time > 0"):
+            PredatorParams(diffusion_coefficient=1.0, assay_time=0.0).fick_length()
+        with pytest.raises(ValueError, match="gradient_decay_constant"):
+            ForagingParams(gradient_decay_constant=0.0).fick_length()
+
+    def test_field_magnitude_rejects_unknown_mode(self):
+        """The shared kernel raises on an unrecognised field mode (no silent fallback)."""
+        from quantumnematode.env.env import field_magnitude
+
+        with pytest.raises(ValueError, match="Unknown gradient field mode"):
+            field_magnitude(1.0, mode="gaussian", decay=8.0, strength=1.0, fick_length=8.0)
+        # known modes still work (strength at distance 0)
+        kw = {"decay": 8.0, "strength": 1.0, "fick_length": 8.0}
+        assert field_magnitude(0.0, mode="fick", **kw) == 1.0
+        assert field_magnitude(0.0, mode="exponential", **kw) == 1.0
+
 
 class TestPoissonDiskSampling:
     """Test cases for Poisson disk sampling food distribution."""

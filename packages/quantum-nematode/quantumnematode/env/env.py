@@ -89,10 +89,18 @@ def field_magnitude(
       scale when ``D`` is unset). Per-signal ``L`` sets distinct geometry (larger → broader).
 
     At ``distance == 0`` both modes return ``strength`` (``exp(0) == 1``).
+
+    Raises
+    ------
+    ValueError
+        If ``mode`` is neither ``"exponential"`` nor ``"fick"``.
     """
     if mode == "fick":
         return float(strength * np.exp(-((distance / fick_length) ** 2)))
-    return float(strength * np.exp(-distance / decay))
+    if mode == "exponential":
+        return float(strength * np.exp(-distance / decay))
+    msg = f"Unknown gradient field mode {mode!r}; expected 'exponential' or 'fick'."
+    raise ValueError(msg)
 
 
 # Type aliases
@@ -249,7 +257,20 @@ class ForagingParams:
         continuity with the tuned exponential ``decay`` scale.
         """
         if self.diffusion_coefficient is not None:
+            if self.diffusion_coefficient <= 0 or self.assay_time <= 0:
+                msg = (
+                    "Fick diffusion length requires diffusion_coefficient > 0 and "
+                    f"assay_time > 0, got diffusion_coefficient={self.diffusion_coefficient}, "
+                    f"assay_time={self.assay_time}."
+                )
+                raise ValueError(msg)
             return float((4.0 * self.diffusion_coefficient * self.assay_time) ** 0.5)
+        if self.gradient_decay_constant <= 0:
+            msg = (
+                "Fick diffusion length falls back to gradient_decay_constant, which must "
+                f"be > 0, got {self.gradient_decay_constant}."
+            )
+            raise ValueError(msg)
         return float(self.gradient_decay_constant)
 
 
@@ -314,7 +335,20 @@ class PredatorParams:
         tuned exponential ``decay`` scale (mirrors ``ForagingParams.fick_length``).
         """
         if self.diffusion_coefficient is not None:
+            if self.diffusion_coefficient <= 0 or self.assay_time <= 0:
+                msg = (
+                    "Fick diffusion length requires diffusion_coefficient > 0 and "
+                    f"assay_time > 0, got diffusion_coefficient={self.diffusion_coefficient}, "
+                    f"assay_time={self.assay_time}."
+                )
+                raise ValueError(msg)
             return float((4.0 * self.diffusion_coefficient * self.assay_time) ** 0.5)
+        if self.gradient_decay_constant <= 0:
+            msg = (
+                "Fick diffusion length falls back to gradient_decay_constant, which must "
+                f"be > 0, got {self.gradient_decay_constant}."
+            )
+            raise ValueError(msg)
         return float(self.gradient_decay_constant)
 
 
