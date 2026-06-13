@@ -6,8 +6,9 @@
 #     (``adaptive_chemosensor_*``): fold-change coding on the derivative/turning channel
 #     ((dC/dt)/(C+eps)), the literature-faithful hyper-Weber readout.
 #
-# Continuous-action PPO needs a higher entropy_coef (~0.10) than the discrete grid to
-# keep the tanh-Gaussian log_std off the clamp floor.
+# NB the continuous tanh-Gaussian log_std does NOT collapse to the clamp floor here (the
+# earlier assumption that drove a high ~0.10 entropy_coef); it pins at the +2 ceiling, i.e.
+# over-explores. See the stability-calibration note on entropy_coef / learning_rate below.
 #
 # Calibrated for T7 (T7.prep.foraging_calibration; forensics in
 # tmp/evaluations/t7-continuous-prep/ -> T7 logbook):
@@ -37,8 +38,13 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    entropy_coef: 0.1  # continuous needs higher entropy than discrete
-    learning_rate: 0.001
+    # Stability-calibrated for T7 (T7.prep.continuous_tuning). The seed-fragility was NOT
+    # log_std collapse to the clamp floor (the earlier assumption) — saved-weight inspection
+    # shows log_std pins at the +2 MAX ceiling, i.e. OVER-exploration. Fix is the OPPOSITE of
+    # the old high-entropy rule: LOWER entropy + LOWER lr. entropy 0.10→0.02, lr 0.001→0.0003
+    # lifts per-seed success 60%→94% (n=16, mean 1.01).
+    entropy_coef: 0.02
+    learning_rate: 0.0003
     rollout_buffer_size: 256
     num_epochs: 10
     num_minibatches: 2
