@@ -51,6 +51,10 @@ class Continuous2DParams:
     max_step_mm: float = 1.0
     capture_radius_mm: float = 1.0
     sweep_amplitude_mm: float = 0.5
+    # Body/contact-scale Euclidean damage radius (mm) used when a predator's configured
+    # ``damage_radius`` is <= 0 — the integer grid "same-cell" default is unreachable as a
+    # Euclidean distance, so without this fallback continuous predators can never deal damage.
+    predator_damage_radius_mm: float = 1.0
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -460,6 +464,18 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             for px, py in (self._predator_xy(pred) for pred in self.predators)
         )
 
+    def _effective_damage_radius(self, pred: Predator) -> float:
+        """Euclidean damage radius (mm) for a predator on the continuous substrate.
+
+        Falls back to the body/contact-scale ``predator_damage_radius_mm`` when the
+        configured ``damage_radius`` is <= 0 — the integer grid "same-cell" default is
+        unreachable as a Euclidean distance, so without this fallback continuous predators
+        could never deal damage. An explicit positive ``damage_radius`` takes precedence.
+        """
+        if pred.damage_radius > 0:
+            return float(pred.damage_radius)
+        return self.continuous.predator_damage_radius_mm
+
     def is_agent_in_damage_radius_for(self, agent_id: str) -> bool:
         """Return True if the agent is within any predator's (Euclidean) damage radius."""
         if not self.predator.enabled:
@@ -467,7 +483,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         ax, ay = self._agent_xy(agent_id)
         for pred in self.predators:
             px, py = self._predator_xy(pred)
-            if math.hypot(ax - px, ay - py) <= pred.damage_radius:
+            if math.hypot(ax - px, ay - py) <= self._effective_damage_radius(pred):
                 logger.debug(
                     f"Agent {agent_id} in damage radius of {pred.predator_type.value} "
                     f"predator at {(px, py)} (continuous-2D)",
@@ -495,7 +511,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         for pred in self.predators:
             px, py = self._predator_xy(pred)
             distance = math.hypot(ax - px, ay - py)
-            if distance > pred.damage_radius:
+            if distance > self._effective_damage_radius(pred):
                 continue
             if nearest_dist is None or distance < nearest_dist:
                 nearest_pred, nearest_dist = pred, distance

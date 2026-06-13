@@ -37,10 +37,15 @@ def _env(  # noqa: PLR0913 — test factory threads predator config knobs
     damage: int = 2,
     speed: float = 1.0,
     max_step: float = 1.0,
+    dmg_fallback: float = 1.0,
     seed: int = 7,
 ) -> Continuous2DEnvironment:
     return Continuous2DEnvironment(
-        continuous=Continuous2DParams(world_size_mm=_WORLD, max_step_mm=max_step),
+        continuous=Continuous2DParams(
+            world_size_mm=_WORLD,
+            max_step_mm=max_step,
+            predator_damage_radius_mm=dmg_fallback,
+        ),
         predator=PredatorParams(
             enabled=True,
             count=count,
@@ -191,6 +196,44 @@ class TestEuclideanDetection:
 
         pred.pos_continuous = (12.5, 12.5)  # Euclidean 3.54 > 3
         assert env.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID) is False
+
+
+class TestDamageRadiusFallback:
+    """Body/contact-scale fallback when damage_radius is the unreachable grid default.
+
+    The integer grid default ``damage_radius=0`` is unreachable as a Euclidean distance,
+    so the continuous substrate falls back to ``predator_damage_radius_mm``.
+    """
+
+    def test_default_zero_falls_back_to_body_scale(self) -> None:
+        # damage_radius=0 (grid default) -> fallback predator_damage_radius_mm (default 1.0 mm).
+        env = _env(detection=50, damage=0)
+        _set_agent(env, (10.0, 10.0))
+        pred = _pred(env)
+
+        pred.pos_continuous = (10.8, 10.0)  # Euclidean 0.8 ≤ 1.0 fallback
+        assert env.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID) is True
+
+        pred.pos_continuous = (11.5, 10.0)  # Euclidean 1.5 > 1.0 fallback
+        assert env.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID) is False
+
+    def test_configurable_fallback_radius(self) -> None:
+        # damage_radius=0 but a larger body/contact scale configured.
+        env = _env(detection=50, damage=0, dmg_fallback=2.5)
+        _set_agent(env, (10.0, 10.0))
+        pred = _pred(env)
+
+        pred.pos_continuous = (12.0, 10.0)  # Euclidean 2.0 ≤ 2.5 fallback
+        assert env.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID) is True
+
+    def test_explicit_positive_damage_radius_takes_precedence(self) -> None:
+        # An explicit positive damage_radius (3) wins over a small fallback (0.5).
+        env = _env(detection=50, damage=3, dmg_fallback=0.5)
+        _set_agent(env, (10.0, 10.0))
+        pred = _pred(env)
+
+        pred.pos_continuous = (12.0, 10.0)  # Euclidean 2.0: ≤ 3 (explicit), > 0.5 (fallback)
+        assert env.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID) is True
 
 
 class TestContactZoneContinuousHeading:
