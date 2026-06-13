@@ -4,7 +4,9 @@
 
 - [x] 1.1 Add `predator_damage_radius_mm: float = 1.0` to `Continuous2DParams`
   (`env/continuous_2d.py`), documented as the body/contact-scale Euclidean damage radius
-  applied when the configured `damage_radius <= 0`.
+  applied when the configured `damage_radius <= 0`; add the matching
+  `Continuous2DConfig.predator_damage_radius_mm` pydantic field and factory wiring in
+  `utils/config_loader.py` so it is settable from the YAML `continuous:` block.
 - [x] 1.2 Add `_effective_damage_radius(self, pred) -> float` to `Continuous2DEnvironment`:
   `float(pred.damage_radius)` if `pred.damage_radius > 0` else `self.continuous.predator_damage_radius_mm`.
 - [x] 1.3 Use `_effective_damage_radius(pred)` in `is_agent_in_damage_radius_for` and

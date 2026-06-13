@@ -12,8 +12,10 @@ value always wins. This keeps the grid path byte-stable and honours any intentio
 
 ## D2 — `predator_damage_radius_mm` on `Continuous2DParams` (default 1.0 mm)
 
-The fallback value is a new field on `Continuous2DParams` (the `continuous:` config block),
-mirroring `capture_radius_mm` / `world_size_mm`:
+The fallback value is a new field wired through both the pydantic `Continuous2DConfig`
+(`config_loader.py`, the YAML `continuous:` block) and the env-side `Continuous2DParams`
+dataclass via the `create_env_from_config` factory, mirroring `capture_radius_mm` /
+`world_size_mm`:
 
 - Default **1.0 mm** = one `body_length_mm`, i.e. "predator within one body length = contact bite" —
   the same body-scale logic used for food capture, and a value the Stage-1 canary confirmed

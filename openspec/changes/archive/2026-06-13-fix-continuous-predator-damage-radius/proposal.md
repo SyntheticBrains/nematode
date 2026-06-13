@@ -58,6 +58,10 @@ env-upgrade delta on predator behaviour would be meaningless.
     helper returning `float(pred.damage_radius)` when positive else
     `predator_damage_radius_mm`; use it in `is_agent_in_damage_radius_for` and
     `get_agent_predator_contact_zone_for`.
+  - `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — add the matching
+    `Continuous2DConfig.predator_damage_radius_mm` pydantic field (`Field(default=1.0, ge=0.0)`)
+    and thread it through the `create_env_from_config` factory into `Continuous2DParams`, so the
+    fallback radius is settable from the YAML `continuous:` block (parity with `capture_radius_mm`).
 - **Tests:** continuous predator damage triggers at body scale with the default
   `damage_radius` (regression); explicit positive `damage_radius` still honoured; grid damage
   remains integer same-cell, byte-stable.
