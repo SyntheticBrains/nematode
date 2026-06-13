@@ -798,6 +798,30 @@ class SensingConfig(BaseModel):
         ),
     )
 
+    @model_validator(mode="after")
+    def _warn_alpha_noop_under_fold_change(self) -> "SensingConfig":
+        """Warn when ``adaptive_chemosensor_alpha`` is set under the ``fold_change`` readout.
+
+        Alpha only drives the ``contrast`` readout's leaky-integrator background; the
+        ``fold_change`` readout is ``(dC/dt)/(C+eps)`` with no background term, so alpha is
+        a no-op there. Warn only for a non-default value (so default configs stay quiet) —
+        the tuning lever for ``fold_change`` is ``adaptive_chemosensor_epsilon``.
+        """
+        alpha_default = type(self).model_fields["adaptive_chemosensor_alpha"].default
+        if (
+            self.adaptive_chemosensor_enabled
+            and self.adaptive_chemosensor_readout == "fold_change"
+            and self.adaptive_chemosensor_alpha != alpha_default
+        ):
+            logger.warning(
+                "adaptive_chemosensor_alpha=%s has no effect under the 'fold_change' "
+                "readout (alpha only controls the leaky-integrator background used by the "
+                "'contrast' readout). Tune adaptive_chemosensor_epsilon for fold_change, "
+                "or select the 'contrast' readout to make alpha active.",
+                self.adaptive_chemosensor_alpha,
+            )
+        return self
+
 
 def _module_suffix_for_mode(mode: SensingMode) -> str:
     """Return the module name suffix for a given sensing mode."""

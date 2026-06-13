@@ -1,5 +1,7 @@
 """Tests for configuration loading utilities."""
 
+import logging
+
 import pytest
 from quantumnematode.env import (
     AerotaxisParams,
@@ -496,6 +498,44 @@ class TestSensingConfig:
         sensing = env_config.get_sensing_config()
         assert sensing.chemotaxis_mode == SensingMode.TEMPORAL
         assert sensing.stam_enabled is True
+
+    def test_adaptive_alpha_noop_warning_under_fold_change(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A non-default alpha under the fold_change readout warns (alpha is a no-op there)."""
+        with caplog.at_level(logging.WARNING):
+            SensingConfig(
+                adaptive_chemosensor_enabled=True,
+                adaptive_chemosensor_readout="fold_change",
+                adaptive_chemosensor_alpha=0.01,
+            )
+        assert any("adaptive_chemosensor_alpha" in r.getMessage() for r in caplog.records)
+
+    def test_adaptive_alpha_default_no_warning_under_fold_change(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The default alpha under fold_change is quiet (no spurious warning)."""
+        with caplog.at_level(logging.WARNING):
+            SensingConfig(
+                adaptive_chemosensor_enabled=True,
+                adaptive_chemosensor_readout="fold_change",
+            )
+        assert not any("adaptive_chemosensor_alpha" in r.getMessage() for r in caplog.records)
+
+    def test_adaptive_alpha_active_under_contrast_no_warning(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Alpha IS used by the contrast readout → a non-default value is not flagged."""
+        with caplog.at_level(logging.WARNING):
+            SensingConfig(
+                adaptive_chemosensor_enabled=True,
+                adaptive_chemosensor_readout="contrast",
+                adaptive_chemosensor_alpha=0.01,
+            )
+        assert not any("adaptive_chemosensor_alpha" in r.getMessage() for r in caplog.records)
 
 
 class TestValidateSensingConfig:
