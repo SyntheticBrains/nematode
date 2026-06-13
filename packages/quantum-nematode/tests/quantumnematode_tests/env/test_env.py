@@ -268,6 +268,125 @@ class TestFickGradientGeometry:
         assert params.fick_length() == 8.0
 
 
+class TestPredatorFickGradientGeometry:
+    """Rung-2 static Fick-shaped geometry extended to the predator-sulfolipid field."""
+
+    def _env(self, predator: PredatorParams) -> DynamicForagingEnvironment:
+        return DynamicForagingEnvironment(
+            grid_size=40,
+            start_pos=(20, 20),
+            predator=predator,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+    @staticmethod
+    def _place_one(env: DynamicForagingEnvironment, pos: tuple[int, int]) -> None:
+        """Pin the single predator at a known cell for deterministic field queries."""
+        env.predators[0].position = pos
+
+    def test_exponential_default_byte_stable(self):
+        """Default (exponential) predator field matches the prior inline kernel exactly."""
+        env = self._env(
+            PredatorParams(
+                enabled=True,
+                count=1,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+            ),
+        )
+        self._place_one(env, (30, 20))  # distance 10 east of (20, 20)
+        expected = float(np.tanh(1.0 * np.exp(-10.0 / 8.0) * 1.0))
+        assert env.get_predator_concentration((20, 20)) == expected
+
+    def test_fick_mode_uses_gaussian_kernel(self):
+        """Fick mode evaluates strength * exp(-(r/L)**2) on the predator field."""
+        env = self._env(
+            PredatorParams(
+                enabled=True,
+                count=1,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+                gradient_field_mode="fick",
+            ),
+        )
+        self._place_one(env, (30, 20))
+        expected = float(np.tanh(1.0 * np.exp(-((10.0 / 8.0) ** 2)) * 1.0))
+        assert env.get_predator_concentration((20, 20)) == expected
+
+    def test_fick_differs_from_exponential(self):
+        """Fick and exponential predator fields differ at the same distance."""
+        common = {
+            "enabled": True,
+            "count": 1,
+            "gradient_decay_constant": 8.0,
+            "gradient_strength": 1.0,
+        }
+        exp_env = self._env(PredatorParams(**common))
+        fick_env = self._env(PredatorParams(**common, gradient_field_mode="fick"))
+        self._place_one(exp_env, (30, 20))
+        self._place_one(fick_env, (30, 20))
+        assert exp_env.get_predator_concentration(
+            (20, 20),
+        ) != fick_env.get_predator_concentration((20, 20))
+
+    def test_fick_at_source_returns_strength(self):
+        """At distance 0 the Fick predator kernel returns the configured strength."""
+        env = self._env(
+            PredatorParams(
+                enabled=True,
+                count=1,
+                gradient_strength=1.0,
+                gradient_field_mode="fick",
+            ),
+        )
+        self._place_one(env, (20, 20))  # on the query point
+        assert env.get_predator_concentration((20, 20)) == float(np.tanh(1.0))
+
+    def test_per_signal_diffusion_coefficient_independent_of_food(self):
+        """The predator field uses its OWN D (sqrt(4 D t)), not the food field's scale."""
+        env = self._env(
+            PredatorParams(
+                enabled=True,
+                count=1,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+                gradient_field_mode="fick",
+                diffusion_coefficient=2.0,
+            ),
+        )
+        self._place_one(env, (30, 20))
+        length = (4.0 * 2.0 * 1.0) ** 0.5  # predator's own L = 2.828, not the decay 8.0
+        expected = float(np.tanh(np.exp(-((10.0 / length) ** 2))))
+        assert env.get_predator_concentration((20, 20)) == expected
+
+    def test_predator_fick_length(self):
+        """PredatorParams.fick_length(): sqrt(4 D t) when D set; decay fallback otherwise."""
+        with_d = PredatorParams(diffusion_coefficient=9.0, assay_time=1.0)
+        assert with_d.fick_length() == pytest.approx((4.0 * 9.0 * 1.0) ** 0.5)
+        assert PredatorParams(gradient_decay_constant=8.0).fick_length() == 8.0
+
+    def test_fick_length_rejects_nonpositive_inputs(self):
+        """fick_length() raises on non-positive D / assay_time / decay-fallback."""
+        with pytest.raises(ValueError, match="diffusion_coefficient > 0"):
+            PredatorParams(diffusion_coefficient=0.0).fick_length()
+        with pytest.raises(ValueError, match="assay_time > 0"):
+            PredatorParams(diffusion_coefficient=1.0, assay_time=0.0).fick_length()
+        with pytest.raises(ValueError, match="gradient_decay_constant"):
+            ForagingParams(gradient_decay_constant=0.0).fick_length()
+
+    def test_field_magnitude_rejects_unknown_mode(self):
+        """The shared kernel raises on an unrecognised field mode (no silent fallback)."""
+        from quantumnematode.env.env import field_magnitude
+
+        with pytest.raises(ValueError, match="Unknown gradient field mode"):
+            field_magnitude(1.0, mode="gaussian", decay=8.0, strength=1.0, fick_length=8.0)
+        # known modes still work (strength at distance 0)
+        kw = {"decay": 8.0, "strength": 1.0, "fick_length": 8.0}
+        assert field_magnitude(0.0, mode="fick", **kw) == 1.0
+        assert field_magnitude(0.0, mode="exponential", **kw) == 1.0
+
+
 class TestPoissonDiskSampling:
     """Test cases for Poisson disk sampling food distribution."""
 
