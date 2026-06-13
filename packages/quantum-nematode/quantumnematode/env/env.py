@@ -69,6 +69,31 @@ MAX_POISSON_ATTEMPTS = 100
 # Constants for gradient scaling
 GRADIENT_SCALING_TANH_FACTOR = 1.0
 
+
+def field_magnitude(
+    distance: float,
+    *,
+    mode: str,
+    decay: float,
+    strength: float,
+    fick_length: float,
+) -> float:
+    """Per-source diffusing-chemical field magnitude at ``distance`` from a source.
+
+    Shared by every diffusing chemical field (food, predator sulfolipid, …) so the
+    exp-vs-Fick dispatch lives in one place:
+
+    - ``exponential`` (default; legacy + grid byte-stable): ``strength * exp(-distance / decay)``.
+    - ``fick``: the frozen analytic Fick (Gaussian) kernel ``strength * exp(-(distance / L)**2)``
+      with diffusion length ``L = fick_length`` (``sqrt(4 * D * assay_time)`` or the decay
+      scale when ``D`` is unset). Per-signal ``L`` sets distinct geometry (larger → broader).
+
+    At ``distance == 0`` both modes return ``strength`` (``exp(0) == 1``).
+    """
+    if mode == "fick":
+        return float(strength * np.exp(-((distance / fick_length) ** 2)))
+    return float(strength * np.exp(-distance / decay))
+
 # Type aliases
 type Viewport = tuple[int, int, int, int]
 """Viewport bounds as (min_x, min_y, max_x, max_y) in world coordinates."""
@@ -270,7 +295,26 @@ class PredatorParams:
     damage_radius: int = 0
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
+    # Chemical-gradient field mode for the predator-sulfolipid distal-chemo field.
+    # ``exponential`` is the default and keeps every existing/grid config byte-stable;
+    # ``fick`` selects the frozen analytic Fick (Gaussian) kernel with the predator's own
+    # diffusion length ``L = sqrt(4 * D * assay_time)`` (or ``gradient_decay_constant`` when
+    # ``diffusion_coefficient`` is unset). Per-signal ``D`` is independent of the food field.
+    gradient_field_mode: str = "exponential"
+    diffusion_coefficient: float | None = None
+    assay_time: float = 1.0
     brain_config: PredatorBrainConfig | None = None
+
+    def fick_length(self) -> float:
+        """Fick diffusion length ``sqrt(4 * D * assay_time)`` for the predator Gaussian kernel.
+
+        Falls back to ``gradient_decay_constant`` (interpreted as the diffusion length
+        directly) when ``diffusion_coefficient`` is unset, preserving continuity with the
+        tuned exponential ``decay`` scale (mirrors ``ForagingParams.fick_length``).
+        """
+        if self.diffusion_coefficient is not None:
+            return float((4.0 * self.diffusion_coefficient * self.assay_time) ** 0.5)
+        return float(self.gradient_decay_constant)
 
 
 @dataclass
@@ -1979,28 +2023,36 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return False
 
     def _food_field_magnitude(self, distance: float) -> float:
-        """Per-source food/chemical field magnitude at ``distance`` from a source.
+        """Per-source food/chemical field magnitude at ``distance`` (mode-aware).
 
-        Two selectable field modes (``foraging.gradient_field_mode``):
-
-        - ``exponential`` (default; legacy + grid byte-stable): the
-          kernel ``strength * exp(-distance / decay_constant)``.
-        - ``fick``: the frozen analytic Fick (Gaussian) kernel
-          ``strength * exp(-(distance / L)**2)`` with diffusion length
-          ``L = sqrt(4 * D * assay_time)`` (or ``decay_constant`` when ``D`` is
-          unset). Per-signal ``D`` sets distinct geometry (larger ``D`` → broader
-          gradient).
-
-        At ``distance == 0`` both modes return ``strength`` (``exp(0) == 1``).
-        Applies to the food/chemical field only; the predator field keeps the
-        exponential kernel.
+        Delegates to the shared :func:`field_magnitude` kernel with the foraging field's
+        ``gradient_field_mode`` (``exponential`` default | ``fick``). Numerically identical
+        to the prior inline kernel.
         """
         foraging = self.foraging
-        if foraging.gradient_field_mode == "fick":
-            length = foraging.fick_length()
-            return float(foraging.gradient_strength * np.exp(-((distance / length) ** 2)))
-        return float(
-            foraging.gradient_strength * np.exp(-distance / foraging.gradient_decay_constant),
+        return field_magnitude(
+            distance,
+            mode=foraging.gradient_field_mode,
+            decay=foraging.gradient_decay_constant,
+            strength=foraging.gradient_strength,
+            fick_length=foraging.fick_length(),
+        )
+
+    def _predator_field_magnitude(self, distance: float) -> float:
+        """Per-source predator-sulfolipid field magnitude at ``distance`` (mode-aware).
+
+        Delegates to the shared :func:`field_magnitude` kernel with the predator field's
+        own ``gradient_field_mode`` + diffusion coefficient (independent of food). At the
+        ``exponential`` default this equals the prior inline ``strength * exp(-distance /
+        decay)`` (byte-stable).
+        """
+        predator = self.predator
+        return field_magnitude(
+            distance,
+            mode=predator.gradient_field_mode,
+            decay=predator.gradient_decay_constant,
+            strength=predator.gradient_strength,
+            fick_length=predator.fick_length(),
         )
 
     def _compute_food_gradient_vector(
@@ -2084,10 +2136,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             if distance == 0:
                 continue
 
-            # Exponential decay gradient (negative/repulsive)
-            strength = -self.predator.gradient_strength * np.exp(
-                -distance / self.predator.gradient_decay_constant,
-            )
+            # Mode-aware field magnitude (exponential default | Fick), negated (repulsive).
+            strength = -self._predator_field_magnitude(distance)
 
             # Compute direction vector (pointing away from predator due to negative strength)
             direction = np.arctan2(dy, dx)
@@ -2141,10 +2191,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
     ) -> float:
         """Scalar predator danger signal at position (no directional information).
 
-        Sums exponential decay magnitudes from all predator positions,
-        then normalizes via tanh to [0, 1]. Models what ASH/ADL nociceptive
-        neurons detect — predator-secreted chemicals (sulfolipids) via
-        temporal comparison, not directional gradient.
+        Sums the per-source predator field magnitudes (mode-aware: exponential default |
+        Fick — see `_predator_field_magnitude`) from all predator positions, then
+        normalizes via tanh to [0, 1]. Models what ASH/ADL nociceptive neurons detect —
+        predator-secreted chemicals (sulfolipids) via temporal comparison, not directional
+        gradient.
 
         Parameters
         ----------
@@ -2169,14 +2220,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             dx = px - position[0]
             dy = py - position[1]
             distance = np.sqrt(dx**2 + dy**2)
-
-            if distance == 0:
-                raw_concentration += self.predator.gradient_strength
-                continue
-
-            raw_concentration += self.predator.gradient_strength * np.exp(
-                -distance / self.predator.gradient_decay_constant,
-            )
+            # Mode-aware field magnitude (exponential default | Fick). At distance 0 the
+            # kernel returns `strength`, so no special-case is needed.
+            raw_concentration += self._predator_field_magnitude(distance)
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 

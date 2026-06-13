@@ -402,6 +402,12 @@ class PredatorConfig(BaseModel):
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
     gradient_strength: float = 1.0
+    # Predator-sulfolipid chemical-gradient field mode (exponential default keeps existing
+    # configs byte-stable; ``fick`` uses the frozen Gaussian kernel with the predator's own
+    # diffusion coefficient, independent of the food field).
+    gradient_field_mode: Literal["exponential", "fick"] = "exponential"
+    diffusion_coefficient: float | None = Field(default=None, gt=0.0)
+    assay_time: float = Field(default=1.0, gt=0.0)
     brain_config: PredatorBrainConfigSchema | None = None
 
     def to_params(self) -> PredatorParams:
@@ -422,6 +428,9 @@ class PredatorConfig(BaseModel):
             damage_radius=self.damage_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
+            gradient_field_mode=self.gradient_field_mode,
+            diffusion_coefficient=self.diffusion_coefficient,
+            assay_time=self.assay_time,
             brain_config=(self.brain_config.to_params() if self.brain_config is not None else None),
         )
 
