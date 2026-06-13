@@ -1,0 +1,105 @@
+# CFCPPO continuous-action klinotaxis foraging on the calibrated continuous-2D substrate —
+# env-fidelity upgrades enabled:
+#   - static Fick-shaped gradient geometry (``gradient_field_mode: fick``; Gaussian kernel
+#     exp(-(r/L)^2), L = gradient_decay_constant),
+#   - the adaptive-threshold / biphasic chemosensory sensor (``adaptive_chemosensor_*``):
+#     fold-change coding on the derivative/turning channel ((dC/dt)/(C+eps)).
+# Env / reward / sensing / satiety are identical to the calibrated MLP config
+# (mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml) for a clean cross-arm comparison;
+# substrate calibration provenance (eps=0.1, capture 2.0 mm, ~1500-ep budget) is documented
+# there (T7.prep.foraging_calibration).
+#
+# Stability-calibrated for T7 (T7.prep.continuous_tuning). Unlike MLP/LSTM, CfC's continuous
+# log_std does NOT pin at either clamp — saved-weight inspection shows a healthy mid-range
+# spread for both passing and failing seeds, so CfC is NOT over-exploring. Its residual
+# fragility is optimization-basin variance, and the lever is therefore the OPPOSITE of the
+# MLP fix: entropy is RAISED 0.01 -> 0.03 (CfC ran the lowest entropy of all arms) to help
+# seeds escape bad basins. This lifts per-seed success 38% -> 68% (n=16, mean 0.96 — the best
+# mean of the recurrent arms). The remaining basin-stuck seeds are handled by the n>=8 +
+# reported-per-seed-success-rate evaluation protocol, not by further tuning.
+
+max_steps: 400
+brain:
+  name: cfcppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    units: 32
+    ncp_sparsity: 0.5
+    cfc_mode: default
+    bptt_chunk_length: 64
+
+    # Actor head: MLP on the recurrent hidden state (better than the motor-direct
+    # head for continuous control).
+    actor_head: mlp
+    actor_hidden_dim: 64
+    actor_num_layers: 2
+
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    # Raised 0.01 -> 0.03 (CfC's log_std is un-pinned/mid-range, i.e. not over-exploring,
+    # so more entropy helps seeds escape bad optimization basins — see header).
+    entropy_coef: 0.03
+    rollout_buffer_size: 256
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_klinotaxis by env-sensing mode
+      - proprioception   # Heading context so the brain can correlate dC/dt with movement
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0  # body/patch scale (calibrated — see MLP config header)
+    sweep_amplitude_mm: 0.5
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    # Adaptive chemosensory sensor: fold-change on the derivative channel.
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1  # no-op under fold_change (only `contrast` uses the background)
+    adaptive_chemosensor_epsilon: 0.1  # calibrated (0.001 collapses foraging — see MLP config header)
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    # Static Fick-shaped gradient geometry (Gaussian kernel, L = decay).
+    gradient_field_mode: fick
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
