@@ -11,7 +11,9 @@ Renders the simulation in a Pygame window with layered surfaces:
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import TYPE_CHECKING, Any
 
 from quantumnematode.env.sprites import (
@@ -1119,8 +1121,21 @@ HEATMAP_FIELDS = ("food", "predator", "temperature", "oxygen", "pheromone")
 # Worm / sensor overlay colours.
 WORM_MARKER_COLOR = (220, 195, 160)
 WORM_OUTLINE_COLOR = (120, 95, 60)
-WORM_HEADING_COLOR = (255, 230, 180)
+WORM_HEAD_COLOR = (235, 210, 170)  # bright head end (distinct from the body)
+WORM_BODY_COLOR = (188, 162, 128)  # tapering body, darker so the head stands out
+WORM_HEADING_COLOR = (
+    255,
+    110,
+    70,
+)  # heading indicator: a contrasting hue, not blended into the body
 KLINOTAXIS_SAMPLE_COLOR = (120, 200, 255)
+
+# Path-following undulating body geometry.
+_WORM_BODY_SEGMENTS = 12  # recent positions kept; the body is a stylised trail over this path
+_WORM_RESET_JUMP_MM = 3.0  # a pos jump larger than any legal step (<= max_step_mm) ⇒ episode reset
+_WORM_UNDULATION_WAVELENGTH_SEG = 8.0  # body segments per crawl wave
+_WORM_UNDULATION_PHASE_STEP = 0.55  # phase advance per frame (rad) → the wave travels down the body
+_WORM_UNDULATION_AMPLITUDE_FRAC = 0.7  # lateral wiggle as a fraction of the worm radius
 PREDATOR_DETECTION_RING_COLOR = (200, 160, 220)
 PREDATOR_DAMAGE_RING_COLOR = (220, 70, 70)
 QUIVER_ARROW_COLOR = (120, 230, 140)
@@ -1204,6 +1219,12 @@ class Continuous2DRenderer:
         self._quiver_enabled = False
         self._heatmap_field_idx = 0
         self._heatmap_cache: tuple[Any, Any] | None = None  # (cache_key, surface)
+
+        # Worm body: a trailing history of recent positions (drawn as an undulating,
+        # tapered body) + a crawl-wave phase. Reset on an episode-boundary position jump.
+        self._body_history: deque[tuple[float, float]] = deque(maxlen=_WORM_BODY_SEGMENTS)
+        self._last_worm_pos: tuple[float, float] | None = None
+        self._undulation_phase: float = 0.0
 
         self._closed = False
         self._last_status_line_count = 0
@@ -1316,6 +1337,7 @@ class Continuous2DRenderer:
             return
 
         self._update_camera(state)
+        self._update_body_history(state.pos)
         status_lines = self._build_status_lines(state, session_text)
         self._resize_if_needed(len(status_lines))
 
@@ -1335,6 +1357,25 @@ class Continuous2DRenderer:
 
         self._pg.display.flip()
         self._clock.tick(30)
+
+    def _update_body_history(self, pos: tuple[float, float]) -> None:
+        """Accumulate the worm's recent positions for the trailing body.
+
+        Clears the history on an episode-boundary position jump (a discontinuity larger
+        than any single legal step, e.g. the reset teleport to the arena centre), so the
+        body never streaks across a reset. Advances the crawl-wave phase each frame.
+        """
+        import math
+
+        last = self._last_worm_pos
+        if (
+            last is not None
+            and math.hypot(pos[0] - last[0], pos[1] - last[1]) > _WORM_RESET_JUMP_MM
+        ):
+            self._body_history.clear()
+        self._body_history.append((float(pos[0]), float(pos[1])))
+        self._last_worm_pos = (float(pos[0]), float(pos[1]))
+        self._undulation_phase += _WORM_UNDULATION_PHASE_STEP
 
     # ── Parity layers (ported to continuous coordinates) ──────────────────────
 
@@ -1645,12 +1686,49 @@ class Continuous2DRenderer:
                 cx, cy = self._world_to_pixel(px, py)
                 self._screen.blit(sprite, (cx - half, cy - half))
 
-        # Worm: filled marker + heading line (continuous heading_rad), sized to the
-        # active (camera) zoom so it grows in the following view.
-        worm_radius = max(4, round(0.6 * self._active_ppm))
+        # Worm: a path-following, tapered, undulating body trailing the head, then a
+        # distinct head marker + a contrasting heading indicator. Sized to the active
+        # (camera) zoom; width scales with body_length_mm. The body is a stylised visual
+        # overlay (the worm is a point kinematically) — it does not affect the simulation.
+        body_len_mm = getattr(getattr(env, "continuous", None), "body_length_mm", 1.0)
+        worm_radius = max(4, round(0.6 * body_len_mm * self._active_ppm))
         wx, wy = self._world_to_pixel(state.pos[0], state.pos[1])
-        self._pg.draw.circle(self._screen, WORM_MARKER_COLOR, (wx, wy), worm_radius)
+
+        # Body backbone = recent positions (tail→head) in pixel space, with a travelling
+        # sinusoidal lateral undulation and a head→tail taper. Drawn as a CONNECTED tube:
+        # thick links between consecutive points fill the gaps, with rounded circles at the
+        # joints (so it reads as one continuous worm, not disjoint balls).
+        backbone = [self._world_to_pixel(hx_w, hy_w) for hx_w, hy_w in self._body_history]
+        n = len(backbone)
+        if n >= 2:  # noqa: PLR2004 — need at least two points to define a backbone direction
+            wave_k = 2.0 * math.pi / _WORM_UNDULATION_WAVELENGTH_SEG
+            amp = _WORM_UNDULATION_AMPLITUDE_FRAC * worm_radius
+            # Undulated pixel point + local radius (thin tail → full head) per segment.
+            seg_pts: list[tuple[int, int, int]] = []
+            for i, (bx, by) in enumerate(backbone):
+                nxt, prv = backbone[min(i + 1, n - 1)], backbone[max(i - 1, 0)]
+                dx, dy = nxt[0] - prv[0], nxt[1] - prv[1]
+                seg = math.hypot(dx, dy) or 1.0
+                perp_x, perp_y = -dy / seg, dx / seg  # unit normal to the local backbone
+                offset = amp * math.sin(self._undulation_phase + i * wave_k)
+                seg_r = max(2, round(worm_radius * (0.3 + 0.7 * (i / (n - 1)))))
+                seg_pts.append((round(bx + perp_x * offset), round(by + perp_y * offset), seg_r))
+            # Connecting links first (thickness ≈ local diameter), then rounded joints on top.
+            for (x0, y0, r0), (x1, y1, r1) in pairwise(seg_pts):
+                self._pg.draw.line(
+                    self._screen,
+                    WORM_BODY_COLOR,
+                    (x0, y0),
+                    (x1, y1),
+                    max(2, r0 + r1),
+                )
+            for x, y, r in seg_pts:
+                self._pg.draw.circle(self._screen, WORM_BODY_COLOR, (x, y), r)
+
+        # Head marker (at the true, un-undulated position) — distinct, brighter end.
+        self._pg.draw.circle(self._screen, WORM_HEAD_COLOR, (wx, wy), worm_radius)
         self._pg.draw.circle(self._screen, WORM_OUTLINE_COLOR, (wx, wy), worm_radius, 1)
+        # Heading indicator: short, contrasting hue (not blended into the body).
         heading_len = worm_radius + max(6, round(1.2 * self._active_ppm))
         hx = wx + math.cos(state.heading_rad) * heading_len
         hy = wy - math.sin(state.heading_rad) * heading_len  # world y-up → screen y-down
