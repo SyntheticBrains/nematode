@@ -55,6 +55,13 @@ class Continuous2DParams:
     # ``damage_radius`` is <= 0 — the integer grid "same-cell" default is unreachable as a
     # Euclidean distance, so without this fallback continuous predators can never deal damage.
     predator_damage_radius_mm: float = 1.0
+    # Maximum per-step angular velocity (radians) — the rotational analogue of ``max_step_mm``.
+    # The brain's normalized ``turn`` in [-1, 1] is rescaled to [-max_turn_rad, +max_turn_rad] in
+    # ``move_agent_normalized``. Default 0.5 rad (~29 deg/step) — biologically realistic (real
+    # C. elegans reorients ~15-30 deg/step), well below the previous unbounded pi (~180 deg/step
+    # "helicopter" spin). Foraging converges robustly at this bound with the C1 entropy/episode
+    # tuning; predator evasion is comparable to looser bounds (validated T7 C1).
+    max_turn_rad: float = 0.5
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -239,7 +246,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         speed_norm : float
             Normalized forward speed in ``[0, 1]`` (mapped to ``[0, max_step_mm]``).
         turn_norm : float
-            Normalized heading change in ``[-1, 1]`` (mapped to ``[-π, π]``).
+            Normalized heading change in ``[-1, 1]`` (mapped to
+            ``[-max_turn_rad, +max_turn_rad]`` — the configured max per-step angular velocity).
         agent_id : str
             The agent to move (defaults to the single/default agent).
 
@@ -251,7 +259,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         a safety net.
         """
         speed = speed_norm * self.continuous.max_step_mm
-        turn = turn_norm * math.pi
+        turn = turn_norm * self.continuous.max_turn_rad
         self._kinematic_move(self.agents[agent_id], speed, turn)
 
     # ----- float source placement + capture-radius consumption + Euclidean -----
