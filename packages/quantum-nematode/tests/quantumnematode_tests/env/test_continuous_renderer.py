@@ -458,23 +458,29 @@ class TestWormBody:
 
     def test_history_accumulates_and_resets_on_jump(self) -> None:
         r = self._renderer()
-        # Successive small (legal) steps accumulate into the body history.
-        for x in (10.0, 10.5, 11.0, 11.4):
-            r._update_body_history((x, 10.0))
-        assert len(r._body_history) == 4
-        assert r._undulation_phase > 0.0  # crawl phase advanced per frame
+        try:
+            # Successive small (legal) steps accumulate into the body history.
+            for x in (10.0, 10.5, 11.0, 11.4):
+                r._update_body_history((x, 10.0))
+            assert len(r._body_history) == 4
+            assert r._undulation_phase > 0.0  # crawl phase advanced per frame
 
-        # A large position jump (episode reset → teleport to centre) clears the history.
-        r._update_body_history((2.0, 18.0))
-        assert list(r._body_history) == [(2.0, 18.0)]
+            # A large position jump (episode reset → teleport to centre) clears the history.
+            r._update_body_history((2.0, 18.0))
+            assert list(r._body_history) == [(2.0, 18.0)]
+        finally:
+            r.close()
 
     def test_full_frame_with_body_renders(self) -> None:
         env = Continuous2DEnvironment(continuous=Continuous2DParams(world_size_mm=20.0))
         r = self._renderer()
-        for x in (10.0, 10.5, 11.0):  # build a trail, then render with the body drawn
-            r.render_frame(env, _make_state(pos=(x, 10.0)))
-        assert len(r._body_history) == 3
-        assert r._screen.get_width() > 0
+        try:
+            for x in (10.0, 10.5, 11.0):  # build a trail, then render with the body drawn
+                r.render_frame(env, _make_state(pos=(x, 10.0)))
+            assert len(r._body_history) == 3
+            assert r._screen.get_width() > 0
+        finally:
+            r.close()
 
     def test_heading_colour_contrasts_body(self) -> None:
         from quantumnematode.env import pygame_renderer as pr
