@@ -1,0 +1,104 @@
+# TransformerPPO continuous-2D single-behaviour canary — THERMOTAXIS (foraging + lethal thermal gradient).
+#
+# Stage-1 substrate behaviour canary (T7.prep.continuous_behaviours.s1_substrate_canary):
+# confirms continuous thermotaxis (avoiding lethal thermal zones) is learnable on the calibrated
+# substrate. Env / sensing / reward / satiety match the calibrated foraging substrate; brain = the
+# TransformerPPO tuned recipe (T7.prep.continuous_tuning).
+#
+# CALIBRATED thermal difficulty (Stage-1): gradient_strength 1.25. The T4-carried 1.5 forces a
+# degenerate park-in-comfort / starve on the (harder) continuous foraging substrate (foraging
+# collapses to ~0); 1.25 keeps thermal a real, learnable pressure with foraging preserved and is
+# in-band on both robust arms. Calibrated on the continuous substrate's own terms (reward frozen);
+# gentler side leaves stacking headroom for the integrated cell.
+
+max_steps: 500
+brain:
+  name: transformerppo
+  config:
+    action_mode: continuous
+    window_size: 16
+    d_model: 64
+    nhead: 4
+    num_encoder_layers: 2
+    dim_feedforward: 128
+    dropout: 0.0
+    critic_hidden_dim: 64
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.03
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 4
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    sensory_modules:
+    - food_chemotaxis
+    - thermotaxis
+    - proprioception
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_temperature_proximity: 0.0
+  penalty_health_damage: 0.0
+  reward_health_gain: 0.1
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0
+    sweep_amplitude_mm: 0.5
+  viewport_size:
+  - 11
+  - 11
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1
+    adaptive_chemosensor_epsilon: 0.1
+    thermotaxis_mode: klinotaxis
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_field_mode: fick
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+  health:
+    max_hp: 100.0
+    predator_damage: 0.0
+    food_healing: 5.0
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0
+    gradient_direction: 0.0
+    gradient_strength: 1.25
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    comfort_delta: 5.0
+    discomfort_delta: 10.0
+    danger_delta: 15.0
