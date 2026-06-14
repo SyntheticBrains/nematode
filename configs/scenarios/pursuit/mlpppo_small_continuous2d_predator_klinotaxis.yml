@@ -64,6 +64,10 @@ environment:
     max_step_mm: 1.0
     capture_radius_mm: 2.0
     sweep_amplitude_mm: 0.5
+    # Body/contact-scale Euclidean predator damage radius (mm). The predators block leaves
+    # `damage_radius` at the grid default 0 (an unreachable Euclidean distance), so the
+    # continuous env applies this fallback — stated explicitly here to match the header.
+    predator_damage_radius_mm: 1.0
   viewport_size:
   - 11
   - 11
