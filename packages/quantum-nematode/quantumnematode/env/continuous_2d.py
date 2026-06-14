@@ -450,6 +450,26 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         if math.hypot(new_x - origin[0], new_y - origin[1]) > 1e-9:  # noqa: PLR2004
             pred.distance_traveled += 1
 
+    def get_nearest_predator_distance_for(self, agent_id: str) -> float | None:
+        """Return the **Euclidean** distance to the nearest predator from a specific agent.
+
+        Overrides the grid base's integer-Manhattan computation so the predator distance the
+        reward calculator consumes (`curr_pred_dist`) is coherent with the continuous geometry —
+        true Euclidean distance between the agent's `pos_continuous` and each predator's
+        real-valued position. The reward *formula* is unchanged (it queries the same method).
+        """
+        if not self.predator.enabled or not self.predators:
+            return None
+        ax, ay = self._agent_xy(agent_id)
+        return min(
+            math.hypot(ax - px, ay - py)
+            for px, py in (self._predator_xy(pred) for pred in self.predators)
+        )
+
+    def get_nearest_predator_distance(self) -> float | None:
+        """Euclidean distance to the nearest predator from the default agent (continuous-2D)."""
+        return self.get_nearest_predator_distance_for(DEFAULT_AGENT_ID)
+
     def is_agent_in_danger_for(self, agent_id: str) -> bool:
         """Return True if the agent is within (Euclidean) detection radius of any predator."""
         if not self.predator.enabled:

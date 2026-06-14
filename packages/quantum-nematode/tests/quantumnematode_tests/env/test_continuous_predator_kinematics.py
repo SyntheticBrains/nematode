@@ -198,6 +198,41 @@ class TestEuclideanDetection:
         assert env.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID) is False
 
 
+class TestEuclideanNearestPredatorDistance:
+    """The nearest-predator-distance the reward consumes is Euclidean on continuous."""
+
+    def test_nearest_distance_is_euclidean_not_manhattan(self) -> None:
+        env = _env(detection=50, damage=2)
+        _set_agent(env, (10.0, 10.0))
+        pred = _pred(env)
+        pred.pos_continuous = (13.0, 14.0)  # offset (3, 4): Euclidean 5.0, Manhattan 7
+
+        dist = env.get_nearest_predator_distance_for(DEFAULT_AGENT_ID)
+        assert dist == pytest.approx(5.0)  # hypot(3, 4), not |3| + |4| = 7
+
+    def test_nearest_distance_takes_the_minimum(self) -> None:
+        env = _env(count=2, detection=50, damage=2)
+        _set_agent(env, (10.0, 10.0))
+        env.predators[0].pos_continuous = (10.0, 18.0)  # 8.0 away
+        env.predators[1].pos_continuous = (13.0, 14.0)  # 5.0 away (nearest)
+
+        assert env.get_nearest_predator_distance_for(DEFAULT_AGENT_ID) == pytest.approx(5.0)
+
+    def test_convenience_matches_default_agent(self) -> None:
+        env = _env(detection=50, damage=2)
+        _set_agent(env, (10.0, 10.0))
+        _pred(env).pos_continuous = (13.0, 14.0)
+
+        assert env.get_nearest_predator_distance() == env.get_nearest_predator_distance_for(
+            DEFAULT_AGENT_ID,
+        )
+
+    def test_returns_none_when_no_predators(self) -> None:
+        env = _env(count=0, detection=50, damage=2)
+        _set_agent(env, (10.0, 10.0))
+        assert env.get_nearest_predator_distance_for(DEFAULT_AGENT_ID) is None
+
+
 class TestDamageRadiusFallback:
     """Body/contact-scale fallback when damage_radius is the unreachable grid default.
 
