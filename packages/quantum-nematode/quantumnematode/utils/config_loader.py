@@ -1000,6 +1000,11 @@ class Continuous2DConfig(BaseModel):
     # grid "same-cell" default, unreachable as a Euclidean distance). Default ≈ 1
     # body length. Configurable for predator-difficulty calibration.
     predator_damage_radius_mm: float = Field(default=1.0, ge=0.0)
+    # Maximum per-step angular velocity (radians) — the rotational analogue of max_step_mm.
+    # The brain's normalized turn in [-1, 1] is rescaled to [-max_turn_rad, +max_turn_rad].
+    # Default 0.5 rad (~29 deg/step): biologically realistic (real C. elegans ~15-30 deg/step),
+    # well below the previous pi (~180 deg/step "helicopter" spin). Must be > 0.
+    max_turn_rad: float = Field(default=0.5, gt=0.0)
 
 
 class EnvironmentConfig(BaseModel):
@@ -2877,6 +2882,7 @@ def create_env_from_config(
                 capture_radius_mm=continuous_config.capture_radius_mm,
                 sweep_amplitude_mm=continuous_config.sweep_amplitude_mm,
                 predator_damage_radius_mm=continuous_config.predator_damage_radius_mm,
+                max_turn_rad=continuous_config.max_turn_rad,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,

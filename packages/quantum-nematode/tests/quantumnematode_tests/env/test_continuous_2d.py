@@ -291,3 +291,30 @@ class TestGridSubstrateUnchanged:
         env.move_agent(Action.FORWARD)  # discrete cardinal move from centre
         moved = env.agent_pos
         assert abs(moved[0] - start[0]) + abs(moved[1] - start[1]) == 1
+
+
+class TestMaxTurnRate:
+    """The normalized turn is rescaled to physical radians by ``max_turn_rad``."""
+
+    def test_default_is_a_realistic_bound(self) -> None:
+        # Positive and strictly tighter than the [-pi, pi] heading-wrap range — so a
+        # single step cannot perform a near-full heading reversal.
+        assert 0.0 < Continuous2DParams().max_turn_rad < math.pi
+
+    def test_normalized_turn_scaled_by_max_turn_rad(self) -> None:
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=20.0, max_turn_rad=0.4),
+        )
+        _state(env).heading_rad = 0.0
+        env.move_agent_normalized(speed_norm=0.0, turn_norm=1.0)  # full normalized turn
+        assert _state(env).heading_rad == pytest.approx(0.4)  # == max_turn_rad, not pi
+
+        _state(env).heading_rad = 0.0
+        env.move_agent_normalized(speed_norm=0.0, turn_norm=-1.0)
+        assert _state(env).heading_rad == pytest.approx(-0.4)
+
+    def test_config_field_parses_and_defaults(self) -> None:
+        from quantumnematode.utils.config_loader import Continuous2DConfig
+
+        assert Continuous2DConfig().max_turn_rad == pytest.approx(0.5)
+        assert Continuous2DConfig(max_turn_rad=0.8).max_turn_rad == pytest.approx(0.8)
