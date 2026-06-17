@@ -6,10 +6,6 @@
 #     (``adaptive_chemosensor_*``): fold-change coding on the derivative/turning channel
 #     ((dC/dt)/(C+eps)), the literature-faithful hyper-Weber readout.
 #
-# NB the continuous tanh-Gaussian log_std does NOT collapse to the clamp floor here (the
-# earlier assumption that drove a high ~0.10 entropy_coef); it pins at the +2 ceiling, i.e.
-# over-explores. See the stability-calibration note on entropy_coef / learning_rate below.
-#
 # Calibrated for T7 (T7.prep.foraging_calibration; forensics in
 # tmp/evaluations/t7-continuous-prep/ -> T7 logbook):
 #   - adaptive_chemosensor_epsilon: 0.1 (NOT the 0.001 default — at 0.001 the
@@ -22,9 +18,20 @@
 #     capture lets the worm capture where the field still has gradient. Lifts MLP
 #     ~3x (n=10 median 0.63) and connectome ~2.2x (0.64, tight), keeping the
 #     high-fidelity Fick + adaptive substrate.
-# Residual seed-fragility (continuous tanh-Gaussian log_std) -> T7.prep.continuous_tuning.
+# C1 foraging convergence recipe (T7.*.c1_foraging). The collect-all-10 task converges to ~100%
+# per-seed success with a SIMPLE recipe once the continuous reward is metric-coherent (the
+# fix-continuous-distance-reward-metric / -predator-mechano-channel / -sensing-float-position
+# changes):
+#   - max_steps 800 + forage-to-survive satiety (init 300 / decay 0.8 / gain 20): budget + hunger
+#     pressure to collect the full 10 (target 10 is a survival/budget task, not a learning wall);
+#   - gamma 0.99 + learning_rate 0.0003 (PPO defaults): the corrected reward removes the spurious
+#     per-step reward that previously inflated returns, so the long-horizon discount (0.999) and
+#     low lr (5e-5) that earlier compensated for it are NOT needed — gamma 0.99 matches the T4 grid
+#     runs (cleaner cross-regime comparison);
+#   - entropy_coef 0.05 + max_turn_rad 0.5 (~29deg/step, biologically realistic turn bound).
+# n=4 on the corrected reward: MLP ~99% / Transformer 100% / LSTM 100% / CfC ~91% per-seed success.
 
-max_steps: 400
+max_steps: 800
 brain:
   name: mlpppo
   config:
@@ -38,12 +45,10 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    # Stability-calibrated for T7 (T7.prep.continuous_tuning). The seed-fragility was NOT
-    # log_std collapse to the clamp floor (the earlier assumption) — saved-weight inspection
-    # shows log_std pins at the +2 MAX ceiling, i.e. OVER-exploration. Fix is the OPPOSITE of
-    # the old high-entropy rule: LOWER entropy + LOWER lr. entropy 0.10→0.02, lr 0.001→0.0003
-    # lifts per-seed success 60%→94% (n=16, mean 1.01).
-    entropy_coef: 0.02
+    # PPO defaults suffice on the metric-coherent reward (see header): gamma 0.99 + lr 0.0003,
+    # no long-horizon / low-lr stabilisation needed. entropy 0.05 (klinotaxis benefits from
+    # sustained exploration; pairs with the max_turn_rad 0.5 turn bound).
+    entropy_coef: 0.05
     learning_rate: 0.0003
     rollout_buffer_size: 256
     num_epochs: 10
@@ -66,9 +71,11 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 200.0
-  satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2
+  # Forage-to-survive over the episode (see header): hungry start + food sustains life so the
+  # worm must keep foraging to reach the full target.
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
 
 environment:
   env_type: continuous_2d
@@ -78,6 +85,7 @@ environment:
     max_step_mm: 1.0
     capture_radius_mm: 2.0  # body/patch scale (calibrated — see header)
     sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5  # ~29deg/step — biologically realistic turn bound (env default; explicit here)
 
   viewport_size: [11, 11]
 
