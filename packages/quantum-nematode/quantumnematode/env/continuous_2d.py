@@ -510,6 +510,30 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             for px, py in (self._predator_xy(pred) for pred in self.predators)
         )
 
+    def predator_contact_intensity_at(self, pos: tuple[float, float]) -> float:  # type: ignore[override]
+        """Euclidean graded predator contact intensity at a position (continuous metric).
+
+        Overrides the grid base's Manhattan + raw-``damage_radius`` computation with Euclidean
+        distance against the predator's real-valued position and the *effective* damage radius
+        (:meth:`_effective_damage_radius`, which applies the ``predator_damage_radius_mm``
+        fallback when the configured ``damage_radius <= 0``). Without this the continuous default
+        ``damage_radius = 0`` would skip every predator and the ``predator_mechano`` channel
+        would be constantly zero.
+        """
+        if not self.predator.enabled or not self.predators:
+            return 0.0
+        best_intensity = 0.0
+        for pred in self.predators:
+            radius = self._effective_damage_radius(pred)
+            if radius <= 0:
+                continue
+            px, py = self._predator_xy(pred)
+            dist = math.hypot(pos[0] - px, pos[1] - py)
+            if dist > radius:
+                continue
+            best_intensity = max(best_intensity, 0.0, 1.0 - dist / radius)
+        return best_intensity
+
     def is_agent_in_danger_for(self, agent_id: str) -> bool:
         """Return True if the agent is within (Euclidean) detection radius of any predator."""
         if not self.predator.enabled:

@@ -69,6 +69,40 @@ def _pred(env: Continuous2DEnvironment) -> Predator:
     return env.predators[0]
 
 
+class TestContinuousPredatorContactIntensity:
+    """Euclidean ``predator_contact_intensity_at`` + effective-radius fallback.
+
+    The ``predator_mechano`` channel was dead on continuous (default ``damage_radius=0``
+    skipped every predator); the continuous override revives it via the effective radius
+    and uses Euclidean distance.
+    """
+
+    def test_revived_with_default_damage_radius_zero(self) -> None:
+        # Continuous default damage_radius=0 (would skip every predator pre-fix), fallback 1.0 mm.
+        env = _env(damage=0, dmg_fallback=1.0)
+        _pred(env).pos_continuous = (10.0, 10.0)
+        # 0.5 mm away (Euclidean) → intensity 1 - 0.5/1.0 = 0.5, NOT 0.0 (channel revived).
+        assert env.predator_contact_intensity_at((10.5, 10.0)) == pytest.approx(0.5)
+
+    def test_euclidean_metric(self) -> None:
+        env = _env(damage=0, dmg_fallback=2.0)
+        _pred(env).pos_continuous = (10.0, 10.0)
+        # Off-axis query: Euclidean hypot(0.6,0.8)=1.0 → 1 - 1.0/2.0 = 0.5;
+        # Manhattan would be 1.4 → 0.3. Assert the Euclidean value.
+        assert env.predator_contact_intensity_at((10.6, 10.8)) == pytest.approx(0.5)
+
+    def test_zero_outside_effective_radius(self) -> None:
+        env = _env(damage=0, dmg_fallback=1.0)
+        _pred(env).pos_continuous = (10.0, 10.0)
+        assert env.predator_contact_intensity_at((15.0, 10.0)) == 0.0  # 5 mm > 1 mm radius
+
+    def test_explicit_positive_radius_takes_precedence(self) -> None:
+        env = _env(damage=4, dmg_fallback=1.0)  # explicit 4 mm wins over the fallback
+        _pred(env).pos_continuous = (10.0, 10.0)
+        # 2 mm away, radius 4 → 1 - 2/4 = 0.5 (would be 0 if the 1 mm fallback were used).
+        assert env.predator_contact_intensity_at((12.0, 10.0)) == pytest.approx(0.5)
+
+
 class TestContinuousMovement:
     def test_pursuit_steers_toward_agent_and_advances_subcell(self) -> None:
         env = _env(detection=50)

@@ -2680,6 +2680,41 @@ class DynamicForagingEnvironment(BaseEnvironment):
             for pred in self.predators
         )
 
+    def predator_contact_intensity_at(self, pos: tuple[float, float]) -> float:
+        """Graded predator contact intensity at a position, in the env's native metric.
+
+        Parameters
+        ----------
+        pos : tuple[float, float]
+            The ``(x, y)`` position to evaluate.
+
+        Returns
+        -------
+        float
+            ``max(0, 1 - dist / damage_radius)`` against the highest-intensity predator within
+            its damage radius, or ``0.0`` when predators are disabled, none exist, or none are
+            in range. The biological ``predator_mechano`` (ALM/PLM/AVM contact) channel scalar.
+
+        Notes
+        -----
+        Grid uses Manhattan distance against the predator's integer position and the raw
+        ``damage_radius`` (predators with ``damage_radius <= 0`` are skipped). The continuous-2D
+        env overrides this with Euclidean distance and the *effective* damage radius (the
+        ``predator_damage_radius_mm`` fallback), so the channel is non-zero and metric-coherent
+        on the continuous substrate rather than constantly zero.
+        """
+        if not self.predator.enabled or not self.predators:
+            return 0.0
+        best_intensity = 0.0
+        for pred in self.predators:
+            if pred.damage_radius <= 0:
+                continue
+            dist = abs(pos[0] - pred.position[0]) + abs(pos[1] - pred.position[1])
+            if dist > pred.damage_radius:
+                continue
+            best_intensity = max(best_intensity, 0.0, 1.0 - dist / pred.damage_radius)
+        return best_intensity
+
     # --- Mechanosensation methods ---
 
     def move_agent(self, action: Action) -> None:
