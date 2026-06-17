@@ -152,7 +152,7 @@ class RewardCalculator:
                     # Previous predator distance in the env's NATIVE metric (Manhattan on grid,
                     # Euclidean on continuous-2D), matching ``curr_pred_dist`` — a Manhattan-vs-
                     # Euclidean mismatch would skew the evasion delta (see foraging note above).
-                    prev_pos = path[-2]
+                    prev_pos = (path[-2][0], path[-2][1])
                     prev_pred_dist = env.get_nearest_predator_distance_from(prev_pos)
                     # Positive when moving AWAY (curr > prev), negative when CLOSER
                     if prev_pred_dist is not None:
@@ -255,7 +255,7 @@ class RewardCalculator:
         # makes ``prev_dist - curr_dist`` systematically positive (Manhattan >= Euclidean), so
         # the potential-based distance term stops telescoping and pays a spurious per-step
         # survival reward.
-        prev_pos = path[-2]
+        prev_pos = (path[-2][0], path[-2][1])
         prev_dist = env.get_nearest_food_distance_from(prev_pos)
 
         if prev_dist is not None:

@@ -2512,15 +2512,27 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_nearest_food_distance_from(
         self,
-        pos: tuple[float, ...],
+        pos: tuple[float, float],
     ) -> float | None:
-        """Get the nearest-food distance from an arbitrary position, in the env's native metric.
+        """Get the nearest-food distance from an arbitrary position in the env's native metric.
 
-        Grid uses Manhattan (matching :meth:`get_nearest_food_distance_for`); the
-        continuous-2D env overrides this with Euclidean. Used by the reward calculator to
-        compute the *previous*-step distance in the SAME metric as the current-step distance,
-        so the potential-based distance-reward term telescopes correctly (a Manhattan-vs-
-        Euclidean mismatch otherwise pays a spurious per-step survival reward).
+        Parameters
+        ----------
+        pos : tuple[float, float]
+            The ``(x, y)`` position to measure from.
+
+        Returns
+        -------
+        float | None
+            Distance from ``pos`` to the nearest food source, or ``None`` if no foods exist.
+
+        Notes
+        -----
+        Grid uses Manhattan (matching :meth:`get_nearest_food_distance_for`); the continuous-2D
+        env overrides this with Euclidean. Used by the reward calculator to compute the
+        *previous*-step distance in the SAME metric as the current-step distance, so the
+        potential-based distance-reward term telescopes correctly (a Manhattan-vs-Euclidean
+        mismatch otherwise pays a spurious per-step survival reward).
         """
         if not self.foods:
             return None
@@ -2639,10 +2651,23 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_nearest_predator_distance_from(
         self,
-        pos: tuple[float, ...],
+        pos: tuple[float, float],
     ) -> float | None:
-        """Nearest-predator distance from an arbitrary position, in the env's native metric.
+        """Get the nearest-predator distance from an arbitrary position in the env's native metric.
 
+        Parameters
+        ----------
+        pos : tuple[float, float]
+            The ``(x, y)`` position to measure from.
+
+        Returns
+        -------
+        float | None
+            Distance from ``pos`` to the nearest predator, or ``None`` if predators are
+            disabled or none exist.
+
+        Notes
+        -----
         Grid uses Manhattan; the continuous-2D env overrides this with Euclidean. Used by the
         reward calculator for the *previous*-step predator distance so the evasion term
         telescopes in the same metric as the current-step distance (avoids the Manhattan-vs-

@@ -335,7 +335,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
 
     def get_nearest_food_distance_from(  # type: ignore[override]
         self,
-        pos: tuple[float, ...],
+        pos: tuple[float, float],
     ) -> float | None:
         """Euclidean nearest-food distance from an arbitrary position (continuous metric).
 
@@ -495,7 +495,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
 
     def get_nearest_predator_distance_from(  # type: ignore[override]
         self,
-        pos: tuple[float, ...],
+        pos: tuple[float, float],
     ) -> float | None:
         """Euclidean nearest-predator distance from an arbitrary position (continuous metric).
 
