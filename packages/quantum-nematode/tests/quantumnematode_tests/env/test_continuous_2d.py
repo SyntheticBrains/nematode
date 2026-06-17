@@ -137,6 +137,44 @@ class TestKinematicMovement:
         assert 0 <= st.position[1] <= env.grid_size - 1
 
 
+class TestDistanceMetricCoherence:
+    """Euclidean ``get_nearest_*_distance_from`` so the distance reward telescopes.
+
+    ``prev`` and ``curr`` share the env-native metric (Euclidean on continuous), so the
+    potential-based distance term does not pay a spurious per-step reward from a Manhattan-prev
+    vs Euclidean-curr mismatch.
+    """
+
+    def test_food_distance_from_is_euclidean(self) -> None:
+        env = _env(world=20.0)
+        env.foods = [(13, 14)]  # off-axis: Euclidean 5.0 from (10,10) vs Manhattan 7.0
+        assert env.get_nearest_food_distance_from((10.0, 10.0)) == pytest.approx(5.0)
+
+    def test_food_distance_reward_telescopes_on_tangential_move(self) -> None:
+        # Two positions on the same circle around the food (equal Euclidean distance) — a
+        # tangential move with no net approach. With the Euclidean metric prev == curr, so the
+        # distance-reward delta is ~0 (telescopes). A Manhattan metric would NOT be equal here
+        # (axis point 5.0 vs 45-degree point 7.07), which is exactly the bug this guards against.
+        env = _env(world=20.0)
+        env.foods = [(10, 10)]
+        axis = (15.0, 10.0)  # Euclidean 5.0, Manhattan 5.0
+        diag = (10.0 + 5.0 * math.cos(math.pi / 4), 10.0 + 5.0 * math.sin(math.pi / 4))  # Euc 5.0
+        prev_d = env.get_nearest_food_distance_from(axis)
+        curr_d = env.get_nearest_food_distance_from(diag)
+        assert prev_d is not None
+        assert curr_d is not None
+        assert prev_d == pytest.approx(curr_d, abs=1e-6)  # telescopes: delta ~ 0
+        # An approaching move yields a positive delta (the term still guides toward food).
+        closer_d = env.get_nearest_food_distance_from((12.0, 10.0))  # Euclidean 2.0
+        assert closer_d is not None
+        assert prev_d - closer_d == pytest.approx(3.0)
+
+    def test_distance_from_handles_empty(self) -> None:
+        env = _env(world=20.0)
+        env.foods = []
+        assert env.get_nearest_food_distance_from((10.0, 10.0)) is None
+
+
 class TestCaptureRadius:
     def test_reached_goal_within_radius(self) -> None:
         env = _env(capture_radius=1.0)

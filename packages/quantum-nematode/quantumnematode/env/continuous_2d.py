@@ -333,6 +333,21 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         """Return the true Euclidean distance to the nearest food for the default agent."""
         return self.get_nearest_food_distance_for(DEFAULT_AGENT_ID)
 
+    def get_nearest_food_distance_from(  # type: ignore[override]
+        self,
+        pos: tuple[float, float],
+    ) -> float | None:
+        """Euclidean nearest-food distance from an arbitrary position (continuous metric).
+
+        Overrides the grid base's Manhattan so the reward calculator's previous-step distance
+        uses the SAME Euclidean metric as the current-step distance — the distance-reward term
+        then telescopes correctly instead of paying a spurious Manhattan-minus-Euclidean
+        per-step survival reward.
+        """
+        if not self.foods:
+            return None
+        return min(math.hypot(pos[0] - food_x, pos[1] - food_y) for food_x, food_y in self.foods)
+
     # ----- continuous predator kinematics + Euclidean detection/damage ----------
     # On the continuous substrate predators move with continuous ``(speed, heading)``
     # kinematics and their detection / damage / contact geometry is Euclidean against
@@ -477,6 +492,23 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
     def get_nearest_predator_distance(self) -> float | None:
         """Euclidean distance to the nearest predator from the default agent (continuous-2D)."""
         return self.get_nearest_predator_distance_for(DEFAULT_AGENT_ID)
+
+    def get_nearest_predator_distance_from(  # type: ignore[override]
+        self,
+        pos: tuple[float, float],
+    ) -> float | None:
+        """Euclidean nearest-predator distance from an arbitrary position (continuous metric).
+
+        Overrides the grid base's Manhattan so the reward calculator's previous-step predator
+        distance uses the SAME Euclidean metric as the current-step distance (the evasion term
+        then telescopes instead of paying a spurious per-step reward).
+        """
+        if not self.predator.enabled or not self.predators:
+            return None
+        return min(
+            math.hypot(pos[0] - px, pos[1] - py)
+            for px, py in (self._predator_xy(pred) for pred in self.predators)
+        )
 
     def is_agent_in_danger_for(self, agent_id: str) -> bool:
         """Return True if the agent is within (Euclidean) detection radius of any predator."""

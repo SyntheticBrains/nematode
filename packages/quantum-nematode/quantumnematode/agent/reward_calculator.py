@@ -149,16 +149,16 @@ class RewardCalculator:
             if curr_pred_dist is not None and len(path) > 1:
                 evasion_reward = 0.0
                 if self.config.reward_mode == "default":
-                    prev_pos = path[-2]
-                    prev_pred_distances = [
-                        abs(prev_pos[0] - pred.position[0]) + abs(prev_pos[1] - pred.position[1])
-                        for pred in env.predators
-                    ]
-                    prev_pred_dist = min(prev_pred_distances)
+                    # Previous predator distance in the env's NATIVE metric (Manhattan on grid,
+                    # Euclidean on continuous-2D), matching ``curr_pred_dist`` — a Manhattan-vs-
+                    # Euclidean mismatch would skew the evasion delta (see foraging note above).
+                    prev_pos = (path[-2][0], path[-2][1])
+                    prev_pred_dist = env.get_nearest_predator_distance_from(prev_pos)
                     # Positive when moving AWAY (curr > prev), negative when CLOSER
-                    evasion_reward = self.config.penalty_predator_proximity * (
-                        curr_pred_dist - prev_pred_dist
-                    )
+                    if prev_pred_dist is not None:
+                        evasion_reward = self.config.penalty_predator_proximity * (
+                            curr_pred_dist - prev_pred_dist
+                        )
                 # Contact penalty: when predator is on or adjacent (dist ≤ 1),
                 # apply flat penalty so agent always has incentive to escape.
                 # Active under ALL reward modes — this is the load-bearing
@@ -249,12 +249,14 @@ class RewardCalculator:
         if curr_dist is None or len(path) <= 1:
             return 0.0
 
-        # Calculate previous nearest food distance
-        prev_pos = path[-2]
-        prev_distances = [
-            abs(prev_pos[0] - food[0]) + abs(prev_pos[1] - food[1]) for food in env.foods
-        ]
-        prev_dist = min(prev_distances) if prev_distances else None
+        # Calculate previous nearest food distance in the env's NATIVE metric (Manhattan on
+        # grid, Euclidean on continuous-2D), matching how ``curr_dist`` is computed. Computing
+        # ``prev_dist`` as Manhattan while ``curr_dist`` is Euclidean (the continuous case)
+        # makes ``prev_dist - curr_dist`` systematically positive (Manhattan >= Euclidean), so
+        # the potential-based distance term stops telescoping and pays a spurious per-step
+        # survival reward.
+        prev_pos = (path[-2][0], path[-2][1])
+        prev_dist = env.get_nearest_food_distance_from(prev_pos)
 
         if prev_dist is not None:
             distance_reward = self.config.reward_distance_scale * (prev_dist - curr_dist)
