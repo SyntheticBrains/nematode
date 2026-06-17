@@ -229,7 +229,7 @@ def _build_channel_fetchers(
 
 
 def _predator_contact_intensity_at(
-    position: tuple[int, ...],
+    position: tuple[float, ...],
     env: DynamicForagingEnvironment,
 ) -> float:
     """Graded contact intensity at ``position`` against env predators.
@@ -440,7 +440,7 @@ class QuantumNematodeAgent:
         self._stam: STAMBuffer | None = None
         self._active_channels: tuple[STAMChannelDef, ...] = ()
         self._channel_fetchers: list[ChannelFetcher] = []
-        self._previous_position: tuple[int, ...] | None = None
+        self._previous_position: tuple[float, ...] | None = None
         self._last_heading: Direction = Direction.UP
 
         if env is None:
@@ -755,18 +755,24 @@ class QuantumNematodeAgent:
         if not (any_non_oracle or sensing.stam_enabled):
             return result
 
-        # (a) Get scalar concentrations from environment at this agent's position
+        # (a) Get scalar concentrations from environment at this agent's position.
+        #   - ``agent_pos`` is the integer ``.position`` — used for the grid klinotaxis cell-offset
+        #     sampling (``_compute_lateral_offsets``) and the unused fallback below.
+        #   - ``sensing_pos`` is the field-sampling position: the float ``pos_continuous`` truth on
+        #     the continuous substrate (sub-cell sensing), the integer ``.position`` on the grid —
+        #     so continuous concentration fields are not re-quantised to grid cells.
         agent_pos = self.env.agents[self.agent_id].position
+        sensing_pos = self.env.agent_sensing_position(self.agent_id)
         step = self._episode_tracker.steps
 
         if sensing.chemotaxis_mode != SensingMode.ORACLE:
-            result["food_concentration"] = self.env.get_food_concentration(position=agent_pos)
+            result["food_concentration"] = self.env.get_food_concentration(position=sensing_pos)
             separated_grads.pop("food_gradient_strength", None)
             separated_grads.pop("food_gradient_direction", None)
 
         if sensing.nociception_mode != SensingMode.ORACLE:
             result["predator_concentration"] = self.env.get_predator_concentration(
-                position=agent_pos,
+                position=sensing_pos,
             )
             separated_grads.pop("predator_gradient_strength", None)
             separated_grads.pop("predator_gradient_direction", None)
@@ -779,12 +785,12 @@ class QuantumNematodeAgent:
         # Pheromone temporal concentrations (when not oracle mode)
         if self.env.pheromones.enabled and pheromone_food_mode != SensingMode.ORACLE:
             result["pheromone_food_concentration"] = self.env.get_pheromone_food_concentration(
-                position=agent_pos,
+                position=sensing_pos,
                 current_step=step,
             )
         if self.env.pheromones.enabled and pheromone_alarm_mode != SensingMode.ORACLE:
             result["pheromone_alarm_concentration"] = self.env.get_pheromone_alarm_concentration(
-                position=agent_pos,
+                position=sensing_pos,
                 current_step=step,
             )
         if (
@@ -794,7 +800,7 @@ class QuantumNematodeAgent:
         ):
             result["pheromone_aggregation_concentration"] = (
                 self.env.get_pheromone_aggregation_concentration(
-                    position=agent_pos,
+                    position=sensing_pos,
                     current_step=step,
                 )
             )
@@ -921,7 +927,7 @@ class QuantumNematodeAgent:
             result["pheromone_aggregation_lateral_gradient"] = right_c - left_c
 
         # (b) Compute position delta from previous position
-        current_pos = tuple(agent_pos)
+        current_pos = tuple(sensing_pos)
         pos_delta = (0.0, 0.0)
         if self._previous_position is not None:
             pos_delta = (
@@ -937,7 +943,9 @@ class QuantumNematodeAgent:
                 action_str = str(action.action) if action.action is not None else "stay"
                 action_idx = _ACTION_TO_IDX.get(action_str, 0)
 
-            pos_2d = (int(current_pos[0]), int(current_pos[1]))
+            # No int() cast: ``current_pos`` is the sensing position (float on continuous,
+            # integer on grid) so STAM channel scalars sample the field at the sub-cell truth.
+            pos_2d = (current_pos[0], current_pos[1])
             scalars = [fetcher(pos_2d, step) for fetcher in self._channel_fetchers]
 
             self._stam.record(
@@ -995,11 +1003,12 @@ class QuantumNematodeAgent:
         """
         sensing = self.sensing_config
 
-        # Resolve this agent's actual position (not the default agent's position).
-        # In multi-agent mode, self.env is shared — self.env.agent_pos returns the
-        # "default" backward-compat agent. Use agents[self.agent_id] instead.
+        # Resolve this agent's actual state (not the default agent's). In multi-agent mode
+        # self.env is shared — self.env.agent_pos returns the "default" agent.
         agent_state = self.env.agents[self.agent_id]
-        agent_pos: tuple[int, int] = agent_state.position
+        # Sample sensory fields at the sensing position: the float `pos_continuous` truth on the
+        # continuous substrate (sub-cell field sampling), the integer `.position` on the grid.
+        agent_pos = self.env.agent_sensing_position(self.agent_id)
 
         # Get separated food/predator gradients for sensory modules
         separated_grads = self.env.get_separated_gradients(

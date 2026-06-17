@@ -2092,7 +2092,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def _compute_food_gradient_vector(
         self,
-        position: tuple[int, ...],
+        position: tuple[float, ...],
     ) -> tuple[float, float]:
         """
         Compute the local food gradient vector (superposition of all food sources).
@@ -2140,7 +2140,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def _compute_predator_gradient_vector(
         self,
-        position: tuple[int, ...],
+        position: tuple[float, ...],
     ) -> tuple[float, float]:
         """
         Compute the local predator gradient vector (superposition of all predators).
@@ -2341,7 +2341,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_separated_gradients(
         self,
-        position: tuple[int, ...],
+        position: tuple[float, ...],
         *,
         disable_log: bool = False,
     ) -> dict[str, float]:
@@ -2952,6 +2952,30 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Reset agent HP to maximum (called at episode start)."""
         self.agent_hp = self.health.max_hp
 
+    def agent_sensing_position(self, agent_id: str) -> tuple[float, float]:
+        """Position at which sensory/reward fields are sampled for an agent.
+
+        Parameters
+        ----------
+        agent_id : str
+            Agent identifier.
+
+        Returns
+        -------
+        tuple[float, float]
+            The agent's integer `.position` on the discrete grid; overridden by the
+            continuous-2D env to return the real-valued `pos_continuous` (float truth).
+
+        Notes
+        -----
+        Field-sampling queries (scalar concentrations, separated gradients, STAM channels,
+        and the reward's field terms) SHALL sample at this position so the continuous substrate
+        is sensed at sub-cell resolution rather than rounded to a grid cell. Discrete
+        cell-identity logic (anti-dithering equality, visited-cells) keeps using the integer
+        `.position`, not this value.
+        """
+        return self.agents[agent_id].position
+
     # -------------------------------------------------------------------------
     # Multi-agent wrapper methods (*_for variants)
     # Methods that already accept a position parameter get thin wrappers.
@@ -2965,19 +2989,19 @@ class DynamicForagingEnvironment(BaseEnvironment):
         *,
         disable_log: bool = False,
     ) -> dict[str, float]:
-        """Get separated gradients for a specific agent's position."""
+        """Get separated gradients for a specific agent's (field-sampling) position."""
         return self.get_separated_gradients(
-            self.agents[agent_id].position,
+            self.agent_sensing_position(agent_id),
             disable_log=disable_log,
         )
 
     def get_food_concentration_for(self, agent_id: str) -> float:
-        """Get scalar food concentration at a specific agent's position."""
-        return self.get_food_concentration(position=self.agents[agent_id].position)
+        """Get scalar food concentration at a specific agent's (field-sampling) position."""
+        return self.get_food_concentration(position=self.agent_sensing_position(agent_id))
 
     def get_predator_concentration_for(self, agent_id: str) -> float:
-        """Get scalar predator concentration at a specific agent's position."""
-        return self.get_predator_concentration(position=self.agents[agent_id].position)
+        """Get scalar predator concentration at a specific agent's (field-sampling) position."""
+        return self.get_predator_concentration(position=self.agent_sensing_position(agent_id))
 
     def get_temperature_for(self, agent_id: str) -> float | None:
         """Get temperature at a specific agent's position."""

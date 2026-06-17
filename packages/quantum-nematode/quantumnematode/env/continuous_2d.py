@@ -297,6 +297,15 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             return state.pos_continuous
         return (float(state.position[0]), float(state.position[1]))
 
+    def agent_sensing_position(self, agent_id: str) -> tuple[float, float]:
+        """Sample sensory/reward fields at the agent's real-valued ``pos_continuous`` (float truth).
+
+        Overrides the grid base (which returns the rounded integer ``.position``) so continuous
+        sensing is sub-cell-faithful rather than re-quantised to grid cells. Discrete
+        cell-identity logic still uses the integer ``.position``.
+        """
+        return self._agent_xy(agent_id)
+
     def reached_goal_for(self, agent_id: str) -> bool:
         """Return True if the agent is within the capture radius (Euclidean) of any food."""
         agent_x, agent_y = self._agent_xy(agent_id)

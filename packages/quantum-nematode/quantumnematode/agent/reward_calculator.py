@@ -80,8 +80,12 @@ class RewardCalculator:
         reward = 0.0
         anti_dither_penalty = 0.0
 
-        # Resolve agent position
+        # Resolve agent position. ``agent_pos`` is the integer ``.position`` — required for the
+        # anti-dithering exact-cell-equality check below (the integer ``path`` history). Field
+        # queries use ``sensing_pos`` (the float ``pos_continuous`` truth on the continuous
+        # substrate, integer ``.position`` on the grid) so they sample at sub-cell resolution.
         agent_pos = env.agents[agent_id].position
+        sensing_pos = env.agent_sensing_position(agent_id)
 
         # Handle distance-based rewards for foraging environment
         distance_reward = self._calculate_foraging_distance_reward(env, path, agent_id)
@@ -134,7 +138,7 @@ class RewardCalculator:
             "gradient_proximity",
             "distal_chemo_contact_trigger",
         ):
-            predator_concentration = env.get_predator_concentration(agent_pos)
+            predator_concentration = env.get_predator_concentration(sensing_pos)
             gradient_penalty = self.config.penalty_predator_proximity * predator_concentration
             reward -= gradient_penalty
             logger.debug(

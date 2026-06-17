@@ -137,6 +137,39 @@ class TestKinematicMovement:
         assert 0 <= st.position[1] <= env.grid_size - 1
 
 
+class TestSensingFloatPosition:
+    """Sensory fields sample at the float ``pos_continuous`` truth (sub-cell sensing).
+
+    ``agent_sensing_position`` returns the float position on continuous, so two positions in the
+    same integer cell sense differently (pre-fix both rounded to the same cell).
+    """
+
+    def test_sensing_position_is_float_truth(self) -> None:
+        env = _env(world=20.0)
+        _state(env).pos_continuous = (10.3, 8.7)
+        assert env.agent_sensing_position(DEFAULT_AGENT_ID) == (10.3, 8.7)  # not (10, 9)
+
+    def test_subcell_food_concentration_differs(self) -> None:
+        env = _env(world=20.0)
+        env.foods = [(13, 10)]
+        _state(env).pos_continuous = (10.1, 10.0)
+        near_edge = env.get_food_concentration_for(DEFAULT_AGENT_ID)
+        _state(env).pos_continuous = (10.9, 10.0)  # same integer cell (10, 10) as above
+        far_edge = env.get_food_concentration_for(DEFAULT_AGENT_ID)
+        # Closer to the food at (13,10) → higher concentration; pre-fix both rounded to (10,10)
+        # and were identical.
+        assert far_edge > near_edge
+
+    def test_subcell_separated_gradient_differs(self) -> None:
+        env = _env(world=20.0)
+        env.foods = [(13, 10)]
+        _state(env).pos_continuous = (10.1, 10.0)
+        g_a = env.get_separated_gradients_for(DEFAULT_AGENT_ID)["food_gradient_strength"]
+        _state(env).pos_continuous = (10.9, 10.0)
+        g_b = env.get_separated_gradients_for(DEFAULT_AGENT_ID)["food_gradient_strength"]
+        assert g_a != g_b  # sub-cell positions yield different gradients (float sampling)
+
+
 class TestDistanceMetricCoherence:
     """Euclidean ``get_nearest_*_distance_from`` so the distance reward telescopes.
 
