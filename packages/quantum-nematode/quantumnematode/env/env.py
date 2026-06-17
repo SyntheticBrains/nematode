@@ -2510,6 +2510,22 @@ class DynamicForagingEnvironment(BaseEnvironment):
         distances = [abs(pos[0] - food[0]) + abs(pos[1] - food[1]) for food in self.foods]
         return min(distances)
 
+    def get_nearest_food_distance_from(
+        self,
+        pos: tuple[float, ...],
+    ) -> float | None:
+        """Get the nearest-food distance from an arbitrary position, in the env's native metric.
+
+        Grid uses Manhattan (matching :meth:`get_nearest_food_distance_for`); the
+        continuous-2D env overrides this with Euclidean. Used by the reward calculator to
+        compute the *previous*-step distance in the SAME metric as the current-step distance,
+        so the potential-based distance-reward term telescopes correctly (a Manhattan-vs-
+        Euclidean mismatch otherwise pays a spurious per-step survival reward).
+        """
+        if not self.foods:
+            return None
+        return min(abs(pos[0] - food[0]) + abs(pos[1] - food[1]) for food in self.foods)
+
     def update_predators(self, step_index: int = 0) -> None:
         """Update all predator positions.
 
@@ -2616,6 +2632,24 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if not self.predator.enabled or not self.predators:
             return None
         pos = self.agents[agent_id].position
+        return min(
+            abs(pos[0] - pred.position[0]) + abs(pos[1] - pred.position[1])
+            for pred in self.predators
+        )
+
+    def get_nearest_predator_distance_from(
+        self,
+        pos: tuple[float, ...],
+    ) -> float | None:
+        """Nearest-predator distance from an arbitrary position, in the env's native metric.
+
+        Grid uses Manhattan; the continuous-2D env overrides this with Euclidean. Used by the
+        reward calculator for the *previous*-step predator distance so the evasion term
+        telescopes in the same metric as the current-step distance (avoids the Manhattan-vs-
+        Euclidean spurious per-step reward on the continuous substrate).
+        """
+        if not self.predator.enabled or not self.predators:
+            return None
         return min(
             abs(pos[0] - pred.position[0]) + abs(pos[1] - pred.position[1])
             for pred in self.predators

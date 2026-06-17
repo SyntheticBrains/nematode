@@ -47,6 +47,16 @@ def _make_base_env(
     env.thermotaxis = Mock()
     env.thermotaxis.enabled = False
     env.foods = []
+    # Native-metric (grid Manhattan) nearest-distance-from-pos helpers, computed at call
+    # time over the env's current foods/predators so they track late-assigned fixtures.
+    env.get_nearest_food_distance_from = lambda pos: (
+        min(abs(pos[0] - f[0]) + abs(pos[1] - f[1]) for f in env.foods) if env.foods else None
+    )
+    env.get_nearest_predator_distance_from = lambda pos: (
+        min(abs(pos[0] - p.position[0]) + abs(pos[1] - p.position[1]) for p in env.predators)
+        if getattr(env, "predators", None)
+        else None
+    )
     return env
 
 
@@ -158,6 +168,9 @@ class TestMultiAgentReward:
         env.agents = {"near": state_near, "far": state_far}
         env.reached_goal_for = Mock(return_value=False)
         env.foods = [(5, 6)]
+        env.get_nearest_food_distance_from = lambda pos: (
+            min(abs(pos[0] - f[0]) + abs(pos[1] - f[1]) for f in env.foods) if env.foods else None
+        )
         env.predator = Mock()
         env.predator.enabled = False
         env.thermotaxis = Mock()
