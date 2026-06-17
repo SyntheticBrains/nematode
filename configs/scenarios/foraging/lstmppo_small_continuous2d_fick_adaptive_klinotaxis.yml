@@ -4,21 +4,18 @@
 #     exp(-(r/L)^2), L = gradient_decay_constant),
 #   - the adaptive-threshold / biphasic chemosensory sensor (``adaptive_chemosensor_*``):
 #     fold-change coding on the derivative/turning channel ((dC/dt)/(C+eps)).
-# Env / reward / sensing / satiety are identical to the calibrated MLP config
-# (mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml) for a clean cross-arm comparison;
-# substrate calibration provenance (eps=0.1, capture 2.0 mm, ~1500-ep budget) is documented
-# there (T7.prep.foraging_calibration).
+# Env / reward / sensing / satiety + the C1 convergence recipe are identical to the calibrated
+# MLP config (mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml) for a clean cross-arm
+# comparison; the substrate calibration provenance (eps=0.1, capture 2.0 mm) and the full
+# recipe rationale (max_steps 800 + forage-to-survive satiety + gamma 0.99 + lr 0.0003 +
+# entropy 0.05 + max_turn_rad 0.5, on the metric-coherent reward) are documented there.
 #
-# Stability-calibrated for T7 (T7.prep.continuous_tuning). Saved-weight inspection across
-# passing AND failing seeds shows the recurrent arms do NOT collapse to the log_std floor:
-# the turn dimension pins at the +2 ceiling for both, so the residual seed-fragility is
-# optimization-basin variance, not an exploration-variance problem. LSTM patterns with the
-# MLP (over-exploration), so entropy is LOWERED 0.03 -> 0.02 to match the MLP stability fix;
-# this nudge lifts per-seed success to ~68% (n=16, mean 0.58). The remaining basin-stuck
-# seeds are handled by the n>=8 + reported-per-seed-success-rate evaluation protocol, not by
-# further tuning.
+# C1 foraging convergence (T7.*.c1_foraging): the simple recipe converges all arms once the
+# continuous reward is metric-coherent — LSTM reaches 100% per-seed success at n=4 (the earlier
+# recurrent collapse was the reward-metric bug, NOT the architecture). No long-horizon discount
+# or low-lr stabilisation needed (gamma 0.99 + lr 0.0003 = PPO defaults, == the T4 grid runs).
 
-max_steps: 400
+max_steps: 800
 brain:
   name: lstmppo
   config:
@@ -44,11 +41,11 @@ brain:
     num_epochs: 4
     max_grad_norm: 0.5
 
-    # Flat at 0.02 (matches the MLP stability fix). ``entropy_coef_end`` MUST equal
+    # Flat at 0.05 (the C1 recipe — see MLP header). ``entropy_coef_end`` MUST equal
     # ``entropy_coef`` to defeat the LSTMPPOBrainConfig decay defaults (end=0.008,
     # decay_episodes=500); otherwise it silently decays to 0.008.
-    entropy_coef: 0.02
-    entropy_coef_end: 0.02
+    entropy_coef: 0.05
+    entropy_coef_end: 0.05
     entropy_decay_episodes: 500
 
     sensory_modules:
@@ -67,9 +64,10 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 200.0
-  satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2
+  # Forage-to-survive over the episode (see MLP config header).
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
 
 environment:
   env_type: continuous_2d
@@ -79,6 +77,7 @@ environment:
     max_step_mm: 1.0
     capture_radius_mm: 2.0  # body/patch scale (calibrated — see MLP config header)
     sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5  # ~29deg/step — biologically realistic turn bound (env default; explicit here)
 
   viewport_size: [11, 11]
 

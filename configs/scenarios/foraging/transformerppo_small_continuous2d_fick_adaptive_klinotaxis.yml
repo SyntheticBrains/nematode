@@ -4,17 +4,17 @@
 #     exp(-(r/L)^2), L = gradient_decay_constant),
 #   - the adaptive-threshold / biphasic chemosensory sensor (``adaptive_chemosensor_*``):
 #     fold-change coding on the derivative/turning channel ((dC/dt)/(C+eps)).
-# Env / reward / sensing / satiety are identical to the calibrated MLP config
-# (mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml) for a clean cross-arm comparison;
-# substrate calibration provenance (eps=0.1, capture 2.0 mm, ~1500-ep budget) is documented
-# there (T7.prep.foraging_calibration).
+# Env / reward / sensing / satiety + the C1 convergence recipe are identical to the calibrated
+# MLP config (mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml) for a clean cross-arm
+# comparison; the substrate calibration provenance (eps=0.1, capture 2.0 mm) and the full recipe
+# rationale (max_steps 800 + forage-to-survive satiety + gamma 0.99 + lr 0.0003 + entropy 0.05 +
+# max_turn_rad 0.5, on the metric-coherent reward) are documented there.
 #
-# First continuous-2D config for the Transformer arm (only the grid klinotaxis config existed
-# before) — authored for T7 (T7.prep.continuous_tuning). On the calibrated substrate with the
-# low-entropy / low-lr recipe (entropy 0.03, lr 0.0003) it is the most robust arm: 100% per-seed
-# success (n=8, mean 0.82), no tuning required. No entropy change vs the grid config was needed.
+# C1 foraging convergence (T7.*.c1_foraging): the simple recipe converges all arms once the
+# continuous reward is metric-coherent — the Transformer reaches 100% per-seed success at n=4 (it
+# was the most robust arm throughout). gamma 0.99 + lr 0.0003 = PPO defaults, == the T4 grid runs.
 
-max_steps: 400
+max_steps: 800
 brain:
   name: transformerppo
   config:
@@ -34,7 +34,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    entropy_coef: 0.03  # klinotaxis benefits from sustained exploration
+    entropy_coef: 0.05  # C1 recipe (see MLP header); klinotaxis benefits from sustained exploration
     learning_rate: 0.0003
     rollout_buffer_size: 256
     num_epochs: 4
@@ -57,9 +57,10 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 200.0
-  satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2
+  # Forage-to-survive over the episode (see MLP config header).
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
 
 environment:
   env_type: continuous_2d
@@ -69,6 +70,7 @@ environment:
     max_step_mm: 1.0
     capture_radius_mm: 2.0  # body/patch scale (calibrated — see MLP config header)
     sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5  # ~29deg/step — biologically realistic turn bound (env default; explicit here)
 
   viewport_size: [11, 11]
 
