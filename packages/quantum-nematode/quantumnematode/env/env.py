@@ -2099,7 +2099,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Parameters
         ----------
-        position : tuple[int, ...]
+        position : tuple[float, ...]
             Position to query gradient at.
 
         Returns
@@ -2147,7 +2147,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Parameters
         ----------
-        position : tuple[int, ...]
+        position : tuple[float, ...]
             Position to query gradient at.
 
         Returns
@@ -2357,7 +2357,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Parameters
         ----------
-        position : tuple[int, ...]
+        position : tuple[float, ...]
             Position to query local gradients at.
         disable_log : bool
             Whether to disable debug logging.

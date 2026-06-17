@@ -1610,6 +1610,11 @@ class QuantumNematodeAgent:
         if self._adaptive_food is not None:
             self._adaptive_food.reset()
 
+        # Clear the previous-position reference so the first step of the new episode computes a
+        # zero movement delta (STAM ``pos_delta``) rather than a spurious delta against the prior
+        # episode's last position.
+        self._previous_position = None
+
         logger.info("Environment reset. Retaining learned data.")
 
     def reset_brain(self) -> None:
