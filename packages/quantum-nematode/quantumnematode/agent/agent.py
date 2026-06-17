@@ -234,30 +234,18 @@ def _predator_contact_intensity_at(
 ) -> float:
     """Graded contact intensity at ``position`` against env predators.
 
-    Returns `max(0, 1 - manhattan_dist / damage_radius)` against the
-    predator with the highest damage-normalised intensity (i.e. the
-    closest one within its own damage radius). Returns 0.0 when
-    predators are disabled, when there are no predators, or when no
-    predator is within its damage radius of ``position``.
+    Delegates to :meth:`DynamicForagingEnvironment.predator_contact_intensity_at`, which
+    computes ``max(0, 1 - dist / damage_radius)`` against the predator with the highest
+    damage-normalised intensity in the env's **native metric** — Manhattan + raw
+    ``damage_radius`` on the grid, Euclidean + the *effective* damage radius on the
+    continuous-2D substrate (so the channel is not constantly zero under the continuous default
+    ``damage_radius = 0``). Returns 0.0 when predators are disabled, absent, or none are in range.
 
-    Shared by the STAM `predator_mechano` channel fetcher and the
-    agent-side `_create_brain_params` BrainParams population so both
-    paths emit the same scalar at the same step.
+    Shared by the STAM `predator_mechano` channel fetcher and the agent-side
+    `_create_brain_params` BrainParams population so both paths emit the same scalar at the
+    same step.
     """
-    if not env.predator.enabled or not env.predators:
-        return 0.0
-    best_intensity = 0.0
-    for pred in env.predators:
-        if pred.damage_radius <= 0:
-            continue
-        manhattan = abs(position[0] - pred.position[0]) + abs(
-            position[1] - pred.position[1],
-        )
-        if manhattan > pred.damage_radius:
-            continue
-        intensity = max(0.0, 1.0 - manhattan / pred.damage_radius)
-        best_intensity = max(best_intensity, intensity)
-    return best_intensity
+    return env.predator_contact_intensity_at((position[0], position[1]))
 
 
 def _make_predator_mechano_fetcher(
