@@ -1,0 +1,122 @@
+# ConnectomePPO continuous-2D THERMO-ONLY projection validation (Stage 2 step 2b).
+#
+# Isolates the connectome's biologically-grounded thermotaxis projection — the (3, 2)
+# thermotaxis_gains matrix onto the AFD thermosensory pair (AFDL/AFDR),
+# enable_thermotaxis_projection: true — on the continuous-2D substrate, to confirm it receives
+# correct continuous head-sweep temperature features (temp_deviation + lateral + dT/dt) and that
+# lethal-zone avoidance learns. Projection wiring is unchanged from the grid connectome thermo
+# config (connectomeppo_small_isothermal_klinotaxis.yml) — validate-don't-rebuild; the difference
+# here is the continuous substrate + a real (non-isothermal) thermal gradient + float sensing (#241).
+#
+# Env (thermotaxis block + satiety + reward + health + max_steps) matches the Stage-1 MLP thermal
+# canary (mlpppo_small_continuous2d_thermal_klinotaxis.yml — calibrated gradient_strength 1.25,
+# max_steps 500, survival-dominant satiety gain 0.2) so the difficulty sits in the calibrated
+# learnable band; only the brain is swapped to the connectome (C1 recipe + thermotaxis projection).
+# The chemosensor/substrate geometry match the connectome C1 foraging config. Single-behaviour
+# validation; does NOT exercise behaviour competition (that is C2 / Stage 2 step 2c).
+
+max_steps: 500
+brain:
+  name: connectomeppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    connectome_source: cook_2019_hermaphrodite
+    enable_gap_junctions: true
+    chemical_mask_mode: strict
+    sensing_mode: klinotaxis  # 3-feature head-sweep food input
+    enable_thermotaxis_projection: true  # routes temperature onto AFDL/AFDR
+    forward_pass_depth: 4
+    freeze_updates: false
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    # Start from the connectome C1 recipe (entropy 0.05 / lr 0.0003 on the metric-coherent
+    # reward — see the C1 config); per-arch tuning if avoidance under-learns (2b is a validation).
+    entropy_coef: 0.05
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_temperature_proximity: 0.0
+  penalty_health_damage: 0.0
+  reward_health_gain: 0.1
+
+satiety:
+  # Survival-dominant (matches the Stage-1 thermal canary): food barely replenishes satiety, so
+  # the episode is a lethal-zone-avoidance/survival task rather than a collect-10 budget.
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0  # body/patch scale (calibrated — see C1 config header)
+    sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5  # ~29deg/step — biologically realistic turn bound (env default; explicit here)
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    thermotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    # Adaptive chemosensory sensor: fold-change on the derivative channel.
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1  # no-op under fold_change (only `contrast` uses the background)
+    adaptive_chemosensor_epsilon: 0.1  # calibrated (0.001 collapses foraging — see C1 config header)
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    # Static Fick-shaped gradient geometry (Gaussian kernel, L = decay).
+    gradient_field_mode: fick
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 0.0
+    food_healing: 5.0
+
+  thermotaxis:
+    # Stage-1 calibrated continuous thermal difficulty: gradient_strength 1.25 (the T4-carried 1.5
+    # forces a degenerate park-in-comfort / starve on the continuous substrate; 1.25 keeps thermal
+    # a real, learnable pressure with foraging preserved — see the MLP thermal canary header).
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0
+    gradient_direction: 0.0
+    gradient_strength: 1.25
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    comfort_delta: 5.0
+    discomfort_delta: 10.0
+    danger_delta: 15.0
