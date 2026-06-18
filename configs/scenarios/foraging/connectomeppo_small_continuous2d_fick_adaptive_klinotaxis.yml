@@ -1,0 +1,97 @@
+# ConnectomePPO continuous-action klinotaxis foraging on the calibrated continuous-2D substrate
+# with the env-fidelity upgrades enabled (Fick-shaped gradient geometry + adaptive/biphasic
+# chemosensor) — the connectome arm's C1 foraging config (T7 Stage 2 / T7.*.c1_foraging).
+#
+# Same Cook-2019 hermaphrodite connectome topology (strict chemical mask + fixed gap junctions)
+# + klinotaxis sensing + continuous tanh-squashed Gaussian action head as
+# ``connectomeppo_small_continuous2d_klinotaxis.yml``; the strict-mask / gap junctions are
+# upstream of the motor readout and unchanged (validate-don't-rebuild). The difference here is
+# the substrate + recipe:
+#   - Fick-shaped gradient geometry (``gradient_field_mode: fick``) + the adaptive-threshold
+#     chemosensor (``adaptive_chemosensor_*``, eps 0.1) + capture_radius 2.0 — identical to the
+#     calibrated MLP/LSTM/CfC/Transformer configs for a clean cross-arm comparison; substrate
+#     calibration provenance is documented in
+#     mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml (T7.prep.foraging_calibration).
+#   - The C1 convergence recipe (see that MLP header): max_steps 800 + forage-to-survive satiety
+#     (300/0.8/20) + gamma 0.99 + lr 0.0003 + entropy 0.05 + max_turn_rad 0.5, on the
+#     metric-coherent reward. NB the bug-era connectome continuous config sat at entropy 0.10 /
+#     lr 0.001 to fight the continuous "collapse" that was in fact the now-fixed reward-metric
+#     value explosion; this starts from the shared recipe (entropy 0.05 / lr 0.0003) and is
+#     subject to the connectome's own per-seed/entropy C1 check (Stage 2 step 2a).
+
+max_steps: 800
+brain:
+  name: connectomeppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    connectome_source: cook_2019_hermaphrodite
+    enable_gap_junctions: true
+    chemical_mask_mode: strict
+    sensing_mode: klinotaxis  # 3-feature head-sweep input
+    forward_pass_depth: 4
+    freeze_updates: false
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    # C1 recipe (see MLP config header): entropy 0.05 + lr 0.0003 on the metric-coherent reward
+    # (the bug-era 0.10 / 0.001 compensated for the now-fixed value explosion). Subject to the
+    # connectome's own per-seed/entropy check (Stage 2 step 2a).
+    entropy_coef: 0.05
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  # Forage-to-survive over the episode (see MLP config header).
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0  # body/patch scale (calibrated — see MLP config header)
+    sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5  # ~29deg/step — biologically realistic turn bound (env default; explicit here)
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    # Adaptive chemosensory sensor: fold-change on the derivative channel.
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1  # no-op under fold_change (only `contrast` uses the background)
+    adaptive_chemosensor_epsilon: 0.1  # calibrated (0.001 collapses foraging — see MLP config header)
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    # Static Fick-shaped gradient geometry (Gaussian kernel, L = decay).
+    gradient_field_mode: fick
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
