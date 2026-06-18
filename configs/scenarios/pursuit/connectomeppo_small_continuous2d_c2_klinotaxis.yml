@@ -43,10 +43,12 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    # C2 start: entropy 0.02 (the 2b predator per-arch value) / lr 0.0003. Tune entropy in
-    # {0.02, 0.01, 0.005} if the connectome's constant-entropy late drift surfaces (no schedule
-    # support — see header); report best-checkpoint.
-    entropy_coef: 0.02
+    # Connectome canonical low-entropy drift-lock: entropy 0.005 (logbook 023 R2b / T4.0d; the grid
+    # connectome value). The difficulty-recalibration probe showed constant 0.02 induces late drift
+    # under predator pressure (peaks then collapses, worse with more budget/lr); 0.005 stabilises
+    # (holds over 3000ep). lr 0.0003 unchanged. Predator difficulty here is the pre-recalibration
+    # placeholder — the recalibrated band (count2/speed0.4/dmg15) is set at the Stage-3 cross-arm C2.
+    entropy_coef: 0.005
     learning_rate: 0.0003
     rollout_buffer_size: 256
     num_epochs: 10
