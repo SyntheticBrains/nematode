@@ -35,11 +35,12 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    # Predator/evasion per-arch recipe: entropy 0.02 (the MLP predator canary's value), NOT the
-    # foraging C1's 0.05. 2b validation finding — at entropy 0.05 the connectome over-explores and
-    # under-learns evasion (n=4 finalQ survival 20–34%); entropy 0.02 lets the policy commit to
-    # evasion (n=4 finalQ survival ~45–52%, at/above the MLP canary's ~41%). lr 0.0003 unchanged.
-    entropy_coef: 0.02
+    # Connectome canonical low-entropy drift-lock (logbook 023 R2b / T4.0d): entropy 0.005, the
+    # value the grid connectome configs use. Earlier 0.02 (vs 0.05) lifted evasion but, per the
+    # difficulty-recalibration probe, induces the connectome's documented constant-entropy late drift
+    # at higher predator pressure (peaks ~40% then collapses); 0.005 stabilises it (holds, no collapse
+    # over 3000ep) and is what the C3 integrated cell must use. lr 0.0003 unchanged.
+    entropy_coef: 0.005
     learning_rate: 0.0003
     rollout_buffer_size: 256
     num_epochs: 10
