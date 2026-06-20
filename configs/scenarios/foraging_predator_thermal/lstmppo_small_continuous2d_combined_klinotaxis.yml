@@ -1,0 +1,131 @@
+# Combined-behaviour C3 cell — LSTMPPO (GRU) (food + predator + thermotaxis, klinotaxis, continuous-2D).
+#
+# Integrated C3 cell on the continuous-2D substrate: food chemotaxis + predator
+# evasion + thermotaxis all active in one episode. Every architecture's C3 cell
+# shares this IDENTICAL env + reward + satiety block (below) — only the brain
+# differs — so the comparison measures how each brain juggles the competing
+# pressures. Locked T7 continuous difficulty (count2 / speed 0.4 / detection 15;
+# steep predator field gradient_decay_constant 5 = REAL flee-direction signal,
+# NOT the saturated-field "racing" of the pre-fix configs; thermal LINEAR
+# gradient_strength 0.4; reward_mode distal_chemo_contact_trigger). 60 mm world.
+#
+# Cross-arm final-quarter success (n=4, each arm at its tuned per-arch recipe):
+#   MLP 80 >> Transformer 52 > CfC 48 > LSTM 42 > connectome 35. The integrated
+#   cell discriminates: MLP (all-rounder) leads; the connectome is the structural
+#   laggard (its evasion-lag dominates). Per-arch recipes do NOT port between
+#   cells — each is tuned ON this integrated cell (see this arm's note below).
+#
+# LSTMPPO recipe: FLAT entropy 0.02 (NOT the peak-anneal schedule). The schedule's
+# high early entropy handicaps it exactly as it did CfC — switching to flat low
+# entropy lifts it on the integrated cell (35 -> 42 at n=4). gru / bptt 16.
+max_steps: 2400
+brain:
+  name: lstmppo
+  config:
+    action_mode: continuous
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 256
+    num_epochs: 4
+    max_grad_norm: 0.5
+    entropy_coef: 0.02
+    sensory_modules:
+    - food_chemotaxis
+    - predator_mechanosensation_klinotaxis
+    - predator_chemosensation_klinotaxis
+    - thermotaxis
+    - proprioception
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+  reward_mode: distal_chemo_contact_trigger
+  penalty_temperature_proximity: 0.3
+satiety:
+  initial_satiety: 900
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 60.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0
+    sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5
+    predator_damage_radius_mm: 1.0
+  viewport_size:
+  - 11
+  - 11
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1
+    adaptive_chemosensor_epsilon: 0.1
+    predator_mechano_mode: klinotaxis
+    predator_distal_mode: klinotaxis
+    thermotaxis_mode: klinotaxis
+  foraging:
+    foods_on_grid: 45
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_field_mode: fick
+    gradient_decay_constant: 24.0
+    gradient_strength: 1.0
+  health:
+    max_hp: 100.0
+    predator_damage: 15.0
+    food_healing: 10.0
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.4
+    movement_pattern: pursuit
+    detection_radius: 15
+    gradient_decay_constant: 5.0
+    gradient_strength: 1.0
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0
+    gradient_direction: 0.0
+    gradient_strength: 0.4
+    hot_spots: []
+    cold_spots: []
+    spot_decay_constant: 8.0
+    comfort_reward: 0.0
+    discomfort_penalty: -0.05
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    comfort_delta: 5.0
+    discomfort_delta: 10.0
+    danger_delta: 15.0
