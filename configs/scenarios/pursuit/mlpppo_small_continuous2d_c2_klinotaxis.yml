@@ -84,7 +84,7 @@ environment:
     speed: 0.4
     movement_pattern: pursuit
     detection_radius: 5
-    gradient_decay_constant: 10.0
+    gradient_decay_constant: 5.0  # steep predator field (saturation fix — see phase6-tracking; decay 10 gave ~1-7% directional signal -> racing, not evasion)
     gradient_strength: 1.0
   health:
     max_hp: 100.0
