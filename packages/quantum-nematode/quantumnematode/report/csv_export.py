@@ -167,6 +167,7 @@ _SIMULATION_RESULTS_FIELDNAMES = [
     "predator_encounters",
     "successful_evasions",
     "died_to_health_depletion",
+    "temperature_comfort_score",
     "oxygen_comfort_score",
 ]
 
@@ -201,6 +202,9 @@ def _simulation_result_to_row(
         else np.nan,
         "died_to_health_depletion": result.died_to_health_depletion
         if result.died_to_health_depletion is not None
+        else np.nan,
+        "temperature_comfort_score": result.temperature_comfort_score
+        if result.temperature_comfort_score is not None
         else np.nan,
         "oxygen_comfort_score": result.oxygen_comfort_score
         if result.oxygen_comfort_score is not None
