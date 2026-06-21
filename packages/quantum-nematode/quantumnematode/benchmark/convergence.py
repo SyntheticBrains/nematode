@@ -81,78 +81,136 @@ class ConvergenceMetrics(BaseModel):
 
 def detect_convergence(
     results: list[SimulationResult],
-    variance_threshold: float = 0.05,
+    *,
     stability_runs: int = 10,
     min_total_runs: int = 30,
-    min_success_rate: float = 0.5,
+    band: float = 0.10,
+    tail_frac: float = 0.25,
 ) -> int | None:
     """
-    Detect when learning strategy converges using adaptive algorithm.
+    Detect when a learning strategy reaches its performance plateau.
 
-    Convergence is detected when the success rate variance falls below a threshold
-    for a sustained number of runs AND the mean success rate in that window is
-    above a minimum threshold, indicating the strategy has learned and stabilized.
+    Convergence here means *the policy has stopped improving* — it is decoupled
+    from the absolute success level, so a stable 40% plateau and a stable 95%
+    plateau are both detected. This is deliberately NOT a "reaches near-100%
+    streaks" test: on binary success data a low-variance high-mean window is
+    reachable only near 100%, so a variance-based gate mis-classifies stable
+    intermediate plateaus (e.g. a policy that completes the task ~45% of episodes
+    from a fully-converged policy) as "never converged". See the
+    ``architecture-comparison-protocol`` capability spec.
 
-    The algorithm searches from the beginning to find the earliest point where
-    a stable, successful window begins. This allows detecting early convergence
-    (e.g., at run 4) while still requiring enough total data for reliable detection.
+    Two steps:
+
+    1. **No-trend gate.** Compare the final trailing block of ``tail_frac`` of the
+       runs (the converged level ``L``) against the immediately-preceding block of
+       equal size. They are large blocks, so per-episode binary noise is averaged
+       out; convergence is declared only when their mean success rates agree within
+       ``band``. A run still climbing/declining at the end fails this and returns
+       ``None`` (flagged for an extend-and-rerun, not mis-ranked).
+    2. **Onset.** The earliest ``stability_runs``-window whose mean success reaches
+       within ``band`` of ``L``. During warm-up the rate sits away from ``L`` (a
+       flat-at-zero prefix is below ``L`` by more than ``band``, so it is excluded);
+       the metric averages raw success from this onset to the end.
+
+    ``band`` is calibrated to block sampling noise: block means over
+    ``t = tail_frac * N`` runs have std ~ sqrt(p(1-p)/t); at N~1200, t~300 that is
+    ~0.03, so ``band = 0.10`` (~2.5 sigma between two blocks) passes a truly-flat
+    plateau ~99% of the time while flagging a residual trend > 0.10 per block.
 
     Parameters
     ----------
     results : list[SimulationResult]
         Ordered list of simulation results from a session.
-    variance_threshold : float, optional
-        Maximum variance to consider converged (default: 0.05 = 5%).
     stability_runs : int, optional
-        Number of consecutive low-variance runs required (default: 10).
+        Width of the onset window (default: 10).
     min_total_runs : int, optional
-        Minimum total runs required before convergence detection is attempted
-        (default: 30). This ensures we have enough data to distinguish true
-        convergence from temporary plateaus.
-    min_success_rate : float, optional
-        Minimum mean success rate required in the stability window for
-        convergence to be declared (default: 0.5 = 50%). This prevents
-        detecting "convergence" when the agent is stably failing.
+        Minimum total runs before detection is attempted (default: 30).
+    band : float, optional
+        Absolute success-rate tolerance for the no-trend gate and onset, in [0, 1]
+        (default: 0.10). Calibrated to two-block sampling noise (see above).
+    tail_frac : float, optional
+        Fraction of runs in each comparison block for the no-trend gate
+        (default: 0.25).
 
     Returns
     -------
     int | None
-        1-indexed run number where the stable region begins,
-        or None if never converged.
+        1-indexed run number where the plateau begins, or None if the run has
+        not converged (still trending at its budget).
 
     Notes
     -----
-    The algorithm checks if success rate variance in a sliding window of
-    `stability_runs` remains below the threshold AND the mean success rate
-    is above the minimum. It searches from the start to find the earliest
-    convergence point.
+    The onset is the start of the final at-plateau region, NOT the first
+    fully-homogeneous (~100%) window the legacy detector required; for high-band
+    runs this can differ by <=1 run, but the averaged plateau metric is unchanged
+    within sampling noise.
 
-    For example, if an agent achieves 100% success from run 5 onward with a
-    stability window of 10, convergence will be reported at run 5 (since the
-    window from run 5-14 is stable and successful). Returns 1-indexed values
-    so run 5 means the 5th run.
+    A flat run (e.g. one that never succeeds, or sits at a low level) satisfies
+    the no-trend gate and is reported as converged at that level. This is correct
+    for an architecture that genuinely plateaus low (a valid ranking outcome), but
+    it cannot be distinguished from a slow-igniter cut off mid-warm-up purely from
+    the run — both look flat. That ambiguity is a budget-sufficiency concern, not a
+    detection one: callers MUST give every arm enough episodes to reach its plateau
+    (the ``architecture-comparison-protocol`` budget requirement), and the
+    full-window-mean cross-check flags a run whose tail still disagrees.
     """
-    if len(results) < min_total_runs:
+    if stability_runs <= 0:
+        msg = f"stability_runs must be > 0, got {stability_runs}"
+        raise ValueError(msg)
+    if min_total_runs <= 0:
+        msg = f"min_total_runs must be > 0, got {min_total_runs}"
+        raise ValueError(msg)
+    if not 0 < band <= 1:
+        msg = f"band must be in (0, 1], got {band}"
+        raise ValueError(msg)
+    if not 0 < tail_frac <= 1:
+        msg = f"tail_frac must be in (0, 1], got {tail_frac}"
+        raise ValueError(msg)
+
+    n = len(results)
+    if n < min_total_runs:
         return None
 
-    # Extract binary success indicators (1.0 for success, 0.0 for failure)
-    successes = [1.0 if r.success else 0.0 for r in results]
+    # Binary success indicators (1.0 success / 0.0 failure).
+    successes = np.array([1.0 if r.success else 0.0 for r in results], dtype=float)
 
-    # Search for convergence point from the beginning
-    # The earliest possible convergence is at index 0 (window covers runs 0-9)
-    for i in range(len(successes) - stability_runs + 1):
-        # Check variance and success rate in stability window
-        window = successes[i : i + stability_runs]
-        variance = float(np.var(window))
-        mean_success = float(np.mean(window))
+    # No-trend gate: the final block vs the equal-size preceding block. Large
+    # blocks average out per-episode noise, so this tests for a residual trend
+    # (still learning), NOT for low per-episode variance.
+    tail = max(int(tail_frac * n), stability_runs)
+    final_level = float(successes[-tail:].mean())
+    prev_block = successes[-2 * tail : -tail] if n >= 2 * tail else successes[:-tail]
+    prev_level = float(prev_block.mean()) if prev_block.size else final_level
+    if abs(final_level - prev_level) > band:
+        # Still climbing/declining at the budget -> not yet converged.
+        return None
 
-        if variance < variance_threshold and mean_success >= min_success_rate:
-            # Found stable, successful region - convergence detected at start of window
-            # Return 1-indexed (add 1 to convert from 0-indexed)
-            return i + 1
+    # Onset: earliest run after which the smoothed success rate STAYS within `band`
+    # of the converged level for the rest of the run. Requiring it to stay (rather
+    # than the first window to merely touch the band) avoids a premature onset
+    # during a warm-up climb, which would drag the averaged metric below the true
+    # plateau. The smoothing window scales with run length so long runs are robust
+    # to per-episode noise while short runs still resolve an early onset; a
+    # flat-at-zero warm-up is excluded because its smoothed rate is below
+    # `final_level` by more than `band`.
+    # The band is one-sided (below `final_level`): RL arms warm up from below the
+    # plateau, so the warm-up is excluded by `rolling < final_level - band`, while a
+    # noisy excursion ABOVE the plateau does not reset the onset (it is still
+    # converged, just noisy-high). The converged-from-above case does not arise for
+    # learning-from-scratch and is guarded by the no-trend gate above.
+    window = max(stability_runs, n // 20)
+    csum = np.cumsum(np.insert(successes, 0, 0.0))
+    rolling = (csum[window:] - csum[:-window]) / window  # rolling[k] = mean(successes[k:k+window])
+    below_band = np.flatnonzero(rolling < final_level - band)
+    if below_band.size == 0:
+        onset = 0
+    elif int(below_band[-1]) == rolling.size - 1:
+        # Smoothed rate is still below the plateau at the very end -> not converged.
+        return None
+    else:
+        onset = int(below_band[-1]) + 1  # start of the final region at/above the plateau
 
-    # Never converged within the session
-    return None
+    return onset + 1
 
 
 def calculate_learning_speed_episodes(

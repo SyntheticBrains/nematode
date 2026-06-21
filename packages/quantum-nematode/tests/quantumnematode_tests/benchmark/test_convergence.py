@@ -31,32 +31,123 @@ class TestConvergenceDetection:
 
         convergence_run = detect_convergence(results)
 
-        # Should detect convergence at the first stable window (run 11, 1-indexed)
-        # Window covers runs 11-20 (1-indexed), which are indices 10-19 (0-indexed)
+        # Level-agnostic onset = first window reaching within `band` of the converged
+        # level (1.0 here). The 9-success/1-fail boundary window [indices 9..18] is
+        # within band of 1.0, so onset is run 10 (1-indexed) — one earlier than the
+        # legacy "first fully-homogeneous window" (11). The averaged plateau metric is
+        # unchanged within sampling noise (see test_high_band_metric_regression).
         assert convergence_run is not None
-        assert convergence_run == 11  # First run where 10-run window is stable (1-indexed)
+        assert convergence_run == 10
         assert convergence_run < 50  # Before end
 
-    def test_detect_convergence_never_converges(self):
-        """Test that oscillating performance doesn't converge."""
-        # Alternating success/fail - high variance
+    def test_detect_convergence_stationary_intermediate_plateau(self):
+        """A stable INTERMEDIATE plateau (~45%) is converged (level-agnostic).
+
+        Regression for the T7 sub-saturation band: the legacy variance-gate
+        returned None here (a ~45% plateau never produces a near-homogeneous
+        window), silently degrading the ranked metric to a noisy last-N fallback.
+        """
+
+        # Deterministic, evenly-spread 45% plateau (no warm-up): (i*9 % 20) < 9 is a
+        # scrambled permutation of residues, so every window holds ~45% (no blocky
+        # phase artifact vs the no-trend gate's comparison blocks).
+        def _hit(i: int) -> bool:
+            return (i * 9) % 20 < 9
+
         results = [
             SimulationResult(
                 run=i,
                 steps=50,
                 path=[],
-                total_reward=10.0 if i % 2 == 0 else 0.0,
-                last_total_reward=10.0 if i % 2 == 0 else 0.0,
+                total_reward=10.0 if _hit(i) else 0.0,
+                last_total_reward=10.0 if _hit(i) else 0.0,
+                termination_reason=TerminationReason.GOAL_REACHED
+                if _hit(i)
+                else TerminationReason.MAX_STEPS,
+                success=_hit(i),
+            )
+            for i in range(200)
+        ]
+
+        convergence_run = detect_convergence(results)
+
+        assert convergence_run is not None  # legacy detector returned None here
+        metrics = calculate_post_convergence_metrics(results, convergence_run)
+        assert metrics["success_rate"] == pytest.approx(0.45, abs=0.02)
+
+    def test_detect_convergence_still_trending_returns_none(self):
+        """A run still climbing at its budget is NOT converged (flag, don't mis-rank)."""
+        # Monotonic ramp that never flattens: success probability rises across the run
+        # so the final block still exceeds the preceding block by more than `band`.
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0 if (i % 10) < (i // 20) else 0.0,
+                last_total_reward=10.0 if (i % 10) < (i // 20) else 0.0,
+                termination_reason=TerminationReason.GOAL_REACHED
+                if (i % 10) < (i // 20)
+                else TerminationReason.MAX_STEPS,
+                success=(i % 10) < (i // 20),
+            )
+            for i in range(200)
+        ]
+
+        convergence_run = detect_convergence(results)
+
+        # Still trending up at the end (no-trend gate fails) -> not converged.
+        assert convergence_run is None
+
+    def test_detect_convergence_flat_zero_warmup_not_a_plateau(self):
+        """A long all-fail prefix before ignition is NOT reported as the plateau."""
+        # Fail for the first 120 runs, then a stable ~80% plateau.
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0 if (i >= 120 and (i % 5) < 4) else 0.0,
+                last_total_reward=10.0 if (i >= 120 and (i % 5) < 4) else 0.0,
+                termination_reason=TerminationReason.GOAL_REACHED
+                if (i >= 120 and (i % 5) < 4)
+                else TerminationReason.MAX_STEPS,
+                success=(i >= 120 and (i % 5) < 4),
+            )
+            for i in range(280)
+        ]
+
+        convergence_run = detect_convergence(results)
+
+        assert convergence_run is not None
+        # Onset is after ignition (~run 120), NOT in the flat-zero prefix.
+        assert convergence_run > 100
+        metrics = calculate_post_convergence_metrics(results, convergence_run)
+        assert metrics["success_rate"] == pytest.approx(0.8, abs=0.05)
+
+    def test_high_band_metric_regression(self):
+        """High-band plateau: the averaged metric is unchanged within sampling noise.
+
+        The onset can shift by <=1 run vs the legacy detector, but the load-bearing
+        quantity — the post-convergence success rate — stays ~1.0.
+        """
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0,
+                last_total_reward=10.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
-                success=i % 2 == 0,
+                success=i >= 10,
             )
             for i in range(50)
         ]
 
         convergence_run = detect_convergence(results)
+        metrics = calculate_post_convergence_metrics(results, convergence_run)
 
-        # Should NOT converge due to high variance
-        assert convergence_run is None
+        assert metrics["success_rate"] == pytest.approx(1.0, abs=0.03)
 
     def test_detect_convergence_insufficient_runs(self):
         """Test that too few runs returns None."""
@@ -78,6 +169,34 @@ class TestConvergenceDetection:
         # Should return None due to insufficient total runs
         assert convergence_run is None
 
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"stability_runs": 0}, "stability_runs"),
+            ({"min_total_runs": 0}, "min_total_runs"),
+            ({"band": 0.0}, "band"),
+            ({"band": 1.5}, "band"),
+            ({"tail_frac": 0.0}, "tail_frac"),
+            ({"tail_frac": 1.5}, "tail_frac"),
+        ],
+    )
+    def test_detect_convergence_rejects_invalid_params(self, kwargs, match):
+        """Out-of-range tunables raise ValueError (they would corrupt detection)."""
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0,
+                last_total_reward=10.0,
+                termination_reason=TerminationReason.GOAL_REACHED,
+                success=True,
+            )
+            for i in range(50)
+        ]
+        with pytest.raises(ValueError, match=match):
+            detect_convergence(results, **kwargs)
+
     def test_detect_convergence_gradual_improvement(self):
         """Test convergence with gradual improvement to stability."""
         # Linearly improving success rate
@@ -97,10 +216,11 @@ class TestConvergenceDetection:
 
         convergence_run = detect_convergence(results)
 
-        # Should detect convergence at run 26
-        # (1-indexed, first run where window 26-35 is 100% stable)
+        # Level-agnostic onset: the boundary window reaching within `band` of the
+        # converged level (1.0) is run 25 (1-indexed) — one earlier than the legacy
+        # first-fully-homogeneous window (26).
         assert convergence_run is not None
-        assert convergence_run == 26  # First stable window (1-indexed)
+        assert convergence_run == 25
         assert convergence_run <= 36  # Not too late
 
     def test_detect_convergence_early_success(self):
@@ -121,10 +241,11 @@ class TestConvergenceDetection:
 
         convergence_run = detect_convergence(results)
 
-        # Should detect convergence at run 5 (1-indexed, first stable successful window)
-        # Window from runs 5-14 (1-indexed) = indices 4-13 (0-indexed) has 100% success
+        # Level-agnostic onset: the boundary window reaching within `band` of the
+        # converged level (1.0) is run 4 (1-indexed) — one earlier than the legacy
+        # first-fully-homogeneous window (5). Early detection is preserved.
         assert convergence_run is not None
-        assert convergence_run == 5  # Early detection at actual convergence point (1-indexed)
+        assert convergence_run == 4
 
 
 class TestPostConvergenceMetrics:
@@ -283,11 +404,13 @@ class TestAnalyzeConvergence:
         # Verify convergence detected
         assert metrics.converged is True
         assert metrics.convergence_run is not None
-        # Convergence at run 16 (1-indexed, first stable window with 100% success from 16-25)
-        assert metrics.convergence_run == 16
+        # Level-agnostic onset: the boundary window reaching within `band` of the
+        # converged level (1.0) is run 15 (1-indexed) — one earlier than the legacy
+        # first-fully-homogeneous window (16); the averaged metric stays ~1.0.
+        assert metrics.convergence_run == 15
 
-        # Verify post-convergence metrics are strong
-        assert metrics.post_convergence_success_rate == 1.0
+        # Verify post-convergence metrics are strong (one boundary failure included).
+        assert metrics.post_convergence_success_rate == pytest.approx(1.0, abs=0.03)
         assert metrics.post_convergence_avg_steps is not None
         assert metrics.post_convergence_avg_steps < 100  # Better than early runs
         assert metrics.distance_efficiency is not None
@@ -298,31 +421,37 @@ class TestAnalyzeConvergence:
         assert metrics.composite_score <= 1.0  # Within valid range
 
     def test_analyze_convergence_no_convergence(self):
-        """Test analysis when learning never converges."""
-        # Random performance - no pattern
-        import random
+        """Test analysis when learning never converges (still trending at the budget).
 
-        random.seed(42)
+        Under level-agnostic semantics, "never converges" means the run is still
+        improving at its budget — NOT a stationary intermediate plateau (a stable
+        ~50% IS a converged plateau and is detected; see
+        test_detect_convergence_stationary_intermediate_plateau). The fallback
+        last-N metric still populates so downstream reporting never crashes.
+        """
+        # Monotonic ramp that never flattens by the end.
         results = [
             SimulationResult(
                 run=i,
                 steps=50,
                 path=[],
-                total_reward=random.random() * 10,  # noqa: S311
-                last_total_reward=random.random() * 10,  # noqa: S311
-                termination_reason=TerminationReason.MAX_STEPS,
-                success=random.random() > 0.5,  # noqa: S311
+                total_reward=10.0 if (i % 10) < (i // 10) else 0.0,
+                last_total_reward=10.0 if (i % 10) < (i // 10) else 0.0,
+                termination_reason=TerminationReason.GOAL_REACHED
+                if (i % 10) < (i // 10)
+                else TerminationReason.MAX_STEPS,
+                success=(i % 10) < (i // 10),
             )
-            for i in range(50)
+            for i in range(100)
         ]
 
-        metrics = analyze_convergence(results, total_runs=50)
+        metrics = analyze_convergence(results, total_runs=100)
 
-        # Should not converge
+        # Still trending -> not converged.
         assert metrics.converged is False
         assert metrics.convergence_run is None
         assert metrics.runs_to_convergence is None
 
-        # Should still calculate fallback metrics
+        # Should still calculate fallback metrics (so reporting never crashes).
         assert metrics.post_convergence_success_rate is not None
         assert metrics.composite_score is not None
