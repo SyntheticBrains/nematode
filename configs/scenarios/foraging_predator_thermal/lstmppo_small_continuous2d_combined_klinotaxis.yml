@@ -9,15 +9,18 @@
 # NOT the saturated-field "racing" of the pre-fix configs; thermal LINEAR
 # gradient_strength 0.4; reward_mode distal_chemo_contact_trigger). 60 mm world.
 #
-# Cross-arm final-quarter success (n=4, each arm at its tuned per-arch recipe):
-#   MLP 80 >> Transformer 52 > CfC 48 > LSTM 42 > connectome 35. The integrated
-#   cell discriminates: MLP (all-rounder) leads; the connectome is the structural
-#   laggard (its evasion-lag dominates). Per-arch recipes do NOT port between
-#   cells — each is tuned ON this integrated cell (see this arm's note below).
+# Cross-arm converged success (n=4, converged-budget re-measure @2400-3000ep with the
+#   level-agnostic plateau metric): MLP 86 > Transformer 68 > CfC 56 ~ connectome 52 > LSTM.
+#   The earlier 1200ep ranking (MLP 80 > Tfmr 52 > CfC 48 > LSTM 42 > connectome 35)
+#   UNDER-TRAINED the slow-climbing arms: Transformer is the robust #2, and the connectome is
+#   mid-pack (NOT a structural laggard — its "35 ceiling" was a 1200ep artifact). MLP leads
+#   robustly. Per-arch recipes are tuned ON this integrated cell. Final numbers pending the
+#   n>=8 ranking @3000ep.
 #
-# LSTMPPO recipe: FLAT entropy 0.02 (NOT the peak-anneal schedule). The schedule's
-# high early entropy handicaps it exactly as it did CfC — switching to flat low
-# entropy lifts it on the integrated cell (35 -> 42 at n=4). gru / bptt 16.
+# LSTMPPO recipe: lr 0.0002 + flat entropy 0.01. The converged-budget re-measure showed the
+# prior lr 0.0003 / entropy 0.02 was basin-fragile (n=4 wobble 48/66/34/31, one seed dipping to
+# ~16% mid-run); lowering lr + entropy raised the n=4 mean 45 -> 59 and the worst-seed floor
+# 31 -> 43 with no collapses (flat entropy still beats the peak-anneal schedule). gru / bptt 16.
 max_steps: 2400
 brain:
   name: lstmppo
@@ -30,8 +33,8 @@ brain:
     critic_hidden_dim: 128
     actor_num_layers: 2
     critic_num_layers: 2
-    actor_lr: 0.0003
-    critic_lr: 0.0003
+    actor_lr: 0.0002
+    critic_lr: 0.0002
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95
@@ -39,7 +42,7 @@ brain:
     rollout_buffer_size: 256
     num_epochs: 4
     max_grad_norm: 0.5
-    entropy_coef: 0.02
+    entropy_coef: 0.01
     sensory_modules:
     - food_chemotaxis
     - predator_mechanosensation_klinotaxis
