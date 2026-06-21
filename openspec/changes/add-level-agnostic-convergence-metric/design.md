@@ -31,7 +31,7 @@ The naive flatness test (small variance of the rolling mean) fails: a rolling me
 
 ### D2 — Onset anchored on the converged level (level-agnostic)
 
-**Decision:** once converged, the plateau onset is the first run whose **rolling-mean success** (window `W=50`) reaches within `band` of the converged level `L` (`rm ≥ L − band`). This adapts to each arm's warm-up length (slow igniters get a later onset) and is purely relative to `L`, so it works at any band. The metric is `mean(raw_success[onset:])`. Validated onsets on the real data are sensible (e.g. CfC ~100–180, connectome ~370–630, MLP ~360–720). *Alternative considered:* a fixed post-warmup window (e.g. last 50%) — simpler but mis-measures heterogeneous warm-ups (the exact reason the spec rejected fixed-window for T4's long-warm-up arms); kept only as the cross-check (D4).
+**Decision:** once converged, the plateau onset is the **start of the final region whose smoothed success rate has reached the plateau** — the run after the last point where the rolling mean is still *below* `L − band`. The check is **one-sided** (below only): RL arms warm up from below, so a flat-at-zero warm-up is excluded (its smoothed rate is below `L − band`) while a noisy excursion *above* the plateau does not reset the onset. The smoothing window **scales with run length** (`W = max(stability_runs, n // 20)`) so long runs are robust to per-episode noise while short runs still resolve an early onset. The metric is `mean(raw_success[onset:])`, and onset is purely relative to `L`, so it works at any band. *Alternatives considered (both rejected during implementation):* (a) the *first window to merely touch* the band — it latched mid-climb (e.g. Transformer onset ~92 → metric 37% vs the ~45% plateau), so "stays at the plateau" is required instead; (b) a fixed post-warmup window — mis-measures heterogeneous warm-ups (the reason the spec rejected fixed-window for T4's long-warm-up arms); kept only as the cross-check (D4).
 
 ### D3 — Still-trending runs return `None` (flagged, not mis-scored)
 
@@ -43,7 +43,7 @@ The naive flatness test (small variance of the rolling mean) fails: a rolling me
 
 ### D5 — Backward compatibility via defaults
 
-**Decision:** the new path is the default behaviour of `detect_convergence`; `min_success_rate` is removed from the convergence gate (it was the level-coupling), but the function keeps its signature shape and adds the new tunables (`band`, `tail_frac`, smoothing `W`) with defaults that reproduce sensible T4-band behaviour. A regression test asserts high-band (≥0.8) sequences converge at an equivalent onset and yield an equal-within-ε `post_convergence_success_rate` vs the legacy logic.
+**Decision:** the new path is the default behaviour of `detect_convergence`. The level-coupling parameters (`variance_threshold`, `min_success_rate`) are removed and the new tunables (`band`, `tail_frac`) added; `stability_runs` / `min_total_runs` are kept, and all parameters are made keyword-only. This is safe — no caller passes the removed params (the only production call is arg-less; Task 1.4). The smoothing window is **derived internally** (`max(stability_runs, n // 20)`), not a separate kwarg. A regression test asserts high-band (≥0.8) sequences yield an equal-within-ε `post_convergence_success_rate` vs the legacy logic (the onset may shift by ≤1 run; the averaged metric is what is pinned).
 
 ## Risks / Trade-offs
 
