@@ -154,6 +154,19 @@ def detect_convergence(
     (the ``architecture-comparison-protocol`` budget requirement), and the
     full-window-mean cross-check flags a run whose tail still disagrees.
     """
+    if stability_runs <= 0:
+        msg = f"stability_runs must be > 0, got {stability_runs}"
+        raise ValueError(msg)
+    if min_total_runs <= 0:
+        msg = f"min_total_runs must be > 0, got {min_total_runs}"
+        raise ValueError(msg)
+    if not 0 < band <= 1:
+        msg = f"band must be in (0, 1], got {band}"
+        raise ValueError(msg)
+    if not 0 < tail_frac <= 1:
+        msg = f"tail_frac must be in (0, 1], got {tail_frac}"
+        raise ValueError(msg)
+
     n = len(results)
     if n < min_total_runs:
         return None

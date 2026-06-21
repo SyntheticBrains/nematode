@@ -169,6 +169,34 @@ class TestConvergenceDetection:
         # Should return None due to insufficient total runs
         assert convergence_run is None
 
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"stability_runs": 0}, "stability_runs"),
+            ({"min_total_runs": 0}, "min_total_runs"),
+            ({"band": 0.0}, "band"),
+            ({"band": 1.5}, "band"),
+            ({"tail_frac": 0.0}, "tail_frac"),
+            ({"tail_frac": 1.5}, "tail_frac"),
+        ],
+    )
+    def test_detect_convergence_rejects_invalid_params(self, kwargs, match):
+        """Out-of-range tunables raise ValueError (they would corrupt detection)."""
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0,
+                last_total_reward=10.0,
+                termination_reason=TerminationReason.GOAL_REACHED,
+                success=True,
+            )
+            for i in range(50)
+        ]
+        with pytest.raises(ValueError, match=match):
+            detect_convergence(results, **kwargs)
+
     def test_detect_convergence_gradual_improvement(self):
         """Test convergence with gradual improvement to stability."""
         # Linearly improving success rate
