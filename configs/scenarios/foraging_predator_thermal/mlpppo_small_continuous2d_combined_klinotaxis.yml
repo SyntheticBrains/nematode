@@ -10,7 +10,9 @@
 # gradient_strength 0.4; reward_mode distal_chemo_contact_trigger). 60 mm world.
 #
 # Cross-arm converged success (n=4, converged-budget re-measure @2400-3000ep with the
-#   level-agnostic plateau metric): MLP 86 > Transformer 68 > CfC 56 ~ connectome 52 > LSTM.
+#   level-agnostic plateau metric): MLP 86 > Transformer 68 > a CfC/connectome/LSTM
+#   mid-cluster (CfC 56 ~ connectome 52, LSTM 45 baseline lifted to ~59 by the re-tune;
+#   internal order unsettled, pending n>=8).
 #   The earlier 1200ep ranking (MLP 80 > Tfmr 52 > CfC 48 > LSTM 42 > connectome 35)
 #   UNDER-TRAINED the slow-climbing arms: Transformer is the robust #2, and the connectome is
 #   mid-pack (NOT a structural laggard — its "35 ceiling" was a 1200ep artifact). MLP leads
