@@ -140,10 +140,19 @@ def detect_convergence(
 
     Notes
     -----
-    The onset is the first window reaching within ``band`` of the converged
-    plateau, NOT the first fully-homogeneous (≈100%) window the legacy detector
-    required; for high-band runs this can differ by ≤1 run, but the averaged
-    plateau metric is unchanged within sampling noise.
+    The onset is the start of the final at-plateau region, NOT the first
+    fully-homogeneous (~100%) window the legacy detector required; for high-band
+    runs this can differ by <=1 run, but the averaged plateau metric is unchanged
+    within sampling noise.
+
+    A flat run (e.g. one that never succeeds, or sits at a low level) satisfies
+    the no-trend gate and is reported as converged at that level. This is correct
+    for an architecture that genuinely plateaus low (a valid ranking outcome), but
+    it cannot be distinguished from a slow-igniter cut off mid-warm-up purely from
+    the run — both look flat. That ambiguity is a budget-sufficiency concern, not a
+    detection one: callers MUST give every arm enough episodes to reach its plateau
+    (the ``architecture-comparison-protocol`` budget requirement), and the
+    full-window-mean cross-check flags a run whose tail still disagrees.
     """
     n = len(results)
     if n < min_total_runs:
