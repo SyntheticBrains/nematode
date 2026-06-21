@@ -3,7 +3,7 @@
 # The GA-evolved-weights member (6th MUST arm) of the cross-architecture C3
 # comparison. Shares the locked T7 continuous C3 env + reward + satiety block with
 # the five PPO C3 cells (configs/scenarios/foraging_predator_thermal/
-# *_small_combined_continuous2d_klinotaxis.yml) — only the brain + the learning
+# *_small_continuous2d_combined_klinotaxis.yml) — only the brain + the learning
 # regime (GA population weight-search vs PPO gradient descent) differ. Lives under
 # configs/evolution/ because GA configs carry an `evolution:` block and launch via
 # scripts/run_evolution.py (NOT run_simulation.py).
