@@ -22,6 +22,7 @@ from quantumnematode.utils.config_loader import (
     SensingMode,
     ThermotaxisConfig,
     TransgenerationalConfig,
+    _warn_unknown_brain_config_keys,
     apply_sensing_mode,
     validate_sensing_config,
 )
@@ -1360,3 +1361,47 @@ class TestEvolutionConfigComposedInheritancePairing:
         )
         assert cfg.inheritance == "none"
         assert cfg.transgenerational is None
+
+
+class TestUnknownBrainConfigKeyWarning:
+    """`_warn_unknown_brain_config_keys` surfaces silently-dropped brain.config keys."""
+
+    def test_warns_on_unknown_key(self, caplog):
+        """A brain.config key the brain class does not declare emits a warning."""
+        data = {
+            "brain": {
+                "name": "mlpppo",
+                # entropy_coef_end / entropy_decay_episodes are NOT mlpppo fields —
+                # mlpppo does not implement an entropy schedule, so they no-op.
+                "config": {
+                    "entropy_coef": 0.08,
+                    "entropy_coef_end": 0.02,
+                    "entropy_decay_episodes": 800,
+                },
+            },
+        }
+        with caplog.at_level(logging.WARNING):
+            _warn_unknown_brain_config_keys(data, "test.yml")
+        assert "unrecognized field" in caplog.text
+        assert "entropy_coef_end" in caplog.text
+        assert "entropy_decay_episodes" in caplog.text
+
+    def test_silent_on_clean_config(self, caplog):
+        """A config with only recognized fields emits no warning."""
+        data = {
+            "brain": {"name": "mlpppo", "config": {"entropy_coef": 0.08, "learning_rate": 0.0003}},
+        }
+        with caplog.at_level(logging.WARNING):
+            _warn_unknown_brain_config_keys(data, "test.yml")
+        assert "unrecognized field" not in caplog.text
+
+    def test_no_crash_on_missing_or_unknown_brain(self, caplog):
+        """Missing brain block / unknown brain name / non-dict config are handled gracefully."""
+        with caplog.at_level(logging.WARNING):
+            _warn_unknown_brain_config_keys({}, "test.yml")  # no brain
+            _warn_unknown_brain_config_keys(
+                {"brain": {"name": "nonexistent", "config": {"x": 1}}}, "t.yml",
+            )
+            _warn_unknown_brain_config_keys({"brain": {"name": "mlpppo"}}, "test.yml")  # no config
+            _warn_unknown_brain_config_keys("not-a-dict", "test.yml")
+        assert "unrecognized field" not in caplog.text

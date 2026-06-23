@@ -2528,7 +2528,42 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
     """
     with Path(config_path).open() as file:
         data = yaml.safe_load(file)
+        _warn_unknown_brain_config_keys(data, config_path)
         return SimulationConfig(**data)
+
+
+def _warn_unknown_brain_config_keys(data: object, config_path: str) -> None:
+    """Warn about ``brain.config`` keys the brain's config class does not declare.
+
+    Unknown keys are silently dropped when the YAML is parsed into the brain config
+    model (Pydantic ignores extras), so a typo'd or dead hyperparameter — e.g. an
+    entropy-schedule key on a brain that does not implement the schedule — passes
+    without effect. Comparing the raw YAML keys against the resolved brain config
+    class's fields here surfaces them at load time, before they silently no-op.
+    """
+    if not isinstance(data, dict):
+        return
+    brain = data.get("brain")
+    if not isinstance(brain, dict):
+        return
+    brain_name = brain.get("name")
+    raw_config = brain.get("config")
+    if not isinstance(brain_name, str) or not isinstance(raw_config, dict):
+        return
+    config_cls = BRAIN_CONFIG_MAP.get(brain_name)
+    if config_cls is None:
+        return  # unknown brain name is reported elsewhere (brain factory / schema validation)
+    unknown = set(raw_config) - set(config_cls.model_fields)
+    if unknown:
+        logger.warning(
+            "Brain config for '%s' in %s declares unrecognized field(s) %s that "
+            "%s does not accept — they are IGNORED (silently dropped). Check for a "
+            "typo or a hyperparameter the brain does not implement.",
+            brain_name,
+            config_path,
+            sorted(unknown),
+            config_cls.__name__,
+        )
 
 
 def configure_brain(
