@@ -1400,7 +1400,8 @@ class TestUnknownBrainConfigKeyWarning:
         with caplog.at_level(logging.WARNING):
             _warn_unknown_brain_config_keys({}, "test.yml")  # no brain
             _warn_unknown_brain_config_keys(
-                {"brain": {"name": "nonexistent", "config": {"x": 1}}}, "t.yml",
+                {"brain": {"name": "nonexistent", "config": {"x": 1}}},
+                "t.yml",
             )
             _warn_unknown_brain_config_keys({"brain": {"name": "mlpppo"}}, "test.yml")  # no config
             _warn_unknown_brain_config_keys("not-a-dict", "test.yml")
