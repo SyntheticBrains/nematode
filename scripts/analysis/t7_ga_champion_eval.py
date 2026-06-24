@@ -59,8 +59,15 @@ def main() -> None:
             generation=0,
         )
 
+    seed_ptrs = sorted(args.runs_dir.glob("resultsdir_s*.txt"))
+    if not seed_ptrs:
+        msg = (
+            f"No resultsdir_s*.txt files in {args.runs_dir} — nothing to evaluate "
+            "(check the GA runs completed and wrote their results-dir pointers)."
+        )
+        raise SystemExit(msg)
     results: dict[str, dict] = {}
-    for ptr in sorted(args.runs_dir.glob("resultsdir_s*.txt")):
+    for ptr in seed_ptrs:
         seed = int(ptr.stem.split("_s")[-1])
         rd = ptr.read_text().strip()
         bp = json.loads((REPO / "evolution_results" / rd / "best_params.json").read_text())

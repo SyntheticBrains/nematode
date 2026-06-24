@@ -130,18 +130,22 @@ def load_primary(manifest: Path, ga_results: Path | None) -> dict[str, dict[int,
         if missing:
             print(f"  WARN {arch}: {len(missing)} seed(s) missing experiment JSON {missing}")
 
-    if ga_results and ga_results.exists():
-        ga = json.loads(ga_results.read_text())
-        table["feedforwardga"] = {
-            int(s): {
-                "success": v["full_clear_rate"],
-                "converged": None,  # n/a — the GA champion eval has no training-plateau notion
-                "foods": v.get("mean_foods"),
-                "evasion_rate": None,
-                "temp_comfort": None,
+    if ga_results is not None:
+        ga = json.loads(ga_results.read_text()) if ga_results.exists() else {}
+        if ga:
+            table["feedforwardga"] = {
+                int(s): {
+                    "success": v["full_clear_rate"],
+                    "converged": None,  # n/a — the GA champion eval has no training-plateau notion
+                    "foods": v.get("mean_foods"),
+                    "evasion_rate": None,
+                    "temp_comfort": None,
+                }
+                for s, v in ga.items()
             }
-            for s, v in ga.items()
-        }
+        else:
+            # --ga-results was requested but unusable: do NOT silently drop the GA arm.
+            print(f"  WARN feedforwardga: --ga-results {ga_results} missing or empty — GA arm excluded")
     return table
 
 
