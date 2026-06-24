@@ -145,7 +145,9 @@ def load_primary(manifest: Path, ga_results: Path | None) -> dict[str, dict[int,
             }
         else:
             # --ga-results was requested but unusable: do NOT silently drop the GA arm.
-            print(f"  WARN feedforwardga: --ga-results {ga_results} missing or empty — GA arm excluded")
+            print(
+                f"  WARN feedforwardga: --ga-results {ga_results} missing or empty — GA arm excluded",
+            )
     return table
 
 
