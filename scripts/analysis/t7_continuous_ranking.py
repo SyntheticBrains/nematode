@@ -29,9 +29,9 @@ Metric sources:
 Usage::
 
     uv run python scripts/analysis/t7_continuous_ranking.py \
-        --manifest tmp/evaluations/t7-continuous-prep/n8/_manifest.txt \
-        --ga-results tmp/evaluations/t7-continuous-prep/n8_ga/ga_c3_results.json \
-        --out tmp/evaluations/t7-continuous-prep/n8/ranking.json
+        --manifest <run-dir>/_manifest.txt \
+        --ga-results <ga-run-dir>/ga_c3_results.json \
+        --out <run-dir>/ranking.json
 """
 
 from __future__ import annotations

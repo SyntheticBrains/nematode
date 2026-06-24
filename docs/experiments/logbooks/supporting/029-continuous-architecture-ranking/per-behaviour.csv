@@ -1,0 +1,7 @@
+arch,foods,evasion_pct,thermal_comfort
+mlpppo,9.59,80.5,0.775
+transformerppo,8.62,65.5,0.754
+cfcppo,9.00,69.0,0.716
+connectomeppo,7.79,50.8,0.614
+lstmppo,8.24,60.9,0.706
+feedforwardga,,,

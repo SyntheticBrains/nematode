@@ -10,8 +10,8 @@ Usage::
 
     uv run python scripts/analysis/t7_ga_champion_eval.py \
         --config configs/evolution/feedforwardga_small_continuous2d_combined_klinotaxis.yml \
-        --runs-dir tmp/evaluations/t7-continuous-prep/n8_ga \
-        --episodes 40 --out tmp/evaluations/t7-continuous-prep/n8_ga/ga_c3_results.json
+        --runs-dir <ga-run-dir> \
+        --episodes 40 --out <ga-run-dir>/ga_c3_results.json
 """
 
 from __future__ import annotations

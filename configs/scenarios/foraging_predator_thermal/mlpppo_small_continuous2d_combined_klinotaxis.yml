@@ -19,9 +19,11 @@
 #   robustly. Per-arch recipes are tuned ON this integrated cell. Final numbers pending the
 #   n>=8 ranking @3000ep.
 #
-# MLPPPO recipe: peak-anneal entropy schedule 0.08 -> 0.02 over 800 ep. This
-# all-rounder LEADS the integrated cell (80% — strong on both evasion and
-# thermotaxis), so the schedule that works for it is kept unchanged.
+# MLPPPO recipe: flat entropy 0.08. (mlpppo does NOT implement an entropy schedule —
+# the earlier entropy_coef_end / entropy_decay_episodes keys were silently dropped
+# no-ops, so this arm always ran flat 0.08; load-time warning added in PR #253.) This
+# all-rounder LEADS the integrated cell (the clear #1, best on all three behaviours)
+# at flat 0.08, so no schedule is needed.
 max_steps: 2400
 brain:
   name: mlpppo
@@ -40,8 +42,6 @@ brain:
     num_epochs: 10
     num_minibatches: 2
     max_grad_norm: 0.5
-    entropy_coef_end: 0.02
-    entropy_decay_episodes: 800
     sensory_modules:
     - food_chemotaxis
     - predator_mechanosensation_klinotaxis
