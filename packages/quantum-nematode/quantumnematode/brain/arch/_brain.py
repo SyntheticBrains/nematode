@@ -129,6 +129,23 @@ class BrainParams(BaseModel):
         description="Last action taken by the agent.",
     )
 
+    # --- Bit-memory positive-control task (artificial; None unless the task is enabled) ---
+    cue_signal: float | None = Field(
+        default=None,
+        description=(
+            "Bit-memory task cue value (-1/+1) during the cue phase, 0 during "
+            "delay/response; None when the task is disabled. The delayed-match-to-cue "
+            "working-memory probe withholds this after the cue phase."
+        ),
+    )
+    go_signal: float | None = Field(
+        default=None,
+        description=(
+            "Bit-memory task go-signal (1 during the response phase, 0 otherwise); "
+            "None when the task is disabled."
+        ),
+    )
+
     # --- Chemotaxis (food/predator gradients) ---
     food_gradient_strength: float | None = Field(
         default=None,

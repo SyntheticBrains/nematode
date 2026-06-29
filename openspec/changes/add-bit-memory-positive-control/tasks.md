@@ -2,9 +2,9 @@
 
 ## 1. Observation channels (cue + go-signal sensory modules)
 
-- [ ] 1.1 Add `CUE` and `GO_SIGNAL` members to the `ModuleName` enum and register them in `SENSORY_MODULES` (`brain/modules.py`), each with `classical_dim = 1`, an extraction function reading the new `BrainParams` fields, and a description marking them as bit-memory task channels.
-- [ ] 1.2 Add `cue_signal: float | None` and `go_signal: float | None` fields to `BrainParams` (`brain/arch/_brain.py`); default `None` (treated as `0.0` by the extractors).
-- [ ] 1.3 Unit test: registering both modules with `classical_dim = 1` is load-bearing (the unknown-module fallback in `extract_classical_features` emits 2 zeros, which would make input_dim = 4). Assert `get_classical_feature_dimension([cue, go_signal]) == 2`; with `cue_signal`/`go_signal` set, `extract_classical_features([cue, go_signal], params)` yields the expected 2-dim observation; with them unset it yields zeros.
+- [x] 1.1 Add `CUE` and `GO_SIGNAL` members to the `ModuleName` enum and register them in `SENSORY_MODULES` (`brain/modules.py`), each with `classical_dim = 1`, an extraction function reading the new `BrainParams` fields, and a description marking them as bit-memory task channels.
+- [x] 1.2 Add `cue_signal: float | None` and `go_signal: float | None` fields to `BrainParams` (`brain/arch/_brain.py`); default `None` (treated as `0.0` by the extractors).
+- [x] 1.3 Unit test: registering both modules with `classical_dim = 1` is load-bearing (the unknown-module fallback in `extract_classical_features` emits 2 zeros, which would make input_dim = 4). Assert `get_classical_feature_dimension([cue, go_signal]) == 2`; with `cue_signal`/`go_signal` set, `extract_classical_features([cue, go_signal], params)` yields the expected 2-dim observation; with them unset it yields zeros.
 
 ## 2. Configuration schema
 
