@@ -47,7 +47,6 @@ brain:
     num_epochs: 10
     num_minibatches: 2
     max_grad_norm: 0.5
-    normalize_advantages: true
     sensory_modules:
       - food_chemotaxis                  # Auto-translated to food_chemotaxis_klinotaxis
       - predator_mechanosensation_oracle # Auto-translated to predator_mechanosensation_klinotaxis

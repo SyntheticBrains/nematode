@@ -33,7 +33,6 @@ brain:
     num_epochs: 10
     num_minibatches: 2
     max_grad_norm: 0.5
-    normalize_advantages: true
 
     # LR schedule: warmup prevents early instability, decay prevents late oscillation
     lr_warmup_episodes: 50
