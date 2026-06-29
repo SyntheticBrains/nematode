@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -41,7 +41,11 @@ from quantumnematode.brain.arch import (
     SpikingReinforceBrainConfig,
     TransformerPPOBrainConfig,
 )
-from quantumnematode.brain.modules import Modules
+from quantumnematode.brain.modules import (
+    ModuleName,
+    Modules,
+    get_classical_feature_dimension,
+)
 from quantumnematode.dtypes import OxygenSpot, TemperatureSpot
 from quantumnematode.env.env import (
     DEFAULT_BASE_OXYGEN,
@@ -1007,6 +1011,112 @@ class Continuous2DConfig(BaseModel):
     max_turn_rad: float = Field(default=0.5, gt=0.0)
 
 
+# Reference windowed-attention span for the bit-memory Transformer-confound guard.
+# The Transformer arm attends over a fixed window (transformer_ppo default
+# ``window_size = 16``); if the cue-to-response span exceeds it the cue is evicted
+# and the Transformer fails like a memoryless arm — a confounded null. Arms with a
+# smaller window need a correspondingly smaller span.
+_REFERENCE_ATTENTION_WINDOW = 16
+
+# The bit-memory observation is exactly the cue + go-signal channels (2 dims). Any
+# other resolved sensory module (gradient sensing, STAM) breaks the no-external-memory-aid
+# contract and is rejected.
+_BIT_MEMORY_OBS_DIM = 2
+
+
+class BitMemoryTaskConfig(BaseModel):
+    """Bit-memory delayed-match-to-cue positive control (artificial; off by default).
+
+    A working-memory probe: per trial a binary cue is shown during the cue phase,
+    withheld across the delay, then on a go-signalled response phase the agent must
+    act on the *remembered* cue. A memoryless policy is pinned at chance; a
+    recurrent/attention policy can solve it. See the ``bit-memory-positive-control``
+    capability. ``extra="forbid"`` so a typo'd key fails loudly rather than silently
+    dropping (this task's parameters are load-bearing for the control's validity).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    trials_per_episode: int = Field(default=20, gt=0)
+    cue_steps: int = Field(default=2, gt=0)
+    delay_steps: int = Field(default=8, ge=0)
+    response_steps: int = Field(default=1, gt=0)
+    reward_correct: float = 1.0
+    penalty_wrong: float = 0.0
+
+    @property
+    def trial_span(self) -> int:
+        """Steps per trial (cue + delay + response)."""
+        return self.cue_steps + self.delay_steps + self.response_steps
+
+    @model_validator(mode="after")
+    def _warn_span_exceeds_window(self) -> "BitMemoryTaskConfig":
+        """Warn when the per-trial span exceeds the reference attention window.
+
+        The Transformer-confound guard (design Decision 3): a span past the window
+        evicts the cue from a windowed-attention arm, so it fails like a memoryless
+        arm — a confounded result rather than a memory finding.
+        """
+        if self.enabled and self.trial_span > _REFERENCE_ATTENTION_WINDOW:
+            logger.warning(
+                "bit_memory_task per-trial span (%d = cue %d + delay %d + response %d) "
+                "exceeds the reference attention window_size (%d); a windowed-attention "
+                "arm (e.g. transformerppo) cannot attend to the cue and would fail like a "
+                "memoryless arm — a confounded result. Keep the span within the window.",
+                self.trial_span,
+                self.cue_steps,
+                self.delay_steps,
+                self.response_steps,
+                _REFERENCE_ATTENTION_WINDOW,
+            )
+        return self
+
+
+def assert_bit_memory_observation_clean(
+    raw_modules: list[ModuleName] | None,
+    sensing: SensingConfig | None,
+) -> None:
+    """Assert a bit-memory observation resolves to exactly the cue + go channels.
+
+    The no-external-memory-aid contract (spec "No external memory aids"): when the
+    bit-memory task is enabled the observation MUST be cue + go only, so retaining the
+    cue requires internal recurrent state. Resolve the modules exactly as brain
+    construction does — STAM sneaks in when ``stam_enabled`` (``apply_sensing_mode``
+    appends it) or under derivative/klinotaxis modes (``validate_sensing_config``
+    auto-enables it). Raises ``ValueError`` on any STAM/gradient leak so a memoryless
+    arm cannot cheat.
+    """
+    if not raw_modules:
+        msg = (
+            "bit_memory_task.enabled requires the brain to declare "
+            "sensory_modules: [cue, go_signal]; none were found."
+        )
+        raise ValueError(msg)
+    resolved_sensing = validate_sensing_config(sensing) if sensing is not None else SensingConfig()
+    resolved = apply_sensing_mode([str(m) for m in raw_modules], resolved_sensing)
+    if ModuleName.STAM.value in resolved:
+        msg = (
+            "bit_memory_task.enabled but STAM is present in the resolved sensory "
+            f"modules {resolved} — STAM is an external recency buffer that would leak the "
+            "cue to a memoryless arm and invalidate the control. Use oracle sensing with "
+            "stam_enabled: false (the default)."
+        )
+        raise ValueError(msg)
+    try:
+        dim = get_classical_feature_dimension([ModuleName(m) for m in resolved])
+    except ValueError as exc:
+        msg = f"bit_memory_task resolved an unknown sensory module in {resolved}: {exc}"
+        raise ValueError(msg) from exc
+    if dim != _BIT_MEMORY_OBS_DIM:
+        msg = (
+            f"bit_memory_task.enabled requires a {_BIT_MEMORY_OBS_DIM}-dim observation "
+            f"(cue + go only); got {dim} from resolved modules {resolved}. Remove any "
+            "gradient/STAM sensory modules — the no-external-memory-aid contract."
+        )
+        raise ValueError(msg)
+
+
 class EnvironmentConfig(BaseModel):
     """Configuration for the dynamic foraging environment."""
 
@@ -1027,6 +1137,10 @@ class EnvironmentConfig(BaseModel):
     pheromones: PheromoneConfig | None = None
     social_feeding: SocialFeedingConfig | None = None
     sensing: SensingConfig | None = None
+    # Bit-memory delayed-match-to-cue positive control (artificial; off by default).
+    # When enabled, the foraging/predator/thermal dynamics are inactive and the
+    # episode is driven by the cue/delay/response phase machine.
+    bit_memory_task: BitMemoryTaskConfig | None = None
 
     @model_validator(mode="after")
     def _validate_continuous_env_type(self) -> "EnvironmentConfig":
@@ -1065,6 +1179,10 @@ class EnvironmentConfig(BaseModel):
     def get_thermotaxis_config(self) -> ThermotaxisConfig:
         """Get thermotaxis configuration with defaults."""
         return self.thermotaxis or ThermotaxisConfig()
+
+    def get_bit_memory_task_config(self) -> BitMemoryTaskConfig:
+        """Get the bit-memory task configuration with defaults (disabled)."""
+        return self.bit_memory_task or BitMemoryTaskConfig()
 
     def get_aerotaxis_config(self) -> AerotaxisConfig:
         """Get aerotaxis configuration with defaults."""
@@ -2529,7 +2647,36 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
     with Path(config_path).open() as file:
         data = yaml.safe_load(file)
         _warn_unknown_brain_config_keys(data, config_path)
-        return SimulationConfig(**data)
+        config = SimulationConfig(**data)
+        _assert_bit_memory_invariant_from_raw(data, config)
+        return config
+
+
+def _assert_bit_memory_invariant_from_raw(data: object, config: SimulationConfig) -> None:
+    """Run the bit-memory no-external-memory-aid assertion from the raw YAML modules.
+
+    The brain config is a union type resolved later (``configure_brain``), so the raw
+    ``brain.config.sensory_modules`` from the YAML are the reliable source here. Only
+    fires when the bit-memory task is enabled; a leaked cue (STAM / gradient channel)
+    raises, since it would let a memoryless arm cheat and invalidate the control.
+    """
+    env = config.environment
+    if env is None or env.bit_memory_task is None or not env.bit_memory_task.enabled:
+        return
+    raw_modules = None
+    if isinstance(data, dict):
+        brain = data.get("brain")
+        brain_cfg = brain.get("config") if isinstance(brain, dict) else None
+        if isinstance(brain_cfg, dict):
+            raw_modules = brain_cfg.get("sensory_modules")
+    modules: list[ModuleName] | None = None
+    if raw_modules:
+        try:
+            modules = [ModuleName(m) for m in raw_modules]
+        except ValueError as exc:
+            msg = f"bit_memory_task: unknown sensory module in {raw_modules}: {exc}"
+            raise ValueError(msg) from exc
+    assert_bit_memory_observation_clean(modules, env.sensing)
 
 
 def _warn_unknown_brain_config_keys(data: object, config_path: str) -> None:

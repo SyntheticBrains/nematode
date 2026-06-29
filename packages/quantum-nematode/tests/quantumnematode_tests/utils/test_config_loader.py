@@ -1406,3 +1406,88 @@ class TestUnknownBrainConfigKeyWarning:
             _warn_unknown_brain_config_keys({"brain": {"name": "mlpppo"}}, "test.yml")  # no config
             _warn_unknown_brain_config_keys("not-a-dict", "test.yml")
         assert "unrecognized field" not in caplog.text
+
+
+class TestBitMemoryTaskConfig:
+    """Bit-memory positive-control config + the no-external-memory-aid invariant."""
+
+    def test_defaults_disabled_with_starter_values(self):
+        """Off by default, with within-window starter step counts (trial span 11 < 16)."""
+        from quantumnematode.utils.config_loader import BitMemoryTaskConfig
+
+        cfg = BitMemoryTaskConfig()
+        assert cfg.enabled is False
+        assert (cfg.cue_steps, cfg.delay_steps, cfg.response_steps) == (2, 8, 1)
+        assert cfg.trials_per_episode == 20
+        assert cfg.trial_span == 11
+
+    def test_unknown_key_is_rejected(self):
+        """extra='forbid': a typo'd task key fails loudly (this task's params are load-bearing)."""
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import BitMemoryTaskConfig
+
+        with pytest.raises(ValidationError):
+            BitMemoryTaskConfig(enabled=True, delya_steps=8)  # typo
+
+    def test_span_over_window_warns(self, caplog):
+        """The Transformer-confound guard warns when the trial span exceeds the window."""
+        import logging
+
+        from quantumnematode.utils.config_loader import BitMemoryTaskConfig
+
+        with caplog.at_level(logging.WARNING):
+            BitMemoryTaskConfig(enabled=True, delay_steps=30)  # span 33 > 16
+        assert "window" in caplog.text.lower()
+
+    def test_clean_cue_go_observation_passes(self):
+        """Oracle sensing + [cue, go_signal] resolves to exactly 2 dims — the contract."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import assert_bit_memory_observation_clean
+
+        assert_bit_memory_observation_clean([ModuleName.CUE, ModuleName.GO_SIGNAL], None)
+
+    def test_stam_enabled_is_rejected(self):
+        """Explicit STAM in the observation would leak the cue -> hard error."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import (
+            SensingConfig,
+            assert_bit_memory_observation_clean,
+        )
+
+        with pytest.raises(ValueError, match="STAM"):
+            assert_bit_memory_observation_clean(
+                [ModuleName.CUE, ModuleName.GO_SIGNAL],
+                SensingConfig(stam_enabled=True),
+            )
+
+    def test_klinotaxis_mode_auto_enables_stam_and_is_rejected(self):
+        """The validate_sensing_config STAM auto-injection path is caught."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import (
+            SensingConfig,
+            assert_bit_memory_observation_clean,
+        )
+
+        with pytest.raises(ValueError, match="STAM"):
+            assert_bit_memory_observation_clean(
+                [ModuleName.CUE, ModuleName.GO_SIGNAL],
+                SensingConfig(chemotaxis_mode=SensingMode.KLINOTAXIS),
+            )
+
+    def test_extra_gradient_module_breaks_two_dim_and_is_rejected(self):
+        """Any extra sensory module breaks the exactly-2-dim contract -> hard error."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import assert_bit_memory_observation_clean
+
+        with pytest.raises(ValueError, match="2-dim"):
+            assert_bit_memory_observation_clean(
+                [ModuleName.CUE, ModuleName.GO_SIGNAL, ModuleName.FOOD_CHEMOTAXIS],
+                None,
+            )
+
+    def test_no_modules_is_rejected(self):
+        """An enabled task with no sensory_modules is a config error."""
+        from quantumnematode.utils.config_loader import assert_bit_memory_observation_clean
+
+        with pytest.raises(ValueError, match="sensory_modules"):
+            assert_bit_memory_observation_clean(None, None)
