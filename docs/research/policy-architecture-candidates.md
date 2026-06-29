@@ -40,14 +40,17 @@ memory-separation gate first; the new arms are only worth bringing up if that ga
 confirms and populates the already-scoped `T7.separation.bit_memory_control` →
 `T7.separation.ars_depletion` structure rather than inventing new sequencing.
 
-**Top picks (all conditional on the memory gate separating the arms):**
+**Top picks — memory-gated** (conditional on the memory gate separating the arms):
 
 - **minGRU / minLSTM** — cheapest new arm (a near-trivial extension of the existing `lstmppo`
   recurrent path); also a candidate *stability* upgrade to our laggard LSTM arm, independent of memory.
 - **Modified S5 (structured SSM)** — the strongest memory-axis candidate; strictly memory-cell-dependent.
+
+**Top pick — memory-independent** (NOT gated by the memory cell; must not be deferred by a null memory result):
+
 - **NCP (worm-circuit wiring)** — the one candidate evaluable *without* the memory cell; highest
   biological fidelity, but heavy overlap with our existing CfC + connectome arms, so a fidelity/
-  interpretability arm, not a leaderboard contender.
+  interpretability arm, not a leaderboard contender — schedule it independently of the gate.
 
 Everything else (LTC, Mamba world-models, the exotic-unrated set, and every in-repo SHOULD/MAY
 arm) is **skip or defer** for T7.
@@ -223,8 +226,8 @@ memory gate is the single real prerequisite.)
 2. **If it separates** (recurrent / Transformer > MLP) → bring up the Tier-1 new arms to see if they
    beat the *existing* recurrent arms on memory: **minGRU** (cheapest; doubles as the LSTM-stability
    fix) and **modified-S5** (strongest memory candidate), with LSTM/GRU as the control yardstick.
-   Optionally elevate `T7.separation.ars_depletion` (the biological twin) and add **NCP** as the
-   bio-fidelity arm.
+   Optionally elevate `T7.separation.ars_depletion` (the biological twin) — also gated on separation.
+   (**NCP is the exception — not gated on memory; brought up independently, see below.**)
 3. **If it does not separate** → the null settles it; the new memory arms stay deferred (they would
    reproduce the reactive null on the biological cell too).
 
