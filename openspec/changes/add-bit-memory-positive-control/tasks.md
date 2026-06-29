@@ -8,7 +8,7 @@
 
 ## 2. Configuration schema
 
-- [ ] 2.1 Add a `BitMemoryTaskConfig` block (`enabled: bool = False`, `trials_per_episode`, `cue_steps`, `delay_steps`, `response_steps`, `reward_correct`, `penalty_wrong`) to `utils/config_loader.py` and wire it into the environment config; off by default.
+- [ ] 2.1 Add a `BitMemoryTaskConfig` block to `utils/config_loader.py` and wire it into the environment config; off by default. Give the fields sensible within-window **starter defaults** (refined by the calibration in §6.2, kept under the Transformer's `window_size = 16`): `enabled: bool = False`, `trials_per_episode = 20`, `cue_steps = 2`, `delay_steps = 8`, `response_steps = 1`, `reward_correct = 1.0`, `penalty_wrong = 0.0` — so the schema is usable before calibration.
 - [ ] 2.2 Validation: assert `cue_steps + delay_steps + response_steps >= 1` and (with a warning) flag when the per-trial span exceeds a referenced attention `window_size` (the Transformer-confound guard from design Decision 3).
 - [ ] 2.3 Config-load test: a config with the task enabled parses; a config without it is unchanged. (NB the `#253` unknown-key warning is brain-config-only; the env-side `BitMemoryTaskConfig` is guarded by pydantic field validation instead — assert an unknown key under `bit_memory_task` raises rather than silently dropping.)
 - [ ] 2.4 **No-external-memory-aid invariant (hard assertion, the validity canary — design Risks / spec "No external memory aids").** When `bit_memory_task.enabled`, assert at config-resolve time that the sensing mode is oracle/none, that `stam` is **absent** from the resolved `sensory_modules` (guarding the `apply_sensing_mode` / `validate_sensing_config` STAM auto-injection path), and that the assembled observation dimension is exactly 2 (cue + go). Fail loudly if violated — a leaked cue invalidates the whole control.
@@ -26,7 +26,7 @@
 
 ## 4. Per-arm configs
 
-- [ ] 4.1 Author `configs/scenarios/bit_memory/{mlpppo,lstmppo,cfcppo,transformerppo,connectomeppo}_small_bitmemory.yml`: `sensory_modules: [cue, go_signal]`, the `bit_memory_task` block (span kept `< transformerppo.window_size` per design Decision 3), each arm's existing action head, and a fixed seed block for paired-seed runs.
+- [ ] 4.1 Author `configs/scenarios/bit_memory/{mlpppo,lstmppo,cfcppo,transformerppo,connectomeppo}_small_bit_memory.yml` (the filename carries **no `{sensing}` suffix** — a deliberate, documented deviation from the `{brain}_{size}[_{variant}]_{sensing}` convention in AGENTS.md, since bit-memory is a task variant whose input is the cue/go channels, not a sensing mode): `sensory_modules: [cue, go_signal]`, the `bit_memory_task` block (span kept `< transformerppo.window_size` per design Decision 3), each arm's existing action head, and a fixed seed block for paired-seed runs.
 - [ ] 4.2 Smoke: each config loads and runs a short headless episode (`--theme headless`) without error and produces the per-episode cue-match success metric.
 
 ## 5. Separation analysis harness
