@@ -19,7 +19,6 @@ brain:
     num_epochs: 10
     num_minibatches: 2
     max_grad_norm: 0.5
-    normalize_advantages: true
     sensory_modules:
       - food_chemotaxis
       - social_proximity
@@ -30,19 +29,19 @@ multi_agent:
   enabled: true
   agents:
     - id: agent_0
-      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, normalize_advantages: true, sensory_modules: [food_chemotaxis, social_proximity] } }
+      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, sensory_modules: [food_chemotaxis, social_proximity] } }
       social_phenotype: social
     - id: agent_1
-      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, normalize_advantages: true, sensory_modules: [food_chemotaxis, social_proximity] } }
+      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, sensory_modules: [food_chemotaxis, social_proximity] } }
       social_phenotype: social
     - id: agent_2
-      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, normalize_advantages: true, sensory_modules: [food_chemotaxis, social_proximity] } }
+      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, sensory_modules: [food_chemotaxis, social_proximity] } }
       social_phenotype: social
     - id: agent_3
-      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, normalize_advantages: true, sensory_modules: [food_chemotaxis, social_proximity] } }
+      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, sensory_modules: [food_chemotaxis, social_proximity] } }
       social_phenotype: solitary
     - id: agent_4
-      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, normalize_advantages: true, sensory_modules: [food_chemotaxis, social_proximity] } }
+      brain: { name: mlpppo, config: { actor_hidden_dim: 64, critic_hidden_dim: 64, num_hidden_layers: 2, clip_epsilon: 0.2, gamma: 0.99, gae_lambda: 0.95, value_loss_coef: 0.5, entropy_coef: 0.02, learning_rate: 0.001, rollout_buffer_size: 256, num_epochs: 10, num_minibatches: 2, max_grad_norm: 0.5, sensory_modules: [food_chemotaxis, social_proximity] } }
       social_phenotype: solitary
   food_competition: first_arrival
   social_detection_radius: 5

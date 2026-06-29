@@ -5,15 +5,12 @@ max_steps: 1000
 brain:
   name: lstmppo
   config:
-    hidden_dim: 64
     rnn_type: gru
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
     entropy_coef: 0.02
-    learning_rate: 0.001
-    chunk_length: 16
     rollout_buffer_size: 512
     num_epochs: 10
     max_grad_norm: 0.5

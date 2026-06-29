@@ -43,7 +43,6 @@ brain:
     num_epochs: 20             # More epochs to extract learning from each rollout
     num_minibatches: 2
     max_grad_norm: 0.5
-    normalize_advantages: true
 
     # LR schedule (decay matched to 4000 episode training)
     lr_warmup_episodes: 50

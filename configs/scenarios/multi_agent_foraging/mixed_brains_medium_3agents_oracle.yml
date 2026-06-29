@@ -28,7 +28,6 @@ multi_agent:
           num_epochs: 10
           num_minibatches: 2
           max_grad_norm: 0.5
-          normalize_advantages: true
           sensory_modules:
             - food_chemotaxis
             - social_proximity
@@ -36,15 +35,12 @@ multi_agent:
       brain:
         name: lstmppo
         config:
-          hidden_dim: 64
           rnn_type: gru
           clip_epsilon: 0.2
           gamma: 0.99
           gae_lambda: 0.95
           value_loss_coef: 0.5
           entropy_coef: 0.02
-          learning_rate: 0.001
-          chunk_length: 16
           sensory_modules:
             - food_chemotaxis
             - social_proximity
@@ -52,10 +48,8 @@ multi_agent:
       brain:
         name: qrh
         config:
-          num_qubits: 4
           reservoir_depth: 3
           readout_hidden_dim: 32
-          learning_rate: 0.001
           sensory_modules:
             - food_chemotaxis
             - social_proximity
