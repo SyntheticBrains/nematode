@@ -310,24 +310,28 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         """Return True if the agent is within the capture radius (Euclidean) of any food."""
         agent_x, agent_y = self._agent_xy(agent_id)
         radius = self.continuous.capture_radius_mm
+        deplete = self.foraging.source_depletion_enabled
+        eps = self.foraging.source_removal_eps
         return any(
             math.hypot(agent_x - food_x, agent_y - food_y) <= radius
-            for food_x, food_y in self.foods
+            and (not deplete or self.food_amounts[i] > eps)
+            for i, (food_x, food_y) in enumerate(self.foods)
         )
 
     def consume_food_for(self, agent_id: str) -> tuple[int, int] | None:
         """Consume the nearest food within the capture radius, respawn, and return it."""
         agent_x, agent_y = self._agent_xy(agent_id)
-        nearest: tuple[int, int] | None = None
+        nearest_index: int | None = None
         nearest_distance = self.continuous.capture_radius_mm
-        for food in self.foods:
+        for i, food in enumerate(self.foods):
             distance = math.hypot(agent_x - food[0], agent_y - food[1])
             if distance <= nearest_distance:
-                nearest, nearest_distance = food, distance
-        if nearest is not None:
-            self.foods.remove(nearest)
+                nearest_index, nearest_distance = i, distance
+        if nearest_index is not None:
+            nearest = self.foods[nearest_index]
+            # Deplete in place / remove + respawn by index so the matched source drains.
+            self._deplete_or_remove(nearest_index)
             logger.info(f"Food consumed near {nearest} by {agent_id} (continuous-2D)")
-            self.spawn_food()
             return nearest
         return None
 

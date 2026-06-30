@@ -2,29 +2,29 @@
 
 ## 1. Config block (off by default)
 
-- [ ] 1.1 Add a source-depletion block to `ForagingParams` (`env/env.py:~231`) with sensible defaults: `source_depletion_enabled: bool = False`, `source_initial_amount: float = 1.0`, `depletion_per_feed: float = 0.25` (gradual — ~4 feeds to exhaust; NOT one-bite, which would just reproduce binary removal), `removal_eps: float = 1e-3` (and an optional `deplete_scales_reward: bool = False` lever, D7).
-- [ ] 1.2 Mirror the block on `ForagingConfig` (`utils/config_loader.py:284-306`) with pydantic `Field(...)` validators (positive amounts; quantum ≤ initial); wire through `to_params()` (`config_loader.py:328-345`).
+- [x] 1.1 Add a source-depletion block to `ForagingParams` (`env/env.py:~231`) with sensible defaults: `source_depletion_enabled: bool = False`, `source_initial_amount: float = 1.0`, `depletion_per_feed: float = 0.25` (gradual — ~4 feeds to exhaust; NOT one-bite, which would just reproduce binary removal), `source_removal_eps: float = 1e-3` (and an optional `deplete_scales_reward: bool = False` lever, D7).
+- [x] 1.2 Mirror the block on `ForagingConfig` (`utils/config_loader.py`) with pydantic `Field(gt=0)` validators + a `model_validator` rejecting quantum > initial; wire through `to_params()`.
 
 ## 2. Data model (parallel amount store)
 
-- [ ] 2.1 Add `self.food_amounts: list[float]` index-aligned with `self.foods`, initialised at the `__init__` declaration (`env/env.py:~1559`, alongside `self.foods = []`) AND repopulated in `_initialize_foods` (which runs only conditionally, so the store must exist before it) — each placed source starts at `source_initial_amount`. Keep the lists aligned **always** (append a default amount on add, pop on remove); the field consults amounts only when depletion is enabled.
-- [ ] 2.2 Add a `_remove_food(index)` / `_add_food(pos, amount)` helper pair that mutates **both** lists; route every `self.foods` mutation through it (`_initialize_foods`, `spawn_food`, both `consume_food_for`) so the lists never desync.
-- [ ] 2.3 Carry `food_amounts` in the **base** `DynamicForagingEnvironment.copy()` (`env/env.py:~4327`, where `new_env.foods = self.foods.copy()`) — NOT the continuous override, which delegates to `super().copy()` and never touches `foods` (adding it there would be a silent no-op).
+- [x] 2.1 Add `self.food_amounts: list[float]` index-aligned with `self.foods`, initialised at the `__init__` declaration AND repopulated in `_initialize_foods`; each placed source starts at `source_initial_amount`. Lists kept aligned always; the field consults amounts only when depletion is enabled.
+- [x] 2.2 Add a `_remove_food(index)` / `_add_food(pos, amount)` helper pair that mutates **both** lists; routed `_initialize_foods` + `spawn_food` appends through `_add_food` (consume routes through `_remove_food` via 4.1).
+- [x] 2.3 Carry `food_amounts` in the **base** `DynamicForagingEnvironment.copy()` (next to `new_env.foods = self.foods.copy()`).
 
 ## 3. Field reads (amount-scaled; off = byte-identical)
 
-- [ ] 3.1 Give `_food_field_magnitude` (`env/env.py:2078`) an optional `source_amount: float | None = None`; when `None` use the global `gradient_strength` (today's path, byte-identical), else scale by `source_amount`.
-- [ ] 3.2 Thread the per-source amount through the two superposition sites — `_compute_food_gradient_vector` (`env/env.py:2111`) and `get_food_concentration` (`env/env.py:2202`) — passing the source's amount **only when depletion is enabled**.
-- [ ] 3.3 Fix the `distance == 0` special case in `get_food_concentration` (`env/env.py:2234`) to read the **source's** amount (not the global `gradient_strength`) when depletion is enabled.
-- [ ] 3.4 Assert no field read mutates `food_amounts` (purity — the once-per-step landmine, D3).
-- [ ] 3.5 Add an amount signature to the continuous fidelity renderer's food-heatmap cache key (`env/pygame_renderer.py:~1497`, keyed on positions only today) when depletion is enabled, so the position-fixed depleting field visualises live (needed for the 7.1 calibration; the live scalar/quiver getters already read the current field).
+- [x] 3.1 Give `_food_field_magnitude` an optional `source_amount: float | None = None`; when `None` use the global `gradient_strength` (byte-identical), else scale by `source_amount`.
+- [x] 3.2 Thread the per-source amount through `_compute_food_gradient_vector` and `get_food_concentration` (enumerate; pass the amount only when depletion is enabled).
+- [x] 3.3 Fix the `distance == 0` special case in `get_food_concentration` to read the **source's** amount when depletion is enabled.
+- [x] 3.4 Field reads are pure — depletion is applied only at the consume event (4.1), never in a field read (covered by test 5.3).
+- [x] 3.5 Add an amount signature to the continuous fidelity renderer's food-heatmap cache key (`_heatmap_cache_key`) when depletion is enabled, so the position-fixed depleting field visualises live.
 
 ## 4. Consume paths (decrement vs remove; both substrates)
 
-- [ ] 4.1 Add a shared `_deplete_or_remove(index)` helper: when depletion enabled, decrement `food_amounts[index]` by `depletion_per_feed`; if it crosses `removal_eps`, `_remove_food` + `spawn_food` (subject to `no_respawn`); when disabled, remove outright (today's behaviour).
-- [ ] 4.2 Route grid `consume_food_for` (`env/env.py:~2467`) and continuous `consume_food_for` (`continuous_2d.py:~318`) through the shared helper — once per consume event (the only per-step depletion site, D3). Refactor BOTH to locate the matched source by **index** (they `foods.remove(agent_tuple)` / `foods.remove(nearest)` by value today) so the helper decrements the correct `food_amounts[index]` even when two foods coincide.
-- [ ] 4.3 `reached_goal_for` / capture predicate (`env/env.py:~2461`, `continuous_2d.py:~309`): a source at/below `removal_eps` SHALL NOT count as reachable food (no goal/reward) — one gate that atomically covers consumption, the goal bonus, and multi-agent competition.
-- [ ] 4.4 Reward coherence (D5): exclude below-`removal_eps` sources from the nearest-food distance metric (`agent/reward_calculator.py` → `get_nearest_food_distance_*`) when depletion is enabled, so the distance-shaping reward does not pull the agent toward exhausted patches (which would fight the memory demand).
+- [x] 4.1 Add a shared `_deplete_or_remove(index)` helper: when depletion enabled, decrement `food_amounts[index]` by `depletion_per_feed`; while above `source_removal_eps` leave in place; else (or when disabled) `_remove_food` + `spawn_food` (subject to `no_respawn`).
+- [x] 4.2 Route grid + continuous `consume_food_for` through the shared helper, located by **index** (not value) so the matched source drains even when two foods coincide.
+- [x] 4.3 `reached_goal_for` (grid + continuous): a source at/below `source_removal_eps` does not count as reachable food — one gate covering consumption, the goal bonus, and multi-agent competition.
+- [x] 4.4 Reward coherence (D5): confirmed no `reward_calculator` change is needed — exhausted sources are removed (4.1) so they are absent from all food signals; a *partially*-depleted source above the threshold is still valid food (correct to attract). The field-independent distance-shaping confound is handled at the cell level (6.1).
 - [ ] 4.5 (Lever, D7) if `deplete_scales_reward`, scale the consume reward/satiety by the source's remaining amount.
 
 ## 5. Tests
@@ -35,11 +35,11 @@
 - [ ] 5.4 In-place flattening + removal: a partially-depleted source persists in place (position fixed, amplitude reduced) and stays consumable; at `removal_eps` it is removed (+ respawn unless `no_respawn`); a below-threshold source is not consumable.
 - [ ] 5.5 Integrity: `food_amounts` stays index-aligned across add/remove; continuous `copy()` preserves it; both substrates deplete.
 - [ ] 5.6 Index-matching: two coincident (or near-coincident) sources — a consume depletes the **matched** source's amount, not another's (guards the value-vs-index refactor, 4.2).
-- [ ] 5.7 Reward coherence: a below-`removal_eps` source is excluded from the nearest-food distance metric under depletion (the distance-shaping reward does not approach an exhausted patch; spec scenario).
+- [ ] 5.7 Signal absence via removal: a source consumed to exhaustion is removed and therefore absent from the nearest-food distance metric (and the concentration/gradient) — no spent patch lingers in any food signal.
 
 ## 6. Scenario config
 
-- [ ] 6.1 A new continuous-2D ARS foraging cell (`configs/scenarios/foraging/…_ars_depletion…yml`): depletion enabled, `no_respawn` (or depletion-aware respawn), patch-structured food, klinotaxis sensing; mirror the 029 continuous-2D foraging recipe otherwise.
+- [ ] 6.1 A new continuous-2D ARS foraging cell (`configs/scenarios/foraging/…_ars_depletion…yml`): depletion enabled, `no_respawn` (or depletion-aware respawn), patch-structured food, klinotaxis sensing, and a low/zero `reward_distance_scale` so the within-episode-memory demand rests on the depleting field (not field-independent distance shaping); mirror the 029 continuous-2D foraging recipe otherwise.
 - [ ] 6.2 A `no_respawn`-only **control** cell (identical to 6.1 but depletion OFF — consume removes outright) to isolate depletion's marginal effect from `no_respawn`'s non-stationarity (the confound, D8).
 
 ## 7. Evaluation (does the separation reproduce?)

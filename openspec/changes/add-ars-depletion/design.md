@@ -113,12 +113,16 @@ can immediately gradient-follow to. `reached_goal_for` must treat a below-`remov
 **not food** (no goal/reward once depleted) — one gate that atomically covers consumption, the goal
 bonus, and multi-agent food competition (all key off `reached_goal_for`).
 
-**Reward coherence.** The foraging distance-shaping reward must be made coherent with depletion:
-`reward_calculator`'s nearest-food distance term (`get_nearest_food_distance_*`) measures distance to
-source *positions* and would keep pulling the agent toward a flattened-but-not-yet-removed patch that
-`reached_goal_for` now rejects — rewarding re-approach to exhausted patches and working *against* the
-memory demand. Below-`removal_eps` sources MUST be excluded from the nearest-food distance metric
-when depletion is enabled.
+**Reward coherence.** Exhausted sources are *removed* (above), so they are automatically absent from
+every food signal — concentration, gradient, and the `reward_calculator` nearest-food distance term;
+no separate distance-metric exclusion is needed (and a *partially*-depleted source above the
+threshold is still valid food the distance term *should* point at, so excluding it would be wrong).
+The deeper confound is that a distance-shaping reward gives food-direction **independent of the
+field**: near a flattened patch the field is gradient-less but the distance term still points at the
+food, which could let a reactive policy bypass the memory demand. This is handled at the **cell**
+level — the ARS evaluation cell minimises field-independent distance shaping (low/zero
+`reward_distance_scale`) so the memory demand rests on the depleting field — not by a
+`reward_calculator` change.
 
 ### D6 — Both substrates via a shared decrement helper + the distance-0 fix
 

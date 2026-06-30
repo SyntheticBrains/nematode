@@ -1494,7 +1494,18 @@ class Continuous2DRenderer:
         temporal decay), so its key includes ``step`` to recompute every frame.
         """
         if field_name == "food":
-            sig: Any = tuple(sorted((round(fx, 3), round(fy, 3)) for fx, fy in env.foods))
+            if env.foraging.source_depletion_enabled:
+                # Depleting field: the source amplitude changes with positions fixed, so include
+                # the (rounded) per-source amount in the key — else the cached heatmap stays frozen
+                # as a patch flattens in place.
+                sig: Any = tuple(
+                    sorted(
+                        (round(fx, 3), round(fy, 3), round(a, 3))
+                        for (fx, fy), a in zip(env.foods, env.food_amounts, strict=True)
+                    ),
+                )
+            else:
+                sig = tuple(sorted((round(fx, 3), round(fy, 3)) for fx, fy in env.foods))
         elif field_name == "predator":
             sig = tuple(sorted((p.position[0], p.position[1]) for p in env.predators))
         elif field_name == "pheromone":

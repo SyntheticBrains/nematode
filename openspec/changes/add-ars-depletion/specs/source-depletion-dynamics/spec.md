@@ -58,10 +58,10 @@ consumable food (it SHALL NOT trigger a goal/reward).
 - **WHEN** the agent is within the capture radius of a source whose remaining amount is at or below the removal threshold
 - **THEN** no consumption / goal / reward SHALL fire for that source
 
-#### Scenario: A depleted source is excluded from the foraging approach signal
+#### Scenario: An exhausted source is absent from the foraging signals
 
-- **WHEN** depletion is enabled and a source is at or below the removal threshold
-- **THEN** it SHALL be excluded from the nearest-food distance / approach-shaping reward signal, so the distance-shaping reward does not attract the agent to an exhausted patch (consistent with it not being consumable)
+- **WHEN** a source is exhausted (its remaining amount crosses the removal threshold and it is removed)
+- **THEN** it SHALL be absent from every food signal — concentration, gradient, and nearest-food distance — so no foraging reward points at a spent patch (a *partially*-depleted source above the threshold remains valid food and continues to contribute to all signals)
 
 ### Requirement: Per-source amount integrity across mutations and copy
 
