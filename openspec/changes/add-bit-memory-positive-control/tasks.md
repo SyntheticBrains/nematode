@@ -21,7 +21,7 @@
 - [x] 3.2 **Agent — cue/go injection into `BrainParams`.** In `agent._create_brain_params` (the method that already pulls per-agent env state such as `predator_contact_zone`), read the env's `get_bit_memory_signals(...)` and populate the new `cue_signal` / `go_signal` fields (cue value during the cue phase, `0` during delay/response; go = `1` during response, else `0`). The env does **not** push into `BrainParams` (spec: cue/go channels).
 - [x] 3.3 **Runner — post-action response scoring + termination.** In the `StandardEpisodeRunner.run` loop, add a `bit_memory_task.enabled` post-action branch: on response steps read the binary response from the just-emitted `top_action` (`sign(top_action.continuous[1])` for continuous arms; `LEFT`/`RIGHT` for discrete), compare to the trial cue, grant `reward_correct` on a match / the wrong-response outcome otherwise (parameters from `BitMemoryTaskConfig`), record per-trial correctness, and drive episode-done off the **trial counter** rather than `env.reached_goal()` (spec: cue-conditioned reward, binary readout).
 - [x] 3.4 **Runner/config — foraging deactivation (enumerate the touch-points).** When the task is enabled, bypass the runner's independent handler calls — food collection, `_handle_predator_phase`, `_handle_temperature_effects`, `_handle_oxygen_effects`, `_handle_starvation_check`, and satiety decay — and make agent movement inert (the action is consumed only as the response, never as locomotion), via a runner-level early-branch or env-config flags that no-op each handler. Disabling them "in the environment" alone is insufficient — these are runner calls (design Decision 6 / review S4).
-- [x] 3.5 Expose per-episode cue-match success for experiment tracking (the metric the analysis harness consumes).
+- [x] 3.5 Surface the per-episode cue-match for the analysis harness. *(As built: with the canonical reward — `reward_correct=1`, `penalty_wrong=0` — the episode reward equals the correct-response count, so the harness derives cue-match = `reward / num_responses` from the per-run `.out`; the runner additionally logs the rate `BitMemory: cue_match=…` at episode end.)*
 - [x] 3.6 Tests: phase transitions land on the configured boundaries; the cue channel is exactly `0` on every delay/response step **and the assembled observation is exactly 2-dim with no `stam` channel** (the validity invariant, §2.4); `go_signal` is `1` only during the response phase; `sign(turn)` correct vs wrong scoring; no cue reward in cue/delay phases; episode-done fires off the trial counter; **disabled = byte-identical existing behaviour**.
 
 ## 4. Per-arm configs
@@ -31,7 +31,7 @@
 
 ## 5. Separation analysis harness
 
-- [x] 5.1 `scripts/analysis/bit_memory_separation.py`: read each run's per-episode cue-match success, compute per-arm mean success over the converged tail, and the pairwise paired-seed deltas (one-sided Wilcoxon + 80% bootstrap CI + BH-FDR) by importing the helpers from `weight_search_architecture_ranking` (same methodology as the T7 ranking). Print + write a JSON summary with per-arm success, the pairwise table, and the separation verdict.
+- [x] 5.1 `scripts/analysis/bit_memory_separation.py`: read each run's per-episode reward from the `.out` and convert to cue-match (= `reward / num_responses`, where `num_responses = trials_per_episode × response_steps` via `--num-responses`; valid because `penalty_wrong=0`), compute per-arm plateau-tail (final-quarter) mean, and the pairwise paired-seed deltas (one-sided Wilcoxon + 80% bootstrap CI + BH-FDR) by importing the helpers from `weight_search_architecture_ranking` (same methodology as the T7 ranking). Print + write a JSON summary with per-arm cue-match, the pairwise table, and the separation verdict.
 - [x] 5.2 Test the metric extraction + verdict logic on a tiny synthetic fixture (memory arms high, MLP at chance → "separation"; all at chance → "null").
 
 ## 6. Learnability pre-check + calibration
@@ -54,4 +54,4 @@
 
 - [x] 9.1 `openspec validate add-bit-memory-positive-control --strict` passes.
 - [x] 9.2 Targeted `pre-commit` (ruff / pyright / markdownlint) on changed files during iteration; full `uv run pytest -m "not nightly"` before push.
-- [ ] 9.3 After merge, archive the OpenSpec change (`openspec archive add-bit-memory-positive-control`) so the `bit-memory-positive-control` delta applies into `openspec/specs/`.
+- [x] 9.3 Archive the OpenSpec change (`openspec archive add-bit-memory-positive-control`) so the `bit-memory-positive-control` delta applies into `openspec/specs/`. *(Archived in this PR per the implementer's request — the change is complete + gated.)*
