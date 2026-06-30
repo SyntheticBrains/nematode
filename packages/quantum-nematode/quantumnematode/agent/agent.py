@@ -1150,8 +1150,14 @@ class QuantumNematodeAgent:
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
 
+        # --- Bit-memory task cue/go channels (0, 0 when the task is off) ---
+        cue_signal, go_signal = self.env.get_bit_memory_signals()
+
         # (e) Build BrainParams with all fields
         return BrainParams(
+            # Bit-memory positive-control task channels (artificial; 0 when disabled)
+            cue_signal=cue_signal,
+            go_signal=go_signal,
             # Separated LOCAL gradients (egocentric sensing, oracle)
             food_gradient_strength=separated_grads.get("food_gradient_strength"),
             food_gradient_direction=separated_grads.get("food_gradient_direction"),
@@ -1553,6 +1559,12 @@ class QuantumNematodeAgent:
         """
         from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
+        # The bit-memory phase machine is attached post-construction (create_env_from_config),
+        # so carry it across the env recreation — otherwise the task silently reverts to
+        # foraging after run 0. The cue RNG is rebound to the new env's (per-run-seeded) rng
+        # below so the cue sequence stays seed-reproducible.
+        bit_memory = self.env.bit_memory
+
         if isinstance(self.env, Continuous2DEnvironment):
             # Continuous-2D substrate: recreate the SAME env type (not the grid
             # parent) so the continuous params + float positions survive the reset.
@@ -1588,6 +1600,10 @@ class QuantumNematodeAgent:
                 # Reproducibility: preserve seed from original environment
                 seed=self.env.seed,
             )
+        if bit_memory is not None:
+            bit_memory.rebind_rng(self.env.rng)
+            self.env.bit_memory = bit_memory
+
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation (cell-snapped).
         self.food_history = [_food_cells(self.env.foods)]

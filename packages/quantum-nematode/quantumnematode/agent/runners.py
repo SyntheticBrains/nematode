@@ -24,6 +24,12 @@ from quantumnematode.report.dtypes import TerminationReason
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
+    from quantumnematode.brain.actions import ActionData
+    from quantumnematode.env.bit_memory import BitMemoryTask
+
+# Chance accuracy for the binary bit-memory cue-match (a per-episode success flag is set
+# when the episode's cue-match rate beats this; the analysis harness uses the logged rate).
+_BIT_MEMORY_CHANCE = 0.5
 
 
 @dataclass
@@ -614,6 +620,117 @@ class StandardEpisodeRunner(EpisodeRunner):
             termination_reason=TerminationReason.STARVED,
         ), reward
 
+    @staticmethod
+    def _bit_memory_turn(action: ActionData) -> float:
+        """Return the binary-response source — the continuous turn or a discrete L/R vote.
+
+        ``sign`` of the returned value is compared to the cue: for the continuous arms this
+        is the normalized turn component, for a discrete arm a LEFT/RIGHT choice.
+        """
+        if action.continuous is not None:
+            return float(action.continuous[1])  # (speed, turn) -> turn
+        from quantumnematode.brain.actions import Action
+
+        if action.action == Action.LEFT:
+            return -1.0
+        if action.action == Action.RIGHT:
+            return 1.0
+        return 0.0
+
+    def _terminate_bit_memory(  # noqa: PLR0913
+        self,
+        agent: QuantumNematodeAgent,
+        params: Any,  # noqa: ANN401
+        reward: float,
+        bm: BitMemoryTask,
+        *,
+        learn: bool = True,
+        update_memory: bool = True,
+    ) -> EpisodeResult:
+        """Log the per-episode cue-match rate (the analysis metric) and terminate."""
+        rate = bm.cue_match_success_rate
+        logger.info("BitMemory: cue_match=%.4f responses=%d", rate, bm.num_responses)
+        return self._terminate_episode(
+            agent,
+            params,
+            reward,
+            success=rate > _BIT_MEMORY_CHANCE,
+            termination_reason=TerminationReason.BIT_MEMORY_COMPLETED,
+            learn=learn,
+            update_memory=update_memory,
+            food_history=None,
+        )
+
+    def _run_bit_memory_step(
+        self,
+        agent: QuantumNematodeAgent,
+        max_steps: int,
+        prev_action: ActionData | None,
+        *,
+        render_text: str | None,
+        show_last_frame_only: bool,
+    ) -> tuple[EpisodeResult | None, ActionData | None]:
+        """Run one bit-memory step: cue/go observation -> action -> response scoring.
+
+        Bypasses all foraging/predator/thermal dynamics (movement is inert). The reward is
+        the *previous* response's score (``run_brain`` treats it as the previous-step
+        reward, mirroring the foraging timing); the current action is scored against the cue
+        when this is a response step. The episode ends once every trial completes.
+        """
+        bm = agent.env.bit_memory
+        if bm is None:  # defensive: the caller guards this
+            return None, prev_action
+
+        reward = bm.take_reward()
+        agent._episode_tracker.track_reward(reward)
+        input_data = agent._prepare_input_data(0.0)
+        params = agent._create_brain_params(action=prev_action)
+        action = agent.brain.run_brain(
+            params=params,
+            reward=reward,
+            input_data=input_data,
+            top_only=True,
+            top_randomize=True,
+        )
+        if len(action) != 1:
+            error_msg = f"Invalid action length: {len(action)}. Expected 1."
+            raise ValueError(error_msg)
+        top_action = action[0]
+        agent._episode_tracker.track_step()
+
+        # All trials complete: the final response's reward was just delivered above
+        # (take_reward -> run_brain). Finalise + terminate.
+        if bm.done:
+            return self._terminate_bit_memory(agent, params, reward, bm), top_action
+
+        # Score this step's action against the cue (a no-op outside the response phase).
+        bm.record_response(self._bit_memory_turn(top_action))
+
+        episode_done = agent._episode_tracker.steps >= max_steps
+        if isinstance(agent.brain, ClassicalBrain):
+            agent.brain.learn(params=params, reward=reward, episode_done=episode_done)
+        agent.brain.update_memory(reward)
+
+        # Movement is inert — record the (unchanged) position so path bookkeeping holds.
+        agent.path.append((agent.env.agent_pos[0], agent.env.agent_pos[1]))
+        agent._render_step(max_steps, render_text, show_last_frame_only=show_last_frame_only)
+
+        if episode_done:  # budget exhausted before all trials (mis-sized config)
+            return (
+                self._terminate_bit_memory(
+                    agent,
+                    params,
+                    reward,
+                    bm,
+                    learn=False,
+                    update_memory=False,
+                ),
+                top_action,
+            )
+
+        bm.advance()
+        return None, top_action
+
     def run(  # noqa: C901, PLR0911, PLR0912, PLR0915
         self,
         agent: QuantumNematodeAgent,
@@ -665,6 +782,9 @@ class StandardEpisodeRunner(EpisodeRunner):
         # Reset STAM buffer for new episode (no cross-episode memory)
         if agent._stam is not None:
             agent._stam.reset()
+        # Reset the bit-memory phase machine for the new episode (no cross-episode cue).
+        if agent.env.bit_memory is not None:
+            agent.env.bit_memory.reset()
         # Reset the adaptive chemosensory background too (same per-episode boundary
         # as STAM — otherwise the background leaks across reused episodes).
         if agent._adaptive_food is not None:
@@ -682,6 +802,22 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         for step_index in range(max_steps):
             logger.debug("--- New Step ---")
+
+            # Bit-memory positive control: a non-spatial delayed-match-to-cue task. When
+            # enabled, drive its phase machine instead of the foraging dynamics — movement
+            # is inert and every foraging/predator/thermal handler below is bypassed.
+            if agent.env.bit_memory is not None:
+                result, top_action = self._run_bit_memory_step(
+                    agent,
+                    max_steps,
+                    top_action,
+                    render_text=render_text,
+                    show_last_frame_only=show_last_frame_only,
+                )
+                if result is not None:
+                    return result
+                continue
+
             gradient_strength, _gradient_direction = agent.env.get_state(agent.path[-1])
 
             # Track if agent stays in same position

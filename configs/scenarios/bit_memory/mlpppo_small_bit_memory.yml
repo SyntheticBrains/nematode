@@ -1,0 +1,42 @@
+# Bit-memory delayed-match-to-cue positive control — MLPPPO (the memoryless baseline).
+#
+# Artificial working-memory probe (NOT a sensing/foraging scenario): a binary cue is shown
+# during the cue phase, withheld across the delay, then on a go-signalled response phase the
+# agent must act on the *remembered* cue (the sign of its continuous turn). The observation
+# is exactly [cue, go_signal] — no STAM, no gradients — so only internal recurrent state can
+# carry the cue across the delay. MLP is memoryless and is expected to sit at chance (~50%);
+# the recurrent/attention arms (lstmppo / cfcppo / transformerppo) should solve it. The
+# per-trial span (cue 2 + delay 8 + response 1 = 11) stays within the Transformer window (16).
+#
+# Filename carries no {sensing} suffix: bit-memory is a task variant whose input is the
+# cue/go channels, not a sensing mode. See the bit-memory-positive-control capability +
+# docs/research/policy-architecture-candidates.md (the gate-first sequencing).
+#
+# max_steps = trials_per_episode (20) * trial_span (11) + a trailing step for the last reward.
+max_steps: 230
+brain:
+  name: mlpppo
+  config:
+    action_mode: continuous
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.08
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    sensory_modules:
+    - cue
+    - go_signal
+environment:
+  env_type: continuous_2d
+  bit_memory_task:
+    enabled: true
+    # trials_per_episode / cue_steps / delay_steps / response_steps default to the
+    # within-window starters (20 / 2 / 8 / 1); calibrated in the evaluation tranche.

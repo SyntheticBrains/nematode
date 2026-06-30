@@ -3007,6 +3007,30 @@ def configure_environment(config: SimulationConfig) -> EnvironmentConfig:
     return config.environment or EnvironmentConfig()
 
 
+def _attach_bit_memory_task(
+    env: "DynamicForagingEnvironment",
+    bit_memory_task: BitMemoryTaskConfig | None,
+) -> None:
+    """Attach the bit-memory phase machine to a freshly-built env when enabled.
+
+    Construction (vs an ``__init__`` param) keeps the already-wide env constructors
+    unchanged; the runner drives the attached machine. No-op when the task is disabled.
+    """
+    if bit_memory_task is None or not bit_memory_task.enabled:
+        return
+    from quantumnematode.env.bit_memory import BitMemoryTask
+
+    env.bit_memory = BitMemoryTask(
+        trials_per_episode=bit_memory_task.trials_per_episode,
+        cue_steps=bit_memory_task.cue_steps,
+        delay_steps=bit_memory_task.delay_steps,
+        response_steps=bit_memory_task.response_steps,
+        reward_correct=bit_memory_task.reward_correct,
+        penalty_wrong=bit_memory_task.penalty_wrong,
+        rng=env.rng,
+    )
+
+
 def create_env_from_config(
     env_config: EnvironmentConfig,
     *,
@@ -3056,7 +3080,7 @@ def create_env_from_config(
         )
 
         continuous_config = env_config.get_continuous_config()
-        return Continuous2DEnvironment(
+        env: DynamicForagingEnvironment = Continuous2DEnvironment(
             continuous=Continuous2DParams(
                 world_size_mm=continuous_config.world_size_mm,
                 body_length_mm=continuous_config.body_length_mm,
@@ -3078,8 +3102,10 @@ def create_env_from_config(
             pheromones=pheromone_config.to_params(),
             social_feeding=social_feeding_config.to_params(),
         )
+        _attach_bit_memory_task(env, env_config.bit_memory_task)
+        return env
 
-    return DynamicForagingEnvironment(
+    env = DynamicForagingEnvironment(
         grid_size=env_config.grid_size,
         viewport_size=env_config.viewport_size,
         max_body_length=max_body_length if max_body_length is not None else 6,
@@ -3093,3 +3119,5 @@ def create_env_from_config(
         pheromones=pheromone_config.to_params(),
         social_feeding=social_feeding_config.to_params(),
     )
+    _attach_bit_memory_task(env, env_config.bit_memory_task)
+    return env
