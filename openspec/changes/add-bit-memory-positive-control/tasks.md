@@ -36,19 +36,19 @@
 
 ## 6. Learnability pre-check + calibration
 
-- [ ] 6.1 Pre-check (guards the null-vs-mis-built risk, design Risks): confirm at least one memory arm (LSTM) reaches the success threshold on the easiest setting (short delay, generous budget) **before** running the full panel; if it cannot, debug delay/budget/reward, not the gate verdict.
-- [ ] 6.2 Calibrate `cue_steps` / `delay_steps` / `response_steps` / `trials_per_episode` / training budget so the task is learnable by the memory arms while the span stays within the Transformer window; record the calibrated values and the pre-registered success threshold (design Open Questions).
+- [x] 6.1 Pre-check (guards the null-vs-mis-built risk, design Risks): confirm at least one memory arm (LSTM) reaches the success threshold on the easiest setting (short delay, generous budget) **before** running the full panel; if it cannot, debug delay/budget/reward, not the gate verdict.
+- [x] 6.2 Calibrate `cue_steps` / `delay_steps` / `response_steps` / `trials_per_episode` / training budget so the task is learnable by the memory arms while the span stays within the Transformer window; record the calibrated values and the pre-registered success threshold (design Open Questions).
 
 ## 7. Evaluation + verdict
 
-- [ ] 7.1 Run the 5 MUST arms at `n ≥ 8` paired seeds, headless, parallelised (`OMP_NUM_THREADS=1`, `xargs -P`).
-- [ ] 7.2 Compute the separation (harness from §5); record per-arm cue-match success, the pairwise BH-FDR table, and whether the recurrent/attention arms clear both chance and the MLP (spec: separation evaluation).
-- [ ] 7.3 Interpret the connectome result against design Decision 7 (cross-step state vs within-step settling).
+- [x] 7.1 Run the 5 MUST arms at `n ≥ 8` paired seeds, headless, parallelised (`OMP_NUM_THREADS=1`, `xargs -P`).
+- [x] 7.2 Compute the separation (harness from §5); record per-arm cue-match success, the pairwise BH-FDR table, and whether the recurrent/attention arms clear both chance and the MLP (spec: separation evaluation).
+- [x] 7.3 Interpret the connectome result against design Decision 7 (cross-step state vs within-step settling).
 
 ## 8. Tracker + supporting analysis
 
-- [ ] 8.1 Tick `T7.separation.bit_memory_control` in `openspec/changes/phase6-tracking/tasks.md`, record the verdict (separation vs null), and update the conditional status of `T7.separation.ars_depletion` and `T7.separation.new_arch_candidates` accordingly (proceed on separation; defer on a null, recording the null as the finding).
-- [ ] 8.2 Write the supporting analysis (per-arm success, pairwise table, verdict, calibration) under the relevant logbook supporting folder — committed artefacts only, **no `tmp/` references**.
+- [x] 8.1 Tick `T7.separation.bit_memory_control` in `openspec/changes/phase6-tracking/tasks.md`, record the verdict (separation vs null), and update the conditional status of `T7.separation.ars_depletion` and `T7.separation.new_arch_candidates` accordingly (proceed on separation; defer on a null, recording the null as the finding).
+- [x] 8.2 Write the supporting analysis (per-arm success, pairwise table, verdict, calibration) under the relevant logbook supporting folder — committed artefacts only, **no `tmp/` references**.
 
 ## 9. Pre-merge gates
 
