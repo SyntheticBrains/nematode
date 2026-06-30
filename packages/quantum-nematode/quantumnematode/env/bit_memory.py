@@ -1,13 +1,13 @@
 """Bit-memory delayed-match-to-cue positive-control phase machine.
 
-A deliberately-artificial working-memory probe (the ``bit-memory-positive-control``
-capability). Per trial a binary cue is presented during a cue phase, withheld across a
-delay phase, then on a go-signalled response phase the agent must act on the *remembered*
-cue. A memoryless policy is pinned at chance; a recurrent/attention policy can solve it.
+A deliberately-artificial working-memory probe. Per trial a binary cue is presented during
+a cue phase, withheld across a delay phase, then on a go-signalled response phase the agent
+must act on the *remembered* cue. A memoryless policy is pinned at chance; a
+recurrent/attention policy can solve it.
 
 This module is pure phase-machine logic (no env/agent imports) so it is unit-testable in
 isolation: the environment owns an instance and exposes its cue/go signals; the episode
-runner drives ``record_response`` / ``take_reward`` / ``advance`` (design Decision 6).
+runner drives ``record_response`` / ``take_reward`` / ``advance``.
 """
 
 from __future__ import annotations

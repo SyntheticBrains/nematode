@@ -9,8 +9,7 @@
 # per-trial span (cue 2 + delay 8 + response 1 = 11) stays within the Transformer window (16).
 #
 # Filename carries no {sensing} suffix: bit-memory is a task variant whose input is the
-# cue/go channels, not a sensing mode. See the bit-memory-positive-control capability +
-# docs/research/policy-architecture-candidates.md (the gate-first sequencing).
+# cue/go channels, not a sensing mode.
 #
 # max_steps = trials_per_episode (20) * trial_span (11) + a trailing step for the last reward.
 max_steps: 230
@@ -39,4 +38,4 @@ environment:
   bit_memory_task:
     enabled: true
     # trials_per_episode / cue_steps / delay_steps / response_steps default to the
-    # within-window starters (20 / 2 / 8 / 1); calibrated in the evaluation tranche.
+    # within-window starters (20 / 2 / 8 / 1).

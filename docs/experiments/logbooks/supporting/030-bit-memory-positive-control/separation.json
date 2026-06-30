@@ -280,7 +280,10 @@
       "cfcppo",
       "transformerppo"
     ],
-    "mlp_mean": 0.5013,
-    "mlp_at_chance": true
+    "memoryless_means": {
+      "mlpppo": 0.5013,
+      "connectomeppo": 0.49856666666666666
+    },
+    "memoryless_at_chance": true
   }
 }

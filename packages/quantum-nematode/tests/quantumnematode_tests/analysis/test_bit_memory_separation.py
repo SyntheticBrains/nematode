@@ -10,7 +10,7 @@ import pytest
 _ANALYSIS_DIR = Path(__file__).resolve().parents[5] / "scripts" / "analysis"
 sys.path.insert(0, str(_ANALYSIS_DIR))
 
-import bit_memory_separation as bms  # noqa: E402
+import bit_memory_separation as bms  # noqa: E402  # pyright: ignore[reportMissingImports]
 
 
 def _out_file(tmp_path: Path, rewards: list[float]) -> Path:

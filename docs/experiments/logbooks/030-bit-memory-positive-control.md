@@ -119,6 +119,10 @@ reusable datapoint about what the wild-type wiring does and does not compute.
   longer-delay variant (span > window) that would separate unbounded memory (LSTM/CfC) from
   windowed attention (Transformer) is a recorded follow-on, not part of this gate.
 - **Non-gating** — does not enter Gate 3; the MUST integrated-C3 ranking (029) is unchanged.
+- **Tooling caveat** — the `run_simulation` session summary is foraging-centric and labels every
+  bit-memory episode `Status: FAILED` / 0% success (it only counts goal/food terminations). The
+  cue-match rate via the separation harness is the real metric; the summary's success% does not
+  apply to this task.
 
 ## Next Steps
 

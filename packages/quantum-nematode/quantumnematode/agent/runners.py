@@ -711,8 +711,10 @@ class StandardEpisodeRunner(EpisodeRunner):
             agent.brain.learn(params=params, reward=reward, episode_done=episode_done)
         agent.brain.update_memory(reward)
 
-        # Movement is inert — record the (unchanged) position so path bookkeeping holds.
+        # Movement is inert — record the (unchanged) position + foods so the agent-level
+        # len(path) == len(food_history) invariant the foraging loop maintains still holds.
         agent.path.append((agent.env.agent_pos[0], agent.env.agent_pos[1]))
+        agent.food_history.append([(round(fx), round(fy)) for fx, fy in agent.env.foods])
         agent._render_step(max_steps, render_text, show_last_frame_only=show_last_frame_only)
 
         if episode_done:  # budget exhausted before all trials (mis-sized config)

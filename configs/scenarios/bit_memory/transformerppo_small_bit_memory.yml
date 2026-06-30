@@ -3,7 +3,7 @@
 # See mlpppo_small_bit_memory.yml for the task rationale. The per-trial span (cue 2 + delay 8
 # + response 1 = 11) is kept WITHIN the attention window_size (16) so the cue is still in the
 # window at the response step — the Transformer can attend to it and is expected to solve the
-# task. (A span > window would evict the cue and confound the result; see design Decision 3.)
+# task. (A span > window would evict the cue from attention and confound the result.)
 max_steps: 230
 brain:
   name: transformerppo

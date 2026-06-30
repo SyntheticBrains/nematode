@@ -1427,7 +1427,7 @@ class TestBitMemoryTaskConfig:
         from quantumnematode.utils.config_loader import BitMemoryTaskConfig
 
         with pytest.raises(ValidationError):
-            BitMemoryTaskConfig(enabled=True, delya_steps=8)  # typo
+            BitMemoryTaskConfig(enabled=True, delya_steps=8)  # type: ignore[call-arg]  # typo
 
     def test_span_over_window_warns(self, caplog):
         """The Transformer-confound guard warns when the trial span exceeds the window."""

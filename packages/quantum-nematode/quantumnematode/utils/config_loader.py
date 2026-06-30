@@ -1030,9 +1030,9 @@ class BitMemoryTaskConfig(BaseModel):
     A working-memory probe: per trial a binary cue is shown during the cue phase,
     withheld across the delay, then on a go-signalled response phase the agent must
     act on the *remembered* cue. A memoryless policy is pinned at chance; a
-    recurrent/attention policy can solve it. See the ``bit-memory-positive-control``
-    capability. ``extra="forbid"`` so a typo'd key fails loudly rather than silently
-    dropping (this task's parameters are load-bearing for the control's validity).
+    recurrent/attention policy can solve it. ``extra="forbid"`` so a typo'd key fails
+    loudly rather than silently dropping (this task's parameters are load-bearing for
+    the control's validity).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -1042,6 +1042,9 @@ class BitMemoryTaskConfig(BaseModel):
     cue_steps: int = Field(default=2, gt=0)
     delay_steps: int = Field(default=8, ge=0)
     response_steps: int = Field(default=1, gt=0)
+    # The separation analysis derives the cue-match rate from the episode reward (= the
+    # correct-response count), which holds only at reward_correct=1 / penalty_wrong=0; a
+    # validator pins them so a reward-shape change can't silently corrupt the verdict.
     reward_correct: float = 1.0
     penalty_wrong: float = 0.0
 
@@ -1051,12 +1054,30 @@ class BitMemoryTaskConfig(BaseModel):
         return self.cue_steps + self.delay_steps + self.response_steps
 
     @model_validator(mode="after")
+    def _require_reward_for_count_metric(self) -> "BitMemoryTaskConfig":
+        """Pin the reward so the analysis's reward-derived cue-match stays valid.
+
+        The separation analysis reads the per-episode reward as the correct-response
+        count (cue-match = reward / num_responses). That identity holds only when a
+        correct response scores +1 and a wrong response scores 0; any other shaping makes
+        the reward a net score, silently corrupting the cue-match rate and the verdict.
+        """
+        if self.enabled and (self.reward_correct != 1.0 or self.penalty_wrong != 0.0):
+            msg = (
+                f"bit_memory_task requires reward_correct=1.0 and penalty_wrong=0.0 "
+                f"(got {self.reward_correct} / {self.penalty_wrong}); the separation "
+                "analysis derives cue-match from the episode reward as a correct-response "
+                "count. Change the analysis harness if other reward values are needed."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def _warn_span_exceeds_window(self) -> "BitMemoryTaskConfig":
         """Warn when the per-trial span exceeds the reference attention window.
 
-        The Transformer-confound guard (design Decision 3): a span past the window
-        evicts the cue from a windowed-attention arm, so it fails like a memoryless
-        arm — a confounded result rather than a memory finding.
+        A span past the window evicts the cue from a windowed-attention arm, so it fails
+        like a memoryless arm — a confounded result rather than a memory finding.
         """
         if self.enabled and self.trial_span > _REFERENCE_ATTENTION_WINDOW:
             logger.warning(
@@ -1079,7 +1100,7 @@ def assert_bit_memory_observation_clean(
 ) -> None:
     """Assert a bit-memory observation resolves to exactly the cue + go channels.
 
-    The no-external-memory-aid contract (spec "No external memory aids"): when the
+    The no-external-memory-aid contract: when the
     bit-memory task is enabled the observation MUST be cue + go only, so retaining the
     cue requires internal recurrent state. Resolve the modules exactly as brain
     construction does — STAM sneaks in when ``stam_enabled`` (``apply_sensing_mode``
