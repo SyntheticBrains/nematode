@@ -1033,3 +1033,42 @@ class TestThermotaxisClassicalFeaturesBiologicalPlausibility:
         # gradient points right, go LEFT"
         assert features[0] > 0.5  # Strong gradient signal
         assert features[2] > 0.7  # High deviation - I'm in danger!
+
+
+class TestBitMemoryModules:
+    """Bit-memory positive-control cue + go-signal channels (delayed-match-to-cue)."""
+
+    def test_dimension_is_exactly_two(self):
+        """Cue + go-signal register classical_dim=1 each, so the observation is 2-dim.
+
+        Load-bearing: an unregistered module would fall back to 2 zeros, making
+        input_dim 4 instead of 2.
+        """
+        assert get_classical_feature_dimension([ModuleName.CUE, ModuleName.GO_SIGNAL]) == 2
+
+    def test_cue_and_go_are_extracted_in_value_order(self):
+        """A set cue/go ride in the observation; modules sort by value -> [cue, go]."""
+        params = BrainParams(cue_signal=-1.0, go_signal=1.0)
+        features = extract_classical_features(
+            params,
+            [ModuleName.CUE, ModuleName.GO_SIGNAL],
+        )
+        # extract_classical_features sorts by value: "cue" < "go_signal".
+        np.testing.assert_array_equal(features, np.array([-1.0, 1.0], dtype=np.float32))
+
+    def test_unset_signals_extract_as_zero(self):
+        """Unset cue/go (None, the disabled-task default) extract as 0 — cue not leaked."""
+        features = extract_classical_features(
+            BrainParams(),
+            [ModuleName.CUE, ModuleName.GO_SIGNAL],
+        )
+        np.testing.assert_array_equal(features, np.array([0.0, 0.0], dtype=np.float32))
+
+    def test_withheld_cue_reads_exactly_zero(self):
+        """During delay/response the env sets cue_signal=0 -> the cue channel is 0."""
+        features = extract_classical_features(
+            BrainParams(cue_signal=0.0, go_signal=1.0),
+            [ModuleName.CUE, ModuleName.GO_SIGNAL],
+        )
+        assert features[0] == 0.0  # cue withheld
+        assert features[1] == 1.0  # go-signal active

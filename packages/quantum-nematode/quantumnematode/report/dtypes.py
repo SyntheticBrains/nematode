@@ -34,6 +34,7 @@ class TerminationReason(StrEnum):
     HEALTH_DEPLETED = "health_depleted"
     MAX_STEPS = "max_steps"
     INTERRUPTED = "interrupted"
+    BIT_MEMORY_COMPLETED = "bit_memory_completed"
 
 
 class SimulationResult(BaseModel):

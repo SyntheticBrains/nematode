@@ -11,7 +11,7 @@ check if the goal is reached, and render the environment.
 from abc import ABC, abstractmethod
 from dataclasses import field
 from enum import Enum, StrEnum
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 from pydantic.dataclasses import dataclass
@@ -58,6 +58,9 @@ from quantumnematode.env.theme import (
 )
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng
+
+if TYPE_CHECKING:
+    from quantumnematode.env.bit_memory import BitMemoryTask
 
 # Validation
 MIN_GRID_SIZE = 5
@@ -982,6 +985,11 @@ class BaseEnvironment(ABC):
         self.seed = ensure_seed(seed)
         self.rng = get_rng(self.seed)
 
+        # Bit-memory delayed-match-to-cue positive control (artificial; off unless a
+        # config enables it, set by create_env_from_config). When present, the episode
+        # runner drives its phase machine instead of the foraging dynamics.
+        self.bit_memory: BitMemoryTask | None = None
+
         self.grid_size = grid_size
         self.theme = theme
         self.action_set = action_set
@@ -1050,6 +1058,16 @@ class BaseEnvironment(ABC):
             If agent_id is not found.
         """
         return self.agents[agent_id]
+
+    def get_bit_memory_signals(self) -> tuple[float, float]:
+        """Return ``(cue_signal, go_signal)`` for the bit-memory task, or ``(0, 0)`` if off.
+
+        The agent's ``_create_brain_params`` reads this into ``BrainParams`` so the cue/go
+        channels appear in the observation. The bit-memory task is single-agent.
+        """
+        if self.bit_memory is None:
+            return 0.0, 0.0
+        return self.bit_memory.signals()
 
     @abstractmethod
     def get_state(

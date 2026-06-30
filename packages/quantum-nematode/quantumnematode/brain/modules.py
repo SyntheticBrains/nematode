@@ -127,6 +127,13 @@ class ModuleName(StrEnum):
     PREDATOR_CHEMOSENSATION_KLINOTAXIS = "predator_chemosensation_klinotaxis"
     PREDATOR_BIOLOGY_KLINOTAXIS = "predator_biology_klinotaxis"
 
+    # Bit-memory positive-control task channels (artificial — NOT biological
+    # modalities). The cue is presented during the cue phase and withheld
+    # afterwards; the go-signal marks the response phase. Used only by the
+    # delayed-match-to-cue working-memory probe (bit-memory-positive-control).
+    CUE = "cue"
+    GO_SIGNAL = "go_signal"
+
 
 # =============================================================================
 # Helper Functions
@@ -733,11 +740,55 @@ class STAMSensoryModule(SensoryModule):
         )
 
 
+def _cue_core(params: BrainParams) -> CoreFeatures:
+    """Extract the bit-memory cue channel (artificial positive-control task input).
+
+    The cue is a discrete value (-1 or +1) presented only during the cue phase and
+    zero during the delay/response phases — so 0 unambiguously means "no cue". A
+    memoryless policy therefore cannot recover the cue after the cue phase; only
+    internal recurrent state can carry it across the delay. The value rides in the
+    ``strength`` field (the module registers ``classical_dim=1``).
+    """
+    return CoreFeatures(strength=float(params.cue_signal or 0.0))
+
+
+def _go_signal_core(params: BrainParams) -> CoreFeatures:
+    """Extract the bit-memory go-signal (1 during the response phase, else 0).
+
+    Marks when the agent must emit its remembered-cue response, isolating cue
+    memory from timing/counting. Rides in the ``strength`` field (``classical_dim=1``).
+    """
+    return CoreFeatures(strength=float(params.go_signal or 0.0))
+
+
 # =============================================================================
 # Sensory Module Registry
 # =============================================================================
 
 SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
+    # Bit-memory positive-control task channels (artificial; classical_dim=1 each
+    # so the assembled observation is exactly 2-dim — the no-external-memory-aid
+    # contract of the delayed-match-to-cue probe).
+    ModuleName.CUE: SensoryModule(
+        name=ModuleName.CUE,
+        extract=_cue_core,
+        description=(
+            "Bit-memory positive-control cue channel (artificial, not a biological "
+            "modality). Carries the trial cue (-1/+1) during the cue phase only and "
+            "0 during delay/response, so retaining it requires internal memory."
+        ),
+        classical_dim=1,
+    ),
+    ModuleName.GO_SIGNAL: SensoryModule(
+        name=ModuleName.GO_SIGNAL,
+        extract=_go_signal_core,
+        description=(
+            "Bit-memory positive-control go-signal (artificial). 1 during the "
+            "response phase and 0 otherwise — tells the agent when to act on the "
+            "remembered cue, isolating cue memory from timing."
+        ),
+        classical_dim=1,
+    ),
     # Food-specific chemotaxis
     ModuleName.FOOD_CHEMOTAXIS: SensoryModule(
         name=ModuleName.FOOD_CHEMOTAXIS,
