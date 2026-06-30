@@ -1,0 +1,35 @@
+# Bit-memory delayed-match-to-cue positive control — minLSTM (a memory arm).
+#
+# See mlpppo_small_bit_memory.yml for the task rationale. The minimal-RNN recurrent state
+# carries the cue across the delay (span 11 < bptt_chunk_length 16), so this arm is expected
+# to solve the task well above chance — the contrast against the memoryless MLP is the
+# separation the control exists to detect. The minimal-RNN arms always use the single-state
+# minimal core, so there is no rnn_type field (it is rejected by the config validator).
+max_steps: 230
+brain:
+  name: minlstmppo
+  config:
+    action_mode: continuous
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+    actor_lr: 0.0002
+    critic_lr: 0.0002
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 256
+    num_epochs: 4
+    max_grad_norm: 0.5
+    entropy_coef: 0.01
+    sensory_modules:
+    - cue
+    - go_signal
+environment:
+  env_type: continuous_2d
+  bit_memory_task:
+    enabled: true

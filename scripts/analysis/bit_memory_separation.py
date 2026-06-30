@@ -39,7 +39,7 @@ _CHANCE_BAND = 0.15  # a memoryless arm reads "at chance" within this of _CHANCE
 _SEPARATION_THRESHOLD = 0.80  # a memory arm must clear this to count as "solving" the task
 _MIN_PAIRED_SEEDS = 2  # a pairwise Wilcoxon needs >= 2 common seeds
 
-MEMORY_ARMS = ("lstmppo", "cfcppo", "transformerppo")
+MEMORY_ARMS = ("lstmppo", "cfcppo", "transformerppo", "mingruppo", "minlstmppo")
 MEMORYLESS_ARM = "mlpppo"  # the designated memoryless baseline the memory arms must beat
 MEMORYLESS_ARMS = ("mlpppo", "connectomeppo")  # both expected at chance (the at-chance check)
 _RUN_LINE = re.compile(r"Run:\s+\d+.*?Reward:\s+([-0-9.]+)")

@@ -54,7 +54,15 @@ EXPERIMENTS = REPO / "experiments"
 
 _FINAL_WINDOW_FRAC = 0.25  # plateau-tail window: the final quarter of a run
 
-PPO_ARCHS = ("mlpppo", "transformerppo", "cfcppo", "connectomeppo", "lstmppo")
+PPO_ARCHS = (
+    "mlpppo",
+    "transformerppo",
+    "cfcppo",
+    "connectomeppo",
+    "lstmppo",
+    "mingruppo",
+    "minlstmppo",
+)
 ALL_ARCHS = (*PPO_ARCHS, "feedforwardga")
 
 
