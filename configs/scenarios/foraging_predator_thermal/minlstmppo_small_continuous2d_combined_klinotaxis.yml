@@ -3,8 +3,8 @@
 # Reactive-cell stability A/B: IDENTICAL env + reward + satiety block + recipe to
 # lstmppo_small_continuous2d_combined_klinotaxis.yml (the 029 LSTM C3 arm), swapping only the
 # recurrent cell for the single-state minimal core. Tests whether the parallel-form minimal RNN
-# (no saturating hidden-to-hidden matrix) trains more stably than the plain GRU on this reactive
-# cell — the memory-independent half of the minGRU bring-up. No rnn_type field (the minimal arms
+# (no saturating hidden-to-hidden matrix) trains more stably than the plain `lstmppo` baseline on
+# this reactive cell — the memory-independent half of the minLSTM bring-up. No rnn_type field (the minimal arms
 # always use the single-state core; it is rejected by the config validator).
 max_steps: 2400
 brain:

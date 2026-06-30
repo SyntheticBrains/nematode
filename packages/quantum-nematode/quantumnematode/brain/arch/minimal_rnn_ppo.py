@@ -81,18 +81,23 @@ class MinimalRNN(nn.Module):
             ``(output, h_new)`` where ``output`` is ``(seq_len, batch, hidden_size)`` and
             ``h_new`` is ``(1, batch, hidden_size)``.
         """
+        # The gates and the candidate are input-only (no dependence on the hidden state), so
+        # project the WHOLE sequence once — the parallel-form property — and keep only the
+        # elementwise convex state update in the per-step loop. Both variants reduce to
+        # ``h = retain * h_prev + write * h_tilde``.
+        h_tilde = self.weight_h(x_seq)  # (seq, batch, hidden)
+        if self.is_lstm:
+            f = torch.sigmoid(self.weight_f(x_seq))
+            i = torch.sigmoid(self.weight_i(x_seq))
+            denom = f + i + _GATE_NORM_EPS
+            retain, write = f / denom, i / denom
+        else:
+            write = torch.sigmoid(self.weight_z(x_seq))  # z
+            retain = 1.0 - write
         h = hidden.squeeze(0)  # (batch, hidden)
         outputs = []
-        for x_t in x_seq:  # x_t: (batch, input_size)
-            h_tilde = self.weight_h(x_t)
-            if self.is_lstm:
-                f = torch.sigmoid(self.weight_f(x_t))
-                i = torch.sigmoid(self.weight_i(x_t))
-                denom = f + i + _GATE_NORM_EPS
-                h = (f / denom) * h + (i / denom) * h_tilde
-            else:
-                z = torch.sigmoid(self.weight_z(x_t))
-                h = (1.0 - z) * h + z * h_tilde
+        for t in range(x_seq.shape[0]):
+            h = retain[t] * h + write[t] * h_tilde[t]
             outputs.append(h)
         output = torch.stack(outputs, dim=0)  # (seq_len, batch, hidden)
         return output, h.unsqueeze(0)
