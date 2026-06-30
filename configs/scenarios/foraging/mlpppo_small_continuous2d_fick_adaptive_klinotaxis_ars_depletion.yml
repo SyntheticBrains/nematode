@@ -1,0 +1,129 @@
+# Area-restricted-search (ARS) foraging on the continuous-2D substrate via source-depletion
+# dynamics. The biological twin of the artificial bit-memory working-memory probe: a within-episode
+# memory demand that arises from the ENVIRONMENT rather than a contrived cue channel.
+#
+# Mechanism (source-depletion): each food source carries a remaining ``amount``; feeding decrements
+# it by ``depletion_per_feed`` and its contribution to the Fick concentration field scales with the
+# remaining amount. So a patch FLATTENS IN PLACE as it is grazed — the near-source gradient that led
+# the worm in vanishes while the (now-spent) patch still sits there. With ``no_respawn`` the patches
+# are finite. After exhausting a patch the worm stands in a flattened, gradient-poor region and must
+# RELOCATE to a fresh patch by memory/search rather than by hill-climbing a local gradient — the
+# area-restricted-search demand. A memoryless reactive policy (the local one-step gradient) has no
+# signal to act on once the patch is flat; recurrent/attention arms can carry the within-episode
+# state. Whether that separation reproduces is the empirical question (the ARS biological twin).
+#
+# Mirrors the calibrated continuous-2D foraging recipe
+# (mlpppo_small_continuous2d_fick_adaptive_klinotaxis.yml) — static signal-specific Fick geometry +
+# the adaptive/biphasic chemosensor + klinotaxis + forage-to-survive satiety — with exactly three
+# cell-level changes for the ARS demand:
+#   1. source-depletion enabled (initial 1.0, per-feed 0.25 -> ~4 feeds to exhaust a patch; gradual,
+#      not one-bite, so the patch flattens progressively);
+#   2. ``no_respawn`` (finite patches — a depleted patch stays spent; the worm must move on);
+#   3. ``reward_distance_scale: 0`` — REMOVE the field-independent distance-to-nearest-food shaping
+#      reward. This is load-bearing for the memory test: distance shaping is pure geometry to the
+#      nearest source and is BLIND to the field, so it would keep pointing at a patch the depleting
+#      field has already flattened — leaking the location the worm is supposed to have to remember.
+#      With it at zero the within-episode-memory demand rests on the depleting field alone.
+#
+# Foraging economics: 5 patches x ~4 feeds = ~20 collectable feeds; target 10 (mirrors the recipe,
+# reachable with margin). The no_respawn-only control cell
+# (mlpppo_small_continuous2d_fick_adaptive_klinotaxis_no_respawn_control.yml) matches this ~20-feed
+# total with 20 single-feed sources so the marginal-separation comparison is on comparable
+# foraging economics (depletion ON vs OFF, no_respawn held fixed).
+#
+# This is the mlpppo reference cell — the memoryless baseline and the calibration vehicle. The full
+# architecture panel is minted from this cell by swapping the ``brain`` block (one file per arm,
+# mirroring the existing per-arm continuous-2D foraging files) once the cell is calibrated.
+#
+# Calibration knobs (pre-eval calibration pass — visualise the depleting field + confirm the cell
+# induces non-gradient search and is learnable, then tune): patch density (``foods_on_grid``),
+# ``depletion_per_feed`` / ``source_initial_amount`` (how fast a patch flattens), the diffusion
+# length ``gradient_decay_constant`` (patch sharpness — at the recipe's L=8 mm in a 20 mm arena the
+# 5 patches' Gaussians overlap heavily, so depleting one patch shifts the LOCAL field only ~6%; a
+# shorter L makes the in-place flattening locally dominant and the ARS memory demand sharper),
+# ``no_respawn``, ``max_steps`` + satiety (search budget under sparse capture-only reward), and the
+# STAM front-end (``stam_enabled``) — STAM is itself a within-episode short-term memory that could
+# MASK the architecture separation, so the calibration must check it on/off (the artificial
+# bit-memory probe deliberately withheld such aids). Kept on here to mirror the recipe; flagged for
+# the calibration.
+
+max_steps: 800
+brain:
+  name: mlpppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.05
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis
+      - proprioception
+
+reward:
+  reward_goal: 2.0
+  # Distance-to-nearest-food shaping REMOVED for the ARS memory test (see header): a field-blind
+  # geometric crutch that would leak the location of a patch the depleting field has flattened.
+  reward_distance_scale: 0.0
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0  # body/patch scale (calibrated — see recipe header)
+    sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true  # mirrors the recipe; calibration must check on/off (may mask arch memory)
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1
+    adaptive_chemosensor_epsilon: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    no_respawn: true  # finite patches — a depleted patch stays spent (ARS relocate demand)
+    # Static Fick-shaped gradient geometry (Gaussian kernel, L = decay).
+    gradient_field_mode: fick
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+    # Source-depletion dynamics: each patch flattens in place over ~4 feeds, then is removed.
+    source_depletion_enabled: true
+    source_initial_amount: 1.0
+    depletion_per_feed: 0.25
+    source_removal_eps: 0.001

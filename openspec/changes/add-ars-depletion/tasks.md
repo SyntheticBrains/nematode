@@ -39,8 +39,8 @@
 
 ## 6. Scenario config
 
-- [ ] 6.1 A new continuous-2D ARS foraging cell (`configs/scenarios/foraging/…_ars_depletion…yml`): depletion enabled, `no_respawn` (or depletion-aware respawn), patch-structured food, klinotaxis sensing, and a low/zero `reward_distance_scale` so the within-episode-memory demand rests on the depleting field (not field-independent distance shaping); mirror the 029 continuous-2D foraging recipe otherwise.
-- [ ] 6.2 A `no_respawn`-only **control** cell (identical to 6.1 but depletion OFF — consume removes outright) to isolate depletion's marginal effect from `no_respawn`'s non-stationarity (the confound, D8).
+- [x] 6.1 A new continuous-2D ARS foraging cell (`configs/scenarios/foraging/…_ars_depletion…yml`): depletion enabled, `no_respawn` (or depletion-aware respawn), patch-structured food, klinotaxis sensing, and a low/zero `reward_distance_scale` so the within-episode-memory demand rests on the depleting field (not field-independent distance shaping); mirror the 029 continuous-2D foraging recipe otherwise. *(`mlpppo_small_continuous2d_fick_adaptive_klinotaxis_ars_depletion.yml` — mlpppo reference cell: depletion 1.0/0.25 ≈ 4 feeds, `no_respawn`, `reward_distance_scale: 0`; 5 patches × ~4 feeds ≈ 20 collectable, target 10. Loads + wires through the loader. Per-arm panel minted at 7.2 after calibration.)*
+- [x] 6.2 A `no_respawn`-only **control** cell (identical to 6.1 but depletion OFF — consume removes outright) to isolate depletion's marginal effect from `no_respawn`'s non-stationarity (the confound, D8). *(`mlpppo_small_continuous2d_fick_adaptive_klinotaxis_no_respawn_control.yml` — depletion OFF, `foods_on_grid: 20` so single-feed sources match the ARS cell's ~20-feed total; residual patch-density caveat documented in-header.)*
 
 ## 7. Evaluation (does the separation reproduce?)
 
