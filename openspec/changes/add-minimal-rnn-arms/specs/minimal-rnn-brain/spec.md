@@ -102,7 +102,7 @@ Each arm SHALL self-register via the brain plugin registry such that its registe
 
 #### Scenario: Plain-RNN cell-selection fields are rejected
 
-- **WHEN** a `mingruppo` or `minlstmppo` configuration explicitly sets `rnn_type` or `recurrent_layernorm`
+- **WHEN** a `mingruppo` or `minlstmppo` configuration sets `rnn_type` to a non-default value or enables `recurrent_layernorm`
 - **THEN** configuration validation SHALL reject it with an error, because those fields select the plain-RNN cell and are not honoured by the minimal-RNN arms (which always use the single-state minimal core)
 
 ### Requirement: Memory-axis evaluation

@@ -147,10 +147,10 @@ full hyperparameter surface (hidden dim, BPTT chunk, LRs, PPO/entropy/LR-schedul
 `sensory_modules` required) so the A/B is a like-for-like swap of only the recurrent cell. The
 inherited `rnn_type` / `recurrent_layernorm` fields are **not honoured** by the minimal arms (the
 override pins `_is_gru = True` and builds `MinimalRNN`); a `model_validator` on the minimal configs
-**rejects explicitly setting** either field (via `model_fields_set`), so a stray `rnn_type: lstm`
-fails loudly instead of silently selecting an inconsistent two-state path. This avoids both the
-`AttributeError` (the fields exist, inherited) and the silent-misconfig footgun, with zero field
-duplication.
+**rejects a non-default value** of either field (the config loader repopulates every field from its
+default, so a `model_fields_set` check is unreliable), so a stray `rnn_type: gru` fails loudly
+instead of silently implying an inconsistent two-state path. This avoids both the `AttributeError`
+(the fields exist, inherited) and the silent-misconfig footgun, with zero field duplication.
 
 - **Alternative — re-declare the surface on a fresh `BrainConfig` subclass with `extra="forbid"`
   and no `rnn_type`:** a cleaner field set, but duplicates ~20 inherited field declarations;

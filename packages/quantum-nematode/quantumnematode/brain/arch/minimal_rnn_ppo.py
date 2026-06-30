@@ -108,12 +108,16 @@ class _MinimalRNNPPOConfig(LSTMPPOBrainConfig):
 
     @model_validator(mode="after")
     def _reject_plain_rnn_cell_fields(self) -> _MinimalRNNPPOConfig:
-        bad = {"rnn_type", "recurrent_layernorm"} & self.model_fields_set
-        if bad:
+        # rnn_type / recurrent_layernorm select the plain-RNN cell and are NOT honoured by the
+        # minimal arms (which always use the single-state minimal core). The config loader
+        # repopulates every field from its default, so ``model_fields_set`` is unreliable here —
+        # reject a non-default *value* instead (the only way a user signals real intent).
+        if self.rnn_type != "lstm" or self.recurrent_layernorm:
             msg = (
-                f"{type(self).__name__} does not honour {sorted(bad)} — the minimal-RNN "
-                "arms always use the single-state minimal core (rnn_type / "
-                "recurrent_layernorm select the plain-RNN cell). Remove these fields."
+                f"{type(self).__name__} does not honour rnn_type / recurrent_layernorm — the "
+                "minimal-RNN arms always use the single-state minimal core. Remove these "
+                f"fields (got rnn_type={self.rnn_type!r}, "
+                f"recurrent_layernorm={self.recurrent_layernorm})."
             )
             raise ValueError(msg)
         return self

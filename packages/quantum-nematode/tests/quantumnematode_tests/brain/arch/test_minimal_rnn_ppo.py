@@ -106,10 +106,10 @@ def test_config_requires_sensory_modules(cls):
 @pytest.mark.parametrize("cls", [MinGRUPPOBrainConfig, MinLSTMPPOBrainConfig])
 @pytest.mark.parametrize("field", ["rnn_type", "recurrent_layernorm"])
 def test_config_rejects_unhonoured_plain_rnn_fields(cls, field):
-    """Explicitly setting rnn_type / recurrent_layernorm fails loudly (they are not honoured)."""
+    """A non-default rnn_type / recurrent_layernorm fails loudly (they are not honoured)."""
     from pydantic import ValidationError
 
-    value = "lstm" if field == "rnn_type" else True
+    value = "gru" if field == "rnn_type" else True  # non-default values
     with pytest.raises(ValidationError):
         cls(sensory_modules=_MODS, **{field: value})
 
