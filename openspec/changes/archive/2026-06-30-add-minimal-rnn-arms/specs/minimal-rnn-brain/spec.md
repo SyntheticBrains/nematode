@@ -43,6 +43,12 @@ The recurrent core SHALL compute its gates from the current input only (no depen
 - **WHEN** the recurrent core is constructed and its weights are initialized
 - **THEN** the core SHALL contain no hidden-to-hidden (`weight_hh`) parameter, and weight initialization SHALL initialize only the input projections (the saturating-recurrent-matrix orthogonal-init pass SHALL NOT be applied)
 
+#### Scenario: Retention gate initialised to hold by default
+
+- **WHEN** the recurrent core's weights are initialized
+- **THEN** the retention gate SHALL be biased toward holding the previous state (minGRU update gate biased low, minLSTM forget gate biased high relative to the input gate), so that across a zero-input step the core retains the majority of its previous state
+- **AND** this memory-friendly prior is load-bearing — without it the gate is bias-only during a zero-input phase (e.g. a memory task's delay), giving a ~1-step retention half-life that washes out the held signal and leaves an effectively memoryless policy
+
 ### Requirement: Recurrent hidden-state management
 
 The brain SHALL maintain the single recurrent state within an episode and reset it at episode boundaries, with no separate cell state for either variant.
@@ -117,4 +123,4 @@ The arms SHALL be evaluable as memory-axis candidates against the existing recur
 #### Scenario: Stability A/B on the reactive cell
 
 - **WHEN** the arms are run on the reactive continuous cell paired-seed against the LSTM-PPO arm
-- **THEN** the comparison SHALL use the committed paired-seed statistics layer (one-sided Wilcoxon, bootstrap CI, BH-FDR) to report the stability/return difference versus the LSTM-PPO baseline
+- **THEN** the comparison SHALL use the committed paired-seed statistics layer (one-sided Wilcoxon, bootstrap CI, BH-FDR) to report the plateau-tail full-clear success difference (and per-seed spread, the stability signal) versus the LSTM-PPO baseline

@@ -10,7 +10,7 @@ Carries a load-bearing implementation finding: the arms only learn the memory ta
 
 **Date**: 2026-06-30.
 
-**OpenSpec change**: [`add-minimal-rnn-arms`](../../../openspec/changes/add-minimal-rnn-arms/proposal.md).
+**OpenSpec change**: [`add-minimal-rnn-arms`](../../../openspec/changes/archive/2026-06-30-add-minimal-rnn-arms/proposal.md).
 
 ______________________________________________________________________
 
@@ -148,7 +148,7 @@ Tier-1 candidate) remains a separate follow-on.
 
 ## Data References
 
-- Arms + analysis: the [`add-minimal-rnn-arms`](../../../openspec/changes/add-minimal-rnn-arms/proposal.md)
+- Arms + analysis: the [`add-minimal-rnn-arms`](../../../openspec/changes/archive/2026-06-30-add-minimal-rnn-arms/proposal.md)
   change (`brain/arch/minimal_rnn_ppo.py`, the `lstmppo` hook, the harness arm-roster edits).
 - Memory-cell separation summary + per-seed cue-match: the supporting
   [separation.json + cue-match-per-seed.csv](supporting/031-minimal-rnn-candidates/separation.json);

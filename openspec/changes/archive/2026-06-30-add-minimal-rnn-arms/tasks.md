@@ -55,7 +55,7 @@
 
 ## 9. Gates
 
-- [ ] 9.1 Targeted `pre-commit` (ruff / pyright / markdownlint) on changed files during iteration; full `pre-commit run -a` before push.
+- [x] 9.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` green before push.
 - [x] 9.2 `openspec validate add-minimal-rnn-arms --strict`.
 - [x] 9.3 Full `uv run pytest -m "not nightly"` green — 4002 passed (no regression; the `lstmppo` byte-identical assertion holds).
-- [ ] 9.4 Archive the change after merge (`openspec archive add-minimal-rnn-arms -y`).
+- [x] 9.4 Archive the change in-PR (`openspec archive add-minimal-rnn-arms -y`) — applies the `minimal-rnn-brain` spec delta to `openspec/specs/`; modified-S5 is tracked separately in `phase6-tracking`, not this change.

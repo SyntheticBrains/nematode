@@ -138,12 +138,14 @@ shared statistics layer is unchanged):
   and update the test that pins that set (`test_bit_memory_separation.py:57`). Confirm the minimal
   RNNs clear chance + beat the memoryless MLP, with LSTM / CfC as the yardstick.
 - **Reactive-cell stability A/B** — the 029 continuous-2D klinotaxis C3 cell, paired-seed vs
-  `lstmppo`. The live orchestrator is `scripts/analysis/t7_continuous_ranking.py` (it imports the
-  shared paired-seed Wilcoxon + bootstrap + BH-FDR functions from
-  `weight_search_architecture_ranking`); **add both arms to its `PPO_ARCHS`** (line 57), or run a
-  bespoke pairwise A/B against `lstmppo` using the same shared statistics functions. Report return +
-  seeds-converged vs the `lstmppo` baseline (the hypothesis is about seed-fragility, not just mean
-  return).
+  `lstmppo`. **Implemented as a small bespoke harness** (`scripts/analysis/minimal_rnn_reactive_ab.py`)
+  that reads each run's plateau-tail **full-clear success** (the 029 primary metric) from the `.out`
+  and reuses the shared paired-seed Wilcoxon + bootstrap + BH-FDR functions from
+  `weight_search_architecture_ranking`. The full `t7_continuous_ranking.py` orchestrator was **not**
+  used directly — it needs the per-run experiment JSON (`--track-experiment`, not generated here)
+  and the whole 7-arm panel; `PPO_ARCHS` is still extended so the arms can enter a future full
+  ranking. Report the success delta + per-seed spread vs `lstmppo` (the stability signal — the
+  hypothesis is about seed-fragility, not just the mean).
 
 ### D7 — Configs subclass `LSTMPPOBrainConfig`; the plain-RNN fields are pinned, not honoured
 
@@ -193,9 +195,10 @@ schema migration.
 
 ## Open Questions
 
-- **minLSTM gate normalisation guard** — `f/(f+i)` needs an `eps` floor for the (near-impossible
-  with sigmoid, but defensive) `f+i→0` case; settle the exact form in implementation (a small
-  additive `eps`, consistent with the paper's stable form).
-- **Stability-A/B metric** — *resolved (D6)*: report both the 029 primary return metric and a
-  seeds-converged summary, since the hypothesis is specifically about seed-fragility, not just mean
-  return.
+- **minLSTM gate normalisation guard** — *resolved*: implemented as an additive
+  `_GATE_NORM_EPS = 1e-8` on the `f+i` denominator (with sigmoid gates `f+i ∈ (0, 2)`, so it only
+  guards the degenerate `f,i→0` limit).
+- **Stability-A/B metric** — *resolved*: the reactive A/B reports the plateau-tail **full-clear
+  success** rate (the 029 primary metric) plus the per-seed spread (std + worst-seed floor) as the
+  stability signal — not a convergence count, since the runs did not write the experiment JSON the
+  029 convergence detector needs.
