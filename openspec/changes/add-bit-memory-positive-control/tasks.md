@@ -31,8 +31,8 @@
 
 ## 5. Separation analysis harness
 
-- [ ] 5.1 `scripts/analysis/bit_memory_separation.py`: read each run's per-episode cue-match success, compute per-arm mean success over the converged tail, and the pairwise paired-seed deltas (one-sided Wilcoxon + 80% bootstrap CI + BH-FDR) by importing the helpers from `weight_search_architecture_ranking` (same methodology as the T7 ranking). Print + write a JSON summary with per-arm success, the pairwise table, and the separation verdict.
-- [ ] 5.2 Test the metric extraction + verdict logic on a tiny synthetic fixture (memory arms high, MLP at chance → "separation"; all at chance → "null").
+- [x] 5.1 `scripts/analysis/bit_memory_separation.py`: read each run's per-episode cue-match success, compute per-arm mean success over the converged tail, and the pairwise paired-seed deltas (one-sided Wilcoxon + 80% bootstrap CI + BH-FDR) by importing the helpers from `weight_search_architecture_ranking` (same methodology as the T7 ranking). Print + write a JSON summary with per-arm success, the pairwise table, and the separation verdict.
+- [x] 5.2 Test the metric extraction + verdict logic on a tiny synthetic fixture (memory arms high, MLP at chance → "separation"; all at chance → "null").
 
 ## 6. Learnability pre-check + calibration
 
