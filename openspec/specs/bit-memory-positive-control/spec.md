@@ -1,8 +1,17 @@
 # bit-memory-positive-control Specification
 
 ## Purpose
-TBD - created by archiving change add-bit-memory-positive-control. Update Purpose after archive.
+
+A deliberately-artificial working-memory positive control: a delayed-match-to-cue task that a
+memoryless policy provably cannot solve above chance, used to confirm the architecture
+comparison can separate working memory at all. A binary cue is shown, withheld across a delay,
+then acted on later; the observation carries no external memory aid (no STAM, no gradients), so
+retaining the cue requires internal recurrent state. The capability defines the task's phase
+structure, the cue/go observation channels, the cue-conditioned reward, the no-memory-aid
+contract, and the separation-evaluation protocol.
+
 ## Requirements
+
 ### Requirement: Delayed-match-to-cue task structure
 
 The system SHALL provide a config-gated bit-memory task composed of one or more independent trials per episode. Each trial SHALL progress through three phases in order — a **cue phase**, a **delay phase**, and a **response phase** — whose lengths are configurable. At the start of each trial the system SHALL sample a binary cue uniformly at random, independently of prior trials.
@@ -99,4 +108,3 @@ The system SHALL provide an evaluation that reports each arm's cue-match success
 
 - **WHEN** no arm exceeds chance, or the recurrent/attention arms do not significantly exceed the memoryless MLP
 - **THEN** the evaluation reports a null verdict (the comparison does not resolve working memory) rather than a separation
-
