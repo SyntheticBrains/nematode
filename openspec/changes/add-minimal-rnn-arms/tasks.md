@@ -42,20 +42,20 @@
 ## 7. Evaluation (two prongs)
 
 - [x] 7.1 Extend the memory-cell harness: add `mingruppo`, `minlstmppo` to `MEMORY_ARMS` in `scripts/analysis/bit_memory_separation.py` (line 42, hardcoded). (The `test_bit_memory_separation.py:57` assertion needs no change — its synthetic table excludes the new arms, so they are not in `separating_arms`.)
-- [ ] 7.2 Memory-cell separation: run the new arms (paired seeds) on the bit-memory control, analyze with the harness, and record whether they clear chance + beat the memoryless MLP (LSTM / CfC as the yardstick).
+- [x] 7.2 Memory-cell separation (n=8): SEPARATION CONFIRMED — minLSTM 0.966 / minGRU 0.956 clear chance + beat the memoryless MLP (BH-FDR q=0.007), on par with LSTM 0.939. (Needed a memory-friendly retention-gate init — without it both sat at chance; see logbook 031.)
 - [x] 7.3 Extend the reactive-cell harness: add `mingruppo`, `minlstmppo` to `PPO_ARCHS` in `scripts/analysis/t7_continuous_ranking.py` (line 57, hardcoded).
-- [ ] 7.4 Reactive-cell stability A/B: run the new arms paired-seed vs `lstmppo` on the 029 C3 cell; report return + seeds-converged vs the `lstmppo` baseline.
-- [ ] 7.5 Write the logbook (objective / method / results / analysis / limitations), and persist committed supporting artefacts (per-seed CSV + summary JSON).
+- [x] 7.4 Reactive-cell stability A/B (n=8, plateau-tail full-clear success via the bespoke `scripts/analysis/minimal_rnn_reactive_ab.py`): both BEAT `lstmppo` — minLSTM 73.1 (+17.0, q=0.016 \*\*\*), minGRU 66.2 (+10.1, ns) vs lstmppo 56.1 — lower spread + higher floor; the hold-init costs nothing on the reactive cell.
+- [x] 7.5 Logbook [031](../../../docs/experiments/logbooks/031-minimal-rnn-candidates.md) written + committed supporting artefacts (separation.json, cue-match-per-seed.csv, reactive_ab.json).
 
 ## 8. Docs + tracker
 
-- [ ] 8.1 Tick the minGRU/minLSTM portion of `T7.separation.new_arch_candidates` with the two-prong verdict; note modified-S5 remains a separate follow-on.
+- [x] 8.1 Annotated `T7.separation.new_arch_candidates` with the two-prong verdict (box left open — modified-S5 remains the open Tier-1 item).
 - [x] 8.2 Update the `AGENTS.md` brain-arch count + enumeration (25 → 27, append `mingruppo`, `minlstmppo`). (The plugin-developer-guide has no fixed arch count/roster to bump.)
-- [ ] 8.3 Add the logbook row to `docs/experiments/README.md` and any canonical architecture-doc arm listing.
+- [x] 8.3 Added the 031 row to `docs/experiments/README.md`.
 
 ## 9. Gates
 
 - [ ] 9.1 Targeted `pre-commit` (ruff / pyright / markdownlint) on changed files during iteration; full `pre-commit run -a` before push.
 - [x] 9.2 `openspec validate add-minimal-rnn-arms --strict`.
-- [ ] 9.3 Full `uv run pytest -m "not nightly"` green (no regression; the `lstmppo` byte-identical assertion holds).
+- [x] 9.3 Full `uv run pytest -m "not nightly"` green — 4002 passed (no regression; the `lstmppo` byte-identical assertion holds).
 - [ ] 9.4 Archive the change after merge (`openspec archive add-minimal-rnn-arms -y`).
