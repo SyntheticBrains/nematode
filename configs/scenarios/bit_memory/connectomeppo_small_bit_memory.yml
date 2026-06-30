@@ -1,0 +1,37 @@
+# Bit-memory delayed-match-to-cue positive control — CONNECTOMEPPO (Cook-2019 wiring).
+#
+# See mlpppo_small_bit_memory.yml for the task rationale. The connectome's recurrence is
+# WITHIN-step settling (the hidden state resets each forward call), so it carries no
+# cross-step memory — it is expected to behave like the memoryless MLP (near chance). That
+# prediction is itself a result the control reveals. Predator/thermotaxis projections are
+# off (neither is present in this task); cue/go are the only inputs.
+max_steps: 230
+brain:
+  name: connectomeppo
+  config:
+    action_mode: continuous
+    connectome_source: cook_2019_hermaphrodite
+    enable_gap_junctions: true
+    chemical_mask_mode: strict
+    sensing_mode: oracle
+    enable_predator_projection: false
+    enable_thermotaxis_projection: false
+    forward_pass_depth: 4
+    freeze_updates: false
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.005
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    sensory_modules:
+    - cue
+    - go_signal
+environment:
+  env_type: continuous_2d
+  bit_memory_task:
+    enabled: true

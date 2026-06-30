@@ -1,0 +1,35 @@
+# Bit-memory delayed-match-to-cue positive control — TRANSFORMERPPO (attention; a memory arm).
+#
+# See mlpppo_small_bit_memory.yml for the task rationale. The per-trial span (cue 2 + delay 8
+# + response 1 = 11) is kept WITHIN the attention window_size (16) so the cue is still in the
+# window at the response step — the Transformer can attend to it and is expected to solve the
+# task. (A span > window would evict the cue and confound the result; see design Decision 3.)
+max_steps: 230
+brain:
+  name: transformerppo
+  config:
+    action_mode: continuous
+    window_size: 16
+    d_model: 64
+    nhead: 4
+    num_encoder_layers: 2
+    dim_feedforward: 128
+    dropout: 0.0
+    critic_hidden_dim: 64
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.005
+    learning_rate: 0.0001
+    rollout_buffer_size: 256
+    num_epochs: 4
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    sensory_modules:
+    - cue
+    - go_signal
+environment:
+  env_type: continuous_2d
+  bit_memory_task:
+    enabled: true

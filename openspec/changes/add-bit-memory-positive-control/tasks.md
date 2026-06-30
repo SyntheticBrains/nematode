@@ -26,8 +26,8 @@
 
 ## 4. Per-arm configs
 
-- [ ] 4.1 Author `configs/scenarios/bit_memory/{mlpppo,lstmppo,cfcppo,transformerppo,connectomeppo}_small_bit_memory.yml` (the filename carries **no `{sensing}` suffix** — a deliberate, documented deviation from the `{brain}_{size}[_{variant}]_{sensing}` convention in AGENTS.md, since bit-memory is a task variant whose input is the cue/go channels, not a sensing mode): `sensory_modules: [cue, go_signal]`, the `bit_memory_task` block (span kept `< transformerppo.window_size` per design Decision 3), each arm's existing action head, and a fixed seed block for paired-seed runs.
-- [ ] 4.2 Smoke: each config loads and runs a short headless episode (`--theme headless`) without error and produces the per-episode cue-match success metric.
+- [x] 4.1 Author `configs/scenarios/bit_memory/{mlpppo,lstmppo,cfcppo,transformerppo,connectomeppo}_small_bit_memory.yml` (the filename carries **no `{sensing}` suffix** — a deliberate, documented deviation from the `{brain}_{size}[_{variant}]_{sensing}` convention in AGENTS.md, since bit-memory is a task variant whose input is the cue/go channels, not a sensing mode): `sensory_modules: [cue, go_signal]`, the `bit_memory_task` block (span kept `< transformerppo.window_size` per design Decision 3), each arm's existing action head, and a fixed seed block for paired-seed runs.
+- [x] 4.2 Smoke: each config loads and runs a short headless episode (`--theme headless`) without error and produces the per-episode cue-match success metric.
 
 ## 5. Separation analysis harness
 
