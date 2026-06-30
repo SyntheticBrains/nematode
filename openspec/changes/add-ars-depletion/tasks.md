@@ -29,13 +29,13 @@
 
 ## 5. Tests
 
-- [ ] 5.1 Disabled = byte-identical: with depletion off, `get_food_concentration` / gradient / consume / `copy()` match the pre-change behaviour (no amount effect).
-- [ ] 5.2 Amount-scaled field: a half-depleted source contributes ~half the bump; the `distance==0` case reads the source amount.
-- [ ] 5.3 Once-per-step purity: sampling the field N times (incl. klinotaxis 2×) leaves `food_amounts` unchanged; a single consume decrements exactly once.
-- [ ] 5.4 In-place flattening + removal: a partially-depleted source persists in place (position fixed, amplitude reduced) and stays consumable; at `removal_eps` it is removed (+ respawn unless `no_respawn`); a below-threshold source is not consumable.
-- [ ] 5.5 Integrity: `food_amounts` stays index-aligned across add/remove; continuous `copy()` preserves it; both substrates deplete.
-- [ ] 5.6 Index-matching: two coincident (or near-coincident) sources — a consume depletes the **matched** source's amount, not another's (guards the value-vs-index refactor, 4.2).
-- [ ] 5.7 Signal absence via removal: a source consumed to exhaustion is removed and therefore absent from the nearest-food distance metric (and the concentration/gradient) — no spent patch lingers in any food signal.
+- [x] 5.1 Disabled = byte-identical: with depletion off, `get_food_concentration` / gradient / consume / `copy()` match the pre-change behaviour (no amount effect). *(`test_disabled_field_ignores_amounts` — concentration + gradient off-paths ignore amounts; `test_disabled_consume_removes_outright`; the unchanged 216-test env suite covers the broader default path.)*
+- [x] 5.2 Amount-scaled field: a half-depleted source contributes ~half the bump; the `distance==0` case reads the source amount. *(`test_amount_scales_field_and_distance_zero`.)*
+- [x] 5.3 Once-per-step purity: sampling the field N times (incl. klinotaxis 2×) leaves `food_amounts` unchanged; a single consume decrements exactly once. *(`test_field_reads_are_pure` + `test_one_consume_decrements_once`.)*
+- [x] 5.4 In-place flattening + removal: a partially-depleted source persists in place (position fixed, amplitude reduced) and stays consumable; at `removal_eps` it is removed (+ respawn unless `no_respawn`); a below-threshold source is not consumable. *(`test_persist_in_place_then_remove_at_exhaustion` + `test_below_threshold_not_consumable`.)*
+- [x] 5.5 Integrity: `food_amounts` stays index-aligned across add/remove; continuous `copy()` preserves it; both substrates deplete. *(`test_copy_preserves_amounts` + `test_grid_substrate_depletes`.)*
+- [x] 5.6 Index-matching: two coincident (or near-coincident) sources — a consume depletes the **matched** source's amount, not another's (guards the value-vs-index refactor, 4.2). *(`test_consume_matches_source_by_index`.)*
+- [x] 5.7 Signal absence via removal: a source consumed to exhaustion is removed and therefore absent from the nearest-food distance metric (and the concentration/gradient) — no spent patch lingers in any food signal. *(`test_signal_absent_after_exhaustion`.)*
 
 ## 6. Scenario config
 
