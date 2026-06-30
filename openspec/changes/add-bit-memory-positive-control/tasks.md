@@ -52,6 +52,6 @@
 
 ## 9. Pre-merge gates
 
-- [ ] 9.1 `openspec validate add-bit-memory-positive-control --strict` passes.
-- [ ] 9.2 Targeted `pre-commit` (ruff / pyright / markdownlint) on changed files during iteration; full `uv run pytest -m "not nightly"` before push.
+- [x] 9.1 `openspec validate add-bit-memory-positive-control --strict` passes.
+- [x] 9.2 Targeted `pre-commit` (ruff / pyright / markdownlint) on changed files during iteration; full `uv run pytest -m "not nightly"` before push.
 - [ ] 9.3 After merge, archive the OpenSpec change (`openspec archive add-bit-memory-positive-control`) so the `bit-memory-positive-control` delta applies into `openspec/specs/`.
