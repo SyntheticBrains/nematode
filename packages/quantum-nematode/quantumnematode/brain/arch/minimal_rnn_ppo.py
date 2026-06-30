@@ -153,14 +153,29 @@ class _MinimalRNNPPOBrain(LSTMPPOBrain):
             is_lstm=self._MINIMAL_IS_LSTM,
         ).to(self.device)
 
+    # Default-to-hold gate bias. During a zero-input phase (e.g. the bit-memory delay, obs
+    # [0, 0]) the gate is bias-only, so a zeroed bias gives z = f' = 0.5 — a ~1-step retention
+    # half-life that washes out any held signal. Biasing the retention gate toward holding (the
+    # LSTM forget-gate-bias trick adapted to the minimal cell) extends the half-life so the
+    # policy only has to learn to WRITE during the input, not discover the hold via delayed
+    # credit. z ~ sigmoid(-2.5) ~ 0.08 -> retain ~0.92; minLSTM f' ~ 0.92 likewise.
+    _HOLD_BIAS = 2.5
+
     def _init_recurrent_weights(self) -> None:
-        """Xavier-init the input projections; zero biases.
+        """Xavier-init the input projections; bias the retention gate toward holding.
 
         The minimal RNN has no hidden-to-hidden matrix, so the base orthogonal-``weight_hh``
         pass (which fights recurrent-state saturation in the plain GRU/LSTM) does not apply.
+        The retention-gate bias (see ``_HOLD_BIAS``) gives the cell a memory-friendly prior.
         """
         for name, param in self.rnn.named_parameters():
-            if "bias" in name:
+            if "weight_z.bias" in name:  # minGRU update gate: small z -> large retention (1-z)
+                nn.init.constant_(param.data, -self._HOLD_BIAS)
+            elif "weight_f.bias" in name:  # minLSTM forget gate: large f -> large retention f'
+                nn.init.constant_(param.data, self._HOLD_BIAS)
+            elif "weight_i.bias" in name:  # minLSTM input gate: small i -> f' -> 1
+                nn.init.constant_(param.data, -self._HOLD_BIAS)
+            elif "bias" in name:
                 nn.init.constant_(param.data, 0.0)
             else:
                 nn.init.xavier_uniform_(param.data)

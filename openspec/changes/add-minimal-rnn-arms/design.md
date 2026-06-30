@@ -110,10 +110,15 @@ chunk length 16.
 
 `lstmppo._init_recurrent_weights` orthogonalises `weight_hh` per gate block to fight
 recurrent-state saturation. The minimal RNN has **no** `weight_hh` (gates are input-only), so that
-pass is inapplicable; the subclass overrides `_init_recurrent_weights` to initialise the
-input projections (`W_z/W_f/W_i/W_h`) — Xavier-uniform weights, zeroed biases. The absence of a
-saturating recurrent matrix is precisely the structural reason these arms are a candidate stability
-fix for the 029 LSTM laggard.
+pass is inapplicable; the subclass overrides `_init_recurrent_weights` to Xavier-init the input
+projections (`W_z/W_f/W_i/W_h`) and to **bias the retention gate toward holding** (minGRU
+`bias_z < 0`, minLSTM `bias_f > 0` / `bias_i < 0`) — a memory-friendly prior. **This bias is
+load-bearing.** During a zero-input phase (e.g. the bit-memory delay, obs `[0, 0]`) the gate is
+bias-only, so a zeroed bias gives `z = f' = 0.5` — a ~1-step retention half-life that washes out
+any held signal over the delay. The eval confirmed this empirically: with zeroed biases both
+minimal arms sit at chance (never learn the delayed-match task); with the hold bias they reach
+~0.96, joining the LSTM/Transformer cluster. The absence of a saturating recurrent matrix is also
+the structural reason these arms are a candidate stability fix for the 029 LSTM laggard.
 
 ### D5 — Inherit both action heads unchanged
 

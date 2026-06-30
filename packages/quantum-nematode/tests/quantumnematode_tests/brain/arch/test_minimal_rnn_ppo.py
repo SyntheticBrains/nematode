@@ -91,6 +91,27 @@ def test_cell_state_is_bounded_by_candidates(is_lstm):
     assert h_final.abs().max().item() <= max_candidate + 1e-5
 
 
+@pytest.mark.parametrize(
+    ("brain_cls", "cfg_cls"),
+    [(MinGRUPPOBrain, MinGRUPPOBrainConfig), (MinLSTMPPOBrain, MinLSTMPPOBrainConfig)],
+)
+def test_retention_gate_defaults_to_hold(brain_cls, cfg_cls):
+    """The retention gate is biased toward HOLDING at init (a memory-friendly prior).
+
+    During a zero-input phase the gate is bias-only; a zeroed bias gives a ~1-step retention
+    half-life that washes out a held signal. The hold-bias init retains most of the prior state
+    across a zero-input step, so the policy only has to learn to write during the input.
+    """
+    brain = brain_cls(_cfg(cfg_cls), num_actions=4)
+    rnn = brain.rnn
+    assert isinstance(rnn, MinimalRNN)
+    h_prev = torch.ones(1, 1, brain.config.lstm_hidden_dim)
+    x0 = torch.zeros(1, 1, brain.input_dim)
+    _, h_new = rnn(x0, h_prev)
+    # ~0.92 retention of the all-ones prior across a zero-input step (vs 0.5 for a zeroed bias).
+    assert (h_new.abs() > 0.8).all()
+
+
 # ── Config validation ───────────────────────────────────────────────────────────────
 
 
