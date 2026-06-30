@@ -46,6 +46,8 @@ class BrainType(StrEnum):
     SPIKING_PPO = "spikingppo"
     EQUIVARIANT_QUANTUM_PPO = "equivariantquantum"
     TRANSFORMER_PPO = "transformerppo"
+    MINGRU_PPO = "mingruppo"
+    MINLSTM_PPO = "minlstmppo"
 
 
 class DeviceType(StrEnum):
@@ -115,6 +117,8 @@ BRAIN_TYPES = Literal[
     BrainType.SPIKING_PPO,
     BrainType.EQUIVARIANT_QUANTUM_PPO,
     BrainType.TRANSFORMER_PPO,
+    BrainType.MINGRU_PPO,
+    BrainType.MINLSTM_PPO,
 ]
 
 

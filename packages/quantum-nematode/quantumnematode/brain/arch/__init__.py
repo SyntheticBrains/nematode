@@ -33,6 +33,12 @@ from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
 from .lstmppo import LSTMPPOBrain, LSTMPPOBrainConfig
+from .minimal_rnn_ppo import (
+    MinGRUPPOBrain,
+    MinGRUPPOBrainConfig,
+    MinLSTMPPOBrain,
+    MinLSTMPPOBrainConfig,
+)
 from .mlpdqn import MLPDQNBrain, MLPDQNBrainConfig
 from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig
 from .mlpreinforce import MLPReinforceBrain, MLPReinforceBrainConfig
@@ -88,6 +94,10 @@ __all__ = [
     "MLPPPOBrainConfig",
     "MLPReinforceBrain",
     "MLPReinforceBrainConfig",
+    "MinGRUPPOBrain",
+    "MinGRUPPOBrainConfig",
+    "MinLSTMPPOBrain",
+    "MinLSTMPPOBrainConfig",
     "QEFBrain",
     "QEFBrainConfig",
     "QLIFLSTMBrain",

@@ -585,22 +585,9 @@ class LSTMPPOBrain(ClassicalBrain):
         # LayerNorm on input features
         self.feature_norm = nn.LayerNorm(self.input_dim).to(self.device)
 
-        # LSTM or GRU
-        self._is_gru = config.rnn_type == "gru"
-        if config.recurrent_layernorm:
-            self.rnn = LayerNormRecurrent(
-                self.input_dim,
-                config.lstm_hidden_dim,
-                is_gru=self._is_gru,
-            ).to(self.device)
-        else:
-            rnn_cls = nn.GRU if config.rnn_type == "gru" else nn.LSTM
-            self.rnn = rnn_cls(
-                input_size=self.input_dim,
-                hidden_size=config.lstm_hidden_dim,
-                num_layers=1,
-                batch_first=False,
-            ).to(self.device)
+        # Recurrent core (overridable hook: also sets self._is_gru and
+        # self._recurrent_core_label). Subclasses replace the cell here.
+        self.rnn = self._build_recurrent_core()
 
         # Actor MLP: h_t → action logits
         actor_layers: list[nn.Module] = [
@@ -741,11 +728,43 @@ class LSTMPPOBrain(ClassicalBrain):
         )
         critic_params = sum(p.numel() for p in self.critic.parameters())
         logger.info(
-            f"LSTMPPOBrain initialized: rnn_type={config.rnn_type}, "
+            f"LSTMPPOBrain initialized: rnn_type={self._recurrent_core_label}, "
             f"input_dim={self.input_dim}, hidden_dim={config.lstm_hidden_dim}, "
             f"actor_params={actor_params:,}, critic_params={critic_params:,}, "
             f"total={actor_params + critic_params:,}",
         )
+
+    def _build_recurrent_core(self) -> nn.Module:
+        """Build the recurrent core, and set ``self._is_gru`` + ``self._recurrent_core_label``.
+
+        Overridable hook so subclasses can swap the recurrent cell without touching the
+        rest of the pipeline. The base builds ``nn.LSTM`` / ``nn.GRU`` or the LayerNorm
+        recurrent cell per ``rnn_type`` / ``recurrent_layernorm`` (the only reads of those
+        two config fields). ``self._is_gru`` selects the single-state (GRU) path used by
+        ``_zero_hidden`` / ``_rnn_forward`` / the buffer; ``self._recurrent_core_label`` is
+        the human-readable core name used in the init log.
+
+        Returns
+        -------
+        nn.Module
+            The recurrent core module (already moved to ``self.device``).
+        """
+        config = self.config
+        self._is_gru = config.rnn_type == "gru"
+        self._recurrent_core_label = config.rnn_type
+        if config.recurrent_layernorm:
+            return LayerNormRecurrent(
+                self.input_dim,
+                config.lstm_hidden_dim,
+                is_gru=self._is_gru,
+            ).to(self.device)
+        rnn_cls = nn.GRU if config.rnn_type == "gru" else nn.LSTM
+        return rnn_cls(
+            input_size=self.input_dim,
+            hidden_size=config.lstm_hidden_dim,
+            num_layers=1,
+            batch_first=False,
+        ).to(self.device)
 
     def _initialize_weights(self) -> None:
         """Initialize network weights with orthogonal initialization.
