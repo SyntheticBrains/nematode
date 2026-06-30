@@ -1124,16 +1124,25 @@ def assert_bit_memory_observation_clean(
             "stam_enabled: false (the default)."
         )
         raise ValueError(msg)
-    try:
-        dim = get_classical_feature_dimension([ModuleName(m) for m in resolved])
-    except ValueError as exc:
-        msg = f"bit_memory_task resolved an unknown sensory module in {resolved}: {exc}"
-        raise ValueError(msg) from exc
+    # Primary guard: the resolved modules must be *exactly* the cue + go-signal pair — no
+    # extras, no duplicates. A dimension-only check is too weak: a non-cue/go module set that
+    # happens to sum to _BIT_MEMORY_OBS_DIM (e.g. a duplicated channel) would slip through.
+    expected = {ModuleName.CUE.value, ModuleName.GO_SIGNAL.value}
+    if set(resolved) != expected or len(resolved) != len(expected):
+        msg = (
+            "bit_memory_task.enabled requires the resolved sensory modules to be exactly "
+            f"[cue, go_signal] (a {_BIT_MEMORY_OBS_DIM}-dim observation); got {resolved}. "
+            "Remove any gradient/STAM modules or duplicates — the no-external-memory-aid "
+            "contract admits only the cue and go-signal channels."
+        )
+        raise ValueError(msg)
+    # Secondary invariant: the cue + go pair must still resolve to the expected observation
+    # width (guards a future change to either channel's dimensionality).
+    dim = get_classical_feature_dimension([ModuleName(m) for m in resolved])
     if dim != _BIT_MEMORY_OBS_DIM:
         msg = (
             f"bit_memory_task.enabled requires a {_BIT_MEMORY_OBS_DIM}-dim observation "
-            f"(cue + go only); got {dim} from resolved modules {resolved}. Remove any "
-            "gradient/STAM sensory modules — the no-external-memory-aid contract."
+            f"(cue + go only); got {dim} from resolved modules {resolved}."
         )
         raise ValueError(msg)
 

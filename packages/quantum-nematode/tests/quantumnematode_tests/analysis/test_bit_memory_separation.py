@@ -70,3 +70,24 @@ def test_verdict_null_when_all_at_chance():
     bms.analyse(table, out)
     assert out["verdict"]["separated"] is False
     assert out["verdict"]["separating_arms"] == []
+
+
+def test_verdict_null_when_one_memoryless_arm_above_chance():
+    """One off-chance memoryless baseline vetoes separation (the all-not-any at-chance gate).
+
+    Memory arms cleanly beat the MLP, but the connectome — a memoryless baseline — sits at
+    0.75, not chance. A separation verdict claims the memoryless arms don't solve the task, so
+    this must read NULL rather than letting the at-chance MLP corroborate it away (the bug the
+    old ``any(...)`` gate allowed).
+    """
+    table = {
+        "mlpppo": _arm(0.50),
+        "lstmppo": _arm(0.92),
+        "cfcppo": _arm(0.90),
+        "transformerppo": _arm(0.91),
+        "connectomeppo": _arm(0.75),  # memoryless arm NOT at chance
+    }
+    out: dict = {}
+    bms.analyse(table, out)
+    assert out["verdict"]["memoryless_at_chance"] is False
+    assert out["verdict"]["separated"] is False

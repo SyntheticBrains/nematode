@@ -1485,6 +1485,18 @@ class TestBitMemoryTaskConfig:
                 None,
             )
 
+    def test_two_dim_non_pair_observation_is_rejected(self):
+        """A 2-dim observation that isn't exactly [cue, go_signal] (here a duplicated cue).
+
+        It passes a dimension-only check (1 + 1 == 2) but must be rejected by the exact-pair
+        membership contract — the gap a width-only check would miss.
+        """
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import assert_bit_memory_observation_clean
+
+        with pytest.raises(ValueError, match="exactly"):
+            assert_bit_memory_observation_clean([ModuleName.CUE, ModuleName.CUE], None)
+
     def test_no_modules_is_rejected(self):
         """An enabled task with no sensory_modules is a config error."""
         from quantumnematode.utils.config_loader import assert_bit_memory_observation_clean

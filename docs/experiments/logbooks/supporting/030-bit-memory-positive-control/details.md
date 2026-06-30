@@ -41,7 +41,7 @@ never drop below 0.05 regardless of effect size (every pair came back q = 0.069)
 
 ## Reproduce
 
-```
+```shell
 # 5 arms × 8 seeds × 1500 ep (parallel, OMP_NUM_THREADS=1), then the harness:
 #   configs/scenarios/bit_memory/{arm}_small_bit_memory.yml  (delay 8, [cue, go_signal])
 uv run python scripts/analysis/bit_memory_separation.py \

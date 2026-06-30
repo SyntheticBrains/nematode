@@ -129,10 +129,15 @@ def analyse(table: dict[str, dict[int, float]], out: dict) -> None:
         beats_mlp = means[a] > mlp_mean and q is not None and q < 0.05
         if means[a] >= _SEPARATION_THRESHOLD and beats_mlp:
             separators.append(a)
-    # The at-chance baseline uses ALL present memoryless arms (e.g. MLP + connectome), so a
-    # single noisy arm-mean can't veto a separation the other memoryless arm corroborates.
+    # Require *every* present memoryless arm to sit at chance. A separation verdict asserts the
+    # memoryless baselines don't solve the task, so one off-chance baseline (e.g. a connectome
+    # that unexpectedly carried memory) must veto the verdict rather than be averaged away by a
+    # single corroborating arm. With no memoryless arm present there is nothing to anchor the
+    # claim, so it is not "at chance".
     memoryless_means = {a: means[a] for a in MEMORYLESS_ARMS if a in means}
-    memoryless_at_chance = any(abs(m - _CHANCE) < _CHANCE_BAND for m in memoryless_means.values())
+    memoryless_at_chance = bool(memoryless_means) and all(
+        abs(m - _CHANCE) < _CHANCE_BAND for m in memoryless_means.values()
+    )
     separated = bool(separators) and memoryless_at_chance
     out["verdict"] = {
         "separated": separated,
@@ -172,6 +177,10 @@ def main() -> None:
     )
     ap.add_argument("--out", type=Path, default=None, help="write the separation summary JSON here")
     args = ap.parse_args()
+    if args.num_responses <= 0:
+        # num_responses is the divisor for cue-match = reward / num_responses; a non-positive
+        # value yields nonsense rates (or a ZeroDivisionError), so reject at the entrypoint.
+        ap.error("--num-responses must be a positive integer")
 
     table = load(args.manifest, args.num_responses)
     out: dict = {}

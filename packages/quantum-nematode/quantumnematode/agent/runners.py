@@ -626,6 +626,17 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         ``sign`` of the returned value is compared to the cue: for the continuous arms this
         is the normalized turn component, for a discrete arm a LEFT/RIGHT choice.
+
+        Parameters
+        ----------
+        action : ActionData
+            The top action emitted by the brain this step.
+
+        Returns
+        -------
+        float
+            The signed response source: the normalized turn for a continuous action, or
+            -1.0 / +1.0 for a discrete LEFT / RIGHT (0.0 for any other discrete action).
         """
         if action.continuous is not None:
             return float(action.continuous[1])  # (speed, turn) -> turn
@@ -647,7 +658,28 @@ class StandardEpisodeRunner(EpisodeRunner):
         learn: bool = True,
         update_memory: bool = True,
     ) -> EpisodeResult:
-        """Log the per-episode cue-match rate (the analysis metric) and terminate."""
+        """Log the per-episode cue-match rate (the analysis metric) and terminate.
+
+        Parameters
+        ----------
+        agent : QuantumNematodeAgent
+            The agent instance.
+        params : Any
+            Brain parameters from the final step.
+        reward : float
+            The reward delivered on the terminating step.
+        bm : BitMemoryTask
+            The bit-memory phase machine, read for the cue-match rate + response count.
+        learn : bool
+            Whether to call brain.learn at termination (default True).
+        update_memory : bool
+            Whether to call brain.update_memory at termination (default True).
+
+        Returns
+        -------
+        EpisodeResult
+            The episode result, tagged with the bit-memory termination reason.
+        """
         rate = bm.cue_match_success_rate
         logger.info("BitMemory: cue_match=%.4f responses=%d", rate, bm.num_responses)
         return self._terminate_episode(
@@ -676,6 +708,26 @@ class StandardEpisodeRunner(EpisodeRunner):
         the *previous* response's score (``run_brain`` treats it as the previous-step
         reward, mirroring the foraging timing); the current action is scored against the cue
         when this is a response step. The episode ends once every trial completes.
+
+        Parameters
+        ----------
+        agent : QuantumNematodeAgent
+            The agent instance (drives the brain + owns the bit-memory env).
+        max_steps : int
+            The episode step budget. Completion is normally driven by the trial counter;
+            this is only a mis-size guard for a config whose budget is too small.
+        prev_action : ActionData | None
+            The previous step's top action, forwarded into the brain params.
+        render_text : str | None
+            Text to display during rendering.
+        show_last_frame_only : bool
+            Whether to render only the last frame.
+
+        Returns
+        -------
+        tuple[EpisodeResult | None, ActionData | None]
+            The episode result once the task terminates (else None), and this step's top
+            action (carried forward as the next step's ``prev_action``).
         """
         bm = agent.env.bit_memory
         if bm is None:  # defensive: the caller guards this
