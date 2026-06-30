@@ -42,9 +42,10 @@ class MinimalRNN(nn.Module):
       ``f' = f/(f+i)``, ``i' = i/(f+i)``, ``h_tilde = W_h x``,
       ``h = f' * h_prev + i' * h_tilde``.
 
-    Both updates are convex (the two coefficients sum to 1), so the state stays within the
-    range of ``h_tilde`` — affine in the bounded LayerNorm'd input — and remains bounded
-    over arbitrary sequence lengths without a squashing nonlinearity. There is no
+    The minGRU update is exactly convex (``(1 - z) + z = 1``); the minLSTM update is contractive
+    (the normalised coefficients sum to ``(f + i) / (f + i + eps) ≤ 1``). Either way the state
+    stays within the range of ``h_tilde`` — affine in the bounded LayerNorm'd input — and remains
+    bounded over arbitrary sequence lengths without a squashing nonlinearity. There is no
     hidden-to-hidden (``weight_hh``) matrix, which is why the arms override
     ``_init_recurrent_weights`` with an input-projection-only initialisation.
     """

@@ -91,6 +91,26 @@ def test_cell_state_is_bounded_by_candidates(is_lstm):
     assert h_final.abs().max().item() <= max_candidate + 1e-5
 
 
+def test_minlstm_normalization_bounds_state_with_high_gates():
+    """The minLSTM `f/(f+i)` normalization is what keeps the state bounded.
+
+    With both gates driven high (`bias_f = bias_i` large), an UN-normalized update
+    `h = f*h_prev + i*h_tilde` has `f + i ≈ 2`, so the state grows ~2x per step and diverges. The
+    shipped normalized update (`f' + i' ≈ 1`) stays within the candidate range. This exercises the
+    regime the random-input bounded test never does — so a dropped normalization is caught here.
+    """
+    torch.manual_seed(2)
+    cell = MinimalRNN(input_size=4, hidden_size=6, is_lstm=True)
+    with torch.no_grad():
+        cell.weight_f.bias.fill_(5.0)  # f ~ 0.99
+        cell.weight_i.bias.fill_(5.0)  # i ~ 0.99 -> an un-normalized f+i ~ 2 would diverge
+    x_seq = torch.randn(300, 1, 4)
+    _, h_final = cell(x_seq, torch.zeros(1, 1, 6))
+    max_candidate = cell.weight_h(x_seq).abs().max().item()
+    assert torch.isfinite(h_final).all()
+    assert h_final.abs().max().item() <= max_candidate + 1e-5
+
+
 @pytest.mark.parametrize(
     ("brain_cls", "cfg_cls"),
     [(MinGRUPPOBrain, MinGRUPPOBrainConfig), (MinLSTMPPOBrain, MinLSTMPPOBrainConfig)],
@@ -108,8 +128,11 @@ def test_retention_gate_defaults_to_hold(brain_cls, cfg_cls):
     h_prev = torch.ones(1, 1, brain.config.lstm_hidden_dim)
     x0 = torch.zeros(1, 1, brain.input_dim)
     _, h_new = rnn(x0, h_prev)
-    # ~0.92 retention of the all-ones prior across a zero-input step (vs 0.5 for a zeroed bias).
-    assert (h_new.abs() > 0.8).all()
+    # With zero input the candidate is the (zeroed) bias, so h_new = retention_coeff * h_prev:
+    # a high fraction of the all-ones prior (~0.92), never grown beyond it. The two bounds catch
+    # every regression mode: a zeroed update-gate bias -> 0.5 (< 0.8); a retain<->write direction
+    # swap -> ~0.08 (< 0.8); and a non-holding cell whose candidate bias inflates the output -> > 1.
+    assert ((h_new > 0.8) & (h_new <= 1.0 + 1e-5)).all()
 
 
 # ── Config validation ───────────────────────────────────────────────────────────────
@@ -220,8 +243,13 @@ def test_weight_persistence_round_trip(brain_cls, cfg_cls):
 
     dst = brain_cls(_cfg(cfg_cls), num_actions=4)
     # Pre-condition: fresh init differs from the source on at least one core weight.
-    src_w = src.rnn.weight_h.weight
-    assert not torch.allclose(src_w, dst.rnn.weight_h.weight)
+    assert not torch.allclose(src.rnn.weight_h.weight, dst.rnn.weight_h.weight)
 
     dst.load_weight_components(components)
-    torch.testing.assert_close(dst.rnn.weight_h.weight, src_w)
+    # Every recurrent-core param round-trips — the gate projections AND all biases (incl. the
+    # load-bearing hold-bias), not just one weight.
+    src_state = src.rnn.state_dict()
+    dst_state = dst.rnn.state_dict()
+    assert set(src_state) == set(dst_state)
+    for key, src_param in src_state.items():
+        torch.testing.assert_close(dst_state[key], src_param)

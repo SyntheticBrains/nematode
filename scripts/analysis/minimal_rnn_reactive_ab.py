@@ -30,7 +30,6 @@ from weight_search_architecture_ranking import bh_fdr, paired_seed_wilcoxon_boot
 REPO = Path(__file__).resolve().parents[2]
 
 _FINAL_WINDOW_FRAC = 0.25  # plateau-tail window: the final quarter of the run
-_CONVERGED_BAR = 30.0  # a seed "converged" if its plateau-tail full-clear success clears this %
 BASELINE = "lstmppo"
 NEW_ARMS = ("mingruppo", "minlstmppo")
 _SEEDS = range(1, 9)
@@ -78,17 +77,18 @@ def analyse(table: dict[str, dict[int, float]], out: dict) -> None:
             print(f"  {arm:12} (no data)")
             continue
         v = list(vals.values())
-        converged = sum(x >= _CONVERGED_BAR for x in v)
+        # mean + the per-seed spread (min, std) are the stability signal — the hypothesis is about
+        # seed-fragility, not just the mean. (No "converged" count: the runs don't write the
+        # experiment JSON the 029 convergence detector needs, so any fixed success-bar proxy here
+        # would be uninformative — see logbook 031.)
         print(
             f"  {arm:12} mean={np.mean(v):5.1f}  min={min(v):5.1f}  std={np.std(v):4.1f}  "
-            f"converged({_CONVERGED_BAR:.0f}%+)={converged}/{len(v)}  "
             f"per-seed={[round(x, 1) for x in v]}",
         )
         out["per_arm"][arm] = {
             "mean": float(np.mean(v)),
             "min": float(min(v)),
             "std": float(np.std(v)),
-            "converged": converged,
             "n": len(v),
             "per_seed": {s: vals[s] for s in sorted(vals)},
         }
