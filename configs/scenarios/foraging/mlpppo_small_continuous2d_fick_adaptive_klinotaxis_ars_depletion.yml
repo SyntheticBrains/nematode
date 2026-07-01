@@ -35,17 +35,24 @@
 # architecture panel is minted from this cell by swapping the ``brain`` block (one file per arm,
 # mirroring the existing per-arm continuous-2D foraging files) once the cell is calibrated.
 #
-# Calibration knobs (pre-eval calibration pass — visualise the depleting field + confirm the cell
-# induces non-gradient search and is learnable, then tune): patch density (``foods_on_grid``),
-# ``depletion_per_feed`` / ``source_initial_amount`` (how fast a patch flattens), the diffusion
-# length ``gradient_decay_constant`` (patch sharpness — at the recipe's L=8 mm in a 20 mm arena the
-# 5 patches' Gaussians overlap heavily, so depleting one patch shifts the LOCAL field only ~6%; a
-# shorter L makes the in-place flattening locally dominant and the ARS memory demand sharper),
-# ``no_respawn``, ``max_steps`` + satiety (search budget under sparse capture-only reward), and the
-# STAM front-end (``stam_enabled``) — STAM is itself a within-episode short-term memory that could
-# MASK the architecture separation, so the calibration must check it on/off (the artificial
-# bit-memory probe deliberately withheld such aids). Kept on here to mirror the recipe; flagged for
-# the calibration.
+# Field calibration: the diffusion length ``gradient_decay_constant`` is the patch-sharpness knob and
+# is load-bearing for the ARS demand. The recipe's L=8 mm merges the 5 patches into a single broad
+# blob (a depleted patch hands straight off to its overlapping neighbours — purely reactive, no
+# memory demand). Swept L for two competing quantities — the navigation signal toward a patch
+# (findability/learnability) and the gradient that survives at a just-exhausted patch's location
+# (stranding; low = strong ARS) — and L=4 mm is the sweet spot: it MAXIMISES findability while a
+# depleted patch's residual gradient falls to ~half the approach signal (vs L=8's ratio >1, where the
+# neighbour pull exceeds the approach signal), and the patches are genuinely isolated (peak/valley
+# ~270 vs 2.3). Hence L=4 here (down from the recipe's 8).
+#
+# Remaining calibration knobs (the learnability canary + any tuning pass): patch density
+# (``foods_on_grid`` — fewer patches strand harder), ``depletion_per_feed`` / ``source_initial_amount``
+# (how fast a patch flattens), ``no_respawn``, ``max_steps`` + satiety (search budget under sparse
+# capture-only reward), and the STAM front-end (``stam_enabled``) — STAM is itself a within-episode
+# short-term memory that could MASK the architecture separation, so the calibration must check it
+# on/off (the artificial bit-memory probe deliberately withheld such aids). Kept on here to mirror
+# the recipe; flagged for the calibration. (L=3 mm is the sharper-demand fallback if the canary shows
+# L=4's demand too soft.)
 
 max_steps: 800
 brain:
@@ -120,7 +127,7 @@ environment:
     no_respawn: true  # finite patches — a depleted patch stays spent (ARS relocate demand)
     # Static Fick-shaped gradient geometry (Gaussian kernel, L = decay).
     gradient_field_mode: fick
-    gradient_decay_constant: 8.0
+    gradient_decay_constant: 4.0  # calibrated for ARS patch isolation (recipe was 8.0; see header)
     gradient_strength: 1.0
     # Source-depletion dynamics: each patch flattens in place over ~4 feeds, then is removed.
     source_depletion_enabled: true
