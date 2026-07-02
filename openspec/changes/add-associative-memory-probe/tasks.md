@@ -111,21 +111,21 @@ conditioning** phase.
 
 ## 7. Evaluation + verdict
 
-- [ ] 7.1 Run the arm panel (MLP + LSTM/CfC/Transformer/minGRU/minLSTM) at `n ≥ 8` paired seeds, headless,
+- [x] 7.1 Run the arm panel (MLP + LSTM/CfC/Transformer/minGRU/minLSTM) at `n ≥ 8` paired seeds, headless,
   parallelised (`OMP_NUM_THREADS=1`, `xargs -P`).
-- [ ] 7.2 Compute the separation (harness §5); record per-arm accuracy, the pairwise BH-FDR table, and
+- [x] 7.2 Compute the separation (harness §5); record per-arm accuracy, the pairwise BH-FDR table, and
   whether the memory arms clear both chance and the MLP.
-- [ ] 7.3 **PAUSE for user review of the evaluation + verdict before writing the logbook** (project
+- [x] 7.3 **PAUSE for user review of the evaluation + verdict before writing the logbook** (project
   convention).
 
 ## 8. Logbook + tracker
 
-- [ ] 8.1 Write the logbook (objective / method / results / analysis / limitations) + committed supporting
+- [x] 8.1 Write the logbook (objective / method / results / analysis / limitations) + committed supporting
   artefacts (no `tmp/` references).
-- [ ] 8.2 Add the logbook row to `docs/experiments/README.md`.
-- [ ] 8.3 Tick `T7.separation.associative_memory` in `openspec/changes/phase6-tracking/tasks.md` with the
+- [x] 8.2 Add the logbook row to `docs/experiments/README.md`.
+- [x] 8.3 Tick `T7.separation.associative_memory` in `openspec/changes/phase6-tracking/tasks.md` with the
   verdict (separation = a second naturalistic memory data point; null = reported as such).
-- [ ] 8.4 Document the `_associative_memory` config variant / the `associative_memory/` scenario family in
+- [x] 8.4 Document the `_associative_memory` config variant / the `associative_memory/` scenario family in
   `AGENTS.md`.
 
 ## 9. Pre-merge gates
