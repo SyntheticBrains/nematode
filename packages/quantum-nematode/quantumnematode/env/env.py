@@ -226,6 +226,19 @@ class ForagingParams:
         food" and "avoid predator" objectives are in unresolvable
         conflict on a small grid and PPO collapses to one extreme or
         the other regardless of reward shape.
+    source_depletion_enabled : bool
+        Config-gated within-episode source-depletion. Default ``False`` →
+        the field uses the global ``gradient_strength`` (byte-identical).
+        When ``True`` each source carries a remaining amount that scales
+        its field contribution, so a grazed patch flattens in place.
+    source_initial_amount : float
+        Starting remaining amount of each source when depletion is enabled.
+    depletion_per_feed : float
+        Amount removed from the matched source per consume event (gradual;
+        ``< source_initial_amount`` → multiple feeds to exhaust a patch).
+    source_removal_eps : float
+        Removal threshold: a source at or below this amount is exhausted —
+        removed (respawn subject to ``no_respawn``) and not counted as food.
     """
 
     foods_on_grid: int = 10
@@ -251,6 +264,16 @@ class ForagingParams:
     gradient_field_mode: str = "exponential"
     diffusion_coefficient: float | None = None
     assay_time: float = 1.0
+    # Source-depletion dynamics (area-restricted search). When enabled, each food source
+    # carries a remaining amount that drains on feeding; its contribution to the food field
+    # scales with that amount, so a patch flattens *in place* as it is fed upon — a
+    # within-episode-memory demand. Off by default = byte-identical static field.
+    # ``depletion_per_feed`` < ``source_initial_amount`` gives gradual depletion (the default
+    # ~4 feeds to exhaust); a one-bite quantum would just reproduce today's binary removal.
+    source_depletion_enabled: bool = False
+    source_initial_amount: float = 1.0
+    depletion_per_feed: float = 0.25
+    source_removal_eps: float = 1e-3
 
     def fick_length(self) -> float:
         """Fick diffusion length ``sqrt(4 * D * assay_time)`` for the Gaussian kernel.
@@ -1557,6 +1580,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # candidate generator; the float values are coordinate-compatible
         # (every consumer does Euclidean/arithmetic, not lattice indexing).
         self.foods: list[tuple[int, int]] = []
+        # Per-source remaining amount, index-aligned with self.foods (source-depletion
+        # dynamics for area-restricted search). Kept aligned across every add/remove; the
+        # food field consults it only when self.foraging.source_depletion_enabled, so it is
+        # byte-identical when depletion is off.
+        self.food_amounts: list[float] = []
         self.predators: list[Predator] = []
         if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
             self._initialize_predators()
@@ -1683,6 +1711,39 @@ class DynamicForagingEnvironment(BaseEnvironment):
             int(self.rng.integers(self.grid_size)),
         )
 
+    def _add_food(self, position: tuple, amount: float | None = None) -> None:
+        """Append a food source and its remaining amount, kept index-aligned with ``foods``.
+
+        The amount defaults to ``source_initial_amount``. It is consulted by the food field
+        only when source-depletion is enabled, so populating it is byte-identical when off.
+        """
+        self.foods.append(position)
+        self.food_amounts.append(
+            self.foraging.source_initial_amount if amount is None else amount,
+        )
+
+    def _remove_food(self, index: int) -> tuple:
+        """Remove the food source at ``index`` (and its amount); return its position."""
+        self.food_amounts.pop(index)
+        return self.foods.pop(index)
+
+    def _deplete_or_remove(self, index: int) -> None:
+        """Apply one feeding event to the food at ``index``: deplete in place, or remove + respawn.
+
+        With source-depletion enabled, decrement the source's remaining amount by
+        ``depletion_per_feed`` and, while it stays above ``source_removal_eps``, leave it in place
+        at reduced amplitude (the in-place flattening). Only when it crosses the threshold (or when
+        depletion is disabled — today's behaviour) is the source removed and a replacement spawned
+        (the spawn is itself gated by ``no_respawn``).
+        """
+        foraging = self.foraging
+        if foraging.source_depletion_enabled:
+            self.food_amounts[index] -= foraging.depletion_per_feed
+            if self.food_amounts[index] > foraging.source_removal_eps:
+                return
+        self._remove_food(index)
+        self.spawn_food()
+
     def _initialize_foods(self) -> None:
         """
         Initialize food sources using Poisson disk sampling.
@@ -1692,6 +1753,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         rejection filter afterward.
         """
         self.foods = []
+        self.food_amounts = []
         attempts = 0
         max_total_attempts = MAX_POISSON_ATTEMPTS * self.foraging.foods_on_grid
         safe_bias = self.foraging.safe_zone_food_bias
@@ -1708,7 +1770,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 if require_safe_zone and not self._is_safe_temperature_zone(candidate):
                     attempts += 1
                     continue
-                self.foods.append(candidate)
+                self._add_food(candidate)
 
             attempts += 1
 
@@ -2065,7 +2127,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 # Check safe zone requirement if applicable
                 if require_safe_zone and not self._is_safe_temperature_zone(candidate):
                     continue
-                self.foods.append(candidate)
+                self._add_food(candidate)
                 logger.debug(
                     f"Spawned food at {candidate} "
                     f"({len(self.foods)}/{self.foraging.foods_on_grid} on grid)",
@@ -2075,19 +2137,24 @@ class DynamicForagingEnvironment(BaseEnvironment):
         logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
-    def _food_field_magnitude(self, distance: float) -> float:
+    def _food_field_magnitude(self, distance: float, source_amount: float | None = None) -> float:
         """Per-source food/chemical field magnitude at ``distance`` (mode-aware).
 
         Delegates to the shared :func:`field_magnitude` kernel with the foraging field's
-        ``gradient_field_mode`` (``exponential`` default | ``fick``). Numerically identical
-        to the prior inline kernel.
+        ``gradient_field_mode`` (``exponential`` default | ``fick``). When ``source_amount`` is
+        given (source-depletion enabled) the magnitude is scaled by that source's remaining
+        amount; when ``None`` (depletion off) the global strength is used unchanged, so the
+        field is byte-identical to before.
         """
         foraging = self.foraging
+        strength = foraging.gradient_strength
+        if source_amount is not None:
+            strength *= source_amount
         return field_magnitude(
             distance,
             mode=foraging.gradient_field_mode,
             decay=foraging.gradient_decay_constant,
-            strength=foraging.gradient_strength,
+            strength=strength,
             fick_length=foraging.fick_length(),
         )
 
@@ -2128,7 +2195,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         vector_x = 0.0
         vector_y = 0.0
 
-        for food in self.foods:
+        deplete = self.foraging.source_depletion_enabled
+        for i, food in enumerate(self.foods):
             dx = food[0] - position[0]
             dy = food[1] - position[1]
             distance = np.sqrt(dx**2 + dy**2)
@@ -2136,8 +2204,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
             if distance == 0:
                 continue
 
-            # Food/chemical field magnitude (exponential or Fick)
-            strength = self._food_field_magnitude(distance)
+            # Food/chemical field magnitude (exponential or Fick); scaled by the source's
+            # remaining amount when source-depletion is enabled (else byte-identical).
+            strength = self._food_field_magnitude(
+                distance,
+                source_amount=self.food_amounts[i] if deplete else None,
+            )
 
             # Compute direction vector
             direction = np.arctan2(dy, dx)
@@ -2224,17 +2296,24 @@ class DynamicForagingEnvironment(BaseEnvironment):
             position = self.agent_pos
 
         raw_concentration = 0.0
-        for food in self.foods:
+        deplete = self.foraging.source_depletion_enabled
+        for i, food in enumerate(self.foods):
             dx = food[0] - position[0]
             dy = food[1] - position[1]
             distance = np.sqrt(dx**2 + dy**2)
 
             if distance == 0:
-                # Agent is on the food source — maximum signal
-                raw_concentration += self.foraging.gradient_strength
+                # Agent is on the food source — maximum signal, scaled by the source's
+                # remaining amount when depletion is enabled (not the global strength).
+                raw_concentration += self.foraging.gradient_strength * (
+                    self.food_amounts[i] if deplete else 1.0
+                )
                 continue
 
-            raw_concentration += self._food_field_magnitude(distance)
+            raw_concentration += self._food_field_magnitude(
+                distance,
+                source_amount=self.food_amounts[i] if deplete else None,
+            )
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 
@@ -2458,14 +2537,24 @@ class DynamicForagingEnvironment(BaseEnvironment):
         bool
             True if agent is at a food position, False otherwise.
         """
-        return tuple(self.agents[agent_id].position) in self.foods
+        pos = tuple(self.agents[agent_id].position)
+        if not self.foraging.source_depletion_enabled:
+            return pos in self.foods
+        # Under depletion a source counts as food only while above the removal threshold
+        # (exhausted sources are removed, so this is a defensive guard for the degenerate case).
+        eps = self.foraging.source_removal_eps
+        return any(food == pos and self.food_amounts[i] > eps for i, food in enumerate(self.foods))
 
     def consume_food(self) -> tuple[int, int] | None:
         """Consume food at the default agent's position."""
         return self.consume_food_for(DEFAULT_AGENT_ID)
 
     def consume_food_for(self, agent_id: str) -> tuple[int, int] | None:
-        """Consume food at a specific agent's position and respawn immediately.
+        """Consume food at a specific agent's position and return it.
+
+        Delegates to ``_deplete_or_remove`` by index: with source-depletion enabled the matched
+        source is depleted in place and only removed + respawned once exhausted; otherwise it is
+        removed + respawned outright — respawn in both cases subject to ``no_respawn``.
 
         Parameters
         ----------
@@ -2480,9 +2569,10 @@ class DynamicForagingEnvironment(BaseEnvironment):
         pos = self.agents[agent_id].position
         agent_tuple = (pos[0], pos[1])
         if agent_tuple in self.foods:
-            self.foods.remove(agent_tuple)
+            # Deplete in place (source-depletion) or remove + respawn (default), by index so the
+            # matched source's amount is the one that drains even if foods coincide.
+            self._deplete_or_remove(self.foods.index(agent_tuple))
             logger.info(f"Food consumed at {agent_tuple} by {agent_id}")
-            self.spawn_food()
             return agent_tuple
         return None
 
@@ -4325,6 +4415,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         new_env = self._new_like()
         new_env.foods = self.foods.copy()
+        new_env.food_amounts = self.food_amounts.copy()
         # Copy RNG state for reproducibility. We construct a fresh
         # Generator from the same seed and then transfer the source
         # generator's bit_generator state, so the clone resumes from

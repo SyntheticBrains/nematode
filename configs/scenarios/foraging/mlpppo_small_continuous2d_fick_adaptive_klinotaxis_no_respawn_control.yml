@@ -1,0 +1,101 @@
+# no_respawn-only CONTROL cell for the area-restricted-search (ARS) source-depletion comparison.
+# Isolates the marginal effect of source-depletion from the confound it rides on: ``no_respawn``
+# alone makes foraging non-stationary (the food set only shrinks), which is itself a within-episode
+# memory demand. This cell holds ``no_respawn`` fixed and turns source-depletion OFF, so any
+# arm separation here is attributable to non-stationarity alone — the depletion claim is the
+# separation of the ARS cell OVER this control, not either cell in isolation.
+#
+# Identical to the ARS cell (mlpppo_small_continuous2d_fick_adaptive_klinotaxis_ars_depletion.yml)
+# except:
+#   - source-depletion OFF (a consume removes the source outright — today's behaviour);
+#   - ``foods_on_grid`` raised 5 -> 20 so the total available food matches the ARS cell's ~20
+#     collectable feeds (5 patches x ~4 feeds). Without depletion each source gives a single feed,
+#     so matching the feed economics needs 20 single-feed sources — otherwise the control would
+#     starve below the target-10 and floor (a floor effect, not a clean control).
+#
+# The residual asymmetry is patch DENSITY/richness: the ARS cell has 5 rich patches that flatten in
+# place; this control has 20 poorer single-feed patches. Matching total food while keeping
+# single-feed sources necessarily trades patch count for feeds-per-source — so the contrast is
+# "few patches that deplete in place" vs "many patches that vanish on contact", both under
+# no_respawn. This density caveat is the acknowledged limitation of the no_respawn control (a
+# depletion-aware-respawn variant — matched patch count, source turnover instead of finite food —
+# is the alternative second control if the density asymmetry proves load-bearing).
+#
+# Like the ARS cell this is the mlpppo reference instance; the architecture panel is minted by
+# swapping the ``brain`` block once the cells are calibrated.
+
+max_steps: 800
+brain:
+  name: mlpppo
+  config:
+    action_mode: continuous  # tanh-squashed Gaussian (speed, turn) head
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.05
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+
+    sensory_modules:
+      - food_chemotaxis
+      - proprioception
+
+reward:
+  reward_goal: 2.0
+  # Distance-to-nearest-food shaping REMOVED (matches the ARS cell — same field-blind crutch caveat).
+  reward_distance_scale: 0.0
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 20.0
+
+environment:
+  env_type: continuous_2d
+  continuous:
+    world_size_mm: 20.0
+    body_length_mm: 1.0
+    max_step_mm: 1.0
+    capture_radius_mm: 2.0
+    sweep_amplitude_mm: 0.5
+    max_turn_rad: 0.5
+
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+    adaptive_chemosensor_enabled: true
+    adaptive_chemosensor_readout: fold_change
+    adaptive_chemosensor_alpha: 0.1
+    adaptive_chemosensor_epsilon: 0.1
+
+  foraging:
+    foods_on_grid: 20  # matched to the ARS cell's ~20 collectable feeds (see header)
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    no_respawn: true  # the confound under test, held fixed vs the ARS cell
+    gradient_field_mode: fick
+    gradient_decay_constant: 4.0  # matched to the ARS cell (calibrated patch isolation)
+    gradient_strength: 1.0
+    # source-depletion OFF — a consume removes the source outright (the control contrast).
+    source_depletion_enabled: false

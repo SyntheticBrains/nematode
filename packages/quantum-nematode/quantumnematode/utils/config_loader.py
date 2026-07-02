@@ -313,6 +313,33 @@ class ForagingConfig(BaseModel):
     # damage zone and PPO cannot find a middle-ground policy between
     # "approach food" and "avoid predator" regardless of reward shape.
     min_food_predator_distance: int = Field(default=0, ge=0)
+    # Source-depletion dynamics (area-restricted search). Off by default = byte-identical static
+    # field. When enabled, each food source carries a remaining amount that drains on feeding,
+    # scaling its field contribution so a patch flattens in place (a within-episode-memory demand).
+    # ``depletion_per_feed`` < ``source_initial_amount`` gives gradual depletion (the default
+    # ~4 feeds); a one-bite quantum reproduces today's binary removal.
+    source_depletion_enabled: bool = False
+    source_initial_amount: float = Field(default=1.0, gt=0.0)
+    depletion_per_feed: float = Field(default=0.25, gt=0.0)
+    source_removal_eps: float = Field(default=1e-3, ge=0.0)
+
+    @model_validator(mode="after")
+    def _validate_depletion(self) -> "ForagingConfig":
+        """Reject source-depletion misconfigurations that make the cell unreachable."""
+        if self.source_depletion_enabled and self.depletion_per_feed > self.source_initial_amount:
+            msg = (
+                f"depletion_per_feed ({self.depletion_per_feed}) must be <= source_initial_amount "
+                f"({self.source_initial_amount}) when source_depletion_enabled."
+            )
+            raise ValueError(msg)
+        if self.source_depletion_enabled and self.source_removal_eps >= self.source_initial_amount:
+            msg = (
+                f"source_removal_eps ({self.source_removal_eps}) must be < source_initial_amount "
+                f"({self.source_initial_amount}) when source_depletion_enabled — otherwise a fresh "
+                f"source is already below the removal threshold and is never consumable."
+            )
+            raise ValueError(msg)
+        return self
 
     def to_params(self) -> ForagingParams:
         """Convert to ForagingParams for environment initialization."""
@@ -342,6 +369,10 @@ class ForagingConfig(BaseModel):
             gradient_field_mode=self.gradient_field_mode,
             diffusion_coefficient=self.diffusion_coefficient,
             assay_time=self.assay_time,
+            source_depletion_enabled=self.source_depletion_enabled,
+            source_initial_amount=self.source_initial_amount,
+            depletion_per_feed=self.depletion_per_feed,
+            source_removal_eps=self.source_removal_eps,
         )
 
 
