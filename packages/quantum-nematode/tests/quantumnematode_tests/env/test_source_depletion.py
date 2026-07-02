@@ -13,14 +13,14 @@ from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuou
 from quantumnematode.env.env import DEFAULT_AGENT_ID, DynamicForagingEnvironment, ForagingParams
 
 
-def _foraging(*, deplete: bool, foods: int = 3) -> ForagingParams:
+def _foraging(*, deplete: bool, foods: int = 3, no_respawn: bool = True) -> ForagingParams:
     return ForagingParams(
         foods_on_grid=foods,
         min_food_distance=2,
         gradient_field_mode="fick",
         gradient_decay_constant=10.0,
         gradient_strength=1.0,
-        no_respawn=True,
+        no_respawn=no_respawn,
         source_depletion_enabled=deplete,
         source_initial_amount=1.0,
         depletion_per_feed=0.25,
@@ -28,12 +28,12 @@ def _foraging(*, deplete: bool, foods: int = 3) -> ForagingParams:
     )
 
 
-def _cont(*, deplete: bool, foods: int = 3) -> Continuous2DEnvironment:
+def _cont(*, deplete: bool, foods: int = 3, no_respawn: bool = True) -> Continuous2DEnvironment:
     return Continuous2DEnvironment(
         grid_size=60,
         seed=1,
         continuous=Continuous2DParams(world_size_mm=60.0, capture_radius_mm=2.0),
-        foraging=_foraging(deplete=deplete, foods=foods),
+        foraging=_foraging(deplete=deplete, foods=foods, no_respawn=no_respawn),
     )
 
 
@@ -170,3 +170,39 @@ def test_signal_absent_after_exhaustion():
     assert e.foods == []  # removed (no_respawn)
     assert e.get_food_concentration(position=src) == pytest.approx(0.0)
     assert e.get_nearest_food_distance_for(DEFAULT_AGENT_ID) is None
+
+
+# ── Grid-substrate + respawn coverage (branch-review gaps) ────────────────────────────
+
+
+def test_grid_below_threshold_not_reachable():
+    """Grid: a source at/below removal_eps does not count as reachable food."""
+    e = _grid(deplete=True)
+    pos = e.foods[0]
+    e.agents[DEFAULT_AGENT_ID].position = pos
+    assert e.reached_goal()  # full source on which the agent sits -> reachable
+    e.food_amounts[0] = 0.0
+    assert not e.reached_goal()  # exhausted -> not food (others are min_food_distance away)
+
+
+def test_respawn_after_exhaustion_realigns():
+    """no_respawn off: exhaustion removes + respawns a fresh full source; lists stay aligned."""
+    e = _cont(deplete=True, foods=3, no_respawn=False)
+    n = len(e.foods)
+    for _ in range(4):  # 1.0 -> 0.0 over 4 feeds; the 4th removes + respawns
+        e._deplete_or_remove(0)
+    assert len(e.foods) == n  # respawned, not shrunk
+    assert len(e.food_amounts) == n  # lists stay index-aligned
+    assert all(a == pytest.approx(1.0) for a in e.food_amounts)  # fresh source at full amount
+
+
+def test_grid_consume_matches_source_by_index():
+    """Grid: coincident sources — consume drains exactly one matched source (via .index())."""
+    e = _grid(deplete=True)
+    e.foods[1] = e.foods[0]  # make source 1 coincide with source 0
+    e.food_amounts[0] = 1.0
+    e.food_amounts[1] = 1.0
+    e.agents[DEFAULT_AGENT_ID].position = e.foods[0]
+    e.consume_food_for(DEFAULT_AGENT_ID)
+    assert sum(e.food_amounts[:2]) == pytest.approx(2.0 - 0.25)  # one quantum removed total
+    assert {round(a, 2) for a in e.food_amounts[:2]} == {1.0, 0.75}
