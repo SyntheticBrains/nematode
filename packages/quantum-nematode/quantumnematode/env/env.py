@@ -60,6 +60,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 if TYPE_CHECKING:
+    from quantumnematode.env.associative_memory import AssociativeMemoryTask
     from quantumnematode.env.bit_memory import BitMemoryTask
 
 # Validation
@@ -1012,6 +1013,9 @@ class BaseEnvironment(ABC):
         # config enables it, set by create_env_from_config). When present, the episode
         # runner drives its phase machine instead of the foraging dynamics.
         self.bit_memory: BitMemoryTask | None = None
+        # Chemosensory associative-memory probe (artificial; off unless a config enables it).
+        # When present, the runner drives its phase machine instead of the foraging dynamics.
+        self.associative_memory: AssociativeMemoryTask | None = None
 
         self.grid_size = grid_size
         self.theme = theme
@@ -1091,6 +1095,16 @@ class BaseEnvironment(ABC):
         if self.bit_memory is None:
             return 0.0, 0.0
         return self.bit_memory.signals()
+
+    def get_associative_signals(self) -> tuple[float, float, float]:
+        """Return ``(cue_signal, outcome_signal, go_signal)`` for the associative-memory task.
+
+        ``(0, 0, 0)`` when off. The agent's ``_create_brain_params`` reads this into
+        ``BrainParams`` so the cue/outcome/go channels appear in the observation. Single-agent.
+        """
+        if self.associative_memory is None:
+            return 0.0, 0.0, 0.0
+        return self.associative_memory.signals()
 
     @abstractmethod
     def get_state(

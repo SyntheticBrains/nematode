@@ -40,7 +40,7 @@ conditioning** phase.
 
 ## 3. Task mechanics (env exposes → agent injects → runner scores)
 
-- [ ] 3.1 **Dedicated task class (mirror `env/bit_memory.py`).** Create `env/associative_memory.py`
+- [x] 3.1 **Dedicated task class (mirror `env/bit_memory.py`).** Create `env/associative_memory.py`
   with an `AssociativeMemoryTask` class paralleling `BitMemoryTask`: an `AssociativeMemoryPhase` enum
   (conditioning / **reversal** / delay / response), a per-trial sample of the initial rewarded cue ∈
   {A, B}, presentation order, and a reversal draw (`rng.random() < reversal_prob`) from an injected RNG;
@@ -51,26 +51,26 @@ conditioning** phase.
   `rebind_rng()`, `done()`, `num_responses()`, accuracy (overall + reversal / non-reversal split). The
   env holds `self.associative_memory: AssociativeMemoryTask | None` + a thin `get_associative_signals()`
   getter (mirroring `self.bit_memory` / `get_bit_memory_signals`, env.py:1085).
-- [ ] 3.2 **Agent — cue/outcome/go injection into `BrainParams`.** In `agent._create_brain_params`,
+- [x] 3.2 **Agent — cue/outcome/go injection into `BrainParams`.** In `agent._create_brain_params`,
   read `get_associative_signals(...)` and populate `cue_signal` / `outcome_signal` / `go_signal` (cue +
   outcome during the conditioning **and reversal** blocks; go = `1` during response, else `0`). The env
   does not push into `BrainParams`.
-- [ ] 3.3 **Runner — dedicated step + scoring + termination (mirror the bit-memory path).** Add
+- [x] 3.3 **Runner — dedicated step + scoring + termination (mirror the bit-memory path).** Add
   `_run_associative_memory_step` / `_terminate_associative_memory` / `_associative_memory_turn` paralleling
   `_run_bit_memory_step` / `_terminate_bit_memory` / `_bit_memory_turn` (`runners.py:696/651/624`),
   dispatched when `associative_memory_task.enabled`: on response steps read the binary response
   (`sign(top_action.continuous[1])` continuous; `LEFT`/`RIGHT` discrete) → `am.record_response`, compare
   to the trial's **current** rewarded cue, grant the reward via `am.take_reward`, and drive episode-done
   off `am.done()`.
-- [ ] 3.4 **Foraging deactivation (via the dedicated step).** As bit-memory, `_run_associative_memory_step`
+- [x] 3.4 **Foraging deactivation (via the dedicated step).** As bit-memory, `_run_associative_memory_step`
   is the *entire* step when enabled — it does **not** invoke the food / `_handle_predator_phase` /
   `_handle_temperature_effects` / `_handle_oxygen_effects` / `_handle_starvation_check` / satiety-decay
   handlers, and the action is consumed only as the response (movement inert). Verify no handler path leaks.
-- [ ] 3.5 Surface the per-episode response accuracy for the harness (with `reward_correct = 1`,
+- [x] 3.5 Surface the per-episode response accuracy for the harness (with `reward_correct = 1`,
   `penalty_wrong = 0` the episode reward equals the correct count → accuracy = `reward / num_responses`);
   log `AssocMemory: accuracy=… (reversal=… non_reversal=…)` at episode end so the update demand is
   readable directly.
-- [ ] 3.6 Tests: phase transitions land on the configured boundaries (incl. the reversal block only on
+- [x] 3.6 Tests: phase transitions land on the configured boundaries (incl. the reversal block only on
   reversal trials); cue-identity + outcome are exactly `0` on every delay/response step **and the
   assembled observation is exactly 3-dim with no `stam`** (validity invariant, §2.4); go = `1` only in
   response; per-trial rewarded-cue + reversal randomisation; the reversal block presents **flipped**

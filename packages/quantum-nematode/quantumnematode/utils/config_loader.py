@@ -3237,6 +3237,31 @@ def _attach_bit_memory_task(
     )
 
 
+def _attach_associative_memory_task(
+    env: "DynamicForagingEnvironment",
+    associative_memory_task: AssociativeMemoryTaskConfig | None,
+) -> None:
+    """Attach the associative-memory phase machine to a freshly-built env when enabled.
+
+    Mirrors ``_attach_bit_memory_task``: construction (vs an ``__init__`` param) keeps the env
+    constructors unchanged; the runner drives the attached machine. No-op when disabled.
+    """
+    if associative_memory_task is None or not associative_memory_task.enabled:
+        return
+    from quantumnematode.env.associative_memory import AssociativeMemoryTask
+
+    env.associative_memory = AssociativeMemoryTask(
+        trials_per_episode=associative_memory_task.trials_per_episode,
+        cond_steps_per_cue=associative_memory_task.cond_steps_per_cue,
+        delay_steps=associative_memory_task.delay_steps,
+        response_steps=associative_memory_task.response_steps,
+        reversal_prob=associative_memory_task.reversal_prob,
+        reward_correct=associative_memory_task.reward_correct,
+        penalty_wrong=associative_memory_task.penalty_wrong,
+        rng=env.rng,
+    )
+
+
 def create_env_from_config(
     env_config: EnvironmentConfig,
     *,
@@ -3309,6 +3334,7 @@ def create_env_from_config(
             social_feeding=social_feeding_config.to_params(),
         )
         _attach_bit_memory_task(env, env_config.bit_memory_task)
+        _attach_associative_memory_task(env, env_config.associative_memory_task)
         return env
 
     env = DynamicForagingEnvironment(
@@ -3326,4 +3352,5 @@ def create_env_from_config(
         social_feeding=social_feeding_config.to_params(),
     )
     _attach_bit_memory_task(env, env_config.bit_memory_task)
+    _attach_associative_memory_task(env, env_config.associative_memory_task)
     return env

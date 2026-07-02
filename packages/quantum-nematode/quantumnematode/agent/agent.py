@@ -1150,14 +1150,18 @@ class QuantumNematodeAgent:
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
 
-        # --- Bit-memory task cue/go channels (0, 0 when the task is off) ---
+        # --- Memory-task cue/outcome/go channels (0 when off; only one task is ever active) ---
         cue_signal, go_signal = self.env.get_bit_memory_signals()
+        outcome_signal: float | None = None
+        if self.env.associative_memory is not None:
+            cue_signal, outcome_signal, go_signal = self.env.get_associative_signals()
 
         # (e) Build BrainParams with all fields
         return BrainParams(
-            # Bit-memory positive-control task channels (artificial; 0 when disabled)
+            # Working-memory task channels (artificial; 0/None when disabled)
             cue_signal=cue_signal,
             go_signal=go_signal,
+            outcome_signal=outcome_signal,
             # Separated LOCAL gradients (egocentric sensing, oracle)
             food_gradient_strength=separated_grads.get("food_gradient_strength"),
             food_gradient_direction=separated_grads.get("food_gradient_direction"),
@@ -1559,11 +1563,12 @@ class QuantumNematodeAgent:
         """
         from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
-        # The bit-memory phase machine is attached post-construction (create_env_from_config),
-        # so carry it across the env recreation — otherwise the task silently reverts to
-        # foraging after run 0. The cue RNG is rebound to the new env's (per-run-seeded) rng
-        # below so the cue sequence stays seed-reproducible.
+        # The bit-memory / associative-memory phase machines are attached post-construction
+        # (create_env_from_config), so carry them across the env recreation — otherwise the task
+        # silently reverts to foraging after run 0. Their RNGs are rebound to the new env's
+        # (per-run-seeded) rng below so the sampled sequences stay seed-reproducible.
         bit_memory = self.env.bit_memory
+        associative_memory = self.env.associative_memory
 
         if isinstance(self.env, Continuous2DEnvironment):
             # Continuous-2D substrate: recreate the SAME env type (not the grid
@@ -1603,6 +1608,9 @@ class QuantumNematodeAgent:
         if bit_memory is not None:
             bit_memory.rebind_rng(self.env.rng)
             self.env.bit_memory = bit_memory
+        if associative_memory is not None:
+            associative_memory.rebind_rng(self.env.rng)
+            self.env.associative_memory = associative_memory
 
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation (cell-snapped).
