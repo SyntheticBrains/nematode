@@ -261,7 +261,6 @@ class ForagingParams:
     source_initial_amount: float = 1.0
     depletion_per_feed: float = 0.25
     source_removal_eps: float = 1e-3
-    deplete_scales_reward: bool = False
 
     def fick_length(self) -> float:
         """Fick diffusion length ``sqrt(4 * D * assay_time)`` for the Gaussian kernel.

@@ -61,8 +61,7 @@ configured quantum `depletion_per_feed`; the source persists at the reduced amou
 Keep `self.foods: list[tuple]` as positions and add a parallel **`self.food_amounts: list[float]`**
 index-aligned with it. Rationale: promoting foods to `(x, y, a)` tuples or a `FoodSource` dataclass
 would break the many 2-tuple-unpacking and `tuple in self.foods` call sites (membership tests,
-distance loops, rendering, metrics — `env/env.py:2131,2228,2482,2518`; `continuous_2d.py:315,324,
-339,358`). The parallel list touches far less surface.
+distance loops, rendering, metrics — `env/env.py:2131,2228,2482,2518`; `continuous_2d.py:315,324, 339,358`). The parallel list touches far less surface.
 
 The two lists are kept in sync through a **single `_remove_food(index)` / `_add_food(pos, amount)`
 helper pair** that mutates both; **every** `self.foods` mutation routes through it: the `__init__`
@@ -131,13 +130,16 @@ Grid `consume_food_for` (`env/env.py:2467`) and continuous `consume_food_for`
 respawn at exhaustion) so the continuous substrate — the ARS target — cannot silently miss it. The
 `distance == 0` special case fix (D4) lives in the shared field path.
 
-### D7 — Reward/satiety coupling is a lever, default off
+### D7 — Reward/satiety coupling stays fixed per bite (reward-scaling lever considered, NOT shipped)
 
-The consume reward + satiety restoration stay **fixed per bite** by default (the memory demand comes
-from the **field** flattening, not the reward), keeping the change minimal. An optional config lever
-**scales the consume reward/satiety by the source's remaining amount** (a depleted patch yields less
-food) — biologically natural and a stronger patch-abandonment pressure — left off by default and
-available for the eval to dial in if the field-only demand is too weak.
+The consume reward + satiety restoration stay **fixed per bite** — the memory demand comes from the
+**field** flattening, not the reward — keeping the change minimal. A reward-scaling lever (scale the
+consume reward/satiety by the source's remaining amount, so a depleted patch yields less food) was
+considered as a stronger patch-abandonment pressure but **was not implemented**: the evaluation found
+the field-only demand is short-horizon and the architecture separation does not reproduce
+([Logbook 032](../../../docs/experiments/logbooks/032-ars-source-depletion.md)), so a reward-coupling
+lever is moot. The placeholder `deplete_scales_reward` config flag was removed rather than shipped
+unwired. If a future task wants it, add the flag + wire the reward together.
 
 ### D8 — Evaluation: does the separation reproduce, honestly framed
 

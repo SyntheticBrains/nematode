@@ -322,7 +322,6 @@ class ForagingConfig(BaseModel):
     source_initial_amount: float = Field(default=1.0, gt=0.0)
     depletion_per_feed: float = Field(default=0.25, gt=0.0)
     source_removal_eps: float = Field(default=1e-3, ge=0.0)
-    deplete_scales_reward: bool = False
 
     @model_validator(mode="after")
     def _validate_depletion(self) -> "ForagingConfig":
@@ -367,7 +366,6 @@ class ForagingConfig(BaseModel):
             source_initial_amount=self.source_initial_amount,
             depletion_per_feed=self.depletion_per_feed,
             source_removal_eps=self.source_removal_eps,
-            deplete_scales_reward=self.deplete_scales_reward,
         )
 
 

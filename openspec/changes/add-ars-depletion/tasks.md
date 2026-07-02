@@ -2,7 +2,7 @@
 
 ## 1. Config block (off by default)
 
-- [x] 1.1 Add a source-depletion block to `ForagingParams` (`env/env.py:~231`) with sensible defaults: `source_depletion_enabled: bool = False`, `source_initial_amount: float = 1.0`, `depletion_per_feed: float = 0.25` (gradual — ~4 feeds to exhaust; NOT one-bite, which would just reproduce binary removal), `source_removal_eps: float = 1e-3` (and an optional `deplete_scales_reward: bool = False` lever, D7).
+- [x] 1.1 Add a source-depletion block to `ForagingParams` (`env/env.py:~231`) with sensible defaults: `source_depletion_enabled: bool = False`, `source_initial_amount: float = 1.0`, `depletion_per_feed: float = 0.25` (gradual — ~4 feeds to exhaust; NOT one-bite, which would just reproduce binary removal), `source_removal_eps: float = 1e-3`. *(The optional `deplete_scales_reward` lever originally scoped here was **dropped** — see 4.5.)*
 - [x] 1.2 Mirror the block on `ForagingConfig` (`utils/config_loader.py`) with pydantic `Field(gt=0)` validators + a `model_validator` rejecting quantum > initial; wire through `to_params()`.
 
 ## 2. Data model (parallel amount store)
@@ -25,7 +25,7 @@
 - [x] 4.2 Route grid + continuous `consume_food_for` through the shared helper, located by **index** (not value) so the matched source drains even when two foods coincide.
 - [x] 4.3 `reached_goal_for` (grid + continuous): a source at/below `source_removal_eps` does not count as reachable food — one gate covering consumption, the goal bonus, and multi-agent competition.
 - [x] 4.4 Reward coherence (D5): confirmed no `reward_calculator` change is needed — exhausted sources are removed (4.1) so they are absent from all food signals; a *partially*-depleted source above the threshold is still valid food (correct to attract). The field-independent distance-shaping confound is handled at the cell level (6.1).
-- [ ] 4.5 (Lever, D7) if `deplete_scales_reward`, scale the consume reward/satiety by the source's remaining amount.
+- [x] 4.5 (Lever, D7) — **DROPPED, not implemented.** The reward-scaling lever (scale consume reward/satiety by the source's remaining amount) was considered but not shipped, and the placeholder `deplete_scales_reward` flag was **removed** rather than left unwired: the null verdict ([Logbook 032](../../../docs/experiments/logbooks/032-ars-source-depletion.md)) makes reward-coupling moot. If wanted later, add + wire the flag together (design D7).
 
 ## 5. Tests
 

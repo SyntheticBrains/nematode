@@ -39,7 +39,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 - `configs/scenarios/` — YAML config files organized by scenario (`{brain}_{size}[_{variant}]_{sensing}.yml`)
   - Scenarios: `foraging`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`, `oxygen_foraging`, `oxygen_pursuit`, `oxygen_stationary`, `oxygen_thermal_foraging`, `oxygen_thermal_pursuit`, `oxygen_thermal_stationary`, `multi_agent_foraging`, `multi_agent_pursuit`, `multi_agent_stationary`, `foraging_predator_thermal`, `bit_memory`
   - Sensing suffixes: `_oracle`, `_temporal`, `_derivative`, `_klinotaxis`
-  - Variant suffixes: `_classical`, `_fair`, `_separable`, `_modality_paired`, `_pheromone`, `_no_pheromone`, `_social`, `_aggregation`, `_full_social`, `_scarcity`, `_propfood`, `_mixed_phenotype`, `_ars_depletion` (source-depletion foraging — food depletes as eaten so the Fick field flattens in place → area-restricted search; `_no_respawn_control` is its depletion-off control), etc.
+  - Variant suffixes: `_classical`, `_fair`, `_separable`, `_modality_paired`, `_pheromone`, `_no_pheromone`, `_social`, `_aggregation`, `_full_social`, `_scarcity`, `_propfood`, `_mixed_phenotype`, `_ars_depletion`, `_no_respawn_control`, etc.
   - Task suffixes: `_bit_memory` (the `bit_memory` family — a non-spatial delayed-match-to-cue working-memory positive control; spatial/foraging/predator/thermal dynamics are disabled, so it is its own family rather than a variant of a spatial scenario)
   - Example: `configs/scenarios/foraging/mlpppo_small_oracle.yml`, `configs/scenarios/thermal_pursuit/lstmppo_large_temporal.yml`
 - `configs/evolution/` — Evolutionary optimization configs
