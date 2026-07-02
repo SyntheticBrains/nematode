@@ -58,7 +58,7 @@
 
 ## 9. Gates
 
-- [ ] 9.1 Targeted `pre-commit` during iteration *(done per-file on every commit)*; full `pre-commit run -a` before push.
+- [x] 9.1 Targeted `pre-commit` during iteration *(done per-file on every commit)*; full `pre-commit run -a` before push. *(Full suite green — all hooks pass on the complete branch.)*
 - [x] 9.2 `openspec validate add-ars-depletion --strict`. *(valid, 0 errors.)*
 - [x] 9.3 Full `uv run pytest -m "not nightly"` green (no regression; the disabled-is-byte-identical assertion holds). *(4018 passed, 1 skipped, 2 xfailed, 0 failed.)*
-- [ ] 9.4 Archive the change in-PR (`openspec archive add-ars-depletion -y`).
+- [x] 9.4 Archive the change in-PR (`openspec archive add-ars-depletion -y`).
