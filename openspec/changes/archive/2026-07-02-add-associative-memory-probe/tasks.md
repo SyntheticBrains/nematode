@@ -130,7 +130,7 @@ conditioning** phase.
 
 ## 9. Pre-merge gates
 
-- [ ] 9.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push.
-- [ ] 9.2 `openspec validate add-associative-memory-probe --strict`.
-- [ ] 9.3 Full `uv run pytest -m "not nightly"` green (disabled = byte-identical holds).
-- [ ] 9.4 Archive the change in-PR (`openspec archive add-associative-memory-probe -y`).
+- [x] 9.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push.
+- [x] 9.2 `openspec validate add-associative-memory-probe --strict`.
+- [x] 9.3 Full `uv run pytest -m "not nightly"` green (disabled = byte-identical holds).
+- [x] 9.4 Archive the change in-PR (`openspec archive add-associative-memory-probe -y`).
