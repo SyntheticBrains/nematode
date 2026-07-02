@@ -319,7 +319,12 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         )
 
     def consume_food_for(self, agent_id: str) -> tuple[int, int] | None:
-        """Consume the nearest food within the capture radius, respawn, and return it."""
+        """Consume the nearest food within the capture radius and return it.
+
+        Delegates to ``_deplete_or_remove`` by index: with source-depletion enabled the matched
+        source is depleted in place (removed + respawned only once exhausted), otherwise it is
+        removed + respawned outright — respawn in both cases subject to ``no_respawn``.
+        """
         agent_x, agent_y = self._agent_xy(agent_id)
         nearest_index: int | None = None
         nearest_distance = self.continuous.capture_radius_mm

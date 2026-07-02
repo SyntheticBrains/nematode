@@ -206,3 +206,41 @@ def test_grid_consume_matches_source_by_index():
     e.consume_food_for(DEFAULT_AGENT_ID)
     assert sum(e.food_amounts[:2]) == pytest.approx(2.0 - 0.25)  # one quantum removed total
     assert {round(a, 2) for a in e.food_amounts[:2]} == {1.0, 0.75}
+
+
+# ── Config validation (fail fast on unreachable depletion) ────────────────────────────
+
+
+def test_config_rejects_unreachable_depletion():
+    """ForagingConfig fails fast on source-depletion misconfigs that make the cell unreachable."""
+    from quantumnematode.utils.config_loader import (
+        ForagingConfig,  # config-side (avoid import cycle)
+    )
+
+    # removal_eps >= initial amount -> a fresh source is already below threshold (never consumable)
+    with pytest.raises(ValueError, match="source_removal_eps"):
+        ForagingConfig(
+            source_depletion_enabled=True,
+            source_initial_amount=1.0,
+            source_removal_eps=1.0,
+        )
+    # depletion quantum larger than the source amount
+    with pytest.raises(ValueError, match="depletion_per_feed"):
+        ForagingConfig(
+            source_depletion_enabled=True,
+            source_initial_amount=1.0,
+            depletion_per_feed=2.0,
+        )
+    # a valid depletion config is accepted
+    ForagingConfig(
+        source_depletion_enabled=True,
+        source_initial_amount=1.0,
+        depletion_per_feed=0.25,
+        source_removal_eps=1e-3,
+    )
+    # disabled: the guards do not fire (byte-identical path is unconstrained)
+    ForagingConfig(
+        source_depletion_enabled=False,
+        source_initial_amount=1.0,
+        source_removal_eps=5.0,
+    )

@@ -226,6 +226,19 @@ class ForagingParams:
         food" and "avoid predator" objectives are in unresolvable
         conflict on a small grid and PPO collapses to one extreme or
         the other regardless of reward shape.
+    source_depletion_enabled : bool
+        Config-gated within-episode source-depletion. Default ``False`` →
+        the field uses the global ``gradient_strength`` (byte-identical).
+        When ``True`` each source carries a remaining amount that scales
+        its field contribution, so a grazed patch flattens in place.
+    source_initial_amount : float
+        Starting remaining amount of each source when depletion is enabled.
+    depletion_per_feed : float
+        Amount removed from the matched source per consume event (gradual;
+        ``< source_initial_amount`` → multiple feeds to exhaust a patch).
+    source_removal_eps : float
+        Removal threshold: a source at or below this amount is exhausted —
+        removed (respawn subject to ``no_respawn``) and not counted as food.
     """
 
     foods_on_grid: int = 10
@@ -2537,7 +2550,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return self.consume_food_for(DEFAULT_AGENT_ID)
 
     def consume_food_for(self, agent_id: str) -> tuple[int, int] | None:
-        """Consume food at a specific agent's position and respawn immediately.
+        """Consume food at a specific agent's position and return it.
+
+        Delegates to ``_deplete_or_remove`` by index: with source-depletion enabled the matched
+        source is depleted in place and only removed + respawned once exhausted; otherwise it is
+        removed + respawned outright — respawn in both cases subject to ``no_respawn``.
 
         Parameters
         ----------

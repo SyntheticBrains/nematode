@@ -325,11 +325,18 @@ class ForagingConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_depletion(self) -> "ForagingConfig":
-        """Reject a depletion quantum larger than the source amount (a misconfiguration)."""
+        """Reject source-depletion misconfigurations that make the cell unreachable."""
         if self.source_depletion_enabled and self.depletion_per_feed > self.source_initial_amount:
             msg = (
                 f"depletion_per_feed ({self.depletion_per_feed}) must be <= source_initial_amount "
                 f"({self.source_initial_amount}) when source_depletion_enabled."
+            )
+            raise ValueError(msg)
+        if self.source_depletion_enabled and self.source_removal_eps >= self.source_initial_amount:
+            msg = (
+                f"source_removal_eps ({self.source_removal_eps}) must be < source_initial_amount "
+                f"({self.source_initial_amount}) when source_depletion_enabled — otherwise a fresh "
+                f"source is already below the removal threshold and is never consumable."
             )
             raise ValueError(msg)
         return self
