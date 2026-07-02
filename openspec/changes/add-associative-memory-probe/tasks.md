@@ -101,10 +101,10 @@ conditioning** phase.
 
 ## 6. Learnability pre-check + calibration
 
-- [ ] 6.1 Pre-check (guards null-vs-mis-built): confirm at least one memory arm (LSTM or Transformer)
+- [x] 6.1 Pre-check (guards null-vs-mis-built): confirm at least one memory arm (LSTM or Transformer)
   clears the accuracy threshold on the easiest setting (short delay, generous budget) **before** the full
   panel; if not, debug delay/budget/reward, not the verdict.
-- [ ] 6.2 Calibrate `cond_steps_per_cue` / `delay_steps` / `response_steps` / `reversal_prob` /
+- [x] 6.2 Calibrate `cond_steps_per_cue` / `delay_steps` / `response_steps` / `reversal_prob` /
   `trials_per_episode` / budget / matched `entropy_coef` so the task is learnable by the memory arms with
   the worst-case (reversal) span within the Transformer window; record the calibrated values + the
   pre-registered success threshold.
