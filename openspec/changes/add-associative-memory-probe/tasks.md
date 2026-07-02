@@ -7,13 +7,13 @@ conditioning** phase.
 
 ## 1. Observation channels (add the outcome/valence channel)
 
-- [ ] 1.1 Add an `OUTCOME` member to the `ModuleName` enum + register it in `SENSORY_MODULES`
+- [x] 1.1 Add an `OUTCOME` member to the `ModuleName` enum + register it in `SENSORY_MODULES`
   (`brain/modules.py`) with `classical_dim = 1`, an extractor reading a new `BrainParams.outcome_signal`
   field, and a description marking it an associative-memory task channel. Reuse the existing `CUE` and
   `GO_SIGNAL` modules for cue-identity + go.
-- [ ] 1.2 Add `outcome_signal: float | None` to `BrainParams` (`brain/arch/_brain.py`), default `None`
+- [x] 1.2 Add `outcome_signal: float | None` to `BrainParams` (`brain/arch/_brain.py`), default `None`
   (treated as `0.0`). `cue_signal` / `go_signal` already exist (bit-memory).
-- [ ] 1.3 Unit test: `get_classical_feature_dimension([cue, outcome, go_signal]) == 3`; with the three
+- [x] 1.3 Unit test: `get_classical_feature_dimension([cue, outcome, go_signal]) == 3`; with the three
   fields set, `extract_classical_features` yields the expected 3-dim observation; unset → zeros.
 
 ## 2. Configuration schema
@@ -45,8 +45,7 @@ conditioning** phase.
   (conditioning / **reversal** / delay / response), a per-trial sample of the initial rewarded cue ∈
   {A, B}, presentation order, and a reversal draw (`rng.random() < reversal_prob`) from an injected RNG;
   the trial's **current rewarded cue** = initial ⊕ reversed. `advance()` steps conditioning →
-  (reversal if drawn) → delay → response → next trial. `signals()` returns `(cue_identity, outcome,
-  go)` — the current presentation step's cue `+1`/`-1` + outcome (`+1` rewarded / `-1` else, **flipped**
+  (reversal if drawn) → delay → response → next trial. `signals()` returns `(cue_identity, outcome, go)` — the current presentation step's cue `+1`/`-1` + outcome (`+1` rewarded / `-1` else, **flipped**
   during the reversal block), or the go flag in the response phase, all zero in delay/response.
   `record_response()` scores against the **current** rewarded cue; `take_reward()`, `reset()`,
   `rebind_rng()`, `done()`, `num_responses()`, accuracy (overall + reversal / non-reversal split). The
@@ -84,8 +83,7 @@ conditioning** phase.
 
 - [ ] 4.1 Author `configs/scenarios/associative_memory/{mlpppo,lstmppo,cfcppo,transformerppo,mingruppo,minlstmppo}_small_associative_memory.yml`
   (no `{sensing}` suffix — a task variant, per the bit-memory precedent + the AGENTS.md note):
-  `sensory_modules: [cue, outcome, go_signal]`, the `associative_memory_task` block (span `<
-  transformerppo.window_size`), **matched `entropy_coef` across arms** (D7), each arm's action head, and
+  `sensory_modules: [cue, outcome, go_signal]`, the `associative_memory_task` block (span `< transformerppo.window_size`), **matched `entropy_coef` across arms** (D7), each arm's action head, and
   a fixed seed block for paired-seed runs. **Skip connectome** (at-chance on bit-memory, D7).
 - [ ] 4.2 Smoke: each config loads + runs a short headless episode (`--theme headless`) without error and
   emits the per-episode accuracy metric.
