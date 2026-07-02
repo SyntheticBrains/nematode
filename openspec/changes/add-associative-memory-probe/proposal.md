@@ -22,8 +22,7 @@ biological "remember-and-use" probe the ARS null could not provide.
 
 ## What Changes
 
-- **New config-gated associative-memory task** (`conditioning → [optional reversal] → delay →
-  response`), off by default, extending the bit-memory phase-machine scaffolding. In a **conditioning
+- **New config-gated associative-memory task** (`conditioning → [optional reversal] → delay → response`), off by default, extending the bit-memory phase-machine scaffolding. In a **conditioning
   phase** the agent experiences two chemosensory cues in sequence, one paired with a positive outcome
   and one neutral/aversive (the pairing sampled fresh per trial); then **with probability
   `reversal_prob` a reversal block re-presents the two cues with flipped outcomes**. After a **delay
