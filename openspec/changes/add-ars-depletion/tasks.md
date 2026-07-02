@@ -44,17 +44,17 @@
 
 ## 7. Evaluation (does the separation reproduce?)
 
-- [ ] 7.1 Learnability + calibration pre-check: visualise the depleting field (the continuous fidelity renderer) and run a quick read to confirm the cell induces non-gradient search (tune patch density / `depletion_per_feed` / `source_initial_amount` / `no_respawn`); record the calibration.
-- [ ] 7.2 Run the arm panel (`mlpppo`, `lstmppo`, `cfcppo`, `transformerppo`, `connectomeppo`, `mingruppo`, `minlstmppo`) on the ARS cell, n paired seeds.
-- [ ] 7.3 Run the same panel + seeds on the `no_respawn`-only control cell (6.2). Match the control's total available food to the ARS cell (depletion gives multiple feeds per source) so the marginal-separation comparison is on comparable foraging economics.
-- [ ] 7.4 Separation read on **both** cells: plateau-tail foraging success per arm + paired-seed deltas vs the memoryless MLP (reuse the committed Wilcoxon + bootstrap + BH-FDR layer). The depletion claim = the **marginal** separation of the ARS cell over the control (D8); report the verdict — depletion-attributable separation, no_respawn-only separation, or null.
-- [ ] 7.5 Write the logbook (objective / method / results / analysis / limitations) + committed supporting artefacts.
+- [x] 7.1 Learnability + calibration pre-check: visualise the depleting field (the continuous fidelity renderer) and run a quick read to confirm the cell induces non-gradient search (tune patch density / `depletion_per_feed` / `source_initial_amount` / `no_respawn`); record the calibration. *(Field L=8→4 un-merges the patch blob; target is the demand lever; distance-shaping perverse under depletion; entropy 0.2 stabilises the baseline. Logbook 032 § Method.)*
+- [x] 7.2 Run the arm panel (`mlpppo`, `lstmppo`, `cfcppo`, `transformerppo`, `connectomeppo`, `mingruppo`, `minlstmppo`) on the ARS cell, n paired seeds. *(Ran the scoped investigation-form panel — 5 arms {mlp, transformer, cfc, minGRU, minLSTM} × 6 seeds × 1500; dropped lstmppo (a worse minGRU/minLSTM) + connectomeppo (memoryless-at-chance per 030) as they cannot change a null. The formal 7-arm ranking-harness run is unwarranted for a null.)*
+- [x] 7.3 Run the same panel + seeds on the `no_respawn`-only control cell (6.2). Match the control's total available food to the ARS cell (depletion gives multiple feeds per source) so the marginal-separation comparison is on comparable foraging economics. *(Control ≈100% for all arms — non-respawn-without-depletion is trivially solvable; not a memory demand.)*
+- [x] 7.4 Separation read on **both** cells: plateau-tail foraging success per arm + paired-seed deltas vs the memoryless MLP (reuse the committed Wilcoxon + bootstrap + BH-FDR layer). The depletion claim = the **marginal** separation of the ARS cell over the control (D8); report the verdict — depletion-attributable separation, no_respawn-only separation, or null. *(**NULL** — MLP best on ARS (41%); all memory arms underperform; marginal negative for all. A sensory-memory ablation shows the masked demand is SHORT-HORIZON (flips at 20 mm, vanishes at 30 mm). Logbook 032 § Results/Analysis.)*
+- [x] 7.5 Write the logbook (objective / method / results / analysis / limitations) + committed supporting artefacts. *([Logbook 032](../../../docs/experiments/logbooks/032-ars-source-depletion.md).)*
 
 ## 8. Docs + tracker
 
-- [ ] 8.1 Tick `T7.separation.ars_depletion` with the verdict (separation = the biological twin confirmed; null = environmental depletion alone insufficient — itself a finding).
-- [ ] 8.2 Add the logbook row to `docs/experiments/README.md`.
-- [ ] 8.3 Document the `_ars_depletion` config variant suffix in the `AGENTS.md` scenario conventions (foraging family) for discoverability.
+- [x] 8.1 Tick `T7.separation.ars_depletion` with the verdict (separation = the biological twin confirmed; null = environmental depletion alone insufficient — itself a finding). *(Ticked null + resolution note; added the follow-up `T7.separation.associative_memory` task.)*
+- [x] 8.2 Add the logbook row to `docs/experiments/README.md`. *(032 row added.)*
+- [x] 8.3 Document the `_ars_depletion` config variant suffix in the `AGENTS.md` scenario conventions (foraging family) for discoverability.
 
 ## 9. Gates
 
