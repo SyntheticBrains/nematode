@@ -804,12 +804,12 @@ class StandardEpisodeRunner(EpisodeRunner):
         readable (a hold-only policy is at chance on the reversal fraction).
         """
         acc = am.response_accuracy
-        logger.info(
-            "AssocMemory: accuracy=%.4f (reversal=%.4f non_reversal=%.4f) responses=%d",
-            acc,
-            am.reversal_accuracy,
-            am.non_reversal_accuracy,
-            am.num_responses,
+        # Print (not just log) so the reversal / non-reversal split reaches the run's ``.out`` for
+        # the separation harness — the overall accuracy is also derivable from the episode reward,
+        # but the split (which arms actually *update* the association) is not.
+        print(  # noqa: T201
+            f"AssocMemory: accuracy={acc:.4f} reversal={am.reversal_accuracy:.4f} "
+            f"non_reversal={am.non_reversal_accuracy:.4f} responses={am.num_responses}",
         )
         return self._terminate_episode(
             agent,

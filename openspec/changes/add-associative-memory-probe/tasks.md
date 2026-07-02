@@ -90,13 +90,13 @@ conditioning** phase.
 
 ## 5. Separation analysis harness
 
-- [ ] 5.1 `scripts/analysis/associative_memory_separation.py`: read each run's per-episode reward from the
+- [x] 5.1 `scripts/analysis/associative_memory_separation.py`: read each run's per-episode reward from the
   `.out` → accuracy (= `reward / num_responses`, `num_responses = trials_per_episode × response_steps`),
   per-arm plateau-tail (final-quarter) mean, and pairwise paired-seed deltas (one-sided Wilcoxon + 80%
   bootstrap CI + BH-FDR) by importing `weight_search_architecture_ranking` helpers; also parse the logged
   **reversal / non-reversal accuracy split** so per-arm update deficits are visible; print + write a JSON
   summary with per-arm accuracy (overall + split), the pairwise table, and the separation verdict.
-- [ ] 5.2 Test the metric extraction + verdict logic on a tiny synthetic fixture (memory arms high, MLP
+- [x] 5.2 Test the metric extraction + verdict logic on a tiny synthetic fixture (memory arms high, MLP
   at chance → "separation"; all at chance → "null").
 
 ## 6. Learnability pre-check + calibration
