@@ -1,0 +1,43 @@
+# Associative-memory probe — minlstmppo.
+#
+# Artificial working-memory probe (the biological remember-and-use twin of bit-memory): two cues
+# are shown in a conditioning phase with opposite outcomes (one rewarded); with probability
+# reversal_prob a reversal block re-presents them with FLIPPED outcomes; after a delay the agent
+# gives a binary readout (sign of its continuous turn) of the CURRENT rewarded cue. Observation is
+# exactly [cue, outcome, go_signal] — no STAM, no gradients. The reversal makes the demand
+# working-memory UPDATE (a hold-only policy is at chance on the reversal fraction). Worst-case
+# per-trial span (2 cond + 2 reversal + 8 delay + 1 response = 13) stays within the Transformer
+# window (16). Entropy carried from the proven bit-memory arm config; §6.2 calibration finalises it.
+#
+# max_steps >= trials (20) * worst-case span (13) + a trailing step for the last reward.
+max_steps: 280
+brain:
+  name: minlstmppo
+  config:
+    action_mode: continuous
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+    actor_lr: 0.0002
+    critic_lr: 0.0002
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 256
+    num_epochs: 4
+    max_grad_norm: 0.5
+    entropy_coef: 0.01
+    sensory_modules:
+    - cue
+    - outcome
+    - go_signal
+environment:
+  env_type: continuous_2d
+  associative_memory_task:
+    enabled: true
+    # trials_per_episode / cond_steps_per_cue / reversal_prob / delay_steps / response_steps
+    # default to the within-window starters (20 / 1 / 0.5 / 8 / 1).

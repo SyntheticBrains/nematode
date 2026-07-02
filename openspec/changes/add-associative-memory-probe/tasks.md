@@ -81,11 +81,11 @@ conditioning** phase.
 
 ## 4. Per-arm configs
 
-- [ ] 4.1 Author `configs/scenarios/associative_memory/{mlpppo,lstmppo,cfcppo,transformerppo,mingruppo,minlstmppo}_small_associative_memory.yml`
+- [x] 4.1 Author `configs/scenarios/associative_memory/{mlpppo,lstmppo,cfcppo,transformerppo,mingruppo,minlstmppo}_small_associative_memory.yml`
   (no `{sensing}` suffix — a task variant, per the bit-memory precedent + the AGENTS.md note):
   `sensory_modules: [cue, outcome, go_signal]`, the `associative_memory_task` block (span `< transformerppo.window_size`), **matched `entropy_coef` across arms** (D7), each arm's action head, and
   a fixed seed block for paired-seed runs. **Skip connectome** (at-chance on bit-memory, D7).
-- [ ] 4.2 Smoke: each config loads + runs a short headless episode (`--theme headless`) without error and
+- [x] 4.2 Smoke: each config loads + runs a short headless episode (`--theme headless`) without error and
   emits the per-episode accuracy metric.
 
 ## 5. Separation analysis harness
