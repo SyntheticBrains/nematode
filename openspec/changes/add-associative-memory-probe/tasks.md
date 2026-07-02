@@ -18,22 +18,22 @@ conditioning** phase.
 
 ## 2. Configuration schema
 
-- [ ] 2.1 Add an `AssociativeMemoryTaskConfig` block to `utils/config_loader.py`, off by default, with
+- [x] 2.1 Add an `AssociativeMemoryTaskConfig` block to `utils/config_loader.py`, off by default, with
   within-window starter defaults (kept under the Transformer `window_size = 16`): `enabled = False`,
   `trials_per_episode = 20`, `cond_steps_per_cue = 1` (two cues → 2 conditioning steps; the reversal
   block reuses it → 2 more on reversal trials), `reversal_prob = 0.5`, `delay_steps = 8`,
   `response_steps = 1`, `reward_correct = 1.0`, `penalty_wrong = 0.0` (worst-case span with reversal =
   `2·cond + 2·cond + delay + response = 13 < 16`).
-- [ ] 2.2 Validation (mirror `BitMemoryTaskConfig`, config_loader.py:1062): assert
+- [x] 2.2 Validation (mirror `BitMemoryTaskConfig`, config_loader.py:1062): assert
   `2·cond_steps_per_cue + delay_steps + response_steps >= 1` and `0 <= reversal_prob <= 1`; warn when
   the **worst-case (reversal) per-trial span** (`4·cond_steps_per_cue + delay_steps + response_steps`)
   exceeds a referenced attention `window_size` (Transformer-confound guard, D1); and **pin
   `reward_correct = 1.0` / `penalty_wrong = 0.0`** via a validator, since the harness metric
   (accuracy = reward / num_responses) holds only at those values.
-- [ ] 2.3 Config-load test: a config with the task enabled parses; a config without it is unchanged;
+- [x] 2.3 Config-load test: a config with the task enabled parses; a config without it is unchanged;
   an unknown key under `associative_memory_task` raises (pydantic field validation), not silently
   dropped.
-- [ ] 2.4 **No-external-memory-aid invariant (validity canary — D3, spec "No external memory aids").**
+- [x] 2.4 **No-external-memory-aid invariant (validity canary — D3, spec "No external memory aids").**
   When enabled, assert at config-resolve that the sensing mode is oracle/none, `stam` is **absent** from
   the resolved `sensory_modules` (guards the STAM auto-injection path), and the assembled observation
   dimension is exactly 3 (cue + outcome + go). Fail loudly if violated.

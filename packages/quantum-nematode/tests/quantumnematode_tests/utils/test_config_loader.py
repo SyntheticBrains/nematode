@@ -1503,3 +1503,99 @@ class TestBitMemoryTaskConfig:
 
         with pytest.raises(ValueError, match="sensory_modules"):
             assert_bit_memory_observation_clean(None, None)
+
+
+class TestAssociativeMemoryTaskConfig:
+    """AssociativeMemoryTaskConfig + its no-external-memory-aid invariant."""
+
+    def test_defaults_parse_within_window(self):
+        """Defaults parse; the worst-case (reversal) trial span stays within the window."""
+        from quantumnematode.utils.config_loader import AssociativeMemoryTaskConfig
+
+        assert AssociativeMemoryTaskConfig(enabled=True).trial_span == 13  # 4*1 + 8 + 1 < 16
+
+    def test_unknown_key_is_rejected(self):
+        """extra='forbid' -> a typo'd key fails loudly rather than silently dropping."""
+        from quantumnematode.utils.config_loader import AssociativeMemoryTaskConfig
+
+        with pytest.raises(ValueError):  # noqa: PT011 - pydantic ValidationError (ValueError subclass)
+            AssociativeMemoryTaskConfig(enabled=True, reversal_prb=0.5)  # type: ignore[call-arg]  # typo
+
+    def test_reward_shape_is_pinned(self):
+        """Accuracy = reward / num_responses requires reward_correct=1 / penalty_wrong=0."""
+        from quantumnematode.utils.config_loader import AssociativeMemoryTaskConfig
+
+        with pytest.raises(ValueError, match="reward_correct"):
+            AssociativeMemoryTaskConfig(enabled=True, reward_correct=2.0)
+
+    def test_reversal_prob_must_be_a_probability(self):
+        """reversal_prob is bounded to [0, 1]."""
+        from quantumnematode.utils.config_loader import AssociativeMemoryTaskConfig
+
+        with pytest.raises(ValueError):  # noqa: PT011 - pydantic ValidationError (ValueError subclass)
+            AssociativeMemoryTaskConfig(enabled=True, reversal_prob=1.5)
+
+    def test_span_over_window_warns(self, caplog):
+        """The Transformer-confound guard warns when the worst-case span exceeds the window."""
+        import logging
+
+        from quantumnematode.utils.config_loader import AssociativeMemoryTaskConfig
+
+        with caplog.at_level(logging.WARNING):
+            AssociativeMemoryTaskConfig(enabled=True, delay_steps=30)  # span 4 + 30 + 1 = 35 > 16
+        assert "window" in caplog.text.lower()
+
+    def test_clean_observation_passes(self):
+        """Oracle sensing + [cue, outcome, go_signal] resolves to exactly 3 dims — the contract."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import assert_associative_observation_clean
+
+        assert_associative_observation_clean(
+            [ModuleName.CUE, ModuleName.OUTCOME, ModuleName.GO_SIGNAL],
+            None,
+        )
+
+    def test_stam_enabled_is_rejected(self):
+        """Explicit STAM in the observation would leak the association -> hard error."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import (
+            SensingConfig,
+            assert_associative_observation_clean,
+        )
+
+        with pytest.raises(ValueError, match="STAM"):
+            assert_associative_observation_clean(
+                [ModuleName.CUE, ModuleName.OUTCOME, ModuleName.GO_SIGNAL],
+                SensingConfig(stam_enabled=True),
+            )
+
+    def test_missing_outcome_channel_is_rejected(self):
+        """[cue, go_signal] (missing outcome) is not the exact triple -> hard error."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import assert_associative_observation_clean
+
+        with pytest.raises(ValueError, match="exactly"):
+            assert_associative_observation_clean([ModuleName.CUE, ModuleName.GO_SIGNAL], None)
+
+    def test_extra_gradient_module_is_rejected(self):
+        """Any extra sensory module breaks the exactly-3-dim contract -> hard error."""
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import assert_associative_observation_clean
+
+        with pytest.raises(ValueError, match="exactly"):
+            assert_associative_observation_clean(
+                [
+                    ModuleName.CUE,
+                    ModuleName.OUTCOME,
+                    ModuleName.GO_SIGNAL,
+                    ModuleName.FOOD_CHEMOTAXIS,
+                ],
+                None,
+            )
+
+    def test_no_modules_is_rejected(self):
+        """An enabled task with no sensory_modules is a config error."""
+        from quantumnematode.utils.config_loader import assert_associative_observation_clean
+
+        with pytest.raises(ValueError, match="sensory_modules"):
+            assert_associative_observation_clean(None, None)
