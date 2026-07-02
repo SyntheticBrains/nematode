@@ -79,8 +79,7 @@ separable within-episode-memory demand.
 ## Impact
 
 - **Food data model** — a parallel index-aligned per-source amount store in `env/env.py`
-  (`self.foods` stays a position list to avoid breaking the many `(x, y)` unpacking + `tuple in
-  foods` call sites), kept in sync across removal/spawn via a small helper, initialised at the
+  (`self.foods` stays a position list to avoid breaking the many `(x, y)` unpacking + `tuple in foods` call sites), kept in sync across removal/spawn via a small helper, initialised at the
   `__init__` declaration; the **base** `DynamicForagingEnvironment.copy()` carries it (the continuous
   override delegates to it).
 - **Field reads** — `_food_field_magnitude` / `_compute_food_gradient_vector` /
