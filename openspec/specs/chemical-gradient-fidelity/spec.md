@@ -8,7 +8,7 @@ Defines the Rung-2 chemical-gradient fidelity of the chemosensory system: signal
 
 ### Requirement: Signal-type-specific static Fick-shaped gradient geometry
 
-The environment SHALL be able to compute **diffusing chemical** concentration fields using a **frozen analytic Fick (Gaussian) kernel** `C(r) = A · exp(−r² / (4·D·t_assay))` with **per-signal diffusion coefficients** `D` (e.g. food, predator sulfolipid, pheromone, CO₂), selectable as a per-field mode on the continuous-2D substrate. The pre-existing exponential-decay kernel SHALL remain the default field mode for every field so that legacy and discrete-grid configurations are unaffected and byte-stable. The Fick mode SHALL be selectable **independently per diffusing chemical field, each with its own `D`** — this includes the **food** field and the **predator sulfolipid** distal-chemo field (a diffusing chemical the worm senses at a distance; Liu et al. 2018). Fields that are **not point-source diffusion** are out of scope and retain their existing behaviour: **temperature** (an imposed thermal-conduction gradient) and the **oxygen base gradient** (an imposed/boundary aerotaxis gradient). The field SHALL remain **static** (frozen at assay time); time-evolving diffusion is explicitly out of scope (gated stretch).
+The environment SHALL be able to compute **diffusing chemical** concentration fields using a **frozen analytic Fick (Gaussian) kernel** `C(r) = A · exp(−r² / (4·D·t_assay))` with **per-signal diffusion coefficients** `D` (e.g. food, predator sulfolipid, pheromone, CO₂), selectable as a per-field mode on the continuous-2D substrate. The pre-existing exponential-decay kernel SHALL remain the default field mode for every field so that legacy and discrete-grid configurations are unaffected and byte-stable. The Fick mode SHALL be selectable **independently per diffusing chemical field, each with its own `D`** — this includes the **food** field and the **predator sulfolipid** distal-chemo field (a diffusing chemical the worm senses at a distance; Liu et al. 2018). Fields that are **not point-source diffusion** are out of scope and retain their existing behaviour: **temperature** (an imposed thermal-conduction gradient) and the **oxygen base gradient** (an imposed/boundary aerotaxis gradient). The field **geometry** SHALL remain **static** — the analytic kernel and per-signal `D` are frozen at assay time, and time-evolving diffusion (a `∂C/∂t = D∇²C` solve) is explicitly out of scope (a gated stretch). The per-source **amplitude** `A` MAY vary *within* an episode when the config-gated source-depletion dynamic is enabled (see the `source-depletion-dynamics` capability): this scales only the per-source strength, leaving the frozen geometry and `D` unchanged, and is distinct from the out-of-scope diffusion PDE.
 
 #### Scenario: Fick field mode produces the Gaussian kernel
 
@@ -34,6 +34,11 @@ The environment SHALL be able to compute **diffusing chemical** concentration fi
 
 - **WHEN** a configuration does not select the Fick field mode for a given field
 - **THEN** the environment SHALL use the existing exponential-decay kernel for that field, and discrete-grid field values SHALL remain byte-stable
+
+#### Scenario: Source depletion varies amplitude, not geometry
+
+- **WHEN** the source-depletion dynamic is enabled and a source is fed upon
+- **THEN** only that source's amplitude `A` SHALL decrease (its frozen Fick geometry and `D` are unchanged), and the time-evolving `∂C/∂t = D∇²C` diffusion PDE SHALL remain out of scope
 
 ### Requirement: Adaptive chemosensory sensor with background-tracking relative coding
 
