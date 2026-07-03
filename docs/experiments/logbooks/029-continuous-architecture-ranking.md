@@ -175,15 +175,16 @@ now caught at load time (#253) and the wider debt tracked (#254).
 
 ## Next Steps
 
-- **SHOULD/MAY arms** (quantum / spiking / reservoir / hybrid) — opportunistic continuous-substrate
-  bring-up, decided *after* this MUST ranking (non-gating; `T7.prep.should_may_continuous`). Quantum is
-  settled-negative at T4 (025) so low priority.
-- **Memory-bound control** — an explicitly-artificial bit-memory / area-restricted-search task to confirm
-  the comparison *can* separate working memory in principle (the open hypothesis from 025).
+- **Memory-bound control** — resolved in dedicated logbooks: [030](030-bit-memory-positive-control.md)
+  (bit-memory, separation), [032](032-ars-source-depletion.md) (ARS, null), and
+  [033](033-associative-memory-probe.md) (associative, separation). The comparison *does* separate working
+  memory when a task demands it — the open hypothesis from 025 is answered.
+- **SHOULD/MAY arms** (quantum / spiking / reservoir / hybrid) — deferred to Phase 7 (non-gating; no arm
+  earns a T7 row per the 2026-06-29 architecture-candidate research; quantum settled-negative at T4).
 - **Config debt** (#254): decide implement-vs-remove for `normalize_advantages` (a re-validation-grade
-  decision, since it would shift all MLP results).
-- **T7 closure** is deferred until the above are resolved — this logbook records the MUST ranking, not the
-  tranche close.
+  decision, since it would shift all MLP results). Still open — independent of the tranche close.
+- **T7 closure** — this logbook (the MUST ranking) is complete; T7 formally closes with the real-worm
+  validation (Gate 3 G3.d) + the Gate 3 decision, recorded in a separate T7-closure logbook.
 
 ## Data References
 
