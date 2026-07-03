@@ -1,8 +1,13 @@
 # 029: Cross-Architecture Ranking on the Continuous-2D Substrate (T7)
 
-**Status**: integrated-C3 ranking complete for the **6 MUST architectures** (n=8 paired seeds, uniform
-6000ep + a 5-seed 8000ep convergence top-up). T7 is **NOT closed** — SHOULD/MAY arms and a memory-bound
-control are deferred to a follow-up (see Next Steps).
+**Status**: **completed (MUST ranking).** The integrated-C3 ranking for the **6 MUST architectures**
+(n=8 paired seeds, uniform 6000ep + a 5-seed 8000ep convergence top-up) is complete and final — it
+delivers Gate 3 G3.a/b/c. The two items originally deferred inside this logbook are now resolved: the
+**memory-bound control** was spun into dedicated logbooks ([030](030-bit-memory-positive-control.md)
+bit-memory, [032](032-ars-source-depletion.md) ARS, [033](033-associative-memory-probe.md)
+associative), and the **SHOULD/MAY arms** are deferred to Phase 7 (non-gating; no arm earns a T7 row —
+2026-07-03 tranche cleanup). T7 formally **closes** with the real-worm validation (G3.d) + the Gate 3
+decision, recorded separately in the T7-closure logbook; this ranking logbook is closed for its scope.
 
 **Branch**: `openspec/t7-n8-ranking`.
 
