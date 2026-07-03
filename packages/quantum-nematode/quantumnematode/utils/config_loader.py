@@ -1182,6 +1182,112 @@ def assert_bit_memory_observation_clean(
         raise ValueError(msg)
 
 
+_ASSOCIATIVE_MEMORY_OBS_DIM = 3  # cue-identity + outcome + go-signal
+
+
+class AssociativeMemoryTaskConfig(BaseModel):
+    """Chemosensory associative-memory probe (artificial; off by default).
+
+    Per trial two cues are presented in a conditioning phase with opposite outcomes (one
+    rewarded); with probability ``reversal_prob`` a reversal block re-presents them with
+    *flipped* outcomes; after a delay the agent must give a binary readout of the **current**
+    rewarded cue. The reversal makes the demand working-memory *update* (overwrite a held
+    association), which a static hold cannot test — a memoryless policy is at chance, and a
+    hold-only policy is at chance on the reversal fraction. ``extra="forbid"`` so a typo'd key
+    fails loudly (the parameters are load-bearing for the probe's validity).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    trials_per_episode: int = Field(default=20, gt=0)
+    cond_steps_per_cue: int = Field(default=1, gt=0)
+    reversal_prob: float = Field(default=0.5, ge=0.0, le=1.0)
+    delay_steps: int = Field(default=8, ge=0)
+    response_steps: int = Field(default=1, gt=0)
+    # As bit-memory: the analysis derives accuracy from the episode reward (= correct-response
+    # count), valid only at reward_correct=1 / penalty_wrong=0; a validator pins them.
+    reward_correct: float = 1.0
+    penalty_wrong: float = 0.0
+
+    @property
+    def trial_span(self) -> int:
+        """Worst-case steps per trial (both cues conditioned + reversed + delay + response)."""
+        return 4 * self.cond_steps_per_cue + self.delay_steps + self.response_steps
+
+    @model_validator(mode="after")
+    def _require_reward_for_count_metric(self) -> "AssociativeMemoryTaskConfig":
+        """Pin the reward so the analysis's reward-derived accuracy stays valid."""
+        if self.enabled and (self.reward_correct != 1.0 or self.penalty_wrong != 0.0):
+            msg = (
+                f"associative_memory_task requires reward_correct=1.0 and penalty_wrong=0.0 "
+                f"(got {self.reward_correct} / {self.penalty_wrong}); the separation analysis "
+                "derives accuracy from the episode reward as a correct-response count."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _warn_span_exceeds_window(self) -> "AssociativeMemoryTaskConfig":
+        """Warn when the worst-case (reversal) per-trial span exceeds the reference window."""
+        if self.enabled and self.trial_span > _REFERENCE_ATTENTION_WINDOW:
+            logger.warning(
+                "associative_memory_task worst-case per-trial span (%d = 4*cond %d + delay %d + "
+                "response %d, incl. the reversal block) exceeds the reference attention "
+                "window_size (%d); a windowed-attention arm cannot attend the conditioning and "
+                "would fail like a memoryless arm — a confounded result. Keep the span within it.",
+                self.trial_span,
+                self.cond_steps_per_cue,
+                self.delay_steps,
+                self.response_steps,
+                _REFERENCE_ATTENTION_WINDOW,
+            )
+        return self
+
+
+def assert_associative_observation_clean(
+    raw_modules: list[ModuleName] | None,
+    sensing: SensingConfig | None,
+) -> None:
+    """Assert an associative-memory observation resolves to exactly cue + outcome + go.
+
+    The no-external-memory-aid contract (mirrors bit-memory): when the task is enabled the
+    observation MUST be cue + outcome + go only, so retaining/updating the association requires
+    internal recurrent state. Raises ``ValueError`` on any STAM/gradient leak.
+    """
+    if not raw_modules:
+        msg = (
+            "associative_memory_task.enabled requires the brain to declare "
+            "sensory_modules: [cue, outcome, go_signal]; none were found."
+        )
+        raise ValueError(msg)
+    resolved_sensing = validate_sensing_config(sensing) if sensing is not None else SensingConfig()
+    resolved = apply_sensing_mode([str(m) for m in raw_modules], resolved_sensing)
+    if ModuleName.STAM.value in resolved:
+        msg = (
+            "associative_memory_task.enabled but STAM is present in the resolved sensory "
+            f"modules {resolved} — STAM would leak the association to a memoryless arm and "
+            "invalidate the control. Use oracle sensing with stam_enabled: false (the default)."
+        )
+        raise ValueError(msg)
+    expected = {ModuleName.CUE.value, ModuleName.OUTCOME.value, ModuleName.GO_SIGNAL.value}
+    if set(resolved) != expected or len(resolved) != len(expected):
+        msg = (
+            "associative_memory_task.enabled requires the resolved sensory modules to be exactly "
+            f"[cue, outcome, go_signal] (a {_ASSOCIATIVE_MEMORY_OBS_DIM}-dim observation); got "
+            f"{resolved}. Remove any gradient/STAM modules or duplicates — the "
+            "no-external-memory-aid contract admits only the cue, outcome, and go channels."
+        )
+        raise ValueError(msg)
+    dim = get_classical_feature_dimension([ModuleName(m) for m in resolved])
+    if dim != _ASSOCIATIVE_MEMORY_OBS_DIM:
+        msg = (
+            f"associative_memory_task.enabled requires a {_ASSOCIATIVE_MEMORY_OBS_DIM}-dim "
+            f"observation (cue + outcome + go); got {dim} from resolved modules {resolved}."
+        )
+        raise ValueError(msg)
+
+
 class EnvironmentConfig(BaseModel):
     """Configuration for the dynamic foraging environment."""
 
@@ -1206,6 +1312,10 @@ class EnvironmentConfig(BaseModel):
     # When enabled, the foraging/predator/thermal dynamics are inactive and the
     # episode is driven by the cue/delay/response phase machine.
     bit_memory_task: BitMemoryTaskConfig | None = None
+    # Chemosensory associative-memory probe (artificial; off by default). When enabled,
+    # the foraging/predator/thermal dynamics are inactive and the episode is driven by the
+    # conditioning/reversal/delay/response phase machine.
+    associative_memory_task: AssociativeMemoryTaskConfig | None = None
 
     @model_validator(mode="after")
     def _validate_continuous_env_type(self) -> "EnvironmentConfig":
@@ -1221,6 +1331,30 @@ class EnvironmentConfig(BaseModel):
                 f"{self.env_type!r}; a continuous-2D parameter block requires "
                 'env_type: "continuous_2d". Remove the continuous block or set '
                 "the matching env_type."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_memory_tasks_mutually_exclusive(self) -> "EnvironmentConfig":
+        """Reject enabling both working-memory tasks at once.
+
+        `bit_memory_task` and `associative_memory_task` each require the resolved
+        sensory modules to be *exactly* their own channel set ([cue, go_signal] vs
+        [cue, outcome, go_signal]), so enabling both is already contradictory; the
+        signal-injection and scoring paths also assume a single active task. Fail
+        fast with a clear message rather than surfacing a confusing
+        module-mismatch error from whichever channel-invariant is checked first.
+        """
+        if (
+            self.bit_memory_task is not None
+            and self.bit_memory_task.enabled
+            and self.associative_memory_task is not None
+            and self.associative_memory_task.enabled
+        ):
+            msg = (
+                "bit_memory_task and associative_memory_task are mutually exclusive — "
+                "enable only one working-memory task per environment."
             )
             raise ValueError(msg)
         return self
@@ -2714,6 +2848,7 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
         _warn_unknown_brain_config_keys(data, config_path)
         config = SimulationConfig(**data)
         _assert_bit_memory_invariant_from_raw(data, config)
+        _assert_associative_invariant_from_raw(data, config)
         return config
 
 
@@ -2742,6 +2877,36 @@ def _assert_bit_memory_invariant_from_raw(data: object, config: SimulationConfig
             msg = f"bit_memory_task: unknown sensory module in {raw_modules}: {exc}"
             raise ValueError(msg) from exc
     assert_bit_memory_observation_clean(modules, env.sensing)
+
+
+def _assert_associative_invariant_from_raw(data: object, config: SimulationConfig) -> None:
+    """Run the associative-memory no-external-memory-aid assertion from the raw YAML modules.
+
+    Mirrors ``_assert_bit_memory_invariant_from_raw``: only fires when the associative-memory
+    task is enabled; a leaked association (STAM / gradient channel) raises, since it would let a
+    memoryless arm cheat and invalidate the control.
+    """
+    env = config.environment
+    if (
+        env is None
+        or env.associative_memory_task is None
+        or not env.associative_memory_task.enabled
+    ):
+        return
+    raw_modules = None
+    if isinstance(data, dict):
+        brain = data.get("brain")
+        brain_cfg = brain.get("config") if isinstance(brain, dict) else None
+        if isinstance(brain_cfg, dict):
+            raw_modules = brain_cfg.get("sensory_modules")
+    modules: list[ModuleName] | None = None
+    if raw_modules:
+        try:
+            modules = [ModuleName(m) for m in raw_modules]
+        except ValueError as exc:
+            msg = f"associative_memory_task: unknown sensory module in {raw_modules}: {exc}"
+            raise ValueError(msg) from exc
+    assert_associative_observation_clean(modules, env.sensing)
 
 
 def _warn_unknown_brain_config_keys(data: object, config_path: str) -> None:
@@ -3096,6 +3261,31 @@ def _attach_bit_memory_task(
     )
 
 
+def _attach_associative_memory_task(
+    env: "DynamicForagingEnvironment",
+    associative_memory_task: AssociativeMemoryTaskConfig | None,
+) -> None:
+    """Attach the associative-memory phase machine to a freshly-built env when enabled.
+
+    Mirrors ``_attach_bit_memory_task``: construction (vs an ``__init__`` param) keeps the env
+    constructors unchanged; the runner drives the attached machine. No-op when disabled.
+    """
+    if associative_memory_task is None or not associative_memory_task.enabled:
+        return
+    from quantumnematode.env.associative_memory import AssociativeMemoryTask
+
+    env.associative_memory = AssociativeMemoryTask(
+        trials_per_episode=associative_memory_task.trials_per_episode,
+        cond_steps_per_cue=associative_memory_task.cond_steps_per_cue,
+        delay_steps=associative_memory_task.delay_steps,
+        response_steps=associative_memory_task.response_steps,
+        reversal_prob=associative_memory_task.reversal_prob,
+        reward_correct=associative_memory_task.reward_correct,
+        penalty_wrong=associative_memory_task.penalty_wrong,
+        rng=env.rng,
+    )
+
+
 def create_env_from_config(
     env_config: EnvironmentConfig,
     *,
@@ -3168,6 +3358,7 @@ def create_env_from_config(
             social_feeding=social_feeding_config.to_params(),
         )
         _attach_bit_memory_task(env, env_config.bit_memory_task)
+        _attach_associative_memory_task(env, env_config.associative_memory_task)
         return env
 
     env = DynamicForagingEnvironment(
@@ -3185,4 +3376,5 @@ def create_env_from_config(
         social_feeding=social_feeding_config.to_params(),
     )
     _attach_bit_memory_task(env, env_config.bit_memory_task)
+    _attach_associative_memory_task(env, env_config.associative_memory_task)
     return env

@@ -133,6 +133,10 @@ class ModuleName(StrEnum):
     # delayed-match-to-cue working-memory probe (bit-memory-positive-control).
     CUE = "cue"
     GO_SIGNAL = "go_signal"
+    # Associative-memory probe channel (artificial). The outcome/valence accompanies
+    # each conditioning cue (+1 rewarded-paired / -1 not; flipped in a reversal block)
+    # and is withheld during delay/response. Used by the associative-memory probe.
+    OUTCOME = "outcome"
 
 
 # =============================================================================
@@ -761,6 +765,17 @@ def _go_signal_core(params: BrainParams) -> CoreFeatures:
     return CoreFeatures(strength=float(params.go_signal or 0.0))
 
 
+def _outcome_core(params: BrainParams) -> CoreFeatures:
+    """Extract the associative-memory outcome/valence channel (artificial task input).
+
+    Accompanies each conditioning cue (+1 rewarded-paired / -1 not; flipped during a
+    reversal block) and is 0 during delay/response. Binding cue-identity to this
+    outcome across the delay is the associative-memory demand. Rides in the
+    ``strength`` field (``classical_dim=1``).
+    """
+    return CoreFeatures(strength=float(params.outcome_signal or 0.0))
+
+
 # =============================================================================
 # Sensory Module Registry
 # =============================================================================
@@ -786,6 +801,17 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
             "Bit-memory positive-control go-signal (artificial). 1 during the "
             "response phase and 0 otherwise — tells the agent when to act on the "
             "remembered cue, isolating cue memory from timing."
+        ),
+        classical_dim=1,
+    ),
+    ModuleName.OUTCOME: SensoryModule(
+        name=ModuleName.OUTCOME,
+        extract=_outcome_core,
+        description=(
+            "Associative-memory probe outcome/valence channel (artificial). Carries "
+            "the current conditioning cue's outcome (+1 rewarded / -1 not; flipped in "
+            "a reversal block) and 0 during delay/response — binding cue-identity to "
+            "it across the delay requires internal memory."
         ),
         classical_dim=1,
     ),

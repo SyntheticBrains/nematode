@@ -1072,3 +1072,33 @@ class TestBitMemoryModules:
         )
         assert features[0] == 0.0  # cue withheld
         assert features[1] == 1.0  # go-signal active
+
+    def test_associative_dimension_is_exactly_three(self):
+        """Cue + outcome + go-signal register classical_dim=1 each, so the observation is 3-dim.
+
+        Load-bearing (associative-memory probe): the no-external-memory-aid contract asserts
+        exactly 3 channels; an unregistered module would fall back to 2 zeros and break it.
+        """
+        assert (
+            get_classical_feature_dimension(
+                [ModuleName.CUE, ModuleName.OUTCOME, ModuleName.GO_SIGNAL],
+            )
+            == 3
+        )
+
+    def test_outcome_channel_lands_after_cue_and_go(self):
+        """Outcome sorts last by value (cue < go_signal < outcome) -> the 3rd channel."""
+        features = extract_classical_features(
+            BrainParams(outcome_signal=1.0),
+            [ModuleName.CUE, ModuleName.OUTCOME, ModuleName.GO_SIGNAL],
+        )
+        # cue + go unset (0); outcome=+1 at index 2 — and the cue is not leaked.
+        np.testing.assert_array_equal(features, np.array([0.0, 0.0, 1.0], dtype=np.float32))
+
+    def test_unset_associative_channels_extract_as_zero(self):
+        """Unset cue/outcome/go (None, the disabled-task default) all extract as 0."""
+        features = extract_classical_features(
+            BrainParams(),
+            [ModuleName.CUE, ModuleName.OUTCOME, ModuleName.GO_SIGNAL],
+        )
+        np.testing.assert_array_equal(features, np.array([0.0, 0.0, 0.0], dtype=np.float32))

@@ -1,0 +1,45 @@
+# Associative-memory probe — MLPPPO (the memoryless baseline).
+#
+# Artificial working-memory probe (the biological remember-and-use twin of bit-memory): two cues
+# are shown in a conditioning phase with opposite outcomes (one rewarded); with probability
+# reversal_prob a reversal block re-presents them with FLIPPED outcomes; after a delay the agent
+# must give a binary readout (sign of its continuous turn) of the CURRENT (post-reversal) rewarded
+# cue. The observation is exactly [cue, outcome, go_signal] — no STAM, no gradients — so only
+# internal recurrent state can carry (and update) the association across the delay. MLP is
+# memoryless and is expected to sit at chance (~50%); the recurrent/attention arms should do
+# better. The reversal makes the demand working-memory UPDATE (a hold-only policy is at chance on
+# the reversal fraction). The worst-case per-trial span (2 cond + 2 reversal + 8 delay + 1 response
+# = 13) stays within the Transformer window (16).
+#
+# Filename carries no {sensing} suffix: a task variant whose input is the cue/outcome/go channels,
+# not a sensing mode.
+#
+# max_steps >= trials (20) * worst-case span (13) + a trailing step for the last reward.
+max_steps: 280
+brain:
+  name: mlpppo
+  config:
+    action_mode: continuous
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.08
+    learning_rate: 0.0003
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    sensory_modules:
+    - cue
+    - outcome
+    - go_signal
+environment:
+  env_type: continuous_2d
+  associative_memory_task:
+    enabled: true
+    # trials_per_episode / cond_steps_per_cue / reversal_prob / delay_steps / response_steps
+    # default to the within-window starters (20 / 1 / 0.5 / 8 / 1).

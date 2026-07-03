@@ -35,6 +35,7 @@ class TerminationReason(StrEnum):
     MAX_STEPS = "max_steps"
     INTERRUPTED = "interrupted"
     BIT_MEMORY_COMPLETED = "bit_memory_completed"
+    ASSOCIATIVE_MEMORY_COMPLETED = "associative_memory_completed"
 
 
 class SimulationResult(BaseModel):

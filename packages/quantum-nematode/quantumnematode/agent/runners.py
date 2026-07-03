@@ -25,11 +25,14 @@ from quantumnematode.report.dtypes import TerminationReason
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
     from quantumnematode.brain.actions import ActionData
+    from quantumnematode.env.associative_memory import AssociativeMemoryTask
     from quantumnematode.env.bit_memory import BitMemoryTask
 
 # Chance accuracy for the binary bit-memory cue-match (a per-episode success flag is set
 # when the episode's cue-match rate beats this; the analysis harness uses the logged rate).
 _BIT_MEMORY_CHANCE = 0.5
+# Chance accuracy for the associative-memory binary readout (same 50% two-alternative baseline).
+_ASSOCIATIVE_MEMORY_CHANCE = 0.5
 
 
 @dataclass
@@ -785,6 +788,111 @@ class StandardEpisodeRunner(EpisodeRunner):
         bm.advance()
         return None, top_action
 
+    def _terminate_associative_memory(  # noqa: PLR0913
+        self,
+        agent: QuantumNematodeAgent,
+        params: Any,  # noqa: ANN401
+        reward: float,
+        am: AssociativeMemoryTask,
+        *,
+        learn: bool = True,
+        update_memory: bool = True,
+    ) -> EpisodeResult:
+        """Log the per-episode response accuracy (overall + reversal split) and terminate.
+
+        The reversal / non-reversal split makes the working-memory *update* demand directly
+        readable (a hold-only policy is at chance on the reversal fraction).
+        """
+        acc = am.response_accuracy
+        # Print (not just log) so the reversal / non-reversal split reaches the run's ``.out`` for
+        # the separation harness — the overall accuracy is also derivable from the episode reward,
+        # but the split (which arms actually *update* the association) is not.
+        print(  # noqa: T201
+            f"AssocMemory: accuracy={acc:.4f} reversal={am.reversal_accuracy:.4f} "
+            f"non_reversal={am.non_reversal_accuracy:.4f} responses={am.num_responses}",
+        )
+        return self._terminate_episode(
+            agent,
+            params,
+            reward,
+            success=acc > _ASSOCIATIVE_MEMORY_CHANCE,
+            termination_reason=TerminationReason.ASSOCIATIVE_MEMORY_COMPLETED,
+            learn=learn,
+            update_memory=update_memory,
+            food_history=None,
+        )
+
+    def _run_associative_memory_step(
+        self,
+        agent: QuantumNematodeAgent,
+        max_steps: int,
+        prev_action: ActionData | None,
+        *,
+        render_text: str | None,
+        show_last_frame_only: bool,
+    ) -> tuple[EpisodeResult | None, ActionData | None]:
+        """Run one associative-memory step (mirrors ``_run_bit_memory_step``).
+
+        cue/outcome/go observation -> action -> response scoring against the *current*
+        (post-reversal) rewarded cue. Bypasses all foraging/predator/thermal dynamics (movement
+        inert). The reward is the previous response's score; the episode ends once every trial
+        completes.
+        """
+        am = agent.env.associative_memory
+        if am is None:  # defensive: the caller guards this
+            return None, prev_action
+
+        reward = am.take_reward()
+        agent._episode_tracker.track_reward(reward)
+        input_data = agent._prepare_input_data(0.0)
+        params = agent._create_brain_params(action=prev_action)
+        action = agent.brain.run_brain(
+            params=params,
+            reward=reward,
+            input_data=input_data,
+            top_only=True,
+            top_randomize=True,
+        )
+        if len(action) != 1:
+            error_msg = f"Invalid action length: {len(action)}. Expected 1."
+            raise ValueError(error_msg)
+        top_action = action[0]
+        agent._episode_tracker.track_step()
+
+        if am.done:
+            return self._terminate_associative_memory(agent, params, reward, am), top_action
+
+        # Score this step's action against the current rewarded cue (no-op outside the response
+        # phase). The binary-response reader is arch-agnostic — reused from the bit-memory path.
+        am.record_response(self._bit_memory_turn(top_action))
+
+        episode_done = agent._episode_tracker.steps >= max_steps
+        if isinstance(agent.brain, ClassicalBrain):
+            agent.brain.learn(params=params, reward=reward, episode_done=episode_done)
+        agent.brain.update_memory(reward)
+
+        # Movement is inert — record the (unchanged) position + foods so the agent-level
+        # len(path) == len(food_history) invariant the foraging loop maintains still holds.
+        agent.path.append((agent.env.agent_pos[0], agent.env.agent_pos[1]))
+        agent.food_history.append([(round(fx), round(fy)) for fx, fy in agent.env.foods])
+        agent._render_step(max_steps, render_text, show_last_frame_only=show_last_frame_only)
+
+        if episode_done:  # budget exhausted before all trials (mis-sized config)
+            return (
+                self._terminate_associative_memory(
+                    agent,
+                    params,
+                    reward,
+                    am,
+                    learn=False,
+                    update_memory=False,
+                ),
+                top_action,
+            )
+
+        am.advance()
+        return None, top_action
+
     def run(  # noqa: C901, PLR0911, PLR0912, PLR0915
         self,
         agent: QuantumNematodeAgent,
@@ -839,6 +947,9 @@ class StandardEpisodeRunner(EpisodeRunner):
         # Reset the bit-memory phase machine for the new episode (no cross-episode cue).
         if agent.env.bit_memory is not None:
             agent.env.bit_memory.reset()
+        # Reset the associative-memory phase machine too (no cross-episode association).
+        if agent.env.associative_memory is not None:
+            agent.env.associative_memory.reset()
         # Reset the adaptive chemosensory background too (same per-episode boundary
         # as STAM — otherwise the background leaks across reused episodes).
         if agent._adaptive_food is not None:
@@ -862,6 +973,20 @@ class StandardEpisodeRunner(EpisodeRunner):
             # is inert and every foraging/predator/thermal handler below is bypassed.
             if agent.env.bit_memory is not None:
                 result, top_action = self._run_bit_memory_step(
+                    agent,
+                    max_steps,
+                    top_action,
+                    render_text=render_text,
+                    show_last_frame_only=show_last_frame_only,
+                )
+                if result is not None:
+                    return result
+                continue
+
+            # Associative-memory probe: the same non-spatial pattern (conditioning/reversal/
+            # delay/response). When enabled, drive its phase machine instead of foraging.
+            if agent.env.associative_memory is not None:
+                result, top_action = self._run_associative_memory_step(
                     agent,
                     max_steps,
                     top_action,

@@ -145,6 +145,14 @@ class BrainParams(BaseModel):
             "None when the task is disabled."
         ),
     )
+    outcome_signal: float | None = Field(
+        default=None,
+        description=(
+            "Associative-memory task outcome/valence (+1 rewarded-paired / -1 not) "
+            "accompanying each conditioning cue, flipped during a reversal block, 0 "
+            "during delay/response; None when the task is disabled."
+        ),
+    )
 
     # --- Chemotaxis (food/predator gradients) ---
     food_gradient_strength: float | None = Field(
