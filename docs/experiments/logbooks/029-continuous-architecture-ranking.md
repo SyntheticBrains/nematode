@@ -1,8 +1,13 @@
 # 029: Cross-Architecture Ranking on the Continuous-2D Substrate (T7)
 
-**Status**: integrated-C3 ranking complete for the **6 MUST architectures** (n=8 paired seeds, uniform
-6000ep + a 5-seed 8000ep convergence top-up). T7 is **NOT closed** — SHOULD/MAY arms and a memory-bound
-control are deferred to a follow-up (see Next Steps).
+**Status**: **completed (MUST ranking).** The integrated-C3 ranking for the **6 MUST architectures**
+(n=8 paired seeds, uniform 6000ep + a 5-seed 8000ep convergence top-up) is complete and final — it
+delivers Gate 3 G3.a/b/c. The two items originally deferred inside this logbook are now resolved: the
+**memory-bound control** was spun into dedicated logbooks ([030](030-bit-memory-positive-control.md)
+bit-memory, [032](032-ars-source-depletion.md) ARS, [033](033-associative-memory-probe.md)
+associative), and the **SHOULD/MAY arms** are deferred to Phase 7 (non-gating; no arm earns a T7 row —
+2026-07-03 tranche cleanup). T7 formally **closes** with the real-worm validation (G3.d) + the Gate 3
+decision, recorded separately in the T7-closure logbook; this ranking logbook is closed for its scope.
 
 **Branch**: `openspec/t7-n8-ranking`.
 
@@ -170,15 +175,16 @@ now caught at load time (#253) and the wider debt tracked (#254).
 
 ## Next Steps
 
-- **SHOULD/MAY arms** (quantum / spiking / reservoir / hybrid) — opportunistic continuous-substrate
-  bring-up, decided *after* this MUST ranking (non-gating; `T7.prep.should_may_continuous`). Quantum is
-  settled-negative at T4 (025) so low priority.
-- **Memory-bound control** — an explicitly-artificial bit-memory / area-restricted-search task to confirm
-  the comparison *can* separate working memory in principle (the open hypothesis from 025).
+- **Memory-bound control** — resolved in dedicated logbooks: [030](030-bit-memory-positive-control.md)
+  (bit-memory, separation), [032](032-ars-source-depletion.md) (ARS, null), and
+  [033](033-associative-memory-probe.md) (associative, separation). The comparison *does* separate working
+  memory when a task demands it — the open hypothesis from 025 is answered.
+- **SHOULD/MAY arms** (quantum / spiking / reservoir / hybrid) — deferred to Phase 7 (non-gating; no arm
+  earns a T7 row per the 2026-06-29 architecture-candidate research; quantum settled-negative at T4).
 - **Config debt** (#254): decide implement-vs-remove for `normalize_advantages` (a re-validation-grade
-  decision, since it would shift all MLP results).
-- **T7 closure** is deferred until the above are resolved — this logbook records the MUST ranking, not the
-  tranche close.
+  decision, since it would shift all MLP results). Still open — independent of the tranche close.
+- **T7 closure** — this logbook (the MUST ranking) is complete; T7 formally closes with the real-worm
+  validation (Gate 3 G3.d) + the Gate 3 decision, recorded in a separate T7-closure logbook.
 
 ## Data References
 
