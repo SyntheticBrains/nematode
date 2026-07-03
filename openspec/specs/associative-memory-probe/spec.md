@@ -37,15 +37,17 @@ reversal trials, updated) across the delay.
 ### Requirement: Cue-identity, outcome, and go observation channels
 
 The task observation SHALL expose a **cue-identity** channel (a signed identity for the cue shown at
-the current conditioning step), an **outcome (valence)** channel (positive for the rewarded cue,
-non-positive otherwise), and a **go-signal** channel marking the response phase. The cue-identity and
-outcome channels SHALL be non-zero only during the conditioning phase; the go-signal SHALL be asserted
-only during the response phase.
+the current conditioning or reversal step), an **outcome (valence)** channel (positive for the cue
+rewarded in the current block, non-positive otherwise), and a **go-signal** channel marking the
+response phase. The cue-identity and outcome channels SHALL be non-zero during the conditioning **and
+reversal** phases (the reversal phase re-presents the same two cues with flipped outcomes) and zero
+during the delay and response phases; the go-signal SHALL be asserted only during the response phase.
 
-#### Scenario: Cue-identity and outcome are present only during conditioning
+#### Scenario: Cue-identity and outcome are zero only in the delay and response phases
 
 - **WHEN** the task is in the delay or response phase
-- **THEN** the cue-identity and outcome channels SHALL be zero (the association is not re-presented)
+- **THEN** the cue-identity and outcome channels SHALL be zero (the association is not re-presented for
+  the agent to read)
 
 #### Scenario: Each conditioning step exposes one cue with its outcome
 

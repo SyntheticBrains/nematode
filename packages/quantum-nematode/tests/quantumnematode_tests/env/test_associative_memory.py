@@ -140,17 +140,23 @@ class TestScoring:
         assert task.num_responses == 0
 
     def test_reversal_and_non_reversal_split(self):
-        """Accuracy splits by reversal vs non-reversal trials."""
-        task = _task(trials=6, cond=1, delay=0, response=1, reversal=0.5)
+        """The split scores reversal vs non-reversal trials in the correct buckets."""
+        task = _task(trials=6, cond=1, delay=0, response=1, reversal=0.5)  # seed=0 -> a 2/4 mix
         for _ in range(task._trial_span() * 6 + 6):
             if task.done:
                 break
             if task.phase == AssociativeMemoryPhase.RESPONSE:
-                task.record_response(turn=task.current_rewarded_cue)  # always correct
+                # Answer non-reversal trials correctly and reversal trials wrongly, so the two
+                # buckets must diverge — a split that ignored the reversal key could not pass.
+                correct = task.current_rewarded_cue
+                task.record_response(turn=-correct if task._reversed else correct)
             task.advance()
-        assert task.response_accuracy == 1.0
-        assert task.reversal_accuracy in (0.0, 1.0)  # 1.0 if any reversal trials occurred
-        assert task.non_reversal_accuracy in (0.0, 1.0)
+        # Both buckets must actually be exercised, else the split assertions are vacuous.
+        n_reversal = sum(task._response_was_reversal)
+        assert n_reversal > 0, "test setup produced no reversal trial"
+        assert task.num_responses - n_reversal > 0, "test setup produced no non-reversal trial"
+        assert task.non_reversal_accuracy == 1.0  # answered correctly
+        assert task.reversal_accuracy == 0.0  # answered wrongly
 
 
 class TestEpisodeLifecycle:

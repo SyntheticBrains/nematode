@@ -1545,6 +1545,25 @@ class TestAssociativeMemoryTaskConfig:
             AssociativeMemoryTaskConfig(enabled=True, delay_steps=30)  # span 4 + 30 + 1 = 35 > 16
         assert "window" in caplog.text.lower()
 
+    def test_mutually_exclusive_with_bit_memory(self):
+        """Enabling both working-memory tasks fails loudly rather than mixing them."""
+        from quantumnematode.utils.config_loader import (
+            AssociativeMemoryTaskConfig,
+            BitMemoryTaskConfig,
+            EnvironmentConfig,
+        )
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            EnvironmentConfig(
+                bit_memory_task=BitMemoryTaskConfig(enabled=True),
+                associative_memory_task=AssociativeMemoryTaskConfig(enabled=True),
+            )
+        # One enabled with the other present-but-disabled is allowed.
+        EnvironmentConfig(
+            bit_memory_task=BitMemoryTaskConfig(enabled=False),
+            associative_memory_task=AssociativeMemoryTaskConfig(enabled=True),
+        )
+
     def test_clean_observation_passes(self):
         """Oracle sensing + [cue, outcome, go_signal] resolves to exactly 3 dims — the contract."""
         from quantumnematode.brain.modules import ModuleName

@@ -1150,7 +1150,8 @@ class QuantumNematodeAgent:
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
 
-        # --- Memory-task cue/outcome/go channels (0 when off; only one task is ever active) ---
+        # --- Memory-task cue/outcome/go channels (0 when off; at most one task is active,
+        # enforced by EnvironmentConfig._validate_memory_tasks_mutually_exclusive) ---
         cue_signal, go_signal = self.env.get_bit_memory_signals()
         outcome_signal: float | None = None
         if self.env.associative_memory is not None:

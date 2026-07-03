@@ -1335,6 +1335,30 @@ class EnvironmentConfig(BaseModel):
             raise ValueError(msg)
         return self
 
+    @model_validator(mode="after")
+    def _validate_memory_tasks_mutually_exclusive(self) -> "EnvironmentConfig":
+        """Reject enabling both working-memory tasks at once.
+
+        `bit_memory_task` and `associative_memory_task` each require the resolved
+        sensory modules to be *exactly* their own channel set ([cue, go_signal] vs
+        [cue, outcome, go_signal]), so enabling both is already contradictory; the
+        signal-injection and scoring paths also assume a single active task. Fail
+        fast with a clear message rather than surfacing a confusing
+        module-mismatch error from whichever channel-invariant is checked first.
+        """
+        if (
+            self.bit_memory_task is not None
+            and self.bit_memory_task.enabled
+            and self.associative_memory_task is not None
+            and self.associative_memory_task.enabled
+        ):
+            msg = (
+                "bit_memory_task and associative_memory_task are mutually exclusive — "
+                "enable only one working-memory task per environment."
+            )
+            raise ValueError(msg)
+        return self
+
     def get_continuous_config(self) -> Continuous2DConfig:
         """Get continuous-2D configuration with defaults."""
         return self.continuous or Continuous2DConfig()
