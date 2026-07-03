@@ -12,7 +12,7 @@ This change adds a new `phase6-tracking` spec capability whose requirements comm
 
 Create `openspec/changes/phase6-tracking/` with proposal/design/tasks/spec. The `tasks.md` is a living checklist of every Phase 6 deliverable at sub-task granularity, organised by the nine tranches in [design.md § Decision 1](design.md) (L0 ingest → L1 plugin refactor → corrected ASH/ADL nociception → L2 first pass on grid → platform refactor (continuous-2D + continuous-action heads + parity) → env fidelity (Rung 2 + log-concentration adaptation) → L2 re-run on upgraded substrate + real-worm validation → L3 NEAT → Phase 6 synthesis logbook), with the three mid-phase gates mapped to tranche boundaries (Gate 1 closes T2, Gate 2 closes T5, Gate 3 closes T7). Each subsequent Phase 6 milestone PR updates this checklist as part of its diff.
 
-This change is **intentionally not archived after merge** — it stays open until the entire Phase 6 is complete (synthesis logbook published). At that point it gets archived alongside the synthesis change.
+This change is **intentionally not archived after merge** — it stays open until **Phase 6a** is complete (the T9a Phase 6a synthesis logbook published; see § 4 Phase 6a/6b split below). At that point it gets archived alongside the T9a synthesis change, and Phase 6b tracks onward under a fresh `phase6b-tracking` change.
 
 ### 2. Roadmap Edits (Four)
 
@@ -35,9 +35,20 @@ The plan that generated these tranches made seven decisions that should be visib
 - **Decision 6 — Mid-phase gate discipline with quantitative pre-registered criteria**: each of the three gates has explicit numerical pass criteria (G1.a-d; G2.a-d; G3.a-d) in the spirit of Phase 5's M2/M3/M4 quantitative gates. Each gate decision is recorded in the triggering tranche's published *logbook* (not in `tasks.md`, which becomes hard to amend post-archive).
 - **Decision 7 — L2 connectome-substrate semantics with explicit connection-type taxonomy**: strict-mask applies to chemical synapses (directed, weighted) — PPO tunes weights only along existing chemical edges. Gap junctions are fixed-weight electrical couplings (not learnable — biologically faithful). Extra-synaptic/peptidergic signalling is out of Phase 6 scope (reserved for Phase 7 L4 plasticity). Soft-prior on chemical synapses ships as a documented ablation in the same sweep.
 
+### 4. Phase 6a/6b split (amended 2026-07 — Gate-3 sub-phase split taken)
+
+Per this change's spec scenario *"Phase 6a / 6b sub-phase split triggered at Gate 3"*, the split is taken (by success — the T7 MUST ranking published in [Logbook 029](../../../docs/experiments/logbooks/029-continuous-architecture-ranking.md)):
+
+- **Phase 6a = T1–T7 + connectome-structure controls (`T7.controls.*`) + T9a synthesis.** `phase6-tracking` owns Phase 6a and archives at the T9a Phase 6a synthesis publication.
+- **Phase 6b = T8 NEAT + T9b synthesis addendum** inherits a **fresh `phase6b-tracking` change** (the spec's rule for a >1-tranche 6b). The committed NEAT work moves there as `[ ]` not-started tasks; `phase6-tracking`'s T8 becomes a pointer stub with no checkboxes so it archives cleanly.
+- **Connectome-structure controls (ex-T8.3b rewired-null + ex-T8.3c learnable-gap-junction) decoupled from T8 into Phase 6a** — PPO weight-search, not topology search.
+- **Co-evolution (ex-T8.4) deferred with no scheduled destination** — a resolved scoping decision recorded in `tasks.md` and roadmap RQ4, not moved to 6b.
+
+See [design.md § Phase 6a/6b endgame re-scope banner](design.md) for the full rationale.
+
 ## Capabilities
 
-**Added**: `phase6-tracking` (new) — five requirements covering the living Phase 6 tranche checklist, the roadmap Phase 6 status block, gate-decision visibility, fixed architecture-family scope, and the deliberate tranche sequence. This capability lives until the Phase 6 synthesis logbook archives alongside it.
+**Added**: `phase6-tracking` (new) — five requirements covering the living Phase 6 tranche checklist, the roadmap Phase 6 status block, gate-decision visibility, fixed architecture-family scope, and the deliberate tranche sequence. This capability lives until the Phase 6a synthesis logbook archives alongside it (Phase 6b tracks onward under `phase6b-tracking`).
 
 **Modified**: none.
 
