@@ -38,13 +38,13 @@ rewired-null result or the 6a synthesis review raises the frozen-electrical-syna
 
 ## 4. Control-analysis harness
 
-- [ ] 4.1 `scripts/analysis/connectome_structure_controls.py` — load a `<arm> <seed> <out>` manifest
+- [x] 4.1 `scripts/analysis/connectome_structure_controls.py` — load a `<arm> <seed> <out>` manifest
   (arms: `wild_type`, `rewired_null`), compute the C3 plateau-tail ranked success per seed **reusing
   the committed ranking metric** (`t7_continuous_ranking` / the level-agnostic ranked metric — no new
   metric), print the paired-seed deltas + 80% bootstrap CI + BH-FDR
   (`weight_search_architecture_ranking`), and the verdict (wild-type > rewired at q\<0.05 → "specific
   wiring matters"; CI spans 0 → "degree statistics, not wiring"). Write a summary JSON.
-- [ ] 4.2 Tests: metric + paired-delta + verdict logic on synthetic `.out`s (mirror
+- [x] 4.2 Tests: metric + paired-delta + verdict logic on synthetic `.out`s (mirror
   `test_associative_memory_separation.py`).
 
 ## 5. Calibration / smoke (before the panel)
