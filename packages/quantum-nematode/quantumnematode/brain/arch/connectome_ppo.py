@@ -45,6 +45,7 @@ from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+from quantumnematode.connectome.rewiring import rewire_degree_preserving
 from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
@@ -144,6 +145,18 @@ class ConnectomePPOBrainConfig(BrainConfig):
     """Configuration for the connectome-constrained PPO brain."""
 
     connectome_source: Literal["cook_2019_hermaphrodite"] = "cook_2019_hermaphrodite"
+    # Wiring control. "wild_type" uses the loaded Cook-2019 adjacency as-is;
+    # "rewired_degree_preserving" replaces the chemical + gap-junction edge sets with a
+    # degree-preserving edge-swapped null (every neuron's in/out degree preserved, only
+    # *which* neurons connect scrambled) before the topology is built — the control that
+    # isolates "the specific wiring matters" from "only the degree statistics matter".
+    # Default wild_type is byte-identical to the pre-change brain.
+    wiring: Literal["wild_type", "rewired_degree_preserving"] = "wild_type"
+    # Seed for the degree-preserving rewiring draw (used only when
+    # wiring == "rewired_degree_preserving"). None -> derive from the run seed, so each
+    # paired run draws its own null topology from a dedicated RNG while the weight-init
+    # RNG stream is left untouched (matched init vs wild-type for the same seed).
+    rewire_seed: int | None = None
     enable_gap_junctions: bool = True
     chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"
     # Sensing mode controls what env-side fields the sensor projection
@@ -952,6 +965,19 @@ class ConnectomePPOBrain(ClassicalBrain):
             msg = f"Unsupported connectome_source: {config.connectome_source!r}"
             raise ValueError(msg)
         connectome = load_cook_2019_hermaphrodite()
+
+        # Optional degree-preserving rewired-null control, applied BEFORE topology construction on a
+        # DEDICATED RNG (from ``rewire_seed`` or the run seed) so the weight-init RNG (``self.rng``)
+        # is left at the same state as the wild-type run for the same seed — matched initialisation,
+        # so the paired wild-type-vs-rewired comparison isolates topology, not an init-RNG offset.
+        # Preserves every neuron's in/out degree; only which neurons connect changes, so per-post
+        # fan-in (hence the strict-mask scale and gap normalisation) is intact.
+        if config.wiring == "rewired_degree_preserving":
+            rewire_seed = config.rewire_seed if config.rewire_seed is not None else self.seed
+            connectome = rewire_degree_preserving(connectome, np.random.default_rng(rewire_seed))
+            logger.info(
+                f"ConnectomePPOBrain wiring: rewired_degree_preserving (rewire_seed={rewire_seed})",
+            )
 
         # Derive the per-mode food-feature count.
         self._n_food_features = _N_FOOD_FEATURES_BY_MODE[config.sensing_mode]

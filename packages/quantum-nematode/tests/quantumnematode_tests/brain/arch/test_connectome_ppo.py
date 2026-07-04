@@ -503,3 +503,59 @@ class TestTopologyProtocol:
         assert id(brain.topology.food_gains) in param_ids
         assert id(brain.topology.readout) in param_ids
         assert id(brain.topology.g_gap) not in param_ids
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Degree-preserving rewired-null wiring control
+# ──────────────────────────────────────────────────────────────────────────────
+class TestWiringControl:
+    """The ``wiring: wild_type | rewired_degree_preserving`` connectome-structure control."""
+
+    def test_wild_type_matches_loaded_connectome(self) -> None:
+        """wiring: wild_type builds the mask from the real Cook adjacency (rewiring not applied)."""
+        from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+
+        brain = _make_brain(wiring="wild_type")
+        connectome = load_cook_2019_hermaphrodite()
+        idx = {n: i for i, n in enumerate(brain.topology.neuron_names)}
+        expected = torch.zeros(302, 302, dtype=torch.bool)
+        for s in connectome.chemical_synapses:
+            expected[idx[s.pre], idx[s.post]] = True
+        assert torch.equal(brain.topology.m_chem, expected)
+
+    def test_wild_type_is_byte_identical_to_default(self) -> None:
+        """The new ``wiring`` field defaults to wild_type and perturbs no built tensor."""
+        a = _make_brain()  # default wiring
+        b = _make_brain(wiring="wild_type")
+        assert torch.equal(a.topology.m_chem, b.topology.m_chem)
+        assert torch.equal(a.topology.w_chem, b.topology.w_chem)
+        assert torch.equal(a.topology.g_gap, b.topology.g_gap)
+
+    def test_rewired_preserves_degree_but_changes_edges(self) -> None:
+        """rewired_degree_preserving changes which neurons connect but keeps every degree."""
+        wild = _make_brain(wiring="wild_type")
+        rewired = _make_brain(wiring="rewired_degree_preserving")
+        assert not torch.equal(rewired.topology.m_chem, wild.topology.m_chem)
+        assert int(rewired.topology.m_chem.sum()) == int(wild.topology.m_chem.sum())
+        # m_chem is [pre, post]: sum over dim 0 = per-post in-degree, dim 1 = per-pre out-degree.
+        assert torch.equal(rewired.topology.m_chem.sum(0), wild.topology.m_chem.sum(0))
+        assert torch.equal(rewired.topology.m_chem.sum(1), wild.topology.m_chem.sum(1))
+
+    def test_rewired_gap_junctions_stay_symmetric(self) -> None:
+        """The rewired gap-junction coupling remains symmetric (gap junctions are undirected)."""
+        g = _make_brain(wiring="rewired_degree_preserving").topology.g_gap
+        assert torch.allclose(g, g.T), "Rewired gap-junction matrix must stay symmetric"
+
+    def test_rewired_topology_forward_pass_is_finite(self) -> None:
+        """A rewired brain runs a forward pass without error and produces finite logits."""
+        rewired = _make_brain(wiring="rewired_degree_preserving")
+        logits = rewired.topology(torch.from_numpy(rewired.preprocess(_make_params())))
+        assert torch.isfinite(logits).all()
+
+    def test_rewire_seed_controls_the_draw(self) -> None:
+        """Same rewire_seed -> identical null; different rewire_seed -> different null."""
+        a = _make_brain(wiring="rewired_degree_preserving", rewire_seed=11)
+        b = _make_brain(wiring="rewired_degree_preserving", rewire_seed=11)
+        c = _make_brain(wiring="rewired_degree_preserving", rewire_seed=12)
+        assert torch.equal(a.topology.m_chem, b.topology.m_chem)
+        assert not torch.equal(a.topology.m_chem, c.topology.m_chem)

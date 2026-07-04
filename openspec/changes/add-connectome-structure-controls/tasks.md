@@ -7,33 +7,33 @@ rewired-null result or the 6a synthesis review raises the frozen-electrical-syna
 
 ## 1. Degree-preserving rewiring utility
 
-- [ ] 1.1 Add `connectome/rewiring.py`: `rewire_degree_preserving(connectome, rng, swaps_per_edge=10)`
+- [x] 1.1 Add `connectome/rewiring.py`: `rewire_degree_preserving(connectome, rng, swaps_per_edge=10)`
   returning a new `Connectome` with the same `neurons` and degree-preserving edge-swapped
   `chemical_synapses` (directed double-edge-swap) + `gap_junctions` (undirected double-edge-swap),
   rejecting self-loops / duplicates; `source` annotated with the seed. Weights travel with the edge.
-- [ ] 1.2 Tests (`connectome/test_rewiring.py`): in/out degree per neuron preserved (chemical) + gap
+- [x] 1.2 Tests (`connectome/test_rewiring.py`): in/out degree per neuron preserved (chemical) + gap
   degree preserved; no self-loops / duplicates; neuron set + order unchanged; deterministic under the
   same seed, differs across seeds; edge count preserved.
 
 ## 2. Wiring config option + brain injection seam
 
-- [ ] 2.1 Add `wiring: Literal["wild_type", "rewired_degree_preserving"] = "wild_type"` and
+- [x] 2.1 Add `wiring: Literal["wild_type", "rewired_degree_preserving"] = "wild_type"` and
   `rewire_seed: int | None = None` to `ConnectomePPOBrainConfig`.
-- [ ] 2.2 In the connectome brain, between `connectome = load_cook_2019_hermaphrodite()` and the
+- [x] 2.2 In the connectome brain, between `connectome = load_cook_2019_hermaphrodite()` and the
   `ConnectomeTopology(...)` construction, apply `rewire_degree_preserving` when
   `wiring == "rewired_degree_preserving"`, using a **dedicated** `np.random.default_rng(rewire_seed if rewire_seed is not None else self.seed)` — independent of `self.rng` / the global seed — so the
   `w_chem` init draws are unperturbed (matched init vs wild-type for the same seed). Everything
   downstream unchanged.
-- [ ] 2.3 Byte-identical invariant test: with `wiring: wild_type` the rewiring branch is skipped, so
+- [x] 2.3 Byte-identical invariant test: with `wiring: wild_type` the rewiring branch is skipped, so
   the built `m_chem`, `w_chem` init, and `g_gap` equal those from the unmodified load path (construct a
   wild-type brain and a directly-loaded-connectome topology; assert tensor-equal). Guards the 029
   ranking cell against drift.
-- [ ] 2.4 Rewired-brain test: with `wiring: rewired_degree_preserving`, `m_chem` differs from wild-type
+- [x] 2.4 Rewired-brain test: with `wiring: rewired_degree_preserving`, `m_chem` differs from wild-type
   but has the same per-column/row sums (degree preserved), and the brain trains a step without error.
 
 ## 3. Config (match the c3_integrated cell verbatim)
 
-- [ ] 3.1 `configs/scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_rewired_null.yml`
+- [x] 3.1 `configs/scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_rewired_null.yml`
   — a verbatim copy of the wild-type combined cell with only `wiring: rewired_degree_preserving` added.
 
 ## 4. Control-analysis harness
