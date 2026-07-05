@@ -3,7 +3,7 @@
 Compares the wild-type *C. elegans* connectome against a **degree-preserving rewired-null** on the
 continuous integrated-C3 cell across paired seeds. Reads each run's plateau-tail (final-quarter)
 ranked success from the ``run_simulation`` ``.out`` - **reusing the committed ranking metric**
-(``t7_continuous_ranking._plateau_tail``), so this control is measured identically to the 029 ranking
+(``t7_continuous_ranking.plateau_tail``), so this control is measured identically to the 029 ranking
 - and reports the paired-seed delta (wild-type - rewired) with the committed paired-seed Wilcoxon +
 80% bootstrap CI + BH-FDR layer.
 
@@ -29,7 +29,7 @@ from pathlib import Path
 import numpy as np
 
 # Reuse the committed metric + statistics layers verbatim (identical methodology to the 029 ranking).
-from t7_continuous_ranking import _plateau_tail
+from t7_continuous_ranking import plateau_tail
 from weight_search_architecture_ranking import bh_fdr, paired_seed_wilcoxon_bootstrap
 
 REPO = Path(__file__).resolve().parents[2]
@@ -45,25 +45,35 @@ _SIG_Q = 0.05
 
 def _success(out_path: Path) -> float | None:
     """Plateau-tail full-clear success % for one run (the 029 ranked metric), or None."""
-    result = _plateau_tail(out_path)
+    result = plateau_tail(out_path)
     return None if result is None else result[0]
 
 
 def load(manifest: Path) -> dict[str, dict[int, float]]:
-    """Return ``{arm: {seed: success}}`` from an ``<arm> <seed> <out_path>`` manifest."""
+    """Return ``{arm: {seed: success}}`` from an ``<arm> <seed> <out_path>`` manifest.
+
+    Blank / ``#``-comment lines are skipped silently; any other line that fails the
+    ``<arm> <int seed> <out>`` shape, or a duplicate ``(arm, seed)`` overwrite, is reported so
+    analysis issues stay traceable rather than silently dropped.
+    """
     arms: dict[str, dict[int, float]] = {}
-    for line in manifest.read_text().splitlines():
+    for raw in manifest.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
         parts = line.split()
-        if (
-            len(parts) != 3 or not parts[1].isdigit()
-        ):  # `<arm> <int seed> <out>`; skip anything else
+        if len(parts) != 3 or not parts[1].isdigit():  # expected: `<arm> <int seed> <out>`
+            print(f"  WARN: skipping malformed manifest line: {raw!r}")
             continue
         arm, seed, out_path = parts[0], int(parts[1]), Path(parts[2])
         success = _success(REPO / out_path)
         if success is None:
             print(f"  WARN {arm} seed {seed}: no parseable plateau in {out_path} - dropped")
             continue
-        arms.setdefault(arm, {})[seed] = success
+        seeds = arms.setdefault(arm, {})
+        if seed in seeds:
+            print(f"  WARN {arm} seed {seed}: duplicate manifest entry - overwriting previous")
+        seeds[seed] = success
     return arms
 
 

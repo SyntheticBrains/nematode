@@ -146,9 +146,11 @@ def rewire_degree_preserving(
     """
     chem_edges = [(s.pre, s.post) for s in connectome.chemical_synapses]
     gap_edges = [(g.neuron_a, g.neuron_b) for g in connectome.gap_junctions]
-    # The swap assumes a SIMPLE input graph (no parallel edges) - the weight dicts below key on the
-    # edge tuple and would silently collapse duplicates. The Cook loader dedups both edge types, so
-    # this is a guard against a hand-built/alternate-loader fixture, not a live path.
+    # Guard against PARALLEL edges only (the weight dicts below key on the edge tuple and would
+    # silently collapse duplicates). Self-loops (autapses) are intentionally NOT rejected: the real
+    # Cook connectome contains 38 chemical autapses, they are legitimate structure, and the swap
+    # preserves their degree contribution (an in+out on the diagonal). The Cook loader dedups both
+    # edge types, so this is a guard against a hand-built/alternate-loader fixture, not a live path.
     if len(set(chem_edges)) != len(chem_edges) or len(set(gap_edges)) != len(gap_edges):
         msg = "rewire_degree_preserving requires a simple connectome (no duplicate/parallel edges)"
         raise ValueError(msg)

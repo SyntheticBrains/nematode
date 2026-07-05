@@ -4,9 +4,12 @@ import sys
 from pathlib import Path
 
 # The analysis script lives in scripts/analysis/ and imports sibling helper modules, so put that
-# directory on the path before importing it.
-_ANALYSIS_DIR = Path(__file__).resolve().parents[5] / "scripts" / "analysis"
-sys.path.insert(0, str(_ANALYSIS_DIR))
+# directory on the path first. Locate it by walking up to the repo root (robust to this test's
+# nesting depth) rather than a hardcoded parent index.
+_root = Path(__file__).resolve()
+while _root != _root.parent and not (_root / "scripts" / "analysis").is_dir():
+    _root = _root.parent
+sys.path.insert(0, str(_root / "scripts" / "analysis"))
 
 import connectome_structure_controls as csc  # noqa: E402  # pyright: ignore[reportMissingImports]
 
