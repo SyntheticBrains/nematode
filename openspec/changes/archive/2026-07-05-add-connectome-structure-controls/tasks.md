@@ -78,7 +78,7 @@ rewired-null result or the 6a synthesis review raises the frozen-electrical-syna
 
 ## 8. Pre-merge gates
 
-- [ ] 8.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push.
-- [ ] 8.2 `openspec validate add-connectome-structure-controls --strict`.
-- [ ] 8.3 Full `uv run pytest -m "not nightly"` green (byte-identical wild-type invariant holds).
-- [ ] 8.4 Archive the change in-PR (`openspec archive add-connectome-structure-controls -y`).
+- [x] 8.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push.
+- [x] 8.2 `openspec validate add-connectome-structure-controls --strict`.
+- [x] 8.3 Full `uv run pytest -m "not nightly"` green (byte-identical wild-type invariant holds).
+- [x] 8.4 Archive the change in-PR (`openspec archive add-connectome-structure-controls -y`).
