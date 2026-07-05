@@ -137,6 +137,7 @@ def test_min_path_len_floor_excludes_creep_outliers():
     floored = bc.weathervane_slope_all(kin, min_path_len=floor)
     unfloored = bc.weathervane_slope_all(kin, min_path_len=0.0)
     assert floored is not None
+    assert unfloored is not None
     assert abs(floored) < abs(unfloored)  # the creep outlier no longer dominates the slope
 
 
