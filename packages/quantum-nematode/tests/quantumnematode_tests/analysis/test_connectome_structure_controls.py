@@ -4,9 +4,16 @@ import sys
 from pathlib import Path
 
 # The analysis script lives in scripts/analysis/ and imports sibling helper modules, so put that
-# directory on the path before importing it.
-_ANALYSIS_DIR = Path(__file__).resolve().parents[5] / "scripts" / "analysis"
-sys.path.insert(0, str(_ANALYSIS_DIR))
+# directory on the path first. Locate it by walking up to the repo root (robust to this test's
+# nesting depth) rather than a hardcoded parent index.
+_root = Path(__file__).resolve()
+while _root != _root.parent and not (_root / "scripts" / "analysis").is_dir():
+    _root = _root.parent
+_analysis_dir = _root / "scripts" / "analysis"
+if not _analysis_dir.is_dir():  # fail fast rather than surface an opaque ModuleNotFoundError later
+    msg = f"could not locate scripts/analysis walking up from {Path(__file__).resolve()}"
+    raise RuntimeError(msg)
+sys.path.insert(0, str(_analysis_dir))
 
 import connectome_structure_controls as csc  # noqa: E402  # pyright: ignore[reportMissingImports]
 
@@ -86,3 +93,31 @@ def test_load_parses_manifest(tmp_path):
     arms = csc.load(manifest)
     assert arms["wild_type"][1] == 100.0
     assert arms["rewired_null"][1] == 100.0
+
+
+def test_load_warns_on_malformed_line_and_unknown_arm(tmp_path, capsys):
+    """A bad-shape line and an unknown arm both WARN (not silently dropped) and are skipped."""
+    a = _out_file(tmp_path, ["SUCCESS"] * 8)
+    manifest = tmp_path / "_manifest.txt"
+    manifest.write_text(f"wild_type 1 {a}\nwild_type notaseed {a}\nwild_typo 2 {a}\n")
+    arms = csc.load(manifest)
+    warned = capsys.readouterr().out
+    assert "skipping malformed manifest line" in warned  # non-int seed
+    assert "unknown arm" in warned  # typo'd arm
+    assert arms["wild_type"] == {1: 100.0}  # only the valid line stored
+
+
+def test_load_warns_on_duplicate_seed_and_last_wins(tmp_path, capsys):
+    """A duplicate (arm, seed) entry WARNs and the later value overwrites the earlier."""
+    hi = _out_file(tmp_path, ["SUCCESS"] * 8)  # 100%
+    lo = tmp_path / "lo.out"
+    lo.write_text(
+        "\n".join(
+            f"Run: {i}   Status: FAILED  Reason: x Steps: 1 Eaten: 3/10  " for i in range(1, 9)
+        ),
+    )
+    manifest = tmp_path / "_manifest.txt"
+    manifest.write_text(f"wild_type 1 {hi}\nwild_type 1 {lo}\n")
+    arms = csc.load(manifest)
+    assert "duplicate manifest entry" in capsys.readouterr().out
+    assert arms["wild_type"][1] == 0.0  # the later (lo) value wins

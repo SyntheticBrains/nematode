@@ -90,6 +90,15 @@ def _plateau_tail(out_path: Path) -> tuple[float, float] | None:
     return 100.0 * float(np.mean(succ[-tail:])), float(np.mean(foods[-tail:]))
 
 
+def plateau_tail(out_path: Path) -> tuple[float, float] | None:
+    """Public entry point for the plateau-tail ranked metric (see :func:`_plateau_tail`).
+
+    Stable cross-module API so other analyses (e.g. the connectome-structure controls) can reuse the
+    exact 029 ranked metric without importing the private helper.
+    """
+    return _plateau_tail(out_path)
+
+
 def _ppo_metrics(experiment_id: str, out_path: Path) -> dict | None:
     """Per-seed metrics: plateau-tail success + foods (from the .out) + JSON convergence/sub-metrics.
 
