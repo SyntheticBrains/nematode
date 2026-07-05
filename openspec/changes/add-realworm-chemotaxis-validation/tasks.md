@@ -26,11 +26,11 @@
 
 ## 3. Reference literature signatures
 
-- [ ] 3.1 Add a `BiasCurveReference` dataclass + `data/chemotaxis/behavioural_bias_signatures.json`:
+- [x] 3.1 Add a `BiasCurveReference` dataclass + `data/chemotaxis/behavioural_bias_signatures.json`:
   per strategy, the documented bias direction + a reported magnitude range + citation
   (Pierce-Shimomura 1999 down/up turn-rate ratio; Iino & Yoshida 2009 weathervane slope). Pin the
   numbers against the papers' reported summary stats; annotate any conservatively-set range.
-- [ ] 3.2 Tests: the reference loads, has both strategies with sign + range + citation, and the
+- [x] 3.2 Tests: the reference loads, has both strategies with sign + range + citation, and the
   no-bias null is representable.
 
 ## 4. Agreement statistic + report + figures

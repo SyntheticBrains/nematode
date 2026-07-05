@@ -18,6 +18,7 @@ from .chemotaxis import (
 # Project root and default dataset path for clearer path resolution
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _DEFAULT_DATASET_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "literature_ci_values.json"
+_DEFAULT_BIAS_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "behavioural_bias_signatures.json"
 
 
 @dataclass
@@ -297,3 +298,86 @@ class ChemotaxisValidationBenchmark:
             "validation_levels": level_counts,
             "individual_results": results,
         }
+
+
+@dataclass
+class BiasCurveReference:
+    """A documented behaviour-level signature of a *C. elegans* klinotaxis strategy.
+
+    A behaviour-level reference (bias direction + a reported magnitude range + citation), NOT a
+    pixel-digitised curve. Used to grade a model bias statistic REPRODUCED / PARTIAL / ABSENT.
+
+    Attributes
+    ----------
+        strategy: "klinokinesis" | "klinotaxis".
+        statistic: The model bias-statistic name this reference is compared against.
+        null_value: The no-bias value of the statistic (1.0 for a rate ratio, 0.0 for a slope).
+        sign: +1 if the statistic should EXCEED null_value when the strategy is present.
+        magnitude_range: (lo, hi) comparable literature range, or None for a sign-only reference.
+        citation: The source paper.
+        notes: Precision / unit-comparability caveats (behaviour-level, not figure-exact).
+    """
+
+    strategy: str
+    statistic: str
+    null_value: float
+    sign: int
+    magnitude_range: tuple[float, float] | None
+    citation: str
+    notes: str
+
+
+def _bias_from_dict(d: dict) -> BiasCurveReference:
+    mr = d.get("magnitude_range")
+    return BiasCurveReference(
+        strategy=d["strategy"],
+        statistic=d["statistic"],
+        null_value=float(d["null_value"]),
+        sign=int(d["sign"]),
+        magnitude_range=(float(mr[0]), float(mr[1])) if mr is not None else None,
+        citation=d["citation"],
+        notes=d["notes"],
+    )
+
+
+def _default_bias_signatures() -> dict[str, BiasCurveReference]:
+    """Hardcoded fallback mirroring ``behavioural_bias_signatures.json`` (behaviour-level)."""
+    return {
+        "klinokinesis": BiasCurveReference(
+            strategy="klinokinesis",
+            statistic="down_up_turn_ratio",
+            null_value=1.0,
+            sign=1,
+            magnitude_range=(1.5, 3.0),
+            citation="Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+            notes=(
+                "Pirouette-initiation rate is elevated heading down-gradient (dC/dt < 0); the "
+                "down/up-gradient turn-rate ratio is ~2x. A dimensionless ratio (directly "
+                "comparable). Approximate literature signature, not a figure digitization."
+            ),
+        ),
+        "klinotaxis": BiasCurveReference(
+            strategy="klinotaxis",
+            statistic="weathervane_slope",
+            null_value=0.0,
+            sign=1,
+            magnitude_range=None,
+            citation="Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+            notes=(
+                "The weathervane curves the trajectory toward the gradient (positive slope). Its "
+                "magnitude in rad/mm-per-bearing is not comparable to the paper's "
+                "deg/mm-per-normal-gradient parameterization, so this is a sign-only reference; a "
+                "figure-digitized slope is a non-goal."
+            ),
+        ),
+    }
+
+
+def load_bias_signatures(path: str | Path | None = None) -> dict[str, BiasCurveReference]:
+    """Load the behavioural bias-curve reference signatures (JSON, with a hardcoded fallback)."""
+    resolved = _DEFAULT_BIAS_PATH if path is None else Path(path)
+    if not resolved.exists():
+        return _default_bias_signatures()
+    with resolved.open() as f:
+        data = json.load(f)
+    return {key: _bias_from_dict(value) for key, value in data.items()}

@@ -1,0 +1,20 @@
+{
+  "klinokinesis": {
+    "strategy": "klinokinesis",
+    "statistic": "down_up_turn_ratio",
+    "null_value": 1.0,
+    "sign": 1,
+    "magnitude_range": [1.5, 3.0],
+    "citation": "Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+    "notes": "Pirouette-initiation rate is elevated when the worm heads down-gradient (dC/dt < 0); the down/up-gradient turn-rate ratio is ~2x. A dimensionless ratio, so directly comparable to the model statistic. The range is an approximate literature signature, not a pixel digitization of the original figures."
+  },
+  "klinotaxis": {
+    "strategy": "klinotaxis",
+    "statistic": "weathervane_slope",
+    "null_value": 0.0,
+    "sign": 1,
+    "magnitude_range": null,
+    "citation": "Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+    "notes": "The weathervane curves the trajectory toward the gradient (positive slope of curving-rate vs bearing). Its magnitude in rad/mm-per-bearing is not directly comparable to the paper's deg/mm-per-normal-gradient parameterization, so this is a sign-only (direction) reference; a figure-digitized slope is an explicit non-goal."
+  }
+}
