@@ -83,9 +83,18 @@ def test_end_to_end_klinokinesis_reproduced(tmp_path):
     theta = bcv._resolve_theta_sharp(seeds, theta_sharp=1.0, theta_percentile=85.0)
     summary = bcv.analyse(seeds, theta)
     assert summary["n_seeds"] == 8
-    assert summary["klinokinesis"]["statistic"] == "down_up_turn_ratio"
-    assert summary["klinokinesis"]["mean"] > summary["klinokinesis"]["null_value"]
-    assert summary["klinokinesis"]["verdict"] in {"REPRODUCED", "PARTIAL"}
+    kk = summary["statistics"]["klinokinesis"]
+    assert kk["statistic"] == "down_up_turn_ratio"
+    assert kk["mean"] > kk["null_value"]
+    assert kk["verdict"] in {"REPRODUCED", "PARTIAL"}
+    # The threshold-free companion is computed too, and the strategy verdict reconciles them.
+    assert "klinokinesis_magnitude" in summary["statistics"]
+    assert summary["strategy_verdicts"]["klinokinesis"]["combined"] in {
+        "PRESENT",
+        "PRESENT_PARTIAL",
+        "EQUIVOCAL",
+        "ABSENT",
+    }
 
 
 def test_tail_runs_keeps_only_last_n():

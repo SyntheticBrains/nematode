@@ -370,6 +370,32 @@ def _default_bias_signatures() -> dict[str, BiasCurveReference]:
                 "figure-digitized slope is a non-goal."
             ),
         ),
+        "klinokinesis_magnitude": BiasCurveReference(
+            strategy="klinokinesis",
+            statistic="down_up_magnitude_ratio",
+            null_value=1.0,
+            sign=1,
+            magnitude_range=None,
+            citation="Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+            notes=(
+                "Threshold-free companion to down_up_turn_ratio: mean |dtheta| down- vs "
+                "up-gradient. Same direction, different unit (magnitude, not rate), so graded "
+                "sign-only; a theta_sharp-independent robustness cross-check."
+            ),
+        ),
+        "klinotaxis_all": BiasCurveReference(
+            strategy="klinotaxis",
+            statistic="weathervane_slope_all",
+            null_value=0.0,
+            sign=1,
+            magnitude_range=None,
+            citation="Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+            notes=(
+                "Threshold-free companion to weathervane_slope: the curving-rate-vs-bearing slope "
+                "over all usable steps (sharp reorientations not excluded), independent of "
+                "theta_sharp. Sign-only reference; the weathervane robustness cross-check."
+            ),
+        ),
     }
 
 

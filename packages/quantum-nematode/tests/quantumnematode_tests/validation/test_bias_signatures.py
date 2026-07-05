@@ -6,11 +6,31 @@ from quantumnematode.validation.datasets import (
 )
 
 
-def test_reference_loads_both_strategies():
-    """The JSON reference loads with both documented klinotaxis strategies."""
+def test_reference_loads_all_strategies():
+    """The JSON reference loads the thresholded + threshold-free companion signatures."""
     refs = load_bias_signatures()
-    assert set(refs) == {"klinokinesis", "klinotaxis"}
+    assert set(refs) == {
+        "klinokinesis",
+        "klinotaxis",
+        "klinokinesis_magnitude",
+        "klinotaxis_all",
+    }
     assert all(isinstance(r, BiasCurveReference) for r in refs.values())
+
+
+def test_threshold_free_companions_are_sign_only():
+    """The threshold-free companions share direction/null with their thresholded partner (sign-only)."""  # noqa: E501
+    refs = load_bias_signatures()
+    mag, thr = refs["klinokinesis_magnitude"], refs["klinokinesis"]
+    assert mag.statistic == "down_up_magnitude_ratio"
+    assert mag.null_value == thr.null_value
+    assert mag.sign == thr.sign
+    assert mag.magnitude_range is None  # sign-only cross-check
+    allw, slope = refs["klinotaxis_all"], refs["klinotaxis"]
+    assert allw.statistic == "weathervane_slope_all"
+    assert allw.null_value == slope.null_value
+    assert allw.sign == slope.sign
+    assert allw.magnitude_range is None
 
 
 def test_klinokinesis_reference_has_sign_range_and_citation():

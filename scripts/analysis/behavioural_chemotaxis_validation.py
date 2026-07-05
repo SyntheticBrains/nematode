@@ -33,17 +33,28 @@ from quantumnematode.validation.behavioural_curves import (
     BiasCurve,
     curving_rate_vs_bearing,
     kinematics,
+    klinokinesis_magnitude_ratio,
     klinokinesis_ratio,
     suggest_theta_sharp,
     turn_rate_vs_dcdt,
     weathervane_slope,
+    weathervane_slope_all,
 )
 from quantumnematode.validation.datasets import load_bias_signatures
 
 REPO = Path(__file__).resolve().parents[2]
 
-_KLINOKINESIS = "klinokinesis"
-_KLINOTAXIS = "klinotaxis"
+# Each bias statistic: (reference key, strategy, kinematics-reducer, family). The thresholded and
+# threshold-free reducers for one strategy are cross-checked against each other (§6 decision: the
+# |dtheta| distribution saturates at the turn bound, so the thresholded sharp/gradual split has no
+# natural cut; the threshold-free companion is theta_sharp-independent).
+_STATISTICS = (
+    ("klinokinesis", "klinokinesis", klinokinesis_ratio, "thresholded"),
+    ("klinokinesis_magnitude", "klinokinesis", klinokinesis_magnitude_ratio, "threshold_free"),
+    ("klinotaxis", "klinotaxis", weathervane_slope, "thresholded"),
+    ("klinotaxis_all", "klinotaxis", weathervane_slope_all, "threshold_free"),
+)
+_STRATEGIES = ("klinokinesis", "klinotaxis")
 
 
 def _steps_from_dicts(step_dicts: list[dict]) -> list[BehaviourStep]:
@@ -106,10 +117,27 @@ def _resolve_theta_sharp(
 def _per_seed_statistics(
     runs: list[list[BehaviourStep]],
     theta_sharp: float,
-) -> tuple[float | None, float | None]:
-    """One seed's (klinokinesis ratio, weathervane slope), pooling per-run kinematics."""
+) -> dict[str, float | None]:
+    """One seed's four bias statistics (keyed by reference key), pooling per-run kinematics."""
     kin = [k for run in runs for k in kinematics(run, theta_sharp)]  # no cross-run transitions
-    return klinokinesis_ratio(kin), weathervane_slope(kin)
+    return {key: reducer(kin) for key, _strategy, reducer, _family in _STATISTICS}
+
+
+def _combined_verdict(thresholded: str, threshold_free: str) -> str:
+    """Reconcile a strategy's thresholded + threshold-free verdicts (§6 robustness cross-check).
+
+    A direction is 'present' unless graded ABSENT. Agreement -> a robust present/absent call;
+    disagreement -> equivocal (the point statistic is threshold-sensitive, only the direction is
+    trustworthy).
+    """
+    present_t = thresholded != "ABSENT"
+    present_f = threshold_free != "ABSENT"
+    if present_t and present_f:
+        both_strong = thresholded == "REPRODUCED" and threshold_free == "REPRODUCED"
+        return "PRESENT" if both_strong else "PRESENT_PARTIAL"
+    if not present_t and not present_f:
+        return "ABSENT"
+    return "EQUIVOCAL"
 
 
 def _pooled_curves(
@@ -125,55 +153,67 @@ def analyse(
     seeds: dict[int, list[list[BehaviourStep]]],
     theta_sharp: float,
 ) -> dict:
-    """Grade both bias statistics across seeds and print the two-curve agreement table."""
+    """Grade all four bias statistics across seeds and print the per-strategy agreement table."""
     refs = load_bias_signatures()
-    per_seed_ratio: dict[int, float | None] = {}
-    per_seed_slope: dict[int, float | None] = {}
+    per_seed: dict[str, dict[int, float | None]] = {key: {} for key, *_ in _STATISTICS}
     for seed, runs in sorted(seeds.items()):
-        ratio, slope = _per_seed_statistics(runs, theta_sharp)
-        per_seed_ratio[seed] = ratio
-        per_seed_slope[seed] = slope
-        # A degenerate seed (no up-gradient turns -> inf ratio; too-few gradual steps -> None slope)
-        # is dropped from the CI but reported so it is not silently miscounted.
-        if ratio is None or not math.isfinite(ratio):
-            print(f"  WARN seed {seed}: klinokinesis ratio not finite ({ratio}) - dropped from CI")
-        if slope is None:
-            print(f"  WARN seed {seed}: weathervane slope undefined - dropped from CI")
+        stats = _per_seed_statistics(runs, theta_sharp)
+        for key, value in stats.items():
+            per_seed[key][seed] = value
+            if value is None or not math.isfinite(value):
+                print(f"  WARN seed {seed}: {key} not finite ({value}) - dropped from CI")
 
-    ratios = [v for v in per_seed_ratio.values() if v is not None and math.isfinite(v)]
-    slopes = [v for v in per_seed_slope.values() if v is not None]
-    klinokinesis = grade_statistic(ratios, refs[_KLINOKINESIS])
-    klinotaxis = grade_statistic(slopes, refs[_KLINOTAXIS])
+    graded = {
+        key: grade_statistic(
+            [v for v in per_seed[key].values() if v is not None and math.isfinite(v)],
+            refs[key],
+        )
+        for key, *_ in _STATISTICS
+    }
+    family = {key: fam for key, _strategy, _reducer, fam in _STATISTICS}
+    strategy_of = {key: strat for key, strat, _reducer, _fam in _STATISTICS}
 
     print("\n" + "=" * 78)
     print("REAL-WORM BEHAVIOURAL-CHEMOTAXIS VALIDATION - klinotaxis bias curves vs C. elegans")
     print(f"  n_seeds={len(seeds)}  theta_sharp={theta_sharp:.3f} rad")
     print("=" * 78)
-    for label, res, per_seed in (
-        ("klinokinesis (down/up turn-rate ratio)", klinokinesis, per_seed_ratio),
-        ("klinotaxis (weathervane slope)", klinotaxis, per_seed_slope),
-    ):
-        usable = [round(v, 3) for v in per_seed.values() if v is not None]
-        print(f"\n  {label}")
+
+    summary: dict = {"theta_sharp": theta_sharp, "n_seeds": len(seeds), "statistics": {}}
+    for key, *_ in _STATISTICS:
+        res = graded[key]
+        usable = [round(v, 3) for v in per_seed[key].values() if v is not None and math.isfinite(v)]
+        print(f"\n  {strategy_of[key]} / {res.statistic}  [{family[key]}]")
         print(
             f"    mean={res.mean:+.3f}  80% CI[{res.ci_lo:+.3f}, {res.ci_hi:+.3f}]  "
-            f"n={res.n}  null={res.null_value:.1f}",
+            f"n={res.n}  null={res.null_value:.1f}  VERDICT: {res.verdict.value}",
         )
         print(f"    per-seed usable={usable}")
-        print(f"    VERDICT: {res.verdict.value}  ({res.citation})")
+        summary["statistics"][key] = {
+            **res.to_dict(),
+            "family": family[key],
+            "strategy": strategy_of[key],
+            "per_seed": {str(s): v for s, v in per_seed[key].items()},
+        }
 
-    return {
-        "theta_sharp": theta_sharp,
-        "n_seeds": len(seeds),
-        "klinokinesis": {
-            **klinokinesis.to_dict(),
-            "per_seed": {str(s): v for s, v in per_seed_ratio.items()},
-        },
-        "klinotaxis": {
-            **klinotaxis.to_dict(),
-            "per_seed": {str(s): v for s, v in per_seed_slope.items()},
-        },
-    }
+    # Per-strategy agreement: reconcile the thresholded + threshold-free verdicts.
+    print("\n" + "-" * 78)
+    summary["strategy_verdicts"] = {}
+    for strategy in _STRATEGIES:
+        keys = [key for key, strat, *_ in _STATISTICS if strat == strategy]
+        thr = next(k for k in keys if family[k] == "thresholded")
+        free = next(k for k in keys if family[k] == "threshold_free")
+        combined = _combined_verdict(graded[thr].verdict.value, graded[free].verdict.value)
+        summary["strategy_verdicts"][strategy] = {
+            "combined": combined,
+            "thresholded": graded[thr].verdict.value,
+            "threshold_free": graded[free].verdict.value,
+            "citation": graded[thr].citation,
+        }
+        print(
+            f"  {strategy}: {combined}  "
+            f"(thresholded={graded[thr].verdict.value}, threshold-free={graded[free].verdict.value})",
+        )
+    return summary
 
 
 def _write_figures(
@@ -193,7 +233,7 @@ def _write_figures(
     turn_curve, weathervane_curve = _pooled_curves(seeds, theta_sharp)
 
     def _agreement(key: str) -> AgreementResult:
-        d = summary[key]
+        d = summary["statistics"][key]
         return AgreementResult(
             statistic=d["statistic"],
             verdict=Verdict(d["verdict"]),
@@ -210,12 +250,12 @@ def _write_figures(
     plot_turn_rate_curve(
         turn_curve,
         figure_dir / "turn_rate_vs_dcdt.png",
-        agreement=_agreement(_KLINOKINESIS),
+        agreement=_agreement("klinokinesis"),
     )
     plot_weathervane_curve(
         weathervane_curve,
         figure_dir / "curving_rate_vs_bearing.png",
-        agreement=_agreement(_KLINOTAXIS),
+        agreement=_agreement("klinotaxis"),
     )
     print(f"\nwrote figures to {figure_dir}")
 

@@ -96,6 +96,31 @@ def test_wrap_around_heading_change():
     assert not kin[0].is_turn
 
 
+def test_threshold_free_magnitude_ratio_above_one_down_gradient():
+    """Larger turns heading down-gradient -> threshold-free magnitude ratio > 1 (no theta_sharp)."""
+    kin = bc.kinematics(_klinokinesis_worm(), theta_sharp=1.0)
+    ratio = bc.klinokinesis_magnitude_ratio(kin)
+    assert ratio is not None
+    assert ratio > 1.0
+
+
+def test_threshold_free_weathervane_slope_positive_toward_gradient():
+    """Curving toward the gradient -> positive all-step weathervane slope (theta_sharp-free)."""
+    kin = bc.kinematics(_weathervane_worm(), theta_sharp=1.0)
+    slope = bc.weathervane_slope_all(kin)
+    assert slope is not None
+    assert slope > 0.0
+
+
+def test_threshold_free_metrics_are_theta_sharp_invariant():
+    """The threshold-free statistics do not depend on theta_sharp (unlike the thresholded ones)."""
+    worm = _klinokinesis_worm()
+    lo = bc.kinematics(worm, theta_sharp=0.1)
+    hi = bc.kinematics(worm, theta_sharp=3.0)
+    assert bc.klinokinesis_magnitude_ratio(lo) == bc.klinokinesis_magnitude_ratio(hi)
+    assert bc.weathervane_slope_all(lo) == bc.weathervane_slope_all(hi)
+
+
 def test_empty_and_single_step_safe():
     """No trajectory / one step -> no kinematics, and the reducers return empty/None."""
     assert bc.kinematics([], theta_sharp=1.0) == []
@@ -104,6 +129,8 @@ def test_empty_and_single_step_safe():
     assert bc.curving_rate_vs_bearing([]).values == []
     assert bc.klinokinesis_ratio([]) is None
     assert bc.weathervane_slope([]) is None
+    assert bc.klinokinesis_magnitude_ratio([]) is None
+    assert bc.weathervane_slope_all([]) is None
 
 
 def test_suggest_theta_sharp_returns_a_high_percentile():
