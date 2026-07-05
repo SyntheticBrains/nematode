@@ -18,7 +18,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    from matplotlib.axes import Axes
+
     from quantumnematode.env.env import DynamicForagingEnvironment
+    from quantumnematode.validation.behavioural_agreement import AgreementResult
+    from quantumnematode.validation.behavioural_curves import BiasCurve
 
 # Selectable heatmap/quiver fields (mirrors the live renderer's field set).
 _FOOD_FIELD = "food"
@@ -243,3 +247,120 @@ def plot_gradient_quiver(
     fig.savefig(output_path, dpi=120)
     plt.close(fig)
     return output_path
+
+
+def _annotate_agreement(ax: Axes, agreement: AgreementResult | None) -> None:
+    """Overlay a reduced-statistic / verdict / citation text box (behaviour-level reference)."""
+    if agreement is None:
+        return
+    lines = [
+        f"{agreement.statistic} = {agreement.mean:.2f}",
+        f"80% CI [{agreement.ci_lo:.2f}, {agreement.ci_hi:.2f}] (n={agreement.n})",
+        f"verdict: {agreement.verdict.value}",
+        agreement.citation,
+    ]
+    ax.text(
+        0.02,
+        0.98,
+        "\n".join(lines),
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=7,
+        bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8, "edgecolor": "#999999"},
+    )
+
+
+def _plot_bias_curve(  # noqa: PLR0913
+    curve: BiasCurve,
+    output_path: Path,
+    *,
+    band: tuple[list[float], list[float]] | None,
+    agreement: AgreementResult | None,
+    reference_line: float,
+    xlabel: str,
+    ylabel: str,
+    title: str,
+) -> Path:
+    """Shared model bias-curve figure: mean curve + optional across-seed CI band + a null line."""
+    centers = np.asarray(curve.bin_centers, dtype=float)
+    values = np.asarray(curve.values, dtype=float)
+    finite = np.isfinite(values)
+
+    fig, ax = plt.subplots(figsize=(6, 4.5))
+    if band is not None:
+        lower = np.asarray(band[0], dtype=float)
+        upper = np.asarray(band[1], dtype=float)
+        band_mask = finite & np.isfinite(lower) & np.isfinite(upper)
+        ax.fill_between(
+            centers[band_mask],
+            lower[band_mask],
+            upper[band_mask],
+            color="#5fb0ff",
+            alpha=0.25,
+            label="80% CI",
+        )
+    ax.plot(centers[finite], values[finite], "-o", color="#1f6fb0", markersize=4, label="model")
+    ax.axhline(reference_line, color="#999999", linestyle="--", linewidth=1.0, label="no-bias null")
+    _annotate_agreement(ax, agreement)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.legend(loc="upper right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=120)
+    plt.close(fig)
+    return output_path
+
+
+def plot_turn_rate_curve(
+    curve: BiasCurve,
+    output_path: Path,
+    *,
+    band: tuple[list[float], list[float]] | None = None,
+    agreement: AgreementResult | None = None,
+    title: str = "Turn-rate vs dC/dt (klinokinesis)",
+) -> Path:
+    """Curve A: reorientation rate binned by dC/dt, with an optional CI band + verdict annotation.
+
+    The literature signature (Pierce-Shimomura et al. 1999) is elevated turning heading
+    down-gradient (``dC/dt < 0``); the reduced down/up ratio + verdict is annotated via
+    ``agreement`` rather than overlaying a per-bin reference band (the behaviour-level reference
+    is a ratio, not a curve).
+    """
+    return _plot_bias_curve(
+        curve,
+        output_path,
+        band=band,
+        agreement=agreement,
+        reference_line=0.0,
+        xlabel="dC/dt",
+        ylabel="reorientation rate",
+        title=title,
+    )
+
+
+def plot_weathervane_curve(
+    curve: BiasCurve,
+    output_path: Path,
+    *,
+    band: tuple[list[float], list[float]] | None = None,
+    agreement: AgreementResult | None = None,
+    title: str = "Curving-rate vs bearing (klinotaxis)",
+) -> Path:
+    """Curve B: mean signed curving-rate binned by bearing-to-gradient, with a null line at 0.
+
+    The literature signature (Iino & Yoshida 2009) is a positive slope (curving toward the
+    gradient); the reduced weathervane slope + verdict is annotated via ``agreement`` (a sign-only
+    reference).
+    """
+    return _plot_bias_curve(
+        curve,
+        output_path,
+        band=band,
+        agreement=agreement,
+        reference_line=0.0,
+        xlabel="bearing to gradient (rad)",
+        ylabel="signed curving-rate (rad/mm)",
+        title=title,
+    )

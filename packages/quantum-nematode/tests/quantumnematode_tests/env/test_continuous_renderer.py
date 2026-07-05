@@ -446,6 +446,40 @@ class TestOfflineFigures:
         with pytest.raises(ValueError, match="resolution must be >= 2"):
             cf.plot_field_heatmap(self._env(), tmp_path / "x.png", resolution=1)
 
+    def test_plot_turn_rate_curve(self, tmp_path: Path) -> None:
+        """The klinokinesis curve writes a PNG (with a CI band + verdict annotation)."""
+        from quantumnematode.report import continuous_figures as cf
+        from quantumnematode.validation.behavioural_agreement import grade_statistic
+        from quantumnematode.validation.behavioural_curves import BiasCurve
+        from quantumnematode.validation.datasets import load_bias_signatures
+
+        curve = BiasCurve(
+            bin_centers=[-1.0, -0.5, 0.0, 0.5, 1.0],
+            values=[0.6, 0.4, float("nan"), 0.2, 0.1],
+            counts=[5, 4, 0, 4, 5],
+        )
+        band = ([0.5, 0.3, 0.0, 0.1, 0.05], [0.7, 0.5, 0.0, 0.3, 0.15])
+        agreement = grade_statistic([1.9, 2.0, 2.1, 2.0], load_bias_signatures()["klinokinesis"])
+        out = tmp_path / "turn_rate.png"
+        cf.plot_turn_rate_curve(curve, out, band=band, agreement=agreement)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_plot_weathervane_curve(self, tmp_path: Path) -> None:
+        """The klinotaxis curve writes a PNG without an optional band/annotation."""
+        from quantumnematode.report import continuous_figures as cf
+        from quantumnematode.validation.behavioural_curves import BiasCurve
+
+        curve = BiasCurve(
+            bin_centers=[-2.0, -1.0, 0.0, 1.0, 2.0],
+            values=[-0.3, -0.1, 0.0, 0.1, 0.3],
+            counts=[3, 4, 5, 4, 3],
+        )
+        out = tmp_path / "weathervane.png"
+        cf.plot_weathervane_curve(curve, out)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
 
 @requires_pygame
 class TestWormBody:

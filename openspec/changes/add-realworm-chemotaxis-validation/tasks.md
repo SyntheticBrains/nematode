@@ -35,12 +35,14 @@
 
 ## 4. Agreement statistic + report + figures
 
-- [ ] 4.1 Reduce each model curve to its bias statistic (down/up turn-rate ratio; weathervane slope)
+- [x] 4.1 Reduce each model curve to its bias statistic (down/up turn-rate ratio; weathervane slope)
   with an 80% bootstrap CI across seeds; per-curve verdict REPRODUCED / PARTIAL / ABSENT vs the
-  reference (§3). Write `behavioural_curves.json`.
-- [ ] 4.2 Add `plot_turn_rate_curve` + `plot_weathervane_curve` to `report/continuous_figures.py`
-  (model curve + CI band overlaid on the literature reference band); headless-safe.
-- [ ] 4.3 Tests: verdict logic (REPRODUCED/PARTIAL/ABSENT) on synthetic statistics; figures write
+  reference (§3). Write `behavioural_curves.json`. (Grading + serialisable `AgreementResult` in
+  `validation/behavioural_agreement.py`; the harness §5 writes the JSON.)
+- [x] 4.2 Add `plot_turn_rate_curve` + `plot_weathervane_curve` to `report/continuous_figures.py`
+  (model curve + across-seed CI band + a null line + the reduced-statistic/verdict/citation
+  annotation); headless-safe.
+- [x] 4.3 Tests: verdict logic (REPRODUCED/PARTIAL/ABSENT) on synthetic statistics; figures write
   headless.
 
 ## 5. Aggregation harness
