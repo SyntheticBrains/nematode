@@ -1,5 +1,6 @@
 """Data types for reporting in Quantum Nematode."""
 
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -7,6 +8,44 @@ from pydantic import BaseModel, Field
 
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import AgentPath, FoodHistory
+
+
+@dataclass(slots=True)
+class BehaviourStep:
+    """One per-step continuous behavioural record for real-worm chemotaxis validation.
+
+    Captured opt-in (``SensingConfig.capture_behaviour``) at the agent step where the continuous
+    state and the sensing are computed together. The two klinotaxis bias curves are computed as a
+    pure function of a ``list[BehaviourStep]``: turn-rate vs ``dc_dt`` (klinokinesis) and
+    curving-rate vs the bearing ``wrap(grad_dir - heading_rad)`` (klinotaxis weathervane).
+
+    Attributes
+    ----------
+    step : int
+        Episode step index.
+    x, y : float
+        Continuous position (mm).
+    heading_rad : float
+        Continuous heading (radians, world frame).
+    concentration : float
+        Local food concentration at the sensing position.
+    dc_dt : float
+        Temporal derivative of the food concentration (STAM).
+    grad_dir : float
+        Local food-gradient direction (radians, world frame), captured live (the food field mutates
+        during a foraging run, so it cannot be recomputed post-hoc).
+    grad_strength : float
+        Local food-gradient magnitude (weak-gradient steps can be down-weighted / excluded).
+    """
+
+    step: int
+    x: float
+    y: float
+    heading_rad: float
+    concentration: float
+    dc_dt: float
+    grad_dir: float
+    grad_strength: float
 
 
 class TerminationReason(StrEnum):
@@ -92,6 +131,9 @@ class SimulationResult(BaseModel):
     seed: int | None = None
     steps: int
     path: AgentPath
+    # Opt-in continuous behavioural trajectory (real-worm chemotaxis validation); None unless
+    # SensingConfig.capture_behaviour is set. Model config allows the BehaviourStep dataclass.
+    behaviour: list[BehaviourStep] | None = None
     total_reward: float
     last_total_reward: float
     termination_reason: TerminationReason
