@@ -81,6 +81,16 @@ def load_manifest(manifest: Path) -> dict[int, list[list[BehaviourStep]]]:
     return seeds
 
 
+def tail_runs(
+    seeds: dict[int, list[list[BehaviourStep]]],
+    keep: int | None,
+) -> dict[int, list[list[BehaviourStep]]]:
+    """Keep only each seed's last ``keep`` runs (post-convergence tail); no-op when ``keep`` None."""
+    if keep is None:
+        return seeds
+    return {seed: runs[-keep:] for seed, runs in seeds.items()}
+
+
 def _resolve_theta_sharp(
     seeds: dict[int, list[list[BehaviourStep]]],
     theta_sharp: float | None,
@@ -222,6 +232,12 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=None, help="write the summary JSON here")
     ap.add_argument("--figure-dir", type=Path, default=None, help="emit the two bias-curve figures")
     ap.add_argument(
+        "--tail-runs",
+        type=int,
+        default=None,
+        help="analyse only each seed's last N runs (the post-convergence tail); default all",
+    )
+    ap.add_argument(
         "--theta-sharp",
         type=float,
         default=None,
@@ -239,6 +255,7 @@ def main() -> None:
     if not seeds:
         print("No usable seeds - nothing to analyse.")
         return
+    seeds = tail_runs(seeds, args.tail_runs)
     theta_sharp = _resolve_theta_sharp(seeds, args.theta_sharp, args.theta_percentile)
     summary = analyse(seeds, theta_sharp)
 

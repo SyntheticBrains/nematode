@@ -88,6 +88,14 @@ def test_end_to_end_klinokinesis_reproduced(tmp_path):
     assert summary["klinokinesis"]["verdict"] in {"REPRODUCED", "PARTIAL"}
 
 
+def test_tail_runs_keeps_only_last_n():
+    """tail_runs keeps each seed's last N runs; None is a no-op."""
+    seeds = {42: [["a"], ["b"], ["c"], ["d"]]}  # type: ignore[dict-item]  # sentinels, not steps
+    assert bcv.tail_runs(seeds, None) == seeds
+    assert bcv.tail_runs(seeds, 2) == {42: [["c"], ["d"]]}
+    assert bcv.tail_runs(seeds, 10) == seeds  # keep more than present -> all
+
+
 def test_figures_written(tmp_path):
     """--figure-dir emits both bias-curve PNGs."""
     entries = [(s, _capture_file(tmp_path, s, _klinokinesis_steps())) for s in range(42, 46)]

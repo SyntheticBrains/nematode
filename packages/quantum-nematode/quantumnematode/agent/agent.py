@@ -1019,6 +1019,19 @@ class QuantumNematodeAgent:
             disable_log=True,
         )
 
+        # Ground-truth food-gradient direction/strength at the sensing position, snapshotted live
+        # before `_compute_temporal_data` pops these keys under non-oracle (derivative) sensing and
+        # before the food field mutates. This is the bearing reference for the behavioural
+        # klinotaxis validation (weathervane curving is measured against the true gradient, which
+        # the derivative-sensing agent does not itself observe). Off-path when capture is disabled.
+        _capture_grad_dir = 0.0
+        _capture_grad_strength = 0.0
+        if sensing.capture_behaviour:
+            _capture_grad_dir = float(separated_grads.get("food_gradient_direction", 0.0) or 0.0)
+            _capture_grad_strength = float(
+                separated_grads.get("food_gradient_strength", 0.0) or 0.0,
+            )
+
         # Mechanosensation: detect physical contact with boundaries and predators
         boundary_contact = self.env.is_agent_at_boundary_for(self.agent_id)
         predator_contact = self.env.is_agent_in_predator_contact_for(self.agent_id)
@@ -1172,8 +1185,8 @@ class QuantumNematodeAgent:
                     heading_rad=float(agent_state.heading_rad),
                     concentration=float(temporal.get("food_concentration", 0.0) or 0.0),
                     dc_dt=float(temporal.get("food_dconcentration_dt", 0.0) or 0.0),
-                    grad_dir=float(separated_grads.get("food_gradient_direction", 0.0) or 0.0),
-                    grad_strength=float(separated_grads.get("food_gradient_strength", 0.0) or 0.0),
+                    grad_dir=_capture_grad_dir,
+                    grad_strength=_capture_grad_strength,
                 ),
             )
 
