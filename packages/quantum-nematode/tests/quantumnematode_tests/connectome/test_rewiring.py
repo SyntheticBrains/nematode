@@ -12,20 +12,20 @@ from quantumnematode.connectome.model import (
 )
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
 
-_N = 20  # neurons n00..n19 — large enough that distinct seeds reliably diverge
+_N = 20  # neurons n00..n19 - large enough that distinct seeds reliably diverge
 
 
 def _synthetic_connectome() -> Connectome:
     """Build a regular synthetic connectome: chemical out/in-degree 2, gap degree 2, all neurons."""
     names = [f"n{i:02d}" for i in range(_N)]
     neurons = {name: Neuron(name=name, cell_class="interneuron") for name in names}
-    # Directed chemical: i -> i+1 and i -> i+7 (mod N) — every node out-degree 2, in-degree 2.
+    # Directed chemical: i -> i+1 and i -> i+7 (mod N) - every node out-degree 2, in-degree 2.
     chem = [
         ChemicalSynapse(pre=names[i], post=names[(i + step) % _N], weight=1)
         for i in range(_N)
         for step in (1, 7)
     ]
-    # Undirected gap: {i, i+3} canonicalised — every node degree 2.
+    # Undirected gap: {i, i+3} canonicalised - every node degree 2.
     gap = []
     for i in range(_N):
         a, b = names[i], names[(i + 3) % _N]
@@ -131,3 +131,52 @@ def test_degree_preserved_across_seeds(seed):
     assert _chem_out(rewired) == _chem_out(wild)
     assert _chem_in(rewired) == _chem_in(wild)
     assert _gap_deg(rewired) == _gap_deg(wild)
+
+
+def _irregular_connectome() -> Connectome:
+    """Build a connectome with heterogeneous, distinct in/out degrees (catches in/out confusion)."""
+    n = 12
+    names = [f"m{i:02d}" for i in range(n)]
+    neurons = {name: Neuron(name=name, cell_class="interneuron") for name in names}
+    chem, seen = [], set()
+    for i in range(n):
+        for k in range(1, (i % 3) + 2):  # out-degree 1..3, varies by node
+            e = (names[i], names[(i + k) % n])
+            if e[0] != e[1] and e not in seen:
+                seen.add(e)
+                chem.append(ChemicalSynapse(pre=e[0], post=e[1], weight=1))
+    gap, gseen = [], set()
+    for i in range(0, n, 2):  # only even nodes seed a gap edge -> heterogeneous gap degree
+        a, b = sorted((names[i], names[(i + 3) % n]))
+        if a != b and (a, b) not in gseen:
+            gseen.add((a, b))
+            gap.append(GapJunction(neuron_a=a, neuron_b=b, weight=1))
+    return Connectome(
+        neurons=neurons,
+        chemical_synapses=chem,
+        gap_junctions=gap,
+        source="synthetic-irregular",
+        version="test",
+    )
+
+
+def test_degree_preserved_on_irregular_graph():
+    """On a non-regular graph, in- and out-degree are preserved *independently*, and edges move."""
+    wild = _irregular_connectome()
+    assert len(set(_chem_out(wild).values())) > 1  # the fixture is genuinely irregular
+    rewired = rewire_degree_preserving(wild, np.random.default_rng(0))
+    assert _chem_out(rewired) == _chem_out(wild)  # out-degree per node preserved
+    assert _chem_in(rewired) == _chem_in(wild)  # in-degree per node preserved (independently)
+    assert _gap_deg(rewired) == _gap_deg(wild)
+    wild_pairs = {(s.pre, s.post) for s in wild.chemical_synapses}
+    rewired_pairs = {(s.pre, s.post) for s in rewired.chemical_synapses}
+    assert wild_pairs != rewired_pairs  # non-trivial: edges actually moved
+
+
+def test_rejects_duplicate_input_edges():
+    """A non-simple input (parallel edges) is rejected rather than silently corrupting weights."""
+    wild = _synthetic_connectome()
+    dup = wild.chemical_synapses[0]
+    bad = wild.model_copy(update={"chemical_synapses": [*wild.chemical_synapses, dup]})
+    with pytest.raises(ValueError, match="simple connectome"):
+        rewire_degree_preserving(bad, np.random.default_rng(0))

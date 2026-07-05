@@ -209,16 +209,16 @@ class TestForwardPass:
         assert np.isfinite(brain.current_probabilities).all()
 
     def test_forward_pass_has_non_degenerate_variance(self) -> None:
-        """Across ≥ 100 forward passes, action-logit variance is > 0."""
+        """Across >= 100 forward passes, action-logit variance is > 0."""
         brain = _make_brain()
         # Pin the global RNG so the test is deterministic.
-        np.random.seed(_SEED)  # noqa: NPY002 — match brain's legacy global RNG
+        np.random.seed(_SEED)  # noqa: NPY002 - match brain's legacy global RNG
         torch.manual_seed(_SEED)
         probs_samples: list[np.ndarray] = []
         for _ in range(100):
             params = _make_params(
-                strength=float(np.random.uniform(0, 1)),  # noqa: NPY002 — driven by global seeded RNG
-                angle=float(np.random.uniform(-np.pi, np.pi)),  # noqa: NPY002 — driven by global seeded RNG
+                strength=float(np.random.uniform(0, 1)),  # noqa: NPY002 - driven by global seeded RNG
+                angle=float(np.random.uniform(-np.pi, np.pi)),  # noqa: NPY002 - driven by global seeded RNG
             )
             brain.run_brain(
                 params,
@@ -238,10 +238,10 @@ class TestForwardPass:
 
     def test_forward_pass_depth_is_configurable(self) -> None:
         """K=2 produces different activations than K=4 for the same input."""
-        np.random.seed(_SEED)  # noqa: NPY002 — match brain's legacy global RNG
+        np.random.seed(_SEED)  # noqa: NPY002 - match brain's legacy global RNG
         torch.manual_seed(_SEED)
         brain2 = _make_brain(forward_pass_depth=2)
-        np.random.seed(_SEED)  # noqa: NPY002 — match brain's legacy global RNG
+        np.random.seed(_SEED)  # noqa: NPY002 - match brain's legacy global RNG
         torch.manual_seed(_SEED)
         brain4 = _make_brain(forward_pass_depth=4)
 
@@ -367,7 +367,7 @@ class TestSoftPriorMode:
 
         The forward pass uses raw ``w_chem`` (not ``w_chem * m_chem``) so
         backprop produces non-zero gradients on edges outside the
-        wild-type adjacency — that's what lets the optimiser grow new
+        wild-type adjacency - that's what lets the optimiser grow new
         edges from a zero initialisation.
         """
         brain = _make_brain(chemical_mask_mode="soft_prior")
@@ -391,7 +391,7 @@ class TestSoftPriorMode:
         """Strict mode pins gradients on ~M_chem to zero.
 
         The forward pass uses ``w_chem * m_chem`` so backprop's chain
-        rule multiplies the upstream gradient by ``m_chem`` — zero on
+        rule multiplies the upstream gradient by ``m_chem`` - zero on
         non-wild-type entries. This is what guarantees ``w_chem`` data
         on those entries never moves from the zero initialisation.
         """
@@ -559,3 +559,29 @@ class TestWiringControl:
         c = _make_brain(wiring="rewired_degree_preserving", rewire_seed=12)
         assert torch.equal(a.topology.m_chem, b.topology.m_chem)
         assert not torch.equal(a.topology.m_chem, c.topology.m_chem)
+
+    def test_rewired_matches_wild_type_init_at_same_seed(self) -> None:
+        """Matched init: the rewiring's dedicated RNG leaves food_gains/readout byte-identical."""
+        wild = _make_brain(wiring="wild_type")
+        rewired = _make_brain(wiring="rewired_degree_preserving")
+        assert torch.equal(wild.topology.food_gains, rewired.topology.food_gains)
+        assert torch.equal(wild.topology.readout, rewired.topology.readout)
+
+    def test_rewired_brain_trains_and_keeps_strict_mask(self) -> None:
+        """A rewired brain survives a PPO update: finite weights, strict-mask still holds."""
+        brain = _make_brain(wiring="rewired_degree_preserving")
+        for step in range(8):
+            params = _make_params(strength=0.5 + 0.01 * step, angle=0.1 * step)
+            brain.run_brain(
+                params,
+                reward=None,
+                input_data=None,
+                top_only=False,
+                top_randomize=False,
+            )
+            brain.learn(params, reward=0.1, episode_done=(step == 7))
+        assert torch.isfinite(brain.topology.w_chem).all()
+        violation = (brain.topology.w_chem * ~brain.topology.m_chem).abs().max().item()
+        assert violation == 0.0, (
+            f"strict-mask violated on rewired m_chem: max|W along ~M| = {violation}"
+        )

@@ -1,9 +1,9 @@
 # 034 supporting — connectome rewired-null control forensics
 
 Supporting analysis for [Logbook 034](../../034-connectome-structure-controls.md). Committed
-artefacts only (analysis outputs); the 16 raw per-run training `.out` files are uncommitted
-evaluation forensics under `tmp/evaluations/t7-connectome-controls/` (gitignored, per the
-025/029/030/033 precedent).
+artefacts only (analysis outputs); the 16 raw per-run training `.out` files are uncommitted,
+gitignored evaluation forensics (regenerable from the configs + harness — see Reproduce below), per
+the 025/029/030/033 precedent.
 
 ## Files
 

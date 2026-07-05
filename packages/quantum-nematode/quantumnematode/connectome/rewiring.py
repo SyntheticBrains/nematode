@@ -6,8 +6,8 @@ connect is scrambled. Comparing the wild-type connectome against these degree-ma
 matched initialisation and training budget, separates "the specific *C. elegans* wiring matters"
 from "only the degree/sparsity statistics matter".
 
-The rewiring is a seeded **double-edge-swap** — directed (configuration-model) for chemical
-synapses, undirected for gap junctions — which preserves the degree sequence exactly by
+The rewiring is a seeded **double-edge-swap** - directed (configuration-model) for chemical
+synapses, undirected for gap junctions - which preserves the degree sequence exactly by
 construction. A naive random-rewiring null (which destroys the degree sequence) is a weaker,
 uninteresting control; the degree-preserving swap is the standard.
 
@@ -41,7 +41,7 @@ def _directed_double_edge_swap(
     Each accepted swap takes two distinct edges ``(a→b), (c→d)`` to ``(a→d), (c→b)``, rejecting any
     swap that would create a self-loop or a duplicate edge. Out-degree (``a``, ``c``) and in-degree
     (``b``, ``d``) are conserved by construction. Weights travel with the edge (the multiset is
-    preserved) — they do not affect training (the strict-mask uses presence only), but are kept for
+    preserved) - they do not affect training (the strict-mask uses presence only), but are kept for
     provenance and to satisfy the ``weight > 0`` model invariant.
     """
     edge_set = set(edges)
@@ -73,7 +73,7 @@ def _directed_double_edge_swap(
     if accepted < target_swaps:
         logger.warning(
             "Directed rewiring reached only %d/%d swaps in %d attempts "
-            "(sparse graph, low acceptance) — reported, not reseeded.",
+            "(sparse graph, low acceptance) - reported, not reseeded.",
             accepted,
             target_swaps,
             attempts,
@@ -145,10 +145,16 @@ def rewire_degree_preserving(
     running ``swaps_per_edge * |E|`` accepted swaps for mixing. Deterministic given ``rng``'s seed.
     """
     chem_edges = [(s.pre, s.post) for s in connectome.chemical_synapses]
+    gap_edges = [(g.neuron_a, g.neuron_b) for g in connectome.gap_junctions]
+    # The swap assumes a SIMPLE input graph (no parallel edges) - the weight dicts below key on the
+    # edge tuple and would silently collapse duplicates. The Cook loader dedups both edge types, so
+    # this is a guard against a hand-built/alternate-loader fixture, not a live path.
+    if len(set(chem_edges)) != len(chem_edges) or len(set(gap_edges)) != len(gap_edges):
+        msg = "rewire_degree_preserving requires a simple connectome (no duplicate/parallel edges)"
+        raise ValueError(msg)
     chem_weights = {(s.pre, s.post): s.weight for s in connectome.chemical_synapses}
     _directed_double_edge_swap(chem_edges, chem_weights, rng, swaps_per_edge * len(chem_edges))
 
-    gap_edges = [(g.neuron_a, g.neuron_b) for g in connectome.gap_junctions]
     gap_weights = {(g.neuron_a, g.neuron_b): g.weight for g in connectome.gap_junctions}
     _undirected_double_edge_swap(gap_edges, gap_weights, rng, swaps_per_edge * len(gap_edges))
 

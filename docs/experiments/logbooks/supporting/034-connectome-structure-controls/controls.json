@@ -32,6 +32,7 @@
   "verdict": {
     "verdict": "degree_statistics",
     "n_common": 8,
+    "underpowered": false,
     "mean_delta": -3.2750000000000004,
     "ci_lo": -8.55833333333333,
     "ci_hi": 1.6099999999999979,

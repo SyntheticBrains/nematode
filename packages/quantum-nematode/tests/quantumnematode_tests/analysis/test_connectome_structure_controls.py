@@ -35,7 +35,7 @@ def test_missing_file_is_none(tmp_path):
 
 
 def _arm(base: float) -> dict[int, float]:
-    # 8 paired seeds with small variation — enough for a one-sided Wilcoxon to reach q < 0.05.
+    # 8 paired seeds with small variation - enough for a one-sided Wilcoxon to reach q < 0.05.
     return {s: base + 0.5 * ((s % 3) - 1) for s in range(1, 9)}
 
 
@@ -54,6 +54,19 @@ def test_verdict_degree_statistics():
     out: dict = {}
     csc.analyse(arms, out)
     assert out["verdict"]["verdict"] == "degree_statistics"
+
+
+def test_verdict_rewired_beats_is_reachable():
+    """A significant rewired-WIN (CI entirely below zero) is labelled, not lost to 'inconclusive'.
+
+    The reused Wilcoxon is one-sided (H1: wild > rewired), so this direction is detected via the
+    bootstrap CI (ci_hi < 0), never via q.
+    """
+    arms = {"wild_type": _arm(35.0), "rewired_null": _arm(60.0)}
+    out: dict = {}
+    csc.analyse(arms, out)
+    assert out["verdict"]["verdict"] == "rewired_beats_wildtype"
+    assert out["verdict"]["ci_hi"] < 0
 
 
 def test_verdict_insufficient_seeds():
