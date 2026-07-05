@@ -7,7 +7,10 @@ the rewired-null is nominally higher). So the connectome's 5th-of-6 standing und
 ([Logbook 029](029-continuous-architecture-ranking.md)) is a property of its connectivity
 **statistics** (degree / sparsity), **not** its specific wiring: a degree-matched random rewiring
 performs the same. The credibility control the connectome half of the 6a synthesis needed — it
-delivers a citable answer.
+delivers a citable answer. The verdict is **robust across axes**: a follow-up efficiency re-analysis
+(learning-curve AUC + episodes-to-competence on the same paired panel) also finds no wild-type
+advantage (n=8, all BH-FDR **q ≥ 0.37**), so the specific wiring buys neither a higher plateau **nor
+faster learning** than a degree-matched rewiring.
 
 **Branch**: `openspec/add-connectome-structure-controls`.
 
@@ -92,6 +95,29 @@ wiring". At n=8 the direction **reverses and vanishes**. Seed 1 was a favourable
 the same connectome seed-variance 029 flagged (wild-type alone spans 35–68% per seed). A live
 demonstration of why n≥8, not n=1, is the bar for this arm.
 
+### Efficiency axis: same verdict (n=8, whole-run learning curves)
+
+The ranked metric above is the final-quarter plateau. A natural follow-up objection: even if the
+*plateau* is degree-statistics, does the specific wiring help the connectome **learn faster** — a
+sample-efficiency / inductive-bias advantage the peak metric would miss? Reading the **whole**
+per-episode series (not just the tail) from the same paired panel forecloses it. No efficiency metric
+shows a significant wild-type advantage:
+
+| metric (n=8 paired) | wild-type | rewired-null | delta (+ = wild better/faster) | BH-FDR q |
+|---|---|---|---|---|
+| learning-curve AUC, full-clear success | 0.46 | 0.44 | +0.022 (wild 6/8) | 0.365 |
+| learning-curve AUC, foods/episode | 7.41 | 7.24 | +0.165 (wild 5/8) | 0.365 |
+| episodes → 30% rolling success | 685 | 967 | +283 (wild 3/8) | 0.422 |
+| episodes → 90% of own foods plateau | 1088 | 1538 | +450 (wild 6/8) | 0.365 |
+
+The point estimates nominally lean wild-type on three of four metrics (the *reverse* nominal lean to
+the peak metric's −3.28), but every one is non-significant at n=8 (all q ≥ 0.37) with mixed per-seed
+direction — the same connectome seed-variance that reversed the single-seed smoke. **The efficiency
+axis agrees with the peak axis: degree-statistics, not wiring.** Cross-arm context from
+[029](029-continuous-architecture-ranking.md): the connectome is not faster-learning than the other
+arms either — the MLP leads on learning-curve AUC and time-to-competence just as it leads on peak, so
+there is no "structural prior → faster learning" story on any comparison run.
+
 ## Analysis
 
 **The connectome's ranking is a degree-statistics result, not a wiring result.** Under PPO weight
@@ -114,6 +140,10 @@ null.
 - **Degree-statistics verdict.** The wild-type connectome is indistinguishable from its
   degree-preserving rewirings (n=8, q=0.770, CI spans 0); its 029 standing reflects connectivity
   statistics, not the specific wiring.
+- **The null holds on the efficiency axis too.** No learning-curve AUC or time-to-competence metric
+  separates wild-type from the rewired-null (n=8, all BH-FDR q ≥ 0.37) — the wiring buys neither a
+  higher plateau nor faster learning, so the credibility control forecloses the inductive-bias/
+  sample-efficiency reframe as well as the peak one.
 - **The single-seed smoke reversed at n=8** — a clean caution against reading connectome results off
   one seed.
 - The **rewiring mechanism is committed, tested, and byte-identical when off** — a reusable
@@ -130,13 +160,18 @@ null.
   consistently"); a chemical-only sensitivity variant was not run (recorded as an option).
 - The **learnable-gap-junction control** (`T7.controls.learnable_gj`, the frozen-electrical-synapse
   fairness question) is a tracked **fast-follow**, deferred from this change.
+- The **efficiency metrics** (learning-curve AUC + threshold-crossing) use a fixed 6000-episode
+  horizon and a 200-episode rolling window; runs that never cross a threshold are right-censored at the
+  horizon. The four metrics are BH-FDR-corrected together; they are a follow-up re-analysis of the
+  existing panel, not a re-run.
 
 ## Next Steps
 
 - [ ] **Learnable-gap-junction control** (`T7.controls.learnable_gj`) — the deferred fast-follow;
   revisit if the 6a-synthesis review raises the frozen-electrical-synapse question.
 - [ ] **6a synthesis (T9a)** rolls this verdict into the connectome section (T9.2 — "document the
-  connectome ranking honestly": 5th of 6, and that standing is degree-statistics not wiring).
+  connectome ranking honestly": 5th of 6, and that standing is degree-statistics not wiring — on both
+  the peak and learning-efficiency axes).
 - [ ] **Real-worm behavioural-chemotaxis validation** (`T7.validation`) — the remaining Phase-6a gate
   (Gate 3 G3.d) before the tranche closes.
 
@@ -148,3 +183,6 @@ null.
   the harness (`scripts/analysis/connectome_structure_controls.py`), and their tests.
 - Supporting analysis (committed): [supporting/034-connectome-structure-controls/](supporting/034-connectome-structure-controls/details.md)
   — the `controls.json` summary + the per-seed CSV + rewiring/matched-init forensics.
+- Efficiency-axis follow-up: the companion harness (`scripts/analysis/connectome_structure_efficiency.py`)
+  reading the **same** paired panel via `t7-connectome-controls/panel_n8/_manifest.txt`; summary committed at
+  [supporting/034-connectome-structure-controls/efficiency.json](supporting/034-connectome-structure-controls/efficiency.json).
