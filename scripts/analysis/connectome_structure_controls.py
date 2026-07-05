@@ -66,7 +66,7 @@ def analyse(arms: dict[str, dict[int, float]], out: dict) -> None:
     """Print + record the per-arm success, the paired wild-vs-rewired delta, and the verdict."""
     print("\n" + "=" * 72)
     print(
-        "CONNECTOME-STRUCTURE CONTROL — plateau-tail C3 ranked success (wild-type vs rewired-null)"
+        "CONNECTOME-STRUCTURE CONTROL — plateau-tail C3 ranked success (wild-type vs rewired-null)",
     )
     print("=" * 72)
     out["per_arm"] = {}
