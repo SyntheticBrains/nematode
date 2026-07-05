@@ -47,10 +47,11 @@
 
 ## 5. Aggregation harness
 
-- [ ] 5.1 `scripts/analysis/behavioural_chemotaxis_validation.py` — load a `<seed> <behaviour-file>`
+- [x] 5.1 `scripts/analysis/behavioural_chemotaxis_validation.py` — load a `<seed> <behaviour-file>`
   manifest (or the per-seed run captures), compute both curves + statistics + verdicts + the summary
-  JSON, print the two-curve agreement table. Reuse the committed bootstrap layer.
-- [ ] 5.2 Tests: manifest parse + end-to-end verdict on synthetic captures (mirror the associative /
+  JSON, print the two-curve agreement table. Reuse the committed bootstrap layer. (Run persistence:
+  `report/behaviour_export.py` writes `behaviour_capture.json` when `capture_behaviour` is on.)
+- [x] 5.2 Tests: manifest parse + end-to-end verdict on synthetic captures (mirror the associative /
   connectome-controls harness tests).
 
 ## 6. Calibration / smoke (before the panel)

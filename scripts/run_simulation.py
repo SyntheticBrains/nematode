@@ -47,6 +47,7 @@ from quantumnematode.optimizers.learning_rate import (
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
+from quantumnematode.report.behaviour_export import write_behaviour_capture
 from quantumnematode.report.csv_export import (
     IncrementalDetailedTrackingWriter,
     create_path_csv_writer,
@@ -957,6 +958,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             skip_path_data=True,
         )
         export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+        behaviour_path = write_behaviour_capture(all_results, data_dir)
+        if behaviour_path is not None:
+            logger.info("Wrote behavioural capture to %s", behaviour_path)
     else:
         logger.warning("No completed runs - skipping plots and data export.")
 

@@ -1,0 +1,253 @@
+"""Real-worm behavioural-chemotaxis validation - klinotaxis bias curves vs published *C. elegans*.
+
+Reduces each seed's captured behavioural trajectory (``behaviour_capture.json`` from a
+``capture_behaviour`` run) to its two klinotaxis bias statistics - the klinokinesis down/up
+turn-rate ratio (Pierce-Shimomura et al. 1999) and the klinotaxis weathervane slope (Iino &
+Yoshida 2009) - then grades each across seeds against the behaviour-level literature reference
+(§3) with an 80% bootstrap CI as REPRODUCED / PARTIAL / ABSENT.
+
+The reference is behaviour-level (bias direction + a reported magnitude range + citation), NOT a
+pixel digitization of the original figures; the weathervane slope is a sign-only reference (see the
+reference notes). Both bias curves + the pooled statistics + the verdicts are written to a summary
+JSON; the two figures are emitted when ``--figure-dir`` is given.
+
+Usage::
+
+    uv run python scripts/analysis/behavioural_chemotaxis_validation.py \
+        --manifest <run-dir>/_manifest.txt --out <run-dir>/behavioural_curves.json \
+        [--figure-dir <run-dir>/figures] [--theta-sharp 0.6] [--theta-percentile 85]
+
+The manifest is ``<seed> <behaviour_capture.json>`` per line (``#`` comments / blanks skipped).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+from pathlib import Path
+
+from quantumnematode.report.dtypes import BehaviourStep
+from quantumnematode.validation.behavioural_agreement import grade_statistic
+from quantumnematode.validation.behavioural_curves import (
+    BiasCurve,
+    curving_rate_vs_bearing,
+    kinematics,
+    klinokinesis_ratio,
+    suggest_theta_sharp,
+    turn_rate_vs_dcdt,
+    weathervane_slope,
+)
+from quantumnematode.validation.datasets import load_bias_signatures
+
+REPO = Path(__file__).resolve().parents[2]
+
+_KLINOKINESIS = "klinokinesis"
+_KLINOTAXIS = "klinotaxis"
+
+
+def _steps_from_dicts(step_dicts: list[dict]) -> list[BehaviourStep]:
+    """Rebuild ``BehaviourStep`` records from their serialised dicts."""
+    return [BehaviourStep(**d) for d in step_dicts]
+
+
+def load_manifest(manifest: Path) -> dict[int, list[list[BehaviourStep]]]:
+    """Return ``{seed: [per-run step series]}`` from a ``<seed> <behaviour_capture.json>`` manifest.
+
+    Blank / ``#``-comment lines are skipped; malformed lines and missing/duplicate seeds are
+    reported so analysis issues stay traceable rather than silently dropped.
+    """
+    seeds: dict[int, list[list[BehaviourStep]]] = {}
+    for raw in manifest.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) != 2 or not parts[0].lstrip("-").isdigit():  # expected: `<int seed> <file>`
+            print(f"  WARN: skipping malformed manifest line: {raw!r}")
+            continue
+        seed, capture_path = int(parts[0]), REPO / parts[1]
+        if not capture_path.exists():
+            print(f"  WARN seed {seed}: {capture_path} not found - dropped")
+            continue
+        if seed in seeds:
+            print(f"  WARN seed {seed}: duplicate manifest entry - overwriting previous")
+        data = json.loads(capture_path.read_text())
+        runs = [_steps_from_dicts(run["steps"]) for run in data.get("runs", []) if run["steps"]]
+        if not runs:
+            print(f"  WARN seed {seed}: no captured steps in {capture_path} - dropped")
+            continue
+        seeds[seed] = runs
+    return seeds
+
+
+def _resolve_theta_sharp(
+    seeds: dict[int, list[list[BehaviourStep]]],
+    theta_sharp: float | None,
+    theta_percentile: float,
+) -> float:
+    """Use an explicit ``theta_sharp`` or calibrate it from the pooled |dtheta| distribution."""
+    if theta_sharp is not None:
+        return theta_sharp
+    pooled = [step for runs in seeds.values() for run in runs for step in run]
+    return suggest_theta_sharp(pooled, percentile=theta_percentile)
+
+
+def _per_seed_statistics(
+    runs: list[list[BehaviourStep]],
+    theta_sharp: float,
+) -> tuple[float | None, float | None]:
+    """One seed's (klinokinesis ratio, weathervane slope), pooling per-run kinematics."""
+    kin = [k for run in runs for k in kinematics(run, theta_sharp)]  # no cross-run transitions
+    return klinokinesis_ratio(kin), weathervane_slope(kin)
+
+
+def _pooled_curves(
+    seeds: dict[int, list[list[BehaviourStep]]],
+    theta_sharp: float,
+) -> tuple[BiasCurve, BiasCurve]:
+    """Build the two bias curves over all seeds' kinematics (for the figures / visual reference)."""
+    kin = [k for runs in seeds.values() for run in runs for k in kinematics(run, theta_sharp)]
+    return turn_rate_vs_dcdt(kin), curving_rate_vs_bearing(kin)
+
+
+def analyse(
+    seeds: dict[int, list[list[BehaviourStep]]],
+    theta_sharp: float,
+) -> dict:
+    """Grade both bias statistics across seeds and print the two-curve agreement table."""
+    refs = load_bias_signatures()
+    per_seed_ratio: dict[int, float | None] = {}
+    per_seed_slope: dict[int, float | None] = {}
+    for seed, runs in sorted(seeds.items()):
+        ratio, slope = _per_seed_statistics(runs, theta_sharp)
+        per_seed_ratio[seed] = ratio
+        per_seed_slope[seed] = slope
+        # A degenerate seed (no up-gradient turns -> inf ratio; too-few gradual steps -> None slope)
+        # is dropped from the CI but reported so it is not silently miscounted.
+        if ratio is None or not math.isfinite(ratio):
+            print(f"  WARN seed {seed}: klinokinesis ratio not finite ({ratio}) - dropped from CI")
+        if slope is None:
+            print(f"  WARN seed {seed}: weathervane slope undefined - dropped from CI")
+
+    ratios = [v for v in per_seed_ratio.values() if v is not None and math.isfinite(v)]
+    slopes = [v for v in per_seed_slope.values() if v is not None]
+    klinokinesis = grade_statistic(ratios, refs[_KLINOKINESIS])
+    klinotaxis = grade_statistic(slopes, refs[_KLINOTAXIS])
+
+    print("\n" + "=" * 78)
+    print("REAL-WORM BEHAVIOURAL-CHEMOTAXIS VALIDATION - klinotaxis bias curves vs C. elegans")
+    print(f"  n_seeds={len(seeds)}  theta_sharp={theta_sharp:.3f} rad")
+    print("=" * 78)
+    for label, res, per_seed in (
+        ("klinokinesis (down/up turn-rate ratio)", klinokinesis, per_seed_ratio),
+        ("klinotaxis (weathervane slope)", klinotaxis, per_seed_slope),
+    ):
+        usable = [round(v, 3) for v in per_seed.values() if v is not None]
+        print(f"\n  {label}")
+        print(
+            f"    mean={res.mean:+.3f}  80% CI[{res.ci_lo:+.3f}, {res.ci_hi:+.3f}]  "
+            f"n={res.n}  null={res.null_value:.1f}",
+        )
+        print(f"    per-seed usable={usable}")
+        print(f"    VERDICT: {res.verdict.value}  ({res.citation})")
+
+    return {
+        "theta_sharp": theta_sharp,
+        "n_seeds": len(seeds),
+        "klinokinesis": {
+            **klinokinesis.to_dict(),
+            "per_seed": {str(s): v for s, v in per_seed_ratio.items()},
+        },
+        "klinotaxis": {
+            **klinotaxis.to_dict(),
+            "per_seed": {str(s): v for s, v in per_seed_slope.items()},
+        },
+    }
+
+
+def _write_figures(
+    seeds: dict[int, list[list[BehaviourStep]]],
+    theta_sharp: float,
+    summary: dict,
+    figure_dir: Path,
+) -> None:
+    """Emit the two bias-curve figures (pooled curve + verdict annotation) into ``figure_dir``."""
+    from quantumnematode.report.continuous_figures import (
+        plot_turn_rate_curve,
+        plot_weathervane_curve,
+    )
+    from quantumnematode.validation.behavioural_agreement import AgreementResult, Verdict
+
+    figure_dir.mkdir(parents=True, exist_ok=True)
+    turn_curve, weathervane_curve = _pooled_curves(seeds, theta_sharp)
+
+    def _agreement(key: str) -> AgreementResult:
+        d = summary[key]
+        return AgreementResult(
+            statistic=d["statistic"],
+            verdict=Verdict(d["verdict"]),
+            mean=d["mean"],
+            ci_lo=d["ci_lo"],
+            ci_hi=d["ci_hi"],
+            n=d["n"],
+            null_value=d["null_value"],
+            sign=d["sign"],
+            magnitude_range=tuple(d["magnitude_range"]) if d["magnitude_range"] else None,
+            citation=d["citation"],
+        )
+
+    plot_turn_rate_curve(
+        turn_curve,
+        figure_dir / "turn_rate_vs_dcdt.png",
+        agreement=_agreement(_KLINOKINESIS),
+    )
+    plot_weathervane_curve(
+        weathervane_curve,
+        figure_dir / "curving_rate_vs_bearing.png",
+        agreement=_agreement(_KLINOTAXIS),
+    )
+    print(f"\nwrote figures to {figure_dir}")
+
+
+def main() -> None:
+    """Load the manifest, grade both bias curves across seeds, and write the summary JSON."""
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--manifest",
+        type=Path,
+        required=True,
+        help="<seed> <behaviour_capture.json> per line",
+    )
+    ap.add_argument("--out", type=Path, default=None, help="write the summary JSON here")
+    ap.add_argument("--figure-dir", type=Path, default=None, help="emit the two bias-curve figures")
+    ap.add_argument(
+        "--theta-sharp",
+        type=float,
+        default=None,
+        help="explicit sharp-turn threshold (rad); default calibrates from |dtheta|",
+    )
+    ap.add_argument(
+        "--theta-percentile",
+        type=float,
+        default=85.0,
+        help="percentile of |dtheta| used to calibrate theta_sharp when not given",
+    )
+    args = ap.parse_args()
+
+    seeds = load_manifest(args.manifest)
+    if not seeds:
+        print("No usable seeds - nothing to analyse.")
+        return
+    theta_sharp = _resolve_theta_sharp(seeds, args.theta_sharp, args.theta_percentile)
+    summary = analyse(seeds, theta_sharp)
+
+    if args.figure_dir:
+        _write_figures(seeds, theta_sharp, summary, args.figure_dir)
+    if args.out:
+        args.out.write_text(json.dumps(summary, indent=2, default=str))
+        print(f"\nwrote {args.out}")
+
+
+if __name__ == "__main__":
+    main()
