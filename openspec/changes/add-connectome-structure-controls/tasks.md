@@ -49,32 +49,32 @@ rewired-null result or the 6a synthesis review raises the frozen-electrical-syna
 
 ## 5. Calibration / smoke (before the panel)
 
-- [ ] 5.1 Single-seed smoke: the rewired-null trains on the combined cell without collapse and the
+- [x] 5.1 Single-seed smoke: the rewired-null trains on the combined cell without collapse and the
   wild-type cell reproduces its 029 plateau (a recipe-match sanity check). Record the directed-swap
   acceptance rate + whether `swaps_per_edge` needs raising for mixing.
-- [ ] 5.2 **PAUSE for user review of the smoke before the full panel.**
+- [x] 5.2 **PAUSE for user review of the smoke before the full panel.**
 
 ## 6. Evaluation + verdict
 
-- [ ] 6.1 Panel: `wild_type` vs `rewired_degree_preserving` on the combined continuous integrated-C3
+- [x] 6.1 Panel: `wild_type` vs `rewired_degree_preserving` on the combined continuous integrated-C3
   cell, **both arms re-run in one fresh panel** (identical code version + exact seed pairing),
   **n ≥ 8 paired seeds**, headless, parallelised (`OMP_NUM_THREADS=1`, `xargs -P`), same PPO recipe /
   **budget as the 029 `T7.connectome.c3_integrated` cell** (6000ep uniform; 8000ep top-up if 029 used
   one).
-- [ ] 6.2 Run the harness (§4); record the per-arm ranked success, the paired BH-FDR table, and the
+- [x] 6.2 Run the harness (§4); record the per-arm ranked success, the paired BH-FDR table, and the
   verdict (specific-wiring vs degree-statistics).
-- [ ] 6.3 **PAUSE for user review of the evaluation + verdict before writing the logbook** (project
+- [x] 6.3 **PAUSE for user review of the evaluation + verdict before writing the logbook** (project
   convention).
 
 ## 7. Logbook + tracker
 
-- [ ] 7.1 Write the logbook (objective / method / results / analysis / limitations) + committed
+- [x] 7.1 Write the logbook (objective / method / results / analysis / limitations) + committed
   supporting artefacts (no `tmp/` references); it feeds the 6a synthesis (T9a / T9.2).
-- [ ] 7.2 Add the logbook row to `docs/experiments/README.md`.
-- [ ] 7.3 Tick `T7.controls.rewired_null` + `T7.controls.logbook` in
+- [x] 7.2 Add the logbook row to `docs/experiments/README.md`.
+- [x] 7.3 Tick `T7.controls.rewired_null` + `T7.controls.logbook` in
   `openspec/changes/phase6-tracking/tasks.md` with the verdict; note `T7.controls.learnable_gj` remains
   open as a fast-follow.
-- [ ] 7.4 Document the `_rewired_null` connectome config variant in `AGENTS.md`.
+- [x] 7.4 Document the `_rewired_null` connectome config variant in `AGENTS.md`.
 
 ## 8. Pre-merge gates
 
