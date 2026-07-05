@@ -56,31 +56,46 @@
 
 ## 6. Calibration / smoke (before the panel)
 
-- [ ] 6.1 Single-seed smoke: run a trained klinotaxis MLP forager with `capture_behaviour: true` on the
+- [x] 6.1 Single-seed smoke: run a trained klinotaxis MLP forager with `capture_behaviour: true` on the
   food-only klinotaxis cell; calibrate `θ_sharp` from the `|Δθ|` histogram (natural bimodal cut);
-  confirm the pipeline produces both curves and record which strategy the worm shows.
-- [ ] 6.2 **PAUSE for user review of the smoke** (which strategies appear + the calibrated threshold)
-  before the full panel.
+  confirm the pipeline produces both curves and record which strategy the worm shows. *Seed 42, 300
+  episodes → 99.3% success. Caught + fixed a capture bug (the food-gradient keys are popped under
+  derivative sensing → zero weathervane bearing). Finding: the `|Δθ|` distribution SATURATES at the
+  `max_turn_rad` bound (no natural bimodal cut) → thresholded statistics are `θ_sharp`-sensitive
+  (weathervane slope flips sign across the range). Klinokinesis PRESENT, weathervane ABSENT.*
+- [x] 6.2 **PAUSE for user review of the smoke** (which strategies appear + the calibrated threshold)
+  before the full panel. *Reviewed; decision: "report both metrics" — added `θ_sharp`-independent
+  threshold-free companions (`klinokinesis_magnitude_ratio`, `weathervane_slope_all`) + a
+  per-strategy combined verdict reconciling the two families. Reconciled smoke: klinokinesis
+  PRESENT_PARTIAL (both families agree), weathervane ABSENT (both slopes negative).*
 
 ## 7. Evaluation + verdict
 
-- [ ] 7.1 Panel: the trained klinotaxis forager (leading MLP arm), `capture_behaviour: true`, **n ≥ 8
-  seeds**, post-convergence, headless. (Optionally the connectome arm as a non-gating biological-fidelity
-  companion.)
-- [ ] 7.2 Run the harness (§5); record both bias curves, the statistics + CIs, and the per-curve
-  verdicts vs Pierce-Shimomura / Iino & Yoshida. Check verdict stability across a small `θ_sharp` sweep.
-- [ ] 7.3 **PAUSE for user review of the evaluation + verdict before writing the logbook** (project
-  convention).
+- [x] 7.1 Panel: the trained klinotaxis forager (leading MLP arm), `capture_behaviour: true`, **n ≥ 8
+  seeds**, post-convergence, headless. Plus the connectome companion (architecture-robustness) and a
+  derivative-mode specificity control (spatial head-sweep removed). *All n=8, converged 91-100%.*
+- [x] 7.2 Run the harness (§5); record both bias curves, the statistics + CIs, and the per-curve
+  verdicts. Robustness checked across `θ_sharp`, tail-window, curving-rate floor fraction, and CI level
+  (80%→95%). *Klinokinesis + weathervane both PRESENT (MLP + connectome); control shows the weathervane
+  collapses 87-93% (thresholded slope non-significant at 95%) while klinokinesis persists/strengthens —
+  a double dissociation. A creep-step curving-rate floor was required (pre-floor weathervane was a
+  spurious ABSENT outlier artifact).*
+- [x] 7.3 **PAUSE for user review of the evaluation + verdict before writing the logbook** (project
+  convention). *Reviewed; framing agreed: weathervane direction-only (not magnitude); klinokinesis
+  led by the θ-independent magnitude ratio; specificity by effect-size collapse (label is
+  magnitude-blind); connectome = architecture-robust, not native biological dynamics; scope =
+  chemotaxis-only on the calibrated substrate; dissociation-led narrative.*
 
 ## 8. Logbook + tracker
 
-- [ ] 8.1 Write the logbook (objective / method / results / analysis / limitations, incl. the
+- [x] 8.1 Write the logbook (objective / method / results / analysis / limitations, incl. the
   behaviour-level reference caveat) + committed supporting artefacts (no `tmp/` references); it feeds
-  the 6a synthesis (T9a) and Gate 3 G3.d.
-- [ ] 8.2 Add the logbook row to `docs/experiments/README.md`.
-- [ ] 8.3 Tick `T7.validation.1/2/3` in `openspec/changes/phase6-tracking/tasks.md` with the verdict;
+  the 6a synthesis (T9a) and Gate 3 G3.d. \*[Logbook 035](../../../docs/experiments/logbooks/035-realworm-chemotaxis-validation.md)
+  - `supporting/035-realworm-chemotaxis-validation/` (3 per-arm JSONs + 4 figures).\*
+- [x] 8.2 Add the logbook row to `docs/experiments/README.md`.
+- [x] 8.3 Tick `T7.validation.1/2/3` in `openspec/changes/phase6-tracking/tasks.md` with the verdict;
   note the Gate-3 G3.d contribution.
-- [ ] 8.4 Document the `capture_behaviour` flag / the validation entry point in `AGENTS.md`.
+- [x] 8.4 Document the `capture_behaviour` flag / the validation entry point in `AGENTS.md`.
 
 ## 9. Pre-merge gates
 

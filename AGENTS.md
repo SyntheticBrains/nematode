@@ -26,6 +26,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 - Test (all, including nightly): `uv run pytest`
 - Lint/format: `uv run pre-commit run -a`
 - Run simulation: `uv run ./scripts/run_simulation.py --config ./configs/scenarios/<scenario>/<config>.yml`
+- Real-worm behavioural-chemotaxis validation: set `sensing.capture_behaviour: true` in a foraging config (default `false` — a byte-identical no-op when off) to log a per-run behavioural trajectory to `exports/<session>/session/data/behaviour_capture.json`, then grade the klinokinesis + weathervane bias curves against the *C. elegans* literature with `uv run python scripts/analysis/behavioural_chemotaxis_validation.py --manifest <seed> <behaviour_capture.json per line> --tail-runs 100 [--figure-dir <dir>] [--theta-sharp 0.45]` (see [Logbook 035](docs/experiments/logbooks/035-realworm-chemotaxis-validation.md)).
 
 ## Key Directories
 
