@@ -102,17 +102,25 @@ def rate_vs_binned_covariate(
 def _usable(
     kin: Sequence[StepKinematics],
     min_grad_strength: float,
+    min_path_len: float = 0.0,
 ) -> list[StepKinematics]:
-    """Transitions with a usable gradient + a real displacement (bearing/curving are defined)."""
-    return [k for k in kin if k.grad_strength > min_grad_strength and k.path_len > _EPS]
+    """Transitions with a usable gradient + a real displacement (bearing/curving are defined).
+
+    ``min_path_len`` floors the displacement: the curving-rate ``dtheta / path_len`` blows up on
+    near-stationary creep/dwell steps, so a floor above ``_EPS`` (e.g. a fraction of the typical
+    stride) keeps those high-leverage points from dominating the weathervane slope.
+    """
+    floor = max(_EPS, min_path_len)
+    return [k for k in kin if k.grad_strength > min_grad_strength and k.path_len > floor]
 
 
 def _gradual(
     kin: Sequence[StepKinematics],
     min_grad_strength: float,
+    min_path_len: float = 0.0,
 ) -> list[StepKinematics]:
     """Non-reorientation usable transitions (gradual curving for the thresholded weathervane)."""
-    return [k for k in _usable(kin, min_grad_strength) if not k.is_turn]
+    return [k for k in _usable(kin, min_grad_strength, min_path_len) if not k.is_turn]
 
 
 def _slope(usable: Sequence[StepKinematics]) -> float | None:
@@ -142,9 +150,10 @@ def curving_rate_vs_bearing(
     kin: Sequence[StepKinematics],
     n_bins: int = 8,
     min_grad_strength: float = 0.0,
+    min_path_len: float = 0.0,
 ) -> BiasCurve:
     """Curve B: mean signed gradual curving-rate (rad/mm) binned by bearing (weathervane)."""
-    grad = _gradual(kin, min_grad_strength)
+    grad = _gradual(kin, min_grad_strength, min_path_len)
     if not grad:
         return BiasCurve([], [], [])
     bearing = np.array([k.bearing for k in grad])
@@ -165,9 +174,10 @@ def klinokinesis_ratio(kin: Sequence[StepKinematics]) -> float | None:
 def weathervane_slope(
     kin: Sequence[StepKinematics],
     min_grad_strength: float = 0.0,
+    min_path_len: float = 0.0,
 ) -> float | None:
     """Thresholded weathervane: gradual (non-turn) curving-rate-vs-bearing slope (> 0 = toward)."""
-    return _slope(_gradual(kin, min_grad_strength))
+    return _slope(_gradual(kin, min_grad_strength, min_path_len))
 
 
 def klinokinesis_magnitude_ratio(kin: Sequence[StepKinematics]) -> float | None:
@@ -188,13 +198,14 @@ def klinokinesis_magnitude_ratio(kin: Sequence[StepKinematics]) -> float | None:
 def weathervane_slope_all(
     kin: Sequence[StepKinematics],
     min_grad_strength: float = 0.0,
+    min_path_len: float = 0.0,
 ) -> float | None:
     """Threshold-free weathervane: the curving-rate-vs-bearing slope over ALL usable steps.
 
     The threshold-free companion to :func:`weathervane_slope` - it does not exclude sharp
     reorientations, so it does not depend on ``theta_sharp``. > 0 = curves toward the gradient.
     """
-    return _slope(_usable(kin, min_grad_strength))
+    return _slope(_usable(kin, min_grad_strength, min_path_len))
 
 
 def suggest_theta_sharp(steps: Sequence[BehaviourStep], percentile: float = 90.0) -> float:
@@ -203,3 +214,13 @@ def suggest_theta_sharp(steps: Sequence[BehaviourStep], percentile: float = 90.0
         return math.pi / 4
     dth = np.array([abs(_wrap(b.heading_rad - a.heading_rad)) for a, b in pairwise(steps)])
     return float(np.percentile(dth, percentile))
+
+
+def suggest_min_path_len(kin: Sequence[StepKinematics], fraction: float = 0.25) -> float:
+    """Return a curving-rate displacement floor: ``fraction`` x the median non-trivial stride.
+
+    Scale-free (data-driven): excludes creep/dwell steps whose tiny ``path_len`` would otherwise
+    make ``dtheta / path_len`` explode. 0.0 when there are no usable strides.
+    """
+    strides = [k.path_len for k in kin if k.path_len > _EPS]
+    return fraction * float(np.median(strides)) if strides else 0.0

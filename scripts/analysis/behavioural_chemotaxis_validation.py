@@ -35,6 +35,7 @@ from quantumnematode.validation.behavioural_curves import (
     kinematics,
     klinokinesis_magnitude_ratio,
     klinokinesis_ratio,
+    suggest_min_path_len,
     suggest_theta_sharp,
     turn_rate_vs_dcdt,
     weathervane_slope,
@@ -44,15 +45,17 @@ from quantumnematode.validation.datasets import load_bias_signatures
 
 REPO = Path(__file__).resolve().parents[2]
 
-# Each bias statistic: (reference key, strategy, kinematics-reducer, family). The thresholded and
-# threshold-free reducers for one strategy are cross-checked against each other (§6 decision: the
-# |dtheta| distribution saturates at the turn bound, so the thresholded sharp/gradual split has no
-# natural cut; the threshold-free companion is theta_sharp-independent).
+_MIN_PATH_LEN_FRACTION = 0.25  # curving-rate floor = this x the median stride (per seed/pool)
+
+# Each bias statistic: (reference key, strategy, family). The thresholded and threshold-free
+# statistics for one strategy are cross-checked against each other (§6 decision: the |dtheta|
+# distribution saturates at the turn bound, so the thresholded sharp/gradual split has no natural
+# cut; the threshold-free companion is theta_sharp-independent).
 _STATISTICS = (
-    ("klinokinesis", "klinokinesis", klinokinesis_ratio, "thresholded"),
-    ("klinokinesis_magnitude", "klinokinesis", klinokinesis_magnitude_ratio, "threshold_free"),
-    ("klinotaxis", "klinotaxis", weathervane_slope, "thresholded"),
-    ("klinotaxis_all", "klinotaxis", weathervane_slope_all, "threshold_free"),
+    ("klinokinesis", "klinokinesis", "thresholded"),
+    ("klinokinesis_magnitude", "klinokinesis", "threshold_free"),
+    ("klinotaxis", "klinotaxis", "thresholded"),
+    ("klinotaxis_all", "klinotaxis", "threshold_free"),
 )
 _STRATEGIES = ("klinokinesis", "klinotaxis")
 
@@ -118,9 +121,20 @@ def _per_seed_statistics(
     runs: list[list[BehaviourStep]],
     theta_sharp: float,
 ) -> dict[str, float | None]:
-    """One seed's four bias statistics (keyed by reference key), pooling per-run kinematics."""
+    """One seed's four bias statistics (keyed by reference key), pooling per-run kinematics.
+
+    The weathervane slopes use a data-driven curving-rate floor (``suggest_min_path_len``) so
+    near-stationary creep steps do not blow up ``dtheta / path_len``; the klinokinesis statistics
+    do not divide by displacement and so need no floor.
+    """
     kin = [k for run in runs for k in kinematics(run, theta_sharp)]  # no cross-run transitions
-    return {key: reducer(kin) for key, _strategy, reducer, _family in _STATISTICS}
+    floor = suggest_min_path_len(kin, _MIN_PATH_LEN_FRACTION)
+    return {
+        "klinokinesis": klinokinesis_ratio(kin),
+        "klinokinesis_magnitude": klinokinesis_magnitude_ratio(kin),
+        "klinotaxis": weathervane_slope(kin, min_path_len=floor),
+        "klinotaxis_all": weathervane_slope_all(kin, min_path_len=floor),
+    }
 
 
 def _combined_verdict(thresholded: str, threshold_free: str) -> str:
@@ -146,7 +160,8 @@ def _pooled_curves(
 ) -> tuple[BiasCurve, BiasCurve]:
     """Build the two bias curves over all seeds' kinematics (for the figures / visual reference)."""
     kin = [k for runs in seeds.values() for run in runs for k in kinematics(run, theta_sharp)]
-    return turn_rate_vs_dcdt(kin), curving_rate_vs_bearing(kin)
+    floor = suggest_min_path_len(kin, _MIN_PATH_LEN_FRACTION)
+    return turn_rate_vs_dcdt(kin), curving_rate_vs_bearing(kin, min_path_len=floor)
 
 
 def analyse(
@@ -170,15 +185,20 @@ def analyse(
         )
         for key, *_ in _STATISTICS
     }
-    family = {key: fam for key, _strategy, _reducer, fam in _STATISTICS}
-    strategy_of = {key: strat for key, strat, _reducer, _fam in _STATISTICS}
+    family = {key: fam for key, _strategy, fam in _STATISTICS}
+    strategy_of = {key: strat for key, strat, _fam in _STATISTICS}
 
     print("\n" + "=" * 78)
     print("REAL-WORM BEHAVIOURAL-CHEMOTAXIS VALIDATION - klinotaxis bias curves vs C. elegans")
     print(f"  n_seeds={len(seeds)}  theta_sharp={theta_sharp:.3f} rad")
     print("=" * 78)
 
-    summary: dict = {"theta_sharp": theta_sharp, "n_seeds": len(seeds), "statistics": {}}
+    summary: dict = {
+        "theta_sharp": theta_sharp,
+        "min_path_len_fraction": _MIN_PATH_LEN_FRACTION,
+        "n_seeds": len(seeds),
+        "statistics": {},
+    }
     for key, *_ in _STATISTICS:
         res = graded[key]
         usable = [round(v, 3) for v in per_seed[key].values() if v is not None and math.isfinite(v)]

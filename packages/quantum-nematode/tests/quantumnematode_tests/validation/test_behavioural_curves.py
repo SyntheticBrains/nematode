@@ -112,6 +112,39 @@ def test_threshold_free_weathervane_slope_positive_toward_gradient():
     assert slope > 0.0
 
 
+def test_min_path_len_floor_excludes_creep_outliers():
+    """A tiny-displacement creep step (dtheta/path_len explodes) is dropped once floored."""
+    # Three clean strides toward grad_dir=0 plus one near-stationary creep with a big turn.
+    headings = [0.5, 0.4, 0.3, 0.2]
+    steps = _steps(headings, [0.0] * len(headings), grad_dirs=[0.0] * len(headings))
+    # Append a near-stationary step: displacement ~0 but a large heading change.
+    last = steps[-1]
+    steps.append(
+        BehaviourStep(
+            step=len(steps),
+            x=last.x + 1e-3,
+            y=last.y + 1e-3,
+            heading_rad=last.heading_rad + 0.4,
+            concentration=0.5,
+            dc_dt=0.0,
+            grad_dir=0.0,
+            grad_strength=1.0,
+        ),
+    )
+    kin = bc.kinematics(steps, theta_sharp=1.0)
+    floor = bc.suggest_min_path_len(kin)
+    assert floor > 0.0
+    floored = bc.weathervane_slope_all(kin, min_path_len=floor)
+    unfloored = bc.weathervane_slope_all(kin, min_path_len=0.0)
+    assert floored is not None
+    assert abs(floored) < abs(unfloored)  # the creep outlier no longer dominates the slope
+
+
+def test_suggest_min_path_len_empty_is_zero():
+    """No usable strides -> a zero floor (no-op)."""
+    assert bc.suggest_min_path_len([]) == 0.0
+
+
 def test_threshold_free_metrics_are_theta_sharp_invariant():
     """The threshold-free statistics do not depend on theta_sharp (unlike the thresholded ones)."""
     worm = _klinokinesis_worm()
