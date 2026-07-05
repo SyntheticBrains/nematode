@@ -16,12 +16,12 @@
 
 ## 2. Bias-curve metrics + binning helper
 
-- [ ] 2.1 New `validation/behavioural_curves.py` (pure functions over `list[BehaviourStep]`): a shared
+- [x] 2.1 New `validation/behavioural_curves.py` (pure functions over `list[BehaviourStep]`): a shared
   `rate_vs_binned_covariate(covariate, value, bins, *, kind)` (numpy `digitize`); the
   klinokinesis/klinotaxis split (sharp reorientation `|Δθ| > θ_sharp` vs gradual signed `Δθ`/mm);
   **curve A** turn-rate vs dC/dt; **curve B** mean signed curving-rate vs bearing-to-gradient (bearing
   = `wrap(atan2(grad_dy, grad_dx) - heading_rad)` from the logged per-step gradient direction).
-- [ ] 2.2 Tests: on synthetic trajectories (a hand-built down-gradient-turns worm; a curve-toward-gradient
+- [x] 2.2 Tests: on synthetic trajectories (a hand-built down-gradient-turns worm; a curve-toward-gradient
   worm) the metrics recover the expected bias sign; wrap-around Δθ handled; empty/one-step safe.
 
 ## 3. Reference literature signatures
