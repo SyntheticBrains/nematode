@@ -66,6 +66,9 @@ def load(manifest: Path) -> dict[str, dict[int, float]]:
             print(f"  WARN: skipping malformed manifest line: {raw!r}")
             continue
         arm, seed, out_path = parts[0], int(parts[1]), Path(parts[2])
+        if arm not in (_WILD, _REWIRED):  # a typo'd arm would be silently ignored by analyse()
+            print(f"  WARN: skipping manifest line with unknown arm {arm!r}: {raw!r}")
+            continue
         success = _success(REPO / out_path)
         if success is None:
             print(f"  WARN {arm} seed {seed}: no parseable plateau in {out_path} - dropped")
