@@ -1,0 +1,17 @@
+arch,seed,plateau_success_pct,mean_foods
+wild_type,1,57.20,8.254
+wild_type,2,45.13,7.547
+wild_type,3,53.73,7.983
+wild_type,4,51.60,7.783
+wild_type,5,51.60,7.603
+wild_type,6,68.27,8.623
+wild_type,7,35.33,6.740
+wild_type,8,59.40,8.177
+rewired_null,1,46.47,7.516
+rewired_null,2,65.47,8.490
+rewired_null,3,56.27,8.096
+rewired_null,4,61.93,8.493
+rewired_null,5,55.80,8.050
+rewired_null,6,65.27,8.573
+rewired_null,7,50.80,7.851
+rewired_null,8,46.47,7.435
