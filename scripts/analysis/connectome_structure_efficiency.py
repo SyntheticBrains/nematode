@@ -131,12 +131,21 @@ def analyse(manifest: Path) -> dict:
         msg = f"manifest must contain both {_WILD!r} and {_REWIRED!r} arms"
         raise ValueError(msg)
 
-    horizon = min(len(_parse_series(p)[0]) for arm in (_WILD, _REWIRED) for p in runs[arm].values())
+    # Fail fast on any unpaired seed: an extra/missing run would otherwise silently shrink the
+    # shared horizon (the min run length) and distort every metric.
+    wild_seeds, rewired_seeds = set(runs[_WILD]), set(runs[_REWIRED])
+    if wild_seeds != rewired_seeds:
+        msg = (
+            f"paired seed sets differ - wild-only={sorted(wild_seeds - rewired_seeds)}, "
+            f"rewired-only={sorted(rewired_seeds - wild_seeds)}"
+        )
+        raise ValueError(msg)
+    seeds = sorted(wild_seeds)
+
+    horizon = min(len(_parse_series(runs[arm][s])[0]) for arm in (_WILD, _REWIRED) for s in seeds)
     per_seed = {
-        arm: {seed: _run_metrics(path, horizon) for seed, path in sorted(runs[arm].items())}
-        for arm in (_WILD, _REWIRED)
+        arm: {s: _run_metrics(runs[arm][s], horizon) for s in seeds} for arm in (_WILD, _REWIRED)
     }
-    seeds = sorted(set(per_seed[_WILD]) & set(per_seed[_REWIRED]))
 
     metrics_out: dict[str, dict] = {}
     pvals: list[float] = []
@@ -174,14 +183,14 @@ def analyse(manifest: Path) -> dict:
 def _print_summary(report: dict) -> None:
     print(
         f"VERDICT: {report['verdict'].upper()}  "
-        f"(n={report['n_paired_seeds']}, horizon={report['horizon_episodes']} episodes)"
+        f"(n={report['n_paired_seeds']}, horizon={report['horizon_episodes']} episodes)",
     )
     print(f"{'metric':32} {'wild':>9} {'rewired':>9} {'delta(+=wild)':>13} {'q':>7}")
     for name, e in report["metrics"].items():
         print(
             f"{name:32} {e['wild_mean']:>9.2f} {e['rewired_mean']:>9.2f} "
             f"{e['mean_delta']:>+13.3f} {e['bh_fdr_q']:>7.3f}  "
-            f"wild-better {e['wild_better_seeds']}/{report['n_paired_seeds']}"
+            f"wild-better {e['wild_better_seeds']}/{report['n_paired_seeds']}",
         )
 
 

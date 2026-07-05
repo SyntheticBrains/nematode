@@ -9,7 +9,7 @@ the rewired-null is nominally higher). So the connectome's 5th-of-6 standing und
 performs the same. The credibility control the connectome half of the 6a synthesis needed — it
 delivers a citable answer. The verdict is **robust across axes**: a follow-up efficiency re-analysis
 (learning-curve AUC + episodes-to-competence on the same paired panel) also finds no wild-type
-advantage (n=8, all BH-FDR **q ≥ 0.37**), so the specific wiring buys neither a higher plateau **nor
+advantage (n=8, all BH-FDR **q ≥ 0.36**), so the specific wiring buys neither a higher plateau **nor
 faster learning** than a degree-matched rewiring.
 
 **Branch**: `openspec/add-connectome-structure-controls`.
@@ -111,7 +111,7 @@ shows a significant wild-type advantage:
 | episodes → 90% of own foods plateau | 1088 | 1538 | +450 (wild 6/8) | 0.365 |
 
 The point estimates nominally lean wild-type on three of four metrics (the *reverse* nominal lean to
-the peak metric's −3.28), but every one is non-significant at n=8 (all q ≥ 0.37) with mixed per-seed
+the peak metric's −3.28), but every one is non-significant at n=8 (all q ≥ 0.36) with mixed per-seed
 direction — the same connectome seed-variance that reversed the single-seed smoke. **The efficiency
 axis agrees with the peak axis: degree-statistics, not wiring.** Cross-arm context from
 [029](029-continuous-architecture-ranking.md): the connectome is not faster-learning than the other
@@ -141,7 +141,7 @@ null.
   degree-preserving rewirings (n=8, q=0.770, CI spans 0); its 029 standing reflects connectivity
   statistics, not the specific wiring.
 - **The null holds on the efficiency axis too.** No learning-curve AUC or time-to-competence metric
-  separates wild-type from the rewired-null (n=8, all BH-FDR q ≥ 0.37) — the wiring buys neither a
+  separates wild-type from the rewired-null (n=8, all BH-FDR q ≥ 0.36) — the wiring buys neither a
   higher plateau nor faster learning, so the credibility control forecloses the inductive-bias/
   sample-efficiency reframe as well as the peak one.
 - **The single-seed smoke reversed at n=8** — a clean caution against reading connectome results off
