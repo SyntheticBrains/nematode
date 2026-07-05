@@ -823,6 +823,10 @@ class SensingConfig(BaseModel):
     # ``contrast`` reshapes the magnitude/strength channel ((C-B)/(C+B+eps));
     # ``log`` is the log(1+C) baseline (documented ablation comparator).
     adaptive_chemosensor_enabled: bool = False
+    # Opt-in continuous behavioural-trajectory capture for real-worm chemotaxis validation. When
+    # true, each agent step records a BehaviourStep (position/heading/concentration/dC-dt/gradient)
+    # onto the run result. Off by default → nothing is captured and the run is byte-identical.
+    capture_behaviour: bool = False
     adaptive_chemosensor_readout: Literal["fold_change", "contrast", "log"] = "fold_change"
     adaptive_chemosensor_alpha: float = Field(default=0.1, gt=0.0, le=1.0)
     adaptive_chemosensor_epsilon: float = Field(default=1e-3, gt=0.0)

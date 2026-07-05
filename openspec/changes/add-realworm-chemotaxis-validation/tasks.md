@@ -2,16 +2,16 @@
 
 ## 1. Opt-in continuous behavioural-trajectory capture
 
-- [ ] 1.1 Add a config-gated `capture_behaviour: bool = False` and a
+- [x] 1.1 Add a config-gated `capture_behaviour: bool = False` and a
   `BehaviourStep(step, x, y, heading_rad, concentration, dc_dt, grad_dx, grad_dy)` record. Capture at
   the **agent step** (`agent.py`, `_create_brain_params` / `_build_temporal_result`) where position,
   heading, `env.get_food_concentration(pos)`, the step's `food_dconcentration_dt`, and the **live**
   `env.get_separated_gradients(pos)` direction are all in hand — NOT the runner loop (those sensing
   values aren't available there). Log the gradient direction live (the food field mutates). Ride the
   series on `SimulationResult` (optional `behaviour`), flushed per run.
-- [ ] 1.2 Byte-identical test: with capture off (default), the run result + `result.path` are identical
+- [x] 1.2 Byte-identical test: with capture off (default), the run result + `result.path` are identical
   to the pre-change behaviour (no behavioural record, no RNG/step-order perturbation).
-- [ ] 1.3 Capture test: with capture on, a short continuous-2D run yields one `BehaviourStep` per step
+- [x] 1.3 Capture test: with capture on, a short continuous-2D run yields one `BehaviourStep` per step
   with finite position/heading/concentration/dC-dt.
 
 ## 2. Bias-curve metrics + binning helper

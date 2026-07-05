@@ -713,6 +713,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 seed=run_seed,
                 steps=steps_taken,
                 path=step_result.agent_path,
+                behaviour=step_result.behaviour,
                 total_reward=total_reward,
                 last_total_reward=agent._episode_tracker.rewards,
                 termination_reason=step_result.termination_reason,
