@@ -42,6 +42,12 @@ _MIN_SLOPE_POINTS = 2
 # all) there is no bias, so return the neutral (null) ratio instead of a spurious maximal bias.
 _MAX_RATIO = 10.0
 _NEUTRAL_RATIO = 1.0
+# A stride is "moving" (vs a near-stationary creep/dwell step) when it exceeds this fraction of the
+# largest stride. The curving-rate floor falls back to the median *moving* stride only when the raw
+# median has collapsed below this fraction of the max — i.e. the worm parks (a converged thermotaxis
+# worm dwelling at its comfort target). For a continuously-moving worm the raw median is well above
+# the threshold, so the raw-median floor is used unchanged.
+_MOVING_STRIDE_FRACTION = 0.1
 
 
 def _wrap(theta: float) -> float:
@@ -234,10 +240,22 @@ def suggest_theta_sharp(steps: Sequence[BehaviourStep], percentile: float = 90.0
 
 
 def suggest_min_path_len(kin: Sequence[StepKinematics], fraction: float = 0.25) -> float:
-    """Return a curving-rate displacement floor: ``fraction`` x the median non-trivial stride.
+    """Return a curving-rate displacement floor: ``fraction`` x the typical *moving* stride.
 
     Scale-free (data-driven): excludes creep/dwell steps whose tiny ``path_len`` would otherwise
-    make ``dtheta / path_len`` explode. 0.0 when there are no usable strides.
+    make ``dtheta / path_len`` explode. The scale is the raw median stride, EXCEPT when that median
+    has collapsed below ``_MOVING_STRIDE_FRACTION`` of the largest stride — i.e. the worm parks (a
+    converged thermotaxis worm dwelling at its comfort target) — in which case it falls back to the
+    median of the *moving* strides so the floor stays at the true stride scale rather than letting
+    the creep artifact through. A continuously-moving worm keeps the raw-median floor unchanged.
+    0.0 when there are no strides.
     """
-    strides = [k.path_len for k in kin if k.path_len > _EPS]
-    return fraction * float(np.median(strides)) if strides else 0.0
+    strides = np.array([k.path_len for k in kin if k.path_len > _EPS])
+    if strides.size == 0:
+        return 0.0
+    scale = float(np.median(strides))
+    if scale < _MOVING_STRIDE_FRACTION * float(strides.max()):  # parked -> raw median collapsed
+        moving = strides[strides > _MOVING_STRIDE_FRACTION * strides.max()]
+        if moving.size:
+            scale = float(np.median(moving))
+    return fraction * scale
