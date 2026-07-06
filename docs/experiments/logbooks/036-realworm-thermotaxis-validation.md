@@ -72,7 +72,7 @@ variable — one seed, 44, failed to converge at 0%).
 | klinokinesis, turn-rate ratio | 1.015 [0.996, 1.034] | 0.959 [0.910, 1.007] |
 | klinokinesis, magnitude ratio | 1.006 [0.999, 1.013] | 0.983 [0.962, 1.004] |
 | weathervane slope *(thresholded)* | **+0.011 [+0.007, +0.015]** | +0.000 [−0.002, +0.003] |
-| weathervane slope *(θ-free)* | **+0.020 [+0.013, +0.031]** | +0.000 [−0.013, +0.013] |
+| weathervane slope *(θ-free)* | **+0.020 [+0.013, +0.027]** | +0.000 [−0.008, +0.009] |
 | **combined**: klinokinesis / weathervane | PARTIAL / **PRESENT** | ABSENT / *(collapsed)* |
 
 *(80% CIs shown for the model statistics; the weathervane also excludes the null at **95%** — see
@@ -83,7 +83,7 @@ robustness.)*
 [+0.010, +0.031] excludes zero, and it is stable across θ_sharp (0.30–0.45), tail window (50/150),
 and leave-one-out (every LOO mean positive — no single seed drives it). It is **~5× weaker than
 chemotaxis's +0.09**. Removing the head-sweep (derivative control) collapses it to **+0.000**
-[−0.013, +0.013], and leave-one-out confirms the collapse is *not* an artifact of the one failed seed
+[−0.008, +0.009], and leave-one-out confirms the collapse is *not* an artifact of the one failed seed
 — so the specificity control establishes the thermal weathervane as a genuine, sensor-driven signal,
 not a geometry confound.
 

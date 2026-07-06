@@ -991,14 +991,31 @@ class QuantumNematodeAgent:
     ) -> tuple[float, float, float, float]:
         """Return the captured drive fields, selected by ``capture_behaviour_modality``.
 
-        The tuple is ``(drive, drive-derivative, toward-drive direction, gradient strength)``:
-
         - ``food`` (chemotaxis): the food concentration, its temporal derivative, and the live
           food-gradient direction/strength (monotonic — the drive is the concentration itself).
         - ``thermotaxis``: the homeostatic thermal drive ``-|T - Tc|`` (higher = closer to the
           cultivation temperature ``Tc``), its one-step derivative, and the toward-comfort direction
           (up the thermal gradient when too cold, opposite when too hot) + the gradient strength.
           Sampling the setpoint-adjusted drive lets the same bias-curve metrics grade thermotaxis.
+
+        Parameters
+        ----------
+        sensing : SensingConfig
+            The sensing config; ``capture_behaviour_modality`` selects the branch.
+        temporal : dict
+            The temporal-sensing result (food concentration + dC/dt) — used by the food branch.
+        food_grad_dir, food_grad_strength : float
+            The live food-gradient direction/strength — used by the food branch.
+        sensing_pos : tuple[float, float]
+            The float sensing position; the thermotaxis branch samples the thermal gradient here.
+        temperature : float | None
+            The temperature at ``sensing_pos`` (``None`` when thermotaxis is disabled).
+
+        Returns
+        -------
+        tuple[float, float, float, float]
+            ``(drive, drive-derivative, toward-drive direction, gradient strength)`` for the
+            ``BehaviourStep`` — the food values or the setpoint-adjusted thermal values.
         """
         if sensing.capture_behaviour_modality == "thermotaxis" and self.env.thermotaxis.enabled:
             tc = float(self.env.thermotaxis.cultivation_temperature)

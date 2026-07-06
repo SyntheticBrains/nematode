@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Literal
 
 from quantumnematode.agent import QuantumNematodeAgent, RewardConfig, SatietyConfig
 from quantumnematode.brain.arch import ConnectomePPOBrain, ConnectomePPOBrainConfig
@@ -16,10 +17,13 @@ def _agent(
     *,
     capture: bool,
     chemotaxis_mode: SensingMode = SensingMode.ORACLE,
+    capture_behaviour_modality: Literal["food", "thermotaxis"] = "food",
+    thermotaxis: ThermotaxisParams | None = None,
 ) -> QuantumNematodeAgent:
     env = Continuous2DEnvironment(
         continuous=Continuous2DParams(world_size_mm=20.0, max_step_mm=1.0),
         seed=0,
+        thermotaxis=thermotaxis,
     )
     brain = ConnectomePPOBrain(
         config=ConnectomePPOBrainConfig(
@@ -35,7 +39,11 @@ def _agent(
         brain=brain,
         env=env,
         satiety_config=SatietyConfig(initial_satiety=100.0),
-        sensing_config=SensingConfig(capture_behaviour=capture, chemotaxis_mode=chemotaxis_mode),
+        sensing_config=SensingConfig(
+            capture_behaviour=capture,
+            chemotaxis_mode=chemotaxis_mode,
+            capture_behaviour_modality=capture_behaviour_modality,
+        ),
     )
 
 
@@ -91,41 +99,28 @@ def test_capture_is_byte_identical_to_capture_off():
     assert on.path == off.path
 
 
+def _thermotaxis(base_temperature: float) -> ThermotaxisParams:
+    """Build a linear-gradient thermotaxis field (Tc=20, +x gradient); base sets the spawn error."""
+    return ThermotaxisParams(
+        enabled=True,
+        cultivation_temperature=20.0,
+        base_temperature=base_temperature,
+        gradient_direction=0.0,
+        gradient_strength=0.5,
+    )
+
+
 def test_thermotaxis_modality_captures_setpoint_drive():
     """Thermotaxis capture records the homeostatic thermal drive + toward-comfort direction.
 
     The drive is ``-|T - Tc|`` (<= 0, zero at the cultivation temperature) and the thermal gradient
     is live, so the same bias-curve metrics can grade thermotaxis against the setpoint.
     """
-    env = Continuous2DEnvironment(
-        continuous=Continuous2DParams(world_size_mm=20.0, max_step_mm=1.0),
-        seed=0,
-        thermotaxis=ThermotaxisParams(
-            enabled=True,
-            cultivation_temperature=20.0,
-            base_temperature=15.0,  # cool base -> a real thermal error toward warmer
-            gradient_direction=0.0,
-            gradient_strength=0.5,
-        ),
-    )
-    brain = ConnectomePPOBrain(
-        config=ConnectomePPOBrainConfig(
-            seed=0,
-            action_mode="continuous",
-            rollout_buffer_size=16,
-            num_minibatches=2,
-            num_epochs=2,
-        ),
-        device=DeviceType.CPU,
-    )
-    agent = QuantumNematodeAgent(
-        brain=brain,
-        env=env,
-        satiety_config=SatietyConfig(initial_satiety=100.0),
-        sensing_config=SensingConfig(
-            capture_behaviour=True,
-            capture_behaviour_modality="thermotaxis",
-        ),
+    # Cool base (15 < Tc) -> a real thermal error toward warmer.
+    agent = _agent(
+        capture=True,
+        capture_behaviour_modality="thermotaxis",
+        thermotaxis=_thermotaxis(15.0),
     )
     agent.run_episode(RewardConfig(), max_steps=20)
     assert len(agent.behaviour) > 0
@@ -141,40 +136,16 @@ def test_thermotaxis_toward_comfort_flips_above_setpoint():
     Guards the ``else tgrad[1] + pi`` branch: with a base ABOVE Tc the spawn is too hot, so
     toward-comfort points *down* the thermal gradient (the increasing-temperature direction + pi).
     """
-    env = Continuous2DEnvironment(
-        continuous=Continuous2DParams(world_size_mm=20.0, max_step_mm=1.0),
-        seed=0,
-        thermotaxis=ThermotaxisParams(
-            enabled=True,
-            cultivation_temperature=20.0,
-            base_temperature=25.0,  # spawn (centre) is HOT -> T > Tc -> flip
-            gradient_direction=0.0,  # temperature increases toward +x
-            gradient_strength=0.5,
-        ),
+    agent = _agent(
+        capture=True,
+        capture_behaviour_modality="thermotaxis",
+        thermotaxis=_thermotaxis(25.0),  # spawn (centre) is HOT -> T > Tc -> flip
     )
-    brain = ConnectomePPOBrain(
-        config=ConnectomePPOBrainConfig(
-            seed=0,
-            action_mode="continuous",
-            rollout_buffer_size=16,
-            num_minibatches=2,
-            num_epochs=2,
-        ),
-        device=DeviceType.CPU,
-    )
-    agent = QuantumNematodeAgent(
-        brain=brain,
-        env=env,
-        satiety_config=SatietyConfig(initial_satiety=100.0),
-        sensing_config=SensingConfig(
-            capture_behaviour=True,
-            capture_behaviour_modality="thermotaxis",
-        ),
-    )
+    env = agent.env
     agent.run_episode(RewardConfig(), max_steps=20)
     # For every captured step, the toward-comfort direction is 0 (up-gradient) when the worm is
     # colder than Tc and ~pi (down-gradient) when hotter — verify the hot steps take the flip.
-    hot = [b for b in agent.behaviour if env.get_temperature((b.x, b.y)) > 20.0]
+    hot = [b for b in agent.behaviour if (env.get_temperature((b.x, b.y)) or 0.0) > 20.0]
     assert hot  # the worm starts hot, so some steps must be above Tc
     # gradient direction is 0 (toward +x/warmer), so the flipped toward-comfort is exactly pi.
     assert all(abs(b.grad_dir - math.pi) < 1e-6 for b in hot)

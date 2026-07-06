@@ -248,7 +248,18 @@ def suggest_min_path_len(kin: Sequence[StepKinematics], fraction: float = 0.25) 
     converged thermotaxis worm dwelling at its comfort target) — in which case it falls back to the
     median of the *moving* strides so the floor stays at the true stride scale rather than letting
     the creep artifact through. A continuously-moving worm keeps the raw-median floor unchanged.
-    0.0 when there are no strides.
+
+    Parameters
+    ----------
+    kin : Sequence[StepKinematics]
+        The per-transition kinematics whose ``path_len`` distribution sets the stride scale.
+    fraction : float
+        The floor as a fraction of the typical (moving) stride.
+
+    Returns
+    -------
+    float
+        The displacement floor (mm); ``0.0`` when there are no strides.
     """
     strides = np.array([k.path_len for k in kin if k.path_len > _EPS])
     if strides.size == 0:
