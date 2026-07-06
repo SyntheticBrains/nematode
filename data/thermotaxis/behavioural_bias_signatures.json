@@ -1,0 +1,38 @@
+{
+  "klinokinesis": {
+    "strategy": "klinokinesis",
+    "statistic": "down_up_turn_ratio",
+    "null_value": 1.0,
+    "sign": 1,
+    "magnitude_range": null,
+    "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Ryu & Samuel (2002). J Neurosci 22(13):5727-5733",
+    "notes": "Thermotaxis is homeostatic: the drive is the setpoint error toward the cultivation temperature Tc (drive = -|T - Tc|). Reorientation rate is elevated when the thermal error worsens (the drive decreases, i.e. the worm moves away from Tc), the thermal analogue of the chemotaxis biased random walk. Luo et al. 2014 decompose C. elegans thermotaxis into klinokinesis + klinotaxis; Ryu & Samuel 2002 is a supporting behaviour-level source. Sign-only (direction) reference — the turn-rate ratio magnitude is not cleanly comparable to the reported thermotactic-bias statistics; a figure digitization is a non-goal."
+  },
+  "klinokinesis_magnitude": {
+    "strategy": "klinokinesis",
+    "statistic": "down_up_magnitude_ratio",
+    "null_value": 1.0,
+    "sign": 1,
+    "magnitude_range": null,
+    "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Ryu & Samuel (2002). J Neurosci 22(13):5727-5733",
+    "notes": "Threshold-free companion: mean |dtheta| is larger when the thermal error worsens vs improves. Same documented direction (larger reorientations heading away from Tc), sign-only; the theta_sharp-independent robustness cross-check for thermal klinokinesis."
+  },
+  "klinotaxis": {
+    "strategy": "klinotaxis",
+    "statistic": "weathervane_slope",
+    "null_value": 0.0,
+    "sign": 1,
+    "magnitude_range": null,
+    "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Clark et al. (2007). J Neurosci 27(23):6083-6090",
+    "notes": "C. elegans thermotaxis uses gradual curving toward the preferred thermal direction (toward Tc: up-gradient when too cold, down-gradient when too hot) in addition to klinokinesis. Positive curving-rate-vs-bearing slope against the toward-comfort direction. Sign-only reference; magnitude units are not literature-comparable."
+  },
+  "klinotaxis_all": {
+    "strategy": "klinotaxis",
+    "statistic": "weathervane_slope_all",
+    "null_value": 0.0,
+    "sign": 1,
+    "magnitude_range": null,
+    "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Clark et al. (2007). J Neurosci 27(23):6083-6090",
+    "notes": "Threshold-free companion to the thermal weathervane slope: the curving-rate-vs-bearing slope over all usable steps (independent of theta_sharp). Sign-only reference."
+  }
+}

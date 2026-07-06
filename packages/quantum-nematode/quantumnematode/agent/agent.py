@@ -980,6 +980,46 @@ class QuantumNematodeAgent:
 
         return result
 
+    def _behaviour_capture_fields(  # noqa: PLR0913
+        self,
+        sensing: SensingConfig,
+        temporal: dict,
+        food_grad_dir: float,
+        food_grad_strength: float,
+        sensing_pos: tuple[float, float],
+        temperature: float | None,
+    ) -> tuple[float, float, float, float]:
+        """Return the captured drive fields, selected by ``capture_behaviour_modality``.
+
+        The tuple is ``(drive, drive-derivative, toward-drive direction, gradient strength)``:
+
+        - ``food`` (chemotaxis): the food concentration, its temporal derivative, and the live
+          food-gradient direction/strength (monotonic — the drive is the concentration itself).
+        - ``thermotaxis``: the homeostatic thermal drive ``-|T - Tc|`` (higher = closer to the
+          cultivation temperature ``Tc``), its one-step derivative, and the toward-comfort direction
+          (up the thermal gradient when too cold, opposite when too hot) + the gradient strength.
+          Sampling the setpoint-adjusted drive lets the same bias-curve metrics grade thermotaxis.
+        """
+        if sensing.capture_behaviour_modality == "thermotaxis" and self.env.thermotaxis.enabled:
+            tc = float(self.env.thermotaxis.cultivation_temperature)
+            t_now = float(temperature) if temperature is not None else tc
+            drive = -abs(t_now - tc)  # 0 at the setpoint, more negative the further from comfort
+            prev_drive = self.behaviour[-1].concentration if self.behaviour else drive
+            tgrad = self.env.get_temperature_gradient(position=sensing_pos)
+            # get_temperature_gradient points toward WARMER; go that way when too cold, the opposite
+            # when too hot. kinematics() re-wraps ``grad_dir - heading`` so unwrapped is fine.
+            strength, toward = 0.0, 0.0
+            if tgrad is not None:
+                strength = float(tgrad[0])
+                toward = float(tgrad[1]) if t_now < tc else float(tgrad[1]) + math.pi
+            return drive, drive - prev_drive, toward, strength
+        return (
+            float(temporal.get("food_concentration", 0.0) or 0.0),
+            float(temporal.get("food_dconcentration_dt", 0.0) or 0.0),
+            food_grad_dir,
+            food_grad_strength,
+        )
+
     def _create_brain_params(  # noqa: C901, PLR0912, PLR0915
         self,
         action: ActionData | None = None,
@@ -1177,16 +1217,24 @@ class QuantumNematodeAgent:
                 float(agent_state.position[0]),
                 float(agent_state.position[1]),
             )
+            _drive, _ddt, _gdir, _gstr = self._behaviour_capture_fields(
+                sensing,
+                temporal,
+                _capture_grad_dir,
+                _capture_grad_strength,
+                agent_pos,
+                temperature,
+            )
             self.behaviour.append(
                 BehaviourStep(
                     step=self._episode_tracker.steps,
                     x=float(_bpos[0]),
                     y=float(_bpos[1]),
                     heading_rad=float(agent_state.heading_rad),
-                    concentration=float(temporal.get("food_concentration", 0.0) or 0.0),
-                    dc_dt=float(temporal.get("food_dconcentration_dt", 0.0) or 0.0),
-                    grad_dir=_capture_grad_dir,
-                    grad_strength=_capture_grad_strength,
+                    concentration=_drive,
+                    dc_dt=_ddt,
+                    grad_dir=_gdir,
+                    grad_strength=_gstr,
                 ),
             )
 

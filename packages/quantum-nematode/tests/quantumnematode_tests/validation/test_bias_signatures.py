@@ -74,3 +74,20 @@ def test_explicit_missing_path_raises(tmp_path):
     """A caller-supplied path that does not exist is an error, not a silent fallback to defaults."""
     with pytest.raises(FileNotFoundError):
         load_bias_signatures(tmp_path / "does_not_exist.json")
+
+
+def test_thermotaxis_modality_loads_sign_only_setpoint_references():
+    """The thermotaxis reference set has the four statistics, all sign-only (homeostatic setpoint)."""
+    refs = load_bias_signatures(modality="thermotaxis")
+    assert set(refs) == {
+        "klinokinesis",
+        "klinokinesis_magnitude",
+        "klinotaxis",
+        "klinotaxis_all",
+    }
+    assert all(r.magnitude_range is None for r in refs.values())  # sign-only
+    assert refs["klinokinesis"].null_value == 1.0
+    assert refs["klinotaxis"].null_value == 0.0
+    assert "Ryu" in refs["klinokinesis"].citation
+    # Distinct from the food references (different citations for the same statistic keys).
+    assert refs["klinokinesis"].citation != load_bias_signatures()["klinokinesis"].citation
