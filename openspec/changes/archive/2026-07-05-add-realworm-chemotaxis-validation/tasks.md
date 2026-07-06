@@ -99,7 +99,9 @@
 
 ## 9. Pre-merge gates
 
-- [ ] 9.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push.
-- [ ] 9.2 `openspec validate add-realworm-chemotaxis-validation --strict`.
-- [ ] 9.3 Full `uv run pytest -m "not nightly"` green (byte-identical capture-off invariant holds).
-- [ ] 9.4 Archive the change in-PR (`openspec archive add-realworm-chemotaxis-validation -y`).
+- [x] 9.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push. *Full suite green.*
+- [x] 9.2 `openspec validate add-realworm-chemotaxis-validation --strict`. *Valid.*
+- [x] 9.3 Full `uv run pytest -m "not nightly"` green (byte-identical capture-off invariant holds).
+  *4123 passed, 1 skipped, 2 xfailed.*
+- [x] 9.4 Archive the change in-PR (`openspec archive add-realworm-chemotaxis-validation -y`). *Archived
+  as `2026-07-05-add-realworm-chemotaxis-validation`; `realworm-behavioural-validation` spec created.*
