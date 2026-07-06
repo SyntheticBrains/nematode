@@ -77,7 +77,7 @@ def test_explicit_missing_path_raises(tmp_path):
 
 
 def test_thermotaxis_modality_loads_sign_only_setpoint_references():
-    """The thermotaxis reference set has the four statistics, all sign-only (homeostatic setpoint)."""
+    """The thermotaxis reference set has four statistics, all sign-only (homeostatic setpoint)."""
     refs = load_bias_signatures(modality="thermotaxis")
     assert set(refs) == {
         "klinokinesis",

@@ -830,7 +830,7 @@ class SensingConfig(BaseModel):
     # Which navigation drive the captured BehaviourStep records: "food" (chemotaxis — concentration,
     # dC/dt, food-gradient direction) or "thermotaxis" (the homeostatic thermal drive — the captured
     # drive/derivative/gradient fields carry the setpoint-adjusted thermal error toward the
-    # cultivation temperature and the toward-comfort direction, so the same bias-curve metrics apply).
+    # cultivation temperature + the toward-comfort direction, so the same bias-curve metrics apply).
     capture_behaviour_modality: Literal["food", "thermotaxis"] = "food"
     adaptive_chemosensor_readout: Literal["fold_change", "contrast", "log"] = "fold_change"
     adaptive_chemosensor_alpha: float = Field(default=0.1, gt=0.0, le=1.0)
