@@ -20,7 +20,7 @@ from quantumnematode.env import Direction
 from quantumnematode.env.oxygen import OxygenZone
 from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.logging_config import logger
-from quantumnematode.report.dtypes import TerminationReason
+from quantumnematode.report.dtypes import BehaviourStep, TerminationReason
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
@@ -88,11 +88,15 @@ class EpisodeResult:
         The reason for episode termination, if applicable.
     food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
+    behaviour : list[BehaviourStep] | None
+        Opt-in continuous behavioural trajectory (real-worm chemotaxis validation); None unless
+        ``SensingConfig.capture_behaviour`` is set.
     """
 
     agent_path: AgentPath
     termination_reason: TerminationReason
     food_history: FoodHistory | None = None
+    behaviour: list[BehaviourStep] | None = None
 
 
 class EpisodeRunner(Protocol):
@@ -238,6 +242,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             agent_path=agent.path,
             termination_reason=termination_reason,
             food_history=resolved_food_history,
+            behaviour=agent.behaviour or None,
         )
 
     def _apply_brave_foraging_bonuses(

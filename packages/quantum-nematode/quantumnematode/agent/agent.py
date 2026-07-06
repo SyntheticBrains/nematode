@@ -23,7 +23,7 @@ from quantumnematode.env import (
 from quantumnematode.env.env import Direction
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
-from quantumnematode.report.dtypes import PerformanceMetrics
+from quantumnematode.report.dtypes import BehaviourStep, PerformanceMetrics
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
@@ -498,6 +498,9 @@ class QuantumNematodeAgent:
 
         _init_pos = self.env.agents[self.agent_id].position
         self.path: list[GridPosition] = [(_init_pos[0], _init_pos[1])]
+        # Opt-in continuous behavioural trajectory (real-worm chemotaxis validation); populated per
+        # step only when ``sensing_config.capture_behaviour`` is set; reset each reset_environment.
+        self.behaviour: list[BehaviourStep] = []
         # Track food positions at each step for chemotaxis validation. The history
         # is a cell-resolution reporting record (snap the continuous-2D float
         # sources); the worm senses the real float sources via the env field.
@@ -1016,6 +1019,19 @@ class QuantumNematodeAgent:
             disable_log=True,
         )
 
+        # Ground-truth food-gradient direction/strength at the sensing position, snapshotted live
+        # before `_compute_temporal_data` pops these keys under non-oracle (derivative) sensing and
+        # before the food field mutates. This is the bearing reference for the behavioural
+        # klinotaxis validation (weathervane curving is measured against the true gradient, which
+        # the derivative-sensing agent does not itself observe). Off-path when capture is disabled.
+        _capture_grad_dir = 0.0
+        _capture_grad_strength = 0.0
+        if sensing.capture_behaviour:
+            _capture_grad_dir = float(separated_grads.get("food_gradient_direction", 0.0) or 0.0)
+            _capture_grad_strength = float(
+                separated_grads.get("food_gradient_strength", 0.0) or 0.0,
+            )
+
         # Mechanosensation: detect physical contact with boundaries and predators
         boundary_contact = self.env.is_agent_at_boundary_for(self.agent_id)
         predator_contact = self.env.is_agent_in_predator_contact_for(self.agent_id)
@@ -1149,6 +1165,30 @@ class QuantumNematodeAgent:
 
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
+
+        # --- Opt-in behavioural-trajectory capture (real-worm chemotaxis validation): record the
+        # per-step continuous state + sensing where they are all in hand; the gradient direction is
+        # captured live (the food field mutates during a foraging run). Off by default -> no-op;
+        # deduped by step since this method may run more than once per step. ---
+        if sensing.capture_behaviour and (
+            not self.behaviour or self.behaviour[-1].step != self._episode_tracker.steps
+        ):
+            _bpos = agent_state.pos_continuous or (
+                float(agent_state.position[0]),
+                float(agent_state.position[1]),
+            )
+            self.behaviour.append(
+                BehaviourStep(
+                    step=self._episode_tracker.steps,
+                    x=float(_bpos[0]),
+                    y=float(_bpos[1]),
+                    heading_rad=float(agent_state.heading_rad),
+                    concentration=float(temporal.get("food_concentration", 0.0) or 0.0),
+                    dc_dt=float(temporal.get("food_dconcentration_dt", 0.0) or 0.0),
+                    grad_dir=_capture_grad_dir,
+                    grad_strength=_capture_grad_strength,
+                ),
+            )
 
         # --- Memory-task cue/outcome/go channels (0 when off; at most one task is active,
         # enforced by EnvironmentConfig._validate_memory_tasks_mutually_exclusive) ---
@@ -1614,6 +1654,7 @@ class QuantumNematodeAgent:
             self.env.associative_memory = associative_memory
 
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
+        self.behaviour = []
         # Track food positions at each step for chemotaxis validation (cell-snapped).
         self.food_history = [_food_cells(self.env.foods)]
 

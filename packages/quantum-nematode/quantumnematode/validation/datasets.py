@@ -8,6 +8,7 @@ biological baselines.
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .chemotaxis import (
     ChemotaxisMetrics,
@@ -18,6 +19,7 @@ from .chemotaxis import (
 # Project root and default dataset path for clearer path resolution
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _DEFAULT_DATASET_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "literature_ci_values.json"
+_DEFAULT_BIAS_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "behavioural_bias_signatures.json"
 
 
 @dataclass
@@ -297,3 +299,146 @@ class ChemotaxisValidationBenchmark:
             "validation_levels": level_counts,
             "individual_results": results,
         }
+
+
+@dataclass
+class BiasCurveReference:
+    """A documented behaviour-level signature of a *C. elegans* klinotaxis strategy.
+
+    A behaviour-level reference (bias direction + a reported magnitude range + citation), NOT a
+    pixel-digitised curve. Used to grade a model bias statistic REPRODUCED / PARTIAL / ABSENT.
+
+    Attributes
+    ----------
+        strategy: "klinokinesis" | "klinotaxis".
+        statistic: The model bias-statistic name this reference is compared against.
+        null_value: The no-bias value of the statistic (1.0 for a rate ratio, 0.0 for a slope).
+        sign: +1 if the statistic should EXCEED null_value when the strategy is present.
+        magnitude_range: (lo, hi) comparable literature range, or None for a sign-only reference.
+        citation: The source paper.
+        notes: Precision / unit-comparability caveats (behaviour-level, not figure-exact).
+    """
+
+    strategy: str
+    statistic: str
+    null_value: float
+    sign: int
+    magnitude_range: tuple[float, float] | None
+    citation: str
+    notes: str
+
+
+def _bias_from_dict(d: dict[str, Any]) -> BiasCurveReference:
+    """Build a ``BiasCurveReference`` from one JSON object.
+
+    Parameters
+    ----------
+    d : dict[str, Any]
+        A mapping with keys ``strategy``, ``statistic``, ``null_value``, ``sign``,
+        ``magnitude_range`` (a ``[lo, hi]`` list or ``null``), ``citation`` and ``notes``.
+
+    Returns
+    -------
+    BiasCurveReference
+        The parsed reference, with ``magnitude_range`` coerced to a ``(lo, hi)`` tuple or ``None``.
+    """
+    mr = d.get("magnitude_range")
+    return BiasCurveReference(
+        strategy=d["strategy"],
+        statistic=d["statistic"],
+        null_value=float(d["null_value"]),
+        sign=int(d["sign"]),
+        magnitude_range=(float(mr[0]), float(mr[1])) if mr is not None else None,
+        citation=d["citation"],
+        notes=d["notes"],
+    )
+
+
+def _default_bias_signatures() -> dict[str, BiasCurveReference]:
+    """Hardcoded fallback mirroring ``behavioural_bias_signatures.json`` (behaviour-level)."""
+    return {
+        "klinokinesis": BiasCurveReference(
+            strategy="klinokinesis",
+            statistic="down_up_turn_ratio",
+            null_value=1.0,
+            sign=1,
+            magnitude_range=(1.5, 3.0),
+            citation="Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+            notes=(
+                "Pirouette-initiation rate is elevated heading down-gradient (dC/dt < 0); the "
+                "down/up-gradient turn-rate ratio is ~2x. A dimensionless ratio (directly "
+                "comparable). Approximate literature signature, not a figure digitization."
+            ),
+        ),
+        "klinotaxis": BiasCurveReference(
+            strategy="klinotaxis",
+            statistic="weathervane_slope",
+            null_value=0.0,
+            sign=1,
+            magnitude_range=None,
+            citation="Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+            notes=(
+                "The weathervane curves the trajectory toward the gradient (positive slope). Its "
+                "magnitude in rad/mm-per-bearing is not comparable to the paper's "
+                "deg/mm-per-normal-gradient parameterization, so this is a sign-only reference; a "
+                "figure-digitized slope is a non-goal."
+            ),
+        ),
+        "klinokinesis_magnitude": BiasCurveReference(
+            strategy="klinokinesis",
+            statistic="down_up_magnitude_ratio",
+            null_value=1.0,
+            sign=1,
+            magnitude_range=None,
+            citation="Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+            notes=(
+                "Threshold-free companion to down_up_turn_ratio: mean |dtheta| down- vs "
+                "up-gradient. Same direction, different unit (magnitude, not rate), so graded "
+                "sign-only; a theta_sharp-independent robustness cross-check."
+            ),
+        ),
+        "klinotaxis_all": BiasCurveReference(
+            strategy="klinotaxis",
+            statistic="weathervane_slope_all",
+            null_value=0.0,
+            sign=1,
+            magnitude_range=None,
+            citation="Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+            notes=(
+                "Threshold-free companion to weathervane_slope: the curving-rate-vs-bearing slope "
+                "over all usable steps (sharp reorientations not excluded), independent of "
+                "theta_sharp. Sign-only reference; the weathervane robustness cross-check."
+            ),
+        ),
+    }
+
+
+def load_bias_signatures(path: str | Path | None = None) -> dict[str, BiasCurveReference]:
+    """Load the behavioural bias-curve reference signatures from JSON.
+
+    Parameters
+    ----------
+    path : str | Path | None
+        An explicit signatures file. When omitted, the packaged default is used, falling back to the
+        hardcoded ``_default_bias_signatures()`` if that default file is absent. A *caller-supplied*
+        path that does not exist is an error (raised), not silently replaced with the defaults.
+
+    Returns
+    -------
+    dict[str, BiasCurveReference]
+        The reference signatures keyed by their reference key.
+
+    Raises
+    ------
+    FileNotFoundError
+        If an explicit ``path`` is given but does not exist.
+    """
+    resolved = _DEFAULT_BIAS_PATH if path is None else Path(path)
+    if not resolved.exists():
+        if path is not None:
+            msg = f"Bias-signatures file not found: {resolved}"
+            raise FileNotFoundError(msg)
+        return _default_bias_signatures()  # implicit default missing -> canonical hardcoded values
+    with resolved.open() as f:
+        data = json.load(f)
+    return {key: _bias_from_dict(value) for key, value in data.items()}

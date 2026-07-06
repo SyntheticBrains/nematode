@@ -1,0 +1,120 @@
+{
+  "theta_sharp": 0.45,
+  "min_path_len_fraction": 0.25,
+  "n_seeds": 8,
+  "statistics": {
+    "klinokinesis": {
+      "statistic": "down_up_turn_ratio",
+      "verdict": "PARTIAL",
+      "mean": 1.1467685884229089,
+      "ci_lo": 1.1268108059685225,
+      "ci_hi": 1.1665908403050675,
+      "n": 8,
+      "null_value": 1.0,
+      "sign": 1,
+      "magnitude_range": [
+        1.5,
+        3.0
+      ],
+      "citation": "Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+      "family": "thresholded",
+      "strategy": "klinokinesis",
+      "per_seed": {
+        "42": 1.114489314431536,
+        "43": 1.1945780636633374,
+        "44": 1.0868535565547757,
+        "45": 1.1825352844790116,
+        "46": 1.1089560298923264,
+        "47": 1.211944052089487,
+        "48": 1.1608708814132775,
+        "49": 1.1139215248595193
+      }
+    },
+    "klinokinesis_magnitude": {
+      "statistic": "down_up_magnitude_ratio",
+      "verdict": "REPRODUCED",
+      "mean": 1.041366338417391,
+      "ci_lo": 1.0362275833015218,
+      "ci_hi": 1.0463904944136992,
+      "n": 8,
+      "null_value": 1.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569",
+      "family": "threshold_free",
+      "strategy": "klinokinesis",
+      "per_seed": {
+        "42": 1.0416313767431564,
+        "43": 1.0516675699052709,
+        "44": 1.0289350792066807,
+        "45": 1.0481885850878019,
+        "46": 1.0266855589706214,
+        "47": 1.0589353142902929,
+        "48": 1.04640563909743,
+        "49": 1.0284815840378736
+      }
+    },
+    "klinotaxis": {
+      "statistic": "weathervane_slope",
+      "verdict": "REPRODUCED",
+      "mean": 0.02703446929183024,
+      "ci_lo": 0.021305756367141247,
+      "ci_hi": 0.03307230532801187,
+      "n": 8,
+      "null_value": 0.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+      "family": "thresholded",
+      "strategy": "klinotaxis",
+      "per_seed": {
+        "42": 0.046266726310254164,
+        "43": 0.014795435209281381,
+        "44": 0.037956711129337496,
+        "45": 0.01689298835383881,
+        "46": 0.04064726668529822,
+        "47": 0.020060030800126995,
+        "48": 0.0306337021488458,
+        "49": 0.009022893697659046
+      }
+    },
+    "klinotaxis_all": {
+      "statistic": "weathervane_slope_all",
+      "verdict": "REPRODUCED",
+      "mean": 0.06539104895630057,
+      "ci_lo": 0.05267742847424135,
+      "ci_hi": 0.07832415512298439,
+      "n": 8,
+      "null_value": 0.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Iino & Yoshida (2009). J Neurosci 29(17):5370-5380",
+      "family": "threshold_free",
+      "strategy": "klinotaxis",
+      "per_seed": {
+        "42": 0.10418623664967419,
+        "43": 0.04899159454600483,
+        "44": 0.08852661015251648,
+        "45": 0.04001798055420626,
+        "46": 0.08544806964298564,
+        "47": 0.047907361881979874,
+        "48": 0.08901597427730053,
+        "49": 0.01903456394573672
+      }
+    }
+  },
+  "strategy_verdicts": {
+    "klinokinesis": {
+      "combined": "PRESENT_PARTIAL",
+      "thresholded": "PARTIAL",
+      "threshold_free": "REPRODUCED",
+      "citation": "Pierce-Shimomura, Morse & Lockery (1999). J Neurosci 19(21):9557-9569"
+    },
+    "klinotaxis": {
+      "combined": "PRESENT",
+      "thresholded": "REPRODUCED",
+      "threshold_free": "REPRODUCED",
+      "citation": "Iino & Yoshida (2009). J Neurosci 29(17):5370-5380"
+    }
+  }
+}

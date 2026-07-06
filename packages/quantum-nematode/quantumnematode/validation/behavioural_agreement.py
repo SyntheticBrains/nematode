@@ -1,0 +1,179 @@
+"""Agreement grading for behavioural klinotaxis bias statistics vs literature references.
+
+Reduces a per-seed set of bias-statistic values (down/up turn-rate ratio; weathervane slope) to
+a mean + an 80% bootstrap CI, then grades it against a :class:`BiasCurveReference` as
+REPRODUCED / PARTIAL / ABSENT.
+
+The grading is deliberately conservative and behaviour-level (see the reference notes): a ranged
+reference (e.g. the klinokinesis ratio) grades REPRODUCED only when a significant correct-sign bias
+*and* a literature-range-overlapping magnitude are both present; a sign-only reference (e.g. the
+weathervane slope) grades on direction alone. Verdicts:
+
+- **REPRODUCED**: the 80% CI excludes the no-bias null on the reference's sign side (a significant
+  correct-direction bias), and — for a ranged reference — the CI overlaps the literature range.
+- **PARTIAL**: the mean leans the correct way but the CI includes the null (direction not
+  significant), or a significant bias whose magnitude falls outside the literature range.
+- **ABSENT**: the mean does not lean the reference's direction.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from .datasets import BiasCurveReference
+
+_BOOTSTRAP_RESAMPLES = 1000
+_CI_LEVEL = 0.80
+_BOOTSTRAP_SEED = 42
+# A single sample has a zero-width bootstrap CI, so it can never establish significance; require at
+# least this many seeds before a CI-excludes-null call counts as a significant (REPRODUCED) bias.
+_MIN_SIGNIFICANT_N = 2
+
+
+class Verdict(StrEnum):
+    """Per-curve agreement verdict against a behaviour-level literature reference."""
+
+    REPRODUCED = "REPRODUCED"
+    PARTIAL = "PARTIAL"
+    ABSENT = "ABSENT"
+
+
+@dataclass(slots=True)
+class AgreementResult:
+    """A graded bias statistic: the reduced value + 80% bootstrap CI + verdict vs the reference."""
+
+    statistic: str
+    verdict: Verdict
+    mean: float
+    ci_lo: float
+    ci_hi: float
+    n: int
+    null_value: float
+    sign: int
+    magnitude_range: tuple[float, float] | None
+    citation: str
+
+    def to_dict(self) -> dict:
+        """JSON-serialisable summary (verdict as its string value)."""
+        return {
+            "statistic": self.statistic,
+            "verdict": self.verdict.value,
+            "mean": self.mean,
+            "ci_lo": self.ci_lo,
+            "ci_hi": self.ci_hi,
+            "n": self.n,
+            "null_value": self.null_value,
+            "sign": self.sign,
+            "magnitude_range": list(self.magnitude_range) if self.magnitude_range else None,
+            "citation": self.citation,
+        }
+
+
+def bootstrap_ci(values: Sequence[float]) -> tuple[float, float, float]:
+    """Mean and an 80% bootstrap confidence interval over per-seed values.
+
+    Parameters
+    ----------
+    values : Sequence[float]
+        The per-seed statistic values (assumed already finite; empties/None filtered upstream).
+
+    Returns
+    -------
+    tuple[float, float, float]
+        ``(mean, ci_lo, ci_hi)``: the sample mean and the 80% percentile bootstrap CI bounds. An
+        empty input returns ``(nan, nan, nan)``; a single value returns a zero-width CI at it.
+
+    Notes
+    -----
+    The resampling is seeded (``rng=42``, ``1000`` resamples) so the CI is reproducible.
+    """
+    arr = np.asarray([float(v) for v in values], dtype=float)
+    if arr.size == 0:
+        return float("nan"), float("nan"), float("nan")
+    mean = float(arr.mean())
+    if arr.size == 1:
+        return mean, mean, mean
+    rng = np.random.default_rng(_BOOTSTRAP_SEED)
+    boots = np.array(
+        [rng.choice(arr, size=arr.size, replace=True).mean() for _ in range(_BOOTSTRAP_RESAMPLES)],
+    )
+    alpha = 1.0 - _CI_LEVEL
+    return mean, float(np.quantile(boots, alpha / 2)), float(np.quantile(boots, 1.0 - alpha / 2))
+
+
+def _leans_correct(mean: float, null_value: float, sign: int) -> bool:
+    return (mean - null_value) * sign > 0.0
+
+
+def _ci_excludes_null(ci_lo: float, ci_hi: float, null_value: float, sign: int) -> bool:
+    """Return whether the whole CI sits on the reference's sign side of the null (significant)."""
+    return ci_lo > null_value if sign > 0 else ci_hi < null_value
+
+
+def _ranges_overlap(lo_a: float, hi_a: float, lo_b: float, hi_b: float) -> bool:
+    return lo_a <= hi_b and lo_b <= hi_a
+
+
+def grade_statistic(
+    values: Sequence[float | None],
+    reference: BiasCurveReference,
+) -> AgreementResult:
+    """Grade per-seed statistic values against a behaviour-level reference.
+
+    Parameters
+    ----------
+    values : Sequence[float | None]
+        The per-seed values of one bias statistic. ``None`` / non-finite entries are dropped.
+    reference : BiasCurveReference
+        The literature signature (null value, sign, optional magnitude range, citation).
+
+    Returns
+    -------
+    AgreementResult
+        The reduced statistic (mean + 80% bootstrap CI + surviving ``n``) and its verdict:
+        ``REPRODUCED`` (a significant correct-direction bias whose CI overlaps the range, or a
+        sign-only reference), ``PARTIAL`` (a correct lean that is not significant, or significant
+        but out of range), or ``ABSENT`` (no correct-direction lean). A single value is never
+        significant (its CI is a point), so it cannot be ``REPRODUCED``.
+    """
+    finite = [float(v) for v in values if v is not None and np.isfinite(v)]
+    mean, ci_lo, ci_hi = bootstrap_ci(finite)
+    null, sign = reference.null_value, reference.sign
+    # A single sample cannot be significant (its bootstrap CI is a point); gate significance on n.
+    significant = len(finite) >= _MIN_SIGNIFICANT_N and _ci_excludes_null(
+        ci_lo,
+        ci_hi,
+        null,
+        sign,
+    )
+
+    if not finite or not _leans_correct(mean, null, sign):
+        verdict = Verdict.ABSENT
+    elif not significant:
+        verdict = Verdict.PARTIAL  # leans correct but not a significant correct-direction bias
+    elif reference.magnitude_range is None:
+        verdict = Verdict.REPRODUCED  # sign-only reference: a significant correct-direction bias
+    else:
+        lo, hi = reference.magnitude_range
+        in_range = _ranges_overlap(ci_lo, ci_hi, lo, hi) or (lo <= mean <= hi)
+        verdict = Verdict.REPRODUCED if in_range else Verdict.PARTIAL
+
+    return AgreementResult(
+        statistic=reference.statistic,
+        verdict=verdict,
+        mean=mean,
+        ci_lo=ci_lo,
+        ci_hi=ci_hi,
+        n=len(finite),
+        null_value=null,
+        sign=sign,
+        magnitude_range=reference.magnitude_range,
+        citation=reference.citation,
+    )
