@@ -109,7 +109,7 @@ Bias statistics (post-convergence tail, θ_sharp = 0.45, curving-rate floor 0.25
 | klinokinesis, turn-**rate** ratio *(thresholded)* | 1.30 [1.26, 1.34] | 1.15 [1.13, 1.17] | 1.56 [1.51, 1.62] |
 | weathervane slope *(thresholded)* | **+0.027** [+0.022, +0.031] | **+0.027** [+0.021, +0.033] | +0.002 [+0.000, +0.004] |
 | weathervane slope *(θ-free)* | **+0.091** [+0.079, +0.103] | **+0.065** [+0.053, +0.078] | +0.012 [+0.010, +0.014] |
-| **combined**: klinokinesis / weathervane | PRESENT / **PRESENT** | PRESENT / **PRESENT** | PRESENT / *(residual)* |
+| **combined**: klinokinesis / weathervane | PRESENT_PARTIAL / **PRESENT** | PRESENT_PARTIAL / **PRESENT** | PRESENT / *(residual)* |
 
 **Klinokinesis — reproduced (directional, robust).** The θ-independent magnitude ratio is
 significantly > 1 on every arm and every seed (MLP 1.10, connectome 1.04) — reorientations are larger
@@ -204,4 +204,4 @@ calibration could shift the klinokinesis/weathervane balance.
   curve across arms (positive toward-gradient slope in the sensing arms; flat in the control).
 
 Reproduce: `capture_behaviour: true` on the klinotaxis foraging cell, then
-`scripts/analysis/behavioural_chemotaxis_validation.py --manifest <seed file> --tail-runs 100 --theta-sharp 0.45`.
+`scripts/analysis/behavioural_chemotaxis_validation.py --manifest <seed file> --tail-runs 100 --out <behavioural_curves.json> --theta-sharp 0.45`.

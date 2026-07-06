@@ -77,7 +77,23 @@ class AgreementResult:
 
 
 def bootstrap_ci(values: Sequence[float]) -> tuple[float, float, float]:
-    """Mean + 80% bootstrap CI (mean, ci_lo, ci_hi) over per-seed values; seeded (rng=42)."""
+    """Mean and an 80% bootstrap confidence interval over per-seed values.
+
+    Parameters
+    ----------
+    values : Sequence[float]
+        The per-seed statistic values (assumed already finite; empties/None filtered upstream).
+
+    Returns
+    -------
+    tuple[float, float, float]
+        ``(mean, ci_lo, ci_hi)``: the sample mean and the 80% percentile bootstrap CI bounds. An
+        empty input returns ``(nan, nan, nan)``; a single value returns a zero-width CI at it.
+
+    Notes
+    -----
+    The resampling is seeded (``rng=42``, ``1000`` resamples) so the CI is reproducible.
+    """
     arr = np.asarray([float(v) for v in values], dtype=float)
     if arr.size == 0:
         return float("nan"), float("nan"), float("nan")
@@ -109,7 +125,24 @@ def grade_statistic(
     values: Sequence[float | None],
     reference: BiasCurveReference,
 ) -> AgreementResult:
-    """Grade per-seed statistic values vs a reference (REPRODUCED/PARTIAL/ABSENT)."""
+    """Grade per-seed statistic values against a behaviour-level reference.
+
+    Parameters
+    ----------
+    values : Sequence[float | None]
+        The per-seed values of one bias statistic. ``None`` / non-finite entries are dropped.
+    reference : BiasCurveReference
+        The literature signature (null value, sign, optional magnitude range, citation).
+
+    Returns
+    -------
+    AgreementResult
+        The reduced statistic (mean + 80% bootstrap CI + surviving ``n``) and its verdict:
+        ``REPRODUCED`` (a significant correct-direction bias whose CI overlaps the range, or a
+        sign-only reference), ``PARTIAL`` (a correct lean that is not significant, or significant
+        but out of range), or ``ABSENT`` (no correct-direction lean). A single value is never
+        significant (its CI is a point), so it cannot be ``REPRODUCED``.
+    """
     finite = [float(v) for v in values if v is not None and np.isfinite(v)]
     mean, ci_lo, ci_hi = bootstrap_ci(finite)
     null, sign = reference.null_value, reference.sign

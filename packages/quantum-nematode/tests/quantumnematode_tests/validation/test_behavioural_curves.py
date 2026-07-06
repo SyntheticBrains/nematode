@@ -105,6 +105,19 @@ def test_klinokinesis_ratio_caps_maximal_bias_instead_of_inf():
     assert ratio == bc._MAX_RATIO
 
 
+def test_klinokinesis_ratio_neutral_when_no_turning_either_way():
+    """No sharp turns on either side (0/0) -> the neutral ratio, not a spurious maximal bias."""
+    # A worm that only ever drifts (no |dtheta| exceeds theta_sharp) on both up- and down-gradient.
+    headings = [0.0]
+    h = 0.0
+    for _ in range(20):
+        h += 0.02  # always gradual, never a sharp turn
+        headings.append(h)
+    dc_dts = [(-1.0 if t % 2 == 0 else 1.0) for t in range(len(headings))]
+    kin = bc.kinematics(_steps(headings, dc_dts), theta_sharp=1.0)
+    assert bc.klinokinesis_ratio(kin) == bc._NEUTRAL_RATIO
+
+
 def test_wrap_around_heading_change():
     """A heading step across +/-pi wraps to a small change, not ~2pi."""
     kin = bc.kinematics(_steps([math.pi - 0.1, -(math.pi - 0.1)], [0.0, 0.0]), theta_sharp=1.0)

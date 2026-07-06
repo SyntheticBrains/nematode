@@ -10,6 +10,10 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import AgentPath, FoodHistory
 
 
+# A plain slotted dataclass (not a pydantic ``BaseModel`` like ``SimulationResult``) is deliberate:
+# this is a lightweight per-step record appended in the capture loop, and it round-trips through
+# ``dataclasses.asdict`` / ``BehaviourStep(**d)`` for the behaviour-capture JSON — per-step pydantic
+# validation would add cost with no benefit for an internally-produced value.
 @dataclass(slots=True)
 class BehaviourStep:
     """One per-step continuous behavioural record for real-worm chemotaxis validation.

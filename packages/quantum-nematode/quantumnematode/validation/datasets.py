@@ -8,6 +8,7 @@ biological baselines.
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .chemotaxis import (
     ChemotaxisMetrics,
@@ -327,7 +328,20 @@ class BiasCurveReference:
     notes: str
 
 
-def _bias_from_dict(d: dict) -> BiasCurveReference:
+def _bias_from_dict(d: dict[str, Any]) -> BiasCurveReference:
+    """Build a ``BiasCurveReference`` from one JSON object.
+
+    Parameters
+    ----------
+    d : dict[str, Any]
+        A mapping with keys ``strategy``, ``statistic``, ``null_value``, ``sign``,
+        ``magnitude_range`` (a ``[lo, hi]`` list or ``null``), ``citation`` and ``notes``.
+
+    Returns
+    -------
+    BiasCurveReference
+        The parsed reference, with ``magnitude_range`` coerced to a ``(lo, hi)`` tuple or ``None``.
+    """
     mr = d.get("magnitude_range")
     return BiasCurveReference(
         strategy=d["strategy"],
@@ -400,10 +414,31 @@ def _default_bias_signatures() -> dict[str, BiasCurveReference]:
 
 
 def load_bias_signatures(path: str | Path | None = None) -> dict[str, BiasCurveReference]:
-    """Load the behavioural bias-curve reference signatures (JSON, with a hardcoded fallback)."""
+    """Load the behavioural bias-curve reference signatures from JSON.
+
+    Parameters
+    ----------
+    path : str | Path | None
+        An explicit signatures file. When omitted, the packaged default is used, falling back to the
+        hardcoded ``_default_bias_signatures()`` if that default file is absent. A *caller-supplied*
+        path that does not exist is an error (raised), not silently replaced with the defaults.
+
+    Returns
+    -------
+    dict[str, BiasCurveReference]
+        The reference signatures keyed by their reference key.
+
+    Raises
+    ------
+    FileNotFoundError
+        If an explicit ``path`` is given but does not exist.
+    """
     resolved = _DEFAULT_BIAS_PATH if path is None else Path(path)
     if not resolved.exists():
-        return _default_bias_signatures()
+        if path is not None:
+            msg = f"Bias-signatures file not found: {resolved}"
+            raise FileNotFoundError(msg)
+        return _default_bias_signatures()  # implicit default missing -> canonical hardcoded values
     with resolved.open() as f:
         data = json.load(f)
     return {key: _bias_from_dict(value) for key, value in data.items()}

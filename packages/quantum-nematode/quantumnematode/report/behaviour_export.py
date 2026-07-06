@@ -25,7 +25,17 @@ def write_behaviour_capture(
 ) -> Path | None:
     """Write the per-run behavioural series to ``<data_dir>/behaviour_capture.json``.
 
-    Returns the written path, or ``None`` when no run captured a behavioural series (capture off).
+    Parameters
+    ----------
+    results : list[SimulationResult]
+        The completed runs; only those carrying a captured ``behaviour`` series are written.
+    data_dir : Path
+        Directory to write ``behaviour_capture.json`` into (created if missing).
+
+    Returns
+    -------
+    Path | None
+        The written file path, or ``None`` when no run captured a behavioural series (capture off).
     """
     runs = [
         {

@@ -35,10 +35,13 @@ if TYPE_CHECKING:
 _TWO_PI = 2.0 * math.pi
 _EPS = 1e-9
 _MIN_SLOPE_POINTS = 2
-# When the up-gradient reference (turn-rate / mean turn-magnitude) underflows, the down/up ratio is
-# a maximal bias. Return this finite cap rather than inf so the seed is graded present-direction and
-# not silently dropped as non-finite (which would bias the pooled verdict toward ABSENT).
+# When the up-gradient reference (turn-rate / mean turn-magnitude) underflows *and* the
+# down-gradient side is clearly non-zero, the down/up ratio is a maximal bias: return this finite
+# cap rather than inf so the seed is graded present-direction and not silently dropped as non-finite
+# (which would bias the pooled verdict toward ABSENT). When *both* sides underflow (no turning at
+# all) there is no bias, so return the neutral (null) ratio instead of a spurious maximal bias.
 _MAX_RATIO = 10.0
+_NEUTRAL_RATIO = 1.0
 
 
 def _wrap(theta: float) -> float:
@@ -168,15 +171,18 @@ def curving_rate_vs_bearing(
 def klinokinesis_ratio(kin: Sequence[StepKinematics]) -> float | None:
     """Down/up-gradient turn-rate ratio (> 1 = biased random walk); None if either side is empty.
 
-    When no up-gradient reorientations are observed (maximal bias) the ratio is capped at
-    ``_MAX_RATIO`` (a finite present-direction value) rather than returned as inf.
+    When no up-gradient reorientations are observed *and* down-gradient turning is non-zero (maximal
+    bias) the ratio is capped at ``_MAX_RATIO`` (a finite present-direction value) rather than
+    returned as inf; when neither side turns (no bias) it is the neutral ``_NEUTRAL_RATIO``.
     """
     down = [1.0 if k.is_turn else 0.0 for k in kin if k.dc_dt < 0]
     up = [1.0 if k.is_turn else 0.0 for k in kin if k.dc_dt > 0]
     if not down or not up:
         return None
-    up_rate = float(np.mean(up))
-    return _MAX_RATIO if up_rate < _EPS else min(float(np.mean(down)) / up_rate, _MAX_RATIO)
+    up_rate, down_rate = float(np.mean(up)), float(np.mean(down))
+    if up_rate < _EPS:
+        return _MAX_RATIO if down_rate > _EPS else _NEUTRAL_RATIO
+    return min(down_rate / up_rate, _MAX_RATIO)
 
 
 def weathervane_slope(
@@ -193,14 +199,17 @@ def klinokinesis_magnitude_ratio(kin: Sequence[StepKinematics]) -> float | None:
 
     Avoids the sharp/gradual threshold entirely by comparing turn MAGNITUDE (not a thresholded
     rate) heading down- vs up-gradient; robust when the |dtheta| distribution has no natural cut.
-    None if either side is empty; capped at ``_MAX_RATIO`` if the up-gradient mean is ~0.
+    None if either side is empty; capped at ``_MAX_RATIO`` when only the up-gradient mean is ~0, and
+    the neutral ``_NEUTRAL_RATIO`` when both means are ~0 (no turning either way).
     """
     down = [abs(k.dtheta) for k in kin if k.dc_dt < 0]
     up = [abs(k.dtheta) for k in kin if k.dc_dt > 0]
     if not down or not up:
         return None
-    up_mean = float(np.mean(up))
-    return _MAX_RATIO if up_mean < _EPS else min(float(np.mean(down)) / up_mean, _MAX_RATIO)
+    up_mean, down_mean = float(np.mean(up)), float(np.mean(down))
+    if up_mean < _EPS:
+        return _MAX_RATIO if down_mean > _EPS else _NEUTRAL_RATIO
+    return min(down_mean / up_mean, _MAX_RATIO)
 
 
 def weathervane_slope_all(

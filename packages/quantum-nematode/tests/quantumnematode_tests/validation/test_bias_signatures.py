@@ -1,7 +1,9 @@
 """Tests for the behavioural bias-curve reference signatures."""
 
+import pytest
 from quantumnematode.validation.datasets import (
     BiasCurveReference,
+    _default_bias_signatures,
     load_bias_signatures,
 )
 
@@ -19,7 +21,7 @@ def test_reference_loads_all_strategies():
 
 
 def test_threshold_free_companions_are_sign_only():
-    """The threshold-free companions share direction/null with their thresholded partner (sign-only)."""  # noqa: E501
+    """A companion shares its partner's direction/null but is sign-only (no magnitude range)."""
     refs = load_bias_signatures()
     mag, thr = refs["klinokinesis_magnitude"], refs["klinokinesis"]
     assert mag.statistic == "down_up_magnitude_ratio"
@@ -56,13 +58,19 @@ def test_klinotaxis_reference_is_sign_only_with_citation():
     assert "Iino" in ref.citation
 
 
-def test_fallback_matches_json(tmp_path):
-    """A missing file falls back to the hardcoded defaults (same strategies + statistics)."""
+def test_hardcoded_fallback_matches_json():
+    """The hardcoded default signatures mirror the packaged JSON (same strategies + statistics)."""
     from_disk = load_bias_signatures()
-    fallback = load_bias_signatures(tmp_path / "does_not_exist.json")
+    fallback = _default_bias_signatures()
     assert set(fallback) == set(from_disk)
     for key, ref in fallback.items():
         assert ref.statistic == from_disk[key].statistic
         assert ref.null_value == from_disk[key].null_value
         assert ref.sign == from_disk[key].sign
         assert ref.magnitude_range == from_disk[key].magnitude_range
+
+
+def test_explicit_missing_path_raises(tmp_path):
+    """A caller-supplied path that does not exist is an error, not a silent fallback to defaults."""
+    with pytest.raises(FileNotFoundError):
+        load_bias_signatures(tmp_path / "does_not_exist.json")
