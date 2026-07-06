@@ -65,21 +65,42 @@ a linear thermal gradient with the spawn region off-setpoint and the reward rewa
 pressure minimised. The exact difficulty (gradient strength, comfort band width, reward weights) is
 **calibrated at the smoke** (as 035 calibrated `θ_sharp`), then frozen for the panel.
 
-### D5 — Same evaluation shape as 035
+### D5 — Evaluation shape, and the honest-finding scope (revised after the smoke)
 
-MLP primary (gating-arm architecture) + connectome companion, n ≥ 8, post-convergence tail, the same
-θ_sharp / tail-window / curving-rate-floor robustness, the same REPRODUCED/PARTIAL/ABSENT grading with
-80% bootstrap CIs.
+The klinotaxis cell (weathervane) + a `thermotaxis_mode: derivative` control (klinokinesis — temporal
+dT/dt only, no head-sweep, the direct analogue of 035's food-derivative arm; the capture samples the
+true thermal gradient regardless of the worm's sensing mode). Same θ_sharp / tail-window /
+curving-rate-floor / grading machinery as 035.
 
-A **specificity control is available and is the direct analogue of 035's food-derivative arm**:
-`thermotaxis_mode: derivative` (temporal thermal sensing — dT/dt, no head-sweep) removes the spatial
-thermal-gradient signal while the captured setpoint drive stays intact (the capture samples the true
-thermal gradient regardless of the worm's sensing mode). The prediction mirrors 035: klinokinesis
-persists (the temporal channel is intact) while the weathervane collapses if it is sensor-driven. Run
-it **iff the panel shows a positive thermal weathervane** (as the food weathervane did) — it is the
-control that would establish the thermal weathervane as sensor-driven rather than a geometry confound.
-It is optional at authoring time because thermotaxis may reproduce klinokinesis only (see Risks); the
-smoke/panel decides.
+**Smoke outcome (2026-07-06) — scoped to an honest finding, NOT a forced-positive panel.** The smoke
+established two things that make thermotaxis a *weaker, more caveated* validation than chemotaxis, for
+principled reasons — reported honestly rather than engineered around:
+
+- **The RL worm migrates-and-parks, it does not isothermal-track.** Real *C. elegans* keeps moving
+  along the `Tc` isotherm; our worm is rewarded for *being* in comfort, so once there it dwells
+  (~94% of steps near-stationary at the comfort target). Temperature is not consumable (unlike food,
+  which drives continuous chemotaxis), so thermotaxis converges to a static endpoint. The fine-grained
+  bias lives in the brief migration phase, so the signal is weak (migration-phase weathervane ~+0.05
+  vs food's +0.09; klinokinesis ~absent under klinotaxis sensing).
+- **The continuous-Gaussian action head steers; it does not random-walk.** The MLP-PPO head has a
+  *state-independent* learnable log-std (`mlpppo.py`), so the worm cannot modulate its turn
+  *randomness* by state — true stochastic klinokinesis (a biased random walk) is architecturally out
+  of reach. The klinokinesis *signature* the metric detects is a deterministic "reorient-when-worse",
+  elicited mainly under derivative sensing (no head-sweep). This is true for 035 too and is documented
+  as a shared limitation.
+
+**Rejected: a radial thermal "comfort spot" geometry.** It gave a much stronger, rich-bearing signal
+BUT it is not the biology — every reference assay (Ryu & Samuel 2002; Luo 2014; Clark 2007) is a
+*linear* spatial gradient; a point-source attractor is chemotaxis geometry, and switching to it to
+rescue a weak number is assay-shopping. The evaluation stays on the **faithful linear gradient** and
+reports the weak result honestly.
+
+**Scope:** a light linear-gradient confirmation (MLP, n=4, klinotaxis cell + derivative control) to
+pin the numbers, then a logbook that records the honest finding — outcome-level thermotaxis confirmed
+(reaches `Tc`), fine-grained signatures weak/absent because the worm migrates-and-parks and its head
+steers-not-random-walks. Chemotaxis (035) remains the strong validation of record; this is a
+behavioural-*difference* finding that motivates Phase 7 (the RL worm does not reproduce the full
+klinokinesis + klinotaxis + isothermal-tracking repertoire).
 
 ## Risks
 
