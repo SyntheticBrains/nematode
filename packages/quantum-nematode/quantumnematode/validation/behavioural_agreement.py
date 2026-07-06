@@ -1,7 +1,7 @@
 """Agreement grading for behavioural klinotaxis bias statistics vs literature references.
 
 Reduces a per-seed set of bias-statistic values (down/up turn-rate ratio; weathervane slope) to
-a mean + an 80% bootstrap CI, then grades it against a :class:`BiasCurveReference` (§3) as
+a mean + an 80% bootstrap CI, then grades it against a :class:`BiasCurveReference` as
 REPRODUCED / PARTIAL / ABSENT.
 
 The grading is deliberately conservative and behaviour-level (see the reference notes): a ranged
@@ -32,6 +32,9 @@ if TYPE_CHECKING:
 _BOOTSTRAP_RESAMPLES = 1000
 _CI_LEVEL = 0.80
 _BOOTSTRAP_SEED = 42
+# A single sample has a zero-width bootstrap CI, so it can never establish significance; require at
+# least this many seeds before a CI-excludes-null call counts as a significant (REPRODUCED) bias.
+_MIN_SIGNIFICANT_N = 2
 
 
 class Verdict(StrEnum):
@@ -103,18 +106,25 @@ def _ranges_overlap(lo_a: float, hi_a: float, lo_b: float, hi_b: float) -> bool:
 
 
 def grade_statistic(
-    values: Sequence[float],
+    values: Sequence[float | None],
     reference: BiasCurveReference,
 ) -> AgreementResult:
     """Grade per-seed statistic values vs a reference (REPRODUCED/PARTIAL/ABSENT)."""
-    finite = [float(v) for v in values if np.isfinite(v)]
+    finite = [float(v) for v in values if v is not None and np.isfinite(v)]
     mean, ci_lo, ci_hi = bootstrap_ci(finite)
     null, sign = reference.null_value, reference.sign
+    # A single sample cannot be significant (its bootstrap CI is a point); gate significance on n.
+    significant = len(finite) >= _MIN_SIGNIFICANT_N and _ci_excludes_null(
+        ci_lo,
+        ci_hi,
+        null,
+        sign,
+    )
 
     if not finite or not _leans_correct(mean, null, sign):
         verdict = Verdict.ABSENT
-    elif not _ci_excludes_null(ci_lo, ci_hi, null, sign):
-        verdict = Verdict.PARTIAL  # leans correct but the CI includes the no-bias null
+    elif not significant:
+        verdict = Verdict.PARTIAL  # leans correct but not a significant correct-direction bias
     elif reference.magnitude_range is None:
         verdict = Verdict.REPRODUCED  # sign-only reference: a significant correct-direction bias
     else:

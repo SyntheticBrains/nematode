@@ -1,4 +1,4 @@
-"""Tests for the klinotaxis behavioural bias-curve metrics (§2)."""
+"""Tests for the klinotaxis behavioural bias-curve metrics."""
 
 import math
 
@@ -86,6 +86,23 @@ def test_weathervane_slope_positive_when_curving_toward_gradient():
     ]
     assert neg
     assert all(v < 0 for v in neg)
+
+
+def test_klinokinesis_ratio_caps_maximal_bias_instead_of_inf():
+    """Zero up-gradient turns (maximal bias) -> a finite capped ratio, not inf (never dropped)."""
+    # Every down-gradient step turns sharply; every up-gradient step barely moves (no sharp turn).
+    headings, dc_dts, h = [0.0], [], 0.0
+    for t in range(20):
+        turn = t % 2 == 0  # even = down-gradient sharp turn; odd = up-gradient gradual
+        dc_dts.append(-1.0 if turn else 1.0)
+        h += 2.0 if turn else 0.01
+        headings.append(h)
+    dc_dts.append(0.0)
+    kin = bc.kinematics(_steps(headings, dc_dts), theta_sharp=1.0)
+    ratio = bc.klinokinesis_ratio(kin)
+    assert ratio is not None
+    assert math.isfinite(ratio)  # NOT inf -> the harness will count it, not drop it
+    assert ratio == bc._MAX_RATIO
 
 
 def test_wrap_around_heading_change():

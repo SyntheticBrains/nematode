@@ -4,7 +4,7 @@ Reduces each seed's captured behavioural trajectory (``behaviour_capture.json`` 
 ``capture_behaviour`` run) to its two klinotaxis bias statistics - the klinokinesis down/up
 turn-rate ratio (Pierce-Shimomura et al. 1999) and the klinotaxis weathervane slope (Iino &
 Yoshida 2009) - then grades each across seeds against the behaviour-level literature reference
-(§3) with an 80% bootstrap CI as REPRODUCED / PARTIAL / ABSENT.
+with an 80% bootstrap CI as REPRODUCED / PARTIAL / ABSENT.
 
 The reference is behaviour-level (bias direction + a reported magnitude range + citation), NOT a
 pixel digitization of the original figures; the weathervane slope is a sign-only reference (see the
@@ -48,9 +48,9 @@ REPO = Path(__file__).resolve().parents[2]
 _MIN_PATH_LEN_FRACTION = 0.25  # curving-rate floor = this x the median stride (per seed/pool)
 
 # Each bias statistic: (reference key, strategy, family). The thresholded and threshold-free
-# statistics for one strategy are cross-checked against each other (§6 decision: the |dtheta|
-# distribution saturates at the turn bound, so the thresholded sharp/gradual split has no natural
-# cut; the threshold-free companion is theta_sharp-independent).
+# statistics for one strategy are cross-checked against each other: the |dtheta| distribution
+# saturates at the turn bound, so the thresholded sharp/gradual split has no natural cut, whereas
+# the threshold-free companion is theta_sharp-independent.
 _STATISTICS = (
     ("klinokinesis", "klinokinesis", "thresholded"),
     ("klinokinesis_magnitude", "klinokinesis", "threshold_free"),
@@ -99,9 +99,15 @@ def tail_runs(
     seeds: dict[int, list[list[BehaviourStep]]],
     keep: int | None,
 ) -> dict[int, list[list[BehaviourStep]]]:
-    """Keep only each seed's last ``keep`` runs (post-convergence tail); no-op when ``keep`` None."""
+    """Keep only each seed's last ``keep`` runs (post-convergence tail); no-op when ``keep`` None.
+
+    ``keep <= 0`` selects an empty tail (guarding the ``runs[-0:] == runs[:]`` foot-gun, where a
+    zero would otherwise silently keep *all* runs).
+    """
     if keep is None:
         return seeds
+    if keep <= 0:
+        return {seed: [] for seed in seeds}
     return {seed: runs[-keep:] for seed, runs in seeds.items()}
 
 
@@ -138,18 +144,28 @@ def _per_seed_statistics(
 
 
 def _combined_verdict(thresholded: str, threshold_free: str) -> str:
-    """Reconcile a strategy's thresholded + threshold-free verdicts (§6 robustness cross-check).
+    """Reconcile a strategy's thresholded + threshold-free verdicts as a robustness cross-check.
 
-    A direction is 'present' unless graded ABSENT. Agreement -> a robust present/absent call;
-    disagreement -> equivocal (the point statistic is threshold-sensitive, only the direction is
-    trustworthy).
+    Only a REPRODUCED verdict is a *significant* correct-direction bias; PARTIAL is a non-significant
+    lean (the CI includes the null or the magnitude is out of range) and ABSENT is no correct lean.
+    A "present" call therefore requires at least one significant (REPRODUCED) statistic:
+
+    - both REPRODUCED -> PRESENT (robust)
+    - one REPRODUCED, the other a lean -> PRESENT_PARTIAL
+    - both a lean, neither significant -> PARTIAL (a weak, non-significant lean, not "present")
+    - both ABSENT -> ABSENT
+    - otherwise (a significant/lean statistic disagreeing with an ABSENT one) -> EQUIVOCAL
     """
-    present_t = thresholded != "ABSENT"
-    present_f = threshold_free != "ABSENT"
-    if present_t and present_f:
-        both_strong = thresholded == "REPRODUCED" and threshold_free == "REPRODUCED"
-        return "PRESENT" if both_strong else "PRESENT_PARTIAL"
-    if not present_t and not present_f:
+    verdicts = (thresholded, threshold_free)
+    n_reproduced = verdicts.count("REPRODUCED")
+    n_absent = verdicts.count("ABSENT")
+    if n_reproduced == 2:
+        return "PRESENT"
+    if n_reproduced == 1 and n_absent == 0:
+        return "PRESENT_PARTIAL"
+    if n_reproduced == 0 and n_absent == 0:
+        return "PARTIAL"
+    if n_absent == 2:
         return "ABSENT"
     return "EQUIVOCAL"
 

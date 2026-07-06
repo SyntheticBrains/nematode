@@ -1,4 +1,4 @@
-"""Tests for the behavioural bias-curve reference signatures (§3)."""
+"""Tests for the behavioural bias-curve reference signatures."""
 
 from quantumnematode.validation.datasets import (
     BiasCurveReference,

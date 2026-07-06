@@ -1,4 +1,4 @@
-"""Opt-in continuous behavioural-trajectory capture (real-worm chemotaxis validation, §1)."""
+"""Opt-in continuous behavioural-trajectory capture for real-worm chemotaxis validation."""
 
 from __future__ import annotations
 
@@ -8,10 +8,14 @@ from quantumnematode.agent import QuantumNematodeAgent, RewardConfig, SatietyCon
 from quantumnematode.brain.arch import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
-from quantumnematode.utils.config_loader import SensingConfig
+from quantumnematode.utils.config_loader import SensingConfig, SensingMode
 
 
-def _agent(*, capture: bool) -> QuantumNematodeAgent:
+def _agent(
+    *,
+    capture: bool,
+    chemotaxis_mode: SensingMode = SensingMode.ORACLE,
+) -> QuantumNematodeAgent:
     env = Continuous2DEnvironment(
         continuous=Continuous2DParams(world_size_mm=20.0, max_step_mm=1.0),
         seed=0,
@@ -30,7 +34,7 @@ def _agent(*, capture: bool) -> QuantumNematodeAgent:
         brain=brain,
         env=env,
         satiety_config=SatietyConfig(initial_satiety=100.0),
-        sensing_config=SensingConfig(capture_behaviour=capture),
+        sensing_config=SensingConfig(capture_behaviour=capture, chemotaxis_mode=chemotaxis_mode),
     )
 
 
@@ -71,3 +75,30 @@ def test_capture_resets_each_episode():
     assert len(agent.behaviour) > 0
     agent.reset_environment()
     assert agent.behaviour == []
+
+
+def test_capture_is_byte_identical_to_capture_off():
+    """The captured trajectory must not perturb the run: capture-on and -off paths are identical.
+
+    The whole premise of behavioural validation is that the recorded worm IS the real (uncaptured)
+    worm — so with a matched seed the agent path is identical whether capture is on or off.
+    """
+    off = _agent(capture=False)
+    off.run_episode(RewardConfig(), max_steps=20)
+    on = _agent(capture=True)
+    on.run_episode(RewardConfig(), max_steps=20)
+    assert on.path == off.path
+
+
+def test_derivative_sensing_captures_live_gradient():
+    """Derivative sensing (which pops the food-gradient keys) still records a live nonzero gradient.
+
+    Guards the popped-keys regression the live snapshot was built for: the capture reads the true
+    gradient before the derivative-sensing pipeline pops those keys.
+    """
+    agent = _agent(capture=True, chemotaxis_mode=SensingMode.DERIVATIVE)
+    agent.run_episode(RewardConfig(), max_steps=20)
+    assert len(agent.behaviour) > 0
+    # The true food gradient is non-zero across the arena, so at least one step must log it — a
+    # regression that read grad after the pop would record grad_strength == 0.0 for every step.
+    assert any(b.grad_strength > 0.0 for b in agent.behaviour)

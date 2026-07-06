@@ -35,6 +35,10 @@ if TYPE_CHECKING:
 _TWO_PI = 2.0 * math.pi
 _EPS = 1e-9
 _MIN_SLOPE_POINTS = 2
+# When the up-gradient reference (turn-rate / mean turn-magnitude) underflows, the down/up ratio is
+# a maximal bias. Return this finite cap rather than inf so the seed is graded present-direction and
+# not silently dropped as non-finite (which would bias the pooled verdict toward ABSENT).
+_MAX_RATIO = 10.0
 
 
 def _wrap(theta: float) -> float:
@@ -162,13 +166,17 @@ def curving_rate_vs_bearing(
 
 
 def klinokinesis_ratio(kin: Sequence[StepKinematics]) -> float | None:
-    """Down/up-gradient turn-rate ratio (> 1 = biased random walk); None if either side is empty."""
+    """Down/up-gradient turn-rate ratio (> 1 = biased random walk); None if either side is empty.
+
+    When no up-gradient reorientations are observed (maximal bias) the ratio is capped at
+    ``_MAX_RATIO`` (a finite present-direction value) rather than returned as inf.
+    """
     down = [1.0 if k.is_turn else 0.0 for k in kin if k.dc_dt < 0]
     up = [1.0 if k.is_turn else 0.0 for k in kin if k.dc_dt > 0]
     if not down or not up:
         return None
     up_rate = float(np.mean(up))
-    return float("inf") if up_rate < _EPS else float(np.mean(down)) / up_rate
+    return _MAX_RATIO if up_rate < _EPS else min(float(np.mean(down)) / up_rate, _MAX_RATIO)
 
 
 def weathervane_slope(
@@ -185,14 +193,14 @@ def klinokinesis_magnitude_ratio(kin: Sequence[StepKinematics]) -> float | None:
 
     Avoids the sharp/gradual threshold entirely by comparing turn MAGNITUDE (not a thresholded
     rate) heading down- vs up-gradient; robust when the |dtheta| distribution has no natural cut.
-    None if either side is empty; inf if the up-gradient mean is ~0.
+    None if either side is empty; capped at ``_MAX_RATIO`` if the up-gradient mean is ~0.
     """
     down = [abs(k.dtheta) for k in kin if k.dc_dt < 0]
     up = [abs(k.dtheta) for k in kin if k.dc_dt > 0]
     if not down or not up:
         return None
     up_mean = float(np.mean(up))
-    return float("inf") if up_mean < _EPS else float(np.mean(down)) / up_mean
+    return _MAX_RATIO if up_mean < _EPS else min(float(np.mean(down)) / up_mean, _MAX_RATIO)
 
 
 def weathervane_slope_all(

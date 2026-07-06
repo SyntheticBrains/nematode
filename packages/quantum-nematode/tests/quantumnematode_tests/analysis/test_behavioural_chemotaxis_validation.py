@@ -92,17 +92,32 @@ def test_end_to_end_klinokinesis_reproduced(tmp_path):
     assert summary["strategy_verdicts"]["klinokinesis"]["combined"] in {
         "PRESENT",
         "PRESENT_PARTIAL",
+        "PARTIAL",
         "EQUIVOCAL",
         "ABSENT",
     }
 
 
 def test_tail_runs_keeps_only_last_n():
-    """tail_runs keeps each seed's last N runs; None is a no-op."""
+    """tail_runs keeps each seed's last N runs; None is a no-op; 0/negative -> empty (not all)."""
     seeds = {42: [["a"], ["b"], ["c"], ["d"]]}  # type: ignore[dict-item]  # sentinels, not steps
     assert bcv.tail_runs(seeds, None) == seeds
     assert bcv.tail_runs(seeds, 2) == {42: [["c"], ["d"]]}
     assert bcv.tail_runs(seeds, 10) == seeds  # keep more than present -> all
+    assert bcv.tail_runs(seeds, 0) == {42: []}  # NOT all runs (guards runs[-0:] == runs[:])
+    assert bcv.tail_runs(seeds, -3) == {42: []}
+
+
+def test_combined_verdict_reconciliation():
+    """The combined verdict requires a significant (REPRODUCED) statistic to call a strategy present."""  # noqa: E501
+    assert bcv._combined_verdict("REPRODUCED", "REPRODUCED") == "PRESENT"
+    assert bcv._combined_verdict("REPRODUCED", "PARTIAL") == "PRESENT_PARTIAL"
+    assert (
+        bcv._combined_verdict("PARTIAL", "PARTIAL") == "PARTIAL"
+    )  # neither significant -> weak lean
+    assert bcv._combined_verdict("ABSENT", "ABSENT") == "ABSENT"
+    assert bcv._combined_verdict("REPRODUCED", "ABSENT") == "EQUIVOCAL"
+    assert bcv._combined_verdict("PARTIAL", "ABSENT") == "EQUIVOCAL"
 
 
 def test_figures_written(tmp_path):

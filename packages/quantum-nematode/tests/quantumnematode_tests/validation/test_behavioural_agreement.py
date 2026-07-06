@@ -1,4 +1,4 @@
-"""Tests for the behavioural bias-statistic agreement grading (§4.1)."""
+"""Tests for the behavioural bias-statistic agreement grading."""
 
 from quantumnematode.validation.behavioural_agreement import (
     Verdict,
@@ -41,6 +41,22 @@ def test_ranged_reproduced_when_significant_and_in_range():
     res = grade_statistic([1.9, 2.0, 2.1, 2.0, 1.95, 2.05, 2.0, 2.1], _RANGED)
     assert res.verdict is Verdict.REPRODUCED
     assert res.ci_lo > _RANGED.null_value
+
+
+def test_single_seed_is_never_significant():
+    """A single value has a zero-width CI, so it cannot be graded REPRODUCED (only PARTIAL)."""
+    ranged = grade_statistic([2.0], _RANGED)  # in-range value but n=1
+    assert ranged.verdict is Verdict.PARTIAL
+    assert ranged.n == 1
+    sign_only = grade_statistic([0.5], _SIGN_ONLY)  # correct-sign but n=1
+    assert sign_only.verdict is Verdict.PARTIAL
+
+
+def test_none_values_are_dropped_not_crashing():
+    """A None in the values (a degenerate per-seed statistic) is filtered, not a TypeError."""
+    res = grade_statistic([None, 2.0, None, 1.9, 2.1, 2.0, 1.95, 2.05, 2.0], _RANGED)
+    assert res.n == 7  # the two Nones dropped
+    assert res.verdict is Verdict.REPRODUCED
 
 
 def test_ranged_partial_when_significant_but_below_range():

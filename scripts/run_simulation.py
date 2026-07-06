@@ -357,6 +357,25 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load and validate sensing configuration
         sensing_config = validate_sensing_config(environment_config.get_sensing_config())
 
+        # Behavioural capture assumes a continuous-2D substrate with derivative-bearing sensing;
+        # warn (don't fail) when the config would record a degenerate trajectory rather than
+        # silently produce a misleading validation result.
+        if sensing_config.capture_behaviour:
+            from quantumnematode.utils.config_loader import SensingMode
+
+            if environment_config.env_type != "continuous_2d":
+                logger.warning(
+                    "capture_behaviour is set on a %r env; heading is only tracked on the "
+                    "continuous-2D substrate, so the captured trajectory will be degenerate.",
+                    environment_config.env_type,
+                )
+            if sensing_config.chemotaxis_mode == SensingMode.ORACLE:
+                logger.warning(
+                    "capture_behaviour is set with chemotaxis_mode=oracle; food concentration + "
+                    "dC/dt are not populated in oracle mode, so the klinokinesis curve will be "
+                    "degenerate. Use derivative or klinotaxis sensing for behavioural validation.",
+                )
+
         # Apply sensing mode translation to brain's sensory modules
         sensory_modules_attr = (
             getattr(brain_config, "sensory_modules", None)
@@ -399,6 +418,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             unsupported_flags.append("--track-experiment")
         if args.validate_chemotaxis:
             unsupported_flags.append("--validate-chemotaxis")
+        if sensing_config.capture_behaviour:
+            # The single-agent capture path is not wired through the multi-agent runner (each
+            # agent would accumulate an un-emitted behaviour list); reject rather than leak.
+            unsupported_flags.append("sensing.capture_behaviour")
         if unsupported_flags:
             msg = (
                 f"Cannot use {', '.join(unsupported_flags)} with multi-agent mode. "
