@@ -176,6 +176,31 @@ def test_suggest_min_path_len_empty_is_zero():
     assert bc.suggest_min_path_len([]) == 0.0
 
 
+def _kin(path_len: float) -> bc.StepKinematics:
+    return bc.StepKinematics(
+        dtheta=0.1,
+        is_turn=False,
+        path_len=path_len,
+        dc_dt=0.0,
+        bearing=0.0,
+        grad_strength=1.0,
+    )
+
+
+def test_min_path_len_floor_robust_to_parked_worm():
+    """A parked worm (raw median stride ~0) floors at the moving-stride scale, not the collapsed 0.
+
+    Guards the regression a converged thermotaxis worm exposed: dwelling at a comfort target makes
+    the raw-median stride collapse, so the median-based floor let the dtheta/path_len creep artifact
+    through. A continuously-moving worm is unaffected (raw-median floor).
+    """
+    parked = [_kin(0.005) for _ in range(90)] + [_kin(1.0) for _ in range(10)]  # 90% dwelling
+    floor = bc.suggest_min_path_len(parked)
+    assert floor > 0.1  # NOT the collapsed 0.25 * 0.005 = 0.00125
+    moving = [_kin(1.0) for _ in range(100)]  # continuously moving -> raw-median floor unchanged
+    assert bc.suggest_min_path_len(moving) == 0.25
+
+
 def test_threshold_free_metrics_are_theta_sharp_invariant():
     """The threshold-free statistics do not depend on theta_sharp (unlike the thresholded ones)."""
     worm = _klinokinesis_worm()

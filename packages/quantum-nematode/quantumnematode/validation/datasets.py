@@ -20,6 +20,10 @@ from .chemotaxis import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _DEFAULT_DATASET_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "literature_ci_values.json"
 _DEFAULT_BIAS_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "behavioural_bias_signatures.json"
+_DEFAULT_BIAS_PATH_THERMOTAXIS = (
+    _PROJECT_ROOT / "data" / "thermotaxis" / "behavioural_bias_signatures.json"
+)
+_BIAS_PATH_BY_MODALITY = {"food": _DEFAULT_BIAS_PATH, "thermotaxis": _DEFAULT_BIAS_PATH_THERMOTAXIS}
 
 
 @dataclass
@@ -413,15 +417,72 @@ def _default_bias_signatures() -> dict[str, BiasCurveReference]:
     }
 
 
-def load_bias_signatures(path: str | Path | None = None) -> dict[str, BiasCurveReference]:
+def _default_bias_signatures_thermotaxis() -> dict[str, BiasCurveReference]:
+    """Hardcoded thermotaxis fallback mirroring ``thermotaxis/behavioural_bias_signatures.json``.
+
+    Thermotaxis is homeostatic: the drive is the setpoint error toward the cultivation temperature
+    (``-|T - Tc|``), so all four references are sign-only (direction, not literature-comparable
+    magnitude) — turning/curving is biased toward the cultivation temperature.
+    """
+    kin = "Luo et al. (2014). J Neurosci 34(13):4655-4667; Ryu & Samuel (2002). J Neurosci 22(13):5727-5733"  # noqa: E501
+    luo = "Luo et al. (2014). J Neurosci 34(13):4655-4667; Clark et al. (2007). J Neurosci 27(23):6083-6090"  # noqa: E501
+    return {
+        "klinokinesis": BiasCurveReference(
+            strategy="klinokinesis",
+            statistic="down_up_turn_ratio",
+            null_value=1.0,
+            sign=1,
+            magnitude_range=None,
+            citation=kin,
+            notes="Turn-rate elevated when the thermal error worsens (drive decreases). Sign-only.",
+        ),
+        "klinokinesis_magnitude": BiasCurveReference(
+            strategy="klinokinesis",
+            statistic="down_up_magnitude_ratio",
+            null_value=1.0,
+            sign=1,
+            magnitude_range=None,
+            citation=kin,
+            notes="Threshold-free companion: larger |dtheta| heading away from Tc. Sign-only.",
+        ),
+        "klinotaxis": BiasCurveReference(
+            strategy="klinotaxis",
+            statistic="weathervane_slope",
+            null_value=0.0,
+            sign=1,
+            magnitude_range=None,
+            citation=luo,
+            notes="Gradual curving toward the preferred thermal direction (toward Tc). Sign-only.",
+        ),
+        "klinotaxis_all": BiasCurveReference(
+            strategy="klinotaxis",
+            statistic="weathervane_slope_all",
+            null_value=0.0,
+            sign=1,
+            magnitude_range=None,
+            citation=luo,
+            notes="Threshold-free companion to the thermal weathervane slope. Sign-only.",
+        ),
+    }
+
+
+def load_bias_signatures(
+    path: str | Path | None = None,
+    *,
+    modality: str = "food",
+) -> dict[str, BiasCurveReference]:
     """Load the behavioural bias-curve reference signatures from JSON.
 
     Parameters
     ----------
     path : str | Path | None
-        An explicit signatures file. When omitted, the packaged default is used, falling back to the
-        hardcoded ``_default_bias_signatures()`` if that default file is absent. A *caller-supplied*
-        path that does not exist is an error (raised), not silently replaced with the defaults.
+        An explicit signatures file. When omitted, the packaged default for ``modality`` is used,
+        falling back to the hardcoded defaults if that file is absent. A *caller-supplied* path that
+        does not exist is an error (raised), not silently replaced with the defaults.
+    modality : str
+        Which reference set the omitted-``path`` default resolves to: ``"food"`` (chemotaxis;
+        Pierce-Shimomura / Iino & Yoshida) or ``"thermotaxis"`` (setpoint drive; Ryu & Samuel /
+        thermal klinotaxis). Ignored when an explicit ``path`` is given.
 
     Returns
     -------
@@ -432,13 +493,25 @@ def load_bias_signatures(path: str | Path | None = None) -> dict[str, BiasCurveR
     ------
     FileNotFoundError
         If an explicit ``path`` is given but does not exist.
+    ValueError
+        If ``modality`` is not one of the known reference sets (rather than silently grading
+        against the food references).
     """
-    resolved = _DEFAULT_BIAS_PATH if path is None else Path(path)
+    if modality not in _BIAS_PATH_BY_MODALITY:
+        msg = f"Unknown modality {modality!r}; expected one of {sorted(_BIAS_PATH_BY_MODALITY)}."
+        raise ValueError(msg)
+    default_path = _BIAS_PATH_BY_MODALITY[modality]
+    resolved = default_path if path is None else Path(path)
     if not resolved.exists():
         if path is not None:
             msg = f"Bias-signatures file not found: {resolved}"
             raise FileNotFoundError(msg)
-        return _default_bias_signatures()  # implicit default missing -> canonical hardcoded values
+        # implicit default missing -> canonical hardcoded values
+        return (
+            _default_bias_signatures_thermotaxis()
+            if modality == "thermotaxis"
+            else _default_bias_signatures()
+        )
     with resolved.open() as f:
         data = json.load(f)
     return {key: _bias_from_dict(value) for key, value in data.items()}

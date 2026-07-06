@@ -183,9 +183,10 @@ def _pooled_curves(
 def analyse(
     seeds: dict[int, list[list[BehaviourStep]]],
     theta_sharp: float,
+    modality: str = "food",
 ) -> dict:
     """Grade all four bias statistics across seeds and print the per-strategy agreement table."""
-    refs = load_bias_signatures()
+    refs = load_bias_signatures(modality=modality)
     per_seed: dict[str, dict[int, float | None]] = {key: {} for key, *_ in _STATISTICS}
     for seed, runs in sorted(seeds.items()):
         stats = _per_seed_statistics(runs, theta_sharp)
@@ -205,11 +206,12 @@ def analyse(
     strategy_of = {key: strat for key, strat, _fam in _STATISTICS}
 
     print("\n" + "=" * 78)
-    print("REAL-WORM BEHAVIOURAL-CHEMOTAXIS VALIDATION - klinotaxis bias curves vs C. elegans")
+    print(f"REAL-WORM BEHAVIOURAL VALIDATION ({modality}) - bias curves vs C. elegans")
     print(f"  n_seeds={len(seeds)}  theta_sharp={theta_sharp:.3f} rad")
     print("=" * 78)
 
     summary: dict = {
+        "modality": modality,
         "theta_sharp": theta_sharp,
         "min_path_len_fraction": _MIN_PATH_LEN_FRACTION,
         "n_seeds": len(seeds),
@@ -325,6 +327,12 @@ def main() -> None:
         default=85.0,
         help="percentile of |dtheta| used to calibrate theta_sharp when not given",
     )
+    ap.add_argument(
+        "--modality",
+        choices=("food", "thermotaxis"),
+        default="food",
+        help="which reference set to grade against (the captured drive's modality)",
+    )
     args = ap.parse_args()
 
     seeds = load_manifest(args.manifest)
@@ -333,7 +341,7 @@ def main() -> None:
         return
     seeds = tail_runs(seeds, args.tail_runs)
     theta_sharp = _resolve_theta_sharp(seeds, args.theta_sharp, args.theta_percentile)
-    summary = analyse(seeds, theta_sharp)
+    summary = analyse(seeds, theta_sharp, modality=args.modality)
 
     if args.figure_dir:
         _write_figures(seeds, theta_sharp, summary, args.figure_dir)
