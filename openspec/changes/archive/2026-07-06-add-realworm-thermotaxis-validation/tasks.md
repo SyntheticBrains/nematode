@@ -75,7 +75,7 @@
 
 ## 7. Pre-merge gates
 
-- [ ] 7.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push.
-- [ ] 7.2 `openspec validate add-realworm-thermotaxis-validation --strict`.
-- [ ] 7.3 Full `uv run pytest -m "not nightly"` green (byte-identical `food`-modality invariant holds).
-- [ ] 7.4 Archive the change in-PR (`openspec archive add-realworm-thermotaxis-validation -y`).
+- [x] 7.1 Targeted `pre-commit` during iteration; full `pre-commit run -a` before push. *Full suite green.*
+- [x] 7.2 `openspec validate add-realworm-thermotaxis-validation --strict`. *Valid.*
+- [x] 7.3 Full `uv run pytest -m "not nightly"` green (byte-identical `food`-modality invariant holds). *4136 passed, 1 skipped, 2 xfailed.*
+- [x] 7.4 Archive the change in-PR (`openspec archive add-realworm-thermotaxis-validation -y`). *Archived 2026-07-06; realworm-behavioural-validation spec updated (+4 requirements).*
