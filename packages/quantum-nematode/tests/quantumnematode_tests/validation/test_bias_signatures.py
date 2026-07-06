@@ -91,3 +91,9 @@ def test_thermotaxis_modality_loads_sign_only_setpoint_references():
     assert "Ryu" in refs["klinokinesis"].citation
     # Distinct from the food references (different citations for the same statistic keys).
     assert refs["klinokinesis"].citation != load_bias_signatures()["klinokinesis"].citation
+
+
+def test_unknown_modality_raises():
+    """An unknown modality raises rather than silently grading against the food references."""
+    with pytest.raises(ValueError, match="Unknown modality"):
+        load_bias_signatures(modality="temperature")

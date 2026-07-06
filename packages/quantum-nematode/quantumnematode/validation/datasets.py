@@ -493,8 +493,14 @@ def load_bias_signatures(
     ------
     FileNotFoundError
         If an explicit ``path`` is given but does not exist.
+    ValueError
+        If ``modality`` is not one of the known reference sets (rather than silently grading
+        against the food references).
     """
-    default_path = _BIAS_PATH_BY_MODALITY.get(modality, _DEFAULT_BIAS_PATH)
+    if modality not in _BIAS_PATH_BY_MODALITY:
+        msg = f"Unknown modality {modality!r}; expected one of {sorted(_BIAS_PATH_BY_MODALITY)}."
+        raise ValueError(msg)
+    default_path = _BIAS_PATH_BY_MODALITY[modality]
     resolved = default_path if path is None else Path(path)
     if not resolved.exists():
         if path is not None:

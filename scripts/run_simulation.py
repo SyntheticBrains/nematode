@@ -375,6 +375,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     "dC/dt are not populated in oracle mode, so the klinokinesis curve will be "
                     "degenerate. Use derivative or klinotaxis sensing for behavioural validation.",
                 )
+            if (
+                sensing_config.capture_behaviour_modality == "thermotaxis"
+                and not environment_config.get_thermotaxis_config().enabled
+            ):
+                logger.warning(
+                    "capture_behaviour_modality=thermotaxis but thermotaxis is disabled; the "
+                    "capture falls back to the food drive, so the recorded trajectory is NOT "
+                    "thermotactic. Enable the thermotaxis block or use the food modality.",
+                )
 
         # Apply sensing mode translation to brain's sensory modules
         sensory_modules_attr = (
