@@ -462,7 +462,7 @@ from each integrated run per the `architecture-comparison-protocol` capability (
 **Decision must be written in**: the T7 OpenSpec change's published logbook (likely the T7 logbook itself). This tracker links to the decision once it lands.
 
 - [x] **Gate 3 decision recorded**: all 6 MUST integrated-C3 cells (G3.a) AND connectome ranking clear (G3.b) AND env-upgrade delta (G3.c) AND real-worm validation (G3.d) → **GO, closing Phase 6a** (Phase 6b / T8 NEAT proceeds under `phase6b-tracking`, gated on GPU + env-vectorisation). *(2026-07: the Phase 6a/6b split is already taken by success — see the T8 stub + design.md banner — so a GO here closes 6a and hands off to 6b rather than continuing a monolithic Phase 6.)* Fewer than half MUST cells reach the statistical bar after T7 risk-mitigation pivot → STOP (publishable negative result; Phase 7 L4 inherits substrate-engineering question). *(G3.a is already satisfied — 6 MUST cells published, Logbook 029; the open sub-criteria are G3.d real-worm validation + the connectome-structure controls.)* *(2026-07-07 — **DECISION: GO.** All four sub-criteria satisfied (G3.a 029; G3.b 029+034; G3.c 025-vs-029; G3.d 035); no MUST cell STOPped. Phase 6a closes; 6b (NEAT) proceeds under `phase6b-tracking`. Recorded in [Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md) § Gate-3 decision.)*
-- [x] **Gate 3 decision link**: [add link to the T7 logbook where the decision is recorded][Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md) § Gate-3 decision: **GO**.
+- [x] **Gate 3 decision link**: [Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md) § Gate-3 decision: **GO**.
 
 ## Tranche 8 — L3 NEAT Topology Search ⏭️ MOVED TO PHASE 6b (`phase6b-tracking`)
 
