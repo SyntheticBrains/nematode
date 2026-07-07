@@ -10,9 +10,11 @@ and **6b** (T8 NEAT topology search + the T9b synthesis addendum) tracked separa
 
 ## Requirements
 
-### Requirement: Phase 6 Living Tranche Checklist
+> **Frozen — historical record.** Phase 6a closed at Gate 3 GO ([Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md)) and the `phase6-tracking` change is **archived (read-only)**. The requirements below describe the tracking contract as it governed Phase 6a and are retained as a record of what was done — they no longer impose live obligations. The **live checklist contract for the remaining Phase 6 work (6b — T8 NEAT + the T9b synthesis) is `phase6b-tracking`**; direct all forward "maintain / update the checklist" obligations there.
 
-The repository SHALL maintain a single living checklist file at `openspec/changes/phase6-tracking/tasks.md` covering every Phase 6 tranche (T1–T9) and every mid-phase gate, at sub-task granularity. Every Phase 6 milestone PR SHALL update this file as part of its diff.
+### Requirement: Phase 6a Living Tranche Checklist (now frozen)
+
+Through Phase 6a the repository maintained a single living checklist at `openspec/changes/phase6-tracking/tasks.md` covering the Phase-6a tranches (T1–T7) + the mid-phase gates at sub-task granularity, updated by every Phase-6a milestone PR. That change is now **archived** on the Phase-6a synthesis; the checklist is frozen. Ongoing tracking continues under `phase6b-tracking`.
 
 #### Scenario: Future session orients to Phase 6
 
