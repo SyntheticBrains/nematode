@@ -137,7 +137,7 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 25 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 27 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
@@ -167,14 +167,16 @@ The project supports 25 brain architectures across quantum, hybrid, classical, a
 18. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
 19. **LSTMPPOBrain** (`lstmppo`): LSTM/GRU-augmented PPO with chunk-based truncated BPTT — designed for temporal sensing tasks
 20. **CfCPPOBrain** (`cfcppo`): CfC (Closed-form Continuous-time) liquid network with AutoNCP wiring and continuous-time recurrence, PPO-trained
-21. **FeedforwardGABrain** (`feedforwardga`): Feed-forward network with weights evolved by the GA optimizer (gradient-free); graded episodic-progress fitness for sparse-reward cells
+21. **TransformerPPOBrain** (`transformerppo`): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — attention-based temporal-memory comparator to the LSTM/CfC recurrent substrates
+22. **MinGRUPPOBrain** (`mingruppo`): minGRU-augmented PPO — parallel-form minimal RNN with input-only gating (Feng et al. 2024); bounded, saturation-free recurrent core and stability-upgrade candidate to the LSTM arm
+23. **MinLSTMPPOBrain** (`minlstmppo`): minLSTM-augmented PPO — parallel-form minimal RNN with normalised input-only gates and a single recurrent state; classical stability-comparator companion to minGRU
+24. **FeedforwardGABrain** (`feedforwardga`): Feed-forward network with weights evolved by the GA optimizer (gradient-free); graded episodic-progress fitness for sparse-reward cells
 
 **Biologically-Inspired:**
 
-22. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
-23. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
-24. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
-25. **TransformerPPOBrain** (`transformerppo`): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — attention-based temporal-memory comparator to the LSTM/CfC recurrent substrates
+25. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+26. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
+27. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
 
 Each brain architecture self-registers via the `@register_brain` decorator and follows a common interface defined in `quantumnematode.brain.arch`. See the [Plugin Developer Guide](docs/architecture/plugin-developer-guide.md) for how to add a new one.
 
