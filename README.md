@@ -168,11 +168,29 @@ docker-compose exec quantum-nematode bash
 
 1. **State Perception**: The nematode perceives its environment through modular sensory inputs — oracle gradients, temporal concentration scalars, or derivative signals (dC/dt) depending on sensing mode, plus proprioception, mechanosensation, and STAM temporal memory
 2. **Brain Processing**: The selected brain architecture processes the state
-3. **Action Selection**: Brain outputs action probabilities (forward, left, right, stay)
+3. **Action Selection**: The brain emits an action — a discrete choice on the grid substrate or a continuous steering command on the continuous-2D substrate (see [Action Spaces](#action-spaces-grid-vs-continuous-2d) below)
 4. **Environment Update**: Agent moves, satiety decays, and receives reward signal
 5. **Food Collection**: When reaching food, satiety is restored and new food spawns
 6. **Learning**: Brain parameters are updated based on reward feedback
 7. **Repeat**: Process continues until all foods are collected, satiety reaches zero (starvation), or maximum steps reached
+
+### Action Spaces: Grid vs Continuous-2D
+
+The two substrates map the brain's outputs to movement very differently. On the **grid**, the actor is a classifier — 4 logits over `[forward, left, right, stay]`; the chosen index *is* the move (advance one cell along the current cardinal facing, snap the facing 90°, or stay). On the **continuous-2D** substrate, the actor is a regressor — it emits a 2-D steering command `(speed, turn)` that a kinematic model integrates into smooth motion.
+
+| | Grid | Continuous-2D |
+|---|---|---|
+| Output layer | 4 logits (categorical) | 2 Gaussian means + a learned std |
+| Policy sample | pick 1 of 4 actions | tanh-squashed Gaussian → `(speed, turn)` |
+| Raw action | discrete index | `speed ∈ [0, 1]`, `turn ∈ [-1, 1]` (normalized) |
+| Rescale to physics | none | `× max_step_mm`, `× max_turn_rad` (env-owned) |
+| Movement | cardinal ±90° turn + one-cell hop | incremental heading rotation + sub-mm glide along a persistent float heading |
+| "Stay" | explicit `stay` action | emergent — `speed ≈ 0` (dwelling is a low-speed continuum, not a button) |
+
+Two things this buys the continuous substrate:
+
+- **The brain emits motor drive, not coordinates.** It outputs normalized numbers in `[0, 1]` / `[-1, 1]`; the environment owns the physical scale (`max_step_mm`, `max_turn_rad`) and integrates the kinematics. The same actor works regardless of arena units — the honest analogue of a nervous system driving muscles rather than teleporting between cells.
+- **Sensing is decoupled from the motor output.** The klinotaxis head-sweep (sampling the gradient lateral to the heading) is a *sensing* mechanism, distinct from the `(speed, turn)` command — whereas grid sensing is a static per-cell readout.
 
 ### Quantum Learning Process
 
