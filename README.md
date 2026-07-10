@@ -382,7 +382,7 @@ Console-based themes (ASCII, Emoji, Rich, etc.) are available for terminal rende
 uv run ./scripts/run_simulation.py --config ./configs/scenarios/foraging/mlpppo_small_oracle.yml --runs 50 --theme headless
 ```
 
-Available themes: `pixel` (default), `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless`.
+Available themes: `pixel` (default), `pixel_continuous` (continuous-2D substrate), `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless`.
 
 ### Session Summary
 
