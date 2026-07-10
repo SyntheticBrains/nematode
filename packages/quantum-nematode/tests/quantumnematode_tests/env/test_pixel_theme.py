@@ -103,9 +103,23 @@ class TestSprites:
 
     def test_sprite_surfaces_are_correct_size(self) -> None:
         """Verify all sprites are CELL_SIZE x CELL_SIZE."""
-        from quantumnematode.env.sprites import CELL_SIZE, create_sprites
+        from quantumnematode.env.sprites import (
+            CELL_SIZE,
+            PREDATOR_PURSUIT_FRAMES,
+            create_sprites,
+        )
 
         sprites = create_sprites(_pg)
+
+        # The pursuit animation has a specific container contract: a list of
+        # PREDATOR_PURSUIT_FRAMES gait surfaces + a single strike surface.
+        frames = sprites["predator_pursuit_frames"]
+        assert isinstance(frames, list), "predator_pursuit_frames must be a list"
+        assert len(frames) == PREDATOR_PURSUIT_FRAMES
+        assert isinstance(sprites["predator_pursuit_strike"], _pg.Surface), (
+            "predator_pursuit_strike must be a single Surface"
+        )
+
         for name, value in sprites.items():
             # Animation entries (e.g. predator_pursuit_frames) are lists of surfaces;
             # every frame must still be CELL_SIZE x CELL_SIZE.
