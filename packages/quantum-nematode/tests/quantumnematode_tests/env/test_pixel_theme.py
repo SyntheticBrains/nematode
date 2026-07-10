@@ -104,9 +104,13 @@ class TestSprites:
         from quantumnematode.env.sprites import CELL_SIZE, create_sprites
 
         sprites = create_sprites(_pg)
-        for name, surf in sprites.items():
-            assert surf.get_width() == CELL_SIZE, f"{name} width mismatch"
-            assert surf.get_height() == CELL_SIZE, f"{name} height mismatch"
+        for name, value in sprites.items():
+            # Animation entries (e.g. predator_pursuit_frames) are lists of surfaces;
+            # every frame must still be CELL_SIZE x CELL_SIZE.
+            surfaces = value if isinstance(value, list) else [value]
+            for surf in surfaces:
+                assert surf.get_width() == CELL_SIZE, f"{name} width mismatch"
+                assert surf.get_height() == CELL_SIZE, f"{name} height mismatch"
 
     def test_entity_sprites_have_alpha(self) -> None:
         """Entity sprites (not soil) should use SRCALPHA for zone transparency."""

@@ -130,6 +130,11 @@ def create_sprites(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     sprites["predator_random"] = _make_predator_random(pg)
     sprites["predator_stationary"] = _make_predator_stationary(pg)
     sprites["predator_pursuit"] = _make_predator_pursuit(pg)
+    # Pursuit-predator animation: a gait cycle + a strike pose, all facing +x so the
+    # continuous renderer can orient them by the predator's heading.
+    pursuit_anim = make_predator_pursuit_frames(pg)
+    sprites["predator_pursuit_frames"] = pursuit_anim["frames"]
+    sprites["predator_pursuit_strike"] = pursuit_anim["strike"]
 
     # Directional head sprites
     for direction in ("up", "down", "left", "right"):
@@ -330,17 +335,81 @@ def _make_predator_stationary(pg: Any) -> Any:  # noqa: ANN401
     return surf
 
 
-def _make_predator_pursuit(pg: Any) -> Any:  # noqa: ANN401
-    """Predatory mite -- small arachnid shape in orange-red."""
-    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
+# Pursuit-predator (mite) animation: gait-cycle frame count + per-leg phase spread.
+PREDATOR_PURSUIT_FRAMES = 4
+# Four legs per side; each entry is (attach_x_offset, forward_fan) where fan < 0 rakes
+# a leg toward the rear and fan > 0 toward the front. Drawn for a mite FACING +x
+# (right), so the renderer can rotate a single canonical sprite by ``heading_rad``.
+_MITE_LEGS: tuple[tuple[int, float], ...] = ((-5, -0.9), (-2, -0.3), (1, 0.3), (4, 0.9))
+_MITE_EYE_COLOR = (40, 20, 20)
+
+
+def _draw_mite(pg: Any, surf: Any, leg_phase: float, *, strike: bool) -> None:  # noqa: ANN401
+    """Draw a top-down predatory mite facing +x onto ``surf`` at a gait phase.
+
+    The eight legs scuttle in an alternating-tripod gait driven by ``leg_phase``; on
+    ``strike`` the legs splay wide, the body lunges forward, and the chelicerae open —
+    used when the predator is within striking range of the worm.
+    """
     c = CELL_SIZE // 2
-    pg.draw.ellipse(surf, PREDATOR_PURSUIT_COLOR, (c - 6, c - 8, 12, 16))
-    pg.draw.circle(surf, PREDATOR_PURSUIT_HIGHLIGHT, (c, c - 10), 5)
-    for dy, spread in [(-4, 10), (-1, 12), (2, 11), (5, 9)]:
-        pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (c - 2, c + dy), (c - spread, c + dy - 3), 1)
-        pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (c + 2, c + dy), (c + spread, c + dy - 3), 1)
-    pg.draw.circle(surf, (40, 20, 20), (c - 2, c - 12), 1)
-    pg.draw.circle(surf, (40, 20, 20), (c + 2, c - 12), 1)
+    body_dx = 1 if strike else 0  # lunge forward on strike
+    bx = c + body_dx
+
+    # Legs first (behind the body). Two-segment (femur + tarsus) polylines.
+    reach = 1.35 if strike else 1.0
+    for side in (-1, 1):  # -1 = top (screen up), +1 = bottom
+        for i, (ax_off, fan) in enumerate(_MITE_LEGS):
+            ax, ay = bx + ax_off, c + side * 4
+            ph = leg_phase + i * 1.7 + (0.0 if side < 0 else math.pi)
+            swing = math.sin(ph)
+            knee_x = ax + (fan * 4.0 + 0.6 * swing) * reach
+            knee_y = ay + side * 5.0 * reach
+            tip_x = knee_x + (fan * 3.5 + 1.6 * swing) * reach
+            tip_y = knee_y + side * 4.5 * reach
+            pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (ax, ay), (knee_x, knee_y), 2)
+            pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (knee_x, knee_y), (tip_x, tip_y), 1)
+
+    # Idiosoma (main body oval) + a lighter dorsal sheen.
+    pg.draw.ellipse(surf, PREDATOR_PURSUIT_COLOR, (bx - 7, c - 6, 14, 12))
+    pg.draw.ellipse(surf, PREDATOR_PURSUIT_DARK, (bx - 7, c - 6, 14, 12), 1)
+    pg.draw.circle(surf, PREDATOR_PURSUIT_HIGHLIGHT, (bx - 2, c - 2), 3)
+
+    # Gnathosoma (mouth cone) + chelicerae/fangs pointing forward (+x).
+    pg.draw.polygon(
+        surf,
+        PREDATOR_PURSUIT_COLOR,
+        [(bx + 5, c - 3), (bx + 5, c + 3), (bx + 10, c)],
+    )
+    fang_spread = 4 if strike else 2
+    pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (bx + 8, c - 1), (bx + 13, c - fang_spread), 1)
+    pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (bx + 8, c + 1), (bx + 13, c + fang_spread), 1)
+
+    # Eyes near the front of the idiosoma.
+    pg.draw.circle(surf, _MITE_EYE_COLOR, (bx + 3, c - 3), 1)
+    pg.draw.circle(surf, _MITE_EYE_COLOR, (bx + 3, c + 3), 1)
+
+
+def make_predator_pursuit_frames(pg: Any) -> dict[str, Any]:  # noqa: ANN401
+    """Build the pursuit-predator (mite) animation frames + the strike pose.
+
+    Returns a dict with ``"frames"`` (a gait cycle of ``PREDATOR_PURSUIT_FRAMES``
+    surfaces) and ``"strike"`` (the lunge pose). All sprites face +x so the renderer
+    orients them by rotating with the predator's ``heading_rad``.
+    """
+    frames = []
+    for f in range(PREDATOR_PURSUIT_FRAMES):
+        surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
+        _draw_mite(pg, surf, 2.0 * math.pi * f / PREDATOR_PURSUIT_FRAMES, strike=False)
+        frames.append(surf)
+    strike = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
+    _draw_mite(pg, strike, 0.0, strike=True)
+    return {"frames": frames, "strike": strike}
+
+
+def _make_predator_pursuit(pg: Any) -> Any:  # noqa: ANN401
+    """Predatory mite facing +x (the static/frame-0 sprite for non-animated renderers)."""
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
+    _draw_mite(pg, surf, 0.0, strike=False)
     return surf
 
 

@@ -357,7 +357,7 @@ uv run ./scripts/run_simulation.py \
 | **Food** | Green clustered dots | *E. coli* / OP50 bacterial lawns |
 | **Random predator** | Purple branching tendrils | Nematode-trapping fungi (*Arthrobotrys oligospora*) |
 | **Stationary predator** | Purple ring/net structure with toxic zone | Constricting ring traps (*Drechslerella*) |
-| **Pursuit predator** | Orange-red arachnid shape | Predatory mites |
+| **Pursuit predator** | Orange-red mite with a scuttling-leg gait that turns to face its heading and lunges on a strike (continuous-2D) | Predatory mites |
 
 ### Environment Layers
 
