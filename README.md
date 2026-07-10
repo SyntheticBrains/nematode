@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/SyntheticBrains/nematode/branch/main/graph/badge.svg)](https://codecov.io/gh/SyntheticBrains/nematode)
 
 <p align="center">
-  <img src="./docs/assets/images/demo.gif" alt="nematode simulation demo" />
+  <img src="./docs/assets/images/demo-hi-fi.gif" alt="high-fidelity nematode simulation demo (continuous-2D foraging with predator evasion and thermotaxis)" />
 </p>
 
 This project simulates a simplified nematode (C. elegans) navigating dynamic foraging environments to find food while managing satiety, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for realistic foraging dynamics.
