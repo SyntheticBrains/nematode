@@ -129,10 +129,11 @@ def create_sprites(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     sprites["food"] = _make_food(pg)
     sprites["predator_random"] = _make_predator_random(pg)
     sprites["predator_stationary"] = _make_predator_stationary(pg)
-    sprites["predator_pursuit"] = _make_predator_pursuit(pg)
     # Pursuit-predator animation: a gait cycle + a strike pose, all facing +x so the
-    # continuous renderer can orient them by the predator's heading.
-    pursuit_anim = make_predator_pursuit_frames(pg)
+    # continuous renderer can orient them by the predator's heading. The static
+    # predator_pursuit sprite (used by the non-animated grid renderer) is gait frame 0.
+    pursuit_anim = _make_predator_pursuit_frames(pg)
+    sprites["predator_pursuit"] = pursuit_anim["frames"][0]
     sprites["predator_pursuit_frames"] = pursuit_anim["frames"]
     sprites["predator_pursuit_strike"] = pursuit_anim["strike"]
 
@@ -389,7 +390,7 @@ def _draw_mite(pg: Any, surf: Any, leg_phase: float, *, strike: bool) -> None:  
     pg.draw.circle(surf, _MITE_EYE_COLOR, (bx + 3, c + 3), 1)
 
 
-def make_predator_pursuit_frames(pg: Any) -> dict[str, Any]:  # noqa: ANN401
+def _make_predator_pursuit_frames(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     """Build the pursuit-predator (mite) animation frames + the strike pose.
 
     Returns a dict with ``"frames"`` (a gait cycle of ``PREDATOR_PURSUIT_FRAMES``
@@ -404,13 +405,6 @@ def make_predator_pursuit_frames(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     strike = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     _draw_mite(pg, strike, 0.0, strike=True)
     return {"frames": frames, "strike": strike}
-
-
-def _make_predator_pursuit(pg: Any) -> Any:  # noqa: ANN401
-    """Predatory mite facing +x (the static/frame-0 sprite for non-animated renderers)."""
-    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
-    _draw_mite(pg, surf, 0.0, strike=False)
-    return surf
 
 
 def create_tinted_head_sprites(

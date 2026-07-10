@@ -1701,8 +1701,8 @@ class Continuous2DRenderer:
             from quantumnematode.env.env import PredatorType
 
             frames = sprites["predator_pursuit_frames"]
-            gait_idx = int(self._undulation_phase / _PREDATOR_GAIT_PHASE_STEP) % len(frames)
-            for pred in env.predators:
+            gait_base = self._undulation_phase / _PREDATOR_GAIT_PHASE_STEP
+            for i, pred in enumerate(env.predators):
                 px, py = pred.pos_continuous or (
                     float(pred.position[0]),
                     float(pred.position[1]),
@@ -1710,9 +1710,11 @@ class Continuous2DRenderer:
                 cx, cy = self._world_to_pixel(px, py)
                 if pred.predator_type == PredatorType.PURSUIT:
                     # Animated + oriented: pick the gait frame (or strike pose when
-                    # closing on the worm) and rotate it to face the heading.
+                    # closing on the worm) and rotate it to face the heading. The
+                    # per-predator index offset desynchronises multiple mites' gaits.
                     worm_dist = math.hypot(px - state.pos[0], py - state.pos[1])
                     striking = worm_dist <= _PREDATOR_STRIKE_MM
+                    gait_idx = int(gait_base + i) % len(frames)
                     base = sprites["predator_pursuit_strike"] if striking else frames[gait_idx]
                     rotated = self._pg.transform.rotate(base, math.degrees(pred.heading_rad))
                     self._screen.blit(rotated, rotated.get_rect(center=(cx, cy)))
