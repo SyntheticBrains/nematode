@@ -1136,6 +1136,10 @@ _WORM_RESET_JUMP_MM = 3.0  # a pos jump larger than any legal step (<= max_step_
 _WORM_UNDULATION_WAVELENGTH_SEG = 8.0  # body segments per crawl wave
 _WORM_UNDULATION_PHASE_STEP = 0.55  # phase advance per frame (rad) → the wave travels down the body
 _WORM_UNDULATION_AMPLITUDE_FRAC = 0.7  # lateral wiggle as a fraction of the worm radius
+# Pursuit-predator (mite) rendering: leg-gait cadence (phase per gait-frame advance) and
+# the worm-distance (mm) within which it snaps to the strike pose.
+_PREDATOR_GAIT_PHASE_STEP = 1.1
+_PREDATOR_STRIKE_MM = 3.0
 PREDATOR_DETECTION_RING_COLOR = (200, 160, 220)
 PREDATOR_DAMAGE_RING_COLOR = (220, 70, 70)
 QUIVER_ARROW_COLOR = (120, 230, 140)
@@ -1203,6 +1207,10 @@ class Continuous2DRenderer:
             key: sprites[key]
             for key in ("food", "predator_random", "predator_stationary", "predator_pursuit")
         }
+        # Pursuit-predator animation frames (gait cycle + strike pose), scaled per zoom
+        # alongside the static sprites and oriented at draw time by the predator heading.
+        self._pursuit_frames_raw: list[Any] = sprites["predator_pursuit_frames"]
+        self._pursuit_strike_raw: Any = sprites["predator_pursuit_strike"]
         self._sprite_cache: dict[int, dict[str, Any]] = {}
 
         # Camera state: full-arena by default; `C` toggles agent-following. The
@@ -1285,11 +1293,20 @@ class Continuous2DRenderer:
         entity_px = max(10, round(2.0 * ppm))
         cached = self._sprite_cache.get(entity_px)
         if cached is None:
-            cached = {
+            scaled: dict[str, Any] = {
                 key: self._pg.transform.smoothscale(raw, (entity_px, entity_px))
                 for key, raw in self._raw_sprites.items()
             }
-            self._sprite_cache[entity_px] = cached
+            scaled["predator_pursuit_frames"] = [
+                self._pg.transform.smoothscale(f, (entity_px, entity_px))
+                for f in self._pursuit_frames_raw
+            ]
+            scaled["predator_pursuit_strike"] = self._pg.transform.smoothscale(
+                self._pursuit_strike_raw,
+                (entity_px, entity_px),
+            )
+            self._sprite_cache[entity_px] = scaled
+            cached = scaled
         return cached, entity_px
 
     def _cell_rect(self, gx: int, gy: int) -> tuple[int, int, int, int]:
@@ -1683,18 +1700,29 @@ class Continuous2DRenderer:
         if env.predator.enabled:
             from quantumnematode.env.env import PredatorType
 
-            for pred in env.predators:
-                if pred.predator_type == PredatorType.STATIONARY:
-                    sprite = sprites["predator_stationary"]
-                elif pred.predator_type == PredatorType.PURSUIT:
-                    sprite = sprites["predator_pursuit"]
-                else:
-                    sprite = sprites["predator_random"]
+            frames = sprites["predator_pursuit_frames"]
+            gait_base = self._undulation_phase / _PREDATOR_GAIT_PHASE_STEP
+            for i, pred in enumerate(env.predators):
                 px, py = pred.pos_continuous or (
                     float(pred.position[0]),
                     float(pred.position[1]),
                 )
                 cx, cy = self._world_to_pixel(px, py)
+                if pred.predator_type == PredatorType.PURSUIT:
+                    # Animated + oriented: pick the gait frame (or strike pose when
+                    # closing on the worm) and rotate it to face the heading. The
+                    # per-predator index offset desynchronises multiple mites' gaits.
+                    worm_dist = math.hypot(px - state.pos[0], py - state.pos[1])
+                    striking = worm_dist <= _PREDATOR_STRIKE_MM
+                    gait_idx = int(gait_base + i) % len(frames)
+                    base = sprites["predator_pursuit_strike"] if striking else frames[gait_idx]
+                    rotated = self._pg.transform.rotate(base, math.degrees(pred.heading_rad))
+                    self._screen.blit(rotated, rotated.get_rect(center=(cx, cy)))
+                    continue
+                if pred.predator_type == PredatorType.STATIONARY:
+                    sprite = sprites["predator_stationary"]
+                else:
+                    sprite = sprites["predator_random"]
                 self._screen.blit(sprite, (cx - half, cy - half))
 
         # Worm: a path-following, tapered, undulating body trailing the head, then a

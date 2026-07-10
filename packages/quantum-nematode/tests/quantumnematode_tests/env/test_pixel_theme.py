@@ -92,6 +92,8 @@ class TestSprites:
             "predator_random",
             "predator_stationary",
             "predator_pursuit",
+            "predator_pursuit_frames",
+            "predator_pursuit_strike",
             "head_up",
             "head_down",
             "head_left",
@@ -101,12 +103,30 @@ class TestSprites:
 
     def test_sprite_surfaces_are_correct_size(self) -> None:
         """Verify all sprites are CELL_SIZE x CELL_SIZE."""
-        from quantumnematode.env.sprites import CELL_SIZE, create_sprites
+        from quantumnematode.env.sprites import (
+            CELL_SIZE,
+            PREDATOR_PURSUIT_FRAMES,
+            create_sprites,
+        )
 
         sprites = create_sprites(_pg)
-        for name, surf in sprites.items():
-            assert surf.get_width() == CELL_SIZE, f"{name} width mismatch"
-            assert surf.get_height() == CELL_SIZE, f"{name} height mismatch"
+
+        # The pursuit animation has a specific container contract: a list of
+        # PREDATOR_PURSUIT_FRAMES gait surfaces + a single strike surface.
+        frames = sprites["predator_pursuit_frames"]
+        assert isinstance(frames, list), "predator_pursuit_frames must be a list"
+        assert len(frames) == PREDATOR_PURSUIT_FRAMES
+        assert isinstance(sprites["predator_pursuit_strike"], _pg.Surface), (
+            "predator_pursuit_strike must be a single Surface"
+        )
+
+        for name, value in sprites.items():
+            # Animation entries (e.g. predator_pursuit_frames) are lists of surfaces;
+            # every frame must still be CELL_SIZE x CELL_SIZE.
+            surfaces = value if isinstance(value, list) else [value]
+            for surf in surfaces:
+                assert surf.get_width() == CELL_SIZE, f"{name} width mismatch"
+                assert surf.get_height() == CELL_SIZE, f"{name} height mismatch"
 
     def test_entity_sprites_have_alpha(self) -> None:
         """Entity sprites (not soil) should use SRCALPHA for zone transparency."""
@@ -119,10 +139,15 @@ class TestSprites:
             "predator_random",
             "predator_stationary",
             "predator_pursuit",
+            "predator_pursuit_frames",  # list of gait-cycle surfaces
+            "predator_pursuit_strike",
         ]
         for name in alpha_sprites:
-            surf = sprites[name]
-            assert surf.get_flags() & _pg.SRCALPHA, f"{name} should have SRCALPHA"
+            value = sprites[name]
+            # Animation entries are lists of surfaces; every surface must be SRCALPHA.
+            surfaces = value if isinstance(value, list) else [value]
+            for surf in surfaces:
+                assert surf.get_flags() & _pg.SRCALPHA, f"{name} should have SRCALPHA"
 
     def test_create_zone_overlay(self) -> None:
         """Verify zone overlays are SRCALPHA and correct size."""
