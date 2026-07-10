@@ -92,6 +92,8 @@ class TestSprites:
             "predator_random",
             "predator_stationary",
             "predator_pursuit",
+            "predator_pursuit_frames",
+            "predator_pursuit_strike",
             "head_up",
             "head_down",
             "head_left",
@@ -123,10 +125,15 @@ class TestSprites:
             "predator_random",
             "predator_stationary",
             "predator_pursuit",
+            "predator_pursuit_frames",  # list of gait-cycle surfaces
+            "predator_pursuit_strike",
         ]
         for name in alpha_sprites:
-            surf = sprites[name]
-            assert surf.get_flags() & _pg.SRCALPHA, f"{name} should have SRCALPHA"
+            value = sprites[name]
+            # Animation entries are lists of surfaces; every surface must be SRCALPHA.
+            surfaces = value if isinstance(value, list) else [value]
+            for surf in surfaces:
+                assert surf.get_flags() & _pg.SRCALPHA, f"{name} should have SRCALPHA"
 
     def test_create_zone_overlay(self) -> None:
         """Verify zone overlays are SRCALPHA and correct size."""

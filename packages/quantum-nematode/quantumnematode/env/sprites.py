@@ -121,7 +121,8 @@ def create_sprites(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     Returns
     -------
     dict[str, Any]
-        Mapping of sprite name to pygame.Surface.
+        Mapping of sprite name to a pygame.Surface, except ``predator_pursuit_frames``
+        which is a ``list`` of pygame.Surface (the pursuit-predator gait cycle).
     """
     sprites: dict[str, Any] = {}
 
@@ -337,12 +338,12 @@ def _make_predator_stationary(pg: Any) -> Any:  # noqa: ANN401
 
 
 # Pursuit-predator (mite) animation: gait-cycle frame count + per-leg phase spread.
-PREDATOR_PURSUIT_FRAMES = 4
+PREDATOR_PURSUIT_FRAMES: int = 4
 # Four legs per side; each entry is (attach_x_offset, forward_fan) where fan < 0 rakes
 # a leg toward the rear and fan > 0 toward the front. Drawn for a mite FACING +x
 # (right), so the renderer can rotate a single canonical sprite by ``heading_rad``.
 _MITE_LEGS: tuple[tuple[int, float], ...] = ((-5, -0.9), (-2, -0.3), (1, 0.3), (4, 0.9))
-_MITE_EYE_COLOR = (40, 20, 20)
+_MITE_EYE_COLOR: tuple[int, int, int] = (40, 20, 20)
 
 
 def _draw_mite(pg: Any, surf: Any, leg_phase: float, *, strike: bool) -> None:  # noqa: ANN401
@@ -365,8 +366,11 @@ def _draw_mite(pg: Any, surf: Any, leg_phase: float, *, strike: bool) -> None:  
             swing = math.sin(ph)
             knee_x = ax + (fan * 4.0 + 0.6 * swing) * reach
             knee_y = ay + side * 5.0 * reach
-            tip_x = knee_x + (fan * 3.5 + 1.6 * swing) * reach
-            tip_y = knee_y + side * 4.5 * reach
+            # Clamp the tips into the canvas so the wider strike splay (reach 1.35)
+            # cannot push the outermost legs past the 32x32 edge and clip.
+            edge = float(CELL_SIZE - 1)
+            tip_x = min(edge, max(0.0, knee_x + (fan * 3.5 + 1.6 * swing) * reach))
+            tip_y = min(edge, max(0.0, knee_y + side * 4.5 * reach))
             pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (ax, ay), (knee_x, knee_y), 2)
             pg.draw.line(surf, PREDATOR_PURSUIT_DARK, (knee_x, knee_y), (tip_x, tip_y), 1)
 
@@ -397,7 +401,7 @@ def _make_predator_pursuit_frames(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     surfaces) and ``"strike"`` (the lunge pose). All sprites face +x so the renderer
     orients them by rotating with the predator's ``heading_rad``.
     """
-    frames = []
+    frames: list[Any] = []
     for f in range(PREDATOR_PURSUIT_FRAMES):
         surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
         _draw_mite(pg, surf, 2.0 * math.pi * f / PREDATOR_PURSUIT_FRAMES, strike=False)
