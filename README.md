@@ -24,6 +24,8 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Evolutionary Optimization & Inheritance**: CMA-ES, genetic algorithms, and TPE hyperparameter search, plus Lamarckian weight inheritance, Baldwin-effect, and predator-prey co-evolution
 - ✅ **Connectome Substrate**: Connectome-constrained brains on the real *C. elegans* wiring diagram (302 neurons, Cook et al. 2019) with chemical synapses and gap junctions
+- ✅ **Continuous-2D Substrate**: High-fidelity continuous-space navigation — sub-cell float kinematics, Euclidean geometry, Fick-diffusion concentration fields, and an adaptive biphasic (Weber-law) chemosensor — with a dedicated fidelity renderer (`--theme pixel_continuous`)
+- ✅ **Real-Worm Behavioural Validation**: Grades the learned worm's own behaviour against published *C. elegans* literature via bias curves — klinokinesis turn-rate vs dC/dt and klinotaxis weathervane curving vs bearing (chemotaxis), plus setpoint-drive turning (thermotaxis) — with bootstrap-CI grading (REPRODUCED / PARTIAL / ABSENT)
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
 - ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
 - ✅ **Interactive Workflows**: CLI scripts with flexible configuration
@@ -33,7 +35,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from 25 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 27 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
@@ -64,6 +66,8 @@ Choose from 25 brain architectures spanning quantum, classical, hybrid, and biol
 - **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
 - **CfCPPOBrain** (cfcppo): CfC (Closed-form Continuous-time) liquid neural network with AutoNCP wiring and continuous-time recurrent dynamics, PPO-trained — an alternative recurrent substrate for temporal sensing
 - **TransformerPPOBrain** (transformerppo): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — an attention-based temporal-memory comparator to the recurrent (LSTM/CfC) substrates
+- **MinGRUPPOBrain** (mingruppo): minGRU-augmented PPO — parallel-form minimal RNN with input-only gating (Feng et al. 2024, "Were RNNs All We Needed?"); a bounded, saturation-free recurrent core and stability upgrade candidate to the plain LSTM arm
+- **MinLSTMPPOBrain** (minlstmppo): minLSTM-augmented PPO — parallel-form minimal RNN with normalised input-only gates and a single recurrent state; classical stability-comparator companion to minGRU
 - **FeedforwardGABrain** (feedforwardga): Feed-forward network whose weights are evolved by the genetic-algorithm optimizer (gradient-free), with graded episodic-progress fitness for sparse-reward cells
 
 **Biologically-Inspired:**
@@ -164,11 +168,29 @@ docker-compose exec quantum-nematode bash
 
 1. **State Perception**: The nematode perceives its environment through modular sensory inputs — oracle gradients, temporal concentration scalars, or derivative signals (dC/dt) depending on sensing mode, plus proprioception, mechanosensation, and STAM temporal memory
 2. **Brain Processing**: The selected brain architecture processes the state
-3. **Action Selection**: Brain outputs action probabilities (forward, left, right, stay)
+3. **Action Selection**: The brain emits an action — a discrete choice on the grid substrate or a continuous steering command on the continuous-2D substrate (see [Action Spaces](#action-spaces-grid-vs-continuous-2d) below)
 4. **Environment Update**: Agent moves, satiety decays, and receives reward signal
 5. **Food Collection**: When reaching food, satiety is restored and new food spawns
 6. **Learning**: Brain parameters are updated based on reward feedback
 7. **Repeat**: Process continues until all foods are collected, satiety reaches zero (starvation), or maximum steps reached
+
+### Action Spaces: Grid vs Continuous-2D
+
+The two substrates map the brain's outputs to movement very differently. On the **grid**, the actor is a classifier — 4 logits over `[forward, left, right, stay]`; the chosen index *is* the move (advance one cell along the current cardinal facing, snap the facing 90°, or stay). On the **continuous-2D** substrate, the actor is a regressor — it emits a 2-D steering command `(speed, turn)` that a kinematic model integrates into smooth motion.
+
+| | Grid | Continuous-2D |
+|---|---|---|
+| Output layer | 4 logits (categorical) | 2 Gaussian means + a learned std |
+| Policy sample | pick 1 of 4 actions | tanh-squashed Gaussian → `(speed, turn)` |
+| Raw action | discrete index | `speed ∈ [0, 1]`, `turn ∈ [-1, 1]` (normalized) |
+| Rescale to physics | none | `× max_step_mm`, `× max_turn_rad` (env-owned) |
+| Movement | cardinal ±90° turn + one-cell hop | incremental heading rotation + sub-mm glide along a persistent float heading |
+| "Stay" | explicit `stay` action | emergent — `speed ≈ 0` (dwelling is a low-speed continuum, not a button) |
+
+Two things this buys the continuous substrate:
+
+- **The brain emits motor drive, not coordinates.** It outputs normalized numbers in `[0, 1]` / `[-1, 1]`; the environment owns the physical scale (`max_step_mm`, `max_turn_rad`) and integrates the kinematics. The same actor works regardless of arena units — the honest analogue of a nervous system driving muscles rather than teleporting between cells.
+- **Sensing is decoupled from the motor output.** The klinotaxis head-sweep (sampling the gradient lateral to the heading) is a *sensing* mechanism, distinct from the `(speed, turn)` command — whereas grid sensing is a static per-cell readout.
 
 ### Quantum Learning Process
 
@@ -360,7 +382,7 @@ Console-based themes (ASCII, Emoji, Rich, etc.) are available for terminal rende
 uv run ./scripts/run_simulation.py --config ./configs/scenarios/foraging/mlpppo_small_oracle.yml --runs 50 --theme headless
 ```
 
-Available themes: `pixel` (default), `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless`.
+Available themes: `pixel` (default), `pixel_continuous` (continuous-2D substrate), `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless`.
 
 ### Session Summary
 
@@ -404,6 +426,9 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Recently Completed
 
+- **Architecture Comparison on the Connectome (Phase 6a — Gate 3 GO)**: First closed-loop learning on the real *C. elegans* connectome, ranked against five other brain families on a common continuous-2D substrate across three behaviours (klinotaxis, thermotaxis, predator evasion). Result: `MLP 89.0 ≫ {CfC 75.8 ~ Transformer 74.0} > LSTM 60.1 > connectome 52.2 ≫ GA 15.0` (n=8) — the wild-type connectome ranks 5th of 6 under PPO weight search, beaten on all three behaviours by a plain MLP. See [Logbook 037](docs/experiments/logbooks/037-phase6a-synthesis.md)
+- **Continuous-2D Substrate**: High-fidelity continuous-space navigation (sub-cell float kinematics, Euclidean geometry, Fick-diffusion concentration fields, adaptive biphasic Weber-law chemosensor) with a dedicated fidelity renderer (`--theme pixel_continuous`)
+- **Real-Worm Behavioural Validation**: Bias-curve grading of the learned worm's own behaviour against published *C. elegans* data — klinokinesis (turn-rate vs dC/dt) and klinotaxis (weathervane curving vs bearing) for chemotaxis, setpoint-drive turning for thermotaxis — with bootstrap-CI verdicts
 - **Evolution & Inheritance**: CMA-ES, genetic-algorithm, and TPE optimization plus Lamarckian weight inheritance across generations (the headline-positive Phase 5 result), with Baldwin-effect, predator-prey co-evolution arms-race, and transgenerational-memory studies
 - **Pluggable Architecture Interface**: Self-registering `@register_brain` plug-in registry admitting MLP, recurrent, spiking, reservoir, quantum, hybrid, GA-evolved, and connectome-constrained brains as comparable rows in one experimental sweep
 - **Multi-Agent Simulations**: Cooperative and competitive foraging with pheromone communication (food-marking, alarm, aggregation), social feeding (npr-1 mediated satiety modulation), food competition policies, collective behavior metrics (aggregation index, alarm evasion, food sharing), and real-time Pygame visualization with per-agent colored sprites and pheromone overlays
@@ -415,9 +440,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 
-- **Connectome Architecture Comparison** (in progress): Closed-loop learning and evolution on the real *C. elegans* connectome (302 neurons, Cook et al. 2019) as a focal architecture, with NEAT topology search ranking the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion
-- **Plasticity & Cross-Species Transfer**: Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome, and *P. pacificus* transfer using Cook et al. 2025 connectome data
-- **Continuous Physics**: Continuous 2D movement and realistic locomotion
+- **NEAT Topology Search** (Phase 6b, in progress): Evolving network topologies to rank the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion (gated on GPU + environment vectorisation)
+- **Plasticity & Cross-Species Transfer** (Phase 7): Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome, and *P. pacificus* transfer using Cook et al. 2025 connectome data
 - **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
 - **Real-World Validation**: WormBot deployment, C. elegans lab collaborations, cross-organism transfer (Drosophila, zebrafish)
 
