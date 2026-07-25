@@ -1,7 +1,7 @@
 """Tests for convergence detection and analysis."""
 
 import pytest
-from quantumnematode.benchmark.convergence import (
+from quantumnematode.experiment.convergence import (
     analyze_convergence,
     calculate_composite_score,
     calculate_post_convergence_metrics,

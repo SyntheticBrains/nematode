@@ -1,4 +1,4 @@
-"""Convergence detection and composite scoring for benchmark evaluation.
+"""Convergence detection and composite scoring.
 
 This module implements adaptive convergence detection to identify when a learning
 strategy has stabilized, enabling more accurate performance assessment based on

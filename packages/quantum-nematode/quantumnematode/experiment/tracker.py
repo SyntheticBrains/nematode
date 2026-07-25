@@ -6,9 +6,9 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from quantumnematode.benchmark.convergence import analyze_convergence
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import DynamicForagingEnvironment
+from quantumnematode.experiment.convergence import analyze_convergence
 from quantumnematode.experiment.git_utils import capture_git_context, get_relative_config_path
 from quantumnematode.experiment.metadata import (
     BrainMetadata,

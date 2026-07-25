@@ -19,11 +19,11 @@
 
 ## 3. Relocate the convergence detector
 
-- [ ] 3.1 `git mv benchmark/convergence.py experiment/convergence.py`; `git mv tests/.../benchmark/test_convergence.py tests/.../experiment/test_convergence.py`; `git rm` both now-empty `__init__.py` files so the `benchmark/` package disappears.
-- [ ] 3.2 Repoint the import in `experiment/tracker.py:9` and in the moved test. Let ruff-isort re-sort — do not hand-place.
-- [ ] 3.3 Drop "for benchmark evaluation" from the module docstring. Change no symbol names.
-- [ ] 3.4 Update the two live `convergence.py` path references in `openspec/specs/architecture-comparison-protocol/spec.md:52` (link target + display text). Do **not** touch the identical paths under `openspec/changes/archive/**` — archived changes correctly record the path as it was.
-- [ ] 3.5 Verify: the 17 convergence tests pass at their new path; a repo-wide grep for `quantumnematode.benchmark` / `quantumnematode/benchmark` returns zero outside `openspec/changes/archive/`.
+- [x] 3.1 `git mv benchmark/convergence.py experiment/convergence.py`; `git mv tests/.../benchmark/test_convergence.py tests/.../experiment/test_convergence.py`; `git rm` both now-empty `__init__.py` files so the `benchmark/` package disappears.
+- [x] 3.2 Repoint the import in `experiment/tracker.py:9` and in the moved test. Let ruff-isort re-sort — do not hand-place.
+- [x] 3.3 Drop "for benchmark evaluation" from the module docstring. Change no symbol names.
+- [x] 3.4 Update the two live `convergence.py` path references in `openspec/specs/architecture-comparison-protocol/spec.md:52` (link target + display text). Do **not** touch the identical paths under `openspec/changes/archive/**` — archived changes correctly record the path as it was.
+- [x] 3.5 Verify: the 17 convergence tests pass at their new path; a repo-wide grep for `quantumnematode.benchmark` / `quantumnematode/benchmark` returns zero outside `openspec/changes/archive/`.
 
 ## 4. Preserve the experiment data, remove the submission wrapper
 
