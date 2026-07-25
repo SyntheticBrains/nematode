@@ -29,11 +29,11 @@
 
 The 72 experiment JSONs under `artifacts/benchmarks/` have **no duplicate anywhere** — their IDs and `artifacts/experiments/`'s 12 IDs are disjoint. They are primary experiment records, not submission tooling, so they are migrated rather than deleted (design.md D6). Only the six submission manifests are removed.
 
-- [ ] 4.1 Migrate each `artifacts/benchmarks/<submission_id>/<experiment_id>.json` to `artifacts/experiments/<experiment_id>/<experiment_id>.json`, copying that submission's `config.yml` alongside each — the live folder layout specified by the `Experiment Folder Structure` scenario being migrated in §7.1. Use `git mv` where possible so LFS pointers move rather than re-add.
-- [ ] 4.2 Verify the migration before deleting anything: 72 new experiment folders exist, each contains exactly one JSON plus one YAML, every JSON parses, and `artifacts/experiments/` has gone 12 → 84 entries with no ID collisions.
-- [ ] 4.3 `git rm -r benchmarks/` (the 6 submission manifests) and remove the now-empty `artifacts/benchmarks/` tree — before the `.gitattributes` edit, so nothing can be re-added as a plain blob.
-- [ ] 4.4 Drop the `benchmarks/**/*.json` LFS rule from `.gitattributes` and the `!benchmarks/` negation from `.gitignore`. Keep the generic `artifacts/**/*.json` rule — it now covers the migrated files — and the `.bench_evolution_tmp/` entry, a different system.
-- [ ] 4.5 Verify: `git lfs status` shows the migrated JSONs still LFS-tracked (not converted to plain blobs); `check-added-large-files` green. Do **not** run `git lfs prune`.
+- [x] 4.1 Migrate each `artifacts/benchmarks/<submission_id>/<experiment_id>.json` to `artifacts/experiments/<experiment_id>/<experiment_id>.json`, copying that submission's `config.yml` alongside each — the live folder layout specified by the `Experiment Folder Structure` scenario being migrated in §7.1. Use `git mv` where possible so LFS pointers move rather than re-add.
+- [x] 4.2 Verify the migration before deleting anything: 72 new experiment folders exist, each contains exactly one JSON plus one YAML, every JSON parses, and `artifacts/experiments/` has gone 12 → 84 entries with no ID collisions.
+- [x] 4.3 `git rm -r benchmarks/` (the 6 submission manifests) and remove the now-empty `artifacts/benchmarks/` tree — before the `.gitattributes` edit, so nothing can be re-added as a plain blob.
+- [x] 4.4 Drop the `benchmarks/**/*.json` LFS rule from `.gitattributes` and the `!benchmarks/` negation from `.gitignore`. Keep the generic `artifacts/**/*.json` rule — it now covers the migrated files — and the `.bench_evolution_tmp/` entry, a different system.
+- [x] 4.5 Verify: `git lfs status` shows the migrated JSONs still LFS-tracked (not converted to plain blobs); `check-added-large-files` green. Do **not** run `git lfs prune`.
 
 ## 5. Remove the documentation
 
