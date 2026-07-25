@@ -6,9 +6,9 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from quantumnematode.benchmark.convergence import analyze_convergence
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import DynamicForagingEnvironment
+from quantumnematode.experiment.convergence import analyze_convergence
 from quantumnematode.experiment.git_utils import capture_git_context, get_relative_config_path
 from quantumnematode.experiment.metadata import (
     BrainMetadata,
@@ -531,7 +531,7 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         post_convergence_variance=convergence_metrics.post_convergence_variance,
         post_convergence_distance_efficiency=convergence_metrics.distance_efficiency,
         composite_benchmark_score=convergence_metrics.composite_score,
-        # Learning metrics (added for NematodeBench format)
+        # Learning-dynamics metrics
         learning_speed=convergence_metrics.learning_speed,
         learning_speed_episodes=convergence_metrics.learning_speed_episodes,
         stability=convergence_metrics.stability,

@@ -34,9 +34,9 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
   - `brain/arch/` — 27 brain architectures: qvarcircuit, qqlearning, qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm, hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn, mlpppo, lstmppo, spikingreinforce, connectomeppo, feedforwardga, cfcppo, spikingppo, equivariantquantum, transformerppo, mingruppo, minlstmppo. Plug-in registry: each Brain self-registers via `@register_brain`; see [docs/architecture/plugin-developer-guide.md](docs/architecture/plugin-developer-guide.md) for how to add a new one.
   - `env/` — Environment simulation
   - `agent/` — Agent orchestration, rewards, metrics
-  - `experiment/` — Experiment tracking and benchmarking
+  - `experiment/` — Experiment tracking, metadata, and convergence analysis
   - `optimizers/` — Learning algorithms (PSR, CMA-ES)
-- `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
+- `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, experiment_query.py)
 - `configs/scenarios/` — YAML config files organized by scenario (`{brain}_{size}[_{variant}]_{sensing}.yml`)
   - Scenarios: `foraging`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`, `oxygen_foraging`, `oxygen_pursuit`, `oxygen_stationary`, `oxygen_thermal_foraging`, `oxygen_thermal_pursuit`, `oxygen_thermal_stationary`, `multi_agent_foraging`, `multi_agent_pursuit`, `multi_agent_stationary`, `foraging_predator_thermal`, `bit_memory`, `associative_memory`
   - Sensing suffixes: `_oracle`, `_temporal`, `_derivative`, `_klinotaxis`
@@ -46,7 +46,6 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 - `configs/evolution/` — Evolutionary optimization configs
 - `configs/special/` — One-off experimental configs
 - `tests/` — Three-tier testing (unit, smoke, nightly)
-- `benchmarks/` — Submitted benchmark results
 - `openspec/` — Spec-driven development framework
 
 ## Code Conventions

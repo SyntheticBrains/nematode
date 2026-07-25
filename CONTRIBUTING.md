@@ -274,9 +274,9 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/foragin
 uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml --theme headless
 ```
 
-### Experiment Tracking and Benchmarks
+### Experiment Tracking
 
-The project includes a comprehensive experiment tracking and benchmark management system to facilitate reproducibility and performance comparison.
+The project includes an experiment tracking system to facilitate reproducibility and performance comparison.
 
 #### Experiment Tracking
 
@@ -320,108 +320,6 @@ uv run scripts/experiment_query.py compare <exp-id-1> <exp-id-2>
 uv run scripts/experiment_query.py show <experiment-id> --format json > results.json
 ```
 
-#### Submitting Benchmarks
-
-When you achieve noteworthy results, submit them as benchmarks:
-
-**Method 1: From existing experiment**
-
-```bash
-# Submit a tracked experiment as benchmark
-uv run scripts/benchmark_submit.py submit <experiment-id> \
-  --contributor "Your Name" \
-  --github "your-username" \
-  --notes "Brief description of optimization approach"
-```
-
-**Method 2: Direct from simulation**
-
-```bash
-# Run and submit as benchmark in one step
-uv run scripts/run_simulation.py \
-  --config configs/scenarios/foraging/qvarcircuit_medium_oracle.yml \
-  --runs 50 \
-  --save-benchmark \
-  --benchmark-notes "Your optimization approach"
-```
-
-The CLI will interactively prompt for contributor information if not provided via flags.
-
-#### Benchmark Quality Standards
-
-To ensure benchmark quality and reproducibility, submissions must meet these criteria:
-
-**Required**:
-
-- Minimum 50 simulation runs for statistical significance
-- Clean git state (no uncommitted changes)
-- Complete contributor information
-- Valid configuration file
-
-**Recommended**:
-
-- High success rate (category-dependent)
-- Meaningful optimization notes explaining your approach
-- Standard environment configurations
-- Documented novel techniques or insights
-
-#### Benchmark Workflow
-
-NematodeBench requires multiple independent training sessions for scientific rigor:
-
-1. **Develop and Test**: Experiment with different configurations, learning rates, and brain architectures
-2. **Run Multiple Sessions**: Run 10+ independent training sessions with `--track-experiment`
-3. **Submit Benchmark**: Use `benchmark_submit.py` to aggregate sessions into a benchmark
-4. **Create PR**: Add the generated benchmark JSON and artifacts to git
-5. **Verification**: Maintainers will verify reproducibility and merge
-
-Example workflow:
-
-```bash
-# 1. Run 10+ independent training sessions
-for session in {1..10}; do
-    uv run scripts/run_simulation.py \
-        --config configs/my_config.yml \
-        --runs 50 \
-        --track-experiment
-done
-
-# 2. Submit all sessions together
-uv run scripts/benchmark_submit.py \
-    --experiments experiments/* \
-    --category foraging_medium/quantum \
-    --contributor "Jane Doe" \
-    --github "janedoe" \
-    --notes "Tuned learning rate schedule with adaptive exploration"
-
-# 3. Regenerate leaderboards
-uv run scripts/benchmark_submit.py regenerate
-
-# 4. Create PR
-git add benchmarks/foraging_medium/quantum/*.json
-git add artifacts/experiments/
-git add README.md docs/nematodebench/LEADERBOARD.md
-git commit -m "Add benchmark: Adaptive exploration for foraging medium"
-git push origin feature/my-benchmark
-```
-
-#### Viewing Leaderboards
-
-Check current benchmark standings:
-
-```bash
-# View summary of all categories
-uv run scripts/benchmark_submit.py leaderboard
-
-# View specific category
-uv run scripts/benchmark_submit.py leaderboard --category foraging_medium/quantum
-
-# Regenerate leaderboard documentation
-uv run scripts/benchmark_submit.py regenerate
-```
-
-See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and detailed submission guidelines.
-
 #### Experiment Logbooks
 
 For documenting analysis and insights from experiment series, use the logbook system in `docs/experiments/`:
@@ -451,7 +349,6 @@ docs/experiments/
 | Evolution results | `evolution_results/` | No | All evolution run outputs |
 | Artifacts | `artifacts/` | Yes | Curated outputs referenced in logbooks |
 | Logbooks | `docs/experiments/logbooks/` | Yes | Human analysis and narrative |
-| Benchmarks | `benchmarks/` | Yes | Top-performing submissions |
 
 To create a new logbook:
 
@@ -506,7 +403,6 @@ The `scripts/` directory also includes:
 - `run_coevolution.py` — predator-prey co-evolution arms-race campaigns (`CoevolutionLoop`)
 - `run_plasticity_test.py` / `compare_plasticity_results.py` — sequential multi-objective ("plasticity") training and cross-architecture comparison
 - `experiment_query.py` — query and compare tracked experiments
-- `benchmark_submit.py` / `evaluate_submission.py` — submit and validate benchmark results
 - `extract_runs.py`, `export_screenshot.py`, `qef_mi_analysis.py`, `qrh_mi_analysis.py` — artifact extraction, rendering, and mutual-information analysis helpers
 - `manage_jobs.py` — check the status of IBM Quantum / Q-CTRL Qiskit Function jobs by ID
 

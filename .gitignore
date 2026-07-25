@@ -18,9 +18,6 @@ plots/*
 # Experiment tracking (auto-tracked experiments are gitignored)
 experiments/*
 
-# Benchmarks are tracked in git
-!benchmarks/
-
 # Evolution results
 evolution_results/*
 

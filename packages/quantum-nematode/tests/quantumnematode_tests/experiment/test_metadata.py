@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 from quantumnematode.experiment.metadata import (
-    BenchmarkMetadata,
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
@@ -461,49 +460,6 @@ class TestSystemMetadata:
         assert data["device_type"] == "cpu"
 
 
-class TestBenchmarkMetadata:
-    """Test BenchmarkMetadata model."""
-
-    def test_create_benchmark_metadata(self):
-        """Test creating benchmark metadata."""
-        benchmark = BenchmarkMetadata(
-            contributor="Jane Doe",
-            github_username="janedoe",
-            category="dynamic_medium_quantum",
-            verified=False,
-            notes="Optimized learning rate schedule",
-        )
-
-        assert benchmark.contributor == "Jane Doe"
-        assert benchmark.github_username == "janedoe"
-        assert benchmark.category == "dynamic_medium_quantum"
-        assert benchmark.verified is False
-        assert benchmark.notes == "Optimized learning rate schedule"
-
-    def test_create_without_optional_fields(self):
-        """Test creating benchmark with only required fields."""
-        benchmark = BenchmarkMetadata(
-            contributor="John Smith",
-            category="dynamic_small_classical",
-        )
-
-        assert benchmark.contributor == "John Smith"
-        assert benchmark.github_username is None
-        assert benchmark.notes is None
-
-    def test_model_dump(self):
-        """Test Pydantic model_dump."""
-        benchmark = BenchmarkMetadata(
-            contributor="Alice",
-            category="dynamic_small_quantum",
-        )
-
-        data = benchmark.model_dump()
-        assert isinstance(data, dict)
-        assert data["contributor"] == "Alice"
-        assert data["category"] == "dynamic_small_quantum"
-
-
 class TestExperimentMetadata:
     """Test complete ExperimentMetadata model."""
 
@@ -568,54 +524,6 @@ class TestExperimentMetadata:
         assert experiment.gradient.method == "clip"
         assert experiment.results.success_rate == 0.9
         assert experiment.system.python_version == "3.12.0"
-
-    def test_create_with_benchmark(self):
-        """Test creating experiment with benchmark metadata."""
-        now = datetime.now(UTC)
-        experiment = ExperimentMetadata(
-            experiment_id="20250101_130000",
-            timestamp=now,
-            config_file="configs/test.yml",
-            config_hash="xyz789",
-            environment=EnvironmentMetadata(grid_size=10),
-            brain=BrainMetadata(type="mlp", learning_rate=0.001),
-            reward=RewardMetadata(
-                reward_goal=0.2,
-                reward_distance_scale=0.1,
-                reward_exploration=0.05,
-                penalty_step=0.01,
-                penalty_anti_dithering=0.05,
-                penalty_stuck_position=0.02,
-                stuck_position_threshold=2,
-                penalty_starvation=10.0,
-                penalty_predator_death=10.0,
-                penalty_predator_proximity=0.1,
-            ),
-            learning_rate=LearningRateMetadata(
-                method="static",
-                initial_learning_rate=0.001,
-            ),
-            gradient=GradientMetadata(method="raw"),
-            results=ResultsMetadata(
-                total_runs=10,
-                success_rate=0.8,
-                avg_steps=50.0,
-                avg_reward=80.0,
-            ),
-            system=SystemMetadata(
-                python_version="3.12.0",
-                qiskit_version="1.0.0",
-                device_type="cpu",
-            ),
-            benchmark=BenchmarkMetadata(
-                contributor="Test User",
-                category="dynamic_small_classical",
-            ),
-        )
-
-        assert experiment.benchmark is not None
-        assert experiment.benchmark.contributor == "Test User"
-        assert experiment.benchmark.category == "dynamic_small_classical"
 
     def test_serialization(self):
         """Test complete serialization and deserialization."""
@@ -698,6 +606,70 @@ class TestExperimentMetadata:
         assert restored.results.total_runs == experiment.results.total_runs
         assert restored.system.python_version == experiment.system.python_version
         assert restored.exports_path == experiment.exports_path
+
+    def test_from_dict_ignores_removed_benchmark_key(self):
+        """Historical artifacts carrying the removed `benchmark` key still load.
+
+        421 tracked experiment JSONs under ``artifacts/`` predate the removal of
+        the NematodeBench submission system and carry a top-level ``benchmark``
+        key (420 null, one populated). ``from_dict`` ends in ``cls(**data)``, so
+        they load only because Pydantic's default ``extra="ignore"`` drops the
+        now-unknown key. That is inherited behaviour, not declared behaviour —
+        adding ``extra="forbid"`` to ``ExperimentMetadata`` would turn every one
+        of those reads into a ``ValidationError``. This test fails loudly if that
+        happens.
+
+        The fixture mirrors the shape of the single artifact on disk with a
+        populated object: ``artifacts/experiments/20251219_105232``.
+        """
+        data = {
+            "experiment_id": "20251219_105232",
+            "timestamp": "2025-12-19T10:52:32+00:00",
+            "config_file": "configs/test.yml",
+            "config_hash": "abc123",
+            "environment": {"grid_size": 20},
+            "brain": {"type": "spiking"},
+            "reward": {
+                "reward_goal": 1.0,
+                "reward_distance_scale": 0.1,
+                "reward_exploration": 0.05,
+                "penalty_step": 0.01,
+                "penalty_anti_dithering": 0.05,
+                "penalty_stuck_position": 0.02,
+                "stuck_position_threshold": 2,
+                "penalty_starvation": 10.0,
+                "penalty_predator_death": 10.0,
+                "penalty_predator_proximity": 0.1,
+            },
+            "gradient": {"method": "raw"},
+            "results": {
+                "total_runs": 50,
+                "success_rate": 0.9,
+                "avg_steps": 40.0,
+                "avg_reward": 120.0,
+                "composite_benchmark_score": 0.8959999999999999,
+            },
+            "system": {
+                "python_version": "3.12.0",
+                "qiskit_version": "1.0.0",
+                "device_type": "cpu",
+            },
+            "benchmark": {
+                "contributor": "Chris Zaharia",
+                "github_username": "chrisjz",
+                "category": "static_maze_classical",
+                "notes": None,
+                "verified": False,
+            },
+        }
+
+        restored = ExperimentMetadata.from_dict(data)
+
+        assert restored.experiment_id == "20251219_105232"
+        # The composite score is deliberately NOT renamed — a rename would read
+        # as None here rather than raising, silently corrupting 421 artifacts.
+        assert restored.results.composite_benchmark_score == 0.8959999999999999
+        assert not hasattr(restored, "benchmark")
 
     def test_serialization_lean_format(self):
         """Test lean serialization format (excludes duplicate config data)."""

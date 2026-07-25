@@ -46,7 +46,9 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## Benchmarking: Enhance NematodeBench (No External Framework)
+## Benchmarking: Enhance NematodeBench (No External Framework) — superseded 2026-07-25
+
+**Status**: **Superseded.** NematodeBench was removed on 2026-07-25 (`openspec/changes/archive/2026-07-25-remove-nematodebench/`). The original decision and rationale are kept verbatim below as the historical record; see **Why superseded** after them.
 
 **Decision**: Continue developing NematodeBench as our custom benchmarking system.
 
@@ -66,6 +68,16 @@ ______________________________________________________________________
 - Improved export formats and visualizations
 - Spiking as a separate brain class alongside quantum/classical
 
+**Why superseded** (2026-07-25):
+
+The rationale's premise held — no standard RL framework covers chemotaxis indices, thermotaxis precision or multi-objective survival scores — but it was an argument for *domain-specific metrics*, not for a *submission pipeline*, and the decision conflated the two. What the project actually needed was per-experiment metric capture: `--track-experiment`, `ResultsMetadata`, and the convergence detector. Those are orthogonal to submission validation, leaderboard generation and multi-session aggregation, and only the former was ever used.
+
+The evidence is the usage record. Across Phases 5 and 6 the architecture-comparison protocol read tracked-experiment output directly via `scripts/analysis/weight_search_architecture_ranking.py`; no logbook invoked the submission pipeline. The corpus stopped at six submissions from 2025-12-28/29 covering 3 of the eventual 27 architectures, and every later commit to the system was drive-by maintenance from unrelated refactors.
+
+The two Phase-2 enhancements that mattered were delivered elsewhere. Hierarchical categories and statistical testing landed inside `architecture-comparison-protocol` as paired-seed Wilcoxon + bootstrap CIs + BH-FDR — a stronger statistical layer than the one planned here, built where cross-architecture comparison actually happens. The remaining planned items were never built.
+
+What survives: the convergence detector and composite score, now `packages/quantum-nematode/quantumnematode/experiment/convergence.py`, and the 72 session experiments, migrated into `artifacts/experiments/`.
+
 ______________________________________________________________________
 
 ## Summary
@@ -74,4 +86,4 @@ ______________________________________________________________________
 |------|----------|-----------|--------|
 | Environment | Keep custom | — | Domain-specific multi-modal sensing, quantum params |
 | Configuration | Keep custom | Pydantic + YAML | Type-safe, mature, no sweep needs |
-| Benchmarking | Enhance custom | NematodeBench | Domain-specific metrics, no standard fits |
+| Benchmarking | Removed (2026-07-25) | — | Superseded by architecture-comparison-protocol; see § Benchmarking |

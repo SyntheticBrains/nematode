@@ -1143,7 +1143,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
 
             # Save experiment to experiments/<id>/ folder structure
-            # This creates a self-contained experiment folder for potential benchmark submission
+            # This creates a self-contained experiment folder for reproducibility
             experiment_dir = Path.cwd() / "experiments" / experiment_metadata.experiment_id
 
             # Save experiment metadata JSON
@@ -1167,9 +1167,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 print(f"  Config: {experiment_dir / Path(config_file).name}")
             print(
                 f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
-            )
-            print(
-                f"\n  To submit as benchmark: uv run scripts/benchmark_submit.py --experiments {experiment_dir}",
             )
 
             # Display chemotaxis validation if requested
