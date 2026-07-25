@@ -69,6 +69,18 @@ Two requirements deserve a note on why they *are* removable despite looking live
 
 `experiment-tracking`'s existing `Experiment Storage` scenario specifies `experiments/{experiment_id}.json` (flat). The code writes `experiments/<id>/<id>.json` and discovers experiments by scanning subdirectories (`storage.py:73,98`), which is what the migrated `Experiment Folder Structure` scenario describes. Rather than land two contradictory scenarios in one capability, the delta **replaces** the stale scenario. This is in-scope because the migration is what surfaced it; leaving a known-wrong scenario in place while editing the requirement around it would be worse.
 
+### D6 — the 72 session experiments are migrated, not deleted
+
+The submission corpus splits into two things that a `git rm -r artifacts/benchmarks/` would conflate. The six files under `benchmarks/` are submission *manifests* — aggregate roll-ups produced by the deleted pipeline, meaningless without it. The 72 files under `artifacts/benchmarks/` are the *session experiments* those manifests reference: complete `ExperimentMetadata` records with per-run seeds and their originating config.
+
+Their experiment IDs are **disjoint** from the 12 under `artifacts/experiments/` — checked, zero overlap — so deleting the directory would destroy the only copy of 72 tracked experiment records. That is primary research data, and `artifacts/` is this repo's permanent scientific record.
+
+**Decision:** migrate them into `artifacts/experiments/<experiment_id>/` in the live folder layout (JSON plus the submission's config.yml), and delete only the six manifests. The data was already in the right shape; only the NematodeBench-specific `<submission_id>/` grouping goes.
+
+The trade-off is 3.8 MB retained and `artifacts/experiments/` growing 12 → 84 entries, against the irreversibility of the alternative. Git and LFS history technically retain deleted blobs, but LFS objects are prunable in ways plain blobs are not, and "recoverable from history" is not the same as "part of the record". The asymmetry is decisive: keeping costs a directory listing, losing costs the Phase 0-3 grid-era reproducibility inputs.
+
+A useful side effect: with no data destroyed, this change is purely "remove an unused pipeline", which is a far easier claim to defend in the roadmap reversal than "remove a pipeline and its data".
+
 ## Risks / Trade-offs
 
 - **Silent artifact-read regression** — the one real risk, mitigated by D2 plus an explicit round-trip test (tasks §2.4) against the shape of the single artifact on disk with a populated `benchmark` object. Without the test, a later `extra="forbid"` would turn a passing load into a `ValidationError` with nothing to catch it.
