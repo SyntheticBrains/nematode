@@ -571,32 +571,6 @@ The system SHALL track predator-related performance metrics including encounters
 - **AND** `predator_deaths` SHALL not be tracked
 - **AND** this SHALL maintain backward compatibility
 
-### Requirement: Predator-Enabled Benchmark Categories
-
-The system SHALL provide separate benchmark categories for predator-enabled simulations to track learning performance on survival-foraging tasks.
-
-#### Scenario: Predator Quantum Benchmarks
-
-- **GIVEN** a simulation with quantum brain and `predators.enabled: true`
-- **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `predator_small/quantum`, `predator_medium/quantum`, or `predator_large/quantum`
-- **AND** this SHALL be based on grid size using same thresholds as non-predator benchmarks
-- **AND** small ≤ 20×20, medium ≤ 50×50, large > 50×50
-
-#### Scenario: Predator Classical Benchmarks
-
-- **GIVEN** a simulation with classical brain (MLP or Spiking) and `predators.enabled: true`
-- **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `predator_small/classical`, `predator_medium/classical`, or `predator_large/classical`
-- **AND** this SHALL enable separate tracking of classical vs quantum performance on predator tasks
-
-#### Scenario: Non-Predator Benchmark Unchanged
-
-- **GIVEN** a simulation with `predators.enabled: false` or predators not configured
-- **WHEN** benchmark category is determined
-- **THEN** foraging categories SHALL be used (`foraging_small/quantum`, etc.)
-- **AND** backward compatibility with existing benchmarks SHALL be maintained
-
 ### Requirement: Step Execution Order with Predators
 
 The system SHALL execute each simulation step in a deterministic order to ensure consistent collision detection and predator movement behavior.
@@ -653,16 +627,6 @@ The system SHALL use consistent, documented symbols for predators across all ren
 - **THEN** the predator SHALL be displayed as hash symbol: #
 - **AND** this SHALL match the documented spec exactly
 - **AND** the symbol SHALL be visually distinct from food and agent ASCII symbols
-
-#### Scenario: Benchmark Category Name Verification
-
-- **GIVEN** a predator-enabled simulation for benchmarking
-- **WHEN** the benchmark category is determined
-- **THEN** category names SHALL exactly match the documented format:
-  - Quantum brains: `predator_small/quantum`, `predator_medium/quantum`, `predator_large/quantum`
-  - Classical brains: `predator_small/classical`, `predator_medium/classical`, `predator_large/classical`
-- **AND** the forward slash separator SHALL be used between environment type and brain class
-- **AND** category names SHALL match the implementation exactly to prevent doc-code drift
 
 <!-- Synced from change: add-temporal-sensing-and-stam -->
 

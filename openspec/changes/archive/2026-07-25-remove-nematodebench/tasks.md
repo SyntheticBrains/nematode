@@ -55,12 +55,12 @@ The 72 experiment JSONs under `artifacts/benchmarks/` have **no duplicate anywhe
 
 ## 7. Apply the specs and archive
 
-- [ ] 7.1 Apply the `experiment-tracking` delta: add the three migrated requirements, replace the stale flat-file `Experiment Storage` scenario with the folder-layout one (design.md D5).
-- [ ] 7.2 Apply the `cli-interface` and `environment-simulation` deltas.
-- [ ] 7.3 Replace `openspec/specs/benchmark-management/spec.md` with the tombstone (design.md D3) — Purpose in past tense, Status notice, "what survives and where", `## Requirements` = None.
-- [ ] 7.4 `openspec/config.yaml` needs no edit — verified to contain zero benchmark references. Recorded so a reviewer does not re-check.
-- [ ] 7.5 Tick this checklist; `git mv openspec/changes/remove-nematodebench openspec/changes/archive/2026-07-25-remove-nematodebench`.
-- [ ] 7.6 Final verification: full `uv run pytest -m "not nightly"` (against the recorded baseline — see below), `uv run pre-commit run -a`, an end-to-end `--track-experiment` smoke run confirming `composite_benchmark_score` is still written, and a repo-wide case-insensitive `nematodebench` grep. Expected surviving hits, exactly four sites: the roadmap reversal prose, the `STANDARDIZATION.md` supersession, the `benchmark-management` tombstone, and the struck-through Logbook 009 line. Anything else is a miss.
+- [x] 7.1 Apply the `experiment-tracking` delta: add the three migrated requirements, replace the stale flat-file `Experiment Storage` scenario with the folder-layout one (design.md D5).
+- [x] 7.2 Apply the `cli-interface` and `environment-simulation` deltas.
+- [x] 7.3 Replace `openspec/specs/benchmark-management/spec.md` with the tombstone (design.md D3) — Purpose in past tense, Status notice, "what survives and where", `## Requirements` = None.
+- [x] 7.4 `openspec/config.yaml` needs no edit — verified to contain zero benchmark references. Recorded so a reviewer does not re-check.
+- [x] 7.5 Tick this checklist; `git mv openspec/changes/remove-nematodebench openspec/changes/archive/2026-07-25-remove-nematodebench`.
+- [x] 7.6 Final verification: full `uv run pytest -m "not nightly"` (against the recorded baseline — see below), `uv run pre-commit run -a`, an end-to-end `--track-experiment` smoke run confirming `composite_benchmark_score` is still written, and a repo-wide case-insensitive `nematodebench` grep. Expected surviving hits, exactly four sites: the roadmap reversal prose, the `STANDARDIZATION.md` supersession, the `benchmark-management` tombstone, and the struck-through Logbook 009 line. Anything else is a miss.
 
 ## Verification baseline
 
