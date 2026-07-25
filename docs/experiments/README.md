@@ -31,10 +31,6 @@ This project has complementary systems for tracking experiments:
 4. Document findings
    └── Write logbook in docs/experiments/logbooks/
    └── Reference artifacts: "See artifacts/evolutions/20251209_205950/"
-
-5. Promote best results
-   └── python scripts/benchmark_submit.py submit <id>
-   └── Saved to benchmarks/ for leaderboards
 ```
 
 ## Active Experiments

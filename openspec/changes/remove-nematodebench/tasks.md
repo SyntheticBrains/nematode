@@ -37,13 +37,13 @@ The 72 experiment JSONs under `artifacts/benchmarks/` have **no duplicate anywhe
 
 ## 5. Remove the documentation
 
-- [ ] 5.1 Delete `BENCHMARKS.md` and `docs/nematodebench/` (5 files).
-- [ ] 5.2 Strip the `## 🏆 Top Benchmarks` section from `README.md` (the block the deleted `leaderboard.py::update_readme()` used to regenerate — it anchors on literal strings, not HTML markers, so nothing else keys off it).
-- [ ] 5.3 Strip the NematodeBench cluster from `CONTRIBUTING.md` (submission/leaderboard subsections, the `benchmarks/` table row, the scripts bullet). Leave the `#### Nightly E2E Tests` section and its `e2e_benchmarks.json` reference — different system.
-- [ ] 5.4 Remove the `benchmark_submit.py` line from the workflow diagram in `docs/experiments/README.md`.
-- [ ] 5.5 Update `AGENTS.md`: `experiment/` description now names convergence analysis; drop `benchmark_submit.py` from the scripts list; delete the `benchmarks/` directory entry.
-- [ ] 5.6 Mark the orphaned action item in [Logbook 009](../../../docs/experiments/logbooks/009-temporal-sensing-evaluation.md) (`- [ ] Formal NematodeBench submission for lstmppo configs`) as obsolete **in place** — strike it and note the removal date. Logbooks are immutable records of what was true, but an open checkbox is a forward commitment, not a record, and this one now points at a deleted system. Precedent: `phase6-tracking`'s T8 section became a pointer stub with no checkboxes when its scope moved. Do not delete the line and do not touch anything else in the logbook.
-- [ ] 5.7 Verify: grep for `BENCHMARKS.md`, `docs/nematodebench`, `benchmark_submit`, `evaluate_submission` across `*.md` returns zero outside the archive. No link-checking hook exists, so this grep is the only guard against dead links.
+- [x] 5.1 Delete `BENCHMARKS.md` and `docs/nematodebench/` (5 files).
+- [x] 5.2 Strip the `## 🏆 Top Benchmarks` section from `README.md` (the block the deleted `leaderboard.py::update_readme()` used to regenerate — it anchors on literal strings, not HTML markers, so nothing else keys off it).
+- [x] 5.3 Strip the NematodeBench cluster from `CONTRIBUTING.md` (submission/leaderboard subsections, the `benchmarks/` table row, the scripts bullet). Leave the `#### Nightly E2E Tests` section and its `e2e_benchmarks.json` reference — different system.
+- [x] 5.4 Remove the `benchmark_submit.py` line from the workflow diagram in `docs/experiments/README.md`.
+- [x] 5.5 Update `AGENTS.md`: `experiment/` description now names convergence analysis; drop `benchmark_submit.py` from the scripts list; delete the `benchmarks/` directory entry.
+- [x] 5.6 Mark the orphaned action item in [Logbook 009](../../../docs/experiments/logbooks/009-temporal-sensing-evaluation.md) (`- [ ] Formal NematodeBench submission for lstmppo configs`) as obsolete **in place** — strike it and note the removal date. Logbooks are immutable records of what was true, but an open checkbox is a forward commitment, not a record, and this one now points at a deleted system. Precedent: `phase6-tracking`'s T8 section became a pointer stub with no checkboxes when its scope moved. Do not delete the line and do not touch anything else in the logbook.
+- [x] 5.7 Verify: grep for `BENCHMARKS.md`, `docs/nematodebench`, `benchmark_submit`, `evaluate_submission` across `*.md` returns zero outside the archive. No link-checking hook exists, so this grep is the only guard against dead links.
 
 ## 6. Record the reversal
 

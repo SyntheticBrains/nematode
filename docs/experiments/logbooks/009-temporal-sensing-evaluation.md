@@ -203,7 +203,7 @@ ______________________________________________________________________
 ## Next Steps
 
 - [ ] Held-out seed validation (seeds 100-103) to confirm generalisation
-- [ ] Formal NematodeBench submission for lstmppo configs
+- [x] ~~Formal NematodeBench submission for lstmppo configs~~ — obsolete: the NematodeBench submission system was removed on 2026-07-25 (`remove-nematodebench`); it was never used by the architecture-comparison protocol
 - [ ] Phase 4 (Multi-Agent) evaluation — test whether GRU temporal memory transfers to social dynamics
 - [ ] Investigate convergence speed improvements (curiosity-driven exploration, intrinsic motivation)
 - [ ] Publish temporal sensing findings (computational neuroscience angle: temporal concentration comparison is computationally sufficient for complex navigation)
