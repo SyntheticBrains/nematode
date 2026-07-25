@@ -407,7 +407,7 @@ class ResultsMetadata(BaseModel):
     health_depleted: int = 0
     avg_predator_encounters: float | None = None
     avg_successful_evasions: float | None = None
-    # Convergence-based metrics (added for benchmark v2)
+    # Convergence-based metrics
     converged: bool = False
     convergence_run: int | None = None
     runs_to_convergence: int | None = None
@@ -417,7 +417,7 @@ class ResultsMetadata(BaseModel):
     post_convergence_variance: float | None = None
     post_convergence_distance_efficiency: float | None = None
     composite_benchmark_score: float | None = None
-    # Learning metrics (added for NematodeBench format)
+    # Learning-dynamics metrics
     learning_speed: float | None = None
     learning_speed_episodes: int | None = None
     stability: float | None = None
@@ -470,30 +470,6 @@ class SystemMetadata(BaseModel):
     torch_version: str | None = None
     device_type: str
     qpu_backend: str | None = None
-
-
-class BenchmarkMetadata(BaseModel):
-    """Benchmark-specific metadata for curated submissions.
-
-    Attributes
-    ----------
-    contributor : str
-        Contributor display name.
-    github_username : str | None
-        GitHub username (optional).
-    category : str
-        Benchmark category (e.g., "dynamic_medium_quantum").
-    notes : str | None
-        Notes about optimization approach.
-    verified : bool
-        Whether the benchmark has been verified by maintainers.
-    """
-
-    contributor: str
-    github_username: str | None = None
-    category: str
-    notes: str | None = None
-    verified: bool = False
 
 
 class ConfigSummary(BaseModel):
@@ -585,8 +561,6 @@ class ExperimentMetadata(BaseModel):
         System and dependency information.
     exports_path : str | None
         Path to detailed exports directory.
-    benchmark : BenchmarkMetadata | None
-        Benchmark metadata (if this is a benchmark submission).
     """
 
     experiment_id: str
@@ -604,7 +578,6 @@ class ExperimentMetadata(BaseModel):
     results: ResultsMetadata
     system: SystemMetadata
     exports_path: str | None = None
-    benchmark: BenchmarkMetadata | None = None
     plasticity: PlasticityMetadata | None = None
 
     def to_dict(self, *, exclude_config_details: bool = True) -> dict[str, Any]:

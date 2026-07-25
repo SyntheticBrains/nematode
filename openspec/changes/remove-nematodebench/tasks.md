@@ -8,14 +8,14 @@
 
 ## 2. Remove the submission and leaderboard code
 
-- [ ] 2.1 Delete `benchmark/{leaderboard,categorization,validation}.py`; reduce `benchmark/__init__.py` to the convergence re-exports only (transitional — the file is deleted in §3).
-- [ ] 2.2 Delete `experiment/submission.py` and `experiment/validation.py`; drop their imports and the 7 corresponding `__all__` entries from `experiment/__init__.py`.
-- [ ] 2.3 Delete `class BenchmarkMetadata` from `experiment/metadata.py` (:475-489) with its `ExperimentMetadata.benchmark` field (:607) and docstring line (:588). Reword the stale comments at :410 and :419 — comment text only, no field, attribute-docstring or CSV-label changes (design.md D2).
-- [ ] 2.4 **Add the artifact round-trip regression test**: assert `load_experiment` succeeds on a fixture carrying a populated `"benchmark": {...}` plus `composite_benchmark_score`, and that the score round-trips to the expected float. Build the fixture from the shape of `artifacts/experiments/20251219_105232/20251219_105232.json` (inline the dict — do not read an LFS file from a unit test). This pins the Pydantic `extra="ignore"` behaviour the whole change rests on.
-- [ ] 2.5 Delete `scripts/benchmark_submit.py` and `scripts/evaluate_submission.py`. In `scripts/run_simulation.py`, delete the "To submit as benchmark" hint (`:1172`) and reword the stale comment (`:1146`). **Leave `:1205` alone** — "Use dynamic literature source from benchmark" refers to `ChemotaxisValidationBenchmark`, the real-worm biological validation, which is a different system.
-- [ ] 2.6 Delete `tests/.../benchmark/{test_categorization,test_validation}.py` and `tests/.../experiment/test_validation.py`; prune the `BenchmarkMetadata` import, `TestBenchmarkMetadata` class and `benchmark=` kwarg from `tests/.../experiment/test_metadata.py`.
-- [ ] 2.7 Drop the three orphaned `[tool.ruff.lint.per-file-ignores]` blocks from `pyproject.toml` and the `benchmark/leaderboard.py` entry from `codecov.yml`.
-- [ ] 2.8 Verify: `uv run pytest -m "not nightly"`, `uv run pre-commit run -a` (pyright catches dangling imports), and a grep for the 7 removed symbols returning zero hits in `packages/` + `scripts/`.
+- [x] 2.1 Delete `benchmark/{leaderboard,categorization,validation}.py`; reduce `benchmark/__init__.py` to the convergence re-exports only (transitional — the file is deleted in §3).
+- [x] 2.2 Delete `experiment/submission.py` and `experiment/validation.py`; drop their imports and the 7 corresponding `__all__` entries from `experiment/__init__.py`.
+- [x] 2.3 Delete `class BenchmarkMetadata` from `experiment/metadata.py` (:475-489) with its `ExperimentMetadata.benchmark` field (:607) and docstring line (:588). Reword the stale comments at :410 and :419 — comment text only, no field, attribute-docstring or CSV-label changes (design.md D2).
+- [x] 2.4 **Add the artifact round-trip regression test**: assert `load_experiment` succeeds on a fixture carrying a populated `"benchmark": {...}` plus `composite_benchmark_score`, and that the score round-trips to the expected float. Build the fixture from the shape of `artifacts/experiments/20251219_105232/20251219_105232.json` (inline the dict — do not read an LFS file from a unit test). This pins the Pydantic `extra="ignore"` behaviour the whole change rests on.
+- [x] 2.5 Delete `scripts/benchmark_submit.py` and `scripts/evaluate_submission.py`. In `scripts/run_simulation.py`, delete the "To submit as benchmark" hint (`:1172`) and reword the stale comment (`:1146`). **Leave `:1205` alone** — "Use dynamic literature source from benchmark" refers to `ChemotaxisValidationBenchmark`, the real-worm biological validation, which is a different system.
+- [x] 2.6 Delete `tests/.../benchmark/{test_categorization,test_validation}.py` and `tests/.../experiment/test_validation.py`; prune the `BenchmarkMetadata` import, `TestBenchmarkMetadata` class and `benchmark=` kwarg from `tests/.../experiment/test_metadata.py`.
+- [x] 2.7 Drop the three orphaned `[tool.ruff.lint.per-file-ignores]` blocks from `pyproject.toml` and the `benchmark/leaderboard.py` entry from `codecov.yml`.
+- [x] 2.8 Verify: `uv run pytest -m "not nightly"`, `uv run pre-commit run -a` (pyright catches dangling imports), and a grep for the 7 removed symbols returning zero hits in `packages/` + `scripts/`.
 
 ## 3. Relocate the convergence detector
 

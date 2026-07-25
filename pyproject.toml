@@ -113,9 +113,6 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
   "T201",  # Interactive prompts use print for user output
   "PLR2004",  # Menu choice constants
 ]
-"packages/quantum-nematode/quantumnematode/benchmark/categorization.py" = [
-  "PLR2004",  # Grid size thresholds are domain-specific magic values
-]
 "packages/quantum-nematode/quantumnematode/experiment/git_utils.py" = [
   "S607",  # Git commands are safe subprocess calls
   "TRY300",  # Git utility functions have acceptable control flow
@@ -126,12 +123,6 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
 "packages/quantum-nematode/quantumnematode/experiment/storage.py" = [
   "BLE001",  # Need to catch broad exceptions when loading experiment files
   "TRY300",  # Acceptable control flow for file operations
-]
-"packages/quantum-nematode/quantumnematode/benchmark/validation.py" = [
-  "TRY300",  # Acceptable control flow for validation
-]
-"scripts/benchmark_submit.py" = [
-  "BLE001",  # CLI error handling needs to catch broad exceptions
 ]
 "scripts/run_simulation.py" = [
   "BLE001",  # CLI error handling needs to catch broad exceptions

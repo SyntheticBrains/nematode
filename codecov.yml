@@ -34,7 +34,6 @@ ignore:
   - "setup.py"
   - "docs/"
   - "packages/quantum-nematode/quantumnematode/auth/ibm_quantum.py"
-  - "packages/quantum-nematode/quantumnematode/benchmark/leaderboard.py"
   - "packages/quantum-nematode/quantumnematode/executors/ibm_job.py"
   - "packages/quantum-nematode/quantumnematode/experiment/storage.py"
   - "packages/quantum-nematode/quantumnematode/experiment/tracker.py"
