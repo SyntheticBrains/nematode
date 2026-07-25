@@ -47,11 +47,11 @@ The 72 experiment JSONs under `artifacts/benchmarks/` have **no duplicate anywhe
 
 ## 6. Record the reversal
 
-- [ ] 6.1 `docs/roadmap.md` § NematodeBench (Future Directions) — retitle to `(removed)`, state what was removed and what survives, and give the evidence: the protocol used `weight_search_architecture_ranking.py` over tracked experiments and never invoked the submission pipeline.
-- [ ] 6.2 `docs/roadmap.md` § NematodeBench public launch — the internal tooling is now removed too; a future launch is a from-scratch build, not a reactivation. Keep the standing "benchmarks crystallise mature communities" rationale.
-- [ ] 6.3 `docs/roadmap.md` § Scoping Changes from v3 — **add a new row** recording the second step down. Do not edit the existing row; that table is a record of what changed when.
-- [ ] 6.4 `docs/roadmap.md` principle 4 ("Demote rather than delete") — append the corollary: where a demoted component accrues no use across a full phase, deletion follows and is recorded.
-- [ ] 6.5 `docs/STANDARDIZATION.md` § Benchmarking — supersede in place. Keep the original Decision/Rationale verbatim as the historical record; add `**Status**: Superseded.` and a `**Why superseded**` block; update the summary-table row.
+- [x] 6.1 `docs/roadmap.md` § NematodeBench (Future Directions) — retitle to `(removed)`, state what was removed and what survives, and give the evidence: the protocol used `weight_search_architecture_ranking.py` over tracked experiments and never invoked the submission pipeline.
+- [x] 6.2 `docs/roadmap.md` § NematodeBench public launch — the internal tooling is now removed too; a future launch is a from-scratch build, not a reactivation. Keep the standing "benchmarks crystallise mature communities" rationale.
+- [x] 6.3 `docs/roadmap.md` § Scoping Changes from v3 — **add a new row** recording the second step down. Do not edit the existing row; that table is a record of what changed when.
+- [x] 6.4 `docs/roadmap.md` principle 4 ("Demote rather than delete") — append the corollary: where a demoted component accrues no use across a full phase, deletion follows and is recorded.
+- [x] 6.5 `docs/STANDARDIZATION.md` § Benchmarking — supersede in place. Keep the original Decision/Rationale verbatim as the historical record; add `**Status**: Superseded.` and a `**Why superseded**` block; update the summary-table row.
 
 ## 7. Apply the specs and archive
 
