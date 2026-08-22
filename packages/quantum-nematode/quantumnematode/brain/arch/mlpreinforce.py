@@ -438,11 +438,18 @@ class MLPReinforceBrain(ClassicalBrain):
             advantages,
         )
 
-        # Entropy regularization (recomputed per stored state, as before).
-        entropies = []
-        for x in self.episode_states[: len(self.episode_log_probs)]:
-            _lp, entropy, _probs = categorical_logprob_entropy_torch(self.forward(x), 0)
-            entropies.append(entropy)
+        # Entropy regularization (recomputed per stored state, as before). The
+        # action index is the one actually taken rather than a dummy 0 — entropy
+        # does not depend on it, but passing a real action keeps the call honest.
+        num_steps = len(self.episode_log_probs)
+        entropies = [
+            categorical_logprob_entropy_torch(self.forward(x), int(a))[1]
+            for x, a in zip(
+                self.episode_states[:num_steps],
+                self.episode_actions[:num_steps],
+                strict=False,
+            )
+        ]
         avg_entropy = torch.stack(entropies).mean()
 
         # Total loss

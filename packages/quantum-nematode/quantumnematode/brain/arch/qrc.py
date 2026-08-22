@@ -43,6 +43,7 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
     categorical_logprob_entropy_torch,
     reinforce_policy_loss,
 )
@@ -583,7 +584,7 @@ class QRCBrain(ClassicalBrain):
             self._perform_policy_update()
             self._reset_episode_buffer()
 
-    def _perform_policy_update(self) -> None:  # noqa: C901
+    def _perform_policy_update(self) -> None:
         """Perform the REINFORCE policy gradient update."""
         if len(self.episode_states) == 0:
             logger.warning("QRC _perform_policy_update: episode_states is empty, skipping update")
@@ -640,13 +641,16 @@ class QRCBrain(ClassicalBrain):
         # blocked sum reassociates the additions, a ~1e-7 float32 reorder (D5).
         avg_policy_loss = reinforce_policy_loss(torch.stack(log_probs), advantages)
 
-        # Entropy H(π) = -Σ π(a)·log π(a), averaged over the episode.
-        entropy_sum = torch.tensor(0.0, device=self.device, requires_grad=True)
-        for t in range(len(log_probs)):
-            entropy_sum = entropy_sum - torch.sum(
-                probs_list[t] * torch.log(probs_list[t] + 1e-8),
-            )
-        avg_entropy = entropy_sum / len(log_probs)
+        # Entropy H(π), averaged over the episode, via the shared scorer. This
+        # site carries a live gradient to the readout (``probs_list`` is stored
+        # un-detached at rollout), so it is policy scoring and belongs here — the
+        # original sweep regex only matched the log-PROB shape and missed it.
+        actions = self.episode_actions[:min_length]
+        entropies = [
+            categorical_logprob_entropy_from_probs(probs_list[t], int(actions[t]))[1]
+            for t in range(len(log_probs))
+        ]
+        avg_entropy = torch.stack(entropies).mean()
 
         # Total loss: policy loss - entropy bonus (entropy bonus encourages exploration)
         total_loss = avg_policy_loss - self.entropy_coef * avg_entropy

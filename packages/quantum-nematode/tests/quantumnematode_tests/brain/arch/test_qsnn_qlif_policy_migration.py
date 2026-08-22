@@ -89,15 +89,45 @@ class TestFamilyAPredatorBrain:
 class TestFamilyBQlifLstm:
     """``qliflstm`` scores both halves from the same torch logits."""
 
-    def test_numpy_sampler_untouched(self) -> None:
-        """The sampled-action trajectory carries no tolerance at all."""
-        torch.manual_seed(_SEED)
-        logits = torch.randn(4)
-        action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
+    def test_scoring_consumes_no_rng_from_either_stream(self) -> None:
+        """The real invariant behind "the sampler is untouched".
 
-        a = [int(np.random.default_rng(7).choice(4, p=action_probs)) for _ in range(1)]
-        b = [int(np.random.default_rng(7).choice(4, p=action_probs)) for _ in range(1)]
-        assert a == b
+        The migration adds scoring calls around an unchanged ``rng.choice``. If
+        any of those calls drew from the NumPy or torch RNG, every subsequent
+        sampled action would shift and the trajectory would silently diverge —
+        the one thing this migration promises cannot happen.
+
+        An earlier version of this test reseeded ``default_rng`` twice and
+        compared the draws to each other, which only demonstrated that NumPy is
+        deterministic and never touched the migrated code at all.
+        """
+        rng = np.random.default_rng(_SEED)
+        probs_np = np.array([0.4, 0.3, 0.2, 0.1])
+        logits = torch.log(torch.as_tensor(probs_np, dtype=torch.float32))
+
+        # Baseline: draws with no scoring interleaved.
+        baseline = [int(rng.choice(4, p=probs_np)) for _ in range(64)]
+        torch.manual_seed(_SEED)
+        torch_baseline = torch.randn(8)
+
+        # Same streams, with every migrated scorer called between draws.
+        rng = np.random.default_rng(_SEED)
+        interleaved = []
+        for _ in range(64):
+            interleaved.append(int(rng.choice(4, p=probs_np)))
+            categorical_logprob_entropy_torch(logits, 0)
+            categorical_logprob_entropy_from_probs(
+                torch.as_tensor(probs_np, dtype=torch.float32),
+                1,
+            )
+            categorical_evaluate_torch(logits.unsqueeze(0), torch.tensor([2]))
+        torch.manual_seed(_SEED)
+        for _ in range(8):
+            categorical_logprob_entropy_torch(logits, 3)
+        torch_after = torch.randn(8)
+
+        assert interleaved == baseline
+        assert torch.equal(torch_after, torch_baseline)
 
     def test_logprob_deviation_is_the_epsilon_floor_being_removed(self) -> None:
         """Old-vs-new is exactly ``-log1p(eps/p)``; see design D3."""

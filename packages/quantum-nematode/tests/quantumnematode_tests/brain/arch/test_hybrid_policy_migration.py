@@ -29,6 +29,7 @@ import math
 import numpy as np
 import torch
 from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
     categorical_logprob_entropy_from_probs,
     categorical_logprob_entropy_torch,
     ppo_clip_policy_loss,
@@ -143,20 +144,33 @@ class TestD4CortexRatioIsExactlyOne:
         assert biased > 0, "expected the pre-migration cortex ratio to be biased off 1.0"
 
     def test_migrated_cortex_ratio_is_exactly_one(self) -> None:
-        """Both halves now use one scorer, so an unmoved policy gives ratio == 1."""
+        """An unmoved policy gives ratio == 1 through the REAL two entry points.
+
+        Deliberately calls the two functions the migrated code actually uses —
+        ``categorical_logprob_entropy_torch`` on the rollout side (the hybrids
+        store cortex logits and score them after sampling) and
+        ``categorical_evaluate_torch`` on the update side (what
+        ``_hybrid_common.perform_ppo_update`` calls). An earlier version of this
+        test invoked the *same* helper twice, which made ``exp(x - x) == 1``
+        tautological and proved nothing about the migration.
+        """
         torch.manual_seed(_SEED)
 
         for _ in range(_N):
             logits = torch.randn(4) * 2.0
-            probs = torch.softmax(logits, dim=-1)
-            dist = torch.distributions.Categorical(probs)
-            action = int(dist.sample())
+            action = int(torch.distributions.Categorical(torch.softmax(logits, dim=-1)).sample())
 
-            # Rollout (migrated) and update both route through the shared scorer.
-            old_post, _, _ = categorical_logprob_entropy_from_probs(probs, action)
-            new, _, _ = categorical_logprob_entropy_from_probs(probs, action)
+            # Rollout side, as hybridquantum / hybridclassical now score it.
+            rollout_lp, _entropy, _probs = categorical_logprob_entropy_torch(logits, action)
 
-            assert math.exp(float(new) - float(old_post)) == 1.0
+            # Update side, as _hybrid_common.perform_ppo_update re-scores it
+            # (batched; take the single row back out).
+            update_lp, _mean_entropy = categorical_evaluate_torch(
+                logits.unsqueeze(0),
+                torch.tensor([action]),
+            )
+
+            assert math.exp(float(update_lp[0]) - float(rollout_lp)) == 1.0
 
 
 class TestD4ReflexRatioResidual:

@@ -60,9 +60,19 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 6. Sweep, spec, and close-out
 
-- [x] 6.1 Grep-audit with a **known expected answer**, not an open-ended sweep. Baseline at `0ae24375` is 10 clipped-surrogate modules and 23 manual `log(p + ε)` sites across 10 modules. After the migration: `surr1` / `surr2` / `clamp(ratio` SHALL appear only in `_policy.py` and its test, and exactly **two** manual scoring sites SHALL remain — both diagnostic-only, both pre-identified: `qrc.py:435` (f-string) and `spikingreinforce.py:494` (detached `.item()` for a log line). Any third survivor is a miss, not a judgement call.
+- [x] 6.1 Grep-audit with a **known expected answer**, not an open-ended sweep. Baseline at `0ae24375` is 10 clipped-surrogate modules and 23 manual `log(p + ε)` sites across 10 modules. After the migration: `surr1` / `surr2` / `clamp(ratio` appear only in `_policy.py` and its tests.
 
-  **The audit did its job: it found a third.** `hybridquantumcortex.py:1950` stored `_pending_cortex_log_prob` via `np.log(action_probs[idx] + NORM_EPS)` into the rollout buffer — adjacent to a site already migrated, and spelling the same `1e-8` the other way (the exact D6 drift). Now migrated; the audit matches the declared answer exactly. Without a pre-declared expected count this would have read as an acceptable leftover.
+  **The audit found a miss, then its own regex was found wanting.** It first caught `hybridquantumcortex.py:1950` (a third log-prob survivor, now migrated). A later PR review then showed the regex itself was too narrow — it matched only the *log-prob* shape `log(probs[idx] + eps)` and missed manual **entropy** of the form `-(p * log(p + eps)).sum()`. Re-swept wider; the corrected inventory of remaining manual sites is **six, none in a live gradient path**:
+
+  | Site | Status |
+  |---|---|
+  | `qrc.py:435` | diagnostic (f-string) |
+  | `spikingreinforce.py:494` | diagnostic (detached `.item()`) |
+  | `qsnnreinforce.py:1917` | diagnostic (feeds `_log_motor_dynamics`) |
+  | `hybridquantumcortex.py:2062` | diagnostic (feeds `logger.debug`) |
+  | `spikingreinforce.py:679`, `:808` | entropy bonus over **`.detach()`ed** probs (`:486`) — contributes to the loss *value* but **zero gradient**; migrating would need a batched-probs entropy helper for no gradient benefit. Left, recorded. |
+
+  `qrc.py:647` **was** live — `episode_probs` is stored un-detached, so its entropy carried a gradient to the readout. Now migrated onto the shared scorer. The earlier task-record claim of "exactly two survivors, both diagnostic-only" was wrong on both the count and the reasoning.
 
 - [x] 6.2 Confirm the four non-PG brains (`qqlearning`, `mlpdqn`, `feedforwardga`, `qvarcircuit`) were correctly excluded, not missed — and that `feedforward_ga`'s `no_grad()` sampling site at `:186-190` was left inline for the reason recorded in the D-risks, not overlooked.
 
@@ -83,5 +93,13 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
   5. **Scope realised:** 14 brains across 14 modules, not the six the issue implies. Four brains (`qqlearning`, `mlpdqn`, `qvarcircuit`, `feedforwardga`) are excluded by construction — no categorical PG term to share.
 
 - [x] 6.6 Archived as `openspec/changes/archive/2026-08-22-consolidate-ppo-policy-helpers/`.
+
+- [x] 6.8 **Second review pass (PR #275 inline comments).** Four claims assessed against the tree; two fixed, two skipped with reason.
+
+  - **Fixed — `qrc.py:647` live entropy** (see 6.1): the only remaining manual scoring site with a gradient path.
+  - **Fixed — three tests that asserted nothing.** `test_migrated_cortex_ratio_is_exactly_one` called the *same* helper twice, making `exp(x-x) == 1` tautological; it now drives the two entry points the migrated code actually uses (`categorical_logprob_entropy_torch` at rollout, `categorical_evaluate_torch` at update) and still passes. Two `test_numpy_sampler_untouched` tests reseeded `default_rng` and compared it to itself, demonstrating only that NumPy is deterministic; replaced with the invariant they were reaching for — that the added scorers consume **no** RNG from either stream, mutation-checked to confirm it fails when a scorer leaks a draw.
+  - **Skipped — `spikingreinforce` singleton batch dim.** The review asked for `action_probs.squeeze(0)`. Verified: the pre-migration code produced the *same* `(T, 1)` shape and the same `(T, T)` broadcast, and the migration is byte-identical (loss 0.22559338808059692 both sides). The broadcast is a **pre-existing bug** — squeezing changes the loss to 0.2926 — so fixing it here would break this PR's no-behavioural-change contract and alter `spikingreinforce` training with no validation. Belongs in its own issue.
+  - **Skipped — `Args:` → NumPy `Parameters` in the two new helpers.** All four *pre-existing* discrete helpers in `_policy.py` use `Args:`; only the two continuous ones use `Parameters`. Converting just the new pair would make the file 4/4 split instead of 6/2 — more inconsistent, not less. A whole-file docstring pass is the right fix and is out of scope here. ruff (`convention = "numpy"`) passes either way.
+  - **Also removed** a dummy `action=0` in `mlpreinforce`'s entropy call (flagged as a non-finding) — it now passes the action actually taken. Dropping `qrc`'s entropy loop also made its `# noqa: C901` unused, now removed.
 
 - [x] 6.7 **Post-archive branch review** (added after the fact; see D3). Two documentation defects found and fixed, no functional regression: (a) the helper docstrings claimed `Categorical` applies no epsilon floor — it clamps at `finfo(float32).eps = 1.19e-7`, *larger* than the `1e-8` removed, and zeroes the gradient below it; 4 tests added to pin the real behaviour. (b) The D4 comments in the three hybrid rollouts claimed both ratio halves share one formula — true of the scorer, false of the distribution in the joint stage, where the rollout stores the fused distribution and the update re-scores the reflex-only mixture. Both corrected. Gate re-run: **4106 passed, 1 skipped, 2 xfailed**, pyright **0 errors**, `pre-commit run -a` clean.

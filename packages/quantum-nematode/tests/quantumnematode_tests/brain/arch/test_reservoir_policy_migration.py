@@ -30,6 +30,11 @@ from __future__ import annotations
 
 import numpy as np
 import torch
+from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
+    categorical_logprob_entropy_from_probs,
+    categorical_logprob_entropy_torch,
+)
 from quantumnematode.brain.arch.crh import CRHBrain, CRHBrainConfig
 from quantumnematode.brain.arch.crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
 from quantumnematode.brain.modules import ModuleName
@@ -155,25 +160,45 @@ class TestReservoirHybridBaseFamilyA:
 class TestReservoirLSTMBaseFamilyB:
     """ReservoirLSTMBase (crhqlstm / qrhqlstm) keeps its sampler, moves its scoring."""
 
-    def test_numpy_sampler_is_untouched(self) -> None:
-        """The sampled-action trajectory must stay byte-identical.
+    def test_scoring_consumes_no_rng_from_either_stream(self) -> None:
+        """The real invariant behind "the sampler is untouched".
 
-        This is the half of Family B that carries NO tolerance: the migration
-        may move the log-prob, but the action drawn from ``rng.choice`` on the
-        same probability vector must be exactly what it was before.
+        The migration adds scoring calls around an unchanged ``rng.choice``. If
+        any of those calls drew from the NumPy or torch RNG, every subsequent
+        sampled action would shift and the trajectory would silently diverge —
+        the one thing this migration promises cannot happen.
+
+        An earlier version of this test reseeded ``default_rng`` twice and
+        compared the draws to each other, which only demonstrated that NumPy is
+        deterministic and never touched the migrated code at all.
         """
-        brain = _crhqlstm_brain()
+        rng = np.random.default_rng(_SEED)
+        probs_np = np.array([0.4, 0.3, 0.2, 0.1])
+        logits = torch.log(torch.as_tensor(probs_np, dtype=torch.float32))
+
+        # Baseline: draws with no scoring interleaved.
+        baseline = [int(rng.choice(4, p=probs_np)) for _ in range(64)]
         torch.manual_seed(_SEED)
-        logits = torch.randn(brain.num_actions)
-        action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
+        torch_baseline = torch.randn(8)
 
-        rng_ref = np.random.default_rng(_SAMPLE_SEED)
-        actions_ref = [int(rng_ref.choice(brain.num_actions, p=action_probs)) for _ in range(32)]
+        # Same streams, with every migrated scorer called between draws.
+        rng = np.random.default_rng(_SEED)
+        interleaved = []
+        for _ in range(64):
+            interleaved.append(int(rng.choice(4, p=probs_np)))
+            categorical_logprob_entropy_torch(logits, 0)
+            categorical_logprob_entropy_from_probs(
+                torch.as_tensor(probs_np, dtype=torch.float32),
+                1,
+            )
+            categorical_evaluate_torch(logits.unsqueeze(0), torch.tensor([2]))
+        torch.manual_seed(_SEED)
+        for _ in range(8):
+            categorical_logprob_entropy_torch(logits, 3)
+        torch_after = torch.randn(8)
 
-        rng = np.random.default_rng(_SAMPLE_SEED)
-        actions = [int(rng.choice(brain.num_actions, p=action_probs)) for _ in range(32)]
-
-        assert actions == actions_ref
+        assert interleaved == baseline
+        assert torch.equal(torch_after, torch_baseline)
 
     def test_logprob_deviation_is_exactly_the_epsilon_floor_being_removed(self) -> None:
         """The whole old-vs-new gap is the ``+1e-8`` floor, and it follows a model.
