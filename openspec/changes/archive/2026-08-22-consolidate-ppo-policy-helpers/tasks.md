@@ -68,10 +68,10 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 - [x] 6.2b **Verified** via the live registry: both resolve `minimal_rnn_ppo <- lstmppo`, so they inherit the migrated scoring with no edit. `test_minimal_rnn_ppo.py` — 25 passed.
 
-- [ ] 6.3 Land the `brain-architecture` ADDED deltas; `openspec validate consolidate-ppo-policy-helpers --strict` passes.
+- [x] 6.3 Landed via `openspec archive`: **3 ADDED requirements** applied to `openspec/specs/brain-architecture/spec.md` (25 → 28). `openspec validate --strict` passed on the change throughout. **Pre-existing, not caused here:** `openspec validate --specs` reports 46/47, the one failure being the `benchmark-management` tombstone left by WS1's removal (no requirements, last touched by `8816d1ee`). Worth folding into WS4's doc-drift sweep.
 
-- [ ] 6.4 Full `uv run pytest -m "not nightly"` against the baseline (**4062 passed, 1 skipped, 2 xfailed**): skipped and xfailed unchanged, no previously-passing test failing, and passed up by exactly the number of tests this change adds — record that number here. `uv run pyright` — must stay **0 errors**. `uv run pre-commit run -a` clean.
+- [x] 6.4 **Final gate met.** `pytest -m "not nightly"`: **4102 passed, 1 skipped, 2 xfailed** — skipped and xfailed unchanged from the 4062/1/2 baseline, no previously-passing test failing, passed up by exactly **40**, the number of tests this change adds (9 + 7 + 8 + 10 + 6). `pyright` **0 errors, 0 warnings**. `uv run pre-commit run -a` **all hooks pass**.
 
-- [ ] 6.5 Close [#204](https://github.com/SyntheticBrains/nematode/issues/204) with the D0 corrections: seven already migrated (not six); `qef` **is** a candidate and is covered free via `ReservoirHybridBase`; `qrc` is REINFORCE, not a `ReservoirHybridBase` subclass; `env/mlpppo_predator_brain.py` added to scope.
+- [ ] 6.5 **Held for the user — outward-facing.** Close [#204](https://github.com/SyntheticBrains/nematode/issues/204) with the D0 corrections: seven already migrated (not six); `qef` **is** a candidate and is covered free via `ReservoirHybridBase`; `qrc` is REINFORCE, not a `ReservoirHybridBase` subclass; `env/mlpppo_predator_brain.py` added to scope.
 
-- [ ] 6.6 Archive to `openspec/changes/archive/<YYYY-MM-DD>-consolidate-ppo-policy-helpers/`.
+- [x] 6.6 Archived as `openspec/changes/archive/2026-08-22-consolidate-ppo-policy-helpers/`.
