@@ -16,7 +16,7 @@ Line numbers are as of `main` at authoring time. Re-verify before editing.
 
 - [x] 2.1 Re-derive the architecture count and the full name list **from the live `_REGISTRY`**, not by editing 27 → 26 by hand (D5 — the `openspec/config.yaml` enumeration had already drifted once, found in WS4).
 - [x] 2.2 Update the count in **five** live sites — `README.md:38`, `AGENTS.md:34`, `CONTRIBUTING.md:140`, `openspec/config.yaml:18` and **`docs/roadmap.md:98`** (*"The platform **now supports**: 27 brain architectures"* — present tense, so a live claim, unlike the historical `:102` and `:1142`). Regenerate `config.yaml`'s enumeration and verify programmatically that it matches the registry exactly.
-- [x] 2.3 Remove the `QQLearningBrain` entry from `README.md`'s **Quantum:** list and from `CONTRIBUTING.md`'s numbered list. It is entry **`02`** there, so all 25 later entries shift; the numbering is **zero-padded** (`01.`…`27.`), so verify it is contiguous **`01..26`** in that form.
+- [x] 2.3 Remove the `QQLearningBrain` entry from `README.md`'s **Quantum:** list and from `CONTRIBUTING.md`'s numbered list. It is entry **`02`** there, so all 25 later entries shift; `main` had the list **zero-padded** (`01.`…`27.`), but `mdformat` renormalises ordered-list markers and strips the padding, so the landed form is `1.`…`26.`. Verify contiguity in whatever form the hook produces — re-padding by hand is reverted on the next `pre-commit run`.
 - [x] 2.4 Drop **three** docstring mentions, not two:
   - `brain/modules.py:596`.
   - `brain/arch/_policy.py:6` — names it among *"the **four** non-PG brains"*; the word **four must become three**, not just the name removed.
