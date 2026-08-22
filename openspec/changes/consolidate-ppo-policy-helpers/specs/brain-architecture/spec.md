@@ -52,7 +52,8 @@ Regression tests for this bar SHALL NOT assert against stored absolute floating-
 
 - **WHEN** the full non-nightly test suite is run after the migration
 - **THEN** every migrated brain's existing test module SHALL pass without modification
-- **AND** the suite's pass/skip/xfail counts SHALL match the pre-migration baseline exactly
+- **AND** no previously-passing test SHALL fail, and no existing test SHALL be weakened, skipped, or otherwise altered to accommodate the migration
+- **AND** the skipped and xfailed counts SHALL match the pre-migration baseline exactly, while the passing count SHALL increase by exactly the number of tests this change adds
 
 ### Requirement: Both halves of the PPO importance ratio use one formula
 
@@ -62,7 +63,9 @@ For any brain using a PPO clipped surrogate, the log-probability stored at rollo
 
 - **GIVEN** a brain that stores an old log-probability during rollout and re-scores the same action during its PPO update
 - **WHEN** the update is performed with policy parameters unchanged since rollout
-- **THEN** the importance ratio SHALL be 1 up to float round-off, with no systematic offset introduced by a difference of formula between the two paths
+- **THEN** the importance ratio SHALL carry no systematic offset attributable to a difference of *formula* between the two paths
+- **AND** where both paths already operate on the same tensor dtype, the ratio SHALL be exactly 1 up to float round-off
+- **AND** where the two paths straddle a pre-existing NumPy-float64 / torch-float32 boundary, the residual offset SHALL be bounded by the declared per-brain tolerance and SHALL be reported separately rather than averaged together with the same-dtype paths
 
 #### Scenario: Rollout and update migrate together
 

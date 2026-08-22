@@ -14,7 +14,7 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 ## 2. Shared bases — Family A + B (5 brains)
 
 - [ ] 2.1 `_reservoir_hybrid_base.py` **update** (`:678-693`): `probs`/`dist`/`log_prob`/`entropy` → `categorical_evaluate_torch`; `surr1`/`surr2`/`min` → `ppo_clip_policy_loss`. Family A, byte-exact.
-- [ ] 2.2 `_reservoir_hybrid_base.py` **rollout** (`:454-457`): → `categorical_sample_torch`. Confirm the returned `probs` still feeds `self.current_probabilities` and the `buffer.position % 50` diagnostic unchanged.
+- [ ] 2.2 `_reservoir_hybrid_base.py` **rollout** (`:454-457`): → `categorical_sample_torch`, passing **`device=self.device` explicitly** — the current code builds the action tensor on `self.device` (`:457`) while the helper defaults to `logits.device`; they coincide today, but relying on that would make byte-exactness depend on an unstated invariant. Confirm the returned `probs` still feeds `self.current_probabilities` and the `buffer.position % 50` diagnostic unchanged, and that the discarded `entropy` is the accepted cost recorded in D8.
 - [ ] 2.3 Confirm `crh`, `qef`, `qrh` are covered with no per-brain edit (D0.2 — `qef` overrides neither `run()` nor the update). Re-verify by grep that none of the three defines a policy-scoring method.
 - [ ] 2.4 `_reservoir_lstm_base.py` **rollout** (`:538-545`): keep `rng.choice` at `:541` **verbatim**; replace `np.log(action_probs[action_idx] + 1e-8)` with `categorical_logprob_entropy_torch(logits, int(action_idx))`. Family B.
 - [ ] 2.5 `_reservoir_lstm_base.py` **update** (`:686-721`): per-step manual `torch.log`/`-Σ p log p` → `categorical_logprob_entropy_torch`; surrogate → `ppo_clip_policy_loss`, keeping `ratio` for the clip-fraction metric at `:726` (mirror the `lstmppo.py:1202-1216` comment style).
@@ -25,10 +25,11 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 - [ ] 3.1 `_hybrid_common.py` `perform_ppo_update` (`:445-469`): → `categorical_evaluate_torch` + `ppo_clip_policy_loss`, keeping `log_ratio`/`ratio` for the `approx_kl` term at `:455-458`. Byte-exact in isolation.
 - [ ] 3.2 `hybridquantum.py` cortex **rollout** (`:1072-1073`): `torch.log(cortex_probs + 1e-8)` → the shared scorer, so both halves of the cortex ratio use one formula (D4). Leave the `np.clip`/renormalise at `:1081-1082` and `rng.choice` at `:1083` **verbatim**.
-- [ ] 3.3 Same for `hybridclassical.py` (`:777-778`, sampler at `:794` region) and `hybridquantumcortex.py` (`:1926`, `:1934`).
+- [ ] 3.3 Same for `hybridclassical.py` (`:777-778`, sampler at `:794` region) and `hybridquantumcortex.py` (`:1926`, `:1934` — note these two adjacent branches spell the same `1e-8` as a literal and as `NORM_EPS`; both go).
+- [ ] 3.3b Where a Family-C rollout hands its **numpy** mixture to the shared scorer, convert with `torch.as_tensor(action_probs, dtype=torch.float32)` so the rollout matches the update's dtype (D2). Do **not** use `torch.from_numpy`, which carries float64 through and would leave a dtype-induced offset in the ratio after the formula was shared.
 - [ ] 3.4 `hybridquantum.py` reflex **update** (`:1339-1360`): ε-mixed `action_probs` → `categorical_logprob_entropy_from_probs`; surrogate → `ppo_clip_policy_loss`, keeping `- effective_entropy_coef * mean_entropy` as a separate term. Leave `_exploration_schedule()` and the mixture construction untouched (D2).
 - [ ] 3.5 Same for `hybridclassical.py` (`:1020-1042`) and `hybridquantumcortex.py` (`:2222-2244`).
-- [ ] 3.6 Record the measured pre/post deviation on the cortex ratio at `ratio == 1` (expected ~1e-7; D4) and note it in this file.
+- [ ] 3.6 Measure the pre/post ratio deviation at `ratio == 1` for the **cortex** and **reflex** paths **separately** (D4) and record both here. Expected: cortex reaches **exactly 1** (same-dtype torch on both sides — the formula mismatch is the whole defect); reflex lands at **~1e-7** (the numpy-float64 / torch-float32 boundary is pre-existing and survives). A single averaged figure would hide a half-done fix, so do not report one.
 - [ ] 3.7 Family C migration test per D7 — reference expression must be the **ε-mixture**, not a plain softmax, so a helper that re-softmaxed would fail.
 - [ ] 3.8 `test_hybridquantum.py`, `test_hybridclassical.py`, `test_hybridquantumcortex.py` pass unchanged. Commit.
 
@@ -50,9 +51,10 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 6. Sweep, spec, and close-out
 
-- [ ] 6.1 Grep-audit: no `clamp(ratio` / `surr1` / `surr2` remains outside `_policy.py` and its test; no `torch.log(...probs...[idx] + 1e-8)` or `-Σ p·log(p + 1e-1[0]…)` remains in `brain/arch/` or `env/`. Record any deliberate survivors (e.g. diagnostic-only entropy at `qrc.py:431`) here.
-- [ ] 6.2 Confirm the four non-PG brains (`qqlearning`, `mlpdqn`, `feedforward_ga`, `qvarcircuit`) were correctly excluded, not missed.
+- [ ] 6.1 Grep-audit with a **known expected answer**, not an open-ended sweep. Baseline at `0ae24375` is 10 clipped-surrogate modules and 23 manual `log(p + ε)` sites across 10 modules. After the migration: `surr1` / `surr2` / `clamp(ratio` SHALL appear only in `_policy.py` and its test, and exactly **two** manual scoring sites SHALL remain — both diagnostic-only, both pre-identified: `qrc.py:431` (f-string) and `spikingreinforce.py:490` (detached `.item()` for a log line). Any third survivor is a miss, not a judgement call.
+- [ ] 6.2 Confirm the four non-PG brains (`qqlearning`, `mlpdqn`, `feedforwardga`, `qvarcircuit`) were correctly excluded, not missed — and that `feedforward_ga`'s `no_grad()` sampling site at `:186-190` was left inline for the reason recorded in the D-risks, not overlooked.
+- [ ] 6.2b Confirm `mingruppo` / `minlstmppo` still inherit their scoring from `LSTMPPOBrain` unchanged (they are covered transitively and must need no edit). `uv run pytest -k "minimal_rnn"` passes.
 - [ ] 6.3 Land the `brain-architecture` ADDED deltas; `openspec validate consolidate-ppo-policy-helpers --strict` passes.
-- [ ] 6.4 Full `uv run pytest -m "not nightly"` — must match the baseline exactly (**4062 passed, 1 skipped, 2 xfailed**). `uv run pyright` — must stay **0 errors**. `uv run pre-commit run -a` clean.
+- [ ] 6.4 Full `uv run pytest -m "not nightly"` against the baseline (**4062 passed, 1 skipped, 2 xfailed**): skipped and xfailed unchanged, no previously-passing test failing, and passed up by exactly the number of tests this change adds — record that number here. `uv run pyright` — must stay **0 errors**. `uv run pre-commit run -a` clean.
 - [ ] 6.5 Close [#204](https://github.com/SyntheticBrains/nematode/issues/204) with the D0 corrections: seven already migrated (not six); `qef` **is** a candidate and is covered free via `ReservoirHybridBase`; `qrc` is REINFORCE, not a `ReservoirHybridBase` subclass; `env/mlpppo_predator_brain.py` added to scope.
 - [ ] 6.6 Archive to `openspec/changes/archive/<YYYY-MM-DD>-consolidate-ppo-policy-helpers/`.
