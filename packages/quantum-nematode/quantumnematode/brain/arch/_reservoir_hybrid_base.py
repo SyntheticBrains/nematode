@@ -33,6 +33,11 @@ from torch import nn, optim
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
+    categorical_sample_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer as _RolloutBuffer
 from quantumnematode.brain.arch._quantum_reservoir import build_readout_network
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
@@ -450,11 +455,16 @@ class ReservoirHybridBase(ClassicalBrain):
         logits = self.actor(x_normed)
         value = self._compute_critic_value(x_normed)
 
-        # Compute action distribution
-        probs = torch.softmax(logits, dim=-1)
-        dist = torch.distributions.Categorical(probs)
-        action_idx = int(dist.sample().item())
-        log_prob = dist.log_prob(torch.tensor(action_idx, device=self.device))
+        # Compute action distribution and sample via the shared torch helper
+        # (byte-identical to the prior inline softmax/Categorical/sample/log_prob).
+        # ``device`` is passed explicitly: the inline code built the action tensor
+        # on ``self.device`` while the helper defaults to ``logits.device``. The
+        # returned entropy is unused here — the accepted cost of one sampling
+        # contract across every brain.
+        action_idx, log_prob, _entropy, probs = categorical_sample_torch(
+            logits,
+            device=self.device,
+        )
 
         action_name = self.action_set[action_idx]
         probs_np = probs.detach().cpu().numpy()
@@ -675,22 +685,18 @@ class ReservoirHybridBase(ClassicalBrain):
                     raw_states=raw_states,
                 ).squeeze(-1)
 
-                probs = torch.softmax(logits, dim=-1)
-                dist = torch.distributions.Categorical(probs)
+                # Re-score the taken actions via the shared torch helper
+                # (byte-identical to the prior inline softmax/Categorical path).
+                new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
 
-                new_log_probs = dist.log_prob(batch["actions"])
-                entropy = dist.entropy().mean()
-
-                # Compute ratio
-                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
-
-                # Clipped surrogate objective
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
-                    * batch["advantages"]
+                # Clipped surrogate objective via the shared term (byte-identical
+                # to the prior inline ratio/surr1/surr2/min).
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    batch["old_log_probs"],
+                    batch["advantages"],
+                    self.clip_epsilon,
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
 
                 # Value loss
                 value_loss = nn.functional.mse_loss(values, batch["returns"])

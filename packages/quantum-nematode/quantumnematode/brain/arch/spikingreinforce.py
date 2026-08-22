@@ -45,6 +45,10 @@ import torch
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    reinforce_policy_loss,
+)
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._spiking_layers import OutputMode, SpikingPolicyNetwork
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
@@ -652,13 +656,19 @@ class SpikingReinforceBrain(ClassicalBrain):
             action_probs = torch.softmax(action_logits, dim=-1)
             action_probs = self._apply_probability_floor(action_probs)
 
-            action_dist = torch.distributions.Categorical(action_probs)
-            log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
+            # Shared scorer over the FLOORED probability vector — the floor makes
+            # this not a softmax of ``action_logits``, so the probs helper is the
+            # correct entry point. Byte-exact: it is the same ``Categorical`` call.
+            log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                action_probs,
+                int(action_idx),
+                device=self.device,
+            )
             log_probs_list.append(log_prob)
 
         # Compute policy loss
         log_probs = torch.stack(log_probs_list)
-        policy_loss = -(log_probs * advantages).mean()
+        policy_loss = reinforce_policy_loss(log_probs, advantages)
 
         # Add entropy regularization
         current_entropy_beta = self._get_current_entropy_beta()
@@ -770,16 +780,21 @@ class SpikingReinforceBrain(ClassicalBrain):
             action_probs = torch.softmax(action_logits, dim=-1)
             action_probs = self._apply_probability_floor(action_probs)
 
-            action_dist = torch.distributions.Categorical(action_probs)
-            log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
+            # Shared scorer over the FLOORED probability vector — the floor makes
+            # this not a softmax of ``action_logits``, so the probs helper is the
+            # correct entry point. Byte-exact: it is the same ``Categorical`` call.
+            log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                action_probs,
+                int(action_idx),
+                device=self.device,
+            )
             log_probs_list.append(log_prob)
 
         # Compute policy loss: -Σ log_prob(a_t) * advantage_t
         # Average over batch to normalize gradient magnitude
         log_probs = torch.stack(log_probs_list)
-        policy_loss = -(
-            log_probs * advantages
-        ).mean()  # mean instead of sum for batch normalization
+        # Shared REINFORCE term (mean, not sum, to normalise gradient magnitude).
+        policy_loss = reinforce_policy_loss(log_probs, advantages)
 
         # Apply entropy decay schedule
         current_entropy_beta = self._get_current_entropy_beta()

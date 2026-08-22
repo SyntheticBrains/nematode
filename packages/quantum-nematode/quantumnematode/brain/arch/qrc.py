@@ -42,6 +42,11 @@ from torch import optim
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    categorical_logprob_entropy_torch,
+    reinforce_policy_loss,
+)
 from quantumnematode.brain.arch._quantum_reservoir import build_readout_network
 from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend, run_circuit_shots
 from quantumnematode.brain.arch._registry import register_brain
@@ -509,12 +514,16 @@ class QRCBrain(ClassicalBrain):
                 f"logits_range=[{logits.min().item():.3f}, {logits.max().item():.3f}]",
             )
 
-        # Sample action from categorical distribution
+        # Sample action (numpy RNG kept verbatim — trajectory byte-identical).
         action_idx = self.rng.choice(self.num_actions, p=probs_np)
         action_name = self.action_set[action_idx]
 
-        # Store log probability for learning
-        log_prob = torch.log(probs[action_idx] + 1e-8)
+        # Log probability via the shared torch helper, replacing the manual
+        # log(softmax)+eps (design D3: the deviation is the floor being removed).
+        log_prob, _entropy, _probs = categorical_logprob_entropy_torch(
+            logits,
+            int(action_idx),
+        )
 
         # Update tracking data
         self.latest_data.action = ActionData(
@@ -575,7 +584,7 @@ class QRCBrain(ClassicalBrain):
             self._perform_policy_update()
             self._reset_episode_buffer()
 
-    def _perform_policy_update(self) -> None:  # noqa: C901
+    def _perform_policy_update(self) -> None:
         """Perform the REINFORCE policy gradient update."""
         if len(self.episode_states) == 0:
             logger.warning("QRC _perform_policy_update: episode_states is empty, skipping update")
@@ -627,19 +636,21 @@ class QRCBrain(ClassicalBrain):
         if len(advantages) > 1:
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        # Compute policy loss: L = -Σ log_prob(a_t) · G_t
-        policy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
-        entropy_sum = torch.tensor(0.0, device=self.device, requires_grad=True)
-        for t in range(len(log_probs)):
-            policy_loss = policy_loss - log_probs[t] * advantages[t]
-            # Entropy: H(π) = -Σ π(a) log π(a)
-            entropy_sum = entropy_sum - torch.sum(
-                probs_list[t] * torch.log(probs_list[t] + 1e-8),
-            )
+        # Policy loss L = -Σ log_prob(a_t)·G_t / T via the shared REINFORCE term.
+        # NOT byte-exact against the prior Python-loop accumulation: torch's
+        # blocked sum reassociates the additions, a ~1e-7 float32 reorder (D5).
+        avg_policy_loss = reinforce_policy_loss(torch.stack(log_probs), advantages)
 
-        # Average over episode length
-        avg_policy_loss = policy_loss / len(log_probs)
-        avg_entropy = entropy_sum / len(log_probs)
+        # Entropy H(π), averaged over the episode, via the shared scorer. This
+        # site carries a live gradient to the readout (``probs_list`` is stored
+        # un-detached at rollout), so it is policy scoring and belongs here — the
+        # original sweep regex only matched the log-PROB shape and missed it.
+        actions = self.episode_actions[:min_length]
+        entropies = [
+            categorical_logprob_entropy_from_probs(probs_list[t], int(actions[t]))[1]
+            for t in range(len(log_probs))
+        ]
+        avg_entropy = torch.stack(entropies).mean()
 
         # Total loss: policy loss - entropy bonus (entropy bonus encourages exploration)
         total_loss = avg_policy_loss - self.entropy_coef * avg_entropy

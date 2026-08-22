@@ -1,0 +1,105 @@
+# Tasks
+
+Line numbers are as of `0ae24375`. Re-verify before editing.
+
+## 1. Extend `_policy.py`
+
+- [x] 1.1 Add `categorical_logprob_entropy_from_probs(probs, action, *, device=None) -> (log_prob, entropy, probs)` to [`_policy.py`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_policy.py) (D2). Score an already-constructed probability vector via `Categorical(probs)`; document that `Categorical` normalises internally and that no epsilon floor is applied (D6).
+- [x] 1.2 Refactor `categorical_logprob_entropy_torch` to delegate to 1.1 after its `softmax`, so there is one `Categorical` construction site. Must stay byte-exact for the seven already-migrated brains — assert with `torch.equal` in `test_policy.py`.
+- [x] 1.3 Add `reinforce_policy_loss(log_probs, advantages) -> Tensor` returning `-(log_probs * advantages).mean()` (D5). Docstring notes it is the REINFORCE counterpart of `ppo_clip_policy_loss` and that callers add their own entropy bonus.
+- [x] 1.4 Add both to `__all__`. Update the module docstring for the four-family split (D1). **D8 open question resolved: table.** The prose form named individual brains, which does not survive 20 brains across four families; the docstring now carries a four-row family table (distribution scored / rollout sampler / tolerance) plus a note that rollout and update scoring must always migrate together.
+- [x] 1.5 Unit tests in `test_policy.py`: the probs-based scorer against an explicit ε-mixture reference; `reinforce_policy_loss` against the inline expression; the 1.2 delegation byte-equivalence.
+- [x] 1.6 Tree green with no brain touched yet: **4071 passed, 1 skipped, 2 xfailed** (baseline 4062 + the 9 tests added here; skip/xfail unchanged), `pyright` **0 errors**, ruff clean. Commit.
+
+## 2. Shared bases — Family A + B (5 brains)
+
+- [x] 2.1 `_reservoir_hybrid_base.py` **update** (`:678-693`): `probs`/`dist`/`log_prob`/`entropy` → `categorical_evaluate_torch`; `surr1`/`surr2`/`min` → `ppo_clip_policy_loss`. Family A, byte-exact.
+- [x] 2.2 `_reservoir_hybrid_base.py` **rollout** (`:454-457`): → `categorical_sample_torch`, passing **`device=self.device` explicitly** — the current code builds the action tensor on `self.device` (`:457`) while the helper defaults to `logits.device`; they coincide today, but relying on that would make byte-exactness depend on an unstated invariant. Confirm the returned `probs` still feeds `self.current_probabilities` and the `buffer.position % 50` diagnostic unchanged, and that the discarded `entropy` is the accepted cost recorded in D8.
+- [x] 2.3 Confirm `crh`, `qef`, `qrh` are covered with no per-brain edit (D0.2 — `qef` overrides neither `run()` nor the update). **Verified:** grep for `Categorical` / `softmax` / `log_prob` / `surr1` / `rng.choice` across all three returns nothing but one docstring line in `qrh.py:24`. Same check on `crhqlstm` / `qrhqlstm`: nothing.
+- [x] 2.4 `_reservoir_lstm_base.py` **rollout** (`:538-545`): keep `rng.choice` at `:541` **verbatim**; replace `np.log(action_probs[action_idx] + 1e-8)` with `categorical_logprob_entropy_torch(logits, int(action_idx))`. Family B.
+- [x] 2.5 `_reservoir_lstm_base.py` **update** (`:686-721`): per-step manual `torch.log`/`-Σ p log p` → `categorical_logprob_entropy_torch`; surrogate → `ppo_clip_policy_loss`, keeping `ratio` for the clip-fraction metric at `:726` (mirror the `lstmppo.py:1202-1216` comment style).
+- [x] 2.6 Family A + B migration tests per D7 in `test_reservoir_policy_migration.py` (7 tests). Family A asserts `torch.equal`. **Family B's bar was amended here — see D3.** The first version, written against the flat `atol=1e-7` D3 originally declared, *failed*: the log-prob deviation is the `+1e-8` floor being removed, which is `-log1p(ε/p)` — ~4e-8 at p=0.25 but ~1e-4 at p=1e-4, unbounded as p→0. The test now asserts that **model** (residual ≤2e-6 for all p ≥ 1e-6, measured over 240k samples) and self-checks that it exercised at least one action improbable enough for the floor to bite. Entropy keeps a constant bar at 5e-7 — its `+1e-10` floor is damped by each term's factor of p. A separate test pins the p < 1e-6 boundary where float32 softmax loses the value and neither form is closer to exact.
+- [x] 2.7 `test_reservoir_hybrid_base.py`, `test_qef.py`, `test_crh.py`, `test_qrh.py`, `test_crhqlstm.py`, `test_qrhqlstm.py` — **248 passed, unchanged**.
+- [x] 2.8 **End-to-end training validation (D3a).** Family A (`crh`, 300 runs, seed 1, 94.7% success): output byte-identical before/after apart from the session UUID. Family B (`crhqlstm`, 500 runs × 5 paired seeds): diverges at run 10–17 as expected, but success rate Δ = −0.08 pp (95% CI [−1.02, +0.86]), reward Δ = +0.26 (CI [−0.23, +0.74]), foods Δ = +0.004 (CI [−0.065, +0.073]) — none significant, all sign columns mixed. **Process note:** the harness swaps files in the shared working tree; two tail-probe measurements were silently taken against the pre-migration code while it ran. Use a git worktree for any future A/B, and verify `git status` is clean before trusting a measurement.
+- [x] 2.9 **Float32-tail scope decision (D3).** Instrumented probe over real sessions: 267,638 calls at 200 runs (min p 1.34e-3) and 859,040 calls at 800 runs past full entropy decay (97.3% success, min p 1.20e-4) — **zero** calls below the 1e-6 floor in either. Family C is structurally incapable of reaching it (ε-mixture floors p at ε/n_actions = 0.0075). Out of scope; file a low-priority issue in WS5 rather than deferring work this change needs. Full suite **4078 passed, 1 skipped, 2 xfailed** (4071 + the 7 added here). pyright **0 errors**. ruff clean. Commit.
+
+## 3. Hybrid family — `_hybrid_common` + the three brains (D4: one commit)
+
+- [x] 3.1 `_hybrid_common.py` `perform_ppo_update` (`:445-469`): → `categorical_evaluate_torch` + `ppo_clip_policy_loss`, keeping `log_ratio`/`ratio` for the `approx_kl` term at `:455-458`. Byte-exact in isolation.
+- [x] 3.2 `hybridquantum.py` cortex **rollout** (`:1072-1073`): `torch.log(cortex_probs + 1e-8)` → the shared scorer, so both halves of the cortex ratio use one formula (D4). Leave the `np.clip`/renormalise at `:1081-1082` and `rng.choice` at `:1083` **verbatim**.
+- [x] 3.3 Same for `hybridclassical.py` (`:777-778`, sampler at `:794` region) and `hybridquantumcortex.py` (`:1926`, `:1934` — note these two adjacent branches spell the same `1e-8` as a literal and as `NORM_EPS`; both go).
+- [x] 3.3b Where a Family-C rollout hands its **numpy** mixture to the shared scorer, convert with `torch.as_tensor(action_probs, dtype=torch.float32)`. **Justification corrected in Task 4:** this originally said `from_numpy` would leave a dtype-induced offset in the ratio — measured over 20k samples, false (the two swap order between sample sizes). The residual is dominated by the numpy-vs-torch **softmax backends**, which differ by ~3.8e-7 on `p` before any scoring. The cast stays for dtype discipline, not ratio tightness (D2 amended).
+- [x] 3.4 `hybridquantum.py` reflex **update** (`:1339-1360`): ε-mixed `action_probs` → `categorical_logprob_entropy_from_probs`; surrogate → `ppo_clip_policy_loss`, keeping `- effective_entropy_coef * mean_entropy` as a separate term. Leave `_exploration_schedule()` and the mixture construction untouched (D2).
+- [x] 3.5 Same for `hybridclassical.py` (`:1020-1042`) and `hybridquantumcortex.py` (`:2222-2244`).
+- [x] 3.6 **Measured**, 50k samples, action sampled from the policy (as the real code does), `clip_epsilon = 0.2` for scale. **Cortex:** `|ratio-1|` before mean 5.7e-8 / max 8.3e-5 → after **exactly 0 in 100% of samples**. **Reflex:** before mean 5.5e-8 / max 4.3e-7 → after mean 4.1e-8 / max 4.8e-7, exactly 0 in 61%. Both D4 predictions hold; the reflex residual is the float64/float32 boundary and is explicitly *not* claimed exact. **Correction:** only `hybridquantum` and `hybridclassical` call `perform_ppo_update` — `hybridquantumcortex`'s cortex path is a REINFORCE loop with no ratio, so D4 covers two brains on the cortex path, not three (design D4 amended).
+- [x] 3.7 Family C migration test per D7 — reference expression must be the **ε-mixture**, not a plain softmax, so a helper that re-softmaxed would fail.
+- [x] 3.8 `test_hybridquantum.py`, `test_hybridclassical.py`, `test_hybridquantumcortex.py` — **157 passed, unchanged**.
+- [x] 3.9 **End-to-end validation of the cortex fix (D3a).** Ran in a **git worktree**, not by swapping the shared tree (Task 2's lesson). `hybridclassical` **stage 2** — the default foraging configs are stage 1 and never reach `perform_ppo_update`, so a stage-2 config was built and its cortex-update call verified (40 in 40 runs) first. Both conditions load identical stage-1 weights. 300 runs × 5 paired seeds: success +0.20 pp (CI [−0.03, +0.43]), foods +0.016 (CI [−0.003, +0.035]), reward +0.12 (CI [−0.21, +0.45]) — none significant, but **no seed regressed** on success or foods. Main tree `git status` clean throughout. Full suite **4086 passed, 1 skipped, 2 xfailed** (4078 + the 8 added here). pyright **0 errors**. ruff clean. Commit.
+
+## 4. Remaining direct copies
+
+- [x] 4.1 `qsnnppo.py` **rollout** (`:920-931`): keep the numpy softmax and `rng.choice` at `:927` verbatim; `np.log(...+1e-8)` at `:931` → shared scorer. **update** (`:1110-1149`): manual log/entropy → `categorical_logprob_entropy_torch`; surrogate → `ppo_clip_policy_loss`, keeping `ratio` for clip-frac and `approx_kl` at `:1152-1157`.
+
+- [x] 4.2 `qsnnreinforce.py` (`:1590-1615` update, `:1946` rollout): Family C — ε-mixed, same treatment as 3.4. Despite the brain's name this path is a PPO-clipped surrogate.
+
+- [x] 4.3 `qliflstm.py` (`:1099-1134` update, `:965` rollout): Family B, same treatment as 2.4/2.5; keep the clip-frac at `:1137-1139`.
+
+- [x] 4.4 `env/mlpppo_predator_brain.py`: **rollout** (`:318-322`) → `categorical_sample_torch`; **update** (`:438-449`) → `categorical_evaluate_torch` + `ppo_clip_policy_loss`. Family A, byte-exact. Check the `:339` cumulative-softmax inversion branch is unaffected.
+
+- [x] 4.5 `test_qsnnppo.py`, `test_qsnnreinforce.py`, `test_qliflstm.py` + the three predator-brain suites — **374 passed, unchanged**. 10 migration tests added in `test_qsnn_qlif_policy_migration.py`. Full suite **4096 passed, 1 skipped, 2 xfailed** (4086 + 10). pyright **0 errors**. ruff clean. Commit.
+
+  **Note on `qsnnppo` vs `qliflstm` (both Family B, treated differently on purpose):** `qliflstm` has a torch `logits` tensor at rollout, so it scores via `categorical_logprob_entropy_torch` — the same expression the update uses. `qsnnppo`'s rollout forward pass is NumPy, so no such tensor exists; re-deriving one would score a distribution the sampler never saw. It therefore scores its own probability vector via `categorical_logprob_entropy_from_probs`.
+
+## 5. Family D — REINFORCE partial reuse
+
+- [x] 5.1 `spikingreinforce.py` (`:652-661`, `:770-777`) → `reinforce_policy_loss`. **Byte-exact.** **Correction:** the task said `categorical_logprob_entropy_torch`, but the brain applies `_apply_probability_floor` *before* scoring, so its distribution is not a softmax of `action_logits` — it needs `categorical_logprob_entropy_from_probs`, the same reason Family C does. Routing it through the logits scorer would have silently scored a different distribution. The floor itself is untouched.
+- [x] 5.2 `hybridquantumcortex.py` cortex REINFORCE path (`:2369-2382`): plain softmax → shared scorer + `reinforce_policy_loss`. Byte-exact.
+- [x] 5.3 `qrc.py` (`:502-517` rollout, `:630-645` update): keep `rng.choice` at `:513` verbatim; loop-accumulated `-Σ lp·adv` → `reinforce_policy_loss`. **Not byte-exact** — summation reorder, ~1e-7 (D5).
+- [x] 5.4 `mlpreinforce.py` (`:279-291` rollout, `:422-437` update): keep the temperature-sampled `rng.choice` at `:287` verbatim (note the log-prob is scored on the **non**-temperature `probs` — preserve that). Decompose `(policy_loss + entropy_loss)/n` as `reinforce_policy_loss(...) - β·entropies.mean()`. Not byte-exact, ~1e-7.
+- [x] 5.5 6 migration tests in `test_reinforce_policy_migration.py`, asserting the byte-exact/reorder split rather than assuming it — including one that shows the `qrc`/`mlpreinforce` gap shrinks in float64 (the signature of a summation reorder, not a changed formula) and one pinning that `mlpreinforce`'s `(policy + entropy)/T` decomposition is an algebraic identity. `test_qrc.py`, `test_mlpreinforce.py`, `test_spikingreinforce.py`, `test_hybridquantumcortex.py` — **163 passed, unchanged**. Full suite **4102 passed, 1 skipped, 2 xfailed** (4096 + 6). pyright **0 errors**. ruff clean. Commit.
+
+## 6. Sweep, spec, and close-out
+
+- [x] 6.1 Grep-audit with a **known expected answer**, not an open-ended sweep. Baseline at `0ae24375` is 10 clipped-surrogate modules and 23 manual `log(p + ε)` sites across 10 modules. After the migration: `surr1` / `surr2` / `clamp(ratio` appear only in `_policy.py` and its tests.
+
+  **The audit found a miss, then its own regex was found wanting.** It first caught `hybridquantumcortex.py:1950` (a third log-prob survivor, now migrated). A later PR review then showed the regex itself was too narrow — it matched only the *log-prob* shape `log(probs[idx] + eps)` and missed manual **entropy** of the form `-(p * log(p + eps)).sum()`. Re-swept wider; the corrected inventory of remaining manual sites is **six, none in a live gradient path**:
+
+  | Site | Status |
+  |---|---|
+  | `qrc.py:435` | diagnostic (f-string) |
+  | `spikingreinforce.py:494` | diagnostic (detached `.item()`) |
+  | `qsnnreinforce.py:1917` | diagnostic (feeds `_log_motor_dynamics`) |
+  | `hybridquantumcortex.py:2062` | diagnostic (feeds `logger.debug`) |
+  | `spikingreinforce.py:679`, `:808` | entropy bonus over **`.detach()`ed** probs (`:486`) — contributes to the loss *value* but **zero gradient**; migrating would need a batched-probs entropy helper for no gradient benefit. Left, recorded. |
+
+  `qrc.py:647` **was** live — `episode_probs` is stored un-detached, so its entropy carried a gradient to the readout. Now migrated onto the shared scorer. The earlier task-record claim of "exactly two survivors, both diagnostic-only" was wrong on both the count and the reasoning.
+
+- [x] 6.2 Confirm the four non-PG brains (`qqlearning`, `mlpdqn`, `feedforwardga`, `qvarcircuit`) were correctly excluded, not missed — and that `feedforward_ga`'s `no_grad()` sampling site at `:186-190` was left inline for the reason recorded in the D-risks, not overlooked.
+
+- [x] 6.2b **Verified** via the live registry: both resolve `minimal_rnn_ppo <- lstmppo`, so they inherit the migrated scoring with no edit. `test_minimal_rnn_ppo.py` — 25 passed.
+
+- [x] 6.3 Landed via `openspec archive`: **3 ADDED requirements** applied to `openspec/specs/brain-architecture/spec.md` (25 → 28). `openspec validate --strict` passed on the change throughout. **Pre-existing, not caused here:** `openspec validate --specs` reports 46/47, the one failure being the `benchmark-management` tombstone left by WS1's removal (no requirements, last touched by `8816d1ee`). Worth folding into WS4's doc-drift sweep.
+
+- [x] 6.4 **Final gate met.** `pytest -m "not nightly"`: **4102 passed, 1 skipped, 2 xfailed** — skipped and xfailed unchanged from the 4062/1/2 baseline, no previously-passing test failing, passed up by exactly **40**, the number of tests this change adds (9 + 7 + 8 + 10 + 6). `pyright` **0 errors, 0 warnings**. `uv run pre-commit run -a` **all hooks pass**.
+
+- [x] 6.5 **Corrections to [#204](https://github.com/SyntheticBrains/nematode/issues/204) authored** (the in-change deliverable). The task as originally written conflated authoring the correction with applying it on GitHub; only the first is in-change work, and `gh` is not installed on the development machine in any case. The closure itself is a merge-time action carried by the PR (`Closes #204`), listed in the PR description rather than left dangling here.
+
+  Ready-to-apply body corrections, all verified against the tree (design D0):
+
+  1. **"six already migrated" → seven.** The issue predates `transformer_ppo`, which is migrated. (Nine brains in total reach `_policy.py`: those seven plus `mingruppo`/`minlstmppo`, which subclass `LSTMPPOBrain`.)
+  2. **`qef` is listed as "not a candidate" — it is one, and it is free.** It overrides neither `run()` nor the PPO update, inheriting both from `ReservoirHybridBase`, so migrating the base covered it at no extra cost. The variational part is the feature extractor; the policy head is an ordinary categorical PG.
+  3. **`qrc` is listed under `_reservoir_hybrid_base`'s coverage — it is not a subclass.** That base's subclasses are exactly `crh`, `qef`, `qrh`. `qrc` is a standalone `ClassicalBrain` with a REINFORCE loss and no PPO clip; it migrated with Family D.
+  4. **Add `env/mlpppo_predator_brain.py` to the scope list.** Absent from the issue, it carried a full inline clipped surrogate; migrated byte-exactly.
+  5. **Scope realised:** 14 brains across 14 modules, not the six the issue implies. Four brains (`qqlearning`, `mlpdqn`, `qvarcircuit`, `feedforwardga`) are excluded by construction — no categorical PG term to share.
+
+- [x] 6.6 Archived as `openspec/changes/archive/2026-08-22-consolidate-ppo-policy-helpers/`.
+
+- [x] 6.8 **Second review pass (PR #275 inline comments).** Four claims assessed against the tree; two fixed, two skipped with reason.
+
+  - **Fixed — `qrc.py:647` live entropy** (see 6.1): the only remaining manual scoring site with a gradient path.
+  - **Fixed — three tests that asserted nothing.** `test_migrated_cortex_ratio_is_exactly_one` called the *same* helper twice, making `exp(x-x) == 1` tautological; it now drives the two entry points the migrated code actually uses (`categorical_logprob_entropy_torch` at rollout, `categorical_evaluate_torch` at update) and still passes. Two `test_numpy_sampler_untouched` tests reseeded `default_rng` and compared it to itself, demonstrating only that NumPy is deterministic; replaced with the invariant they were reaching for — that the added scorers consume **no** RNG from either stream, mutation-checked to confirm it fails when a scorer leaks a draw.
+  - **Skipped — `spikingreinforce` singleton batch dim.** The review asked for `action_probs.squeeze(0)`. Verified: the pre-migration code produced the *same* `(T, 1)` shape and the same `(T, T)` broadcast, and the migration is byte-identical (loss 0.22559338808059692 both sides). The broadcast is a **pre-existing bug** — squeezing changes the loss to 0.2926 — so fixing it here would break this PR's no-behavioural-change contract and alter `spikingreinforce` training with no validation. Belongs in its own issue.
+  - **Skipped — `Args:` → NumPy `Parameters` in the two new helpers.** All four *pre-existing* discrete helpers in `_policy.py` use `Args:`; only the two continuous ones use `Parameters`. Converting just the new pair would make the file 4/4 split instead of 6/2 — more inconsistent, not less. A whole-file docstring pass is the right fix and is out of scope here. ruff (`convention = "numpy"`) passes either way.
+  - **Also removed** a dummy `action=0` in `mlpreinforce`'s entropy call (flagged as a non-finding) — it now passes the action actually taken. Dropping `qrc`'s entropy loop also made its `# noqa: C901` unused, now removed.
+
+- [x] 6.7 **Post-archive branch review** (added after the fact; see D3). Two documentation defects found and fixed, no functional regression: (a) the helper docstrings claimed `Categorical` applies no epsilon floor — it clamps at `finfo(float32).eps = 1.19e-7`, *larger* than the `1e-8` removed, and zeroes the gradient below it; 4 tests added to pin the real behaviour. (b) The D4 comments in the three hybrid rollouts claimed both ratio halves share one formula — true of the scorer, false of the distribution in the joint stage, where the rollout stores the fused distribution and the update re-scores the reflex-only mixture. Both corrected. Gate re-run: **4106 passed, 1 skipped, 2 xfailed**, pyright **0 errors**, `pre-commit run -a` clean.

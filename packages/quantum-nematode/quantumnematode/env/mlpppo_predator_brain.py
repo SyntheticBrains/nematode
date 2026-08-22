@@ -42,6 +42,11 @@ import numpy as np
 import torch
 from torch import nn
 
+from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
+    categorical_sample_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.env.predator_brain import PredatorAction
 
 if TYPE_CHECKING:
@@ -315,11 +320,10 @@ class MLPPPOPredatorBrain:
             obs_tensor = torch.from_numpy(obs).unsqueeze(0)  # (1, INPUT_DIM)
             logits = self.actor(obs_tensor).squeeze(0)
             value = self.critic(obs_tensor).squeeze()
-            probs = torch.softmax(logits, dim=-1)
-            dist = torch.distributions.Categorical(probs)
-            action_tensor = dist.sample()
-            idx = int(action_tensor.item())
-            log_prob = dist.log_prob(action_tensor)
+            # Shared torch sampler (byte-identical to the prior inline
+            # softmax/Categorical/sample/log_prob). The returned entropy is
+            # unused here — the accepted cost of one sampling contract.
+            idx, log_prob, _entropy, probs = categorical_sample_torch(logits)
             # Stash for the next `learn()` call.
             self._pending_state = obs
             self._pending_action = idx
@@ -435,18 +439,15 @@ class MLPPPOPredatorBrain:
                 logits = self.actor(batch["states"])
                 values = self.critic(batch["states"]).squeeze(-1)
 
-                probs = torch.softmax(logits, dim=-1)
-                dist = torch.distributions.Categorical(probs)
-                new_log_probs = dist.log_prob(batch["actions"])
-                entropy = dist.entropy().mean()
-
-                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(ratio, 1 - self._clip_epsilon, 1 + self._clip_epsilon)
-                    * batch["advantages"]
+                # Re-score + clipped surrogate via the shared helpers
+                # (byte-identical to the prior inline path).
+                new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    batch["old_log_probs"],
+                    batch["advantages"],
+                    self._clip_epsilon,
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
                 value_loss = nn.functional.mse_loss(values, batch["returns"])
                 loss = (
                     policy_loss + self._value_loss_coef * value_loss - self._entropy_coef * entropy

@@ -70,6 +70,11 @@ from quantumnematode.brain.arch._hybrid_common import (
     save_cortex_weights,
     update_cortex_learning_rates,
 )
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    categorical_logprob_entropy_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
@@ -773,13 +778,17 @@ class HybridClassicalBrain(ClassicalBrain):
             action_probs = action_probs_t.detach().cpu().numpy()
 
             # Store PPO data for cortex training.
+            # Store the cortex logits; the chosen-action log-prob is scored
+            # below, AFTER sampling, through the same shared helper that
+            # ``perform_ppo_update`` re-scores with. Both halves of the PPO
+            # importance ratio therefore use one formula (design D4) — the
+            # prior ``log(softmax + 1e-8)`` here did not match the update's
+            # ``Categorical.log_prob``, biasing ratio away from 1.
             cortex_logits = action_biases.detach()
-            cortex_probs = torch.softmax(cortex_logits, dim=-1)
-            cortex_log_probs = torch.log(cortex_probs + 1e-8)
             with torch.no_grad():
                 value = self._cortex_value(sensory_t)
             self._pending_cortex_state = cortex_features
-            self._pending_cortex_log_prob_dist = cortex_log_probs
+            self._pending_cortex_logits = cortex_logits
             self._pending_cortex_value = value
 
         # Sample action
@@ -791,13 +800,36 @@ class HybridClassicalBrain(ClassicalBrain):
         # Store REINFORCE data (stage 1 and 3)
         if self.training_stage in (STAGE_REFLEX_ONLY, STAGE_JOINT):
             self.episode_features.append(reflex_features)
-            old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
-            self.episode_old_log_probs.append(old_log_prob)
+            # Scored through the same shared helper the reflex update uses, so
+            # both halves apply the same *scoring formula* (D4).
+            #
+            # NOTE — the scorer is unified, the DISTRIBUTION is not, and only in
+            # the reflex-only stage do the two coincide. In the joint stage
+            # ``action_probs`` here is the FUSED distribution while the reflex
+            # update re-scores the reflex-only epsilon-mixture, so the ratio is
+            # not 1 even before a gradient step. That mismatch is pre-existing
+            # and out of scope for this migration; it is called out so the D4
+            # claim is not read more broadly than it holds.
+            #
+            # ``as_tensor`` with an explicit float32 keeps the rollout in the
+            # update's precision rather than pushing a float64 tensor through a
+            # float32 pipeline. It does NOT measurably tighten the ratio: the
+            # residual is dominated by the numpy-vs-torch softmax backends, which
+            # differ by ~4e-7 before any scoring happens (D2, amended).
+            old_log_prob_t, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                torch.as_tensor(action_probs, dtype=torch.float32),
+                int(action_idx),
+            )
+            self.episode_old_log_probs.append(float(old_log_prob_t))
 
         # Store cortex PPO chosen-action log_prob for the PPO buffer
         if self.training_stage >= STAGE_CORTEX_ONLY:
             self._pending_cortex_action = action_idx
-            self._pending_cortex_chosen_log_prob = self._pending_cortex_log_prob_dist[action_idx]
+            chosen_log_prob, _entropy, _probs = categorical_logprob_entropy_torch(
+                self._pending_cortex_logits,
+                int(action_idx),
+            )
+            self._pending_cortex_chosen_log_prob = chosen_log_prob
             self._has_pending_cortex_data = True
 
         self.episode_actions.append(action_idx)
@@ -1023,23 +1055,32 @@ class HybridClassicalBrain(ClassicalBrain):
             uniform = torch.ones_like(softmax_probs) / self.num_actions
             action_probs = (1 - epsilon) * softmax_probs + epsilon * uniform
 
-            log_prob = torch.log(action_probs[action_idx] + 1e-8)
+            # Shared scorer for the epsilon-MIXTURE (not a softmax of any
+            # logits the brain holds), so the mixture construction above stays
+            # this brain's concern and only the scoring is shared. Drops the
+            # manual +1e-8 / +1e-10 floors — see design D2/D3.
+            log_prob, entropy, _probs = categorical_logprob_entropy_from_probs(
+                action_probs,
+                int(action_idx),
+            )
             log_probs_list.append(log_prob)
-
-            entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-10))
             entropies.append(entropy)
 
         log_probs = torch.stack(log_probs_list)
         mean_entropy = torch.stack(entropies).mean()
         effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
 
-        ratio = torch.exp(log_probs - old_log_probs_t)
-        surr1 = ratio * advantages
-        surr2 = (
-            torch.clamp(ratio, 1.0 - self.config.clip_epsilon, 1.0 + self.config.clip_epsilon)
-            * advantages
+        # Shared clipped surrogate; the entropy bonus stays a separate term
+        # because the coefficient schedule is this brain's own.
+        policy_loss = (
+            ppo_clip_policy_loss(
+                log_probs,
+                old_log_probs_t,
+                advantages,
+                self.config.clip_epsilon,
+            )
+            - effective_entropy_coef * mean_entropy
         )
-        policy_loss = -torch.min(surr1, surr2).mean() - effective_entropy_coef * mean_entropy
 
         self.reflex_optimizer.zero_grad()
         policy_loss.backward()

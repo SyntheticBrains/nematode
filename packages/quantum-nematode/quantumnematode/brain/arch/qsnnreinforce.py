@@ -54,6 +54,10 @@ from torch import nn
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._qlif_layers import (
     DEFAULT_SURROGATE_ALPHA,  # noqa: F401  # re-exported
     LOGIT_SCALE,
@@ -1592,27 +1596,30 @@ class QSNNReinforceBrain(ClassicalBrain):
             uniform = torch.ones_like(softmax_probs) / self.num_actions
             action_probs = (1 - epsilon) * softmax_probs + epsilon * uniform
 
-            log_prob = torch.log(action_probs[action_idx] + 1e-8)
+            # Shared scorer for the epsilon-MIXTURE (not a softmax of any logits
+            # this brain holds); the mixture construction above stays its own.
+            log_prob, entropy, _probs = categorical_logprob_entropy_from_probs(
+                action_probs,
+                int(action_idx),
+            )
             log_probs_list.append(log_prob)
-
-            entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-10))
             entropies.append(entropy)
 
         log_probs = torch.stack(log_probs_list)
         mean_entropy = torch.stack(entropies).mean()
         effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
 
-        ratio = torch.exp(log_probs - old_log_probs_t)
-        surr1 = ratio * advantages
-        surr2 = (
-            torch.clamp(
-                ratio,
-                1.0 - self.config.clip_epsilon,
-                1.0 + self.config.clip_epsilon,
+        # Shared clipped surrogate; the entropy bonus stays a separate term
+        # because the coefficient schedule is this brain's own.
+        policy_loss = (
+            ppo_clip_policy_loss(
+                log_probs,
+                old_log_probs_t,
+                advantages,
+                self.config.clip_epsilon,
             )
-            * advantages
+            - effective_entropy_coef * mean_entropy
         )
-        policy_loss = -torch.min(surr1, surr2).mean() - effective_entropy_coef * mean_entropy
 
         if self.optimizer is not None:
             self.optimizer.zero_grad()
@@ -1943,8 +1950,14 @@ class QSNNReinforceBrain(ClassicalBrain):
         # Store features and old log-probs for surrogate gradient recomputation
         if not self.use_local_learning:
             self.episode_features.append(features)
-            old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
-            self.episode_old_log_probs.append(old_log_prob)
+            # Scored through the same shared helper the update uses, so both
+            # halves of the ratio share one formula (D4). ``as_tensor`` with an
+            # explicit float32 pins the rollout to the update's dtype (D2).
+            old_log_prob_t, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                torch.as_tensor(action_probs, dtype=torch.float32),
+                int(action_idx),
+            )
+            self.episode_old_log_probs.append(float(old_log_prob_t))
             if self.use_critic and self._critic_use_hidden_spikes:
                 self.episode_hidden_spikes.append(self._last_avg_hidden_spikes.copy())
 

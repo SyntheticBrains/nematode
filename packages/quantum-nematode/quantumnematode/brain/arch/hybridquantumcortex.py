@@ -75,6 +75,12 @@ from quantumnematode.brain.arch._hybrid_common import (
     normalize_reward,
     update_cortex_learning_rates,
 )
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    categorical_logprob_entropy_torch,
+    ppo_clip_policy_loss,
+    reinforce_policy_loss,
+)
 from quantumnematode.brain.arch._qlif_layers import (
     LOGIT_SCALE,
     WEIGHT_INIT_SCALE,
@@ -1923,16 +1929,40 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         # Store REINFORCE data (stage 1, 3, 4)
         if self.training_stage != STAGE_CORTEX_ONLY:
             self.episode_features.append(reflex_features)
-            old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
-            self.episode_old_log_probs.append(old_log_prob)
+            # Scored through the same shared helper the reflex update uses, so
+            # both halves apply the same *scoring formula* (D4).
+            #
+            # NOTE — the scorer is unified, the DISTRIBUTION is not, and only in
+            # the reflex-only stage do the two coincide. In the joint stage
+            # ``action_probs`` here is the FUSED distribution while the reflex
+            # update re-scores the reflex-only epsilon-mixture, so the ratio is
+            # not 1 even before a gradient step. That mismatch is pre-existing
+            # and out of scope for this migration; it is called out so the D4
+            # claim is not read more broadly than it holds.
+            #
+            # ``as_tensor`` with an explicit float32 keeps the rollout in the
+            # update's precision rather than pushing a float64 tensor through a
+            # float32 pipeline. It does NOT measurably tighten the ratio: the
+            # residual is dominated by the numpy-vs-torch softmax backends, which
+            # differ by ~4e-7 before any scoring happens (D2, amended).
+            old_log_prob_t, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                torch.as_tensor(action_probs, dtype=torch.float32),
+                int(action_idx),
+            )
+            self.episode_old_log_probs.append(float(old_log_prob_t))
 
         # Store chosen action for rollout buffer
         if self.training_stage >= STAGE_CORTEX_ONLY:
             self._pending_cortex_action = action_idx
-            # Log prob from fused distribution for REINFORCE
-            self._pending_cortex_log_prob = torch.tensor(
-                np.log(action_probs[action_idx] + NORM_EPS),
+            # Log prob from the fused distribution, for the rollout buffer.
+            # Scored through the shared helper like its sibling above; the two
+            # sat adjacent and spelled the same 1e-8 two different ways
+            # (literal vs NORM_EPS), which is the drift design D6 describes.
+            pending_log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                torch.as_tensor(action_probs, dtype=torch.float32),
+                int(action_idx),
             )
+            self._pending_cortex_log_prob = pending_log_prob
 
         self.episode_actions.append(action_idx)
         self.current_probabilities = action_probs
@@ -2225,23 +2255,32 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             uniform = torch.ones_like(softmax_probs) / self.num_actions
             action_probs = (1 - epsilon) * softmax_probs + epsilon * uniform
 
-            log_prob = torch.log(action_probs[action_idx] + 1e-8)
+            # Shared scorer for the epsilon-MIXTURE (not a softmax of any
+            # logits the brain holds), so the mixture construction above stays
+            # this brain's concern and only the scoring is shared. Drops the
+            # manual +1e-8 / +1e-10 floors — see design D2/D3.
+            log_prob, entropy, _probs = categorical_logprob_entropy_from_probs(
+                action_probs,
+                int(action_idx),
+            )
             log_probs_list.append(log_prob)
-
-            entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-10))
             entropies.append(entropy)
 
         log_probs = torch.stack(log_probs_list)
         mean_entropy = torch.stack(entropies).mean()
         effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
 
-        ratio = torch.exp(log_probs - old_log_probs_t)
-        surr1 = ratio * advantages
-        surr2 = (
-            torch.clamp(ratio, 1.0 - self.config.clip_epsilon, 1.0 + self.config.clip_epsilon)
-            * advantages
+        # Shared clipped surrogate; the entropy bonus stays a separate term
+        # because the coefficient schedule is this brain's own.
+        policy_loss = (
+            ppo_clip_policy_loss(
+                log_probs,
+                old_log_probs_t,
+                advantages,
+                self.config.clip_epsilon,
+            )
+            - effective_entropy_coef * mean_entropy
         )
-        policy_loss = -torch.min(surr1, surr2).mean() - effective_entropy_coef * mean_entropy
 
         self.reflex_optimizer.zero_grad()
         policy_loss.backward()
@@ -2366,20 +2405,21 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 # output_clipped is a Tensor, so ab is guaranteed to be a Tensor
                 action_biases = ab if isinstance(ab, torch.Tensor) else torch.tensor(ab)
 
-                # Use action biases as policy logits for REINFORCE
-                cortex_probs = torch.softmax(action_biases, dim=-1)
-                log_prob = torch.log(cortex_probs[action_idx] + 1e-8)
+                # Use action biases as policy logits for REINFORCE. Plain softmax
+                # here (no ε-mixture), so the logits scorer is the right entry point.
+                log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                    action_biases,
+                    int(action_idx),
+                )
                 log_probs_list.append(log_prob)
-
-                entropy = -torch.sum(cortex_probs * torch.log(cortex_probs + 1e-10))
                 entropies.append(entropy)
 
             log_probs = torch.stack(log_probs_list)
             mean_entropy = torch.stack(entropies).mean()
             effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
 
-            # REINFORCE loss with detached advantages
-            policy_loss = -(log_probs * advantages.detach()).mean()
+            # REINFORCE loss with detached advantages, via the shared term.
+            policy_loss = reinforce_policy_loss(log_probs, advantages.detach())
             policy_loss = policy_loss - effective_entropy_coef * mean_entropy
 
             self.cortex_optimizer.zero_grad()

@@ -34,6 +34,10 @@ from torch import nn, optim  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_torch,
+    reinforce_policy_loss,
+)
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.env import Direction
@@ -287,8 +291,14 @@ class MLPReinforceBrain(ClassicalBrain):
         action_idx = self.rng.choice(self.num_actions, p=probs_temp_np)
         action_name = self.action_set[action_idx]
 
-        # Store log probability for learning (using original probs, not temperature)
-        log_prob = torch.log(probs[action_idx] + 1e-8)
+        # Log probability via the shared torch helper. Deliberately scored on the
+        # ORIGINAL ``logits`` (no temperature), matching the pre-migration
+        # behaviour: the temperature only widens exploration at sampling time and
+        # is not part of the objective's distribution.
+        log_prob, _entropy, _probs = categorical_logprob_entropy_torch(
+            logits,
+            int(action_idx),
+        )
 
         self.latest_data.action = ActionData(
             state=action_name,
@@ -418,23 +428,32 @@ class MLPReinforceBrain(ClassicalBrain):
         # Compute advantages
         advantages = returns - self.baseline
 
-        # Compute policy loss
-        policy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
-        entropy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+        # Policy loss via the shared REINFORCE term. The prior code accumulated
+        # ``policy_loss`` and ``entropy_loss`` in one Python loop and divided both
+        # by T at the end; that decomposes exactly into mean(policy) - beta*mean(H).
+        # NOT byte-exact: torch's blocked sum reassociates the additions, a ~1e-7
+        # float32 reorder (design D5).
+        avg_policy_loss = reinforce_policy_loss(
+            torch.stack(self.episode_log_probs),
+            advantages,
+        )
 
-        for t in range(len(self.episode_log_probs)):
-            # Policy gradient loss
-            policy_loss = policy_loss - self.episode_log_probs[t] * advantages[t]
-
-            # Entropy regularization (recompute for current state)
-            x = self.episode_states[t]
-            logits = self.forward(x)
-            probs = torch.softmax(logits, dim=-1)
-            entropy = -torch.sum(probs * torch.log(probs + 1e-8))
-            entropy_loss = entropy_loss - self.entropy_beta * entropy
+        # Entropy regularization (recomputed per stored state, as before). The
+        # action index is the one actually taken rather than a dummy 0 — entropy
+        # does not depend on it, but passing a real action keeps the call honest.
+        num_steps = len(self.episode_log_probs)
+        entropies = [
+            categorical_logprob_entropy_torch(self.forward(x), int(a))[1]
+            for x, a in zip(
+                self.episode_states[:num_steps],
+                self.episode_actions[:num_steps],
+                strict=False,
+            )
+        ]
+        avg_entropy = torch.stack(entropies).mean()
 
         # Total loss
-        total_loss = (policy_loss + entropy_loss) / len(self.episode_log_probs)
+        total_loss = avg_policy_loss - self.entropy_beta * avg_entropy
 
         # Ensure we have a tensor and clip loss to prevent extreme updates
         if not isinstance(total_loss, torch.Tensor):
