@@ -7,7 +7,10 @@ case, monotone-violation case, and the cross-seed verdict aggregator
 
 from __future__ import annotations
 
+import csv
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
@@ -302,3 +305,68 @@ def test_load_f0_training_fitness_per_seed_skips_malformed_fitness(tmp_path: Pat
 
     result = mod.load_f0_training_fitness_per_seed(root)
     assert result == {}
+
+
+class TestMistypedCampaignRootFailsClosed:
+    """Drives ``main()``: a bad ``--campaign-root`` must not silently degrade.
+
+    The load used to be guarded by ``args.campaign_root.is_dir()``, so a missing or
+    mistyped root left the override as ``None`` — "post-hoc F0 for every seed", the
+    baseline the operator asked to replace. Same fail-open as #279 by a different
+    route; m69 and m613 never had the guard.
+
+    This exercises ``main()`` rather than the helpers, because the guard lived in
+    the wiring: a helper-level test passes whether or not ``main`` decides to call
+    the loader.
+    """
+
+    @staticmethod
+    def _per_gen_csv(path: Path) -> None:
+        """Write the minimal per-gen CSV the aggregator needs to reach gating."""
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(
+                ["arm", "seed", "generation", "choice_index", "termination_reason"],
+            )
+            for arm in ("tei_on", "control"):
+                for gen in range(4):
+                    for episode in range(4):
+                        writer.writerow(
+                            [
+                                arm,
+                                42,
+                                gen,
+                                0.5,
+                                "HEALTH_DEPLETED" if episode == 0 else "FOOD_COLLECTED",
+                            ],
+                        )
+
+    def test_main_refuses_a_campaign_root_it_cannot_read(self, tmp_path: Path) -> None:
+        per_gen = tmp_path / "per_gen.csv"
+        self._per_gen_csv(per_gen)
+
+        result = subprocess.run(  # noqa: S603
+            [
+                sys.executable,
+                str(AGGREGATOR_PATH),
+                "--per-gen-csv",
+                str(per_gen),
+                "--campaign-root",
+                str(tmp_path / "definitely-not-here"),
+                "--output-dir",
+                str(tmp_path / "out"),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+
+        assert result.returncode != 0, (
+            "main() accepted an unreadable --campaign-root and carried on; it has "
+            "silently fallen back to the post-hoc F0 baseline for every seed"
+        )
+        assert "override covers 0 of" in (result.stdout + result.stderr), (
+            "expected the preflight to report zero coverage; got:\n"
+            f"{result.stdout}\n{result.stderr}"
+        )

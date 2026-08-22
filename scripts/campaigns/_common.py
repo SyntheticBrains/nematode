@@ -21,7 +21,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
     from pathlib import Path
 
 try:
@@ -63,6 +63,7 @@ __all__ = [
     "read_f0_training_fitness",
     "read_history",
     "read_per_gen_csv",
+    "require_complete_f0_override",
     "resolve_session_for",
     "resolve_speed",
     "write_cross_arm_verdict_csv",
@@ -269,6 +270,47 @@ def build_survival_table(rows: list[dict]) -> dict[tuple[str, int, int], float]:
     return {k: 1.0 - mean(v) for k, v in bucket.items()}
 
 
+def require_complete_f0_override(
+    f0_baseline_override: dict[tuple[str, int], float] | None,
+    gated_pairs: Iterable[tuple[str, int]],
+) -> None:
+    """Raise if an F0 override was requested but does not cover every gated seed.
+
+    ``evaluate_decision_gate_one_seed`` refuses to fall back per-seed (#279), so a
+    partial override would fail there anyway — one seed at a time, mid-run. This
+    runs the check up front instead, before any gating work, and reports **every**
+    missing ``(arm, seed)`` in one message, which is what an operator needs in
+    order to go and look at the inputs.
+
+    A ``None`` override means the post-hoc retention baseline is being used
+    deliberately for every seed, which is consistent and not an error.
+
+    Parameters
+    ----------
+    f0_baseline_override : dict[tuple[str, int], float] | None
+        The loaded override, or ``None`` when ``--campaign-root`` was not given.
+    gated_pairs : Iterable[tuple[str, int]]
+        The ``(arm, seed)`` pairs about to be gated. Pass the pairs that actually
+        exist rather than an arms x seeds product — arms do not necessarily share
+        a seed set, and a cartesian product would report phantom gaps.
+    """
+    if f0_baseline_override is None:
+        return
+    pairs = sorted(set(gated_pairs))
+    missing = [pair for pair in pairs if pair not in f0_baseline_override]
+    if not missing:
+        return
+    listed = ", ".join(f"{arm}/seed-{seed}" for arm, seed in missing)
+    msg = (
+        f"F0 training-fitness override covers {len(pairs) - len(missing)} of "
+        f"{len(pairs)} gated (arm, seed) pairs; missing: {listed}. "
+        "Refusing to gate a mix of training-time and post-hoc F0 baselines (#279). "
+        "Either make per_gen_elites.jsonl available for those seeds, or drop "
+        "--campaign-root to gate every seed on the post-hoc baseline."
+    )
+    raise ValueError(msg)
+
+
 # Extracted from 3 identical copies: m6, m613, m69
 def evaluate_decision_gate_one_seed(
     *,
@@ -283,7 +325,21 @@ def evaluate_decision_gate_one_seed(
     The gate is on survival_rate (the primary campaign metric);
     choice_index is not used at the per-arm gate.
     """
-    if f0_baseline_override is not None and (arm, seed) in f0_baseline_override:
+    if f0_baseline_override is not None:
+        # Fail closed on a partial override (#279). Falling back to the post-hoc
+        # retention F0 for a seed the operator asked to override means gating some
+        # seeds on the training-time baseline and others on the post-hoc one inside
+        # a single arm verdict — a silent mixing that can flip GO to PIVOT. If the
+        # caller wants the post-hoc baseline, it should not pass an override.
+        if (arm, seed) not in f0_baseline_override:
+            msg = (
+                f"F0 training-fitness override is missing (arm={arm!r}, seed={seed}). "
+                "Refusing to fall back to the post-hoc retention F0: that would gate "
+                "this seed on a different baseline from its siblings. Check the "
+                "per_gen_elites.jsonl for this seed, or re-run without "
+                "--campaign-root to gate every seed on the post-hoc baseline."
+            )
+            raise ValueError(msg)
         f0: float | None = f0_baseline_override[(arm, seed)]
     else:
         f0 = retention.get((arm, seed, 0))
