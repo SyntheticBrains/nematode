@@ -52,11 +52,11 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 5. Family D — REINFORCE partial reuse
 
-- [ ] 5.1 `spikingreinforce.py` (`:652-661`, `:770-777`): already `Categorical` → `categorical_logprob_entropy_torch` + `reinforce_policy_loss`. **Byte-exact** (D3 exception). Leave the action-probability floor at `:448` untouched.
-- [ ] 5.2 `hybridquantumcortex.py` cortex REINFORCE path (`:2369-2382`): plain softmax → shared scorer + `reinforce_policy_loss`. Byte-exact.
-- [ ] 5.3 `qrc.py` (`:502-517` rollout, `:630-645` update): keep `rng.choice` at `:513` verbatim; loop-accumulated `-Σ lp·adv` → `reinforce_policy_loss`. **Not byte-exact** — summation reorder, ~1e-7 (D5).
-- [ ] 5.4 `mlpreinforce.py` (`:279-291` rollout, `:422-437` update): keep the temperature-sampled `rng.choice` at `:287` verbatim (note the log-prob is scored on the **non**-temperature `probs` — preserve that). Decompose `(policy_loss + entropy_loss)/n` as `reinforce_policy_loss(...) - β·entropies.mean()`. Not byte-exact, ~1e-7.
-- [ ] 5.5 Family D migration test per D7. `test_qrc.py`, `test_mlpreinforce.py`, `test_spikingreinforce.py` pass unchanged. Commit.
+- [x] 5.1 `spikingreinforce.py` (`:652-661`, `:770-777`) → `reinforce_policy_loss`. **Byte-exact.** **Correction:** the task said `categorical_logprob_entropy_torch`, but the brain applies `_apply_probability_floor` *before* scoring, so its distribution is not a softmax of `action_logits` — it needs `categorical_logprob_entropy_from_probs`, the same reason Family C does. Routing it through the logits scorer would have silently scored a different distribution. The floor itself is untouched.
+- [x] 5.2 `hybridquantumcortex.py` cortex REINFORCE path (`:2369-2382`): plain softmax → shared scorer + `reinforce_policy_loss`. Byte-exact.
+- [x] 5.3 `qrc.py` (`:502-517` rollout, `:630-645` update): keep `rng.choice` at `:513` verbatim; loop-accumulated `-Σ lp·adv` → `reinforce_policy_loss`. **Not byte-exact** — summation reorder, ~1e-7 (D5).
+- [x] 5.4 `mlpreinforce.py` (`:279-291` rollout, `:422-437` update): keep the temperature-sampled `rng.choice` at `:287` verbatim (note the log-prob is scored on the **non**-temperature `probs` — preserve that). Decompose `(policy_loss + entropy_loss)/n` as `reinforce_policy_loss(...) - β·entropies.mean()`. Not byte-exact, ~1e-7.
+- [x] 5.5 6 migration tests in `test_reinforce_policy_migration.py`, asserting the byte-exact/reorder split rather than assuming it — including one that shows the `qrc`/`mlpreinforce` gap shrinks in float64 (the signature of a summation reorder, not a changed formula) and one pinning that `mlpreinforce`'s `(policy + entropy)/T` decomposition is an algebraic identity. `test_qrc.py`, `test_mlpreinforce.py`, `test_spikingreinforce.py`, `test_hybridquantumcortex.py` — **163 passed, unchanged**. Full suite **4102 passed, 1 skipped, 2 xfailed** (4096 + 6). pyright **0 errors**. ruff clean. Commit.
 
 ## 6. Sweep, spec, and close-out
 

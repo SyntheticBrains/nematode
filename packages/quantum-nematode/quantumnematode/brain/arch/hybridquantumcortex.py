@@ -77,7 +77,9 @@ from quantumnematode.brain.arch._hybrid_common import (
 )
 from quantumnematode.brain.arch._policy import (
     categorical_logprob_entropy_from_probs,
+    categorical_logprob_entropy_torch,
     ppo_clip_policy_loss,
+    reinforce_policy_loss,
 )
 from quantumnematode.brain.arch._qlif_layers import (
     LOGIT_SCALE,
@@ -2389,20 +2391,21 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 # output_clipped is a Tensor, so ab is guaranteed to be a Tensor
                 action_biases = ab if isinstance(ab, torch.Tensor) else torch.tensor(ab)
 
-                # Use action biases as policy logits for REINFORCE
-                cortex_probs = torch.softmax(action_biases, dim=-1)
-                log_prob = torch.log(cortex_probs[action_idx] + 1e-8)
+                # Use action biases as policy logits for REINFORCE. Plain softmax
+                # here (no ε-mixture), so the logits scorer is the right entry point.
+                log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                    action_biases,
+                    int(action_idx),
+                )
                 log_probs_list.append(log_prob)
-
-                entropy = -torch.sum(cortex_probs * torch.log(cortex_probs + 1e-10))
                 entropies.append(entropy)
 
             log_probs = torch.stack(log_probs_list)
             mean_entropy = torch.stack(entropies).mean()
             effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
 
-            # REINFORCE loss with detached advantages
-            policy_loss = -(log_probs * advantages.detach()).mean()
+            # REINFORCE loss with detached advantages, via the shared term.
+            policy_loss = reinforce_policy_loss(log_probs, advantages.detach())
             policy_loss = policy_loss - effective_entropy_coef * mean_entropy
 
             self.cortex_optimizer.zero_grad()
