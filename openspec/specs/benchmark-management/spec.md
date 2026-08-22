@@ -33,3 +33,12 @@ Also surviving in code: the convergence detector and composite score, moved to [
 ## Requirements
 
 None. This capability has no live requirements.
+
+> **Expected validator consequence.** `openspec validate --specs` reports this spec
+> as failing (`Spec must have at least one requirement`), so the repository-wide
+> total is **46 passed / 1 failed**, not 47/47. That is the intended cost of the
+> retention decision above, not drift: the validator has no notion of a retired
+> capability, and the alternatives are deleting the file (losing the redirect for
+> anyone arriving from an old link) or inventing a placeholder requirement (a fake
+> obligation in a spec that has none). Neither is better. Do not "fix" this by
+> adding a requirement.

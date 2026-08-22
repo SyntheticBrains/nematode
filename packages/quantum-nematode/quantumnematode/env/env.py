@@ -175,13 +175,14 @@ DEFAULT_PREDATOR_DAMAGE = 10.0
 DEFAULT_FOOD_HEALING = 5.0
 
 
+# The parameter dataclasses below are deliberately left mutable rather than
+# ``frozen=True``: freezing them trips a Pylance false positive on the generated
+# ``__init__`` signature. Revisit once that is resolved.
+# https://github.com/microsoft/pylance-release/issues/7801
 @dataclass
 class ForagingParams:
     """
     Parameters for food/foraging configuration in the environment.
-
-    TODO: Freeze this class once the following Pylance issue is resolved:
-    https://github.com/microsoft/pylance-release/issues/7801
 
     Attributes
     ----------
@@ -306,9 +307,6 @@ class PredatorParams:
     """
     Parameters for predator configuration in the environment.
 
-    TODO: Freeze this class once the following Pylance issue is resolved:
-    https://github.com/microsoft/pylance-release/issues/7801
-
     Attributes
     ----------
     enabled : bool
@@ -381,12 +379,7 @@ class PredatorParams:
 
 @dataclass
 class HealthParams:
-    """
-    Parameters for health system configuration in the environment.
-
-    TODO: Freeze this class once the following Pylance issue is resolved:
-    https://github.com/microsoft/pylance-release/issues/7801
-    """
+    """Parameters for health system configuration in the environment."""
 
     max_hp: float = DEFAULT_MAX_HP
     predator_damage: float = DEFAULT_PREDATOR_DAMAGE
@@ -411,9 +404,6 @@ class ThermotaxisParams:
     Thermotaxis simulates C. elegans temperature-guided navigation behavior.
     Worms navigate toward their cultivation temperature (Tc) using AFD
     thermosensory neurons.
-
-    TODO: Freeze this class once the following Pylance issue is resolved:
-    https://github.com/microsoft/pylance-release/issues/7801
 
     Attributes
     ----------
@@ -496,8 +486,6 @@ class AerotaxisParams:
     has no discomfort tier because URX/BAG neurons have relatively sharp
     activation thresholds.
 
-    TODO: Freeze this class once the following Pylance issue is resolved:
-    https://github.com/microsoft/pylance-release/issues/7801
     """
 
     enabled: bool = False
@@ -1139,16 +1127,6 @@ class BaseEnvironment(ABC):
         bool
             True if goal is reached, False otherwise.
         """
-
-    def _get_new_position_if_valid(
-        self,
-        direction: Direction,
-    ) -> tuple[int, int] | None:
-        """Calculate new position if valid. Uses default agent position.
-
-        For multi-agent support, prefer ``_get_new_position_from()``.
-        """
-        return self._get_new_position_from(self.agent_pos, direction)
 
     def _get_new_position_from(
         self,
@@ -2871,10 +2849,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         # Apply the movement
         self._apply_movement(agent_state, action)
-
-    def _would_hit_wall(self, action: Action) -> bool:
-        """Check if action would cause wall collision for default agent."""
-        return self._would_hit_wall_for(self.agents[DEFAULT_AGENT_ID], action)
 
     def _would_hit_wall_for(self, agent_state: AgentState, action: Action) -> bool:
         """Check if action would cause a wall collision for a specific agent.

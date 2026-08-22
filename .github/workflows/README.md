@@ -23,14 +23,26 @@ ______________________________________________________________________
 
 ### `tests.yml`
 
-Runs the full test suite on Python 3.11 and 3.12.
+Runs the test suite on Python 3.12 (the only version the project supports — `requires-python = ">=3.12,<3.13"`).
 
 **What it does:**
 
-- ✅ Runs pytest across multiple Python versions (matrix strategy)
+- ✅ Runs pytest on a single Python 3.12 job (no matrix — 3.11 is excluded by `requires-python`)
 - ✅ Uploads coverage reports to Codecov (optional)
 - ✅ Runs with verbose output and colored results
-- ✅ Uses fail-fast: false to see all Python version results
+
+______________________________________________________________________
+
+### `nightly-tests.yml`
+
+Runs the nightly end-to-end regression suite on a schedule (`cron: '0 3 * * *'`),
+on Python 3.12.
+
+**What it does:**
+
+- ✅ Runs the `nightly`-marked tests, which are excluded from every other workflow
+- ✅ Restores Git LFS objects from cache so the fixture data is available
+- ✅ Surfaces its status through the **Nightly Tests** badge in the root `README.md`
 
 ______________________________________________________________________
 
@@ -53,7 +65,7 @@ uv run pytest packages/quantum-nematode/tests/
 
 All workflows use:
 
-- **Python versions**: 3.11, 3.12
+- **Python version**: 3.12
 - **Package manager**: `uv` with caching enabled
 - **Pre-commit**: v3.0.1 action
 

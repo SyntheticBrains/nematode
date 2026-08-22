@@ -157,30 +157,3 @@ def manage_simulation_halt(  # noqa: PLR0913
                 print("Circuit details are only available for QuantumBrain architectures.")
         else:
             logger.error("Invalid choice. Please enter a number between 0 and 2.")
-
-
-def prompt_interrupt() -> str:
-    """Prompt user for action after keyboard interrupt.
-
-    Returns
-    -------
-    str
-        User choice: ``'y'`` (save & exit), ``'n'`` (exit without saving),
-        ``'c'`` (continue).
-    """
-    print("\n" + "=" * 60)
-    print("INTERRUPTED - What would you like to do?")
-    print("  [y] Save checkpoint and exit (default)")
-    print("  [n] Exit without saving")
-    print("  [c] Continue running")
-    print("=" * 60)
-
-    try:
-        choice = input("Choice [y/n/c]: ").strip().lower()
-        if choice in ("y", "n", "c", ""):
-            return choice or "y"
-        print(f"Invalid choice '{choice}', defaulting to save & exit")
-        return "y"  # noqa: TRY300
-    except (EOFError, KeyboardInterrupt):
-        print("\nForce exit requested")
-        return "n"
