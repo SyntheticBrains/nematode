@@ -52,11 +52,11 @@ from scripts.campaigns._common import (  # noqa: E402
     GATE_F3_RATIO,
     VERDICT_GO_MIN_SEEDS,
     VERDICT_PIVOT_MIN_SEEDS,
-    _mean,
-    _read_per_gen_csv,
     build_survival_table,
     evaluate_decision_gate_one_seed,
     load_f0_training_fitness_per_seed,
+    mean,
+    read_per_gen_csv,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ def build_retention_table(rows: list[dict]) -> dict[tuple[str, int, int], float]
     for row in rows:
         key = (str(row["arm"]), int(row["seed"]), int(row["generation"]))
         bucket[key].append(float(row["choice_index"]))
-    return {k: _mean(v) for k, v in bucket.items()}
+    return {k: mean(v) for k, v in bucket.items()}
 
 
 def aggregate_verdict(seed_evaluations: list[dict]) -> str:
@@ -175,7 +175,7 @@ def _write_summary_md(
                 if a == arm:
                     per_gen_means[gen].append(v)
             gen_strs = [
-                f"{_mean(per_gen_means[g]):.3f}" if per_gen_means.get(g) else "—"
+                f"{mean(per_gen_means[g]):.3f}" if per_gen_means.get(g) else "—"
                 for g in (0, 1, 2, 3)
             ]
             lines.append(
@@ -242,7 +242,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested loops are cleare
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = _read_per_gen_csv(args.per_gen_csv)
+    rows = read_per_gen_csv(args.per_gen_csv)
     if not rows:
         print(f"No rows in {args.per_gen_csv}. Nothing to aggregate.")
         return 1

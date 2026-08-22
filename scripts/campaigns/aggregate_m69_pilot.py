@@ -64,13 +64,13 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.campaigns._common import (  # noqa: E402
-    _read_per_gen_csv,
-    _write_cross_arm_verdict_csv,
     aggregate_per_arm_verdict,
     build_survival_table,
     compute_cross_arm_delta_stats,
     evaluate_decision_gate_one_seed,
     load_f0_training_fitness_per_seed,
+    read_per_gen_csv,
+    write_cross_arm_verdict_csv,
 )
 
 # numpy/scipy are no longer imported here: every function that used them now
@@ -510,7 +510,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = _read_per_gen_csv(args.per_gen_csv)
+    rows = read_per_gen_csv(args.per_gen_csv)
     survival_table = build_survival_table(rows)
     if not survival_table:
         logger.error(
@@ -590,7 +590,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
     # Emit outputs.
     _write_retention_csv(survival_table, args.output_dir / "retention_table.csv")
     _write_decision_gate_csv(all_evals, args.output_dir / "decision_gate.csv")
-    _write_cross_arm_verdict_csv(cross_arm_results, args.output_dir / "cross_arm_verdict.csv")
+    write_cross_arm_verdict_csv(cross_arm_results, args.output_dir / "cross_arm_verdict.csv")
     _write_summary_md(
         per_arm_verdicts=per_arm_verdicts,
         primary_verdict=primary_verdict,

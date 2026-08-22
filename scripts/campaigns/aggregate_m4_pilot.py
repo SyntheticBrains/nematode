@@ -54,9 +54,9 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.campaigns._common import (  # noqa: E402
-    _baseline_success_rates,
-    _latest_session,
-    _resolve_speed,
+    baseline_success_rates,
+    read_history,
+    resolve_speed,
 )
 
 # Best-fitness threshold for the Speed metric.  0.92 is calibrated to
@@ -86,17 +86,6 @@ F1_OVER_BASELINE_THRESHOLD = 0.10
 # subsumed by the speed gate's <= 7.75 if Lamarckian rerun reproduces
 # its M3 number).  Documented in design Decision 6.
 COMPARATIVE_GAP_GENERATIONS = 4
-
-
-def _read_history(seed_dir: Path) -> list[dict[str, float]]:
-    """Read the latest session's history.csv as a list of float dicts."""
-    history_path = _latest_session(seed_dir) / "history.csv"
-    if not history_path.exists():
-        msg = f"No history.csv at {history_path}"
-        raise FileNotFoundError(msg)
-    with history_path.open() as handle:
-        reader = csv.DictReader(handle)
-        return [{k: float(v) for k, v in row.items()} for row in reader]
 
 
 def _read_f1_csv(f1_csv: Path) -> dict[int, float]:
@@ -209,9 +198,9 @@ def _format_summary(  # noqa: PLR0913
     )
     fallback_gen = max_gens + 1
 
-    speed_baldwin_vals = [_resolve_speed(speed_baldwin[s], fallback_gen) for s in seeds]
-    speed_lam_vals = [_resolve_speed(speed_lam[s], fallback_gen) for s in seeds]
-    speed_ctrl_vals = [_resolve_speed(speed_ctrl[s], fallback_gen) for s in seeds]
+    speed_baldwin_vals = [resolve_speed(speed_baldwin[s], fallback_gen) for s in seeds]
+    speed_lam_vals = [resolve_speed(speed_lam[s], fallback_gen) for s in seeds]
+    speed_ctrl_vals = [resolve_speed(speed_ctrl[s], fallback_gen) for s in seeds]
     speed_mean_baldwin = float(np.mean(speed_baldwin_vals))
     speed_mean_lam = float(np.mean(speed_lam_vals))
     speed_mean_ctrl = float(np.mean(speed_ctrl_vals))
@@ -452,12 +441,12 @@ def main() -> int:
     lam_history: dict[int, list[dict[str, float]]] = {}
     ctrl_history: dict[int, list[dict[str, float]]] = {}
     for seed in args.seeds:
-        baldwin_history[seed] = _read_history(args.baldwin_root / f"seed-{seed}")
-        lam_history[seed] = _read_history(args.lamarckian_root / f"seed-{seed}")
-        ctrl_history[seed] = _read_history(args.control_root / f"seed-{seed}")
+        baldwin_history[seed] = read_history(args.baldwin_root / f"seed-{seed}")
+        lam_history[seed] = read_history(args.lamarckian_root / f"seed-{seed}")
+        ctrl_history[seed] = read_history(args.control_root / f"seed-{seed}")
 
     # Baseline (run_simulation.py-driven, optimiser-independent).
-    baseline_rates = _baseline_success_rates(args.baseline_root)
+    baseline_rates = baseline_success_rates(args.baseline_root)
     missing_baseline = sorted(set(args.seeds) - set(baseline_rates))
     if missing_baseline:
         msg = (

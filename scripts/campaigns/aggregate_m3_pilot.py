@@ -47,8 +47,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.campaigns._common import (  # noqa: E402
-    _baseline_success_rates,
-    _latest_session,
+    baseline_success_rates,
+    read_history,
 )
 
 # Best-fitness threshold for the Speed metric.  0.92 is calibrated to
@@ -77,17 +77,6 @@ SPEED_GAIN_GENERATIONS = 4
 # generation of from-scratch progress.
 FLOOR_LAMARCKIAN_GEN = 2
 FLOOR_CONTROL_GEN = 3
-
-
-def _read_history(seed_dir: Path) -> list[dict[str, float]]:
-    """Read the latest session's history.csv as a list of float dicts."""
-    history_path = _latest_session(seed_dir) / "history.csv"
-    if not history_path.exists():
-        msg = f"No history.csv at {history_path}"
-        raise FileNotFoundError(msg)
-    with history_path.open() as handle:
-        reader = csv.DictReader(handle)
-        return [{k: float(v) for k, v in row.items()} for row in reader]
 
 
 def _gen_first_reaches_target(
@@ -368,11 +357,11 @@ def main() -> int:
     lam_history: dict[int, list[dict[str, float]]] = {}
     ctrl_history: dict[int, list[dict[str, float]]] = {}
     for seed in args.seeds:
-        lam_history[seed] = _read_history(args.lamarckian_root / f"seed-{seed}")
-        ctrl_history[seed] = _read_history(args.control_root / f"seed-{seed}")
+        lam_history[seed] = read_history(args.lamarckian_root / f"seed-{seed}")
+        ctrl_history[seed] = read_history(args.control_root / f"seed-{seed}")
 
     # Baseline (run_simulation.py-driven, optimiser-independent).
-    baseline_rates = _baseline_success_rates(args.baseline_root)
+    baseline_rates = baseline_success_rates(args.baseline_root)
     missing = sorted(set(args.seeds) - set(baseline_rates))
     if missing:
         # Two distinct failure modes share the same error-handling path:

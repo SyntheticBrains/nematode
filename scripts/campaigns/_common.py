@@ -21,7 +21,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
 try:
@@ -51,13 +51,31 @@ CROSS_ARM_BOOTSTRAP_RESAMPLES = 1000
 CROSS_ARM_BOOTSTRAP_CI_LEVEL = 0.80  # 80% CI => alpha=0.20
 
 
+__all__ = [
+    "aggregate_per_arm_verdict",
+    "baseline_success_rates",
+    "build_survival_table",
+    "compute_cross_arm_delta_stats",
+    "evaluate_decision_gate_one_seed",
+    "latest_session",
+    "load_f0_training_fitness_per_seed",
+    "mean",
+    "read_f0_training_fitness",
+    "read_history",
+    "read_per_gen_csv",
+    "resolve_session_for",
+    "resolve_speed",
+    "write_cross_arm_verdict_csv",
+]
+
+
 # Extracted from 3 identical copies: m6, m613, m69
-def _mean(values: Sequence[float]) -> float:
+def mean(values: Sequence[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
 # Extracted from 2 identical copies: baldwin_retry, m4
-def _resolve_speed(g: int | None, fallback_gen: int) -> float:
+def resolve_speed(g: int | None, fallback_gen: int) -> float:
     """Resolve a per-seed gen-to-target value to a float for averaging.
 
     Treats never-reached as the fallback (run's max generation + 1) so
@@ -67,7 +85,7 @@ def _resolve_speed(g: int | None, fallback_gen: int) -> float:
 
 
 # Extracted from 3 identical copies: m2, m3, m4
-def _latest_session(seed_dir: Path) -> Path:
+def latest_session(seed_dir: Path) -> Path:
     """Return the most recently modified subdirectory under ``seed_dir``.
 
     Filtering to directories (rather than relying on lexicographic order over
@@ -83,7 +101,7 @@ def _latest_session(seed_dir: Path) -> Path:
 
 
 # Extracted from 3 identical copies: m6, m613, m69
-def _read_per_gen_csv(path: Path) -> list[dict]:
+def read_per_gen_csv(path: Path) -> list[dict]:
     """Read the per-gen choice-index CSV into a list of dict rows."""
     if not path.exists():
         msg = f"per-gen CSV not found: {path}"
@@ -93,7 +111,7 @@ def _read_per_gen_csv(path: Path) -> list[dict]:
 
 
 # Extracted from 4 identical copies: baldwin_retry, m2, m3, m4
-def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
+def baseline_success_rates(baseline_root: Path) -> dict[int, float]:
     """Extract per-seed success rates from the run_simulation.py log files.
 
     Note: M2.11's baseline covers seeds 42-45 only (n=4).  M4.5's pilot
@@ -120,7 +138,7 @@ def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
 # a warning instead of raising on a malformed value. On well-formed data all
 # three behave identically; on malformed data m6/m69 previously raised
 # ValueError and now skip the row with a warning. Declared, not silent.
-def _read_f0_training_fitness(jsonl_path: Path) -> float | None:  # noqa: C901 - linear JSONL row filter; branches are defensive guards
+def read_f0_training_fitness(jsonl_path: Path) -> float | None:  # noqa: C901 - linear JSONL row filter; branches are defensive guards
     """Return the F0 (``generation == 0``) elite's training-time ``fitness`` field, or None.
 
     Skips rows missing the ``fitness`` key OR with non-finite values
@@ -212,7 +230,7 @@ def load_f0_training_fitness_per_seed(
                     seed_dir,
                 )
                 continue
-            f0_fitness = _read_f0_training_fitness(jsonl_path)
+            f0_fitness = read_f0_training_fitness(jsonl_path)
             if f0_fitness is not None:
                 out[(arm, seed)] = f0_fitness
     return out
@@ -233,7 +251,7 @@ def build_survival_table(rows: list[dict]) -> dict[tuple[str, int, int], float]:
         key = (str(row["arm"]), int(row["seed"]), int(row["generation"]))
         died = 1 if str(row["termination_reason"]).lower() == "health_depleted" else 0
         bucket[key].append(died)
-    return {k: 1.0 - _mean(v) for k, v in bucket.items()}
+    return {k: 1.0 - mean(v) for k, v in bucket.items()}
 
 
 # Extracted from 3 identical copies: m6, m613, m69
@@ -343,7 +361,7 @@ def compute_cross_arm_delta_stats(
         f3 = survival_table.get((arm, seed, 3))
         if any(v is None for v in (f1, f2, f3)):
             return None
-        return _mean([float(f1), float(f2), float(f3)])  # type: ignore[arg-type]
+        return mean([float(f1), float(f2), float(f3)])  # type: ignore[arg-type]
 
     per_seed_deltas: list[float] = []
     skipped_seeds: list[int] = []
@@ -366,7 +384,7 @@ def compute_cross_arm_delta_stats(
             "skipped_seeds": skipped_seeds,
             "_override_used": f0_baseline_override is not None,
         }
-    mean_delta = _mean(per_seed_deltas)
+    mean_delta = mean(per_seed_deltas)
     # Wilcoxon signed-rank: one-sided alternative arm_a > arm_b
     # requires at least one non-zero delta. The all-zero short-circuit
     # both guards against scipy's all-zero RuntimeWarning path (which
@@ -407,7 +425,7 @@ def compute_cross_arm_delta_stats(
 
 
 # Extracted from 2 identical copies: m613, m69
-def _write_cross_arm_verdict_csv(
+def write_cross_arm_verdict_csv(
     cross_arm_results: list[dict],
     path: Path,
 ) -> None:
@@ -439,3 +457,51 @@ def _write_cross_arm_verdict_csv(
                     ";".join(str(s) for s in r["skipped_seeds"]),
                 ],
             )
+
+
+# Extracted from 4 copies (baldwin_retry, m2, m3, m4). The copies differed only
+# in which session resolver they called: baldwin_retry used a two-layout
+# ``_resolve_session``, the rest used ``latest_session``. That difference is now
+# the ``resolve_session`` parameter rather than a fork in the code.
+def read_history(
+    seed_dir: Path,
+    resolve_session: Callable[[Path], Path] = latest_session,
+) -> list[dict[str, float]]:
+    """Read a seed's ``history.csv`` as a list of float dicts.
+
+    Parameters
+    ----------
+    seed_dir : Path
+        The ``seed-N`` directory.
+    resolve_session : Callable[[Path], Path]
+        How to find the directory holding ``history.csv``. Defaults to the
+        most-recently-modified subdirectory; pass ``resolve_session_for``
+        for the layout where the file may sit directly under ``seed_dir``.
+    """
+    history_path = resolve_session(seed_dir) / "history.csv"
+    if not history_path.exists():
+        msg = f"history.csv not found at {history_path}"
+        raise FileNotFoundError(msg)
+    with history_path.open() as handle:
+        reader = csv.DictReader(handle)
+        return [{k: float(v) for k, v in row.items()} for row in reader]
+
+
+# Extracted from 2 copies (baldwin_retry, baldwin_f1_postpilot_eval). They were
+# structurally identical and differed only in which filename they probed for, so
+# that is now a parameter.
+def resolve_session_for(seed_dir: Path, filename: str) -> Path:
+    """Return the directory containing ``filename`` for this seed.
+
+    Supports both layouts: the file directly under ``seed_dir`` (the layout
+    ``run_evolution.py`` has written since logbook 014), or nested one level
+    under a per-session subdirectory (older runs).
+    """
+    if (seed_dir / filename).exists():
+        return seed_dir
+    sessions = sorted(p for p in seed_dir.iterdir() if p.is_dir())
+    for session in sessions:
+        if (session / filename).exists():
+            return session
+    msg = f"No {filename} found under {seed_dir} (direct or nested)"
+    raise FileNotFoundError(msg)
