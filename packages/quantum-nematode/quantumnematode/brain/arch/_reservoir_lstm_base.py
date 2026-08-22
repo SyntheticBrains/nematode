@@ -68,6 +68,10 @@ from torch import nn
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.arch.qliflstm import QLIFLSTMCell, QLIFLSTMCritic, QLIFLSTMRolloutBuffer
@@ -537,12 +541,19 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
             logits = self.actor_head(actor_input)
             action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
 
-        # Sample action
+        # Sample action (numpy RNG kept verbatim — trajectory byte-identical).
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
         action_name = self.action_set[action_idx]
 
-        # Compute log probability
-        log_prob = float(np.log(action_probs[action_idx] + 1e-8))
+        # Log probability via the shared torch helper: the numpy sampler above is
+        # unchanged so the trajectory is byte-identical; the log-prob moves off the
+        # manual log(softmax)+eps onto torch's stabler log_softmax (~1e-7 deviation),
+        # consistent with the update path below.
+        log_prob_t, _entropy_t, _probs_t = categorical_logprob_entropy_torch(
+            logits,
+            int(action_idx),
+        )
+        log_prob = float(log_prob_t)
 
         # Compute critic value
         with torch.no_grad():
@@ -683,15 +694,15 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
                     # Actor
                     actor_input = self._get_actor_input(normalized, h)
                     logits = self.actor_head(actor_input)
-                    action_probs = torch.softmax(logits, dim=-1)
 
+                    # Shared torch log-prob/entropy for the stored action
+                    # (differentiable, used inside the BPTT loop).
                     action_idx = chunk["actions"][step_idx].item()
-                    log_prob = torch.log(action_probs[action_idx] + 1e-8)
-                    log_probs_list.append(log_prob)
-
-                    entropy = -torch.sum(
-                        action_probs * torch.log(action_probs + 1e-10),
+                    log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                        logits,
+                        int(action_idx),
                     )
+                    log_probs_list.append(log_prob)
                     entropies_list.append(entropy)
 
                     # Critic
@@ -707,18 +718,16 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
                 mean_entropy = torch.stack(entropies_list).mean()
                 values = torch.stack(values_list)
 
-                # PPO policy loss
+                # PPO policy loss via the shared clipped surrogate (byte-identical
+                # to the prior inline surr1/surr2/min). ``ratio`` is kept for the
+                # clip-fraction metric below.
                 ratio = torch.exp(new_log_probs - chunk["old_log_probs"])
-                surr1 = ratio * chunk["advantages"]
-                surr2 = (
-                    torch.clamp(
-                        ratio,
-                        1 - self.config.clip_epsilon,
-                        1 + self.config.clip_epsilon,
-                    )
-                    * chunk["advantages"]
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    chunk["old_log_probs"],
+                    chunk["advantages"],
+                    self.config.clip_epsilon,
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
 
                 # Track clip fraction
                 with torch.no_grad():

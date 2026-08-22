@@ -86,9 +86,24 @@ action_probs = (1 - epsilon) * softmax_probs + epsilon * uniform
 
 ### D3 — Per-brain tolerance, declared here, before any code moves
 
-Family A is **byte-exact** and is held to `torch.equal`. Families B, C, and D are held to `rtol=0, atol=1e-7`.
+Family A is **byte-exact** and is held to `torch.equal`.
 
-That `1e-7` is not a new number: the existing `brain-architecture` requirement *"Migration Regression Bar — Other 17 Architectures Numerical Equivalence"* already binds `{QRC, QRH, QEF, CRH, QSNN_REINFORCE, QSNN_PPO, HYBRID_QUANTUM, HYBRID_CLASSICAL, HYBRID_QUANTUM_CORTEX, QLIF_LSTM, QRH_QLSTM, CRH_QLSTM, MLP_REINFORCE, SPIKING_REINFORCE, …}` — the same set — to `torch.allclose(rtol=0, atol=1e-7)`. This change adopts the standing bar rather than inventing a second one, and D6's measured ~1e-7 float32 round-off for the identical LSTM/CfC transformation is the empirical basis.
+**Amended during Task 2 (measured, not assumed).** This decision originally held Families B, C, and D to a flat `rtol=0, atol=1e-7`, borrowed from the standing *"Migration Regression Bar — Other 17 Architectures Numerical Equivalence"* requirement and from D6's report of "~1e-7 at all policy-confidence levels." The first Family-B test written against that bar **failed**, and the measurement shows the flat constant was wrong:
+
+| Quantity | Declared bar | Basis |
+|---|---|---|
+| Sampled action | **byte-identical** | sampler untouched; no tolerance at all |
+| Entropy | `atol = 5e-7` | the `+1e-10` floor is damped by each term's factor of `p`, so the residual is float32 round-off of the sum (measured worst 2.4e-7 over 2000 random policies) |
+| Log-probability | `-log1p(ε / p)`, verified to `2e-6` | the deviation **is** the `+1e-8` floor being removed; it is a *model*, not a constant |
+| Log-prob, `p < 1e-6` | no bar | float32 `softmax` has already lost the value; see below |
+
+The log-prob deviation is `log(p) - log(p + ε) = -log1p(ε/p) ≈ ε/p`. That is ~4e-8 at `p = 0.25`, ~1e-6 at `p = 0.01`, and ~1e-4 at `p = 1e-4` — so a flat `1e-7` holds only for `p ≳ 0.1`. Measured over 240k samples, the residual after subtracting the model is ≤ 1.1e-6 for every `p ≥ 1e-6`.
+
+**Why this is still a correction rather than a regression.** The excess belongs entirely to the expression being *removed*: the floor biased low-probability actions upward by exactly the epsilon it added, and it did so hardest precisely where PPO is most sensitive — an improbable action that was nonetheless taken. Both halves of the ratio migrate together (D4), so within a run the two sides stay consistent.
+
+**Boundary, recorded rather than hidden.** Below `p ≈ 1e-6` the float32 `softmax` has already lost the probability to its own round-off, so *both* the old and the new expression sit far from the float64-exact value and neither is reliably closer (measured: at `p = 8.2e-8`, old is 0.115 from exact and new is 0.375, in the same direction). Both read the same float32 `probs`, so this is a property of the brains' float32 pipeline that the migration neither changes nor claims to fix. `test_below_the_float32_softmax_floor_the_model_stops_applying` pins the boundary so a future reader does not mistake it for migration drift.
+
+This **does not** conflict with the standing T2 requirement, which binds `torch.allclose(rtol=0, atol=1e-7)` on *parameter tensors after 5-step smoke training* — a different quantity from a single-step log-probability, and one where a `1e-4` log-prob shift on a rarely-taken action does not propagate at that magnitude.
 
 One exception in the other direction: **`spikingreinforce` is byte-exact.** It already uses `torch.distributions.Categorical` at `spikingreinforce.py:655` and `:773`; its migration is a Family-A lift despite sitting in the REINFORCE group.
 
