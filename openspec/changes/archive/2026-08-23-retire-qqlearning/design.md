@@ -81,8 +81,8 @@ without raising.
 
 The equivalent check here comes back clean:
 
-- `ExperimentMetadata.brain_type` is typed `str`
-  ([`metadata.py:491`](../../../packages/quantum-nematode/quantumnematode/experiment/metadata.py)),
+- `ConfigSummary.brain_type` is typed `str`
+  ([`metadata.py:497`](../../../packages/quantum-nematode/quantumnematode/experiment/metadata.py)),
   **not** the `BrainType` enum — so a historical record naming `qqlearning` still
   loads after the enum member is gone.
 - There are **0** artifacts under `artifacts/` carrying the string at all.
@@ -119,8 +119,9 @@ That preserves a known-false obligation in a live spec for tidiness reasons.
 
 ### D5 — The architecture count is derived, then written down
 
-Four files state the count (`README.md`, `AGENTS.md`, `CONTRIBUTING.md`,
-`openspec/config.yaml`) and `openspec/config.yaml` also enumerates every name. WS4
+Five files state the count (`README.md`, `AGENTS.md`, `CONTRIBUTING.md`,
+`openspec/config.yaml` and `docs/roadmap.md:98`) and `openspec/config.yaml` also
+enumerates every name. WS4
 found that enumeration had already drifted (it said 25 and listed 25 while the
 registry held 27).
 

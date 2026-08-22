@@ -72,11 +72,12 @@ already decided not to pursue.
 
 ## Impact
 
-- **Code (7 files):** `brain/arch/qqlearning.py` (deleted), `brain/arch/__init__.py`,
+- **Code (8 files):** `brain/arch/qqlearning.py` (deleted), `brain/arch/__init__.py`,
   `brain/arch/dtypes.py`, `utils/brain_factory.py` (branch **and** a parameter
   docstring at `:198`), `utils/config_loader.py`, `brain/modules.py`,
-  `brain/arch/_policy.py`.
-- **Tests:** `tests/.../brain/arch/test_qqlearning.py` (deleted, 30 tests).
+  `brain/arch/_policy.py`, `experiment/metadata.py` (two `brain_type` docstrings).
+- **Tests:** `tests/.../brain/arch/test_qqlearning.py` (deleted, 30 tests) and
+  `tests/.../utils/test_brain_type_validation.py` (added, 35 tests, task 4.5).
 - **Spec (2):** `openspec/specs/configuration-system/spec.md` (requirement via the
   delta, Purpose by direct edit) and `openspec/specs/brain-architecture/spec.md`.
 - **Docs (6):** `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `openspec/config.yaml`,

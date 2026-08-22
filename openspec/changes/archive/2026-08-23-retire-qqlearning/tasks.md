@@ -64,7 +64,7 @@ Line numbers are as of `main` at authoring time. Re-verify before editing.
 
 - [x] 5.2 Confirm nothing was orphaned. `initializers` has **ten** other consumers (`spiking_ppo`, `qvarcircuit`, `lstmppo`, `config_loader`, `cfc_ppo`, `equivariant_quantum`, `mlpdqn`, `mlpppo`, `mlpreinforce`, `transformer_ppo`) and `DynamicLearningRate` is also used by `qvarcircuit`, `learning_rate.py`, `brain_factory`, `config_loader`, `scripts/run_simulation.py` and one test module (`test_qvarcircuit.py`). Re-derive both lists rather than trusting these — the first draft of this line said *two* test modules, and the re-derivation found one.
 
-- [x] 5.3 Confirm the compatibility check still holds (D3): `ExperimentMetadata.brain_type` is `str`, not the enum, and **0** artifacts carry the string — so no historical record fails to load.
+- [x] 5.3 Confirm the compatibility check still holds (D3): `ConfigSummary.brain_type` (`metadata.py:497`) is `str`, not the enum, and **0** artifacts carry the string — so no historical record fails to load.
 
 - [x] 5.4 Full `uv run pytest -m "not nightly"`: **4136 (main) − 30 (deleted) + 7 (added by task 4.5) = 4113**, and nothing else fails. The count is stated as an arithmetic identity rather than "drops by 30" because this change both removes and adds tests; a bare subtraction would have flagged a passing gate as a failure. `uv run pyright` 0 errors. `uv run pre-commit run -a` clean.
 
