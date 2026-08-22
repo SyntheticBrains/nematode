@@ -41,7 +41,7 @@ _REFLEX_RATIO_TOLERANCE = 1e-6
 
 
 def _epsilon_mixture_numpy(logits: np.ndarray, epsilon: float, temperature: float) -> np.ndarray:
-    """The rollout-side mixture, exactly as the brains build it (NumPy float64)."""
+    """Build the rollout-side mixture exactly as the brains do (NumPy float64)."""
     scaled = logits / temperature
     exp_probs = np.exp(scaled - np.max(scaled))
     softmax_probs = exp_probs / np.sum(exp_probs)
@@ -54,7 +54,7 @@ def _epsilon_mixture_torch(
     epsilon: float,
     temperature: float,
 ) -> torch.Tensor:
-    """The update-side mixture, exactly as the brains build it (torch float32)."""
+    """Build the update-side mixture exactly as the brains do (torch float32)."""
     softmax_probs = torch.softmax(logits / temperature, dim=-1)
     uniform = torch.ones_like(softmax_probs) / softmax_probs.shape[-1]
     return (1 - epsilon) * softmax_probs + epsilon * uniform
@@ -100,13 +100,16 @@ class TestFamilyCMixtureScoring:
         action = 1
 
         base, _, _ = categorical_logprob_entropy_from_probs(
-            _epsilon_mixture_torch(logits, 0.03, 1.0), action
+            _epsilon_mixture_torch(logits, 0.03, 1.0),
+            action,
         )
         hotter, _, _ = categorical_logprob_entropy_from_probs(
-            _epsilon_mixture_torch(logits, 0.03, 1.5), action
+            _epsilon_mixture_torch(logits, 0.03, 1.5),
+            action,
         )
         explorier, _, _ = categorical_logprob_entropy_from_probs(
-            _epsilon_mixture_torch(logits, 0.30, 1.0), action
+            _epsilon_mixture_torch(logits, 0.30, 1.0),
+            action,
         )
 
         assert not torch.allclose(base, hotter, rtol=0, atol=1e-6)
@@ -173,13 +176,16 @@ class TestD4ReflexRatioResidual:
             logits_np = (rng.random(4) - 0.5) * 6.0
             probs_np = _epsilon_mixture_numpy(logits_np, epsilon, temperature)
             probs_t = _epsilon_mixture_torch(
-                torch.tensor(logits_np, dtype=torch.float32), epsilon, temperature
+                torch.tensor(logits_np, dtype=torch.float32),
+                epsilon,
+                temperature,
             )
             action = int(rng.choice(4, p=probs_np / probs_np.sum()))
 
             # Rollout casts to float32 (design D2) before scoring; update is float32.
             old_lp, _, _ = categorical_logprob_entropy_from_probs(
-                torch.as_tensor(probs_np, dtype=torch.float32), action
+                torch.as_tensor(probs_np, dtype=torch.float32),
+                action,
             )
             new_lp, _, _ = categorical_logprob_entropy_from_probs(probs_t, action)
             worst = max(worst, abs(math.exp(float(new_lp) - float(old_lp)) - 1.0))

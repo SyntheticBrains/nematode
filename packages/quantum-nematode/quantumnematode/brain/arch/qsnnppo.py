@@ -54,6 +54,11 @@ from torch import nn
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    categorical_logprob_entropy_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._qlif_layers import (
     WEIGHT_INIT_SCALE,
     encode_sensory_spikes,
@@ -923,12 +928,21 @@ class QSNNPPOBrain(ClassicalBrain):
         exp_probs = np.exp(logits - np.max(logits))
         action_probs = exp_probs / np.sum(exp_probs)
 
-        # Sample action
+        # Sample action (numpy RNG kept verbatim — trajectory byte-identical).
         action_idx = self.rng.choice(self.num_actions, p=action_probs)
         action_name = self.action_set[action_idx]
 
-        # Compute log probability
-        log_prob = float(np.log(action_probs[action_idx] + 1e-8))
+        # Log probability of the distribution actually sampled from, via the
+        # shared scorer. The logits here are numpy (non-differentiable forward),
+        # so the probability vector is scored directly. ``as_tensor`` with an
+        # explicit float32 keeps it in the update path's precision (D2); it does
+        # not measurably tighten the ratio — the numpy-vs-torch softmax backends
+        # dominate that residual.
+        log_prob_t, _entropy_t, _probs_t = categorical_logprob_entropy_from_probs(
+            torch.as_tensor(action_probs, dtype=torch.float32),
+            int(action_idx),
+        )
+        log_prob = float(log_prob_t)
 
         # Compute critic value
         with torch.no_grad():
@@ -1107,18 +1121,18 @@ class QSNNPPOBrain(ClassicalBrain):
                     # Convert to action probabilities
                     motor_clipped = torch.clamp(motor_spikes, 1e-8, 1.0 - 1e-8)
                     logits = (motor_clipped - 0.5) * self.config.logit_scale
-                    action_probs = torch.softmax(logits, dim=-1)
 
                     # Track motor spike probs for diagnostics
                     motor_spike_sum += motor_clipped.detach().cpu().numpy()
                     motor_spike_count += 1
 
-                    log_prob = torch.log(action_probs[action_idx] + 1e-8)
-                    log_probs_list.append(log_prob)
-
-                    entropy = -torch.sum(
-                        action_probs * torch.log(action_probs + 1e-10),
+                    # Shared torch log-prob/entropy for the stored action
+                    # (differentiable, used inside the surrogate-gradient loop).
+                    log_prob, entropy, _probs = categorical_logprob_entropy_torch(
+                        logits,
+                        int(action_idx),
                     )
+                    log_probs_list.append(log_prob)
                     entropies_list.append(entropy)
 
                     # Critic forward pass
@@ -1135,18 +1149,15 @@ class QSNNPPOBrain(ClassicalBrain):
                 mean_entropy = torch.stack(entropies_list).mean()
                 values = torch.stack(values_list)
 
-                # PPO policy loss
+                # PPO policy loss via the shared clipped surrogate. ``ratio`` is
+                # kept for the clip-fraction / approx-KL diagnostics below.
                 ratio = torch.exp(new_log_probs - batch["old_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(
-                        ratio,
-                        1 - self.config.clip_epsilon,
-                        1 + self.config.clip_epsilon,
-                    )
-                    * batch["advantages"]
+                policy_loss = ppo_clip_policy_loss(
+                    new_log_probs,
+                    batch["old_log_probs"],
+                    batch["advantages"],
+                    self.config.clip_epsilon,
                 )
-                policy_loss = -torch.min(surr1, surr2).mean()
 
                 # Track clip fraction
                 with torch.no_grad():

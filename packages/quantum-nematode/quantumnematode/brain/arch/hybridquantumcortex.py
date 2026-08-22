@@ -1928,10 +1928,12 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         if self.training_stage != STAGE_CORTEX_ONLY:
             self.episode_features.append(reflex_features)
             # Scored through the same shared helper the reflex update uses, so
-            # both halves of the ratio share one formula (D4). ``as_tensor`` with
-            # an explicit float32 pins the rollout to the update's dtype; plain
-            # ``from_numpy`` would carry float64 through and leave a dtype-induced
-            # offset in the ratio even once the formula was shared (D2).
+            # both halves of the ratio share one formula (D4). ``as_tensor`` with an
+            # explicit float32 keeps the rollout in the update's precision rather
+            # than pushing a float64 tensor through a float32 pipeline. It does
+            # NOT measurably tighten the ratio: the residual is dominated by the
+            # numpy-vs-torch softmax backends, which differ by ~4e-7 before any
+            # scoring happens (D2, amended).
             old_log_prob_t, _entropy, _probs = categorical_logprob_entropy_from_probs(
                 torch.as_tensor(action_probs, dtype=torch.float32),
                 int(action_idx),

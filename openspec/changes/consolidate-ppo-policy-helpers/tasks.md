@@ -28,7 +28,7 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 - [x] 3.1 `_hybrid_common.py` `perform_ppo_update` (`:445-469`): → `categorical_evaluate_torch` + `ppo_clip_policy_loss`, keeping `log_ratio`/`ratio` for the `approx_kl` term at `:455-458`. Byte-exact in isolation.
 - [x] 3.2 `hybridquantum.py` cortex **rollout** (`:1072-1073`): `torch.log(cortex_probs + 1e-8)` → the shared scorer, so both halves of the cortex ratio use one formula (D4). Leave the `np.clip`/renormalise at `:1081-1082` and `rng.choice` at `:1083` **verbatim**.
 - [x] 3.3 Same for `hybridclassical.py` (`:777-778`, sampler at `:794` region) and `hybridquantumcortex.py` (`:1926`, `:1934` — note these two adjacent branches spell the same `1e-8` as a literal and as `NORM_EPS`; both go).
-- [x] 3.3b Where a Family-C rollout hands its **numpy** mixture to the shared scorer, convert with `torch.as_tensor(action_probs, dtype=torch.float32)` so the rollout matches the update's dtype (D2). Do **not** use `torch.from_numpy`, which carries float64 through and would leave a dtype-induced offset in the ratio after the formula was shared.
+- [x] 3.3b Where a Family-C rollout hands its **numpy** mixture to the shared scorer, convert with `torch.as_tensor(action_probs, dtype=torch.float32)`. **Justification corrected in Task 4:** this originally said `from_numpy` would leave a dtype-induced offset in the ratio — measured over 20k samples, false (the two swap order between sample sizes). The residual is dominated by the numpy-vs-torch **softmax backends**, which differ by ~3.8e-7 on `p` before any scoring. The cast stays for dtype discipline, not ratio tightness (D2 amended).
 - [x] 3.4 `hybridquantum.py` reflex **update** (`:1339-1360`): ε-mixed `action_probs` → `categorical_logprob_entropy_from_probs`; surrogate → `ppo_clip_policy_loss`, keeping `- effective_entropy_coef * mean_entropy` as a separate term. Leave `_exploration_schedule()` and the mixture construction untouched (D2).
 - [x] 3.5 Same for `hybridclassical.py` (`:1020-1042`) and `hybridquantumcortex.py` (`:2222-2244`).
 - [x] 3.6 **Measured**, 50k samples, action sampled from the policy (as the real code does), `clip_epsilon = 0.2` for scale. **Cortex:** `|ratio-1|` before mean 5.7e-8 / max 8.3e-5 → after **exactly 0 in 100% of samples**. **Reflex:** before mean 5.5e-8 / max 4.3e-7 → after mean 4.1e-8 / max 4.8e-7, exactly 0 in 61%. Both D4 predictions hold; the reflex residual is the float64/float32 boundary and is explicitly *not* claimed exact. **Correction:** only `hybridquantum` and `hybridclassical` call `perform_ppo_update` — `hybridquantumcortex`'s cortex path is a REINFORCE loop with no ratio, so D4 covers two brains on the cortex path, not three (design D4 amended).
@@ -38,11 +38,17 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 4. Remaining direct copies
 
-- [ ] 4.1 `qsnnppo.py` **rollout** (`:920-931`): keep the numpy softmax and `rng.choice` at `:927` verbatim; `np.log(...+1e-8)` at `:931` → shared scorer. **update** (`:1110-1149`): manual log/entropy → `categorical_logprob_entropy_torch`; surrogate → `ppo_clip_policy_loss`, keeping `ratio` for clip-frac and `approx_kl` at `:1152-1157`.
-- [ ] 4.2 `qsnnreinforce.py` (`:1590-1615` update, `:1946` rollout): Family C — ε-mixed, same treatment as 3.4. Despite the brain's name this path is a PPO-clipped surrogate.
-- [ ] 4.3 `qliflstm.py` (`:1099-1134` update, `:965` rollout): Family B, same treatment as 2.4/2.5; keep the clip-frac at `:1137-1139`.
-- [ ] 4.4 `env/mlpppo_predator_brain.py`: **rollout** (`:318-322`) → `categorical_sample_torch`; **update** (`:438-449`) → `categorical_evaluate_torch` + `ppo_clip_policy_loss`. Family A, byte-exact. Check the `:339` cumulative-softmax inversion branch is unaffected.
-- [ ] 4.5 `test_qsnnppo.py`, `test_qsnnreinforce.py`, `test_qliflstm.py` and the predator-brain tests pass unchanged. Commit.
+- [x] 4.1 `qsnnppo.py` **rollout** (`:920-931`): keep the numpy softmax and `rng.choice` at `:927` verbatim; `np.log(...+1e-8)` at `:931` → shared scorer. **update** (`:1110-1149`): manual log/entropy → `categorical_logprob_entropy_torch`; surrogate → `ppo_clip_policy_loss`, keeping `ratio` for clip-frac and `approx_kl` at `:1152-1157`.
+
+- [x] 4.2 `qsnnreinforce.py` (`:1590-1615` update, `:1946` rollout): Family C — ε-mixed, same treatment as 3.4. Despite the brain's name this path is a PPO-clipped surrogate.
+
+- [x] 4.3 `qliflstm.py` (`:1099-1134` update, `:965` rollout): Family B, same treatment as 2.4/2.5; keep the clip-frac at `:1137-1139`.
+
+- [x] 4.4 `env/mlpppo_predator_brain.py`: **rollout** (`:318-322`) → `categorical_sample_torch`; **update** (`:438-449`) → `categorical_evaluate_torch` + `ppo_clip_policy_loss`. Family A, byte-exact. Check the `:339` cumulative-softmax inversion branch is unaffected.
+
+- [x] 4.5 `test_qsnnppo.py`, `test_qsnnreinforce.py`, `test_qliflstm.py` + the three predator-brain suites — **374 passed, unchanged**. 10 migration tests added in `test_qsnn_qlif_policy_migration.py`. Full suite **4096 passed, 1 skipped, 2 xfailed** (4086 + 10). pyright **0 errors**. ruff clean. Commit.
+
+  **Note on `qsnnppo` vs `qliflstm` (both Family B, treated differently on purpose):** `qliflstm` has a torch `logits` tensor at rollout, so it scores via `categorical_logprob_entropy_torch` — the same expression the update uses. `qsnnppo`'s rollout forward pass is NumPy, so no such tensor exists; re-deriving one would score a distribution the sampler never saw. It therefore scores its own probability vector via `categorical_logprob_entropy_from_probs`.
 
 ## 5. Family D — REINFORCE partial reuse
 
