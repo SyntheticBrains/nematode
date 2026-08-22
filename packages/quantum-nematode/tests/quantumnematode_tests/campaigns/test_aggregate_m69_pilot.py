@@ -13,6 +13,8 @@ import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import pytest
+
 if TYPE_CHECKING:
     from types import ModuleType
 
@@ -310,11 +312,18 @@ def test_cross_arm_primary_verdict_stop_not_indeterminate_at_full_n_seeds() -> N
 
 
 def test_f0_override_threads_through_per_arm_gate_for_all_three_arms() -> None:
-    """``f0_baseline_override`` SHALL replace post-hoc F0 for all three arms.
+    """``f0_baseline_override`` SHALL replace post-hoc F0 for the pairs it covers.
 
-    The per-arm gate is called once per (arm, seed); the override dict
-    is shared across arms so a single (arm, seed) override fires only
-    for that pair.
+    **Semantics changed 2026-08-22 (#279).** This test previously asserted that a
+    pair *absent* from the override silently fell back to the post-hoc F0
+    (``control_result["f0"] == 0.08``), documenting that fallback as intended. It
+    is now a failure: gating one arm on the training-time baseline and another on
+    the post-hoc one inside a single verdict is the mixing #279 describes, and it
+    can flip GO to PIVOT. A caller that wants the post-hoc baseline should pass no
+    override at all.
+
+    What still holds — and is what this test was really for — is that the override
+    is keyed per ``(arm, seed)`` and applies only to the pair it names.
     """
     mod = _load_aggregator_module()
     retention = {
@@ -327,23 +336,37 @@ def test_f0_override_threads_through_per_arm_gate_for_all_three_arms() -> None:
         ("control", 42, 2): 0.20,
         ("control", 42, 3): 0.10,
     }
-    override = {("tei_on", 42): 0.50}
-    # tei_on: override applied → F0=0.50.
-    tei_on_result = mod.evaluate_decision_gate_one_seed(
-        retention=retention,
-        arm="tei_on",
-        seed=42,
-        f0_baseline_override=override,
+
+    # A complete override applies per (arm, seed), each pair getting its own value.
+    complete = {("tei_on", 42): 0.50, ("control", 42): 0.20}
+    assert (
+        mod.evaluate_decision_gate_one_seed(
+            retention=retention,
+            arm="tei_on",
+            seed=42,
+            f0_baseline_override=complete,
+        )["f0"]
+        == 0.50
     )
-    assert tei_on_result["f0"] == 0.50
-    # control: no override entry → post-hoc F0=0.08.
-    control_result = mod.evaluate_decision_gate_one_seed(
-        retention=retention,
-        arm="control",
-        seed=42,
-        f0_baseline_override=override,
+    assert (
+        mod.evaluate_decision_gate_one_seed(
+            retention=retention,
+            arm="control",
+            seed=42,
+            f0_baseline_override=complete,
+        )["f0"]
+        == 0.20
     )
-    assert control_result["f0"] == 0.08
+
+    # A partial override no longer falls back — it raises.
+    partial = {("tei_on", 42): 0.50}
+    with pytest.raises(ValueError, match="override is missing"):
+        mod.evaluate_decision_gate_one_seed(
+            retention=retention,
+            arm="control",
+            seed=42,
+            f0_baseline_override=partial,
+        )
 
 
 # ---------------------------------------------------------------------------

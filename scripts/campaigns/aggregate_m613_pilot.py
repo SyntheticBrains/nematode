@@ -77,6 +77,7 @@ from scripts.campaigns._common import (  # noqa: E402
     evaluate_decision_gate_one_seed,
     load_f0_training_fitness_per_seed,
     read_per_gen_csv,
+    require_complete_f0_override,
     write_cross_arm_verdict_csv,
 )
 
@@ -639,6 +640,14 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested helpers would ob
             seeds_per_arm[arm].append(seed)
     for arm_seeds in seeds_per_arm.values():
         arm_seeds.sort()
+
+    # Fail closed before gating if the override does not cover every pair about
+    # to be gated (#279) — a partial override would mix training-time and
+    # post-hoc F0 baselines inside one arm verdict.
+    require_complete_f0_override(
+        f0_override,
+        [(arm, seed) for arm in EXPECTED_ARMS for seed in seeds_per_arm.get(arm, [])],
+    )
 
     all_evals: list[dict] = []
     per_arm_evals: dict[str, list[dict]] = defaultdict(list)
