@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Brain Type Validation Against the Registry`
+- TO: `### Requirement: Brain Type Validation Against the Registry`
+
 ## MODIFIED Requirements
 
 ### Requirement: Brain Type Enumeration Extension
@@ -30,15 +35,16 @@ naming it fails at load.
 #### Scenario: An unregistered brain type is rejected
 
 - **GIVEN** a configuration specifying a brain type absent from the registry —
-  including a retired one such as "qqlearning", or a legacy alias such as
-  "modular" or "qmlp"
+  whether a name that never existed, a retired architecture, or a legacy alias
 - **WHEN** validation occurs
 - **THEN** loading SHALL fail with an error naming the unknown type
 - **AND** it SHALL NOT silently substitute a default or nearest-match architecture
 
-#### Scenario: The specification does not re-enumerate the registry
+#### Scenario: Registry membership changes without a configuration-schema change
 
-- **WHEN** a brain architecture is added to or removed from the registry
-- **THEN** this requirement SHALL remain accurate without edit
-- **AND** any document that does state a count or an enumeration SHALL derive it
-  from the registry rather than maintaining it by hand
+- **GIVEN** a brain architecture is added to or removed from the registry
+- **WHEN** a configuration naming a still-registered type is loaded
+- **THEN** it SHALL continue to load unchanged
+- **AND** a configuration naming the removed type SHALL be rejected per the
+  scenario above, with no code change required in the configuration layer beyond
+  the registration itself

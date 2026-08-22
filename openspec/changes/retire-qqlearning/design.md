@@ -53,16 +53,18 @@ The argument against retiring is loss. There is little to lose: git history keep
 the implementation, and the evaluation that produced the "not competitive" verdict
 is recorded in the roadmap and Logbook 023's inventory. Nothing is destroyed.
 
-### D2 — No tombstone module, unlike `remove-nematodebench`
+### D2 — No tombstone, unlike `remove-nematodebench`
 
-The NematodeBench removal kept `openspec/specs/benchmark-management/spec.md` as a
-retired-capability tombstone, because an entire capability disappeared and a reader
-arriving from an old link needed to find out where the live parts went.
+The NematodeBench removal kept a retired-capability **spec file**
+(`openspec/specs/benchmark-management/spec.md`, "Retired — capability removed"). It
+never kept a placeholder code module — the code was deleted outright. The tombstone
+existed because an entire capability disappeared and a reader arriving from an old
+link needed to find where the live parts went.
 
-Nothing analogous applies here. `configuration-system` survives — it is amended,
-not retired — so there is no spec to tombstone, no requirement to redirect, and no
-404 to prevent. Adding a placeholder module would be dead code of exactly the kind
-the recent cleanup has been removing.
+By that precedent's own rationale, nothing analogous applies here.
+`configuration-system` and `brain-architecture` both survive — they are amended,
+not retired — so there is no capability to tombstone, no requirement to redirect,
+and nothing that 404s.
 
 **Consequence, stated:** an out-of-tree config with `brain: qqlearning` will fail at
 config load with an unknown-brain-type error. That is the intended behaviour — the
@@ -101,6 +103,12 @@ exists in the code**: they appear in no `BrainType` value and in no alias mappin
 `config_loader.py`. They were presumably removed at some point without the spec
 following.
 
+The names do still appear twice as **documentation** —
+`experiment/metadata.py:264` and `:484` list them in `brain_type` docstrings — which
+is the same drift, and those are corrected alongside. What does not exist anywhere
+is a mechanism: no `BrainType` value, and no alias mapping (`BRAIN_CONFIG_MAP` is
+keyed by registry name; there is no alias layer at all).
+
 Leaving a clause known to be false inside a requirement I am already rewriting
 would be worse than fixing it. The delta therefore states the valid types by
 reference to the registry rather than by re-enumerating a list that has drifted
@@ -118,6 +126,42 @@ registry held 27).
 
 So the count and the enumeration are re-derived from the live `_REGISTRY` and
 verified programmatically as part of the tasks, not hand-edited from 27 to 26.
+
+### D5a — Amend the `brain-architecture` migration bar too
+
+`openspec/specs/brain-architecture/spec.md:582` names `QQLEARNING` inside a live
+`SHALL` set — *"Migration Regression Bar — Other **17** Architectures Numerical
+Equivalence"*. A retired brain cannot satisfy a `SHALL`, so leaving it there would
+create exactly the contradiction this change exists to remove, in a second spec.
+
+**Decision:** amend it, and drop the count from the requirement's title as well.
+"17" was already load-bearing in a title, which is a trap — it goes stale the moment
+any architecture is added or retired. The requirement now scopes itself to "the
+registered non-MUST brains at the time the refactor runs", so registry changes do
+not require a spec edit. That needs a `RENAMED` delta alongside the `MODIFIED` one,
+since the title itself changes.
+
+*Alternative rejected:* treat it as a historical acceptance record for the completed
+T2 refactor and leave it, the way Logbook 023's inventory is left. Rejected because
+it is phrased as an ongoing `SHALL` in a live spec, not as a past-tense record — if
+it were meant historically it should say so, and that is a larger edit than this
+change should make unilaterally.
+
+### D6 — The `configuration-system` Purpose needs a direct edit, not a delta
+
+OpenSpec's archive **ignores a delta `## Purpose` when the target spec already has
+one**, by design — from its own source:
+
+> A delta Purpose only seeds a spec that does not exist yet. … `delta Purpose ignored; already has one. Edit the target directly to change it.`
+
+The `configuration-system` Purpose names `qqlearning` *and* all five non-existent
+legacy aliases. Relying on the delta to fix it would silently half-land this
+change: the requirement would be corrected and the Purpose — the more visible
+prose — would keep both errors.
+
+**Decision:** the tasks carry an explicit step to hand-edit
+`openspec/specs/configuration-system/spec.md` line 5 at archive time. Recorded as a
+decision rather than a task footnote because the failure mode is silent: `openspec archive` succeeds either way, and only a warning distinguishes them.
 
 ## Risks / Trade-offs
 

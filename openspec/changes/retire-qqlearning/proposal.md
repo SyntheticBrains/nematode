@@ -35,11 +35,17 @@ already decided not to pursue.
 - **Remove the `qqlearning` branch in `brain_factory._build_infra_kwargs`**, its
   `config_loader` import + `BrainConfigType` union entry, and the
   `brain/arch/__init__.py` import and two `__all__` entries.
-- **Amend the `configuration-system` capability**: its Purpose and its
-  *Brain Type Validation* requirement both name `qqlearning` as a valid type.
-- **Update the architecture count 27 → 26** in `README.md`, `AGENTS.md`,
-  `CONTRIBUTING.md` and `openspec/config.yaml`, and drop the two docstring
-  mentions in `brain/modules.py` and `brain/arch/_policy.py`.
+- **Amend two live capabilities.** `configuration-system` names `qqlearning` as a
+  valid brain type in both its Purpose and its brain-type requirement.
+  `brain-architecture` names `QQLEARNING` inside a `SHALL` set of "17
+  architectures" in its migration-regression bar. Both are rewritten to derive
+  membership from the registry rather than enumerate it. The `configuration-system`
+  **Purpose** needs a direct edit at archive time — OpenSpec deliberately ignores a
+  delta Purpose when the target spec already has one (design D6).
+- **Update the architecture count 27 → 26** in **five** live sites: `README.md`,
+  `AGENTS.md`, `CONTRIBUTING.md`, `openspec/config.yaml` and `docs/roadmap.md:98`
+  ("The platform *now supports*: 27 …"), and drop the **three** docstring mentions
+  in `brain/modules.py`, `brain/arch/_policy.py` and `utils/brain_factory.py:198`.
 - **Record the retirement in `docs/roadmap.md`** alongside the existing
   deprioritisation line, and drop the decision-tree mention in
   `docs/OPTIMIZATION_METHODS.md`.
@@ -58,18 +64,24 @@ already decided not to pursue.
 
 - `configuration-system`: `qqlearning` is removed from the set of valid brain
   types, and the requirement's stale legacy-alias list is corrected (see design D4
-  — `modular`, `qmodular`, `mlp`, `qmlp`, `ppo` are named in the spec but exist
-  nowhere in the code).
+  — `modular`, `qmodular`, `mlp`, `qmlp`, `ppo` are named in the spec but exist as
+  no `BrainType` value and in no alias mapping; there is no alias mechanism at all).
+- `brain-architecture`: the *Migration Regression Bar — Other 17 Architectures*
+  requirement drops `QQLEARNING` and stops hard-coding a count that goes stale the
+  moment an architecture is retired (design D5a).
 
 ## Impact
 
 - **Code (7 files):** `brain/arch/qqlearning.py` (deleted), `brain/arch/__init__.py`,
-  `brain/arch/dtypes.py`, `utils/brain_factory.py`, `utils/config_loader.py`,
-  `brain/modules.py`, `brain/arch/_policy.py`.
+  `brain/arch/dtypes.py`, `utils/brain_factory.py` (branch **and** a parameter
+  docstring at `:198`), `utils/config_loader.py`, `brain/modules.py`,
+  `brain/arch/_policy.py`.
 - **Tests:** `tests/.../brain/arch/test_qqlearning.py` (deleted, 30 tests).
-- **Spec:** `openspec/specs/configuration-system/spec.md`.
+- **Spec (2):** `openspec/specs/configuration-system/spec.md` (requirement via the
+  delta, Purpose by direct edit) and `openspec/specs/brain-architecture/spec.md`.
 - **Docs (6):** `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `openspec/config.yaml`,
-  `docs/roadmap.md`, `docs/OPTIMIZATION_METHODS.md`.
+  `docs/roadmap.md` (the `:98` count **and** the `:1216` retirement note),
+  `docs/OPTIMIZATION_METHODS.md`.
 - **Deliberately untouched:** `docs/experiments/logbooks/023-architecture-plugin-interface.md`,
   whose architecture inventory is a historical record of what existed at the time.
 - **No behavioural change to any other brain.** Nothing imports `QQLearningBrain`
