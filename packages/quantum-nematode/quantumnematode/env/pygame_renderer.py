@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from itertools import pairwise
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 from quantumnematode.env.sprites import (
     AGENT_COLOR_PALETTE,
@@ -584,7 +584,11 @@ class PygameRenderer:
             elif pred.predator_type == PredatorType.PURSUIT:
                 sprite = self._sprites["predator_pursuit"]
             else:
-                sprite = self._sprites["predator_random"]
+                # Exhaustive over PredatorType. A new member added without a sprite
+                # is a pyright error here rather than a silent wrong-sprite render —
+                # which is exactly what happened when PredatorType.RANDOM was removed
+                # in 674188a5 and this branch quietly became unreachable.
+                assert_never(pred.predator_type)
             px, py = self._cell_to_pixel(pred.position[0], pred.position[1], viewport)
             self._screen.blit(sprite, (px, py))
 
@@ -1204,8 +1208,7 @@ class Continuous2DRenderer:
         # (the camera changes the effective zoom when following).
         sprites = create_sprites(pygame)
         self._raw_sprites: dict[str, Any] = {
-            key: sprites[key]
-            for key in ("food", "predator_random", "predator_stationary", "predator_pursuit")
+            key: sprites[key] for key in ("food", "predator_stationary", "predator_pursuit")
         }
         # Pursuit-predator animation frames (gait cycle + strike pose), scaled per zoom
         # alongside the static sprites and oriented at draw time by the predator heading.
@@ -1722,7 +1725,9 @@ class Continuous2DRenderer:
                 if pred.predator_type == PredatorType.STATIONARY:
                     sprite = sprites["predator_stationary"]
                 else:
-                    sprite = sprites["predator_random"]
+                    # PURSUIT returned above, so STATIONARY is the only case left;
+                    # exhaustive over PredatorType (see the grid renderer's note).
+                    assert_never(pred.predator_type)
                 self._screen.blit(sprite, (cx - half, cy - half))
 
         # Worm: a path-following, tapered, undulating body trailing the head, then a

@@ -89,7 +89,6 @@ class TestSprites:
         expected = {
             "empty",
             "food",
-            "predator_random",
             "predator_stationary",
             "predator_pursuit",
             "predator_pursuit_frames",
@@ -136,7 +135,6 @@ class TestSprites:
         alpha_sprites = [
             "food",
             "head_up",
-            "predator_random",
             "predator_stationary",
             "predator_pursuit",
             "predator_pursuit_frames",  # list of gait-cycle surfaces
