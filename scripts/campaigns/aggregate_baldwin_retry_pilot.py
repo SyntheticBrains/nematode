@@ -61,10 +61,23 @@ from __future__ import annotations
 
 import argparse
 import csv
-import re
+import sys
 from pathlib import Path
 
 import numpy as np
+
+# These aggregators are executed directly (``uv run python scripts/campaigns/...``),
+# so the repo root is not on ``sys.path`` and ``scripts.campaigns`` is not
+# importable; the tests load them by file path for the same reason. Put the repo
+# root on the path before importing the shared helpers.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.campaigns._common import (  # noqa: E402
+    _baseline_success_rates,
+    _resolve_speed,
+)
 
 # Best-fitness threshold for the Speed metric.  0.92 is calibrated to
 # the predator-arm fitness landscape's documented saturation ceiling
@@ -136,28 +149,6 @@ def _read_history(seed_dir: Path) -> list[dict[str, float]]:
         return [{k: float(v) for k, v in row.items()} for row in reader]
 
 
-def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
-    """Extract per-seed success rates from the run_simulation.py log files.
-
-    Note: M2.11's baseline covers seeds 42-45 only (n=4).  M4.5's pilot
-    arms run n=8 — the per-seed table will show "—" for the seeds
-    without baseline data, and the convergence plot's baseline
-    horizontal line is annotated to disclose the n-asymmetry.
-    """
-    rates: dict[int, float] = {}
-    for log in sorted(baseline_root.glob("seed-*.log")):
-        seed_match = re.search(r"seed-(\d+)\.log", log.name)
-        if not seed_match:
-            continue
-        seed = int(seed_match.group(1))
-        for line in log.read_text().splitlines():
-            m = re.match(r"^Success rate:\s+([\d.]+)%", line)
-            if m:
-                rates[seed] = float(m.group(1)) / 100.0
-                break
-    return rates
-
-
 def _read_f1_csv(
     f1_csv: Path,
     *,
@@ -205,15 +196,6 @@ def _gen_first_reaches_target(
         if row["best_fitness"] >= target:
             return int(row["generation"])
     return None
-
-
-def _resolve_speed(g: int | None, fallback_gen: int) -> float:
-    """Resolve a per-seed gen-to-target value to a float for averaging.
-
-    Treats never-reached as the fallback (run's max generation + 1) so
-    the metric is bounded; conservative for the GO check.
-    """
-    return float(g) if g is not None else float(fallback_gen)
 
 
 def _first_gen_mean_fitness(
