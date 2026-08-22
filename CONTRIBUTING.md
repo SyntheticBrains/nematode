@@ -149,13 +149,13 @@ The project supports 27 brain architectures across quantum, hybrid, classical, a
 06. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
 07. **QLIFLSTMBrain** (`qliflstm`): Quantum-enhanced LSTM with QLIF gates, recurrent PPO with truncated BPTT
 08. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
-09. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout (ablation companion to QRH-QLSTM)
-10. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
-11. **EquivariantQuantumPPOBrain** (`equivariantquantum`): Z2-equivariant data-re-uploading circuit with odd/even-parity latent split and PPO; ships classical-equivariant + symmetry-prior ablation controls
+09. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
+10. **EquivariantQuantumPPOBrain** (`equivariantquantum`): Z2-equivariant data-re-uploading circuit with odd/even-parity latent split and PPO; ships classical-equivariant + symmetry-prior ablation controls
 
 **Hybrid (quantum + classical):**
 
-12. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
+11. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout — classical-reservoir ablation companion to QRH-QLSTM
+12. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture on the grid substrate (Logbook 008)
 13. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
 14. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
 

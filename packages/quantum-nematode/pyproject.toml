@@ -105,6 +105,7 @@ addopts = [
 markers = [
     "smoke: Smoke tests that run entry-point scripts (excluded from pre-commit)",
     "nightly: Nightly regression tests against benchmarks (slow)",
+    "slow: Heavy integration tests (e.g. real EvolutionLoop runs) — excluded from pre-commit, run before push",
 ]
 
 [tool.coverage.run]

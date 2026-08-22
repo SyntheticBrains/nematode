@@ -48,12 +48,12 @@ Choose from 27 brain architectures spanning quantum, classical, hybrid, and biol
 - **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
 - **QEFBrain** (qef): Quantum entangled features — parameterized quantum circuit with configurable cross-modal entanglement topology (modality-paired, ring, random), Z+ZZ+cos/sin feature extraction, and PPO-trained classical readout
 - **QRHQLSTMBrain** (qrhqlstm): QRH quantum reservoir with QLIF-LSTM temporal readout — reservoir feature extraction + recurrent PPO with truncated BPTT
-- **CRHQLSTMBrain** (crhqlstm): CRH classical reservoir with QLIF-LSTM temporal readout — classical reservoir ablation companion to QRH-QLSTM
 - **EquivariantQuantumPPOBrain** (equivariantquantum): Z2-equivariant parameterized quantum circuit with data re-uploading and odd/even-parity latent split, PPO-trained — ships with classical-equivariant and symmetry-prior ablation controls to isolate the equivariance and quantum contributions
 
 **Hybrid (Quantum + Classical):**
 
-- **HybridQuantumBrain** (hybridquantum): QSNN reflex + classical cortex MLP + classical critic with mode-gated fusion and 3-stage curriculum ([96.9%](docs/experiments/logbooks/supporting/008/hybridquantum-optimization.md) on pursuit predators)
+- **CRHQLSTMBrain** (crhqlstm): CRH classical reservoir with QLIF-LSTM temporal readout — classical reservoir ablation companion to QRH-QLSTM
+- **HybridQuantumBrain** (hybridquantum): QSNN reflex + classical cortex MLP + classical critic with mode-gated fusion and 3-stage curriculum ([96.9%](docs/experiments/logbooks/supporting/008/hybridquantum-optimization.md) on pursuit predators — *grid substrate, Logbook 008; see the [Phase 6a ranking](#%EF%B8%8F-roadmap) for the current continuous-2D comparison*)
 - **HybridClassicalBrain** (hybridclassical): Classical ablation control for HybridQuantum — replaces QSNN reflex with small classical MLP ([96.3%](docs/experiments/logbooks/supporting/008/hybridclassical-ablation.md) on pursuit predators)
 - **HybridQuantumCortexBrain** (hybridquantumcortex): QSNN reflex + QSNN cortex (grouped sensory QLIF) + classical critic with 4-stage curriculum ([halted](docs/experiments/logbooks/supporting/008/hybridquantumcortex-optimization.md) — [40.9%](docs/experiments/logbooks/supporting/008/hybridquantumcortex-optimization.md) on 2-predator)
 
@@ -81,7 +81,7 @@ For full architecture comparison and benchmarks, see [quantum-architectures.md](
 Select the brain architecture when running simulations:
 
 ```bash
-uv run ./scripts/run_simulation.py --brain hybridquantum     # Best quantum (96.9% pursuit predators)
+uv run ./scripts/run_simulation.py --brain hybridquantum     # Best quantum on the grid substrate (96.9% pursuit, Logbook 008)
 uv run ./scripts/run_simulation.py --brain mlpppo            # Best classical (PPO actor-critic)
 uv run ./scripts/run_simulation.py --brain lstmppo           # LSTM/GRU PPO (temporal sensing)
 uv run ./scripts/run_simulation.py --brain crh               # Classical reservoir hybrid (QRH ablation control)
@@ -133,7 +133,7 @@ cp .env.template .env
 **Command Line Examples:**
 
 ```bash
-# Hybrid quantum brain — QSNN reflex + classical cortex (best quantum: 96.9% on pursuit predators)
+# Hybrid quantum brain — QSNN reflex + classical cortex (best quantum on the grid substrate: 96.9% pursuit, Logbook 008)
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/hybridquantum_small_oracle.yml --theme emoji
 
 # Classical PPO brain (best classical: actor-critic with GAE)
@@ -217,7 +217,7 @@ The spiking brain architecture provides biologically realistic neural computatio
 - Biologically plausible temporal dynamics with LIF neurons
 - Effective gradient-based learning through surrogate gradients
 - Configurable network architecture (timesteps, hidden layers, hidden size)
-- Achieves 100% success on foraging tasks, 63% on predator evasion
+- Achieves 100% success on foraging tasks, 63% on predator evasion *(grid substrate, [Logbook 003](docs/experiments/logbooks/003-spiking-brain-optimization.md); not directly comparable to the continuous-2D Phase 6a ranking)*
 
 ### Predator Evasion
 
@@ -225,9 +225,9 @@ The predator evasion system adds a challenging multi-objective learning task whe
 
 **Predator Mechanics:**
 
-- Random movement patterns with configurable speed (default 1 unit/step)
+- Two predator types (`PredatorType`): **stationary** (a fixed toxic zone) and **pursuit** (moves toward the agent inside its detection radius, and randomly outside it), with configurable speed (default 1 unit/step)
 - Detection radius (default 8 units) creating danger zones
-- Kill radius (default 0 units) for lethal collisions
+- Damage radius (`damage_radius`, default 0 — i.e. same-cell contact on the grid) for damaging collisions; the continuous-2D substrate overrides this to 1.0 mm because a zero radius is unreachable in continuous space
 - Multiple predators with independent movement
 
 **Perception Modes:**
@@ -300,7 +300,7 @@ uv run ./scripts/run_simulation.py \
 | **Multi-agent colors** | 8-color palette (cream, blue, green, red, orange, purple, cyan, yellow) | Visual differentiation for 2+ agents |
 | **Dead agent** | Gray overlay with red X marker | Agent terminated (starved, killed, frozen) |
 | **Food** | Green clustered dots | *E. coli* / OP50 bacterial lawns |
-| **Random predator** | Purple branching tendrils | Nematode-trapping fungi (*Arthrobotrys oligospora*) |
+| **Random predator** *(legacy sprite — no matching `PredatorType`; kept as the renderer's fallback)* | Purple branching tendrils | Nematode-trapping fungi (*Arthrobotrys oligospora*) |
 | **Stationary predator** | Purple ring/net structure with toxic zone | Constricting ring traps (*Drechslerella*) |
 | **Pursuit predator** | Orange-red mite with a scuttling-leg gait that turns to face its heading and lunges on a strike (continuous-2D) | Predatory mites |
 
@@ -385,12 +385,12 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 
-- **NEAT Topology Search** (Phase 6b, in progress): Evolving network topologies to rank the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion (gated on GPU + environment vectorisation)
+- **NEAT Topology Search** (Phase 6b, not started — scaffold only): Evolving network topologies to rank the wild-type connectome against evolved alternatives on klinotaxis, thermotaxis, and predator evasion (gated on GPU + environment vectorisation)
 - **Plasticity & Cross-Species Transfer** (Phase 7): Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome, and *P. pacificus* transfer using Cook et al. 2025 connectome data
 - **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
 - **Real-World Validation**: WormBot deployment, C. elegans lab collaborations, cross-organism transfer (Drosophila, zebrafish)
 
-### Research Applications
+### Research Directions
 
 This platform enables research in:
 
