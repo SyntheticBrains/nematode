@@ -28,10 +28,6 @@ FOOD_COLOR = (120, 180, 80)
 FOOD_HIGHLIGHT = (160, 210, 120)
 FOOD_DARK = (80, 140, 50)
 
-# Random predator -- nematode-trapping fungal hyphae (Arthrobotrys oligospora)
-PREDATOR_RANDOM_COLOR = (160, 120, 180)
-PREDATOR_RANDOM_HIGHLIGHT = (190, 160, 210)
-
 # Stationary predator -- fungal constricting ring trap (Drechslerella)
 PREDATOR_STATIONARY_COLOR = (130, 80, 150)
 PREDATOR_STATIONARY_RING = (160, 100, 180)
@@ -128,7 +124,6 @@ def create_sprites(pg: Any) -> dict[str, Any]:  # noqa: ANN401
 
     sprites["empty"] = _make_soil(pg)
     sprites["food"] = _make_food(pg)
-    sprites["predator_random"] = _make_predator_random(pg)
     sprites["predator_stationary"] = _make_predator_stationary(pg)
     # Pursuit-predator animation: a gait cycle + a strike pose, all facing +x so the
     # continuous renderer can orient them by the predator's heading. The static
@@ -293,27 +288,6 @@ def draw_body_segment(  # noqa: PLR0913
         pg.draw.circle(surface, oc, (cx, cy), _BODY_RADIUS, 1)
         # Highlight
         pg.draw.circle(surface, hc, (cx - 2, cy - 2), 3)
-
-
-def _make_predator_random(pg: Any) -> Any:  # noqa: ANN401
-    """Nematode-trapping fungal hyphae -- branching purple tendrils."""
-    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
-    c = CELL_SIZE // 2
-    pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c + 10), (c, c - 10), 2)
-    pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c - 4), (c + 8, c - 10), 2)
-    pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c - 4), (c - 8, c - 10), 2)
-    pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c + 4), (c + 7, c + 10), 2)
-    pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c + 4), (c - 7, c + 10), 2)
-    knob_positions = [
-        (c, c - 10),
-        (c + 8, c - 10),
-        (c - 8, c - 10),
-        (c + 7, c + 10),
-        (c - 7, c + 10),
-    ]
-    for pos in knob_positions:
-        pg.draw.circle(surf, PREDATOR_RANDOM_HIGHLIGHT, pos, 3)
-    return surf
 
 
 def _make_predator_stationary(pg: Any) -> Any:  # noqa: ANN401

@@ -300,7 +300,6 @@ uv run ./scripts/run_simulation.py \
 | **Multi-agent colors** | 8-color palette (cream, blue, green, red, orange, purple, cyan, yellow) | Visual differentiation for 2+ agents |
 | **Dead agent** | Gray overlay with red X marker | Agent terminated (starved, killed, frozen) |
 | **Food** | Green clustered dots | *E. coli* / OP50 bacterial lawns |
-| **Random predator** *(legacy sprite — no matching `PredatorType`; kept as the renderer's fallback)* | Purple branching tendrils | Nematode-trapping fungi (*Arthrobotrys oligospora*) |
 | **Stationary predator** | Purple ring/net structure with toxic zone | Constricting ring traps (*Drechslerella*) |
 | **Pursuit predator** | Orange-red mite with a scuttling-leg gait that turns to face its heading and lunges on a strike (continuous-2D) | Predatory mites |
 
