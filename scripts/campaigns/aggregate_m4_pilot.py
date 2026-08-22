@@ -114,13 +114,19 @@ def _gen_first_reaches_target(
 ) -> int | None:
     """Return the 1-indexed generation at which best_fitness first reaches ``target``.
 
-    Returns ``None`` if the threshold is never crossed.  History rows
-    are 0-indexed in the CSV; the returned generation is 1-indexed for
-    human readability.
+    Returns ``None`` if the threshold is never crossed.
+
+    ``history.csv`` is written **1-indexed** — its first data row is
+    ``generation,1`` — so the column is returned unmodified. A ``+ 1`` was
+    applied here until 2026-08-22 on the belief that the CSV was 0-indexed,
+    which inflated every reported gen-to-target by one (see #277). The
+    convergence plot's x-axis is ``np.arange(1, N + 1)`` over history
+    *positions*, so it already agrees with the raw column; the ``+ 1`` made
+    the scalar disagree with the plot rather than match it.
     """
     for row in history:
         if row["best_fitness"] >= target:
-            return int(row["generation"]) + 1
+            return int(row["generation"])
     return None
 
 

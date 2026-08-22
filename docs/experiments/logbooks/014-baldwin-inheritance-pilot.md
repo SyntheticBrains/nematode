@@ -2,6 +2,21 @@
 
 **Status**: `complete (framework shipped) — INCONCLUSIVE ⚠️ on the science`. The framework changes (kind() Protocol method, BaldwinInheritance strategy, two-guard loop split, weight_init_scale brain field, --early-stop-on-saturation flag) are validated and shipped. The 3-arm pilot ran cleanly and Lamarckian rerun reproduces M3 exactly. **However, a post-pilot audit found three design flaws that prevent the data from definitively answering "does Baldwin work on this codebase + arm?".** The literal aggregator verdict is STOP (Speed gate FAIL margin +0.00, Genetic-assimilation gate FAIL margin -0.17, Comparative gate PASS), but the gates were calibrated against confounded comparisons. See § Audit and § Decision below. M4.5 (the proper Baldwin re-evaluation) is recorded as the follow-up.
 
+> **Correction (2026-08-22, [#277](https://github.com/SyntheticBrains/nematode/issues/277)).**
+> Every *gen-to-0.92* figure in this logbook is **one generation too high**.
+> `aggregate_m4_pilot.py` added 1 to the `generation` column on the belief that
+> `history.csv` was 0-indexed; it is written 1-indexed (its first data row is
+> `generation,1`). The code is fixed; the figures below are left as published with
+> the corrected values alongside, so the record stays consistent with the artefacts
+> under `artifacts/logbooks/014/`.
+>
+> Corrected per-seed gen-to-0.92 — baldwin `[—, 7, 6, 2]`, lamarckian `[2, 3, 3, 6]`,
+> control `[—, 4, 4, 7]`; lamarckian mean **3.50** (published 4.50).
+>
+> **No conclusion changes.** The reproduction claim in particular still holds: M3
+> and M4 used the same aggregator convention, so "identical to M3's published
+> numbers" is true both before and after the correction — both shift by one.
+
 **Branch**: `feat/m4-baldwin-evolution` (PR pending)
 
 **Date Started**: 2026-05-03
@@ -98,10 +113,10 @@ The M2.11 + M2.12 hand-tuned baseline reuses M2.11's published artefacts unchang
 
 | Seed | Baldwin gen-to-0.92 | Lamarckian gen-to-0.92 | Control gen-to-0.92 | F1 innate-only |
 |---|---|---|---|---|
-| 42 | — (saturated at 0.88, gen 7) | 3 | — (saturated at 0.84, gen 6) | 0.000 |
-| 43 | 8 | 4 | 5 | 0.000 |
-| 44 | 7 | 4 | 5 | 0.000 |
-| 45 | 3 | 7 | 8 | 0.000 |
+| 42 | — (saturated at 0.88, gen 7) | 3 *(corrected: 2)* | — (saturated at 0.84, gen 6) | 0.000 |
+| 43 | 8 *(corrected: 7)* | 4 *(corrected: 3)* | 5 *(corrected: 4)* | 0.000 |
+| 44 | 7 *(corrected: 6)* | 4 *(corrected: 3)* | 5 *(corrected: 4)* | 0.000 |
+| 45 | 3 *(corrected: 2)* | 7 *(corrected: 6)* | 8 *(corrected: 7)* | 0.000 |
 | **mean** | **8.50** (with seed 42 → 16 fallback) | **4.50** | **8.50** (with seed 42 → 16 fallback) | **0.000** |
 
 Excluding seed 42's never-reached fallback: Baldwin = [8, 7, 3] mean 6.0 vs Control = [5, 5, 8] mean 6.0. Same mean. Even on the 3 seeds where both reached 0.92, Baldwin and control are statistically indistinguishable; the per-seed variance dominates any directional signal.
@@ -116,7 +131,7 @@ Excluding seed 42's never-reached fallback: Baldwin = [8, 7, 3] mean 6.0 vs Cont
 | 45 | 0.92 (gen 7) | 1.00 (gen 11) | 0.96 (gen 12) |
 | **mean** | **0.920** | **1.000** | **0.930** |
 
-Lamarckian rerun reproduces M3's published numbers exactly: all 4 seeds reach 1.0; mean gen-to-0.92 of 4.5. Confirms the M4 code revision is byte-equivalent for the M3 lamarckian path (the kind() Protocol method is pure-additive; the early-stop monitor is opt-in; the weight_init_scale brain field defaults to 1.0).
+Lamarckian rerun reproduces M3's published numbers exactly: all 4 seeds reach 1.0; mean gen-to-0.92 of 4.5 *(corrected: 3.5 — M3 and M4 share the same aggregator convention, so the reproduction claim holds either way)*. Confirms the M4 code revision is byte-equivalent for the M3 lamarckian path (the kind() Protocol method is pure-additive; the early-stop monitor is opt-in; the weight_init_scale brain field defaults to 1.0).
 
 ### Wall-time
 
@@ -151,7 +166,7 @@ TPE explored the schema range for both fields. `weight_init_scale` evolved value
 
 ### Lamarckian rerun reproduces M3 exactly
 
-M3 published: lamarckian gen-to-0.92 per seed = [3, 4, 4, 7], mean 4.50, all 4 seeds reach 1.00 final. M4 lamarckian rerun (same config, same seeds, M4 code revision): **identical** numbers. This confirms the M4 framework changes (kind() Protocol method, two-guard loop split, early-stop monitor, weight_init_scale brain field default 1.0) are byte-equivalent for the M3 lamarckian path — no regression. The framework work is solid.
+M3 published: lamarckian gen-to-0.92 per seed = [3, 4, 4, 7], mean 4.50 *(corrected: [2, 3, 3, 6], mean 3.50)*, all 4 seeds reach 1.00 final. M4 lamarckian rerun (same config, same seeds, M4 code revision): **identical** numbers. This confirms the M4 framework changes (kind() Protocol method, two-guard loop split, early-stop monitor, weight_init_scale brain field default 1.0) are byte-equivalent for the M3 lamarckian path — no regression. The framework work is solid.
 
 ### What the literal aggregator said vs what the data actually proves
 
