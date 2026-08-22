@@ -1,11 +1,11 @@
 ## RENAMED Requirements
 
-- FROM: `### Requirement: Brain Type Validation Against the Registry`
+- FROM: `### Requirement: Brain Type Enumeration Extension`
 - TO: `### Requirement: Brain Type Validation Against the Registry`
 
 ## MODIFIED Requirements
 
-### Requirement: Brain Type Enumeration Extension
+### Requirement: Brain Type Validation Against the Registry
 
 The brain type validation SHALL accept exactly the brain types registered in the
 brain plugin registry, and SHALL reject any other value with an error rather than
