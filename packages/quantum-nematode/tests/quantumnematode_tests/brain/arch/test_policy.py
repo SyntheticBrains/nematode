@@ -7,6 +7,8 @@ Gaussian) helpers are tested when added by the continuous-action-heads work.
 
 from __future__ import annotations
 
+import math
+
 import torch
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
@@ -279,3 +281,67 @@ class TestReinforcePolicyLoss:
 
         assert log_probs.grad is not None
         assert torch.isfinite(log_probs.grad).all()
+
+
+class TestCategoricalInternalClamp:
+    """``Categorical`` has its own floor — larger than the one the migration removed.
+
+    Found in review of this migration. The scorers' docstrings originally claimed
+    "no epsilon floor is applied", which is wrong: ``Categorical`` runs
+    ``clamp_probs`` internally, pinning probabilities to
+    ``[finfo(dtype).eps, 1 - finfo(dtype).eps]`` — ``1.19e-7`` in float32, versus
+    the ``1e-8`` additive floor the per-brain code used. These tests pin the real
+    behaviour so it is known rather than rediscovered.
+    """
+
+    def test_clamp_threshold_is_float32_eps(self) -> None:
+        from torch.distributions.utils import clamp_probs
+
+        eps = torch.finfo(torch.float32).eps
+        probs = torch.tensor([1e-9, 1e-5, 1.0 - 1e-5 - 1e-9], dtype=torch.float32)
+        assert float(clamp_probs(probs)[0]) == eps
+        assert eps > 1e-8, "the internal clamp is LARGER than the removed 1e-8 floor"
+
+    def test_log_prob_saturates_below_the_clamp(self) -> None:
+        """Below the clamp the log-prob stops tracking ``p`` at all."""
+        saturated = math.log(torch.finfo(torch.float32).eps)
+        for p in (1e-8, 1e-9, 1e-12):
+            probs = torch.tensor([p, 1.0 - p], dtype=torch.float32)
+            log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(probs, 0)
+            assert abs(float(log_prob) - saturated) < 1e-3
+
+    def test_gradient_is_zeroed_below_the_clamp(self) -> None:
+        """The behavioural change that matters: a clamped entry gets no gradient.
+
+        ``clamp`` has zero gradient outside its range, so a timestep whose action
+        has fallen below ``1.19e-7`` under the updated policy contributes nothing
+        to the policy gradient — where ``log(p + 1e-8)`` contributed an enormous
+        one. Better-conditioned (it removes a variance spike), but a change.
+        """
+        below = torch.tensor([1e-9, 1.0 - 1e-9], dtype=torch.float32, requires_grad=True)
+        categorical_logprob_entropy_from_probs(below, 0)[0].backward()
+        assert below.grad is not None
+        assert float(below.grad[0]) == 0.0
+
+        above = torch.tensor([1e-4, 1.0 - 1e-4], dtype=torch.float32, requires_grad=True)
+        categorical_logprob_entropy_from_probs(above, 0)[0].backward()
+        assert above.grad is not None
+        assert float(above.grad[0]) > 0.0
+
+    def test_the_clamp_is_unreachable_for_the_epsilon_mixture_brains(self) -> None:
+        """Family C floors ``p`` at ``eps/n_actions``, far above the clamp.
+
+        ``exploration_schedule`` decays ε to 30% of its initial value, never to
+        zero, so at the configured ``exploration_epsilon: 0.1`` with 4 actions the
+        mixture guarantees ``p >= 0.0075`` — ~63,000x the clamp threshold.
+        """
+        clamp = torch.finfo(torch.float32).eps
+        epsilon_final, n_actions = 0.1 * (1.0 - 0.7), 4
+        floor = epsilon_final / n_actions
+
+        saturating = torch.tensor([40.0, 0.0, -40.0, -80.0])
+        softmax_probs = torch.softmax(saturating, dim=-1)
+        mixture = (1 - epsilon_final) * softmax_probs + epsilon_final / n_actions
+
+        assert float(mixture.min()) >= floor * 0.999
+        assert float(mixture.min()) > clamp * 1000

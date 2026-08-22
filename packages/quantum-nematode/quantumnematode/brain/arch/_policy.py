@@ -28,8 +28,11 @@ D            ``softmax(logits)``             either; REINFORCE loss, not a clipp
   is byte-identical; only log-probability, entropy, and the surrogate move here, via
   ``categorical_logprob_entropy_torch`` (per given action) and
   ``categorical_evaluate_torch`` (batched update). This replaces their manual
-  ``log(softmax)`` / ``-sum(p*log p)`` with torch's numerically-stabler equivalents;
-  measured deviation on the taken action is ~1e-7 (float32 round-off).
+  ``log(softmax)`` / ``-sum(p*log p)`` with torch's equivalents. The deviation on
+  the taken action is the ``1e-8`` floor's bias being removed — ``-log1p(1e-8/p)``,
+  so ~1e-7 only for ``p >= 0.1`` — NOT a flat constant. Below ``p ~ 1.19e-7``
+  ``Categorical``'s own clamp takes over; see
+  ``categorical_logprob_entropy_from_probs`` for what changes there.
 - **Family C** — the distribution is an explicit ε-greedy mixture
   ``(1 - ε) * softmax(logits / T) + ε * uniform``, which is not the softmax of any
   logits the brain holds. These call ``categorical_logprob_entropy_from_probs``
@@ -193,14 +196,31 @@ def categorical_logprob_entropy_from_probs(
     Constructing the distribution (temperature, exploration schedule, mixing
     weight) stays the brain's concern; this function only scores it.
 
-    Two numerical notes, both deliberate:
+    Three numerical notes, all deliberate:
 
-    - **No epsilon floor.** The per-brain code this replaces wrote
-      ``log(probs[a] + 1e-8)`` (and ``-sum(p * log(p + 1e-10))`` for entropy).
-      ``Categorical`` works in log-space internally and is stable at small
-      probabilities without a floor, so the floors are dropped. They biased
-      low-probability actions upward by exactly the epsilon they added; removing
-      them moves the value by ~1e-7 (float32) and is a stability improvement.
+    - **The manual epsilon floors are replaced, not removed.** The per-brain code
+      this supersedes wrote ``log(probs[a] + 1e-8)`` (and
+      ``-sum(p * log(p + 1e-10))`` for entropy). Those additive floors are gone,
+      but ``Categorical`` applies its own *clamp* internally
+      (``torch.distributions.utils.clamp_probs``): probabilities are clamped to
+      ``[finfo(dtype).eps, 1 - finfo(dtype).eps]``, i.e. ``[1.19e-7, 1-1.19e-7]``
+      in float32 — a **larger** floor than the ``1e-8`` it replaces. For any
+      ``p`` above that clamp the change is the ~``-log1p(1e-8/p)`` bias removal
+      described in the module docstring, and is a genuine improvement.
+    - **Below the clamp the behaviour differs in kind, not just degree.**
+      ``log_prob`` saturates at ``log(1.19e-7) ≈ -15.94`` however small ``p``
+      gets, and — because ``clamp`` has zero gradient outside its range — the
+      gradient with respect to that entry is **zero**, where the old
+      ``log(p + 1e-8)`` produced a large one. In an update that re-scores a
+      stored action under a policy that has since moved to near-zero probability
+      on it, that timestep contributes nothing to the policy gradient instead of
+      contributing an enormous one. This is arguably the better-conditioned
+      behaviour (it removes a variance spike), but it IS a behavioural change and
+      is recorded here rather than discovered later. It is far outside the range
+      real policies reach — measured minimum ``p`` over 859k scoring calls in a
+      converged training session was 1.2e-4, and the ε-mixture brains floor ``p``
+      at ``ε/n_actions`` by construction — and PPO's clip damps the regime
+      further. ``test_policy.py`` pins both the saturation and the zero gradient.
     - **``Categorical`` normalises.** ``probs`` is divided by its own sum, so a
       vector that has drifted off 1.0 is silently renormalised rather than
       rejected. Callers that need the un-normalised vector should keep their own

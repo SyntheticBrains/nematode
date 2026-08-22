@@ -801,12 +801,21 @@ class HybridClassicalBrain(ClassicalBrain):
         if self.training_stage in (STAGE_REFLEX_ONLY, STAGE_JOINT):
             self.episode_features.append(reflex_features)
             # Scored through the same shared helper the reflex update uses, so
-            # both halves of the ratio share one formula (D4). ``as_tensor`` with an
-            # explicit float32 keeps the rollout in the update's precision rather
-            # than pushing a float64 tensor through a float32 pipeline. It does
-            # NOT measurably tighten the ratio: the residual is dominated by the
-            # numpy-vs-torch softmax backends, which differ by ~4e-7 before any
-            # scoring happens (D2, amended).
+            # both halves apply the same *scoring formula* (D4).
+            #
+            # NOTE — the scorer is unified, the DISTRIBUTION is not, and only in
+            # the reflex-only stage do the two coincide. In the joint stage
+            # ``action_probs`` here is the FUSED distribution while the reflex
+            # update re-scores the reflex-only epsilon-mixture, so the ratio is
+            # not 1 even before a gradient step. That mismatch is pre-existing
+            # and out of scope for this migration; it is called out so the D4
+            # claim is not read more broadly than it holds.
+            #
+            # ``as_tensor`` with an explicit float32 keeps the rollout in the
+            # update's precision rather than pushing a float64 tensor through a
+            # float32 pipeline. It does NOT measurably tighten the ratio: the
+            # residual is dominated by the numpy-vs-torch softmax backends, which
+            # differ by ~4e-7 before any scoring happens (D2, amended).
             old_log_prob_t, _entropy, _probs = categorical_logprob_entropy_from_probs(
                 torch.as_tensor(action_probs, dtype=torch.float32),
                 int(action_idx),

@@ -83,3 +83,5 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
   5. **Scope realised:** 14 brains across 14 modules, not the six the issue implies. Four brains (`qqlearning`, `mlpdqn`, `qvarcircuit`, `feedforwardga`) are excluded by construction — no categorical PG term to share.
 
 - [x] 6.6 Archived as `openspec/changes/archive/2026-08-22-consolidate-ppo-policy-helpers/`.
+
+- [x] 6.7 **Post-archive branch review** (added after the fact; see D3). Two documentation defects found and fixed, no functional regression: (a) the helper docstrings claimed `Categorical` applies no epsilon floor — it clamps at `finfo(float32).eps = 1.19e-7`, *larger* than the `1e-8` removed, and zeroes the gradient below it; 4 tests added to pin the real behaviour. (b) The D4 comments in the three hybrid rollouts claimed both ratio halves share one formula — true of the scorer, false of the distribution in the joint stage, where the rollout stores the fused distribution and the update re-scores the reflex-only mixture. Both corrected. Gate re-run: **4106 passed, 1 skipped, 2 xfailed**, pyright **0 errors**, `pre-commit run -a` clean.
