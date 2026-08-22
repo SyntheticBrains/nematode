@@ -60,10 +60,18 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 6. Sweep, spec, and close-out
 
-- [ ] 6.1 Grep-audit with a **known expected answer**, not an open-ended sweep. Baseline at `0ae24375` is 10 clipped-surrogate modules and 23 manual `log(p + ε)` sites across 10 modules. After the migration: `surr1` / `surr2` / `clamp(ratio` SHALL appear only in `_policy.py` and its test, and exactly **two** manual scoring sites SHALL remain — both diagnostic-only, both pre-identified: `qrc.py:431` (f-string) and `spikingreinforce.py:490` (detached `.item()` for a log line). Any third survivor is a miss, not a judgement call.
-- [ ] 6.2 Confirm the four non-PG brains (`qqlearning`, `mlpdqn`, `feedforwardga`, `qvarcircuit`) were correctly excluded, not missed — and that `feedforward_ga`'s `no_grad()` sampling site at `:186-190` was left inline for the reason recorded in the D-risks, not overlooked.
-- [ ] 6.2b Confirm `mingruppo` / `minlstmppo` still inherit their scoring from `LSTMPPOBrain` unchanged (they are covered transitively and must need no edit). `uv run pytest -k "minimal_rnn"` passes.
+- [x] 6.1 Grep-audit with a **known expected answer**, not an open-ended sweep. Baseline at `0ae24375` is 10 clipped-surrogate modules and 23 manual `log(p + ε)` sites across 10 modules. After the migration: `surr1` / `surr2` / `clamp(ratio` SHALL appear only in `_policy.py` and its test, and exactly **two** manual scoring sites SHALL remain — both diagnostic-only, both pre-identified: `qrc.py:435` (f-string) and `spikingreinforce.py:494` (detached `.item()` for a log line). Any third survivor is a miss, not a judgement call.
+
+  **The audit did its job: it found a third.** `hybridquantumcortex.py:1950` stored `_pending_cortex_log_prob` via `np.log(action_probs[idx] + NORM_EPS)` into the rollout buffer — adjacent to a site already migrated, and spelling the same `1e-8` the other way (the exact D6 drift). Now migrated; the audit matches the declared answer exactly. Without a pre-declared expected count this would have read as an acceptable leftover.
+
+- [x] 6.2 Confirm the four non-PG brains (`qqlearning`, `mlpdqn`, `feedforwardga`, `qvarcircuit`) were correctly excluded, not missed — and that `feedforward_ga`'s `no_grad()` sampling site at `:186-190` was left inline for the reason recorded in the D-risks, not overlooked.
+
+- [x] 6.2b **Verified** via the live registry: both resolve `minimal_rnn_ppo <- lstmppo`, so they inherit the migrated scoring with no edit. `test_minimal_rnn_ppo.py` — 25 passed.
+
 - [ ] 6.3 Land the `brain-architecture` ADDED deltas; `openspec validate consolidate-ppo-policy-helpers --strict` passes.
+
 - [ ] 6.4 Full `uv run pytest -m "not nightly"` against the baseline (**4062 passed, 1 skipped, 2 xfailed**): skipped and xfailed unchanged, no previously-passing test failing, and passed up by exactly the number of tests this change adds — record that number here. `uv run pyright` — must stay **0 errors**. `uv run pre-commit run -a` clean.
+
 - [ ] 6.5 Close [#204](https://github.com/SyntheticBrains/nematode/issues/204) with the D0 corrections: seven already migrated (not six); `qef` **is** a candidate and is covered free via `ReservoirHybridBase`; `qrc` is REINFORCE, not a `ReservoirHybridBase` subclass; `env/mlpppo_predator_brain.py` added to scope.
+
 - [ ] 6.6 Archive to `openspec/changes/archive/<YYYY-MM-DD>-consolidate-ppo-policy-helpers/`.

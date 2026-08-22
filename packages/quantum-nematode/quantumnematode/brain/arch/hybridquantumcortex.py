@@ -1945,10 +1945,15 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         # Store chosen action for rollout buffer
         if self.training_stage >= STAGE_CORTEX_ONLY:
             self._pending_cortex_action = action_idx
-            # Log prob from fused distribution for REINFORCE
-            self._pending_cortex_log_prob = torch.tensor(
-                np.log(action_probs[action_idx] + NORM_EPS),
+            # Log prob from the fused distribution, for the rollout buffer.
+            # Scored through the shared helper like its sibling above; the two
+            # sat adjacent and spelled the same 1e-8 two different ways
+            # (literal vs NORM_EPS), which is the drift design D6 describes.
+            pending_log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                torch.as_tensor(action_probs, dtype=torch.float32),
+                int(action_idx),
             )
+            self._pending_cortex_log_prob = pending_log_prob
 
         self.episode_actions.append(action_idx)
         self.current_probabilities = action_probs
