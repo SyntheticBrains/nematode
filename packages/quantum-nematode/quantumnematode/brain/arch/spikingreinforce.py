@@ -599,11 +599,24 @@ class SpikingReinforceBrain(ClassicalBrain):
         """
         n_steps = self.config.update_frequency
 
-        # Get the last n_steps of data
-        recent_states = self.episode_states[-n_steps:]
-        recent_actions = self.episode_actions[-n_steps:]
-        recent_action_probs = self.episode_action_probs[-n_steps:]
-        recent_rewards = self.episode_rewards[-n_steps:]
+        # Align the buffers before slicing. ``episode_states`` is appended by
+        # ``run_brain`` and ``episode_rewards`` by ``learn``, and the episode-final
+        # ``learn(episode_done=True)`` can add a reward with no preceding step — so
+        # rewards may run one ahead. The per-step loop below already tolerates this
+        # via ``zip(strict=False)``, but the returns were computed from the reward
+        # list independently, producing a longer advantages vector. That mismatch
+        # used to be swallowed by a (T, 1) x (T,) broadcast; with the shapes correct
+        # it would raise, so the buffers are trimmed to their common length here.
+        aligned = min(
+            len(self.episode_states),
+            len(self.episode_actions),
+            len(self.episode_action_probs),
+            len(self.episode_rewards),
+        )
+        recent_states = self.episode_states[:aligned][-n_steps:]
+        recent_actions = self.episode_actions[:aligned][-n_steps:]
+        recent_action_probs = self.episode_action_probs[:aligned][-n_steps:]
+        recent_rewards = self.episode_rewards[:aligned][-n_steps:]
 
         if len(recent_states) < n_steps:
             return  # Not enough data yet
@@ -659,8 +672,16 @@ class SpikingReinforceBrain(ClassicalBrain):
             # Shared scorer over the FLOORED probability vector — the floor makes
             # this not a softmax of ``action_logits``, so the probs helper is the
             # correct entry point. Byte-exact: it is the same ``Categorical`` call.
+            # ``action_probs`` is (1, n_actions) because the policy is fed a
+            # batched state, so ``Categorical`` would have batch_shape (1,) and
+            # ``log_prob`` would come back shape (1,) rather than scalar. Stacking
+            # those gives (T, 1), which broadcasts against the (T,) advantages into
+            # a (T, T) outer product whose mean is
+            # ``mean(log_probs) * mean(advantages)`` — destroying per-action credit
+            # assignment, and zeroing the gradient entirely once advantages are
+            # mean-centred, which they always are here. See #276.
             log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
-                action_probs,
+                action_probs.squeeze(0),
                 int(action_idx),
                 device=self.device,
             )
@@ -721,10 +742,19 @@ class SpikingReinforceBrain(ClassicalBrain):
         all_action_probs: list[torch.Tensor] = []
 
         for ep_idx in range(self.batch_episode_count):
-            ep_rewards = self.batch_episodes_rewards[ep_idx]
-            ep_states = self.batch_episodes_states[ep_idx]
-            ep_actions = self.batch_episodes_actions[ep_idx]
-            ep_action_probs = self.batch_episodes_action_probs[ep_idx]
+            # Trim to the common length first — see the note in the intra-episode
+            # path: the episode-final ``learn`` can leave one more reward than
+            # there are steps, and the returns are built from the reward list.
+            ep_len = min(
+                len(self.batch_episodes_rewards[ep_idx]),
+                len(self.batch_episodes_states[ep_idx]),
+                len(self.batch_episodes_actions[ep_idx]),
+                len(self.batch_episodes_action_probs[ep_idx]),
+            )
+            ep_rewards = self.batch_episodes_rewards[ep_idx][:ep_len]
+            ep_states = self.batch_episodes_states[ep_idx][:ep_len]
+            ep_actions = self.batch_episodes_actions[ep_idx][:ep_len]
+            ep_action_probs = self.batch_episodes_action_probs[ep_idx][:ep_len]
 
             # Compute discounted returns backward through episode
             returns: list[float] = []
@@ -783,8 +813,16 @@ class SpikingReinforceBrain(ClassicalBrain):
             # Shared scorer over the FLOORED probability vector — the floor makes
             # this not a softmax of ``action_logits``, so the probs helper is the
             # correct entry point. Byte-exact: it is the same ``Categorical`` call.
+            # ``action_probs`` is (1, n_actions) because the policy is fed a
+            # batched state, so ``Categorical`` would have batch_shape (1,) and
+            # ``log_prob`` would come back shape (1,) rather than scalar. Stacking
+            # those gives (T, 1), which broadcasts against the (T,) advantages into
+            # a (T, T) outer product whose mean is
+            # ``mean(log_probs) * mean(advantages)`` — destroying per-action credit
+            # assignment, and zeroing the gradient entirely once advantages are
+            # mean-centred, which they always are here. See #276.
             log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
-                action_probs,
+                action_probs.squeeze(0),
                 int(action_idx),
                 device=self.device,
             )

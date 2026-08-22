@@ -1221,3 +1221,116 @@ class TestProbabilityFloorHelper:
 
         # Should sum to 1 after renormalization
         assert torch.allclose(floored.sum(dim=-1), torch.tensor([1.0]))
+
+
+class TestPolicyGradientShapes:
+    """Regression tests for #276 — the policy gradient was identically zero.
+
+    ``action_probs`` is ``(1, n_actions)`` because the policy is fed a batched
+    state, so each ``Categorical.log_prob`` came back shape ``(1,)`` rather than
+    scalar. Stacking those gave ``(T, 1)``, which broadcasts against the ``(T,)``
+    advantages into a ``(T, T)`` outer product whose mean is exactly
+    ``mean(log_probs) * mean(advantages)``. Both update paths mean-centre their
+    advantages, so that is zero by construction — and the policy loss is the
+    brain's only gradient path.
+
+    These assert the tensor shapes the brain *actually passes* to
+    ``reinforce_policy_loss``, captured at the real call site. Two weaker
+    formulations were tried first and both passed with the fix reverted:
+
+    - scoring through a test-local helper that applied the ``squeeze`` itself,
+      which never exercised the brain's code path at all;
+    - asserting that the policy weights move, which cannot discriminate — a
+      freshly-initialised network with a probability floor is near-uniform, so
+      every log-prob is nearly equal and the loss is ~0 either way.
+    """
+
+    @pytest.fixture
+    def brain(self) -> SpikingReinforceBrain:
+        return SpikingReinforceBrain(
+            config=SpikingReinforceBrainConfig(
+                hidden_size=8,
+                num_timesteps=5,
+                num_hidden_layers=1,
+                learning_rate=0.05,
+                update_frequency=0,
+            ),
+            input_dim=4,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+    @staticmethod
+    def _capture_loss_calls(monkeypatch) -> list[tuple]:
+        """Record the (log_probs, advantages) shapes at the real call site."""
+        import quantumnematode.brain.arch.spikingreinforce as sr_module
+        from quantumnematode.brain.arch._policy import reinforce_policy_loss
+
+        calls: list[tuple] = []
+
+        def spy(log_probs, advantages):
+            calls.append((tuple(log_probs.shape), tuple(advantages.shape)))
+            return reinforce_policy_loss(log_probs, advantages)
+
+        monkeypatch.setattr(sr_module, "reinforce_policy_loss", spy)
+        return calls
+
+    @staticmethod
+    def _run_episode(brain: SpikingReinforceBrain, steps: int = 6) -> None:
+        params = BrainParams()
+        rng = np.random.default_rng(0)
+        for i in range(steps):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=float(rng.normal()), episode_done=(i == steps - 1))
+
+    def test_log_probs_reach_the_loss_one_dimensional(self, brain, monkeypatch) -> None:
+        """``(T,)`` against ``(T,)``. A ``(T, 1)`` stack is the bug."""
+        calls = self._capture_loss_calls(monkeypatch)
+        torch.manual_seed(0)
+
+        self._run_episode(brain)
+
+        assert calls, "no policy-gradient update fired — the fixture is not exercising the path"
+        for lp_shape, adv_shape in calls:
+            assert len(lp_shape) == 1, (
+                f"log_probs reached the loss with shape {lp_shape}; a (T, 1) stack "
+                "broadcasts against the (T,) advantages into a (T, T) outer product "
+                "whose mean drops per-action credit assignment (see #276)"
+            )
+            assert lp_shape == adv_shape, (
+                f"log_probs {lp_shape} and advantages {adv_shape} disagree — the "
+                "buffers are misaligned, which the broadcast used to hide"
+            )
+
+    def test_batch_path_also_passes_one_dimensional_log_probs(self, brain, monkeypatch) -> None:
+        """The batch update has its own scoring site and its own alignment."""
+        calls = self._capture_loss_calls(monkeypatch)
+        torch.manual_seed(0)
+
+        for _ in range(3):
+            self._run_episode(brain, steps=4)
+
+        assert calls, "no batch update fired"
+        assert all(len(lp) == 1 and lp == adv for lp, adv in calls), (
+            f"batch path passed mismatched or 2-D shapes: {calls}"
+        )
+
+    def test_credit_assignment_is_per_action(self) -> None:
+        """Distinguishes the fix from merely restoring a non-zero gradient.
+
+        Under the bug the loss was ``mean(log_probs) * mean(advantages)``, which is
+        invariant to which action received which advantage.
+        """
+        from quantumnematode.brain.arch._policy import reinforce_policy_loss
+
+        torch.manual_seed(0)
+        log_probs = torch.randn(6)
+        advantages = torch.tensor([2.0, -1.0, 0.5, -1.5, 1.0, -1.0])
+
+        loss = reinforce_policy_loss(log_probs, advantages)
+        permuted = reinforce_policy_loss(log_probs, advantages.flip(0))
+
+        assert not torch.isclose(loss, permuted), (
+            "loss is invariant to which action got which advantage — credit "
+            "assignment is not per-action"
+        )
