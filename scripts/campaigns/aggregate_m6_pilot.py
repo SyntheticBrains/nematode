@@ -52,6 +52,7 @@ from scripts.campaigns._common import (  # noqa: E402
     GATE_F3_RATIO,
     VERDICT_GO_MIN_SEEDS,
     VERDICT_PIVOT_MIN_SEEDS,
+    aggregate_per_arm_verdict,
     build_survival_table,
     evaluate_decision_gate_one_seed,
     load_f0_training_fitness_per_seed,
@@ -72,21 +73,6 @@ def build_retention_table(rows: list[dict]) -> dict[tuple[str, int, int], float]
         key = (str(row["arm"]), int(row["seed"]), int(row["generation"]))
         bucket[key].append(float(row["choice_index"]))
     return {k: mean(v) for k, v in bucket.items()}
-
-
-def aggregate_verdict(seed_evaluations: list[dict]) -> str:
-    """Aggregate per-seed evaluations into a cross-seed verdict.
-
-    ``GO`` iff ≥``VERDICT_GO_MIN_SEEDS`` seeds pass; ``PIVOT`` iff
-    exactly ``VERDICT_PIVOT_MIN_SEEDS`` seed passes; ``STOP`` otherwise.
-    Skipped seeds (incomplete generations) count as failures.
-    """
-    pass_count = sum(1 for s in seed_evaluations if s["overall_pass"])
-    if pass_count >= VERDICT_GO_MIN_SEEDS:
-        return "GO"
-    if pass_count >= VERDICT_PIVOT_MIN_SEEDS:
-        return "PIVOT"
-    return "STOP"
 
 
 def _write_retention_csv(
@@ -279,7 +265,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested loops are cleare
         # Verdict only meaningful for TEI-on (TEI-off arm shouldn't satisfy
         # the gates by construction). Compute for all arms for symmetry,
         # but the logbook reads the tei_on row.
-        verdict_per_arm[arm] = aggregate_verdict(per_arm)
+        verdict_per_arm[arm] = aggregate_per_arm_verdict(per_arm)
 
     # Same gate logic, applied to the survival_rate metric instead of
     # choice_index. Only emitted if the CSV actually had a
@@ -302,7 +288,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested loops are cleare
                 if (arm, seed, 0) in survival
             ]
             survival_evaluations_per_arm[arm] = per_arm_surv
-            survival_verdict_per_arm[arm] = aggregate_verdict(per_arm_surv)
+            survival_verdict_per_arm[arm] = aggregate_per_arm_verdict(per_arm_surv)
 
     _write_retention_csv(retention, args.output_dir / "retention_table.csv")
     _write_decision_gate_csv(seed_evaluations_all, args.output_dir / "decision_gate.csv")

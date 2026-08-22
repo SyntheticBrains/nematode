@@ -49,6 +49,7 @@ if str(_REPO_ROOT) not in sys.path:
 from scripts.campaigns._common import (  # noqa: E402
     baseline_success_rates,
     read_history,
+    resolve_speed,
 )
 
 # Best-fitness threshold for the Speed metric.  0.92 is calibrated to
@@ -140,11 +141,8 @@ def _format_summary(  # noqa: PLR0913
     max_gens = max(len(h) for h in (*lam_history.values(), *ctrl_history.values()))
     fallback_gen = max_gens + 1
 
-    def _resolve(g: int | None) -> float:
-        return float(g) if g is not None else float(fallback_gen)
-
-    speed_lam_vals = [_resolve(speed_lam[s]) for s in seeds]
-    speed_ctrl_vals = [_resolve(speed_ctrl[s]) for s in seeds]
+    speed_lam_vals = [resolve_speed(speed_lam[s], fallback_gen) for s in seeds]
+    speed_ctrl_vals = [resolve_speed(speed_ctrl[s], fallback_gen) for s in seeds]
     speed_mean_lam = float(np.mean(speed_lam_vals))
     speed_mean_ctrl = float(np.mean(speed_ctrl_vals))
 

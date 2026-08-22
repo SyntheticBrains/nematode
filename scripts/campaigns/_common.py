@@ -71,6 +71,21 @@ __all__ = [
 
 # Extracted from 3 identical copies: m6, m613, m69
 def mean(values: Sequence[float]) -> float:
+    """Arithmetic mean, with an empty sequence treated as zero.
+
+    Parameters
+    ----------
+    values : Sequence[float]
+        Values to average. May be empty.
+
+    Returns
+    -------
+    float
+        The mean, or ``0.0`` when ``values`` is empty. The zero default is
+        deliberate: callers aggregate over seed sets that can legitimately be
+        empty after filtering, and a raised exception there would abort the whole
+        run rather than reporting an empty cell.
+    """
     return sum(values) / len(values) if values else 0.0
 
 
@@ -353,6 +368,13 @@ def compute_cross_arm_delta_stats(
     Returns a dict with ``mean_delta``, ``wilcoxon_p``,
     ``bootstrap_ci_lo``, ``bootstrap_ci_hi``, plus the raw
     ``per_seed_deltas`` list for downstream diagnostics.
+
+    ``f0_baseline_override`` does NOT affect any computed statistic and is not
+    meant to: the deltas average F1/F2/F3 only — the post-F0 retention window —
+    so an F0 override has nothing to act on here. It is carried solely to stamp
+    ``_override_used`` on the result, recording whether the surrounding run was
+    using overridden F0 baselines. (It *does* change the outcome in
+    ``evaluate_decision_gate_one_seed``, which gates on ratios of F0.)
     """
 
     def _f1plus_mean(arm: str, seed: int) -> float | None:
