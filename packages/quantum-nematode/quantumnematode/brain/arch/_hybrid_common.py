@@ -27,6 +27,10 @@ import numpy as np
 import torch
 from torch import nn
 
+from quantumnematode.brain.arch._policy import (
+    categorical_evaluate_torch,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._ppo_buffer import (
     RolloutBuffer as _CortexRolloutBuffer,  # noqa: TC001
 )
@@ -442,31 +446,26 @@ def perform_ppo_update(  # noqa: PLR0913
             # Cortex actor forward pass
             cortex_out = cortex_actor(batch["states"])
             logits = cortex_out[:, :num_motor]
-            probs = torch.softmax(logits, dim=-1)
-            dist = torch.distributions.Categorical(probs)
-
-            new_log_probs = dist.log_prob(batch["actions"])
-            entropy = dist.entropy().mean()
+            # Re-score the taken actions via the shared torch helper
+            # (byte-identical to the prior inline softmax/Categorical path).
+            new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
 
             # Values
             values = cortex_critic(batch["states"]).squeeze(-1)
 
-            # PPO clipped surrogate
+            # PPO clipped surrogate via the shared term. ``log_ratio``/``ratio``
+            # are kept for the approximate-KL diagnostic below.
             log_ratio = new_log_probs - batch["old_log_probs"]
             ratio = torch.exp(log_ratio)
             with torch.no_grad():
                 approx_kl_batch = ((ratio - 1) - log_ratio).mean().item()
             total_approx_kl += approx_kl_batch
-            surr1 = ratio * batch["advantages"]
-            surr2 = (
-                torch.clamp(
-                    ratio,
-                    1 - ppo_clip_epsilon,
-                    1 + ppo_clip_epsilon,
-                )
-                * batch["advantages"]
+            policy_loss = ppo_clip_policy_loss(
+                new_log_probs,
+                batch["old_log_probs"],
+                batch["advantages"],
+                ppo_clip_epsilon,
             )
-            policy_loss = -torch.min(surr1, surr2).mean()
 
             # Value loss (Huber for robustness)
             value_loss = nn.functional.smooth_l1_loss(values, batch["returns"])

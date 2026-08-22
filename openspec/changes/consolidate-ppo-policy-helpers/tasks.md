@@ -25,15 +25,15 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 3. Hybrid family — `_hybrid_common` + the three brains (D4: one commit)
 
-- [ ] 3.1 `_hybrid_common.py` `perform_ppo_update` (`:445-469`): → `categorical_evaluate_torch` + `ppo_clip_policy_loss`, keeping `log_ratio`/`ratio` for the `approx_kl` term at `:455-458`. Byte-exact in isolation.
-- [ ] 3.2 `hybridquantum.py` cortex **rollout** (`:1072-1073`): `torch.log(cortex_probs + 1e-8)` → the shared scorer, so both halves of the cortex ratio use one formula (D4). Leave the `np.clip`/renormalise at `:1081-1082` and `rng.choice` at `:1083` **verbatim**.
-- [ ] 3.3 Same for `hybridclassical.py` (`:777-778`, sampler at `:794` region) and `hybridquantumcortex.py` (`:1926`, `:1934` — note these two adjacent branches spell the same `1e-8` as a literal and as `NORM_EPS`; both go).
-- [ ] 3.3b Where a Family-C rollout hands its **numpy** mixture to the shared scorer, convert with `torch.as_tensor(action_probs, dtype=torch.float32)` so the rollout matches the update's dtype (D2). Do **not** use `torch.from_numpy`, which carries float64 through and would leave a dtype-induced offset in the ratio after the formula was shared.
-- [ ] 3.4 `hybridquantum.py` reflex **update** (`:1339-1360`): ε-mixed `action_probs` → `categorical_logprob_entropy_from_probs`; surrogate → `ppo_clip_policy_loss`, keeping `- effective_entropy_coef * mean_entropy` as a separate term. Leave `_exploration_schedule()` and the mixture construction untouched (D2).
-- [ ] 3.5 Same for `hybridclassical.py` (`:1020-1042`) and `hybridquantumcortex.py` (`:2222-2244`).
-- [ ] 3.6 Measure the pre/post ratio deviation at `ratio == 1` for the **cortex** and **reflex** paths **separately** (D4) and record both here. Expected: cortex reaches **exactly 1** (same-dtype torch on both sides — the formula mismatch is the whole defect); reflex lands at **~1e-7** (the numpy-float64 / torch-float32 boundary is pre-existing and survives). A single averaged figure would hide a half-done fix, so do not report one.
-- [ ] 3.7 Family C migration test per D7 — reference expression must be the **ε-mixture**, not a plain softmax, so a helper that re-softmaxed would fail.
-- [ ] 3.8 `test_hybridquantum.py`, `test_hybridclassical.py`, `test_hybridquantumcortex.py` pass unchanged. Commit.
+- [x] 3.1 `_hybrid_common.py` `perform_ppo_update` (`:445-469`): → `categorical_evaluate_torch` + `ppo_clip_policy_loss`, keeping `log_ratio`/`ratio` for the `approx_kl` term at `:455-458`. Byte-exact in isolation.
+- [x] 3.2 `hybridquantum.py` cortex **rollout** (`:1072-1073`): `torch.log(cortex_probs + 1e-8)` → the shared scorer, so both halves of the cortex ratio use one formula (D4). Leave the `np.clip`/renormalise at `:1081-1082` and `rng.choice` at `:1083` **verbatim**.
+- [x] 3.3 Same for `hybridclassical.py` (`:777-778`, sampler at `:794` region) and `hybridquantumcortex.py` (`:1926`, `:1934` — note these two adjacent branches spell the same `1e-8` as a literal and as `NORM_EPS`; both go).
+- [x] 3.3b Where a Family-C rollout hands its **numpy** mixture to the shared scorer, convert with `torch.as_tensor(action_probs, dtype=torch.float32)` so the rollout matches the update's dtype (D2). Do **not** use `torch.from_numpy`, which carries float64 through and would leave a dtype-induced offset in the ratio after the formula was shared.
+- [x] 3.4 `hybridquantum.py` reflex **update** (`:1339-1360`): ε-mixed `action_probs` → `categorical_logprob_entropy_from_probs`; surrogate → `ppo_clip_policy_loss`, keeping `- effective_entropy_coef * mean_entropy` as a separate term. Leave `_exploration_schedule()` and the mixture construction untouched (D2).
+- [x] 3.5 Same for `hybridclassical.py` (`:1020-1042`) and `hybridquantumcortex.py` (`:2222-2244`).
+- [x] 3.6 **Measured**, 50k samples, action sampled from the policy (as the real code does), `clip_epsilon = 0.2` for scale. **Cortex:** `|ratio-1|` before mean 5.7e-8 / max 8.3e-5 → after **exactly 0 in 100% of samples**. **Reflex:** before mean 5.5e-8 / max 4.3e-7 → after mean 4.1e-8 / max 4.8e-7, exactly 0 in 61%. Both D4 predictions hold; the reflex residual is the float64/float32 boundary and is explicitly *not* claimed exact. **Correction:** only `hybridquantum` and `hybridclassical` call `perform_ppo_update` — `hybridquantumcortex`'s cortex path is a REINFORCE loop with no ratio, so D4 covers two brains on the cortex path, not three (design D4 amended).
+- [x] 3.7 Family C migration test per D7 — reference expression must be the **ε-mixture**, not a plain softmax, so a helper that re-softmaxed would fail.
+- [x] 3.8 `test_hybridquantum.py`, `test_hybridclassical.py`, `test_hybridquantumcortex.py` — **157 passed, unchanged**. Full suite **4086 passed, 1 skipped, 2 xfailed** (4078 + the 8 added here). pyright **0 errors**. ruff clean. Commit.
 
 ## 4. Remaining direct copies
 

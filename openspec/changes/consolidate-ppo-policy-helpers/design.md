@@ -148,11 +148,22 @@ PPO's importance ratio is `exp(new_log_prob − old_log_prob)`, where `old` is s
 
 Two distinct pairs violate this today, and they are **not** fixed to the same degree. The distinction matters because it determines what the implementation may claim:
 
-**Cortex path — a pure formula mismatch, fully corrected.** The rollout stores `log(softmax(logits) + 1e-8)` ([`hybridquantum.py:1073`](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridquantum.py), [`hybridclassical.py:778`](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py)) while `_hybrid_common.perform_ppo_update` re-scores with `Categorical.log_prob` ([`_hybrid_common.py:448`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_hybrid_common.py)). Both sides are torch on the same dtype, so the `+1e-8` floor is the *only* difference: `ratio ≈ 1 ± 1e-7` systematically rather than exactly 1. Routing both through the same scorer removes it entirely. This is the real defect, and it is the reason `_hybrid_common` cannot be migrated in isolation despite being a shared module.
+**Cortex path — a pure formula mismatch, fully corrected. Affects TWO brains, not three.** The rollout stores `log(softmax(logits) + 1e-8)` ([`hybridquantum.py:1073`](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridquantum.py), [`hybridclassical.py:778`](../../../packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py)) while `_hybrid_common.perform_ppo_update` re-scores with `Categorical.log_prob` ([`_hybrid_common.py:448`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_hybrid_common.py)). Both sides are torch on the same dtype, so the `+1e-8` floor is the *only* difference: the ratio is systematically off 1 rather than exactly 1. Routing both through the same scorer removes it entirely. This is the real defect, and it is the reason `_hybrid_common` cannot be migrated in isolation despite being a shared module.
+
+**Correction found during Task 3:** only `hybridquantum` and `hybridclassical` import and call `perform_ppo_update`. `hybridquantumcortex` does **not** — its cortex path is a REINFORCE loop of its own (`hybridquantumcortex.py:2340-2395`, `-(log_probs * advantages).mean()`) with no importance ratio, and its stored rollout log-prob comes from the *fused* distribution rather than the cortex one. D4's ratio-symmetry requirement therefore does not apply to its cortex path at all; that path is Family D (Task 5.2). All three brains do share the ε-mixed **reflex** path below.
 
 **Reflex path — formula *and* dtype, only the formula is closed.** Here the rollout is numpy float64 (`hybridquantum.py:1089`) and the update is torch float32 (`:1344`). The migration makes both use `Categorical`, which removes the formula half; the float64/float32 gap is pre-existing, is not what this change is about, and survives (mitigated by the D2 cast, which at least stops the *new* code from widening it). So the reflex ratio improves but does not become exact.
 
-**Decision:** each brain's rollout and update scoring move in the **same commit**, and `_hybrid_common`'s migration is paired with the corresponding rollout migration in the three hybrids. Task 3.6 measures the two paths **separately** — the cortex pair is expected to reach exactly 1, the reflex pair to land at ~1e-7 — so a single averaged number cannot hide a half-done fix.
+**Decision:** each brain's rollout and update scoring move in the **same commit**, and `_hybrid_common`'s migration is paired with the corresponding rollout migration in the two brains that call it. Task 3.6 measures the two paths **separately** so a single averaged number cannot hide a half-done fix.
+
+**Measured (Task 3.6, 50k samples, action sampled from the policy as the real code does, `clip_epsilon = 0.2` for scale):**
+
+| Path | `|ratio - 1|` before | after |
+|---|---|---|
+| Cortex (2 brains) | mean 5.7e-8, max 8.3e-5 | **exactly 0 in 100% of samples** |
+| Reflex (3 brains) | mean 5.5e-8, max 4.3e-7 | mean 4.1e-8, max 4.8e-7; exactly 0 in 61% |
+
+Both predictions hold: the cortex ratio is now exactly 1 for an unmoved policy, and the reflex ratio keeps a ~1e-7 residual from the float64/float32 boundary — improved slightly but explicitly **not** claimed exact.
 
 **This is a deliberate, declared deviation from "no behavioural change."** The bias removed is ~1e-7 on the ratio, far below the `clip_epsilon = 0.2` clip band and well inside the D3 tolerance, so no training outcome can turn on it. It is recorded here rather than fixed silently.
 

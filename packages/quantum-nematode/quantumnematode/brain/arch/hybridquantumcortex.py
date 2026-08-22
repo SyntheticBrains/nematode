@@ -75,6 +75,10 @@ from quantumnematode.brain.arch._hybrid_common import (
     normalize_reward,
     update_cortex_learning_rates,
 )
+from quantumnematode.brain.arch._policy import (
+    categorical_logprob_entropy_from_probs,
+    ppo_clip_policy_loss,
+)
 from quantumnematode.brain.arch._qlif_layers import (
     LOGIT_SCALE,
     WEIGHT_INIT_SCALE,
@@ -1923,8 +1927,16 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         # Store REINFORCE data (stage 1, 3, 4)
         if self.training_stage != STAGE_CORTEX_ONLY:
             self.episode_features.append(reflex_features)
-            old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
-            self.episode_old_log_probs.append(old_log_prob)
+            # Scored through the same shared helper the reflex update uses, so
+            # both halves of the ratio share one formula (D4). ``as_tensor`` with
+            # an explicit float32 pins the rollout to the update's dtype; plain
+            # ``from_numpy`` would carry float64 through and leave a dtype-induced
+            # offset in the ratio even once the formula was shared (D2).
+            old_log_prob_t, _entropy, _probs = categorical_logprob_entropy_from_probs(
+                torch.as_tensor(action_probs, dtype=torch.float32),
+                int(action_idx),
+            )
+            self.episode_old_log_probs.append(float(old_log_prob_t))
 
         # Store chosen action for rollout buffer
         if self.training_stage >= STAGE_CORTEX_ONLY:
@@ -2225,23 +2237,32 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             uniform = torch.ones_like(softmax_probs) / self.num_actions
             action_probs = (1 - epsilon) * softmax_probs + epsilon * uniform
 
-            log_prob = torch.log(action_probs[action_idx] + 1e-8)
+            # Shared scorer for the epsilon-MIXTURE (not a softmax of any
+            # logits the brain holds), so the mixture construction above stays
+            # this brain's concern and only the scoring is shared. Drops the
+            # manual +1e-8 / +1e-10 floors — see design D2/D3.
+            log_prob, entropy, _probs = categorical_logprob_entropy_from_probs(
+                action_probs,
+                int(action_idx),
+            )
             log_probs_list.append(log_prob)
-
-            entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-10))
             entropies.append(entropy)
 
         log_probs = torch.stack(log_probs_list)
         mean_entropy = torch.stack(entropies).mean()
         effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
 
-        ratio = torch.exp(log_probs - old_log_probs_t)
-        surr1 = ratio * advantages
-        surr2 = (
-            torch.clamp(ratio, 1.0 - self.config.clip_epsilon, 1.0 + self.config.clip_epsilon)
-            * advantages
+        # Shared clipped surrogate; the entropy bonus stays a separate term
+        # because the coefficient schedule is this brain's own.
+        policy_loss = (
+            ppo_clip_policy_loss(
+                log_probs,
+                old_log_probs_t,
+                advantages,
+                self.config.clip_epsilon,
+            )
+            - effective_entropy_coef * mean_entropy
         )
-        policy_loss = -torch.min(surr1, surr2).mean() - effective_entropy_coef * mean_entropy
 
         self.reflex_optimizer.zero_grad()
         policy_loss.backward()
