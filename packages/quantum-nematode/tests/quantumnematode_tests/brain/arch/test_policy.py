@@ -10,9 +10,11 @@ from __future__ import annotations
 import torch
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
+    categorical_logprob_entropy_from_probs,
     categorical_logprob_entropy_torch,
     categorical_sample_torch,
     ppo_clip_policy_loss,
+    reinforce_policy_loss,
 )
 
 
@@ -134,3 +136,146 @@ class TestPPOClipPolicyLoss:
 
         loss = ppo_clip_policy_loss(new_log_probs, old_log_probs, advantages, clip_epsilon)
         assert torch.equal(loss, loss_ref)
+
+
+class TestCategoricalLogprobEntropyFromProbs:
+    """The probs-based scorer serves the Family-C ε-mixture policies."""
+
+    @staticmethod
+    def _epsilon_mixture(
+        logits: torch.Tensor,
+        epsilon: float,
+        temperature: float,
+    ) -> torch.Tensor:
+        """Rebuild the exact ε-greedy mixture the Family-C brains construct."""
+        softmax_probs = torch.softmax(logits / temperature, dim=-1)
+        uniform = torch.ones_like(softmax_probs) / softmax_probs.shape[-1]
+        return (1 - epsilon) * softmax_probs + epsilon * uniform
+
+    def test_matches_inline_categorical_on_a_mixture(self) -> None:
+        """Scoring an ε-mixture must equal the inline Categorical ops on it."""
+        logits = torch.tensor([1.4, -0.6, 0.2, -1.1])
+        probs = self._epsilon_mixture(logits, epsilon=0.1, temperature=1.5)
+        action = 2
+
+        dist_ref = torch.distributions.Categorical(probs)
+        log_prob_ref = dist_ref.log_prob(torch.tensor(action))
+        entropy_ref = dist_ref.entropy()
+
+        log_prob, entropy, returned = categorical_logprob_entropy_from_probs(probs, action)
+
+        assert torch.equal(log_prob, log_prob_ref)
+        assert torch.equal(entropy, entropy_ref)
+        assert returned is probs
+
+    def test_mixture_is_not_a_softmax_of_the_logits(self) -> None:
+        """Guards the reason this helper exists at all.
+
+        If the ε-mixture happened to equal ``softmax(logits)``, the logits-based
+        helper would have sufficed and the Family-C migration would be scoring
+        the wrong distribution without any test noticing.
+        """
+        logits = torch.tensor([1.4, -0.6, 0.2, -1.1])
+        probs = self._epsilon_mixture(logits, epsilon=0.1, temperature=1.5)
+        action = 2
+
+        from_probs, _, _ = categorical_logprob_entropy_from_probs(probs, action)
+        from_logits, _, _ = categorical_logprob_entropy_torch(logits, action)
+
+        assert not torch.allclose(from_probs, from_logits, rtol=0, atol=1e-4)
+
+    def test_deviation_from_the_manual_epsilon_floored_form_is_within_tolerance(self) -> None:
+        """Dropping the ``+1e-8`` / ``+1e-10`` floors stays inside the declared 1e-7 bar."""
+        logits = torch.tensor([1.4, -0.6, 0.2, -1.1])
+        probs = self._epsilon_mixture(logits, epsilon=0.05, temperature=1.0)
+        action = 1
+
+        # The pre-migration inline expressions, verbatim.
+        log_prob_manual = torch.log(probs[action] + 1e-8)
+        entropy_manual = -torch.sum(probs * torch.log(probs + 1e-10))
+
+        log_prob, entropy, _ = categorical_logprob_entropy_from_probs(probs, action)
+
+        assert torch.allclose(log_prob, log_prob_manual, rtol=0, atol=1e-7)
+        assert torch.allclose(entropy, entropy_manual, rtol=0, atol=1e-7)
+
+    def test_renormalises_a_drifted_vector(self) -> None:
+        """Documented behaviour: ``Categorical`` normalises rather than rejecting."""
+        probs = torch.tensor([0.2, 0.2, 0.2, 0.2])  # sums to 0.8, not 1.0
+        log_prob, entropy, _ = categorical_logprob_entropy_from_probs(probs, 0)
+
+        assert torch.allclose(log_prob, torch.log(torch.tensor(0.25)), rtol=0, atol=1e-6)
+        assert torch.isfinite(entropy)
+
+
+class TestLogitsScorerDelegation:
+    """The logits scorer is now a softmax front-end over the probs scorer."""
+
+    def test_delegation_is_byte_exact_for_the_already_migrated_brains(self) -> None:
+        """Refactoring the logits helper must not move any migrated brain."""
+        logits = torch.tensor([0.5, -1.2, 0.3, 0.9])
+        action = 3
+
+        # The pre-refactor body of ``categorical_logprob_entropy_torch``.
+        probs_ref = torch.softmax(logits, dim=-1)
+        dist_ref = torch.distributions.Categorical(probs_ref)
+        log_prob_ref = dist_ref.log_prob(torch.tensor(action))
+        entropy_ref = dist_ref.entropy()
+
+        log_prob, entropy, probs = categorical_logprob_entropy_torch(logits, action)
+
+        assert torch.equal(log_prob, log_prob_ref)
+        assert torch.equal(entropy, entropy_ref)
+        assert torch.equal(probs, probs_ref)
+
+    def test_delegation_agrees_with_calling_the_probs_scorer_directly(self) -> None:
+        logits = torch.tensor([0.5, -1.2, 0.3, 0.9])
+        action = 1
+
+        via_logits = categorical_logprob_entropy_torch(logits, action)
+        via_probs = categorical_logprob_entropy_from_probs(torch.softmax(logits, dim=-1), action)
+
+        assert torch.equal(via_logits[0], via_probs[0])
+        assert torch.equal(via_logits[1], via_probs[1])
+
+
+class TestReinforcePolicyLoss:
+    """The shared REINFORCE term must match the inline per-brain loss."""
+
+    def test_matches_inline_vectorised_form(self) -> None:
+        """Byte-exact for brains that already wrote the vectorised expression."""
+        log_probs = torch.tensor([-0.5, -1.0, -0.2, -1.7])
+        advantages = torch.tensor([1.0, -2.0, 0.5, 0.3])
+
+        loss_ref = -(log_probs * advantages).mean()
+        loss = reinforce_policy_loss(log_probs, advantages)
+
+        assert torch.equal(loss, loss_ref)
+
+    def test_matches_loop_accumulated_form_within_tolerance(self) -> None:
+        """``qrc`` / ``mlpreinforce`` accumulated in a Python loop then divided.
+
+        Same mathematics, different association order — a float32 reorder, so
+        this is the declared ~1e-7 case rather than byte-exact.
+        """
+        torch.manual_seed(11)
+        log_probs = torch.randn(64)
+        advantages = torch.randn(64)
+
+        loop_loss = torch.tensor(0.0)
+        for t in range(len(log_probs)):
+            loop_loss = loop_loss - log_probs[t] * advantages[t]
+        loop_loss = loop_loss / len(log_probs)
+
+        loss = reinforce_policy_loss(log_probs, advantages)
+
+        assert torch.allclose(loss, loop_loss, rtol=0, atol=1e-7)
+
+    def test_gradient_flows_to_log_probs(self) -> None:
+        log_probs = torch.tensor([-0.5, -1.0], requires_grad=True)
+        advantages = torch.tensor([1.0, -2.0])
+
+        reinforce_policy_loss(log_probs, advantages).backward()
+
+        assert log_probs.grad is not None
+        assert torch.isfinite(log_probs.grad).all()

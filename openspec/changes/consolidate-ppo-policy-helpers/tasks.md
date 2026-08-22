@@ -4,12 +4,12 @@ Line numbers are as of `0ae24375`. Re-verify before editing.
 
 ## 1. Extend `_policy.py`
 
-- [ ] 1.1 Add `categorical_logprob_entropy_from_probs(probs, action, *, device=None) -> (log_prob, entropy, probs)` to [`_policy.py`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_policy.py) (D2). Score an already-constructed probability vector via `Categorical(probs)`; document that `Categorical` normalises internally and that no epsilon floor is applied (D6).
-- [ ] 1.2 Refactor `categorical_logprob_entropy_torch` to delegate to 1.1 after its `softmax`, so there is one `Categorical` construction site. Must stay byte-exact for the seven already-migrated brains — assert with `torch.equal` in `test_policy.py`.
-- [ ] 1.3 Add `reinforce_policy_loss(log_probs, advantages) -> Tensor` returning `-(log_probs * advantages).mean()` (D5). Docstring notes it is the REINFORCE counterpart of `ppo_clip_policy_loss` and that callers add their own entropy bonus.
-- [ ] 1.4 Add both to `__all__`. Update the module docstring for the four-family split (D1) — resolve the D8 open question on whether this becomes a table, and record which way here.
-- [ ] 1.5 Unit tests in `test_policy.py`: the probs-based scorer against an explicit ε-mixture reference; `reinforce_policy_loss` against the inline expression; the 1.2 delegation byte-equivalence.
-- [ ] 1.6 Tree green (`pytest -m "not nightly"`, `pyright`) with no brain touched yet. Commit.
+- [x] 1.1 Add `categorical_logprob_entropy_from_probs(probs, action, *, device=None) -> (log_prob, entropy, probs)` to [`_policy.py`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_policy.py) (D2). Score an already-constructed probability vector via `Categorical(probs)`; document that `Categorical` normalises internally and that no epsilon floor is applied (D6).
+- [x] 1.2 Refactor `categorical_logprob_entropy_torch` to delegate to 1.1 after its `softmax`, so there is one `Categorical` construction site. Must stay byte-exact for the seven already-migrated brains — assert with `torch.equal` in `test_policy.py`.
+- [x] 1.3 Add `reinforce_policy_loss(log_probs, advantages) -> Tensor` returning `-(log_probs * advantages).mean()` (D5). Docstring notes it is the REINFORCE counterpart of `ppo_clip_policy_loss` and that callers add their own entropy bonus.
+- [x] 1.4 Add both to `__all__`. Update the module docstring for the four-family split (D1). **D8 open question resolved: table.** The prose form named individual brains, which does not survive 20 brains across four families; the docstring now carries a four-row family table (distribution scored / rollout sampler / tolerance) plus a note that rollout and update scoring must always migrate together.
+- [x] 1.5 Unit tests in `test_policy.py`: the probs-based scorer against an explicit ε-mixture reference; `reinforce_policy_loss` against the inline expression; the 1.2 delegation byte-equivalence.
+- [x] 1.6 Tree green with no brain touched yet: **4071 passed, 1 skipped, 2 xfailed** (baseline 4062 + the 9 tests added here; skip/xfail unchanged), `pyright` **0 errors**, ruff clean. Commit.
 
 ## 2. Shared bases — Family A + B (5 brains)
 
