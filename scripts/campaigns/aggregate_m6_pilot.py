@@ -33,40 +33,34 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import logging
-import math
+import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+# These aggregators are executed directly (``uv run python scripts/campaigns/...``),
+# so the repo root is not on ``sys.path`` and ``scripts.campaigns`` is not
+# importable; the tests load them by file path for the same reason. Put the repo
+# root on the path before importing the shared helpers.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.campaigns._common import (  # noqa: E402
+    GATE_F1_RATIO,
+    GATE_F2_RATIO,
+    GATE_F3_RATIO,
+    VERDICT_GO_MIN_SEEDS,
+    VERDICT_PIVOT_MIN_SEEDS,
+    aggregate_per_arm_verdict,
+    build_survival_table,
+    evaluate_decision_gate_one_seed,
+    load_f0_training_fitness_per_seed,
+    mean,
+    read_per_gen_csv,
+)
 
 logger = logging.getLogger(__name__)
-
-
-# Decision-gate thresholds — locked by the transgenerational-memory OpenSpec change.
-GATE_F1_RATIO = 0.40
-GATE_F2_RATIO = 0.25
-GATE_F3_RATIO = 0.15
-
-# Cross-seed verdict thresholds.
-VERDICT_GO_MIN_SEEDS = 2  # ≥2 of N → GO
-VERDICT_PIVOT_MIN_SEEDS = 1  # exactly 1 → PIVOT (anything below → STOP)
-
-
-def _read_per_gen_csv(path: Path) -> list[dict]:
-    """Read the per-gen choice-index CSV into a list of dict rows."""
-    if not path.exists():
-        msg = f"per-gen CSV not found: {path}"
-        raise FileNotFoundError(msg)
-    with path.open(encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
-
-
-def _mean(values: Sequence[float]) -> float:
-    return sum(values) / len(values) if values else 0.0
 
 
 def build_retention_table(rows: list[dict]) -> dict[tuple[str, int, int], float]:
@@ -78,237 +72,7 @@ def build_retention_table(rows: list[dict]) -> dict[tuple[str, int, int], float]
     for row in rows:
         key = (str(row["arm"]), int(row["seed"]), int(row["generation"]))
         bucket[key].append(float(row["choice_index"]))
-    return {k: _mean(v) for k, v in bucket.items()}
-
-
-def build_survival_table(rows: list[dict]) -> dict[tuple[str, int, int], float]:
-    """Aggregate per-episode rows into ``(arm, seed, generation) -> survival_rate``.
-
-    ``survival_rate = 1 - (n_episodes_ending_in_HEALTH_DEPLETED / n_episodes)``.
-    Directionally aligned with ``choice_index`` (higher = better avoidance),
-    so the same decision-gate logic applies. Has higher dynamic range than
-    ``choice_index`` on envs where geometry alone keeps a wandering agent
-    mostly outside damage radius — death from accumulated damage is a much
-    sharper signal of "the agent walks into pathogens" than fractional
-    step-time inside damage radius.
-
-    Skips rows that lack a ``termination_reason`` column (backwards-compat
-    with older per_gen_choice_index.csv files that predate the column).
-    """
-    bucket: dict[tuple[str, int, int], list[int]] = defaultdict(list)
-    for row in rows:
-        if "termination_reason" not in row or row["termination_reason"] == "":
-            continue
-        key = (str(row["arm"]), int(row["seed"]), int(row["generation"]))
-        # 1 = died from health depletion (bad); 0 = survived (good)
-        died = 1 if str(row["termination_reason"]).lower() == "health_depleted" else 0
-        bucket[key].append(died)
-    return {k: 1.0 - _mean(v) for k, v in bucket.items()}
-
-
-def load_f0_training_fitness_per_seed(
-    campaign_root: Path,
-    *,
-    arms: list[str] | None = None,
-) -> dict[tuple[str, int], float]:
-    """Locate each (arm, seed)'s ``per_gen_elites.jsonl`` and extract F0 training fitness.
-
-    The training-time composite fitness recorded in
-    ``per_gen_elites.jsonl`` is the canonical F0 retention baseline for
-    transgenerational decision-gate evaluation:
-
-    - F0's trained brain achieved this fitness on the training-eval set
-      that TPE used to select it.
-    - The post-hoc per-gen evaluator can NOT reproduce that measurement
-      because the F0 weight ``.pt`` is GC'd by the substrate-extraction
-      pipeline (only the ``.tei.pt`` is retained); the evaluator's F0
-      row is an untrained-brain baseline, not a measurement of the
-      substrate's source policy.
-
-    Using training-time F0 fitness as the gate baseline gives a
-    biologically-correct retention ratio (F1+ post-hoc survival vs F0
-    trained survival), matching the wet-lab Kaletsky/Vidal-Gadea
-    convention.
-
-    Expected directory layout (mirrors campaign shell output):
-    ``<campaign_root>/{arm}/seed-{N}/[<session_id>/]per_gen_elites.jsonl``.
-
-    Returns a dict ``{(arm, seed): f0_fitness}``. Missing files / parse
-    errors are skipped with a warning so the rest of the campaign's
-    seeds are still evaluable.
-    """
-    arms_to_scan = (
-        arms if arms is not None else [d.name for d in campaign_root.iterdir() if d.is_dir()]
-    )
-    out: dict[tuple[str, int], float] = {}
-    for arm in arms_to_scan:
-        arm_dir = campaign_root / arm
-        if not arm_dir.is_dir():
-            continue
-        for seed_dir in sorted(arm_dir.iterdir()):
-            if not seed_dir.is_dir() or not seed_dir.name.startswith("seed-"):
-                continue
-            try:
-                seed = int(seed_dir.name.split("-", 1)[1])
-            except (IndexError, ValueError):
-                logger.warning("Skipping non-seed directory: %s", seed_dir)
-                continue
-            # Direct layout: <seed_dir>/per_gen_elites.jsonl
-            direct = seed_dir / "per_gen_elites.jsonl"
-            jsonl_path: Path | None = None
-            if direct.exists():
-                jsonl_path = direct
-            else:
-                # Nested layout: <seed_dir>/<session_id>/per_gen_elites.jsonl
-                candidates = [
-                    p
-                    for p in seed_dir.iterdir()
-                    if p.is_dir() and (p / "per_gen_elites.jsonl").is_file()
-                ]
-                if candidates:
-                    jsonl_path = (
-                        max(candidates, key=lambda p: p.stat().st_mtime) / "per_gen_elites.jsonl"
-                    )
-            if jsonl_path is None:
-                logger.warning(
-                    "No per_gen_elites.jsonl for arm=%s seed=%d under %s; skipping.",
-                    arm,
-                    seed,
-                    seed_dir,
-                )
-                continue
-            f0_fitness = _read_f0_training_fitness(jsonl_path)
-            if f0_fitness is not None:
-                out[(arm, seed)] = f0_fitness
-    return out
-
-
-def _read_f0_training_fitness(jsonl_path: Path) -> float | None:
-    """Return the F0 (``generation == 0``) elite's training-time ``fitness`` field, or None.
-
-    Returns ``None`` (so the caller skips the seed) when the F0 row is
-    missing the ``fitness`` key entirely OR when the field is present
-    but cannot be coerced to a finite float (``NaN``, ``inf``, a
-    non-numeric string, etc.). Defensively coding here matters because
-    a silent ``0.0`` default would set the gate's F0 baseline to zero
-    and let any positive F1 trivially pass the monotone check.
-    """
-    try:
-        with jsonl_path.open(encoding="utf-8") as handle:
-            for raw in handle:
-                stripped = raw.strip()
-                if not stripped:
-                    continue
-                try:
-                    row = json.loads(stripped)
-                except json.JSONDecodeError:
-                    continue
-                if not isinstance(row, dict):
-                    continue
-                if int(row.get("generation", -1)) != 0:
-                    continue
-                if "fitness" not in row:
-                    return None
-                try:
-                    value = float(row["fitness"])
-                except (TypeError, ValueError):
-                    return None
-                if not math.isfinite(value):
-                    return None
-                return value
-    except OSError as exc:
-        logger.warning("Failed to read %s: %s", jsonl_path, exc)
-    return None
-
-
-def evaluate_decision_gate_one_seed(
-    *,
-    retention: dict[tuple[str, int, int], float],
-    arm: str,
-    seed: int,
-    f0_baseline_override: dict[tuple[str, int], float] | None = None,
-) -> dict:
-    """Evaluate the decision gate for one (arm, seed).
-
-    Returns a dict with:
-      - ``f0``..``f3``: per-gen mean choice indices (or None if missing)
-      - ``f1_ratio_pass``: bool — F1 ≥ ``GATE_F1_RATIO`` x F0
-      - ``f2_ratio_pass``: bool
-      - ``f3_ratio_pass``: bool
-      - ``monotone_pass``: bool — F0 ≥ F1 ≥ F2 ≥ F3
-      - ``overall_pass``: bool — AND of all four
-
-    When ``f0_baseline_override`` is provided AND contains the
-    ``(arm, seed)`` key, its value replaces the post-hoc retention
-    table's F0 entry. This is the biologically-correct path for
-    transgenerational decision-gate evaluation: F0 retention is the
-    training-time avoidance behaviour the substrate was extracted
-    from, not the untrained-brain baseline that the post-hoc
-    evaluator measures (the F0 ``.pt`` weights are GC'd by the
-    substrate-extraction pipeline).
-    """
-    if f0_baseline_override is not None and (arm, seed) in f0_baseline_override:
-        f0: float | None = f0_baseline_override[(arm, seed)]
-    else:
-        f0 = retention.get((arm, seed, 0))
-    f1 = retention.get((arm, seed, 1))
-    f2 = retention.get((arm, seed, 2))
-    f3 = retention.get((arm, seed, 3))
-    if any(v is None for v in (f0, f1, f2, f3)):
-        return {
-            "arm": arm,
-            "seed": seed,
-            "f0": f0,
-            "f1": f1,
-            "f2": f2,
-            "f3": f3,
-            "f1_ratio_pass": False,
-            "f2_ratio_pass": False,
-            "f3_ratio_pass": False,
-            "monotone_pass": False,
-            "overall_pass": False,
-            "skipped": True,
-            "skip_reason": "incomplete-generations",
-        }
-    f0_v = float(f0)  # type: ignore[arg-type]
-    f1_v = float(f1)  # type: ignore[arg-type]
-    f2_v = float(f2)  # type: ignore[arg-type]
-    f3_v = float(f3)  # type: ignore[arg-type]
-    f1_pass = f1_v >= GATE_F1_RATIO * f0_v
-    f2_pass = f2_v >= GATE_F2_RATIO * f0_v
-    f3_pass = f3_v >= GATE_F3_RATIO * f0_v
-    monotone_pass = f0_v >= f1_v >= f2_v >= f3_v
-    overall = f1_pass and f2_pass and f3_pass and monotone_pass
-    return {
-        "arm": arm,
-        "seed": seed,
-        "f0": f0_v,
-        "f1": f1_v,
-        "f2": f2_v,
-        "f3": f3_v,
-        "f1_ratio_pass": f1_pass,
-        "f2_ratio_pass": f2_pass,
-        "f3_ratio_pass": f3_pass,
-        "monotone_pass": monotone_pass,
-        "overall_pass": overall,
-        "skipped": False,
-        "skip_reason": "",
-    }
-
-
-def aggregate_verdict(seed_evaluations: list[dict]) -> str:
-    """Aggregate per-seed evaluations into a cross-seed verdict.
-
-    ``GO`` iff ≥``VERDICT_GO_MIN_SEEDS`` seeds pass; ``PIVOT`` iff
-    exactly ``VERDICT_PIVOT_MIN_SEEDS`` seed passes; ``STOP`` otherwise.
-    Skipped seeds (incomplete generations) count as failures.
-    """
-    pass_count = sum(1 for s in seed_evaluations if s["overall_pass"])
-    if pass_count >= VERDICT_GO_MIN_SEEDS:
-        return "GO"
-    if pass_count >= VERDICT_PIVOT_MIN_SEEDS:
-        return "PIVOT"
-    return "STOP"
+    return {k: mean(v) for k, v in bucket.items()}
 
 
 def _write_retention_csv(
@@ -397,7 +161,7 @@ def _write_summary_md(
                 if a == arm:
                     per_gen_means[gen].append(v)
             gen_strs = [
-                f"{_mean(per_gen_means[g]):.3f}" if per_gen_means.get(g) else "—"
+                f"{mean(per_gen_means[g]):.3f}" if per_gen_means.get(g) else "—"
                 for g in (0, 1, 2, 3)
             ]
             lines.append(
@@ -464,7 +228,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested loops are cleare
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = _read_per_gen_csv(args.per_gen_csv)
+    rows = read_per_gen_csv(args.per_gen_csv)
     if not rows:
         print(f"No rows in {args.per_gen_csv}. Nothing to aggregate.")
         return 1
@@ -501,7 +265,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested loops are cleare
         # Verdict only meaningful for TEI-on (TEI-off arm shouldn't satisfy
         # the gates by construction). Compute for all arms for symmetry,
         # but the logbook reads the tei_on row.
-        verdict_per_arm[arm] = aggregate_verdict(per_arm)
+        verdict_per_arm[arm] = aggregate_per_arm_verdict(per_arm)
 
     # Same gate logic, applied to the survival_rate metric instead of
     # choice_index. Only emitted if the CSV actually had a
@@ -524,7 +288,7 @@ def main() -> int:  # noqa: C901 - linear orchestration; nested loops are cleare
                 if (arm, seed, 0) in survival
             ]
             survival_evaluations_per_arm[arm] = per_arm_surv
-            survival_verdict_per_arm[arm] = aggregate_verdict(per_arm_surv)
+            survival_verdict_per_arm[arm] = aggregate_per_arm_verdict(per_arm_surv)
 
     _write_retention_csv(retention, args.output_dir / "retention_table.csv")
     _write_decision_gate_csv(seed_evaluations_all, args.output_dir / "decision_gate.csv")

@@ -33,10 +33,24 @@ from __future__ import annotations
 
 import argparse
 import csv
-import re
+import sys
 from pathlib import Path
 
 import numpy as np
+
+# These aggregators are executed directly (``uv run python scripts/campaigns/...``),
+# so the repo root is not on ``sys.path`` and ``scripts.campaigns`` is not
+# importable; the tests load them by file path for the same reason. Put the repo
+# root on the path before importing the shared helpers.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.campaigns._common import (  # noqa: E402
+    baseline_success_rates,
+    read_history,
+    resolve_speed,
+)
 
 # Best-fitness threshold for the Speed metric.  0.92 is calibrated to
 # the predator-arm fitness landscape's documented saturation ceiling
@@ -64,48 +78,6 @@ SPEED_GAIN_GENERATIONS = 4
 # generation of from-scratch progress.
 FLOOR_LAMARCKIAN_GEN = 2
 FLOOR_CONTROL_GEN = 3
-
-
-def _latest_session(seed_dir: Path) -> Path:
-    """Return the most recently modified subdirectory under ``seed_dir``."""
-    sessions = [p for p in seed_dir.iterdir() if p.is_dir()]
-    if not sessions:
-        msg = f"No session directory under {seed_dir}"
-        raise FileNotFoundError(msg)
-    return max(sessions, key=lambda p: p.stat().st_mtime)
-
-
-def _read_history(seed_dir: Path) -> list[dict[str, float]]:
-    """Read the latest session's history.csv as a list of float dicts."""
-    history_path = _latest_session(seed_dir) / "history.csv"
-    if not history_path.exists():
-        msg = f"No history.csv at {history_path}"
-        raise FileNotFoundError(msg)
-    with history_path.open() as handle:
-        reader = csv.DictReader(handle)
-        return [{k: float(v) for k, v in row.items()} for row in reader]
-
-
-def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
-    """Extract per-seed success rates from the run_simulation.py log files.
-
-    Returns ``{seed: rate}`` for every ``seed-N.log`` whose contents
-    contain a ``Success rate: NN.NN%`` line.  Logs that exist but lack
-    the expected line are silently dropped from the result; the caller
-    raises a clear error naming the missing seeds.
-    """
-    rates: dict[int, float] = {}
-    for log in sorted(baseline_root.glob("seed-*.log")):
-        seed_match = re.search(r"seed-(\d+)\.log", log.name)
-        if not seed_match:
-            continue
-        seed = int(seed_match.group(1))
-        for line in log.read_text().splitlines():
-            m = re.match(r"^Success rate:\s+([\d.]+)%", line)
-            if m:
-                rates[seed] = float(m.group(1)) / 100.0
-                break
-    return rates
 
 
 def _gen_first_reaches_target(
@@ -169,11 +141,8 @@ def _format_summary(  # noqa: PLR0913
     max_gens = max(len(h) for h in (*lam_history.values(), *ctrl_history.values()))
     fallback_gen = max_gens + 1
 
-    def _resolve(g: int | None) -> float:
-        return float(g) if g is not None else float(fallback_gen)
-
-    speed_lam_vals = [_resolve(speed_lam[s]) for s in seeds]
-    speed_ctrl_vals = [_resolve(speed_ctrl[s]) for s in seeds]
+    speed_lam_vals = [resolve_speed(speed_lam[s], fallback_gen) for s in seeds]
+    speed_ctrl_vals = [resolve_speed(speed_ctrl[s], fallback_gen) for s in seeds]
     speed_mean_lam = float(np.mean(speed_lam_vals))
     speed_mean_ctrl = float(np.mean(speed_ctrl_vals))
 
@@ -386,11 +355,11 @@ def main() -> int:
     lam_history: dict[int, list[dict[str, float]]] = {}
     ctrl_history: dict[int, list[dict[str, float]]] = {}
     for seed in args.seeds:
-        lam_history[seed] = _read_history(args.lamarckian_root / f"seed-{seed}")
-        ctrl_history[seed] = _read_history(args.control_root / f"seed-{seed}")
+        lam_history[seed] = read_history(args.lamarckian_root / f"seed-{seed}")
+        ctrl_history[seed] = read_history(args.control_root / f"seed-{seed}")
 
     # Baseline (run_simulation.py-driven, optimiser-independent).
-    baseline_rates = _baseline_success_rates(args.baseline_root)
+    baseline_rates = baseline_success_rates(args.baseline_root)
     missing = sorted(set(args.seeds) - set(baseline_rates))
     if missing:
         # Two distinct failure modes share the same error-handling path:

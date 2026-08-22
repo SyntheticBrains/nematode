@@ -347,3 +347,126 @@ def test_cli_rejects_kprime_negative(tmp_path: Path) -> None:
     )
     assert result.returncode != 0
     assert "--k-prime must be a positive integer" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# History-layout resolution
+# ---------------------------------------------------------------------------
+
+
+class TestHistoryLayoutResolution:
+    """Both seed-dir layouts must be readable, not just the nested one.
+
+    ``aggregate_baldwin_retry_pilot`` resolves its history via the two-layout
+    ``_resolve_session`` (file directly under ``seed-N/``, or nested one level
+    under a session dir) rather than the newest-subdirectory ``_latest_session``
+    the other aggregators use.
+
+    Added after a refactor silently dropped that resolver and the existing suite
+    stayed green: every fixture here used the nested layout, so the direct layout
+    — the whole reason the resolver exists — was never exercised.
+    """
+
+    @staticmethod
+    def _write_history(target: Path) -> None:
+        target.mkdir(parents=True, exist_ok=True)
+        with (target / "history.csv").open("w", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["generation", "best_fitness", "mean_fitness", "std_fitness"])
+            writer.writerow([1, 0.5, 0.4, 0.1])
+            writer.writerow([2, 0.95, 0.8, 0.05])
+
+    def test_reads_history_written_directly_under_the_seed_dir(self, tmp_path: Path) -> None:
+        """The layout run_evolution.py has written since logbook 014."""
+        module = _load_script_module()
+        seed_dir = tmp_path / "seed-42"
+        self._write_history(seed_dir)
+
+        rows = module.read_history(seed_dir, module._resolve_session)
+
+        assert len(rows) == 2
+        assert rows[1]["best_fitness"] == pytest.approx(0.95)
+
+    def test_reads_history_nested_under_a_session_dir(self, tmp_path: Path) -> None:
+        """The older layout, where the loop wrote a per-session subdirectory."""
+        module = _load_script_module()
+        seed_dir = tmp_path / "seed-42"
+        self._write_history(seed_dir / "20260101_000000_abcdef")
+
+        rows = module.read_history(seed_dir, module._resolve_session)
+
+        assert len(rows) == 2
+        assert rows[1]["best_fitness"] == pytest.approx(0.95)
+
+    def test_default_resolver_cannot_see_the_direct_layout(self, tmp_path: Path) -> None:
+        """Pins WHY this aggregator passes its own resolver rather than the default.
+
+        If this ever starts passing, the shared default has become
+        layout-tolerant and the explicit argument is redundant.
+        """
+        module = _load_script_module()
+        seed_dir = tmp_path / "seed-42"
+        self._write_history(seed_dir)
+
+        with pytest.raises(FileNotFoundError):
+            module.read_history(seed_dir)
+
+    def test_main_reads_the_direct_layout_end_to_end(self, tmp_path: Path) -> None:
+        """Exercises the CALL SITE, not just the helper.
+
+        The helper-level tests above pass whether or not ``main`` actually
+        forwards the two-layout resolver, so they cannot catch a call site that
+        silently falls back to the default. This drives the real entry point
+        against a direct-layout tree, which fails outright if the resolver is
+        dropped.
+        """
+        seeds = [42, 43]
+        for arm in ("baldwin", "lamarckian", "control"):
+            for seed in seeds:
+                self._write_history(tmp_path / arm / f"seed-{seed}")
+        baseline = tmp_path / "baseline"
+        baseline.mkdir()
+        for seed in seeds:
+            (baseline / f"seed-{seed}.log").write_text("Success rate: 65.00%\n")
+        f1_csv = tmp_path / "f1.csv"
+        with f1_csv.open("w", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(
+                ["seed", "k_prime", "elite_success_rate", "baseline_success_rate", "signal_delta"],
+            )
+            for seed in seeds:
+                writer.writerow([seed, 1, 0.9, 0.6, 0.3])
+
+        result = subprocess.run(  # noqa: S603
+            [
+                sys.executable,
+                str(SCRIPT_PATH),
+                "--baldwin-root",
+                str(tmp_path / "baldwin"),
+                "--lamarckian-root",
+                str(tmp_path / "lamarckian"),
+                "--control-root",
+                str(tmp_path / "control"),
+                "--baseline-root",
+                str(baseline),
+                "--f1-csv",
+                str(f1_csv),
+                "--k-prime",
+                "1",
+                "--seeds",
+                "42",
+                "43",
+                "--output-dir",
+                str(tmp_path / "out"),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+
+        assert result.returncode == 0, (
+            "main() failed on the direct seed-dir layout — the two-layout "
+            f"resolver was probably dropped at the call site.\n{result.stderr}"
+        )
+        assert (tmp_path / "out" / "summary.md").exists()

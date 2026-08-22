@@ -119,10 +119,10 @@ def test_cross_seed_verdict_go_at_two_or_more_passes() -> None:
         {"overall_pass": False},
         {"overall_pass": False},
     ]
-    assert mod.aggregate_verdict(evaluations) == "GO"
+    assert mod.aggregate_per_arm_verdict(evaluations) == "GO"
 
     evaluations[2]["overall_pass"] = True
-    assert mod.aggregate_verdict(evaluations) == "GO"
+    assert mod.aggregate_per_arm_verdict(evaluations) == "GO"
 
 
 def test_cross_seed_verdict_pivot_at_exactly_one_pass() -> None:
@@ -134,7 +134,7 @@ def test_cross_seed_verdict_pivot_at_exactly_one_pass() -> None:
         {"overall_pass": False},
         {"overall_pass": False},
     ]
-    assert mod.aggregate_verdict(evaluations) == "PIVOT"
+    assert mod.aggregate_per_arm_verdict(evaluations) == "PIVOT"
 
 
 def test_cross_seed_verdict_stop_at_zero_passes() -> None:
@@ -146,7 +146,7 @@ def test_cross_seed_verdict_stop_at_zero_passes() -> None:
         {"overall_pass": False},
         {"overall_pass": False},
     ]
-    assert mod.aggregate_verdict(evaluations) == "STOP"
+    assert mod.aggregate_per_arm_verdict(evaluations) == "STOP"
 
 
 def test_build_retention_table_averages_episodes_per_generation() -> None:

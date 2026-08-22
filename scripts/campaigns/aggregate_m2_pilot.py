@@ -29,12 +29,25 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import csv
 import json
-import re
+import sys
 from pathlib import Path
 
 import numpy as np
+
+# These aggregators are executed directly (``uv run python scripts/campaigns/...``),
+# so the repo root is not on ``sys.path`` and ``scripts.campaigns`` is not
+# importable; the tests load them by file path for the same reason. Put the repo
+# root on the path before importing the shared helpers.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.campaigns._common import (  # noqa: E402
+    baseline_success_rates,
+    latest_session,
+    read_history,
+)
 
 # PIVOT decision needs a positive-but-below-GO band.  1pp is a reasonable
 # floor for "this didn't separate from baseline at all"; below that we
@@ -43,55 +56,13 @@ import numpy as np
 PIVOT_MIN_PP = 0.01
 
 
-def _latest_session(seed_dir: Path) -> Path:
-    """Return the most recently modified subdirectory under ``seed_dir``.
-
-    Filtering to directories (rather than relying on lexicographic order over
-    ``iterdir()``) avoids stray files (``.DS_Store``, log tails, etc.) being
-    mistaken for a session.  Selecting by ``stat().st_mtime`` instead of name
-    means we don't depend on a particular session-id format ordering.
-    """
-    sessions = [p for p in seed_dir.iterdir() if p.is_dir()]
-    if not sessions:
-        msg = f"No session directory under {seed_dir}"
-        raise FileNotFoundError(msg)
-    return max(sessions, key=lambda p: p.stat().st_mtime)
-
-
-def _read_history(seed_dir: Path) -> list[dict[str, float]]:
-    """Read the single session under seed_dir's history.csv into rows."""
-    history_path = _latest_session(seed_dir) / "history.csv"
-    if not history_path.exists():
-        msg = f"No history.csv at {history_path}"
-        raise FileNotFoundError(msg)
-    with history_path.open() as f:
-        reader = csv.DictReader(f)
-        return [{k: float(v) for k, v in row.items()} for row in reader]
-
-
 def _read_best(seed_dir: Path) -> dict[str, object]:
     """Read the single session under seed_dir's best_params.json."""
-    best_path = _latest_session(seed_dir) / "best_params.json"
+    best_path = latest_session(seed_dir) / "best_params.json"
     if not best_path.exists():
         msg = f"No best_params.json at {best_path}"
         raise FileNotFoundError(msg)
     return json.loads(best_path.read_text())
-
-
-def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
-    """Extract per-seed success rates from baseline run logs."""
-    rates: dict[int, float] = {}
-    for log in sorted(baseline_root.glob("seed-*.log")):
-        seed_match = re.search(r"seed-(\d+)\.log", log.name)
-        if not seed_match:
-            continue
-        seed = int(seed_match.group(1))
-        for line in log.read_text().splitlines():
-            m = re.match(r"^Success rate:\s+([\d.]+)%", line)
-            if m:
-                rates[seed] = float(m.group(1)) / 100.0
-                break
-    return rates
 
 
 def _format_summary(  # noqa: PLR0913, PLR0915
@@ -274,10 +245,10 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
     pilot_best: dict[int, dict[str, object]] = {}
     for seed in args.seeds:
         seed_dir = args.pilot_root / f"seed-{seed}"
-        pilot_history[seed] = _read_history(seed_dir)
+        pilot_history[seed] = read_history(seed_dir)
         pilot_best[seed] = _read_best(seed_dir)
 
-    baseline_rates = _baseline_success_rates(args.baseline_root)
+    baseline_rates = baseline_success_rates(args.baseline_root)
     # Validate that we have a baseline rate for every requested seed.
     # Silently averaging over a subset would understate or overstate
     # the baseline mean and corrupt the GO threshold.
