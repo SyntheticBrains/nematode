@@ -599,7 +599,10 @@ class SpikingReinforceBrain(ClassicalBrain):
         """
         n_steps = self.config.update_frequency
 
-        # Get the last n_steps of data
+        # Get the last n_steps of data. No alignment needed here: every slice is
+        # ``[-n_steps:]`` and the guard below returns unless there are n_steps
+        # states, so all four are exactly n_steps long even when ``episode_rewards``
+        # runs one ahead. The batch path has no such equaliser — see the note there.
         recent_states = self.episode_states[-n_steps:]
         recent_actions = self.episode_actions[-n_steps:]
         recent_action_probs = self.episode_action_probs[-n_steps:]
@@ -659,8 +662,16 @@ class SpikingReinforceBrain(ClassicalBrain):
             # Shared scorer over the FLOORED probability vector — the floor makes
             # this not a softmax of ``action_logits``, so the probs helper is the
             # correct entry point. Byte-exact: it is the same ``Categorical`` call.
+            # ``action_probs`` is (1, n_actions) because the policy is fed a
+            # batched state, so ``Categorical`` would have batch_shape (1,) and
+            # ``log_prob`` would come back shape (1,) rather than scalar. Stacking
+            # those gives (T, 1), which broadcasts against the (T,) advantages into
+            # a (T, T) outer product whose mean is
+            # ``mean(log_probs) * mean(advantages)`` — destroying per-action credit
+            # assignment, and zeroing the gradient entirely once advantages are
+            # mean-centred, which they always are here. See #276.
             log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
-                action_probs,
+                action_probs.squeeze(0),
                 int(action_idx),
                 device=self.device,
             )
@@ -721,10 +732,19 @@ class SpikingReinforceBrain(ClassicalBrain):
         all_action_probs: list[torch.Tensor] = []
 
         for ep_idx in range(self.batch_episode_count):
-            ep_rewards = self.batch_episodes_rewards[ep_idx]
-            ep_states = self.batch_episodes_states[ep_idx]
-            ep_actions = self.batch_episodes_actions[ep_idx]
-            ep_action_probs = self.batch_episodes_action_probs[ep_idx]
+            # Trim to the common length first — see the note in the intra-episode
+            # path: the episode-final ``learn`` can leave one more reward than
+            # there are steps, and the returns are built from the reward list.
+            ep_len = min(
+                len(self.batch_episodes_rewards[ep_idx]),
+                len(self.batch_episodes_states[ep_idx]),
+                len(self.batch_episodes_actions[ep_idx]),
+                len(self.batch_episodes_action_probs[ep_idx]),
+            )
+            ep_rewards = self.batch_episodes_rewards[ep_idx][:ep_len]
+            ep_states = self.batch_episodes_states[ep_idx][:ep_len]
+            ep_actions = self.batch_episodes_actions[ep_idx][:ep_len]
+            ep_action_probs = self.batch_episodes_action_probs[ep_idx][:ep_len]
 
             # Compute discounted returns backward through episode
             returns: list[float] = []
@@ -783,8 +803,16 @@ class SpikingReinforceBrain(ClassicalBrain):
             # Shared scorer over the FLOORED probability vector — the floor makes
             # this not a softmax of ``action_logits``, so the probs helper is the
             # correct entry point. Byte-exact: it is the same ``Categorical`` call.
+            # ``action_probs`` is (1, n_actions) because the policy is fed a
+            # batched state, so ``Categorical`` would have batch_shape (1,) and
+            # ``log_prob`` would come back shape (1,) rather than scalar. Stacking
+            # those gives (T, 1), which broadcasts against the (T,) advantages into
+            # a (T, T) outer product whose mean is
+            # ``mean(log_probs) * mean(advantages)`` — destroying per-action credit
+            # assignment, and zeroing the gradient entirely once advantages are
+            # mean-centred, which they always are here. See #276.
             log_prob, _entropy, _probs = categorical_logprob_entropy_from_probs(
-                action_probs,
+                action_probs.squeeze(0),
                 int(action_idx),
                 device=self.device,
             )
