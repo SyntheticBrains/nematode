@@ -140,7 +140,19 @@ Method: revert **only** the migrated module(s) to their pre-migration state, run
 
 No metric is significant at p < 0.05 (paired *t*, df = 4), and every sign column is mixed. For scale, the Phase 6a headline separations this platform is built to resolve are 13–75 pp; the CI here bounds any migration effect on success rate at about ±1 pp.
 
-**Honest limits.** n = 5 seeds on one config bounds the effect, it does not prove absence — a sub-1 pp shift would not be detected. The avg-reward column leans positive in 4 of 5 seeds, which is worth re-checking if the same lean appears in later families rather than dismissing now. Families C and D get the same treatment as they land.
+**Family C — the cortex fix, isolated.** `hybridclassical` **stage 2** (`training_stage: 2`, cortex PPO), 300 runs × 5 paired seeds. Stage 1 is the default for the foraging configs and exercises only the reflex path, so a stage-2 config was built and its `perform_ppo_update` call verified (40 updates in 40 runs) before spending the runs — otherwise the D4 cortex fix would not have been touched at all. Both conditions load the **same** stage-1 reflex weights, so cortex scoring is the only variable.
+
+| Metric | Before | After | Paired Δ | 95% CI | Signs |
+|---|---|---|---|---|---|
+| success rate | 99.40 ±0.28 | 99.60 ±0.28 | **+0.20 pp** | [−0.03, +0.43] | 3+/2 tie/0− |
+| avg foods | 9.968 ±0.029 | 9.982 ±0.019 | **+0.016** | [−0.003, +0.035] | 3+/2 tie/0− |
+| avg reward | 35.92 ±0.24 | 36.04 ±0.20 | **+0.12** | [−0.21, +0.45] | 4+/1− |
+
+None significant at p < 0.05 (largest *t*(4) = 2.45 against a critical 2.776), so the defensible claim is again "no detectable change." Two things are worth stating rather than rounding away: the direction is **consistently non-negative** — no seed regressed on success rate or foods — and success rate and foods both sit just under the significance threshold. That is the direction removing a systematic ratio bias would predict, and the same mild positive lean showed up in Family B's reward column (4 of 5 seeds). It is *not* evidence of improvement at n = 5 against a 99.4% ceiling; it is a pattern to keep watching as Family D lands.
+
+**Honest limits.** n = 5 seeds per family on one config bounds the effect, it does not prove absence — a sub-1 pp shift would not be detected, and the Family C cell is close to a ceiling that compresses any real effect. Family D gets the same treatment as it lands.
+
+**Method note (applied from Task 2's mistake).** Family C's A/B ran in a **git worktree** at the pre-migration commit rather than by swapping files in the shared tree, so the main tree was never mutated (`git status` clean throughout) and no concurrent measurement could be silently taken against the wrong code.
 
 ### D4 — Migrate rollout and update together, per brain; this fixes a live ratio bias
 
