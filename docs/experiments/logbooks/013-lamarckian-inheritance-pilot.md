@@ -2,6 +2,32 @@
 
 **Status**: `complete` — M3 GO; speed gate +5.25 gens (need ≥4); corrected floor gate +0.42; M4 (Baldwin Effect) starts on this configuration.
 
+> **Correction (2026-08-22, [#277](https://github.com/SyntheticBrains/nematode/issues/277)).**
+> Every *gen-to-0.92* figure in this logbook is **one generation too high**.
+> `aggregate_m3_pilot.py` added 1 to the `generation` column on the belief that
+> `history.csv` was 0-indexed; it is written 1-indexed (its first data row is
+> `generation,1`). The M2.12 comparison figure carries the same convention.
+> The code is fixed; the numbers below are left as published with the corrected
+> value alongside, so the record and the artefacts under
+> `artifacts/logbooks/013/` stay consistent with each other.
+>
+> **The conclusions are unaffected and both headline deltas get slightly
+> stronger.** The error does not cancel between arms, because the never-reached
+> fallback (`max_gens + 1 = 21`, used for control seed 42) is not shifted while
+> the reached values are.
+>
+> | | published | corrected |
+> |---|---|---|
+> | lamarckian mean gen-to-0.92 | 4.50 | **3.50** |
+> | control mean gen-to-0.92 | 9.75 | **9.00** |
+> | M2.12 mean gen-to-0.92 | 10.00 | **9.00** |
+> | speed-gate margin (control − lamarckian) | +5.25 | **+5.50** |
+> | schema effect (control − M2.12) | +0.25 | **0.00** |
+> | cross-schema lift (M2.12 − lamarckian) | +5.50 | **+5.50** (unchanged) |
+>
+> Per-seed corrected values: lamarckian `[2, 3, 3, 6]`, control `[—, 4, 4, 7]`.
+> The speed gate needs ≥ 4 and passes either way.
+
 **Branch**: `feat/m3-lamarckian-evolution` (PR pending)
 
 **Date Started**: 2026-05-02
@@ -181,12 +207,12 @@ M3 dropped `rnn_type` and `lstm_hidden_dim` from the schema (architecture-changi
 
 | | Mean gen-to-0.92 |
 |---|---|
-| M3 lamarckian (4-fld + inheritance) | 4.50 |
-| M3 control (4-fld, no inheritance) | 9.75 |
-| M2.12 (6-fld, no inheritance) | 10.00 |
+| M3 lamarckian (4-fld + inheritance) | 4.50 *(corrected: 3.50)* |
+| M3 control (4-fld, no inheritance) | 9.75 *(corrected: 9.00)* |
+| M2.12 (6-fld, no inheritance) | 10.00 *(corrected: 9.00)* |
 
-- M3-control vs M2.12: **+0.25 gens** — the schema simplification buys essentially nothing on its own.
-- M3-lam vs M2.12 (cross-schema): **+5.50 gens** — the entire speed lift is attributable to inheritance.
+- M3-control vs M2.12: **+0.25 gens** *(corrected: **0.00 gens**)* — the schema simplification buys essentially nothing on its own; corrected, it buys exactly nothing.
+- M3-lam vs M2.12 (cross-schema): **+5.50 gens** *(unchanged under the correction — both figures shift by one)* — the entire speed lift is attributable to inheritance.
 
 Schema confounder ruled out.
 
@@ -267,7 +293,7 @@ M4 (Baldwin Effect) starts on the M3 predator-arm config + TPE + a Baldwin-style
 
 ## Conclusions
 
-01. **Lamarckian inheritance accelerates evolutionary convergence on the predator arm by +5.25 generations** (mean gen-to-0.92: 4.50 lamarckian vs 9.75 control). The speed gate passes by 1.3× the threshold; the result is robust under multiple alternative measurement treatments.
+01. **Lamarckian inheritance accelerates evolutionary convergence on the predator arm by +5.25 generations** *(corrected: **+5.50**)* (mean gen-to-0.92: 4.50 lamarckian vs 9.75 control; corrected 3.50 vs 9.00 — see the correction notice at the top). The speed gate passes by 1.3× the threshold; the result is robust under multiple alternative measurement treatments.
 
 02. **The schema confounder is dispelled.** M3's 4-field schema (vs M2.12's 6-field) buys ~0.25 gens on its own. The +5.5-gen margin vs M2.12 is entirely attributable to inheritance.
 
