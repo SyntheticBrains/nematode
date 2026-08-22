@@ -103,11 +103,44 @@ The log-prob deviation is `log(p) - log(p + ε) = -log1p(ε/p) ≈ ε/p`. That i
 
 **Boundary, recorded rather than hidden.** Below `p ≈ 1e-6` the float32 `softmax` has already lost the probability to its own round-off, so *both* the old and the new expression sit far from the float64-exact value and neither is reliably closer (measured: at `p = 8.2e-8`, old is 0.115 from exact and new is 0.375, in the same direction). Both read the same float32 `probs`, so this is a property of the brains' float32 pipeline that the migration neither changes nor claims to fix. `test_below_the_float32_softmax_floor_the_model_stops_applying` pins the boundary so a future reader does not mistake it for migration drift.
 
+**The boundary is never reached in practice — measured, not assumed.** Instrumenting the shared scorer and running real training sessions:
+
+| Session | Scoring calls | Min `p` scored | Calls below `1e-6` |
+|---|---|---|---|
+| `crhqlstm`, 200 runs (90% success) | 267,638 | 1.34e-3 | **0** |
+| `crhqlstm`, 800 runs (97.3% success, past full entropy decay) | 859,040 | 1.20e-4 | **0** |
+
+The converged 800-run policy — the most confident state the config produces — still stays 120× above the floor, where the floor-removal deviation is 8.3e-5 log units, i.e. a ratio factor of 1.00008 against a `clip_epsilon` of 0.2. Two structural reasons, not luck: the scored action is the *sampled* action (so a `p = 1e-6` action is scored about once per million steps by construction), and the entropy bonus exists precisely to stop the policy saturating.
+
+**Family C cannot reach it at all.** The ε-greedy mixture floors every action at `ε / n_actions`, and `exploration_schedule` ([`_hybrid_common.py:572`](../../../packages/quantum-nematode/quantumnematode/brain/arch/_hybrid_common.py)) decays ε to 30% of its initial value, never to zero: `current_epsilon = exploration_epsilon * (1.0 - progress * 0.7)`. At the configured `exploration_epsilon: 0.1` with 4 actions that is a hard floor of `p ≥ 0.0075` — 7,500× above the float32 floor, worst deviation 1.3e-6 log units — for `hybridquantum`, `hybridclassical`, `hybridquantumcortex`, and `qsnnreinforce`, independent of task.
+
+Addressing the float32 tail is therefore **out of scope and recorded as a low-priority issue**, not deferred work this change depends on. The condition that would make it matter — a config annealing `entropy_coef` to zero with no ε floor — does not exist in `configs/`.
+
 This **does not** conflict with the standing T2 requirement, which binds `torch.allclose(rtol=0, atol=1e-7)` on *parameter tensors after 5-step smoke training* — a different quantity from a single-step log-probability, and one where a `1e-4` log-prob shift on a rarely-taken action does not propagate at that magnitude.
 
 One exception in the other direction: **`spikingreinforce` is byte-exact.** It already uses `torch.distributions.Categorical` at `spikingreinforce.py:655` and `:773`; its migration is a Family-A lift despite sitting in the REINFORCE group.
 
 **Sampled-action trajectories are byte-identical for every brain**, including B/C/D — every `rng.choice` sampler is kept verbatim, untouched. The tolerance applies only to the scalar log-prob/entropy/loss values, never to which action was taken. This is the distinction D6 drew between an acceptable round-off tolerance and the forbidden "different-seed run."
+
+### D3a — End-to-end training validation (added during Task 2)
+
+The unit-level bars in D3 bound the *scalar* deviation. They do not answer the question that actually matters — whether a migrated brain still trains the same. So each migrated family is also checked by running real training sessions before and after, at matched seeds.
+
+Method: revert **only** the migrated module(s) to their pre-migration state, run `scripts/run_simulation.py` at a fixed seed, restore, re-run. Both conditions share identical `_policy.py`, so the migration is the only variable.
+
+**Family A — byte-identical end to end.** `crh`, `foraging/crh_small_oracle`, 300 runs, seed 1 (94.7% success, so a genuinely trained policy): the *only* difference in the entire output is the session UUID. Every run line, reward, step count, and summary metric matches exactly. This confirms the byte-exactness claim on a real training run rather than only in a unit test — and validates the harness, since a method capable of manufacturing a difference would have shown one here.
+
+**Family B — trajectories diverge, outcomes do not.** `crhqlstm`, `foraging/crhqlstm_small_classical_oracle`, 500 runs × 5 paired seeds. Divergence begins at run 10–17 of 500 — expected, since the log-prob feeds the gradient, so the two conditions become independent training runs rather than the same run with noise. The correct claim is therefore *distributional equivalence*, not identity:
+
+| Metric | Before | After | Paired Δ | 95% CI | Signs |
+|---|---|---|---|---|---|
+| success rate | 95.36 ±0.57 | 95.28 ±0.52 | **−0.08 pp** | [−1.02, +0.86] | 3−/2+ |
+| avg reward | 34.23 ±0.12 | 34.49 ±0.37 | **+0.26** | [−0.23, +0.74] | 1−/4+ |
+| avg foods | 9.622 ±0.042 | 9.626 ±0.049 | **+0.004** | [−0.065, +0.073] | 2−/1=/2+ |
+
+No metric is significant at p < 0.05 (paired *t*, df = 4), and every sign column is mixed. For scale, the Phase 6a headline separations this platform is built to resolve are 13–75 pp; the CI here bounds any migration effect on success rate at about ±1 pp.
+
+**Honest limits.** n = 5 seeds on one config bounds the effect, it does not prove absence — a sub-1 pp shift would not be detected. The avg-reward column leans positive in 4 of 5 seeds, which is worth re-checking if the same lean appears in later families rather than dismissing now. Families C and D get the same treatment as they land.
 
 ### D4 — Migrate rollout and update together, per brain; this fixes a live ratio bias
 
