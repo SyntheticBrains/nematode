@@ -1223,6 +1223,50 @@ class TestProbabilityFloorHelper:
         assert torch.allclose(floored.sum(dim=-1), torch.tensor([1.0]))
 
 
+def _make_brain(**overrides: object) -> SpikingReinforceBrain:
+    """Build a small spiking brain, overriding config fields per test."""
+    config_kwargs: dict[str, object] = {
+        "hidden_size": 8,
+        "num_timesteps": 5,
+        "num_hidden_layers": 1,
+        "learning_rate": 0.05,
+        "update_frequency": 0,
+    }
+    config_kwargs.update(overrides)
+    return SpikingReinforceBrain(
+        config=SpikingReinforceBrainConfig(**config_kwargs),  # type: ignore[arg-type]
+        input_dim=4,
+        num_actions=4,
+        device=DeviceType.CPU,
+    )
+
+
+def _capture_loss_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[tuple[int, ...], tuple[int, ...]]]:
+    """Record the ``(log_probs, advantages)`` shapes at the real call site."""
+    import quantumnematode.brain.arch.spikingreinforce as sr_module
+    from quantumnematode.brain.arch._policy import reinforce_policy_loss
+
+    calls: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
+
+    def spy(log_probs: torch.Tensor, advantages: torch.Tensor) -> torch.Tensor:
+        calls.append((tuple(log_probs.shape), tuple(advantages.shape)))
+        return reinforce_policy_loss(log_probs, advantages)
+
+    monkeypatch.setattr(sr_module, "reinforce_policy_loss", spy)
+    return calls
+
+
+def _run_episode(brain: SpikingReinforceBrain, steps: int = 6) -> None:
+    """Drive a balanced episode (one ``learn`` per ``run_brain``)."""
+    params = BrainParams()
+    rng = np.random.default_rng(0)
+    for i in range(steps):
+        brain.run_brain(params, top_only=False, top_randomize=False)
+        brain.learn(params, reward=float(rng.normal()), episode_done=(i == steps - 1))
+
+
 class TestPolicyGradientShapes:
     """Regression tests for #276 — the policy gradient was identically zero.
 
@@ -1243,52 +1287,24 @@ class TestPolicyGradientShapes:
     - asserting that the policy weights move, which cannot discriminate — a
       freshly-initialised network with a probability floor is near-uniform, so
       every log-prob is nearly equal and the loss is ~0 either way.
+
+    ``TestBufferAlignment`` below covers the second defect separately.
     """
 
     @pytest.fixture
     def brain(self) -> SpikingReinforceBrain:
-        return SpikingReinforceBrain(
-            config=SpikingReinforceBrainConfig(
-                hidden_size=8,
-                num_timesteps=5,
-                num_hidden_layers=1,
-                learning_rate=0.05,
-                update_frequency=0,
-            ),
-            input_dim=4,
-            num_actions=4,
-            device=DeviceType.CPU,
-        )
+        return _make_brain()
 
-    @staticmethod
-    def _capture_loss_calls(monkeypatch) -> list[tuple]:
-        """Record the (log_probs, advantages) shapes at the real call site."""
-        import quantumnematode.brain.arch.spikingreinforce as sr_module
-        from quantumnematode.brain.arch._policy import reinforce_policy_loss
-
-        calls: list[tuple] = []
-
-        def spy(log_probs, advantages):
-            calls.append((tuple(log_probs.shape), tuple(advantages.shape)))
-            return reinforce_policy_loss(log_probs, advantages)
-
-        monkeypatch.setattr(sr_module, "reinforce_policy_loss", spy)
-        return calls
-
-    @staticmethod
-    def _run_episode(brain: SpikingReinforceBrain, steps: int = 6) -> None:
-        params = BrainParams()
-        rng = np.random.default_rng(0)
-        for i in range(steps):
-            brain.run_brain(params, top_only=False, top_randomize=False)
-            brain.learn(params, reward=float(rng.normal()), episode_done=(i == steps - 1))
-
-    def test_log_probs_reach_the_loss_one_dimensional(self, brain, monkeypatch) -> None:
+    def test_log_probs_reach_the_loss_one_dimensional(
+        self,
+        brain: SpikingReinforceBrain,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """``(T,)`` against ``(T,)``. A ``(T, 1)`` stack is the bug."""
-        calls = self._capture_loss_calls(monkeypatch)
+        calls = _capture_loss_calls(monkeypatch)
         torch.manual_seed(0)
 
-        self._run_episode(brain)
+        _run_episode(brain)
 
         assert calls, "no policy-gradient update fired — the fixture is not exercising the path"
         for lp_shape, adv_shape in calls:
@@ -1302,13 +1318,17 @@ class TestPolicyGradientShapes:
                 "buffers are misaligned, which the broadcast used to hide"
             )
 
-    def test_batch_path_also_passes_one_dimensional_log_probs(self, brain, monkeypatch) -> None:
+    def test_batch_path_also_passes_one_dimensional_log_probs(
+        self,
+        brain: SpikingReinforceBrain,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """The batch update has its own scoring site and its own alignment."""
-        calls = self._capture_loss_calls(monkeypatch)
+        calls = _capture_loss_calls(monkeypatch)
         torch.manual_seed(0)
 
         for _ in range(3):
-            self._run_episode(brain, steps=4)
+            _run_episode(brain, steps=4)
 
         assert calls, "no batch update fired"
         assert all(len(lp) == 1 and lp == adv for lp, adv in calls), (
@@ -1334,3 +1354,85 @@ class TestPolicyGradientShapes:
             "loss is invariant to which action got which advantage — credit "
             "assignment is not per-action"
         )
+
+
+class TestBufferAlignment:
+    """The second defect the (T, 1) broadcast was hiding (#276).
+
+    ``episode_states`` is appended by ``run_brain`` and ``episode_rewards`` by
+    ``learn``, and the episode-final ``learn(episode_done=True)`` can add a reward
+    with no preceding step — so rewards run one ahead. The per-step loops already
+    tolerated that via ``zip(strict=False)``, but the returns were built from the
+    reward list independently, producing a longer advantages vector.
+    ``(3, 1) x (4,)`` broadcast silently; ``(3,) x (4,)`` raises.
+
+    ``TestPolicyGradientShapes`` drives a balanced episode and so never creates the
+    misalignment. These deliberately do, and assert the resulting sample count
+    rather than only that nothing raised. Note the two paths differ: the batch path
+    genuinely needs trimming, the intra-episode path is self-aligning — see each
+    test's docstring.
+    """
+
+    @staticmethod
+    def _unbalanced_episode(brain: SpikingReinforceBrain, steps: int) -> None:
+        """Take ``steps`` steps, then a terminal ``learn`` with no matching step.
+
+        This is the shape the runners produce: ``runners.py:199`` finalises an
+        episode with ``learn(episode_done=True)`` independently of ``run_brain``.
+        """
+        params = BrainParams()
+        rng = np.random.default_rng(0)
+        for _ in range(steps):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=float(rng.normal()), episode_done=False)
+        brain.learn(params, reward=float(rng.normal()), episode_done=True)
+
+    def test_intra_episode_path_is_self_aligning(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The intra-episode path needs no trimming, and this pins why.
+
+        Every buffer is sliced ``[-update_frequency:]`` and the guard returns
+        unless there are that many states, so all four are exactly
+        ``update_frequency`` long even when ``episode_rewards`` runs one ahead.
+        An explicit alignment step was written here first and then removed once
+        this test showed it could never change the outcome; if this ever starts
+        failing, the slicing has changed and the batch path's trimming logic
+        belongs here too.
+        """
+        brain = _make_brain(update_frequency=3, warmup_episodes=99)
+        calls = _capture_loss_calls(monkeypatch)
+        torch.manual_seed(0)
+
+        self._unbalanced_episode(brain, steps=6)
+
+        assert calls, "intra-episode update did not fire — check update_frequency"
+        for lp_shape, adv_shape in calls:
+            assert lp_shape == adv_shape == (3,), (
+                f"expected exactly update_frequency=3 aligned samples, got "
+                f"log_probs {lp_shape} / advantages {adv_shape}"
+            )
+
+    def test_batch_update_trims_the_extra_terminal_reward(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Batch path: one extra reward per episode must not lengthen advantages."""
+        brain = _make_brain(batch_size=2)
+        calls = _capture_loss_calls(monkeypatch)
+        torch.manual_seed(0)
+
+        self._unbalanced_episode(brain, steps=4)
+        self._unbalanced_episode(brain, steps=4)
+
+        assert calls, "batch update did not fire — check batch_size"
+        for lp_shape, adv_shape in calls:
+            assert lp_shape == adv_shape, (
+                f"batch path passed log_probs {lp_shape} against advantages "
+                f"{adv_shape}; the extra terminal reward was not trimmed"
+            )
+            assert lp_shape == (8,), (
+                f"expected 2 episodes x 4 steps = 8 aligned samples, got {lp_shape} "
+                "— the terminal rewards were counted or steps were dropped"
+            )

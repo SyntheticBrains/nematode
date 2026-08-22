@@ -599,24 +599,14 @@ class SpikingReinforceBrain(ClassicalBrain):
         """
         n_steps = self.config.update_frequency
 
-        # Align the buffers before slicing. ``episode_states`` is appended by
-        # ``run_brain`` and ``episode_rewards`` by ``learn``, and the episode-final
-        # ``learn(episode_done=True)`` can add a reward with no preceding step — so
-        # rewards may run one ahead. The per-step loop below already tolerates this
-        # via ``zip(strict=False)``, but the returns were computed from the reward
-        # list independently, producing a longer advantages vector. That mismatch
-        # used to be swallowed by a (T, 1) x (T,) broadcast; with the shapes correct
-        # it would raise, so the buffers are trimmed to their common length here.
-        aligned = min(
-            len(self.episode_states),
-            len(self.episode_actions),
-            len(self.episode_action_probs),
-            len(self.episode_rewards),
-        )
-        recent_states = self.episode_states[:aligned][-n_steps:]
-        recent_actions = self.episode_actions[:aligned][-n_steps:]
-        recent_action_probs = self.episode_action_probs[:aligned][-n_steps:]
-        recent_rewards = self.episode_rewards[:aligned][-n_steps:]
+        # Get the last n_steps of data. No alignment needed here: every slice is
+        # ``[-n_steps:]`` and the guard below returns unless there are n_steps
+        # states, so all four are exactly n_steps long even when ``episode_rewards``
+        # runs one ahead. The batch path has no such equaliser — see the note there.
+        recent_states = self.episode_states[-n_steps:]
+        recent_actions = self.episode_actions[-n_steps:]
+        recent_action_probs = self.episode_action_probs[-n_steps:]
+        recent_rewards = self.episode_rewards[-n_steps:]
 
         if len(recent_states) < n_steps:
             return  # Not enough data yet
