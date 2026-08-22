@@ -149,7 +149,7 @@ brain:
 Use this decision tree to choose an optimization method:
 
 ```text
-Is the brain quantum-based (QVarCircuitBrain, QQLearningBrain)?
+Is the brain quantum-based (QVarCircuitBrain)?
 ├── YES → Use CMA-ES
 │         - Evolution handles shot noise naturally
 │         - Avoids barren plateaus

@@ -137,46 +137,45 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 27 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 26 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
-01. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
-02. **QQLearningBrain** (`qqlearning`): Quantum Q-learning with variational circuits
-03. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
-04. **QRHBrain** (`qrh`): Quantum reservoir hybrid — C. elegans topology, X/Y/Z+ZZ features, PPO readout
-05. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
-06. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
-07. **QLIFLSTMBrain** (`qliflstm`): Quantum-enhanced LSTM with QLIF gates, recurrent PPO with truncated BPTT
-08. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
-09. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
-10. **EquivariantQuantumPPOBrain** (`equivariantquantum`): Z2-equivariant data-re-uploading circuit with odd/even-parity latent split and PPO; ships classical-equivariant + symmetry-prior ablation controls
+1. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
+2. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
+3. **QRHBrain** (`qrh`): Quantum reservoir hybrid — C. elegans topology, X/Y/Z+ZZ features, PPO readout
+4. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
+5. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
+6. **QLIFLSTMBrain** (`qliflstm`): Quantum-enhanced LSTM with QLIF gates, recurrent PPO with truncated BPTT
+7. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
+8. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
+9. **EquivariantQuantumPPOBrain** (`equivariantquantum`): Z2-equivariant data-re-uploading circuit with odd/even-parity latent split and PPO; ships classical-equivariant + symmetry-prior ablation controls
 
 **Hybrid (quantum + classical):**
 
-11. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout — classical-reservoir ablation companion to QRH-QLSTM
-12. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture on the grid substrate (Logbook 008)
-13. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
-14. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
+10. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout — classical-reservoir ablation companion to QRH-QLSTM
+11. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture on the grid substrate (Logbook 008)
+12. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
+13. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
 
 **Classical:**
 
-15. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
-16. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
-17. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
-18. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
-19. **LSTMPPOBrain** (`lstmppo`): LSTM/GRU-augmented PPO with chunk-based truncated BPTT — designed for temporal sensing tasks
-20. **CfCPPOBrain** (`cfcppo`): CfC (Closed-form Continuous-time) liquid network with AutoNCP wiring and continuous-time recurrence, PPO-trained
-21. **TransformerPPOBrain** (`transformerppo`): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — attention-based temporal-memory comparator to the LSTM/CfC recurrent substrates
-22. **MinGRUPPOBrain** (`mingruppo`): minGRU-augmented PPO — parallel-form minimal RNN with input-only gating (Feng et al. 2024); bounded, saturation-free recurrent core and stability-upgrade candidate to the LSTM arm
-23. **MinLSTMPPOBrain** (`minlstmppo`): minLSTM-augmented PPO — parallel-form minimal RNN with normalised input-only gates and a single recurrent state; classical stability-comparator companion to minGRU
-24. **FeedforwardGABrain** (`feedforwardga`): Feed-forward network with weights evolved by the GA optimizer (gradient-free); graded episodic-progress fitness for sparse-reward cells
+14. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
+15. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
+16. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
+17. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
+18. **LSTMPPOBrain** (`lstmppo`): LSTM/GRU-augmented PPO with chunk-based truncated BPTT — designed for temporal sensing tasks
+19. **CfCPPOBrain** (`cfcppo`): CfC (Closed-form Continuous-time) liquid network with AutoNCP wiring and continuous-time recurrence, PPO-trained
+20. **TransformerPPOBrain** (`transformerppo`): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — attention-based temporal-memory comparator to the LSTM/CfC recurrent substrates
+21. **MinGRUPPOBrain** (`mingruppo`): minGRU-augmented PPO — parallel-form minimal RNN with input-only gating (Feng et al. 2024); bounded, saturation-free recurrent core and stability-upgrade candidate to the LSTM arm
+22. **MinLSTMPPOBrain** (`minlstmppo`): minLSTM-augmented PPO — parallel-form minimal RNN with normalised input-only gates and a single recurrent state; classical stability-comparator companion to minGRU
+23. **FeedforwardGABrain** (`feedforwardga`): Feed-forward network with weights evolved by the GA optimizer (gradient-free); graded episodic-progress fitness for sparse-reward cells
 
 **Biologically-Inspired:**
 
-25. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
-26. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
-27. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
+24. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+25. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
+26. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
 
 Each brain architecture self-registers via the `@register_brain` decorator and follows a common interface defined in `quantumnematode.brain.arch`. See the [Plugin Developer Guide](docs/architecture/plugin-developer-guide.md) for how to add a new one.
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This specification defines the YAML-based configuration system for the Quantum Nematode simulation platform. It governs how brain architectures (qvarcircuit, qqlearning, mlpreinforce, mlpppo, mlpdqn, spikingreinforce; legacy aliases: modular, qmodular, mlp, qmlp, ppo, spiking), environment parameters, and learning hyperparameters are specified, validated, and loaded. The configuration system ensures all parameters fall within valid ranges, applies sensible defaults for optional settings, and provides example configurations for common use cases. This spec is intended for developers extending the platform with new brain types or environment features.
+This specification defines the YAML-based configuration system for the Quantum Nematode simulation platform. It governs how brain architectures (the names registered in `brain/arch/_registry.py` — enumerating them here has drifted twice and is no longer done), environment parameters, and learning hyperparameters are specified, validated, and loaded. The configuration system ensures all parameters fall within valid ranges, applies sensible defaults for optional settings, and provides example configurations for common use cases. This spec is intended for developers extending the platform with new brain types or environment features.
 
 ## Requirements
 

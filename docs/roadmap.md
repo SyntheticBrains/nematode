@@ -95,7 +95,7 @@ ______________________________________________________________________
 
 ## Current State
 
-Phases 0-5 are complete. The platform now supports: 27 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6.
+Phases 0-5 are complete. The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6.
 
 ### Phase 0 — Foundation & Baselines
 
@@ -1213,7 +1213,7 @@ ______________________________________________________________________
 
 ### Resolved through Phase 5
 
-- ~~QQLearningBrain completion~~ — evaluated, not competitive; deprioritised.
+- ~~QQLearningBrain completion~~ — evaluated, not competitive; deprioritised. **Retired 2026-08-23** — the architecture was removed from the codebase ([#282](https://github.com/SyntheticBrains/nematode/issues/282)); git history keeps the implementation.
 - ~~MLPReinforceBrain loss bug~~ — investigated and documented.
 - ~~Grid size hardcoding~~ — fixed.
 - ~~Statistical analysis framework~~ — operational; paired-seed Wilcoxon and bootstrap CIs are the project-wide standard.

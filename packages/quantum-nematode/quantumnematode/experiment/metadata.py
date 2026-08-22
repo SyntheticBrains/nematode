@@ -261,7 +261,8 @@ class BrainMetadata(BaseModel):
     Attributes
     ----------
     type : str
-        Brain architecture type ("modular", "mlp", "qmodular", "qmlp", "spiking").
+        Brain architecture type, e.g. "qvarcircuit", "mlpppo", "spikingreinforce" —
+        a registered brain name (see ``brain/arch/_registry.py``).
     qubits : int | None
         Number of qubits (quantum brains only).
     shots : int | None
@@ -481,7 +482,7 @@ class ConfigSummary(BaseModel):
     Attributes
     ----------
     brain_type : str
-        Brain architecture type ("modular", "mlp", "ppo", "spiking", etc.).
+        Brain architecture type — a registered brain name, e.g. "mlpppo".
     grid_size : int
         Size of the grid environment.
     predators_enabled : bool
