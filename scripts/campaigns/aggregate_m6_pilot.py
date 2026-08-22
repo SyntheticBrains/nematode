@@ -244,8 +244,14 @@ def main() -> int:  # noqa: C901, PLR0915 - linear CLI flow: load, gate, report
     # F0 baseline override: when --campaign-root is provided, load each
     # (arm, seed)'s F0 training-time fitness from per_gen_elites.jsonl
     # and use it as the F0 baseline for the survival_rate gate.
+    # No ``is_dir()`` guard: a mistyped or missing --campaign-root must not
+    # silently degrade to ``None`` (i.e. post-hoc F0 for every seed), which is the
+    # fail-open this change exists to close. The loader returns an empty dict for a
+    # root it cannot read, and the preflight below then reports every gated pair as
+    # missing — so the operator is told, rather than quietly given the baseline they
+    # asked to replace. Matches the m69/m613 form.
     f0_override: dict[tuple[str, int], float] | None = None
-    if args.campaign_root is not None and args.campaign_root.is_dir():
+    if args.campaign_root is not None:
         f0_override = load_f0_training_fitness_per_seed(
             args.campaign_root,
             arms=arms,

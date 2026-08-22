@@ -145,3 +145,41 @@ class TestTheVerdictFlipThisPrevents:
     def test_the_gate_really_is_a_ratio_of_f0(self) -> None:
         """Pins the mechanism the flip depends on."""
         assert GATE_F1_RATIO * 0.40 < 0.25 < GATE_F1_RATIO * 0.80
+
+
+class TestUnreadableCampaignRootStillFailsClosed:
+    """A mistyped ``--campaign-root`` must not degrade to the post-hoc baseline.
+
+    ``aggregate_m6_pilot`` used to guard the load with ``args.campaign_root.is_dir()``,
+    so a missing or mistyped root left the override as ``None`` — which means
+    "post-hoc F0 for every seed", the exact baseline the operator asked to replace.
+    That is the same fail-open #279 closes, reached by a different route, and m69 /
+    m613 never had the guard.
+
+    Without it the loader returns an empty dict for a root it cannot read, and the
+    preflight reports every gated pair as missing.
+    """
+
+    def test_loader_returns_empty_dict_for_an_unreadable_root(self) -> None:
+        from scripts.campaigns._common import load_f0_training_fitness_per_seed
+
+        loaded = load_f0_training_fitness_per_seed(
+            Path("/nonexistent/mistyped-campaign-root"),
+            arms=["tei_on", "control"],
+        )
+
+        assert loaded == {}
+
+    def test_empty_override_is_rejected_rather_than_treated_as_absent(self) -> None:
+        """``{}`` and ``None`` must not behave the same way.
+
+        ``None`` means "post-hoc for everything", which is a coherent choice.
+        ``{}`` means "an override was requested and nothing could be loaded", which
+        is a failure.
+        """
+        gated = [("tei_on", 42), ("control", 42)]
+
+        require_complete_f0_override(None, gated)  # coherent: no override requested
+
+        with pytest.raises(ValueError, match="covers 0 of 2"):
+            require_complete_f0_override({}, gated)
