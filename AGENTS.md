@@ -70,7 +70,7 @@ Pre-commit runs only the fast tier (`not smoke and not nightly and not slow`). R
 
 ### CI sharding and `.test_durations`
 
-CI splits the suite across three parallel shards with `pytest-split`, balanced by
+CI splits the suite across five parallel shards with `pytest-split`, balanced by
 the committed `.test_durations` file. Tests missing from that file still run —
 `pytest-split` places unknown tests without a duration estimate — so it only
 needs regenerating when the balance drifts badly (one shard visibly slower than
