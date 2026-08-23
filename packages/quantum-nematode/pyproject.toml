@@ -3,8 +3,8 @@ name = "quantum-nematode"
 version = "1.0.0"
 description = "Quantum brain simulation of a nematode (C. elegans) using variational quantum circuits"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Chris Zaharia" }]
-maintainers = [{ name = "Chris Zaharia" }]
+authors = [{ name = "Chris Julian Zaharia" }]
+maintainers = [{ name = "Chris Julian Zaharia" }]
 requires-python = ">=3.13,<3.14"
 keywords = [
     "quantum",
