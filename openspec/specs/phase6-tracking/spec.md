@@ -14,7 +14,7 @@ and **6b** (T8 NEAT topology search + the T9b synthesis addendum) tracked separa
 
 ### Requirement: Phase 6a Living Tranche Checklist (now frozen)
 
-Through Phase 6a the repository maintained a single living checklist at `openspec/changes/phase6-tracking/tasks.md` covering the Phase-6a tranches (T1–T7) + the mid-phase gates at sub-task granularity, updated by every Phase-6a milestone PR. That change is now **archived** on the Phase-6a synthesis; the checklist is frozen. Ongoing tracking continues under `phase6b-tracking`.
+Through Phase 6a the repository maintained a single living checklist at `openspec/changes/phase6-tracking/tasks.md` covering the Phase-6a tranches (T1–T7) + the mid-phase gates at sub-task granularity, updated by every Phase-6a milestone PR. That change is now **archived** on the Phase-6a synthesis; the checklist is frozen. The frozen checklist SHALL be retained at that path unmodified as the Phase-6a record, and any forward "maintain / update the checklist" obligation SHALL be directed to `phase6b-tracking` rather than satisfied by editing this file.
 
 #### Scenario: Future session orients to Phase 6
 
