@@ -79,7 +79,7 @@ Create or update an experiment logbook with artifacts and documentation.
 
 5. **Update the experiment index**
 
-   Add entry to `docs/experiments/README.md` in the Active Experiments table.
+   Add entry to `docs/experiments/README.md` in the Logbook Index table.
 
 6. **Update the roadmap** (if findings affect project direction)
 

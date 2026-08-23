@@ -19,7 +19,7 @@ artifacts/
 │   └── <timestamp>/    # e.g., 20251209_205950
 │       ├── best_params.json
 │       ├── history.csv
-│       └── checkpoint_gen30.pkl (optional)
+│       └── checkpoint.pkl (periodic, for --resume)
 ├── experiments/        # Simulation experiment snapshots
 │   └── <session_id>/   # e.g., 20251207_035803
 │       └── metadata.json
@@ -34,7 +34,6 @@ artifacts/
 | Auto-tracking | `experiments/` | No | All simulation run metadata |
 | Evolution results | `evolution_results/` | No | All evolution run outputs |
 | **Artifacts** | `artifacts/` | **Yes** | Curated outputs worth keeping |
-| Benchmarks | `benchmarks/` | Yes | Top-performing submissions |
 | Logbooks | `docs/experiments/logbooks/` | Yes | Human analysis narratives |
 
 ## Workflow
@@ -43,7 +42,7 @@ artifacts/
 
 ```bash
 # 1. Run evolution (outputs to evolution_results/)
-uv run python scripts/run_evolution.py --config configs/examples/evolution_qvarcircuit_foraging_small.yml ...
+uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --algorithm ga ...
 
 # 2. Copy notable results to artifacts/
 cp -r evolution_results/20251209_205950 artifacts/evolutions/
@@ -78,7 +77,6 @@ cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metada
 
 - Every experiment run (use `experiments/` for that)
 - Large checkpoint files unless specifically needed
-- Duplicate data already in `benchmarks/`
 
 ## Naming Conventions
 
@@ -90,5 +88,5 @@ cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metada
 
 - JSON/CSV files: Always acceptable
 - Checkpoint files (`.pkl`) and model weights (`.pt`): tracked via Git LFS automatically
-- Training logs (`.log`) and all JSON files in `artifacts/` and `benchmarks/`: tracked via Git LFS automatically
+- Training logs (`.log`) and all JSON files in `artifacts/`: tracked via Git LFS automatically
 - For other binary formats > 500 KB: add a matching rule to `.gitattributes` before committing
