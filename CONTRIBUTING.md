@@ -205,9 +205,35 @@ PR checklist:
 - [ ] Tests pass (`uv run pytest -m "not nightly"`)
 - [ ] Pre-commit passes (`uv run pre-commit run -a`)
 - [ ] Documentation updated (docs, `AGENTS.md`, logbook if there are results)
+- [ ] `CHANGELOG.md` has a line under *Unreleased* for any user-facing change
 - [ ] Type hints added
 - [ ] Disabled-by-default features are byte-identical no-ops when off
 - [ ] Benchmark ranges updated if training behaviour changed, with evidence
+
+## Releasing
+
+Releases are tags on `main` plus a GitHub Release; there is no PyPI publication. To cut one:
+
+1. In `CHANGELOG.md`, turn *Unreleased* into the new version with the date, breaking changes first, and update the compare links at the bottom.
+
+2. Set the version in both `pyproject.toml` files and in `CITATION.cff` (with `date-released`), then run `uv lock` so the lock file records it.
+
+3. Run `uv run pytest -m "not nightly"`, `uv run pre-commit run -a` and `uv build`, then audit the locked third-party dependencies — export them to a file and point `pip-audit` at it:
+
+   ```bash
+   uv export --format requirements-txt --no-hashes --no-emit-project --no-emit-workspace \
+     --extra cpu --extra torch --extra pixel --extra qpu --extra analysis -o /tmp/requirements-audit.txt
+   uvx --python 3.13 pip-audit -r /tmp/requirements-audit.txt
+   ```
+
+4. Merge the release PR, then on the merge commit: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
+
+5. Extract the release's section from `CHANGELOG.md` into a notes file and publish the release with it; the changelog section leads and GitHub's generated pull-request list follows:
+
+   ```bash
+   awk '/^## \[X.Y.Z\]/{f=1; next} /^## \[/{f=0} f' CHANGELOG.md > /tmp/notes-X.Y.Z.md
+   gh release create vX.Y.Z --title vX.Y.Z --notes-file /tmp/notes-X.Y.Z.md --generate-notes
+   ```
 
 ## Where help is wanted
 
