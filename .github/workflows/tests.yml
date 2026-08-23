@@ -10,10 +10,29 @@ on:
       - main
       - develop
 
+# Superseded PR runs are pointless once a newer commit is pushed. Pushes to the
+# long-lived branches are never cancelled — their coverage upload is the record.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
-    name: Python 3.12
+    name: Python 3.12 (shard ${{ matrix.group }}/5)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5]
+
+    env:
+      # One BLAS/OpenMP thread per xdist worker. Without this, every worker
+      # spawns a full thread pool and the 4 vCPUs are oversubscribed several
+      # times over, which costs more than the parallelism gains.
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
 
     steps:
       - name: Checkout code
@@ -53,7 +72,12 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run pytest -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -m "not nightly" \
+            --splits 5 --group ${{ matrix.group }} \
+            --durations-path .test_durations \
+            -n logical \
+            --cov --cov-branch --cov-report=xml \
+            --tb=short --color=yes
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -61,5 +85,19 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: unittests
-          name: codecov-umbrella
+          name: codecov-shard-${{ matrix.group }}
           fail_ci_if_error: false
+
+  tests-complete:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Check shard results
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "::error::One or more test shards failed (${{ needs.test.result }})."
+            exit 1
+          fi
+          echo "All test shards passed."
