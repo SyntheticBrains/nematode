@@ -22,7 +22,6 @@ class BrainType(StrEnum):
     """
 
     QVARCIRCUIT = "qvarcircuit"
-    QQLEARNING = "qqlearning"
     QRC = "qrc"
     QRH = "qrh"
     QSNN_REINFORCE = "qsnnreinforce"
@@ -93,7 +92,6 @@ class BrainConfig(BaseModel):
 
 BRAIN_TYPES = Literal[
     BrainType.QVARCIRCUIT,
-    BrainType.QQLEARNING,
     BrainType.QRC,
     BrainType.QRH,
     BrainType.QSNN_REINFORCE,

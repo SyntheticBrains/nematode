@@ -261,7 +261,11 @@ class BrainMetadata(BaseModel):
     Attributes
     ----------
     type : str
-        Brain architecture type ("modular", "mlp", "qmodular", "qmlp", "spiking").
+        Brain architecture type as it was recorded at run time, e.g. "qvarcircuit",
+        "mlpppo", "spikingreinforce". Deliberately ``str`` and not ``BrainType``:
+        this field is read back from stored artifacts, and 114 of the 469 tracked
+        records carry a name no longer in the registry ("mlp", "modular", "ppo",
+        "qsnn"). Do not assume membership of the registry when reading it.
     qubits : int | None
         Number of qubits (quantum brains only).
     shots : int | None
@@ -481,7 +485,9 @@ class ConfigSummary(BaseModel):
     Attributes
     ----------
     brain_type : str
-        Brain architecture type ("modular", "mlp", "ppo", "spiking", etc.).
+        Brain architecture type as recorded at run time, e.g. "mlpppo". Historical
+        artifacts may carry retired names absent from the registry — see
+        ``BrainMetadata.type``.
     grid_size : int
         Size of the grid environment.
     predators_enabled : bool

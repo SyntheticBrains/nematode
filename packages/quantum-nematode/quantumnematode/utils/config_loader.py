@@ -32,7 +32,6 @@ from quantumnematode.brain.arch import (
     MLPReinforceBrainConfig,
     QEFBrainConfig,
     QLIFLSTMBrainConfig,
-    QQLearningBrainConfig,
     QRCBrainConfig,
     QRHBrainConfig,
     QRHQLSTMBrainConfig,
@@ -118,7 +117,6 @@ BrainConfigType = (
     | MLPReinforceBrainConfig
     | MLPPPOBrainConfig
     | MLPDQNBrainConfig
-    | QQLearningBrainConfig
     | QRCBrainConfig
     | QRHBrainConfig
     | CRHBrainConfig

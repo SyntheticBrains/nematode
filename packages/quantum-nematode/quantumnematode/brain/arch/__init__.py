@@ -44,7 +44,6 @@ from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig
 from .mlpreinforce import MLPReinforceBrain, MLPReinforceBrainConfig
 from .qef import QEFBrain, QEFBrainConfig
 from .qliflstm import QLIFLSTMBrain, QLIFLSTMBrainConfig
-from .qqlearning import QQLearningBrain, QQLearningBrainConfig
 from .qrc import QRCBrain, QRCBrainConfig
 from .qrh import QRHBrain, QRHBrainConfig
 from .qrhqlstm import QRHQLSTMBrain, QRHQLSTMBrainConfig
@@ -102,8 +101,6 @@ __all__ = [
     "QEFBrainConfig",
     "QLIFLSTMBrain",
     "QLIFLSTMBrainConfig",
-    "QQLearningBrain",
-    "QQLearningBrainConfig",
     "QRCBrain",
     "QRCBrainConfig",
     "QRHBrain",

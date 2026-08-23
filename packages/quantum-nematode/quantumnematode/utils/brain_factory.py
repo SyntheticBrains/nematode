@@ -93,23 +93,6 @@ def _build_infra_kwargs(  # noqa: PLR0911, PLR0913
             "gradient_max_norm": gradient_max_norm,
             "perf_mgmt": perf_mgmt,
         }
-    if brain_type is BrainType.QQLEARNING:
-        if not isinstance(learning_rate, DynamicLearningRate):
-            msg = (
-                "The 'qqlearning' brain architecture requires a DynamicLearningRate. "
-                f"Provided learning rate type: {type(learning_rate)}."
-            )
-            logger.error(msg)
-            raise ValueError(msg)
-        return {
-            "device": device,
-            "shots": shots,
-            "learning_rate": learning_rate,
-            "parameter_initializer": create_parameter_initializer_instance(
-                parameter_initializer_config,
-            ),
-        }
-
     # Classical PPO / REINFORCE / DQN: parameter-initialiser plumbing.
     if brain_type is BrainType.MLP_REINFORCE:
         return {
@@ -195,7 +178,7 @@ def setup_brain_model(  # noqa: PLR0913
         The device to use for simulation.
     learning_rate
         The learning rate configuration for the brain. Only quantum-circuit
-        architectures (QVARCIRCUIT, QQLEARNING) consume this at the
+        architectures (QVARCIRCUIT) consume this at the
         infrastructure layer; classical brains read learning-rate fields
         from their own config.
     gradient_method

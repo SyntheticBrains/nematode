@@ -593,7 +593,7 @@ class SensoryModule:
     def to_quantum_dict(self, params: BrainParams) -> dict[str, float]:
         """Extract and transform to quantum gate angles as a dict.
 
-        This is a convenience method for QVarCircuitBrain and QQLearningBrain that
+        This is a convenience method for QVarCircuitBrain that
         returns features in the dict format expected by circuit building code.
 
         Returns

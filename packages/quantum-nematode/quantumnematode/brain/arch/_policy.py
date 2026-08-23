@@ -3,8 +3,8 @@
 This module is the single source of truth for the parity-sensitive discrete
 policy code — action sampling, log-probability, entropy, and the policy-loss
 terms — which was previously copy-pasted per brain. Every policy-gradient brain
-scores its actions here; the four non-PG brains (``qqlearning``, ``mlpdqn``,
-``qvarcircuit``, ``feedforwardga``) have no categorical PG term to share.
+scores its actions here; the three non-PG brains (``mlpdqn``, ``qvarcircuit``,
+``feedforwardga``) have no categorical PG term to share.
 
 The brains fall into four structural families by *what distribution they score*
 and *which RNG stream samples it*. The migration preserves each family's sampled
