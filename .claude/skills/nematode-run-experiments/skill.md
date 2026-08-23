@@ -12,8 +12,10 @@ Run parallel experiment groups with multiple seeds for evaluation.
 
 **Constraints**
 
-- **Max 16 concurrent sessions** (4 groups × 4 seeds) — machine handles this without degradation
-- **Max 4 experiment groups** per round — keep comparisons manageable
+- **16 concurrent sessions** (4 groups × 4 seeds) is the throughput sweet spot — measured, not assumed. Going wider still finishes more work, it just costs wall-clock per session: 16 sessions run at ~1.8 sessions/s, 24 at ~1.77/s, 32 at ~1.68/s. So **24 is fine** when a round genuinely needs six groups or six seeds; past 32 the returns flatten.
+- **CPU cores are the binding constraint, not memory.** A session peaks around 0.5 GB, so even 32 at once is a small fraction of what this machine has — never reduce a matrix out of memory worry. Reduce it because sessions are competing for cores.
+- **Pin threads when running many sessions**: prefix with `OMP_NUM_THREADS=1 MKL_NUM_THREADS=1`. Each session otherwise spawns a full BLAS thread pool and they oversubscribe each other. Worth ~6% throughput at 24 sessions, more the wider you go.
+- **4 experiment groups** per round by default — the limit is interpretive, not machine capacity: more arms make a comparison harder to read, and the machine will happily run six
 - **4 seeds per group** (default: 42, 43, 44, 45) — sufficient for variance estimation
 - **Temporary configs** go in `/tmp/` — permanent configs stay in `configs/scenarios/`
 
@@ -47,6 +49,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
    ```bash
    for cfg in expA expB expC expD; do
      for seed in 42 43 44 45; do
+       OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
        uv run ./scripts/run_simulation.py --log-level INFO --show-last-frame-only \
          --runs {NUM_RUNS} --config /tmp/{cfg}.yml \
          --theme headless --track-experiment --seed $seed 2>&1 | tail -25 &

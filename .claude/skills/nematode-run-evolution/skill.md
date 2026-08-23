@@ -53,9 +53,20 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 
 2. **Compute expected runtime**
 
-   Use the multiplier from the timing-pitfalls section: `generations × population × episodes × per-episode-cost / parallel_workers`. Per-episode is ~50 ms (MLPPPO) or ~100 ms (LSTMPPO). Per-generation optimiser overhead is negligible with `cma_diagonal: true`.
+   Use the multiplier from the timing-pitfalls section: `generations × population × episodes × per-episode-cost`, then divide by the *measured* parallel speedup below — not by the worker count. Per-episode is ~40 ms (MLPPPO) or ~110 ms (LSTMPPO). Per-generation optimiser overhead is negligible with `cma_diagonal: true`.
 
-   Example: LSTMPPO, 10 gen × pop 8 × 3 episodes, parallel 1 = 240 episodes × 0.1 s ≈ 24 s. With `--parallel 4` ≈ 6 s.
+   **`--parallel N` does not divide wall-clock by N.** Measured speedup over serial saturates at roughly **2.5-3x** and is essentially reached by 6-8 workers:
+
+   | `--parallel` | 800 MLPPPO episodes | speedup |
+   |---|---|---|
+   | 1 | 31.9 s | 1.0x |
+   | 6 | 12.0 s | 2.7x |
+   | 12 | 11.4 s | 2.8x |
+   | 18 | 11.1 s | 2.9x |
+
+   Each generation is a barrier and the optimiser step between generations is serial, so past ~8 workers you are paying fork overhead for nothing. **`--parallel 8` is the sensible default**; raising it further is not the lever you want. On small runs it is actively counter-productive — 80 episodes takes 5.8 s at `--parallel 1` and 7.2 s at `--parallel 18`, because process startup dominates.
+
+   Example: LSTMPPO, 10 gen × pop 8 × 3 episodes, parallel 1 = 240 episodes × 0.11 s ≈ 26 s (measured 25.9 s). With `--parallel 12` ≈ 11 s — not the ≈2 s a linear model would predict.
 
    Tell the user the estimate before launching anything that's expected to take more than a couple minutes.
 
@@ -76,7 +87,7 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
    # Bash tool call: run_in_background=true
    uv run python scripts/run_evolution.py \
      --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml \
-     --generations 50 --population 16 --episodes 5 --parallel 4 --seed 42 \
+     --generations 50 --population 16 --episodes 5 --parallel 8 --seed 42 \
      --output-dir evolution_results
    ```
 
@@ -108,10 +119,10 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 
 - **Frozen weights only**: `EpisodicSuccessRate` runs episodes via `FrozenEvalRunner` which neuters `brain.learn` and `brain.update_memory`. The framework deliberately does not ship a learn-then-evaluate fitness in this version.
 - **Only `mlpppo`, `lstmppo`, and `feedforwardga` brains** are registered in `ENCODER_REGISTRY`. Running the script against a quantum-brain config (e.g. `qvarcircuit`) will fail with a clear error listing the registered names. `feedforwardga` uses the existing `GeneticAlgorithmOptimizer` (set `algorithm: ga` in the `evolution:` block) rather than CMA-ES; smoke config: `configs/evolution/feedforwardga_foraging_small.yml`.
-- **`--parallel N` uses `multiprocessing.Pool`**: workers fork the parent process. Don't run with `--parallel > os.cpu_count()`. Workers ignore SIGINT — Ctrl-C the parent to stop everything cleanly.
+- **`--parallel N` uses `multiprocessing.Pool`**: workers fork the parent process. `os.cpu_count()` is a hard ceiling, but the useful ceiling is far lower — see the speedup table above, which flattens by ~8 workers. Workers ignore SIGINT — Ctrl-C the parent to stop everything cleanly.
 
 ## Tips
 
 - For seeded reproducibility, always pass `--seed`; the per-evaluation seed is derived from this. Two runs with the same seed produce byte-identical lineage CSVs and best_params.
 - The MLPPPO config uses `feature_gating: False`. There is no shipped fixture for `feature_gating: true` evolution.
-- The smoke test [test_run_evolution_smoke_mlpppo](../../packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py) is the canonical "did I break the framework" check. Runs in ~4 s.
+- The smoke test [test_run_evolution_smoke_mlpppo](../../packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py) is the canonical "did I break the framework" check. Runs in ~2.5 s (its `_resume` sibling takes ~4.5 s).
