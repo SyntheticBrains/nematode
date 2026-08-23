@@ -27,8 +27,11 @@ context: |
     minlstmppo. Architectures self-register
     via @register_brain in brain/arch/_registry.py; see
     docs/architecture/plugin-developer-guide.md for how to add a new one.
-  - DynamicForagingEnvironment: multi-food foraging with predators, thermotaxis,
-    aerotaxis, and multi-agent support (2-10 agents with food competition)
+  - Two substrates: DynamicForagingEnvironment (discrete grid, Phases 0-5) and
+    Continuous2DEnvironment (Phase 6: float (speed, turn) kinematics, Euclidean
+    geometry, Fick-shaped concentration fields, adaptive biphasic chemosensor);
+    both with multi-food foraging, predators, thermotaxis, aerotaxis, and
+    multi-agent support (2-10 agents with food competition)
   - MultiAgentSimulation: orchestrator for multi-agent episodes with synchronous
     stepping, food competition, pheromone communication (food-marking + alarm +
     aggregation), social feeding (npr-1 satiety decay reduction), social proximity
@@ -43,7 +46,8 @@ context: |
     QLIF spiking neurons, surrogate gradients, hybrid quantum-classical training
   - RL: REINFORCE, DQN, experience replay, PPO, reward shaping
   - Spiking networks: LIF neurons, STDP learning, surrogate gradients
-  - Grid world: 2D dynamic foraging with viewport-based perception
+  - Grid world: 2D dynamic foraging with viewport-based perception; continuous-2D:
+    sub-cell kinematics with klinotaxis head-sweep sensing
 
   ## Constraints
   - IBM Quantum API key required for QPU execution

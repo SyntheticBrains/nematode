@@ -1,0 +1,42 @@
+name: Bug report
+description: Something crashed, produced the wrong result, or disagrees with the documentation
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks — a reproducible report is the fastest path to a fix. How-to questions belong in [Discussions › Q&A](https://github.com/SyntheticBrains/nematode/discussions/categories/q-a).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Command and config
+      description: The exact command, the scenario or evolution config (path, or paste the relevant block), and the seed.
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and session
+      description: The traceback, the relevant lines of `logs/simulation_<session-id>.log`, or the session id.
+      render: text
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, `uv --version`, the extras you installed, and the `--device`.
+      placeholder: macOS 15 · uv 0.9.4 · cpu+torch+pixel · --device cpu
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit or release
+      placeholder: v0.5.0, or the commit SHA of `main`
