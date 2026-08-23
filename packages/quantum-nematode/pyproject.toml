@@ -5,7 +5,7 @@ description = "Quantum brain simulation of a nematode (C. elegans) using variati
 license = { text = "Apache-2.0" }
 authors = []
 maintainers = []
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 keywords = [
     "quantum",
     "machine-learning",
@@ -24,7 +24,7 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -56,7 +56,12 @@ cpu = [
   "qiskit-aer>=0.17.0",
 ]
 gpu = [
-  "qiskit-aer-gpu>=0.15.1",
+  # Upstream stopped publishing the default CUDA-12 `qiskit-aer-gpu` build after
+  # 0.15.1 (Sept 2024), whose newest wheel is cp312 — it is the single reason
+  # this project could not move past Python 3.12. The CUDA-11 build is still
+  # maintained (0.17.2, Sept 2025) and ships cp313 wheels, so the GPU extra now
+  # tracks it. NOTE: this moves the bundled CUDA runtime from 12 to 11.
+  "qiskit-aer-gpu-cu11>=0.17.2",
 ]
 torch = [
   "torch>=2.7.0",

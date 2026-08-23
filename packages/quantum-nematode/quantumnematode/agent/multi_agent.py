@@ -80,7 +80,7 @@ def resolve_food_competition(
             results[agent_ids[0]] = food_pos
         elif len(agent_ids) > 1:
             if policy == FoodCompetitionPolicy.FIRST_ARRIVAL:
-                winner = sorted(agent_ids)[0]
+                winner = min(agent_ids)
             else:  # RANDOM
                 winner = str(rng.choice(agent_ids))
 

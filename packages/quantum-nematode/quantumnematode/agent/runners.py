@@ -24,7 +24,7 @@ from quantumnematode.report.dtypes import BehaviourStep, TerminationReason
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
-    from quantumnematode.brain.actions import ActionData
+    from quantumnematode.brain.actions import Action, ActionData
     from quantumnematode.env.associative_memory import AssociativeMemoryTask
     from quantumnematode.env.bit_memory import BitMemoryTask
 
@@ -33,6 +33,23 @@ if TYPE_CHECKING:
 _BIT_MEMORY_CHANCE = 0.5
 # Chance accuracy for the associative-memory binary readout (same 50% two-alternative baseline).
 _ASSOCIATIVE_MEMORY_CHANCE = 0.5
+
+
+def _require_discrete_action(action_data: ActionData) -> Action:
+    """Return the discrete action, which the grid substrate always requires.
+
+    ``ActionData.action`` is ``Action | None`` because continuous-2D brains carry
+    their action in ``continuous`` instead. Every caller here has already ruled
+    that case out, so ``None`` means a brain emitted neither a discrete nor a
+    continuous action — a bug worth surfacing rather than passing ``None`` on.
+    """
+    if action_data.action is None:
+        error_msg = (
+            "Brain emitted neither a discrete action nor a continuous (speed, turn) "
+            "vector; the grid substrate cannot move the agent."
+        )
+        raise ValueError(error_msg)
+    return action_data.action
 
 
 @dataclass
@@ -1071,9 +1088,15 @@ class StandardEpisodeRunner(EpisodeRunner):
                             "continuous substrate.",
                         )
                         self._warned_discrete_on_continuous = True
-                    agent.env.move_agent_for(agent.agent_id, top_action.action)
+                    agent.env.move_agent_for(
+                        agent.agent_id,
+                        _require_discrete_action(top_action),
+                    )
             else:
-                agent.env.move_agent_for(agent.agent_id, top_action.action)
+                agent.env.move_agent_for(
+                    agent.agent_id,
+                    _require_discrete_action(top_action),
+                )
 
             # Track step (will add satiety later if dynamic environment)
             agent._episode_tracker.track_step()

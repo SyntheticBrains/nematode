@@ -377,12 +377,16 @@ def _format_summary_text(verdict: dict) -> str:
     lines = [
         "Substrate diversity tripwire (T2) + magnitude tripwire (T4):",
         f"  Seeds evaluated:        {verdict['n_seeds']}",
-        f"  Min pairwise CoV:       {verdict['min_pairwise_cov']:.4f} "
-        f"(threshold >= {verdict['diversity_threshold']:.4f})",
+        (
+            f"  Min pairwise CoV:       {verdict['min_pairwise_cov']:.4f} "
+            f"(threshold >= {verdict['diversity_threshold']:.4f})"
+        ),
         f"  Mean pairwise CoV:      {verdict['mean_pairwise_cov']:.4f}",
         f"  T2 diversity pass:      {verdict['diversity_pass']}",
-        f"  Min |bias_net output|:  {verdict['min_magnitude']:.4f} "
-        f"(threshold >= {verdict['magnitude_threshold']:.4f})",
+        (
+            f"  Min |bias_net output|:  {verdict['min_magnitude']:.4f} "
+            f"(threshold >= {verdict['magnitude_threshold']:.4f})"
+        ),
         f"  T4 magnitude pass:      {verdict['magnitude_pass']}",
         f"  Overall (T2 AND T4):    {verdict['overall_pass']}",
     ]

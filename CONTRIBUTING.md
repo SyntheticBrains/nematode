@@ -6,7 +6,7 @@ Thank you for your interest in contributing to the Quantum Nematode Simulation p
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.13+
 - [uv](https://github.com/astral-sh/uv) for dependency management
 
 ### 1. Install uv
@@ -71,6 +71,13 @@ uv sync --extra cpu
 uv sync --extra gpu
 ```
 
+> **CUDA 11, not 12.** The `gpu` extra tracks `qiskit-aer-gpu-cu11`. Qiskit stopped
+> publishing the default CUDA-12 `qiskit-aer-gpu` build after 0.15.1 (September 2024),
+> whose newest wheel is cp312 — it was the one thing pinning this project to Python
+> 3.12. The CUDA-11 build is still maintained and ships cp313 wheels. Your NVIDIA
+> driver needs to support CUDA 11 (driver >= 450), which is a lower bar than CUDA 12
+> (>= 525), so this should not narrow who can run it.
+
 #### For Classical ML Brain Development
 
 ```bash
@@ -122,7 +129,7 @@ Configuration is in `pyproject.toml`:
 
 ```toml
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]

@@ -261,24 +261,28 @@ def _compute_verdict(
     if not schema_equalisation_passes:
         return (
             "INCONCLUSIVE ⚠️",
-            "Audit A1 (schema-shift confounder) is NOT closed: gen-0 "
-            "mean best_fitness diverges between Baldwin and Control "
-            f"by more than {SCHEMA_EQUALISATION_TOLERANCE} despite "
-            "schema equalisation.  No Baldwin-vs-Control claim can be "
-            "made from this pilot.  Investigate seed plumbing, encoder "
-            "initialisation, and fitness-function determinism before "
-            "re-running.",
+            (
+                "Audit A1 (schema-shift confounder) is NOT closed: gen-0 "
+                "mean best_fitness diverges between Baldwin and Control "
+                f"by more than {SCHEMA_EQUALISATION_TOLERANCE} despite "
+                "schema equalisation.  No Baldwin-vs-Control claim can be "
+                "made from this pilot.  Investigate seed plumbing, encoder "
+                "initialisation, and fitness-function determinism before "
+                "re-running."
+            ),
         )
     if speed_gate_passes and f1_gate_passes and comparative_gate_passes:
         return (
             "GO ✅",
-            "Baldwin inheritance accelerates convergence (speed gate), "
-            "the elite genome learns faster than a schema-prior baseline "
-            "at K' = 10 (F1 learning-acceleration gate), AND its "
-            "convergence speed is competitive with Lamarckian "
-            "(comparative gate).  Inheritance of learning bias is doing "
-            "real work — proceed to the next experiment with Baldwin in "
-            "the substrate.",
+            (
+                "Baldwin inheritance accelerates convergence (speed gate), "
+                "the elite genome learns faster than a schema-prior baseline "
+                "at K' = 10 (F1 learning-acceleration gate), AND its "
+                "convergence speed is competitive with Lamarckian "
+                "(comparative gate).  Inheritance of learning bias is doing "
+                "real work — proceed to the next experiment with Baldwin in "
+                "the substrate."
+            ),
         )
     if speed_gate_passes:
         failed = []
@@ -289,22 +293,26 @@ def _compute_verdict(
         joined = " and ".join(failed)
         return (
             "PIVOT ⚠️",
-            f"The speed gate passed but the {joined} gate(s) failed.  "
-            "Baldwin shows partial signal — inheritance helps "
-            "convergence but either the elite genome doesn't accelerate "
-            "learning above a schema-prior baseline, or it underperforms "
-            "Lamarckian by more than the comparative threshold.  Treat "
-            "as inconclusive and review the per-seed trajectories before "
-            "committing follow-up scope.",
+            (
+                f"The speed gate passed but the {joined} gate(s) failed.  "
+                "Baldwin shows partial signal — inheritance helps "
+                "convergence but either the elite genome doesn't accelerate "
+                "learning above a schema-prior baseline, or it underperforms "
+                "Lamarckian by more than the comparative threshold.  Treat "
+                "as inconclusive and review the per-seed trajectories before "
+                "committing follow-up scope."
+            ),
         )
     return (
         "STOP ❌",
-        "The speed gate failed: Baldwin does not accelerate convergence "
-        "over the from-scratch control by the required margin.  Per the "
-        "pre-registered STOP semantic (Decision 6): the Baldwin Effect "
-        "is NOT exhibited on this testbed.  M5 (co-evolution) proceeds "
-        "without Baldwin in its substrate; M6 (transgenerational memory) "
-        "uses Lamarckian.  No further Baldwin pilot in this Phase.",
+        (
+            "The speed gate failed: Baldwin does not accelerate convergence "
+            "over the from-scratch control by the required margin.  Per the "
+            "pre-registered STOP semantic (Decision 6): the Baldwin Effect "
+            "is NOT exhibited on this testbed.  M5 (co-evolution) proceeds "
+            "without Baldwin in its substrate; M6 (transgenerational memory) "
+            "uses Lamarckian.  No further Baldwin pilot in this Phase."
+        ),
     )
 
 
@@ -389,9 +397,11 @@ def _format_summary(  # noqa: PLR0913
     if not schema_ok:
         lines.extend(
             [
-                "⚠️ **Audit A1 NOT closed** — gates SKIPPED.  Investigate "
-                "seed plumbing, encoder initialisation, or fitness-function "
-                "determinism before re-running.  See verdict text below.",
+                (
+                    "⚠️ **Audit A1 NOT closed** — gates SKIPPED.  Investigate "
+                    "seed plumbing, encoder initialisation, or fitness-function "
+                    "determinism before re-running.  See verdict text below."
+                ),
                 "",
                 f"**Decision**: {verdict}",
                 "",
@@ -404,35 +414,49 @@ def _format_summary(  # noqa: PLR0913
         [
             "### Decision Gates",
             "",
-            f"- **Speed gate** (mean_gen_baldwin + {SPEED_GAIN_GENERATIONS} "
-            f"<= mean_gen_control): {'PASS' if speed_gate_passes else 'FAIL'}",
+            (
+                f"- **Speed gate** (mean_gen_baldwin + {SPEED_GAIN_GENERATIONS} "
+                f"<= mean_gen_control): {'PASS' if speed_gate_passes else 'FAIL'}"
+            ),
             f"  - Baldwin mean gen-to-{TARGET_FITNESS}: {speed_mean_baldwin:.2f}",
             f"  - Control mean gen-to-{TARGET_FITNESS}: {speed_mean_ctrl:.2f}",
-            f"  - Margin: {speed_mean_ctrl - speed_mean_baldwin:+.2f} "
-            f"(need >= {SPEED_GAIN_GENERATIONS})",
+            (
+                f"  - Margin: {speed_mean_ctrl - speed_mean_baldwin:+.2f} "
+                f"(need >= {SPEED_GAIN_GENERATIONS})"
+            ),
             "",
-            f"- **F1 learning-acceleration gate** (mean elite - mean baseline > "
-            f"{F1_LEARNING_ACCELERATION_THRESHOLD}, K' = {k_prime}): "
-            f"{'PASS' if f1_gate_passes else 'FAIL'}",
+            (
+                f"- **F1 learning-acceleration gate** (mean elite - mean baseline > "
+                f"{F1_LEARNING_ACCELERATION_THRESHOLD}, K' = {k_prime}): "
+                f"{'PASS' if f1_gate_passes else 'FAIL'}"
+            ),
             f"  - Baldwin elite mean (K'={k_prime}, L=25):    {f1_elite_mean:.3f}",
             f"  - Schema-prior baseline mean (K'={k_prime}, L=25): {f1_baseline_mean:.3f}",
-            f"  - Signal delta mean: {f1_signal_mean:+.3f} "
-            f"(need > {F1_LEARNING_ACCELERATION_THRESHOLD})",
+            (
+                f"  - Signal delta mean: {f1_signal_mean:+.3f} "
+                f"(need > {F1_LEARNING_ACCELERATION_THRESHOLD})"
+            ),
             "",
-            f"- **Comparative gate** (mean_gen_baldwin <= "
-            f"mean_gen_lamarckian + {COMPARATIVE_GAP_GENERATIONS}): "
-            f"{'PASS' if comparative_gate_passes else 'FAIL'}",
+            (
+                f"- **Comparative gate** (mean_gen_baldwin <= "
+                f"mean_gen_lamarckian + {COMPARATIVE_GAP_GENERATIONS}): "
+                f"{'PASS' if comparative_gate_passes else 'FAIL'}"
+            ),
             f"  - Baldwin mean gen-to-{TARGET_FITNESS}: {speed_mean_baldwin:.2f}",
             f"  - Lamarckian mean gen-to-{TARGET_FITNESS}: {speed_mean_lam:.2f}",
-            f"  - Margin: {speed_mean_lam + COMPARATIVE_GAP_GENERATIONS - speed_mean_baldwin:+.2f} "
-            f"(need >= 0)",
+            (
+                f"  - Margin: {speed_mean_lam + COMPARATIVE_GAP_GENERATIONS - speed_mean_baldwin:+.2f} "
+                f"(need >= 0)"
+            ),
             "",
             f"**Decision**: {verdict}",
             "",
             verdict_text,
             "",
-            "### Per-seed convergence speed (generations to first reach "
-            f"best_fitness >= {TARGET_FITNESS}) + F1 learning-acceleration",
+            (
+                "### Per-seed convergence speed (generations to first reach "
+                f"best_fitness >= {TARGET_FITNESS}) + F1 learning-acceleration"
+            ),
             "",
             "| Seed | Baldwin | Lamarckian | Control | F1 elite | F1 baseline | F1 signal |",
             "|------|---------|------------|---------|----------|-------------|-----------|",

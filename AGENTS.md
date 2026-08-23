@@ -6,7 +6,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 
 ## Tech Stack
 
-- Python 3.12 (strictly >=3.12,\<3.13)
+- Python 3.13 (strictly >=3.13,\<3.14)
 - Quantum: Qiskit 1.0+, Qiskit-Aer 0.17+, Qiskit-IBMRuntime 0.40+ (QPU)
 - Classical ML: PyTorch 2.7+
 - Config: Pydantic 2.11.4+, PyYAML 6.0+
