@@ -953,7 +953,8 @@ def _plot_generality(per_seed_rows: list[dict[str, Any]], out_path: Path) -> Non
         ax.set_title(f"Seed {row['seed']} — generality probe")
         ax.set_xlabel("Probe index (every `generality_probe_every` gens)")
         ax.set_ylabel("Probe fitness")
-        ax.legend(loc="best")
+        if ax.get_legend_handles_labels()[0]:  # matplotlib warns on an empty legend
+            ax.legend(loc="best")
         ax.grid(visible=True, alpha=0.3)
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
