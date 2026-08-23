@@ -7,11 +7,16 @@ context: |
   context for OpenSpec artifact creation.
 
   ## Purpose
-  Quantum Nematode is a research platform simulating a simplified C. elegans
-  navigating dynamic foraging environments using quantum variational circuits
-  or classical neural networks. Focus areas: quantum ML advantages in foraging,
-  biological modeling (chemotaxis, homeostasis), hybrid quantum-classical
-  algorithms, and NISQ applications.
+  Quantum Nematode is a closed-loop sensory-motor simulation platform: a
+  simulated C. elegans forages, evades predators and navigates thermal/oxygen
+  gradients while a pluggable brain architecture is trained by learning or
+  evolution. The research question is which architecture best learns nematode
+  behaviours, with the real C. elegans connectome as the focal comparison point
+  (docs/roadmap.md). Quantum circuits are one architecture family in that
+  comparison, not the organising principle. Focus areas: connectome-constrained
+  learning, biologically-faithful sensing, architecture ranking under a
+  paired-seed statistical protocol, real-worm behavioural validation, and
+  (Phase 7) biologically-plausible plasticity and cross-species transfer.
 
   ## Architecture
   - UV workspace: packages/quantum-nematode is the core package

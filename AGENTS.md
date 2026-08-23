@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-Quantum Nematode simulates a simplified C. elegans navigating dynamic environments to find food, using quantum variational circuits and classical ML alternatives. Research platform for quantum machine learning.
+Quantum Nematode is a closed-loop sensory-motor simulation platform: a simulated C. elegans forages, evades predators and navigates thermal/oxygen gradients while a pluggable brain architecture (MLP, recurrent, spiking, reservoir, quantum, hybrid, GA-evolved, or constrained to the real 302-neuron connectome) is trained by learning or evolution. The research question is which architecture best learns nematode behaviours, with the C. elegans connectome as the focal comparison point; quantum circuits are one architecture family in that comparison, not the organising principle (see docs/roadmap.md). Results are ranked under a paired-seed statistical protocol and validated against published C. elegans behavioural data.
 
 ## Tech Stack
 
 - Python 3.13 (strictly >=3.13,\<3.14)
-- Quantum: Qiskit 1.0+, Qiskit-Aer 0.17+, Qiskit-IBMRuntime 0.40+ (QPU)
+- Quantum: Qiskit 2.x, Qiskit-Aer 0.17+, Qiskit-IBMRuntime 0.40+ (QPU)
 - Classical ML: PyTorch 2.7+
 - Config: Pydantic 2.11.4+, PyYAML 6.0+
 - Viz: Matplotlib 3.10+, Rich 13.0+
@@ -45,7 +45,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
   - Example: `configs/scenarios/foraging/mlpppo_small_oracle.yml`, `configs/scenarios/thermal_pursuit/lstmppo_large_temporal.yml`
 - `configs/evolution/` — Evolutionary optimization configs
 - `configs/special/` — One-off experimental configs
-- `tests/` — Three-tier testing (unit, smoke, nightly)
+- `tests/` — Four-tier testing (unit, slow, smoke, nightly)
 - `openspec/` — Spec-driven development framework
 
 ## Code Conventions

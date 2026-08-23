@@ -19,7 +19,7 @@ artifacts/
 │   └── <timestamp>/    # e.g., 20251209_205950
 │       ├── best_params.json
 │       ├── history.csv
-│       └── checkpoint_gen30.pkl (optional)
+│       └── checkpoint.pkl (periodic, for --resume)
 ├── experiments/        # Simulation experiment snapshots
 │   └── <session_id>/   # e.g., 20251207_035803
 │       └── metadata.json
@@ -34,7 +34,6 @@ artifacts/
 | Auto-tracking | `experiments/` | No | All simulation run metadata |
 | Evolution results | `evolution_results/` | No | All evolution run outputs |
 | **Artifacts** | `artifacts/` | **Yes** | Curated outputs worth keeping |
-| Benchmarks | `benchmarks/` | Yes | Top-performing submissions |
 | Logbooks | `docs/experiments/logbooks/` | Yes | Human analysis narratives |
 
 ## Workflow
@@ -43,7 +42,7 @@ artifacts/
 
 ```bash
 # 1. Run evolution (outputs to evolution_results/)
-uv run python scripts/run_evolution.py --config configs/examples/evolution_qvarcircuit_foraging_small.yml ...
+uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --algorithm ga ...
 
 # 2. Copy notable results to artifacts/
 cp -r evolution_results/20251209_205950 artifacts/evolutions/

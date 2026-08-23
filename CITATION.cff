@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite it as below."
+type: software
+title: "Quantum Nematode: a closed-loop brain-architecture comparison platform on the C. elegans connectome"
+authors:
+  - family-names: Zaharia
+    given-names: Chris Julian
+repository-code: "https://github.com/SyntheticBrains/nematode"
+url: "https://github.com/SyntheticBrains/nematode"
+license: Apache-2.0
+version: 0.4.0
+date-released: "2026-07-10"
+keywords:
+  - C. elegans
+  - connectome
+  - computational neuroscience
+  - reinforcement learning
+  - embodied learning
+  - evolutionary optimisation
+  - quantum machine learning
+  - simulation
+abstract: >-
+  A closed-loop sensory-motor simulation platform in which a simulated nematode
+  forages, evades predators and navigates thermal and oxygen gradients while a
+  pluggable brain architecture — feed-forward, recurrent, spiking, reservoir,
+  quantum, hybrid, GA-evolved or constrained to the real 302-neuron C. elegans
+  connectome — is trained by learning or evolution. Architectures are ranked on
+  the same behaviours under a paired-seed statistical protocol, and the learned
+  behaviour is validated against published C. elegans behavioural data.

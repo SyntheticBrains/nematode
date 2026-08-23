@@ -1,39 +1,36 @@
 # Experiment Logbooks
 
-Human-written analysis and documentation of experiment series.
+Human-written analysis of every experiment series: the objective, the pre-registered hypothesis, the method, the results with paired-seed statistics, and the decision that followed (GO / STOP / PIVOT). The logbooks are the project's evidence base — every result quoted in the [README](../../README.md) or the [roadmap](../roadmap.md) links to one.
 
-## Relationship to Other Systems
+## Relationship to other systems
 
-This project has complementary systems for tracking experiments:
-
-| System | Location | Git Tracked | Purpose |
+| System | Location | Git tracked | Purpose |
 |--------|----------|-------------|---------|
-| **Auto-tracking** | `experiments/*.json` | No | Raw metadata from every simulation run |
-| **Evolution results** | `evolution_results/` | No | All evolution run outputs |
-| **Artifacts** | `artifacts/` | Yes | Curated outputs referenced in logbooks |
-| **Logbooks** (this) | `docs/experiments/logbooks/` | Yes | Human analysis, insights, narrative |
-| **Benchmarks** | `benchmarks/` | Yes | Curated best results for leaderboards |
+| Auto-tracking | `experiments/*.json` | No | Raw metadata from every `--track-experiment` run (config hash, git state, results) |
+| Evolution results | `evolution_results/` | No | All evolution run outputs |
+| Artifacts | `artifacts/` | Yes (Git LFS) | Curated outputs referenced by logbooks — see [artifacts/README.md](../../artifacts/README.md) |
+| Supporting data | `logbooks/supporting/<NNN>/` | Yes | Per-logbook appendices: per-seed CSVs, analysis JSON, figures, the exact configs |
+| **Logbooks** (this) | `logbooks/` | Yes | Human analysis, insights, narrative |
 
 ### Workflow
 
-```markdown
-1. Run simulations/evolution
-   └── Auto-saved to experiments/*.json or evolution_results/
+```text
+1. Run simulations or evolution
+   └── auto-saved to experiments/*.json or evolution_results/
 
 2. Query results
-   └── python scripts/experiment_query.py list
-   └── python scripts/experiment_query.py show <id>
+   └── uv run scripts/experiment_query.py list
+   └── uv run scripts/experiment_query.py show <id>
 
 3. Preserve notable results
-   └── Copy to artifacts/ for git tracking
-   └── e.g., cp -r evolution_results/20251209_205950 artifacts/evolutions/
+   └── copy to artifacts/ (git-tracked, LFS) and/or logbooks/supporting/<NNN>/
 
 4. Document findings
-   └── Write logbook in docs/experiments/logbooks/
-   └── Reference artifacts: "See artifacts/evolutions/20251209_205950/"
+   └── write logbooks/NNN-name.md from templates/experiment.md
+   └── add the row to the index below
 ```
 
-## Active Experiments
+## Logbook Index
 
 | # | Title | Status | Summary |
 |---|-------|--------|---------|
@@ -75,65 +72,21 @@ This project has complementary systems for tracking experiments:
 | 036 | [Real-Worm Behavioural-Thermotaxis Validation](logbooks/036-realworm-thermotaxis-validation.md) | completed (Phase 6a T7) — **PARTIAL / behavioural-difference** (non-gating) | The second modality: reuse the 035 machinery (via a setpoint-adjusted drive `−\|T−Tc\|` so the same bias curves apply) to validate **thermotaxis** on the faithful **linear-gradient** `Tc`-seeking assay (Luo et al. 2014; sign-only references). **Panels (MLP, n=4):** the **weathervane is reproduced weakly but robustly** — θ-free slope +0.020, 95% CI [+0.010,+0.031] excludes null, all 4 seeds positive, stable across θ/tail/leave-one-out (but ~5× weaker than chemotaxis's +0.09) — and a `thermotaxis_mode: derivative` **specificity control** collapses it to +0.000 [−0.013,+0.013], establishing it as **sensor-driven**. **Klinokinesis is ABSENT in both sensing modes** (ratio ~1.0, 95% CI spans null) — unlike 035, the derivative control does *not* elicit it. So the substrate reproduces the **spatial-steering** half of thermotaxis but not the biased-random-walk, for two principled reasons: the continuous-Gaussian action head has a **state-independent std** (can't stochastically random-walk — sharpens 035 too) and the RL worm **migrates-and-parks** rather than isothermal-tracking (temperature isn't consumable → static endpoint). A genuine behavioural *difference* that motivates Phase 7. A **radial comfort-spot** geometry gave a stronger signal but was **rejected as assay-shopping** (reference assays are linear). Also hardened the curving-rate floor (collapses when the worm parks; 035 preserved byte-identical). Chemotaxis (035) remains the strong validation of record; Gate 3 G3.d unchanged. |
 | 037 | [Phase 6a Synthesis — Architecture Comparison on the Connectome Substrate](logbooks/037-phase6a-synthesis.md) | **Phase 6a COMPLETE — Gate 3 GO** | The Phase-6a synthesis (T9a): rolls T1–T7 + the connectome-structure controls + the real-worm validation into the **Gate 3 decision (GO)** and the Phase-6 exit-criterion walkthrough. **Primary result:** the six-family ranking on the continuous substrate (029) — **MLP 89.0 ≫ {CfC 75.8 ~ Transformer 74.0} > LSTM 60.1 > connectome 52.2 ≫ GA 15.0** (three significant tiers; sharper than the T4 grid tie). **The connectome, honestly:** 5th of 6 under PPO, and a **degree-statistics — not a wiring — result** (034 rewired-null indistinguishable), the Beiran & Litwin-Kumar degeneracy prediction; framed as the motivating hypothesis for Phase-7 L4, not a dead end. **Memory axis elevated:** the comparison *resolves* working memory (030/033) but the naturalistic behaviours *don't demand it* (032 ARS null) — why the memoryless MLP wins. **Validation:** chemotaxis strong (both strategies, 035), thermotaxis partial (036). **Cross-regime** grid→continuous is qualitative (non-commensurable) and *sharpens* the ranking. **Phase-7 rec:** L4 plasticity is the best-supported next step; 6b/NEAT deferred (gated on env-vectorisation, not GPU). Phase 6 → 🟡 6a COMPLETE / 6b pending. |
 
-## How to Use Logbooks
+## Reading a logbook
 
-### Reading
+Each logbook follows the same structure: **Objective** (the question), **Hypothesis** (what was expected and why), **Method** (configs, seeds, statistics), **Results**, **Analysis**, **Conclusions** and **Next Steps**, plus **Data References** — the session IDs, config files and artifact paths needed to reproduce it. Phase-level syntheses roll the milestone logbooks into an exit-criteria walkthrough and a gate decision: [021](logbooks/021-phase5-synthesis.md) for Phase 5 and [037](logbooks/037-phase6a-synthesis.md) for Phase 6a.
 
-Each logbook follows a consistent structure:
+## Creating a new logbook
 
-- **Objective**: What we're trying to achieve
-- **Hypothesis**: What we expected
-- **Results**: What actually happened
-- **Analysis**: Why it happened
-- **Next Steps**: Where to go from here
+1. Copy [`templates/experiment.md`](templates/experiment.md) to `logbooks/NNN-descriptive-name.md` using the next sequential number.
 
-### Creating New Logbooks
+2. Put per-seed data, analysis outputs and the exact configs under `logbooks/supporting/NNN-descriptive-name/` (or `artifacts/` for large or binary outputs).
 
-1. Copy `templates/experiment.md` to `logbooks/NNN-descriptive-name.md`
-2. Use the next sequential number
-3. Update the index table above
-4. Reference session IDs from `experiments/*.json` for reproducibility
+3. Reference runs by session ID so they can be re-queried:
 
-### Linking to Auto-Tracked Data
+   ```markdown
+   - Session: `20251209_205950` (80% success with CMA-ES)
+   - Query: `uv run scripts/experiment_query.py show 20251209_205950`
+   ```
 
-Reference specific experiments by session ID:
-
-```markdown
-- Session: `20251209_205950` (80% success with CMA-ES)
-- Query: `python scripts/experiment_query.py show 20251209_205950`
-```
-
-## Key Findings Summary
-
-### Experiment 001: Quantum Circuit Limitations
-
-- 2-qubit circuits max ~31% success with gradient learning
-- Learning actively degrades good initializations
-- Combined gradient (chemotaxis) works; separated gradients fail
-
-### Experiment 002: Evolutionary Approach
-
-- CMA-ES achieved 80% success on foraging-only
-- GA achieved 70% with more stable convergence
-- Evolution bypasses gradient noise problem
-
-## Directory Structure
-
-```markdown
-docs/experiments/
-├── README.md                    # This file
-├── templates/
-│   └── experiment.md            # Template for new logbooks
-└── logbooks/
-    ├── 001-quantum-predator-optimization.md
-    ├── 002-evolutionary-parameter-search.md
-    └── ...
-
-experiments/                     # Auto-generated (gitignored)
-├── 20251207_123456.json
-└── ...
-
-benchmarks/                      # Curated results (git tracked)
-├── foraging_small/classical/
-└── ...
-```
+4. Add the row to the index above and, if the result changes a roadmap status, update [`docs/roadmap.md`](../roadmap.md).

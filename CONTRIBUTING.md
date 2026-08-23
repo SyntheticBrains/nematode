@@ -1,681 +1,227 @@
-# Contributing to Quantum Nematode Simulation
+# Contributing to Quantum Nematode
 
-Thank you for your interest in contributing to the Quantum Nematode Simulation project! This guide will help you get started with development and contributing to the project.
+Thank you for your interest in contributing. This guide covers development setup, the quality tooling, the test tiers, how to extend the platform, and the pull-request process. For *running* simulations, evolution and analysis see the [usage guide](docs/usage.md); for the science see the [roadmap](docs/roadmap.md) and the [experiment logbooks](docs/experiments/README.md).
 
-## 🚀 Development Setup
+## Development setup
 
 ### Prerequisites
 
-- Python 3.13+
-- [uv](https://github.com/astral-sh/uv) for dependency management
-
-### 1. Install uv
-
-```bash
-brew install uv
-```
-
-### 2. Clone and Setup
-
-```bash
-git clone https://github.com/SyntheticBrains/nematode.git
-cd nematode
-```
-
-### 3. Install Git LFS
-
-This project uses [Git LFS](https://git-lfs.com) to store large binary files (model weights,
-evolution checkpoints, training logs).
-
-Install Git LFS:
+- **Python 3.13** — exactly (`>=3.13,<3.14`); `uv` fetches it if it is not installed
+- [**uv**](https://github.com/astral-sh/uv) for dependency management
+- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS
 
 ```bash
 # macOS
-brew install git-lfs
-
-# Ubuntu/Debian
+brew install uv git-lfs
+# Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
 sudo apt-get install git-lfs
+
+git lfs install            # once per machine
+git clone https://github.com/SyntheticBrains/nematode.git
+cd nematode
+git lfs ls-files | head    # confirms LFS objects were fetched
 ```
 
-Then activate it once per machine:
+### Install dependencies
+
+Pick the extras you need — only `cpu` and `gpu` conflict:
+
+| Extra | Adds | Needed for |
+|---|---|---|
+| `cpu` | Qiskit Aer simulator (CPU) | Any quantum brain on the simulator |
+| `gpu` | Qiskit Aer on CUDA 11 (`qiskit-aer-gpu-cu11`) | Quantum simulation on an NVIDIA GPU |
+| `torch` | PyTorch | Every classical, recurrent, spiking, hybrid and connectome brain |
+| `qpu` | `qiskit-ibm-runtime`, `qiskit-ibm-catalog` | Real IBM Quantum hardware (`--device qpu`) |
+| `pixel` | Pygame | The `pixel` and `pixel_continuous` renderers |
+| `analysis` | scikit-learn, SciPy | The analysis scripts under `scripts/analysis/` |
 
 ```bash
-git lfs install
+# Typical development install
+uv sync --extra cpu --extra torch --extra pixel --extra analysis
+
+# What CI installs
+uv sync --extra analysis --extra cpu --extra pixel --extra qpu --extra torch --dev
 ```
 
-Git LFS objects are fetched automatically on clone and pull. Verify LFS is working after cloning:
+> **CUDA 11, not 12.** Qiskit stopped publishing the CUDA-12 `qiskit-aer-gpu` build after 0.15.1 (its newest wheel is cp312), so the `gpu` extra tracks `qiskit-aer-gpu-cu11`, which ships cp313 wheels. Your NVIDIA driver needs CUDA 11 support (driver ≥ 450).
 
-```bash
-git lfs ls-files
-```
+### Environment file
 
-### 4. Install Dependencies
-
-Choose the appropriate installation based on your development needs:
-
-#### For Quantum Hardware Development (QPU)
-
-```bash
-uv sync --extra qpu
-```
-
-#### For CPU-only Development
-
-```bash
-uv sync --extra cpu
-```
-
-#### For GPU Development
-
-```bash
-uv sync --extra gpu
-```
-
-> **CUDA 11, not 12.** The `gpu` extra tracks `qiskit-aer-gpu-cu11`. Qiskit stopped
-> publishing the default CUDA-12 `qiskit-aer-gpu` build after 0.15.1 (September 2024),
-> whose newest wheel is cp312 — it was the one thing pinning this project to Python
-> 3.12. The CUDA-11 build is still maintained and ships cp313 wheels. Your NVIDIA
-> driver needs to support CUDA 11 (driver >= 450), which is a lower bar than CUDA 12
-> (>= 525), so this should not narrow who can run it.
-
-#### For Classical ML Brain Development
-
-```bash
-uv sync [OTHER_EXTRAS] --extra torch
-```
-
-> ⚠️ **Note**: Only the `cpu` and `qpu` extras conflict and cannot be installed together.
-
-### 5. Environment Configuration
-
-Copy the environment template and configure your settings:
+Only needed for quantum hardware. Copy the template and fill in the values from your IBM Quantum and Q-CTRL accounts:
 
 ```bash
 cp .env.template .env
 ```
 
-Edit `.env` to include your API keys and configuration:
-
 ```env
-IBM_QUANTUM_API_KEY=your-ibm-quantum-api-key-here
-IBM_QUANTUM_BACKEND=ibm_brisbane  # Optional: specify backend
+IBM_QUANTUM_API_KEY=…
+IBM_QUANTUM_BACKEND=…      # e.g. ibm_brisbane
+IBM_QUANTUM_CHANNEL=…
+IBM_QUANTUM_CRN=…
+QCTRL_API_KEY=…            # for --optimize (Fire Opal)
 ```
 
-## 🛠️ Development Tools
+## Quality tooling
 
-### Pre-commit Hooks
-
-We use [pre-commit](https://pre-commit.com/) to maintain code quality. Install the hooks:
+Install the pre-commit hooks once; they run on every commit:
 
 ```bash
 uv run pre-commit install
+uv run pre-commit run -a      # run everything manually
 ```
 
-Run checks manually:
+The hooks run Ruff (lint with `select = ALL` and format, line length 100), Pyright, mdformat and markdownlint for Markdown, YAML/TOML validation, large-file and end-of-file checks, and the fast pytest tier. Configuration lives in [`pyproject.toml`](pyproject.toml), [`.pre-commit-config.yaml`](.pre-commit-config.yaml) and [`.markdownlint.jsonc`](.markdownlint.jsonc). Docstrings follow the NumPy convention.
+
+## Tests
+
+Four tiers, selected with pytest markers:
+
+| Tier | Marker | What | When it runs |
+|---|---|---|---|
+| Unit / integration | (none) | Fast in-process tests | Pre-commit hook, every PR |
+| Slow integration | `slow` | Heavy in-process runs, e.g. a real `EvolutionLoop` | Before pushing, especially for `evolution/` changes; every PR in CI |
+| Smoke | `smoke` | The CLI entry points end-to-end with minimal episodes | Every PR in CI |
+| Nightly | `nightly` | Full training sessions asserted against benchmark ranges | 03:00 UTC daily, or manually from the Actions tab |
 
 ```bash
-uv run pre-commit run -a
-```
-
-### Code Quality Tools
-
-The project uses several tools for code quality:
-
-- **Ruff**: Fast Python linter and formatter
-- **Pyright**: Static type checker
-- **Pytest**: Testing framework
-
-Configuration is in `pyproject.toml`:
-
-```toml
-[tool.ruff]
-target-version = "py313"
-line-length = 100
-
-[tool.ruff.lint]
-select = ['ALL']
-ignore = ['TD002', 'TD003']
-
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
-```
-
-## 🧠 Architecture Overview
-
-### Brain Architectures
-
-The project supports 26 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
-
-**Quantum:**
-
-1. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
-2. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
-3. **QRHBrain** (`qrh`): Quantum reservoir hybrid — C. elegans topology, X/Y/Z+ZZ features, PPO readout
-4. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
-5. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
-6. **QLIFLSTMBrain** (`qliflstm`): Quantum-enhanced LSTM with QLIF gates, recurrent PPO with truncated BPTT
-7. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
-8. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
-9. **EquivariantQuantumPPOBrain** (`equivariantquantum`): Z2-equivariant data-re-uploading circuit with odd/even-parity latent split and PPO; ships classical-equivariant + symmetry-prior ablation controls
-
-**Hybrid (quantum + classical):**
-
-10. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout — classical-reservoir ablation companion to QRH-QLSTM
-11. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture on the grid substrate (Logbook 008)
-12. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
-13. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
-
-**Classical:**
-
-14. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
-15. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
-16. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
-17. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
-18. **LSTMPPOBrain** (`lstmppo`): LSTM/GRU-augmented PPO with chunk-based truncated BPTT — designed for temporal sensing tasks
-19. **CfCPPOBrain** (`cfcppo`): CfC (Closed-form Continuous-time) liquid network with AutoNCP wiring and continuous-time recurrence, PPO-trained
-20. **TransformerPPOBrain** (`transformerppo`): Transformer self-attention encoder over a temporal window of recent sensory features, PPO-trained — attention-based temporal-memory comparator to the LSTM/CfC recurrent substrates
-21. **MinGRUPPOBrain** (`mingruppo`): minGRU-augmented PPO — parallel-form minimal RNN with input-only gating (Feng et al. 2024); bounded, saturation-free recurrent core and stability-upgrade candidate to the LSTM arm
-22. **MinLSTMPPOBrain** (`minlstmppo`): minLSTM-augmented PPO — parallel-form minimal RNN with normalised input-only gates and a single recurrent state; classical stability-comparator companion to minGRU
-23. **FeedforwardGABrain** (`feedforwardga`): Feed-forward network with weights evolved by the GA optimizer (gradient-free); graded episodic-progress fitness for sparse-reward cells
-
-**Biologically-Inspired:**
-
-24. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
-25. **SpikingPPOBrain** (`spikingppo`): Recurrent adaptive-LIF spiking network with configurable MLP actor head, trained via PPO
-26. **ConnectomePPOBrain** (`connectomeppo`): Connectome-constrained PPO on the real *C. elegans* connectome (Cook et al. 2019 — chemical synapses + gap junctions) with sensor→interneuron→motor projections and multi-hop recurrence
-
-Each brain architecture self-registers via the `@register_brain` decorator and follows a common interface defined in `quantumnematode.brain.arch`. See the [Plugin Developer Guide](docs/architecture/plugin-developer-guide.md) for how to add a new one.
-
-## 🔧 Development Workflows
-
-### Running Tests
-
-The project has four tiers of tests:
-
-#### Unit & Integration Tests (default)
-
-Fast in-process tests. The pre-commit hook runs only this fast tier (excluding `slow`, `smoke`, and `nightly`); run the full non-nightly set after substantive changes:
-
-```bash
-# Fast pre-commit subset
-uv run pytest -m "not smoke and not nightly and not slow"
-
-# Everything except nightly (includes slow + smoke) — run after substantive changes
-uv run pytest -m "not nightly"
-```
-
-#### Slow Integration Tests
-
-Heavy in-process integration (e.g. real `EvolutionLoop` runs). Excluded from the pre-commit hook; run before pushing, especially when touching `evolution/`:
-
-```bash
+uv run pytest -m "not smoke and not nightly and not slow"   # fast tier (what pre-commit runs)
+uv run pytest -m "not nightly"                               # everything except nightly — run after substantive changes
 uv run pytest -m slow -v
-```
-
-#### Smoke Tests
-
-End-to-end tests that run the actual entry-point scripts (`run_simulation.py`, `run_evolution.py`) with minimal episodes to verify they don't crash. Run on every PR via CI but excluded from pre-commit hooks to keep commits fast:
-
-```bash
 uv run pytest -m smoke -v
+uv run pytest -m nightly -v                                  # slow: full training sessions
+uv run pytest -m nightly -k "foraging_small" -v              # one nightly config
 ```
 
-#### Nightly E2E Tests
+Nightly benchmark ranges live in [`e2e_benchmarks.json`](packages/quantum-nematode/tests/quantumnematode_tests/e2e_benchmarks.json) and are derived from the logbooks; if you change a config or training parameter you may need to update them, with the logbook evidence for the new range.
 
-Full training sessions that assert success rates fall within established benchmark ranges (derived from experiment logbooks). Run automatically at 3 AM UTC daily via GitHub Actions and can be triggered manually from the Actions tab:
+**CI sharding.** The `Tests` workflow splits the suite into five `pytest-split` shards balanced by the committed `.test_durations` file. Tests missing from that file still run, so it only needs regenerating when one shard is visibly slower than the others:
 
 ```bash
-# Run all nightly tests (slow — full training sessions)
-uv run pytest -m nightly -v
-
-# Run a single config
-uv run pytest -m nightly -k "foraging_small" -v
+uv run pytest -m "not nightly" -p no:randomly --store-durations --durations-path .test_durations
 ```
 
-Benchmark ranges are defined in `packages/quantum-nematode/tests/quantumnematode_tests/e2e_benchmarks.json`. When updating configs or training parameters, you may need to update these ranges based on new experiment results.
+Locally the suite is unsharded and `-n logical` uses every logical core.
 
-### Running Simulations
-
-#### Development Testing
-
-##### Testing with Dynamic Foraging Environment
-
-```bash
-# Best quantum brain (hybrid quantum)
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/foraging/hybridquantum_small_oracle.yml --theme emoji
-
-# Best classical brain (MLP PPO)
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/foraging/mlpppo_small_oracle.yml --theme emoji
-```
-
-##### Testing with Predators in Dynamic Foraging Environment
-
-```bash
-# Hybrid quantum on predator evasion
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/hybridquantum_small_oracle.yml --theme emoji
-
-# Spiking brain on predator evasion
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/qsnnreinforce_small_oracle.yml --theme emoji
-```
-
-##### Testing Multi-Agent Simulations
-
-> **Note**: The `--theme pixel` option requires Pygame. Install with `--extra pixel` (e.g., `uv sync --extra cpu --extra pixel`).
-
-```bash
-# Multi-agent cooperative foraging with Pygame visualization
-uv run ./scripts/run_simulation.py --runs 3 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_social_oracle.yml --theme pixel
-
-# Multi-agent with pheromones (headless for batch training)
-uv run ./scripts/run_simulation.py --runs 10 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_full_social_oracle.yml --theme headless
-```
-
-##### Testing with Klinotaxis (Head-Sweep) Sensing
-
-```bash
-# Klinotaxis sensing — biologically accurate head-sweep mode
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/foraging/lstmppo_small_klinotaxis.yml --theme headless
-
-# Klinotaxis with pursuit predators
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml --theme headless
-```
-
-### Experiment Tracking
-
-The project includes an experiment tracking system to facilitate reproducibility and performance comparison.
-
-#### Experiment Tracking
-
-Track any simulation run automatically with the `--track-experiment` flag:
-
-```bash
-# Run with experiment tracking
-uv run ./scripts/run_simulation.py \
-  --config configs/scenarios/foraging/qvarcircuit_medium_oracle.yml \
-  --runs 50 \
-  --track-experiment
-```
-
-This saves complete metadata to `experiments/<experiment-id>.json` including:
-
-- Configuration file and hash
-- Git commit, branch, and dirty state
-- System information and dependency versions
-- Brain and environment parameters
-- Complete results and performance metrics
-- Export paths for plots and CSV files
-
-#### Querying Experiments
-
-Use the experiment query CLI to explore your tracked experiments:
-
-```bash
-# List recent experiments
-uv run scripts/experiment_query.py list
-
-# Filter by environment or brain type
-uv run scripts/experiment_query.py list --env-type dynamic --brain-type modular
-
-# Show detailed experiment info
-uv run scripts/experiment_query.py show <experiment-id>
-
-# Compare two experiments
-uv run scripts/experiment_query.py compare <exp-id-1> <exp-id-2>
-
-# Export as JSON for analysis
-uv run scripts/experiment_query.py show <experiment-id> --format json > results.json
-```
-
-#### Experiment Logbooks
-
-For documenting analysis and insights from experiment series, use the logbook system in `docs/experiments/`:
+## Repository layout
 
 ```text
-docs/experiments/
-├── README.md                    # Index and workflow guide
-├── templates/
-│   └── experiment.md            # Template for new logbooks
-└── logbooks/
-    ├── 001-quantum-predator-optimization.md
-    ├── 002-evolutionary-parameter-search.md
-    ├── 003-spiking-brain-optimization.md
-    ├── ...
-    ├── 025-weight-search-architecture-ranking.md
-    ├── 026-connectome-forward-vectorisation.md
-    └── supporting/              # Detailed appendix data per logbook
-        ├── 003/
-        └── 008/
+packages/quantum-nematode/quantumnematode/
+  brain/arch/      26 brain architectures, self-registering via @register_brain (see docs/architectures.md)
+  brain/modules.py sensory feature modules shared by the brains
+  env/             grid and continuous-2D environments, sensing, predators, pheromones, themes
+  agent/           agent orchestration, rewards, metrics, multi-agent simulation
+  connectome/      Cook et al. 2019 connectome loader and neuron metadata
+  evolution/       CMA-ES / GA / TPE loops, inheritance strategies, co-evolution
+  optimizers/      parameter-shift rule and related quantum optimisers
+  executors/       CPU / GPU / QPU backends
+  experiment/      experiment tracking, metadata, convergence detection
+  validation/      real-worm behavioural validation (bias curves)
+  report/          session summaries, plots, CSV export
+  utils/           config loader, brain factory, logging, interrupt handling
+packages/quantum-nematode/tests/   the test suite (all tiers)
+scripts/           CLI entry points, analysis scripts, Phase 5 campaign drivers
+configs/           scenario, evolution and special configs (see configs/README.md)
+docs/              roadmap, logbooks, biology, guides (see docs/README.md)
+openspec/          specs and change proposals (spec-driven development)
+artifacts/         curated experiment outputs referenced by logbooks (Git LFS)
+data/              vendored connectome data and behavioural reference values
 ```
 
-**Key distinction from auto-tracking:**
+## Extending the platform
 
-| System | Location | Git Tracked | Purpose |
-|--------|----------|-------------|---------|
-| Auto-tracking | `experiments/*.json` | No | Raw metadata from every run |
-| Evolution results | `evolution_results/` | No | All evolution run outputs |
-| Artifacts | `artifacts/` | Yes | Curated outputs referenced in logbooks |
-| Logbooks | `docs/experiments/logbooks/` | Yes | Human analysis and narrative |
+### Adding a brain architecture
 
-To create a new logbook:
+Brains are plugins: a vanilla addition touches at most six files and never adds a per-architecture branch to the simulation or training loops. The [plugin developer guide](docs/architecture/plugin-developer-guide.md) is the canonical walkthrough; the essentials:
 
-1. Copy `docs/experiments/templates/experiment.md` to `docs/experiments/logbooks/NNN-name.md`
-2. Use the next sequential number
-3. Update the index in `docs/experiments/README.md`
-4. Reference session IDs from `artifacts/experiments/` or `artifacts/evolutions/` for reproducibility
-
-### Evolutionary Optimization
-
-For parameter optimization without gradient-based learning, use the evolution script:
-
-```bash
-# CMA-ES optimization (recommended for quantum circuits)
-uv run python scripts/run_evolution.py \
-  --config configs/evolution/qvarcircuit_foraging_small.yml \
-  --algorithm cmaes \
-  --generations 50 \
-  --population 20 \
-  --episodes 15 \
-  --parallel 4
-
-# Genetic Algorithm (more stable convergence)
-uv run python scripts/run_evolution.py \
-  --config configs/evolution/qvarcircuit_foraging_small.yml \
-  --algorithm ga \
-  --generations 50 \
-  --population 30 \
-  --episodes 15 \
-  --parallel 4
-```
-
-Results are saved to `evolution_results/<timestamp>/`:
-
-- `best_params_<timestamp>.json` - Best parameters found
-- `history_<timestamp>.csv` - Fitness history per generation
-- `checkpoint_gen<N>.pkl` - Checkpoints every 10 generations
-
-Resume from checkpoint:
-
-```bash
-uv run python scripts/run_evolution.py \
-  --config configs/evolution/qvarcircuit_foraging_small.yml \
-  --resume evolution_results/20251209_123456/checkpoint_gen20.pkl \
-  --generations 50
-```
-
-#### Related Evolution & Analysis Scripts
-
-The `scripts/` directory also includes:
-
-- `run_coevolution.py` — predator-prey co-evolution arms-race campaigns (`CoevolutionLoop`)
-- `run_plasticity_test.py` / `compare_plasticity_results.py` — sequential multi-objective ("plasticity") training and cross-architecture comparison
-- `experiment_query.py` — query and compare tracked experiments
-- `extract_runs.py`, `export_screenshot.py`, `qef_mi_analysis.py`, `qrh_mi_analysis.py` — artifact extraction, rendering, and mutual-information analysis helpers
-- `manage_jobs.py` — check the status of IBM Quantum / Q-CTRL Qiskit Function jobs by ID
-
-### Adding New Features
-
-Brains are added through a self-registering plug-in registry, so adding one
-no longer requires editing a central dispatch. The [Plugin Developer
-Guide](docs/architecture/plugin-developer-guide.md) walks through the full
-workflow; the essentials:
-
-1. Create a new module in `packages/quantum-nematode/quantumnematode/brain/arch/`
-2. Define a Pydantic config class inheriting from `BrainConfig`
-3. Define your brain inheriting from the appropriate base (`QuantumBrain` or `ClassicalBrain`) and decorate it with `@register_brain` so it self-registers at import time:
-
-```python
-from quantumnematode.brain.arch import ClassicalBrain
-from quantumnematode.brain.arch._registry import register_brain
-from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType
-
-
-class MyNewBrainConfig(BrainConfig):
-    # Define configuration parameters
-    ...
-
-
-@register_brain(
-    name="mynewbrain",              # must equal BrainType.MYNEWBRAIN.value
-    config_cls=MyNewBrainConfig,
-    brain_type=BrainType.MYNEWBRAIN,
-    families=("classical",),        # e.g. "classical", "quantum", "spiking"
-)
-class MyNewBrain(ClassicalBrain):
-    ...
-```
-
-4. Add the matching `BrainType` enum member and wire the module into `brain/arch/__init__.py` and the config loader (see the guide for the exact files)
-5. Add tests in the appropriate test directory
-
-#### Adding New Quantum Modules
-
-1. Define module in `quantumnematode.brain.modules`
-2. Add feature extraction logic
-3. Update `DEFAULT_MODULES` mapping
-4. Test with existing brain architectures
-
-#### Adding New Environment Features
-
-1. Extend `quantumnematode.env` classes (base class: `BaseEnvironment`, main implementation: `DynamicForagingEnvironment`)
-2. Ensure compatibility with `BrainParams` interface
-3. Add visualization support for new features
-4. Update environment state encoding for brain input
-5. Add tracking for new metrics in `EpisodeTracker`
-6. Create corresponding plots and CSV exports
-
-Example for adding a new foraging feature:
-
-```python
-# In quantumnematode/env/dynamic_foraging.py
-class ExtendedForagingEnvironment(DynamicForagingEnvironment):
-    def __init__(self, temperature_variation: bool = False, **kwargs):
-        super().__init__(**kwargs)
-        self.temperature_variation = temperature_variation
-
-    def get_state_vector(self) -> list[float]:
-        state = super().get_state_vector()
-        if self.temperature_variation:
-            state.append(self.get_temperature_at_position())
-        return state
-```
-
-### Code Style Guidelines
-
-1. **Type Hints**: Use comprehensive type hints
+1. Create `packages/quantum-nematode/quantumnematode/brain/arch/<name>.py` with a Pydantic config class inheriting `BrainConfig` and a brain class inheriting the appropriate base (`QuantumBrain` or `ClassicalBrain`), decorated so it self-registers at import time:
 
    ```python
-   def my_function(param: int, optional: str | None = None) -> list[float]:
-       return [1.0, 2.0]
+   from quantumnematode.brain.arch import ClassicalBrain
+   from quantumnematode.brain.arch._registry import register_brain
+   from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType
+
+
+   class MyNewBrainConfig(BrainConfig):
+       ...
+
+
+   @register_brain(
+       name="mynewbrain",              # must equal BrainType.MYNEWBRAIN.value
+       config_cls=MyNewBrainConfig,
+       brain_type=BrainType.MYNEWBRAIN,
+       families=("classical",),        # e.g. "classical", "quantum", "spiking"
+   )
+   class MyNewBrain(ClassicalBrain):
+       ...
    ```
 
-2. **Docstrings**: Use NumPy-style docstrings
+2. Add the `BrainType` enum member, import the module in `brain/arch/__init__.py`, and add the config class to the loader's union (the guide lists the exact files).
 
-   ```python
-   def compute_gradient(params: dict[str, float]) -> list[float]:
-       """
-       Compute parameter gradients using parameter-shift rule.
-       
-       Parameters
-       ----------
-       params : dict[str, float]
-           Parameter values for quantum circuit.
-           
-       Returns
-       -------
-       list[float]
-           Computed gradients for each parameter.
-       """
-   ```
+3. Add tests under `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/`, and a scenario config under `configs/scenarios/` if you are shipping a runnable baseline.
 
-3. **Error Handling**: Use descriptive error messages
+4. Add the row to [docs/architectures.md](docs/architectures.md) and the enumeration in [AGENTS.md](AGENTS.md).
 
-   ```python
-   if not isinstance(params, dict):
-       error_message = f"Expected dict for params, got {type(params)}"
-       logger.error(error_message)
-       raise TypeError(error_message)
-   ```
+### Adding a sensory module
 
-4. **Logging**: Use structured logging
+1. Define the module in `quantumnematode.brain.modules` with its feature-extraction logic.
+2. Add it to the `DEFAULT_MODULES` mapping.
+3. Cover it with module tests and check it against the existing brains.
 
-   ```python
-   from quantumnematode.logging_config import logger
+### Adding an environment feature
 
-   logger.info(f"Training episode {episode} completed with reward {reward}")
-   ```
+1. Extend the environment classes in `quantumnematode.env` (`BaseEnvironment` is the base; `DynamicForagingEnvironment` and `Continuous2DEnvironment` are the two substrates).
+2. Keep the `BrainParams` interface compatible — every brain reads its inputs through it.
+3. Add rendering support for the feature in the relevant theme(s).
+4. Track new metrics in `EpisodeTracker` and add the corresponding plots and CSV exports.
+5. Anything that changes behaviour when *off* is a bug: new features must be byte-identical no-ops when disabled, and the regression tests check that.
 
-## 🧪 Testing Guidelines
+### Adding a scenario config
 
-### Unit Tests
+Follow the naming convention and the "copy the closest config, change only what differs" rule in [configs/README.md](configs/README.md).
 
-- Test individual functions and methods
-- Use meaningful test names: `test_parameter_shift_gradients_with_valid_params`
-- Mock external dependencies (Qiskit backends, etc.)
+## Code style
 
-### Integration Tests
+- **Type hints everywhere**; Pyright runs in pre-commit with `reportMissingImports = "error"`.
+- **NumPy-style docstrings** on public functions and classes.
+- **Descriptive errors**: build the message, log it, then raise (`logger.error(msg); raise TypeError(msg)`).
+- **Structured logging** through `quantumnematode.logging_config.logger`, not `print` (CLI scripts are the exception).
+- **Pydantic models** for data structures and configs; PascalCase classes, snake_case functions, UPPER_SNAKE_CASE constants; leading underscore for private modules.
 
-- Test complete workflows
-- Use small configurations for faster execution
-- Test both classical and quantum backends
+## Workflow and pull requests
 
-### Performance Tests
+1. **Scope the change.** Non-trivial work starts as an [OpenSpec](https://github.com/Fission-AI/OpenSpec) change under `openspec/changes/<name>/` (proposal, design, tasks, spec deltas) and is archived under `openspec/changes/archive/` when it lands. Small fixes do not need one.
+2. **Branch** from `main` (`feat/…`, `fix/…`, `docs/…`).
+3. **Develop and test.** Write tests for new behaviour; run the fast tier as you go and `uv run pytest -m "not nightly"` before pushing; run `uv run pre-commit run -a`.
+4. **Document.** Update docstrings, the relevant guide under `docs/`, and `AGENTS.md` if commands or layout changed. Experimental results go into a numbered logbook (see [docs/experiments/README.md](docs/experiments/README.md)); if they change a phase status, update the roadmap.
+5. **Open the PR.** Titles **must** use a [Conventional Commits](https://www.conventionalcommits.org/) prefix — `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, with `!` for breaking changes (e.g. `feat!: remove legacy preprocessing mode`). Commit messages need no prefix. Describe the change, link related issues, and say how you tested it.
 
-- Benchmark critical paths
-- Monitor memory usage for large circuits
-- Test scalability with different qubit counts
+PR checklist:
 
-## 🚀 Contribution Areas
-
-### High Priority
-
-1. **Dynamic Foraging Enhancements**
-
-   - Food quality variations and preferences
-   - Food spatial persistence for pheromone trail effectiveness
-   - Realistic chemotaxis modeling
-   - Continuous action spaces
-
-2. **Quantum Hardware Integration**
-
-   - Add support for new quantum backends
-   - Implement noise-aware training for foraging tasks
-   - Add hardware-specific optimizations
-
-3. **Advanced Learning Algorithms**
-
-   - Quantum natural gradients for foraging
-   - Meta-learning across environment variations
-   - Transfer learning from simple to complex foraging
-
-4. **Visualization and Analysis**
-
-   - Agent trail/path visualization in multi-agent mode
-   - Satiety and efficiency heatmaps
-   - Frame recording and video export
-   - Comparative analysis tools (quantum vs classical)
-
-### Medium Priority
-
-1. **Multi-Agent Extensions**
-
-   - Evolution and breeding (genetic algorithms, co-evolution)
-   - Predator-prey multi-agent dynamics
-   - Heterogeneous brain architectures in multi-agent competitions
-
-2. **Monitoring and Logging**
-
-   - Advanced foraging strategy detection
-   - Performance metrics tracking per food type
-   - Experiment management and reproducibility
-
-### Documentation
-
-1. **API Documentation**
-
-   - Complete docstring coverage
-   - Usage examples
-   - Best practices guides
-
-2. **Tutorials**
-
-   - Getting started tutorials
-   - Advanced usage patterns
-   - Research applications
-
-## 📝 Pull Request Process
-
-1. **Fork and Branch**
-
-   ```bash
-   git checkout -b feature/my-new-feature
-   ```
-
-2. **Develop and Test**
-
-   - Write tests for new functionality
-   - Ensure all tests pass
-   - Run pre-commit checks
-
-3. **Documentation**
-
-   - Update docstrings
-   - Add usage examples
-   - Update README if needed
-
-4. **Submit PR**
-
-   - Clear description of changes
-   - Link to related issues
-   - Include testing instructions
-
-### PR Checklist
-
-- [ ] All tests pass
-- [ ] Pre-commit checks pass
-- [ ] Documentation updated
+- [ ] Tests pass (`uv run pytest -m "not nightly"`)
+- [ ] Pre-commit passes (`uv run pre-commit run -a`)
+- [ ] Documentation updated (docs, `AGENTS.md`, logbook if there are results)
 - [ ] Type hints added
-- [ ] Backward compatibility maintained
-- [ ] Performance impact considered
+- [ ] Disabled-by-default features are byte-identical no-ops when off
+- [ ] Benchmark ranges updated if training behaviour changed, with evidence
 
-## 🔬 Research Directions
+## Where help is wanted
 
-### Quantum Machine Learning in Foraging
+Aligned with the [roadmap](docs/roadmap.md):
 
-- **Quantum Advantage in Foraging**: Identify scenarios where quantum algorithms excel at multi-objective foraging tasks
-- **Noise Resilience**: Develop training methods robust to quantum hardware noise in dynamic environments
-- **Hybrid Algorithms**: Explore quantum-classical hybrid approaches for foraging strategy optimization
-- **Entanglement in Decision-Making**: Study role of quantum entanglement in balancing exploration vs exploitation
+- **Phase 7 plasticity** — STDP/Hebbian and neuromodulator-gated three-factor rules on the connectome substrate; receptor-class metadata from CeNGEN; a minimal metabolic-state model.
+- **Environment vectorisation** — a vmappable `Continuous2DEnvironment` is the binding constraint on Phase 6b's NEAT topology search.
+- ***P. pacificus* connectome import** — Cook et al. 2025 data through the existing L0/L1 pipeline.
+- **Validation** — a predator/mechanosensation behavioural validation arm; named-neuron grounding (NeuroPAL/WormID) for the connectome brain.
+- **Reproductions** — rerun a logbook on your hardware and report what you get; discrepancies are findings.
+- **Documentation and tutorials**, and test coverage for the scripts under `scripts/`.
 
-### Biological Modeling
+## Community
 
-- **Neural Modeling**: More accurate modeling of C. elegans chemosensory neurons and interneurons
-- **Behavioral Patterns**: Implementation of realistic nematode foraging behaviors (area-restricted search, klinokinesis)
-- **Multi-scale Modeling**: From molecular signaling to behavioral strategies
-- **Satiety and Homeostasis**: Realistic modeling of internal state management
+- [Issues](https://github.com/SyntheticBrains/nematode/issues) for bugs and feature requests
+- [Discussions](https://github.com/SyntheticBrains/nematode/discussions) for questions and ideas
+- Everyone participating is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md)
 
-### Algorithm Development
+## License
 
-- **Novel Quantum Algorithms**: Development of new quantum learning algorithms for sequential decision-making
-- **Optimization Techniques**: Advanced parameter optimization methods for foraging
-- **Scalability**: Methods for larger quantum systems and complex environments
-- **Transfer Learning**: Strategies for adapting from simple to complex foraging scenarios
-
-## 🤝 Community
-
-### Getting Help
-
-- **GitHub Issues**: For bugs and feature requests
-- **Discussions**: For questions and general discussion
-- **Email**: Direct contact with maintainers
-
-### Code of Conduct
-
-We are committed to providing a welcoming and inclusive environment for all contributors. Please be respectful and constructive in all interactions.
-
-## 📄 License
-
-This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
-
-______________________________________________________________________
-
-Thank you for contributing to the Quantum Nematode Simulation project! Your contributions help advance the field of quantum machine learning and computational biology.
+By contributing you agree that your contributions are licensed under the [Apache License 2.0](LICENSE).
