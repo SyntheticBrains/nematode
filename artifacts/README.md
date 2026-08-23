@@ -77,7 +77,6 @@ cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metada
 
 - Every experiment run (use `experiments/` for that)
 - Large checkpoint files unless specifically needed
-- Duplicate data already in `benchmarks/`
 
 ## Naming Conventions
 
@@ -89,5 +88,5 @@ cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metada
 
 - JSON/CSV files: Always acceptable
 - Checkpoint files (`.pkl`) and model weights (`.pt`): tracked via Git LFS automatically
-- Training logs (`.log`) and all JSON files in `artifacts/` and `benchmarks/`: tracked via Git LFS automatically
+- Training logs (`.log`) and all JSON files in `artifacts/`: tracked via Git LFS automatically
 - For other binary formats > 500 KB: add a matching rule to `.gitattributes` before committing

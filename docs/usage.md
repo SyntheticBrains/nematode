@@ -39,7 +39,7 @@ uv run ./scripts/run_simulation.py \
   --config configs/scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis.yml \
   --theme headless --runs 6000 --seed 1 --track-experiment
 
-# Five worms with pheromones and social feeding, rendered (multi-agent supports pixel and headless only)
+# Five GRU worms with food-marking and aggregation pheromones and social feeding on a single food cluster, rendered (multi-agent supports pixel and headless only)
 uv run ./scripts/run_simulation.py \
   --config configs/scenarios/multi_agent_foraging/lstmppo_large_5agents_single_cluster_pheromone_klinotaxis.yml \
   --theme pixel --runs 10
@@ -49,7 +49,7 @@ uv run ./scripts/run_simulation.py --config configs/scenarios/foraging/mlpppo_sm
 uv run ./scripts/run_simulation.py --config configs/scenarios/pursuit/mlpppo_small_oracle.yml --theme headless --runs 100 --load-weights weights/mlpppo_foraging.pt
 ```
 
-Stopping a session with `Ctrl-C` is safe: the interrupt handler still writes the summary and the exports for the runs completed so far.
+Stopping a session with `Ctrl-C` is safe: the interrupt handler offers a menu to write the summary, plots and tracking data for the runs completed so far before exiting.
 
 ## Outputs
 
@@ -98,17 +98,17 @@ uv run python scripts/run_evolution.py --config configs/evolution/<config>.yml [
 | `--parallel N` | Parallel fitness-evaluation workers |
 | `--seed N` | Master seed (per-evaluation seeds are derived from it) |
 | `--sigma X` | CMA-ES initial step size |
-| `--early-stop-on-saturation` | Stop once the population saturates |
+| `--early-stop-on-saturation N` | Stop if the best fitness has not improved for N consecutive generations (default: run the full budget) |
 | `--resume PATH` | Resume from a `checkpoint.pkl` |
 | `--output-dir DIR` | Where to write the session (default `evolution_results/`) |
 
 Three kinds of evolution config exist:
 
-- **Weight evolution** — the genome *is* the brain's weights (`feedforwardga_*`, `mlpppo_foraging_small`, `lstmppo_foraging_small_klinotaxis`). CMA-ES is the recommended optimiser for the quantum circuit; the GA is the gradient-free floor in the architecture rankings ([Logbooks 002](experiments/logbooks/002-evolutionary-parameter-search.md), [029](experiments/logbooks/029-continuous-architecture-ranking.md)).
+- **Weight evolution** — the genome *is* the brain's weights (`feedforwardga_*`, `mlpppo_foraging_small`, `lstmppo_foraging_small_klinotaxis`). The weight-genome encoders cover `mlpppo`, `lstmppo` and `feedforwardga`; the GA arm is the gradient-free floor in the architecture rankings ([Logbook 029](experiments/logbooks/029-continuous-architecture-ranking.md)). CMA-ES's earlier win over parameter-shift gradients for the quantum circuit ([Logbook 002](experiments/logbooks/002-evolutionary-parameter-search.md)) predates this framework, which has no `qvarcircuit` weight encoder yet.
 - **Hyperparameter evolution** — the genome patches a brain's config and each evaluation trains a fresh brain for *K* episodes under `learned_performance` fitness (`hyperparam_*`). TPE is the preferred optimiser ([Logbook 012](experiments/logbooks/012-hyperparam-evolution-mlpppo-pilot.md)).
 - **Inheritance studies** — `lamarckian_*` (warm-start each generation from the prior elite; the Phase 5 positive result, [Logbook 013](experiments/logbooks/013-lamarckian-inheritance-pilot.md)), `baldwin_*` ([015](experiments/logbooks/015-baldwin-iterative-evaluation.md)), `transgenerational_*` and `tei_prior_*` ([018](experiments/logbooks/018-transgenerational-memory.md)–[020](experiments/logbooks/020-tei-prior-on-lamarckian.md)); the latter two are implemented and closed with STOP verdicts.
 
-Each session writes to `evolution_results/<timestamp>/`: the per-generation `history.csv`, the best genome found, and periodic checkpoints to resume from. Configs suffixed `_smoke` or `_pilot` are reduced budgets for framework testing.
+Each session writes to `evolution_results/<session-id>/`: the per-generation `history.csv`, the best genome found, and periodic checkpoints to resume from. Configs suffixed `_smoke` or `_pilot` are reduced budgets for framework testing.
 
 ```bash
 # Evolve feed-forward weights with the GA
@@ -118,7 +118,7 @@ uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_
 uv run python scripts/run_evolution.py --config configs/evolution/hyperparam_mlpppo_pilot.yml --algorithm tpe --inheritance lamarckian --parallel 4
 
 # Resume
-uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --resume evolution_results/<timestamp>/checkpoint.pkl
+uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --resume evolution_results/<session-id>/checkpoint.pkl
 ```
 
 **Predator–prey co-evolution** runs through `scripts/run_coevolution.py --config configs/evolution/coevolution_*.yml [--seed N] [--output-dir DIR] [--resume PATH]` (`CoevolutionLoop`; warm-start prey bundles under `configs/evolution/coevolution_warmstart_prey/`). The Red Queen question it was built for closed with a STOP verdict ([Logbook 017](experiments/logbooks/017-coevolution-arms-race.md)); the lag-matrix and cell-grid instruments remain available.
@@ -152,12 +152,13 @@ The validation grades the worm's *own* behaviour against published *C. elegans* 
 
 1. Set `sensing.capture_behaviour: true` in a foraging config (default `false`; a byte-identical no-op when off). Each run then logs a behavioural trajectory to `exports/<session>/session/data/behaviour_capture.json`.
 
-2. Grade the captured trajectories:
+2. List the captures in a manifest file — one `<seed> <path>` pair per line, paths resolved relative to the repository root — and grade them:
 
    ```bash
+   printf '1 exports/<session-seed-1>/session/data/behaviour_capture.json\n2 exports/<session-seed-2>/session/data/behaviour_capture.json\n' > _manifest.txt
    uv run python scripts/analysis/behavioural_chemotaxis_validation.py \
-     --manifest <seed> <path/to/behaviour_capture.json>   # one line per seed
-     --tail-runs 100 --out behavioural_curves.json [--figure-dir figures/] [--theta-sharp 0.45]
+     --manifest _manifest.txt --tail-runs 100 --out behavioural_curves.json \
+     [--figure-dir figures/] [--theta-sharp 0.45]
    ```
 
 3. For **thermotaxis**, set `sensing.capture_behaviour_modality: thermotaxis` (the captured drive becomes the thermal setpoint error `−|T−Tc|`, so the same bias curves apply) and pass `--modality thermotaxis` to the harness.
@@ -185,7 +186,7 @@ Hardware runs are slow and metered; the Phase 2 campaign used them sparingly for
 ## GPU and Docker
 
 - **GPU simulation**: `uv sync --extra gpu --extra torch --extra pixel` installs `qiskit-aer-gpu-cu11` (CUDA 11; driver ≥ 450) instead of the CPU simulator, then `--device gpu`. The `gpu` and `cpu` extras cannot be installed together.
-- **Container**: `docker compose up --build` builds a `python:3.13-slim` image with the `gpu` and `torch` extras, the source, scripts, configs and data, and starts it with all NVIDIA devices attached (requires Docker with the NVIDIA Container Toolkit on an x86_64 host — the CUDA-11 Aer wheel is published for x86_64 only, so on Apple Silicon build it with `docker build --platform linux/amd64 .` for CPU-only checks). Run sessions inside it with `docker compose exec quantum-nematode uv run ./scripts/run_simulation.py --config configs/scenarios/… --theme headless --device gpu`; outputs land in the container's `/app/exports` unless you mount a volume for it. The image is not built in CI, so treat it as best-effort.
+- **Container**: `docker compose up --build` builds a `python:3.13-slim` image with the `gpu` and `torch` extras, the source, scripts, configs and data, and starts it with all NVIDIA devices attached (requires Docker with the NVIDIA Container Toolkit on an x86_64 host — the CUDA-11 Aer wheel is published for x86_64 only, so on Apple Silicon build it with `docker build --platform linux/amd64 .` for CPU-only checks). Run `git lfs pull` first so the connectome spreadsheets under `data/` are copied in as real files rather than LFS pointers. Run sessions inside it with `docker compose exec quantum-nematode uv run ./scripts/run_simulation.py --config configs/scenarios/… --theme headless --device gpu`; outputs land in the container's `/app/exports` unless you mount a volume for it. The image is not built in CI, so treat it as best-effort.
 
 ## Multi-agent sessions
 
@@ -195,7 +196,7 @@ Configs under `configs/scenarios/multi_agent_*/` run 2–10 worms in one arena w
 
 The mechanics that scenario configs tune. Defaults are the grid-substrate values; the continuous substrate overrides some of them, as noted. Specs for each capability live under [`openspec/specs/`](../openspec/specs/).
 
-**Substrates.** The grid (`DynamicForagingEnvironment`) is a discrete arena — `small` 20×20, `medium` 50×50, `large` 100×100 — where the action is one of `{forward, left, right, stay}`. The continuous-2D substrate (`Continuous2DEnvironment`, selected by the `_continuous2d` config variants) is a 60 mm arena with float kinematics, Euclidean geometry, a persistent heading and a `(speed, turn)` action that the environment rescales by `max_step_mm` and `max_turn_rad`; "stay" is emergent (speed ≈ 0). Concentration fields are Fick-shaped (`gradient_field_mode: fick`) and an adaptive, biphasic chemosensor (`adaptive_chemosensor_*`) provides Weber-law fold-change coding ([Logbook 028](experiments/logbooks/028-rung2-gradients-adaptive-sensor.md)).
+**Substrates.** The grid (`DynamicForagingEnvironment`) is a discrete arena — `small` 20×20, `medium` 50×50, `large` 100×100 — where the action is one of `{forward, left, right, stay}`. The continuous-2D substrate (`Continuous2DEnvironment`, selected by the `_continuous2d` config variants) is a square `world_size_mm` arena — 20 mm in the single-behaviour canary cells, 60 mm in the Phase 6 ranking cells (the C2 pursuit and integrated C3 cells) — with float kinematics, Euclidean geometry, a persistent heading and a `(speed, turn)` action that the environment rescales by `max_step_mm` and `max_turn_rad`; "stay" is emergent (speed ≈ 0). Concentration fields are Fick-shaped (`gradient_field_mode: fick`) and an adaptive, biphasic chemosensor (`adaptive_chemosensor_*`) provides Weber-law fold-change coding ([Logbook 028](experiments/logbooks/028-rung2-gradients-adaptive-sensor.md)).
 
 **Sensing modes** (the config's `_sensing` suffix; [Logbook 009](experiments/logbooks/009-temporal-sensing-evaluation.md)):
 

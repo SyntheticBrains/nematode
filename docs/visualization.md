@@ -96,4 +96,4 @@ Success rate: 60.00%
 
 ## Exporting frames
 
-`scripts/export_screenshot.py` renders a frame of a session to an image for documentation; the hero animation in the README was produced this way from a continuous-2D session.
+`scripts/export_screenshot.py` renders staged frames of the grid, multi-agent and continuous renderers to PNG — the images on this page. The README's hero animation is a recording of a live `--theme pixel_continuous` session, re-encoded from `docs/assets/images/demo-hi-fi.mov`.

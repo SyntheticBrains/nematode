@@ -95,7 +95,7 @@ ______________________________________________________________________
 
 ## Current State
 
-Phases 0-5 are complete. The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6.
+Phases 0-5 and Phase 6a are complete (Phase 6b — NEAT topology search — is pending). The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6.
 
 ### Phase 0 — Foundation & Baselines
 
