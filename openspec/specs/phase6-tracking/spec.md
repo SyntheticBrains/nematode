@@ -10,7 +10,7 @@ and **6b** (T8 NEAT topology search + the T9b synthesis addendum) tracked separa
 
 ## Requirements
 
-> **Frozen — historical record.** Phase 6a closed at Gate 3 GO ([Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md)) and the `phase6-tracking` change is **archived (read-only)**. The requirements below describe the tracking contract as it governed Phase 6a and are retained as a record of what was done — they no longer impose live obligations. The **live checklist contract for the remaining Phase 6 work (6b — T8 NEAT + the T9b synthesis) is `phase6b-tracking`**; direct all forward "maintain / update the checklist" obligations there.
+> **Frozen — historical record.** Phase 6a closed at Gate 3 GO ([Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md)) and the `phase6-tracking` change is **archived (read-only)**. The requirements below describe the tracking contract as it governed Phase 6a and are retained as a record of what was done — they no longer impose live obligations. The **live checklist contract for the remaining Phase 6 work (6b — T8 NEAT + the T9b synthesis) is `phase6b-tracking`**; direct all forward "maintain / update the checklist" obligations there. This applies to *every* obligation below that writes to `openspec/changes/phase6-tracking/tasks.md` — the gate-link and tranche-amendment ones included: all of them were discharged within Phase 6a, and none may be satisfied by editing the frozen file today.
 
 ### Requirement: Phase 6a Living Tranche Checklist (now frozen)
 
@@ -22,18 +22,20 @@ Through Phase 6a the repository maintained a single living checklist at `openspe
 - **WHEN** the agent reads `openspec/changes/phase6-tracking/tasks.md` and the `docs/roadmap.md` Phase 6 block
 - **THEN** the agent SHALL be able to identify the current in-progress tranche and the next sub-task to start without further codebase exploration
 
-#### Scenario: Milestone PR updates the checklist
+#### Scenario: Milestone PR updates the checklist (Phase 6a — historical)
 
-- **GIVEN** a Phase 6 milestone PR (e.g. `add-connectome-substrate`, an L1 plugin refactor, a T4 L2 first-pass run, a T5 platform-refactor change, a T6 Rung 2 gradients change, a T7 L2 final-pass run, a T8 NEAT run) is being prepared
-- **WHEN** the PR is opened
-- **THEN** the PR diff SHALL include updates to `openspec/changes/phase6-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the relevant tranche status header
+- **GIVEN** a Phase 6a milestone PR (e.g. `add-connectome-substrate`, an L1 plugin refactor, a T4 L2 first-pass run, a T5 platform-refactor change, a T6 Rung 2 gradients change, a T7 L2 final-pass run) was being prepared, at any point before the Phase 6a synthesis archived this change
+- **WHEN** the PR was opened
+- **THEN** the PR diff was required to include updates to `openspec/changes/phase6-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the relevant tranche status header
+- **AND** this scenario is a record of Phase 6a practice only; a Phase 6b milestone PR (T8 NEAT, the T9b synthesis) SHALL leave the frozen checklist untouched and SHALL update `phase6b-tracking`'s checklist instead
 
-#### Scenario: Checklist outlives individual milestones
+#### Scenario: Checklist outlives individual milestones (Phase 6a — historical, now discharged)
 
-- **GIVEN** a Phase 6 milestone OpenSpec change (e.g. `add-connectome-substrate`) is archived
-- **WHEN** archival completes
-- **THEN** the `phase6-tracking` change SHALL remain unarchived and continue to receive updates from subsequent milestone PRs
-- **AND** archival of `phase6-tracking` itself SHALL only occur alongside the Phase 6 synthesis logbook change (Tranche 9)
+- **GIVEN** a Phase 6a milestone OpenSpec change (e.g. `add-connectome-substrate`) was archived during Phase 6a
+- **WHEN** archival completed
+- **THEN** the `phase6-tracking` change was required to remain unarchived and to keep receiving updates from subsequent Phase 6a milestone PRs
+- **AND** archival of `phase6-tracking` itself was deferred to a synthesis logbook change, which is what discharged this obligation: the Phase 6a/6b split moved that trigger to the Phase 6a interim synthesis (see the Gate 3 split scenario below), on which this change was archived
+- **AND** the equivalent live obligation for the remaining Phase 6b tranches SHALL be read from `phase6b-tracking`, not from here
 
 #### Scenario: Phase 6a / 6b sub-phase split triggered at Gate 3
 

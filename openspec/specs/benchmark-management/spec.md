@@ -34,10 +34,12 @@ Also surviving in code: the convergence detector and composite score, moved to [
 
 None. This capability has no live requirements.
 
-> **Expected validator consequence.** `openspec validate --specs` reports this spec
-> as failing (`Spec must have at least one requirement`), so the repository-wide
-> total is **46 passed / 1 failed**, not 47/47 — and this spec is the *only*
-> failure, under both plain and `--strict` validation. That is the intended cost of
+> **Expected validator consequence.** This spec fails validation
+> (`Spec must have at least one requirement`), and it is the *only* failure in the
+> repository. `openspec validate --all` reports **47 passed / 1 failed (48 items)**
+> and `openspec validate --specs` reports **46 passed / 1 failed (47 items)** — the
+> two totals differ only because `--all` also validates the one active change.
+> Both figures are identical with and without `--strict`. That is the intended cost of
 > the retention decision above, not drift: the validator (as of openspec 1.10) has
 > no notion of a retired capability and offers no ignore or exclusion mechanism,
 > and the alternatives are deleting the file (losing the redirect for anyone
