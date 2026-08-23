@@ -68,6 +68,20 @@ Four tiers:
 
 Pre-commit runs only the fast tier (`not smoke and not nightly and not slow`). Run `uv run pytest -m "not nightly"` (includes slow + smoke) after substantive changes, especially when touching `evolution/`, and `uv run pre-commit run -a` before committing.
 
+### CI sharding and `.test_durations`
+
+CI splits the suite across three parallel shards with `pytest-split`, balanced by
+the committed `.test_durations` file. Tests missing from that file still run —
+`pytest-split` places unknown tests without a duration estimate — so it only
+needs regenerating when the balance drifts badly (one shard visibly slower than
+the others), not on every PR that adds a test:
+
+```bash
+uv run pytest -m "not nightly" -p no:randomly --store-durations --durations-path .test_durations
+```
+
+Locally the suite is unsharded; `-n logical` in `addopts` uses every logical core.
+
 ## Pull Requests
 
 PR titles MUST use [Conventional Commits](https://www.conventionalcommits.org/) prefixes. Common types in this repo: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`. Use `!` after the type for breaking changes (e.g. `feat!: remove legacy preprocessing mode`). Examples from project history: `feat: Add aerotaxis (oxygen sensing) system`, `fix: multi-agent sensing - use agent's own position in BrainParams`, `docs: Klinotaxis Era multi-agent pheromone evaluation (Logbook 011)`.

@@ -68,6 +68,13 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-xdist>=3.8.0",
+    # Splits the suite across CI shards using .test_durations for balance.
+    "pytest-split>=0.11.0",
+    # pytest-xdist needs psutil to resolve `-n logical`; without it it silently
+    # falls back to physical cores, which halves worker count on CI runners.
+    # It arrives transitively today (ipykernel, qiskit-aer) — pin it directly so
+    # a dependency change cannot quietly slow CI back down.
+    "psutil>=7.0.0",
 ]
 
 [tool.uv.workspace]
@@ -155,7 +162,9 @@ pythonPlatform = "Linux"
 
 [tool.pytest.ini_options]
 testpaths = ["packages/quantum-nematode/tests"]
-addopts = "-n auto"
+# `logical`, not `auto`: xdist's `auto` counts *physical* cores, which gives only
+# 2 workers on a 4-vCPU CI runner. Requires psutil (pinned in the dev group).
+addopts = "-n logical"
 markers = [
     "smoke: Smoke tests that run entry-point scripts (excluded from pre-commit)",
     "nightly: Nightly regression tests against benchmarks (slow)",
