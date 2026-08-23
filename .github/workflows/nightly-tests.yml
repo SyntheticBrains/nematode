@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: false
 
@@ -23,7 +23,7 @@ jobs:
           GIT_LFS_SKIP_SMUDGE: '1'
 
       - name: Cache Git LFS objects
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .git/lfs
           key: lfs-${{ runner.os }}-${{ hashFiles('.lfs-assets-id') }}
@@ -34,14 +34,16 @@ jobs:
         run: git lfs pull && git lfs checkout
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
+          # v9 stopped pruning unused wheels before saving; keep the cache small.
+          prune-cache: true
 
       - name: Install dependencies
         run: |

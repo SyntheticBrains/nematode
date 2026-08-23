@@ -6,7 +6,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 ### `pre-commit.yml`
 
-Runs all pre-commit hooks on every push and pull request to `main` and `develop` branches.
+Runs all pre-commit hooks on every push and pull request to `main`.
 
 **What it does:**
 
