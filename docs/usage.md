@@ -18,7 +18,7 @@ A *session* is `--runs` episodes of one scenario with one brain that learns acro
 | `--theme NAME` | `pixel` (default), `pixel_continuous`, `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless` — see [visualization.md](visualization.md) |
 | `--device cpu\|gpu\|qpu` | Backend for the quantum brains (default `cpu`; `gpu` needs the `gpu` extra; `qpu` needs the `qpu` extra and `.env`) |
 | `--optimize` | On `qpu`, enable Q-CTRL Fire Opal error suppression |
-| `--track-experiment` | Save reproducibility metadata to `experiments/<id>.json` (see [Experiment tracking](#experiment-tracking)) |
+| `--track-experiment` | Save reproducibility metadata to `experiments/<id>/<id>.json` (see [Experiment tracking](#experiment-tracking)) |
 | `--track-per-run` | Write tracked brain data as separate plots per run, in per-run subfolders |
 | `--validate-chemotaxis` | Print chemotaxis-index validation against the *C. elegans* literature values in `data/chemotaxis/` |
 | `--save-weights PATH` / `--load-weights PATH` | Persist trained weights after the session, or warm-start from a saved file |
@@ -68,7 +68,7 @@ A summary is printed when the session ends (success rate, failure breakdown by c
 
 ## Experiment tracking
 
-`--track-experiment` writes `experiments/<experiment-id>.json` with the config file and its hash, the git commit, branch and dirty state, system and dependency versions, the brain and environment parameters, the full results and performance metrics, and the export paths. The convergence detector (`quantumnematode.experiment.convergence`) derives the level-agnostic `post_convergence_success_rate` that the architecture-comparison protocol ranks on.
+`--track-experiment` writes `experiments/<experiment-id>/<experiment-id>.json` with the config file and its hash, the git commit, branch and dirty state, system and dependency versions, the brain and environment parameters, the full results and performance metrics, and the export paths. The convergence detector (`quantumnematode.experiment.convergence`) derives the level-agnostic `post_convergence_success_rate` that the architecture-comparison protocol ranks on.
 
 Query tracked experiments with `scripts/experiment_query.py`:
 

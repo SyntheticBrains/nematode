@@ -6,17 +6,17 @@ Human-written analysis of every experiment series: the objective, the pre-regist
 
 | System | Location | Git tracked | Purpose |
 |--------|----------|-------------|---------|
-| Auto-tracking | `experiments/*.json` | No | Raw metadata from every `--track-experiment` run (config hash, git state, results) |
+| Auto-tracking | `experiments/<id>/<id>.json` | No | Raw metadata from every `--track-experiment` run (config hash, git state, results) |
 | Evolution results | `evolution_results/` | No | All evolution run outputs |
 | Artifacts | `artifacts/` | Yes (Git LFS) | Curated outputs referenced by logbooks — see [artifacts/README.md](../../artifacts/README.md) |
-| Supporting data | `logbooks/supporting/<NNN>/` | Yes | Per-logbook appendices: per-seed CSVs, analysis JSON, figures, the exact configs |
+| Supporting data | `logbooks/supporting/<NNN>/` | Yes | Per-logbook appendices: a `<title>-details.md` write-up plus per-seed CSVs, analysis JSON, figures and the exact configs |
 | **Logbooks** (this) | `logbooks/` | Yes | Human analysis, insights, narrative |
 
 ### Workflow
 
 ```text
 1. Run simulations or evolution
-   └── auto-saved to experiments/*.json or evolution_results/
+   └── auto-saved to experiments/<id>/ or evolution_results/<session-id>/
 
 2. Query results
    └── uv run scripts/experiment_query.py list
@@ -80,7 +80,7 @@ Each logbook follows the same structure: **Objective** (the question), **Hypothe
 
 1. Copy [`templates/experiment.md`](templates/experiment.md) to `logbooks/NNN-descriptive-name.md` using the next sequential number.
 
-2. Put per-seed data, analysis outputs and the exact configs under `logbooks/supporting/NNN-descriptive-name/` (or `artifacts/` for large or binary outputs).
+2. Put the appendix (`<title>-details.md`), per-seed data, analysis outputs and the exact configs under `logbooks/supporting/NNN/` (or `artifacts/` for large or binary outputs).
 
 3. Reference runs by session ID so they can be re-queried:
 

@@ -360,22 +360,32 @@ def _export_continuous(output_path: str) -> None:
         env.move_agent_normalized(speed_norm=0.7, turn_norm=0.1)
         renderer.render_frame(env, snapshot(), session_text=session_text)
 
-    # Stage the food cluster and the predator around wherever the walk ended, on the
-    # side of the arena with the most room so nothing lands out of bounds.
+    # Stage the food cluster and the predator around wherever the walk ended, biased
+    # toward the side of the arena with the most room, and clamp every coordinate
+    # into the plate (with a sprite-sized margin) so nothing can land out of bounds.
     ax, ay = env._agent_xy("default")
     sx = 1.0 if ax < world / 2 else -1.0
     sy = 1.0 if ay < world / 2 else -1.0
+    margin = 1.0
+
+    def clamp(v: float) -> float:
+        return min(max(v, margin), world - margin)
+
     # `foods` is int-annotated but stores real-valued sources at runtime on the
     # continuous substrate (see Continuous2DEnvironment); float coords are intended.
     env.foods = [  # type: ignore[assignment]
-        (ax + sx * 6.4, ay + sy * 3.2),
-        (ax - sx * 5.1, ay + sy * 7.7),
-        (ax + sx * 8.3, ay - sy * 4.6),
-        (ax - sx * 7.2, ay - sy * 6.1),
+        (clamp(ax + sx * 6.4), clamp(ay + sy * 3.2)),
+        (clamp(ax - sx * 5.1), clamp(ay + sy * 7.7)),
+        (clamp(ax + sx * 8.3), clamp(ay - sy * 4.6)),
+        (clamp(ax - sx * 7.2), clamp(ay - sy * 6.1)),
     ]
+    # The float position is the truth on the continuous substrate (it is what the
+    # renderer draws); the integer ``position`` is the rounded view the base class keeps.
+    px, py = clamp(ax + sx * 9), clamp(ay + sy * 9)
     env.predators = [
         Predator(
-            position=(round(ax + sx * 9), round(ay + sy * 9)),
+            position=(round(px), round(py)),
+            pos_continuous=(px, py),
             predator_type=PredatorType.STATIONARY,
             speed=0.0,
             detection_radius=6,
