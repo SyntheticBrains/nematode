@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and help
+    url: https://github.com/SyntheticBrains/nematode/discussions/categories/q-a
+    about: How to run, configure, or interpret something
+  - name: Ideas and research directions
+    url: https://github.com/SyntheticBrains/nematode/discussions/categories/ideas
+    about: Open-ended proposals, before they become a concrete request
+  - name: Report a security vulnerability
+    url: https://github.com/SyntheticBrains/nematode/security/advisories/new
+    about: Please do not file vulnerabilities as public issues — see SECURITY.md

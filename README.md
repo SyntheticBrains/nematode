@@ -158,7 +158,7 @@ Contributions are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, t
 - **Validation arms**: a predator/mechanosensation behavioural validation; named-neuron grounding for the connectome brain.
 - **Docs, tutorials and reproductions**: rerun any logbook on your own hardware — a discrepancy is a finding.
 
-Questions and ideas go to [Discussions](https://github.com/SyntheticBrains/nematode/discussions); bugs to [Issues](https://github.com/SyntheticBrains/nematode/issues).
+Questions and ideas go to [Discussions](https://github.com/SyntheticBrains/nematode/discussions); bugs to [Issues](https://github.com/SyntheticBrains/nematode/issues); suspected vulnerabilities to the private channel in [SECURITY.md](SECURITY.md).
 
 ## Citing
 

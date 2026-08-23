@@ -40,7 +40,7 @@ Pick the extras you need — only `cpu` and `gpu` conflict:
 # Typical development install
 uv sync --extra cpu --extra torch --extra pixel --extra analysis
 
-# What CI installs
+# What the pre-commit workflow installs (the test workflow uses cpu, pixel, torch)
 uv sync --extra analysis --extra cpu --extra pixel --extra qpu --extra torch --dev
 ```
 
@@ -113,12 +113,13 @@ packages/quantum-nematode/quantumnematode/
   agent/           agent orchestration, rewards, metrics, multi-agent simulation
   connectome/      Cook et al. 2019 connectome loader and neuron metadata
   evolution/       CMA-ES / GA / TPE loops, inheritance strategies, co-evolution
-  optimizers/      parameter-shift rule and related quantum optimisers
+  optimizers/      parameter-shift rule, CMA-ES and GA optimisers, learning-rate schedules
   executors/       CPU / GPU / QPU backends
   experiment/      experiment tracking, metadata, convergence detection
   validation/      real-worm behavioural validation (bias curves)
   report/          session summaries, plots, CSV export
-  utils/           config loader, brain factory, logging, interrupt handling
+  utils/           config loader, brain factory, interrupt handling
+  logging_config.py  structured logging (logs/simulation_<session-id>.log)
 packages/quantum-nematode/tests/   the test suite (all tiers)
 scripts/           CLI entry points, analysis scripts, Phase 5 campaign drivers
 configs/           scenario, evolution and special configs (see configs/README.md)

@@ -28,6 +28,7 @@ Start with the [project README](../README.md) — it states the research questio
 | Document | What it is |
 |---|---|
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Development setup, test tiers, code style, pull-request process |
+| [../SECURITY.md](../SECURITY.md) | How to report a vulnerability privately, and what is unsafe to load from untrusted sources |
 | [architecture/plugin-developer-guide.md](architecture/plugin-developer-guide.md) | How to add a brain architecture through the plugin registry |
 | [../AGENTS.md](../AGENTS.md) | Instructions for AI coding assistants: commands, repository layout, conventions |
 | [../openspec/](../openspec/) | Spec-driven development: `specs/` hold the current capability specs, `changes/` the in-flight proposals, `changes/archive/` the history |

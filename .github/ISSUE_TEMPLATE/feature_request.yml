@@ -1,0 +1,32 @@
+name: Feature or research proposal
+description: A capability, architecture, behaviour, or study you think the platform should have
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open-ended ideas are welcome in [Discussions › Ideas](https://github.com/SyntheticBrains/nematode/discussions/categories/ideas); use this form once there is a concrete proposal. The [roadmap](https://github.com/SyntheticBrains/nematode/blob/main/docs/roadmap.md) explains how phases, exit criteria and research questions are organised.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or question
+      description: What cannot be done or answered today, and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would add or change. For a new brain architecture, say which family it belongs to and which existing arm it should be compared against.
+    validations:
+      required: true
+  - type: input
+    id: roadmap
+    attributes:
+      label: Roadmap fit
+      description: Which phase, research question, or logbook this relates to, if any.
+      placeholder: Phase 7 L4 plasticity · RQ3 · follows Logbook 034
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
