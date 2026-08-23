@@ -8,7 +8,7 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [0.5.0] - 2026-08-23
 
-The pre-Phase-7 housekeeping release: the platform that closed Phase 6a, with the research tooling it no longer needs removed, the toolchain moved to Python 3.13 and Qiskit 2, and the repository prepared for a wider audience.
+The pre-Phase-7 housekeeping release. It takes the platform that closed Phase 6a, removes the research tooling the platform no longer needs, moves the toolchain to Python 3.13 and Qiskit 2, and prepares the repository for a wider audience.
 
 ### Breaking changes
 
