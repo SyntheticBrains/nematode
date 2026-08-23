@@ -39,7 +39,7 @@ Each result links to the logbook that holds the evidence. Negative results carry
 
 ### Install
 
-[uv](https://github.com/astral-sh/uv) manages the environment; [Git LFS](https://git-lfs.com) stores weights, checkpoints and connectome data.
+[uv](https://github.com/astral-sh/uv) manages the environment; [Git LFS](https://git-lfs.com) stores weights, checkpoints and connectome data. A fresh clone fetches only the connectome data the code needs (~4 MB); the ~620 MB of curated logbook artifacts stay as LFS pointers until you ask for them with `git lfs pull --include='artifacts/**'`.
 
 ```bash
 # macOS

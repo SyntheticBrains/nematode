@@ -2,6 +2,8 @@
 
 Curated experiment outputs referenced in logbooks and documentation.
 
+> Stored in Git LFS and **not fetched by default**: the committed `.lfsconfig` limits a fresh clone to `data/**`, so everything under `artifacts/` arrives as LFS pointers. Materialise what you need with `git lfs pull --include='artifacts/**'` (or a narrower path such as `artifacts/logbooks/029-*/**`). CI fetches every object.
+
 ## Purpose
 
 This directory stores **selectively preserved** experiment outputs that are:

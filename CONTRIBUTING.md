@@ -8,7 +8,7 @@ Thank you for your interest in contributing. This guide covers development setup
 
 - **Python 3.13** — exactly (`>=3.13,<3.14`); `uv` fetches it if it is not installed
 - [**uv**](https://github.com/astral-sh/uv) for dependency management
-- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS
+- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS. The committed `.lfsconfig` limits a fresh clone to `data/**` (~4 MB); the curated artifacts (~620 MB) are fetched only on request
 
 ```bash
 # macOS
@@ -20,7 +20,10 @@ sudo apt-get install git-lfs
 git lfs install            # once per machine
 git clone https://github.com/SyntheticBrains/nematode.git
 cd nematode
-git lfs ls-files | head    # confirms LFS objects were fetched
+git lfs ls-files | head    # `*` = present locally, `-` = still a pointer
+
+# Only if you need to reproduce a logbook: fetch the curated artifacts (~620 MB, or a narrower path)
+git lfs pull --include='artifacts/**'
 ```
 
 ### Install dependencies
