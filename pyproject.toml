@@ -6,7 +6,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = []
 maintainers = []
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 keywords = [
     "quantum",
     "machine-learning",
@@ -22,15 +22,15 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Physics",
     "Private :: Do Not Upload",
 ]
 dependencies = [
     "pre-commit>=4.6.2",
-    "pyright>=1.1.408",
-    "ruff>=0.15.1",
+    "pyright>=1.1.411",
+    "ruff>=0.16.4",
 ]
 
 [project.urls]
@@ -84,12 +84,24 @@ members = ["packages/*"]
 package = false
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]
 select = ['ALL']
-ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
+ignore = [
+  'FIX002',
+  'PLC0415',
+  'TD002',
+  'TD003',
+  # Ruff 0.16 stabilised these two, and `select = ALL` adopts new rules on sight.
+  # CPY001 wants a copyright header in all 365 source files; this project carries
+  # its Apache-2.0 grant in LICENSE, not per-file preambles.
+  'CPY001',
+  # PLR0917 is the positional-only restatement of PLR0913, which the many-parameter
+  # scientific entry points already suppress deliberately at each site.
+  'PLR0917',
+]
 
 [tool.ruff.lint.per-file-ignores]
 "/**/tests/**/*.py" = [
@@ -157,7 +169,7 @@ reportMissingTypeStubs = false
 reportMatchNotExhaustive = "error"
 reportUnusedFunction = "error"
 reportConstantRedefinition = "error"
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 pythonPlatform = "Linux"
 
 [tool.pytest.ini_options]

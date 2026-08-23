@@ -977,7 +977,7 @@ class CoevolutionLoop:
         else:
             # CMA's running mean is the best gen-0 anchor when no
             # champion has been recorded yet.
-            x0 = list(side.optimizer._es.mean)  # noqa: SLF001 — cma library API
+            x0 = [float(v) for v in side.optimizer._es.mean]  # noqa: SLF001 — cma library API
         side.optimizer = self._build_optimizer(
             num_params=len(x0),
             x0=x0,

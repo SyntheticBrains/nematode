@@ -23,20 +23,20 @@ ______________________________________________________________________
 
 ### `tests.yml`
 
-Runs the test suite on Python 3.12 (the only version the project supports — `requires-python = ">=3.12,<3.13"`).
+Runs the test suite on Python 3.13 (the only version the project supports — `requires-python = ">=3.13,<3.14"`).
 
 **What it does:**
 
-- ✅ Runs pytest on a single Python 3.12 job (no matrix — 3.11 is excluded by `requires-python`)
-- ✅ Uploads coverage reports to Codecov (optional)
-- ✅ Runs with verbose output and colored results
+- ✅ Runs pytest across five parallel `pytest-split` shards on Python 3.13, aggregated behind a single `Tests` check
+- ✅ Uploads a coverage report per shard to Codecov, which merges them by commit (optional)
+- ✅ Pins BLAS/OpenMP to one thread per xdist worker so the runner is not oversubscribed
 
 ______________________________________________________________________
 
 ### `nightly-tests.yml`
 
 Runs the nightly end-to-end regression suite on a schedule (`cron: '0 3 * * *'`),
-on Python 3.12.
+on Python 3.13.
 
 **What it does:**
 
@@ -65,7 +65,7 @@ uv run pytest packages/quantum-nematode/tests/
 
 All workflows use:
 
-- **Python version**: 3.12
+- **Python version**: 3.13
 - **Package manager**: `uv` with caching enabled
 - **Pre-commit**: v3.0.1 action
 

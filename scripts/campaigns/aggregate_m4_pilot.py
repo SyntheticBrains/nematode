@@ -149,12 +149,14 @@ def _compute_verdict(
     if speed_gate_passes and assimilation_gate_passes and comparative_gate_passes:
         return (
             "GO ✅",
-            "Baldwin inheritance accelerates convergence (speed gate), the "
-            "elite genome alone produces useful priors without K-train "
-            "(genetic-assimilation gate), AND its convergence speed is "
-            "competitive with Lamarckian (comparative gate).  Inheritance "
-            "of learning bias is doing real work — proceed to the next "
-            "experiment.",
+            (
+                "Baldwin inheritance accelerates convergence (speed gate), the "
+                "elite genome alone produces useful priors without K-train "
+                "(genetic-assimilation gate), AND its convergence speed is "
+                "competitive with Lamarckian (comparative gate).  Inheritance "
+                "of learning bias is doing real work — proceed to the next "
+                "experiment."
+            ),
         )
     if speed_gate_passes:
         failed = []
@@ -165,20 +167,24 @@ def _compute_verdict(
         joined = " and ".join(failed)
         return (
             "PIVOT ⚠️",
-            f"The speed gate passed but the {joined} gate(s) failed.  "
-            "Baldwin shows partial signal — inheritance helps convergence "
-            "but either the genome doesn't encode useful priors without "
-            "learning, or it underperforms Lamarckian by more than the "
-            "comparative threshold.  Treat as inconclusive and review the "
-            "per-seed trajectories before committing follow-up scope.",
+            (
+                f"The speed gate passed but the {joined} gate(s) failed.  "
+                "Baldwin shows partial signal — inheritance helps convergence "
+                "but either the genome doesn't encode useful priors without "
+                "learning, or it underperforms Lamarckian by more than the "
+                "comparative threshold.  Treat as inconclusive and review the "
+                "per-seed trajectories before committing follow-up scope."
+            ),
         )
     return (
         "STOP ❌",
-        "The speed gate failed: Baldwin does not accelerate convergence "
-        "over the from-scratch control by the required margin.  Either "
-        "the richer learnability schema offers no exploitable signal, "
-        "or the fitness landscape is the wrong testbed.  Re-evaluate "
-        "before committing to follow-up scope.",
+        (
+            "The speed gate failed: Baldwin does not accelerate convergence "
+            "over the from-scratch control by the required margin.  Either "
+            "the richer learnability schema offers no exploitable signal, "
+            "or the fitness landscape is the wrong testbed.  Re-evaluate "
+            "before committing to follow-up scope."
+        ),
     )
 
 
@@ -231,34 +237,46 @@ def _format_summary(  # noqa: PLR0913
         "",
         "### Decision Gates",
         "",
-        f"- **Speed gate** (mean_gen_baldwin + {SPEED_GAIN_GENERATIONS} "
-        f"<= mean_gen_control): {'PASS' if speed_gate_passes else 'FAIL'}",
+        (
+            f"- **Speed gate** (mean_gen_baldwin + {SPEED_GAIN_GENERATIONS} "
+            f"<= mean_gen_control): {'PASS' if speed_gate_passes else 'FAIL'}"
+        ),
         f"  - Baldwin mean gen-to-{TARGET_FITNESS}: {speed_mean_baldwin:.2f}",
         f"  - Control mean gen-to-{TARGET_FITNESS}: {speed_mean_ctrl:.2f}",
-        f"  - Margin: {speed_mean_ctrl - speed_mean_baldwin:+.2f} "
-        f"(need >= {SPEED_GAIN_GENERATIONS})",
+        (
+            f"  - Margin: {speed_mean_ctrl - speed_mean_baldwin:+.2f} "
+            f"(need >= {SPEED_GAIN_GENERATIONS})"
+        ),
         "",
-        f"- **Genetic-assimilation gate** (mean_f1_baldwin > "
-        f"mean_baseline + {F1_OVER_BASELINE_THRESHOLD}): "
-        f"{'PASS' if assimilation_gate_passes else 'FAIL'}",
+        (
+            f"- **Genetic-assimilation gate** (mean_f1_baldwin > "
+            f"mean_baseline + {F1_OVER_BASELINE_THRESHOLD}): "
+            f"{'PASS' if assimilation_gate_passes else 'FAIL'}"
+        ),
         f"  - Baldwin F1 innate-only mean: {f1_mean:.3f}",
         f"  - Hand-tuned baseline mean: {baseline_mean:.3f}",
         f"  - Margin: {f1_mean - baseline_mean:+.3f} (need > {F1_OVER_BASELINE_THRESHOLD})",
         "",
-        f"- **Comparative gate** (mean_gen_baldwin <= "
-        f"mean_gen_lamarckian + {COMPARATIVE_GAP_GENERATIONS}): "
-        f"{'PASS' if comparative_gate_passes else 'FAIL'}",
+        (
+            f"- **Comparative gate** (mean_gen_baldwin <= "
+            f"mean_gen_lamarckian + {COMPARATIVE_GAP_GENERATIONS}): "
+            f"{'PASS' if comparative_gate_passes else 'FAIL'}"
+        ),
         f"  - Baldwin mean gen-to-{TARGET_FITNESS}: {speed_mean_baldwin:.2f}",
         f"  - Lamarckian mean gen-to-{TARGET_FITNESS}: {speed_mean_lam:.2f}",
-        f"  - Margin: {speed_mean_lam + COMPARATIVE_GAP_GENERATIONS - speed_mean_baldwin:+.2f} "
-        f"(need >= 0)",
+        (
+            f"  - Margin: {speed_mean_lam + COMPARATIVE_GAP_GENERATIONS - speed_mean_baldwin:+.2f} "
+            f"(need >= 0)"
+        ),
         "",
         f"**Decision**: {verdict}",
         "",
         verdict_text,
         "",
-        "### Per-seed convergence speed (generations to first reach "
-        f"best_fitness >= {TARGET_FITNESS}) + F1 innate-only success rate",
+        (
+            "### Per-seed convergence speed (generations to first reach "
+            f"best_fitness >= {TARGET_FITNESS}) + F1 innate-only success rate"
+        ),
         "",
         "| Seed | Baldwin | Lamarckian | Control | F1 innate-only |",
         "|------|---------|------------|---------|----------------|",

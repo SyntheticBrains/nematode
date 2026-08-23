@@ -37,7 +37,7 @@ class _UnrelatedConfig(BaseModel):
 
 
 @pytest.fixture(autouse=True)
-def _isolated_registry() -> Generator[None, None, None]:
+def _isolated_registry() -> Generator[None]:
     """Snapshot and restore the module-level registry per test.
 
     The registry is populated at import time by every architecture module

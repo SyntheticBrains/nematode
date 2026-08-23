@@ -1,5 +1,5 @@
 # Use the official Python slim image as a parent image
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # Set the working directory in the container
 WORKDIR /app

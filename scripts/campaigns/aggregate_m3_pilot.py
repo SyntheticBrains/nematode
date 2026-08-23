@@ -189,16 +189,20 @@ def _format_summary(  # noqa: PLR0913
         "",
         "### Decision Gate",
         "",
-        f"- **Speed gate** (mean_gen_lamarckian + {SPEED_GAIN_GENERATIONS} "
-        f"<= mean_gen_control): "
-        f"{'PASS' if speed_gate_passes else 'FAIL'}",
+        (
+            f"- **Speed gate** (mean_gen_lamarckian + {SPEED_GAIN_GENERATIONS} "
+            f"<= mean_gen_control): "
+            f"{'PASS' if speed_gate_passes else 'FAIL'}"
+        ),
         f"  - Lamarckian mean gen-to-{TARGET_FITNESS}: {speed_mean_lam:.1f}",
         f"  - Control mean gen-to-{TARGET_FITNESS}: {speed_mean_ctrl:.1f}",
         f"  - Margin: {speed_mean_ctrl - speed_mean_lam:+.1f} (need >= {SPEED_GAIN_GENERATIONS})",
         "",
-        f"- **Floor gate** (mean_gen{FLOOR_LAMARCKIAN_GEN}_lamarckian >= "
-        f"mean_gen{FLOOR_CONTROL_GEN}_control): "
-        f"{'PASS' if floor_gate_passes else 'FAIL'}",
+        (
+            f"- **Floor gate** (mean_gen{FLOOR_LAMARCKIAN_GEN}_lamarckian >= "
+            f"mean_gen{FLOOR_CONTROL_GEN}_control): "
+            f"{'PASS' if floor_gate_passes else 'FAIL'}"
+        ),
         f"  - Lamarckian gen-{FLOOR_LAMARCKIAN_GEN} mean: {floor_lam:.3f}",
         f"  - Control gen-{FLOOR_CONTROL_GEN} mean: {floor_ctrl:.3f}",
         f"  - Margin: {floor_lam - floor_ctrl:+.3f}",
@@ -207,8 +211,10 @@ def _format_summary(  # noqa: PLR0913
         "",
         verdict_text,
         "",
-        "### Per-seed convergence speed (generations to first reach "
-        f"best_fitness >= {TARGET_FITNESS})",
+        (
+            "### Per-seed convergence speed (generations to first reach "
+            f"best_fitness >= {TARGET_FITNESS})"
+        ),
         "",
         "| Seed | Lamarckian | Control |",
         "|------|------------|---------|",

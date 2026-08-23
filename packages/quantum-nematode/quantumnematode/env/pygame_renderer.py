@@ -1831,8 +1831,10 @@ class Continuous2DRenderer:
         camera_state = "follow" if self._camera_following else "arena"
         lines.append(
             (
-                f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}  "
-                f"[C]amera: {camera_state}",
+                (
+                    f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}  "
+                    f"[C]amera: {camera_state}"
+                ),
                 STATUS_OVERLAY_HINT_COLOR,
             ),
         )
