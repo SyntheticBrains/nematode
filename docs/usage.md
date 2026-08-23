@@ -185,7 +185,7 @@ Hardware runs are slow and metered; the Phase 2 campaign used them sparingly for
 ## GPU and Docker
 
 - **GPU simulation**: `uv sync --extra gpu --extra torch --extra pixel` installs `qiskit-aer-gpu-cu11` (CUDA 11; driver ≥ 450) instead of the CPU simulator, then `--device gpu`. The `gpu` and `cpu` extras cannot be installed together.
-- **Container**: `docker compose up --build` builds a `python:3.13-slim` image with the `gpu` extra and starts it with all NVIDIA devices attached (requires Docker with the NVIDIA Container Toolkit). As committed, the image installs only the `gpu` extra (no PyTorch, so only the quantum brains run) and copies `packages/` and `scripts/` but not `configs/` or `data/` — mount the repository or extend the `Dockerfile` before using it for real sessions. Treat it as a starting point rather than a supported path.
+- **Container**: `docker compose up --build` builds a `python:3.13-slim` image with the `gpu` and `torch` extras, the source, scripts, configs and data, and starts it with all NVIDIA devices attached (requires Docker with the NVIDIA Container Toolkit on an x86_64 host — the CUDA-11 Aer wheel is published for x86_64 only, so on Apple Silicon build it with `docker build --platform linux/amd64 .` for CPU-only checks). Run sessions inside it with `docker compose exec quantum-nematode uv run ./scripts/run_simulation.py --config configs/scenarios/… --theme headless --device gpu`; outputs land in the container's `/app/exports` unless you mount a volume for it. The image is not built in CI, so treat it as best-effort.
 
 ## Multi-agent sessions
 

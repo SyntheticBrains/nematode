@@ -4,6 +4,8 @@
 # Allow specific directories and files
 !/packages/quantum-nematode
 !/scripts
+!/configs
+!/data
 !/pyproject.toml
 !/uv.lock
 !/README.md

@@ -308,23 +308,74 @@ def _export_continuous(output_path: str) -> None:
             danger_delta=10.0,
         ),
     )
+    sweep = float(env.continuous.sweep_amplitude_mm)
+    session_text = "Session:\nContinuous-2D demo\n"
 
-    # Walk the worm off-centre so the heading line and sub-cell pose are visible.
-    for _ in range(6):
-        env.move_agent_normalized(speed_norm=0.9, turn_norm=0.08)
+    def snapshot() -> ContinuousRenderState:
+        """Build the render state for the worm's current pose, as the live runner does."""
+        agent_state = env.agents["default"]
+        ax, ay = env._agent_xy("default")
+        pos = agent_state.pos_continuous or (float(ax), float(ay))
+        # Use the same clamped helper the runtime snapshot builder uses, so the
+        # exported sample points match a live render (and stay in-bounds).
+        left_sample, right_sample = _continuous_lateral_offsets(
+            pos,
+            agent_state.heading_rad,
+            sweep,
+            env.grid_size,
+        )
+        zone = env.get_temperature_zone()
+        return ContinuousRenderState(
+            pos=pos,
+            heading_rad=agent_state.heading_rad,
+            left_sample=left_sample,
+            right_sample=right_sample,
+            sweep=sweep,
+            adaptive_background=0.18,
+            adaptive_readout=0.42,
+            adaptive_mode="contrast",
+            step=45,
+            max_steps=500,
+            foods_collected=2,
+            target_foods=10,
+            health=75.0,
+            max_health=100.0,
+            satiety=60.0,
+            max_satiety=100.0,
+            in_danger=False,
+            temperature=env.get_temperature(),
+            zone_name=zone.value.upper().replace("_", " ") if zone else None,
+            oxygen=None,
+            oxygen_zone_name=None,
+        )
 
+    pygame.init()
+    renderer = Continuous2DRenderer(world_size_mm=world)
+
+    # The renderer draws the worm's body as a stylised trail over the positions it has
+    # rendered recently, so a single staged frame shows only the head. Walk the worm
+    # along a gentle arc and render every step, exactly as a live session does, so the
+    # trail fills in before the frame we keep.
+    for _ in range(14):
+        env.move_agent_normalized(speed_norm=0.7, turn_norm=0.1)
+        renderer.render_frame(env, snapshot(), session_text=session_text)
+
+    # Stage the food cluster and the predator around wherever the walk ended, on the
+    # side of the arena with the most room so nothing lands out of bounds.
     ax, ay = env._agent_xy("default")
+    sx = 1.0 if ax < world / 2 else -1.0
+    sy = 1.0 if ay < world / 2 else -1.0
     # `foods` is int-annotated but stores real-valued sources at runtime on the
     # continuous substrate (see Continuous2DEnvironment); float coords are intended.
     env.foods = [  # type: ignore[assignment]
-        (ax + 6.4, ay + 3.2),
-        (ax - 5.1, ay + 7.7),
-        (ax + 8.3, ay - 4.6),
-        (ax - 7.2, ay - 6.1),
+        (ax + sx * 6.4, ay + sy * 3.2),
+        (ax - sx * 5.1, ay + sy * 7.7),
+        (ax + sx * 8.3, ay - sy * 4.6),
+        (ax - sx * 7.2, ay - sy * 6.1),
     ]
     env.predators = [
         Predator(
-            position=(round(ax + 9), round(ay + 9)),
+            position=(round(ax + sx * 9), round(ay + sy * 9)),
             predator_type=PredatorType.STATIONARY,
             speed=0.0,
             detection_radius=6,
@@ -332,49 +383,9 @@ def _export_continuous(output_path: str) -> None:
         ),
     ]
 
-    agent_state = env.agents["default"]
-    pos = agent_state.pos_continuous or (float(ax), float(ay))
-    sweep = float(env.continuous.sweep_amplitude_mm)
-    # Use the same clamped helper the runtime snapshot builder uses, so the
-    # exported sample points match a live render (and stay in-bounds).
-    left_sample, right_sample = _continuous_lateral_offsets(
-        pos,
-        agent_state.heading_rad,
-        sweep,
-        env.grid_size,
-    )
-
-    temperature = env.get_temperature()
-    zone = env.get_temperature_zone()
-    zone_name = zone.value.upper().replace("_", " ") if zone else None
-
-    state = ContinuousRenderState(
-        pos=pos,
-        heading_rad=agent_state.heading_rad,
-        left_sample=left_sample,
-        right_sample=right_sample,
-        sweep=sweep,
-        adaptive_background=0.18,
-        adaptive_readout=0.42,
-        adaptive_mode="contrast",
-        step=45,
-        max_steps=500,
-        foods_collected=2,
-        target_foods=10,
-        health=75.0,
-        max_health=100.0,
-        satiety=60.0,
-        max_satiety=100.0,
-        in_danger=False,
-        temperature=temperature,
-        zone_name=zone_name,
-        oxygen=None,
-        oxygen_zone_name=None,
-    )
-
-    pygame.init()
-    renderer = Continuous2DRenderer(world_size_mm=world)
-    renderer.render_frame(env, state, session_text="Session:\nContinuous-2D demo\n")
+    # One more small step so the final frame is a genuine pose over the staged scene.
+    env.move_agent_normalized(speed_norm=0.3, turn_norm=0.1)
+    renderer.render_frame(env, snapshot(), session_text=session_text)
 
     from pathlib import Path
 
