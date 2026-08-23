@@ -205,9 +205,20 @@ PR checklist:
 - [ ] Tests pass (`uv run pytest -m "not nightly"`)
 - [ ] Pre-commit passes (`uv run pre-commit run -a`)
 - [ ] Documentation updated (docs, `AGENTS.md`, logbook if there are results)
+- [ ] `CHANGELOG.md` has a line under *Unreleased* for any user-facing change
 - [ ] Type hints added
 - [ ] Disabled-by-default features are byte-identical no-ops when off
 - [ ] Benchmark ranges updated if training behaviour changed, with evidence
+
+## Releasing
+
+Releases are tags on `main` plus a GitHub Release; there is no PyPI publication. To cut one:
+
+1. In `CHANGELOG.md`, turn *Unreleased* into the new version with the date, breaking changes first, and update the compare links at the bottom.
+2. Set the version in both `pyproject.toml` files and in `CITATION.cff` (with `date-released`), then run `uv lock` so the lock file records it.
+3. Run `uv run pytest -m "not nightly"`, `uv run pre-commit run -a`, `uv build`, and `pip-audit` over the exported lock (`uv export --format requirements-txt --no-hashes --no-emit-project --extra cpu --extra torch --extra pixel --extra qpu --extra analysis`).
+4. Merge the release PR, then on the merge commit: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
+5. `gh release create vX.Y.Z --title vX.Y.Z --notes-file <the CHANGELOG section> --generate-notes` — the changelog section leads, GitHub's pull-request list follows.
 
 ## Where help is wanted
 

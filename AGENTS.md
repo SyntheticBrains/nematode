@@ -88,4 +88,6 @@ PR titles MUST use [Conventional Commits](https://www.conventionalcommits.org/) 
 
 Commit messages do not require this prefix — only PR titles do.
 
+User-facing changes add a line to `CHANGELOG.md` under *Unreleased* (Keep a Changelog format; breaking changes first). Releases follow the checklist in CONTRIBUTING.md § Releasing.
+
 <!-- markdownlint-disable MD025 -->

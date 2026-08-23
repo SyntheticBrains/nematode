@@ -1,6 +1,6 @@
 [project]
 name = "quantum-nematode"
-version = "1.0.0"
+version = "0.5.0"
 description = "Quantum brain simulation of a nematode (C. elegans) using variational quantum circuits"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Chris Julian Zaharia" }]
