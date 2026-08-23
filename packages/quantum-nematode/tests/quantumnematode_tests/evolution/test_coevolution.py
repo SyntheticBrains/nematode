@@ -349,20 +349,24 @@ class TestAlternatingSchedule:
         loop._prey_probe_fitness = loop.prey.fitness  # type: ignore[assignment]
         loop.predator.fitness = _StubFitness(fixed_value=0.3)  # type: ignore[assignment]
 
-        # Capture initial optimizer ids; after run, the prey + predator
-        # optimizers SHALL each have been swapped out.
-        prey_opt_ids = [id(loop.prey.optimizer)]
-        predator_opt_ids = [id(loop.predator.optimizer)]
+        # Capture the initial optimizer objects; after run, the prey + predator
+        # optimizers SHALL each have been swapped out. Hold the objects themselves
+        # rather than their ``id()``s: a rebuild drops the only reference to the
+        # previous optimizer, and CPython may hand its freed address to the next
+        # one, so comparing ids across lifetimes is flaky. Holding references keeps
+        # every instance alive, which makes identity comparison meaningful.
+        prey_opts = [loop.prey.optimizer]
+        predator_opts = [loop.predator.optimizer]
 
-        # Patch `_rebuild_optimizer` to record its calls + capture new ids.
+        # Patch `_rebuild_optimizer` to record its calls + capture the new instances.
         original = loop._rebuild_optimizer
 
         def capture(side: Any) -> None:
             original(side)
             if side.name == "prey":
-                prey_opt_ids.append(id(side.optimizer))
+                prey_opts.append(side.optimizer)
             else:
-                predator_opt_ids.append(id(side.optimizer))
+                predator_opts.append(side.optimizer)
 
         with patch.object(loop, "_rebuild_optimizer", side_effect=capture):
             loop.run()
@@ -375,10 +379,10 @@ class TestAlternatingSchedule:
         # 2 times; prey was rebuilt 1 time.
         # Assert each side's optimizer was rebuilt at least once and
         # the new instance is a different object.
-        assert len(predator_opt_ids) >= 2
-        assert len(prey_opt_ids) >= 2
-        assert predator_opt_ids[0] != predator_opt_ids[-1]
-        assert prey_opt_ids[0] != prey_opt_ids[-1]
+        assert len(predator_opts) >= 2
+        assert len(prey_opts) >= 2
+        assert predator_opts[0] is not predator_opts[-1]
+        assert prey_opts[0] is not prey_opts[-1]
 
     def test_opposing_side_frozen_during_off_block(self, tmp_path: Path) -> None:
         """During side X's K-block, side Y's population/optimizer/hof SHALL NOT change."""

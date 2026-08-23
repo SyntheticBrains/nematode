@@ -2,6 +2,8 @@
 
 Curated experiment outputs referenced in logbooks and documentation.
 
+> Stored in Git LFS and **not fetched by default**: the committed `.lfsconfig` limits a fresh clone to `data/**`, so everything under `artifacts/` arrives as LFS pointers. Materialise what you need with `git lfs pull --include='artifacts/**'` (or a narrower path such as `artifacts/logbooks/029-*/**`). CI fetches every object.
+
 ## Purpose
 
 This directory stores **selectively preserved** experiment outputs that are:
@@ -20,11 +22,12 @@ artifacts/
 │       ├── best_params.json
 │       ├── history.csv
 │       └── checkpoint.pkl (periodic, for --resume)
-├── experiments/        # Simulation experiment snapshots
+├── experiments/        # Simulation experiment snapshots (the experiments/<id>/ layout, copied as-is)
 │   └── <session_id>/   # e.g., 20251207_035803
-│       └── metadata.json
-└── models/             # Trained model weights (future)
-    └── ...
+│       └── <session_id>.json
+├── logbooks/           # Per-logbook bundles: configs, weights, session JSON, summaries
+│   └── <NNN>/          # e.g., 010/mlpppo_oxygen_thermal_pursuit/weights/final.pt
+└── models/             # Trained model weights kept outside a logbook bundle
 ```
 
 ## Relationship to Other Systems
@@ -58,7 +61,7 @@ cp -r evolution_results/20251209_205950 artifacts/evolutions/
 uv run scripts/run_simulation.py --track-experiment ...
 
 # 2. Copy notable experiments to artifacts/
-cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metadata.json
+cp -r experiments/20251207_035803 artifacts/experiments/
 
 # 3. Reference in logbook
 # "See artifacts/experiments/20251207_035803/"

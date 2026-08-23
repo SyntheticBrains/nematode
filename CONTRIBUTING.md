@@ -8,7 +8,7 @@ Thank you for your interest in contributing. This guide covers development setup
 
 - **Python 3.13** — exactly (`>=3.13,<3.14`); `uv` fetches it if it is not installed
 - [**uv**](https://github.com/astral-sh/uv) for dependency management
-- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS
+- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS. The committed `.lfsconfig` limits a fresh clone to `data/**` (~4 MB); the curated artifacts (~620 MB) are fetched only on request
 
 ```bash
 # macOS
@@ -20,7 +20,10 @@ sudo apt-get install git-lfs
 git lfs install            # once per machine
 git clone https://github.com/SyntheticBrains/nematode.git
 cd nematode
-git lfs ls-files | head    # confirms LFS objects were fetched
+git lfs ls-files | head    # `*` = present locally, `-` = still a pointer
+
+# Only if you need to reproduce a logbook: fetch the curated artifacts (~620 MB, or a narrower path)
+git lfs pull --include='artifacts/**'
 ```
 
 ### Install dependencies
@@ -40,7 +43,7 @@ Pick the extras you need — only `cpu` and `gpu` conflict:
 # Typical development install
 uv sync --extra cpu --extra torch --extra pixel --extra analysis
 
-# What CI installs
+# What the pre-commit workflow installs (the test workflow uses cpu, pixel, torch)
 uv sync --extra analysis --extra cpu --extra pixel --extra qpu --extra torch --dev
 ```
 
@@ -113,12 +116,13 @@ packages/quantum-nematode/quantumnematode/
   agent/           agent orchestration, rewards, metrics, multi-agent simulation
   connectome/      Cook et al. 2019 connectome loader and neuron metadata
   evolution/       CMA-ES / GA / TPE loops, inheritance strategies, co-evolution
-  optimizers/      parameter-shift rule and related quantum optimisers
+  optimizers/      parameter-shift rule, CMA-ES and GA optimisers, learning-rate schedules
   executors/       CPU / GPU / QPU backends
   experiment/      experiment tracking, metadata, convergence detection
   validation/      real-worm behavioural validation (bias curves)
   report/          session summaries, plots, CSV export
-  utils/           config loader, brain factory, logging, interrupt handling
+  utils/           config loader, brain factory, interrupt handling
+  logging_config.py  structured logging (logs/simulation_<session-id>.log)
 packages/quantum-nematode/tests/   the test suite (all tiers)
 scripts/           CLI entry points, analysis scripts, Phase 5 campaign drivers
 configs/           scenario, evolution and special configs (see configs/README.md)

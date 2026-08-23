@@ -1,0 +1,6 @@
+[lfs]
+	# A fresh clone smudges only the runtime data (the vendored connectome
+	# spreadsheets, ~4 MB). The curated logbook artifacts (~620 MB) stay as
+	# pointers until asked for:  git lfs pull --include="artifacts/**"
+	# CI overrides this to fetch everything.
+	fetchinclude = data/**

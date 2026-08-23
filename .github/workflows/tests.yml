@@ -52,7 +52,9 @@ jobs:
             lfs-${{ runner.os }}-
 
       - name: Pull LFS objects
-        run: git lfs pull && git lfs checkout
+        # .lfsconfig limits fresh clones to data/**; CI needs every object
+        # (tests read artifacts/), so override the include filter here.
+        run: git lfs pull --include='**' && git lfs checkout
 
       - name: Set up Python
         uses: actions/setup-python@v7

@@ -502,8 +502,13 @@ def perform_ppo_update(  # noqa: PLR0913
                 device=device,
             )
             predicted = cortex_critic(all_states).squeeze(-1)
-            target_var = returns.var()
-            explained_var = (1.0 - (returns - predicted).var() / (target_var + 1e-8)).item()
+            if returns.numel() > 1:
+                target_var = returns.var()
+                explained_var = (1.0 - (returns - predicted).var() / (target_var + 1e-8)).item()
+            else:
+                # Variance is undefined for a single return (torch warns about zero
+                # degrees of freedom); report NaN rather than a spurious value.
+                explained_var = float("nan")
 
         logger.info(
             f"{brain_name} cortex PPO: "
