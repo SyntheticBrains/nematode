@@ -7,12 +7,12 @@ design decisions D1–D13, exit criteria, and risk table. Phase 7 ships in three
 neuromodulator stack), **7b** (cross-species comparative learning) — plus a synthesis.
 Every Phase 7 milestone PR updates this checklist as part of its diff.
 
-**Status legend**: `[ ]` not started, `[x]` complete.
+**Status legend**: `[ ]` not started, `[x]` closed — done, or (for unexercised SHOULD scope) dropped/deferred with a dated note, per the house dropped-scope style (`phase6-tracking` precedent), so `openspec archive` is never blocked by an honestly-unexercised SHOULD.
 
 **Preconditions (both hold):**
 
 1. ✅ **Gate 3 GO** — Phase 6a closed ([Logbook 037](../../../docs/experiments/logbooks/037-phase6a-synthesis.md), 2026-07-07). Phase 7 never gates on Phase 6b (`phase6b-tracking`, decoupled per D13).
-2. ✅ **Plan finalised** — roadmap v4.2 with D1–D13 ratified and adversarial-review amendments merged (PR #300, 2026-08-27/28).
+2. ✅ **Plan finalised** — roadmap v4.2 with D1–D13 ratified and adversarial-review amendments merged (PR #300, merged 2026-08-27).
 
 > **Not in Phase 7.** Co-evolution (deferred, no destination — roadmap RQ4). Phase 6b NEAT (own tracker; opportunistic pending a dated GPU/cloud decision — D13/D6). Neuropeptide layer as a rule substrate (Phase-7+ candidate, roadmap § signalling-layer scope). Full `∂C/∂t = D∇²C` PDE. *C. briggsae* (no connectome exists, re-verified 2026-08).
 
@@ -80,14 +80,14 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 **Status**: 🔲 not started
 **Roadmap layer**: cross-species
 **Approx effort**: ~8-12 active weeks; lands beyond the window by default expectation
-**Dependencies**: 7a-i (the L4 rule is the sweep's learning regime per D11)
+**Dependencies**: pipeline tasks (C.1/C.2/C.4) are rule-independent and may start after 7a-i; the comparative runs (C.3/C.5) use the **grounded modulated rule** and depend on 7a-ii — D12's head-scope third-factor source policy presupposes the diffusible layer
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 2, D3/D9/D11/D12
 
 - [ ] C.1 **D9 scaffold**: AVA/AVB command-interneuron readout for head-truncated arms + scaffold-sensitivity check (second readout on one behaviour) + per-behaviour sensor-coverage audit of the truncated scope (evasion declared distal-only).
 - [ ] C.2 Head-truncation of Cook 2019 (nose→RVG, chemical-only) + validation of the truncated *C. elegans* baseline.
-- [ ] C.3 **Dauer pathfinder first** (D11): Yim 2024 nerve-ring loader + comparative run — builds the multi-connectome pipeline with no homology tax.
+- [ ] C.3 SHOULD — **dauer pathfinder, runs first** (D3/D11): Yim 2024 nerve-ring loader + comparative run — builds the multi-connectome pipeline with no homology tax.
 - [ ] C.4 *P. pacificus* ingest: shared-core CSV loader (`stevenjcook/cook_et_al_2025_pristionchus` / *Science* SI), species-keyed classification table + validation pathways, explicit **homology mapping table** artefact, species-keyed sensor/motor projection map (replacing the hard-coded elegans tuples in `connectome_ppo.py`).
-- [ ] C.5 **Comparative cross-connectome learning sweep** (D11 MUST): two homologous behaviours (chemotaxis, thermotaxis), under the L4 rule with PPO as secondary context; one pre-registered transfer metric per behaviour; single-animal-vs-shared-core sensitivity run.
+- [ ] C.5 **Comparative cross-connectome learning sweep** (D11 MUST): two homologous behaviours (klinotaxis, thermotaxis), under the grounded modulated L4 rule (D12 head-scope policy) with PPO as secondary context; one pre-registered transfer metric per behaviour; single-animal-vs-shared-core sensitivity run.
 - [ ] C.6 SHOULD: homology-mapped **weight-transplant transfer** (zero-shot + fine-tune; non-homologous-edge policy stated) — the arm that earns the "transfer of trained agents" claim.
 - [ ] C.7 SHOULD: species-appropriate third behaviour — elegans distal-only evasion at head scope; pacificus predatory approach/bite (**new predation-task env**, scoped in its own change).
 - [ ] C.8 7b logbook + roadmap sync.

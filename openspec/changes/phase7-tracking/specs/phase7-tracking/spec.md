@@ -28,7 +28,7 @@ Phase 7 milestone changes SHALL conform to the ratified design decisions D1–D1
 
 ### Requirement: Substrate Freeze Before the L4 Panel
 
-The L4 2×2 panel SHALL NOT run until the pre-panel platform tranche is complete and the substrate is declared frozen: D5 dead-key removal (behaviour unchanged), D7 state-dependent action `std`, the D7 validation gate (Logbook 036 thermotaxis assay re-run with the klinokinesis signature present), and the post-D7 n=8 re-baseline of the reference arms. Any comparison spanning a subsequent substrate change SHALL be reported as qualitative.
+The L4 2×2 panel SHALL NOT run until the pre-panel platform tranche is complete and the substrate is declared frozen: D5 dead-key removal (behaviour unchanged), D7 state-dependent action `std`, the D7 validation gate (Logbook 036 thermotaxis assay re-run with the klinokinesis signature present), the post-D7 n=8 re-baseline of the reference arms, and load-time config validation extended to the new plasticity keys with the freeze declared (tasks P.1–P.5). Any comparison spanning a subsequent substrate change SHALL be reported as qualitative.
 
 #### Scenario: Panel proposed before the D7 validation gate
 

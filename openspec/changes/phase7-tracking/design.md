@@ -27,7 +27,7 @@ The ratified decision table (`docs/roadmap.md` § Phase 7 § Pre-registered desi
 - **D3** cross-species design: matched head-truncation; two homologous behaviours MUST; species-appropriate third behaviour SHOULD; dauer pathfinder first.
 - **D4** learnable gap junctions: YES, bounded SHOULD ablation (C. elegans L4 substrate only).
 - **D5** #254: freeze — remove dead keys, behaviour unchanged.
-- **D6** env vectorisation: scoped-first; 6b budget contract + L3 evidence bar retained in `phase6b-tracking`.
+- **D6** env vectorisation: scoped-first; the 6b reduced-search budget contract is pinned in `phase6b-tracking` (T8.0), with the L3 evidence bar (lag-matrix or equivalent instrument) per roadmap D6.
 - **D7** state-dependent action `std`: early platform change + 036 klinokinesis validation gate + post-D7 n=8 re-baseline; then substrate freeze.
 - **D8** L4 package: new `learning_rules/` (never overload `quantumnematode/plasticity/`, the quantum-plasticity eval).
 - **D9** head-circuit scaffold: AVA/AVB command-interneuron readout for both arms; sensor-coverage audit; head-scope evasion is distal-only.
@@ -40,7 +40,7 @@ Amending any D-decision requires a dated note in this change (and a matching roa
 
 ### Decision B: Execution-protocol standards (inherited from Phase 6, non-optional)
 
-Every Phase 7 panel or sweep milestone conforms to these; they are credibility constraints, not refinements (provenance: Logbooks 029 § Method, 034, 036; `build/`-era pre-start review):
+Every Phase 7 panel or sweep milestone conforms to these; they are credibility constraints, not refinements (provenance: Logbooks 029 § Method, 034, 036, consolidated at the roadmap v4.2 review — PR #300):
 
 1. **n ≥ 8 paired-seed**, Wilcoxon + bootstrap CIs, **BH-FDR within-pass**, per-seed values and converged-fraction reported alongside.
 2. **Uniform budget set by the slowest converger**, with a **convergence audit before ranking** (the 029 near-misses: silent last-10 fallback misread two arms; an under-budgeted pass under-ranked CfC by a tier). Use the **level-agnostic plateau metric** — never a threshold-calibrated detector on a new learning regime. L4 rules are expected to be slower than PPO; budget accordingly.
@@ -66,4 +66,4 @@ The 7a GO ("7a complete / 7b pending") is a shipment decision, not phase complet
 
 - **The likeliest scientific outcome is the robustness branch** (2×2 null): pre-registered as a citable closure path (roadmap risk table "Partial D2 outcome" row) — one sensitivity pass, ensemble-invariance check, warm-start-aided read, then negative-result closure. The tracker's job is to keep that branch cheap and honest, not to rescue it.
 - **7b is a full phase in half-phase clothing** (feasibility review: ~8-12 active weeks — D9 scaffold, truncation re-baseline, two loaders, homology table, sweep). Mitigation: dauer-first pathfinder builds the pipeline cheaply; 7b lands beyond the window by default expectation (roadmap § timeline).
-- **Solo-maintainer serialization**: the 7a-i window also carries the 6a preprint and warm-start arm (both SHOULD). If the window overloads, the preprint outranks the warm-start arm, which outranks everything MAY — the claim-stake is the item with a competitive clock (Dhiman/flyvis fast-follow risk).
+- **Solo-maintainer serialization**: the 7a-i window also carries the 6a preprint and warm-start arm (both SHOULD). If the window overloads, the preprint outranks the warm-start arm, which outranks everything MAY — the claim-stake is the item with a competitive clock (Dhiman/flyvis fast-follow risk). Exception: if the 2×2 resolves to the robustness branch, S.2 is **promoted to required-for-closure** — the roadmap's Partial-D2 pivot requires the warm-start read before negative-result closure — and this drop-priority no longer applies to it.
