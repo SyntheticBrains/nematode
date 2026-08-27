@@ -15,9 +15,52 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Docs-only PRs skip the 5-shard matrix (~25 runner-minutes) but the required
+  # "Tests" context still reports via tests-complete below. Classification is
+  # fail-open: only paths on the docs allowlist skip; anything else — including
+  # new top-level directories and this workflow itself — runs the full matrix.
+  # Pushes to main are never filtered, so the coverage record stays unbroken.
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          lfs: false
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: classify
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Push event: full test run (main's coverage upload is the record)."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD)
+          echo "Changed files:"
+          echo "$files"
+          code=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              docs/*|openspec/*|.claude/*|*.md|CITATION.cff|LICENSE|.gitignore|.markdownlint.jsonc) ;;
+              *) code=true ;;
+            esac
+          done <<< "$files"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "false" ]; then
+            echo "Docs-only change: test shards will be skipped."
+          fi
+
   test:
     name: Python 3.13 (shard ${{ matrix.group }}/5)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -90,16 +133,22 @@ jobs:
           name: codecov-shard-${{ matrix.group }}
           fail_ci_if_error: false
 
+  # The ruleset-required "Tests" context. Reports a genuine success when the
+  # shards were deliberately skipped for a docs-only diff; fails on any shard
+  # failure, cancellation, or an unexpected skip (code change but no shards).
   tests-complete:
     name: Tests
     runs-on: ubuntu-latest
-    needs: test
+    needs: [changes, test]
     if: always()
     steps:
       - name: Check shard results
         run: |
-          if [ "${{ needs.test.result }}" != "success" ]; then
-            echo "::error::One or more test shards failed (${{ needs.test.result }})."
+          if [ "${{ needs.test.result }}" = "success" ]; then
+            echo "All test shards passed."
+          elif [ "${{ needs.test.result }}" = "skipped" ] && [ "${{ needs.changes.outputs.code }}" = "false" ]; then
+            echo "Docs-only change: test shards deliberately skipped."
+          else
+            echo "::error::Test shards did not succeed (result: ${{ needs.test.result }}, code changes: ${{ needs.changes.outputs.code }})."
             exit 1
           fi
-          echo "All test shards passed."
