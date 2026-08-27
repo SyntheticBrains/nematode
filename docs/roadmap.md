@@ -775,7 +775,7 @@ This is the discipline that keeps the negative-result and any structure-function
 
 #### Pre-registered design decisions (2026-08-27 pre-start review)
 
-Recorded here so the Phase 7 OpenSpec change inherits explicit resolutions rather than silences. Status: **recommended — ratify or amend when the Phase 7 tracking change is authored**; each is cheap to reverse before implementation starts and expensive after.
+Recorded here so the Phase 7 OpenSpec change inherits explicit resolutions rather than silences. Status: **ratified 2026-08-27** at the pre-start review; each remains cheap to reverse before implementation starts and expensive after, and any amendment goes through the Phase 7 tracking change with a dated note.
 
 | # | Decision | Resolution |
 |---|---|---|
