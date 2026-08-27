@@ -96,7 +96,7 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 **OpenSpec change**: placeholder; created at Phase 7 close
 **Status**: 🔲 not started
-**Dependencies**: 7b closed (Phase 7 is COMPLETE only when the 7b comparative sweep ships)
+**Dependencies**: 7b closed (Phase 7 is marked COMPLETE only when the 7b comparative sweep has shipped and this synthesis publishes)
 
 - [ ] Z.1 Phase 7 synthesis logbook: exit-criteria walkthrough (MUST/SHOULD/MAY), the 2×2 terminal verdict against the claim-discipline bars, cross-species findings, honest negative-result documentation where applicable (Phase 5 precedent).
 - [ ] Z.2 `docs/roadmap.md`: Phase 7 status → ✅ COMPLETE; Timeline Overview + exit criteria + Success Levels flipped to terminal state.

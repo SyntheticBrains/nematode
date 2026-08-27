@@ -21,7 +21,7 @@ This is a **tracking scaffold**, not an implementation change. Load-bearing impl
 
 ### 3. Roadmap
 
-`docs/roadmap.md` § Phase 7 gains a one-line pointer to this tracker's `tasks.md` (the same "how to orient" pattern Phases 5/6 use). No plan content changes — the plan was finalised in PR #300.
+`docs/roadmap.md` § Phase 7 gains a one-line pointer to this tracker's `tasks.md` (the same "how to orient" pattern Phases 5/6 use), plus two small consistency edits from the spec/PR reviews: the behaviour naming settled on the roadmap-canonical **klinotaxis** (D3 + risk row, with a naming note relating it to the `data/chemotaxis/` validation vocabulary and the klinokinesis/weathervane strategies) and the completion predicate aligned everywhere (COMPLETE = 7b sweep shipped **and** synthesis published). The plan's substance is unchanged from PR #300.
 
 ## Capabilities
 
