@@ -2,9 +2,9 @@
 
 **Vision**: Determine the most efficient brain architecture for nematode-like embodied tasks, using the *Caenorhabditis elegans* connectome as the focal comparison point against unconstrained and evolved alternatives. The platform brings learning, evolution, and a curated subset of biologically-faithful sensing into one closed sensory-motor loop, so that architecture comparisons answer scientific questions rather than rank benchmarks.
 
-**Version**: 4.1
+**Version**: 4.2
 
-**Last Updated**: 2026-07-05
+**Last Updated**: 2026-08-27
 
 **Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
@@ -60,7 +60,7 @@ ______________________________________________________________________
 | **4** | — | Multi-Agent Complexity | ✅ COMPLETE | Pheromones, social dynamics, klinotaxis sensing. Temporal collective exploration +14.3%; social feeding +35% food under scarcity. Coordination did not produce genuine multi-agent complexity at the scales tested |
 | **5** | — | Evolution & Adaptation | ✅ COMPLETE (2026-05-23) | M3 Lamarckian inheritance is the headline-positive result. M4 Baldwin / M5 co-evolution / M6.x transgenerational memory closed with substrate-grounded STOP verdicts (architectural diagnoses, not implementation failures) |
 | **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🟡 **6a COMPLETE / 6b pending** (delivered in two shipments — see § Phase 6a/6b split) | First closed-loop learning on the real *C. elegans* connectome with a pluggable architecture interface, and a full architecture ranking across six families on three behaviours (klinotaxis, thermotaxis, predator evasion). **6a — COMPLETE, Gate 3 GO** ([Logbook 037](experiments/logbooks/037-phase6a-synthesis.md); T1–T7 + connectome-structure controls + validation): the platform + the ranking (Logbook 029 — MLP dominant, wild-type connectome 5th of 6 under PPO weight search, a *degree-statistics* result per the 034 rewired-null) + real-worm behavioural validation (035 chemotaxis both strategies; 036 thermotaxis partial). **6b** (T8 NEAT topology search): deferred completion, gated on GPU + env-vectorisation. Phase 6 is marked ✅ COMPLETE only when the 6b synthesis lands |
-| **7** | ~8-12 months from Phase 6 close | Deepen — plasticity + cross-species transfer | 🔲 PLANNED | Biologically-plausible plasticity (STDP + neuromodulator-modulated) on the connectome. *P. pacificus* transfer using Cook et al. 2025 connectome data. Optional biological-validation collaboration and paper drafts |
+| **7** | ~8-12 months from Phase 6**a** close (2026-07-07) | Deepen — plasticity + cross-species transfer | 🔲 PLANNED (revised 2026-08-27 pre-start review) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules first, spiking-STDP second arm. Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
 
 ______________________________________________________________________
 
@@ -73,7 +73,7 @@ The project's central contribution is a **platform that makes this question answ
 - Biologically-grounded sensing (klinotaxis, thermosensation, mechanosensation, pheromone-mediated signalling) shipped through Phases 1-4.
 - Multiple learning and evolutionary regimes (PPO, CMA-ES, Lamarckian inheritance) shipped through Phase 5, with neuromodulated plasticity (STDP-family) targeted at Phase 7.
 - A pluggable architecture interface that admits MLP, recurrent, spiking, reservoir, quantum, hybrid, NEAT-evolved, and connectome-constrained brains as comparable rows in one experimental sweep (Phase 6).
-- The real *C. elegans* connectome (302 neurons, Cook et al. 2019) imported as the focal architecture to rank against the others, with *P. pacificus* (Cook et al. 2025) as the planned cross-species comparator at Phase 7.
+- The real *C. elegans* connectome (302 neurons, Cook et al. 2019) imported as the focal architecture to rank against the others, with the *P. pacificus* head connectome (Cook et al. 2025) as the planned cross-species comparator at Phase 7.
 
 Phase 5 results sharpened the framing in a load-bearing way. M3 Lamarckian inheritance shipped as the headline-positive Phase 5 result. M4 (Baldwin), M5 (co-evolution arms race), and M6.x (transgenerational memory) closed with substrate-grounded STOP verdicts that were architectural diagnoses, not implementation failures: each pointed at the substrate or architecture rather than at the experimental protocol. Of those diagnoses, M6.x's wrong-abstraction-for-plasticity carries forward directly into Phase 7's plasticity work. M5's architecture-asymmetry diagnosis would be tested by matched-capacity co-evolution (NEAT-vs-NEAT vs asymmetric NEAT-vs-MLP); co-evolution is **deferred out of Phase 6 entirely with no scheduled destination** — it is too compute-intensive for the phase, and the M5 diagnosis was already independently corroborated (Resendez Prado 2026), so it is a revisit-if-a-concrete-need-reappears item rather than a committed deliverable of any phase.
 
@@ -156,8 +156,8 @@ Two reusable methodology contributions ship unscooped: the **lag-matrix cross-pa
 ### Known Gaps Carried into Phase 6+
 
 - **No connectome-constrained architecture** — Phase 6's focal deliverable.
-- **No biologically-plausible plasticity rules** — STDP and neuromodulator-modulated STDP are Phase 7's focal deliverable.
-- **No energy/metabolic model** (satiety is abstract, not ATP-based) — blocks dauer-state and dwelling-vs-roaming behaviours. Not on the Phase 6 critical path, but promoted from a pure Future-Directions item to a **soft Phase 7 dependency**: the L4 diffusible-signal layer grounds neuromodulator concentrations in internal state ("satiety where available"), and the faithful naturalistic-memory work both lean on a real metabolic-state signal. A *minimal* metabolic-state model (not full ATP biophysics) should be scoped alongside L4 when Phase 7 is planned; see [Phase 7](#phase-7-deepen--plasticity--cross-species-transfer).
+- **No biologically-plausible plasticity rules** — neuromodulator-gated three-factor rules (rate-based primary arm, spiking-STDP second arm per D1) are Phase 7's focal deliverable.
+- **No energy/metabolic model** (satiety is abstract, not ATP-based) — blocks dauer-state and dwelling-vs-roaming behaviours. Not on the Phase 6 critical path, but promoted from a pure Future-Directions item to a **soft Phase 7 dependency**: the L4 diffusible-signal layer grounds neuromodulator concentrations in internal state ("satiety where available"), and the faithful naturalistic-memory work both lean on a real metabolic-state signal. A *minimal* metabolic-state model (not full ATP biophysics) should be scoped alongside L4 when Phase 7 is planned; see [Phase 7](#phase-7-deepen--plasticity--cross-species-transfer). *(2026-08-27 review: this gap is smaller than stated — `BrainParams` already carries satiety/health to the brain boundary; the missing pieces are an internal-state sensory module and the neuromodulator concentration field, not agent plumbing.)*
 - **Discrete grid-world (not continuous physics)** — addressed in Phase 6 alongside Rung 2 chemical gradients and corrected ASH/ADL contact-based nociception (the latter is owed correctness work flagged in [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md)).
 - **No native body mechanics** (sinusoidal undulation, omega turns, pirouettes) — interop with OpenWorm/Sibernetic at the c302 boundary if needed; native implementation is not on the Phase 6 critical path.
 - **Multi-task aggregation infrastructure** — Baldwin prerequisite; revisits if a future phase commits to the Baldwin question.
@@ -171,7 +171,7 @@ Two reusable methodology contributions ship unscooped: the **lag-matrix cross-pa
 2. **Connectome fitness landscape.** Is the wild-type connectome a local optimum on these behaviours, a basin, or a saddle? What synaptic-weight changes does evolution find when permitted to modify it?
 3. **Plasticity and the connectome.** Does biologically-plausible plasticity (STDP, neuromodulator-modulated STDP) on the real connectome reproduce dynamics that match published *C. elegans* learning data (chemotaxis indices, Ca²⁺ correlation matrices)? *(Validation-method caveat for whoever scopes this — surfaced at the 2026-06-04 checkpoint, recorded here because the full methodology note otherwise lives only in the Phase 6 `tasks.md` T7.validation.1, which archives at Phase 6 close: a raw Ca²⁺-trace correlation-matrix match is a **category mismatch** for a behavioural/policy model and is only applicable to the connectome arm. The defensible form is comparing **behaviour-encoding tuning** — neuron-vs-behaviour tuning à la Atanas et al. 2023 / CePNEM — after mapping model units to named neurons (NeuroPAL/WormID). L4 plasticity makes this materially more defensible than under Phase 6's PPO weights, which is why it belongs here. Pin the concrete deliverable when Phase 7 is planned. This caveat is the *dynamics-claim* branch of the [Phase 7 § Claim discipline](#phase-7-deepen--plasticity--cross-species-transfer) gate — matching model tuning to named-neuron data is exactly bar (b), and it must clear bar (a) ensemble-invariance too.)*
 4. **Architecture asymmetry under matched capacity.** Phase 5 M5 diagnosed architecture asymmetry as the blocker for Red Queen entanglement. Does matched-capacity NEAT-vs-NEAT or connectome-vs-connectome co-evolution produce the dynamics that LSTMPPO-vs-MLPPPO suppressed? *(**Deferred out of Phase 6 with no scheduled destination** — this is the co-evolution question, too compute-intensive for the phase and already independently corroborated (Resendez Prado 2026). The lag-matrix instrument is retained for whenever a future phase commits to it.)*
-5. **Cross-species transfer.** Do learned/evolved architectures transfer from *C. elegans* to *P. pacificus* (Cook et al. 2025) on the shared behaviours? Where do they break, and what does that say about the connectome's role?
+5. **Cross-species transfer.** Do learned/evolved architectures transfer from *C. elegans* to *P. pacificus* (Cook et al. 2025) on the shared behaviours? Where do they break, and what does that say about the connectome's role? *(Rescoped 2026-08-27: the Cook 2025 dataset is a head-only, chemical-synapse-only connectome from two animals — the question is answered at head-circuit scope with a matched-truncation *C. elegans* baseline; see Phase 7 Deliverable 2.)*
 
 ______________________________________________________________________
 
@@ -754,9 +754,13 @@ ______________________________________________________________________
 
 ### Phase 7: Deepen — Plasticity & Cross-Species Transfer
 
-**Goal**: Add the L4 plasticity layer to the architecture-comparison platform (biologically-plausible learning rules on the connectome) and extend the comparison to a second nematode species (*P. pacificus*) using the Cook et al. 2025 connectome data. The headline framing is *deepen, don't broaden* — Phase 7 doesn't add new behaviours or new sensory modalities; it deepens the platform's biological-plausibility and species-coverage along the same three Phase 6 behaviours.
+**Goal**: Add the L4 plasticity layer to the architecture-comparison platform (biologically-plausible learning rules on the connectome) and extend the comparison across nematode nervous systems — the *P. pacificus* head connectome (Cook et al. 2025) and, as a scope-matched within-species condition, the dauer connectome (Yim et al. 2024, *Nat. Commun.* 15:1546). The headline framing is *deepen, don't broaden* — Phase 7 doesn't add new behaviours or new sensory modalities; it deepens the platform's biological-plausibility and species-coverage along the same three Phase 6 behaviours.
+
+*(Revised at the 2026-08-27 pre-start review. Two load-bearing changes from v4.1: the cross-species deliverable is rescoped to the **head circuit**, because the Cook 2025 dataset is head-only and chemical-synapse-only — not a whole-animal counterpart to Cook 2019; and the plasticity deliverable is re-staged around a rate-based three-factor primary arm, because the connectome substrate is a rate-code with no spike times and no cross-step state — see § Pre-registered design decisions.)*
 
 **Sharpened central hypothesis (post-Logbook-029).** Phase 6 established that under **PPO gradient learning** the wild-type connectome ranks 5th of 6 — beaten on all three behaviours by a plain MLP. PPO is not the connectome's native learning regime. So Phase 7's L4 work has a pointed, falsifiable question rather than a generic "add plasticity" goal: **does biologically-plausible plasticity + neuromodulation — the connectome's *own* learning rule — recover its standing, or is the 5th-place result robust to the learning rule?** Either answer is a strong result: recovery would show the connectome's structure is matched to plasticity-based learning (a neuroscience finding); robustness would show the wiring is genuinely sub-optimal for these behaviours under any learning rule tested (an architecture finding). This reframes a potentially deflating Phase 6 result into Phase 7's motivating test.
+
+The convergent fly result sharpens the stakes. FlyGM (Jin et al., arXiv:2602.17997 — as of 2026-08 still a workshop poster + preprint, unreplicated) reports the *Drosophila* whole-brain connectome *beating* an MLP under an imitation-then-PPO pipeline — the opposite of Logbook 029's ranking. Whether the learning regime (and warm start) flips the connectome's standing is therefore now an open cross-organism question, not a private one. If the wild-type connectome keeps underperforming under its own rule, FlyGM's imitation-first warm start is the transferable next lever to test before accepting the robustness verdict.
 
 **Claim discipline — pre-register the claim *type* before L4 runs.** The sharpened hypothesis has a failure mode the Beiran & Litwin-Kumar 2025 (*Nat. Neurosci.*) degeneracy result makes concrete: "the connectome's own rule recovers its standing" can come out positive via a plasticity/weight solution that bears no relation to real *C. elegans* neural dynamics, because a connectome plus task output does not uniquely determine single-neuron dynamics — a degenerate space of solutions fits the same wiring and behaviour. Every Phase 7 result is therefore pre-registered as one of two claim types *before* the run:
 
@@ -765,33 +769,52 @@ ______________________________________________________________________
 
 This is the discipline that keeps the negative-result and any structure-function claim defensible to a degeneracy-literate referee; it is a pre-registration habit, not new infrastructure.
 
-**Aspirational timeline**: ~8-12 months from Phase 6 close.
+**Evidence base hardened at the 2026-08-27 review — in both directions.** *For* caution: Dvali, Seguin, Betzel & Leifer (*PRX Life* 3:033021, 2025) show — in *C. elegans*, on the Randi/Leifer signal-propagation data — that functional-network modules **diverge** from anatomical-connectome modules; and Currier et al. (*Cell* 188, 2025) show infrequent strong synapses make connectome-based predictions of physiology unreliable, which bounds how far Cook synapse counts may be trusted as weight priors (state the weight-initialisation choice explicitly in the L4 design). *Against* over-caution: Creamer, Leifer & Pillow (bioRxiv 2024.09.22.614271) find weights fitted on connectome edges alone suffice to explain measured causal (optogenetic) signal propagation, and non-connectome edges don't help — reweighting the fixed topology, which is exactly what plasticity does, is the right lever. Bar (a) now has an **in-house precedent**: Logbook [034](experiments/logbooks/034-connectome-structure-controls.md)'s single-seed smoke read the *opposite sign* (+10.7pp "wiring matters") from the n=8 null — cite it whenever tempted to read a connectome effect off one fit. For bar (b), a decoder-free **representational-geometry comparison** (RSA/CKA against the harmonized WormID corpus, *Cell Reports Methods* Jan 2025) is admitted as an additional instrument alongside behaviour-encoding tuning. Beiran & Litwin-Kumar's final citation is *Nat. Neurosci.* 28:2561–2574 (2025); its constructive half — a few recorded neurons break the degeneracy — is the argument for checking the plastic model against recordings, not behaviour alone, whenever a dynamics claim is attempted.
+
+**Aspirational timeline**: ~8-12 months from Phase 6**a** close (2026-07-07). *(Re-anchored 2026-08-27: the previous anchor, "Phase 6 close", required the 6b synthesis — an event Phase 7 explicitly does not gate on.)* Per [Logbook 037](experiments/logbooks/037-phase6a-synthesis.md) § T9.5, Phase 6b (T8 NEAT) is schedulable into Phase 7's early, CPU-heavy L4-software window; its binding constraint is the env-vectorisation decision (D6 below), not GPU access, and Phase 7 never gates on it.
+
+#### Pre-registered design decisions (2026-08-27 pre-start review)
+
+Recorded here so the Phase 7 OpenSpec change inherits explicit resolutions rather than silences. Status: **recommended — ratify or amend when the Phase 7 tracking change is authored**; each is cheap to reverse before implementation starts and expensive after.
+
+| # | Decision | Resolution |
+|---|---|---|
+| **D1** | **L4 rule family** — the v4.1 phrase "vanilla STDP on the connectome" is unimplementable as written: `ConnectomeTopology` is a tanh rate-code with no spike times and no cross-step state (its recurrence is within-step settling — why it scored chance, 0.499, on bit-memory in [Logbook 030](experiments/logbooks/030-bit-memory-positive-control.md)). | **Staged.** Primary arm: **rate-based three-factor rules** (reward/neuromodulator-modulated Hebbian with eligibility traces) on the existing rate-code substrate plus new persistent pre/post activity traces — keeps the substrate otherwise frozen and maps directly onto the monoamine-gating deliverable. (v4.1's risk-table fallback, "reward-modulated Hebbian without spike timing", is hereby promoted to the primary path.) Second arm: **spiking connectome variant** (reusing the surrogate-gradient LIF infrastructure in `_spiking_layers.py`) for STDP proper — this is where spiking-on-connectome was deferred to. Fallback family: event-driven e-prop / eligibility propagation. |
+| **D2** | **L4 performance bar** — the 2025-26 literature shows no pure STDP/R-STDP result at PPO parity on continuous control; a "reach the L2 PPO baselines" bar would fire the failure pivot by construction. | Success = the plastic connectome **beats its own frozen-weights and vanilla-rule baselines** and the **ranking question resolves** (recovery vs robustness) under a matched rule at the Phase 5/6 statistical bar. PPO parity is explicitly *not* the bar; the L2 PPO results are the reference frame, not the target. |
+| **D3** | ***P. pacificus* comparison design** — the Cook 2025 data is head-only (nose → retrovesicular ganglion), chemical-synapse-only, N=2, pharynx excluded. | **Matched head-truncation**: re-cut the Cook 2019 *C. elegans* connectome to the same scope (head circuit, chemical synapses only, identical motor-scaffold policy) so species is the only independent variable. Ingest the **shared-core** matrix (not one animal's), with the homology mapping table an explicit, reviewable artefact. Behaviour 3 is reframed species-appropriately: *C. elegans* = predator evasion; *P. pacificus* = predatory approach/bite (it is the predator — serotonin-gated per the 2025 monoaminergic map, eLife RP 109557). **Dauer** (Yim 2024, nerve-ring scope) ships as the SHOULD third condition — a within-species wiring-state transfer that is better scope-matched than full Cook 2019. |
+| **D4** | **Learnable gap junctions** — twice-deferred with the condition "revisit only if Phase 7 L4 plasticity work calls for it". | **YES for the *C. elegans* L4 work** — the calling condition is met (gap junctions are genuinely plastic in the biology; Bhattacharya & Hobert 2019). Ships as a bounded SHOULD ablation on the L4 substrate, not a MUST. (The pacificus arm has no gap-junction data, so the matched cross-species baseline runs chemical-only regardless.) |
+| **D5** | **Config debt #254 (`normalize_advantages` dead keys)** — implementing normalization "would shift all MLP results", i.e. move the Logbook 029 yardstick every L4 claim is measured against. | **Freeze.** Remove the dead keys (config honesty), keep training behaviour unchanged, so the Phase 6 baseline stays a valid comparator. Implementing normalization is deliberately deferred past Phase 7's comparative claims. |
+| **D6** | **Env vectorisation** — pre-registered as 6b's binding constraint (T8.0); a vmappable env would also unlock long/multi-episode L4 training for faithful slow-forming memory. | **Scoped-first, decided once, jointly.** Run 6b as a scoped NEAT search without the port; commit the vmappable port only if the faithful-slow-memory L4 training demonstrably needs the throughput. Do not decide it twice. |
+| **D7** | **State-dependent action `std`** — root cause of the [036](experiments/logbooks/036-realworm-thermotaxis-validation.md) thermotaxis klinokinesis failure (a state-independent `log_std` can steer but cannot stochastically random-walk); an action-space change, not a plasticity change, and previously covered by no Phase 7 deliverable. | **YES, early-Phase-7 platform change**, landed and validated *before* the L4 panel and then frozen (the substrate-freeze lesson: never change substrate and learning rule in the same comparison). Byte-identical-when-off, per house standard. |
+| **D8** | **L4 package naming** — `quantumnematode/plasticity/` already exists and is the *quantum-plasticity eval protocol* (catastrophic-forgetting evaluation), not learning rules. | L4 code lands under a **new package** (working name `learning_rules/`); the existing package is not overloaded or silently repurposed. |
 
 #### Required deliverables (MUST)
 
 1. **L4 Plasticity Layer**
 
-   Phase 6's L2 weight search uses PPO-family gradient learning. Phase 7's L4 adds biologically-plausible plasticity on the same connectome substrate, materialised in four sub-deliverables that must be designed together — STDP alone reproduces synaptic-level plasticity but misses the circuit-level behavioural plasticity the *C. elegans* literature is built around.
+   Phase 6's L2 weight search uses PPO-family gradient learning. Phase 7's L4 adds biologically-plausible plasticity on the same connectome substrate, materialised in five sub-deliverables that must be designed together — a synaptic rule alone reproduces synaptic-level plasticity but misses the circuit-level behavioural plasticity the *C. elegans* literature is built around. Rule-family staging per **D1**; performance bar per **D2**.
 
-   - **Vanilla STDP / Hebbian rules** on the connectome topology (~2-4 months software-only).
-   - **Diffusible-signal layer** modelling at least serotonin and dopamine concentrations as a function of internal state (food detection, sensory input, satiety where available). **Soft dependency — a minimal metabolic-state model** (not full ATP biophysics; the no-energy-model gap in § Known Gaps): grounding neuromodulator concentrations in a real internal-energy signal, rather than the current abstract satiety, makes this layer and the faithful naturalistic-memory work below materially more defensible. Scope it alongside L4 when Phase 7 is planned.
-   - **Receptor-class metadata** on the connectome neurons — which neurons express which receptor classes. CeNGEN gene-expression data is the reference source. *C. elegans* has documented behavioural roles for 5 serotonin, 4 dopamine, 4 tyramine, and 3 octopamine receptor classes per WormBook.
-   - **Modulated STDP rules** — three-factor learning where the third factor is neuromodulator concentration. Receptor-class metadata determines which synapses see which modulators.
+   - **Persistent activity-trace substrate** on `ConnectomeTopology` — cross-step pre/post traces (eligibility traces). The connectome brain currently re-initialises from sensor injection every step; any trace-based rule needs state that survives environment steps. This is an architectural addition, not a rule swap, and it lands first, byte-identical-when-off.
+   - **Rate-based three-factor rules** (primary arm, D1) on the connectome topology (~2-3 months software-only), followed by the **spiking-STDP second arm** reusing the existing surrogate-gradient LIF infrastructure. Nearest in-repo precedent: the legacy 3-factor Hebbian eligibility-trace mode in `qsnnreinforce.py`.
+   - **Diffusible-signal layer** modelling at least serotonin and dopamine concentrations as a function of internal state (food detection, sensory input, satiety). Direct methodological precedent to cite and compare against: diffusing-neuromodulator temporal credit assignment (Barretto-Bittar, Levina, Giannakakis & Zeraati, arXiv:2603.08949). **Soft dependency — a minimal metabolic-state model** (not full ATP biophysics; the no-energy-model gap in § Known Gaps). *2026-08-27 sizing:* smaller than v4.1 implied — `BrainParams` already carries satiety/health to the brain boundary; the build is an internal-state sensory module plus the **concentration field** itself, which is the genuinely new substrate.
+   - **Receptor-class metadata** on the connectome neurons — which neurons express which receptor classes, and which release which transmitters. Sources *(revised 2026-08-27)*: release identities from the CRISPR knock-in **neurotransmitter atlas** (Wang et al., eLife 95402, 2024 — corrects antibody-era assignments; every `neurotransmitter` field in `connectome/neurons.py` is currently unpopulated); receptor expression from the **bulk-integrated CeNGEN profiles** (eLife 106183, 2025) rather than thresholded scRNA-seq alone, which under-detects low-abundance GPCRs — exactly the receptor class at stake. *C. elegans* has documented behavioural roles for 5 serotonin, 4 dopamine, 4 tyramine, and 3 octopamine receptor classes per WormBook. Optional refinement: the multiplex extrasynaptic-signalling framework (arXiv:2604.02057) as a principled selector of *which* neurons the diffusible layer modulates.
+   - **Modulated three-factor rules** — the third factor is neuromodulator concentration; receptor-class metadata determines which synapses see which modulators.
 
-   Total scope: ~4-6 months software-only for vanilla STDP, ~6-8 months for full neuromodulator grounding. Loihi 2 / SpiNNaker 2 neuromorphic hardware deployment is a credible additional target if scope allows; the software-only path is fully sufficient for the headline claim.
+   Total scope: ~6-9 months software-only for full neuromodulator grounding — which is why the 7a/7b structure is pre-registered rather than held as a contingency (see Risk-mitigation). Loihi 2 / SpiNNaker 2 neuromorphic hardware deployment is a credible additional target if scope allows (the spiking-STDP arm is its natural vehicle); the software-only path is fully sufficient for the headline claim.
 
    **Signalling-layer scope — a primary limitation, stated up front.** The three-factor rule gates plasticity on *monoamine* concentration (dopamine as the canonical reward-related third factor, plus serotonin / tyramine / octopamine). This is the tractable, mechanistically-grounded vehicle — monoamines have documented receptor-class behavioural roles and a clean three-factor mapping — and it is deliberately *not* replaced by the neuropeptide layer. But two facts must be recorded as the largest deferred fidelity gap in the neuromodulatory model: (1) the monoamine network is *sparser* than the synaptic connectome, whereas the dominant "wireless" signalling layer in *C. elegans* is **peptidergic** — the neuropeptide connectome (Ripoll-Sánchez et al. 2023, *Neuron*; CeNGEN-grounded) is >10× denser than the synaptic wiring; and (2) peptidergic transmission is slow, diffuse *volume* signalling, not a spike-timing plasticity gate, so it is the wrong substrate for the *learning rule* even though it dominates the *signalling graph*. Neuropeptide-mediated neuromodulation is therefore a candidate Phase-7+ layer in its own right, not a substitute for monoamine three-factor STDP.
 
-2. ***P. pacificus* Connectome Transfer**
+2. **Cross-Species Head-Circuit Transfer** *(rescoped 2026-08-27)*
 
-   Cook et al. 2025 (*Science*) published the full *P. pacificus* connectome with neuronal adjacency and connectivity data, accompanied by code (`stevenjcook/cook_et_al_2025_pristionchus`). Phase 7 uses this to ask: *do learned and evolved architectures from C. elegans transfer to P. pacificus's different connectome on shared tasks?*
+   Cook et al. 2025 (*Science* 389:eadx2143, 31 Jul 2025) published the *P. pacificus* **head connectome** — two adult hermaphrodite heads, nose tip → retrovesicular ganglion including the nerve ring; **chemical synapses only** (gap junctions identified but excluded as ultrastructurally ambiguous); pharynx excluded (covered by Bumbarger 2013); ~88% of neuron classes in a shared core across samples, with homology mostly one-to-one (AVH absent in pacificus). Data ships as MIT-licensed CSVs (`stevenjcook/cook_et_al_2025_pristionchus`) plus *Science* Supplementary Data S1–S6 — **an easy CSV parse, not a NeuroML ingest**; the hard part is homology, not format. Phase 7 uses it to ask: *do learned architectures transfer across real nematode head circuits, and what does the wiring difference contribute?*
 
-   - Same three behaviours as Phase 6 (klinotaxis, thermotaxis, predator evasion). Species is the independent variable — clean comparison.
-   - Import and validate *P. pacificus* connectome through the same L0 / L1 pipeline Phase 6 builds.
-   - Evaluate architecture-comparison sweep on the new species; compare results to Phase 6's *C. elegans* baseline.
-   - **MAY**: extend with one *pacificus*-distinctive behaviour (e.g., predatory-mouth-form switching, which *C. elegans* lacks) if connectome data and remaining scope support it.
+   - **Matched head-truncation baseline** (D3): re-cut the Cook 2019 *C. elegans* connectome to the same scope (head circuit, chemical-only, identical motor-scaffold policy) and re-run it, so species is the only independent variable. Comparing full-elegans vs pacificus-head would confound species with network size and coverage.
+   - Import the **shared-core** pacificus matrix through the L0 / L1 pipeline: new CSV loader, species-keyed neuron-classification table, and — the real risk hotspot — a **species-keyed sensor/motor projection map** with an explicit per-homolog biological argument (the current projections are hard-coded *C. elegans* named-neuron tuples in `connectome_ppo.py`).
+   - Behaviours: klinotaxis and thermotaxis transfer directly (amphid homologies conserved — Han et al., eLife 47155, 2019; thermotaxis ground truth is thinner for pacificus, noted as a limitation). **Behaviour 3 is reframed per species**: *P. pacificus* is the *predator*, not prey (Quach & Chalasani 2022) — its third behaviour is predatory approach/bite, serotonin-gated per the 2025 monoaminergic map (eLife RP 109557), while *C. elegans* keeps predator evasion. The sweep therefore tests architecture generality on homologous circuits plus a species-appropriate third behaviour, and says so.
+   - **SHOULD**: the **dauer connectome** (Yim et al. 2024, nerve-ring scope) as a third condition — a within-species wiring-state transfer, better scope-matched to the pacificus head data than full Cook 2019 is, and already packaged in OpenWorm's ConnectomeToolbox.
+   - **MAY**: extend with one *pacificus*-distinctive behaviour beyond the bite decision (e.g. mouth-form-linked foraging strategy) if scope supports it. Note the mouth-form *switch* itself is a developmental polyphenism — the simulable behaviour is the serotonin-gated feeding decision, not the wiring switch.
 
-   Transferring to *C. briggsae* is **not** a Phase 7 deliverable. As of project planning, *C. briggsae* lacks a high-quality published connectome (chromosome-level genomes only); briggsae transfer becomes scoped only when reference data appears.
+   Transferring to *C. briggsae* is **not** a Phase 7 deliverable — re-verified 2026-08: still no published *C. briggsae* connectome. No published work anywhere transfers trained agents across species connectomes; this deliverable is first-in-field even at head-circuit scope.
 
 #### Optional deliverables (MAY)
 
@@ -803,12 +826,27 @@ These are not Phase 7 exit criteria. The project may pursue any combination when
 - **Neuromorphic deployment.** Loihi 2 / SpiNNaker 2 implementation of the L4 plasticity layer — credible exotic-hardware angle for STDP-on-connectome work.
 - **Reproducibility artefacts updated** to the Phase 7 platform state.
 
+#### Biological validation targets (refreshed 2026-08-27)
+
+The L4 validation question — "does modulated plasticity reproduce documented *C. elegans* learning dynamics?" — now has better-matched published targets than the ones v4.1 gestured at, plus one trap to avoid:
+
+- **Dopamine-gated forgetting** of butanone associative memory (bioRxiv 2025.02.20.639379): dopamine-dependent, **extrasynaptic** (8 DA neurons acting on >100 targets), plasticity-linked — almost exactly the diffusible-dopamine machinery L4 builds. The strongest single validation target found.
+- **Learning-altered navigation-strategy weighting** (Chen, Sharma, Pillow & Leifer, *PLOS Biology* 23(3):e3003005, 2025; state-switching follow-up, *PNAS* 123(25), 2026): quantitative signatures — how learning re-weights biased-random-walk vs klinotaxis strategies — that a modulated-plasticity worm should reproduce, and that plug directly into the Logbook 035/036 behavioural-curve machinery.
+- **Escape-circuit redundancy / lesion robustness** (He et al., *PNAS* 123(22), 2026): grounds the predator-evasion task and supplies a testable ablation/degeneracy phenomenon for the Robustness metrics.
+- ⚠️ **Thermotaxis set-point plasticity is the trap**: its biological mechanism is **receptor-level and intrinsic to AFD** (transcriptional thermoreceptor reconfiguration — *Current Biology*, 2025), not synaptic. It is the wrong validation target for a synaptic rule unless modelled as node-level adaptation; do not pre-register it as an STDP success criterion.
+
 #### Phase 7 exit criteria
 
 **Required (MUST):**
 
-- 🔲 L4 plasticity layer operational: vanilla STDP/Hebbian rules + diffusible-signal layer + receptor-class metadata + modulated STDP, all on the connectome substrate, with results across the Phase 6 architecture-family set at the Phase 5/6 statistical bar.
-- 🔲 *P. pacificus* connectome imported through L0 / L1; architecture-comparison sweep on the same three behaviours; quantitative comparison to *C. elegans* Phase 6 baseline.
+- 🔲 L4 plasticity layer operational: persistent-trace substrate + rate-based three-factor rules + diffusible-signal layer + receptor-class metadata + modulated three-factor rules, all on the connectome substrate. Results at the Phase 5/6 statistical bar (n ≥ 8, paired-seed, BH-FDR) for the plastic connectome against its own frozen-weights, vanilla-rule, and L2-PPO reference baselines, plus a **pre-registered comparison set** (recommended: MLP + CfC as reference arms under matched budget). The D2 bar applies: the ranking question resolves (recovery vs robustness); PPO parity is not required. *(Restated from v4.1's "across the Phase 6 architecture-family set", which over-promised — MLP, Transformer, and GA have no biologically-plausible-plasticity analogue.)*
+- 🔲 Cross-species head-circuit transfer: *P. pacificus* shared-core connectome imported through L0 / L1 with an explicit homology map; **matched head-truncated *C. elegans* baseline** re-run; sweep on the two homologous behaviours + the species-appropriate third behaviour; quantitative cross-species comparison.
+
+**Recommended (SHOULD):**
+
+- 🔲 Dauer-connectome third condition (within-species wiring-state transfer).
+- 🔲 Learnable-gap-junction ablation on the *C. elegans* L4 substrate (D4).
+- 🔲 Spiking-STDP second-arm results (D1).
 
 **Optional (MAY):**
 
@@ -821,15 +859,28 @@ These are not Phase 7 exit criteria. The project may pursue any combination when
 
 | Failure mode | Trigger | Pivot |
 |---|---|---|
-| **L4 implementation overshoots ~6 months** | STDP + neuromodulator grounding more complex than estimated; receptor-class metadata harder to integrate; modulated rules harder to debug than vanilla | **Split Phase 7 into 7a / 7b.** Phase 7a ships L4 standalone as the headline deliverable; Phase 7b carries pacificus transfer + optional MAY items as the follow-on. The decision criterion: if L4-on-connectome is not learning demonstrably by month 6, split. Phase 7 closes whether it lands as one phase or two. |
-| **Pacificus connectome data integration is problematic** | Cook et al. 2025 data is incomplete, format-incompatible, or has unclear synaptic-weight provenance once handled in detail | Sub-deliverable: produce the hand-curated *P. pacificus* subset that does work, document the gap, and ship transfer results on that subset. The cross-species transfer claim survives in restricted form. |
-| **L4 plasticity fails to learn on the connectome** | Modulated STDP doesn't reach the L2 PPO baselines on the three behaviours after reasonable hyperparameter search | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families."* Phase 7 closes with the negative result; future work picks up rule-family alternatives (e.g., reward-modulated Hebbian without spike timing). |
+| **L4 implementation overshoots** | Neuromodulator grounding more complex than estimated; receptor-class metadata harder to integrate; modulated rules harder to debug than vanilla | **Phase 7 is pre-structured as 7a / 7b** *(promoted 2026-08-27 from a contingency to the default shape, since the ~6-9-month full-grounding estimate made the old month-6 trigger fire by construction)*: 7a ships L4 on *C. elegans* as the headline deliverable; 7b carries the cross-species transfer + SHOULD/MAY items. The 6a/6b precedent applies — the split may equally be invoked **by success** (7a forms a self-contained citable result) as by overrun. Phase 7 closes whether it lands as one shipment or two. |
+| **Cross-species homology proves ambiguous** | Sensor/motor projection homologs for pacificus can't be defended for one or more behaviours; shared-core matrix leaves a behaviour's circuit under-covered *(re-aimed 2026-08-27: format risk is retired — the data is MIT-licensed CSV; homology and coverage are the real risks)* | Ship the behaviours whose projections are defensible (chemotaxis is the safest — amphid homology is strong), document the gap per behaviour, and report transfer on that subset. The first-in-field claim survives in restricted form. |
+| **L4 plasticity fails to beat its baselines** | The plastic connectome does not beat its own frozen-weights / vanilla-rule baselines (D2 bar) after reasonable search across both D1 arms | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families"* — and is a strong *robustness* answer to the sharpened hypothesis. Phase 7 closes with the negative result; the e-prop fallback family and FlyGM-style imitation warm start are the documented next levers. |
+| **Substrate-vs-rule confound** | Platform changes (D5 key removal, D7 state-dependent `std`) land mid-comparison, making L2-vs-L4 deltas uninterpretable — the Phase 6 grid-vs-continuous non-commensurability lesson | Land all substrate changes **before** the L4 panel, validate, then freeze. Any comparison spanning a substrate change is reported as qualitative, per the 2026-06-14 reframing precedent. |
+
+#### Where Phase 7 is first-in-field (novelty map)
+
+Verified against the 2026-08 literature scan; "nearest precedent" is the closest published work, cited as convergent per the § Claim discipline framing. This is the section that carries the North Star — each row is a claim no other group holds, and each has a defined positive-result payoff.
+
+| Phase 7 claim | Nearest precedent (2026-08) | Payoff if positive |
+|---|---|---|
+| **Reward-driven neuromodulated plasticity on the real *C. elegans* connectome, closed loop** | FlyGM (fly, RL but no plasticity, preprint); MetaWorm/BAAIWorm (*Nat. Comput. Sci.*, worm, no learning); NeuroSimWorm (2025, no plasticity). **The plasticity × RL × real-connectome cell is empty.** | Recovery result ⇒ "the connectome's structure is matched to its native learning rule" — the Nature-Neuroscience-tier structure-function claim, with the ranking + rewired-null + degeneracy controls already in place to defend it. Robustness result ⇒ equally citable architecture finding. |
+| **Cross-connectome transfer of trained agents** (elegans ↔ pacificus head circuits, + dauer state) | **None found** — no published work transfers trained agents across species (or wiring-state) connectomes. | First measurement of what connectome wiring *contributes* across species under matched learning — the comparative-connectomics analogue of a transfer-learning study, and a template other connectome pairs (dauer, developmental Witvliet series, fly) can reuse. |
+| **Receptor-atlas-grounded diffusible third factor** (concentration field gated by per-neuron receptor expression) | Diffusive credit assignment exists in the abstract (arXiv:2603.08949) — not on a real connectome, not receptor-grounded. | A mechanistic bridge from volume transmission to credit assignment in a real nervous system — a computational claim about *why* the monoamine layer is wired the way it is, testable against the Dvali signaling-network modules. |
+| **Faithful slow-forming memory as an L4 application** | No in-silico connectome account of a documented *C. elegans* memory phenomenon exists. | Quantitative reproduction of dopamine-gated forgetting (or the Leifer navigation re-weighting) would be the first mechanistic connectome-level model of a real worm memory — the flagship biological-validation result. |
+| **Degeneracy-disciplined dynamics claims in a low-dimensional animal** (bars (a)+(b) + representational geometry vs WormID) | The degeneracy critique exists (Beiran & Litwin-Kumar; Dvali; Currier); no behaviourally-trained connectome model has yet been *held* to it with named-neuron grounding. | A validation paradigm contribution independent of which way the science lands — the methods template a referee-proof connectome-model paper needs. |
 
 #### Go/No-Go Decision
 
-- **GO if**: L4 lands on the connectome with results in hand, and pacificus transfer ships (or is well underway under the 7b pivot).
-- **PIVOT-split if**: L4 overshoots month-6 milestone — execute Phase 7a / 7b split per the Risk-mitigation table above.
-- **STOP if**: Both L4 implementation and pacificus transfer are infeasible at the substrate level — at which point the diagnosis itself is the Phase 7 deliverable, and follow-on work picks up alternative plasticity rule families or alternative connectome data sources.
+- **GO if**: L4 lands on the *C. elegans* connectome with D2-bar results in hand, and the cross-species head-circuit transfer ships (or is well underway under the 7b shipment).
+- **SPLIT-shipment if**: 7a forms a self-contained citable result before 7b work starts, **or** L4 overshoots its software estimate — either way, execute the pre-structured 7a / 7b shape per the Risk-mitigation table.
+- **STOP if**: Both L4 implementation and the cross-species transfer are infeasible at the substrate level — at which point the diagnosis itself is the Phase 7 deliverable, and follow-on work picks up alternative rule families (e-prop, imitation-warm-start) or alternative connectome data sources.
 
 ______________________________________________________________________
 
@@ -876,11 +927,11 @@ Where the platform sits across five fidelity dimensions, by phase. This view ans
 
 | Dimension | Phase 0-4 | Phase 5 | Phase 6 target | Phase 7 target | Future |
 |---|---|---|---|---|---|
-| **Connectome topology** | None (MLP/LSTM/etc.) | None | 302-neuron Cook 2019 / OpenWorm c302 | + *P. pacificus* (Cook 2025) | + briggsae (gated on data) |
-| **Sensory transduction** | Spatial gradient lookups | + klinotaxis head-sweep | Rung 2 dynamic Fick's-law + log-concentration adaptation kinetics | unchanged | + multi-species receptors |
-| **Plasticity rules** | PPO / DQN / Reinforce | + Lamarckian inheritance, hyperparameter evolution | L2 PPO + L3 NEAT topology search | + L4 STDP + neuromodulator-modulated STDP | + reward-modulated Hebbian; alt rule families |
-| **Body mechanics** | Discrete 4-action grid | Discrete | Continuous 2D + spatial scales; OpenWorm Sibernetic interop if needed | unchanged | Native undulation / omega turns / pirouettes; 3D |
-| **Environment** | Grid; static gradients | + multi-agent, pheromones | Rung 2 dynamic gradients; corrected ASH/ADL contact nociception | unchanged | Bacterial lawns; energy/metabolic state; population dynamics |
+| **Connectome topology** | None (MLP/LSTM/etc.) | None | 302-neuron Cook 2019 (vendored SI parsing) | + *P. pacificus* head circuit (Cook 2025) + dauer (Yim 2024, SHOULD) | + briggsae (gated on data) |
+| **Sensory transduction** | Spatial gradient lookups | + klinotaxis head-sweep | Rung 2 **static** Fick-shaped gradients + adaptive/biphasic sensor *(dynamic PDE descoped 2026-06-04)* | unchanged | + multi-species receptors; dynamic-diffusion PDE |
+| **Plasticity rules** | PPO / DQN / Reinforce | + Lamarckian inheritance, hyperparameter evolution | L2 PPO + L3 NEAT topology search | + L4 three-factor rules (rate-based primary + spiking-STDP arm) | + alt rule families (e-prop, imitation warm start) |
+| **Body mechanics** | Discrete 4-action grid | Discrete | Continuous 2D + spatial scales; OpenWorm Sibernetic interop if needed | + state-dependent action `std` (D7) | Native undulation / omega turns / pirouettes; 3D |
+| **Environment** | Grid; static gradients | + multi-agent, pheromones | Rung 2 static Fick-shaped gradients; corrected ASH/ADL contact nociception | + neuromodulator concentration field; internal-state observability | Bacterial lawns; energy/metabolic state; population dynamics |
 
 ### Trajectory ladder
 
@@ -915,7 +966,7 @@ This roadmap is **adaptive, not linear**. Each phase includes explicit go/no-go 
 ### Potential pivot scenarios
 
 - **Connectome competitive with NEAT-evolved topologies but not dominant** → headline framing shifts from optimal-primary to connectome-primary (a neuroscience finding rather than an architecture one). Platform claim is unchanged. See Phase 6 Risk-mitigation, "L3 produces no separation from connectome."
-- **L4 plasticity overshoots Phase 7 month-6 milestone** → Phase 7a / 7b split. 7a ships L4 standalone; 7b carries pacificus transfer + optional MAY items. See Phase 7 Risk-mitigation.
+- **L4 plasticity overshoots its software estimate (or 7a completes as a citable result)** → the pre-structured Phase 7a / 7b shipment shape absorbs it (2026-08-27: promoted from contingency to default, mirroring the 6a/6b split-by-success precedent). See Phase 7 Risk-mitigation.
 - **L0 c302 connectome import is harder than expected** → hand-curated subset pivot (sensory-interneuron-motor subgraph). Platform claim survives in restricted form. See Phase 6 Risk-mitigation.
 - **Continuous physics doesn't increase task difficulty enough to matter** → keep continuous action space (necessary for the architecture comparison's validity) and accept that the comparison is fundamentally easier than initially modeled. The connectome ranking question doesn't require difficulty escalation to be scientifically interesting.
 - **External collaboration unavailable at Phase 7** → optional MAY items shift to internal-only execution. The platform paper and the connectome-learning paper are still draftable from internal Phase 6 + Phase 7 results without external validation.
@@ -929,7 +980,7 @@ Each pivot maintains scientific value. The Phase 5 STOP pattern is the canonical
 |---|---|---|
 | **Neuroscience lab collaboration** (Phase 7 MAY) | Labs decline or slow response | Optional, not required. Use published behavioural datasets (Bargmann chemotaxis indices, Kavli Ca²⁺ recordings, BAAIWorm correlation matrices) for built-in real-worm validation at Phase 6 close. |
 | **OpenWorm c302 integration** (Phase 6 L0) | NeuroML format issues, missing metadata, unclear synaptic-weight provenance | Hand-curated subset of Cook 2019 connectome as L0 fallback (~50-100 neurons). Platform claim survives in restricted form. |
-| **Cook et al. 2025 pacificus data quality** (Phase 7) | Data incomplete or format-incompatible on detailed handling | Hand-curated *P. pacificus* subset; cross-species transfer claim survives on the subset. |
+| **Cook et al. 2025 pacificus data scope** (Phase 7) | *(Re-aimed 2026-08-27: format risk retired — MIT-licensed CSVs, easy parse.)* Real risks: head-only / chemical-only scope, N=2 variability, and projection-homology ambiguity for specific behaviours | Matched head-truncation of the *C. elegans* baseline; shared-core matrix; explicit homology mapping table; ship the behaviours whose projections are defensible and document per-behaviour gaps. Cross-species claim survives in restricted form. |
 | **GPU / HPC access for L3 NEAT** (Phase 6) | TensorNEAT-scale population search needs GPU; HPC allocation overhead | GPU is realistic baseline (consumer-class cards sufficient with TensorNEAT vectorisation). HPC is optional, pursue only when a specific Phase 7 stretch need justifies. |
 | **Neuromorphic deployment** (Phase 7 MAY) | Loihi 2 / SpiNNaker 2 access non-trivial | Software-only L4 path is fully sufficient for the headline claim. Neuromorphic is a stretch / publication enhancement, not a requirement. |
 
@@ -937,7 +988,7 @@ Each pivot maintains scientific value. The Phase 5 STOP pattern is the canonical
 
 - **Per-milestone logbooks** with audit findings, statistical evidence, and explicit GO/PIVOT/STOP verdicts. Phase 5's logbooks 012-021 are the template.
 - **OpenSpec change per non-trivial milestone**, archived on close (proposal → design → tasks → implementation → verification → archive).
-- **Mid-phase decision gates** for long phases (Phase 6's three gates; Phase 7's L4-month-6 split criterion).
+- **Mid-phase decision gates** for long phases (Phase 6's three gates; Phase 7's pre-structured 7a/7b shipment shape with split-by-success).
 - **Complexity dashboard updates** at each phase close — record measured values; document where the substrate sat.
 - **Architecture-comparison protocol** as the single mechanism that places quantum, classical, recurrent, spiking, reservoir, hybrid, NEAT-evolved, and connectome-constrained brains in one experimental sweep.
 
@@ -956,7 +1007,7 @@ Throughout all phases, biological validation against published *C. elegans* data
 - **Phase 4** ✅: social-feeding and pheromone behaviours validated against aggregation literature.
 - **Phase 5** ✅: evolved-behaviour dynamics framed against natural *C. elegans* adaptation literature; M5 architecture-asymmetry diagnosis independently corroborated by external work (Resendez Prado, arXiv 2604.03565).
 - **Phase 6**: locomotion + chemotaxis behaviour quantitatively compared to real worm data as a phase exit criterion. ≥ 1 of: chemotaxis indices (Bargmann lab + others), escape latencies (mechanosensation literature), whole-brain Ca²⁺ correlation matrices (Kavli / Janelia open data). The corrected ASH/ADL nociception is the natural validation pair for escape latencies.
-- **Phase 7**: deepen biological validation with the L4 plasticity layer (does modulated STDP reproduce documented learning dynamics?) and with *P. pacificus* cross-species transfer. External lab partnership is optional (MAY); internal validation against published data is sufficient for the phase to close.
+- **Phase 7**: deepen biological validation with the L4 plasticity layer against the refreshed target list (dopamine-gated forgetting; learning-altered navigation-strategy weighting; escape-circuit lesion robustness — see [Phase 7 § Biological validation targets](#phase-7-deepen--plasticity--cross-species-transfer)) and with the cross-species head-circuit transfer. External lab partnership is optional (MAY); internal validation against published data is sufficient for the phase to close.
 
 ______________________________________________________________________
 
@@ -993,7 +1044,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 **Targets**:
 
 - **Phase 6**: L2 weight-search results across the MUST architecture-family set on all three behaviours, at the Phase 5 statistical bar. L3 NEAT topology-search results comparing wild-type connectome to NEAT-evolved on ≥ 1 behaviour.
-- **Phase 7**: same sweep with L4 plasticity added; cross-species transfer measured on the same architecture-family set.
+- **Phase 7**: L4 plasticity results for the connectome against its frozen-weights / vanilla-rule / L2-PPO baselines plus a pre-registered comparison set (D2 bar); cross-species transfer measured at matched head-circuit scope.
 
 ### 3. Substrate Coverage
 
@@ -1002,13 +1053,13 @@ The project tracks success across five dimensions. Each dimension has metrics an
 **Metrics**:
 
 - Behaviours operational on the connectome substrate (Phase 6 commits to three; Phase 7 retains the same three on a second species).
-- Sensory-physics fidelity rung achieved (Phase 6 commits to Rung 2: dynamic Fick's-law + log-concentration chemosensory adaptation kinetics).
-- Connectome species supported (Phase 6: *C. elegans*; Phase 7: + *P. pacificus*).
+- Sensory-physics fidelity rung achieved (Phase 6 shipped Rung 2: static Fick-shaped gradients + adaptive/biphasic chemosensory sensor).
+- Connectome species/states supported (Phase 6: *C. elegans*; Phase 7: + *P. pacificus* head circuit, + dauer as SHOULD).
 
 **Targets**:
 
 - **Phase 6**: three behaviours × MUST architectures × continuous 2D + Rung 2 + corrected ASH/ADL nociception.
-- **Phase 7**: same three behaviours × MUST architectures + L4 × *C. elegans* and *P. pacificus*.
+- **Phase 7**: same three behaviours (third behaviour species-appropriate) × L4 + pre-registered comparison arms × *C. elegans* (full + head-truncated baseline) and *P. pacificus* head circuit (+ dauer as SHOULD).
 
 ### 4. Sample efficiency and convergence
 
@@ -1070,8 +1121,8 @@ Phase 6 ships cleanly; the first headline-positive result lands.
 
 Phase 7 closes cleanly and external visibility follows.
 
-- L4 plasticity (STDP + neuromodulator-modulated three-factor STDP) operational on the connectome with results across the architecture-family set.
-- *P. pacificus* cross-species transfer ships; behavioural transfer is measurable across species; the connectome's role in transfer is characterised.
+- L4 plasticity (rate-based three-factor + spiking-STDP arm) operational on the connectome, with D2-bar results against its frozen-weights / vanilla-rule baselines and the pre-registered comparison set.
+- Cross-species head-circuit transfer ships (*P. pacificus*, + dauer as SHOULD); behavioural transfer is measurable across wiring; the connectome's role in transfer is characterised.
 - At least one of the optional MAY items lands: biological-validation collaboration with a *C. elegans* lab; ≥ 1 paper drafted (platform paper, connectome-learning paper, or fitness-landscape paper); neuromorphic deployment demonstrated.
 - Reproducibility artefacts updated to current platform state.
 
@@ -1107,13 +1158,13 @@ Their evolved minimal circuits are not the real connectome — they are abstract
 
 This fast-moving 2024-2026 lineage bounds what the project may claim, and the project should cite it as convergent evidence rather than get scooped by it. Lappalainen et al. 2024 (*Nature*, `flyvis`) established connectome-constrained + task-optimised modelling as a paradigm (supervised, perceptual). A **whole-brain connectomic graph model (Jin et al., arXiv:2602.17997, 2026)** trains the adult *Drosophila* whole-brain connectome as a graph-structured policy for whole-body locomotion via deep reinforcement learning, reporting better sample efficiency than baselines — the closest precedent to closed-loop RL on a real connectome, in a different organism. **Dhiman 2026 (arXiv:2604.04033)** applied a degree-preserving configuration-model (rewired-null) control to a behaving `flyvis` connectome — the fly precedent that the project's own degree-preserving rewired-null control (Tranche 8 / `add-connectome-structure-controls`) converges with. The project's defensible contribution is the *C. elegans* + closed-loop-learning + neuromodulated-plasticity + controlled-comparison combination, dated and hedged; see [Phase 7 § Claim discipline](#phase-7-deepen--plasticity--cross-species-transfer) for how the Beiran & Litwin-Kumar 2025 degeneracy bound constrains structure-function claims against this lineage.
 
-### Cook et al. — *P. pacificus* connectome (Science, 2025)
+### Cook et al. — *P. pacificus* head connectome (Science, 2025)
 
-**Focus**: full *P. pacificus* connectome from two adult hermaphrodite heads; neuronal adjacency + connectivity data; published code (`stevenjcook/cook_et_al_2025_pristionchus`).
+**Focus**: the *P. pacificus* **head connectome** (Cook et al., *Science* 389:eadx2143, 31 Jul 2025) — two adult hermaphrodite heads, nose tip → retrovesicular ganglion including the nerve ring; **chemical synapses only** (gap junctions excluded as ultrastructurally ambiguous); pharynx excluded (covered by Bumbarger 2013 at WormWiring); ~88% of neuron classes in a shared core; data as MIT-licensed CSVs (`stevenjcook/cook_et_al_2025_pristionchus`) + *Science* Supplementary Data S1–S6. *(Description corrected 2026-08-27 — v4.1 called this "the full P. pacificus connectome", which overstated its scope; see Phase 7 Deliverable 2 for the rescope.)*
 
-**Relationship**: **substrate dependency** at Phase 7 cross-species transfer.
+**Relationship**: **substrate dependency** at Phase 7 cross-species transfer (head-circuit scope, matched-truncation design per D3).
 
-The 2025 data makes *C. elegans* → *P. pacificus* transfer feasible today with published reference data. *C. briggsae*, by contrast, lacks a high-quality published connectome as of project planning, so the briggsae direction stays in Future Directions until reference data appears.
+The 2025 data makes *C. elegans* → *P. pacificus* head-circuit transfer feasible today with published reference data; the companion 2025 monoaminergic map (eLife RP 109557) supports the species-appropriate predatory behaviour. No third party (cect, NemaNode) packages this dataset yet — the project's loader is itself a small contribution. *C. briggsae*, by contrast, still lacks a published connectome (re-verified 2026-08), so the briggsae direction stays in Future Directions until reference data appears.
 
 ### Comparative connectomics community
 
@@ -1222,7 +1273,7 @@ ______________________________________________________________________
 
 ### Active for Phase 6
 
-1. **L0 connectome substrate import path** — `c302` (OpenWorm, NeuroML 2 format) ingestion + validation + provenance documentation. Hand-curated Cook 2019 subset as fallback per Phase 6 Risk-mitigation.
+1. **L0 connectome substrate import path** — ✅ shipped, but *not* as planned here: direct Cook 2019 *Nature* SI parsing vendored under `data/connectome/` with provenance, **no runtime c302/NeuroML dependency** (c302/NeuroML survives only as a deferred *export* path, RQ4 in the archived phase6-tracking change). Recorded 2026-08-27 so the pacificus import (item 7) inherits the correct framing: it is a CSV parse, not a NeuroML ingest.
 2. **L1 architecture-plugin interface** — clean `Brain` interface that admits MLP / recurrent / spiking / reservoir / quantum / hybrid / NEAT-evolved / connectome-constrained without per-architecture branching. Plugin-parity test per [openspec/changes/phase6-tracking/design.md § Decision 6 § Gate 2](../openspec/changes/archive/2026-07-06-phase6-tracking/design.md) (files-touched + no-per-architecture-branches checks; informal "≤ 1 week" framing).
 3. **Continuous action heads** — extend the existing PPO-family brains with Gaussian-policy continuous action heads; adapt quantum architectures with continuous-output circuits.
 4. **Corrected ASH/ADL contact-based nociception** — owed correctness work flagged in [Logbook 011](experiments/logbooks/011-multi-agent-evaluation.md); lands in Phase 6's sensory-physics stack.
@@ -1230,8 +1281,9 @@ ______________________________________________________________________
 
 ### Active for Phase 7
 
-6. **L4 plasticity infrastructure** — STDP and Hebbian rule families on the connectome topology; diffusible-signal layer (serotonin, dopamine); receptor-class metadata from CeNGEN; three-factor modulated STDP. Substantial new code.
-7. ***P. pacificus* connectome integration** — Cook et al. 2025 data through the L0 / L1 pipeline; hand-curated subset as fallback per Phase 7 Risk-mitigation.
+6. **L4 plasticity infrastructure** — persistent pre/post activity traces on `ConnectomeTopology` (cross-step state does not currently exist); rate-based three-factor rules first, spiking-STDP arm second (D1); diffusible-signal concentration field (serotonin, dopamine); receptor-class metadata from the Wang 2024 neurotransmitter atlas + bulk-integrated CeNGEN profiles; modulated three-factor rules. New package (D8: `learning_rules/` working name — `quantumnematode/plasticity/` is the quantum-plasticity *eval* protocol, not learning rules). Substantial new code.
+7. **Cross-species head-circuit integration** — Cook et al. 2025 CSV loader + species-keyed neuron-classification table + species-keyed validation pathways + species-keyed sensor/motor projection map (the current projections are hard-coded *C. elegans* named-neuron tuples in `connectome_ppo.py`); head-truncated Cook 2019 baseline; dauer (Yim 2024) loader as SHOULD.
+8. **Pre-L4 platform items, landed then frozen before the panel (D5/D7)** — remove the #254 dead config keys with behaviour unchanged; state-dependent action `std` (byte-identical-when-off); load-time config validation extended to the new plasticity keys from day one.
 
 ### Lower priority (address as needed)
 
@@ -1281,14 +1333,14 @@ This roadmap charts a milestone-based adaptive path from a Phase 5 close anchore
 The contribution is paired, not dual-goal:
 
 1. **Platform contribution**: first closed-loop learning and evolution on the real *C. elegans* connectome with a pluggable architecture interface that admits MLP, recurrent, spiking, reservoir, quantum, hybrid, NEAT-evolved, and connectome-constrained brains as comparable rows in one experimental sweep.
-2. **Scientific contribution**: a defensible answer to "how does the wild-type *C. elegans* connectome rank against unconstrained and evolved alternatives — when learning and evolution operate on it in a closed sensory-motor loop?", with cross-species transfer to *P. pacificus* and biologically-plausible plasticity (STDP + neuromodulator-modulated three-factor STDP) extending the answer at Phase 7.
+2. **Scientific contribution**: a defensible answer to "how does the wild-type *C. elegans* connectome rank against unconstrained and evolved alternatives — when learning and evolution operate on it in a closed sensory-motor loop?", with cross-species head-circuit transfer to *P. pacificus* (+ dauer) and biologically-plausible plasticity (neuromodulator-gated three-factor rules) extending the answer at Phase 7.
 
 The project's unique position — integrating biologically-grounded sensing, multiple learning and evolutionary regimes, a pluggable architecture interface, and the real *C. elegans* connectome on a single substrate — is the contribution. No competing computational *C. elegans* effort has all four. OpenWorm has the connectome and body physics but not closed-loop learning; Izquierdo & Beer have learning and evolution but on minimal evolved circuits rather than the real connectome; the Leeds physics group has body mechanics but not learning. The platform interoperates with each of these where the boundaries are natural (c302 import, Sibernetic for body mechanics if needed); it does not compete with them on their home turf.
 
 Key principles guiding execution:
 
 1. **Evidence-driven, not aspiration-driven.** Decisions live in per-milestone logbooks; STOP-with-diagnosis is the correct verdict when honest experimentation reveals a substrate or architecture limit.
-2. **Fail-fast at the substrate level, not at the phase level.** Mid-phase decision gates (Phase 6's three gates; Phase 7's L4-month-6 split criterion) trigger documented pivots — not silent slides past missed milestones.
+2. **Fail-fast at the substrate level, not at the phase level.** Mid-phase decision gates (Phase 6's three gates; Phase 7's pre-structured 7a/7b shipment shape) trigger documented pivots — not silent slides past missed milestones.
 3. **Hard phase boundaries between completed and in-flight phases.** Phase N+1 work does not begin until Phase N is synthesised — the narrative arc has integrity, even when mid-phase execution is adaptive.
 4. **Demote rather than delete.** Quantum demoted to one architecture family. NematodeBench demoted from public-launch deliverable to internal tooling. Optionality preserved; commitments matched to evidence. *Corollary added 2026-07-25:* demotion is a holding position, not a terminal state. Where a demoted component then accrues no use across a full phase, deletion follows — and is recorded as a reversal with its evidence, rather than left to bit-rot in place. NematodeBench is the first component to complete that arc.
 5. **One programme, two contributions.** The platform claim and the scientific claim are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer.
