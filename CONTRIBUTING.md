@@ -87,6 +87,8 @@ Four tiers, selected with pytest markers:
 | Smoke | `smoke` | The CLI entry points end-to-end with minimal episodes | Every PR in CI |
 | Nightly | `nightly` | Full training sessions asserted against benchmark ranges | 03:00 UTC daily, or manually from the Actions tab |
 
+"Every PR in CI" has one carve-out: **docs-only PRs skip the test shards** (the required `Tests` check still reports, passing explicitly on a deliberate skip), and every push to `main` runs the full suite regardless. See `.github/workflows/README.md` § `tests.yml` for the allowlist.
+
 ```bash
 uv run pytest -m "not smoke and not nightly and not slow"   # fast tier (what pre-commit runs)
 uv run pytest -m "not nightly"                               # everything except nightly — run after substantive changes

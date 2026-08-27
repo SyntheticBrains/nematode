@@ -15,38 +15,49 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Docs-only PRs skip the 5-shard matrix (~25 runner-minutes) but the required
-  # "Tests" context still reports via tests-complete below. Classification is
-  # fail-open: only paths on the docs allowlist skip; anything else — including
-  # new top-level directories and this workflow itself — runs the full matrix.
+  # Docs-only PRs skip the 5-shard matrix (~25 runner-minutes per push) but the
+  # required "Tests" context still reports via tests-complete below.
+  # Classification is fail-open: only paths on the docs allowlist skip. Known
+  # code trees (first case arm — including artifacts/, which the tests read),
+  # anything unrecognised — new top-level directories and this workflow itself
+  # included — and an empty or undecidable file list all run the full matrix.
   # Pushes to main are never filtered, so the coverage record stays unbroken.
+  # Codecov posts no status or comment on docs-only PRs (no head report is
+  # uploaded); neither codecov context is ruleset-required, so nothing blocks.
   changes:
     name: Classify changes
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.classify.outputs.code }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          lfs: false
-          fetch-depth: 0
-
       - name: Classify changed paths
         id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "Push event: full test run (main's coverage upload is the record)."
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD)
+          # The files API needs no checkout, is immune to stale-base-SHA diff
+          # drift on long-lived PRs, and returns raw (unquoted) paths. Renames
+          # contribute both their old and new path, so a file moved out of a
+          # code tree still counts as code.
+          files=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[] | .filename, (.previous_filename // empty)')
           echo "Changed files:"
           echo "$files"
+          if [ -z "$files" ]; then
+            echo "Empty file list (empty commit or API oddity): failing open to a full run."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           code=false
           while IFS= read -r f; do
             [ -z "$f" ] && continue
             case "$f" in
+              artifacts/*|packages/*|configs/*|data/*|scripts/*|.github/*) code=true ;;
               docs/*|openspec/*|.claude/*|*.md|CITATION.cff|LICENSE|.gitignore|.markdownlint.jsonc) ;;
               *) code=true ;;
             esac
