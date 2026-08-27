@@ -30,6 +30,7 @@ Runs the test suite on Python 3.13 (the only version the project supports — `r
 - ✅ Runs pytest across five parallel `pytest-split` shards on Python 3.13, aggregated behind a single `Tests` check
 - ✅ Uploads a coverage report per shard to Codecov, which merges them by commit (optional)
 - ✅ Pins BLAS/OpenMP to one thread per xdist worker so the runner is not oversubscribed
+- ✅ **Skips the shard matrix on docs-only PRs**: a `changes` job classifies the PR's file list (via the GitHub API) against a docs allowlist (`docs/`, `openspec/`, `.claude/`, markdown, licence/lint metadata); known code trees (`artifacts/`, `packages/`, `configs/`, `data/`, `scripts/`, `.github/`), unrecognised paths, and empty file lists all fail open to a full run. The required `Tests` check still reports — it passes explicitly when shards were deliberately skipped. Pushes to `main` are never filtered (the coverage record stays unbroken), and Codecov posts no status/comment on docs-only PRs (neither codecov context is a required check).
 
 ______________________________________________________________________
 
