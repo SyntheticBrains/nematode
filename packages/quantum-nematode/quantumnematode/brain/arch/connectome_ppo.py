@@ -35,11 +35,8 @@ from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
-    categorical_evaluate_torch,
     categorical_sample_torch,
-    continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
-    ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
@@ -999,24 +996,37 @@ class ConnectomePPOBrain(ClassicalBrain):
             continuous=self.continuous,
         ).to(self.device)
 
-        # Critic: scalar value head over the same 302-dim activation vector.
-        self.critic = nn.Linear(self.topology.n_neurons, 1).to(self.device)
-        nn.init.orthogonal_(self.critic.weight, gain=1.0)
-        nn.init.zeros_(self.critic.bias)
+        # Learning rule: owns the critic (constructed inside the rule at this
+        # exact point — same torch-RNG draw order as the pre-extraction
+        # code), the Adam optimiser, and every PPO hyperparameter.
+        # Lazy import (change design Decision 3b): brain/arch/__init__ imports
+        # this module at package load, so a module-level import of
+        # learning_rules here would break `import quantumnematode.learning_rules.ppo`
+        # as a process's first import (partially-initialised module).
+        from quantumnematode.learning_rules.ppo import ConnectomePPOBatch, ConnectomePPORule
 
-        # Single Adam optimiser over the topology's learnable params + critic.
-        learnable = self.topology.learnable_parameters + list(self.critic.parameters())
-        self.optimizer = optim.Adam(learnable, lr=config.learning_rate)
+        self._batch_cls = ConnectomePPOBatch
+        self._rule = ConnectomePPORule(
+            self.topology,
+            learning_rate=config.learning_rate,
+            gamma=config.gamma,
+            gae_lambda=config.gae_lambda,
+            clip_epsilon=config.clip_epsilon,
+            value_loss_coef=config.value_loss_coef,
+            entropy_coef=config.entropy_coef,
+            num_epochs=config.num_epochs,
+            num_minibatches=config.num_minibatches,
+            max_grad_norm=config.max_grad_norm,
+            continuous=self.continuous,
+            action_low=self._action_low,
+            action_high=self._action_high,
+            strict_mask=(config.chemical_mask_mode == "strict"),
+            freeze_updates=config.freeze_updates,
+            device=self.device,
+        )
 
-        # PPO hyperparameters (cached for the learn loop).
-        self.gamma = config.gamma
-        self.gae_lambda = config.gae_lambda
-        self.clip_epsilon = config.clip_epsilon
-        self.value_loss_coef = config.value_loss_coef
-        self.entropy_coef = config.entropy_coef
-        self.num_epochs = config.num_epochs
+        # Update-trigger arithmetic stays brain-side (experience collection).
         self.num_minibatches = config.num_minibatches
-        self.max_grad_norm = config.max_grad_norm
 
         # Rollout buffer.
         self.buffer = RolloutBuffer(
@@ -1044,6 +1054,16 @@ class ConnectomePPOBrain(ClassicalBrain):
     def action_set(self) -> list[Action]:
         """Return the 4-action discrete action set."""
         return self._action_set
+
+    @property
+    def critic(self) -> nn.Linear:
+        """Value head — owned by the learning rule (back-compat shim)."""
+        return self._rule.critic
+
+    @property
+    def optimizer(self) -> optim.Adam:
+        """Adam optimiser — owned by the learning rule (back-compat shim)."""
+        return self._rule.optimizer
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Extract the per-step feature vector for the topology.
@@ -1380,7 +1400,20 @@ class ConnectomePPOBrain(ClassicalBrain):
             )
 
         if self.buffer.is_full() or (episode_done and len(self.buffer) >= self.num_minibatches):
-            self._perform_ppo_update()
+            report = self._rule.step(
+                self.topology,
+                self._batch_cls(
+                    buffer=self.buffer,
+                    unpack_batched=self._unpack_state_batched,
+                    last_value=self.last_value,
+                ),
+            )
+            # House PPO telemetry convention: record the mean policy loss
+            # (lstmppo/cfc/spiking all record avg_policy). None on the
+            # freeze / empty-buffer short-circuits — append nothing then.
+            if report.policy_loss is not None:
+                self.latest_data.loss = report.policy_loss
+                self.history_data.losses.append(report.policy_loss)
             self.buffer.reset()
 
         self.history_data.rewards.append(reward)
@@ -1389,7 +1422,14 @@ class ConnectomePPOBrain(ClassicalBrain):
         """No-op (Brain Protocol surface; PPO updates land in ``learn``)."""
 
     def prepare_episode(self) -> None:
-        """No-op."""
+        """Reset per-episode learning-rule state at episode start.
+
+        Called by the runner at the START of each episode — so any
+        per-episode state (rule caches; activity traces once enabled)
+        persists through the previous episode's terminal
+        ``learn(..., episode_done=True)`` call and resets here.
+        """
+        self._rule.reset_episode()
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:
         """No-op."""
@@ -1399,95 +1439,6 @@ class ConnectomePPOBrain(ClassicalBrain):
         msg = "ConnectomePPOBrain does not support copying. Use deepcopy if needed."
         raise NotImplementedError(msg)
 
-    # ── PPO update ──────────────────────────────────────────────────────
-
-    def _perform_ppo_update(self) -> None:
-        """Run one PPO update over the rollout buffer.
-
-        Skipped entirely when ``config.freeze_updates`` is True — that is
-        the paired-control branch of the training-signal evaluation. Under
-        the strict-mask mode, the chemical-synapse weights are projected
-        onto the wild-type adjacency after every optimiser step.
-        """
-        if self.config.freeze_updates:
-            return
-        if len(self.buffer) == 0:
-            return
-
-        last_value = (
-            self.last_value
-            if self.last_value is not None
-            else torch.tensor(
-                [0.0],
-                device=self.device,
-            )
-        )
-        returns, advantages = self.buffer.compute_returns_and_advantages(
-            last_value,
-            self.gamma,
-            self.gae_lambda,
-        )
-
-        for _ in range(self.num_epochs):
-            for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
-                # Batched forward pass through the topology + critic. The
-                # minibatch's states are unpacked + run in ONE batched
-                # connectome forward (and the post-K hidden states feed the
-                # critic in one call) — replacing the prior per-sample Python
-                # loop, where ~90% of connectome forward passes occurred.
-                states = batch["states"]
-                food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = self._unpack_state_batched(
-                    states,
-                )
-                new_head_out, hidden = self.topology.forward_with_hidden_batched(
-                    food_b,
-                    predator_distal_features=distal_b,
-                    predator_mechano_features=mechano_b,
-                    contact_zone_onehot=zone_onehot_b,
-                    thermotaxis_features=thermo_b,
-                )
-                new_values = self.critic(hidden).squeeze(-1)
-
-                # Re-score actions under the current policy via the shared module:
-                # discrete (Categorical) or continuous (tanh-Gaussian re-scoring the
-                # stored pre-squash samples). Clipped surrogate is shared.
-                if self.continuous:
-                    new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
-                        new_head_out,
-                        self.topology.log_std,
-                        batch["actions"],
-                        self._action_low,
-                        self._action_high,
-                    )
-                else:
-                    new_log_probs, entropy = categorical_evaluate_torch(
-                        new_head_out,
-                        batch["actions"],
-                    )
-                policy_loss = ppo_clip_policy_loss(
-                    new_log_probs,
-                    batch["old_log_probs"],
-                    batch["advantages"],
-                    self.clip_epsilon,
-                )
-                value_loss = nn.functional.mse_loss(new_values, batch["returns"])
-                loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(
-                    self.topology.learnable_parameters + list(self.critic.parameters()),
-                    self.max_grad_norm,
-                )
-                self.optimizer.step()
-
-                # Strict-mask projection: under "strict" mode, zero out any
-                # non-existent edges that the optimiser step would have
-                # created. Under "soft_prior" mode, leave the weights as
-                # the optimiser left them (the mask is then only a
-                # initial-weight prior, and PPO is free to grow new edges).
-                if self.config.chemical_mask_mode == "strict":
-                    with torch.no_grad():
-                        self.topology.w_chem.data.copy_(
-                            self.topology.apply_weight_mask(self.topology.w_chem.data),
-                        )
+    # The PPO update itself lives in ``ConnectomePPORule``
+    # (``quantumnematode/learning_rules/ppo.py``) — extracted verbatim under
+    # the byte-equivalence bar; see ``learn()`` for the delegation.
