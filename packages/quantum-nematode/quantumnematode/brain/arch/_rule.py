@@ -1,10 +1,12 @@
 """Learning-rule Protocol for brain architectures.
 
 A ``LearningRule`` encapsulates how a topology's weights are updated from
-experience. It owns the optimiser, value head (if any), replay buffer (if
-any), advantage estimator (if any), and gradient clipper (if any). The
-paired ``BrainTopology`` is pure structure; the rule owns the mechanism
-that mutates the topology's learnable weights from collected experience.
+experience. It owns the optimiser, value head (if any), update
+hyperparameters, advantage estimator (if any), and gradient clipper (if
+any). An experience-collection buffer owned by the brain MAY be surfaced
+to the rule through ``batch`` rather than owned by the rule. The paired
+``BrainTopology`` is pure structure; the rule owns the mechanism that
+mutates the topology's learnable weights from collected experience.
 """
 
 from __future__ import annotations
@@ -36,8 +38,9 @@ class RuleStepReport(BaseModel):
 class LearningRule(Protocol):
     """How a topology's weights are updated from experience.
 
-    The rule owns optimiser state, replay buffers, value heads, advantage
-    estimators, and gradient clippers. Per-episode lifecycle is handled
+    The rule owns optimiser state, value heads, update hyperparameters,
+    advantage estimators, and gradient clippers; a brain-owned experience
+    buffer may arrive via ``batch``. Per-episode lifecycle is handled
     via ``reset_episode``.
     """
 
