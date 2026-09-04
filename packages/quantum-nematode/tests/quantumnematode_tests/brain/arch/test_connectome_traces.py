@@ -10,10 +10,11 @@ independence, and training bit-invariance while no rule consumes ``E``.
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 import torch
 from pydantic import ValidationError
-
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.connectome_ppo import (
     ConnectomePPOBrain,
@@ -50,6 +51,11 @@ def _drive(brain: ConnectomePPOBrain, n_steps: int = _N_STEPS, *, final_done: bo
         )
 
 
+def _traces(brain: ConnectomePPOBrain) -> torch.Tensor:
+    """Typed accessor for the registered buffer (nn.Module __getattr__ union)."""
+    return cast("torch.Tensor", brain.topology.activity_traces)
+
+
 class TestTracesOff:
     """`Traces off is byte-identical` scenario."""
 
@@ -80,7 +86,7 @@ class TestTraceRecurrence:
     def test_recurrence_matches_manual_accumulation(self) -> None:
         brain = _make_brain(enable_activity_traces=True, trace_decay=0.8)
         topology = brain.topology
-        expected = torch.zeros_like(topology.activity_traces)
+        expected = torch.zeros_like(_traces(brain))
         torch.manual_seed(_DRIVE_SEED)
         for step in range(5):
             params = _make_params(strength=0.2 + 0.1 * step, angle=0.05 * step)
@@ -107,13 +113,13 @@ class TestTraceRecurrence:
                 )
                 topology.enable_activity_traces = True
             expected = 0.8 * expected + topology.m_chem * torch.outer(h, h)
-            assert torch.allclose(topology.activity_traces, expected, rtol=0.0, atol=0.0)
+            assert torch.allclose(_traces(brain), expected, rtol=0.0, atol=0.0)
 
     def test_traces_are_zero_off_edges(self) -> None:
         brain = _make_brain(enable_activity_traces=True)
         torch.manual_seed(_DRIVE_SEED)
         _drive(brain, n_steps=4, final_done=False)
-        traces = brain.topology.activity_traces
+        traces = _traces(brain)
         off_edges = brain.topology.m_chem == 0
         assert torch.all(traces[off_edges] == 0)
         assert traces.abs().sum() > 0
@@ -125,7 +131,7 @@ class TestTraceRecurrence:
             torch.manual_seed(_DRIVE_SEED)
             _drive(brain, n_steps=4, final_done=False)
             brains.append(brain)
-        assert torch.equal(brains[0].topology.activity_traces, brains[1].topology.activity_traces)
+        assert torch.equal(_traces(brains[0]), _traces(brains[1]))
 
 
 class TestTraceLifecycle:
@@ -135,9 +141,9 @@ class TestTraceLifecycle:
         brain = _make_brain(enable_activity_traces=True)
         torch.manual_seed(_DRIVE_SEED)
         _drive(brain, n_steps=4, final_done=False)
-        assert brain.topology.activity_traces.abs().sum() > 0
+        assert _traces(brain).abs().sum() > 0
         brain.prepare_episode()
-        assert torch.all(brain.topology.activity_traces == 0)
+        assert torch.all(_traces(brain) == 0)
 
     def test_reset_traces_is_noop_when_disabled(self) -> None:
         brain = _make_brain()
@@ -164,7 +170,7 @@ class TestTrainingBitInvariance:
         brain = _make_brain(enable_activity_traces=True)
         torch.manual_seed(_DRIVE_SEED)
         _drive(brain, final_done=False)
-        before = brain.topology.activity_traces.detach().clone()
+        before = _traces(brain).detach().clone()
         brain._rule.step(
             brain.topology,
             ConnectomePPOBatch(
@@ -173,7 +179,7 @@ class TestTrainingBitInvariance:
                 last_value=brain.last_value,
             ),
         )
-        assert torch.equal(brain.topology.activity_traces, before)
+        assert torch.equal(_traces(brain), before)
 
 
 class TestTraceConfigValidation:

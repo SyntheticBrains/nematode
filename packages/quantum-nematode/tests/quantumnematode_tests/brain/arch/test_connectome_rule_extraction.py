@@ -16,12 +16,11 @@ import subprocess
 import sys
 
 import torch
-
+from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.connectome_ppo import (
     ConnectomePPOBrain,
     ConnectomePPOBrainConfig,
 )
-from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.learning_rules.ppo import ConnectomePPOBatch
 
@@ -193,7 +192,7 @@ class TestImportDiscipline:
     """Decision 3b: the rule package survives being the first import."""
 
     def test_learning_rules_ppo_as_first_import(self) -> None:
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             [sys.executable, "-c", "import quantumnematode.learning_rules.ppo"],
             capture_output=True,
             text=True,

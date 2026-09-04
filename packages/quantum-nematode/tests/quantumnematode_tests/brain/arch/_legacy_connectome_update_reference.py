@@ -18,13 +18,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
-from torch import nn
-
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
     continuous_evaluate_tanh_gaussian,
     ppo_clip_policy_loss,
 )
+from torch import nn
 
 if TYPE_CHECKING:
     from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrain

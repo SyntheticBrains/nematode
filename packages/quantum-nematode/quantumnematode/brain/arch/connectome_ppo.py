@@ -237,6 +237,8 @@ class ConnectomeTopology(nn.Module):
     # registered buffers from ``Tensor | Module`` to ``torch.Tensor``.
     m_chem: torch.Tensor
     g_gap: torch.Tensor
+    # Allocated only when ``enable_activity_traces`` is on (guard every use).
+    activity_traces: torch.Tensor
     _food_neuron_indices: torch.Tensor
     _motor_flat_indices: torch.Tensor
     _motor_class_boundaries: torch.Tensor

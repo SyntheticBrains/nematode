@@ -6,6 +6,14 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Added
+
+- The Phase 7 L4 trace substrate on the connectome brain: `enable_activity_traces` and `trace_decay` config fields (off by default; per-synapse eligibility traces accumulated during rollout forwards for the upcoming three-factor rules — training is bit-identical with traces on until a rule consumes them), and the new `quantumnematode.learning_rules` package, whose first citizen `ConnectomePPORule` is the connectome PPO update extracted byte-identically behind the `LearningRule` seam.
+
+### Changed
+
+- Connectome-brain runs now record the mean policy loss per PPO update in the tracked `losses` telemetry (the house convention; the brain previously recorded no loss), so connectome session exports gain a `losses` column.
+
 ## [0.5.0] - 2026-08-23
 
 The pre-Phase-7 housekeeping release. It takes the platform that closed Phase 6a, removes the research tooling the platform no longer needs, moves the toolchain to Python 3.13 and Qiskit 2, and prepares the repository for a wider audience.

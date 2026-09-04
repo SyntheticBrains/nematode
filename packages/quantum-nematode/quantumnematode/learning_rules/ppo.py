@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
     from quantumnematode.brain.arch.connectome_ppo import ConnectomeTopology
 
+
 @dataclass
 class ConnectomePPOBatch:
     """Experience surfaced by the brain to the rule for one update.
@@ -123,7 +124,7 @@ class ConnectomePPORule:
         self.freeze_updates = freeze_updates
         self.device = device
 
-    def step(  # noqa: C901 — the verbatim-moved update loop
+    def step(
         self,
         topology: ConnectomeTopology,
         batch: ConnectomePPOBatch,

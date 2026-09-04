@@ -239,19 +239,25 @@ Protocol declared in
 from quantumnematode.brain.arch._topology import BrainTopology
 
 class MyTopology(nn.Module):
-    n_inputs: int
-    n_outputs: int
-    n_hidden: int
+    @property
+    def learnable_parameters(self) -> list[nn.Parameter]:
+        """The parameters a learning rule may update."""
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor: ...
-
-    def apply_weight_mask(self) -> None:
-        """Re-apply any structural constraints after an optimiser step."""
+    def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
+        """Project candidate weights onto the topology's allowed manifold."""
 ```
 
-The Protocol is `runtime_checkable`, so
+The Protocol carries only the seam every rule shares — the mask
+projector and the learnable parameters. Forward-pass signatures are
+deliberately **not** part of it: they are topology-specific
+(`ConnectomeTopology` takes multi-channel sensor features, not a single
+`x`), and a rule that re-forwards experience under current weights (as
+PPO does each epoch) calls its concrete topology's own methods. The
+Protocol is `runtime_checkable`, so
 `isinstance(my_topo, BrainTopology)` works as a runtime conformance
-check. The connectome-PPO brain at
+check — `ConnectomeTopology` genuinely passes it, pinned by
+`tests/.../brain/arch/test_topology_rule_protocols.py`. The
+connectome-PPO brain at
 `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py`
 is the canonical example — its `ConnectomeTopology` enforces a
 strict-mask chemical-synapse adjacency and a fixed gap-junction matrix.
@@ -262,11 +268,22 @@ If you want to share a learning rule (PPO, REINFORCE, DQN) across
 multiple architectures, implement the `LearningRule` Protocol in
 `packages/quantum-nematode/quantumnematode/brain/arch/_rule.py`. The
 Protocol declares `step(topology, batch) -> RuleStepReport` and
-`reset_episode()`.
+`reset_episode()`. The rule owns the optimiser, value head, and update
+hyperparameters; a brain-owned experience buffer may be surfaced
+through `batch`.
 
-This factoring is currently consumed by `ConnectomePPOBrain` only;
-the legacy 19 brains keep their fused `(topology, rule)` `__init__`
-bodies. Use the factored Protocols if you're writing a new brain that
+The first genuine consumer is `ConnectomePPORule` in
+`packages/quantum-nematode/quantumnematode/learning_rules/ppo.py` —
+the connectome brain's PPO update, extracted verbatim under a
+byte-equivalence bar. Rules live in the `learning_rules` package (not
+`quantumnematode.plasticity`, which is the quantum-plasticity
+*evaluation protocol*). One import caution for new rules: import only
+leaf modules from `brain.arch` (`._policy`, `._rule`, `._ppo_buffer`),
+never the package, and have the consuming brain import the rule lazily
+inside `__init__` — `brain/arch/__init__` imports brain modules at
+package load, so package-level imports in either direction create a
+cycle. The legacy brains keep their fused `(topology, rule)` `__init__`
+bodies; use the factored Protocols if you're writing a new brain that
 genuinely separates the two concerns.
 
 ## What NOT to do
