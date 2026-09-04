@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
+from pydantic import Field
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -189,6 +190,17 @@ class ConnectomePPOBrainConfig(BrainConfig):
     enable_thermotaxis_projection: bool = False
     freeze_updates: bool = False
 
+    # ── Activity-trace substrate (Phase 7 L4; opt-in) ────────────────────
+    # Per-synapse eligibility traces E on the chemical edge set, accumulated
+    # during rollout forwards for future three-factor rules. Off by default:
+    # trace-off builds are byte-identical, and (until a rule consumes E)
+    # trace-ON training is bit-identical too. ``trace_decay`` is bounded to
+    # [0, 1) at load time — a decay >= 1 is a divergent accumulator; the 0.9
+    # default is an inert placeholder (biological calibration is the
+    # three-factor rule change's problem, not claimed here).
+    enable_activity_traces: bool = False
+    trace_decay: float = Field(default=0.9, ge=0.0, lt=1.0)
+
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
     gamma: float = _DEFAULT_GAMMA
@@ -252,6 +264,8 @@ class ConnectomeTopology(nn.Module):
         device: torch.device,
         rng: np.random.Generator,
         continuous: bool = False,
+        enable_activity_traces: bool = False,
+        trace_decay: float = 0.9,
     ) -> None:
         super().__init__()
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
@@ -562,6 +576,20 @@ class ConnectomeTopology(nn.Module):
         with torch.no_grad():
             self.w_chem.data.copy_(self.apply_weight_mask(self.w_chem.data))
 
+        # ── Activity-trace substrate (opt-in; Phase 7 L4) ───────────────
+        # Per-synapse eligibility buffer E, allocated ONLY when enabled so
+        # trace-off builds carry no state-dict entry. The allocation
+        # consumes no RNG and sits after every RNG-consuming block, so
+        # flipping the flag leaves all weight-init streams byte-identical
+        # (same discipline as the predator/thermotaxis blocks above).
+        self.enable_activity_traces = enable_activity_traces
+        self.trace_decay = trace_decay
+        if enable_activity_traces:
+            self.register_buffer(
+                "activity_traces",
+                torch.zeros(self.n_neurons, self.n_neurons, device=device),
+            )
+
     def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
         """Project a candidate weight tensor onto the strict-mask manifold.
 
@@ -575,6 +603,16 @@ class ConnectomeTopology(nn.Module):
         contract: stateless, no in-place mutation of ``self``.
         """
         return weights * self.m_chem.to(weights.dtype)
+
+    def reset_traces(self) -> None:
+        """Zero the eligibility traces at episode start.
+
+        A documented no-op when ``enable_activity_traces`` is off (the
+        buffer is not allocated then), so brains call it unconditionally
+        from ``prepare_episode``.
+        """
+        if self.enable_activity_traces:
+            self.activity_traces.zero_()
 
     def _pool_motor(self, h: torch.Tensor) -> torch.Tensor:
         """Mean-pool ``h`` over the four motor classes → ``(4,)`` or ``(B, 4)``.
@@ -730,6 +768,22 @@ class ConnectomeTopology(nn.Module):
         for _ in range(self.forward_pass_depth):
             preact = chem_mat.T @ h + gap_mat.T @ h
             h = torch.tanh(preact)
+
+        # Activity-trace update (opt-in; v1 formula per the OpenSpec change:
+        # E ← trace_decay·E + M_chem ∘ (h hᵀ), with E[i, j] pre-i → post-j
+        # aligned to w_chem). The ``no_grad`` is LOAD-BEARING: this rollout
+        # forward runs grad-enabled (detachment happens later in
+        # RolloutBuffer.add), and the block is what keeps E off the autograd
+        # graph — do not drop it. "Once per env step" is a call-site
+        # convention: run_brain invokes this method exactly once per step
+        # (the diagnostic ``forward`` shim also lands here and would update
+        # E if traces were enabled; no diagnostic path enables them). The
+        # batched (PPO replay) forward never touches E.
+        if self.enable_activity_traces:
+            with torch.no_grad():
+                self.activity_traces.mul_(self.trace_decay).add_(
+                    self.m_chem * torch.outer(h, h),
+                )
 
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
@@ -994,6 +1048,8 @@ class ConnectomePPOBrain(ClassicalBrain):
             device=self.device,
             rng=self.rng,
             continuous=self.continuous,
+            enable_activity_traces=config.enable_activity_traces,
+            trace_decay=config.trace_decay,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -1425,10 +1481,11 @@ class ConnectomePPOBrain(ClassicalBrain):
         """Reset per-episode learning-rule state at episode start.
 
         Called by the runner at the START of each episode — so any
-        per-episode state (rule caches; activity traces once enabled)
+        per-episode state (rule caches; activity traces when enabled)
         persists through the previous episode's terminal
         ``learn(..., episode_done=True)`` call and resets here.
         """
+        self.topology.reset_traces()
         self._rule.reset_episode()
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:
