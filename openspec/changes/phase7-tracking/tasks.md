@@ -26,8 +26,8 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 ## Shipment 7a-i — Platform Freeze + Minimal Rule + the 2×2 Panel
 
-**OpenSpec changes**: `add-l4-trace-substrate` (first; rule-seam decision + traces), then a panel change (placeholders; created per milestone)
-**Status**: 🔲 not started
+**OpenSpec changes**: `add-l4-trace-substrate` (first; rule-seam decision + traces — **active**, authored 2026-08-28), then a panel change (placeholders; created per milestone)
+**Status**: 🟡 in progress (A.1/A.2 under `add-l4-trace-substrate`)
 **Roadmap layer**: L4 (minimal)
 **Approx effort**: ~3-5 active weeks (roadmap § estimate restatement)
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 1, D1/D2/D5/D7/D8/D10/D13
@@ -42,8 +42,8 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 ### L4 minimal rule + panel
 
-- [ ] A.1 Rule-seam decision documented (`LearningRule` Protocol refactor vs bespoke brain — the Protocol currently has zero rule-side consumers; lstmppo chunked-BPTT is the cross-step-state precedent).
-- [ ] A.2 Persistent pre/post activity traces on `ConnectomeTopology` (cross-step eligibility state); byte-identical-when-off.
+- [x] A.1 Rule-seam decision documented (`add-l4-trace-substrate`, 2026-08-28: Protocols reconciled to the seam a rule needs — mask projector + learnable parameters; the inlined PPO update extracted verbatim into `learning_rules.ConnectomePPORule` under the M1 frozen-reference byte-equivalence bar; conformance now genuinely `isinstance`-passes).
+- [x] A.2 Persistent activity traces on `ConnectomeTopology` (`add-l4-trace-substrate`, 2026-08-28: conditionally-allocated eligibility buffer, v1 formula `E ← λE + M∘(h hᵀ)` under load-bearing `no_grad`, reset at `prepare_episode`; byte-identical when off AND training bit-identical with traces on until a rule consumes them).
 - [ ] A.3 Minimal rate-based three-factor rule (reward-modulated Hebbian + eligibility traces) in the new `learning_rules/` package (D8).
 - [ ] A.4 Baseline arms pinned per D2: frozen-weights (Cook-2019 synapse-count-derived init, no learning) + vanilla-rule sanity floors.
 - [ ] A.5 Matched-rule MLP arm (D10 — the rule is substrate-generic; this is the ranking yardstick).

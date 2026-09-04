@@ -1,9 +1,17 @@
 """Topology Protocol for brain architectures.
 
-A ``BrainTopology`` exposes the structural and forward-pass interface of a
-brain's network, factored out from learning-rule concerns (optimisers,
-replay buffers, value heads). The same topology can be paired with different
-learning rules; the same learning rule can drive different topologies.
+A ``BrainTopology`` exposes the structural seam a learning rule needs — the
+weight-mask projector and the learnable parameters — factored out from
+learning-rule concerns (optimisers, replay buffers, value heads). The same
+topology can be paired with different learning rules; the same learning rule
+can drive different topologies.
+
+Forward-pass signatures are deliberately NOT part of the Protocol: they are
+topology-specific (``ConnectomeTopology`` takes multi-channel sensor
+features, not a single ``x``). A rule that needs to re-forward experience
+under current weights — as PPO does once per minibatch per epoch — calls its
+concrete topology's own methods; that surface is beyond the Protocol, which
+carries only the seam every rule shares.
 """
 
 from __future__ import annotations
@@ -12,27 +20,28 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import torch
+    from torch import nn
 
 
 @runtime_checkable
 class BrainTopology(Protocol):
-    """Structural and forward-pass interface of a brain's network.
+    """Structural seam between a brain's network and its learning rule.
 
-    Implementations carry weight tensors as state. The forward pass is free
-    of optimiser, replay-buffer, or value-head side effects — those belong
-    to the paired ``LearningRule``.
+    Implementations carry weight tensors as state and expose the two things
+    a rule genuinely touches: the parameters it may update and the projector
+    that keeps updated weights on the topology's allowed manifold. Forward
+    passes stay free of optimiser, replay-buffer, or value-head side
+    effects — those belong to the paired ``LearningRule``.
     """
 
-    n_inputs: int
-    n_outputs: int
-    n_hidden: int
+    @property
+    def learnable_parameters(self) -> list[nn.Parameter]:
+        """Parameters a learning rule may update.
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute the forward pass through the topology.
-
-        Returns a tensor of shape compatible with ``n_outputs``. The call
-        SHALL NOT mutate optimiser state, replay-buffer state, or
-        value-head state — those mutations belong on the learning rule.
+        Reflects the topology's enabled optional blocks (e.g. predator /
+        thermotaxis projections, continuous ``log_std``): disabled blocks
+        contribute nothing, so optimisers see byte-identical parameter
+        sets across builds that differ only in disabled options.
         """
         ...
 
