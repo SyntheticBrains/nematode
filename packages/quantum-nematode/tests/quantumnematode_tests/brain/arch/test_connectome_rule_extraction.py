@@ -12,9 +12,11 @@ builds); every assertion is a same-process two-construction comparison.
 
 from __future__ import annotations
 
+import math
 import subprocess
 import sys
 
+import pytest
 import torch
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.connectome_ppo import (
@@ -169,7 +171,7 @@ class TestLossTelemetry:
             )
             brain.learn(params, reward=0.1, episode_done=(step == _N_STEPS - 1))
         assert len(brain.history_data.losses) >= 1
-        assert all(torch.isfinite(torch.tensor(loss)) for loss in brain.history_data.losses)
+        assert all(math.isfinite(loss) for loss in brain.history_data.losses)
         assert brain.latest_data.loss is not None
 
     def test_frozen_updates_append_nothing(self) -> None:
@@ -186,6 +188,25 @@ class TestLossTelemetry:
             )
             brain.learn(params, reward=0.1, episode_done=(step == _N_STEPS - 1))
         assert brain.history_data.losses == []
+
+
+class TestTopologyIdentityGuard:
+    """The rule refuses a topology other than the one its optimiser is bound to."""
+
+    def test_step_rejects_foreign_topology(self) -> None:
+        brain_a = _make_brain()
+        brain_b = _make_brain()
+        torch.manual_seed(_DRIVE_SEED)
+        _drive_without_update(brain_a)
+        with pytest.raises(ValueError, match="other than the one"):
+            brain_a._rule.step(
+                brain_b.topology,
+                ConnectomePPOBatch(
+                    buffer=brain_a.buffer,
+                    unpack_batched=brain_a._unpack_state_batched,
+                    last_value=brain_a.last_value,
+                ),
+            )
 
 
 class TestImportDiscipline:

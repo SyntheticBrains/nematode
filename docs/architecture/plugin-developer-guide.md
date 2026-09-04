@@ -277,12 +277,16 @@ The first genuine consumer is `ConnectomePPORule` in
 the connectome brain's PPO update, extracted verbatim under a
 byte-equivalence bar. Rules live in the `learning_rules` package (not
 `quantumnematode.plasticity`, which is the quantum-plasticity
-*evaluation protocol*). One import caution for new rules: import only
-leaf modules from `brain.arch` (`._policy`, `._rule`, `._ppo_buffer`),
-never the package, and have the consuming brain import the rule lazily
-inside `__init__` — `brain/arch/__init__` imports brain modules at
-package load, so package-level imports in either direction create a
-cycle. The legacy brains keep their fused `(topology, rule)` `__init__`
+*evaluation protocol*). One import caution for new rules, and be precise
+about which half protects you: the consuming brain MUST import the rule
+lazily inside `__init__` — that lazy import is what actually breaks the
+cycle, because `brain/arch/__init__` imports every brain module at
+package load, and importing *any* `brain.arch` submodule (leaf or not)
+executes that package `__init__` first. Importing only leaf modules
+(`._policy`, `._rule`, `._ppo_buffer`) from the rule keeps the
+dependency direction clean and the module cheap, but it does not by
+itself prevent the cycle — a module-level rule import in a brain module
+reintroduces it regardless. The legacy brains keep their fused `(topology, rule)` `__init__`
 bodies; use the factored Protocols if you're writing a new brain that
 genuinely separates the two concerns.
 

@@ -20,7 +20,8 @@ inside ``ConnectomePPOBrain.__init__``).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from statistics import fmean
+from typing import TYPE_CHECKING, Any, cast
 
 import torch
 from torch import nn, optim
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
+    from quantumnematode.brain.arch._topology import BrainTopology
     from quantumnematode.brain.arch.connectome_ppo import ConnectomeTopology
 
 
@@ -65,7 +67,7 @@ class ConnectomePPOBatch:
 
 
 def _mean(values: list[float]) -> float | None:
-    return sum(values) / len(values) if values else None
+    return fmean(values) if values else None
 
 
 class ConnectomePPORule:
@@ -77,6 +79,18 @@ class ConnectomePPORule:
     torch-RNG draw order is unchanged), the Adam optimiser over
     ``topology.learnable_parameters + critic.parameters()``, and every PPO
     hyperparameter.
+
+    Two binding semantics, stated explicitly:
+
+    - The optimiser is bound to the **construction-time** topology's
+      parameters, so ``step`` refuses any other topology (a different one
+      would silently train nothing — gradients on its parameters, optimiser
+      stepping the originals). One rule per topology; construct a new rule
+      for a new topology.
+    - ``freeze_updates`` and ``chemical_mask_mode`` are **snapshots** taken
+      at construction. The pre-extraction code read ``brain.config`` live
+      on every update; no repo code mutates those fields mid-run, and doing
+      so is unsupported — reconstruct the brain for a different mode.
     """
 
     def __init__(  # noqa: PLR0913 — mirrors the config fields it caches
@@ -108,6 +122,10 @@ class ConnectomePPORule:
         # Single Adam optimiser over the topology's learnable params + critic.
         learnable = topology.learnable_parameters + list(self.critic.parameters())
         self.optimizer = optim.Adam(learnable, lr=learning_rate)
+        # Cached: the same Parameter objects in the same order for the
+        # per-minibatch grad clip (the list can never change post-init).
+        self._all_params = learnable
+        self._topology = topology
 
         self.gamma = gamma
         self.gae_lambda = gae_lambda
@@ -126,8 +144,8 @@ class ConnectomePPORule:
 
     def step(
         self,
-        topology: ConnectomeTopology,
-        batch: ConnectomePPOBatch,
+        topology: BrainTopology,
+        batch: Any,  # noqa: ANN401 — LearningRule Protocol shape (rule-specific batch)
     ) -> RuleStepReport:
         """Run one PPO update over the rollout buffer.
 
@@ -137,15 +155,26 @@ class ConnectomePPORule:
         the chemical-synapse weights are projected onto the wild-type
         adjacency after every optimiser step.
         """
+        if topology is not self._topology:
+            msg = (
+                "ConnectomePPORule.step received a topology other than the one "
+                "its optimiser was constructed over. The Adam state is bound to "
+                "the construction-time parameters, so updating a different "
+                "topology would silently train nothing — construct a new rule "
+                "for a new topology."
+            )
+            raise ValueError(msg)
+        topo = self._topology
+        ppo_batch = cast("ConnectomePPOBatch", batch)
         if self.freeze_updates:
             return RuleStepReport()
-        buffer = batch.buffer
+        buffer = ppo_batch.buffer
         if len(buffer) == 0:
             return RuleStepReport()
 
         last_value = (
-            batch.last_value
-            if batch.last_value is not None
+            ppo_batch.last_value
+            if ppo_batch.last_value is not None
             else torch.tensor(
                 [0.0],
                 device=self.device,
@@ -170,8 +199,10 @@ class ConnectomePPORule:
                 # connectome forward (and the post-K hidden states feed the
                 # critic in one call).
                 states = minibatch["states"]
-                food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = batch.unpack_batched(states)
-                new_head_out, hidden = topology.forward_with_hidden_batched(
+                food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = ppo_batch.unpack_batched(
+                    states
+                )
+                new_head_out, hidden = topo.forward_with_hidden_batched(
                     food_b,
                     predator_distal_features=distal_b,
                     predator_mechano_features=mechano_b,
@@ -186,7 +217,7 @@ class ConnectomePPORule:
                 if self.continuous:
                     new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
                         new_head_out,
-                        topology.log_std,
+                        topo.log_std,
                         minibatch["actions"],
                         self.action_low,
                         self.action_high,
@@ -208,7 +239,7 @@ class ConnectomePPORule:
                 self.optimizer.zero_grad()
                 loss.backward()
                 grad_norm = nn.utils.clip_grad_norm_(
-                    topology.learnable_parameters + list(self.critic.parameters()),
+                    self._all_params,
                     self.max_grad_norm,
                 )
                 self.optimizer.step()
@@ -220,8 +251,8 @@ class ConnectomePPORule:
                 # initial-weight prior, and PPO is free to grow new edges).
                 if self.strict_mask:
                     with torch.no_grad():
-                        topology.w_chem.data.copy_(
-                            topology.apply_weight_mask(topology.w_chem.data),
+                        topo.w_chem.data.copy_(
+                            topo.apply_weight_mask(topo.w_chem.data),
                         )
 
                 policy_losses.append(policy_loss.item())

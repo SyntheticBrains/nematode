@@ -783,8 +783,12 @@ class ConnectomeTopology(nn.Module):
         # batched (PPO replay) forward never touches E.
         if self.enable_activity_traces:
             with torch.no_grad():
+                # Masking routes through apply_weight_mask — the Protocol's
+                # single masking seam — rather than an inline m_chem multiply
+                # (bitwise-identical: 0/1 mask multiplication is exact and
+                # commutative).
                 self.activity_traces.mul_(self.trace_decay).add_(
-                    self.m_chem * torch.outer(h, h),
+                    self.apply_weight_mask(torch.outer(h, h)),
                 )
 
         # Motor pooling + readout.
@@ -1061,9 +1065,8 @@ class ConnectomePPOBrain(ClassicalBrain):
         # this module at package load, so a module-level import of
         # learning_rules here would break `import quantumnematode.learning_rules.ppo`
         # as a process's first import (partially-initialised module).
-        from quantumnematode.learning_rules.ppo import ConnectomePPOBatch, ConnectomePPORule
+        from quantumnematode.learning_rules.ppo import ConnectomePPORule
 
-        self._batch_cls = ConnectomePPOBatch
         self._rule = ConnectomePPORule(
             self.topology,
             learning_rate=config.learning_rate,
@@ -1082,9 +1085,6 @@ class ConnectomePPOBrain(ClassicalBrain):
             freeze_updates=config.freeze_updates,
             device=self.device,
         )
-
-        # Update-trigger arithmetic stays brain-side (experience collection).
-        self.num_minibatches = config.num_minibatches
 
         # Rollout buffer.
         self.buffer = RolloutBuffer(
@@ -1457,10 +1457,15 @@ class ConnectomePPOBrain(ClassicalBrain):
                 done=episode_done,
             )
 
-        if self.buffer.is_full() or (episode_done and len(self.buffer) >= self.num_minibatches):
+        min_experience = self.config.num_minibatches
+        if self.buffer.is_full() or (episode_done and len(self.buffer) >= min_experience):
+            # Lazy import (Decision 3b — same reason as in __init__); cached in
+            # sys.modules after the first call, so this is a dict lookup.
+            from quantumnematode.learning_rules.ppo import ConnectomePPOBatch
+
             report = self._rule.step(
                 self.topology,
-                self._batch_cls(
+                ConnectomePPOBatch(
                     buffer=self.buffer,
                     unpack_batched=self._unpack_state_batched,
                     last_value=self.last_value,
