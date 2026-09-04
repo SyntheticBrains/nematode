@@ -26,8 +26,8 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 ## Shipment 7a-i — Platform Freeze + Minimal Rule + the 2×2 Panel
 
-**OpenSpec changes**: `add-l4-trace-substrate` (first; rule-seam decision + traces), then a panel change (placeholders; created per milestone)
-**Status**: 🔲 not started
+**OpenSpec changes**: `add-l4-trace-substrate` (first; rule-seam decision + traces — **active**, authored 2026-08-28), then a panel change (placeholders; created per milestone)
+**Status**: 🟡 in progress (A.1/A.2 under `add-l4-trace-substrate`)
 **Roadmap layer**: L4 (minimal)
 **Approx effort**: ~3-5 active weeks (roadmap § estimate restatement)
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 1, D1/D2/D5/D7/D8/D10/D13
