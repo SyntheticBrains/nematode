@@ -25,7 +25,7 @@ A per-synapse eligibility buffer `E` (302×302, masked to the chemical edge set)
 
 ### 4. Telemetry
 
-`ConnectomePPORule.step` returns a `RuleStepReport`; the brain appends `total_loss` to `history_data.losses` — the connectome brain currently records no loss at all, so this is a declared **additive** CSV/tracking change with zero effect on training bits.
+`ConnectomePPORule.step` returns a `RuleStepReport`; the brain appends the mean **policy loss** to `history_data.losses` (the house PPO convention — lstmppo/cfc/spiking all record `avg_policy`, so the CSV column stays one quantity across brains). The connectome brain currently records no loss at all, so this is a declared **additive** tracking change with zero effect on training bits.
 
 ### 5. Tracker + docs
 
@@ -41,7 +41,7 @@ A per-synapse eligibility buffer `E` (302×302, masked to the chemical edge set)
 
 **Code**: `brain/arch/_topology.py`, `_rule.py` (Protocol reconciliation); `brain/arch/connectome_ppo.py` (trace buffer + reset hook + update delegation; config fields `enable_activity_traces`, `trace_decay`); new `quantumnematode/learning_rules/{__init__,ppo.py}`; no `_policy.py` changes (D7 pends against that module).
 
-**Tests**: new `brain/arch/test_connectome_traces.py`, `test_connectome_rule_extraction.py` (+ frozen `_legacy_connectome_update_reference.py`, M1 pattern); `test_topology_rule_protocols.py` (the conformance test the L1 change promised but never shipped); existing connectome suites must stay green unmodified.
+**Tests**: new `brain/arch/test_connectome_traces.py`, `test_connectome_rule_extraction.py` (+ frozen `_legacy_connectome_update_reference.py`, M1 pattern); `test_topology_rule_protocols.py` (the conformance test the L1 change promised but never shipped); a fresh-interpreter import-order test for the new package (Decision 3b); existing connectome suites must stay green unmodified (`brain.critic`/`brain.optimizer` survive as delegating properties).
 
 **Docs**: `docs/architecture/plugin-developer-guide.md`; `openspec/changes/phase7-tracking/tasks.md`; `CHANGELOG.md`.
 

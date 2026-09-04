@@ -4,9 +4,11 @@
 
 ### Requirement: Brain Topology Protocol
 
-The system SHALL provide a `BrainTopology` Protocol that exposes the structural seam a learning rule needs — the weight-mask projector and the learnable parameters — factored out from learning-rule concerns (optimisers, replay buffers, value heads). Forward-pass signatures are topology-specific and SHALL NOT be part of the Protocol: a rule receives replayed activations and features via its `batch`, not by invoking the topology's forward itself. `ConnectomeTopology` SHALL satisfy the Protocol at runtime (`isinstance` under `runtime_checkable`). *(Contract reconciled 2026-08-28: the previous `n_inputs`/`n_outputs`/`n_hidden` + `forward(x)` mandate had zero conforming implementations and zero consumers.)*
+The system SHALL provide a `BrainTopology` Protocol that exposes the structural seam a learning rule needs — the weight-mask projector and the learnable parameters — factored out from learning-rule concerns (optimisers, replay buffers, value heads). Forward-pass signatures are topology-specific and SHALL NOT be part of the Protocol: a rule that needs to re-forward experience under current weights — as PPO does once per minibatch per epoch — SHALL call its **concrete** topology's own methods, a surface beyond the Protocol, which carries only the seam every rule shares. `ConnectomeTopology` SHALL satisfy the Protocol at runtime (`isinstance` under `runtime_checkable`). *(Contract reconciled 2026-08-28: the previous `n_inputs`/`n_outputs`/`n_hidden` + `forward(x)` mandate had zero conforming implementations and zero consumers.)*
 
 #### Scenario: Topology exposes shape attributes
+
+*(Heading kept for scenario continuity across the MODIFIED delta; the body governs.)*
 
 - **WHEN** a `BrainTopology` implementation is inspected
 - **THEN** topology-specific shape metadata MAY be exposed (e.g. `ConnectomeTopology.n_neurons` / `n_food_features`)
@@ -14,14 +16,17 @@ The system SHALL provide a `BrainTopology` Protocol that exposes the structural 
 
 #### Scenario: Topology computes a forward pass
 
-- **WHEN** a topology's forward pass is invoked by its owning brain
+*(Heading kept for scenario continuity across the MODIFIED delta; the body governs.)*
+
+- **WHEN** a topology's forward pass is invoked by its owning brain — or by a concrete rule re-forwarding experience under current weights
 - **THEN** the call SHALL be free of optimiser, replay-buffer, or value-head state changes
-- **AND** the forward signature SHALL NOT be part of the Protocol — it is topology-specific, and a rule never calls it directly
+- **AND** the forward signature SHALL NOT be part of the Protocol — it is topology-specific; a rule that re-forwards does so against the concrete topology, beyond the Protocol surface
 
 #### Scenario: Topology exposes its learnable parameters
 
 - **WHEN** a `BrainTopology` implementation is inspected
 - **THEN** the instance SHALL expose `learnable_parameters` returning the parameters a learning rule may update
+- **AND** the Protocol SHALL declare it as a **property**, matching the `ConnectomeTopology` implementation, so static (pyright) conformance holds as well as `runtime_checkable` conformance
 - **AND** the returned set SHALL reflect the topology's enabled optional blocks (e.g. predator / thermotaxis projections, continuous `log_std`)
 
 #### Scenario: Topology applies weight mask

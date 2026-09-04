@@ -7,8 +7,9 @@ traces), byte-identical-when-off. The minimal three-factor rule (A.3) and the D1
 ## 1. Protocol reconciliation
 
 - [ ] 1.1 `_topology.py`: `BrainTopology` = `apply_weight_mask(weights)` + `learnable_parameters`
-  (list of `nn.Parameter`); drop `n_inputs`/`n_outputs`/`n_hidden` and `forward` from the Protocol;
-  update docstrings to the Decision-2 contract.
+  declared as a **property** returning `list[nn.Parameter]` (static conformance, M3); drop
+  `n_inputs`/`n_outputs`/`n_hidden` and `forward` from the Protocol; update docstrings to the
+  Decision-2 contract (rules that re-forward call the concrete topology, beyond the Protocol).
 - [ ] 1.2 `_rule.py`: keep `step(topology, batch) -> RuleStepReport` + `reset_episode()`; soften the
   ownership docstring (brain-owned experience buffer may arrive via `batch`); no signature changes.
 - [ ] 1.3 New `tests/.../brain/arch/test_topology_rule_protocols.py`: `isinstance(topology,
@@ -22,22 +23,33 @@ traces), byte-identical-when-off. The minimal three-factor rule (A.3) and the D1
 - [ ] 2.1 Create `quantumnematode/learning_rules/{__init__.py, ppo.py}` (D8 — do NOT touch
   `quantumnematode/plasticity/`, the quantum-plasticity eval protocol).
 - [ ] 2.2 `ConnectomePPORule`: owns Adam optimiser, critic (`nn.Linear(n_neurons, 1)`, orthogonal
-  init at the same construction point so RNG streams are unchanged), PPO hyperparameters, and the
-  epoch × minibatch loop; `step(topology, batch)` executes the ops of `_perform_ppo_update`
-  **verbatim** — same six `_policy.py` symbols, same argument order, `freeze_updates` /
-  empty-buffer short-circuits preserved, strict-mask projection at the same post-optimiser point.
-- [ ] 2.3 `batch` object: buffer minibatch iterator (same RNG stream + draw order) + the brain's
-  `_unpack_state_batched` bound as a callable + `last_value` fallback — exactly what the inline code
-  consumed, nothing more.
+  init at the same construction point — immediately after topology construction — so RNG streams
+  are unchanged), PPO hyperparameters **including `gamma`/`gae_lambda` (the rule computes returns +
+  advantages itself)**, and the epoch × minibatch loop, calling `buffer.get_minibatches` once
+  **per epoch** (fresh permutation per call — the RNG draws the byte-equivalence bar protects);
+  constructor receives the continuous flag, action bounds, `chemical_mask_mode`, and device.
+  `step(topology, batch)` executes the ops of `_perform_ppo_update` **verbatim** — the three
+  update-path `_policy.py` helpers (`categorical_evaluate_torch`,
+  `continuous_evaluate_tanh_gaussian`, `ppo_clip_policy_loss`) with identical arguments (samplers
+  stay brain-side), `freeze_updates` / empty-buffer short-circuits preserved (still returning a
+  `RuleStepReport` with `None` loss fields), strict-mask projection at the same post-optimiser point.
+- [ ] 2.3 `batch` object: the **buffer handle** + the brain's `_unpack_state_batched` bound as a
+  callable + `last_value` — exactly what the inline code consumed, nothing more.
 - [ ] 2.4 Brain delegation: `ConnectomePPOBrain` constructs the rule in `__init__` (no
   `_build_infra_kwargs` change), `learn()` calls `rule.step(...)` where it called
-  `_perform_ppo_update()`; `optimizer`/`critic` attributes move onto the rule (grep for external
-  readers first; tests use `_drive_one_ppo_update`, not the attributes).
+  `_perform_ppo_update()` and keeps `buffer.reset()`; `brain.critic` / `brain.optimizer` remain as
+  **thin delegating properties** (`test_connectome_ppo_continuous.py:120` reads `brain.critic`;
+  suites must stay green unmodified per 3.3).
+- [ ] 2.5 Import discipline (Decision 3b): the rule import in `connectome_ppo.py` is **lazy, inside
+  `__init__`**; `learning_rules/ppo.py` imports only leaf modules (`brain.arch._policy`, `._rule`,
+  `._ppo_buffer`), never the `brain.arch` package; add a fresh-interpreter (subprocess) test that
+  `import quantumnematode.learning_rules.ppo` as the first import succeeds.
 
-## 3. Byte-equivalence suite (written BEFORE the extraction lands)
+## 3. Byte-equivalence suite (committed BEFORE the delegation commit)
 
 - [ ] 3.1 Freeze the pre-change update as `tests/.../brain/arch/_legacy_connectome_update_reference.py`
-  (M1 pattern), operating on a deep-copied brain state.
+  (M1 pattern), **copied from this branch's merge-base tree**, operating on a deep-copied brain
+  state — commit ordering inside the PR is what makes "suite before extraction" enforceable.
 - [ ] 3.2 `test_connectome_rule_extraction.py`: identical seeds + identical buffer contents ⇒
   `torch.equal` on every learnable parameter and critic weight after the update, and identical
   torch RNG state; parametrised over discrete/continuous heads and strict/soft-prior mask modes.
@@ -49,17 +61,23 @@ traces), byte-identical-when-off. The minimal three-factor rule (A.3) and the D1
 ## 4. Trace substrate (A.2)
 
 - [ ] 4.1 Config fields on `ConnectomePPOBrainConfig`: `enable_activity_traces: bool = False`,
-  `trace_decay: float = 0.9` (inert placeholder; biological calibration is A.3's). Fields on the
-  model ⇒ the `_warn_unknown_brain_config_keys` load-time path covers them.
+  `trace_decay: float = Field(0.9, ge=0.0, lt=1.0)` (inert placeholder; a decay ≥ 1 is a divergent
+  accumulator; biological calibration is A.3's). Fields on the model ⇒ the
+  `_warn_unknown_brain_config_keys` path covers typos; the pydantic bounds cover values (tracker
+  Decision B.6). Test: out-of-range `trace_decay` raises at load.
 - [ ] 4.2 `ConnectomeTopology`: conditionally-allocated `(n_neurons, n_neurons)` float32 buffer `E`
   (zeros; allocated only when enabled; consumes no RNG; constructed after all RNG-consuming
   blocks per the in-file discipline at L180-184/453-457/534-538); `reset_traces()` method.
-- [ ] 4.3 Trace update in `forward_with_hidden` under `torch.no_grad()`, once per env step:
-  `E ← trace_decay·E + m_chem ∘ (h hᵀ)` with `E[i,j]` pre-`i`→post-`j` aligned to `w_chem`; the
-  **batched** forward does not touch `E`.
-- [ ] 4.4 `prepare_episode()`: `topology.reset_traces()` + `rule.reset_episode()` (was a no-op);
-  terminal-`learn`-sees-old-traces ordering documented in the method docstring.
-- [ ] 4.5 `test_connectome_traces.py`: off ⇒ constructed tensors byte-identical to default (034
+- [ ] 4.3 Trace update in `forward_with_hidden` under `torch.no_grad()` (**load-bearing** — the
+  rollout forward is grad-enabled), v1 formula `E ← trace_decay·E + m_chem ∘ (h hᵀ)` with `E[i,j]`
+  pre-`i`→post-`j` aligned to `w_chem`; the **batched** forward does not touch `E`. Document the
+  once-per-env-step call-site convention on the method (the diagnostic `forward()` shim would also
+  update `E` when enabled; no diagnostic path enables traces).
+- [ ] 4.4 `prepare_episode()`: `topology.reset_traces()` (a **no-op when `E` is unallocated**) +
+  `rule.reset_episode()` (was a no-op); terminal-`learn`-sees-old-traces ordering documented in the
+  method docstring.
+- [ ] 4.5 `test_connectome_traces.py`: off ⇒ constructed tensors byte-identical to a default-config
+  construction (034
   `TestWiringControl` template) and no `E` attribute allocated; on ⇒ decay recurrence matches the
   closed form over a scripted step sequence; masked (E is zero off-edges); reset at
   `prepare_episode`; **training-bit-invariance** — same seed, traces on vs off ⇒ `torch.equal`
@@ -70,7 +88,9 @@ traces), byte-identical-when-off. The minimal three-factor rule (A.3) and the D1
 
 - [ ] 5.1 `step` returns `RuleStepReport` (means of `policy_loss`, `value_loss`, `entropy`,
   `total_loss`, `grad_norm` across the epoch × minibatch iterations); brain appends
-  `report.total_loss` to `history_data.losses`.
+  `report.policy_loss` to `history_data.losses` — the house PPO convention (`avg_policy` in
+  lstmppo/cfc/spiking) — with a `None`-guard (the freeze / empty-buffer short-circuits return a
+  `RuleStepReport` with `None` loss fields and append nothing).
 - [ ] 5.2 Test: after one update, `history_data.losses` is non-empty and finite; with
   `freeze_updates` it stays empty.
 
