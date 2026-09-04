@@ -12,8 +12,7 @@ traces), byte-identical-when-off. The minimal three-factor rule (A.3) and the D1
   Decision-2 contract (rules that re-forward call the concrete topology, beyond the Protocol).
 - [x] 1.2 `_rule.py`: keep `step(topology, batch) -> RuleStepReport` + `reset_episode()`; soften the
   ownership docstring (brain-owned experience buffer may arrive via `batch`); no signature changes.
-- [x] 1.3 New `tests/.../brain/arch/test_topology_rule_protocols.py`: `isinstance(topology,
-  BrainTopology)` and `isinstance(rule, LearningRule)` both pass for the connectome pair (the
+- [x] 1.3 New `tests/.../brain/arch/test_topology_rule_protocols.py`: `isinstance(topology, BrainTopology)` and `isinstance(rule, LearningRule)` both pass for the connectome pair (the
   conformance test the L1 change promised at `archive/2026-05-24-.../tasks.md:85` but never shipped).
 - [x] 1.4 Update `docs/architecture/plugin-developer-guide.md` §§ topology/rule (~L234-301) so the
   conformance and consumer claims are true as written.

@@ -200,7 +200,7 @@ class ConnectomePPORule:
                 # critic in one call).
                 states = minibatch["states"]
                 food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = ppo_batch.unpack_batched(
-                    states
+                    states,
                 )
                 new_head_out, hidden = topo.forward_with_hidden_batched(
                     food_b,
