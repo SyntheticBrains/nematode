@@ -28,12 +28,15 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
-from pydantic import Field, model_validator
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._plasticity_config import (
+    UNMODULATED_RULES,
+    PlasticityConfigMixin,
+)
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_sample_torch,
@@ -130,14 +133,6 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
-# Rules that read the eligibility trace, and so require it to be enabled.
-_PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
-# Plastic rules that apply no neuromodulatory factor — the ablation floors.
-# A new plastic rule must be classified here deliberately rather than
-# inheriting a default: whether an update is gated by reward is the property
-# the panel's floors are built to isolate, so getting it silently wrong would
-# mislabel an arm rather than break it.
-_UNMODULATED_RULES = frozenset({"hebbian"})
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -156,7 +151,7 @@ _N_ACTIONS = 4
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class ConnectomePPOBrainConfig(BrainConfig):
+class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     """Configuration for the connectome-constrained PPO brain."""
 
     connectome_source: Literal["cook_2019_hermaphrodite"] = "cook_2019_hermaphrodite"
@@ -206,63 +201,6 @@ class ConnectomePPOBrainConfig(BrainConfig):
     # perturbs neither the food nor the predator RNG-stream order.
     enable_thermotaxis_projection: bool = False
     freeze_updates: bool = False
-
-    # ── Activity-trace substrate (opt-in) ────────────────────
-    # Per-synapse eligibility traces E on the chemical edge set, accumulated
-    # during rollout forwards for future three-factor rules. Off by default:
-    # trace-off builds are byte-identical, and (until a rule consumes E)
-    # trace-ON training is bit-identical too. ``trace_decay`` is bounded to
-    # [0, 1) at load time — a decay >= 1 is a divergent accumulator; the 0.9
-    # default is an inert placeholder (biological calibration is the
-    # three-factor rule change's problem, not claimed here).
-    enable_activity_traces: bool = False
-    trace_decay: float = Field(default=0.9, ge=0.0, lt=1.0)
-
-    # ── Learning rule ────────────────────────────────────────
-    # Which update mechanism trains this brain. ``ppo`` is the default and
-    # is byte-identical to builds predating this field. ``three_factor``
-    # selects reward-modulated Hebbian plasticity over the chemical
-    # synapses; ``hebbian`` is the same update with the neuromodulatory
-    # factor removed — plain co-activity learning, the ablation that
-    # separates "learned something" from "learned something from reward".
-    # Both plastic modes read the eligibility trace above, hence the
-    # load-time pairing check below.
-    learning_rule: Literal["ppo", "three_factor", "hebbian"] = "ppo"
-
-    # Three-factor hyperparameters (ignored under ``ppo``). Bounds are
-    # load-time rather than advisory: a non-positive rate makes the rule a
-    # no-op, a decay outside [0, 1) either does nothing or inverts weights
-    # each step, and a non-positive bound collapses every synapse to zero.
-    plasticity_rate: float = Field(default=0.01, gt=0.0)
-    plasticity_weight_decay: float = Field(default=0.001, ge=0.0, lt=1.0)
-    # The bound must clear the initialisation it will be applied to. Chemical
-    # weights start at N(0, 1/sqrt(chemical in-degree)), whose tail reaches
-    # ~1.5 on this connectome, so a bound of 1.0 would clamp a handful of
-    # synapses on the very first update — silently starting this arm from a
-    # different substrate than the frozen-weights baseline it is compared
-    # against. 3.0 is roughly ten times the initial standard deviation:
-    # ample room for growth, no contact with the starting weights.
-    plasticity_weight_bound: float = Field(default=3.0, gt=0.0)
-    plasticity_baseline_rate: float = Field(default=0.01, gt=0.0, le=1.0)
-
-    @model_validator(mode="after")
-    def _validate_rule_pairing(self) -> ConnectomePPOBrainConfig:
-        """Reject a plasticity rule with no eligibility trace to read.
-
-        The three-factor update is proportional to the trace, so without
-        one every update is identically zero: training would appear to run
-        and change nothing. Failing at load is the difference between a
-        typo and a silently wasted campaign.
-        """
-        if self.learning_rule in _PLASTIC_RULES and not self.enable_activity_traces:
-            msg = (
-                f"learning_rule={self.learning_rule!r} requires "
-                "enable_activity_traces=true: the update is proportional to the "
-                "eligibility trace, so without one every weight update would be "
-                "identically zero."
-            )
-            raise ValueError(msg)
-        return self
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -697,6 +635,32 @@ class ConnectomeTopology(nn.Module):
         contract: stateless, no in-place mutation of ``self``.
         """
         return weights * self.m_chem.to(weights.dtype)
+
+    # -- Plastic-topology seam: views over existing tensors, no new state --
+    # The plasticity rule reads these instead of naming w_chem / m_chem /
+    # activity_traces, so the same rule drives other substrates unchanged.
+    # Each is the live tensor object, not a copy: the rule updates
+    # plastic_weights[0] in place and that IS w_chem.
+
+    @property
+    def plastic_weights(self) -> list[torch.Tensor]:
+        """The chemical synapse matrix -- the one tensor plasticity may change."""
+        return [self.w_chem]
+
+    @property
+    def eligibility_traces(self) -> list[torch.Tensor]:
+        """The per-synapse trace aligned with ``plastic_weights``.
+
+        Only meaningful when traces are enabled; the rule checks the flag
+        first and refuses to step without one, so this never reads an
+        unallocated buffer in practice.
+        """
+        return [self.activity_traces]
+
+    @property
+    def plastic_masks(self) -> list[torch.Tensor]:
+        """The chemical edge mask aligned with ``plastic_weights``."""
+        return [self.m_chem]
 
     def set_anatomical_readout(self) -> None:
         """Overwrite the motor readout with the contrast its pools imply.
@@ -1280,7 +1244,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 weight_bound=config.plasticity_weight_bound,
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
-                modulated=config.learning_rule not in _UNMODULATED_RULES,
+                modulated=config.learning_rule not in UNMODULATED_RULES,
                 device=self.device,
             )
             # The PPO rule is discarded rather than retained: keeping it
