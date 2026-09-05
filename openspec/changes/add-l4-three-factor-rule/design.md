@@ -102,6 +102,16 @@ Two repairs were available. The rule could expose a null value head, keeping the
 
 The back-compatibility accessors for the value head and optimiser are kept, but under the plastic rule they raise an error naming the active rule rather than surfacing an attribute error from inside the delegation — the difference between "this rule has no optimiser" and a traceback that reads like a bug.
 
+## Decision 9 — the magnitude bound must clear the initialisation (found in implementation)
+
+Writing the alignment test surfaced a defect in the first choice of default bound. At `1.0`, **12 of 3,709** chemical synapses (0.32%, tail reaching |w| ≈ 1.5) sit outside the bound at initialisation, because weights are drawn `N(0, 1/sqrt(chemical in-degree))` and a neuron with in-degree 1 draws at unit scale. The clamp runs on every update, so the very first one — even with a zero prediction error and no decay — would silently truncate those synapses.
+
+The consequence is out of proportion to the number: the plastic arm would no longer begin from the same weights as the frozen-weights baseline it is measured against, and the difference would be invisible, attributed to learning rather than to a clamp firing before any learning happened.
+
+The default is `3.0` — roughly ten times the initial standard deviation, leaving ample room for growth while making no contact with the starting weights. Two tests pin the property rather than the number: that the default bound exceeds the largest initial weight across several seeds, and that a zero-prediction-error update leaves the substrate bit-identical.
+
+The general rule this instance illustrates, worth stating because the arm changes will set these values again: **a stabiliser must not modify the thing it is stabilising before the process it bounds has begun.**
+
 ## Risks
 
 - **The rule may not learn under a frozen readout** (Decision 3). Detected by the D2 frozen-weights floor; interpretation rule fixed in advance.

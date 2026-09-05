@@ -224,7 +224,14 @@ class ConnectomePPOBrainConfig(BrainConfig):
     # each step, and a non-positive bound collapses every synapse to zero.
     plasticity_rate: float = Field(default=0.01, gt=0.0)
     plasticity_weight_decay: float = Field(default=0.001, ge=0.0, lt=1.0)
-    plasticity_weight_bound: float = Field(default=1.0, gt=0.0)
+    # The bound must clear the initialisation it will be applied to. Chemical
+    # weights start at N(0, 1/sqrt(chemical in-degree)), whose tail reaches
+    # ~1.5 on this connectome, so a bound of 1.0 would clamp a handful of
+    # synapses on the very first update — silently starting this arm from a
+    # different substrate than the frozen-weights baseline it is compared
+    # against. 3.0 is roughly ten times the initial standard deviation:
+    # ample room for growth, no contact with the starting weights.
+    plasticity_weight_bound: float = Field(default=3.0, gt=0.0)
     plasticity_baseline_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
     @model_validator(mode="after")

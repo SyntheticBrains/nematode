@@ -209,3 +209,140 @@ class TestTraceLifecycleUnderThePlasticRule:
 
         assert torch.all(brain.topology.activity_traces == 0)
         assert torch.all(brain.topology.prev_activity == 0)
+
+
+class TestStabilisationBoundsValidation:
+    """Unusable plasticity settings fail before a run, not during one."""
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("plasticity_rate", 0.0),  # a zero rate makes the rule a no-op
+            ("plasticity_rate", -0.1),
+            ("plasticity_weight_decay", -0.1),
+            ("plasticity_weight_decay", 1.0),  # >= 1 inverts weights each step
+            ("plasticity_weight_bound", 0.0),  # collapses every synapse to zero
+            ("plasticity_weight_bound", -1.0),
+            ("plasticity_baseline_rate", 0.0),  # baseline would never track
+            ("plasticity_baseline_rate", 1.5),
+        ],
+    )
+    def test_out_of_range_setting_rejected(self, field: str, value: float) -> None:
+        with pytest.raises(ValidationError, match=field):
+            ConnectomePPOBrainConfig(
+                learning_rule="three_factor",
+                enable_activity_traces=True,
+                **{field: value},  # type: ignore[arg-type]
+            )
+
+    def test_in_range_settings_accepted(self) -> None:
+        cfg = ConnectomePPOBrainConfig(
+            learning_rule="three_factor",
+            enable_activity_traces=True,
+            plasticity_rate=0.05,
+            plasticity_weight_decay=0.01,
+            plasticity_weight_bound=2.0,
+            plasticity_baseline_rate=0.1,
+        )
+        assert cfg.plasticity_rate == 0.05
+
+
+class TestRewardCreditsTheStepThatEarnedIt:
+    """Alignment is inclusive of the current step, by design."""
+
+    def test_reward_gates_eligibility_including_its_own_step(self) -> None:
+        """The synapses that produced the action are the ones credited.
+
+        The trace is updated during the forward pass that selects an action,
+        and the reward for that action arrives on the following ``learn``.
+        Excluding the current step would be equally implementable and would
+        silently change what the rule credits, so the inclusive semantics
+        are pinned here.
+
+        Driven from the second step onward, since the first accrues no
+        eligibility and so cannot distinguish the two conventions.
+        """
+        # Decay off: it is proportional to the weights rather than the trace,
+        # so it would mask the alignment this test isolates.
+        brain = _plastic(plasticity_weight_decay=0.0)
+        brain.prepare_episode()
+        torch.manual_seed(_SEED + 3)
+
+        def act(step: int) -> None:
+            brain.run_brain(
+                BrainParams(
+                    food_gradient_strength=0.4 + 0.05 * step,
+                    food_gradient_direction=0.1 * step,
+                ),
+                reward=None,
+                input_data=None,
+                top_only=False,
+                top_randomize=False,
+            )
+
+        # Step 0 accrues nothing; step 1 is the first with eligibility.
+        act(0)
+        brain.learn(BrainParams(), reward=0.0)
+        act(1)
+
+        trace_before_update = brain.topology.activity_traces.detach().clone()
+        assert trace_before_update.abs().sum() > 0
+
+        weights_before = brain.topology.w_chem.detach().clone()
+        brain.learn(BrainParams(), reward=1.0)
+        applied = brain.topology.w_chem - weights_before
+
+        # The applied change must be the plasticity rate times the prediction
+        # error times the trace that ALREADY INCLUDES this step's
+        # contribution. Had the rule gated only strictly-earlier eligibility,
+        # the expected tensor below would be the previous step's trace and
+        # this would not hold.
+        errors = brain.history_data.plasticity_prediction_error
+        expected = brain.config.plasticity_rate * errors[-1] * trace_before_update
+
+        assert torch.allclose(applied, expected, rtol=0.0, atol=1e-7)
+        assert torch.all(applied[~brain.topology.m_chem] == 0)
+
+
+class TestBoundClearsInitialisation:
+    """The clamp must not modify the substrate before learning starts."""
+
+    def test_default_bound_does_not_clip_initial_weights(self) -> None:
+        """Otherwise the plastic arm starts from a different substrate.
+
+        Chemical weights are drawn N(0, 1/sqrt(chemical in-degree)), whose
+        tail reaches well past 1.0 on this connectome. A bound at or below
+        that tail would clamp a handful of synapses on the first update,
+        so this arm would no longer begin where the frozen-weights baseline
+        it is compared against begins.
+        """
+        for seed in (7, 909, 4242):
+            brain = ConnectomePPOBrain(
+                config=ConnectomePPOBrainConfig(
+                    seed=seed,
+                    action_mode="continuous",
+                    learning_rule="three_factor",
+                    enable_activity_traces=True,
+                ),
+                device=DeviceType.CPU,
+            )
+            edges = brain.topology.m_chem
+            largest = brain.topology.w_chem.detach()[edges].abs().max().item()
+            assert largest < brain.config.plasticity_weight_bound, seed
+
+    def test_initial_weights_survive_a_no_op_update(self) -> None:
+        """A zero prediction error must leave the substrate exactly as found."""
+        brain = _plastic(plasticity_weight_decay=0.0)
+        before = brain.topology.w_chem.detach().clone()
+        brain.prepare_episode()
+        torch.manual_seed(_SEED + 4)
+        brain.run_brain(
+            BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0),
+            reward=None,
+            input_data=None,
+            top_only=False,
+            top_randomize=False,
+        )
+        brain.learn(BrainParams(), reward=0.0)
+
+        assert torch.equal(before, brain.topology.w_chem)
