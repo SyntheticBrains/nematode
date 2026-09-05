@@ -148,6 +148,15 @@ class ConnectomeThreeFactorRule:
             self.baseline += self.baseline_rate * delta
 
             weights = topo.w_chem.data
+            # Snapshot before writing: the reported weight change must be
+            # what the weights ACTUALLY did, not what the update proposed.
+            # Once synapses reach the magnitude bound the clamp discards the
+            # proposal entirely, and reporting the proposal would show a
+            # healthy learning signal for a rule that has become a constant
+            # function — defeating the one telemetry meant to detect exactly
+            # that.
+            before = weights.detach().clone()
+
             if self.freeze_updates:
                 # Nothing is written at all — not the Hebbian term, not the
                 # decay, not the clamp. A clamp alone would still edit a
@@ -155,7 +164,7 @@ class ConnectomeThreeFactorRule:
                 # the silent substrate change a frozen control exists to
                 # avoid. Reporting continues, so the control can be compared
                 # step-for-step against the plastic arm.
-                update = torch.zeros_like(weights)
+                pass
             else:
                 # Hebbian term over the eligibility trace, plus decay toward
                 # zero. Decay is what keeps unreinforced synapses from
@@ -172,7 +181,7 @@ class ConnectomeThreeFactorRule:
                 weights.add_(update)
                 weights.clamp_(-self.weight_bound, self.weight_bound)
 
-            mean_abs_delta = update.abs().mean().item()
+            mean_abs_delta = (weights - before).abs().mean().item()
             # Fraction measured over real synapses only: the off-edge zeros
             # are not saturated, and counting them would dilute the signal
             # by the connectome's sparsity and hide a saturating run.

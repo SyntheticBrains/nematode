@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 import torch
+from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.connectome_ppo import (
     ConnectomePPOBrain,
     ConnectomePPOBrainConfig,
@@ -49,6 +50,10 @@ def _rule(topology: ConnectomeTopology, **overrides: object) -> ConnectomeThreeF
     }
     kwargs.update(overrides)
     return ConnectomeThreeFactorRule(topology, device=torch.device("cpu"), **kwargs)  # type: ignore[arg-type]
+
+
+def _params(strength: float = 0.45, angle: float = 0.15) -> BrainParams:
+    return BrainParams(food_gradient_strength=strength, food_gradient_direction=angle)
 
 
 def _seed_trace(topology: ConnectomeTopology, value: float = 0.5) -> torch.Tensor:
@@ -299,3 +304,117 @@ class TestGuards:
 
         with pytest.raises(ValueError, match="requires activity traces"):
             rule.step(traceless, ThreeFactorBatch(reward=1.0))
+
+
+class TestReportedChangeIsTheEffectiveChange:
+    """Telemetry must describe what the weights did, not what was proposed."""
+
+    def test_saturated_weights_report_zero_change(self) -> None:
+        """A rule pinned at its clamp has become a constant function.
+
+        Reporting the proposed update instead would show a healthy learning
+        signal for a rule doing nothing at all — defeating the single metric
+        meant to detect that.
+        """
+        brain = _brain()
+        topology = brain.topology
+        _seed_trace(topology, value=1.0)
+        rule = _rule(
+            topology,
+            plasticity_rate=0.5,
+            weight_bound=0.05,
+            weight_decay=0.0,
+            baseline_rate=0.0,
+        )
+
+        # Drive hard enough that every synapse reaches the bound.
+        for _ in range(10):
+            rule.step(topology, ThreeFactorBatch(reward=10.0))
+
+        before = topology.w_chem.detach().clone()
+        report = rule.step(topology, ThreeFactorBatch(reward=10.0))
+
+        assert torch.equal(before, topology.w_chem), "expected a fully saturated topology"
+        assert report.extra[MEAN_ABS_DELTA_KEY] == 0.0
+        assert report.extra[SATURATED_FRACTION_KEY] > 0.0
+
+    def test_reported_change_matches_measured_change(self) -> None:
+        brain = _brain()
+        topology = brain.topology
+        _seed_trace(topology, value=0.4)
+        rule = _rule(topology, plasticity_rate=0.2, weight_bound=10.0)
+
+        before = topology.w_chem.detach().clone()
+        report = rule.step(topology, ThreeFactorBatch(reward=2.0))
+        measured = (topology.w_chem - before).abs().mean().item()
+
+        assert report.extra[MEAN_ABS_DELTA_KEY] == pytest.approx(measured, abs=1e-9)
+
+    def test_partial_clamping_is_reported_as_partial(self) -> None:
+        """Between "free" and "pinned" the reported change must track reality."""
+        brain = _brain()
+        topology = brain.topology
+        _seed_trace(topology, value=1.0)
+        # A bound just above the initial spread: some synapses clamp, most do not.
+        rule = _rule(topology, plasticity_rate=0.05, weight_bound=2.0, weight_decay=0.0)
+
+        before = topology.w_chem.detach().clone()
+        report = rule.step(topology, ThreeFactorBatch(reward=5.0))
+        measured = (topology.w_chem - before).abs().mean().item()
+
+        assert measured > 0.0
+        assert report.extra[MEAN_ABS_DELTA_KEY] == pytest.approx(measured, abs=1e-9)
+
+
+class TestPreviousStateSurvivesStateDictRoundTrip:
+    """Restoring topology state must restore whether that state is usable."""
+
+    def test_validity_flag_round_trips(self) -> None:
+        """Otherwise a restored previous step is silently treated as absent.
+
+        ``prev_activity`` is a buffer and would restore; a plain attribute
+        beside it would not, leaving the pair inconsistent and dropping one
+        step of eligibility after every restore.
+        """
+        source = _brain()
+        with torch.no_grad():
+            source.topology.prev_activity.fill_(0.3)
+            source.topology.prev_activity_valid.fill_(True)  # noqa: FBT003 — buffer write
+
+        target = _brain()
+        target.topology.load_state_dict(source.topology.state_dict())
+
+        assert bool(target.topology.prev_activity_valid)
+        assert torch.equal(target.topology.prev_activity, source.topology.prev_activity)
+
+    def test_restored_state_accrues_eligibility_immediately(self) -> None:
+        """The step after a restore credits the restored previous activity."""
+        source = _brain()
+        with torch.no_grad():
+            source.topology.prev_activity.fill_(0.3)
+            source.topology.prev_activity_valid.fill_(True)  # noqa: FBT003 — buffer write
+
+        target = _brain()
+        target.topology.load_state_dict(source.topology.state_dict())
+        assert torch.all(target.topology.activity_traces == 0)
+
+        torch.manual_seed(_SEED)
+        target.run_brain(
+            _params(),
+            reward=None,
+            input_data=None,
+            top_only=False,
+            top_randomize=False,
+        )
+
+        # Without the restored flag this first step would accrue nothing.
+        assert target.topology.activity_traces.abs().sum() > 0
+
+    def test_reset_clears_the_flag(self) -> None:
+        brain = _brain()
+        with torch.no_grad():
+            brain.topology.prev_activity_valid.fill_(True)  # noqa: FBT003 — buffer write
+
+        brain.topology.reset_traces()
+
+        assert not bool(brain.topology.prev_activity_valid)

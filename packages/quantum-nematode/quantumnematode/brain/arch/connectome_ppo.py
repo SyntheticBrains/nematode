@@ -291,6 +291,7 @@ class ConnectomeTopology(nn.Module):
     # Allocated only when ``enable_activity_traces`` is on (guard every use).
     activity_traces: torch.Tensor
     prev_activity: torch.Tensor
+    prev_activity_valid: torch.Tensor
     _food_neuron_indices: torch.Tensor
     _motor_flat_indices: torch.Tensor
     _motor_class_boundaries: torch.Tensor
@@ -653,15 +654,23 @@ class ConnectomeTopology(nn.Module):
             # Previous step's settled state, the pre-synaptic factor of the
             # eligibility outer product. Held as a buffer so it follows the
             # topology across devices and state-dict round-trips like the
-            # trace it feeds. ``_has_prev_state`` distinguishes "no previous
-            # step yet" from "previous step was all zeros" — the first step
-            # of an episode must contribute no eligibility, and a zero vector
-            # alone cannot express that.
+            # trace it feeds.
             self.register_buffer(
                 "prev_activity",
                 torch.zeros(self.n_neurons, device=device),
             )
-            self._has_prev_state = False
+            # Whether ``prev_activity`` holds a real previous step. A zero
+            # vector cannot express this on its own — "no previous step yet"
+            # and "the previous step was all zeros" must stay distinguishable,
+            # because only the first accrues no eligibility. Registered as a
+            # buffer rather than kept as a plain attribute so it round-trips
+            # with the state it qualifies: restoring ``prev_activity`` while
+            # silently resetting its validity would drop one step of
+            # eligibility and leave the two inconsistent.
+            self.register_buffer(
+                "prev_activity_valid",
+                torch.zeros((), dtype=torch.bool, device=device),
+            )
 
     def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
         """Project a candidate weight tensor onto the strict-mask manifold.
@@ -736,7 +745,7 @@ class ConnectomeTopology(nn.Module):
         if self.enable_activity_traces:
             self.activity_traces.zero_()
             self.prev_activity.zero_()
-            self._has_prev_state = False
+            self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
         """Per-state ``log_std`` from the settled hidden state.
@@ -925,7 +934,7 @@ class ConnectomeTopology(nn.Module):
         # never touches E or the previous state.
         if self.enable_activity_traces:
             with torch.no_grad():
-                if self._has_prev_state:
+                if self.prev_activity_valid:
                     # Masking routes through apply_weight_mask — the Protocol's
                     # single masking seam — rather than an inline m_chem multiply
                     # (bitwise-identical: 0/1 mask multiplication is exact and
@@ -937,7 +946,7 @@ class ConnectomeTopology(nn.Module):
                     # First step of an episode: no presynaptic history, so
                     # nothing is eligible. Decay still applies to nothing,
                     # leaving E at its reset zeros.
-                    self._has_prev_state = True
+                    self.prev_activity_valid.fill_(True)  # noqa: FBT003 — buffer write
                 self.prev_activity.copy_(h)
 
         # Motor pooling + readout.

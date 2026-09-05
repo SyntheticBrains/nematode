@@ -120,6 +120,16 @@ That matters more here than it would elsewhere: the frozen-weights baseline is t
 
 The freeze is now **total**: no Hebbian term, no decay, and no clamp. The clamp deserves the explicit exclusion — it is the only remaining path by which a frozen arm could still be edited, and it would fire on any weight that began outside the bound, exactly the silent substrate change a control exists to prevent. Reporting continues, so the control stays comparable step-for-step with its pair.
 
+## Decision 11 — telemetry reports the effective change, not the proposal (found at PR review)
+
+`mean |Δw|` was computed from the update the rule *proposed*, before the magnitude clamp had its say. Measured on a deliberately saturated topology, the rule reported `|Δw| = 0.203` while the weights moved by **exactly zero** — every synapse pinned at the bound, the rule a constant function, and the one metric meant to reveal that showing a healthy learning signal.
+
+The interaction is what makes it serious rather than cosmetic. Saturated fraction and mean change were designed as a pair: high saturation with a collapsing change is the signature of a rule that has stopped learning. Reporting the proposal broke the second half of that pair precisely when it was needed, so a panel arm that saturated in its first hundred steps would have looked healthy in the telemetry built to catch it.
+
+The weights are now snapshotted before the write and the reported change is measured against them, so it is the effective post-clamp difference. Three tests pin it: fully saturated reports zero, unclamped reports the measured change, and partial clamping reports the partial amount.
+
+The general form, worth carrying into the arm changes: **a health metric computed from an intention rather than an outcome will agree with the outcome exactly until the moment it matters.**
+
 ## Risks
 
 - **The rule may not learn under a frozen readout** (Decision 3). Detected by the D2 frozen-weights floor; interpretation rule fixed in advance.

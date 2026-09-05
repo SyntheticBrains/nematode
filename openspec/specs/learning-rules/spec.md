@@ -123,6 +123,8 @@ Reporting SHALL continue while frozen, so the control remains comparable step-fo
 
 The rule SHALL report, per update, the prediction error, the running baseline, the mean absolute weight change, and the fraction of synapses at the magnitude bound, so that a saturating or inert rule is visible during a run.
 
+The reported weight change SHALL be the **effective** change — measured against the weights as they stood before the update, after any stabilising clamp — and not the change the update proposed. A rule whose synapses have reached the bound writes nothing while still proposing a large update, so reporting the proposal would show a healthy learning signal for a rule that has become a constant function, defeating this requirement's purpose at exactly the point it is needed.
+
 #### Scenario: Health signals are reported every update
 
 - **WHEN** the rule steps
@@ -133,3 +135,4 @@ The rule SHALL report, per update, the prediction error, the running baseline, t
 - **GIVEN** a run driven until weights reach the magnitude bound
 - **WHEN** the telemetry is inspected
 - **THEN** the saturated fraction SHALL be non-zero
+- **AND** the reported weight change SHALL be zero, because the clamp discarded the update

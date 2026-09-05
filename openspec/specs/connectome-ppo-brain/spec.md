@@ -444,7 +444,8 @@ The default selection SHALL be byte-identical to the pre-change brain: identical
 #### Scenario: Selecting a rule does not change construction
 
 - **WHEN** two brains are constructed at the same seed with different rule selections
-- **THEN** all topology parameters SHALL be byte-identical at initialisation
+- **THEN** every topology parameter other than the motor readout SHALL be byte-identical at initialisation
+- **AND** the readout SHALL differ only as the anatomical-readout requirement below prescribes
 
 ### Requirement: Anatomically-derived motor readout under the plastic rule
 
