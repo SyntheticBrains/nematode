@@ -12,6 +12,7 @@ from pathlib import Path
 
 import yaml
 from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrainConfig
+from quantumnematode.brain.arch.mlpppo import MLPPPOBrainConfig
 from quantumnematode.utils.config_loader import load_simulation_config
 
 _REPO_ROOT = Path(__file__).resolve().parents[4].parent
@@ -120,3 +121,49 @@ class TestSanityFloorConfigs:
         stem = _VARIANT.name.removesuffix(".yml")
         assert _FROZEN.name.startswith(stem)
         assert _HEBBIAN.name.startswith(stem)
+
+
+_MLP_VARIANT = _VARIANT.with_name(_VARIANT.name.replace("connectomeppo", "mlpppo"))
+_MLP_PARENT = _MLP_VARIANT.with_name(_MLP_VARIANT.name.replace("_plastic", ""))
+
+
+class TestMatchedRuleMLPConfig:
+    """The yardstick arm differs from its PPO parent only by the rule keys."""
+
+    def test_mlp_plastic_is_a_minimal_delta(self) -> None:
+        parent = _flatten(yaml.safe_load(_MLP_PARENT.read_text()))
+        variant = _flatten(yaml.safe_load(_MLP_VARIANT.read_text()))
+        assert set(variant) - set(parent) == _EXPECTED_ADDED
+        assert set(parent) - set(variant) == set()
+        assert {k for k in set(parent) & set(variant) if parent[k] != variant[k]} == set()
+
+    def test_mlp_plastic_loads_and_selects_the_rule(self) -> None:
+        config = load_simulation_config(str(_MLP_VARIANT))
+        assert config.brain is not None
+        brain_config = config.brain.config
+        assert isinstance(brain_config, MLPPPOBrainConfig)
+        assert brain_config.learning_rule == "three_factor"
+        assert brain_config.enable_activity_traces is True
+
+    def test_mlp_and_connectome_plastic_arms_share_every_plasticity_value(self) -> None:
+        """Matched means the same numbers, read from the actual arm configs."""
+        mlp = load_simulation_config(str(_MLP_VARIANT)).brain
+        conn = load_simulation_config(str(_VARIANT)).brain
+        assert mlp is not None
+        assert conn is not None
+        for field in (
+            "learning_rule",
+            "plasticity_rate",
+            "plasticity_weight_decay",
+            "plasticity_weight_bound",
+            "plasticity_baseline_rate",
+            "trace_decay",
+            "enable_activity_traces",
+        ):
+            assert getattr(mlp.config, field) == getattr(conn.config, field), field
+
+    def test_mlp_parent_is_unchanged(self) -> None:
+        config = load_simulation_config(str(_MLP_PARENT))
+        assert config.brain is not None
+        assert isinstance(config.brain.config, MLPPPOBrainConfig)
+        assert config.brain.config.learning_rule == "ppo"

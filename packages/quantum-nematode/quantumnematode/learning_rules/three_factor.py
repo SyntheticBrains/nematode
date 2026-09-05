@@ -42,6 +42,7 @@ import torch
 from quantumnematode.brain.arch._rule import RuleStepReport
 
 if TYPE_CHECKING:
+    from quantumnematode.brain.arch._brain import BrainHistoryData
     from quantumnematode.brain.arch._topology import BrainTopology, PlasticTopology
 
 # Telemetry keys, shared with the brain that records them.
@@ -240,6 +241,25 @@ class ThreeFactorRule:
         baseline is deliberately retained across episodes. Kept as a
         documented no-op for the ``LearningRule`` lifecycle.
         """
+
+
+def record_plasticity_report(
+    history_data: BrainHistoryData,
+    report: RuleStepReport,
+    reward: float,
+) -> None:
+    """Append one plasticity step's telemetry to a brain's history.
+
+    Shared by every brain that hosts the rule, so the four keys -- and what
+    they mean -- cannot drift between the arms a panel compares. Also records
+    the reward, matching where the gradient path records it.
+    """
+    extra = report.extra
+    history_data.plasticity_prediction_error.append(extra[PREDICTION_ERROR_KEY])
+    history_data.plasticity_baseline.append(extra[BASELINE_KEY])
+    history_data.plasticity_mean_abs_delta.append(extra[MEAN_ABS_DELTA_KEY])
+    history_data.plasticity_saturated_fraction.append(extra[SATURATED_FRACTION_KEY])
+    history_data.rewards.append(reward)
 
 
 # The connectome was the first substrate this rule drove, and existing code

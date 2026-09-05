@@ -46,6 +46,11 @@ from pydantic import field_validator
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._mlp_topology import MLPTopology
+from quantumnematode.brain.arch._plasticity_config import (
+    UNMODULATED_RULES,
+    PlasticityConfigMixin,
+)
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_evaluate_torch,
@@ -71,6 +76,9 @@ from quantumnematode.brain.modules import (
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
+if TYPE_CHECKING:
+    from quantumnematode.learning_rules.three_factor import ThreeFactorRule
+
 # Default hyperparameters
 DEFAULT_ACTOR_HIDDEN_DIM = 64
 DEFAULT_CRITIC_HIDDEN_DIM = 64
@@ -89,7 +97,7 @@ DEFAULT_MAX_GRAD_NORM = 0.5
 EPISODE_LOG_INTERVAL = 25
 
 
-class MLPPPOBrainConfig(BrainConfig):
+class MLPPPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     """Configuration for the MLPPPOBrain architecture.
 
     Uses modular feature extraction via sensory_modules (required).
@@ -314,6 +322,38 @@ class MLPPPOBrain(ClassicalBrain):
         self._episode_count = 0
         self._current_episode_rewards: list[float] = []
 
+        # ── Learning rule ────────────────────────────────────────
+        # Everything above is built regardless of the rule, in the same
+        # order, so the torch-RNG stream -- and every PPO result recorded for
+        # this brain -- is untouched by the selection. The critic and
+        # optimiser exist under a plastic rule too; they are simply never
+        # used. The topology wraps the actor by reference (no rebuild, no
+        # RNG, no new state-dict keys) and is where the traces live.
+        self.freeze_updates = config.freeze_updates
+        self._uses_ppo = config.learning_rule == "ppo"
+        self.topology = MLPTopology(
+            self.actor,
+            enable_activity_traces=config.enable_activity_traces,
+            trace_decay=config.trace_decay,
+        )
+        self._rule: ThreeFactorRule | None = None
+        if not self._uses_ppo:
+            # Lazy: brain/arch/__init__ imports this module at package load,
+            # and learning_rules imports brain.arch leaves, so a module-level
+            # import here would cycle. Cached after the first call.
+            from quantumnematode.learning_rules.three_factor import ThreeFactorRule
+
+            self._rule = ThreeFactorRule(
+                self.topology,
+                plasticity_rate=config.plasticity_rate,
+                weight_decay=config.plasticity_weight_decay,
+                weight_bound=config.plasticity_weight_bound,
+                baseline_rate=config.plasticity_baseline_rate,
+                freeze_updates=config.freeze_updates,
+                modulated=config.learning_rule not in UNMODULATED_RULES,
+                device=self.device,
+            )
+
     def _init_feature_expansion(self, config: MLPPPOBrainConfig) -> None:
         """Initialize feature expansion for ablation experiments."""
         if config.feature_expansion == "polynomial":
@@ -506,7 +546,7 @@ class MLPPPOBrain(ClassicalBrain):
         self,
         state: np.ndarray,
         action: int | None = None,
-    ) -> tuple[int, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[int, torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """
         Get action, log probability, entropy, and value for a state.
 
@@ -522,9 +562,17 @@ class MLPPPOBrain(ClassicalBrain):
 
         features = self._apply_torch_gating(x)
 
-        # Get action logits and value
-        logits = self.actor(features)
-        value = self.critic(features)
+        # Under a plastic rule this is the ONE traced forward of the step --
+        # run_brain's later probability pass uses the untraced actor, so
+        # eligibility accrues exactly once -- and the critic is skipped rather
+        # than stubbed: a rule that owns no value head must not be handed one
+        # to keep an unused call site alive.
+        if self._uses_ppo:
+            logits = self.actor(features)
+            value = self.critic(features)
+        else:
+            logits = self.topology(features)
+            value = None
 
         # Action distribution via the shared discrete policy helper (byte-equivalent
         # to the prior inline softmax → Categorical → sample/log_prob/entropy).
@@ -619,8 +667,14 @@ class MLPPPOBrain(ClassicalBrain):
         features = self._apply_torch_gating(
             torch.tensor(x, dtype=torch.float32, device=self.device),
         )
-        mean = self.actor(features)
-        value = self.critic(features)
+        # Same discipline as the discrete path: one traced forward per step
+        # under a plastic rule, and no value computed for a rule with no critic.
+        if self._uses_ppo:
+            mean = self.actor(features)
+            value = self.critic(features)
+        else:
+            mean = self.topology(features)
+            value = None
         self.last_value = value
 
         if self._state_dependent_std:
@@ -664,11 +718,32 @@ class MLPPPOBrain(ClassicalBrain):
         *,
         episode_done: bool = False,
     ) -> None:
-        """Add experience to buffer and update if buffer is full."""
+        """Update from this step's reward.
+
+        Under PPO this buffers experience and updates when the buffer fills
+        or the episode ends. Under a plastic rule it applies one
+        reward-modulated update immediately: the neuromodulator's arrival
+        relative to the standing eligibility IS the mechanism, so batching
+        it across a rollout would average modulators over traces that have
+        already decayed by different amounts.
+        """
         self._current_episode_rewards.append(reward)
+
+        if not self._uses_ppo:
+            self._learn_plastic(reward)
+            return
 
         # Add to buffer if we have pending state
         if hasattr(self, "_pending_state"):
+            # The value is only ever unset on the plastic path, which returned
+            # above; reaching here without one is an ordering bug, not a
+            # state to paper over with zeros.
+            if self._pending_value is None:
+                msg = (
+                    "MLPPPOBrain.learn reached the PPO buffer with no pending value. "
+                    "Did the env call learn() before run_brain()?"
+                )
+                raise RuntimeError(msg)
             self.buffer.add(
                 state=self._pending_state,
                 action=self._pending_action,
@@ -686,8 +761,30 @@ class MLPPPOBrain(ClassicalBrain):
         # Store for history
         self.history_data.rewards.append(reward)
 
+    def _learn_plastic(self, reward: float) -> None:
+        """Apply one plasticity update for this step.
+
+        The rollout buffer, advantage estimation, and value head are never
+        touched: the rule reads the topology's eligibility traces and the
+        scalar reward, and nothing else.
+        """
+        from quantumnematode.learning_rules.three_factor import (
+            ThreeFactorBatch,
+            record_plasticity_report,
+        )
+
+        if self._rule is None:
+            msg = "MLPPPOBrain._learn_plastic called under the PPO rule."
+            raise RuntimeError(msg)
+        report = self._rule.step(self.topology, ThreeFactorBatch(reward=reward))
+        record_plasticity_report(self.history_data, report, reward)
+
     def _perform_ppo_update(self) -> None:
         """Perform PPO update using collected experience."""
+        # Paired-control branch, honoured here as it is on the connectome so
+        # the flag means the same thing on every brain under every rule.
+        if self.freeze_updates:
+            return
         if len(self.buffer) == 0:
             return
 
@@ -785,7 +882,14 @@ class MLPPPOBrain(ClassicalBrain):
         """No-op for MLPPPOBrain."""
 
     def prepare_episode(self) -> None:
-        """Prepare for a new episode."""
+        """Reset per-episode plasticity state at episode start.
+
+        A no-op on the PPO path with traces off, so it is byte-identical to
+        the pre-change brain there.
+        """
+        self.topology.reset_traces()
+        if self._rule is not None:
+            self._rule.reset_episode()
 
     def post_process_episode(
         self,

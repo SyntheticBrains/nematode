@@ -67,6 +67,17 @@ class TestSeamConformance:
     def test_alias_is_the_same_class(self) -> None:
         assert ConnectomeThreeFactorRule is ThreeFactorRule
 
+    def test_connectome_seam_is_a_view_not_a_copy(self) -> None:
+        """The rule updates plastic_weights[0] in place, and that must BE w_chem."""
+        topo = _topology()
+        assert topo.plastic_weights[0] is topo.w_chem
+        assert topo.eligibility_traces[0] is topo.activity_traces
+        assert topo.plastic_masks[0] is topo.m_chem
+        # Writing through the seam is writing to the connectome.
+        with torch.no_grad():
+            topo.plastic_weights[0].add_(1.0)
+        assert bool((topo.w_chem == topo.plastic_weights[0]).all())
+
 
 @pytest.mark.parametrize(
     ("modulated", "freeze_updates"),

@@ -200,7 +200,6 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # projection; constructed after the predator block so flipping it on
     # perturbs neither the food nor the predator RNG-stream order.
     enable_thermotaxis_projection: bool = False
-    freeze_updates: bool = False
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -1711,20 +1710,12 @@ class ConnectomePPOBrain(ClassicalBrain):
         scalar reward, and nothing else.
         """
         from quantumnematode.learning_rules.three_factor import (
-            BASELINE_KEY,
-            MEAN_ABS_DELTA_KEY,
-            PREDICTION_ERROR_KEY,
-            SATURATED_FRACTION_KEY,
             ThreeFactorBatch,
+            record_plasticity_report,
         )
 
         report = self._rule.step(self.topology, ThreeFactorBatch(reward=reward))
-        extra = report.extra
-        self.history_data.plasticity_prediction_error.append(extra[PREDICTION_ERROR_KEY])
-        self.history_data.plasticity_baseline.append(extra[BASELINE_KEY])
-        self.history_data.plasticity_mean_abs_delta.append(extra[MEAN_ABS_DELTA_KEY])
-        self.history_data.plasticity_saturated_fraction.append(extra[SATURATED_FRACTION_KEY])
-        self.history_data.rewards.append(reward)
+        record_plasticity_report(self.history_data, report, reward)
 
     def update_memory(self, reward: float | None = None) -> None:
         """No-op (Brain Protocol surface; weight updates land in ``learn``)."""

@@ -71,6 +71,14 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_weight_bound: float = Field(default=3.0, gt=0.0)
     plasticity_baseline_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
+    # ── Paired-control freeze ────────────────────────────────
+    # Run everything -- rollouts, telemetry, bookkeeping -- but never write
+    # a weight. Honoured by every rule on every brain that inherits this, so
+    # a "frozen" arm means the same thing wherever it appears: a control that
+    # quietly kept learning would be indistinguishable from a plastic arm in
+    # its config and very different in its results.
+    freeze_updates: bool = False
+
     @model_validator(mode="after")
     def _validate_rule_pairing(self) -> PlasticityConfigMixin:
         """Reject a plasticity rule with no eligibility trace to read.
