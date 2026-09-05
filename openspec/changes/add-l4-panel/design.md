@@ -143,7 +143,8 @@ band test is reported under every verdict.
 - **Grid**: `plasticity_rate ∈ {0.003, 0.01, 0.03}` — the shipped default and a third and three
   times it. Every other rule hyperparameter (weight decay, bound, baseline rate, trace decay) stays
   at its default; the grid is one axis on purpose, so the pilot is a recipe check, not a search.
-- **Runs**: the six rule-bearing arms at each grid point, plus the frozen arms once (their weights
+- **Runs**: the five rule-bearing arms (the wild-type and rewired Hebbian and three-factor connectome
+  arms, and the MLP) at each grid point, plus the frozen arms once (their weights
   never move, so the rate is irrelevant to them), at pilot seeds 101–102, at a pilot budget of
   3000 episodes. If any three-factor arm at the selected rate has not converged on either pilot
   seed by 3000, that arm's pilot is extended once to 6000 before the budget is pinned (the

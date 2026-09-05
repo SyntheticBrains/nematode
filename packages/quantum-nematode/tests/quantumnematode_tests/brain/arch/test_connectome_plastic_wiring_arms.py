@@ -30,6 +30,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[6]
 _ARMS = _REPO_ROOT / "configs" / "scenarios" / "foraging_predator_thermal"
 _WILD = _ARMS / "connectomeppo_small_continuous2d_combined_klinotaxis_plastic.yml"
 _REWIRED = _ARMS / "connectomeppo_small_continuous2d_combined_klinotaxis_plastic_rewired_null.yml"
+_REWIRED_FROZEN = _ARMS / (
+    "connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen_rewired_null.yml"
+)
+_REWIRED_HEBBIAN = _ARMS / (
+    "connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null.yml"
+)
 
 _SEED = 23
 # Verified to yield a different rewiring from _SEED; "differs" is probabilistic
@@ -196,3 +202,38 @@ class TestPairingBySeed:
     def test_rewire_seed_derives_from_the_run_seed(self) -> None:
         """Unset in the config, so seed k of each arm is a matched pair."""
         assert _config(_REWIRED).rewire_seed is None
+
+
+class TestRewiredFloorsShareTheNullWiring:
+    """The rewired floors sit on exactly the wiring the plastic rewired-null arm learns on.
+
+    This is the premise of the within-wiring learning-gain contrast: subtracting the rewired
+    frozen floor from the plastic rewired-null arm is a like-for-like subtraction only if the
+    two are built on the same rewired graph, which the run-seed-derived rewire_seed provides.
+    """
+
+    @pytest.mark.parametrize(
+        "floor",
+        [_REWIRED_FROZEN, _REWIRED_HEBBIAN],
+        ids=["frozen", "hebbian"],
+    )
+    def test_masks_and_gap_matrices_are_identical_at_one_seed(
+        self,
+        arms: tuple[ConnectomePPOBrain, ConnectomePPOBrain],
+        floor: Path,
+    ) -> None:
+        _wild, rewired = arms
+        floor_brain = _brain(floor)
+        assert torch.equal(floor_brain.topology.m_chem, rewired.topology.m_chem)
+        assert torch.equal(floor_brain.topology.g_gap, rewired.topology.g_gap)
+        # And not the wild-type's: the floor is on the null wiring, not merely on *a* wiring.
+        assert not torch.equal(floor_brain.topology.m_chem, _wild.topology.m_chem)
+
+    def test_initial_weights_are_identical_at_one_seed(
+        self,
+        arms: tuple[ConnectomePPOBrain, ConnectomePPOBrain],
+    ) -> None:
+        """Same wiring, same seed, same initial draws: the floor IS the arm before learning."""
+        _wild, rewired = arms
+        frozen = _brain(_REWIRED_FROZEN)
+        assert torch.equal(frozen.topology.w_chem, rewired.topology.w_chem)
