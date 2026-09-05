@@ -37,6 +37,8 @@ from statistics import median
 import torch
 from torch import nn
 
+_SUMMARY = (__doc__ or "").splitlines()[0]
+
 _MICROSECONDS = 1e6
 
 
@@ -134,7 +136,7 @@ def time_workload(workload: Workload, device_name: str, warmup: int) -> float:
 
 def parse_arguments() -> argparse.Namespace:
     """Parse benchmark options."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=_SUMMARY)
     parser.add_argument(
         "--repeats",
         type=int,

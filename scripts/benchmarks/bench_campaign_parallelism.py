@@ -32,6 +32,8 @@ import sys
 import time
 from pathlib import Path
 
+_SUMMARY = (__doc__ or "").splitlines()[0]
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CAMPAIGN_RUNNER = PROJECT_ROOT / "scripts" / "run_campaign.py"
 DEFAULT_CONFIG = (
@@ -91,7 +93,7 @@ def run_campaign(config: Path, seeds: str, runs: int, workers: int, output_dir: 
 
 def parse_arguments() -> argparse.Namespace:
     """Parse benchmark options."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=_SUMMARY)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="Config to run.")
     parser.add_argument("--seeds", default="1-16", help="Seed spec for every level (default 1-16).")
     parser.add_argument("--runs", type=int, default=20, help="Episodes per run (default 20).")

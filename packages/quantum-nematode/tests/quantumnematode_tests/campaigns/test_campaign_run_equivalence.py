@@ -74,12 +74,21 @@ class TestCampaignRunEquivalence:
         output_dir = tmp_path / "campaign"
         exit_code = campaign.main(
             [
-                "--config", str(CONFIG),
-                "--seeds", str(_SEED),
-                "--runs", str(_EPISODES),
-                "--workers", "1",
-                "--output-dir", str(output_dir),
-                "--", "--theme", "headless", "--log-level", "NONE",
+                "--config",
+                str(CONFIG),
+                "--seeds",
+                str(_SEED),
+                "--runs",
+                str(_EPISODES),
+                "--workers",
+                "1",
+                "--output-dir",
+                str(output_dir),
+                "--",
+                "--theme",
+                "headless",
+                "--log-level",
+                "NONE",
             ],
         )
         assert exit_code == 0
@@ -90,12 +99,18 @@ class TestCampaignRunEquivalence:
 
         hand = subprocess.run(  # noqa: S603 — fixed argv, no shell
             [
-                sys.executable, str(SIMULATION_PATH),
-                "--config", str(CONFIG),
-                "--seed", str(_SEED),
-                "--runs", str(_EPISODES),
-                "--theme", "headless",
-                "--log-level", "NONE",
+                sys.executable,
+                str(SIMULATION_PATH),
+                "--config",
+                str(CONFIG),
+                "--seed",
+                str(_SEED),
+                "--runs",
+                str(_EPISODES),
+                "--theme",
+                "headless",
+                "--log-level",
+                "NONE",
             ],
             capture_output=True,
             text=True,

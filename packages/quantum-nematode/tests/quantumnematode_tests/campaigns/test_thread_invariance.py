@@ -20,10 +20,13 @@ connectome-scale matmul.
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import pytest
 import torch
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _SEED = 2026
 _THREAD_COUNTS = (1, 2, 4)

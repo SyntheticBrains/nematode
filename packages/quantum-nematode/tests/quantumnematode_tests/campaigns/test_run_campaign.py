@@ -41,7 +41,7 @@ def campaign() -> ModuleType:
 
 @pytest.fixture
 def stub_runner(tmp_path: Path) -> Path:
-    """A child script that records when it ran, then exits.
+    """Build a child script that records when it ran, then exits.
 
     Exits non-zero when handed ``--fail``, so failure handling can be driven
     deterministically.
@@ -111,7 +111,7 @@ class TestSeedParsing:
 
     @pytest.mark.parametrize("spec", ["", "abc", "1-x", "4-2", "1,,x"])
     def test_malformed_specs_raise(self, campaign: ModuleType, spec: str) -> None:
-        with pytest.raises(ValueError, match="seed|Invalid|No seeds"):
+        with pytest.raises(ValueError, match=r"seed|Invalid|No seeds"):
             campaign.parse_seeds(spec)
 
 
@@ -181,7 +181,7 @@ class TestPassthroughSplitting:
 class TestDryRun:
     """Dry run plans without executing."""
 
-    def test_starts_no_process(
+    def test_starts_no_process(  # noqa: PLR0913
         self,
         campaign: ModuleType,
         configs: list[Path],
@@ -195,8 +195,15 @@ class TestDryRun:
         monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
 
         exit_code = campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1-3", "--runner", str(stub_runner),
-             "--dry-run"],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1-3",
+                "--runner",
+                str(stub_runner),
+                "--dry-run",
+            ],
         )
 
         assert exit_code == 0
@@ -220,8 +227,18 @@ class TestExecution:
         monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
 
         exit_code = campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1-4", "--runner", str(stub_runner),
-             "--workers", "4", "--output-dir", str(tmp_path / "out")],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1-4",
+                "--runner",
+                str(stub_runner),
+                "--workers",
+                "4",
+                "--output-dir",
+                str(tmp_path / "out"),
+            ],
         )
 
         assert exit_code == 0
@@ -241,8 +258,20 @@ class TestExecution:
         monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
 
         campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1", "--runner", str(stub_runner),
-             "--output-dir", str(tmp_path / "out"), "--", "--marker", "sentinel", "--extra-flag"],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1",
+                "--runner",
+                str(stub_runner),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--",
+                "--marker",
+                "sentinel",
+                "--extra-flag",
+            ],
         )
 
         record = _records(record_dir)[0]
@@ -263,8 +292,16 @@ class TestExecution:
         monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
 
         campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1", "--runner", str(stub_runner),
-             "--output-dir", str(tmp_path / "out")],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1",
+                "--runner",
+                str(stub_runner),
+                "--output-dir",
+                str(tmp_path / "out"),
+            ],
         )
 
         assert _records(record_dir)[0]["omp"] == "1"
@@ -283,8 +320,16 @@ class TestExecution:
         output_dir = tmp_path / "out"
 
         campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1-3", "--runner", str(stub_runner),
-             "--output-dir", str(output_dir)],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1-3",
+                "--runner",
+                str(stub_runner),
+                "--output-dir",
+                str(output_dir),
+            ],
         )
 
         assert len(list((output_dir / "logs").glob("*.log"))) == 3
@@ -306,8 +351,18 @@ class TestConcurrencyBound:
         monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
 
         campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1-6", "--runner", str(stub_runner),
-             "--workers", "2", "--output-dir", str(tmp_path / "out")],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1-6",
+                "--runner",
+                str(stub_runner),
+                "--workers",
+                "2",
+                "--output-dir",
+                str(tmp_path / "out"),
+            ],
         )
 
         # Children record their own start/end; count the maximum overlap. Each
@@ -327,7 +382,7 @@ class TestConcurrencyBound:
 class TestFailureHandling:
     """A failing run is reported without aborting the campaign."""
 
-    def test_failure_sets_exit_code_and_others_still_run(
+    def test_failure_sets_exit_code_and_others_still_run(  # noqa: PLR0913
         self,
         campaign: ModuleType,
         configs: list[Path],
@@ -341,8 +396,18 @@ class TestFailureHandling:
         monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
 
         exit_code = campaign.main(
-            ["--config", str(configs[0]), "--seeds", "1-3", "--runner", str(stub_runner),
-             "--output-dir", str(tmp_path / "out"), "--", "--fail"],
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1-3",
+                "--runner",
+                str(stub_runner),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--",
+                "--fail",
+            ],
         )
 
         assert exit_code == 1
@@ -399,3 +464,55 @@ class TestDefaultWorkers:
         import os
 
         assert campaign.default_workers() <= (os.cpu_count() or 1)
+
+
+class TestInterruptTerminatesChildren:
+    """Cancelling stops in-flight children rather than orphaning them."""
+
+    def test_cancel_terminates_running_processes(
+        self,
+        campaign: ModuleType,
+        tmp_path: Path,
+    ) -> None:
+        import subprocess
+
+        executor = campaign.CampaignExecutor(log_dir=tmp_path, workers=1)
+        # A child that would outlive the test if it were never terminated.
+        process = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+        )
+        executor._processes.add(process)
+        try:
+            assert process.poll() is None
+
+            executor.cancel()
+
+            # terminate() is asynchronous; wait rather than racing it.
+            assert process.wait(timeout=10) is not None
+        finally:
+            if process.poll() is None:  # pragma: no cover — cleanup only
+                process.kill()
+                process.wait(timeout=10)
+
+    def test_cancel_stops_further_launches(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+        stub_runner: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Once cancelled, queued runs are not started."""
+        record_dir = tmp_path / "records"
+        record_dir.mkdir()
+        monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
+
+        executor = campaign.CampaignExecutor(log_dir=tmp_path, workers=1)
+        executor.cancel()
+
+        plan = campaign.plan_runs(configs[:1], [1, 2, 3])
+        commands = [campaign.build_command(run, stub_runner, None, []) for run in plan]
+        results = executor.run_all(plan, commands)
+
+        assert all(not result.ok for result in results)
+        assert list(record_dir.iterdir()) == []

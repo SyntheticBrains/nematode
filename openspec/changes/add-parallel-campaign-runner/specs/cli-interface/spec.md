@@ -10,12 +10,20 @@ The device options offered by the CLI SHALL correspond to backends the running b
 
 When a selected accelerator is unavailable in the running build, the CLI SHALL raise a clear error before brain construction that names the requested device, states that it is unavailable, and names the platform-appropriate alternative.
 
+The availability check SHALL apply to brains that place tensors on the PyTorch device. It SHALL NOT be applied to brains in the `quantum` family, for which `gpu` selects the Qiskit simulator's own GPU device: that backend has separate requirements, so PyTorch's view of CUDA is not evidence about it, and rejecting on that basis would refuse a working configuration.
+
 #### Scenario: Requesting CUDA on a build without CUDA
 
 - **GIVEN** a PyTorch build without CUDA support
-- **WHEN** the CLI is invoked with the `gpu` device
+- **WHEN** the CLI is invoked with the `gpu` device and a brain that places tensors on the PyTorch device
 - **THEN** it SHALL exit with a clear error naming the unavailable device and the platform-appropriate alternative
 - **AND** SHALL NOT surface a raw torch assertion from inside brain construction
+
+#### Scenario: Quantum brains are not judged by PyTorch's accelerator availability
+
+- **GIVEN** a PyTorch build without CUDA support
+- **WHEN** the CLI is invoked with the `gpu` device and a brain in the `quantum` family
+- **THEN** the selection SHALL be accepted, leaving availability to the Qiskit backend that owns it
 
 #### Scenario: Requesting MPS where it is available
 

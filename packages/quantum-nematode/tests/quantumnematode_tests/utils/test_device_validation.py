@@ -111,3 +111,60 @@ class TestAcceleratorAvailability:
         with pytest.raises(ValueError, match="not available in this PyTorch build") as excinfo:
             validate_device_selection(DeviceType.MPS, _TORCH_BRAIN)
         assert "mps" in str(excinfo.value)
+
+
+class TestValidationDerivesFromRegistry:
+    """Coverage follows registration, so new architectures are not missed."""
+
+    def test_every_registered_quantum_brain_rejects_torch_only_devices(self) -> None:
+        """No hand-maintained list: the check reads each brain's family tags.
+
+        A new quantum architecture is covered the moment it registers, which
+        is the property that makes this validation durable rather than a
+        snapshot of the brains that existed when it was written.
+        """
+        from quantumnematode.brain.arch._registry import get_all_registrations
+
+        quantum = [
+            name
+            for name, registration in get_all_registrations().items()
+            if "quantum" in registration.families
+        ]
+        assert quantum, "expected at least one registered quantum brain"
+
+        for name in quantum:
+            with pytest.raises(ValueError, match="PyTorch-only accelerator"):
+                validate_device_selection(DeviceType.MPS, name)
+
+    def test_non_quantum_brains_are_not_rejected_on_family_grounds(self) -> None:
+        from quantumnematode.brain.arch._registry import get_all_registrations
+
+        classical = [
+            name
+            for name, registration in get_all_registrations().items()
+            if "quantum" not in registration.families
+        ]
+        assert classical
+
+        # Either it passes, or it fails on availability — never on family.
+        family_rejections = []
+        for name in classical:
+            try:
+                validate_device_selection(DeviceType.MPS, name)
+            except ValueError as exc:
+                if "PyTorch-only accelerator" in str(exc):
+                    family_rejections.append(name)
+        assert family_rejections == []
+
+
+class TestQuantumAcceleratorsAreLeftToQiskit:
+    """`gpu` on a quantum brain selects Aer's device, not torch's."""
+
+    @pytest.mark.skipif(torch.cuda.is_available(), reason="requires a build without CUDA")
+    def test_gpu_accepted_for_quantum_brain_without_torch_cuda(self) -> None:
+        """Torch's view of CUDA is not evidence about qiskit-aer-gpu.
+
+        Rejecting here would refuse a configuration that works whenever the
+        Aer GPU wheel is installed but the torch build is CPU-only.
+        """
+        validate_device_selection(DeviceType.GPU, _QUANTUM_BRAIN)
