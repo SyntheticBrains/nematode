@@ -45,4 +45,4 @@
 - [x] 6.1 `uv run pre-commit run --all-files` green (the mandatory pre-push gate — CI Code Quality runs all-files).
 - [x] 6.2 Full non-nightly suite green.
 - [x] 6.3 Confirm no implementation code or docstring references planning docs, roadmap IDs, OpenSpec changes, or logbooks; technical rationale stated intrinsically.
-- [ ] 6.4 Re-review the change for drift, archive, review the branch, open the PR.
+- [x] 6.4 Re-review the change for drift, archive, review the branch, open the PR. (Drift found and fixed: the availability requirement was unqualified while the implementation scopes the torch check to torch-backed brains.)

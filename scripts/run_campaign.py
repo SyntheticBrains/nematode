@@ -189,6 +189,14 @@ class CampaignExecutor:
             )
             with self._lock:
                 self._processes.add(process)
+                # Re-check under the same lock `cancel` snapshots under. Without
+                # this, a cancel landing between the check above and this add
+                # would miss the child entirely: it would not appear in the
+                # snapshot, and nothing else would ever terminate it, so the
+                # campaign would wait on a run the user already interrupted.
+                cancelled = self._cancelled.is_set()
+            if cancelled and process.poll() is None:
+                process.terminate()
             try:
                 returncode = process.wait()
             finally:

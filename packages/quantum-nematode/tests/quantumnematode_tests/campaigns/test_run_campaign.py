@@ -516,3 +516,47 @@ class TestInterruptTerminatesChildren:
 
         assert all(not result.ok for result in results)
         assert list(record_dir.iterdir()) == []
+
+    def test_cancel_racing_a_launch_still_terminates(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A cancel landing mid-launch must not leave the child running.
+
+        The dangerous interleaving is narrow: a worker passes the pre-launch
+        cancellation check, and only then does `cancel` run and snapshot the
+        process set — without finding this child, because it has not been
+        registered yet. Nothing else would ever terminate it, so the campaign
+        would wait on a run the user already interrupted.
+
+        Sleeping until the race happens by chance would be flaky and would
+        usually miss, so the window is reproduced exactly: `Popen` is wrapped
+        to fire the cancellation *after* the pre-check has passed and *before*
+        the process is registered. Only the re-check under the registration
+        lock can catch it, so this fails if that re-check is removed.
+        """
+        import subprocess
+
+        sleeper = tmp_path / "sleeper.py"
+        sleeper.write_text("import time; time.sleep(60)\n", encoding="utf-8")
+
+        executor = campaign.CampaignExecutor(log_dir=tmp_path, workers=1)
+        real_popen = subprocess.Popen
+
+        def cancelling_popen(*args: object, **kwargs: object) -> object:
+            # Stand in for `cancel` having run and snapshotted an empty set.
+            executor._cancelled.set()
+            return real_popen(*args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(campaign.subprocess, "Popen", cancelling_popen)
+
+        plan = campaign.plan_runs(configs[:1], [1])
+        results = executor.run_all(plan, [[sys.executable, str(sleeper)]])
+
+        # The child sleeps 60s; anything near that means it was never killed.
+        assert len(results) == 1
+        assert results[0].seconds < 30
+        assert not results[0].ok
