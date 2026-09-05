@@ -167,3 +167,36 @@ class TestMatchedRuleMLPConfig:
         assert config.brain is not None
         assert isinstance(config.brain.config, MLPPPOBrainConfig)
         assert config.brain.config.learning_rule == "ppo"
+
+
+_REWIRED = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_rewired_null.yml"))
+
+
+class TestPlasticRewiredNullConfig:
+    """The primary contrast's other cell: one key different from the plastic arm."""
+
+    def test_rewired_null_adds_only_the_wiring_key(self) -> None:
+        plastic = _flatten(yaml.safe_load(_VARIANT.read_text()))
+        rewired = _flatten(yaml.safe_load(_REWIRED.read_text()))
+        assert set(rewired) - set(plastic) == {"brain.config.wiring"}
+        assert set(plastic) - set(rewired) == set()
+        assert {k for k in set(plastic) & set(rewired) if plastic[k] != rewired[k]} == set()
+
+    def test_rewired_null_loads_as_the_plastic_null_arm(self) -> None:
+        config = load_simulation_config(str(_REWIRED))
+        assert config.brain is not None
+        brain_config = config.brain.config
+        assert isinstance(brain_config, ConnectomePPOBrainConfig)
+        assert brain_config.wiring == "rewired_degree_preserving"
+        assert brain_config.learning_rule == "three_factor"
+        assert brain_config.enable_activity_traces is True
+        assert brain_config.rewire_seed is None
+
+    def test_plastic_parent_stays_wild_type(self) -> None:
+        config = load_simulation_config(str(_VARIANT))
+        assert config.brain is not None
+        assert isinstance(config.brain.config, ConnectomePPOBrainConfig)
+        assert config.brain.config.wiring == "wild_type"
+
+    def test_name_keeps_the_plastic_parent_as_a_prefix(self) -> None:
+        assert _REWIRED.name.startswith(_VARIANT.name.removesuffix(".yml"))
