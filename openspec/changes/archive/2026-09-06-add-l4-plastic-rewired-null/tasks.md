@@ -30,7 +30,7 @@
 
 ## 5. Close-out
 
-- [ ] 5.1 `git add -A`, then `uv run pre-commit run --all-files` **unfiltered**, exit code 0.
-- [ ] 5.2 Full non-nightly suite green.
-- [ ] 5.3 No planning references in tests beyond spec-scenario citations; none in any implementation code (no implementation code changes here).
-- [ ] 5.4 Re-review for drift, archive, review the branch, open the PR.
+- [x] 5.1 `git add -A`, then `uv run pre-commit run --all-files` **unfiltered**, exit code 0.
+- [x] 5.2 Full non-nightly suite green.
+- [x] 5.3 No planning references in tests beyond spec-scenario citations; none in any implementation code (no implementation code changes here).
+- [x] 5.4 Re-review for drift, archive, review the branch, open the PR. (All seven scenarios map to a test; the one test-side reference to a planning document was reworded to state the technical fact instead.)
