@@ -9,7 +9,8 @@ seed list (seeds 1–8), with the rewired arms' `rewire_seed` derived from the r
 and rewired arms pair seed for seed. The per-seed ranked metric SHALL be the committed plateau-tail
 (final-quarter) full-clear success rate, and the per-seed convergence verdict SHALL be the
 level-agnostic plateau detector's, read from the run's experiment record. The two rewired floors
-SHALL each be a one-key (`wiring`) delta from their wild-type parent config.
+SHALL each be a one-key (`wiring`) delta from their wild-type parent config, and SHALL share the
+plastic rewired-null arm's wiring seed for seed, with `rewire_seed` derived from the run seed.
 
 #### Scenario: Each rewired floor is a one-key delta from its wild-type parent
 
@@ -20,6 +21,13 @@ SHALL each be a one-key (`wiring`) delta from their wild-type parent config.
   activity traces, and with `rewire_seed` unset
 - **AND** the parent's file name SHALL remain a prefix of the derived name
 
+#### Scenario: The rewired floors share the rewired plastic arm's wiring
+
+- **GIVEN** the rewired frozen floor and the plastic rewired-null arm built at one seed
+- **WHEN** their chemical masks are compared
+- **THEN** the masks SHALL be identical
+- **AND** the same SHALL hold for the rewired Hebbian floor
+
 #### Scenario: The harness identifies arms and seeds from a campaign directory
 
 - **GIVEN** a campaign directory whose per-run logs are named by config stem and seed
@@ -27,6 +35,7 @@ SHALL each be a one-key (`wiring`) delta from their wild-type parent config.
 - **THEN** every registered config stem SHALL map to its arm key and every seed SHALL be parsed from
   the label
 - **AND** a log whose stem is not in the registry SHALL be skipped with a warning, never guessed
+- **AND** in confirmatory mode a log whose seed is outside 1–8 SHALL be rejected
 
 #### Scenario: A missing experiment record reports convergence unknown
 
@@ -44,7 +53,8 @@ rewired-null; (T2) plastic wild-type over frozen wild-type; (T3) plastic wild-ty
 wild-type; (T4) wild-type learning gain (plastic minus frozen) over rewired-null learning gain. A
 test passes only when its q-value is below 0.05 and its mean delta is positive. The matched-rule MLP
 band test SHALL pass when the 80% bootstrap confidence interval of the paired delta (plastic
-wild-type minus plastic MLP) contains or lies above zero, and fail when it lies entirely below zero.
+wild-type minus plastic MLP) contains or lies above zero, and fail when it lies entirely below zero; the harness SHALL report the band delta's mean and
+interval width beside the outcome.
 A significant reverse result on T1 SHALL be detected by its interval lying entirely below zero and
 reported as its own outcome. The verdict SHALL be one of `sanity_floor_fail`,
 `rewired_beats_wild_type`, `recovery`, `structure_only`, `robustness` or `inconclusive`, assigned in
@@ -92,7 +102,9 @@ how many paired seeds have a positive delta.
 
 Before the panel runs, a pilot SHALL run the rule-bearing arms at `plasticity_rate` values of 0.003,
 0.01 and 0.03 and the frozen arms once, on pilot seeds 101 and 102 only, at 3000 episodes, with one
-extension to 6000 for any three-factor arm not converged on either seed at the selected rate. The
+extension to 6000 for any three-factor arm not converged on either seed at the selected rate; if that arm still has no plateau at 6000, the budget SHALL be pinned at 6000
+and the arm flagged. Every extension, pilot or panel, SHALL be a fresh run at the longer budget at
+the same seed, whose log replaces the shorter run's. The
 selected rate SHALL be the one maximising the pooled mean plateau-tail success of the three
 three-factor arms over the pilot seeds, ties to the default 0.01, and SHALL be written explicitly into
 every plastic-family panel config. The panel's uniform budget SHALL be the smallest multiple of 500

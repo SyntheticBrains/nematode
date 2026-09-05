@@ -59,6 +59,9 @@ key off their wild-type parents, following the derived-suffix naming convention 
 stays a prefix. Ratified with Chris: the rewired floors are worth their 16 runs because they make the
 learning-gain contrast (D4, T4) available; without `rn_frozen` a difference between the two plastic
 arms could be an initial-policy offset of the random wiring rather than anything the rule did.
+The two rewired floors share `rn_plastic`'s exact wiring seed for seed (`rewire_seed` derives from
+the run seed in every rewired config), which is what makes T4's within-wiring gain a like-for-like
+subtraction; task 1.3 pins it with a mask-equality test.
 
 ### D2. Seeds: panel seeds 1–8, pilot seeds 101–102, never mixed
 
@@ -98,6 +101,11 @@ A test passes when its BH-FDR q < 0.05 **and** its mean delta is positive.
 the 80% bootstrap CI of the paired delta `wt_plastic − mlp_plastic` **contains or lies above zero →
 PASS**; entirely below zero → FAIL. Ratified with Chris over a "mean within ±1 sd" reading: it is
 paired, seeded, reuses the committed helper, and is the same reading 034 used for its verdict.
+Its asymmetry is stated here so the logbook cannot miss it: containing zero is the *null* outcome,
+so a wide interval from a high-variance arm passes by noise. The band test is therefore the weaker
+of the two D2 tests by construction, a `recovery` verdict rests on T1, and the harness reports the
+band delta's mean and interval width beside the outcome so a noise pass is never presented as
+parity.
 
 **Direction-agnostic reporting.** The helper's Wilcoxon is one-sided, so a significant *reverse*
 result cannot show up in q. As in 034, a reverse result is detected by the CI lying entirely on the
@@ -139,18 +147,28 @@ band test is reported under every verdict.
   never move, so the rate is irrelevant to them), at pilot seeds 101–102, at a pilot budget of
   3000 episodes. If any three-factor arm at the selected rate has not converged on either pilot
   seed by 3000, that arm's pilot is extended once to 6000 before the budget is pinned (the
-  protocol's extend-and-rerun).
+  protocol's extend-and-rerun). If it still has no plateau on both pilot seeds at 6000, the budget is
+  pinned at 6000, the arm is flagged non-converging in the pilot summary, and the panel runs as
+  registered. The frozen arms run in the pilot as a descriptive floor read only; they feed neither
+  the selection nor the budget.
 - **Recipe selection**: the rate that maximises the **pooled mean** plateau-tail success of the
   three three-factor arms (`wt_plastic`, `rn_plastic`, `mlp_plastic`) over the pilot seeds. Ties
   go to the default. Pooling is the neutral choice: selecting on `wt_plastic` alone would hand the
   arm the hypothesis favours its best-case recipe and make T1 and the band test anti-conservative.
-  The selected rate is written explicitly into all six plastic-family configs, even when it is the
-  default, so the recipe is visible in the file and not inherited silently.
+  The selected rate is written explicitly into all **seven** plastic-family configs — the six
+  connectome arms and the MLP; leaving the MLP at the default would make "matched rule" false —
+  even when it is the default, so the recipe is visible in the file and not inherited silently.
 - **Budget rule**: the panel's uniform budget is the smallest multiple of 500 that is at least
   1.25 × the latest convergence onset among converged pilot runs of any arm at the selected rate,
   and never below 2000. At panel time, a seed still climbing at that budget gets exactly one
   extension to 1.5 × budget (the 029 top-up pattern, pre-registered here rather than improvised); a
-  seed that still has no plateau is flagged and ranked on its plateau-tail per the protocol.
+  seed that still has no plateau is flagged and ranked on its plateau-tail per the protocol. An
+  extension, in the pilot or the panel, is a **fresh run at the longer budget at the same seed**:
+  the connectome brain has no weight persistence, so nothing can resume. Runs are
+  seed-deterministic, so the longer run's first episodes replay the shorter run's exactly and it is
+  a true continuation; its log replaces the shorter one in the manifest, and the launch record
+  lists every extension. A per-arm extension is a separate campaign invocation, since a campaign's
+  episode count is uniform across its configs.
 - **Pinning**: both numbers land in this design as a dated amendment (§ Pinned values, below) with
   the pilot's summary JSON committed under the supporting directory, before the panel launches.
 
@@ -181,7 +199,7 @@ publishable — and any redesign is a new change with its own pre-registration.
 ### D10. Harness and pilot-runner shape
 
 - `scripts/analysis/l4_panel.py`: `--campaign-dir <dir>` (reads `logs/*.log`, maps each config stem
-  to its arm key through a fixed registry, parses the seed from the label) or `--manifest` (`<arm> <seed> <log>` lines, the 034 format); `--out panel.json`; `--csv per-seed.csv`; `--curves curves.csv`. `--pilot` switches to the grid summary: per rate per arm plateau-tail and convergence
+  to its arm key through a fixed registry, parses the seed from the label; in confirmatory mode any seed outside 1–8 is rejected, so a pilot log cannot enter a test) or `--manifest` (`<arm> <seed> <log>` lines, the 034 format); `--out panel.json`; `--csv per-seed.csv`; `--curves curves.csv`. `--pilot` switches to the grid summary: per rate per arm plateau-tail and convergence
   onset over the pilot seeds, the pooled selection, and the budget rule's output.
 - `scripts/campaigns/l4_panel_pilot.py`: derives the grid configs from the committed arms (parent
   YAML plus one `plasticity_rate` key, written under `<out>/configs/` so the pilot is reproducible
@@ -189,7 +207,7 @@ publishable — and any redesign is a new change with its own pre-registration.
   theme passed through.
 - Both are tested on synthetic logs and JSONs: the registry, the seed parse, each test's direction,
   the family size, every verdict row of the map, the band rule at both outcomes, the reverse-result
-  detection, the pooled selection with a tie, the budget rule's rounding and floor, and the derived
+  detection, the pooled selection with a tie, the budget rule's rounding and floor, the seed guard, and the derived
   configs' one-key property.
 
 ## Risks / Trade-offs
@@ -202,6 +220,9 @@ publishable — and any redesign is a new change with its own pre-registration.
 - **The Hebbian floor may beat the frozen floor by learning something reward-free** (the wiring's
   correlation structure). That is exactly why T3 exists alongside T2; a `wt_plastic` that clears T2
   but not T3 fails the floors, honestly.
+- **The band test can pass on noise.** Containing zero is its null outcome (D4). The logbook must
+  report the band delta's mean and interval width with any PASS, and a `recovery` verdict is read
+  as resting on T1.
 - **Seven arms invite 21 comparisons.** Only four are confirmatory; the rest are labelled descriptive
   in the JSON and the CSV so the logbook cannot quietly promote one.
 

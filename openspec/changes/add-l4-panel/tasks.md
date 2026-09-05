@@ -7,7 +7,8 @@
 - [ ] 1.2 `…_plastic_hebbian_rewired_null.yml`: the same one key off the Hebbian floor.
 - [ ] 1.3 Variant tests: each new config differs from its wild-type parent by exactly
   `brain.config.wiring`; each loads with the parent's rule, freeze flag, strict mask and
-  traces; parent name stays a prefix.
+  traces; parent name stays a prefix. The rewired frozen arm's chemical mask equals the rewired
+  plastic arm's at one seed — the shared wiring T4 assumes.
 - [ ] 1.4 Smoke entries for both.
 
 ## 2. The panel harness
@@ -22,8 +23,8 @@
 - [ ] 2.4 `--pilot` mode: per-rate per-arm plateau-tail and onset over the pilot seeds, the pooled
   selection with default tie-break, the budget rule.
 - [ ] 2.5 Tests on synthetic logs and JSONs covering every branch of the verdict map, both band
-  outcomes, the reverse case, the family size, the pooled tie, and the budget rule's rounding and
-  floor.
+  outcomes, the reverse case, the family size, the pooled tie, the budget rule's rounding and
+  floor, and the seed guard (confirmatory mode refuses seeds outside 1–8).
 
 ## 3. The pilot runner
 
@@ -36,11 +37,14 @@
 ## 4. Pilot, then pin
 
 - [ ] 4.1 Run the pilot (seeds 101–102, 3000 episodes, the three-point grid); extend any
-  non-converged three-factor arm at the selected rate once to 6000.
+  non-converged three-factor arm at the selected rate once to 6000 as a separate campaign
+  invocation (a fresh run; episode counts are uniform per campaign). If it still has no plateau,
+  pin the budget at 6000 and flag the arm in the summary.
 - [ ] 4.2 Summarise with `l4_panel.py --pilot`; commit `pilot.json` under
   `docs/experiments/logbooks/supporting/040-l4-panel/`.
 - [ ] 4.3 Pin the recipe and the budget in `design.md § Pinned values` by dated amendment; write the
-  selected `plasticity_rate` explicitly into all six plastic-family configs.
+  selected `plasticity_rate` explicitly into all seven plastic-family configs, the MLP
+  included.
 - [ ] 4.4 Write `launch.md` (commit SHA, command, seeds, budget, recipe) and commit it **before**
   launching the panel.
 
@@ -57,7 +61,7 @@
 ## 6. Close-out
 
 - [ ] 6.1 `configs/README.md`, `docs/architectures.md`, `CHANGELOG.md`; tracker A.7 ticked with the
-  verdict named and "Next: A.8 the logbook".
+  verdict named and "Next: A.8 the logbook"; AGENTS.md gains the harness usage line.
 - [ ] 6.2 Pre-commit gate on all files exit 0; full suite green.
 - [ ] 6.3 No implementation code or docstring references a planning document.
 - [ ] 6.4 Re-review for drift (every scenario maps to a test or a committed artefact), archive,

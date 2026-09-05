@@ -68,7 +68,8 @@ budget, the harness that computes it all, and the persistence of its data.
 
 - New: two configs, one analysis script, one campaign script, their tests, the supporting-data
   directory.
-- Edited: the six plastic-family configs gain an explicit `plasticity_rate` at the pin step (the
+- Edited: all seven plastic-family configs (six connectome arms and the MLP) gain an explicit
+  `plasticity_rate` at the pin step (the
   value the pilot selects, stated even when it equals the default so the recipe is visible in the
   file); `configs/README.md`, `docs/architectures.md`, `CHANGELOG.md`, the Phase 7 tracker.
 - No package code changes. Every run goes through the standard single-run entry point via the
