@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4].parent
 SIMULATION = PROJECT_ROOT / "scripts" / "run_simulation.py"
@@ -28,6 +29,14 @@ MIXED_CONFIG = (
 )
 
 _REJECTED_EXIT = 2
+
+# A torch-only accelerator only exists on some hosts. Where one does, the
+# family-specific rejection can be asserted; where it does not, the guard is
+# still exercised — every agent fails the availability check instead — so the
+# host-independent invariants (rejected before construction, agent named, no
+# traceback) are asserted unconditionally.
+_TORCH_ONLY_DEVICE_AVAILABLE = torch.backends.mps.is_available()
+_ALWAYS_AVAILABLE_DEVICE = "mps" if _TORCH_ONLY_DEVICE_AVAILABLE else "cpu"
 
 
 @pytest.fixture
@@ -68,16 +77,30 @@ def _run(config: Path, device: str) -> subprocess.CompletedProcess[str]:
 class TestMultiAgentDeviceValidation:
     """The per-agent check runs before any brain is constructed."""
 
-    def test_quantum_agent_rejects_torch_only_device(self, quantum_agent_config: Path) -> None:
+    def test_unusable_device_is_rejected_before_construction(
+        self,
+        quantum_agent_config: Path,
+    ) -> None:
+        """Whatever the host, the run stops at validation and names an agent."""
         result = _run(quantum_agent_config, "mps")
 
         assert result.returncode == _REJECTED_EXIT
-        assert "PyTorch-only accelerator" in result.stderr
-        # The message must say which agent is at fault, not just which brain.
         assert "agent" in result.stderr
         # Rejected before construction, so no traceback from inside a brain.
         assert "Traceback" not in result.stderr
 
-    def test_all_classical_agents_are_accepted(self) -> None:
+    @pytest.mark.skipif(
+        not _TORCH_ONLY_DEVICE_AVAILABLE,
+        reason="needs an available torch-only accelerator to reach the family check",
+    )
+    def test_quantum_agent_rejected_on_family_grounds(self, quantum_agent_config: Path) -> None:
+        """Where the device exists, the rejection is about the backend, not the driver."""
+        result = _run(quantum_agent_config, "mps")
+
+        assert result.returncode == _REJECTED_EXIT
+        assert "PyTorch-only accelerator" in result.stderr
+        assert "qvarcircuit" in result.stderr
+
+    def test_usable_device_is_accepted(self) -> None:
         """The guard must not refuse a configuration that works."""
-        assert _run(MIXED_CONFIG, "mps").returncode == 0
+        assert _run(MIXED_CONFIG, _ALWAYS_AVAILABLE_DEVICE).returncode == 0
