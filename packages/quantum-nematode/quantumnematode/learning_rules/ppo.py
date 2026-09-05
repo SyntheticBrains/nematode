@@ -9,7 +9,7 @@ and the PPO hyperparameters — including ``gamma``/``gae_lambda``, so it
 computes returns and advantages itself; the brain retains experience
 collection and feature unpacking, surfaced through ``ConnectomePPOBatch``.
 
-Import discipline (change design Decision 3b): this module imports ONLY
+Import discipline: this module imports ONLY
 leaf modules from ``quantumnematode.brain.arch`` — never the package —
 so ``import quantumnematode.learning_rules.ppo`` works as a process's
 first import even though ``brain/arch/__init__`` imports

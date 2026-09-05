@@ -1,17 +1,17 @@
-"""State-dependent log-std head for continuous policy modes (roadmap D7).
+"""State-dependent log-std head for continuous policy modes.
 
 A minimal linear head mapping a brain's trunk feature to per-action-dim
 ``log_std``. The weight and bias are built **directly as zero
-``nn.Parameter``s** — construction consumes **no RNG draws** (the change's
-review B1: ``nn.Linear``-then-zero would overwrite values but not rewind
-the torch generator, shifting every subsequent draw). Zero parameters mean
+``nn.Parameter``s** — construction consumes **no RNG draws**
+(``nn.Linear``-then-zero would overwrite values but not rewind the torch
+generator, shifting every subsequent draw). Zero parameters mean
 ``log_std ≡ 0 → std = 1`` for every state at step 0, bit-for-bit the
 state-independent parameter's init, so "on-at-init ≡ off-at-init" is a run
 property.
 
 Leaf module by design (imports only from ``._policy``); the shared
-tanh-Gaussian helpers are shape-generic over ``log_std`` and are not
-touched by D7.
+tanh-Gaussian helpers are shape-generic over ``log_std`` and are left
+untouched.
 """
 
 from __future__ import annotations
@@ -51,14 +51,14 @@ class StateDependentLogStdHead(nn.Module):
 
 
 def clamped_log_std_stats(log_std: torch.Tensor) -> tuple[float, float]:
-    """Mean and max of the clamped log-std batch (the D7 ceiling monitor).
+    """Mean and max of the clamped log-std batch (the std ceiling monitor).
 
     ``torch.clamp`` has zero gradient outside ``[-5, 2]``, so a state whose
     head output drifts past the +2 ceiling receives no restoring gradient
     through the std path — a per-state stuck-at-max-entropy trap the single
     shared parameter could not exhibit. Mode-on runs record these stats per
-    update; the pre-registered response to ceiling-pinning is the bounded
-    entropy-only repair pass (change design § Risks).
+    update so ceiling-pinning is visible in telemetry rather than
+    discoverable only through a degenerate policy.
     """
     clamped = clamp_continuous_log_std(log_std.detach())
     return clamped.mean().item(), clamped.max().item()
@@ -69,7 +69,7 @@ def raise_on_std_mode_mismatch(
     *,
     state_dependent: bool,
 ) -> None:
-    """Reject cross-mode weight loads with a descriptive error (review S3).
+    """Reject cross-mode weight loads with a descriptive error.
 
     A mode-on brain fed a mode-off file (or vice versa) must not
     AttributeError or silently skip the std component — the loaded policy's

@@ -210,7 +210,7 @@ class TransformerPPOBrain(ClassicalBrain):
         nn.init.orthogonal_(self.actor.weight, gain=0.01)
         nn.init.zeros_(self.actor.bias)
 
-        # Continuous std (D7): state-independent free parameter (default) or an
+        # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-init state-dependent head off the pooled encoder output.
         self._state_dependent_std = (
             self.continuous and config.continuous_std_mode == "state_dependent"

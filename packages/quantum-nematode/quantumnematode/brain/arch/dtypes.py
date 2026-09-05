@@ -88,13 +88,14 @@ class BrainConfig(BaseModel):
     # that implement a continuous head read this; the physical rescale lives in the
     # environment, so the emitted action is substrate-independent.
     action_mode: Literal["discrete", "continuous"] = "discrete"
-    # Continuous-mode exploration std (roadmap D7): ``state_independent`` (default)
+    # Continuous-mode exploration std: ``state_independent`` (default)
     # keeps the free learnable ``log_std`` parameter; ``state_dependent`` computes
     # ``log_std`` per state via an RNG-free zero-initialised linear head off the
     # same trunk feature that feeds the mean head, letting the policy modulate its
-    # own stochasticity by state (the biased-random-walk capability Logbook 036
-    # found structurally unreachable). Meaningless with ``action_mode: discrete``
-    # — that combination fails validation below (config honesty, per #253/#254).
+    # own stochasticity by state — required for biased-random-walk behaviour,
+    # which a fixed std cannot express. Meaningless with ``action_mode: discrete``
+    # — that combination fails validation below (an invalid pairing must fail
+    # loudly, never parse as a silent no-op).
     continuous_std_mode: Literal["state_independent", "state_dependent"] = "state_independent"
 
     @model_validator(mode="after")

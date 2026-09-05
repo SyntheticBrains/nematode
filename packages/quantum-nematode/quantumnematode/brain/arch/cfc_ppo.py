@@ -521,7 +521,7 @@ class CfCPPOBrain(ClassicalBrain):
                 output_dim=motor_count,
             ).to(self.device)
 
-        # Continuous std (D7): state-independent free parameter (default) or an
+        # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-init state-dependent head off the CfC hidden state
         # (both ``actor_head`` modes; allocated after the critic below so every
         # RNG-consuming parameter precedes it).
@@ -538,7 +538,7 @@ class CfCPPOBrain(ClassicalBrain):
             num_layers=config.critic_num_layers,
         ).to(self.device)
 
-        # State-dependent std head (D7): zero-Parameter, consumes no RNG draws.
+        # State-dependent std head: zero-Parameter, consumes no RNG draws.
         if self._state_dependent_std:
             self.log_std_head = StateDependentLogStdHead(config.units, device=self.device)
 

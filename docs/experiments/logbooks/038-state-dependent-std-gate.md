@@ -14,9 +14,10 @@ stochasticity by state. Roadmap D7 (ratified 2026-08-27) landed the capability �
 state-dependent std heads, byte-identical-when-off — with a pre-registered gate: re-run the 036
 thermal pair with the mode on; freeze the substrate only if the klinotaxis arm's combined
 klinokinesis verdict reaches **PRESENT** (both down/up ratio statistics' 80% CI lower bounds
+
 > 1.0), weathervane holds its 036 grades (both slope statistics REPRODUCED), and the derivative
-control stays ∉ {PRESENT, PRESENT_PARTIAL}. Failure path, also pre-registered: exactly one
-entropy-coefficient-only tuning pass, then a dated D7 amendment — never a silent freeze.
+> control stays ∉ {PRESENT, PRESENT_PARTIAL}. Failure path, also pre-registered: exactly one
+> entropy-coefficient-only tuning pass, then a dated D7 amendment — never a silent freeze.
 
 ## Method
 

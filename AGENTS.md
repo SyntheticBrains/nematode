@@ -56,6 +56,13 @@ Quantum Nematode is a closed-loop sensory-motor simulation platform: a simulated
 - NumPy-style docstrings
 - Pydantic BaseModel for data structures
 - Line length: 100 (Ruff)
+- **No planning-doc references in implementation code or docstrings**: never cite roadmap
+  sections, decision IDs (D1/D7/…), OpenSpec changes, review-finding labels (B1/S3/…), phase or
+  milestone names, logbooks, or issue/PR numbers inside `packages/` source. State the technical
+  constraint itself — the reader of the code gets the *why* as an intrinsic property, not a
+  pointer into planning history. (Tests are the exception: test docstrings SHOULD name the
+  OpenSpec spec scenarios they cover.) Planning provenance belongs in commit messages, OpenSpec
+  changes, and logbooks.
 
 ## Testing
 

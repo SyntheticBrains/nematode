@@ -246,7 +246,7 @@ class MLPPPOBrain(ClassicalBrain):
         ).to(self.device)
 
         # Continuous mode: exploration std. State-independent (default) = one free
-        # learnable log-std per action dim; state-dependent (D7) computes log_std
+        # learnable log-std per action dim; state-dependent mode computes log_std
         # per state via an RNG-free zero-init head (allocated below, after every
         # RNG-consuming parameter).
         self._state_dependent_std = (
@@ -276,7 +276,7 @@ class MLPPPOBrain(ClassicalBrain):
             )
             logger.info(f"Feature gating enabled on {expansion_dim} expanded features")
 
-        # State-dependent std head (D7): zero-Parameter, consumes no RNG draws;
+        # State-dependent std head: zero-Parameter, consumes no RNG draws;
         # sits after all RNG-consuming parameters as defence-in-depth.
         if self._state_dependent_std:
             self.log_std_head = StateDependentLogStdHead(self.input_dim, device=self.device)
@@ -886,7 +886,7 @@ class MLPPPOBrain(ClassicalBrain):
         if "gate_weights" in components and self._feature_gating:
             self.gate_weights.data.copy_(components["gate_weights"].state["gate_weights"])
 
-        # Continuous-mode std: same-mode loads only (D7 review S3).
+        # Continuous-mode std: same-mode loads only.
         raise_on_std_mode_mismatch(
             components,
             state_dependent=self._state_dependent_std,

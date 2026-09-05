@@ -191,7 +191,7 @@ class ConnectomePPOBrainConfig(BrainConfig):
     enable_thermotaxis_projection: bool = False
     freeze_updates: bool = False
 
-    # ── Activity-trace substrate (Phase 7 L4; opt-in) ────────────────────
+    # ── Activity-trace substrate (opt-in) ────────────────────
     # Per-synapse eligibility traces E on the chemical edge set, accumulated
     # during rollout forwards for future three-factor rules. Off by default:
     # trace-off builds are byte-identical, and (until a rule consumes E)
@@ -443,7 +443,7 @@ class ConnectomeTopology(nn.Module):
         # produces a degenerate-uniform initial policy here because the
         # whole upstream pipeline is small (one 302-vec → 4-vec readout).
         nn.init.orthogonal_(self.readout, gain=1.0)
-        # Continuous std (D7): state-independent free parameter (default) or an
+        # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-Parameter head off the pooled motor 4-vec (mirroring the
         # readout's input). Both branches consume zero RNG draws, so every other
         # parameter stream is unaffected by the mode.
@@ -586,7 +586,7 @@ class ConnectomeTopology(nn.Module):
         with torch.no_grad():
             self.w_chem.data.copy_(self.apply_weight_mask(self.w_chem.data))
 
-        # ── Activity-trace substrate (opt-in; Phase 7 L4) ───────────────
+        # ── Activity-trace substrate (opt-in) ───────────────
         # Per-synapse eligibility buffer E, allocated ONLY when enabled so
         # trace-off builds carry no state-dict entry. The allocation
         # consumes no RNG and sits after every RNG-consuming block, so
@@ -625,7 +625,7 @@ class ConnectomeTopology(nn.Module):
             self.activity_traces.zero_()
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
-        """Per-state ``log_std`` from the settled hidden state (D7, review B2).
+        """Per-state ``log_std`` from the settled hidden state.
 
         The public accessor seam for state-dependent std mode: pools ``hidden``
         over the motor classes (handles both ``(302,)`` and ``(B, 302)``) and
@@ -792,7 +792,7 @@ class ConnectomeTopology(nn.Module):
             preact = chem_mat.T @ h + gap_mat.T @ h
             h = torch.tanh(preact)
 
-        # Activity-trace update (opt-in; v1 formula per the OpenSpec change:
+        # Activity-trace update (opt-in; co-activity eligibility:
         # E ← trace_decay·E + M_chem ∘ (h hᵀ), with E[i, j] pre-i → post-j
         # aligned to w_chem). The ``no_grad`` is LOAD-BEARING: this rollout
         # forward runs grad-enabled (detachment happens later in
@@ -1085,7 +1085,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         # Learning rule: owns the critic (constructed inside the rule at this
         # exact point — same torch-RNG draw order as the pre-extraction
         # code), the Adam optimiser, and every PPO hyperparameter.
-        # Lazy import (change design Decision 3b): brain/arch/__init__ imports
+        # Lazy import: brain/arch/__init__ imports
         # this module at package load, so a module-level import of
         # learning_rules here would break `import quantumnematode.learning_rules.ppo`
         # as a process's first import (partially-initialised module).
@@ -1489,7 +1489,7 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         min_experience = self.config.num_minibatches
         if self.buffer.is_full() or (episode_done and len(self.buffer) >= min_experience):
-            # Lazy import (Decision 3b — same reason as in __init__); cached in
+            # Lazy import (same cycle-avoidance reason as in __init__); cached in
             # sys.modules after the first call, so this is a dict lookup.
             from quantumnematode.learning_rules.ppo import ConnectomePPOBatch
 

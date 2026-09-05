@@ -607,7 +607,7 @@ class LSTMPPOBrain(ClassicalBrain):
         actor_layers.append(nn.Linear(config.actor_hidden_dim, actor_output_dim))
         self.actor = nn.Sequential(*actor_layers).to(self.device)
 
-        # Continuous std (D7): state-independent free parameter (default) or an
+        # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-init state-dependent head off ``h_out`` (allocated below,
         # after every RNG-consuming parameter).
         self._state_dependent_std = (
@@ -626,7 +626,7 @@ class LSTMPPOBrain(ClassicalBrain):
         # Initialize weights
         self._initialize_weights()
 
-        # State-dependent std head (D7): zero-Parameter, consumes no RNG draws;
+        # State-dependent std head: zero-Parameter, consumes no RNG draws;
         # sits after all RNG-consuming parameters as defence-in-depth.
         if self._state_dependent_std:
             self.log_std_head = StateDependentLogStdHead(
