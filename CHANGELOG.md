@@ -8,11 +8,19 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ### Added
 
+- `scripts/run_campaign.py`: runs a campaign of simulations — one or more configs crossed with a set of seeds — concurrently under a bounded worker pool, with per-run logs, progress reporting, a status summary, `--dry-run`, and a non-zero exit if any run fails. Each run is a subprocess of `run_simulation.py` given byte-for-byte the command line it replaces, so campaigns change only *when* runs happen, never what they compute. Measured 7.29x at 16 workers on an 18-core machine ([Logbook 039](docs/experiments/logbooks/039-runtime-acceleration-audit.md)).
+
+- `DeviceType.MPS` (`--device mps`): Apple's Metal GPU is now selectable for PyTorch brains, and therefore measurable. CPU remains the default and is faster for every brain currently in the repo — see the device benchmark below.
+
+- `scripts/benchmarks/bench_device_backends.py` and `scripts/benchmarks/bench_campaign_parallelism.py`: reproducible measurements behind the device and worker-count guidance, including a large-network control row that distinguishes an unsuitable workload from a broken accelerator.
+
 - The state-dependent continuous action std (roadmap D7): a `continuous_std_mode` field on every brain config (default `state_independent`, byte-identical to previous behaviour; the discrete combination fails validation), per-brain zero-init std heads on the five continuous brains, six `_sdstd` config variants, and a per-update clamped-log-std monitor in the tracked telemetry. Ships **dormant**: the pre-registered klinokinesis validation gate failed (Logbook 038), so the Phase 7 panel substrate froze in the default mode and the mechanism awaits a future pre-registered retry.
 
 - The Phase 7 L4 trace substrate on the connectome brain: `enable_activity_traces` and `trace_decay` config fields (off by default; per-synapse eligibility traces accumulated during rollout forwards for the upcoming three-factor rules — training is bit-identical with traces on until a rule consumes them), and the new `quantumnematode.learning_rules` package, whose first citizen `ConnectomePPORule` is the connectome PPO update extracted byte-identically behind the `LearningRule` seam.
 
 ### Changed
+
+- Device selection is validated before brain construction and fails with an actionable message. Previously `--device gpu` mapped unconditionally to CUDA and crashed on non-CUDA hosts with a raw `AssertionError: Torch not compiled with CUDA enabled`, despite being an advertised CLI choice. Selection is also checked against the brain family: a PyTorch-only accelerator is rejected for quantum brains, which pass the device to Qiskit — `AerSimulator(device="MPS")` is accepted *without raising*, so the bogus backend would otherwise have been recorded in experiment metadata as though it were real.
 
 - Connectome-brain runs now record the mean policy loss per PPO update in the tracked `losses` telemetry (the house convention; the brain previously recorded no loss), so connectome session exports gain a `losses` column.
 

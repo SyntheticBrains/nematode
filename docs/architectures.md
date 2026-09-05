@@ -86,7 +86,7 @@ Every brain in Quantum Nematode is a plugin: it implements the `Brain` interface
 | Any brain — hyperparameters | **TPE** (Optuna) preferred over CMA-ES | +79pp vs +47pp on the predator arm; TPE rescued CMA-ES's dead-zone seed ([012](experiments/logbooks/012-hyperparam-evolution-mlpppo-pilot.md)) |
 | Across generations | Lamarckian warm-start inheritance | GO — passes the pre-registered speed gate ([013](experiments/logbooks/013-lamarckian-inheritance-pilot.md)). Baldwin-effect and transgenerational-memory inheritance are implemented but closed with STOP verdicts ([015](experiments/logbooks/015-baldwin-iterative-evaluation.md), [018](experiments/logbooks/018-transgenerational-memory.md)–[020](experiments/logbooks/020-tei-prior-on-lamarckian.md)) |
 
-Hardware: the quantum brains run on the Qiskit Aer simulator (`--device cpu`, or `gpu` with the `gpu` extra) or on IBM Quantum hardware (`--device qpu`, with `--optimize` enabling Q-CTRL Fire Opal error suppression). See the [usage guide](usage.md).
+Hardware: the quantum brains run on the Qiskit Aer simulator (`--device cpu`, or `gpu` with the `gpu` extra) or on IBM Quantum hardware (`--device qpu`, with `--optimize` enabling Q-CTRL Fire Opal error suppression); `--device mps` is PyTorch-only and is rejected for them. The classical and spiking brains additionally accept `--device mps`, though CPU is faster at their current sizes — see [Devices](usage.md#devices). See the [usage guide](usage.md).
 
 ## See also
 

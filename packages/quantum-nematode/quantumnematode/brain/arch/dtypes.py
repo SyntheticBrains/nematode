@@ -53,27 +53,49 @@ class DeviceType(StrEnum):
     """
     Different types of devices for running processing for brains.
 
+    This enum serves **two unrelated backends**, which is why some members are
+    meaningful to only one of them:
+
+    - Brains built on PyTorch read it through :meth:`to_torch_device_str` to
+      place tensors.
+    - Quantum brains read ``.value`` directly as a Qiskit Aer simulator
+      selector (upper-cased) or route to IBM Runtime hardware.
+
     For quantum brains, choosing a device other than 'qpu'
     will result in the brain being run on a classical simulator.
 
-    - CPU: Central Processing Unit
-    - GPU: Graphics Processing Unit
+    - CPU: Central Processing Unit (both backends)
+    - GPU: Graphics Processing Unit — CUDA for PyTorch, Aer's GPU device for
+      quantum brains. Deliberately **not** remapped to another vendor's
+      accelerator on non-CUDA hosts: the name would then mean different
+      hardware on different machines, which would silently break comparisons
+      that span them.
+    - MPS: Apple's Metal GPU — **PyTorch only**. Aer accepts an unknown device
+      string without raising, and "MPS" already denotes Matrix Product State
+      there, so selecting it for a quantum brain is rejected up front rather
+      than recorded as a real backend.
     - QPU: Quantum Processing Unit
+
+    Callers that accept a device from a user SHOULD validate it against the
+    selected brain first; see ``quantumnematode.utils.device``.
     """
 
     CPU = "cpu"
     GPU = "gpu"
+    MPS = "mps"
     QPU = "qpu"
 
     def to_torch_device_str(self) -> str:
         """Return a string accepted by ``torch.device()``.
 
-        PyTorch only recognises ``"cpu"`` and ``"cuda"``.  ``GPU`` maps to
-        ``"cuda"``; ``QPU`` maps to ``"cpu"`` because quantum circuits run on
-        Qiskit backends, not PyTorch.
+        ``GPU`` maps to ``"cuda"`` and ``MPS`` to ``"mps"``.  ``QPU`` maps to
+        ``"cpu"`` because quantum circuits run on Qiskit backends, not
+        PyTorch, so a quantum brain's incidental tensors stay on the CPU.
         """
         if self is DeviceType.GPU:
             return "cuda"
+        if self is DeviceType.MPS:
+            return "mps"
         return "cpu"
 
 

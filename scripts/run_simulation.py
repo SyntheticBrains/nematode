@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import logging
 import shutil
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -121,6 +122,7 @@ from quantumnematode.utils.config_loader import (
     load_simulation_config,
     validate_sensing_config,
 )
+from quantumnematode.utils.device import validate_device_selection
 from quantumnematode.utils.interrupt_handler import manage_simulation_halt
 from quantumnematode.utils.seeding import derive_run_seed, ensure_seed, get_rng, set_global_seed
 from quantumnematode.utils.session import generate_session_id
@@ -482,6 +484,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Qubits: {qubits}")
     logger.info(f"Shots: {shots}")
     logger.info(f"Seed: {simulation_seed}")
+
+    # Fail before brain construction if the device cannot serve this brain:
+    # a torch-only accelerator on a Qiskit-backed brain, or a backend this
+    # build lacks. Otherwise the failure surfaces as a raw torch assertion
+    # from inside a brain's __init__, or not at all. Reported on stderr
+    # rather than through the logger, which '--log-level NONE' silences.
+    try:
+        validate_device_selection(device, brain_type.value)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
 
     # Select the brain architecture
     brain = setup_brain_model(
@@ -1595,6 +1608,16 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
             for i in range(multi_agent_config.count)
         ]
+
+    # Multi-agent runs never reach the single-brain device check in `main`,
+    # and each agent may name a different architecture, so validate every one
+    # against the shared device before any brain is constructed.
+    for ac in agent_configs:
+        try:
+            validate_device_selection(device, ac.brain.name)
+        except ValueError as exc:
+            print(f"error: agent '{ac.id}': {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
 
     num_agents = len(agent_configs)
     grid_size = environment_config.grid_size
