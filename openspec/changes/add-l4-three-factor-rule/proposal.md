@@ -60,11 +60,11 @@ The contrast matrix is *itself* orthonormal (unit rows, exactly orthogonal), so 
 
 Unbounded Hebbian growth is the classic failure mode, so two bounded, configurable stabilisers ship with the rule: a weight-decay term (`Δw −= η·λ_w·w`) and a magnitude clamp. Both default to values that constrain without dominating, and both are reported in telemetry so a run that saturates is visible rather than inferred.
 
-**Dale's law is preserved**: the update SHALL NOT flip the sign of an existing synapse. A chemical synapse's sign is a property of its neurotransmitter, not of experience, and a rule that silently converts excitatory synapses to inhibitory would be modelling something the animal cannot do.
+**Dale's law is deliberately not imposed**, and the reason is worth stating because the opposite looks more biological. Forbidding a synapse from crossing between excitatory and inhibitory would be correct *if* synapse signs carried neurotransmitter identity. In this substrate they do not: initial chemical weights are drawn from a zero-mean distribution, so each sign is an arbitrary draw. Constraining it would preserve noise rather than biology, and would stop the rule from correcting a synapse whose initial sign happened to be wrong. Dale's law becomes enforceable once signs are neurotransmitter-derived — a prerequisite this change does not create, and natural work for the receptor-grounded stack that already plans atlas curation.
 
 ### 7. Telemetry and a smoke config
 
-Per-update `δ`, baseline, mean |Δw|, saturated-synapse fraction, and sign-clamp hits, so the rule's health is observable during the panel rather than reconstructed after it. One plastic wild-type config lands as a smoke arm; the panel's full arm set is A.4–A.6.
+Per-update `δ`, baseline, mean |Δw|, and saturated-synapse fraction, so the rule's health is observable during the panel rather than reconstructed after it. One plastic wild-type config lands as a smoke arm; the panel's full arm set is A.4–A.6.
 
 ## Impact
 

@@ -12,6 +12,10 @@ The rule SHALL compute no gradients, own no optimiser, and require no value head
 
 The rule SHALL apply updates **once per environment step**, at the point the reward for that step becomes available, so the modulator is aligned with the eligibility it gates.
 
+The alignment SHALL be **inclusive of the current step**: the trace is updated during the forward pass that selects the step's action, and the reward earned by that action gates the trace *including* that step's contribution. This is the intended semantics — the synapses that produced the action are the ones credited with its outcome — and it is stated explicitly because the alternative (gating only eligibility accrued strictly before the action) is equally implementable and would silently change what the rule credits.
+
+The baseline SHALL persist across episode boundaries. It estimates the task's prevailing reward level, not one episode's; resetting it per episode would make every episode's opening steps register as surprising regardless of behaviour.
+
 The rule SHALL update **only** the chemical synaptic weights over which the trace is defined. Sensory-projection gains, the motor readout, and action-noise parameters SHALL be left at their initial values.
 
 Every update SHALL be projected through the topology's mask seam, so no update creates support outside the topology's edge set.
@@ -29,6 +33,12 @@ Every update SHALL be projected through the topology's mask seam, so no update c
 - **WHEN** the rule has observed enough steps for the baseline to converge
 - **THEN** the magnitude of the weight change per step SHALL tend toward zero
 - **AND** an unexpected reward SHALL produce a larger weight change than an expected one of the same magnitude
+
+#### Scenario: The baseline survives episode boundaries
+
+- **GIVEN** a rule that has observed a run of rewards
+- **WHEN** the episode ends and per-episode state is reset
+- **THEN** the baseline SHALL retain its value
 
 #### Scenario: No gradient machinery is engaged
 
@@ -53,7 +63,7 @@ An unbounded Hebbian rule diverges. The rule SHALL therefore provide configurabl
 
 A weight-decay term SHALL be applied alongside the Hebbian term, and updated weights SHALL be clamped to a configurable magnitude bound. Both SHALL be configurable, and both SHALL be validated at load time so an unusable setting fails before a run rather than during one.
 
-The rule SHALL preserve each synapse's sign: an update SHALL NOT change an existing synapse from excitatory to inhibitory or the reverse. A chemical synapse's sign follows from its neurotransmitter rather than from experience, so sign inversion would model a transition the animal cannot make.
+**Synapse signs are deliberately unconstrained.** A Dale's-law constraint — forbidding a synapse from crossing between excitatory and inhibitory — would be the biologically correct restriction *if* synapse signs carried neurotransmitter identity. In this substrate they do not: initial chemical weights are drawn from a zero-mean distribution, so each synapse's sign is an arbitrary draw. Freezing it would preserve noise rather than biology, and would prevent the rule from correcting a synapse whose initial sign was simply wrong. Dale's law becomes enforceable once synapse signs are derived from neurotransmitter identity, which is a prerequisite this change does not create.
 
 #### Scenario: Weights stay bounded under sustained drive
 
@@ -67,12 +77,11 @@ The rule SHALL preserve each synapse's sign: an update SHALL NOT change an exist
 - **WHEN** the rule steps repeatedly
 - **THEN** chemical weight magnitudes SHALL be non-increasing
 
-#### Scenario: Synapse signs are preserved
+#### Scenario: A synapse may cross zero
 
-- **GIVEN** a synapse with a known sign and an update that would invert it
+- **GIVEN** a synapse whose accumulated updates drive it through zero
 - **WHEN** the rule steps
-- **THEN** the synapse SHALL retain its original sign
-- **AND** the occurrence SHALL be counted in the rule's telemetry
+- **THEN** the update SHALL NOT be clamped on account of the sign change
 
 #### Scenario: Invalid stabilisation settings fail at load
 
@@ -81,12 +90,12 @@ The rule SHALL preserve each synapse's sign: an update SHALL NOT change an exist
 
 ### Requirement: Plasticity telemetry
 
-The rule SHALL report, per update, the prediction error, the running baseline, the mean absolute weight change, the fraction of synapses at the magnitude bound, and the number of sign-clamp events, so that a saturating or inert rule is visible during a run.
+The rule SHALL report, per update, the prediction error, the running baseline, the mean absolute weight change, and the fraction of synapses at the magnitude bound, so that a saturating or inert rule is visible during a run.
 
 #### Scenario: Health signals are reported every update
 
 - **WHEN** the rule steps
-- **THEN** its report SHALL carry the prediction error, baseline, mean absolute weight change, saturated fraction, and sign-clamp count
+- **THEN** its report SHALL carry the prediction error, baseline, mean absolute weight change, and saturated fraction
 
 #### Scenario: Saturation is visible
 

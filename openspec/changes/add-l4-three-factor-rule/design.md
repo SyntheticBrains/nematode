@@ -54,13 +54,15 @@ This is what makes it a *three-factor* rule rather than a batched Hebbian approx
 
 Consequence: the rollout buffer, GAE, and the value head are dormant under this rule. They are not removed — the same brain still serves the PPO arms — but the spec requires they go unexercised, so a future refactor cannot quietly couple them.
 
-## Decision 6 — bounded plasticity, and Dale's law
+## Decision 6 — bounded plasticity (and why Dale's law is not imposed)
 
 Hebbian rules diverge; this one ships with a decay term, a magnitude clamp, and saturation telemetry.
 
 Decay and clamp are configurable and load-time validated. The telemetry matters as much as the bounds: a rule pinned at its clamp is still "learning" by any weight-change metric while having become a constant function, and a panel arm that saturated in its first hundred steps must be visible as such, not inferred afterwards from flat returns.
 
-**Sign preservation** is the one constraint here that is biological rather than numerical. A chemical synapse's sign follows from its neurotransmitter; an update that flips an excitatory synapse to inhibitory models a transition the animal cannot make, and would let the "wild-type connectome" quietly become a different circuit. Updates are clamped at zero for each synapse's initial sign, and clamp events are counted — a high count means the rule is fighting the wiring, which is itself a finding.
+**Sign preservation was specified and then withdrawn at spec review**, and the reversal is instructive enough to record. The argument for it was biological: a chemical synapse's sign follows from its neurotransmitter, so an update flipping excitatory to inhibitory models a transition the animal cannot make. That argument is sound about *C. elegans* and false about *this substrate*. Initial chemical weights are drawn from a zero-mean distribution — each synapse's sign is an arbitrary draw, not a neurotransmitter fact. Enforcing Dale's law over random signs would freeze noise, and would prevent the rule from correcting a synapse whose initial sign was simply wrong. `Neuron.neurotransmitter` exists in the data model but no initialisation path consumes it.
+
+The constraint is therefore dropped, and the prerequisite recorded: Dale's law becomes enforceable once synapse signs are neurotransmitter-derived, which is natural work for the receptor-grounded shipment that already plans atlas curation. Imposing it earlier would have been a plausibility claim the substrate could not support.
 
 ## Decision 7 — the frozen readout is anatomical, not random (ratified with the user)
 
@@ -84,11 +86,21 @@ PPO arms keep the random draw. Changing them would alter the initialisation of t
 
 Recorded because it is the standing question behind the whole shipment, and because the honest answer has parts that are strong and parts that are not.
 
-**Load-bearing and genuine.** The rule is *local*: it uses pre-synaptic activity, post-synaptic activity, and one global scalar, with no backward pass, no weight transport, and no per-synapse error signal. That is the specific property PPO cannot claim and the reason this rule family is the right instrument for the wiring question. Around it: rate coding (defensible as higher fidelity than STDP for a graded, largely non-spiking animal), decaying eligibility, neuromodulatory gating, Dale's law preserved, synapse-count-derived initial weights, non-plastic gap junctions, anatomically-pooled motor classes, and now an anatomically-derived motor decoder.
+**Load-bearing and genuine.** The rule is *local*: it uses pre-synaptic activity, post-synaptic activity, and one global scalar, with no backward pass, no weight transport, and no per-synapse error signal. That is the specific property PPO cannot claim and the reason this rule family is the right instrument for the wiring question. Around it: rate coding (defensible as higher fidelity than STDP for a graded, largely non-spiking animal), decaying eligibility, neuromodulatory gating, EM-derived connectivity, non-plastic gap junctions, anatomically-pooled motor classes, and now an anatomically-derived motor decoder.
+
+**One credential is weaker than it is often stated, and spec review corrected it here.** The connectome supplies *which edges exist*; it does not supply their strengths. Initial chemical weights are drawn from a zero-mean distribution scaled by each neuron's chemical in-degree — the Cook-2019 synapse **counts** determine edge existence and enter the scale only as an edge tally, never as a magnitude. So the substrate is anatomically-constrained in its **topology** and randomly initialised in its **weights**. That is a defensible and common modelling choice, but "synapse-count-derived initial weights" overstates it, and the frozen-weights baseline the panel pins (roadmap D2) uses that wording — a discrepancy flagged for the change that builds that arm.
 
 **Abstractions that are staged rather than ignored.** The modulator is one global scalar with no receptor specificity or spatial extent; the receptor-grounded stack is a named later shipment, and the panel is explicitly re-run under the grounded rule there.
 
 **Gaps that remain, stated rather than glossed.** A plausible learning *rule* is not a plausible learning *problem*, and the problem carries most of the remaining distance: the reward is engineered shaping the animal has no access to, the baseline is effectively a reward oracle computed outside the network, and exploration is Gaussian action noise with a frozen scale — an RL artefact whose more plausible state-dependent form was attempted and failed its gate. None of these are introduced here, and none are fixable within this change, but they bound what the 2×2 can claim: it can say the wiring is or is not legible to a local, neuromodulated, rate-based rule. It cannot say the animal learns this task this way.
+
+## Decision 8 — the value head is skipped, not stubbed (added at spec review)
+
+Spec review found that "the value head SHALL NOT be exercised" was a declared outcome with no mechanism: the action path computes a state value on **every** step, through a property that delegates to the PPO rule. A three-factor rule owning no critic would therefore fail on the first action.
+
+Two repairs were available. The rule could expose a null value head, keeping the call site alive and returning zeros — smaller diff, and wrong: it would give a rule that owns no critic the appearance of one, leave a dead tensor flowing through the action path, and make the spec's "no value head" claim true only by wording. Instead the value computation is **skipped** under the plastic rule, with the per-step and bootstrap value state left unset and the experience buffer left unappended.
+
+The back-compatibility accessors for the value head and optimiser are kept, but under the plastic rule they raise an error naming the active rule rather than surfacing an attribute error from inside the delegation — the difference between "this rule has no optimiser" and a traceback that reads like a bug.
 
 ## Risks
 

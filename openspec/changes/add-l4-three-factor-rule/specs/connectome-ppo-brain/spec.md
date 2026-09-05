@@ -10,6 +10,10 @@ Selecting the three-factor rule SHALL require activity traces to be enabled; the
 
 Under the three-factor rule the brain SHALL invoke the rule **once per environment step** as rewards arrive, rather than accumulating a rollout and updating when full. The rollout buffer, advantage estimation, and value head SHALL NOT be exercised.
 
+"Not exercised" requires an explicit mechanism, because the action path currently computes a state value on **every** step and reaches it through a property that delegates to the PPO rule. Under the three-factor rule that call SHALL be skipped rather than satisfied by a substitute value head: a rule that owns no critic must not be given one merely to keep an unused call site alive. The per-step value and bootstrap value SHALL remain unset, and the experience buffer SHALL NOT be appended to.
+
+The back-compatibility accessors exposing the value head and optimiser SHALL, under the three-factor rule, raise an error naming the active rule and stating that it owns neither, rather than failing with an attribute error from inside the delegation.
+
 The default selection SHALL be byte-identical to the pre-change brain: identical seeds SHALL produce identical parameters after the same number of updates, verified against a frozen reference of the pre-change behaviour.
 
 #### Scenario: Default selection is byte-identical
@@ -35,7 +39,21 @@ The default selection SHALL be byte-identical to the pre-change brain: identical
 - **GIVEN** a brain configured with the three-factor rule
 - **WHEN** an episode runs to completion
 - **THEN** no value estimate, advantage, or clipped-surrogate loss SHALL be computed
+- **AND** the experience buffer SHALL remain empty
 - **AND** the chemical weights SHALL have changed from their initial values
+
+#### Scenario: Action selection does not require a value head
+
+- **GIVEN** a brain configured with the three-factor rule
+- **WHEN** actions are selected across many steps
+- **THEN** every step SHALL succeed without a value head existing
+- **AND** the per-step and bootstrap value state SHALL remain unset
+
+#### Scenario: PPO-only accessors fail informatively
+
+- **GIVEN** a brain configured with the three-factor rule
+- **WHEN** the value-head or optimiser accessor is used
+- **THEN** it SHALL raise an error naming the active rule and stating that it owns neither
 
 #### Scenario: Selecting a rule does not change construction
 
@@ -76,6 +94,24 @@ The assignment SHALL consume no additional randomness and SHALL occur after the 
 
 - **WHEN** a wild-type brain and a rewired-null brain are constructed at the same seed under the three-factor rule
 - **THEN** their readouts SHALL be byte-identical, so the wiring contrast is not confounded by the decoder
+
+### Requirement: Plastic arm configuration
+
+A configuration exercising the three-factor rule on the wild-type connectome SHALL ship with this change, so the rule is reachable from the scenario configs rather than only from tests.
+
+It SHALL differ from its PPO parent by the minimal key set required to select the rule and enable the trace it consumes, so that any behavioural difference is attributable to the rule rather than to incidental configuration drift. The remaining panel arms are added by the changes that introduce them.
+
+#### Scenario: The plastic config is a minimal delta from its parent
+
+- **WHEN** the plastic configuration is compared with the PPO configuration it derives from
+- **THEN** the only differences SHALL be the rule selection and the trace enablement
+- **AND** no other key SHALL be added, removed, or changed
+
+#### Scenario: The plastic config loads and selects the rule
+
+- **WHEN** the plastic configuration is loaded through the standard loader
+- **THEN** it SHALL validate
+- **AND** the resulting brain SHALL use the three-factor rule
 
 ## MODIFIED Requirements
 
