@@ -28,7 +28,8 @@ brain:
     enable_predator_projection: true
     enable_thermotaxis_projection: true
     forward_pass_depth: 4
-    freeze_updates: false
+    # No updates of any kind: the weights stay at initialisation.
+    freeze_updates: true
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95
@@ -44,8 +45,6 @@ brain:
     # proportional to them, so the pairing is validated at load time.
     learning_rule: three_factor
     enable_activity_traces: true
-    # No updates of any kind: the weights stay at initialisation.
-    freeze_updates: true
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
