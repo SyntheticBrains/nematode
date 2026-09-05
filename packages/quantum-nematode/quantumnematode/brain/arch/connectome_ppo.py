@@ -130,6 +130,8 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
+# Rules that read the eligibility trace, and so require it to be enabled.
+_PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -214,9 +216,12 @@ class ConnectomePPOBrainConfig(BrainConfig):
     # Which update mechanism trains this brain. ``ppo`` is the default and
     # is byte-identical to builds predating this field. ``three_factor``
     # selects reward-modulated Hebbian plasticity over the chemical
-    # synapses, which reads the eligibility trace above — hence the
+    # synapses; ``hebbian`` is the same update with the neuromodulatory
+    # factor removed — plain co-activity learning, the ablation that
+    # separates "learned something" from "learned something from reward".
+    # Both plastic modes read the eligibility trace above, hence the
     # load-time pairing check below.
-    learning_rule: Literal["ppo", "three_factor"] = "ppo"
+    learning_rule: Literal["ppo", "three_factor", "hebbian"] = "ppo"
 
     # Three-factor hyperparameters (ignored under ``ppo``). Bounds are
     # load-time rather than advisory: a non-positive rate makes the rule a
@@ -243,11 +248,12 @@ class ConnectomePPOBrainConfig(BrainConfig):
         and change nothing. Failing at load is the difference between a
         typo and a silently wasted campaign.
         """
-        if self.learning_rule == "three_factor" and not self.enable_activity_traces:
+        if self.learning_rule in _PLASTIC_RULES and not self.enable_activity_traces:
             msg = (
-                "learning_rule='three_factor' requires enable_activity_traces=true: "
-                "the update is proportional to the eligibility trace, so without "
-                "one every weight update would be identically zero."
+                f"learning_rule={self.learning_rule!r} requires "
+                "enable_activity_traces=true: the update is proportional to the "
+                "eligibility trace, so without one every weight update would be "
+                "identically zero."
             )
             raise ValueError(msg)
         return self
@@ -1268,6 +1274,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 weight_bound=config.plasticity_weight_bound,
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
+                modulated=config.learning_rule == "three_factor",
                 device=self.device,
             )
             # The PPO rule is discarded rather than retained: keeping it
@@ -1318,9 +1325,9 @@ class ConnectomePPOBrain(ClassicalBrain):
         if self._ppo_rule is None:
             msg = (
                 f"The {component} is owned by the PPO rule, but this brain is "
-                f"configured with learning_rule='three_factor', which owns no "
-                f"{component}: it updates weights directly from the eligibility "
-                f"trace and reward."
+                f"configured with learning_rule={self.config.learning_rule!r}, "
+                f"which owns no {component}: it updates weights directly from "
+                f"the eligibility trace."
             )
             raise AttributeError(msg)
         return self._ppo_rule
@@ -1666,7 +1673,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         that have already decayed by different amounts.
         """
         if not self._uses_ppo:
-            self._learn_three_factor(reward)
+            self._learn_plastic(reward)
             return
 
         if self._pending_state is not None:
@@ -1726,7 +1733,7 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         self.history_data.rewards.append(reward)
 
-    def _learn_three_factor(self, reward: float) -> None:
+    def _learn_plastic(self, reward: float) -> None:
         """Apply one reward-modulated plasticity update for this step.
 
         The rollout buffer, advantage estimation, and value head are never

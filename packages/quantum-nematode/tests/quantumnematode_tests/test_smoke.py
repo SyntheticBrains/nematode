@@ -39,6 +39,14 @@ SIMULATION_CONFIGS = [
     "scenarios/foraging/mlpppo_small_derivative.yml",
     "scenarios/foraging/lstmppo_small_derivative.yml",
     "scenarios/foraging/lstmppo_small_temporal.yml",
+    # Connectome plasticity arms. These exercise a code path no other smoke
+    # entry reaches: the rule updates once per environment step, computes no
+    # state value, and never fills the rollout buffer, so a full run through
+    # the entry point is the only place the runner, tracker and exporters are
+    # asked to cope with that. The three arms differ by one key each.
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic.yml",
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen.yml",
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian.yml",
     # Evolution-mode YAMLs: run_simulation.py ignores the
     # ``evolution`` / ``hyperparam_schema`` / ``transgenerational``
     # blocks, so this confirms the YAML parses and the brain runs

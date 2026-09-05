@@ -87,6 +87,7 @@ class ConnectomeThreeFactorRule:
         weight_bound: float,
         baseline_rate: float,
         freeze_updates: bool,
+        modulated: bool,
         device: torch.device,
     ) -> None:
         self._topology = topology
@@ -100,6 +101,14 @@ class ConnectomeThreeFactorRule:
         # that quietly kept learning would be indistinguishable from a
         # plastic one in its config and very different in its results.
         self.freeze_updates = freeze_updates
+        # Whether the neuromodulatory third factor is applied. Off gives the
+        # ablation floor: plain co-activity learning, dw = eta * E, with the
+        # reward stream observed but never used. It is the comparison that
+        # separates "this arm learned something" from "this arm learned
+        # something FROM REWARD" — without it, an advantage attributable to
+        # the wiring's correlation structure under any Hebbian process would
+        # be indistinguishable from reward-driven learning.
+        self.modulated = modulated
         self.device = device
 
         # Running estimate of the task's reward level. Persists across
@@ -146,6 +155,12 @@ class ConnectomeThreeFactorRule:
             # shifted.
             delta = reward - self.baseline
             self.baseline += self.baseline_rate * delta
+            # Computed and reported even when unmodulated, so both arms record
+            # what the reward stream was doing and only one records having used
+            # it. That makes the ablation visible in a run's own telemetry
+            # rather than inferable only from its configuration — which matters
+            # for an arm whose entire job is to be a trustworthy reference.
+            modulator = delta if self.modulated else 1.0
 
             weights = topo.w_chem.data
             # Snapshot before writing: the reported weight change must be
@@ -169,7 +184,7 @@ class ConnectomeThreeFactorRule:
                 # Hebbian term over the eligibility trace, plus decay toward
                 # zero. Decay is what keeps unreinforced synapses from
                 # holding whatever a transient correlation put there.
-                update = self.plasticity_rate * delta * topo.activity_traces
+                update = self.plasticity_rate * modulator * topo.activity_traces
                 update -= self.plasticity_rate * self.weight_decay * weights
                 # The trace is already masked, but the decay term is not: it
                 # is proportional to the weights, which under the soft-prior

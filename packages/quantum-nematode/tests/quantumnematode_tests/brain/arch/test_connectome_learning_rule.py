@@ -391,3 +391,119 @@ class TestFrozenControlUnderThePlasticRule:
         _drive(brain)
 
         assert not torch.equal(before, brain.topology.w_chem)
+
+
+def _hebbian(**overrides: object) -> ConnectomePPOBrain:
+    return _make(learning_rule="hebbian", enable_activity_traces=True, **overrides)
+
+
+class TestSanityFloorsShareTheSubstrate:
+    """A floor that decodes differently bounds nothing meaningful."""
+
+    def test_all_three_arms_have_identical_topology(self) -> None:
+        """Including the readout — the confound the anatomical map removed."""
+        plastic = _plastic()
+        frozen = _plastic(freeze_updates=True)
+        hebbian = _hebbian()
+
+        for other in (frozen, hebbian):
+            for name in ("w_chem", "food_gains", "readout", "g_gap", "m_chem"):
+                assert torch.equal(
+                    getattr(plastic.topology, name),
+                    getattr(other.topology, name),
+                ), name
+
+    def test_hebbian_arm_takes_the_anatomical_readout(self) -> None:
+        """It is a floor for the plastic arm, so it must decode like it."""
+        readout = _hebbian().topology.readout.detach()
+        ppo_readout = _make().topology.readout.detach()
+        assert torch.equal(readout, _plastic().topology.readout.detach())
+        assert not torch.equal(readout, ppo_readout)
+
+
+class TestSanityFloorBehaviour:
+    """Each floor must do the one thing that makes it a floor."""
+
+    def test_frozen_floor_does_not_learn(self) -> None:
+        brain = _plastic(freeze_updates=True)
+        before = brain.topology.w_chem.detach().clone()
+        _drive(brain)
+        assert torch.equal(before, brain.topology.w_chem)
+
+    def test_hebbian_floor_learns(self) -> None:
+        brain = _hebbian()
+        before = brain.topology.w_chem.detach().clone()
+        _drive(brain)
+        assert not torch.equal(before, brain.topology.w_chem)
+
+    def test_hebbian_floor_is_invariant_to_the_reward_stream(self) -> None:
+        """What makes it the reward ablation rather than a second plastic arm."""
+
+        def run(rewards: list[float]) -> torch.Tensor:
+            brain = _hebbian()
+            brain.prepare_episode()
+            torch.manual_seed(_SEED + 1)
+            for step, reward in enumerate(rewards):
+                brain.run_brain(
+                    BrainParams(
+                        food_gradient_strength=0.3 + 0.05 * step,
+                        food_gradient_direction=0.1 * step - 0.2,
+                    ),
+                    reward=None,
+                    input_data=None,
+                    top_only=False,
+                    top_randomize=False,
+                )
+                brain.learn(BrainParams(), reward=reward)
+            return brain.topology.w_chem.detach().clone()
+
+        assert torch.equal(run([1.0] * 6), run([-4.0, 8.0, 0.0, 2.5, -1.0, 6.0]))
+
+    def test_plastic_arm_is_not_invariant_to_reward(self) -> None:
+        """Guards the ablation: the modulated arm must actually use reward."""
+
+        def run(rewards: list[float]) -> torch.Tensor:
+            brain = _plastic()
+            brain.prepare_episode()
+            torch.manual_seed(_SEED + 1)
+            for step, reward in enumerate(rewards):
+                brain.run_brain(
+                    BrainParams(
+                        food_gradient_strength=0.3 + 0.05 * step,
+                        food_gradient_direction=0.1 * step - 0.2,
+                    ),
+                    reward=None,
+                    input_data=None,
+                    top_only=False,
+                    top_randomize=False,
+                )
+                brain.learn(BrainParams(), reward=reward)
+            return brain.topology.w_chem.detach().clone()
+
+        assert not torch.equal(run([1.0] * 6), run([-4.0, 8.0, 0.0, 2.5, -1.0, 6.0]))
+
+    def test_hebbian_floor_still_reports_the_reward_it_ignored(self) -> None:
+        brain = _hebbian()
+        _drive(brain)
+        errors = brain.history_data.plasticity_prediction_error
+        assert len(errors) == _STEPS
+        assert any(e != 0.0 for e in errors)
+
+
+class TestHebbianRuleValidation:
+    """The ablation reads the same trace, so it carries the same requirement."""
+
+    def test_hebbian_without_traces_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="requires enable_activity_traces"):
+            ConnectomePPOBrainConfig(learning_rule="hebbian")
+
+    def test_error_names_the_configured_rule(self) -> None:
+        with pytest.raises(ValidationError, match="hebbian"):
+            ConnectomePPOBrainConfig(learning_rule="hebbian")
+
+    def test_accessor_error_names_the_configured_rule(self) -> None:
+        """An unmodulated arm must not be told it is the modulated one."""
+        brain = _hebbian()
+        with pytest.raises(AttributeError, match="hebbian") as excinfo:
+            _ = brain.critic
+        assert "three_factor" not in str(excinfo.value)
