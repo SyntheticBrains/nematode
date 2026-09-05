@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
-from pydantic import Field
+from pydantic import Field, model_validator
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -55,6 +55,7 @@ from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 if TYPE_CHECKING:
     from quantumnematode.connectome.model import Connectome
+    from quantumnematode.learning_rules.ppo import ConnectomePPORule
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -129,6 +130,9 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
+# Continuous action layout: index 0 is speed, index 1 is turn.
+_SPEED_ACTION_INDEX = 0
+_TURN_ACTION_INDEX = 1
 
 # Number of food-chemotaxis input features per sensing mode.
 # - oracle: [strength, angle]                      → 2 features
@@ -206,6 +210,48 @@ class ConnectomePPOBrainConfig(BrainConfig):
     enable_activity_traces: bool = False
     trace_decay: float = Field(default=0.9, ge=0.0, lt=1.0)
 
+    # ── Learning rule ────────────────────────────────────────
+    # Which update mechanism trains this brain. ``ppo`` is the default and
+    # is byte-identical to builds predating this field. ``three_factor``
+    # selects reward-modulated Hebbian plasticity over the chemical
+    # synapses, which reads the eligibility trace above — hence the
+    # load-time pairing check below.
+    learning_rule: Literal["ppo", "three_factor"] = "ppo"
+
+    # Three-factor hyperparameters (ignored under ``ppo``). Bounds are
+    # load-time rather than advisory: a non-positive rate makes the rule a
+    # no-op, a decay outside [0, 1) either does nothing or inverts weights
+    # each step, and a non-positive bound collapses every synapse to zero.
+    plasticity_rate: float = Field(default=0.01, gt=0.0)
+    plasticity_weight_decay: float = Field(default=0.001, ge=0.0, lt=1.0)
+    # The bound must clear the initialisation it will be applied to. Chemical
+    # weights start at N(0, 1/sqrt(chemical in-degree)), whose tail reaches
+    # ~1.5 on this connectome, so a bound of 1.0 would clamp a handful of
+    # synapses on the very first update — silently starting this arm from a
+    # different substrate than the frozen-weights baseline it is compared
+    # against. 3.0 is roughly ten times the initial standard deviation:
+    # ample room for growth, no contact with the starting weights.
+    plasticity_weight_bound: float = Field(default=3.0, gt=0.0)
+    plasticity_baseline_rate: float = Field(default=0.01, gt=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def _validate_rule_pairing(self) -> ConnectomePPOBrainConfig:
+        """Reject a plasticity rule with no eligibility trace to read.
+
+        The three-factor update is proportional to the trace, so without
+        one every update is identically zero: training would appear to run
+        and change nothing. Failing at load is the difference between a
+        typo and a silently wasted campaign.
+        """
+        if self.learning_rule == "three_factor" and not self.enable_activity_traces:
+            msg = (
+                "learning_rule='three_factor' requires enable_activity_traces=true: "
+                "the update is proportional to the eligibility trace, so without "
+                "one every weight update would be identically zero."
+            )
+            raise ValueError(msg)
+        return self
+
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
     gamma: float = _DEFAULT_GAMMA
@@ -244,6 +290,8 @@ class ConnectomeTopology(nn.Module):
     g_gap: torch.Tensor
     # Allocated only when ``enable_activity_traces`` is on (guard every use).
     activity_traces: torch.Tensor
+    prev_activity: torch.Tensor
+    prev_activity_valid: torch.Tensor
     _food_neuron_indices: torch.Tensor
     _motor_flat_indices: torch.Tensor
     _motor_class_boundaries: torch.Tensor
@@ -603,6 +651,26 @@ class ConnectomeTopology(nn.Module):
                 "activity_traces",
                 torch.zeros(self.n_neurons, self.n_neurons, device=device),
             )
+            # Previous step's settled state, the pre-synaptic factor of the
+            # eligibility outer product. Held as a buffer so it follows the
+            # topology across devices and state-dict round-trips like the
+            # trace it feeds.
+            self.register_buffer(
+                "prev_activity",
+                torch.zeros(self.n_neurons, device=device),
+            )
+            # Whether ``prev_activity`` holds a real previous step. A zero
+            # vector cannot express this on its own — "no previous step yet"
+            # and "the previous step was all zeros" must stay distinguishable,
+            # because only the first accrues no eligibility. Registered as a
+            # buffer rather than kept as a plain attribute so it round-trips
+            # with the state it qualifies: restoring ``prev_activity`` while
+            # silently resetting its validity would drop one step of
+            # eligibility and leave the two inconsistent.
+            self.register_buffer(
+                "prev_activity_valid",
+                torch.zeros((), dtype=torch.bool, device=device),
+            )
 
     def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
         """Project a candidate weight tensor onto the strict-mask manifold.
@@ -618,15 +686,66 @@ class ConnectomeTopology(nn.Module):
         """
         return weights * self.m_chem.to(weights.dtype)
 
-    def reset_traces(self) -> None:
-        """Zero the eligibility traces at episode start.
+    def set_anatomical_readout(self) -> None:
+        """Overwrite the motor readout with the contrast its pools imply.
 
-        A documented no-op when ``enable_activity_traces`` is off (the
-        buffer is not allocated then), so brains call it unconditionally
-        from ``prepare_episode``.
+        The four pooled classes are the canonical motor groups: two
+        innervate dorsal musculature and two ventral, and orthogonally to
+        that, two drive forward locomotion and two backward. The action
+        space is ``(speed, turn)``, so the decoding is not merely learnable
+        — it is derivable. Turn is the dorsal-minus-ventral contrast; speed
+        is the forward-minus-backward contrast.
+
+        This matters only when the readout is never trained: a learned
+        readout finds an equivalent map on its own, but a frozen random one
+        permanently scrambles the anatomical meaning of the motor neurons
+        driving it.
+
+        The resulting matrix is orthonormal — unit-norm, mutually
+        orthogonal rows — so it preserves the scale and conditioning of the
+        random orthogonal initialisation it replaces, and it consumes no
+        randomness, leaving every other parameter stream untouched.
+
+        Discrete-action builds are left alone: the contrast is defined
+        against a two-dimensional continuous action, and there is no
+        anatomical reading of an arbitrary discrete action set.
+        """
+        if not self.continuous:
+            return
+        # Row order follows the pooled-class order the readout consumes, so
+        # this cannot desynchronise if that ordering is ever changed.
+        dorsal = torch.tensor(
+            [1.0 if cls.startswith("D") else -1.0 for cls in _MOTOR_CLASSES],
+            device=self.readout.device,
+        )
+        forward = torch.tensor(
+            [1.0 if cls.endswith("B") else -1.0 for cls in _MOTOR_CLASSES],
+            device=self.readout.device,
+        )
+        with torch.no_grad():
+            # Unit-norm each contrast; for four classes split two-two this
+            # is a division by two, but computing it keeps the property
+            # true if the class set ever changes.
+            self.readout[_SPEED_ACTION_INDEX].copy_(forward / forward.norm())
+            self.readout[_TURN_ACTION_INDEX].copy_(dorsal / dorsal.norm())
+
+    def reset_traces(self) -> None:
+        """Zero the eligibility traces and drop the previous state.
+
+        A documented no-op when ``enable_activity_traces`` is off (neither
+        buffer is allocated then), so brains call it unconditionally from
+        ``prepare_episode``.
+
+        Dropping the previous state is what makes the first step of an
+        episode contribute no eligibility: without it, the last step of the
+        preceding episode would act as the pre-synaptic factor for the first
+        step of the next one, crediting synapses across a discontinuity in
+        the world.
         """
         if self.enable_activity_traces:
             self.activity_traces.zero_()
+            self.prev_activity.zero_()
+            self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
         """Per-state ``log_std`` from the settled hidden state.
@@ -796,25 +915,39 @@ class ConnectomeTopology(nn.Module):
             preact = chem_mat.T @ h + gap_mat.T @ h
             h = torch.tanh(preact)
 
-        # Activity-trace update (opt-in; co-activity eligibility:
-        # E ← trace_decay·E + M_chem ∘ (h hᵀ), with E[i, j] pre-i → post-j
-        # aligned to w_chem). The ``no_grad`` is LOAD-BEARING: this rollout
-        # forward runs grad-enabled (detachment happens later in
-        # RolloutBuffer.add), and the block is what keeps E off the autograd
-        # graph — do not drop it. "Once per env step" is a call-site
-        # convention: run_brain invokes this method exactly once per step
-        # (the diagnostic ``forward`` shim also lands here and would update
-        # E if traces were enabled; no diagnostic path enables them). The
-        # batched (PPO replay) forward never touches E.
+        # Activity-trace update (opt-in; causal co-activity eligibility:
+        # E ← trace_decay·E + M_chem ∘ (h_prev ⊗ h), with E[i, j] pre-i →
+        # post-j aligned to w_chem). The pre-synaptic factor is the PREVIOUS
+        # step's settled state, so eligibility records that presynaptic
+        # activity preceded — and so could have caused — the postsynaptic
+        # activity it is credited with. A same-step outer product would be
+        # symmetric, giving both directions of a reciprocal edge pair
+        # identical eligibility and encoding no temporal order at all.
+        #
+        # The ``no_grad`` is LOAD-BEARING: this rollout forward runs
+        # grad-enabled (detachment happens later in RolloutBuffer.add), and
+        # the block is what keeps E off the autograd graph — do not drop it.
+        # "Once per env step" is a call-site convention: run_brain invokes
+        # this method exactly once per step (the diagnostic ``forward`` shim
+        # also lands here and would update E if traces were enabled; no
+        # diagnostic path enables them). The batched (PPO replay) forward
+        # never touches E or the previous state.
         if self.enable_activity_traces:
             with torch.no_grad():
-                # Masking routes through apply_weight_mask — the Protocol's
-                # single masking seam — rather than an inline m_chem multiply
-                # (bitwise-identical: 0/1 mask multiplication is exact and
-                # commutative).
-                self.activity_traces.mul_(self.trace_decay).add_(
-                    self.apply_weight_mask(torch.outer(h, h)),
-                )
+                if self.prev_activity_valid:
+                    # Masking routes through apply_weight_mask — the Protocol's
+                    # single masking seam — rather than an inline m_chem multiply
+                    # (bitwise-identical: 0/1 mask multiplication is exact and
+                    # commutative).
+                    self.activity_traces.mul_(self.trace_decay).add_(
+                        self.apply_weight_mask(torch.outer(self.prev_activity, h)),
+                    )
+                else:
+                    # First step of an episode: no presynaptic history, so
+                    # nothing is eligible. Decay still applies to nothing,
+                    # leaving E at its reset zeros.
+                    self.prev_activity_valid.fill_(True)  # noqa: FBT003 — buffer write
+                self.prev_activity.copy_(h)
 
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
@@ -1095,7 +1228,13 @@ class ConnectomePPOBrain(ClassicalBrain):
         # as a process's first import (partially-initialised module).
         from quantumnematode.learning_rules.ppo import ConnectomePPORule
 
-        self._rule = ConnectomePPORule(
+        # Constructed unconditionally so its RNG draws happen in the same
+        # order under either rule: the PPO critic's orthogonal init consumes
+        # torch RNG, and skipping it under the plastic rule would shift every
+        # subsequent stream, making the two selections produce different
+        # topologies from the same seed. The plastic path simply never uses
+        # it (``_uses_ppo`` gates every consumer).
+        ppo_rule = ConnectomePPORule(
             self.topology,
             learning_rate=config.learning_rate,
             gamma=config.gamma,
@@ -1113,6 +1252,33 @@ class ConnectomePPOBrain(ClassicalBrain):
             freeze_updates=config.freeze_updates,
             device=self.device,
         )
+        self._uses_ppo = config.learning_rule == "ppo"
+        if self._uses_ppo:
+            self._rule = ppo_rule
+            self._ppo_rule: ConnectomePPORule | None = ppo_rule
+        else:
+            from quantumnematode.learning_rules.three_factor import (
+                ConnectomeThreeFactorRule,
+            )
+
+            self._rule = ConnectomeThreeFactorRule(
+                self.topology,
+                plasticity_rate=config.plasticity_rate,
+                weight_decay=config.plasticity_weight_decay,
+                weight_bound=config.plasticity_weight_bound,
+                baseline_rate=config.plasticity_baseline_rate,
+                freeze_updates=config.freeze_updates,
+                device=self.device,
+            )
+            # The PPO rule is discarded rather than retained: keeping it
+            # would leave a live critic and optimiser bound to the same
+            # parameters the plastic rule mutates in place.
+            self._ppo_rule = None
+            # Motor decoding is never updated under the plastic rule, so
+            # what it is frozen at decides what the connectome can express.
+            # Overwrite the random orthogonal draw (already consumed above,
+            # so the RNG stream is untouched) with the anatomical contrast.
+            self.topology.set_anatomical_readout()
 
         # Rollout buffer.
         self.buffer = RolloutBuffer(
@@ -1141,15 +1307,33 @@ class ConnectomePPOBrain(ClassicalBrain):
         """Return the 4-action discrete action set."""
         return self._action_set
 
+    def _require_ppo_rule(self, component: str) -> ConnectomePPORule:
+        """Return the PPO rule, or explain why there isn't one.
+
+        Without this the plastic path would surface an attribute error
+        raised from inside a property delegation, which reads like a bug in
+        the brain rather than a question that does not apply to the
+        configured rule.
+        """
+        if self._ppo_rule is None:
+            msg = (
+                f"The {component} is owned by the PPO rule, but this brain is "
+                f"configured with learning_rule='three_factor', which owns no "
+                f"{component}: it updates weights directly from the eligibility "
+                f"trace and reward."
+            )
+            raise AttributeError(msg)
+        return self._ppo_rule
+
     @property
     def critic(self) -> nn.Linear:
-        """Value head — owned by the learning rule (back-compat shim)."""
-        return self._rule.critic
+        """Value head — owned by the PPO rule (back-compat shim)."""
+        return self._require_ppo_rule("value head").critic
 
     @property
     def optimizer(self) -> optim.Adam:
-        """Adam optimiser — owned by the learning rule (back-compat shim)."""
-        return self._rule.optimizer
+        """Adam optimiser — owned by the PPO rule (back-compat shim)."""
+        return self._require_ppo_rule("optimiser").optimizer
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Extract the per-step feature vector for the topology.
@@ -1355,7 +1539,13 @@ class ConnectomePPOBrain(ClassicalBrain):
             predator_contact_zone=zone,
             thermotaxis_features=thermo,
         )
-        value = self.critic(hidden)
+        # The plastic rule owns no critic, so there is nothing to ask and
+        # nothing that would consume the answer: it updates from the
+        # eligibility trace and the reward alone, and never fills the
+        # rollout buffer these values exist to populate. Skipped rather
+        # than answered with a zero stub, which would leave a dead tensor
+        # flowing through the action path.
+        value = self.critic(hidden) if self._uses_ppo else None
         self.last_value = value
 
         if self.continuous:
@@ -1407,7 +1597,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         self,
         mean: torch.Tensor,
         state: np.ndarray,
-        value: torch.Tensor,
+        value: torch.Tensor | None,
         log_std: torch.Tensor,
     ) -> list[ActionData]:
         """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
@@ -1466,7 +1656,19 @@ class ConnectomePPOBrain(ClassicalBrain):
         *,
         episode_done: bool = False,
     ) -> None:
-        """Add experience to the buffer; trigger a PPO update when full or at episode end."""
+        """Update from this step's reward.
+
+        Under the PPO rule this buffers experience and updates when the
+        buffer fills or the episode ends. Under the plastic rule it applies
+        one reward-modulated update immediately: the neuromodulator's
+        arrival relative to the standing eligibility *is* the mechanism, so
+        batching it across a rollout would average modulators over traces
+        that have already decayed by different amounts.
+        """
+        if not self._uses_ppo:
+            self._learn_three_factor(reward)
+            return
+
         if self._pending_state is not None:
             # When ``_pending_state`` is set, ``run_brain`` populates
             # ``_pending_action``, ``_pending_log_prob``, and
@@ -1524,8 +1726,31 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         self.history_data.rewards.append(reward)
 
+    def _learn_three_factor(self, reward: float) -> None:
+        """Apply one reward-modulated plasticity update for this step.
+
+        The rollout buffer, advantage estimation, and value head are never
+        touched: this rule reads the topology's eligibility trace and the
+        scalar reward, and nothing else.
+        """
+        from quantumnematode.learning_rules.three_factor import (
+            BASELINE_KEY,
+            MEAN_ABS_DELTA_KEY,
+            PREDICTION_ERROR_KEY,
+            SATURATED_FRACTION_KEY,
+            ThreeFactorBatch,
+        )
+
+        report = self._rule.step(self.topology, ThreeFactorBatch(reward=reward))
+        extra = report.extra
+        self.history_data.plasticity_prediction_error.append(extra[PREDICTION_ERROR_KEY])
+        self.history_data.plasticity_baseline.append(extra[BASELINE_KEY])
+        self.history_data.plasticity_mean_abs_delta.append(extra[MEAN_ABS_DELTA_KEY])
+        self.history_data.plasticity_saturated_fraction.append(extra[SATURATED_FRACTION_KEY])
+        self.history_data.rewards.append(reward)
+
     def update_memory(self, reward: float | None = None) -> None:
-        """No-op (Brain Protocol surface; PPO updates land in ``learn``)."""
+        """No-op (Brain Protocol surface; weight updates land in ``learn``)."""
 
     def prepare_episode(self) -> None:
         """Reset per-episode learning-rule state at episode start.

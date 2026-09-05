@@ -100,6 +100,35 @@ class BrainHistoryData(BaseModel):
             "(continuous-std ceiling monitor; populated only in state-dependent std mode)"
         ),
     )
+    plasticity_prediction_error: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Reward prediction error gating each plasticity update "
+            "(populated only under a three-factor learning rule)"
+        ),
+    )
+    plasticity_baseline: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Running reward baseline the prediction error is measured against "
+            "(populated only under a three-factor learning rule)"
+        ),
+    )
+    plasticity_mean_abs_delta: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Mean absolute weight change per plasticity update — near-zero means the "
+            "rule is inert (populated only under a three-factor learning rule)"
+        ),
+    )
+    plasticity_saturated_fraction: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Fraction of chemical synapses at the magnitude bound — a rule pinned at "
+            "its clamp has become a constant function while still reporting weight "
+            "change (populated only under a three-factor learning rule)"
+        ),
+    )
     probabilities: list[float] = Field(
         default_factory=list,
         description="Probabilities of actions taken by the agent",
