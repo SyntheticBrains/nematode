@@ -47,6 +47,7 @@ def _rule(topology: ConnectomeTopology, **overrides: object) -> ConnectomeThreeF
         "weight_bound": 10.0,
         "baseline_rate": 0.5,
         "freeze_updates": False,
+        "modulated": True,
     }
     kwargs.update(overrides)
     return ConnectomeThreeFactorRule(topology, device=torch.device("cpu"), **kwargs)  # type: ignore[arg-type]
@@ -418,3 +419,104 @@ class TestPreviousStateSurvivesStateDictRoundTrip:
         brain.topology.reset_traces()
 
         assert not bool(brain.topology.prev_activity_valid)
+
+
+def _hebbian(topology: ConnectomeTopology, **overrides: object) -> ConnectomeThreeFactorRule:
+    kwargs: dict[str, object] = {"modulated": False}
+    kwargs.update(overrides)
+    return _rule(topology, **kwargs)
+
+
+class TestUnmodulatedMode:
+    """The ablation floor: co-activity learning with reward observed, not used."""
+
+    def test_update_omits_the_modulator(self) -> None:
+        brain = _brain()
+        topology = brain.topology
+        trace = _seed_trace(topology)
+        rule = _hebbian(topology, plasticity_rate=0.1, weight_decay=0.0)
+        before = topology.w_chem.detach().clone()
+
+        rule.step(topology, ThreeFactorBatch(reward=7.0))
+
+        assert torch.allclose(topology.w_chem, before + 0.1 * trace, rtol=0.0, atol=1e-7)
+
+    def test_reward_changes_nothing(self) -> None:
+        """The defining property of the floor."""
+        results = []
+        for reward in (-9.0, 0.0, 12.0):
+            brain = _brain()
+            _seed_trace(brain.topology)
+            rule = _hebbian(brain.topology, weight_decay=0.0)
+            rule.step(brain.topology, ThreeFactorBatch(reward=reward))
+            results.append(brain.topology.w_chem.detach().clone())
+
+        for other in results[1:]:
+            assert torch.equal(results[0], other)
+
+    def test_reward_stream_is_still_observed(self) -> None:
+        """A mislabelled or non-applied arm must be visible from telemetry."""
+        modulated_brain, unmodulated_brain = _brain(), _brain()
+        _seed_trace(modulated_brain.topology)
+        _seed_trace(unmodulated_brain.topology)
+        modulated = _rule(modulated_brain.topology)
+        unmodulated = _hebbian(unmodulated_brain.topology)
+
+        rewards = [1.0, 3.0, -2.0]
+        modulated_reports = [
+            modulated.step(modulated_brain.topology, ThreeFactorBatch(reward=r)) for r in rewards
+        ]
+        unmodulated_reports = [
+            unmodulated.step(unmodulated_brain.topology, ThreeFactorBatch(reward=r))
+            for r in rewards
+        ]
+
+        for expected, actual in zip(modulated_reports, unmodulated_reports, strict=True):
+            assert actual.extra[PREDICTION_ERROR_KEY] == pytest.approx(
+                expected.extra[PREDICTION_ERROR_KEY],
+            )
+            assert actual.extra[BASELINE_KEY] == pytest.approx(expected.extra[BASELINE_KEY])
+
+    def test_modes_agree_when_the_prediction_error_is_one(self) -> None:
+        """Only the modulator differs; at a modulator of 1 they must coincide."""
+        modulated_brain, unmodulated_brain = _brain(), _brain()
+        _seed_trace(modulated_brain.topology)
+        _seed_trace(unmodulated_brain.topology)
+        # baseline_rate 0 pins the baseline at 0, so a reward of 1 gives delta 1.
+        modulated = _rule(modulated_brain.topology, baseline_rate=1e-12, weight_decay=0.0)
+        unmodulated = _hebbian(unmodulated_brain.topology, baseline_rate=1e-12, weight_decay=0.0)
+
+        modulated.step(modulated_brain.topology, ThreeFactorBatch(reward=1.0))
+        unmodulated.step(unmodulated_brain.topology, ThreeFactorBatch(reward=1.0))
+
+        assert torch.allclose(
+            modulated_brain.topology.w_chem,
+            unmodulated_brain.topology.w_chem,
+            rtol=0.0,
+            atol=1e-7,
+        )
+
+    def test_stabilisation_still_applies(self) -> None:
+        brain = _brain()
+        topology = brain.topology
+        _seed_trace(topology, value=1.0)
+        rule = _hebbian(topology, plasticity_rate=0.5, weight_bound=0.1, weight_decay=0.0)
+
+        report = rule.step(topology, ThreeFactorBatch(reward=1.0))
+        for _ in range(40):
+            report = rule.step(topology, ThreeFactorBatch(reward=1.0))
+
+        assert topology.w_chem.abs().max().item() <= 0.1 + 1e-6
+        assert report.extra[SATURATED_FRACTION_KEY] > 0.0
+        # Effective-change telemetry: saturated means no movement, and says so.
+        assert report.extra[MEAN_ABS_DELTA_KEY] == 0.0
+
+    def test_masking_is_shared_with_the_modulated_path(self) -> None:
+        brain = _brain()
+        topology = brain.topology
+        _seed_trace(topology)
+        rule = _hebbian(topology)
+
+        rule.step(topology, ThreeFactorBatch(reward=1.0))
+
+        assert torch.all(topology.w_chem[topology.m_chem == 0] == 0)
