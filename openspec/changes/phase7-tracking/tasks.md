@@ -22,6 +22,10 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 <!-- -->
 
+> **Execution**: the n ≥ 8 paired-seed arms below launch through `scripts/run_campaign.py` (`add-parallel-campaign-runner`), which runs the config × seed cross product as isolated subprocesses of the standard single-run entry point — each run byte-for-byte the command it replaces, so results are unchanged and only wall-clock moves.
+
+<!-- -->
+
 > **Coarse-grained by design.** These sub-tasks are the load-bearing shape; per-milestone OpenSpec changes elaborate them (first: `add-l4-trace-substrate`).
 
 ## Shipment 7a-i — Platform Freeze + Minimal Rule + the 2×2 Panel

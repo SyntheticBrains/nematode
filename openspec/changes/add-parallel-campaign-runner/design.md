@@ -52,6 +52,14 @@ This keeps device names stable across machines, makes the Apple GPU reachable an
 
 MPS is added as a **capability, not a recommendation**. The docs record that CPU is the right default for current model sizes, with the measurements and the conditions under which that would change.
 
+### Decision 4a — the check must be brain-family-aware, not just availability-aware
+
+Spec review caught that availability alone is insufficient. `DeviceType` is shared by two unrelated backends: PyTorch tensor placement for classical/spiking brains, and the Qiskit simulator selector for quantum brains, which read it as `self.device.value.upper()`. `AerSimulator(device="MPS")` was tested and is **accepted without raising** — and in Qiskit, MPS already means *Matrix Product State*, a simulation method. An unchecked selection would therefore construct a meaningless backend and propagate `aer_simulator_mps` into experiment metadata as a legitimate-looking backend name: a silent-wrong-data path, the worst failure mode available here.
+
+Validation reads the plugin registry's `families` tuple, which already tags 11 brains `quantum` (one as `("quantum", "classical")`). Hybrids are treated as quantum, because their device value still reaches the simulator. Deriving from registry metadata rather than a device/brain matrix means a new architecture inherits correct validation from its registration alone.
+
+Scope is held tight: this validates only the accelerator this change introduces. The pre-existing behaviour whereby a non-quantum brain selecting `qpu` falls back to CPU placement is documented in the enum and left alone — changing it would be an unrelated behaviour change smuggled into a performance change.
+
 ## Decision 5 — The env hot loop is left alone, on purpose
 
 The largest single optimisation available is not taken. Vectorising the food-gradient superposition measures 32.66 µs → 4.00 µs (**8.2×**) on a function reached ~2.5M times per 10 episodes, worth roughly 1.4× overall by Amdahl.

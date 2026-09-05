@@ -28,7 +28,7 @@ At a realistic per-run length (8 seeds × 100 episodes) the same pattern holds: 
 
 `DeviceType.GPU` maps unconditionally to `"cuda"`. On any machine without a CUDA build — which includes this project's primary development machine — `--device gpu` dies with a raw, unactionable assertion:
 
-```
+```text
 AssertionError: Torch not compiled with CUDA enabled
 ```
 
@@ -57,6 +57,7 @@ Operationally: per-run log files, live progress with completion counts and elaps
 - `DeviceType` gains `MPS = "mps"`, so Apple's GPU becomes selectable and therefore measurable.
 - `GPU` keeps mapping to `"cuda"` — it is not silently redirected to MPS, because MPS is **measurably slower** for this project's model sizes and a silent redirect would hand users a 2–3.6× regression under the name "gpu".
 - Requesting an accelerator that this build cannot provide fails at startup with an actionable message naming the platform-appropriate alternative, instead of a torch assertion mid-brain-construction.
+- Device selection is validated against the **brain family**. `DeviceType` is not torch-only: quantum brains consume the same value as an upper-cased Qiskit Aer simulator selector. `AerSimulator(device="MPS")` is accepted **without raising**, and "MPS" collides with Qiskit's own Matrix Product State method, so an unchecked `--device mps` on a quantum brain would build a nonsense backend and record `aer_simulator_mps` in experiment metadata as if it were real. The check reads the plugin registry's existing `families` metadata, so newly registered architectures inherit it without a per-architecture branch.
 
 ### 3. `scripts/benchmarks/bench_device_backends.py` — reproducible evidence
 
