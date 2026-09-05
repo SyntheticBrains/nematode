@@ -32,7 +32,11 @@ from quantumnematode.brain.arch._policy import (
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._rule import RuleStepReport
-from quantumnematode.brain.arch._std_head import clamped_log_std_stats
+from quantumnematode.brain.arch._std_head import (
+    LOG_STD_CLAMPED_MAX_KEY,
+    LOG_STD_CLAMPED_MEAN_KEY,
+    clamped_log_std_stats,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -195,6 +199,9 @@ class ConnectomePPORule:
         update_log_stds: list[torch.Tensor] = []
 
         for _ in range(self.num_epochs):
+            # Final-epoch semantics for the ceiling monitor: the recorded batch
+            # reflects the near-final weights of this update.
+            update_log_stds.clear()
             for minibatch in buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 # Batched forward pass through the topology + critic. The
                 # minibatch's states are unpacked + run in ONE batched
@@ -275,8 +282,8 @@ class ConnectomePPORule:
             ls_mean, ls_max = clamped_log_std_stats(
                 torch.cat([t.reshape(-1) for t in update_log_stds]),
             )
-            extra["log_std_clamped_mean"] = ls_mean
-            extra["log_std_clamped_max"] = ls_max
+            extra[LOG_STD_CLAMPED_MEAN_KEY] = ls_mean
+            extra[LOG_STD_CLAMPED_MAX_KEY] = ls_max
         return RuleStepReport(
             policy_loss=_mean(policy_losses),
             value_loss=_mean(value_losses),

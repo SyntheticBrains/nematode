@@ -89,14 +89,14 @@ class BrainHistoryData(BaseModel):
     log_std_clamped_mean: list[float] = Field(
         default_factory=list,
         description=(
-            "Per-update mean of the clamped continuous log-std batch "
+            "Final-epoch mean of the clamped continuous log-std batch per update "
             "(continuous-std ceiling monitor; populated only in state-dependent std mode)"
         ),
     )
     log_std_clamped_max: list[float] = Field(
         default_factory=list,
         description=(
-            "Per-update max of the clamped continuous log-std batch "
+            "Final-epoch max of the clamped continuous log-std batch per update "
             "(continuous-std ceiling monitor; populated only in state-dependent std mode)"
         ),
     )

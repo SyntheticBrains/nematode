@@ -56,8 +56,9 @@ from quantumnematode.brain.arch._policy import (
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._std_head import (
     StateDependentLogStdHead,
-    clamped_log_std_stats,
     raise_on_std_mode_mismatch,
+    record_clamped_log_std,
+    std_parameters,
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
@@ -610,9 +611,8 @@ class LSTMPPOBrain(ClassicalBrain):
         # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-init state-dependent head off ``h_out`` (allocated below,
         # after every RNG-consuming parameter).
-        self._state_dependent_std = (
-            self.continuous and config.continuous_std_mode == "state_dependent"
-        )
+        # The config validator guarantees this mode only pairs with continuous.
+        self._state_dependent_std = config.continuous_std_mode == "state_dependent"
         if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
@@ -636,16 +636,20 @@ class LSTMPPOBrain(ClassicalBrain):
 
         # ── Optimizers ──
 
+        # The active std mechanism's parameters, computed once and shared by
+        # the optimiser and grad-clip lists so the two cannot diverge.
+        self._std_params: list[nn.Parameter] = std_parameters(
+            state_dependent=self._state_dependent_std,
+            log_std_head=getattr(self, "log_std_head", None),
+            log_std=getattr(self, "log_std", None),
+        )
         # Actor optimizer: LSTM/GRU + LayerNorm + actor MLP (+ std in continuous mode)
         actor_params = (
             list(self.rnn.parameters())
             + list(self.feature_norm.parameters())
             + list(self.actor.parameters())
         )
-        if self._state_dependent_std:
-            actor_params.extend(self.log_std_head.parameters())
-        elif self.continuous:
-            actor_params.append(self.log_std)
+        actor_params.extend(self._std_params)
         self.actor_optimizer = torch.optim.Adam(actor_params, lr=config.actor_lr)
         # Critic optimizer: critic MLP only
         self.critic_optimizer = torch.optim.Adam(
@@ -1144,6 +1148,9 @@ class LSTMPPOBrain(ClassicalBrain):
         num_updates = 0
 
         for _epoch in range(self.config.num_epochs):
+            # Final-epoch semantics: the recorded monitor batch reflects the
+            # near-final weights of this update, not stale earlier epochs.
+            update_log_stds.clear()
             for chunk in self.buffer.get_sequential_chunks(
                 self.config.bptt_chunk_length,
                 returns,
@@ -1255,10 +1262,7 @@ class LSTMPPOBrain(ClassicalBrain):
                     + list(self.actor.parameters())
                     + list(self.feature_norm.parameters())
                 )
-                if self._state_dependent_std:
-                    actor_clip_params.extend(self.log_std_head.parameters())
-                elif self.continuous:
-                    actor_clip_params.append(self.log_std)
+                actor_clip_params.extend(self._std_params)
                 torch.nn.utils.clip_grad_norm_(
                     actor_clip_params,
                     self.config.max_grad_norm,
@@ -1288,12 +1292,7 @@ class LSTMPPOBrain(ClassicalBrain):
             avg_entropy = total_entropy / num_updates
             self.latest_data.loss = avg_policy
             self.history_data.losses.append(avg_policy)
-            if self._state_dependent_std and update_log_stds:
-                ls_mean, ls_max = clamped_log_std_stats(
-                    torch.cat([t.reshape(-1) for t in update_log_stds]),
-                )
-                self.history_data.log_std_clamped_mean.append(ls_mean)
-                self.history_data.log_std_clamped_max.append(ls_max)
+            record_clamped_log_std(self.history_data, update_log_stds)
 
             current_lr = self._get_current_lr()
             logger.info(
@@ -1543,7 +1542,12 @@ class LSTMPPOBrain(ClassicalBrain):
             ),
             "training_state": WeightComponent(
                 name="training_state",
-                state={"episode_count": self._episode_count},
+                state={
+                    "episode_count": self._episode_count,
+                    # Std-mode marker so cross-mode loads fail even for
+                    # component subsets without a std component.
+                    "continuous_std_mode": self.config.continuous_std_mode,
+                },
             ),
         }
 
@@ -1572,6 +1576,12 @@ class LSTMPPOBrain(ClassicalBrain):
         components: dict[str, WeightComponent],
     ) -> None:
         """Load weight components into this brain."""
+        # Validate std-mode agreement BEFORE mutating any component, so a
+        # caller that catches the error never sees a half-loaded brain.
+        raise_on_std_mode_mismatch(
+            components,
+            state_dependent=self._state_dependent_std,
+        )
         # Load networks first
         if "lstm" in components:
             self.rnn.load_state_dict(components["lstm"].state)
@@ -1581,10 +1591,6 @@ class LSTMPPOBrain(ClassicalBrain):
             self.actor.load_state_dict(components["policy"].state)
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
-        raise_on_std_mode_mismatch(
-            components,
-            state_dependent=self._state_dependent_std,
-        )
         if "log_std" in components and self.continuous:
             self.log_std.data.copy_(components["log_std"].state["log_std"])
         if "log_std_head" in components and self._state_dependent_std:

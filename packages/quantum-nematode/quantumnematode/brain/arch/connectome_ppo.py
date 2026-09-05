@@ -41,7 +41,11 @@ from quantumnematode.brain.arch._policy import (
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
-from quantumnematode.brain.arch._std_head import StateDependentLogStdHead
+from quantumnematode.brain.arch._std_head import (
+    LOG_STD_CLAMPED_MAX_KEY,
+    LOG_STD_CLAMPED_MEAN_KEY,
+    StateDependentLogStdHead,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
@@ -1355,11 +1359,13 @@ class ConnectomePPOBrain(ClassicalBrain):
         self.last_value = value
 
         if self.continuous:
-            log_std = (
-                self.topology.state_dependent_log_std(hidden)
-                if self.topology.state_dependent_std
-                else self.topology.log_std
-            )
+            if self.topology.state_dependent_std:
+                # Rollout-only computation: the sampler's outputs are detached
+                # before storage, so skip graph construction here.
+                with torch.no_grad():
+                    log_std = self.topology.state_dependent_log_std(hidden)
+            else:
+                log_std = self.topology.log_std
             return self._run_brain_continuous(head_out, state, value, log_std)
 
         # Action distribution via the shared discrete policy helper (byte-equivalent
@@ -1507,12 +1513,12 @@ class ConnectomePPOBrain(ClassicalBrain):
             if report.policy_loss is not None:
                 self.latest_data.loss = report.policy_loss
                 self.history_data.losses.append(report.policy_loss)
-            if "log_std_clamped_mean" in report.extra:
+            if LOG_STD_CLAMPED_MEAN_KEY in report.extra:
                 self.history_data.log_std_clamped_mean.append(
-                    report.extra["log_std_clamped_mean"],
+                    report.extra[LOG_STD_CLAMPED_MEAN_KEY],
                 )
                 self.history_data.log_std_clamped_max.append(
-                    report.extra["log_std_clamped_max"],
+                    report.extra[LOG_STD_CLAMPED_MAX_KEY],
                 )
             self.buffer.reset()
 

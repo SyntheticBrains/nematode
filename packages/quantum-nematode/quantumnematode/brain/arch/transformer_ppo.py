@@ -55,8 +55,9 @@ from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._std_head import (
     StateDependentLogStdHead,
-    clamped_log_std_stats,
     raise_on_std_mode_mismatch,
+    record_clamped_log_std,
+    std_parameters,
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
@@ -212,13 +213,20 @@ class TransformerPPOBrain(ClassicalBrain):
 
         # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-init state-dependent head off the pooled encoder output.
-        self._state_dependent_std = (
-            self.continuous and config.continuous_std_mode == "state_dependent"
-        )
+        # The config validator guarantees this mode only pairs with continuous.
+        self._state_dependent_std = config.continuous_std_mode == "state_dependent"
         if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
         if self._state_dependent_std:
             self.log_std_head = StateDependentLogStdHead(config.d_model, device=self.device)
+
+        # The active std mechanism's parameters, computed once and shared by
+        # the optimiser and grad-clip lists so the two cannot diverge.
+        self._std_params: list[nn.Parameter] = std_parameters(
+            state_dependent=self._state_dependent_std,
+            log_std_head=getattr(self, "log_std_head", None),
+            log_std=getattr(self, "log_std", None),
+        )
 
         params = list(self._trainable_parameters())
         self.optimizer = optim.Adam(params, lr=config.learning_rate)
@@ -259,10 +267,7 @@ class TransformerPPOBrain(ClassicalBrain):
             *self.actor.parameters(),
             *self.critic.parameters(),
         ]
-        if self._state_dependent_std:
-            params.extend(self.log_std_head.parameters())
-        elif self.continuous:
-            params.append(self.log_std)
+        params.extend(self._std_params)
         return params
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
@@ -439,6 +444,9 @@ class TransformerPPOBrain(ClassicalBrain):
 
         update_log_stds: list[torch.Tensor] = []
         for _ in range(self.num_epochs):
+            # Final-epoch semantics: the recorded monitor batch reflects the
+            # near-final weights of this update, not stale earlier epochs.
+            update_log_stds.clear()
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 pooled = self._trunk(batch["states"])
                 head_out = self.actor(pooled)
@@ -477,12 +485,7 @@ class TransformerPPOBrain(ClassicalBrain):
                 nn.utils.clip_grad_norm_(self._trainable_parameters(), self.max_grad_norm)
                 self.optimizer.step()
 
-        if self._state_dependent_std and update_log_stds:
-            ls_mean, ls_max = clamped_log_std_stats(
-                torch.cat([t.reshape(-1) for t in update_log_stds]),
-            )
-            self.history_data.log_std_clamped_mean.append(ls_mean)
-            self.history_data.log_std_clamped_max.append(ls_max)
+        record_clamped_log_std(self.history_data, update_log_stds)
 
     def update_memory(self, reward: float | None = None) -> None:
         """No-op for TransformerPPOBrain."""
@@ -521,7 +524,12 @@ class TransformerPPOBrain(ClassicalBrain):
             "optimizer": WeightComponent(name="optimizer", state=self.optimizer.state_dict()),
             "training_state": WeightComponent(
                 name="training_state",
-                state={"episode_count": self._episode_count},
+                state={
+                    "episode_count": self._episode_count,
+                    # Std-mode marker so cross-mode loads fail even for
+                    # component subsets without a std component.
+                    "continuous_std_mode": self.config.continuous_std_mode,
+                },
             ),
         }
         if self._state_dependent_std:
@@ -545,6 +553,12 @@ class TransformerPPOBrain(ClassicalBrain):
 
     def load_weight_components(self, components: dict[str, WeightComponent]) -> None:
         """Load weight components into this brain."""
+        # Validate std-mode agreement BEFORE mutating any component, so a
+        # caller that catches the error never sees a half-loaded brain.
+        raise_on_std_mode_mismatch(
+            components,
+            state_dependent=self._state_dependent_std,
+        )
         if "policy" in components:
             state = components["policy"].state
             self.input_proj.load_state_dict(state["input_proj"])
@@ -554,10 +568,6 @@ class TransformerPPOBrain(ClassicalBrain):
             self.actor.load_state_dict(state["actor"])
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
-        raise_on_std_mode_mismatch(
-            components,
-            state_dependent=self._state_dependent_std,
-        )
         if "log_std" in components and self.continuous:
             self.log_std.data.copy_(components["log_std"].state["log_std"])
         if "log_std_head" in components and self._state_dependent_std:

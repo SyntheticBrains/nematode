@@ -173,14 +173,18 @@ class TestShapePins:
         assert batched.shape == (5, 2)
 
 
-@pytest.mark.parametrize("name", ["mlpppo", "transformerppo", "connectomeppo"])
+@pytest.mark.parametrize("name", list(_BRAINS))
 class TestGradientFlowAndMonitor:
     """A training update moves the head and records the ceiling monitor."""
 
     def test_update_moves_head_and_logs_monitor(self, name: str) -> None:
         overrides: dict[str, object] = {"continuous_std_mode": "state_dependent"}
-        if name != "connectomeppo":
+        if name in ("mlpppo", "transformerppo"):
             overrides["rollout_buffer_size"] = 32
+        if name in ("cfcppo", "lstmppo"):
+            # The default BPTT chunk length (16/64) exceeds the drive length;
+            # shorten it so the recurrent update actually fires.
+            overrides["bptt_chunk_length"] = 4
         brain = _make(name, **overrides)
         owner = brain.topology if name == "connectomeppo" else brain
         before = {
@@ -228,3 +232,28 @@ class TestCrossModePersistence:
             off.load_weight_components(on.get_weight_components())
         with pytest.raises(ValueError, match="modes must match"):
             on.load_weight_components(off.get_weight_components())
+
+
+class TestGuardOrdering:
+    """A failed cross-mode load mutates nothing (guard runs before any apply)."""
+
+    def test_failed_load_leaves_brain_untouched(self) -> None:
+        on = _make("mlpppo", continuous_std_mode="state_dependent")
+        off = _make("mlpppo")
+        actor_before = [p.detach().clone() for p in off.actor.parameters()]
+        with pytest.raises(ValueError, match="must match"):
+            off.load_weight_components(on.get_weight_components())
+        for p_before, p_after in zip(actor_before, off.actor.parameters(), strict=True):
+            assert torch.equal(p_before, p_after)
+
+
+class TestSubsetSaveMarker:
+    """Cross-mode subset saves without a std component still fail loudly."""
+
+    def test_training_state_marker_blocks_cross_mode_subset(self) -> None:
+        on = _make("mlpppo", continuous_std_mode="state_dependent")
+        off = _make("mlpppo")
+        subset = on.get_weight_components(components={"policy", "training_state"})
+        assert "log_std_head" not in subset
+        with pytest.raises(ValueError, match="continuous_std_mode"):
+            off.load_weight_components(subset)

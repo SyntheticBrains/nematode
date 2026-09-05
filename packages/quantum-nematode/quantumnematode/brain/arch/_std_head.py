@@ -29,6 +29,17 @@ from quantumnematode.brain.arch._policy import (
     clamp_continuous_log_std,
 )
 
+if TYPE_CHECKING:
+    from quantumnematode.brain.arch._brain import BrainHistoryData
+
+# Weight-component names for the two std mechanisms (also keyed on by the
+# cross-mode load guard below).
+STD_HEAD_COMPONENT = "log_std_head"
+STD_PARAM_COMPONENT = "log_std"
+# Telemetry keys for the ceiling monitor when routed through a rule report.
+LOG_STD_CLAMPED_MEAN_KEY = "log_std_clamped_mean"
+LOG_STD_CLAMPED_MAX_KEY = "log_std_clamped_max"
+
 
 class StateDependentLogStdHead(nn.Module):
     """Zero-initialised, RNG-free linear head: trunk feature → ``log_std``.
@@ -75,6 +86,16 @@ def raise_on_std_mode_mismatch(
     AttributeError or silently skip the std component — the loaded policy's
     exploration would be wrong with no signal.
     """
+    training_state = components.get("training_state")
+    saved_state = getattr(training_state, "state", None)
+    saved_mode = saved_state.get("continuous_std_mode") if isinstance(saved_state, dict) else None
+    if saved_mode is not None and (saved_mode == "state_dependent") != state_dependent:
+        msg = (
+            f"Weight file was saved with continuous_std_mode: {saved_mode} but this "
+            "brain runs the other std mode. Std modes must match between the saved "
+            "weights and the loading config (component subsets included)."
+        )
+        raise ValueError(msg)
     if state_dependent and "log_std" in components:
         msg = (
             "Weight file carries a state-independent 'log_std' component but this "
@@ -89,3 +110,42 @@ def raise_on_std_mode_mismatch(
             "between the saved weights and the loading config."
         )
         raise ValueError(msg)
+
+
+def std_parameters(
+    *,
+    state_dependent: bool,
+    log_std_head: nn.Module | None = None,
+    log_std: nn.Parameter | None = None,
+) -> list[nn.Parameter]:
+    """Parameters of the active std mechanism (empty for discrete brains).
+
+    Computed once at construction and reused for both the optimiser and the
+    grad-clip lists, so the two can never silently diverge.
+    """
+    if state_dependent:
+        if log_std_head is None:
+            msg = "state-dependent std requires a log_std_head"
+            raise ValueError(msg)
+        return list(log_std_head.parameters())
+    if log_std is not None:
+        return [log_std]
+    return []
+
+
+def record_clamped_log_std(
+    history_data: BrainHistoryData,
+    log_stds: list[torch.Tensor],
+) -> None:
+    """Append the ceiling-monitor stats for one update (no-op on empty input).
+
+    ``log_stds`` holds the final training epoch's detached per-minibatch (or
+    per-step) log-std tensors, so the recorded value reflects the near-final
+    weights of the update rather than being diluted by stale earlier-epoch
+    evaluations.
+    """
+    if not log_stds:
+        return
+    ls_mean, ls_max = clamped_log_std_stats(torch.cat([t.reshape(-1) for t in log_stds]))
+    history_data.log_std_clamped_mean.append(ls_mean)
+    history_data.log_std_clamped_max.append(ls_max)
