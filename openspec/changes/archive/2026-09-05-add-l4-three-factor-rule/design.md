@@ -112,6 +112,14 @@ The default is `3.0` — roughly ten times the initial standard deviation, leavi
 
 The general rule this instance illustrates, worth stating because the arm changes will set these values again: **a stabiliser must not modify the thing it is stabilising before the process it bounds has begun.**
 
+## Decision 10 — freezes are total, and apply to every rule (found at branch review)
+
+`freeze_updates` was honoured only by the gradient rule. Selecting the plasticity rule silently ignored it, so an arm configured as a frozen control would have kept learning — identical in configuration to the plastic arm, materially different in results, and undetectable without reading the rule's source.
+
+That matters more here than it would elsewhere: the frozen-weights baseline is the detector for this change's accepted risk. An arm that fails to clear it reports "the rule did not learn"; if the "frozen" arm were itself learning, that inference would be unavailable and the failure mode would be invisible.
+
+The freeze is now **total**: no Hebbian term, no decay, and no clamp. The clamp deserves the explicit exclusion — it is the only remaining path by which a frozen arm could still be edited, and it would fire on any weight that began outside the bound, exactly the silent substrate change a control exists to prevent. Reporting continues, so the control stays comparable step-for-step with its pair.
+
 ## Risks
 
 - **The rule may not learn under a frozen readout** (Decision 3). Detected by the D2 frozen-weights floor; interpretation rule fixed in advance.

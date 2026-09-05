@@ -86,6 +86,7 @@ class ConnectomeThreeFactorRule:
         weight_decay: float,
         weight_bound: float,
         baseline_rate: float,
+        freeze_updates: bool,
         device: torch.device,
     ) -> None:
         self._topology = topology
@@ -93,6 +94,12 @@ class ConnectomeThreeFactorRule:
         self.weight_decay = weight_decay
         self.weight_bound = weight_bound
         self.baseline_rate = baseline_rate
+        # Paired-control branch: run the rule's bookkeeping but never write a
+        # weight. Honoured here as well as in the gradient rule so the flag
+        # means the same thing whichever rule is selected — a "frozen" arm
+        # that quietly kept learning would be indistinguishable from a
+        # plastic one in its config and very different in its results.
+        self.freeze_updates = freeze_updates
         self.device = device
 
         # Running estimate of the task's reward level. Persists across
@@ -141,20 +148,29 @@ class ConnectomeThreeFactorRule:
             self.baseline += self.baseline_rate * delta
 
             weights = topo.w_chem.data
-            # Hebbian term over the eligibility trace, plus decay toward
-            # zero. Decay is what keeps unreinforced synapses from holding
-            # whatever a transient correlation put there.
-            update = self.plasticity_rate * delta * topo.activity_traces
-            update -= self.plasticity_rate * self.weight_decay * weights
-            # The trace is already masked, but the decay term is not: it is
-            # proportional to the weights, which under the soft-prior mask
-            # mode may hold values off the wild-type edge set. Projecting
-            # keeps the rule from writing anywhere the topology says there
-            # is no synapse.
-            update = topo.apply_weight_mask(update)
+            if self.freeze_updates:
+                # Nothing is written at all — not the Hebbian term, not the
+                # decay, not the clamp. A clamp alone would still edit a
+                # weight that started outside the bound, which is precisely
+                # the silent substrate change a frozen control exists to
+                # avoid. Reporting continues, so the control can be compared
+                # step-for-step against the plastic arm.
+                update = torch.zeros_like(weights)
+            else:
+                # Hebbian term over the eligibility trace, plus decay toward
+                # zero. Decay is what keeps unreinforced synapses from
+                # holding whatever a transient correlation put there.
+                update = self.plasticity_rate * delta * topo.activity_traces
+                update -= self.plasticity_rate * self.weight_decay * weights
+                # The trace is already masked, but the decay term is not: it
+                # is proportional to the weights, which under the soft-prior
+                # mask mode may hold values off the wild-type edge set.
+                # Projecting keeps the rule from writing anywhere the
+                # topology says there is no synapse.
+                update = topo.apply_weight_mask(update)
 
-            weights.add_(update)
-            weights.clamp_(-self.weight_bound, self.weight_bound)
+                weights.add_(update)
+                weights.clamp_(-self.weight_bound, self.weight_bound)
 
             mean_abs_delta = update.abs().mean().item()
             # Fraction measured over real synapses only: the off-edge zeros

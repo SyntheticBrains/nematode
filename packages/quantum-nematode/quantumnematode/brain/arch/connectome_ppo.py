@@ -1258,6 +1258,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 weight_decay=config.plasticity_weight_decay,
                 weight_bound=config.plasticity_weight_bound,
                 baseline_rate=config.plasticity_baseline_rate,
+                freeze_updates=config.freeze_updates,
                 device=self.device,
             )
             # The PPO rule is discarded rather than retained: keeping it

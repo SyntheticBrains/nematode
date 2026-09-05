@@ -346,3 +346,48 @@ class TestBoundClearsInitialisation:
         brain.learn(BrainParams(), reward=0.0)
 
         assert torch.equal(before, brain.topology.w_chem)
+
+
+class TestFrozenControlUnderThePlasticRule:
+    """`freeze_updates` must mean the same thing whichever rule is selected."""
+
+    def test_frozen_plastic_arm_does_not_learn(self) -> None:
+        """A control that quietly kept learning would look identical in config."""
+        brain = _plastic(freeze_updates=True)
+        before = brain.topology.w_chem.detach().clone()
+
+        _drive(brain)
+
+        assert torch.equal(before, brain.topology.w_chem)
+
+    def test_frozen_arm_still_reports_telemetry(self) -> None:
+        """The control must be comparable step-for-step with the plastic arm."""
+        brain = _plastic(freeze_updates=True)
+        _drive(brain)
+
+        assert len(brain.history_data.plasticity_prediction_error) == _STEPS
+        assert all(d == 0.0 for d in brain.history_data.plasticity_mean_abs_delta)
+
+    def test_frozen_arm_is_untouched_even_by_the_clamp(self) -> None:
+        """A clamp alone would still edit a weight that started out of bounds.
+
+        Setting the bound below the initialisation's tail makes the clamp the
+        only thing that could write, so this fails if the freeze skips the
+        update but not the clamp.
+        """
+        brain = _plastic(freeze_updates=True, plasticity_weight_bound=0.1)
+        before = brain.topology.w_chem.detach().clone()
+        assert before.abs().max().item() > 0.1  # the clamp would bite if it ran
+
+        _drive(brain)
+
+        assert torch.equal(before, brain.topology.w_chem)
+
+    def test_unfrozen_plastic_arm_does_learn(self) -> None:
+        """Guards against the freeze test passing because nothing ever learns."""
+        brain = _plastic(freeze_updates=False)
+        before = brain.topology.w_chem.detach().clone()
+
+        _drive(brain)
+
+        assert not torch.equal(before, brain.topology.w_chem)

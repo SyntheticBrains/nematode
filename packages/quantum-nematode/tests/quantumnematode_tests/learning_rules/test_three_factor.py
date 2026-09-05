@@ -39,12 +39,13 @@ def _brain(**overrides: object) -> ConnectomePPOBrain:
     return ConnectomePPOBrain(config=cfg, device=DeviceType.CPU)
 
 
-def _rule(topology: ConnectomeTopology, **overrides: float) -> ConnectomeThreeFactorRule:
-    kwargs: dict[str, float] = {
+def _rule(topology: ConnectomeTopology, **overrides: object) -> ConnectomeThreeFactorRule:
+    kwargs: dict[str, object] = {
         "plasticity_rate": 0.1,
         "weight_decay": 0.0,
         "weight_bound": 10.0,
         "baseline_rate": 0.5,
+        "freeze_updates": False,
     }
     kwargs.update(overrides)
     return ConnectomeThreeFactorRule(topology, device=torch.device("cpu"), **kwargs)  # type: ignore[arg-type]

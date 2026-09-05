@@ -1,6 +1,10 @@
-# Spec: learning-rules
+# learning-rules Specification
 
-## ADDED Requirements
+## Purpose
+
+TBD - created by archiving change add-l4-three-factor-rule. Update Purpose after archive.
+
+## Requirements
 
 ### Requirement: Minimal rate-based three-factor plasticity rule
 
@@ -87,6 +91,33 @@ A weight-decay term SHALL be applied alongside the Hebbian term, and updated wei
 
 - **WHEN** a configuration sets a plasticity rate, decay, or bound outside its valid range
 - **THEN** loading SHALL fail with an error naming the offending field
+
+### Requirement: Frozen controls apply to every rule
+
+A configuration that freezes weight updates SHALL be honoured by every learning rule, not only by the gradient rule. A paired frozen control whose weights kept changing would be indistinguishable from its plastic counterpart in configuration and materially different in results, which is the failure a control exists to prevent.
+
+Under a freeze the rule SHALL write nothing at all — no learning term, no decay, and no stabilising clamp. A clamp alone would still edit a weight that began outside the bound, silently changing the substrate the control is supposed to hold fixed.
+
+Reporting SHALL continue while frozen, so the control remains comparable step-for-step with the arm it is paired against.
+
+#### Scenario: A frozen arm does not learn
+
+- **GIVEN** a configuration selecting a plasticity rule with updates frozen
+- **WHEN** an episode is run
+- **THEN** the trainable weights SHALL be bit-identical to their initial values
+
+#### Scenario: The clamp does not fire under a freeze
+
+- **GIVEN** a frozen arm whose magnitude bound is below its largest initial weight
+- **WHEN** an episode is run
+- **THEN** the weights SHALL still be bit-identical to their initial values
+
+#### Scenario: A frozen arm still reports
+
+- **GIVEN** a frozen arm
+- **WHEN** updates are applied
+- **THEN** telemetry SHALL be recorded for every step
+- **AND** the reported weight change SHALL be zero
 
 ### Requirement: Plasticity telemetry
 
