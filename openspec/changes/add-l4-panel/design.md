@@ -231,6 +231,25 @@ publishable — and any redesign is a new change with its own pre-registration.
 
 None that this change resolves post hoc. The pinned values below are filled by the pilot.
 
+## Pilot 1 outcome (amendment dated 2026-09-06)
+
+The pilot ran as registered and pinned nothing. The grid `{0.003, 0.01, 0.03}` is two orders of
+magnitude too hot for this cell's reward scale: the terminal prediction error is about −10, so one
+update moves weights by order 1 against an initialisation scale near 0.3, and the connectome arms
+random-walk into the bound (the Hebbian floor ends 96% clamped). The MLP dies in episode 1 at 0.01
+and is effectively frozen at 3e-3 and below; its per-weight trace is about a thousand times
+smaller than the connectome's, so no single rate serves both substrates — a matched rate is not a
+matched rule. Diagnostic probes show the connectome learning at 1e-4. Full record:
+`docs/experiments/logbooks/supporting/040-l4-panel/pilot-1-notes.md`.
+
+**Ratified with Chris:** the rule's scaling is made substrate-invariant in its own change before
+the panel (a rule change is out of this change's scope and must be pre-registered on its own);
+the grid is then re-registered here by dated amendment and the pilot re-run on the same pilot
+seeds. Arms, panel seeds, metric, tests, family, verdict map, band rule and sensitivity pass are
+unchanged. D9 anticipated this branch ("the rule never leaves chance at any grid rate") and
+routed it to a new change rather than to a wider grid here; what the pilot added is that the
+defect is scale, not the rule's ability to learn.
+
 ## Pinned values (filled by dated amendment before launch)
 
 - **Recipe** (`plasticity_rate`): *pending the pilot.*

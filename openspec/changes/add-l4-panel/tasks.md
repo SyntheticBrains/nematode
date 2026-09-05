@@ -2,41 +2,44 @@
 
 ## 1. The two rewired floors
 
-- [ ] 1.1 `…_plastic_frozen_rewired_null.yml`: the frozen floor plus the rewired-null `wiring` key, with
+- [x] 1.1 `…_plastic_frozen_rewired_null.yml`: the frozen floor plus the rewired-null `wiring` key, with
   a header comment stating the one-key delta and why `rewire_seed` stays unset.
-- [ ] 1.2 `…_plastic_hebbian_rewired_null.yml`: the same one key off the Hebbian floor.
-- [ ] 1.3 Variant tests: each new config differs from its wild-type parent by exactly
+- [x] 1.2 `…_plastic_hebbian_rewired_null.yml`: the same one key off the Hebbian floor.
+- [x] 1.3 Variant tests: each new config differs from its wild-type parent by exactly
   `brain.config.wiring`; each loads with the parent's rule, freeze flag, strict mask and
   traces; parent name stays a prefix. The rewired frozen arm's chemical mask equals the rewired
   plastic arm's at one seed — the shared wiring T4 assumes.
-- [ ] 1.4 Smoke entries for both.
+- [x] 1.4 Smoke entries for both.
 
 ## 2. The panel harness
 
-- [ ] 2.1 `scripts/analysis/l4_panel.py`: arm registry (config stem → arm key), campaign-dir and
+- [x] 2.1 `scripts/analysis/l4_panel.py`: arm registry (config stem → arm key), campaign-dir and
   manifest readers, seed parse, plateau-tail and convergence per seed via the committed helpers,
   experiment-JSON lookup from the logged id with convergence reported unknown when absent.
-- [ ] 2.2 The four confirmatory tests as one BH-FDR family, the CI-based band test, the
+- [x] 2.2 The four confirmatory tests as one BH-FDR family, the CI-based band test, the
   reverse-result detection, the ensemble-invariance counts, the verdict map in the registered
   order, and the 21 descriptive pairs — labelled as such in the JSON and CSV.
-- [ ] 2.3 Per-seed CSV and per-seed learning-curve export (rolling full-clear per 250 episodes).
-- [ ] 2.4 `--pilot` mode: per-rate per-arm plateau-tail and onset over the pilot seeds, the pooled
+- [x] 2.3 Per-seed CSV and per-seed learning-curve export (rolling full-clear per 250 episodes).
+- [x] 2.4 `--pilot` mode: per-rate per-arm plateau-tail and onset over the pilot seeds, the pooled
   selection with default tie-break, the budget rule.
-- [ ] 2.5 Tests on synthetic logs and JSONs covering every branch of the verdict map, both band
+- [x] 2.5 Tests on synthetic logs and JSONs covering every branch of the verdict map, both band
   outcomes, the reverse case, the family size, the pooled tie, the budget rule's rounding and
   floor, and the seed guard (confirmatory mode refuses seeds outside 1–8).
 
 ## 3. The pilot runner
 
-- [ ] 3.1 `scripts/campaigns/l4_panel_pilot.py`: derive grid configs (parent + `plasticity_rate`)
+- [x] 3.1 `scripts/campaigns/l4_panel_pilot.py`: derive grid configs (parent + `plasticity_rate`)
   under `<out>/configs/`, frozen arms once, invoke `run_campaign.py` with `--track-experiment`
   and the headless theme passed through; `--dry-run` prints the plan.
-- [ ] 3.2 Tests: derived configs are one key off their parents; the plan has the registered arm ×
+- [x] 3.2 Tests: derived configs are one key off their parents; the plan has the registered arm ×
   rate × seed shape.
 
 ## 4. Pilot, then pin
 
-- [ ] 4.1 Run the pilot (seeds 101–102, 3000 episodes, the three-point grid); extend any
+- [x] 4.0 Pilot 1 ran as registered (2026-09-06) and pinned nothing: grid two orders too hot, MLP
+  dead or frozen at every shared rate. Recorded under `supporting/040-l4-panel/pilot-1-*`.
+  **Blocked on** the rule-scaling change; then re-register the grid here by dated amendment.
+- [ ] 4.1 Re-run the pilot on the re-registered grid (seeds 101–102, 3000 episodes, three points); extend any
   non-converged three-factor arm at the selected rate once to 6000 as a separate campaign
   invocation (a fresh run; episode counts are uniform per campaign). If it still has no plateau,
   pin the budget at 6000 and flag the arm in the summary.
