@@ -40,9 +40,12 @@ brain:
     num_epochs: 10
     num_minibatches: 2
     max_grad_norm: 0.5
-    # Learning rule: reward-modulated Hebbian plasticity on the chemical
-    # synapses. Requires the eligibility traces below — the update is
-    # proportional to them, so the pairing is validated at load time.
+    # Learning rule: UNMODULATED Hebbian plasticity on the chemical synapses
+    # — dw = eta * E, plain co-activity learning. Reward is observed and
+    # reported but never applied to the update, which is what makes this the
+    # ablation floor rather than a second plastic arm. Requires the
+    # eligibility traces below: the update is proportional to them, so the
+    # pairing is validated at load time.
     learning_rule: hebbian
     enable_activity_traces: true
 reward:
