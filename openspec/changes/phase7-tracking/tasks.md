@@ -26,7 +26,7 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 ## Shipment 7a-i — Platform Freeze + Minimal Rule + the 2×2 Panel
 
-**OpenSpec changes**: `add-l4-trace-substrate` (merged 2026-09-05, archived `2026-09-04-add-l4-trace-substrate` — A.1/A.2 done), `add-state-dependent-action-std` (**active**, authored 2026-09-05 — the P.1–P.5 platform tranche), then a panel change (placeholder; created per milestone)
+**OpenSpec changes**: `add-l4-trace-substrate` (merged 2026-09-05, archived `2026-09-04-add-l4-trace-substrate` — A.1/A.2 done), `add-state-dependent-action-std` (merged 2026-09-05, archived `2026-09-05-add-state-dependent-action-std` — the P.1–P.5 platform tranche, closed under Amendment A), then a panel change (placeholder; created per milestone)
 **Status**: 🟡 in progress (A.1/A.2 done; P.1–P.5 closed 2026-09-05 under Amendment A — substrate FROZEN mode-off; next: A.3 minimal three-factor rule)
 **Roadmap layer**: L4 (minimal)
 **Approx effort**: ~3-5 active weeks (roadmap § estimate restatement)
