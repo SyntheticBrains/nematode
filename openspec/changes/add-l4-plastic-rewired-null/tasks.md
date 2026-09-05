@@ -8,10 +8,10 @@
 
 ## 2. Shared-substrate parity (Decision 2), tested against the real C3 plastic configs
 
-- [ ] 2.1 Test: at one seed, readout, every sensory-projection gain (food, predator, thermotaxis — the C3 cell enables all three), and `log_std` are `torch.equal` between the plastic wild-type and plastic rewired-null brains.
-- [ ] 2.2 Test: `m_chem` differs; `w_chem` differs; `g_gap` differs; chemical edge count and every neuron's in- and out-degree are equal.
+- [ ] 2.1 Test: at one seed, readout, every sensory-projection gain (food, predator, thermotaxis — the C3 cell enables all three), and `log_std` are `torch.equal` between the plastic wild-type and plastic rewired-null brains. This supersedes the default-config `test_readout_identical_across_wiring_arms` in `test_connectome_learning_rule.py` at the real configs and across all five gain matrices; leave that test in place, do not duplicate its readout-only assertion here.
+- [ ] 2.2 Test: `m_chem` differs; `w_chem` differs; `g_gap` differs; chemical edge count, every neuron's chemical in- and out-degree, and every neuron's gap-junction degree are equal — asserted at the **brain level on the real C3 plastic configs**. The rewiring function itself is already proved by `connectome/test_rewiring.py` (`test_preserves_chemical_in_out_degree`, `test_preserves_gap_degree`, `test_no_self_loops_or_duplicates`, `test_preserves_neuron_set_and_edge_counts`); do not re-test it, test what the brain built from it.
 - [ ] 2.3 Test: trace configuration and every plasticity hyperparameter are equal on both brains (read from the loaded configs).
-- [ ] 2.4 Test: the rewiring is deterministic under the run seed, and a different seed gives a different mask — pairing holds per seed.
+- [ ] 2.4 Test: the rewiring is deterministic under the run seed, and a different seed gives a different mask — pairing holds per seed. "Differs" is probabilistic in principle (034: "with overwhelming probability"), so **pin the seeds**: 23 and 24 are verified to differ; do not draw arbitrary pairs. Determinism at the function level is already `test_deterministic_under_same_seed`; this asserts it through the brain's default `rewire_seed` derivation from the run seed.
 - [ ] 2.5 **Negative-space test**: per-neuron initial incoming weight energy is *not* asserted equal, and the test file says why, so a later reader does not "fix" the parity test by adding a claim that is false.
 
 ## 3. Confinement to the null wiring (Decision 1)

@@ -27,6 +27,7 @@ Rewiring SHALL pair by run seed: the rewiring seed defaults to the run seed, so 
 
 - **WHEN** the two brains are inspected
 - **THEN** the chemical edge count and every neuron's chemical in- and out-degree SHALL be equal
+- **AND** every neuron's gap-junction degree SHALL be equal
 - **AND** the chemical edge mask, the initial chemical weights, and the gap-junction matrix SHALL differ
 
 #### Scenario: Plasticity is confined to the null wiring
