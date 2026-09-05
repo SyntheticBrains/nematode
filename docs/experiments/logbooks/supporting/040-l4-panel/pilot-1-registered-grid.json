@@ -313,5 +313,7 @@
     "pinned_at_extended_budget_for": []
   },
   "non_converged_three_factor_arms": [],
-  "action_required": []
+  "action_required": [],
+  "pinned": false,
+  "pin_note": "selected_rate and budget are what the registered rules compute from these logs; they become the panel recipe only when pinned by dated amendment before launch"
 }

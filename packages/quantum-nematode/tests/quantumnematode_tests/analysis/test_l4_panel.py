@@ -260,6 +260,15 @@ class TestVerdictMap:
         assert not out["family"]["T4"]["pass"]
         assert not out["verdict"]["gain_agrees_with_primary"]
 
+    def test_structure_only_needs_a_sufficient_band(self) -> None:
+        # T1 passes but the MLP arm has one seed: neither MLP-dependent verdict is supportable.
+        values = _values()
+        values["mlp_plastic"] = {1: 95.0}
+        out = lp.analyse(values, {})
+        assert out["family"]["T1"]["pass"]
+        assert not out["band"]["sufficient"]
+        assert out["verdict"]["verdict"] == "insufficient_seeds"
+
     def test_insufficient_seeds(self) -> None:
         values = _values()
         values["wt_plastic"] = {1: 70.0}
@@ -379,6 +388,33 @@ class TestAnalysePilot:
         out = lp.analyse_pilot(_pilot(grid), {})
         assert out["selected_rate"] == 0.01
         assert "ineligible" in capsys.readouterr().out
+
+    def test_rate_with_a_missing_pilot_seed_is_ineligible(self, capsys) -> None:
+        grid = _grid({0.003: (90.0, 900), 0.01: (55.0, 1800)})
+        scanned = [
+            row
+            for row in _pilot(grid)
+            if not (row[0] == "mlp_plastic" and row[1] == 0.003 and row[2] == 102)
+        ]
+        out = lp.analyse_pilot(scanned, {})
+        assert out["selected_rate"] == 0.01
+        assert "ineligible" in capsys.readouterr().out
+
+    def test_budget_basis_ignores_the_floors(self) -> None:
+        scanned = _pilot(_grid({0.01: (55.0, 1000)}))
+        for row in scanned:
+            if row[0] in lp.FROZEN_ARMS:
+                row[3].onset = 2900  # a late floor onset must not set the budget
+        out = lp.analyse_pilot(scanned, {})
+        assert out["budget_basis"]["latest_onset"] == 1000
+        assert out["budget"] == 2000
+
+    def test_summary_is_stamped_unpinned(self) -> None:
+        out = lp.analyse_pilot(_pilot(_grid({0.01: (55.0, 1800)})), {})
+        assert out["pinned"] is False
+        assert "dated amendment" in out["pin_note"]
+        none = lp.analyse_pilot([], {})
+        assert none["pinned"] is False
 
     def test_panel_seed_in_a_pilot_is_ignored(self, capsys) -> None:
         scanned = _pilot(_grid({0.01: (55.0, 1800)}))

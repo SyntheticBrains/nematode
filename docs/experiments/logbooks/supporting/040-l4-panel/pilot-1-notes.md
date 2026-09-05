@@ -2,7 +2,9 @@
 
 Run 2026-09-05/06 from commit `3494428a` with `scripts/campaigns/l4_panel_pilot.py`
 (seeds 101–102, 3000 episodes, `plasticity_rate ∈ {0.003, 0.01, 0.03}`, 34 runs, 40 min on
-16 workers). Summary: [pilot-1-registered-grid.json](pilot-1-registered-grid.json).
+16 workers). Summary: [pilot-1-registered-grid.json](pilot-1-registered-grid.json) — the harness's output from the
+logs, verbatim; its `selected_rate` and `budget` are what the registered rules compute, not a
+decision, and it is stamped `pinned: false`.
 
 ## Plateau-tail full-clear success (%), pilot seeds
 
@@ -13,8 +15,10 @@ Run 2026-09-05/06 from commit `3494428a` with `scripts/campaigns/l4_panel_pilot.
 | 0.03 | 7.6 | 5.2 | 5.1 | 1.9 | 9.8 |
 | frozen floors | wt 5.3 | rn 5.4 | | | |
 
-Every arm sits at the frozen floors' level. Every run "converged" at episode 1: flat from the
-start. The pooled rule would have selected 0.003 on the strength of one rewired seed at 21%.
+Every arm sits at the frozen floors' level. Thirty-two of the thirty-four runs "converged" at
+episode 1 — flat from the start. The two exceptions are `rn_plastic` at 0.003, seed 101 (onset 82,
+the one run that reached 21%) and `wt_hebbian` at 0.01, seed 102 (onset 934). The pooled rule would
+have selected 0.003 on the strength of that one rewired seed.
 
 ## What the per-update telemetry showed (terminal step of each episode)
 

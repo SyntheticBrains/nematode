@@ -308,17 +308,18 @@ def band_test(values: dict[str, dict[int, float]]) -> dict:
 def verdict(tests: dict[str, dict], band: dict) -> str:
     """Assign the verdict by the ordered map."""
     t1, t2, t3 = tests["T1"], tests["T2"], tests["T3"]
-    if not all(t["sufficient"] for t in (t1, t2, t3)):
+    floors_pass = t2["pass"] and t3["pass"]
+    # Both MLP-dependent outcomes read the band; an underpowered band supports neither.
+    band_needed_but_underpowered = floors_pass and t1["pass"] and not band["sufficient"]
+    if not all(t["sufficient"] for t in (t1, t2, t3)) or band_needed_but_underpowered:
         return "insufficient_seeds"
-    if not (t2["pass"] and t3["pass"]):
+    if not floors_pass:
         return "sanity_floor_fail"
     if t1["ci_hi"] < 0.0:
         return "rewired_beats_wild_type"
     if t1["pass"]:
         return "recovery" if band["pass"] else "structure_only"
-    if t1["ci_lo"] <= 0.0 <= t1["ci_hi"]:
-        return "robustness"
-    return "inconclusive"
+    return "robustness" if t1["ci_lo"] <= 0.0 <= t1["ci_hi"] else "inconclusive"
 
 
 def descriptive_pairs(values: dict[str, dict[int, float]]) -> list[dict]:
@@ -474,11 +475,17 @@ def _group_pilot(scanned: Scanned) -> tuple[PilotGrid, dict[str, dict[int, SeedR
 
 
 def _pooled_means(by_rate: PilotGrid) -> dict[float, float]:
-    """Pool the three three-factor arms' plateau-tail values per rate; a rate missing one is ineligible."""
+    """Pool the three three-factor arms' plateau-tail values per rate.
+
+    A rate is eligible only when every three-factor arm has exactly the pilot seeds at it:
+    pooling over a missing seed would weight the arms unequally.
+    """
     pooled: dict[float, float] = {}
     for rate, arms in by_rate.items():
-        if not all(arm in arms for arm in THREE_FACTOR_ARMS):
-            print(f"  WARN: rate {rate:g} lacks a three-factor arm and is ineligible")
+        if not all(set(arms.get(arm, {})) == set(PILOT_SEEDS) for arm in THREE_FACTOR_ARMS):
+            print(
+                f"  WARN: rate {rate:g} lacks a three-factor arm or a pilot seed and is ineligible",
+            )
             continue
         pooled[rate] = float(
             np.mean([r.success for arm in THREE_FACTOR_ARMS for r in arms[arm].values()]),
@@ -486,18 +493,11 @@ def _pooled_means(by_rate: PilotGrid) -> dict[float, float]:
     return pooled
 
 
-def _budget_and_actions(
-    arms_at_rate: dict[str, dict[int, SeedRecord]],
-    floors: dict[str, dict[int, SeedRecord]],
-    selected: float,
-) -> dict:
+def _budget_and_actions(arms_at_rate: dict[str, dict[int, SeedRecord]], selected: float) -> dict:
     """Apply the budget rule at the selected rate and list what is still owed before pinning."""
+    # The floors are a descriptive read only: they feed neither the selection nor the budget.
     onsets = [
-        r.onset
-        for arms in (arms_at_rate, floors)
-        for seeds in arms.values()
-        for r in seeds.values()
-        if r.onset is not None
+        r.onset for seeds in arms_at_rate.values() for r in seeds.values() if r.onset is not None
     ]
     unknown = [
         f"{arm} seed {s}"
@@ -570,9 +570,20 @@ def analyse_pilot(scanned: Scanned, out: dict) -> dict:
     if selected is None:
         out["budget"] = None
         out["action_required"] = ["no rate has all three three-factor arms - nothing to select"]
+        _stamp_unpinned(out)
         return out
-    out.update(_budget_and_actions(by_rate[selected], floors, selected))
+    out.update(_budget_and_actions(by_rate[selected], selected))
+    _stamp_unpinned(out)
     return out
+
+
+def _stamp_unpinned(out: dict) -> None:
+    """Mark the summary as the rules' output, not a decision: pinning is a separate, recorded act."""
+    out["pinned"] = False
+    out["pin_note"] = (
+        "selected_rate and budget are what the registered rules compute from these logs; "
+        "they become the panel recipe only when pinned by dated amendment before launch"
+    )
 
 
 def _print_pilot(out: dict) -> None:
