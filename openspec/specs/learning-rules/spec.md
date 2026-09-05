@@ -2,7 +2,13 @@
 
 ## Purpose
 
-TBD - created by archiving change add-l4-three-factor-rule. Update Purpose after archive.
+This capability specifies the **update mechanisms** that change a brain topology's weights from experience — the rules themselves, separated from the substrates they act on.
+
+A rule owns whatever machinery its own update needs: optimiser state, value heads, advantage estimators, hyperparameters, gradient clippers. The paired topology is pure structure. That separation is what lets one substrate be trained by different rules and compared, which is the whole basis of the rule × wiring comparisons this project is built around: if the rule and the substrate were entangled in one class, a difference between two arms could always be blamed on something other than the dimension under test.
+
+Two rules live here. The clipped-surrogate PPO update is the gradient baseline that Phase 6's results were measured under. The reward-modulated three-factor rule is the biologically-motivated alternative: pre- and post-synaptic activity via a decaying eligibility trace, gated by a global neuromodulatory signal, with no backward pass, no weight transport, and no per-synapse error signal. That locality is the property a gradient method cannot claim, and the reason this rule family — rather than PPO — is the instrument for asking whether a real connectome's wiring is legible to a learner the animal could plausibly host.
+
+Not to be confused with `quantumnematode.plasticity`, which is the quantum-plasticity **evaluation protocol** (sequential multi-objective and catastrophic-forgetting metrics), not a learning rule.
 
 ## Requirements
 

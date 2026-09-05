@@ -2,7 +2,11 @@
 
 ## Purpose
 
-TBD - created by archiving change add-parallel-campaign-runner. Update Purpose after archive.
+This capability specifies how a **campaign** — a set of simulation runs forming one experiment — is executed across the machine's cores.
+
+The project's statistical protocol is paired-seed: a result is a set of runs over the same seed list, compared arm by arm. Those runs are independent by construction, so the work is embarrassingly parallel; before this capability existed it was nonetheless executed one run at a time, leaving most of a multi-core machine idle for the duration of every campaign.
+
+The central guarantee is narrow and deliberate: parallel execution changes **when** runs happen and never **what** they compute. Each run is a separate process invoking the standard single-run entry point with the command line a person would otherwise type by hand, so a campaign's results remain comparable with every result measured before this capability existed. That is why the requirements here concern isolation, bounded concurrency, per-run logging and failure reporting rather than anything about simulation behaviour — the moment a campaign runner starts reimplementing what a run does, the guarantee is gone.
 
 ## Requirements
 
