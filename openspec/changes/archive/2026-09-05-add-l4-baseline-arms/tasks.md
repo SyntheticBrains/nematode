@@ -38,4 +38,4 @@
 - [x] 6.1 `git add -A` **first**, then `uv run pre-commit run --all-files` green (hooks skip untracked files).
 - [x] 6.2 Full non-nightly suite green.
 - [x] 6.3 No implementation code or docstring references planning docs, roadmap IDs, OpenSpec changes, or logbooks.
-- [ ] 6.4 Re-review for drift, archive, review the branch, open the PR.
+- [x] 6.4 Re-review for drift, archive, review the branch, open the PR. (Drift found: the rule-selection requirement scoped itself to the single plastic rule that existed when it was written; widened over the set, with tests parametrised across both.)

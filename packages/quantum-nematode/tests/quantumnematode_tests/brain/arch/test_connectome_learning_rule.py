@@ -507,3 +507,51 @@ class TestHebbianRuleValidation:
         with pytest.raises(AttributeError, match="hebbian") as excinfo:
             _ = brain.critic
         assert "three_factor" not in str(excinfo.value)
+
+
+class TestPlasticRuleRequirementsApplyToBoth:
+    """Requirements over the plasticity rules must not name only one."""
+
+    @pytest.mark.parametrize("rule", ["three_factor", "hebbian"])
+    def test_every_plastic_rule_updates_per_step(self, rule: str) -> None:
+        brain = _make(learning_rule=rule, enable_activity_traces=True)
+        _drive(brain)
+        assert len(brain.history_data.plasticity_prediction_error) == _STEPS
+
+    @pytest.mark.parametrize("rule", ["three_factor", "hebbian"])
+    def test_every_plastic_rule_leaves_ppo_machinery_dormant(self, rule: str) -> None:
+        brain = _make(learning_rule=rule, enable_activity_traces=True)
+        _drive(brain)
+        assert len(brain.buffer) == 0
+        assert brain.last_value is None
+
+    @pytest.mark.parametrize("rule", ["three_factor", "hebbian"])
+    def test_every_plastic_rule_requires_a_trace(self, rule: str) -> None:
+        with pytest.raises(ValidationError, match="requires enable_activity_traces"):
+            ConnectomePPOBrainConfig(learning_rule=rule)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("rule", ["three_factor", "hebbian"])
+    def test_accessor_error_never_names_a_different_plastic_rule(self, rule: str) -> None:
+        """An arm told it is a rule it is not sends a reader after the wrong behaviour."""
+        other = "hebbian" if rule == "three_factor" else "three_factor"
+        brain = _make(learning_rule=rule, enable_activity_traces=True)
+        with pytest.raises(AttributeError) as excinfo:
+            _ = brain.critic
+        assert rule in str(excinfo.value)
+        assert other not in str(excinfo.value)
+
+    def test_every_plastic_rule_is_classified_as_modulated_or_not(self) -> None:
+        """A new plastic rule must be classified, not silently defaulted.
+
+        Whether an update is gated by reward is the property the sanity
+        floors exist to isolate, so an unclassified rule would mislabel an
+        arm rather than fail visibly.
+        """
+        from quantumnematode.brain.arch.connectome_ppo import (
+            _PLASTIC_RULES,
+            _UNMODULATED_RULES,
+        )
+
+        assert _UNMODULATED_RULES <= _PLASTIC_RULES
+        # Every plastic rule is on exactly one side of the modulation split.
+        assert {"three_factor"} == _PLASTIC_RULES - _UNMODULATED_RULES

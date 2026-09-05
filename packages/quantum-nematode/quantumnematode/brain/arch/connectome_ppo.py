@@ -132,6 +132,12 @@ _N_THERMOTAXIS_FEATURES: int = 3
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
 # Rules that read the eligibility trace, and so require it to be enabled.
 _PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
+# Plastic rules that apply no neuromodulatory factor — the ablation floors.
+# A new plastic rule must be classified here deliberately rather than
+# inheriting a default: whether an update is gated by reward is the property
+# the panel's floors are built to isolate, so getting it silently wrong would
+# mislabel an arm rather than break it.
+_UNMODULATED_RULES = frozenset({"hebbian"})
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -1274,7 +1280,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 weight_bound=config.plasticity_weight_bound,
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
-                modulated=config.learning_rule == "three_factor",
+                modulated=config.learning_rule not in _UNMODULATED_RULES,
                 device=self.device,
             )
             # The PPO rule is discarded rather than retained: keeping it
