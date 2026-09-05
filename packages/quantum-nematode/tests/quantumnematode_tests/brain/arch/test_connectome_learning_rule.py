@@ -547,11 +547,11 @@ class TestPlasticRuleRequirementsApplyToBoth:
         floors exist to isolate, so an unclassified rule would mislabel an
         arm rather than fail visibly.
         """
-        from quantumnematode.brain.arch.connectome_ppo import (
-            _PLASTIC_RULES,
-            _UNMODULATED_RULES,
+        from quantumnematode.brain.arch._plasticity_config import (
+            PLASTIC_RULES,
+            UNMODULATED_RULES,
         )
 
-        assert _UNMODULATED_RULES <= _PLASTIC_RULES
+        assert UNMODULATED_RULES <= PLASTIC_RULES
         # Every plastic rule is on exactly one side of the modulation split.
-        assert {"three_factor"} == _PLASTIC_RULES - _UNMODULATED_RULES
+        assert {"three_factor"} == PLASTIC_RULES - UNMODULATED_RULES

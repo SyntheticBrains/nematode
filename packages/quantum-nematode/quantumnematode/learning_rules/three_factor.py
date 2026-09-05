@@ -1,4 +1,4 @@
-"""Reward-modulated Hebbian plasticity over a connectome topology.
+"""Reward-modulated Hebbian plasticity over any plastic topology.
 
 The update is the minimal three-factor form::
 
@@ -42,8 +42,8 @@ import torch
 from quantumnematode.brain.arch._rule import RuleStepReport
 
 if TYPE_CHECKING:
-    from quantumnematode.brain.arch._topology import BrainTopology
-    from quantumnematode.brain.arch.connectome_ppo import ConnectomeTopology
+    from quantumnematode.brain.arch._brain import BrainHistoryData
+    from quantumnematode.brain.arch._topology import BrainTopology, PlasticTopology
 
 # Telemetry keys, shared with the brain that records them.
 PREDICTION_ERROR_KEY = "plasticity_prediction_error"
@@ -64,23 +64,30 @@ class ThreeFactorBatch:
     reward: float
 
 
-class ConnectomeThreeFactorRule:
-    """Reward-modulated Hebbian plasticity on a connectome's chemical synapses.
+class ThreeFactorRule:
+    """Reward-modulated Hebbian plasticity on whatever a topology declares plastic.
 
     Satisfies the ``LearningRule`` Protocol. Owns its hyperparameters and
     a single scalar of state (the reward baseline); it owns no optimiser,
     no critic, and no experience buffer.
 
-    Only ``w_chem`` changes. Sensory-projection gains, the motor readout,
-    and action-noise parameters are left at their initial values, so any
-    difference between two wiring variants trained under this rule is
-    attributable to the wiring rather than to a differently-fitted
-    decoder.
+    The rule reads its substrate through the ``PlasticTopology`` seam --
+    the aligned lists of plastic weights, eligibility traces, and edge
+    masks -- and never names a substrate's own attributes. That is what
+    lets one implementation drive a sparse recurrent connectome and a
+    dense feedforward MLP identically, which is what "matched rule" has
+    to mean for the comparison between them to be honest.
+
+    Only the seam's plastic weights change. Everything else a substrate
+    carries -- sensory gains, a motor readout, biases, action-noise
+    parameters -- is left at its initial value, so a difference between
+    two arms trained under this rule is attributable to what was plastic
+    and how it was wired, not to a differently-fitted periphery.
     """
 
     def __init__(  # noqa: PLR0913 — mirrors the hyperparameters it caches
         self,
-        topology: ConnectomeTopology,
+        topology: PlasticTopology,
         *,
         plasticity_rate: float,
         weight_decay: float,
@@ -130,19 +137,18 @@ class ConnectomeThreeFactorRule:
         """
         if topology is not self._topology:
             msg = (
-                "ConnectomeThreeFactorRule.step received a topology other than "
-                "the one it was constructed over. The rule reads that topology's "
-                "eligibility trace, so updating a different one would apply "
-                "credit assigned from unrelated activity — construct a new rule "
-                "for a new topology."
+                "ThreeFactorRule.step received a topology other than the one it "
+                "was constructed over. The rule reads that topology's eligibility "
+                "traces, so updating a different one would apply credit assigned "
+                "from unrelated activity — construct a new rule for a new topology."
             )
             raise ValueError(msg)
         topo = self._topology
         if not topo.enable_activity_traces:
             msg = (
-                "ConnectomeThreeFactorRule requires activity traces, but the "
-                "topology has none allocated. Without a trace the update is "
-                "identically zero and training would silently do nothing."
+                "ThreeFactorRule requires activity traces, but the topology has "
+                "none allocated. Without a trace the update is identically zero "
+                "and training would silently do nothing."
             )
             raise ValueError(msg)
 
@@ -162,49 +168,61 @@ class ConnectomeThreeFactorRule:
             # for an arm whose entire job is to be a trustworthy reference.
             modulator = delta if self.modulated else 1.0
 
-            weights = topo.w_chem.data
+            weights = topo.plastic_weights
+            traces = topo.eligibility_traces
+            masks = topo.plastic_masks
             # Snapshot before writing: the reported weight change must be
             # what the weights ACTUALLY did, not what the update proposed.
-            # Once synapses reach the magnitude bound the clamp discards the
+            # Once entries reach the magnitude bound the clamp discards the
             # proposal entirely, and reporting the proposal would show a
             # healthy learning signal for a rule that has become a constant
             # function — defeating the one telemetry meant to detect exactly
             # that.
-            before = weights.detach().clone()
+            befores = [w.detach().clone() for w in weights]
 
-            if self.freeze_updates:
-                # Nothing is written at all — not the Hebbian term, not the
-                # decay, not the clamp. A clamp alone would still edit a
-                # weight that started outside the bound, which is precisely
-                # the silent substrate change a frozen control exists to
-                # avoid. Reporting continues, so the control can be compared
-                # step-for-step against the plastic arm.
-                pass
-            else:
-                # Hebbian term over the eligibility trace, plus decay toward
-                # zero. Decay is what keeps unreinforced synapses from
-                # holding whatever a transient correlation put there.
-                update = self.plasticity_rate * modulator * topo.activity_traces
-                update -= self.plasticity_rate * self.weight_decay * weights
-                # The trace is already masked, but the decay term is not: it
-                # is proportional to the weights, which under the soft-prior
-                # mask mode may hold values off the wild-type edge set.
-                # Projecting keeps the rule from writing anywhere the
-                # topology says there is no synapse.
-                update = topo.apply_weight_mask(update)
+            if not self.freeze_updates:
+                for w, trace, mask in zip(weights, traces, masks, strict=True):
+                    # Hebbian term over the eligibility trace, plus decay
+                    # toward zero. Decay is what keeps unreinforced synapses
+                    # from holding whatever a transient correlation put there.
+                    update = self.plasticity_rate * modulator * trace
+                    update -= self.plasticity_rate * self.weight_decay * w
+                    # The trace is already on the edge set, but the decay
+                    # term is not: it is proportional to the weights, which
+                    # may hold values off the allowed edges (the connectome's
+                    # soft-prior mode). Masking keeps the rule from writing
+                    # anywhere the substrate says there is no synapse; on a
+                    # dense substrate the mask is all-true and this is a
+                    # no-op by construction.
+                    update = update * mask.to(update.dtype)
+                    w.data.add_(update)
+                    w.data.clamp_(-self.weight_bound, self.weight_bound)
+            # Under a freeze nothing is written at all — not the Hebbian
+            # term, not the decay, not the clamp. A clamp alone would still
+            # edit a weight that started outside the bound, which is
+            # precisely the silent substrate change a frozen control exists
+            # to avoid. Reporting continues, so the control stays comparable
+            # step-for-step against the plastic arm.
 
-                weights.add_(update)
-                weights.clamp_(-self.weight_bound, self.weight_bound)
-
-            mean_abs_delta = (weights - before).abs().mean().item()
-            # Fraction measured over real synapses only: the off-edge zeros
-            # are not saturated, and counting them would dilute the signal
-            # by the connectome's sparsity and hide a saturating run.
-            edge_count = int(topo.m_chem.sum().item())
-            if edge_count == 0:  # pragma: no cover — a topology with no synapses
+            # Effective change, aggregated over every plastic entry of every
+            # tensor. Reduced in-tensor rather than as a Python-float ratio so
+            # a single-tensor substrate reports bit-for-bit what it did
+            # before the rule became generic.
+            deltas = [
+                (w.detach() - b).abs().reshape(-1) for w, b in zip(weights, befores, strict=True)
+            ]
+            mean_abs_delta = torch.cat(deltas).mean().item()
+            # Saturated fraction over real synapses only: off-edge entries are
+            # not synapses and would dilute the signal by the sparsity of the
+            # substrate. Dense substrates count every entry.
+            edge_count = sum(int(m.sum().item()) for m in masks)
+            if edge_count == 0:  # pragma: no cover — a substrate with no plastic entries
                 saturated = 0.0
             else:
-                at_bound = ((weights.abs() >= self.weight_bound) & topo.m_chem).sum().item()
+                at_bound = sum(
+                    int(((w.detach().abs() >= self.weight_bound) & m).sum().item())
+                    for w, m in zip(weights, masks, strict=True)
+                )
                 saturated = at_bound / edge_count
 
         return RuleStepReport(
@@ -223,3 +241,27 @@ class ConnectomeThreeFactorRule:
         baseline is deliberately retained across episodes. Kept as a
         documented no-op for the ``LearningRule`` lifecycle.
         """
+
+
+def record_plasticity_report(
+    history_data: BrainHistoryData,
+    report: RuleStepReport,
+    reward: float,
+) -> None:
+    """Append one plasticity step's telemetry to a brain's history.
+
+    Shared by every brain that hosts the rule, so the four keys -- and what
+    they mean -- cannot drift between the arms a panel compares. Also records
+    the reward, matching where the gradient path records it.
+    """
+    extra = report.extra
+    history_data.plasticity_prediction_error.append(extra[PREDICTION_ERROR_KEY])
+    history_data.plasticity_baseline.append(extra[BASELINE_KEY])
+    history_data.plasticity_mean_abs_delta.append(extra[MEAN_ABS_DELTA_KEY])
+    history_data.plasticity_saturated_fraction.append(extra[SATURATED_FRACTION_KEY])
+    history_data.rewards.append(reward)
+
+
+# The connectome was the first substrate this rule drove, and existing code
+# imports it under that name. The name now describes only where it started.
+ConnectomeThreeFactorRule = ThreeFactorRule
