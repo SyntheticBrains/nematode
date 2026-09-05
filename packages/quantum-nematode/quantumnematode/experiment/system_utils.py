@@ -70,7 +70,7 @@ def get_device_type_string(device: DeviceType) -> str:
     Returns
     -------
     str
-        Device type as string ("cpu", "gpu", "qpu").
+        Device type as string, e.g. "cpu", "gpu", "mps" or "qpu".
     """
     return device.value
 

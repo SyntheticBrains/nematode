@@ -16,7 +16,7 @@ A *session* is `--runs` episodes of one scenario with one brain that learns acro
 | `--runs N` | Number of episodes (default 1) |
 | `--seed N` | Master seed for reproducibility (auto-generated and printed if omitted) |
 | `--theme NAME` | `pixel` (default), `pixel_continuous`, `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless` — see [visualization.md](visualization.md) |
-| `--device cpu\|gpu\|qpu` | Backend for the quantum brains (default `cpu`; `gpu` needs the `gpu` extra; `qpu` needs the `qpu` extra and `.env`) |
+| `--device cpu\|gpu\|mps\|qpu` | Compute backend (default `cpu`, and the right choice — see [Devices](#devices)). `gpu` is CUDA for PyTorch brains and Aer's GPU device for quantum brains, and needs the `gpu` extra; `mps` is Apple's Metal GPU and is PyTorch-only, rejected for quantum brains; `qpu` needs the `qpu` extra and `.env`. An unavailable device fails at startup rather than mid-run. |
 | `--optimize` | On `qpu`, enable Q-CTRL Fire Opal error suppression |
 | `--track-experiment` | Save reproducibility metadata to `experiments/<id>/<id>.json` (see [Experiment tracking](#experiment-tracking)) |
 | `--track-per-run` | Write tracked brain data as separate plots per run, in per-run subfolders |
@@ -122,6 +122,54 @@ uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_
 ```
 
 **Predator–prey co-evolution** runs through `scripts/run_coevolution.py --config configs/evolution/coevolution_*.yml [--seed N] [--output-dir DIR] [--resume PATH]` (`CoevolutionLoop`; warm-start prey bundles under `configs/evolution/coevolution_warmstart_prey/`). The Red Queen question it was built for closed with a STOP verdict ([Logbook 017](experiments/logbooks/017-coevolution-arms-race.md)); the lag-matrix and cell-grid instruments remain available.
+
+## Running campaigns in parallel
+
+A paired-seed protocol is a set of independent runs, so it can use the whole machine. `scripts/run_campaign.py` takes one or more configs and a set of seeds, runs the **cross product** concurrently, and reports progress and a per-run summary.
+
+```bash
+# Four architectures x eight seeds = 32 runs, tracked
+uv run ./scripts/run_campaign.py \
+    --config configs/scenarios/foraging_predator_thermal/mlpppo_small_continuous2d_combined_klinotaxis.yml \
+    --config configs/scenarios/foraging_predator_thermal/cfcppo_small_continuous2d_combined_klinotaxis.yml \
+    --seeds 1-8 --runs 3000 -- --track-experiment
+
+# Preview the plan without running anything
+uv run ./scripts/run_campaign.py --config <cfg> --seeds 1-4 --dry-run
+```
+
+Seeds accept ranges, lists, or a mixture (`1-8`, `1,3,5`, `1-4,9`). Everything after a bare `--` is passed to every run unchanged. Per-run logs land in `campaigns/<timestamp>/logs/`, and simulation artefacts go to their usual `exports/<session-id>/` directories — session IDs carry a random suffix, so concurrent runs never collide. A failing run does not abort the campaign; it is named in the summary and the command exits non-zero.
+
+**Results are unaffected.** Each run is a separate process invoking `run_simulation.py` with exactly the command line you would type by hand, so a campaign changes only *when* runs happen. Timing telemetry is the one exception: a run inside a wide campaign takes longer in wall-clock than the same run alone, because runs share memory bandwidth.
+
+**Choosing `--workers`.** The default is `cpu_count - 2`, which leaves the machine usable while a campaign occupies it. Measure your own machine with `scripts/benchmarks/bench_campaign_parallelism.py`; on an 18-core M5 Max, 16 seeds x 20 episodes gave:
+
+| workers | wall | speedup | efficiency |
+|---|---|---|---|
+| 1 | 78.7s | 1.00x | 100% |
+| 4 | 24.0s | 3.28x | 82% |
+| 8 | 15.4s | 5.10x | 64% |
+| 16 | **10.8s** | **7.29x** | 46% |
+| 18 | 11.8s | 6.69x | 37% |
+
+Efficiency falls long before wall-clock stops improving, and at 18 workers wall-clock gets *worse* — workers then contend with each other and the OS. Use the lowest-wall-clock level on a dedicated machine, and a smaller one if you need the machine for anything else.
+
+## Devices
+
+CPU is the default and, for this project's model sizes, the fastest option. That is a measured claim, not an assumption — reproduce it with `scripts/benchmarks/bench_device_backends.py`.
+
+| Device | Backend | Notes |
+|---|---|---|
+| `cpu` | PyTorch / Aer | Default. Fastest for every brain currently in the repo. |
+| `gpu` | CUDA / Aer GPU | Needs the `gpu` extra. Fails at startup on a build without CUDA. |
+| `mps` | Apple Metal | PyTorch brains only; **rejected for quantum brains**. Available but slower — see below. |
+| `qpu` | IBM Quantum | Needs the `qpu` extra and `.env`. |
+
+**Why the GPU does not help.** The policy networks are small — the mlpppo actor is 13 → 64 → 64 → 2, about 5,200 parameters — and the rollout evaluates them at **batch size 1**, thousands of times per episode. Accelerator dispatch costs roughly 70 µs per operation on MPS, against about 10 µs of actual per-step compute on the CPU, so the GPU spends its time waiting to be asked. End-to-end on an M5 Max, mlpppo took 5.73s on CPU against 12.41s on MPS, and the connectome brain 2.78s against 10.13s. The same benchmark's control row — a 1024×1024 network at batch 512 — runs 6.5× *faster* on MPS, which is how you can tell the hardware is healthy and the shapes are the problem.
+
+This would change if rollouts became batched (many agents stepped together) or if models grew by roughly two orders of magnitude. Neither is true today.
+
+**The Neural Engine is not reachable.** PyTorch has no ANE backend; the ANE is accessible only through CoreML, which targets inference rather than training. This is a platform constraint, not a gap in this codebase.
 
 ## Analysis and campaign scripts
 

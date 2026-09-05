@@ -36,7 +36,8 @@ context: |
     stepping, food competition, pheromone communication (food-marking + alarm +
     aggregation), social feeding (npr-1 satiety decay reduction), social proximity
     sensing, collective behavior metrics, and per-agent metrics with CSV export
-  - Executor pattern: CPU, GPU, QPU backends
+  - Executor pattern: CPU, GPU (CUDA), MPS (Apple Metal, PyTorch brains only) and QPU backends;
+    device selection is validated against the brain family before construction
   - YAML-driven simulation configs (configs/scenarios/)
   - Comprehensive tracking: EpisodeTracker, experiment metadata, CSV/plot exports
 
