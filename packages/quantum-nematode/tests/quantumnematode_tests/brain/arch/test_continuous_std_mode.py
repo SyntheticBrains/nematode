@@ -11,7 +11,7 @@ gradient flow into the head, and the clamp-ceiling monitor.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import torch
@@ -54,7 +54,7 @@ _REQUIRED: dict[str, dict[str, object]] = {
 }
 
 
-def _make(name: str, **cfg_overrides: object) -> Brain:
+def _make(name: str, **cfg_overrides: object) -> Any:
     brain_cls, cfg_cls = _BRAINS[name]
     kwargs: dict[str, object] = {**_REQUIRED[name], **cfg_overrides}
     cfg = cfg_cls(seed=_SEED, action_mode="continuous", **kwargs)  # type: ignore[call-arg]

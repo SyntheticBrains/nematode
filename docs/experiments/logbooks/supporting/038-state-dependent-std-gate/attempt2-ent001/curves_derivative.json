@@ -1,0 +1,102 @@
+{
+  "modality": "thermotaxis",
+  "theta_sharp": 0.45,
+  "min_path_len_fraction": 0.25,
+  "n_seeds": 4,
+  "statistics": {
+    "klinokinesis": {
+      "statistic": "down_up_turn_ratio",
+      "verdict": "ABSENT",
+      "mean": 0.9792842273729678,
+      "ci_lo": 0.9372819458903145,
+      "ci_hi": 1.020911852067079,
+      "n": 4,
+      "null_value": 1.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Ryu & Samuel (2002). J Neurosci 22(13):5727-5733",
+      "family": "thresholded",
+      "strategy": "klinokinesis",
+      "per_seed": {
+        "42": 0.8653549616987056,
+        "43": 1.0083763594407191,
+        "44": 1.0100415007231278,
+        "45": 1.0333640876293186
+      }
+    },
+    "klinokinesis_magnitude": {
+      "statistic": "down_up_magnitude_ratio",
+      "verdict": "ABSENT",
+      "mean": 0.9973139371544593,
+      "ci_lo": 0.9851225666057412,
+      "ci_hi": 1.0089965840558621,
+      "n": 4,
+      "null_value": 1.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Ryu & Samuel (2002). J Neurosci 22(13):5727-5733",
+      "family": "threshold_free",
+      "strategy": "klinokinesis",
+      "per_seed": {
+        "42": 0.9667370874207316,
+        "43": 1.0023775487967164,
+        "44": 1.004638542784785,
+        "45": 1.0155025696156044
+      }
+    },
+    "klinotaxis": {
+      "statistic": "weathervane_slope",
+      "verdict": "PARTIAL",
+      "mean": 0.002754105745415747,
+      "ci_lo": -0.003492383327037491,
+      "ci_hi": 0.009000594817868985,
+      "n": 4,
+      "null_value": 0.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Clark et al. (2007). J Neurosci 27(23):6083-6090",
+      "family": "thresholded",
+      "strategy": "klinotaxis",
+      "per_seed": {
+        "42": 0.01232727920582108,
+        "43": -0.011886264863045788,
+        "44": -0.0025242827878794666,
+        "45": 0.013099691426767163
+      }
+    },
+    "klinotaxis_all": {
+      "statistic": "weathervane_slope_all",
+      "verdict": "PARTIAL",
+      "mean": 0.004860169429551965,
+      "ci_lo": -0.002941718612405283,
+      "ci_hi": 0.012662057471509214,
+      "n": 4,
+      "null_value": 0.0,
+      "sign": 1,
+      "magnitude_range": null,
+      "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Clark et al. (2007). J Neurosci 27(23):6083-6090",
+      "family": "threshold_free",
+      "strategy": "klinotaxis",
+      "per_seed": {
+        "42": 0.021194695340914033,
+        "43": -0.010012856826914962,
+        "44": 0.007979182620521838,
+        "45": 0.00027965658368695346
+      }
+    }
+  },
+  "strategy_verdicts": {
+    "klinokinesis": {
+      "combined": "ABSENT",
+      "thresholded": "ABSENT",
+      "threshold_free": "ABSENT",
+      "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Ryu & Samuel (2002). J Neurosci 22(13):5727-5733"
+    },
+    "klinotaxis": {
+      "combined": "PARTIAL",
+      "thresholded": "PARTIAL",
+      "threshold_free": "PARTIAL",
+      "citation": "Luo et al. (2014). J Neurosci 34(13):4655-4667; Clark et al. (2007). J Neurosci 27(23):6083-6090"
+    }
+  }
+}

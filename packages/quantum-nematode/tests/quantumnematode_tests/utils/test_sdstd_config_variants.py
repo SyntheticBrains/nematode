@@ -25,8 +25,7 @@ _VARIANTS = [
     _CONFIGS / "foraging_predator_thermal" / f"{arch}_{_C3_STEM}"
     for arch in ("mlpppo", "cfcppo", "transformerppo", "connectomeppo")
 ] + [
-    _CONFIGS / "thermal_foraging" / _GATE_STEM.format(mode)
-    for mode in ("klinotaxis", "derivative")
+    _CONFIGS / "thermal_foraging" / _GATE_STEM.format(mode) for mode in ("klinotaxis", "derivative")
 ]
 
 
@@ -58,4 +57,7 @@ class TestSdstdVariants:
 
     def test_variant_loads_through_the_real_loader(self, variant: Path) -> None:
         config = load_simulation_config(str(variant))
-        assert config.brain.config.continuous_std_mode == "state_dependent"
+        assert config.brain is not None
+        brain_config = config.brain.config
+        assert brain_config is not None
+        assert brain_config.continuous_std_mode == "state_dependent"
