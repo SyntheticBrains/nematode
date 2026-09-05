@@ -8,6 +8,8 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ### Added
 
+- The state-dependent continuous action std (roadmap D7): a `continuous_std_mode` field on every brain config (default `state_independent`, byte-identical to previous behaviour; the discrete combination fails validation), per-brain zero-init std heads on the five continuous brains, six `_sdstd` config variants, and a per-update clamped-log-std monitor in the tracked telemetry. Ships **dormant**: the pre-registered klinokinesis validation gate failed (Logbook 038), so the Phase 7 panel substrate froze in the default mode and the mechanism awaits a future pre-registered retry.
+
 - The Phase 7 L4 trace substrate on the connectome brain: `enable_activity_traces` and `trace_decay` config fields (off by default; per-synapse eligibility traces accumulated during rollout forwards for the upcoming three-factor rules — training is bit-identical with traces on until a rule consumes them), and the new `quantumnematode.learning_rules` package, whose first citizen `ConnectomePPORule` is the connectome PPO update extracted byte-identically behind the `LearningRule` seam.
 
 ### Changed

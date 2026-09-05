@@ -9,7 +9,7 @@ and the PPO hyperparameters — including ``gamma``/``gae_lambda``, so it
 computes returns and advantages itself; the brain retains experience
 collection and feature unpacking, surfaced through ``ConnectomePPOBatch``.
 
-Import discipline (change design Decision 3b): this module imports ONLY
+Import discipline: this module imports ONLY
 leaf modules from ``quantumnematode.brain.arch`` — never the package —
 so ``import quantumnematode.learning_rules.ppo`` works as a process's
 first import even though ``brain/arch/__init__`` imports
@@ -32,6 +32,11 @@ from quantumnematode.brain.arch._policy import (
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._rule import RuleStepReport
+from quantumnematode.brain.arch._std_head import (
+    LOG_STD_CLAMPED_MAX_KEY,
+    LOG_STD_CLAMPED_MEAN_KEY,
+    clamped_log_std_stats,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -191,8 +196,12 @@ class ConnectomePPORule:
         entropies: list[float] = []
         total_losses: list[float] = []
         grad_norms: list[float] = []
+        update_log_stds: list[torch.Tensor] = []
 
         for _ in range(self.num_epochs):
+            # Final-epoch semantics for the ceiling monitor: the recorded batch
+            # reflects the near-final weights of this update.
+            update_log_stds.clear()
             for minibatch in buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 # Batched forward pass through the topology + critic. The
                 # minibatch's states are unpacked + run in ONE batched
@@ -215,9 +224,16 @@ class ConnectomePPORule:
                 # discrete (Categorical) or continuous (tanh-Gaussian re-scoring the
                 # stored pre-squash samples). Clipped surrogate is shared.
                 if self.continuous:
+                    log_std_b = (
+                        topo.state_dependent_log_std(hidden)
+                        if topo.state_dependent_std
+                        else topo.log_std
+                    )
+                    if topo.state_dependent_std:
+                        update_log_stds.append(log_std_b.detach())
                     new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
                         new_head_out,
-                        topo.log_std,
+                        log_std_b,
                         minibatch["actions"],
                         self.action_low,
                         self.action_high,
@@ -261,12 +277,20 @@ class ConnectomePPORule:
                 total_losses.append(loss.item())
                 grad_norms.append(grad_norm.item())
 
+        extra: dict[str, float] = {}
+        if update_log_stds:
+            ls_mean, ls_max = clamped_log_std_stats(
+                torch.cat([t.reshape(-1) for t in update_log_stds]),
+            )
+            extra[LOG_STD_CLAMPED_MEAN_KEY] = ls_mean
+            extra[LOG_STD_CLAMPED_MAX_KEY] = ls_max
         return RuleStepReport(
             policy_loss=_mean(policy_losses),
             value_loss=_mean(value_losses),
             entropy=_mean(entropies),
             total_loss=_mean(total_losses),
             grad_norm=_mean(grad_norms),
+            extra=extra,
         )
 
     def reset_episode(self) -> None:

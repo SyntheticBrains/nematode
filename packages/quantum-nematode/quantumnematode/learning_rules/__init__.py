@@ -1,10 +1,10 @@
-"""Learning rules operating on brain topologies (Phase 7 L4, roadmap D8).
+"""Learning rules operating on brain topologies.
 
 This package hosts ``LearningRule`` implementations — the update mechanisms
 paired with ``BrainTopology`` substrates via the seam in
 ``brain/arch/_rule.py`` / ``_topology.py``. Its first citizen is
-``ConnectomePPORule``, the connectome brain's extracted PPO update; the
-Phase 7 three-factor rules land beside it.
+``ConnectomePPORule``, the connectome brain's extracted PPO update; future
+rules (e.g. three-factor plasticity) land beside it.
 
 Not to be confused with ``quantumnematode.plasticity``, which is the
 quantum-plasticity *evaluation protocol* (sequential multi-objective /

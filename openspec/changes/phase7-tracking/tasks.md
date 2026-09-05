@@ -26,19 +26,19 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 
 ## Shipment 7a-i — Platform Freeze + Minimal Rule + the 2×2 Panel
 
-**OpenSpec changes**: `add-l4-trace-substrate` (first; rule-seam decision + traces — **active**, authored 2026-08-28), then a panel change (placeholders; created per milestone)
-**Status**: 🟡 in progress (A.1/A.2 under `add-l4-trace-substrate`)
+**OpenSpec changes**: `add-l4-trace-substrate` (merged 2026-09-05, archived `2026-09-04-add-l4-trace-substrate` — A.1/A.2 done), `add-state-dependent-action-std` (merged 2026-09-05, archived `2026-09-05-add-state-dependent-action-std` — the P.1–P.5 platform tranche, closed under Amendment A), then a panel change (placeholder; created per milestone)
+**Status**: 🟡 in progress (A.1/A.2 done; P.1–P.5 closed 2026-09-05 under Amendment A — substrate FROZEN mode-off; next: A.3 minimal three-factor rule)
 **Roadmap layer**: L4 (minimal)
 **Approx effort**: ~3-5 active weeks (roadmap § estimate restatement)
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 1, D1/D2/D5/D7/D8/D10/D13
 
 ### Pre-panel platform tranche (D5/D7 — land, validate, freeze)
 
-- [ ] P.1 **D5**: remove the #254 dead config keys (`normalize_advantages` et al.) with training behaviour unchanged; byte-identity evidence recorded.
-- [ ] P.2 **D7**: state-dependent action `std` across the continuous policy heads (touches `_policy.py` consumers); byte-identical-when-off.
-- [ ] P.3 **D7 validation gate**: re-run the Logbook 036 thermotaxis assay post-D7 — klinokinesis signature present before freeze (this gates the Leifer validation target's measurability).
-- [ ] P.4 **Post-D7 n=8 re-baseline** of the reference arms (~24-32 runs) — becomes the panel's descriptive reference frame, superseding the Logbook 029 numbers.
-- [ ] P.5 Load-time config validation extended to the new plasticity keys; substrate declared **frozen** for the L4 panel.
+- [x] P.1 **D5** (verified already-done, 2026-09-05): the #254 dead-key removal shipped during the Phase 6 bit-memory pre-work — zero `normalize_advantages` keys and zero lstmppo renamed-key residue in `configs/` (grep-verified; no code change). Advantage normalization stays unimplemented (closed-issue constraint, 029 raw-GAE lineage).
+- [x] P.2 **D7** (`add-state-dependent-action-std`, 2026-09-05): state-dependent std heads on all five continuous brains, byte-identical-when-off and step-0 bit-equal on/off as a run property (RNG-free zero-Parameter heads; no `_policy.py` changes — the helpers were already shape-generic); ships **dormant** per the Amendment A gate outcome.
+- [x] P.3 **D7 validation gate — FAILED** ([Logbook 038](../../../docs/experiments/logbooks/038-state-dependent-std-gate.md), 2026-09-05): attempt 1 (ent 0.05) hit the clamp-ceiling trap (monitor caught it live); the one pre-registered entropy-only pass (ent 0.01) left klinokinesis EQUIVOCAL with weathervane regressed — capability without pressure. Dated Amendment A applied; the Leifer/Chen validation target stays unmeasurable; klinokinesis retry is recorded future work via its own pre-registered change.
+- [x] P.4 **DESCOPED under Amendment A** (2026-09-05): the substrate froze mode-off, so nothing changed under Logbook 029 — **029 remains the panel's descriptive reference frame** and there is nothing to re-measure. (House dropped-scope tick.)
+- [x] P.5 (2026-09-05): plasticity-key half verified already-done (the trace fields are pydantic-validated since #303); the new `continuous_std_mode` field validates via `model_fields` + a model validator. **Substrate declared FROZEN for the L4 panel in `continuous_std_mode: state_independent` (mode-off, Amendment A)** — the panel runs the unchanged 029-lineage substrate; any mode-on retry is a new pre-registered change.
 
 ### L4 minimal rule + panel
 
