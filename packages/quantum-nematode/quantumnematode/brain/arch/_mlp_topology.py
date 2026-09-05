@@ -139,9 +139,22 @@ class MLPTopology(nn.Module):
         outer product under ``torch.no_grad()``. Call exactly once per
         environment step: the rule's alignment semantics credit the trace
         as it stands when that step's reward arrives.
+
+        With traces enabled ``features`` must be a single unbatched vector:
+        eligibility is one outer product per step, and a batch would have
+        no single "this step" to credit. Batched evaluation belongs to the
+        untraced actor (the PPO replay path), which this does not replace.
         """
         if not self.enable_activity_traces:
             return self._actor(features)
+        if features.dim() != 1:
+            msg = (
+                "MLPTopology.forward with traces enabled expects one unbatched feature "
+                f"vector (got shape {tuple(features.shape)}). Eligibility is one outer "
+                "product per environment step; batched evaluation belongs to the "
+                "untraced actor."
+            )
+            raise ValueError(msg)
 
         modules = self._modules_in_order
         x = features

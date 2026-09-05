@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 
+import pytest
 import torch
 from quantumnematode.brain.arch._mlp_topology import MLPTopology
 from quantumnematode.brain.arch._topology import BrainTopology, PlasticTopology
@@ -132,17 +133,46 @@ class TestSameStepEligibility:
                 )
 
     def test_one_forward_accrues_one_outer_product(self) -> None:
+        """From reset, one forward leaves exactly post (x) pre per layer -- not twice it.
+
+        Determinism across a reset would not catch a double accumulation, so
+        the expected single product is computed explicitly from the plain
+        actor and compared bit for bit.
+        """
         actor = _actor()
         topo = MLPTopology(actor, enable_activity_traces=True, trace_decay=0.9)
         x = _inputs(1)[0]
+
+        expected = []
+        h = x
+        mods = list(actor)
+        i = 0
+        while i < len(mods):
+            if isinstance(mods[i], nn.Linear):
+                pre = h
+                h = mods[i](h)
+                if i + 1 < len(mods) and not isinstance(mods[i + 1], nn.Linear):
+                    h = mods[i + 1](h)
+                    i += 1
+                expected.append(torch.outer(h.detach(), pre.detach()))
+            i += 1
+
         topo(x)
-        first = [t.clone() for t in topo.eligibility_traces]
-        topo.reset_traces()
-        topo(x)
-        for a, b in zip(first, topo.eligibility_traces, strict=True):
-            assert torch.equal(a, b)
-        # And not double: a second call from reset must equal exactly one product.
-        assert all(t.abs().sum() > 0 for t in first)
+        for trace, one_product in zip(topo.eligibility_traces, expected, strict=True):
+            assert torch.equal(trace, one_product)
+            # A doubled accumulation would be exactly 2x and is ruled out explicitly.
+            assert not torch.equal(trace, 2 * one_product)
+
+    def test_traced_forward_rejects_batched_input(self) -> None:
+        """A batch has no single step to credit; the contract is stated, not silent."""
+        topo = MLPTopology(_actor(), enable_activity_traces=True, trace_decay=0.9)
+        with pytest.raises(ValueError, match="unbatched"):
+            topo(torch.stack(_inputs(2)))
+
+    def test_untraced_forward_still_accepts_batches(self) -> None:
+        topo = MLPTopology(_actor(), enable_activity_traces=False, trace_decay=0.9)
+        batch = torch.stack(_inputs(2))
+        assert torch.equal(topo(batch), topo._actor(batch))
 
     def test_reset_zeroes_every_trace(self) -> None:
         topo = MLPTopology(_actor(), enable_activity_traces=True, trace_decay=0.9)

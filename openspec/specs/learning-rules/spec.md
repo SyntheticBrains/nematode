@@ -81,13 +81,13 @@ A weight-decay term SHALL be applied alongside the Hebbian term, and updated wei
 
 - **GIVEN** a sustained positive prediction error and a non-zero trace
 - **WHEN** the rule steps many times
-- **THEN** no chemical weight magnitude SHALL exceed the configured bound
+- **THEN** no plastic weight magnitude SHALL exceed the configured bound
 
 #### Scenario: Decay pulls unreinforced weights down
 
 - **GIVEN** a zero prediction error
 - **WHEN** the rule steps repeatedly
-- **THEN** chemical weight magnitudes SHALL be non-increasing
+- **THEN** plastic weight magnitudes SHALL be non-increasing
 
 #### Scenario: A synapse may cross zero
 
@@ -188,7 +188,7 @@ The reward prediction error and its baseline SHALL still be computed and reporte
 
 ### Requirement: Plastic-topology seam
 
-The project SHALL define a `PlasticTopology` Protocol carrying exactly what a local plasticity rule touches, so the same rule can drive different substrates without naming any of them: an ordered list of plastic weight tensors, an aligned list of eligibility traces of the same shapes, an aligned list of boolean edge masks, a flag stating whether traces are enabled, and the mask projector applied per tensor.
+The project SHALL define a `PlasticTopology` Protocol carrying exactly what a local plasticity rule touches, so the same rule can drive different substrates without naming any of them: an ordered list of plastic weight tensors, an aligned list of eligibility traces of the same shapes, an aligned list of boolean edge masks, and a flag stating whether traces are enabled. Masking is expressed through the aligned masks: the rule multiplies each tensor's update by its own mask, which on a 0/1 mask is bitwise-identical to the connectome's projector and needs no projector member on the seam.
 
 The seam SHALL be a list from the outset, so that a substrate with one plastic tensor and a substrate with one per layer are handled by the same code path. A dense substrate SHALL expose an all-true mask rather than omitting one, so mask-dependent telemetry has the same meaning on every substrate.
 
