@@ -77,6 +77,8 @@ The rule SHALL update **only** the plastic weights the seam exposes. Every other
 
 Every update SHALL be projected through the topology's mask seam, so no update creates support outside the topology's edge set.
 
+*(The scenario titled "Only chemical synapses change" below keeps its historical name from when the connectome was the only substrate; it now specifies that only the seam's plastic weights change on any substrate.)*
+
 #### Scenario: Update follows the three-factor product
 
 - **WHEN** the rule steps with a known trace, reward, and baseline

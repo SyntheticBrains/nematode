@@ -14,6 +14,8 @@ The plastic set SHALL be every linear weight matrix of the actor. Biases, the ac
 
 Eligibility for a feedforward layer SHALL be the same-step product of the layer's output and its input, oriented to the weight's shape, accumulated with the shared trace decay under `torch.no_grad()` once per environment step. The traced forward SHALL be bitwise-equal to the untraced actor forward on the same input.
 
+Traces SHALL accrue from **exactly one** forward per environment step. The discrete action path evaluates the actor twice per step — once to select the action and once to record probabilities — and only the action-selecting evaluation SHALL update traces; the second SHALL not. Accruing from both would credit every synapse twice for one action and break the alignment between the eligibility and the reward that gates it.
+
 #### Scenario: PPO path is byte-identical
 
 - **WHEN** an MLP brain is constructed and trained with `learning_rule` unset
@@ -25,6 +27,7 @@ Eligibility for a feedforward layer SHALL be the same-step product of the layer'
 - **WHEN** a plastic MLP brain is constructed
 - **THEN** the topology's layers SHALL be the same module objects as the actor's
 - **AND** the actor's state dict SHALL contain no trace buffers
+- **AND** after a deep copy of the brain, the copied topology's layers SHALL be the copied actor's layer objects
 
 #### Scenario: Traced forward equals the actor forward
 
@@ -36,6 +39,13 @@ Eligibility for a feedforward layer SHALL be the same-step product of the layer'
 - **WHEN** a scripted sequence of inputs is run with traces enabled
 - **THEN** each layer's trace SHALL equal the decayed sum of that layer's same-step output-by-input products
 - **AND** each trace SHALL have the shape of its layer's weight
+
+#### Scenario: One discrete step accrues one outer product per layer
+
+- **GIVEN** a plastic MLP brain in discrete action mode with traces enabled
+- **WHEN** exactly one environment step is taken from a reset
+- **THEN** each layer's trace SHALL equal that layer's output-by-input product from the action-selecting forward
+- **AND** it SHALL NOT be twice that
 
 #### Scenario: Plastic rule updates once per step without the PPO machinery
 

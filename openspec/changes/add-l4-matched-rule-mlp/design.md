@@ -45,11 +45,23 @@ Rejected: gradient descent on the output layer with plasticity on the hidden one
 
 The plasticity fields move to a mixin both brain configs inherit. "Matched" is a claim about the numbers being equal; two hand-copied blocks of defaults are equal only until someone edits one, and nothing would announce the divergence. One definition, one validator, and a test that the two configs report identical plasticity defaults.
 
+Composition was probed before authoring rather than assumed, since the repo has no pydantic-mixin precedent: a `BaseModel` mixin carrying fields and an after-validator composes with `BrainConfig`, both validators fire, and the configuration loader compares field *sets*, so the reorder the mixin introduces is inert.
+
 The magnitude bound is checked against the MLP's initialisation for the same reason it was checked against the connectome's: a stabiliser must not modify the thing it stabilises before the process it bounds begins. Orthogonal init at gain √2 puts the MLP's largest initial weight near 0.65 across seeds; the shared bound of 3.0 clears it by a wide margin.
 
 ## Decision 6 — the value head is skipped, not stubbed, here too
 
 Both of the MLP brain's action paths compute the critic's value on every step. Under a plastic rule the call is skipped and the per-step value left unset — the same choice made for the connectome, for the same reason: a rule that owns no critic must not be handed one to keep an unused call site alive. The critic and optimiser are still *constructed*, because construction order is what RNG identity depends on; they are simply never used.
+
+## Decision 7 — one traced forward per step, chosen deliberately on the discrete path (added at spec review)
+
+Review found that the MLP's discrete action path evaluates the actor **twice** per step: once to select the action and once, separately, to record probabilities for tracking. Routing "the forward" through the traced path would therefore have accrued eligibility twice per step — every synapse credited twice for one action — and broken the once-per-step alignment the rule's semantics rest on. Nothing would have failed; the traces would simply have been wrong by a factor that decays into the noise.
+
+Only the action-selecting evaluation updates traces. The probability-tracking call uses the untraced actor (or the logits already in hand). The continuous path evaluates once and needs nothing special. A scenario pins one outer product per layer per discrete step.
+
+## Decision 8 — the reference is frozen before the refactor (added at spec review)
+
+The byte-identity scenario promises a *pre-change* reference. The tasks as first written captured it after the brain had been modified, which would pass by construction. The reference is now a task that must complete before any edit to the MLP brain — the same M1 discipline the connectome extraction used, and the one that has caught real regressions twice in this shipment.
 
 ## Risks
 
