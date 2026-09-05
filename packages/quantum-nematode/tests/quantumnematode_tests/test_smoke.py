@@ -47,6 +47,7 @@ SIMULATION_CONFIGS = [
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian.yml",
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_rewired_null.yml",
     # The matched-rule MLP arm: the same plastic path on a dense substrate.
     "scenarios/foraging_predator_thermal/mlpppo_small_continuous2d_combined_klinotaxis_plastic.yml",
     # Evolution-mode YAMLs: run_simulation.py ignores the
