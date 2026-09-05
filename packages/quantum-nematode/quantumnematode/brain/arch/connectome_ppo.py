@@ -41,6 +41,7 @@ from quantumnematode.brain.arch._policy import (
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch._std_head import StateDependentLogStdHead
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
@@ -266,6 +267,7 @@ class ConnectomeTopology(nn.Module):
         device: torch.device,
         rng: np.random.Generator,
         continuous: bool = False,
+        state_dependent_std: bool = False,
         enable_activity_traces: bool = False,
         trace_decay: float = 0.9,
     ) -> None:
@@ -441,9 +443,15 @@ class ConnectomeTopology(nn.Module):
         # produces a degenerate-uniform initial policy here because the
         # whole upstream pipeline is small (one 302-vec → 4-vec readout).
         nn.init.orthogonal_(self.readout, gain=1.0)
-        # Continuous mode: state-independent learnable log-std (one per action dim).
-        if continuous:
+        # Continuous std (D7): state-independent free parameter (default) or an
+        # RNG-free zero-Parameter head off the pooled motor 4-vec (mirroring the
+        # readout's input). Both branches consume zero RNG draws, so every other
+        # parameter stream is unaffected by the mode.
+        self.state_dependent_std = continuous and state_dependent_std
+        if continuous and not self.state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=device))
+        if self.state_dependent_std:
+            self.log_std_head = StateDependentLogStdHead(_N_ACTIONS, device=device)
 
         # ── Predator-sensor projection (opt-in) ─────────────────────────
         # Three learnable gain matrices route the corrected two-channel
@@ -615,6 +623,19 @@ class ConnectomeTopology(nn.Module):
         """
         if self.enable_activity_traces:
             self.activity_traces.zero_()
+
+    def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
+        """Per-state ``log_std`` from the settled hidden state (D7, review B2).
+
+        The public accessor seam for state-dependent std mode: pools ``hidden``
+        over the motor classes (handles both ``(302,)`` and ``(B, 302)``) and
+        applies the zero-init head. Callers (the rollout path and the PPO
+        rule's batched evaluate) use this instead of the ``log_std`` parameter,
+        which is not allocated in this mode. ``forward_with_hidden*`` signatures
+        are deliberately unchanged (the frozen legacy update reference unpacks
+        a 2-tuple).
+        """
+        return self.log_std_head(self._pool_motor(hidden))
 
     def _pool_motor(self, h: torch.Tensor) -> torch.Tensor:
         """Mean-pool ``h`` over the four motor classes → ``(4,)`` or ``(B, 4)``.
@@ -970,7 +991,9 @@ class ConnectomeTopology(nn.Module):
             )
         if self.enable_thermotaxis_projection:
             params.append(self.thermotaxis_gains)
-        if self.continuous:
+        if self.state_dependent_std:
+            params.extend(self.log_std_head.parameters())
+        elif self.continuous:
             params.append(self.log_std)
         return params
 
@@ -1054,6 +1077,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             device=self.device,
             rng=self.rng,
             continuous=self.continuous,
+            state_dependent_std=(config.continuous_std_mode == "state_dependent"),
             enable_activity_traces=config.enable_activity_traces,
             trace_decay=config.trace_decay,
         ).to(self.device)
@@ -1331,7 +1355,12 @@ class ConnectomePPOBrain(ClassicalBrain):
         self.last_value = value
 
         if self.continuous:
-            return self._run_brain_continuous(head_out, state, value)
+            log_std = (
+                self.topology.state_dependent_log_std(hidden)
+                if self.topology.state_dependent_std
+                else self.topology.log_std
+            )
+            return self._run_brain_continuous(head_out, state, value, log_std)
 
         # Action distribution via the shared discrete policy helper (byte-equivalent
         # to the prior inline softmax → Categorical → sample/log_prob).
@@ -1373,6 +1402,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         mean: torch.Tensor,
         state: np.ndarray,
         value: torch.Tensor,
+        log_std: torch.Tensor,
     ) -> list[ActionData]:
         """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
 
@@ -1400,7 +1430,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         """
         action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
             mean,
-            self.topology.log_std,
+            log_std,
             self._action_low,
             self._action_high,
         )
@@ -1477,6 +1507,13 @@ class ConnectomePPOBrain(ClassicalBrain):
             if report.policy_loss is not None:
                 self.latest_data.loss = report.policy_loss
                 self.history_data.losses.append(report.policy_loss)
+            if "log_std_clamped_mean" in report.extra:
+                self.history_data.log_std_clamped_mean.append(
+                    report.extra["log_std_clamped_mean"],
+                )
+                self.history_data.log_std_clamped_max.append(
+                    report.extra["log_std_clamped_max"],
+                )
             self.buffer.reset()
 
         self.history_data.rewards.append(reward)

@@ -86,6 +86,20 @@ class BrainHistoryData(BaseModel):
         default_factory=list,
         description="Loss values during training",
     )
+    log_std_clamped_mean: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Per-update mean of the clamped continuous log-std batch "
+            "(D7 ceiling monitor; populated only in state-dependent std mode)"
+        ),
+    )
+    log_std_clamped_max: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Per-update max of the clamped continuous log-std batch "
+            "(D7 ceiling monitor; populated only in state-dependent std mode)"
+        ),
+    )
     probabilities: list[float] = Field(
         default_factory=list,
         description="Probabilities of actions taken by the agent",

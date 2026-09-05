@@ -54,6 +54,11 @@ from quantumnematode.brain.arch._policy import (
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch._std_head import (
+    StateDependentLogStdHead,
+    clamped_log_std_stats,
+    raise_on_std_mode_mismatch,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
@@ -602,8 +607,13 @@ class LSTMPPOBrain(ClassicalBrain):
         actor_layers.append(nn.Linear(config.actor_hidden_dim, actor_output_dim))
         self.actor = nn.Sequential(*actor_layers).to(self.device)
 
-        # Continuous mode: state-independent learnable log-std (one per action dim).
-        if self.continuous:
+        # Continuous std (D7): state-independent free parameter (default) or an
+        # RNG-free zero-init state-dependent head off ``h_out`` (allocated below,
+        # after every RNG-consuming parameter).
+        self._state_dependent_std = (
+            self.continuous and config.continuous_std_mode == "state_dependent"
+        )
+        if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
         # Critic MLP: h_t.detach() → value
@@ -616,15 +626,25 @@ class LSTMPPOBrain(ClassicalBrain):
         # Initialize weights
         self._initialize_weights()
 
+        # State-dependent std head (D7): zero-Parameter, consumes no RNG draws;
+        # sits after all RNG-consuming parameters as defence-in-depth.
+        if self._state_dependent_std:
+            self.log_std_head = StateDependentLogStdHead(
+                config.lstm_hidden_dim,
+                device=self.device,
+            )
+
         # ── Optimizers ──
 
-        # Actor optimizer: LSTM/GRU + LayerNorm + actor MLP (+ log-std in continuous mode)
+        # Actor optimizer: LSTM/GRU + LayerNorm + actor MLP (+ std in continuous mode)
         actor_params = (
             list(self.rnn.parameters())
             + list(self.feature_norm.parameters())
             + list(self.actor.parameters())
         )
-        if self.continuous:
+        if self._state_dependent_std:
+            actor_params.extend(self.log_std_head.parameters())
+        elif self.continuous:
             actor_params.append(self.log_std)
         self.actor_optimizer = torch.optim.Adam(actor_params, lr=config.actor_lr)
         # Critic optimizer: critic MLP only
@@ -1019,9 +1039,10 @@ class LSTMPPOBrain(ClassicalBrain):
         """
         with torch.no_grad():
             mean = self.actor(h_out)
+            log_std = self.log_std_head(h_out) if self._state_dependent_std else self.log_std
             action_vec, log_prob_t, _entropy_t, pre_tanh = continuous_sample_tanh_gaussian(
                 mean,
-                self.log_std,
+                log_std,
                 self._action_low,
                 self._action_high,
             )
@@ -1115,6 +1136,7 @@ class LSTMPPOBrain(ClassicalBrain):
         buffer_len = len(self.buffer)
         entropy_coef = self._get_entropy_coef()
 
+        update_log_stds: list[torch.Tensor] = []
         total_policy_loss = 0.0
         total_value_loss = 0.0
         total_entropy = 0.0
@@ -1159,9 +1181,14 @@ class LSTMPPOBrain(ClassicalBrain):
                         # Re-score the stored pre-squash sample under the current
                         # policy (no TEI bias in continuous mode).
                         mean = self.actor(h_out)
+                        log_std_t = (
+                            self.log_std_head(h_out) if self._state_dependent_std else self.log_std
+                        )
+                        if self._state_dependent_std:
+                            update_log_stds.append(log_std_t.detach())
                         log_prob, entropy = continuous_evaluate_tanh_gaussian(
                             mean,
-                            self.log_std,
+                            log_std_t,
                             chunk["actions"][step_idx],
                             self._action_low,
                             self._action_high,
@@ -1228,7 +1255,9 @@ class LSTMPPOBrain(ClassicalBrain):
                     + list(self.actor.parameters())
                     + list(self.feature_norm.parameters())
                 )
-                if self.continuous:
+                if self._state_dependent_std:
+                    actor_clip_params.extend(self.log_std_head.parameters())
+                elif self.continuous:
                     actor_clip_params.append(self.log_std)
                 torch.nn.utils.clip_grad_norm_(
                     actor_clip_params,
@@ -1259,6 +1288,12 @@ class LSTMPPOBrain(ClassicalBrain):
             avg_entropy = total_entropy / num_updates
             self.latest_data.loss = avg_policy
             self.history_data.losses.append(avg_policy)
+            if self._state_dependent_std and update_log_stds:
+                ls_mean, ls_max = clamped_log_std_stats(
+                    torch.cat([t.reshape(-1) for t in update_log_stds]),
+                )
+                self.history_data.log_std_clamped_mean.append(ls_mean)
+                self.history_data.log_std_clamped_max.append(ls_max)
 
             current_lr = self._get_current_lr()
             logger.info(
@@ -1512,7 +1547,12 @@ class LSTMPPOBrain(ClassicalBrain):
             ),
         }
 
-        if self.continuous:
+        if self._state_dependent_std:
+            all_components["log_std_head"] = WeightComponent(
+                name="log_std_head",
+                state={k: v.clone() for k, v in self.log_std_head.state_dict().items()},
+            )
+        elif self.continuous:
             all_components["log_std"] = WeightComponent(
                 name="log_std",
                 state={"log_std": self.log_std.data.clone()},
@@ -1527,7 +1567,7 @@ class LSTMPPOBrain(ClassicalBrain):
             raise ValueError(msg)
         return {k: v for k, v in all_components.items() if k in components}
 
-    def load_weight_components(
+    def load_weight_components(  # noqa: C901
         self,
         components: dict[str, WeightComponent],
     ) -> None:
@@ -1541,8 +1581,14 @@ class LSTMPPOBrain(ClassicalBrain):
             self.actor.load_state_dict(components["policy"].state)
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
+        raise_on_std_mode_mismatch(
+            components,
+            state_dependent=self._state_dependent_std,
+        )
         if "log_std" in components and self.continuous:
             self.log_std.data.copy_(components["log_std"].state["log_std"])
+        if "log_std_head" in components and self._state_dependent_std:
+            self.log_std_head.load_state_dict(components["log_std_head"].state)
 
         # Optimizers after networks
         if "actor_optimizer" in components:

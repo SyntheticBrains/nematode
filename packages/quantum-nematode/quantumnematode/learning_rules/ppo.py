@@ -32,6 +32,7 @@ from quantumnematode.brain.arch._policy import (
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._rule import RuleStepReport
+from quantumnematode.brain.arch._std_head import clamped_log_std_stats
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -191,6 +192,7 @@ class ConnectomePPORule:
         entropies: list[float] = []
         total_losses: list[float] = []
         grad_norms: list[float] = []
+        update_log_stds: list[torch.Tensor] = []
 
         for _ in range(self.num_epochs):
             for minibatch in buffer.get_minibatches(self.num_minibatches, returns, advantages):
@@ -215,9 +217,16 @@ class ConnectomePPORule:
                 # discrete (Categorical) or continuous (tanh-Gaussian re-scoring the
                 # stored pre-squash samples). Clipped surrogate is shared.
                 if self.continuous:
+                    log_std_b = (
+                        topo.state_dependent_log_std(hidden)
+                        if topo.state_dependent_std
+                        else topo.log_std
+                    )
+                    if topo.state_dependent_std:
+                        update_log_stds.append(log_std_b.detach())
                     new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
                         new_head_out,
-                        topo.log_std,
+                        log_std_b,
                         minibatch["actions"],
                         self.action_low,
                         self.action_high,
@@ -261,12 +270,20 @@ class ConnectomePPORule:
                 total_losses.append(loss.item())
                 grad_norms.append(grad_norm.item())
 
+        extra: dict[str, float] = {}
+        if update_log_stds:
+            ls_mean, ls_max = clamped_log_std_stats(
+                torch.cat([t.reshape(-1) for t in update_log_stds]),
+            )
+            extra["log_std_clamped_mean"] = ls_mean
+            extra["log_std_clamped_max"] = ls_max
         return RuleStepReport(
             policy_loss=_mean(policy_losses),
             value_loss=_mean(value_losses),
             entropy=_mean(entropies),
             total_loss=_mean(total_losses),
             grad_norm=_mean(grad_norms),
+            extra=extra,
         )
 
     def reset_episode(self) -> None:

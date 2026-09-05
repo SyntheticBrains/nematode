@@ -187,3 +187,45 @@ class TestDeterminism:
         assert torch.equal(action_a, action_b)
         assert torch.equal(pre_a, pre_b)
         assert torch.equal(log_prob_a, log_prob_b)
+
+
+class TestStateDependentBatchedLogStd:
+    """A ``(B, 2)`` state-dependent log-std broadcasts through evaluate (D7).
+
+    Covers the `Batched state-dependent log-std evaluates correctly` scenario
+    of the add-state-dependent-action-std change: per-row change-of-variables
+    equality and entropy as the batch mean of per-state entropies.
+    """
+
+    def test_batched_log_std_matches_per_row_evaluation(self) -> None:
+        torch.manual_seed(7)
+        batch = 4
+        mean = torch.randn(batch, 2)
+        log_std = torch.randn(batch, 2) * 0.3
+        pre_tanh = torch.randn(batch, 2)
+        log_probs, mean_entropy = continuous_evaluate_tanh_gaussian(
+            mean,
+            log_std,
+            pre_tanh,
+            _LOW,
+            _HIGH,
+        )
+        per_row_lp = []
+        per_row_ent = []
+        for i in range(batch):
+            lp_i, ent_i = continuous_evaluate_tanh_gaussian(
+                mean[i],
+                log_std[i],
+                pre_tanh[i : i + 1],
+                _LOW,
+                _HIGH,
+            )
+            per_row_lp.append(lp_i[0])
+            per_row_ent.append(ent_i)
+        assert torch.allclose(log_probs, torch.stack(per_row_lp), rtol=0, atol=1e-6)
+        assert torch.allclose(
+            mean_entropy,
+            torch.stack(per_row_ent).mean(),
+            rtol=0,
+            atol=1e-6,
+        )

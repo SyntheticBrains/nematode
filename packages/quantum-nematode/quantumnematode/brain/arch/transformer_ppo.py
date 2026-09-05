@@ -53,6 +53,11 @@ from quantumnematode.brain.arch._policy import (
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch._std_head import (
+    StateDependentLogStdHead,
+    clamped_log_std_stats,
+    raise_on_std_mode_mismatch,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
@@ -131,7 +136,7 @@ class TransformerPPOBrainConfig(BrainConfig):
 class TransformerPPOBrain(ClassicalBrain):
     """PPO brain with a Transformer encoder over a temporal window of features."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         config: TransformerPPOBrainConfig,
         num_actions: int = 4,
@@ -205,8 +210,15 @@ class TransformerPPOBrain(ClassicalBrain):
         nn.init.orthogonal_(self.actor.weight, gain=0.01)
         nn.init.zeros_(self.actor.bias)
 
-        if self.continuous:
+        # Continuous std (D7): state-independent free parameter (default) or an
+        # RNG-free zero-init state-dependent head off the pooled encoder output.
+        self._state_dependent_std = (
+            self.continuous and config.continuous_std_mode == "state_dependent"
+        )
+        if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
+        if self._state_dependent_std:
+            self.log_std_head = StateDependentLogStdHead(config.d_model, device=self.device)
 
         params = list(self._trainable_parameters())
         self.optimizer = optim.Adam(params, lr=config.learning_rate)
@@ -247,7 +259,9 @@ class TransformerPPOBrain(ClassicalBrain):
             *self.actor.parameters(),
             *self.critic.parameters(),
         ]
-        if self.continuous:
+        if self._state_dependent_std:
+            params.extend(self.log_std_head.parameters())
+        elif self.continuous:
             params.append(self.log_std)
         return params
 
@@ -303,7 +317,13 @@ class TransformerPPOBrain(ClassicalBrain):
         self.last_value = value
 
         if self.continuous:
-            return self._run_brain_continuous(head_out, window, value)
+            with torch.no_grad():
+                log_std = (
+                    self.log_std_head(pooled).squeeze(0)
+                    if self._state_dependent_std
+                    else self.log_std
+                )
+            return self._run_brain_continuous(head_out, window, value, log_std)
 
         action_idx, log_prob, _entropy, probs = categorical_sample_torch(
             head_out,
@@ -332,6 +352,7 @@ class TransformerPPOBrain(ClassicalBrain):
         mean: torch.Tensor,
         window: np.ndarray,
         value: torch.Tensor,
+        log_std: torch.Tensor,
     ) -> list[ActionData]:
         """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
 
@@ -352,7 +373,7 @@ class TransformerPPOBrain(ClassicalBrain):
         """
         action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
             mean,
-            self.log_std,
+            log_std,
             self._action_low,
             self._action_high,
         )
@@ -416,6 +437,7 @@ class TransformerPPOBrain(ClassicalBrain):
             self.gae_lambda,
         )
 
+        update_log_stds: list[torch.Tensor] = []
         for _ in range(self.num_epochs):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 pooled = self._trunk(batch["states"])
@@ -423,9 +445,14 @@ class TransformerPPOBrain(ClassicalBrain):
                 values = self.critic(pooled).squeeze(-1)
 
                 if self.continuous:
+                    log_std_b = (
+                        self.log_std_head(pooled) if self._state_dependent_std else self.log_std
+                    )
+                    if self._state_dependent_std:
+                        update_log_stds.append(log_std_b.detach())
                     new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
                         head_out,
-                        self.log_std,
+                        log_std_b,
                         batch["actions"],
                         self._action_low,
                         self._action_high,
@@ -449,6 +476,13 @@ class TransformerPPOBrain(ClassicalBrain):
                 loss.backward()
                 nn.utils.clip_grad_norm_(self._trainable_parameters(), self.max_grad_norm)
                 self.optimizer.step()
+
+        if self._state_dependent_std and update_log_stds:
+            ls_mean, ls_max = clamped_log_std_stats(
+                torch.cat([t.reshape(-1) for t in update_log_stds]),
+            )
+            self.history_data.log_std_clamped_mean.append(ls_mean)
+            self.history_data.log_std_clamped_max.append(ls_max)
 
     def update_memory(self, reward: float | None = None) -> None:
         """No-op for TransformerPPOBrain."""
@@ -490,7 +524,12 @@ class TransformerPPOBrain(ClassicalBrain):
                 state={"episode_count": self._episode_count},
             ),
         }
-        if self.continuous:
+        if self._state_dependent_std:
+            all_components["log_std_head"] = WeightComponent(
+                name="log_std_head",
+                state={k: v.clone() for k, v in self.log_std_head.state_dict().items()},
+            )
+        elif self.continuous:
             all_components["log_std"] = WeightComponent(
                 name="log_std",
                 state={"log_std": self.log_std.data.clone()},
@@ -515,8 +554,14 @@ class TransformerPPOBrain(ClassicalBrain):
             self.actor.load_state_dict(state["actor"])
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
+        raise_on_std_mode_mismatch(
+            components,
+            state_dependent=self._state_dependent_std,
+        )
         if "log_std" in components and self.continuous:
             self.log_std.data.copy_(components["log_std"].state["log_std"])
+        if "log_std_head" in components and self._state_dependent_std:
+            self.log_std_head.load_state_dict(components["log_std_head"].state)
         if "optimizer" in components:
             self.optimizer.load_state_dict(components["optimizer"].state)
         if "training_state" in components:

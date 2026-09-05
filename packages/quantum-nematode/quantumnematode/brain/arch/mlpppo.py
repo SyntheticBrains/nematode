@@ -56,6 +56,11 @@ from quantumnematode.brain.arch._policy import (
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch._std_head import (
+    StateDependentLogStdHead,
+    clamped_log_std_stats,
+    raise_on_std_mode_mismatch,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
@@ -240,8 +245,14 @@ class MLPPPOBrain(ClassicalBrain):
             input_dim_override=self.input_dim,
         ).to(self.device)
 
-        # Continuous mode: state-independent learnable log-std (one per action dim).
-        if self.continuous:
+        # Continuous mode: exploration std. State-independent (default) = one free
+        # learnable log-std per action dim; state-dependent (D7) computes log_std
+        # per state via an RNG-free zero-init head (allocated below, after every
+        # RNG-consuming parameter).
+        self._state_dependent_std = (
+            self.continuous and config.continuous_std_mode == "state_dependent"
+        )
+        if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
         self.critic = self._build_network(
@@ -265,11 +276,18 @@ class MLPPPOBrain(ClassicalBrain):
             )
             logger.info(f"Feature gating enabled on {expansion_dim} expanded features")
 
+        # State-dependent std head (D7): zero-Parameter, consumes no RNG draws;
+        # sits after all RNG-consuming parameters as defence-in-depth.
+        if self._state_dependent_std:
+            self.log_std_head = StateDependentLogStdHead(self.input_dim, device=self.device)
+
         # Single optimizer for all trainable components
         params = list(self.actor.parameters()) + list(self.critic.parameters())
         if self._feature_gating:
             params.append(self.gate_weights)
-        if self.continuous:
+        if self._state_dependent_std:
+            params.extend(self.log_std_head.parameters())
+        elif self.continuous:
             params.append(self.log_std)
         self.optimizer = optim.Adam(params, lr=config.learning_rate)
 
@@ -601,9 +619,10 @@ class MLPPPOBrain(ClassicalBrain):
         value = self.critic(features)
         self.last_value = value
 
+        log_std = self.log_std_head(features) if self._state_dependent_std else self.log_std
         action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
             mean,
-            self.log_std,
+            log_std,
             self._action_low,
             self._action_high,
         )
@@ -688,6 +707,7 @@ class MLPPPOBrain(ClassicalBrain):
         total_entropy_loss = 0.0
         num_updates = 0
 
+        update_log_stds: list[torch.Tensor] = []
         for _ in range(self.num_epochs):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 gated_states = self._apply_torch_gating(batch["states"])
@@ -698,9 +718,16 @@ class MLPPPOBrain(ClassicalBrain):
                 # stored pre-squash samples). Clipped surrogate is shared.
                 if self.continuous:
                     mean = self.actor(gated_states)
+                    log_std_b = (
+                        self.log_std_head(gated_states)
+                        if self._state_dependent_std
+                        else self.log_std
+                    )
+                    if self._state_dependent_std:
+                        update_log_stds.append(log_std_b.detach())
                     new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
                         mean,
-                        self.log_std,
+                        log_std_b,
                         batch["actions"],
                         self._action_low,
                         self._action_high,
@@ -722,7 +749,9 @@ class MLPPPOBrain(ClassicalBrain):
                 all_params = list(self.actor.parameters()) + list(self.critic.parameters())
                 if self._feature_gating:
                     all_params.append(self.gate_weights)
-                if self.continuous:
+                if self._state_dependent_std:
+                    all_params.extend(self.log_std_head.parameters())
+                elif self.continuous:
                     all_params.append(self.log_std)
                 nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
                 self.optimizer.step()
@@ -731,6 +760,13 @@ class MLPPPOBrain(ClassicalBrain):
                 total_value_loss += value_loss.item()
                 total_entropy_loss += entropy.item()
                 num_updates += 1
+
+        if self._state_dependent_std and update_log_stds:
+            ls_mean, ls_max = clamped_log_std_stats(
+                torch.cat([t.reshape(-1) for t in update_log_stds]),
+            )
+            self.history_data.log_std_clamped_mean.append(ls_mean)
+            self.history_data.log_std_clamped_max.append(ls_max)
 
         if num_updates > 0:
             self.latest_data.loss = total_policy_loss / num_updates
@@ -811,7 +847,12 @@ class MLPPPOBrain(ClassicalBrain):
                 state={"gate_weights": self.gate_weights.data.clone()},
             )
 
-        if self.continuous:
+        if self._state_dependent_std:
+            all_components["log_std_head"] = WeightComponent(
+                name="log_std_head",
+                state={k: v.clone() for k, v in self.log_std_head.state_dict().items()},
+            )
+        elif self.continuous:
             all_components["log_std"] = WeightComponent(
                 name="log_std",
                 state={"log_std": self.log_std.data.clone()},
@@ -845,9 +886,15 @@ class MLPPPOBrain(ClassicalBrain):
         if "gate_weights" in components and self._feature_gating:
             self.gate_weights.data.copy_(components["gate_weights"].state["gate_weights"])
 
-        # Continuous-mode learnable log-std
+        # Continuous-mode std: same-mode loads only (D7 review S3).
+        raise_on_std_mode_mismatch(
+            components,
+            state_dependent=self._state_dependent_std,
+        )
         if "log_std" in components and self.continuous:
             self.log_std.data.copy_(components["log_std"].state["log_std"])
+        if "log_std_head" in components and self._state_dependent_std:
+            self.log_std_head.load_state_dict(components["log_std_head"].state)
 
         # Optimizer state only after networks succeed
         if "optimizer" in components:

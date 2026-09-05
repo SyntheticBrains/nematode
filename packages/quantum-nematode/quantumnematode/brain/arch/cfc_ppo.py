@@ -67,6 +67,11 @@ from quantumnematode.brain.arch._policy import (
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._registry import register_brain
+from quantumnematode.brain.arch._std_head import (
+    StateDependentLogStdHead,
+    clamped_log_std_stats,
+    raise_on_std_mode_mismatch,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
@@ -516,8 +521,14 @@ class CfCPPOBrain(ClassicalBrain):
                 output_dim=motor_count,
             ).to(self.device)
 
-        # Continuous mode: state-independent learnable log-std (one per action dim).
-        if self.continuous:
+        # Continuous std (D7): state-independent free parameter (default) or an
+        # RNG-free zero-init state-dependent head off the CfC hidden state
+        # (both ``actor_head`` modes; allocated after the critic below so every
+        # RNG-consuming parameter precedes it).
+        self._state_dependent_std = (
+            self.continuous and config.continuous_std_mode == "state_dependent"
+        )
+        if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
 
         # Critic MLP on the detached hidden state.
@@ -526,6 +537,10 @@ class CfCPPOBrain(ClassicalBrain):
             hidden_dim=config.critic_hidden_dim,
             num_layers=config.critic_num_layers,
         ).to(self.device)
+
+        # State-dependent std head (D7): zero-Parameter, consumes no RNG draws.
+        if self._state_dependent_std:
+            self.log_std_head = StateDependentLogStdHead(config.units, device=self.device)
 
         # ── Optimizers ──
 
@@ -642,7 +657,9 @@ class CfCPPOBrain(ClassicalBrain):
             params.append(self.logit_scale)
         if self.actor is not None:
             params += list(self.actor.parameters())
-        if self.continuous:
+        if self._state_dependent_std:
+            params.extend(self.log_std_head.parameters())
+        elif self.continuous:
             params.append(self.log_std)
         return params
 
@@ -680,7 +697,13 @@ class CfCPPOBrain(ClassicalBrain):
         if self.continuous:
             # ``head_out`` is the 2-D Gaussian mean; sample a normalized
             # ``(speed, turn)`` (the env rescales to physical units).
-            return self._run_brain_continuous_step(head_out, features, h_pre, value)
+            with torch.no_grad():
+                log_std = (
+                    self.log_std_head(h_new.squeeze(0))
+                    if self._state_dependent_std
+                    else self.log_std
+                )
+            return self._run_brain_continuous_step(head_out, features, h_pre, value, log_std)
 
         logits = head_out
         action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
@@ -733,6 +756,7 @@ class CfCPPOBrain(ClassicalBrain):
         features: np.ndarray,
         h_pre: torch.Tensor,
         value: float,
+        log_std: torch.Tensor,
     ) -> list[ActionData]:
         """Continuous-mode action step: sample a normalized ``(speed, turn)`` action.
 
@@ -762,7 +786,7 @@ class CfCPPOBrain(ClassicalBrain):
         with torch.no_grad():
             action_vec, log_prob_t, _entropy_t, pre_tanh = continuous_sample_tanh_gaussian(
                 mean,
-                self.log_std,
+                log_std,
                 self._action_low,
                 self._action_high,
             )
@@ -831,7 +855,7 @@ class CfCPPOBrain(ClassicalBrain):
         frac = min(1.0, self._episode_count / decay)
         return self.config.entropy_coef + frac * (end - self.config.entropy_coef)
 
-    def _perform_ppo_update(self) -> None:  # noqa: PLR0915
+    def _perform_ppo_update(self) -> None:  # noqa: C901, PLR0912, PLR0915
         """Perform a PPO update with chunk-based truncated BPTT."""
         if len(self.buffer) == 0:
             return
@@ -862,6 +886,7 @@ class CfCPPOBrain(ClassicalBrain):
         buffer_len = len(self.buffer)
         entropy_coef = self._get_entropy_coef()
 
+        update_log_stds: list[torch.Tensor] = []
         total_policy_loss = 0.0
         total_value_loss = 0.0
         total_entropy = 0.0
@@ -902,9 +927,16 @@ class CfCPPOBrain(ClassicalBrain):
                     # Shared torch log-prob/entropy for the stored action
                     # (differentiable, used inside the BPTT loop).
                     if self.continuous:
+                        log_std_t = (
+                            self.log_std_head(h.squeeze(0))
+                            if self._state_dependent_std
+                            else self.log_std
+                        )
+                        if self._state_dependent_std:
+                            update_log_stds.append(log_std_t.detach())
                         log_prob, entropy = continuous_evaluate_tanh_gaussian(
                             head_out,
-                            self.log_std,
+                            log_std_t,
                             chunk["actions"][step_idx],
                             self._action_low,
                             self._action_high,
@@ -981,6 +1013,12 @@ class CfCPPOBrain(ClassicalBrain):
             avg_entropy = total_entropy / num_updates
             self.latest_data.loss = avg_policy
             self.history_data.losses.append(avg_policy)
+            if self._state_dependent_std and update_log_stds:
+                ls_mean, ls_max = clamped_log_std_stats(
+                    torch.cat([t.reshape(-1) for t in update_log_stds]),
+                )
+                self.history_data.log_std_clamped_mean.append(ls_mean)
+                self.history_data.log_std_clamped_max.append(ls_max)
 
             logger.info(
                 f"CfCPPOBrain PPO update: policy_loss={avg_policy:.4f}, "
@@ -1085,7 +1123,12 @@ class CfCPPOBrain(ClassicalBrain):
             ),
         }
 
-        if self.continuous:
+        if self._state_dependent_std:
+            all_components["log_std_head"] = WeightComponent(
+                name="log_std_head",
+                state={k: v.clone() for k, v in self.log_std_head.state_dict().items()},
+            )
+        elif self.continuous:
             all_components["log_std"] = WeightComponent(
                 name="log_std",
                 state={"log_std": self.log_std.data.clone()},
@@ -1123,8 +1166,14 @@ class CfCPPOBrain(ClassicalBrain):
                 self.actor.load_state_dict(actor_state)
         if "critic" in components:
             self.critic.load_state_dict(components["critic"].state)
+        raise_on_std_mode_mismatch(
+            components,
+            state_dependent=self._state_dependent_std,
+        )
         if "log_std" in components and self.continuous:
             self.log_std.data.copy_(components["log_std"].state["log_std"])
+        if "log_std_head" in components and self._state_dependent_std:
+            self.log_std_head.load_state_dict(components["log_std_head"].state)
 
         # Optimizers after networks.
         if "actor_optimizer" in components:
