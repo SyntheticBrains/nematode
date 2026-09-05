@@ -42,6 +42,41 @@ The default selection SHALL be byte-identical to the pre-change brain: identical
 - **WHEN** two brains are constructed at the same seed with different rule selections
 - **THEN** all topology parameters SHALL be byte-identical at initialisation
 
+### Requirement: Anatomically-derived motor readout under the plastic rule
+
+When the three-factor rule is selected the motor readout is never updated, so what it is frozen at determines what the plastic arms can express. It SHALL therefore be set to the anatomical contrast implied by the motor classes it reads, rather than to a random draw.
+
+The four pooled motor classes carry fixed anatomical meaning: two denote dorsal versus ventral muscle innervation, and two denote forward versus backward locomotion drive. The readout SHALL map the dorsal-minus-ventral contrast to the turn action and the forward-minus-backward contrast to the speed action.
+
+The assignment SHALL consume no additional randomness and SHALL occur after the existing initialisation draw, so that every other parameter remains byte-identical across rule selections at the same seed. Under the PPO rule the readout SHALL keep its existing random initialisation, so previously measured results remain reproducible bit-for-bit.
+
+#### Scenario: Plastic readout encodes the anatomical contrasts
+
+- **WHEN** a brain is constructed with the three-factor rule
+- **THEN** the readout row driving turn SHALL weight dorsal classes and ventral classes with equal magnitude and opposite sign
+- **AND** the readout row driving speed SHALL weight forward-drive classes and backward-drive classes with equal magnitude and opposite sign
+
+#### Scenario: The anatomical readout preserves initialisation scale
+
+- **WHEN** the anatomical readout is constructed
+- **THEN** its rows SHALL be unit-norm and mutually orthogonal, matching the scale and conditioning of the random initialisation it replaces
+
+#### Scenario: Rule selection consumes identical randomness
+
+- **WHEN** two brains are constructed at the same seed under different rule selections
+- **THEN** every parameter other than the readout SHALL be byte-identical
+- **AND** the random-number stream SHALL have advanced identically
+
+#### Scenario: PPO arms keep the random readout
+
+- **WHEN** a brain is constructed with the PPO rule
+- **THEN** its readout SHALL be byte-identical to a pre-change construction at the same seed
+
+#### Scenario: The readout is identical across wiring arms
+
+- **WHEN** a wild-type brain and a rewired-null brain are constructed at the same seed under the three-factor rule
+- **THEN** their readouts SHALL be byte-identical, so the wiring contrast is not confounded by the decoder
+
 ## MODIFIED Requirements
 
 ### Requirement: Persistent activity-trace substrate (eligibility traces)

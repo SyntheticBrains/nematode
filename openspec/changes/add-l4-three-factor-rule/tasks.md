@@ -26,6 +26,12 @@
 - [ ] 3.4 Route the new telemetry into `history_data` alongside the existing loss/monitor series.
 - [ ] 3.5 Tests: default byte-identity against a frozen reference; validator; per-step cadence; PPO machinery dormant; construction identical across selections; only `w_chem` changes.
 
+## 3b. Anatomical motor readout (Decision 7)
+
+- [ ] 3b.1 Under the three-factor rule, write the readout as the anatomical contrast (turn ← dorsal − ventral, speed ← B-type − A-type) **after** the existing orthogonal draw, so no extra randomness is consumed and the RNG stream is unperturbed.
+- [ ] 3b.2 Derive the contrast from the motor-class index structure already built at construction rather than from hard-coded column positions, so it cannot silently desynchronise if the class order changes.
+- [ ] 3b.3 Tests: rows encode the two contrasts; rows are unit-norm and mutually orthogonal; PPO readout byte-identical to pre-change; all non-readout parameters byte-identical across rule selections; wild-type and rewired-null readouts identical at the same seed.
+
 ## 4. Evidence the rule is what it claims
 
 - [ ] 4.1 Test: update equals `η·δ·E` before stabilisation, and vanishes when either `δ` or `E` is zero.
@@ -40,7 +46,7 @@
 - [ ] 5.2 Config-variant test pinning the smoke config as a minimal delta from its parent.
 - [ ] 5.3 `docs/architectures.md` note that the connectome brain supports two update regimes; `configs/README.md` variant vocabulary.
 - [ ] 5.4 CHANGELOG entry.
-- [ ] 5.5 Tracker: tick A.3 with a dated note; record the class-naming debt and the `trace_decay` calibration hand-off.
+- [ ] 5.5 Tracker: tick A.3 with a dated note; record the `trace_decay` calibration hand-off and cross-reference the filed class-naming issue.
 
 ## 6. Close-out
 

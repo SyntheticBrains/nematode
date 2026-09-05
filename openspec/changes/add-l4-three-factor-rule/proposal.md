@@ -48,19 +48,28 @@ The rule updates `w_chem` and nothing else. Sensory gains and the motor readout 
 
 This is the clean statement of the hypothesis — the *connectome* learns — and it keeps the wild-type vs rewired-null contrast about wiring alone. A wild-type advantage arising from an adapting readout would be precisely the confound the 2×2 exists to exclude. The cost is accepted and detectable: if a frozen readout makes the task unlearnable, the arm fails the D2 frozen-weights sanity floor, which is what that floor is for. A floor failure is diagnostic, not silent.
 
-### 5. Stability
+### 5. The frozen readout becomes anatomical
+
+Freezing the readout only helps if what is frozen is the right map. The four motor pools are the canonical `VB, DB, VA, DA` classes, whose semantics are fixed anatomy: dorsal-vs-ventral innervation is body bending, and B-type-vs-A-type is forward-vs-backward locomotion. The readout is currently a **random orthogonal** 2×4 matrix — harmless under PPO, which learns its way to the right contrast, but permanent under a rule that never touches it.
+
+Under the three-factor rule the readout SHALL therefore be the anatomical contrast — turn from dorsal minus ventral, speed from B-type minus A-type — rather than a random draw. This is the more faithful model: real motor neurons drive muscle through fixed anatomy, not a learned decoder. It is also the single largest reduction in the risk that the plastic arms fail for want of a usable output map rather than for want of learning.
+
+The contrast matrix is *itself* orthonormal (unit rows, exactly orthogonal), so initial policy scale and conditioning are unchanged — a specific orthogonal matrix replaces a random one. The anatomical values are written **after** the existing orthogonal draw, so the RNG stream is untouched and every other parameter stays byte-identical across rule selections. PPO arms keep the random draw, so the Logbook 029/034 substrate is bit-for-bit unaffected.
+
+### 6. Stability
 
 Unbounded Hebbian growth is the classic failure mode, so two bounded, configurable stabilisers ship with the rule: a weight-decay term (`Δw −= η·λ_w·w`) and a magnitude clamp. Both default to values that constrain without dominating, and both are reported in telemetry so a run that saturates is visible rather than inferred.
 
 **Dale's law is preserved**: the update SHALL NOT flip the sign of an existing synapse. A chemical synapse's sign is a property of its neurotransmitter, not of experience, and a rule that silently converts excitatory synapses to inhibitory would be modelling something the animal cannot do.
 
-### 6. Telemetry and a smoke config
+### 7. Telemetry and a smoke config
 
 Per-update `δ`, baseline, mean |Δw|, saturated-synapse fraction, and sign-clamp hits, so the rule's health is observable during the panel rather than reconstructed after it. One plastic wild-type config lands as a smoke arm; the panel's full arm set is A.4–A.6.
 
 ## Impact
 
 - **Affected specs**: new `learning-rules` capability; `connectome-ppo-brain` gains rule selection and a dated amendment to the trace formula.
-- **Affected code**: new `learning_rules/three_factor.py`; the trace update and reset in `ConnectomeTopology`; rule construction and per-step dispatch in `ConnectomePPOBrain`; config fields and their validator.
+- **Affected code**: new `learning_rules/three_factor.py`; the trace update and reset in `ConnectomeTopology`; the motor readout's initialisation under the plastic rule; rule construction and per-step dispatch in `ConnectomePPOBrain`; config fields and their validator.
 - **Default behaviour unchanged**: `learning_rule` defaults to `"ppo"` and traces default off, so every existing config, weight file, and Logbook 029 comparison is untouched — the substrate frozen under Amendment A stays frozen.
+- **Follow-up debt filed**: the brain class is misnamed once it hosts two update regimes (tracked as a repository issue; the rename crosses config filenames, weight bundles, and logbook provenance, so it belongs at a phase boundary).
 - **Not in scope**: the panel arms (A.4–A.6), the 2×2 itself (A.7), neuromodulator grounding (7a-ii), and any performance claim. This change ships a mechanism and the evidence that it is correctly wired, not a result.

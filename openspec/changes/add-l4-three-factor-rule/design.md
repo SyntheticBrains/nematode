@@ -62,6 +62,34 @@ Decay and clamp are configurable and load-time validated. The telemetry matters 
 
 **Sign preservation** is the one constraint here that is biological rather than numerical. A chemical synapse's sign follows from its neurotransmitter; an update that flips an excitatory synapse to inhibitory models a transition the animal cannot make, and would let the "wild-type connectome" quietly become a different circuit. Updates are clamped at zero for each synapse's initial sign, and clamp events are counted — a high count means the rule is fighting the wiring, which is itself a finding.
 
+## Decision 7 — the frozen readout is anatomical, not random (ratified with the user)
+
+Decision 3 freezes the readout. That only makes sense if what is frozen is defensible, and reconnaissance showed it was not: the readout is a **random orthogonal** 2×4 matrix over pools whose meaning is fixed anatomy.
+
+The pools are `VB, DB, VA, DA` — the canonical *C. elegans* motor classes. `D` and `V` denote dorsal and ventral muscle innervation, so their difference is body bending; `B` and `A` denote forward and backward locomotion drivers, so their difference is translation. The action space is exactly `(speed, turn)`. The correct map is therefore not merely learnable — it is *derivable*, and it is two linear contrasts.
+
+Under PPO this was invisible: the readout is a learnable parameter, so an arbitrary starting point costs some training and nothing else. Freezing it changes the situation completely — the plastic arms would be permanently asked to drive a decoder that scrambles the anatomical semantics of their own motor neurons. That is both less faithful than the animal (whose motor neurons drive muscle through fixed anatomy) and the largest single contributor to the incapacity risk named in Decision 3.
+
+So under the three-factor rule the readout is initialised to the contrast: `turn ← dorsal − ventral`, `speed ← B-type − A-type`.
+
+Three properties make this cheap:
+
+- The contrast matrix is **orthonormal** — unit-norm rows, exactly orthogonal — so it is a *specific* orthogonal matrix, not a departure from the existing `orthogonal_(gain=1.0)` scale or conditioning. The initial policy is no more degenerate than before.
+- The values are written **after** the existing orthogonal draw, so the RNG stream is unperturbed and every other parameter remains byte-identical across rule selections.
+- It is **arm-neutral**: wild-type and rewired-null share an identical readout, so the primary contrast still isolates wiring.
+
+PPO arms keep the random draw. Changing them would alter the initialisation of the Logbook 029/034 substrate — the panel's own descriptive reference frame, frozen four days ago under Amendment A — for no benefit to this change.
+
+## Where this design sits on biological plausibility
+
+Recorded because it is the standing question behind the whole shipment, and because the honest answer has parts that are strong and parts that are not.
+
+**Load-bearing and genuine.** The rule is *local*: it uses pre-synaptic activity, post-synaptic activity, and one global scalar, with no backward pass, no weight transport, and no per-synapse error signal. That is the specific property PPO cannot claim and the reason this rule family is the right instrument for the wiring question. Around it: rate coding (defensible as higher fidelity than STDP for a graded, largely non-spiking animal), decaying eligibility, neuromodulatory gating, Dale's law preserved, synapse-count-derived initial weights, non-plastic gap junctions, anatomically-pooled motor classes, and now an anatomically-derived motor decoder.
+
+**Abstractions that are staged rather than ignored.** The modulator is one global scalar with no receptor specificity or spatial extent; the receptor-grounded stack is a named later shipment, and the panel is explicitly re-run under the grounded rule there.
+
+**Gaps that remain, stated rather than glossed.** A plausible learning *rule* is not a plausible learning *problem*, and the problem carries most of the remaining distance: the reward is engineered shaping the animal has no access to, the baseline is effectively a reward oracle computed outside the network, and exploration is Gaussian action noise with a frozen scale — an RL artefact whose more plausible state-dependent form was attempted and failed its gate. None of these are introduced here, and none are fixable within this change, but they bound what the 2×2 can claim: it can say the wiring is or is not legible to a local, neuromodulated, rate-based rule. It cannot say the animal learns this task this way.
+
 ## Risks
 
 - **The rule may not learn under a frozen readout** (Decision 3). Detected by the D2 frozen-weights floor; interpretation rule fixed in advance.
