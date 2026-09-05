@@ -80,6 +80,7 @@ class TestTraceRecurrence:
         brain = _make_brain(enable_activity_traces=True, trace_decay=0.8)
         topology = brain.topology
         expected = torch.zeros_like(brain.topology.activity_traces)
+        prev_h: torch.Tensor | None = None
         torch.manual_seed(_DRIVE_SEED)
         for step in range(5):
             params = _make_params(strength=0.2 + 0.1 * step, angle=0.05 * step)
@@ -105,8 +106,13 @@ class TestTraceRecurrence:
                     thermotaxis_features=thermo,
                 )
                 topology.enable_activity_traces = True
-            expected = 0.8 * expected + topology.m_chem * torch.outer(h, h)
+            # Causal recurrence: the pre-synaptic factor is the PREVIOUS
+            # step's settled state, so the first step accrues nothing and
+            # every later step credits h_{t-1} -> h_t.
+            if prev_h is not None:
+                expected = 0.8 * expected + topology.m_chem * torch.outer(prev_h, h)
             assert torch.allclose(brain.topology.activity_traces, expected, rtol=0.0, atol=0.0)
+            prev_h = h
 
     def test_traces_are_zero_off_edges(self) -> None:
         brain = _make_brain(enable_activity_traces=True)
@@ -186,3 +192,43 @@ class TestTraceConfigValidation:
     def test_in_range_trace_decay_accepted(self) -> None:
         cfg = ConnectomePPOBrainConfig(seed=_SEED, trace_decay=0.0)
         assert cfg.trace_decay == 0.0
+
+
+class TestCausalDirectionality:
+    """The causal trace distinguishes what the symmetric one could not."""
+
+    def test_reciprocal_edges_receive_different_eligibility(self) -> None:
+        """A same-step outer product would give both directions the same value.
+
+        This is the property the causal formula exists to provide: for a
+        reciprocal pair, eligibility depends on which endpoint was active
+        first, so credit can distinguish the two directions of the
+        connection rather than treating them as one undirected edge.
+        """
+        brain = _make_brain(enable_activity_traces=True, trace_decay=0.8)
+        topology = brain.topology
+        mask = topology.m_chem
+
+        reciprocal = mask & mask.T
+        # Ignore self-connections, whose two "directions" are the same entry.
+        reciprocal = reciprocal & ~torch.eye(
+            mask.shape[0],
+            dtype=torch.bool,
+            device=mask.device,
+        )
+        assert reciprocal.any(), "expected the connectome to contain reciprocal edges"
+
+        torch.manual_seed(_DRIVE_SEED)
+        _drive(brain, n_steps=5, final_done=False)
+
+        traces = topology.activity_traces
+        forward = traces[reciprocal]
+        backward = traces.T[reciprocal]
+        assert not torch.allclose(forward, backward, rtol=0.0, atol=0.0)
+
+    def test_trace_is_not_symmetric(self) -> None:
+        brain = _make_brain(enable_activity_traces=True)
+        torch.manual_seed(_DRIVE_SEED)
+        _drive(brain, n_steps=5, final_done=False)
+        traces = brain.topology.activity_traces
+        assert not torch.allclose(traces, traces.T, rtol=0.0, atol=0.0)
