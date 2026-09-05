@@ -6,11 +6,12 @@ The three-factor rule SHALL offer two independent, default-off scaling modes sha
 plastic brain through the plasticity configuration mixin. With **modulator normalisation** on,
 the third factor SHALL be `tanh(δ / σ)`, where `σ` is a running root-mean-square of the raw
 prediction error `δ` maintained by exponential moving average at a configurable scale rate,
-warm-started from the first observed `|δ|`, used at its pre-update value for the current step,
-and floored at a configurable positive floor before division. With **trace normalisation** on,
+bias-corrected so its first observation counts fully, used at its pre-update value for the
+current step, and floored at a configurable positive floor before division. With **trace normalisation** on,
 the Hebbian term for each plastic tensor SHALL be divided by `ρ`, a running root-mean-square of
-that tensor's eligibility trace over its masked entries, maintained, warm-started, used and
-floored the same way. The decay term and the magnitude clamp SHALL be unchanged by either mode.
+that tensor's eligibility trace over its masked entries, maintained, bias-corrected, used and
+floored the same way, with an all-zero trace neither updating it nor counting toward its
+correction. The decay term and the magnitude clamp SHALL be unchanged by either mode.
 Both scales SHALL advance under a freeze and in unmodulated mode, where the modulator SHALL
 remain `1.0`. With both modes off, the rule SHALL be bit-identical to the rule without this
 requirement. The rule SHALL report the effective modulator, the modulator scale and the mean
@@ -31,13 +32,14 @@ trace scale beside its existing telemetry, and the raw prediction error SHALL st
 - **THEN** the Hebbian steps SHALL be equal within floating-point tolerance
 - **AND** each plastic tensor SHALL carry its own scale, computed over its masked entries only
 
-#### Scenario: Scales warm-start from the first observation
+#### Scenario: Scales are bias-corrected from the first observation
 
 - **GIVEN** a freshly constructed rule with a scaling mode on
 - **WHEN** it takes its first step
 - **THEN** the modulator scale SHALL equal the first `|δ|` (floored) and the trace scale the first
   non-zero trace's root-mean-square (floored)
-- **AND** a zero first trace SHALL leave the trace scale unset until a non-zero trace arrives
+- **AND** after `t` observations each scale SHALL equal its bias-corrected running mean square
+- **AND** an all-zero trace SHALL leave the trace scale and its observation count unchanged
 
 #### Scenario: Both modes off is bit-identical
 
@@ -57,7 +59,7 @@ trace scale beside its existing telemetry, and the raw prediction error SHALL st
 
 - **GIVEN** the connectome and the MLP with both scaling modes on and the same hyperparameters
 - **WHEN** each steps from traces whose magnitudes differ by orders of magnitude
-- **THEN** the mean absolute Hebbian step per unit modulator SHALL be the same on both within
+- **THEN** the root-mean-square Hebbian step per unit modulator SHALL be the same on both within
   tolerance
 
 #### Scenario: The scaling fields are shared and bounded

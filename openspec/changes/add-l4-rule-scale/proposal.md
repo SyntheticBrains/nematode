@@ -28,10 +28,10 @@ Both design choices below were settled with Chris before this proposal was writt
 - **The modulator becomes bounded and scale-free**: `δ̃ = tanh(δ / σ)`, with `σ` a running
   root-mean-square of the prediction error. Sign-preserving, monotone, in `[−1, 1]`, one
   fewer arbitrary constant than a clip; linear near zero and saturating for large surprise,
-  which is also how a neuromodulatory signal with a firing floor and ceiling behaves.
+  bounded, as firing rates are.
 - **The eligibility trace is normalised per plastic tensor by a running scale**:
   `Δw = η · δ̃ · E / ρ`, with `ρ` a running root-mean-square of the trace over the tensor's
-  edge set. `η` then means the mean absolute step per unit modulator on every substrate,
+  edge set. `η` then means the root-mean-square step per unit modulator on every substrate,
   while step-to-step variation of the trace is kept: a step with more co-activity still
   moves more.
 
@@ -42,14 +42,13 @@ Both design choices below were settled with Chris before this proposal was writt
   `plasticity_normalise_trace`, `plasticity_scale_rate`, `plasticity_scale_floor`. Both
   switches default off, and with both off the rule is **byte-identical** to today's, proven
   against the frozen reference.
-- The rule maintains the two running scales as its own state beside the baseline, warm-starts
-  them from the first observation, updates them under a freeze and in unmodulated mode (so
+- The rule maintains the two running scales as its own state beside the baseline, keeps them bias-corrected so the first observation counts fully, updates them under a freeze and in unmodulated mode (so
   telemetry stays comparable across arms), and applies them only to the Hebbian term — the
   decay and the clamp are unchanged.
 - Three new telemetry keys recorded beside the existing four: the effective modulator, the
   modulator scale, and the trace scale.
 - Tests: the product with normalisation on; invariance of the Hebbian step to a constant
-  rescaling of the trace; the modulator's bound; the warm start; byte-identity with both off;
+  rescaling of the trace; the modulator's bound; the bias correction; byte-identity with both off;
   freeze and unmodulated interplay; the keys; and the matched-rule invariance across the two
   substrates under normalisation.
 - Docs: the architectures table's plasticity row, the CHANGELOG.

@@ -30,7 +30,7 @@ available bit for bit behind default-off switches.
 ### D1. The modulator: `δ̃ = tanh(δ / σ)`
 
 `σ` is the running root-mean-square of the raw prediction error: `σ² ← (1 − r_s) σ² + r_s δ²`
-with `r_s = plasticity_scale_rate`. The current step is scored against the scale estimated
+with `r_s = plasticity_scale_rate`, bias-corrected by `1 − (1 − r_s)^t` after `t` observations so the first observation counts fully and later ones average properly. The current step is scored against the scale estimated
 **before** it is absorbed, the same convention the baseline uses, so a surprising step is
 scored as surprising rather than against a scale it has already inflated. `σ` is floored at
 `plasticity_scale_floor` before division.
@@ -43,14 +43,14 @@ an ordinary step. The raw `δ` is still reported so the compression is visible.
 ### D2. The trace: `E / ρ` per plastic tensor
 
 For each plastic tensor `ρ²` is the running mean square of the trace over that tensor's edge
-set (the masked entries, so off-edge zeros do not dilute a sparse substrate): `ρ² ← (1 − r_s) ρ² + r_s · mean(E[mask]²)`, again with the pre-update value used for the current step, floored
+set (the masked entries, so off-edge zeros do not dilute a sparse substrate): `ρ² ← (1 − r_s) ρ² + r_s · mean(E[mask]²)`, bias-corrected the same way, with the pre-update value used for the current step, floored
 before division. The Hebbian term becomes `η · δ̃ · E / ρ`; the decay term and the clamp are
 unchanged.
 
 Ratified with Chris over instantaneous normalisation (which would make every step the same
 size regardless of co-activity, discarding what the trace carries) and over a weight-relative
 LARS-style scale (steps that grow with the weights fight the bound and the decay). With a
-running scale, `η` is the mean absolute Hebbian step per unit modulator on every substrate,
+running scale, `η` is the root-mean-square Hebbian step per unit modulator on every substrate,
 and a step with more co-activity than usual still moves more.
 
 Substrates differ in initialisation scale (connectome ~0.3, MLP ~0.6), so identical absolute
@@ -60,10 +60,14 @@ each substrate's weights would be a different rule on each.
 
 ### D3. Warm start, freeze, unmodulated mode
 
-- **Warm start.** Both scales start unset; the first observation sets them to its own value
-  (`σ = |δ|`, `ρ = RMS(E)` per tensor, each floored). Without it the first steps would divide
-  by the floor and every early modulator would sit at ±1 while the trace step would be
-  enormous. A zero first trace leaves `ρ` unset until a non-zero one arrives.
+- **Bias-corrected start.** Both scales are bias-corrected EMAs: at the first observation each
+  equals that observation exactly, and afterwards each is a properly weighted average rather
+  than one anchored at zero. The alternative — warm-starting from the first `|δ|` alone,
+  typically 0.005 before any death — would leave ordinary steps at `δ/σ ≈ 10` and the modulator
+  pinned at ±1 for a hundred steps. For `ρ`, a step whose trace is all zero (every episode's
+  first step, by the trace's design) neither updates the estimate nor advances its count, so a
+  zero trace can never pull the scale toward the floor. Each estimator runs only when its switch
+  is on; with both off no extra operation executes.
 - **Freeze.** The scales update under a freeze exactly as the baseline does: the frozen arm
   must report the same telemetry the plastic arm would, or the two stop being comparable
   step for step. Nothing is written to a weight.
