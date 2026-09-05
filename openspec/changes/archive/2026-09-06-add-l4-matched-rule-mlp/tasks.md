@@ -47,7 +47,7 @@
 
 ## 8. Close-out
 
-- [ ] 8.1 `git add -A`, then `uv run pre-commit run --all-files` **unfiltered**, exit code 0.
-- [ ] 8.2 Full non-nightly suite green.
-- [ ] 8.3 No planning references in implementation code or docstrings.
-- [ ] 8.4 Re-review for drift, archive, review the branch, open the PR.
+- [x] 8.1 `git add -A`, then `uv run pre-commit run --all-files` **unfiltered**, exit code 0.
+- [x] 8.2 Full non-nightly suite green.
+- [x] 8.3 No planning references in implementation code or docstrings.
+- [x] 8.4 Re-review for drift, archive, review the branch, open the PR. (Drift check over all 23 scenarios found one with no test — the connectome seam being a view rather than a copy had only been probed at a REPL; now pinned.)
