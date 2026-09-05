@@ -30,6 +30,7 @@ Preview without executing::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import signal
 import subprocess
@@ -52,6 +53,12 @@ _CORES_RESERVED = 2
 # bit-identical across thread counts at the tensor sizes used here — pinned by
 # the thread-invariance test in the suite, which will fail if that ever stops
 # holding.
+# Options the campaign computes per run. A passthrough copy would land after
+# the planned one and win under argparse's last-wins parsing, so `--seeds 1-8
+# -- --seed 9` would quietly run seed 9 eight times while the logs and summary
+# still claimed seeds 1-8. Rejected rather than silently overridden.
+_CAMPAIGN_OWNED_OPTIONS = ("--config", "--seed", "--runs")
+
 _SINGLE_THREAD_ENV = {
     "OMP_NUM_THREADS": "1",
     "MKL_NUM_THREADS": "1",
@@ -72,11 +79,22 @@ class Run:
 
     config: Path
     seed: int
+    disambiguator: str = ""
 
     @property
     def label(self) -> str:
-        """Stable identifier used for log filenames and the summary table."""
-        return f"{self.config.stem}-seed{self.seed}"
+        """Stable identifier used for log filenames and the summary table.
+
+        Config basenames are not unique across scenario directories, so a
+        plan holding two same-named configs would otherwise give both runs of
+        a seed the same label — and the second would silently overwrite the
+        first's log. `plan_runs` supplies a path-derived disambiguator in
+        exactly that case, leaving the common case unchanged.
+        """
+        stem = self.config.stem
+        if self.disambiguator:
+            stem = f"{stem}-{self.disambiguator}"
+        return f"{stem}-seed{self.seed}"
 
 
 @dataclass
@@ -135,13 +153,55 @@ def parse_seeds(spec: str) -> list[int]:
     return list(dict.fromkeys(seeds))
 
 
+def _disambiguators(configs: list[Path]) -> dict[Path, str]:
+    """Short path-derived tags for configs whose basenames collide.
+
+    Empty for every config with a unique basename, so ordinary campaigns keep
+    readable labels. Derived from the resolved path, so a given config gets the
+    same tag on every run — log filenames stay stable across invocations.
+    """
+    stems: dict[str, set[Path]] = {}
+    for config in configs:
+        stems.setdefault(config.stem, set()).add(config)
+    tags: dict[Path, str] = {}
+    for sharing in stems.values():
+        if len(sharing) < 2:
+            continue
+        for config in sharing:
+            digest = hashlib.blake2b(
+                str(config.resolve()).encode(),
+                digest_size=3,
+            ).hexdigest()
+            tags[config] = digest
+    return tags
+
+
+def conflicting_passthrough(passthrough: list[str]) -> list[str]:
+    """Campaign-owned options found in the passthrough arguments.
+
+    Matches both ``--seed 1`` and ``--seed=1``; the campaign's own values must
+    remain authoritative for the plan to mean what it says.
+    """
+    found = []
+    for argument in passthrough:
+        name = argument.split("=", 1)[0]
+        if name in _CAMPAIGN_OWNED_OPTIONS:
+            found.append(name)
+    return sorted(set(found))
+
+
 def plan_runs(configs: list[Path], seeds: list[int]) -> list[Run]:
     """Cross product of configs and seeds, config-major.
 
     Config-major ordering means an interrupted campaign has completed whole
     arms rather than a ragged slice of every arm.
     """
-    return [Run(config=config, seed=seed) for config in configs for seed in seeds]
+    tags = _disambiguators(configs)
+    return [
+        Run(config=config, seed=seed, disambiguator=tags.get(config, ""))
+        for config in configs
+        for seed in seeds
+    ]
 
 
 def build_command(run: Run, runner: Path, runs: int | None, passthrough: list[str]) -> list[str]:
@@ -338,6 +398,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.workers < 1:
         print(f"error: --workers must be at least 1, got {args.workers}.", file=sys.stderr)
+        return 2
+
+    conflicts = conflicting_passthrough(passthrough)
+    if conflicts:
+        print(
+            f"error: {', '.join(conflicts)} cannot be passed through — the campaign sets "
+            f"these per run. Use --config/--seeds/--runs on the campaign itself.",
+            file=sys.stderr,
+        )
         return 2
 
     plan = plan_runs(args.config, seeds)

@@ -135,6 +135,151 @@ class TestPlanning:
         assert len({run.label for run in plan}) == len(plan)
 
 
+class TestLabelDisambiguation:
+    """Config basenames are not unique across scenario directories."""
+
+    def test_same_basename_different_directories_get_distinct_labels(
+        self,
+        campaign: ModuleType,
+        tmp_path: Path,
+    ) -> None:
+        """Otherwise both runs of a seed share a log file and one is lost."""
+        first_dir = tmp_path / "scenario_a"
+        second_dir = tmp_path / "scenario_b"
+        first_dir.mkdir()
+        second_dir.mkdir()
+        first = first_dir / "mlpppo_small_oracle.yml"
+        second = second_dir / "mlpppo_small_oracle.yml"
+        for path in (first, second):
+            path.write_text("max_steps: 1\n", encoding="utf-8")
+
+        plan = campaign.plan_runs([first, second], [1, 2])
+
+        labels = [run.label for run in plan]
+        assert len(set(labels)) == len(plan)
+
+    def test_unique_basenames_keep_plain_labels(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+    ) -> None:
+        """The common case stays readable — no tag where none is needed."""
+        plan = campaign.plan_runs(configs, [1])
+        assert [run.label for run in plan] == ["arm_a-seed1", "arm_b-seed1"]
+
+    def test_labels_are_stable_across_invocations(
+        self,
+        campaign: ModuleType,
+        tmp_path: Path,
+    ) -> None:
+        """Log filenames must not move between runs of the same campaign."""
+        first_dir = tmp_path / "a"
+        second_dir = tmp_path / "b"
+        first_dir.mkdir()
+        second_dir.mkdir()
+        paths = [first_dir / "same.yml", second_dir / "same.yml"]
+        for path in paths:
+            path.write_text("max_steps: 1\n", encoding="utf-8")
+
+        first_plan = [run.label for run in campaign.plan_runs(paths, [1])]
+        second_plan = [run.label for run in campaign.plan_runs(paths, [1])]
+        assert first_plan == second_plan
+
+    def test_colliding_runs_write_separate_logs(
+        self,
+        campaign: ModuleType,
+        stub_runner: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        record_dir = tmp_path / "records"
+        record_dir.mkdir()
+        monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
+        first_dir = tmp_path / "one"
+        second_dir = tmp_path / "two"
+        first_dir.mkdir()
+        second_dir.mkdir()
+        for directory in (first_dir, second_dir):
+            (directory / "dup.yml").write_text("max_steps: 1\n", encoding="utf-8")
+        output_dir = tmp_path / "out"
+
+        campaign.main(
+            [
+                "--config",
+                str(first_dir / "dup.yml"),
+                "--config",
+                str(second_dir / "dup.yml"),
+                "--seeds",
+                "1",
+                "--runner",
+                str(stub_runner),
+                "--output-dir",
+                str(output_dir),
+            ],
+        )
+
+        assert len(list((output_dir / "logs").glob("*.log"))) == 2
+
+
+class TestCampaignOwnedOptionsAreAuthoritative:
+    """Passthrough must not be able to rewrite the plan."""
+
+    @pytest.mark.parametrize(
+        "argument",
+        ["--seed", "--config", "--runs"],
+    )
+    def test_conflicting_option_rejected(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+        argument: str,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Argparse is last-wins, so a passthrough copy would silently win."""
+        exit_code = campaign.main(
+            ["--config", str(configs[0]), "--seeds", "1-8", "--", argument, "9"],
+        )
+        assert exit_code == 2
+        assert argument in capsys.readouterr().err
+
+    def test_equals_form_also_rejected(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        exit_code = campaign.main(
+            ["--config", str(configs[0]), "--seeds", "1-8", "--", "--seed=9"],
+        )
+        assert exit_code == 2
+        assert "--seed" in capsys.readouterr().err
+
+    def test_unrelated_passthrough_still_allowed(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+    ) -> None:
+        exit_code = campaign.main(
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1",
+                "--dry-run",
+                "--",
+                "--theme",
+                "headless",
+                "--track-experiment",
+            ],
+        )
+        assert exit_code == 0
+
+    def test_detector_reports_each_conflict_once(self, campaign: ModuleType) -> None:
+        assert campaign.conflicting_passthrough(["--seed", "1", "--seed=2", "--theme", "x"]) == [
+            "--seed",
+        ]
+
+
 class TestCommandConstruction:
     """Each child gets the command a person would type."""
 

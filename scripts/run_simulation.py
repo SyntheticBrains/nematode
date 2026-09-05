@@ -1609,6 +1609,16 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             for i in range(multi_agent_config.count)
         ]
 
+    # Multi-agent runs never reach the single-brain device check in `main`,
+    # and each agent may name a different architecture, so validate every one
+    # against the shared device before any brain is constructed.
+    for ac in agent_configs:
+        try:
+            validate_device_selection(device, ac.brain.name)
+        except ValueError as exc:
+            print(f"error: agent '{ac.id}': {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
+
     num_agents = len(agent_configs)
     grid_size = environment_config.grid_size
 

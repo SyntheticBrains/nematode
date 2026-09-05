@@ -60,6 +60,16 @@ Validation reads the plugin registry's `families` tuple, which already tags 11 b
 
 Scope is held tight: this validates only the accelerator this change introduces. The pre-existing behaviour whereby a non-quantum brain selecting `qpu` falls back to CPU placement is documented in the enum and left alone — changing it would be an unrelated behaviour change smuggled into a performance change.
 
+### Decision 4b — availability is checked for every brain (corrected at branch review)
+
+An earlier revision of this design exempted `quantum`-family brains from the *availability* check, reasoning that for them `gpu` selects Aer's GPU device rather than a torch device. Branch review showed that reasoning rests on a false premise: **seven of the eleven** quantum-family brains — `equivariantquantum`, `hybridquantum`, `hybridquantumcortex`, `qliflstm`, `qrc`, `qsnnppo`, `qsnnreinforce` — call `to_torch_device_str()` and allocate torch actors and critics at construction. Exempting them reinstated precisely the raw `Torch not compiled with CUDA enabled` assertion this change exists to remove.
+
+The family tag cannot distinguish the two cases, because it does not encode whether a brain uses torch. Rather than infer it, the availability check now applies to every brain. The cost is a host with a GPU-enabled Aer and a deliberately CPU-only torch build, which is refused with a clear message; that configuration requires a CUDA GPU plus a non-default torch wheel, and the documented GPU install path (`--extra gpu --extra torch`) does not produce it. The alternative cost — an unhandled assertion for seven architectures — is worse and is the failure this requirement was written against.
+
+### Decision 4c — multi-agent runs validate every agent
+
+`_run_multi_agent` is dispatched before the single-brain check in `main` and constructs one brain per agent, each free to name a different architecture. A per-agent loop therefore runs immediately after the agent configs resolve and before any brain is built, reporting which agent is at fault. Without it, a heterogeneous config could carry a brain the device cannot serve straight past validation.
+
 ## Decision 5 — The env hot loop is left alone, on purpose
 
 The largest single optimisation available is not taken. Vectorising the food-gradient superposition measures 32.66 µs → 4.00 µs (**8.2×**) on a function reached ~2.5M times per 10 episodes, worth roughly 1.4× overall by Amdahl.

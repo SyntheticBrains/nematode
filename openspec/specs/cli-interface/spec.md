@@ -237,20 +237,25 @@ The device options offered by the CLI SHALL correspond to backends the running b
 
 When a selected accelerator is unavailable in the running build, the CLI SHALL raise a clear error before brain construction that names the requested device, states that it is unavailable, and names the platform-appropriate alternative.
 
-The availability check SHALL apply to brains that place tensors on the PyTorch device. It SHALL NOT be applied to brains in the `quantum` family, for which `gpu` selects the Qiskit simulator's own GPU device: that backend has separate requirements, so PyTorch's view of CUDA is not evidence about it, and rejecting on that basis would refuse a working configuration.
+The availability check SHALL apply to **every** brain, including those in the `quantum` family. A `quantum` tag does not imply a brain is Qiskit-only: most quantum brains also construct PyTorch actors and critics and place those tensors on the selected device, so exempting them would reinstate the very unhandled construction-time error this requirement exists to replace. A host offering a GPU-enabled Qiskit simulator with a deliberately CPU-only PyTorch build is refused by this check; that is the accepted trade, and it fails with a message naming the problem rather than a traceback from inside a brain.
 
 #### Scenario: Requesting CUDA on a build without CUDA
 
 - **GIVEN** a PyTorch build without CUDA support
-- **WHEN** the CLI is invoked with the `gpu` device and a brain that places tensors on the PyTorch device
+- **WHEN** the CLI is invoked with the `gpu` device
 - **THEN** it SHALL exit with a clear error naming the unavailable device and the platform-appropriate alternative
 - **AND** SHALL NOT surface a raw torch assertion from inside brain construction
 
-#### Scenario: Quantum brains are not judged by PyTorch's accelerator availability
+#### Scenario: Quantum brains that build PyTorch modules are checked too
 
 - **GIVEN** a PyTorch build without CUDA support
-- **WHEN** the CLI is invoked with the `gpu` device and a brain in the `quantum` family
-- **THEN** the selection SHALL be accepted, leaving availability to the Qiskit backend that owns it
+- **WHEN** the CLI is invoked with the `gpu` device and a brain in the `quantum` family that constructs PyTorch modules
+- **THEN** it SHALL exit with a clear error rather than failing during brain construction
+
+#### Scenario: A device that places no tensors needs no availability check
+
+- **WHEN** the CLI is invoked with `qpu`, which routes to a quantum backend rather than placing tensors on an accelerator
+- **THEN** no PyTorch availability check SHALL be applied
 
 #### Scenario: Requesting MPS where it is available
 
@@ -305,3 +310,16 @@ This requirement adds validation only for accelerators introduced by this change
 
 - **WHEN** a new architecture is registered with a `quantum` family tag
 - **THEN** it SHALL be covered by this validation without any change to the validation code
+
+#### Scenario: Every agent of a multi-agent run is validated
+
+- **GIVEN** a multi-agent configuration whose agents name different architectures
+- **WHEN** a device is selected that one of those agents cannot use
+- **THEN** the run SHALL be rejected before any brain is constructed
+- **AND** the error SHALL identify which agent is at fault
+- **AND** a multi-agent configuration whose agents can all use the device SHALL be accepted
+
+#### Scenario: Multi-agent runs cannot bypass validation
+
+- **WHEN** a multi-agent run is dispatched
+- **THEN** device validation SHALL have been applied to every configured agent's brain, not only to a single top-level brain

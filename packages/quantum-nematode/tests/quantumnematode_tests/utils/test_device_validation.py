@@ -70,9 +70,9 @@ class TestQuantumBrainsRejectTorchOnlyAccelerators:
         # The message must name what the user can actually use instead.
         assert "cpu" in message
 
-    @pytest.mark.parametrize("device", [DeviceType.CPU, DeviceType.GPU, DeviceType.QPU])
+    @pytest.mark.parametrize("device", [DeviceType.CPU, DeviceType.QPU])
     def test_quantum_brains_keep_their_own_devices(self, device: DeviceType) -> None:
-        """`gpu` here selects Aer's GPU device, which validates itself."""
+        """Devices that place no tensors on an accelerator stay accepted."""
         validate_device_selection(device, _QUANTUM_BRAIN)
 
     def test_accepted_devices_excludes_torch_only(self) -> None:
@@ -157,14 +157,44 @@ class TestValidationDerivesFromRegistry:
         assert family_rejections == []
 
 
-class TestQuantumAcceleratorsAreLeftToQiskit:
-    """`gpu` on a quantum brain selects Aer's device, not torch's."""
+class TestAvailabilityAppliesToQuantumBrainsToo:
+    """Being Qiskit-backed does not mean a brain avoids torch."""
+
+    def test_quantum_brains_that_build_torch_modules_are_checked(self) -> None:
+        """Most `quantum`-family brains also allocate torch actors and critics.
+
+        Skipping the availability check for them would reinstate the raw
+        `Torch not compiled with CUDA enabled` assertion this validation
+        exists to replace.
+        """
+        from quantumnematode.brain.arch._registry import get_all_registrations
+
+        registrations = get_all_registrations()
+        assert "quantum" in registrations["equivariantquantum"].families
+
+        if torch.cuda.is_available():  # pragma: no cover — host-dependent
+            pytest.skip("requires a build without CUDA")
+
+        with pytest.raises(ValueError, match="not available in this PyTorch build"):
+            validate_device_selection(DeviceType.GPU, "equivariantquantum")
 
     @pytest.mark.skipif(torch.cuda.is_available(), reason="requires a build without CUDA")
-    def test_gpu_accepted_for_quantum_brain_without_torch_cuda(self) -> None:
-        """Torch's view of CUDA is not evidence about qiskit-aer-gpu.
+    def test_every_torch_using_quantum_brain_is_checked(self) -> None:
+        """Guards the whole set, not just the one brain review happened to name."""
+        torch_using_quantum = [
+            "equivariantquantum",
+            "hybridquantum",
+            "hybridquantumcortex",
+            "qliflstm",
+            "qrc",
+            "qsnnppo",
+            "qsnnreinforce",
+        ]
+        for name in torch_using_quantum:
+            with pytest.raises(ValueError, match="not available in this PyTorch build"):
+                validate_device_selection(DeviceType.GPU, name)
 
-        Rejecting here would refuse a configuration that works whenever the
-        Aer GPU wheel is installed but the torch build is CPU-only.
-        """
-        validate_device_selection(DeviceType.GPU, _QUANTUM_BRAIN)
+    def test_qpu_is_never_blocked_by_torch_availability(self) -> None:
+        """`qpu` places no tensors on an accelerator, so it needs no check."""
+        validate_device_selection(DeviceType.QPU, _QUANTUM_BRAIN)
+        validate_device_selection(DeviceType.QPU, _TORCH_BRAIN)

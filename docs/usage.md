@@ -161,9 +161,11 @@ CPU is the default and, for this project's model sizes, the fastest option. That
 | Device | Backend | Notes |
 |---|---|---|
 | `cpu` | PyTorch / Aer | Default. Fastest for every brain currently in the repo. |
-| `gpu` | CUDA / Aer GPU | Needs the `gpu` extra. Fails at startup on a build without CUDA. |
-| `mps` | Apple Metal | PyTorch brains only; **rejected for quantum brains**. Available but slower — see below. |
-| `qpu` | IBM Quantum | Needs the `qpu` extra and `.env`. |
+| `gpu` | CUDA / Aer GPU | Needs the `gpu` extra. Fails at startup on a build without CUDA — including for quantum brains, most of which also build PyTorch modules. |
+| `mps` | Apple Metal | PyTorch brains only; **rejected for quantum brains**, whose device value reaches Qiskit. Available but slower — see below. |
+| `qpu` | IBM Quantum | Needs the `qpu` extra and `.env`. Places no tensors on an accelerator, so no availability check applies. |
+
+In a multi-agent run every agent's brain is checked against the shared device before any brain is built, and the error names the offending agent.
 
 **Why the GPU does not help.** The policy networks are small — the mlpppo actor is 13 → 64 → 64 → 2, about 5,200 parameters — and the rollout evaluates them at **batch size 1**, thousands of times per episode. Accelerator dispatch costs roughly 70 µs per operation on MPS, against about 10 µs of actual per-step compute on the CPU, so the GPU spends its time waiting to be asked. End-to-end on an M5 Max, mlpppo took 5.73s on CPU against 12.41s on MPS, and the connectome brain 2.78s against 10.13s. The same benchmark's control row — a 1024×1024 network at batch 512 — runs 6.5× *faster* on MPS, which is how you can tell the hardware is healthy and the shapes are the problem.
 

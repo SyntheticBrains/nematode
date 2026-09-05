@@ -95,18 +95,22 @@ def validate_device_selection(device: DeviceType, brain_name: str) -> None:
        present — reporting it as "unavailable" would send the user hunting for
        a driver instead of correcting the flag.
     2. **Absent backend.** An accelerator this torch build cannot provide.
-       Applied only to brains that place tensors on the torch device; for
-       quantum brains ``gpu`` selects Aer's GPU device, which has its own
-       requirements, so torch's CUDA availability is not the right test.
+
+    The availability check applies to **every** brain, quantum ones included.
+    Being tagged ``quantum`` does not mean a brain is Qiskit-only: most of them
+    also build torch actors and critics at construction and place those tensors
+    on this device, so skipping the check for them reinstates exactly the raw
+    ``Torch not compiled with CUDA enabled`` assertion this validation exists to
+    replace. A host with a GPU-enabled Aer but a deliberately CPU-only torch
+    build is refused here; that is the accepted cost, and it fails with a
+    message naming the problem rather than a traceback from inside a brain.
 
     CPU needs no check at all.
     """
     if device is DeviceType.CPU:
         return
 
-    quantum = _is_quantum_brain(brain_name)
-
-    if quantum and device in _TORCH_ONLY_DEVICES:
+    if _is_quantum_brain(brain_name) and device in _TORCH_ONLY_DEVICES:
         msg = (
             f"Device '{device.value}' is a PyTorch-only accelerator and cannot be used with "
             f"the '{brain_name}' brain, which runs on a Qiskit backend. Qiskit would accept "
@@ -114,12 +118,6 @@ def validate_device_selection(device: DeviceType, brain_name: str) -> None:
             f"Accepted devices for '{brain_name}': {', '.join(_accepted_devices(brain_name))}."
         )
         raise ValueError(msg)
-
-    if quantum:
-        # 'gpu'/'qpu' here are Qiskit selectors; Aer and IBM Runtime validate
-        # their own availability, and torch's view of CUDA says nothing about
-        # whether qiskit-aer-gpu is installed.
-        return
 
     if not _torch_backend_available(device):
         msg = (
