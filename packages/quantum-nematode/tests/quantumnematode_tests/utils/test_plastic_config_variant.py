@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrainConfig
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrainConfig
@@ -200,3 +201,62 @@ class TestPlasticRewiredNullConfig:
 
     def test_name_keeps_the_plastic_parent_as_a_prefix(self) -> None:
         assert _REWIRED.name.startswith(_VARIANT.name.removesuffix(".yml"))
+
+
+_FROZEN_REWIRED = _FROZEN.with_name(_FROZEN.name.replace(".yml", "_rewired_null.yml"))
+_HEBBIAN_REWIRED = _HEBBIAN.with_name(_HEBBIAN.name.replace(".yml", "_rewired_null.yml"))
+
+
+class TestRewiredFloorConfigs:
+    """One key off its wild-type floor, and one key off the plastic rewired-null arm."""
+
+    @pytest.mark.parametrize(
+        ("parent", "derived"),
+        [(_FROZEN, _FROZEN_REWIRED), (_HEBBIAN, _HEBBIAN_REWIRED)],
+        ids=["frozen", "hebbian"],
+    )
+    def test_adds_only_the_wiring_key(self, parent: Path, derived: Path) -> None:
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.wiring"}
+        assert set(base) - set(variant) == set()
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+
+    def test_frozen_rewired_is_one_key_off_the_plastic_null_arm(self) -> None:
+        null_arm = _flatten(yaml.safe_load(_REWIRED.read_text()))
+        floor = _flatten(yaml.safe_load(_FROZEN_REWIRED.read_text()))
+        assert set(floor) == set(null_arm)
+        assert {k for k in null_arm if null_arm[k] != floor[k]} == {"brain.config.freeze_updates"}
+
+    def test_hebbian_rewired_is_one_key_off_the_plastic_null_arm(self) -> None:
+        null_arm = _flatten(yaml.safe_load(_REWIRED.read_text()))
+        floor = _flatten(yaml.safe_load(_HEBBIAN_REWIRED.read_text()))
+        assert set(floor) == set(null_arm)
+        assert {k for k in null_arm if null_arm[k] != floor[k]} == {"brain.config.learning_rule"}
+
+    def test_frozen_rewired_loads_as_a_frozen_null_arm(self) -> None:
+        config = load_simulation_config(str(_FROZEN_REWIRED))
+        assert config.brain is not None
+        brain_config = config.brain.config
+        assert isinstance(brain_config, ConnectomePPOBrainConfig)
+        assert brain_config.wiring == "rewired_degree_preserving"
+        assert brain_config.rewire_seed is None
+        assert brain_config.learning_rule == "three_factor"
+        assert brain_config.freeze_updates is True
+        assert brain_config.enable_activity_traces is True
+        assert brain_config.chemical_mask_mode == "strict"
+
+    def test_hebbian_rewired_loads_as_the_unmodulated_null_arm(self) -> None:
+        config = load_simulation_config(str(_HEBBIAN_REWIRED))
+        assert config.brain is not None
+        brain_config = config.brain.config
+        assert isinstance(brain_config, ConnectomePPOBrainConfig)
+        assert brain_config.wiring == "rewired_degree_preserving"
+        assert brain_config.rewire_seed is None
+        assert brain_config.learning_rule == "hebbian"
+        assert brain_config.freeze_updates is False
+        assert brain_config.enable_activity_traces is True
+
+    def test_names_keep_the_wild_type_floor_as_a_prefix(self) -> None:
+        assert _FROZEN_REWIRED.name.startswith(_FROZEN.name.removesuffix(".yml"))
+        assert _HEBBIAN_REWIRED.name.startswith(_HEBBIAN.name.removesuffix(".yml"))
