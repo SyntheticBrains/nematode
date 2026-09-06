@@ -69,6 +69,7 @@ MODULATOR_KEY = "plasticity_modulator"
 MODULATOR_SCALE_KEY = "plasticity_modulator_scale"
 MODULATOR_CENTRE_KEY = "plasticity_modulator_centre"
 TRACE_SCALE_KEY = "plasticity_trace_scale"
+NORM_DRIFT_KEY = "plasticity_norm_drift"
 
 
 @dataclass
@@ -183,6 +184,19 @@ class _RunningMean:
         self._count += 1
 
 
+def _incoming_norms(weight: torch.Tensor, mask: torch.Tensor, axis: int) -> torch.Tensor:
+    """Per-unit norm of the incoming plastic weights over the edge set only."""
+    return (weight.detach() * mask.to(weight.dtype)).norm(dim=axis)
+
+
+def _pooled_drift(drifts: list[tuple[float, int]]) -> float:
+    """Pool per-tensor (sum, count) drifts into one mean over every unit; NaN if none."""
+    total = sum(count for _, count in drifts)
+    if total == 0:
+        return math.nan
+    return sum(value for value, _ in drifts) / total
+
+
 class ThreeFactorRule:
     """Reward-modulated Hebbian plasticity on whatever a topology declares plastic.
 
@@ -217,6 +231,7 @@ class ThreeFactorRule:
         modulated: bool,
         device: torch.device,
         scaling: ScalingOptions | None = None,
+        homeostasis: bool = False,
     ) -> None:
         self._topology = topology
         self.plasticity_rate = plasticity_rate
@@ -255,6 +270,26 @@ class ThreeFactorRule:
             _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
             for _ in topology.plastic_weights
         ]
+        # Homeostatic incoming-norm scaling: each unit's incoming plastic
+        # weights are held at the norm they had when the rule was built, over
+        # the edge set only. This is the multiplicative normalisation of a
+        # neuron's synaptic budget -- synaptic scaling -- and it is what stops
+        # Hebbian positive feedback from running the weights onto the bound.
+        # Targets are captured here, so they are whatever norm the substrate
+        # carried at construction (its initialisation, for a freshly built brain).
+        self.homeostasis = homeostasis
+        self._fan_in_axes: list[int] = []
+        self._norm_targets: list[torch.Tensor] = []
+        if homeostasis:
+            self._fan_in_axes = list(topology.plastic_fan_in_axes)
+            with torch.no_grad():
+                for w, mask, axis in zip(
+                    topology.plastic_weights,
+                    topology.plastic_masks,
+                    self._fan_in_axes,
+                    strict=True,
+                ):
+                    self._norm_targets.append(_incoming_norms(w, mask, axis))
 
     @property
     def modulator_scale(self) -> _RunningScale:
@@ -270,6 +305,48 @@ class ThreeFactorRule:
     def trace_scales(self) -> list[_RunningScale]:
         """One running trace scale per plastic tensor (advance only when the switch is on)."""
         return self._trace_scales
+
+    @property
+    def norm_targets(self) -> list[torch.Tensor]:
+        """Per plastic tensor, each unit's target incoming norm (empty when homeostasis is off)."""
+        return self._norm_targets
+
+    def _norm_drift(
+        self,
+        index: int,
+        weight: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> tuple[float, int]:
+        """Return the summed relative norm deviation and the count of units with a target.
+
+        Returned as a sum and a count rather than a mean so the telemetry pools every unit
+        across tensors equally: a mean of per-tensor means would let a two-unit output layer
+        weigh as much as a sixty-four-unit hidden layer.
+        """
+        target = self._norm_targets[index]
+        has_target = target > 0
+        count = int(has_target.sum().item())
+        if count == 0:
+            return 0.0, 0
+        norms = _incoming_norms(weight, mask, self._fan_in_axes[index])
+        return float((norms[has_target] / target[has_target] - 1.0).abs().sum().item()), count
+
+    def _rescale_incoming(self, index: int, weight: torch.Tensor, mask: torch.Tensor) -> None:
+        """Return each unit's incoming norm to its target, touching masked entries only."""
+        axis = self._fan_in_axes[index]
+        target = self._norm_targets[index]
+        norms = _incoming_norms(weight, mask, axis)
+        # Divide by the actual norm whenever there is one, however small, so the
+        # target is restored exactly. A unit whose incoming weights are all zero
+        # has no direction to scale along; inventing one would write weights no
+        # learning update produced, so it is left as it is.
+        restorable = (target > 0) & (norms > 0)
+        safe_norms = torch.where(restorable, norms, torch.ones_like(norms))
+        factor = torch.where(restorable, target / safe_norms, torch.ones_like(norms))
+        # Broadcast the per-unit factor along the fan-in axis, and apply it on
+        # the edge set only: off-edge entries are multiplied by exactly one.
+        factor = factor.unsqueeze(axis)
+        weight.data.mul_(1.0 + mask.to(weight.dtype) * (factor - 1.0))
 
     def _modulator(self, delta: float) -> tuple[float, float, float]:
         """Return the third factor and the scale and centre it was measured against (NaN if off)."""
@@ -375,6 +452,7 @@ class ThreeFactorRule:
             # function — defeating the one telemetry meant to detect exactly
             # that.
             befores = [w.detach().clone() for w in weights]
+            drifts: list[tuple[float, int]] = []
 
             if not self.freeze_updates:
                 for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
@@ -394,7 +472,19 @@ class ThreeFactorRule:
                     # no-op by construction.
                     update = update * mask.to(update.dtype)
                     w.data.add_(update)
+                    if self.homeostasis:
+                        # Drift is measured after the update and before the
+                        # rescale; the clamp comes last so the bound always holds.
+                        drifts.append(self._norm_drift(index, w, mask))
+                        self._rescale_incoming(index, w, mask)
                     w.data.clamp_(-self.weight_bound, self.weight_bound)
+            elif self.homeostasis:
+                # Nothing is written under a freeze; the drift of the unchanged
+                # weights is still reported so the arms stay comparable.
+                drifts = [
+                    self._norm_drift(index, w, mask)
+                    for index, (w, mask) in enumerate(zip(weights, masks, strict=True))
+                ]
             # Under a freeze nothing is written at all — not the Hebbian
             # term, not the decay, not the clamp. A clamp alone would still
             # edit a weight that started outside the bound, which is
@@ -433,6 +523,7 @@ class ThreeFactorRule:
                 MODULATOR_SCALE_KEY: modulator_scale,
                 MODULATOR_CENTRE_KEY: modulator_centre,
                 TRACE_SCALE_KEY: trace_scale,
+                NORM_DRIFT_KEY: _pooled_drift(drifts),
             },
         )
 
@@ -466,6 +557,7 @@ def record_plasticity_report(
     history_data.plasticity_modulator_scale.append(extra[MODULATOR_SCALE_KEY])
     history_data.plasticity_modulator_centre.append(extra[MODULATOR_CENTRE_KEY])
     history_data.plasticity_trace_scale.append(extra[TRACE_SCALE_KEY])
+    history_data.plasticity_norm_drift.append(extra[NORM_DRIFT_KEY])
     history_data.rewards.append(reward)
 
 

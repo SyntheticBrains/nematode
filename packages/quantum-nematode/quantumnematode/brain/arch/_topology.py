@@ -69,7 +69,7 @@ class PlasticTopology(Protocol):
     naming either. "Substrate-generic" then describes the code, not just
     the equation.
 
-    The three lists are **aligned**: entry ``i`` of each refers to the same
+    The lists are **aligned**: entry ``i`` of each refers to the same
     plastic tensor, and traces and masks have that tensor's shape. They are
     lists from the outset so a substrate with one plastic tensor and one
     with one per layer share a code path. A dense substrate exposes an
@@ -95,4 +95,9 @@ class PlasticTopology(Protocol):
     @property
     def plastic_masks(self) -> list[torch.Tensor]:
         """One boolean edge mask per plastic weight, aligned and shape-matched."""
+        ...
+
+    @property
+    def plastic_fan_in_axes(self) -> list[int]:
+        """Per plastic weight, the axis to reduce over for one unit's incoming weights."""
         ...
