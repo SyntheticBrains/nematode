@@ -9,6 +9,7 @@ from deep-copied identical state across every mode the rule has.
 from __future__ import annotations
 
 import copy
+from typing import Any
 
 import pytest
 import torch
@@ -31,7 +32,7 @@ from quantumnematode.learning_rules.three_factor import (
 from ._legacy_three_factor_reference import legacy_three_factor_step
 
 _SEED = 5150
-_HYPER = {
+_HYPER: dict[str, Any] = {
     "plasticity_rate": 0.2,
     "weight_decay": 0.01,
     "weight_bound": 0.4,  # low enough that some entries saturate

@@ -71,6 +71,23 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_weight_bound: float = Field(default=3.0, gt=0.0)
     plasticity_baseline_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
+    # ── Substrate-invariant scaling (opt-in) ────────────────
+    # Two independent switches, both off by default so the raw rule is
+    # byte-identical. With the modulator normalised the third factor is
+    # tanh(delta / sigma), sigma a bias-corrected running RMS of the raw
+    # prediction error: bounded, sign-preserving, and no longer dominated by
+    # the one terminal penalty that dwarfs every other step. With the trace
+    # normalised the Hebbian term is divided by rho, a bias-corrected running
+    # RMS of each plastic tensor's trace over its edge set, so the rate means
+    # the same root-mean-square step per unit modulator on a sparse recurrent
+    # connectome and on a dense feedforward stack whose traces differ by
+    # orders of magnitude. The scale rate is the EMA rate of both estimators;
+    # the floor sits under both before division.
+    plasticity_normalise_modulator: bool = False
+    plasticity_normalise_trace: bool = False
+    plasticity_scale_rate: float = Field(default=0.01, gt=0.0, le=1.0)
+    plasticity_scale_floor: float = Field(default=1e-6, gt=0.0)
+
     # ── Paired-control freeze ────────────────────────────────
     # Run everything -- rollouts, telemetry, bookkeeping -- but never write
     # a weight. Honoured by every rule on every brain that inherits this, so

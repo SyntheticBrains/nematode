@@ -30,10 +30,23 @@ substrate they do not: initial chemical weights are drawn from a
 zero-mean distribution, so each sign is an arbitrary draw. Clamping it
 would preserve noise and would stop the rule from correcting a synapse
 whose initial sign was simply wrong.
+
+Two optional scalings make the rate mean the same thing everywhere. Raw,
+``eta`` is an absolute step in units that differ by orders of magnitude
+between substrates (a dense layer's trace is far smaller per weight than
+a sparse recurrent matrix's) and between steps (a terminal penalty can be
+two hundred times an ordinary prediction error). With the modulator
+normalised the third factor is ``tanh(delta / sigma)``, ``sigma`` a
+running RMS of the prediction error: bounded and sign-preserving. With
+the trace normalised the Hebbian term is divided by ``rho``, a running
+RMS of each tensor's trace over its edge set, so ``eta`` is the
+root-mean-square step per unit modulator on every substrate. Both are
+off by default and, off, the rule is bit-identical to the raw form.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
@@ -50,6 +63,9 @@ PREDICTION_ERROR_KEY = "plasticity_prediction_error"
 BASELINE_KEY = "plasticity_baseline"
 MEAN_ABS_DELTA_KEY = "plasticity_mean_abs_delta"
 SATURATED_FRACTION_KEY = "plasticity_saturated_fraction"
+MODULATOR_KEY = "plasticity_modulator"
+MODULATOR_SCALE_KEY = "plasticity_modulator_scale"
+TRACE_SCALE_KEY = "plasticity_trace_scale"
 
 
 @dataclass
@@ -64,12 +80,72 @@ class ThreeFactorBatch:
     reward: float
 
 
+@dataclass(frozen=True)
+class ScalingOptions:
+    """The rule's substrate-invariant scaling switches.
+
+    Both switches off reproduces the raw rule bit for bit. ``scale_rate`` is
+    the EMA rate of both running scales; ``scale_floor`` sits under both
+    before any division.
+    """
+
+    normalise_modulator: bool = False
+    normalise_trace: bool = False
+    scale_rate: float = 0.01
+    scale_floor: float = 1e-6
+
+
+class _RunningScale:
+    """A bias-corrected running root-mean-square.
+
+    Adam-style correction: dividing the moving average by ``1 - (1 - r)^t``
+    after ``t`` observations makes the first observation count fully and
+    every later estimate a properly weighted average, instead of one
+    anchored at zero for the first hundred steps. ``scale_for`` returns the
+    scale a step should be measured against -- the estimate from BEFORE
+    that step is absorbed, or the observation itself the first time.
+    """
+
+    def __init__(self, rate: float, floor: float) -> None:
+        self.rate = rate
+        self.floor = floor
+        self._ema = 0.0
+        self._count = 0
+
+    @property
+    def count(self) -> int:
+        return self._count
+
+    def current(self) -> float | None:
+        """Return the bias-corrected RMS estimate, or ``None`` before any observation."""
+        if self._count == 0:
+            return None
+        corrected = self._ema / (1.0 - (1.0 - self.rate) ** self._count)
+        return math.sqrt(corrected)
+
+    def scale_for(self, mean_square: float) -> float:
+        """Return the floored scale to measure this observation against, before absorbing it."""
+        estimate = self.current()
+        value = math.sqrt(mean_square) if estimate is None else estimate
+        return max(value, self.floor)
+
+    def absorb(self, mean_square: float) -> None:
+        self._ema = (1.0 - self.rate) * self._ema + self.rate * mean_square
+        self._count += 1
+
+    def floored(self) -> float:
+        """Return the current estimate floored, or the floor itself before any observation."""
+        estimate = self.current()
+        return self.floor if estimate is None else max(estimate, self.floor)
+
+
 class ThreeFactorRule:
     """Reward-modulated Hebbian plasticity on whatever a topology declares plastic.
 
     Satisfies the ``LearningRule`` Protocol. Owns its hyperparameters and
-    a single scalar of state (the reward baseline); it owns no optimiser,
-    no critic, and no experience buffer.
+    a little scalar state (the reward baseline and, when scaling is on, the
+    running scales); it owns no optimiser, no critic, and no experience
+    buffer.
 
     The rule reads its substrate through the ``PlasticTopology`` seam --
     the aligned lists of plastic weights, eligibility traces, and edge
@@ -96,6 +172,7 @@ class ThreeFactorRule:
         freeze_updates: bool,
         modulated: bool,
         device: torch.device,
+        scaling: ScalingOptions | None = None,
     ) -> None:
         self._topology = topology
         self.plasticity_rate = plasticity_rate
@@ -117,12 +194,72 @@ class ThreeFactorRule:
         # be indistinguishable from reward-driven learning.
         self.modulated = modulated
         self.device = device
+        self.scaling = scaling if scaling is not None else ScalingOptions()
 
         # Running estimate of the task's reward level. Persists across
         # episodes: it describes the task, not one episode, and resetting
         # it per episode would make every episode's opening steps register
         # as surprising regardless of behaviour.
         self.baseline = 0.0
+        # The running scales, also persistent across episodes for the same
+        # reason. Allocated regardless of the switches (they are cheap) but
+        # only ever advanced when their switch is on, so an off switch adds
+        # no operation to the raw path.
+        self._modulator_scale = _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
+        self._trace_scales = [
+            _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
+            for _ in topology.plastic_weights
+        ]
+
+    @property
+    def modulator_scale(self) -> _RunningScale:
+        """The running scale of the prediction error (advances only when its switch is on)."""
+        return self._modulator_scale
+
+    @property
+    def trace_scales(self) -> list[_RunningScale]:
+        """One running trace scale per plastic tensor (advance only when the switch is on)."""
+        return self._trace_scales
+
+    def _modulator(self, delta: float) -> tuple[float, float]:
+        """Return the effective third factor and the scale it was measured against (NaN if off)."""
+        if not self.scaling.normalise_modulator:
+            return (delta if self.modulated else 1.0), math.nan
+        # The scale is estimated BEFORE this step's error is absorbed, the same
+        # convention as the baseline: a surprising step is scored as surprising,
+        # not against a scale it has already inflated. The first observation
+        # counts fully (the bias-corrected estimate is then that observation).
+        squared = delta * delta
+        sigma = self._modulator_scale.scale_for(squared)
+        self._modulator_scale.absorb(squared)
+        # Computed and reported even when unmodulated, so both arms record the
+        # scale of the surprise they saw and only one records having used it.
+        modulator = math.tanh(delta / sigma) if self.modulated else 1.0
+        return modulator, sigma
+
+    def _trace_divisors(
+        self,
+        traces: list[torch.Tensor],
+        masks: list[torch.Tensor],
+    ) -> tuple[list[float] | None, float]:
+        """Per-tensor trace scales for this step (None when off) and their mean for telemetry."""
+        if not self.scaling.normalise_trace:
+            return None, math.nan
+        divisors: list[float] = []
+        for trace, mask, scale in zip(traces, masks, self._trace_scales, strict=True):
+            # Over the edge set only: off-edge zeros would dilute a sparse
+            # substrate's scale by its sparsity.
+            on_edges = trace[mask.to(torch.bool)]
+            mean_square = float(on_edges.square().mean().item()) if on_edges.numel() else 0.0
+            if mean_square > 0.0:
+                divisors.append(scale.scale_for(mean_square))
+                scale.absorb(mean_square)
+            else:
+                # An all-zero trace (every episode's first step, by the trace's
+                # design) neither updates the estimate nor counts toward its
+                # correction; the Hebbian term it would scale is zero anyway.
+                divisors.append(scale.floored())
+        return divisors, float(sum(divisors) / len(divisors)) if divisors else math.nan
 
     def step(
         self,
@@ -161,16 +298,15 @@ class ThreeFactorRule:
             # shifted.
             delta = reward - self.baseline
             self.baseline += self.baseline_rate * delta
-            # Computed and reported even when unmodulated, so both arms record
-            # what the reward stream was doing and only one records having used
-            # it. That makes the ablation visible in a run's own telemetry
-            # rather than inferable only from its configuration — which matters
-            # for an arm whose entire job is to be a trustworthy reference.
-            modulator = delta if self.modulated else 1.0
+            modulator, modulator_scale = self._modulator(delta)
 
             weights = topo.plastic_weights
             traces = topo.eligibility_traces
             masks = topo.plastic_masks
+            # The trace scales advance even under a freeze, like the baseline:
+            # a frozen arm must report what the plastic arm would, or the two
+            # stop being comparable step for step.
+            divisors, trace_scale = self._trace_divisors(traces, masks)
             # Snapshot before writing: the reported weight change must be
             # what the weights ACTUALLY did, not what the update proposed.
             # Once entries reach the magnitude bound the clamp discards the
@@ -181,11 +317,13 @@ class ThreeFactorRule:
             befores = [w.detach().clone() for w in weights]
 
             if not self.freeze_updates:
-                for w, trace, mask in zip(weights, traces, masks, strict=True):
+                for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
                     # Hebbian term over the eligibility trace, plus decay
                     # toward zero. Decay is what keeps unreinforced synapses
                     # from holding whatever a transient correlation put there.
                     update = self.plasticity_rate * modulator * trace
+                    if divisors is not None:
+                        update = update / divisors[index]
                     update -= self.plasticity_rate * self.weight_decay * w
                     # The trace is already on the edge set, but the decay
                     # term is not: it is proportional to the weights, which
@@ -231,6 +369,9 @@ class ThreeFactorRule:
                 BASELINE_KEY: self.baseline,
                 MEAN_ABS_DELTA_KEY: mean_abs_delta,
                 SATURATED_FRACTION_KEY: saturated,
+                MODULATOR_KEY: modulator,
+                MODULATOR_SCALE_KEY: modulator_scale,
+                TRACE_SCALE_KEY: trace_scale,
             },
         )
 
@@ -238,8 +379,9 @@ class ThreeFactorRule:
         """No per-episode rule state to clear.
 
         The eligibility trace is topology-owned and reset there; the
-        baseline is deliberately retained across episodes. Kept as a
-        documented no-op for the ``LearningRule`` lifecycle.
+        baseline and the running scales are deliberately retained across
+        episodes. Kept as a documented no-op for the ``LearningRule``
+        lifecycle.
         """
 
 
@@ -250,8 +392,8 @@ def record_plasticity_report(
 ) -> None:
     """Append one plasticity step's telemetry to a brain's history.
 
-    Shared by every brain that hosts the rule, so the four keys -- and what
-    they mean -- cannot drift between the arms a panel compares. Also records
+    Shared by every brain that hosts the rule, so the keys -- and what they
+    mean -- cannot drift between the arms a panel compares. Also records
     the reward, matching where the gradient path records it.
     """
     extra = report.extra
@@ -259,6 +401,9 @@ def record_plasticity_report(
     history_data.plasticity_baseline.append(extra[BASELINE_KEY])
     history_data.plasticity_mean_abs_delta.append(extra[MEAN_ABS_DELTA_KEY])
     history_data.plasticity_saturated_fraction.append(extra[SATURATED_FRACTION_KEY])
+    history_data.plasticity_modulator.append(extra[MODULATOR_KEY])
+    history_data.plasticity_modulator_scale.append(extra[MODULATOR_SCALE_KEY])
+    history_data.plasticity_trace_scale.append(extra[TRACE_SCALE_KEY])
     history_data.rewards.append(reward)
 
 
