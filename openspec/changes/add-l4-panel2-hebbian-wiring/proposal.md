@@ -16,7 +16,7 @@ identical wiring. We never characterised that landscape — the *prior over poli
 imposes on random initialisations — and we never used the one piece of wiring data the substrate
 ignores: Cook 2019's per-edge synapse counts (1–75, median 3; a third of edges single-synapse),
 which today never reach a weight. Every plasticity result so far has been read against a floor
-whose distribution we do not know, drawn from an initialisation that discards half the anatomy.
+whose distribution we do not know, drawn from an initialisation that discards the counts.
 
 Ratified with Chris (2026-09-06/07) as the next item ahead of the imitation warm start and 7a-ii:
 a second panel that (1) tests the Hebbian wiring contrast as a registered primary at a sample size
@@ -27,7 +27,7 @@ each neuron's incoming norm held at the degree-scaled expectation so homeostasis
 comparable and only the structure *within* a neuron's inputs changes.
 
 It is cheap: the Hebbian arms settle within a few hundred episodes and the frozen arms are
-constant policies, so the whole design runs in about an hour on sixteen workers.
+constant policies, so the whole design runs in two to three hours on sixteen workers.
 
 ## What Changes
 
@@ -37,10 +37,9 @@ constant policies, so the whole design runs in about an hour on sixteen workers.
 - **Four configs**: count-initialised versions of the wild-type and rewired frozen and Hebbian
   arms, each one `weight_init` key off its parent.
 - **The registration**: eight arms (wiring × initialisation × {frozen, Hebbian}); Hebbian arms on
-  seeds 1–16 at 1000 episodes (seeds 1–8 identical to panel 1's); a **prior sweep** of the four
+  seeds 1–16 at 1000 episodes (seeds 1–8 reproducing panel 1's episode streams); a **prior sweep** of the four
   frozen arms on seeds 1–64 at 600 episodes; a four-test BH-FDR family with the wild-type over
-  rewired Hebbian contrast under random initialisation as the primary; a verdict map in the
-  vocabulary of Logbook 034; a launch record before the run; one bounded extension; no pilot,
+  rewired Hebbian contrast under random initialisation as the primary; Logbook 034's verdict map; a launch record before the run; one bounded extension; no pilot,
   since every value the arms run with is panel 1's pin.
 - **A harness** (`scripts/analysis/l4_panel2.py`) reusing panel 1's readers and the committed
   statistics layer, adding the prior-sweep analysis (per-arm distributions and the fraction of

@@ -3,7 +3,7 @@
 ### Requirement: Synapse-count-scaled chemical weight initialisation
 
 The connectome brain configuration SHALL accept `weight_init`, `degree_scaled` (default) or
-`count_scaled`. Under `degree_scaled` the chemical weights SHALL be initialised exactly as before:
+`count_scaled`, governing chemical weights only; gap-junction normalisation SHALL be untouched. Under `degree_scaled` the chemical weights SHALL be initialised exactly as before:
 each edge into a post-synaptic neuron with `k` chemical inputs drawn from `N(0, 1/√k)`. Under
 `count_scaled` each edge's weight SHALL be `z · n / sqrt(Σ n²)`, where `n` is the edge's synapse
 count from the connectome data, the sum runs over the post-synaptic neuron's incoming chemical
@@ -26,7 +26,8 @@ requirement.
 - **WHEN** the incoming weights of a neuron with several inputs are inspected
 - **THEN** their magnitudes divided by the standard-normal draws SHALL be proportional to the edges'
   synapse counts
-- **AND** the mean over neurons with inputs of the squared incoming norm SHALL be 1 within tolerance
+- **AND** for every neuron with inputs the scale factors `n / sqrt(Σ n²)` of its inputs SHALL have
+  unit sum of squares
 
 #### Scenario: The rewired arm carries counts with the moved edges
 

@@ -7,8 +7,9 @@
   `z · n / sqrt(Σ n²)` over the post-synaptic neuron's incoming counts, same draw order and
   generator as the degree-scaled path.
 - [ ] 1.2 Tests: the default is bit-identical (frozen-reference and wiring-arms tests keep passing);
-  under `count_scaled` every neuron with inputs has expected squared incoming norm 1 (checked as
-  the mean over neurons within tolerance) and magnitudes within a neuron proportional to counts;
+  under `count_scaled` the scale factors `n / sqrt(Σ n²)` of every neuron's inputs have unit sum of
+  squares (exact, per neuron) and magnitudes within a neuron proportional to counts; gap junctions
+  are untouched;
   the rewired arm's counts travel with their pre-synaptic endpoints and its normalisation is
   recomputed; the two wirings stay paired at one seed (readout, gains, `log_std` identical).
 
@@ -33,7 +34,8 @@
 - [ ] 4.2 Hebbian panel: four arms × seeds 1–16 × 1000 episodes; the single registered extension for
   any seed without a plateau (fresh run at 1500).
 - [ ] 4.3 Prior sweep: four frozen arms × seeds 1–64 × 600 episodes.
-- [ ] 4.4 Check: panel 1's Hebbian and frozen values on seeds 1–8 are reproduced bit for bit.
+- [ ] 4.4 Check: on seeds 1–8 the per-episode outcomes of the Hebbian arms' first 1000 and the
+  frozen arms' first 600 episodes equal panel 1's logs' prefix.
 
 ## 5. Analysis and records
 

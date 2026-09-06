@@ -51,6 +51,9 @@ receives a different multiset of counts and the per-neuron normalisation is reco
 rewired edge set. The rewired-null is therefore a null of the count structure as well as of the
 partner identity, which is what "degree-matched scramble" should mean once counts carry weight.
 
+**Chemical weights only**: gap junctions already carry their counts through the existing fan-in
+normalisation; `weight_init` leaves them untouched.
+
 **Byte-identity**: `weight_init: degree_scaled` (default) takes the existing code path with no
 extra operation; the frozen-reference and wiring-arms tests keep proving it. The option is a
 config field beside `wiring`, and the count-initialised configs are one key off their parents.
@@ -64,9 +67,11 @@ config field beside `wiring`, and the count-initialised configs are one key off 
 | `wt_hebbian`, `rn_hebbian` | wild-type / rewired | degree-scaled | unmodulated Hebbian |
 | `wt_hebbian_count`, `rn_hebbian_count` | wild-type / rewired | count-scaled | unmodulated Hebbian |
 
-- **Hebbian panel**: the four Hebbian arms on seeds **1–16**, 1000 episodes. Seeds 1–8 reproduce
-  panel 1's Hebbian floors bit for bit (same configs, same seeds), so panel 1's floor values are a
-  built-in check; seeds 9–16 double the sample. The budget is set from panel 1's evidence: every
+- **Hebbian panel**: the four Hebbian arms on seeds **1–16**, 1000 episodes. Seeds 1–8 run the same
+  configs at the same seeds as panel 1, and nothing in the brain or the rule reads the total budget,
+  so their episode streams coincide with panel 1's first 1000 episodes — a built-in reproduction
+  check on the stream (the plateau tails are read on a shorter window and are not expected to
+  match); seeds 9–16 double the sample. The budget is set from panel 1's evidence: every
   Hebbian run there sat at its final level from its first 500-episode block and stayed there for
   3000; 1000 leaves a 250-episode plateau tail after a 750-episode margin.
 - **Prior sweep**: the four frozen arms on seeds **1–64**, 600 episodes. A frozen arm is a fixed
@@ -74,9 +79,10 @@ config field beside `wiring`, and the count-initialised configs are one key off 
   estimate; 64 seeds give the distribution. The frozen arms on seeds 1–16 double as the
   learning-gain floors for the Hebbian panel.
 - **No pilot.** Every value the arms run with is panel 1's registered pin, and the Hebbian rule
-  does not use the modulator. The plateau detector still reports convergence per run; a Hebbian
-  seed without a plateau at 1000 receives the single registered extension (a fresh run at 1500).
-- Cost: 64 + 256 = 320 runs, about an hour on 16 workers.
+  does not use the modulator. The committed plateau detector's convergence flag decides per run; a Hebbian
+  seed it marks non-converged at 1000 receives the single registered extension (a fresh run at 1500).
+- Cost: 64 + 256 = 320 runs. Panel 1 ran 168k episodes in two hours on 16 workers; this design
+  runs 218k, so two to three hours, less where frozen episodes end early.
 
 ### D3. Metric and statistics
 
@@ -103,16 +109,16 @@ seeds whose plateau tail is at least 20% with no learning (the prior's headline 
 learning gain of each Hebbian arm over its own frozen arm on seeds 1–16; per-seed sign counts for
 P1 and P4.
 
-### D5. The verdict map (Logbook 034's vocabulary)
+### D5. The verdict map (Logbook 034's map, in this capability's spelling)
 
-From P1, in order: `wiring_specific` (P1 passes), `rewired_beats_wild_type` (P1's interval
+From P1, in order: `specific_wiring` (P1 passes), `rewired_beats_wild_type` (P1's interval
 entirely below zero), `degree_statistics` (interval spans zero), `inconclusive` (otherwise);
 `insufficient_seeds` first if P1 has fewer than two common seeds. P2–P4 annotate the verdict and
 never change it: the record states whether the count structure preserves the contrast (P2),
 improves the wild-type fixed point (P3), and whether the prior already differs (P4). A
-`wiring_specific` verdict with P4 failing is the interesting case — the wiring's advantage would
+`specific_wiring` verdict with P4 failing is the interesting case — the wiring's advantage would
 be *created* by Hebbian alignment rather than present in the untrained prior — and is named as
-such in the report; a `wiring_specific` verdict with P4 passing says the advantage is already in
+such in the report; a `specific_wiring` verdict with P4 passing says the advantage is already in
 the prior.
 
 Claim type: performance, throughout. Ensemble invariance is reported (sign counts); no dynamics
