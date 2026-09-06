@@ -129,6 +129,14 @@ class TestDefaultsAreOff:
             scale_floor=1e-6,
         )
 
+    @pytest.mark.parametrize(
+        "bad",
+        [{"scale_rate": 0.0}, {"scale_rate": 1.5}, {"scale_floor": 0.0}, {"scale_floor": -1e-3}],
+    )
+    def test_direct_construction_is_bounded_too(self, bad: dict[str, float]) -> None:
+        with pytest.raises(ValueError, match="scale_"):
+            ScalingOptions(**bad)  # type: ignore[arg-type]
+
     def test_default_config_builds_a_rule_with_both_switches_off(self) -> None:
         brain = ConnectomePPOBrain(
             config=ConnectomePPOBrainConfig(

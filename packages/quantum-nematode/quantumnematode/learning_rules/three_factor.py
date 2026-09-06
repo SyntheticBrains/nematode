@@ -94,6 +94,18 @@ class ScalingOptions:
     scale_rate: float = 0.01
     scale_floor: float = 1e-6
 
+    def __post_init__(self) -> None:
+        """Hold a direct construction to the bounds the brain configs enforce at load."""
+        # The brain configs bound these at load; a direct construction must be
+        # held to the same bounds, since a zero rate divides the bias correction
+        # by zero and a non-positive floor cannot floor anything.
+        if not 0.0 < self.scale_rate <= 1.0:
+            msg = f"scale_rate must be in (0, 1], got {self.scale_rate}"
+            raise ValueError(msg)
+        if self.scale_floor <= 0.0:
+            msg = f"scale_floor must be positive, got {self.scale_floor}"
+            raise ValueError(msg)
+
 
 class _RunningScale:
     """A bias-corrected running root-mean-square.
