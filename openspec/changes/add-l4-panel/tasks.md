@@ -49,7 +49,7 @@
 - [x] 4.3 Pin the recipe and the budget in `design.md § Pinned values` by dated amendment; write the
   selected `plasticity_rate` explicitly into all seven plastic-family configs, the MLP
   included.
-- [ ] 4.4 Write `launch.md` (commit SHA, command, seeds, budget, recipe) and commit it **before**
+- [x] 4.4 Write `launch.md` (commit SHA, command, seeds, budget, recipe) and commit it **before**
   launching the panel.
 
 ## 5. The panel
