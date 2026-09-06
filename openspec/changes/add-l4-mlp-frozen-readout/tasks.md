@@ -1,0 +1,26 @@
+# Tasks: freeze the matched-rule yardstick's readout
+
+## 1. The option
+
+- [ ] 1.1 `plastic_layers: Literal["all", "hidden"] = "all"` on the MLP brain config, passed to the
+  topology at construction.
+- [ ] 1.2 `MLPTopology` builds its plastic list from the setting: every `Linear` under `all`, every
+  `Linear` but the last under `hidden`; masks, traces and fan-in axes follow the list; the forward
+  runs the whole actor and credits eligibility to plastic layers only.
+
+## 2. Tests
+
+- [ ] 2.1 `all` is byte-identical: the seam lists, the trace buffers and the forward are today's (the
+  existing MLP seam, equivalence and matched-rule tests keep passing).
+- [ ] 2.2 `hidden`: the seam has one entry fewer; no trace buffer for the output layer; the forward
+  output is bitwise-equal to `actor(features)`; after rule steps the output weight and bias are
+  bit-identical and the hidden weights are not; homeostatic targets exist for hidden layers only.
+- [ ] 2.3 The PPO path is unaffected by the option (`learnable_parameters` unchanged; the frozen
+  reference equivalence holds with `hidden` set).
+
+## 3. Docs and close-out
+
+- [ ] 3.1 `docs/architectures.md` (MLP row); `CHANGELOG.md`.
+- [ ] 3.2 Pre-commit gate on all files exit 0; full suite green.
+- [ ] 3.3 No implementation code or docstring references a planning document.
+- [ ] 3.4 Re-review for drift, archive, review the branch, open the PR.
