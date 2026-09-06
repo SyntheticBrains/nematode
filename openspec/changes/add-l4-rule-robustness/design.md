@@ -40,14 +40,26 @@ would then be learning) and over an exploration schedule (a second free-form rec
 frozen but sensible noise is the smallest change that stops the noise from capping the plateau
 while keeping the periphery frozen.
 
+The field has no meaning in discrete action mode (no Gaussian head) and none under the
+state-dependent std head, whose log-std is a function of the hidden state. It is ignored in the
+former and a non-zero value is **rejected at load** under the latter, so a value that would
+silently do nothing cannot enter a panel config.
+
 ### D2. Homeostatic incoming-norm scaling
 
 After each plastic update the rule rescales, for every unit, the vector of its incoming plastic
 weights so that its norm over the unit's edge set returns to the norm it had at initialisation:
-`w_j ← w_j · t_j / max(‖w_j‖, floor)`, with `t_j` captured from the topology at rule
-construction. Units with no incoming edges (`t_j = 0`) are skipped. The clamp is applied after
-the rescale, so the bound still holds; the decay term stays available but is no longer what
-holds the substrate.
+`w_j ← w_j · t_j / max(‖w_j‖, floor)`, with `t_j` captured from the topology when the rule is built — the norm the substrate had at
+that moment, which today is always its initialisation since no plastic brain loads weights.
+The rescale multiplies the **masked entries only**: off-edge entries are never written, so the
+edge-set invariant the mask seam guarantees is kept under the connectome's soft-prior mode as
+well. Units with no incoming edges (`t_j = 0`) are skipped. The clamp is applied after the
+rescale, so the bound still holds.
+
+The decay term is left in place but becomes **inert under homeostasis**: it shrinks a unit's
+incoming weights uniformly and the rescale restores their norm exactly, so up to the clamp the
+two cancel. The panel therefore has one runaway control, not two, and `plasticity_weight_decay`
+is not a knob to sweep while homeostasis is on.
 
 Why this and not a stronger decay: the runaway is Hebbian positive feedback along
 reward-correlated directions, and the standard remedy is multiplicative normalisation of each
@@ -100,6 +112,8 @@ both substrates.
 - **Homeostasis constrains what the rule can express.** A neuron cannot grow its total input,
   only redistribute it. That is the biological constraint too, and it is the same for both
   wirings and both substrates, so the contrasts stay fair.
+- **Decay looks like a second control and is not.** Under homeostasis the uniform shrink is
+  undone by the rescale (D2); a decay sweep on a homeostatic arm would measure nothing.
 - **A frozen noise chosen by probe on one seed is a recipe choice.** It is shared by every arm
   and pinned before the pilot, like the rate; the probe's selection rule is stated in the panel
   change before it runs.

@@ -3,20 +3,23 @@
 ## 1. Initial action noise
 
 - [ ] 1.1 `initial_log_std: float = 0.0` on the plasticity mixin; both brains build the
-  state-independent `log_std` from it (`torch.full`); default byte-identical.
+  state-independent `log_std` from it (`torch.full`); default byte-identical; ignored in discrete
+  mode and a non-zero value rejected at load under the state-dependent std head.
 - [ ] 1.2 Tests: the parameter equals the configured value on both brains; default builds are
   bit-identical to today's (existing frozen-reference tests keep passing); the two plastic
   wiring arms still share `log_std` at one seed.
+- [ ] 1.3 Test: a non-zero `initial_log_std` with the state-dependent std head fails at load.
 
 ## 2. Homeostatic incoming-norm scaling
 
 - [ ] 2.1 `plastic_fan_in_axes` on the seam: connectome `[0]`, MLP `[1]` per layer.
 - [ ] 2.2 `plasticity_homeostasis: bool = False` on the mixin; the rule captures per-unit initial
-  incoming norms over the masked entries at construction, rescales after each update, skips
-  zero-target units, floors the norm, clamps after the rescale; nothing under a freeze.
+  incoming norms over the masked entries at construction, rescales the masked entries only after each update, skips zero-target units, floors the
+  norm, clamps after the rescale; nothing under a freeze.
 - [ ] 2.3 Telemetry `plasticity_norm_drift` (NaN when off); history field; recorded.
 - [ ] 2.4 Tests: incoming norms equal their targets after updates on both substrates; masked-only
-  norms on the connectome; zero-target units untouched; the bound still holds; off is
+  norms and a masked-only rescale on the connectome (off-edge entries untouched under the
+  soft-prior mask); zero-target units untouched; the decay term is cancelled by the rescale; the bound still holds; off is
   bit-identical to the frozen reference; freeze writes nothing and still reports; the key.
 - [ ] 2.5 Test: on the connectome the captured targets are near 1 for every neuron with inputs.
 

@@ -6,14 +6,16 @@ Every brain that offers the plasticity rules SHALL accept `initial_log_std` from
 plasticity configuration mixin, default `0.0`, and SHALL initialise its state-independent
 continuous `log_std` parameter to that value at construction. Under the gradient rule the
 parameter SHALL still train from that value; under a plastic rule it SHALL stay at that value, as
-every non-plastic parameter does. With the default, construction SHALL be bit-identical to the
-brain without this requirement.
+every non-plastic parameter does. The field SHALL be ignored in discrete action mode and
+a non-zero value SHALL be rejected at load when the state-dependent std head is selected. With
+the default, construction SHALL be bit-identical to the brain without this requirement.
 
 #### Scenario: The configured value is the initial parameter on both brains
 
 - **WHEN** a connectome brain and an MLP brain are built with `initial_log_std` set to a value
 - **THEN** each brain's `log_std` SHALL equal that value at construction
 - **AND** with the default the parameter SHALL be zero and the build bit-identical to today's
+- **AND** a non-zero value under the state-dependent std head SHALL fail at load
 
 #### Scenario: Paired arms share the noise
 
