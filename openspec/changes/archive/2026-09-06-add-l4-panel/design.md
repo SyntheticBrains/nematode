@@ -128,6 +128,7 @@ Evaluated in this order, from the family results:
 
 | verdict | condition | roadmap branch |
 |---|---|---|
+| `insufficient_seeds` | any of T1–T3 has fewer than two common seeds, or the floors and T1 pass but the band test has fewer than two | no branch; the panel was not run as registered |
 | `sanity_floor_fail` | T2 or T3 fails | "L4 plasticity fails to beat its baselines" |
 | `rewired_beats_wild_type` | floors pass; T1's CI lies entirely below zero | reported as its own outcome (034 precedent) |
 | `recovery` | floors pass; T1 passes; band test PASS | GO branch, D2 (i) and (ii) both met |

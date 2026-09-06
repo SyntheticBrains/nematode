@@ -47,11 +47,12 @@ brain:
     # pairing is validated at load time.
     learning_rule: hebbian
     enable_activity_traces: true
-    # Substrate-invariant scaling, on for every panel arm: the third factor
-    # is tanh(delta / sigma) with sigma a running RMS of the prediction error,
-    # and each plastic tensor's Hebbian term is divided by rho, a running RMS
-    # of its trace over its edge set. The rate then means the same
-    # root-mean-square step per unit modulator on every arm.
+    # Substrate-invariant scaling, set on every panel arm for parity. On this
+    # unmodulated arm the third factor is 1, so modulator normalisation is
+    # inactive (the switch is carried, not used); trace normalisation applies:
+    # each plastic tensor's Hebbian term is divided by rho, a running RMS of
+    # its trace over its edge set, so the rate means the same root-mean-square
+    # step here as on the modulated arms.
     plasticity_normalise_modulator: true
     plasticity_normalise_trace: true
     # Homeostatic incoming-norm scaling, on for every panel arm: after each

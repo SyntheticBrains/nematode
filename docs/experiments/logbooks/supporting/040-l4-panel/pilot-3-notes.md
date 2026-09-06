@@ -38,8 +38,9 @@ so no extension is owed.
 
 ## Reading
 
-- **The wild-type plastic arm learns and holds.** At 1e-3 both seeds reach 40–60% per block by
-  episode 500 and stay there for 3000 episodes; against frozen floors of 2–3% this is a
+- **The wild-type plastic arm learns and holds.** At 1e-3 seed 101 sits at 40–60% per block from
+  its first block, and seed 102 climbs from 8% and 22% in its first two blocks to the high 30s by
+  episode 750; both then hold for the rest of the 3000 episodes; against frozen floors of 2–3% this is a
   fifteen-fold gain with zero saturation throughout. At 3e-4 it is unstable and at 3e-3 one seed
   decays while the other is still climbing at the budget (not converged): the rate window is
   narrow and 1e-3 is inside it.

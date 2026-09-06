@@ -28,8 +28,9 @@ _PARENT = _VARIANT.with_name(_VARIANT.name.replace("_plastic", ""))
 _FROZEN = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_frozen.yml"))
 _HEBBIAN = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_hebbian.yml"))
 
-# The rule, the trace it reads, and the two scaling switches every panel arm
-# runs with. The floors and the rewired arms inherit all four from this arm.
+# Every key the plastic wild-type arm adds to its PPO parent: the rule, the trace it
+# reads, the scaling switches, and the panel's shared recipe. This set IS the contract;
+# the floors and the rewired arms inherit it from this arm, and the MLP adds its own.
 _EXPECTED_ADDED = {
     "brain.config.learning_rule",
     "brain.config.enable_activity_traces",

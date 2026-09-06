@@ -1,6 +1,6 @@
 # Plastic C3 cell — MLPPPO under the three-factor rule: the matched-rule yardstick.
 #
-# Four-key delta from the PPO parent
+# Nine-key delta from the PPO parent
 # (mlpppo_small_continuous2d_combined_klinotaxis.yml): the actor's linear
 # layers are trained by reward-modulated Hebbian plasticity instead of by
 # gradient descent. Every environment, reward, satiety and sensing block is

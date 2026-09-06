@@ -3,9 +3,11 @@
 # Single-purpose delta from the PPO parent
 # (connectomeppo_small_continuous2d_combined_klinotaxis.yml): the connectome's
 # chemical synapses are trained by reward-modulated Hebbian plasticity instead
-# of by gradient descent. Four keys change, and nothing else: the rule
-# selection, the eligibility traces the rule reads, and the two scaling
-# switches that make the rate substrate-invariant. Every environment,
+# of by gradient descent. Seven keys change, and nothing else: the rule
+# selection, the eligibility traces the rule reads, the two scaling
+# switches that make the rate substrate-invariant, and the panel's shared
+# recipe -- homeostasis, the frozen action noise and the plasticity rate --
+# which every arm carries identically. Every environment,
 # reward, satiety and sensing block is byte-identical to the parent, so a
 # behavioural difference is attributable to the learning rule alone.
 #

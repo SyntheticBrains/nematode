@@ -75,9 +75,11 @@ band test SHALL pass when the 80% bootstrap confidence interval of the paired de
 wild-type minus plastic MLP) contains or lies above zero, and fail when it lies entirely below zero; the harness SHALL report the band delta's mean and
 interval width beside the outcome.
 A significant reverse result on T1 SHALL be detected by its interval lying entirely below zero and
-reported as its own outcome. The verdict SHALL be one of `sanity_floor_fail`,
+reported as its own outcome. The verdict SHALL be one of `insufficient_seeds`, `sanity_floor_fail`,
 `rewired_beats_wild_type`, `recovery`, `structure_only`, `robustness` or `inconclusive`, assigned in
-that order from the family results as the design records. All other pairwise deltas SHALL be
+that order from the family results as the design records: `insufficient_seeds` first, when any of
+T1, T2 or T3 has fewer than two common seeds, or when the floors and T1 pass but the band test has
+fewer than two common seeds and so cannot separate `recovery` from `structure_only`. All other pairwise deltas SHALL be
 reported descriptively, uncorrected, and labelled as such. The harness SHALL report, for T1 and T4,
 how many paired seeds have a positive delta.
 
