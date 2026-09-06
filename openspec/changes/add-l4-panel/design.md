@@ -282,6 +282,36 @@ probe 3 the MLP yardstick learns at no rate and its trace scale still grows (`1e
 that holds in the pilot, D2 test (ii) passes by construction, and the band test's stated
 asymmetry (D4) is what the logbook must say about it.
 
+## Robustness probes and their rules (amendment dated 2026-09-06, written before the probes ran)
+
+Pilot 2 ran on the re-registered grid and its rules selected `1e-3` and a budget of 2000, but the
+pin was withheld (record: `supporting/040-l4-panel/pilot-2-notes.md`): the plastic arms sat near
+their frozen floors while a fifth of the synapses were clamped on the bound, and the MLP yardstick
+exploded or died. Three defaults of our own rule and arms explained it and were fixed in the
+rule-robustness change: every plastic arm explored at action std 1.0 forever, the decay could not
+hold a coherent Hebbian drive, and the yardstick's ReLU units are unbounded. The mechanisms are
+default-off; the panel turns them on and chooses their values here, by the rules below, stated
+before any probe result was read.
+
+**Probe 4** (diagnostic, seed 101, 600 episodes, rate `1e-3`, both scaling switches on): every arm
+with `plasticity_homeostasis: true`, the MLP arm with `activation: tanh`, and `initial_log_std ∈
+{0, −0.5, −1.0, −1.5}` on the three three-factor arms and both frozen floors (the floors move with
+the noise too, so the paired read must see them).
+
+- **Homeostasis is pinned on for every arm** by decision, not by the probe: it is the runaway
+  control the design adopted (rule-robustness D2). The probe confirms it by reading the
+  saturated fraction, expected near zero.
+- **The MLP arm is pinned to `tanh`** by decision, for the same reason (rule-robustness D3). The
+  probe reads its trace scale, expected bounded, and whether it learns at all.
+- **`initial_log_std` is selected by the probe**: the value maximising the pooled mean
+  plateau-tail success (final quarter of 600 episodes) of the three three-factor arms, the same
+  pooled principle the rate uses; ties go to the value nearest zero, the historical default. It is
+  written into all seven arm configs.
+
+Pilot 3 then runs the registered grid `{3e-4, 1e-3, 3e-3}` on seeds 101–102 with these values,
+and the pin of recipe and budget follows the registered rules unchanged. Arms, panel seeds,
+metric, tests, family, verdict map, band rule, extensions and sensitivity pass are unchanged.
+
 ## Pinned values (filled by dated amendment before launch)
 
 - **Recipe** (`plasticity_rate`): *pending the pilot.*
