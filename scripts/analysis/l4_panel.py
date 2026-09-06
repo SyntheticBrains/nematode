@@ -128,6 +128,11 @@ class SeedRecord:
     evasion_rate: float | None
     temp_comfort: float | None
     curve: list[float]  # full-clear % per CURVE_WINDOW-episode block
+    # Peak tracked action density over the run (descriptive). Under a tanh-squashed
+    # Gaussian the density carries the squash Jacobian, so a peak orders of
+    # magnitude above the frozen arms' means the actions are pinned at the limits:
+    # a collapsed representation, not a learned policy. None when no export is found.
+    peak_action_density: float | None = None
 
 
 def _experiment_json(log_text: str, experiments: Path) -> dict | None:
@@ -139,6 +144,26 @@ def _experiment_json(log_text: str, experiments: Path) -> dict | None:
     if not path.exists():
         return None
     return json.loads(path.read_text())
+
+
+def _peak_action_density(experiment: dict) -> float | None:
+    """Max of the tracked per-run action density in the run's export, or None if absent."""
+    exports = experiment.get("exports_path")
+    if not exports:
+        return None
+    path = Path(exports) / "session" / "data" / "tracking_actions.csv"
+    if not path.exists():
+        return None
+    peak: float | None = None
+    with path.open() as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            try:
+                value = float(row.get("probability", ""))
+            except ValueError:
+                continue
+            peak = value if peak is None else max(peak, value)
+    return peak
 
 
 def read_log(log: Path, experiments: Path = EXPERIMENTS) -> SeedRecord | None:
@@ -177,6 +202,7 @@ def read_log(log: Path, experiments: Path = EXPERIMENTS) -> SeedRecord | None:
         if encounters and encounters > 0 and evasions is not None:
             record.evasion_rate = evasions / encounters * 100.0
         record.temp_comfort = results.get("post_convergence_temperature_comfort_score")
+        record.peak_action_density = _peak_action_density(experiment)
     return record
 
 
@@ -408,6 +434,7 @@ def write_per_seed_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> N
         "onset",
         "evasion_rate",
         "temp_comfort",
+        "peak_action_density",
     ]
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)

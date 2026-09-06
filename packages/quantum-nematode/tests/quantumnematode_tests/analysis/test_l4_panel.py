@@ -35,16 +35,31 @@ def _log(path: Path, statuses: list[str], experiment_id: str | None = None) -> P
     return path
 
 
-def _experiment(root: Path, experiment_id: str, onset: int | None) -> None:
+def _experiment(
+    root: Path,
+    experiment_id: str,
+    onset: int | None,
+    densities: list[float] | None = None,
+) -> None:
     folder = root / experiment_id
     folder.mkdir(parents=True)
+    exports = root / "exports" / experiment_id
+    if densities is not None:
+        data = exports / "session" / "data"
+        data.mkdir(parents=True)
+        (data / "tracking_actions.csv").write_text(
+            "run,state,action,probability\n"
+            + "".join(f"{i},continuous,,{d}\n" for i, d in enumerate(densities, 1)),
+        )
     results = {
         "convergence_run": onset,
         "avg_predator_encounters": 4.0,
         "avg_successful_evasions": 2.0,
         "post_convergence_temperature_comfort_score": 0.7,
     }
-    (folder / f"{experiment_id}.json").write_text(json.dumps({"results": results}))
+    (folder / f"{experiment_id}.json").write_text(
+        json.dumps({"results": results, "exports_path": str(exports)}),
+    )
 
 
 def _arm(base: float, seeds: tuple[int, ...] = _SEEDS) -> dict[int, float]:
@@ -94,6 +109,22 @@ class TestReadLog:
         assert record.temp_comfort == 0.7
         # Blocks of CURVE_WINDOW: first 250 hold 50 successes; the last 50 are all successes.
         assert record.curve == [20.0, 100.0]
+
+    def test_peak_action_density_is_read_from_the_export(self, tmp_path: Path) -> None:
+        experiments = tmp_path / "experiments"
+        _experiment(experiments, "exp-d", onset=10, densities=[2.5, 18.4, 1e17, 7.0])
+        log = _log(tmp_path / "run.log", ["SUCCESS"] * 40, "exp-d")
+        record = lp.read_log(log, experiments)
+        assert record is not None
+        assert record.peak_action_density == 1e17
+
+    def test_peak_action_density_is_none_without_an_export(self, tmp_path: Path) -> None:
+        experiments = tmp_path / "experiments"
+        _experiment(experiments, "exp-n", onset=10)
+        log = _log(tmp_path / "run.log", ["SUCCESS"] * 40, "exp-n")
+        record = lp.read_log(log, experiments)
+        assert record is not None
+        assert record.peak_action_density is None
 
     def test_missing_experiment_record_reports_convergence_unknown(self, tmp_path: Path) -> None:
         log = _log(tmp_path / "run.log", ["SUCCESS"] * 40, "exp-missing")
@@ -439,6 +470,7 @@ def test_csv_exports(tmp_path: Path) -> None:
     lp.write_curves_csv(panel, tmp_path / "curves.csv")
     rows = (tmp_path / "per-seed.csv").read_text().splitlines()
     assert rows[0].startswith("arm,seed,success")
+    assert rows[0].endswith("peak_action_density")
     assert len(rows) == 3
     curves = (tmp_path / "curves.csv").read_text().splitlines()
     assert curves[0] == "arm,seed,window_end,success"

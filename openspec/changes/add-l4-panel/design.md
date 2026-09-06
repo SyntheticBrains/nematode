@@ -324,7 +324,19 @@ metric, tests, family, verdict map, band rule, extensions and sensitivity pass a
   arm. Its plastic output layer, taking its own output as the post-synaptic factor, rotated into
   saturation under the rule and destroyed a 96% foraging policy within three episodes; the arm now
   learns its hidden weights under a frozen readout as the connectome does. The MLP arm is an
-  eight-key delta from its PPO parent. Confirmed by probe 6 before launch.
+  eight-key delta from its PPO parent. **Probe 6** (`supporting/040-l4-panel/probe-6-frozen-readout-yardstick.md`)
+  then showed the frozen readout necessary but not sufficient: the hidden layers alone collapse
+  the representation (every unit's Hebbian update points at the same few active inputs) and the
+  96% frozen policy is gone within a hundred episodes. Readout, activation, noise, runaway control
+  and modulator have each been examined; what remains is the rule meeting a dense substrate.
+  **Ratified with Chris (2026-09-06):** the MLP arm enters the panel as registered, with the frozen
+  readout; its plateau is expected at chance; test (ii) passes by construction and the logbook
+  reads the yardstick as a finding about local rules on dense stacks, structure-function claims
+  resting on T1 and T4. A **sparse random MLP** (masked to the connectome's density under the
+  same rule) is the pre-registered follow-up after this panel, not an arm of it. The harness
+  gains one descriptive per-seed column, `peak_action_density` (the peak tracked action density
+  from the run's export), so a collapsed representation — actions pinned at the squash limits —
+  is visible per arm in the panel's own data; it is reported, never tested.
 - **Recipe** (`plasticity_rate`): **`0.001`**, pinned 2026-09-06 from pilot 3 by the registered
   pooled rule (pooled plateau-tail 16.3 against 8.1 at 3e-4 and 11.8 at 3e-3), written into all
   seven arm configs. Record: `supporting/040-l4-panel/pilot-3-notes.md`, summary `pilot.json`.

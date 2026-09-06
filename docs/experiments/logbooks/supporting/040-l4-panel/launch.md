@@ -3,8 +3,9 @@
 Written and committed before the panel command ran, per the registration.
 
 - **Date**: 2026-09-06
-- **Pinned state**: commit `38363ada` on `feat/l4-panel-run` (arm configs carry both scaling
-  switches, homeostasis, `initial_log_std −1.0`, `plasticity_rate 0.001`; the MLP arm `tanh`)
+- **Pinned state**: commit `e9380fe4` on `feat/l4-panel-run` (arm configs carry both scaling
+  switches, homeostasis, `initial_log_std −1.0`, `plasticity_rate 0.001`; the MLP arm `tanh` with
+  `plastic_layers: hidden`). The commit carrying this record precedes the launch.
 - **Arms** (seven): `wt_frozen`, `wt_hebbian`, `wt_plastic`, `rn_frozen`, `rn_hebbian`,
   `rn_plastic`, `mlp_plastic` — the config stems registered in `scripts/analysis/l4_panel.py`
 - **Seeds**: 1–8, paired across every arm; `rewire_seed` unset so the rewired arms pair with the
@@ -27,6 +28,8 @@ uv run python scripts/run_campaign.py \
   --seeds 1-8 --runs 3000 --output-dir campaigns/l4-panel -- --theme headless --track-experiment
 ```
 
+- **Yardstick note**: probes 5 and 6 established that the MLP arm cannot hold a policy under the
+  rule even with its readout frozen; it runs as registered and is read as a finding.
 - **Analysis**: `uv run python scripts/analysis/l4_panel.py --campaign-dir campaigns/l4-panel --out docs/experiments/logbooks/supporting/040-l4-panel/panel.json --csv .../per-seed.csv --curves .../curves.csv`; the confirmatory family, the band test and the verdict map are the
   ones fixed in that script and in the registration.
 - **Extensions applied**: none at launch (recorded here if any seed is extended).
