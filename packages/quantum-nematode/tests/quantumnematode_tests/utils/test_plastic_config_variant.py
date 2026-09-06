@@ -35,7 +35,11 @@ _EXPECTED_ADDED = {
     "brain.config.enable_activity_traces",
     "brain.config.plasticity_normalise_modulator",
     "brain.config.plasticity_normalise_trace",
+    "brain.config.plasticity_homeostasis",
+    "brain.config.initial_log_std",
 }
+# The MLP yardstick additionally swaps its hidden non-linearity for bounded units.
+_EXPECTED_ADDED_MLP = _EXPECTED_ADDED | {"brain.config.activation"}
 
 
 def _flatten(data: object, prefix: str = "") -> dict[str, object]:
@@ -71,6 +75,8 @@ class TestPlasticVariantIsAMinimalDelta:
         assert brain_config.enable_activity_traces is True
         assert brain_config.plasticity_normalise_modulator is True
         assert brain_config.plasticity_normalise_trace is True
+        assert brain_config.plasticity_homeostasis is True
+        assert brain_config.initial_log_std == -1.0
 
     def test_parent_is_unchanged(self) -> None:
         """The PPO record the plastic arm derives from stays on the PPO rule."""
@@ -140,7 +146,7 @@ class TestMatchedRuleMLPConfig:
     def test_mlp_plastic_is_a_minimal_delta(self) -> None:
         parent = _flatten(yaml.safe_load(_MLP_PARENT.read_text()))
         variant = _flatten(yaml.safe_load(_MLP_VARIANT.read_text()))
-        assert set(variant) - set(parent) == _EXPECTED_ADDED
+        assert set(variant) - set(parent) == _EXPECTED_ADDED_MLP
         assert set(parent) - set(variant) == set()
         assert {k for k in set(parent) & set(variant) if parent[k] != variant[k]} == set()
 
@@ -151,6 +157,7 @@ class TestMatchedRuleMLPConfig:
         assert isinstance(brain_config, MLPPPOBrainConfig)
         assert brain_config.learning_rule == "three_factor"
         assert brain_config.enable_activity_traces is True
+        assert brain_config.activation == "tanh"
 
     def test_mlp_and_connectome_plastic_arms_share_every_plasticity_value(self) -> None:
         """Matched means the same numbers, read from the actual arm configs."""
@@ -170,6 +177,8 @@ class TestMatchedRuleMLPConfig:
             "plasticity_normalise_trace",
             "plasticity_scale_rate",
             "plasticity_scale_floor",
+            "plasticity_homeostasis",
+            "initial_log_std",
         ):
             assert getattr(mlp.config, field) == getattr(conn.config, field), field
 

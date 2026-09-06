@@ -294,8 +294,7 @@ default-off; the panel turns them on and chooses their values here, by the rules
 before any probe result was read.
 
 **Probe 4** (diagnostic, seed 101, 600 episodes, rate `1e-3`, both scaling switches on): every arm
-with `plasticity_homeostasis: true`, the MLP arm with `activation: tanh`, and `initial_log_std ∈
-{0, −0.5, −1.0, −1.5}` on the three three-factor arms and both frozen floors (the floors move with
+with `plasticity_homeostasis: true`, the MLP arm with `activation: tanh`, and `initial_log_std ∈ {0, −0.5, −1.0, −1.5}` on the three three-factor arms and both frozen floors (the floors move with
 the noise too, so the paired read must see them).
 
 - **Homeostasis is pinned on for every arm** by decision, not by the probe: it is the runaway
@@ -314,6 +313,12 @@ metric, tests, family, verdict map, band rule, extensions and sensitivity pass a
 
 ## Pinned values (filled by dated amendment before launch)
 
-- **Recipe** (`plasticity_rate`): *pending the pilot.*
-- **Uniform budget** (episodes): *pending the pilot.*
+- **Robustness values (pinned 2026-09-06 from probe 4,
+  `supporting/040-l4-panel/probe-4-robustness.md`)**: `plasticity_homeostasis: true` and
+  `initial_log_std: -1.0` on all seven arms (the pooled rule selected −1.0: pooled plateau-tail
+  35.1 against 7.8, 8.7 and 4.4 at 0, −0.5 and −1.5); `activation: tanh` on the MLP arm. The
+  plastic wild-type arm is therefore a six-key delta from its PPO parent and the MLP arm a
+  seven-key one; every floor and rewired arm inherits its parent's keys.
+- **Recipe** (`plasticity_rate`): *pending pilot 3.*
+- **Uniform budget** (episodes): *pending pilot 3.*
 - **Pilot summary**: *pending* — `docs/experiments/logbooks/supporting/040-l4-panel/pilot.json`.

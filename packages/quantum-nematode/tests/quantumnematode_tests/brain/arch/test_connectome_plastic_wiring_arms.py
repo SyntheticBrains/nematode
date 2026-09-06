@@ -64,6 +64,8 @@ _PLASTICITY_FIELDS = (
     "plasticity_normalise_trace",
     "plasticity_scale_rate",
     "plasticity_scale_floor",
+    "plasticity_homeostasis",
+    "initial_log_std",
 )
 
 
