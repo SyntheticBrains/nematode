@@ -74,9 +74,9 @@ A **deterministic, periodic** stream mimicking the cell: one period of 203 steps
 baseline then has nothing to absorb and the raw `δ` is zero-mean by construction). The rule is
 driven through whole periods of warm-up and measured over whole periods. In steady state an EMA
 of a periodic input is periodic with the same mean, so the centred residual averages to zero
-over full periods up to floating-point margin: the mean of the centred modulator SHALL be within
-`0.005` of zero, and the mean of the uncentred `tanh(δ / σ)` on the same steps SHALL exceed
-`0.005` in magnitude. A random stream would not do: the compressed value's standard deviation is
+over full periods up to floating-point margin. The acceptance criteria are the spec's (the
+zero-mean scenario of the scaling requirement): the centred modulator's mean within `0.005` of
+zero, and the uncentred `tanh(δ / σ)`'s mean on the same steps beyond `0.005` in magnitude. A random stream would not do: the compressed value's standard deviation is
 near `0.15`, so a random sample mean over a few thousand steps has a standard error near
 `0.003` and the tolerance would be under two standard errors. The second assertion is what makes
 the first meaningful: it shows the test would have caught the defect.
