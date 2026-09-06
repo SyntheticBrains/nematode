@@ -144,6 +144,13 @@ class BrainHistoryData(BaseModel):
             "(NaN when modulator normalisation is off)"
         ),
     )
+    plasticity_modulator_centre: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Running mean of the compressed prediction error the modulator is centred by "
+            "(NaN when modulator normalisation is off)"
+        ),
+    )
     plasticity_trace_scale: list[float] = Field(
         default_factory=list,
         description=(

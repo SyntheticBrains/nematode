@@ -36,8 +36,10 @@ Two optional scalings make the rate mean the same thing everywhere. Raw,
 between substrates (a dense layer's trace is far smaller per weight than
 a sparse recurrent matrix's) and between steps (a terminal penalty can be
 two hundred times an ordinary prediction error). With the modulator
-normalised the third factor is ``tanh(delta / sigma)``, ``sigma`` a
-running RMS of the prediction error: bounded and sign-preserving. With
+normalised the third factor is ``tanh(delta / sigma) - c``, ``sigma`` a
+running RMS of the prediction error and ``c`` the running mean of the
+compressed value: bounded, sign-preserving, and zero-mean, which a
+bounded function of a skewed prediction error is not on its own. With
 the trace normalised the Hebbian term is divided by ``rho``, a running
 RMS of each tensor's trace over its edge set, so ``eta`` is the
 root-mean-square step per unit modulator on every substrate. Both are
@@ -65,6 +67,7 @@ MEAN_ABS_DELTA_KEY = "plasticity_mean_abs_delta"
 SATURATED_FRACTION_KEY = "plasticity_saturated_fraction"
 MODULATOR_KEY = "plasticity_modulator"
 MODULATOR_SCALE_KEY = "plasticity_modulator_scale"
+MODULATOR_CENTRE_KEY = "plasticity_modulator_centre"
 TRACE_SCALE_KEY = "plasticity_trace_scale"
 
 
@@ -151,6 +154,35 @@ class _RunningScale:
         return self.floor if estimate is None else max(estimate, self.floor)
 
 
+class _RunningMean:
+    """A bias-corrected running mean from a zero prior.
+
+    The same Adam-style correction as the scales, but the prior is zero rather
+    than the first observation: a prediction error is zero-mean a priori, so
+    before anything has been seen the centre is zero and the first compressed
+    step passes through uncentred.
+    """
+
+    def __init__(self, rate: float) -> None:
+        self.rate = rate
+        self._ema = 0.0
+        self._count = 0
+
+    @property
+    def count(self) -> int:
+        return self._count
+
+    def current(self) -> float:
+        """Return the bias-corrected mean, or zero before any observation."""
+        if self._count == 0:
+            return 0.0
+        return self._ema / (1.0 - (1.0 - self.rate) ** self._count)
+
+    def absorb(self, value: float) -> None:
+        self._ema = (1.0 - self.rate) * self._ema + self.rate * value
+        self._count += 1
+
+
 class ThreeFactorRule:
     """Reward-modulated Hebbian plasticity on whatever a topology declares plastic.
 
@@ -218,6 +250,7 @@ class ThreeFactorRule:
         # only ever advanced when their switch is on, so an off switch adds
         # no operation to the raw path.
         self._modulator_scale = _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
+        self._modulator_centre = _RunningMean(self.scaling.scale_rate)
         self._trace_scales = [
             _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
             for _ in topology.plastic_weights
@@ -229,14 +262,19 @@ class ThreeFactorRule:
         return self._modulator_scale
 
     @property
+    def modulator_centre(self) -> _RunningMean:
+        """The running mean the compressed modulator is centred by (advances only when on)."""
+        return self._modulator_centre
+
+    @property
     def trace_scales(self) -> list[_RunningScale]:
         """One running trace scale per plastic tensor (advance only when the switch is on)."""
         return self._trace_scales
 
-    def _modulator(self, delta: float) -> tuple[float, float]:
-        """Return the effective third factor and the scale it was measured against (NaN if off)."""
+    def _modulator(self, delta: float) -> tuple[float, float, float]:
+        """Return the third factor and the scale and centre it was measured against (NaN if off)."""
         if not self.scaling.normalise_modulator:
-            return (delta if self.modulated else 1.0), math.nan
+            return (delta if self.modulated else 1.0), math.nan, math.nan
         # The scale is estimated BEFORE this step's error is absorbed, the same
         # convention as the baseline: a surprising step is scored as surprising,
         # not against a scale it has already inflated. The first observation
@@ -244,10 +282,20 @@ class ThreeFactorRule:
         squared = delta * delta
         sigma = self._modulator_scale.scale_for(squared)
         self._modulator_scale.absorb(squared)
+        compressed = math.tanh(delta / sigma)
+        # Compression breaks the zero mean the baseline gave delta: a bounded
+        # function maps rare large negatives and frequent moderate positives to
+        # the same +-1, so the frequent side wins and the modulator acquires a
+        # constant offset -- a reward-blind Hebbian drive. Subtracting the
+        # running mean of the compressed value restores the zero mean a
+        # prediction error must have. Zero prior, pre-update value.
+        centre = self._modulator_centre.current()
+        self._modulator_centre.absorb(compressed)
         # Computed and reported even when unmodulated, so both arms record the
-        # scale of the surprise they saw and only one records having used it.
-        modulator = math.tanh(delta / sigma) if self.modulated else 1.0
-        return modulator, sigma
+        # scale and centre of the surprise they saw and only one records having
+        # used it.
+        modulator = (compressed - centre) if self.modulated else 1.0
+        return modulator, sigma, centre
 
     def _trace_divisors(
         self,
@@ -310,7 +358,7 @@ class ThreeFactorRule:
             # shifted.
             delta = reward - self.baseline
             self.baseline += self.baseline_rate * delta
-            modulator, modulator_scale = self._modulator(delta)
+            modulator, modulator_scale, modulator_centre = self._modulator(delta)
 
             weights = topo.plastic_weights
             traces = topo.eligibility_traces
@@ -383,6 +431,7 @@ class ThreeFactorRule:
                 SATURATED_FRACTION_KEY: saturated,
                 MODULATOR_KEY: modulator,
                 MODULATOR_SCALE_KEY: modulator_scale,
+                MODULATOR_CENTRE_KEY: modulator_centre,
                 TRACE_SCALE_KEY: trace_scale,
             },
         )
@@ -415,6 +464,7 @@ def record_plasticity_report(
     history_data.plasticity_saturated_fraction.append(extra[SATURATED_FRACTION_KEY])
     history_data.plasticity_modulator.append(extra[MODULATOR_KEY])
     history_data.plasticity_modulator_scale.append(extra[MODULATOR_SCALE_KEY])
+    history_data.plasticity_modulator_centre.append(extra[MODULATOR_CENTRE_KEY])
     history_data.plasticity_trace_scale.append(extra[TRACE_SCALE_KEY])
     history_data.rewards.append(reward)
 
