@@ -108,6 +108,11 @@ class MLPTopology(nn.Module):
         """All-true masks: on a dense layer every entry is a synapse."""
         return self._masks
 
+    @property
+    def plastic_fan_in_axes(self) -> list[int]:
+        """A ``Linear`` weight is ``[out, in]``: a unit's incoming weights are a row."""
+        return [1] * len(self._layers)
+
     # ── BrainTopology seam ────────────────────────────────────
 
     @property

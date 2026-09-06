@@ -136,6 +136,10 @@ class MLPPPOBrainConfig(PlasticityConfigMixin, BrainConfig):
 
     # Sensory feature extraction (required)
     sensory_modules: list[ModuleName]
+    # Hidden non-linearity. ``relu`` is the historical build and byte-identical;
+    # ``tanh`` gives bounded units, which a local Hebbian rule needs (unbounded
+    # units explode or die under it) and which match the connectome's.
+    activation: Literal["relu", "tanh"] = "relu"
 
     @field_validator("sensory_modules")
     @classmethod
@@ -247,6 +251,7 @@ class MLPPPOBrain(ClassicalBrain):
         self._init_lr_schedule(config)
 
         # Build networks
+        self._activation = config.activation
         self.actor = self._build_network(
             config.actor_hidden_dim,
             config.num_hidden_layers,
@@ -261,7 +266,9 @@ class MLPPPOBrain(ClassicalBrain):
         # The config validator guarantees this mode only pairs with continuous.
         self._state_dependent_std = config.continuous_std_mode == "state_dependent"
         if self.continuous and not self._state_dependent_std:
-            self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=self.device))
+            self.log_std = nn.Parameter(
+                torch.full((CONTINUOUS_ACTION_DIM,), config.initial_log_std, device=self.device),
+            )
 
         self.critic = self._build_network(
             config.critic_hidden_dim,
@@ -354,6 +361,7 @@ class MLPPPOBrain(ClassicalBrain):
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
+                homeostasis=config.plasticity_homeostasis,
                 scaling=ScalingOptions(
                     normalise_modulator=config.plasticity_normalise_modulator,
                     normalise_trace=config.plasticity_normalise_trace,
@@ -427,9 +435,10 @@ class MLPPPOBrain(ClassicalBrain):
     ) -> nn.Sequential:
         """Build an MLP network."""
         in_dim = input_dim_override if input_dim_override is not None else self.input_dim
-        layers: list[nn.Module] = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
+        activation = nn.Tanh if self._activation == "tanh" else nn.ReLU
+        layers: list[nn.Module] = [nn.Linear(in_dim, hidden_dim), activation()]
         for _ in range(num_hidden_layers - 1):
-            layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
+            layers += [nn.Linear(hidden_dim, hidden_dim), activation()]
         layers.append(nn.Linear(hidden_dim, output_dim))
         return nn.Sequential(*layers)
 
@@ -437,9 +446,13 @@ class MLPPPOBrain(ClassicalBrain):
         """Initialize network parameters with orthogonal initialization."""
         param_count = 0
 
+        # The orthogonal gain follows the hidden non-linearity: sqrt(2) for ReLU
+        # (the historical value), 5/3 for tanh.
+        gain = np.sqrt(2) if self._activation == "relu" else 5.0 / 3.0
+
         def init_weights(module: nn.Module) -> None:
             if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
+                nn.init.orthogonal_(module.weight, gain=gain)
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0.0)
 

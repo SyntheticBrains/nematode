@@ -151,6 +151,13 @@ class BrainHistoryData(BaseModel):
             "(NaN when modulator normalisation is off)"
         ),
     )
+    plasticity_norm_drift: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Mean relative deviation of each unit's incoming plastic-weight norm from its "
+            "homeostatic target, measured before the rescale (NaN when homeostasis is off)"
+        ),
+    )
     plasticity_trace_scale: list[float] = Field(
         default_factory=list,
         description=(

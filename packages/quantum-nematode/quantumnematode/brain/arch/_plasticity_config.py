@@ -88,6 +88,23 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_scale_rate: float = Field(default=0.01, gt=0.0, le=1.0)
     plasticity_scale_floor: float = Field(default=1e-6, gt=0.0)
 
+    # ── Homeostatic incoming-norm scaling (opt-in) ───────────
+    # After each plastic update every unit's incoming plastic weights are
+    # rescaled, over the edge set only, to the norm they had when the rule
+    # was built. Off by default; on, the substrate cannot run away onto the
+    # magnitude bound, and the decay term is undone by the rescale.
+    plasticity_homeostasis: bool = False
+
+    # ── Initial action noise ─────────────────────────────────
+    # The state-independent continuous log-std starts here on every brain
+    # that offers the plasticity rules. Zero (an action std of 1.0) is the
+    # historical value and is byte-identical. Under a plastic rule the
+    # parameter never trains, so this is the noise the arm explores with for
+    # its whole run; under the gradient rule it trains from here. Ignored in
+    # discrete mode; rejected below when the state-dependent std head is
+    # selected, since that head computes its log-std from the hidden state.
+    initial_log_std: float = 0.0
+
     # ── Paired-control freeze ────────────────────────────────
     # Run everything -- rollouts, telemetry, bookkeeping -- but never write
     # a weight. Honoured by every rule on every brain that inherits this, so
@@ -111,6 +128,14 @@ class PlasticityConfigMixin(BaseModel):
                 "enable_activity_traces=true: the update is proportional to the "
                 "eligibility trace, so without one every weight update would be "
                 "identically zero."
+            )
+            raise ValueError(msg)
+        std_mode = getattr(self, "continuous_std_mode", "state_independent")
+        if self.initial_log_std != 0.0 and std_mode == "state_dependent":
+            msg = (
+                "initial_log_std has no effect under the state-dependent std head, whose "
+                "log-std is a function of the hidden state; a non-zero value would silently "
+                "do nothing."
             )
             raise ValueError(msg)
         return self

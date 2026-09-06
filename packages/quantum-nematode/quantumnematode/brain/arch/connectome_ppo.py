@@ -271,6 +271,7 @@ class ConnectomeTopology(nn.Module):
         state_dependent_std: bool = False,
         enable_activity_traces: bool = False,
         trace_decay: float = 0.9,
+        initial_log_std: float = 0.0,
     ) -> None:
         super().__init__()
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
@@ -450,7 +451,11 @@ class ConnectomeTopology(nn.Module):
         # parameter stream is unaffected by the mode.
         self.state_dependent_std = continuous and state_dependent_std
         if continuous and not self.state_dependent_std:
-            self.log_std = nn.Parameter(torch.zeros(CONTINUOUS_ACTION_DIM, device=device))
+            # torch.full with 0.0 is bit-identical to the zeros this started as;
+            # neither branch consumes RNG.
+            self.log_std = nn.Parameter(
+                torch.full((CONTINUOUS_ACTION_DIM,), initial_log_std, device=device),
+            )
         if self.state_dependent_std:
             self.log_std_head = StateDependentLogStdHead(_N_ACTIONS, device=device)
 
@@ -660,6 +665,11 @@ class ConnectomeTopology(nn.Module):
     def plastic_masks(self) -> list[torch.Tensor]:
         """The chemical edge mask aligned with ``plastic_weights``."""
         return [self.m_chem]
+
+    @property
+    def plastic_fan_in_axes(self) -> list[int]:
+        """The chemical matrix is ``[pre, post]``: a neuron's incoming synapses are a column."""
+        return [0]
 
     def set_anatomical_readout(self) -> None:
         """Overwrite the motor readout with the contrast its pools imply.
@@ -1192,6 +1202,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             state_dependent_std=(config.continuous_std_mode == "state_dependent"),
             enable_activity_traces=config.enable_activity_traces,
             trace_decay=config.trace_decay,
+            initial_log_std=config.initial_log_std,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -1245,6 +1256,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
+                homeostasis=config.plasticity_homeostasis,
                 scaling=ScalingOptions(
                     normalise_modulator=config.plasticity_normalise_modulator,
                     normalise_trace=config.plasticity_normalise_trace,
