@@ -268,6 +268,41 @@ class TestHomeostasis:
         _step(rule, reward=3.0)
         assert torch.allclose(topo.w_chem, before, atol=1e-6)
 
+    def test_sub_floor_norm_is_restored_by_its_actual_norm(self) -> None:
+        """A tiny but non-zero incoming vector is scaled back to its target, not to a fraction."""
+        topo = _seeded_connectome_topology()
+        rule = _rule(topo)
+        with torch.no_grad():
+            topo.activity_traces.zero_()  # no update: only the rescale acts
+            unit = int((topo.m_chem.sum(dim=0) > 0).nonzero()[0])
+            topo.w_chem[:, unit] *= 1e-9  # well below the running-scale floor
+        _step(rule, reward=0.0)
+        after = _incoming_norms(topo.w_chem, topo.m_chem, 0)
+        assert after[unit].item() == pytest.approx(rule.norm_targets[0][unit].item(), rel=1e-4)
+
+    def test_all_zero_incoming_vector_is_left_alone(self) -> None:
+        """There is no direction to scale along, and none is invented."""
+        topo = _seeded_connectome_topology()
+        rule = _rule(topo)
+        with torch.no_grad():
+            topo.activity_traces.zero_()
+            unit = int((topo.m_chem.sum(dim=0) > 0).nonzero()[0])
+            topo.w_chem[:, unit] = 0.0
+        _step(rule, reward=0.0)
+        assert torch.all(topo.w_chem[:, unit] == 0.0)
+        assert torch.isfinite(topo.w_chem).all()
+
+    def test_drift_pools_every_unit_across_tensors(self) -> None:
+        """Sixteen drifted units out of thirty-four give 16/34, not a mean of per-layer means."""
+        topo = _mlp_topology()
+        rule = _rule(topo, freeze_updates=True)  # report the drift of the weights as they are
+        with torch.no_grad():
+            topo.plastic_weights[0].mul_(2.0)  # 16 units at drift 1.0; the other 18 at 0
+        report = _step(rule, reward=0.0)
+        units = sum(int(t.numel()) for t in rule.norm_targets)
+        assert units == 34
+        assert report.extra[NORM_DRIFT_KEY] == pytest.approx(16.0 / 34.0)
+
     def test_freeze_writes_nothing_and_still_reports(self) -> None:
         topo = _seeded_connectome_topology()
         before = topo.w_chem.detach().clone()

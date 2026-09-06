@@ -189,6 +189,14 @@ def _incoming_norms(weight: torch.Tensor, mask: torch.Tensor, axis: int) -> torc
     return (weight.detach() * mask.to(weight.dtype)).norm(dim=axis)
 
 
+def _pooled_drift(drifts: list[tuple[float, int]]) -> float:
+    """Pool per-tensor (sum, count) drifts into one mean over every unit; NaN if none."""
+    total = sum(count for _, count in drifts)
+    if total == 0:
+        return math.nan
+    return sum(value for value, _ in drifts) / total
+
+
 class ThreeFactorRule:
     """Reward-modulated Hebbian plasticity on whatever a topology declares plastic.
 
@@ -303,25 +311,38 @@ class ThreeFactorRule:
         """Per plastic tensor, each unit's target incoming norm (empty when homeostasis is off)."""
         return self._norm_targets
 
-    def _norm_drift(self, index: int, weight: torch.Tensor, mask: torch.Tensor) -> float:
-        """Mean relative deviation of the units' incoming norms from their targets."""
+    def _norm_drift(
+        self,
+        index: int,
+        weight: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> tuple[float, int]:
+        """Return the summed relative norm deviation and the count of units with a target.
+
+        Returned as a sum and a count rather than a mean so the telemetry pools every unit
+        across tensors equally: a mean of per-tensor means would let a two-unit output layer
+        weigh as much as a sixty-four-unit hidden layer.
+        """
         target = self._norm_targets[index]
         has_target = target > 0
-        if not bool(has_target.any()):
-            return 0.0
+        count = int(has_target.sum().item())
+        if count == 0:
+            return 0.0, 0
         norms = _incoming_norms(weight, mask, self._fan_in_axes[index])
-        return float((norms[has_target] / target[has_target] - 1.0).abs().mean().item())
+        return float((norms[has_target] / target[has_target] - 1.0).abs().sum().item()), count
 
     def _rescale_incoming(self, index: int, weight: torch.Tensor, mask: torch.Tensor) -> None:
         """Return each unit's incoming norm to its target, touching masked entries only."""
         axis = self._fan_in_axes[index]
         target = self._norm_targets[index]
         norms = _incoming_norms(weight, mask, axis)
-        factor = torch.where(
-            target > 0,
-            target / norms.clamp_min(self.scaling.scale_floor),
-            torch.ones_like(norms),
-        )
+        # Divide by the actual norm whenever there is one, however small, so the
+        # target is restored exactly. A unit whose incoming weights are all zero
+        # has no direction to scale along; inventing one would write weights no
+        # learning update produced, so it is left as it is.
+        restorable = (target > 0) & (norms > 0)
+        safe_norms = torch.where(restorable, norms, torch.ones_like(norms))
+        factor = torch.where(restorable, target / safe_norms, torch.ones_like(norms))
         # Broadcast the per-unit factor along the fan-in axis, and apply it on
         # the edge set only: off-edge entries are multiplied by exactly one.
         factor = factor.unsqueeze(axis)
@@ -431,7 +452,7 @@ class ThreeFactorRule:
             # function — defeating the one telemetry meant to detect exactly
             # that.
             befores = [w.detach().clone() for w in weights]
-            drifts: list[float] = []
+            drifts: list[tuple[float, int]] = []
 
             if not self.freeze_updates:
                 for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
@@ -502,7 +523,7 @@ class ThreeFactorRule:
                 MODULATOR_SCALE_KEY: modulator_scale,
                 MODULATOR_CENTRE_KEY: modulator_centre,
                 TRACE_SCALE_KEY: trace_scale,
-                NORM_DRIFT_KEY: (sum(drifts) / len(drifts)) if drifts else math.nan,
+                NORM_DRIFT_KEY: _pooled_drift(drifts),
             },
         )
 

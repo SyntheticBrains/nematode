@@ -7,7 +7,7 @@ through the plasticity configuration mixin. When on, the rule SHALL capture at c
 every unit of every plastic tensor, the norm of that unit's incoming plastic weights over the
 tensor's masked entries, and after each plastic update SHALL rescale each unit's incoming weights over the masked
 entries only — off-edge entries SHALL never be written — so that their norm returns to that
-target, dividing by the current norm floored at the configured scale floor; units with a zero target SHALL be left untouched; the magnitude clamp
+target, dividing by the unit's current norm; a unit with a zero target, or whose incoming weights are all zero (no direction to scale along), SHALL be left untouched; the magnitude clamp
 SHALL be applied after the rescale. Nothing SHALL be rescaled under a freeze. The rule SHALL obtain each
 tensor's fan-in axis from the plastic-topology seam and SHALL NOT name any substrate's layout.
 The decay term SHALL remain in place; under homeostasis its uniform shrink is undone by the
@@ -32,6 +32,8 @@ rule SHALL be bit-identical to the rule without this requirement.
 - **WHEN** a unit has no incoming edges
 - **THEN** its (zero) incoming weights SHALL be unchanged
 - **AND** no weight SHALL exceed the magnitude bound after the rescale
+- **AND** a unit whose norm is positive but tiny SHALL be restored to its target by its actual norm
+- **AND** a unit whose incoming weights are all zero SHALL be left at zero
 
 #### Scenario: Homeostasis off is bit-identical and a freeze rescales nothing
 
