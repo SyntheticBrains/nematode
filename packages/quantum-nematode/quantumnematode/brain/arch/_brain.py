@@ -129,6 +129,28 @@ class BrainHistoryData(BaseModel):
             "change (populated only under a three-factor learning rule)"
         ),
     )
+    plasticity_modulator: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Effective third factor applied by each plasticity update: the raw or "
+            "normalised prediction error, or 1.0 in unmodulated mode "
+            "(populated only under a three-factor learning rule)"
+        ),
+    )
+    plasticity_modulator_scale: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Running RMS of the prediction error the modulator is normalised by "
+            "(NaN when modulator normalisation is off)"
+        ),
+    )
+    plasticity_trace_scale: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Mean over plastic tensors of the running RMS of the eligibility trace the "
+            "Hebbian term is normalised by (NaN when trace normalisation is off)"
+        ),
+    )
     probabilities: list[float] = Field(
         default_factory=list,
         description="Probabilities of actions taken by the agent",

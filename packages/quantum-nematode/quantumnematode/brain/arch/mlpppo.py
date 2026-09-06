@@ -341,7 +341,10 @@ class MLPPPOBrain(ClassicalBrain):
             # Lazy: brain/arch/__init__ imports this module at package load,
             # and learning_rules imports brain.arch leaves, so a module-level
             # import here would cycle. Cached after the first call.
-            from quantumnematode.learning_rules.three_factor import ThreeFactorRule
+            from quantumnematode.learning_rules.three_factor import (
+                ScalingOptions,
+                ThreeFactorRule,
+            )
 
             self._rule = ThreeFactorRule(
                 self.topology,
@@ -351,6 +354,12 @@ class MLPPPOBrain(ClassicalBrain):
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
+                scaling=ScalingOptions(
+                    normalise_modulator=config.plasticity_normalise_modulator,
+                    normalise_trace=config.plasticity_normalise_trace,
+                    scale_rate=config.plasticity_scale_rate,
+                    scale_floor=config.plasticity_scale_floor,
+                ),
                 device=self.device,
             )
 

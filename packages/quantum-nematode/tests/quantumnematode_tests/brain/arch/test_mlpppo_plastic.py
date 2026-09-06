@@ -11,7 +11,7 @@ machinery genuinely dormant rather than stubbed.
 from __future__ import annotations
 
 import copy
-from typing import Literal
+from typing import Any, Literal
 
 import pytest
 import torch
@@ -243,7 +243,7 @@ class TestMatchedUpdateAcrossSubstrates:
             ),
             device=DeviceType.CPU,
         )
-        hyper = {
+        hyper: dict[str, Any] = {
             "plasticity_rate": 0.05,
             "weight_decay": 0.0,
             "weight_bound": 10.0,

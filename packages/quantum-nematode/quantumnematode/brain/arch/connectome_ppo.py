@@ -1234,6 +1234,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         else:
             from quantumnematode.learning_rules.three_factor import (
                 ConnectomeThreeFactorRule,
+                ScalingOptions,
             )
 
             self._rule = ConnectomeThreeFactorRule(
@@ -1244,6 +1245,12 @@ class ConnectomePPOBrain(ClassicalBrain):
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
+                scaling=ScalingOptions(
+                    normalise_modulator=config.plasticity_normalise_modulator,
+                    normalise_trace=config.plasticity_normalise_trace,
+                    scale_rate=config.plasticity_scale_rate,
+                    scale_floor=config.plasticity_scale_floor,
+                ),
                 device=self.device,
             )
             # The PPO rule is discarded rather than retained: keeping it
