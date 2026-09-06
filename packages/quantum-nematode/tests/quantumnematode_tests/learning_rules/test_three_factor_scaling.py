@@ -30,6 +30,7 @@ from quantumnematode.brain.arch.mlpppo import MLPPPOBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.learning_rules import ScalingOptions, ThreeFactorRule
 from quantumnematode.learning_rules.three_factor import (
+    MODULATOR_CENTRE_KEY,
     MODULATOR_KEY,
     MODULATOR_SCALE_KEY,
     PREDICTION_ERROR_KEY,
@@ -116,6 +117,16 @@ def _corrected_rms(observations: list[float], rate: float) -> float:
     return math.sqrt(ema / (1.0 - (1.0 - rate) ** len(observations)))
 
 
+def _corrected_mean(observations: list[float], rate: float) -> float:
+    """Compute an independent bias-corrected running mean from a zero prior."""
+    if not observations:
+        return 0.0
+    ema = 0.0
+    for value in observations:
+        ema = (1.0 - rate) * ema + rate * value
+    return ema / (1.0 - (1.0 - rate) ** len(observations))
+
+
 def _masked_rms(trace: torch.Tensor, mask: torch.Tensor) -> float:
     return float(trace[mask.to(torch.bool)].square().mean().sqrt().item())
 
@@ -155,6 +166,8 @@ class TestDefaultsAreOff:
         report = _step(rule, 1.5)
         assert math.isnan(report.extra[MODULATOR_SCALE_KEY])
         assert math.isnan(report.extra[TRACE_SCALE_KEY])
+        assert math.isnan(report.extra[MODULATOR_CENTRE_KEY])
+        assert rule.modulator_centre.count == 0
         assert report.extra[MODULATOR_KEY] == report.extra[PREDICTION_ERROR_KEY]
         assert rule.modulator_scale.count == 0
         assert all(scale.count == 0 for scale in rule.trace_scales)
@@ -167,10 +180,12 @@ class TestBoundedModulator:
         assert report.extra[PREDICTION_ERROR_KEY] == -10.0
         assert report.extra[MODULATOR_SCALE_KEY] == pytest.approx(10.0)
         assert report.extra[MODULATOR_KEY] == pytest.approx(math.tanh(-1.0))
+        assert report.extra[MODULATOR_CENTRE_KEY] == 0.0  # zero prior: the first step is uncentred
 
     def test_modulator_is_tanh_of_delta_over_the_pre_update_scale(self) -> None:
         rewards = [0.05, -0.02, -10.0, 0.04, 0.5]
         rule = _rule(_topology(), scaling=_scaling(normalise_modulator=True))
+        compressed: list[float] = []
         for index, reward in enumerate(rewards):
             report = _step(rule, reward)
             expected_scale = (
@@ -178,14 +193,19 @@ class TestBoundedModulator:
             )
             expected_scale = max(expected_scale, _FLOOR)
             assert report.extra[MODULATOR_SCALE_KEY] == pytest.approx(expected_scale)
-            assert report.extra[MODULATOR_KEY] == pytest.approx(math.tanh(reward / expected_scale))
-            assert -1.0 <= report.extra[MODULATOR_KEY] <= 1.0
+            compressed.append(math.tanh(reward / expected_scale))
+            expected_centre = _corrected_mean(compressed[:-1], _RATE)
+            assert report.extra[MODULATOR_CENTRE_KEY] == pytest.approx(expected_centre)
+            assert report.extra[MODULATOR_KEY] == pytest.approx(compressed[-1] - expected_centre)
+            assert -2.0 <= report.extra[MODULATOR_KEY] <= 2.0
 
     def test_modulator_is_bounded_however_large_the_error(self) -> None:
         rule = _rule(_topology(), scaling=_scaling(normalise_modulator=True))
         _step(rule, 0.01)
         report = _step(rule, -1e6)
-        assert report.extra[MODULATOR_KEY] == pytest.approx(-1.0)
+        # Compressed to -1, then centred by the first step's tanh(1).
+        assert report.extra[MODULATOR_KEY] == pytest.approx(-1.0 - math.tanh(1.0))
+        assert -2.0 <= report.extra[MODULATOR_KEY] <= 2.0
 
     def test_floor_applies_to_a_zero_first_error(self) -> None:
         rule = _rule(_topology(), scaling=_scaling(normalise_modulator=True))
@@ -198,6 +218,70 @@ class TestBoundedModulator:
         report = _step(rule, 2.0)
         assert report.extra[PREDICTION_ERROR_KEY] == 2.0
         assert rule.baseline == pytest.approx(1.0)
+
+
+class TestCentring:
+    """The centred modulator is zero-mean where the bare compression is not."""
+
+    _PERIOD = 203
+    _FOODS = 3
+    _RATE_SLOW = 0.01
+
+    def _period(self) -> list[float]:
+        # Three +2 foods, one -10 death, and small steps sized so the raw period sums to zero.
+        small = (10.0 - 2.0 * self._FOODS) / (self._PERIOD - self._FOODS - 1)
+        rewards = [small] * self._PERIOD
+        for position in (40, 110, 170):
+            rewards[position] = 2.0
+        rewards[self._PERIOD - 1] = -10.0
+        assert abs(sum(rewards)) < 1e-9
+        return rewards
+
+    def test_zero_mean_on_a_periodic_skewed_stream(self) -> None:
+        rule = _rule(
+            _topology(),
+            freeze_updates=True,  # the modulator is what is under test; skip the weight writes
+            scaling=_scaling(normalise_modulator=True, scale_rate=self._RATE_SLOW),
+        )
+        period = self._period()
+        warm_up, measured = 30, 10
+        for _ in range(warm_up):
+            for reward in period:
+                _step(rule, reward)
+        centred, uncentred = [], []
+        for _ in range(measured):
+            for reward in period:
+                report = _step(rule, reward)
+                centred.append(report.extra[MODULATOR_KEY])
+                uncentred.append(report.extra[MODULATOR_KEY] + report.extra[MODULATOR_CENTRE_KEY])
+        assert abs(sum(centred) / len(centred)) < 0.005
+        assert abs(sum(uncentred) / len(uncentred)) > 0.005  # the centring is load-bearing
+        assert sum(uncentred) > 0  # and the bias is the positive drift the probe showed
+
+    def test_frozen_arm_advances_the_centre(self) -> None:
+        topo = _topology()
+        before = topo.w_chem.detach().clone()
+        rule = _rule(topo, freeze_updates=True, scaling=_scaling(normalise_modulator=True))
+        _step(rule, 1.0)
+        report = _step(rule, 2.0)
+        assert torch.equal(topo.w_chem, before)
+        assert rule.modulator_centre.count == 2
+        assert report.extra[MODULATOR_CENTRE_KEY] == pytest.approx(math.tanh(1.0))
+
+    def test_unmodulated_arm_reports_the_centre_but_uses_one(self) -> None:
+        rule = _rule(_topology(), modulated=False, scaling=_scaling(normalise_modulator=True))
+        _step(rule, 1.0)
+        report = _step(rule, -3.0)
+        assert report.extra[MODULATOR_KEY] == 1.0
+        assert report.extra[MODULATOR_CENTRE_KEY] == pytest.approx(math.tanh(1.0))
+        assert rule.modulator_centre.count == 2
+
+    def test_centre_is_recorded(self) -> None:
+        rule = _rule(_topology(), scaling=_scaling(normalise_modulator=True))
+        report = _step(rule, 0.3)
+        history = BrainHistoryData()
+        record_plasticity_report(history, report, reward=0.3)
+        assert history.plasticity_modulator_centre == [report.extra[MODULATOR_CENTRE_KEY]]
 
 
 class TestTraceNormalisation:
