@@ -60,6 +60,10 @@ _PLASTICITY_FIELDS = (
     "trace_decay",
     "freeze_updates",
     "chemical_mask_mode",
+    "plasticity_normalise_modulator",
+    "plasticity_normalise_trace",
+    "plasticity_scale_rate",
+    "plasticity_scale_floor",
 )
 
 

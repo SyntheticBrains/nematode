@@ -1,4 +1,4 @@
-"""The plastic arm config differs from its PPO parent by exactly two keys.
+"""The plastic arm config differs from its PPO parent by exactly the rule keys.
 
 The panel's arms are only comparable if they differ where they claim to and
 nowhere else. This pins that for the plastic wild-type arm: any environment,
@@ -28,9 +28,13 @@ _PARENT = _VARIANT.with_name(_VARIANT.name.replace("_plastic", ""))
 _FROZEN = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_frozen.yml"))
 _HEBBIAN = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_hebbian.yml"))
 
+# The rule, the trace it reads, and the two scaling switches every panel arm
+# runs with. The floors and the rewired arms inherit all four from this arm.
 _EXPECTED_ADDED = {
     "brain.config.learning_rule",
     "brain.config.enable_activity_traces",
+    "brain.config.plasticity_normalise_modulator",
+    "brain.config.plasticity_normalise_trace",
 }
 
 
@@ -44,7 +48,7 @@ def _flatten(data: object, prefix: str = "") -> dict[str, object]:
 
 
 class TestPlasticVariantIsAMinimalDelta:
-    """Exactly the rule selection and the trace it reads."""
+    """Exactly the rule selection, the trace it reads, and the two scaling switches."""
 
     def test_only_the_rule_keys_differ(self) -> None:
         parent = _flatten(yaml.safe_load(_PARENT.read_text()))
@@ -65,6 +69,8 @@ class TestPlasticVariantIsAMinimalDelta:
         assert isinstance(brain_config, ConnectomePPOBrainConfig)
         assert brain_config.learning_rule == "three_factor"
         assert brain_config.enable_activity_traces is True
+        assert brain_config.plasticity_normalise_modulator is True
+        assert brain_config.plasticity_normalise_trace is True
 
     def test_parent_is_unchanged(self) -> None:
         """The PPO record the plastic arm derives from stays on the PPO rule."""

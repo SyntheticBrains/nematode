@@ -45,6 +45,13 @@ brain:
     # proportional to them, so the pairing is validated at load time.
     learning_rule: three_factor
     enable_activity_traces: true
+    # Substrate-invariant scaling, on for every panel arm: the third factor
+    # is tanh(delta / sigma) with sigma a running RMS of the prediction error,
+    # and each plastic tensor's Hebbian term is divided by rho, a running RMS
+    # of its trace over its edge set. The rate then means the same
+    # root-mean-square step per unit modulator on every arm.
+    plasticity_normalise_modulator: true
+    plasticity_normalise_trace: true
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
