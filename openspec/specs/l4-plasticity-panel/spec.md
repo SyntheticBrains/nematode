@@ -2,7 +2,18 @@
 
 ## Purpose
 
-TBD - created by archiving change add-l4-panel. Update Purpose after archive.
+This capability is the pre-registered protocol of the L4 panel: the experiment that asks whether the
+wild-type *C. elegans* wiring is load-bearing under a biologically plausible three-factor learning
+rule, by comparing the plastic wild-type connectome against its plastic degree-preserving rewired-null
+on paired seeds, with frozen-weights and unmodulated-Hebbian sanity floors on both wirings and a
+matched-rule MLP as the ranking yardstick.
+
+Its value is the order of operations it fixes. The arms, seeds, ranked metric, confirmatory family,
+band test and verdict map are registered before any panel data exist; a pilot on disjoint seeds pins
+the recipe and the budget by rules stated in advance; a launch record is committed before the panel
+runs; one extension and one sensitivity pass are defined and bounded. The harness that computes the
+result reuses the project's committed plateau-tail metric and paired-seed statistics layer, and every
+artefact the logbook cites is promoted to the supporting directory.
 
 ## Requirements
 
