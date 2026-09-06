@@ -6,7 +6,8 @@
   topology at construction.
 - [ ] 1.2 `MLPTopology` builds its plastic list from the setting: every `Linear` under `all`, every
   `Linear` but the last under `hidden`; masks, traces and fan-in axes follow the list; the forward
-  runs the whole actor and credits eligibility to plastic layers only.
+  runs the whole actor and credits eligibility to plastic layers only; the `layers` property and its
+  docstring say it holds the plastic layers, which under `hidden` exclude the output layer.
 
 ## 2. Tests
 
@@ -20,7 +21,9 @@
 
 ## 3. Docs and close-out
 
-- [ ] 3.1 `docs/architectures.md` (MLP row); `CHANGELOG.md`.
+- [ ] 3.1 `docs/architectures.md`: the plasticity row's "every Linear weight is plastic including the
+  output layer — a deliberate asymmetry in the MLP's favour" is reworded to the selectable depth and
+  its reason; `configs/README.md`'s "every Linear weight plastic" likewise; `CHANGELOG.md`.
 - [ ] 3.2 Pre-commit gate on all files exit 0; full suite green.
 - [ ] 3.3 No implementation code or docstring references a planning document.
 - [ ] 3.4 Re-review for drift, archive, review the branch, open the PR.

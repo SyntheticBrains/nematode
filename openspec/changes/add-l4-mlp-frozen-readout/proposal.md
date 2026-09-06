@@ -38,13 +38,15 @@ existing build is byte-identical.
   eligibility only to the plastic layers.
 - Tests on both settings; docs.
 
-Out of scope: the panel's registration (its MLP config sets `hidden` at the panel's pin step by
-dated amendment and the foraging probe is re-run there), any change to the rule, the connectome,
+Out of scope: the panel's registration (its MLP config sets `hidden` by a further dated amendment,
+the pin having already been made, and the foraging probe is re-run there), any change to the rule, the connectome,
 or the PPO path (which trains every layer regardless of this option).
 
 ## Capabilities
 
-**Modified**: `brain-architecture` — the MLP brain gains a selectable plastic depth.
+**Modified**: `brain-architecture` — the requirement that fixed the MLP's plastic set as every
+linear weight is modified to select it by `plastic_layers`, every existing scenario keeping its
+name; the all-layers asymmetry statement is retracted with its reason.
 
 ## Impact
 

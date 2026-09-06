@@ -48,8 +48,10 @@ to `actor(features)`; only the crediting loop skips the non-plastic layer.
 Both arms then learn a recurrent or feedforward body under a fixed linear decoder that was set
 at construction: anatomical on the connectome, a random orthogonal draw on the MLP. The
 comparison is "same rule, same hyperparameters, same structure of what is plastic", which is what
-the ranking test needs. The MLP's decoder being random rather than anatomical is the residual
-asymmetry, and it now favours neither arm in a way the rule can exploit.
+the ranking test needs. The MLP's decoder being a random full-rank draw rather than an anatomical
+pooling is the residual asymmetry. Its direction is not established — a full-rank decoder can
+read any hidden pattern, an anatomical one only its motor pools — so it is stated and left
+untested rather than claimed to be neutral.
 
 ### D3. Byte-identity and the seam
 
