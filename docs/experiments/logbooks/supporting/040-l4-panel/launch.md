@@ -32,4 +32,8 @@ uv run python scripts/run_campaign.py \
   rule even with its readout frozen; it runs as registered and is read as a finding.
 - **Analysis**: `uv run python scripts/analysis/l4_panel.py --campaign-dir campaigns/l4-panel --out docs/experiments/logbooks/supporting/040-l4-panel/panel.json --csv .../per-seed.csv --curves .../curves.csv`; the confirmatory family, the band test and the verdict map are the
   ones fixed in that script and in the registration.
-- **Extensions applied**: none at launch (recorded here if any seed is extended).
+- **Extensions applied**: one. `wt_plastic` seed 3 was still climbing at 3000 (no plateau detected) and
+  received the single registered extension: a fresh run at 4500 episodes (`campaigns/l4-panel-ext`,
+  its 3000-episode log kept beside it as `*.3000-episodes.log`), which converged with a 28.4%
+  plateau tail against 29.3% on the shorter run; its log replaces the shorter one in the manifest.
+  No other seed was extended. The verdict was not `robustness`, so no sensitivity pass was run.

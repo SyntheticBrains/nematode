@@ -437,7 +437,7 @@ def write_per_seed_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> N
         "peak_action_density",
     ]
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for arm in ARM_KEYS:
             for seed, record in sorted(panel.get(arm, {}).items()):
@@ -448,7 +448,7 @@ def write_per_seed_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> N
 def write_curves_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> None:
     """Write the per-seed learning curves, one row per window."""
     with path.open("w", newline="") as handle:
-        writer = csv.writer(handle)
+        writer = csv.writer(handle, lineterminator="\n")
         writer.writerow(["arm", "seed", "window_end", "success"])
         for arm in ARM_KEYS:
             for seed, record in sorted(panel.get(arm, {}).items()):

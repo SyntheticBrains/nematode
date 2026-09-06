@@ -54,19 +54,19 @@
 
 ## 5. The panel
 
-- [ ] 5.1 Launch seven arms × seeds 1–8 through `run_campaign.py` at the pinned budget with
+- [x] 5.1 Launch seven arms × seeds 1–8 through `run_campaign.py` at the pinned budget with (56/56; wt_plastic seed 3 extended to 4500, converged)
   `--track-experiment`; apply the single pre-registered extension to any still-climbing seed.
-- [ ] 5.2 Analyse with `l4_panel.py`; promote `panel.json`, `per-seed.csv`, `curves.csv`, the
+- [x] 5.2 Analyse with `l4_panel.py`; promote `panel.json`, `per-seed.csv`, `curves.csv`, the
   manifest and a short `details.md` into the supporting directory.
-- [ ] 5.3 If the verdict is `robustness`: run the one pre-registered sensitivity pass (primary pair,
+- [x] 5.3 If the verdict is `robustness`: run the one pre-registered sensitivity pass (primary pair, (verdict sanity_floor_fail: not triggered)
   the two unselected rates, panel seeds) and report it descriptively; otherwise record that it
   was not triggered.
 
 ## 6. Close-out
 
-- [ ] 6.1 `configs/README.md`, `docs/architectures.md`, `CHANGELOG.md`; tracker A.7 ticked with the
+- [x] 6.1 `configs/README.md`, `docs/architectures.md`, `CHANGELOG.md`; tracker A.7 ticked with the
   verdict named and "Next: A.8 the logbook"; AGENTS.md gains the harness usage line.
-- [ ] 6.2 Pre-commit gate on all files exit 0; full suite green.
-- [ ] 6.3 No implementation code or docstring references a planning document.
-- [ ] 6.4 Re-review for drift (every scenario maps to a test or a committed artefact), archive,
+- [x] 6.2 Pre-commit gate on all files exit 0; full suite green. (4615 passed as CI runs it)
+- [x] 6.3 No implementation code or docstring references a planning document.
+- [x] 6.4 Re-review for drift (every scenario maps to a test or a committed artefact), archive, (all fifteen scenarios map to a test or a committed artefact)
   review the branch, open the PR.

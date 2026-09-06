@@ -455,6 +455,59 @@ class TestAnalysePilot:
         assert "not a pilot seed" in capsys.readouterr().out
 
 
+# --- the sensitivity pass ---------------------------------------------------------------
+
+
+def test_sensitivity_pass_is_descriptive_and_cannot_change_the_verdict(tmp_path: Path) -> None:
+    """A second campaign at another rate is reported beside the verdict, never folded into it."""
+    panel = tmp_path / "panel" / "logs"
+    other = tmp_path / "other" / "logs"
+    panel.mkdir(parents=True)
+    other.mkdir(parents=True)
+    for seed in lp.PANEL_SEEDS:
+        for arm in (
+            "wt_plastic",
+            "rn_plastic",
+            "wt_frozen",
+            "wt_hebbian",
+            "rn_frozen",
+            "mlp_plastic",
+        ):
+            stem = lp.STEM_OF[arm]
+            # A robustness-shaped panel: floors cleared, the primary contrast null.
+            wins = {"wt_plastic": 20, "rn_plastic": 20, "wt_frozen": 2, "wt_hebbian": 4}.get(arm, 1)
+            _log(panel / f"{stem}-seed{seed}.log", ["FAILED"] * (40 - wins) + ["SUCCESS"] * wins)
+            if arm in ("wt_plastic", "rn_plastic"):
+                # At the other rate the wild-type arm clearly wins: the verdict must not move.
+                wins_other = 30 if arm == "wt_plastic" else 5
+                _log(
+                    other / f"{stem}-seed{seed}.log",
+                    ["FAILED"] * (40 - wins_other) + ["SUCCESS"] * wins_other,
+                )
+    out = tmp_path / "panel.json"
+    code = lp.main(
+        [
+            "--campaign-dir",
+            str(tmp_path / "panel"),
+            "--experiments-dir",
+            str(tmp_path / "experiments"),
+            "--sensitivity",
+            f"0.0003={tmp_path / 'other'}",
+            "--out",
+            str(out),
+        ],
+    )
+    assert code == 0
+    result = json.loads(out.read_text())
+    assert result["verdict"]["verdict"] == "robustness"
+    assert len(result["sensitivity"]) == 1
+    assert result["sensitivity"][0]["descriptive"] is True
+    assert result["sensitivity"][0]["rate"] == 0.0003
+    assert (
+        result["sensitivity"][0]["mean_delta"] > 0
+    )  # the other rate favoured wild-type and still changed nothing
+
+
 # --- exports ----------------------------------------------------------------------------
 
 
