@@ -1,0 +1,319 @@
+{
+  "grid": {
+    "0p0003": {
+      "wt_plastic": {
+        "mean": 14.466666666666665,
+        "per_seed": {
+          "101": 9.6,
+          "102": 19.333333333333332
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1136
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "wt_hebbian": {
+        "mean": 10.133333333333333,
+        "per_seed": {
+          "101": 0.0,
+          "102": 20.266666666666666
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "rn_hebbian": {
+        "mean": 29.0,
+        "per_seed": {
+          "101": 35.86666666666667,
+          "102": 22.133333333333333
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "rn_plastic": {
+        "mean": 8.933333333333332,
+        "per_seed": {
+          "101": 0.4,
+          "102": 17.466666666666665
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1200
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "mlp_plastic": {
+        "mean": 0.8666666666666666,
+        "per_seed": {
+          "101": 1.7333333333333332,
+          "102": 0.0
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      }
+    },
+    "0p001": {
+      "wt_plastic": {
+        "mean": 39.53333333333333,
+        "per_seed": {
+          "101": 42.0,
+          "102": 37.06666666666666
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1214
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "wt_hebbian": {
+        "mean": 10.8,
+        "per_seed": {
+          "101": 0.0,
+          "102": 21.6
+        },
+        "onsets": {
+          "101": 1,
+          "102": 2090
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "rn_hebbian": {
+        "mean": 28.333333333333336,
+        "per_seed": {
+          "101": 35.86666666666667,
+          "102": 20.8
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "rn_plastic": {
+        "mean": 9.333333333333332,
+        "per_seed": {
+          "101": 18.266666666666666,
+          "102": 0.4
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "mlp_plastic": {
+        "mean": 0.06666666666666667,
+        "per_seed": {
+          "101": 0.13333333333333333,
+          "102": 0.0
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      }
+    },
+    "0p003": {
+      "wt_plastic": {
+        "mean": 30.46666666666667,
+        "per_seed": {
+          "101": 50.13333333333333,
+          "102": 10.8
+        },
+        "onsets": {
+          "101": null,
+          "102": 1
+        },
+        "converged": 1,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "wt_hebbian": {
+        "mean": 10.266666666666667,
+        "per_seed": {
+          "101": 0.0,
+          "102": 20.533333333333335
+        },
+        "onsets": {
+          "101": 1,
+          "102": 2178
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "rn_hebbian": {
+        "mean": 27.799999999999997,
+        "per_seed": {
+          "101": 36.266666666666666,
+          "102": 19.333333333333332
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "rn_plastic": {
+        "mean": 4.8,
+        "per_seed": {
+          "101": 0.8,
+          "102": 8.799999999999999
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      },
+      "mlp_plastic": {
+        "mean": 0.26666666666666666,
+        "per_seed": {
+          "101": 0.13333333333333333,
+          "102": 0.4
+        },
+        "onsets": {
+          "101": 1,
+          "102": 1
+        },
+        "converged": 2,
+        "unknown_convergence": 0,
+        "episodes": {
+          "101": 3000,
+          "102": 3000
+        }
+      }
+    }
+  },
+  "floors": {
+    "wt_frozen": {
+      "mean": 2.8666666666666667,
+      "per_seed": {
+        "101": 2.4,
+        "102": 3.3333333333333335
+      },
+      "onsets": {
+        "101": 1,
+        "102": 1
+      },
+      "converged": 2,
+      "unknown_convergence": 0,
+      "episodes": {
+        "101": 3000,
+        "102": 3000
+      }
+    },
+    "rn_frozen": {
+      "mean": 3.8000000000000007,
+      "per_seed": {
+        "101": 7.466666666666668,
+        "102": 0.13333333333333333
+      },
+      "onsets": {
+        "101": 1,
+        "102": 1
+      },
+      "converged": 2,
+      "unknown_convergence": 0,
+      "episodes": {
+        "101": 3000,
+        "102": 3000
+      }
+    }
+  },
+  "pooled": {
+    "0p0003": 8.088888888888889,
+    "0p001": 16.311111111111114,
+    "0p003": 11.844444444444447
+  },
+  "selected_rate": 0.001,
+  "budget": 3000,
+  "budget_basis": {
+    "latest_onset": 2090,
+    "headroom": 1.25,
+    "step": 500,
+    "floor": 2000,
+    "pinned_at_extended_budget_for": []
+  },
+  "non_converged_three_factor_arms": [],
+  "action_required": [],
+  "pinned": false,
+  "pin_note": "selected_rate and budget are what the registered rules compute from these logs; they become the panel recipe only when pinned by dated amendment before launch"
+}

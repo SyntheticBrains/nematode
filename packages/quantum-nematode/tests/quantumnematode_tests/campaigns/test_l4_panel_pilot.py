@@ -48,7 +48,7 @@ class TestDerivedConfigs:
         arm: str,
     ) -> None:
         lp = pilot.l4_panel
-        derived = pilot.derive_config(arm, 0.003, tmp_path)
+        derived = pilot.derive_config(arm, 0.0003, tmp_path)
         parent = lp.CONFIG_DIR / f"{lp.STEM_OF[arm]}.yml"
         base = _flatten(yaml.safe_load(parent.read_text()))
         variant = _flatten(yaml.safe_load(derived.read_text()))
@@ -57,19 +57,19 @@ class TestDerivedConfigs:
         }
         assert touched == {"brain.config.plasticity_rate"}
         assert set(base) - set(variant) == set()
-        assert variant["brain.config.plasticity_rate"] == 0.003
-        assert derived.name == f"{lp.STEM_OF[arm]}__rate_0p003.yml"
+        assert variant["brain.config.plasticity_rate"] == 0.0003
+        assert derived.name == f"{lp.STEM_OF[arm]}__rate_0p0003.yml"
 
     def test_derived_config_loads(self, pilot: ModuleType, tmp_path: Path) -> None:
         from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrainConfig
         from quantumnematode.utils.config_loader import load_simulation_config
 
-        derived = pilot.derive_config("wt_plastic", 0.03, tmp_path)
+        derived = pilot.derive_config("wt_plastic", 0.003, tmp_path)
         config = load_simulation_config(str(derived))
         assert config.brain is not None
         brain_config = config.brain.config
         assert isinstance(brain_config, ConnectomePPOBrainConfig)
-        assert brain_config.plasticity_rate == 0.03
+        assert brain_config.plasticity_rate == 0.003
         assert brain_config.learning_rule == "three_factor"
 
 
@@ -92,9 +92,9 @@ class TestPlan:
         assert all(c.is_file() for c in configs)
 
     def test_only_and_rate_restrict_the_plan(self, pilot: ModuleType, tmp_path: Path) -> None:
-        configs = pilot.plan_configs(tmp_path, arms=("wt_plastic",), rates=(0.01,))
+        configs = pilot.plan_configs(tmp_path, arms=("wt_plastic",), rates=(0.001,))
         assert [c.name for c in configs] == [
-            "connectomeppo_small_continuous2d_combined_klinotaxis_plastic__rate_0p01.yml",
+            "connectomeppo_small_continuous2d_combined_klinotaxis_plastic__rate_0p001.yml",
         ]
 
     def test_campaign_argv_carries_seeds_budget_and_passthrough(
@@ -127,7 +127,7 @@ class TestPlan:
 
         monkeypatch.setattr(pilot.subprocess, "run", fake_run)
         code = pilot.main(
-            ["--out", str(tmp_path), "--only", "wt_plastic", "--rate", "0.01", "--dry-run"],
+            ["--out", str(tmp_path), "--only", "wt_plastic", "--rate", "0.001", "--dry-run"],
         )
         assert code == 0
         assert len(seen) == 1

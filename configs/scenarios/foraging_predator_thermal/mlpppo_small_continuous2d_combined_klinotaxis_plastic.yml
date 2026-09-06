@@ -1,6 +1,6 @@
 # Plastic C3 cell — MLPPPO under the three-factor rule: the matched-rule yardstick.
 #
-# Two-key delta from the PPO parent
+# Nine-key delta from the PPO parent
 # (mlpppo_small_continuous2d_combined_klinotaxis.yml): the actor's linear
 # layers are trained by reward-modulated Hebbian plasticity instead of by
 # gradient descent. Every environment, reward, satiety and sensing block is
@@ -51,6 +51,33 @@ brain:
     # update is proportional to them, so the pairing is validated at load.
     learning_rule: three_factor
     enable_activity_traces: true
+    # Substrate-invariant scaling, on for every panel arm: the third factor
+    # is tanh(delta / sigma) with sigma a running RMS of the prediction error,
+    # and each plastic tensor's Hebbian term is divided by rho, a running RMS
+    # of its trace over its edge set. The rate then means the same
+    # root-mean-square step per unit modulator on every arm.
+    plasticity_normalise_modulator: true
+    plasticity_normalise_trace: true
+    # Homeostatic incoming-norm scaling, on for every panel arm: after each
+    # update a unit's incoming plastic weights return to the norm they had at
+    # construction, so Hebbian positive feedback cannot run them onto the
+    # bound. The action noise every arm is frozen at (std ~0.37): a probe
+    # selected it by a rule stated in advance; std 1.0 capped every plastic
+    # arm near its floor, and std 0.22 rose and collapsed.
+    plasticity_homeostasis: true
+    initial_log_std: -1.0
+    # The panel recipe: selected by the pilot's pooled rule on the registered
+    # grid and pinned here explicitly, so the rate is visible in the file
+    # rather than inherited from a default. Every arm shares it.
+    plasticity_rate: 0.001
+    # Bounded hidden units, like the connectome's: under a local Hebbian rule
+    # unbounded ReLU units explode or die.
+    activation: tanh
+    # Frozen readout, like the connectome's anatomical one: a plastic output
+    # layer takes its own output as its post-synaptic factor and rotates into
+    # saturation under the rule (a frozen tanh MLP that foraged at 96%
+    # collapsed to zero within three episodes once its readout learned).
+    plastic_layers: hidden
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

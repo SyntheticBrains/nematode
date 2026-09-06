@@ -48,6 +48,26 @@ brain:
     # pairing is validated at load time.
     learning_rule: hebbian
     enable_activity_traces: true
+    # Substrate-invariant scaling, set on every panel arm for parity. On this
+    # unmodulated arm the third factor is 1, so modulator normalisation is
+    # inactive (the switch is carried, not used); trace normalisation applies:
+    # each plastic tensor's Hebbian term is divided by rho, a running RMS of
+    # its trace over its edge set, so the rate means the same root-mean-square
+    # step here as on the modulated arms.
+    plasticity_normalise_modulator: true
+    plasticity_normalise_trace: true
+    # Homeostatic incoming-norm scaling, on for every panel arm: after each
+    # update a unit's incoming plastic weights return to the norm they had at
+    # construction, so Hebbian positive feedback cannot run them onto the
+    # bound. The action noise every arm is frozen at (std ~0.37): a probe
+    # selected it by a rule stated in advance; std 1.0 capped every plastic
+    # arm near its floor, and std 0.22 rose and collapsed.
+    plasticity_homeostasis: true
+    initial_log_std: -1.0
+    # The panel recipe: selected by the pilot's pooled rule on the registered
+    # grid and pinned here explicitly, so the rate is visible in the file
+    # rather than inherited from a default. Every arm shares it.
+    plasticity_rate: 0.001
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

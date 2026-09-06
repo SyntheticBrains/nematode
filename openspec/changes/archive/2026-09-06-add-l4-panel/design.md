@@ -128,6 +128,7 @@ Evaluated in this order, from the family results:
 
 | verdict | condition | roadmap branch |
 |---|---|---|
+| `insufficient_seeds` | any of T1–T3 has fewer than two common seeds, or the floors and T1 pass but the band test has fewer than two | no branch; the panel was not run as registered |
 | `sanity_floor_fail` | T2 or T3 fails | "L4 plasticity fails to beat its baselines" |
 | `rewired_beats_wild_type` | floors pass; T1's CI lies entirely below zero | reported as its own outcome (034 precedent) |
 | `recovery` | floors pass; T1 passes; band test PASS | GO branch, D2 (i) and (ii) both met |
@@ -250,8 +251,97 @@ unchanged. D9 anticipated this branch ("the rule never leaves chance at any grid
 routed it to a new change rather than to a wider grid here; what the pilot added is that the
 defect is scale, not the rule's ability to learn.
 
+## Grid re-registration (amendment dated 2026-09-06)
+
+Between pilot 1 and this amendment the rule changed twice, each in its own pre-registered
+change: substrate-invariant scaling (a bounded modulator `tanh(δ / σ)` and a per-tensor trace
+normalisation `E / ρ`), then centring of the compressed modulator (`tanh(δ / σ) − c`) after the
+first probe with the switches on showed the uncentred form carries a positive mean on this
+cell's skewed reward stream and drives a reward-blind Hebbian drift — the connectome collapsed
+below its frozen floor and the MLP's activations exploded. Records:
+`supporting/040-l4-panel/probe-2-uncentred-normalisation.md` and
+`supporting/040-l4-panel/probe-3-centred-grid.md`.
+
+**What changes in the registration, and only this:**
+
+- Every arm config runs with both scaling switches on (`plasticity_normalise_modulator`,
+  `plasticity_normalise_trace`); the plastic wild-type arm is therefore a four-key delta from its
+  PPO parent, and every floor and rewired arm inherits all four. "One recipe, every arm" holds.
+- The pilot grid is `plasticity_rate ∈ {3e-4, 1e-3, 3e-3}` with ties to `1e-3`, in the
+  normalised units the rate now has (the root-mean-square Hebbian step per unit modulator).
+  Ratified with Chris over a lower grid `{1e-4, 3e-4, 1e-3}` and a higher one
+  `{1e-3, 3e-3, 1e-2}`: probe 3 shows both connectome wirings learning above the frozen floor at
+  every rate, with saturation appearing only at `3e-3` (14–17% of synapses on the bound by
+  episode 600), which is also the strongest learner at that horizon. The grid brackets it with a
+  rate that learns without touching the bound, and the pilot's 3000-episode plateau-tail selection
+  decides whether `3e-3` survives its saturation.
+
+Arms, panel seeds, pilot seeds, pilot budget, metric, tests, family, verdict map, band rule,
+extension rules and sensitivity pass are unchanged. One reading is recorded in advance: in
+probe 3 the MLP yardstick learns at no rate and its trace scale still grows (`1e2–1e5` from
+`0.01`), a property of a dense ReLU stack under a local Hebbian rule rather than an artefact. If
+that holds in the pilot, D2 test (ii) passes by construction, and the band test's stated
+asymmetry (D4) is what the logbook must say about it.
+
+## Robustness probes and their rules (amendment dated 2026-09-06, written before the probes ran)
+
+Pilot 2 ran on the re-registered grid and its rules selected `1e-3` and a budget of 2000, but the
+pin was withheld (record: `supporting/040-l4-panel/pilot-2-notes.md`): the plastic arms sat near
+their frozen floors while a fifth of the synapses were clamped on the bound, and the MLP yardstick
+exploded or died. Three defaults of our own rule and arms explained it and were fixed in the
+rule-robustness change: every plastic arm explored at action std 1.0 forever, the decay could not
+hold a coherent Hebbian drive, and the yardstick's ReLU units are unbounded. The mechanisms are
+default-off; the panel turns them on and chooses their values here, by the rules below, stated
+before any probe result was read.
+
+**Probe 4** (diagnostic, seed 101, 600 episodes, rate `1e-3`, both scaling switches on): every arm
+with `plasticity_homeostasis: true`, the MLP arm with `activation: tanh`, and `initial_log_std ∈ {0, −0.5, −1.0, −1.5}` on the three three-factor arms and both frozen floors (the floors move with
+the noise too, so the paired read must see them).
+
+- **Homeostasis is pinned on for every arm** by decision, not by the probe: it is the runaway
+  control the design adopted (rule-robustness D2). The probe confirms it by reading the
+  saturated fraction, expected near zero.
+- **The MLP arm is pinned to `tanh`** by decision, for the same reason (rule-robustness D3). The
+  probe reads its trace scale, expected bounded, and whether it learns at all.
+- **`initial_log_std` is selected by the probe**: the value maximising the pooled mean
+  plateau-tail success (final quarter of 600 episodes) of the three three-factor arms, the same
+  pooled principle the rate uses; ties go to the value nearest zero, the historical default. It is
+  written into all seven arm configs.
+
+Pilot 3 then runs the registered grid `{3e-4, 1e-3, 3e-3}` on seeds 101–102 with these values,
+and the pin of recipe and budget follows the registered rules unchanged. Arms, panel seeds,
+metric, tests, family, verdict map, band rule, extensions and sensitivity pass are unchanged.
+
 ## Pinned values (filled by dated amendment before launch)
 
-- **Recipe** (`plasticity_rate`): *pending the pilot.*
-- **Uniform budget** (episodes): *pending the pilot.*
-- **Pilot summary**: *pending* — `docs/experiments/logbooks/supporting/040-l4-panel/pilot.json`.
+- **Robustness values (pinned 2026-09-06 from probe 4,
+  `supporting/040-l4-panel/probe-4-robustness.md`)**: `plasticity_homeostasis: true` and
+  `initial_log_std: -1.0` on all seven arms (the pooled rule selected −1.0: pooled plateau-tail
+  35.1 against 7.8, 8.7 and 4.4 at 0, −0.5 and −1.5); `activation: tanh` on the MLP arm. The
+  plastic wild-type arm is therefore a six-key delta from its PPO parent and the MLP arm a
+  seven-key one; every floor and rewired arm inherits its parent's keys.
+- **Yardstick readout (further amendment dated 2026-09-06, from probe 5,
+  `supporting/040-l4-panel/probe-5-foraging-yardstick.md`)**: `plastic_layers: hidden` on the MLP
+  arm. Its plastic output layer, taking its own output as the post-synaptic factor, rotated into
+  saturation under the rule and destroyed a 96% foraging policy within three episodes; the arm now
+  learns its hidden weights under a frozen readout as the connectome does. The MLP arm is an
+  eight-key delta from its PPO parent. **Probe 6** (`supporting/040-l4-panel/probe-6-frozen-readout-yardstick.md`)
+  then showed the frozen readout necessary but not sufficient: the hidden layers alone collapse
+  the representation (every unit's Hebbian update points at the same few active inputs) and the
+  96% frozen policy is gone within a hundred episodes. Readout, activation, noise, runaway control
+  and modulator have each been examined; what remains is the rule meeting a dense substrate.
+  **Ratified with Chris (2026-09-06):** the MLP arm enters the panel as registered, with the frozen
+  readout; its plateau is expected at chance; test (ii) passes by construction and the logbook
+  reads the yardstick as a finding about local rules on dense stacks, structure-function claims
+  resting on T1 and T4. A **sparse random MLP** (masked to the connectome's density under the
+  same rule) is the pre-registered follow-up after this panel, not an arm of it. The harness
+  gains one descriptive per-seed column, `peak_action_density` (the peak tracked action density
+  from the run's export), so a collapsed representation — actions pinned at the squash limits —
+  is visible per arm in the panel's own data; it is reported, never tested.
+- **Recipe** (`plasticity_rate`): **`0.001`**, pinned 2026-09-06 from pilot 3 by the registered
+  pooled rule (pooled plateau-tail 16.3 against 8.1 at 3e-4 and 11.8 at 3e-3), written into all
+  seven arm configs. Record: `supporting/040-l4-panel/pilot-3-notes.md`, summary `pilot.json`.
+- **Uniform budget** (episodes): **3000**, pinned 2026-09-06 by the registered rule (latest
+  converged onset at the selected rate 2090, × 1.25 = 2612, rounded up to the next 500). The
+  single pre-registered extension for a seed still climbing at 3000 is a fresh run at 4500.
+- **Pilot summary**: `docs/experiments/logbooks/supporting/040-l4-panel/pilot.json` (pilot 3).

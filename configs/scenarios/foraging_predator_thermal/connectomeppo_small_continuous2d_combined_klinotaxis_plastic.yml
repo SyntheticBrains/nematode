@@ -3,8 +3,11 @@
 # Single-purpose delta from the PPO parent
 # (connectomeppo_small_continuous2d_combined_klinotaxis.yml): the connectome's
 # chemical synapses are trained by reward-modulated Hebbian plasticity instead
-# of by gradient descent. Two keys change, and nothing else: the rule
-# selection, and the eligibility traces the rule reads. Every environment,
+# of by gradient descent. Seven keys change, and nothing else: the rule
+# selection, the eligibility traces the rule reads, the two scaling
+# switches that make the rate substrate-invariant, and the panel's shared
+# recipe -- homeostasis, the frozen action noise and the plasticity rate --
+# which every arm carries identically. Every environment,
 # reward, satiety and sensing block is byte-identical to the parent, so a
 # behavioural difference is attributable to the learning rule alone.
 #
@@ -45,6 +48,25 @@ brain:
     # proportional to them, so the pairing is validated at load time.
     learning_rule: three_factor
     enable_activity_traces: true
+    # Substrate-invariant scaling, on for every panel arm: the third factor
+    # is tanh(delta / sigma) with sigma a running RMS of the prediction error,
+    # and each plastic tensor's Hebbian term is divided by rho, a running RMS
+    # of its trace over its edge set. The rate then means the same
+    # root-mean-square step per unit modulator on every arm.
+    plasticity_normalise_modulator: true
+    plasticity_normalise_trace: true
+    # Homeostatic incoming-norm scaling, on for every panel arm: after each
+    # update a unit's incoming plastic weights return to the norm they had at
+    # construction, so Hebbian positive feedback cannot run them onto the
+    # bound. The action noise every arm is frozen at (std ~0.37): a probe
+    # selected it by a rule stated in advance; std 1.0 capped every plastic
+    # arm near its floor, and std 0.22 rose and collapsed.
+    plasticity_homeostasis: true
+    initial_log_std: -1.0
+    # The panel recipe: selected by the pilot's pooled rule on the registered
+    # grid and pinned here explicitly, so the rate is visible in the file
+    # rather than inherited from a default. Every arm shares it.
+    plasticity_rate: 0.001
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

@@ -83,8 +83,11 @@ RULE_BEARING_ARMS: tuple[str, ...] = tuple(a for a in ARM_KEYS if a not in FROZE
 
 PANEL_SEEDS: tuple[int, ...] = tuple(range(1, 9))
 PILOT_SEEDS: tuple[int, ...] = (101, 102)
-RATE_GRID: tuple[float, ...] = (0.003, 0.01, 0.03)
-DEFAULT_RATE = 0.01
+# Re-registered after the centred-modulator probe: brackets the strongest learner seen at
+# 600 episodes (3e-3, which also starts to saturate) with a rate that learns without
+# touching the bound (3e-4); the tie-break sits in the middle.
+RATE_GRID: tuple[float, ...] = (3e-4, 1e-3, 3e-3)
+DEFAULT_RATE = 1e-3
 PILOT_BUDGET = 3000
 PILOT_EXTENDED_BUDGET = 6000
 BUDGET_HEADROOM = 1.25
@@ -125,6 +128,11 @@ class SeedRecord:
     evasion_rate: float | None
     temp_comfort: float | None
     curve: list[float]  # full-clear % per CURVE_WINDOW-episode block
+    # Peak tracked action density over the run (descriptive). Under a tanh-squashed
+    # Gaussian the density carries the squash Jacobian, so a peak orders of
+    # magnitude above the frozen arms' means the actions are pinned at the limits:
+    # a collapsed representation, not a learned policy. None when no export is found.
+    peak_action_density: float | None = None
 
 
 def _experiment_json(log_text: str, experiments: Path) -> dict | None:
@@ -136,6 +144,26 @@ def _experiment_json(log_text: str, experiments: Path) -> dict | None:
     if not path.exists():
         return None
     return json.loads(path.read_text())
+
+
+def _peak_action_density(experiment: dict) -> float | None:
+    """Max of the tracked per-run action density in the run's export, or None if absent."""
+    exports = experiment.get("exports_path")
+    if not exports:
+        return None
+    path = Path(exports) / "session" / "data" / "tracking_actions.csv"
+    if not path.exists():
+        return None
+    peak: float | None = None
+    with path.open() as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            try:
+                value = float(row.get("probability", ""))
+            except ValueError:
+                continue
+            peak = value if peak is None else max(peak, value)
+    return peak
 
 
 def read_log(log: Path, experiments: Path = EXPERIMENTS) -> SeedRecord | None:
@@ -174,6 +202,7 @@ def read_log(log: Path, experiments: Path = EXPERIMENTS) -> SeedRecord | None:
         if encounters and encounters > 0 and evasions is not None:
             record.evasion_rate = evasions / encounters * 100.0
         record.temp_comfort = results.get("post_convergence_temperature_comfort_score")
+        record.peak_action_density = _peak_action_density(experiment)
     return record
 
 
@@ -405,9 +434,10 @@ def write_per_seed_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> N
         "onset",
         "evasion_rate",
         "temp_comfort",
+        "peak_action_density",
     ]
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for arm in ARM_KEYS:
             for seed, record in sorted(panel.get(arm, {}).items()):
@@ -418,7 +448,7 @@ def write_per_seed_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> N
 def write_curves_csv(panel: dict[str, dict[int, SeedRecord]], path: Path) -> None:
     """Write the per-seed learning curves, one row per window."""
     with path.open("w", newline="") as handle:
-        writer = csv.writer(handle)
+        writer = csv.writer(handle, lineterminator="\n")
         writer.writerow(["arm", "seed", "window_end", "success"])
         for arm in ARM_KEYS:
             for seed, record in sorted(panel.get(arm, {}).items()):
