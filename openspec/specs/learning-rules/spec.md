@@ -245,26 +245,44 @@ Telemetry SHALL carry the same keys with the same semantics on every substrate: 
 
 The three-factor rule SHALL offer two independent, default-off scaling modes shared by every
 plastic brain through the plasticity configuration mixin. With **modulator normalisation** on,
-the third factor SHALL be `tanh(δ / σ)`, where `σ` is a running root-mean-square of the raw
+the third factor SHALL be `tanh(δ / σ) − c`, where `σ` is a running root-mean-square of the raw
 prediction error `δ` maintained by exponential moving average at a configurable scale rate,
 bias-corrected so its first observation counts fully, used at its pre-update value for the
-current step, and floored at a configurable positive floor before division. With **trace normalisation** on,
-the Hebbian term for each plastic tensor SHALL be divided by `ρ`, a running root-mean-square of
-that tensor's eligibility trace over its masked entries, maintained, bias-corrected, used and
-floored the same way, with an all-zero trace neither updating it nor counting toward its
-correction. The decay term and the magnitude clamp SHALL be unchanged by either mode.
-Both scales SHALL advance under a freeze and in unmodulated mode, where the modulator SHALL
-remain `1.0`. With both modes off, the rule SHALL be bit-identical to the rule without this
-requirement. The rule SHALL report the effective modulator, the modulator scale and the mean
-trace scale beside its existing telemetry, and the raw prediction error SHALL still be reported.
+current step, and floored at a configurable positive floor before division; and `c` is a
+bias-corrected running mean of `tanh(δ / σ)` at the same scale rate, zero before any
+observation and used at its pre-update value for the current step, so that the modulator is
+zero-mean under the agent's own policy as a prediction error must be. With **trace
+normalisation** on, the Hebbian term for each plastic tensor SHALL be divided by `ρ`, a running
+root-mean-square of that tensor's eligibility trace over its masked entries, maintained,
+bias-corrected, used and floored the same way, with an all-zero trace neither updating it nor
+counting toward its correction. The decay term and the magnitude clamp SHALL be unchanged by
+either mode. The scales and the centre SHALL advance under a freeze and in unmodulated mode,
+where the modulator SHALL remain `1.0`. With both modes off, the rule SHALL be bit-identical to
+the rule without this requirement. The rule SHALL report the effective modulator, the modulator
+scale, the modulator centre and the mean trace scale beside its existing telemetry, and the raw
+prediction error SHALL still be reported.
 
 #### Scenario: The modulator is bounded and scale-free
 
 - **GIVEN** modulator normalisation on and a warmed scale `σ`
 - **WHEN** the rule steps with prediction error `δ`
-- **THEN** the modulator SHALL equal `tanh(δ / σ_prev)` with the scale from before this step
-- **AND** it SHALL lie in `[−1, 1]` for any `δ`
-- **AND** the raw `δ` SHALL still be reported as the prediction error
+- **THEN** the modulator SHALL equal `tanh(δ / σ_prev) − c_prev`, with the scale and the centre
+  from before this step
+- **AND** it SHALL lie in `[−2, 2]` for any `δ`
+- **AND** the centre SHALL be zero before any observation and the bias-corrected running mean
+  of `tanh(δ / σ)` after
+- **AND** the raw `δ` SHALL still be reported as the prediction error, and the centre SHALL be
+  reported beside it
+
+#### Scenario: The modulator is zero-mean under a skewed reward stream
+
+- **GIVEN** modulator normalisation on and a deterministic periodic stream of prediction errors
+  with many small values, frequent moderate positives and rare large negatives, whose raw values
+  sum to zero over each period
+- **WHEN** the rule steps through whole periods past a whole-period warm-up
+- **THEN** the mean of the modulator over those steps SHALL be within `0.005` of zero
+- **AND** the mean of the uncentred `tanh(δ / σ)` on the same steps SHALL exceed `0.005` in
+  magnitude, so the centring is shown to be load-bearing
 
 #### Scenario: The trace step is invariant to the trace's scale
 
@@ -292,7 +310,7 @@ trace scale beside its existing telemetry, and the raw prediction error SHALL st
 
 - **GIVEN** a frozen arm and an unmodulated arm with a scaling mode on
 - **WHEN** each steps
-- **THEN** the scales SHALL advance exactly as on the plastic modulated arm
+- **THEN** the scales and the centre SHALL advance exactly as on the plastic modulated arm
 - **AND** the frozen arm SHALL write no weight
 - **AND** the unmodulated arm's modulator SHALL be `1.0` while its trace step is normalised
 
