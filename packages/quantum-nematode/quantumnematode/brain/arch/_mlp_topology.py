@@ -61,6 +61,7 @@ class MLPTopology(nn.Module):
         *,
         enable_activity_traces: bool,
         trace_decay: float,
+        plastic_layers: str = "all",
     ) -> None:
         super().__init__()
         # References, deliberately not registered as submodules: the actor
@@ -72,7 +73,19 @@ class MLPTopology(nn.Module):
         # this module's state dict; store the reference around that hook.
         object.__setattr__(self, "_actor", actor)
         self._modules_in_order: list[nn.Module] = list(actor)
-        self._layers: list[nn.Linear] = [m for m in actor if isinstance(m, nn.Linear)]
+        linears: list[nn.Linear] = [m for m in actor if isinstance(m, nn.Linear)]
+        if plastic_layers not in ("all", "hidden"):
+            msg = f"plastic_layers must be 'all' or 'hidden', got {plastic_layers!r}"
+            raise ValueError(msg)
+        # ``hidden`` keeps the output layer off the seam entirely: no trace, no
+        # mask, no fan-in axis, no update. A plastic output layer takes its own
+        # output as its post-synaptic factor, and under a Hebbian rule its rows
+        # rotate toward the hidden-activity direction that maximises the action
+        # mean until the actions saturate; a fixed decoder, as the connectome
+        # has, is what a learner behind it needs.
+        self.plastic_layers = plastic_layers
+        self._layers: list[nn.Linear] = linears if plastic_layers == "all" else linears[:-1]
+        self._plastic_ids: set[int] = {id(layer) for layer in self._layers}
         self.enable_activity_traces = enable_activity_traces
         self.trace_decay = trace_decay
 
@@ -90,12 +103,16 @@ class MLPTopology(nn.Module):
 
     @property
     def layers(self) -> list[nn.Linear]:
-        """The plastic layers, in forward order, as the actor's own modules."""
+        """The plastic layers, in forward order, as the actor's own modules.
+
+        Every ``Linear`` under ``plastic_layers="all"``; every ``Linear`` but the
+        output layer under ``"hidden"``.
+        """
         return self._layers
 
     @property
     def plastic_weights(self) -> list[torch.Tensor]:
-        """Every ``Linear`` weight matrix. Biases are not plastic."""
+        """The plastic ``Linear`` weight matrices. Biases are not plastic."""
         return [layer.weight for layer in self._layers]
 
     @property
@@ -175,10 +192,14 @@ class MLPTopology(nn.Module):
                 if i + 1 < len(modules) and not isinstance(modules[i + 1], nn.Linear):
                     x = modules[i + 1](x)
                     i += 1
-                with torch.no_grad():
-                    trace = getattr(self, f"trace_{layer_index}")
-                    trace.mul_(self.trace_decay).add_(torch.outer(x.detach(), pre.detach()))
-                layer_index += 1
+                # A non-plastic layer (the output layer under ``hidden``) still
+                # runs, so the output stays bitwise-equal to the actor's; it
+                # simply accrues no eligibility.
+                if id(module) in self._plastic_ids:
+                    with torch.no_grad():
+                        trace = getattr(self, f"trace_{layer_index}")
+                        trace.mul_(self.trace_decay).add_(torch.outer(x.detach(), pre.detach()))
+                    layer_index += 1
             else:
                 # An activation not preceded by a Linear (never the case for
                 # the brain's actor, but the loop stays total).

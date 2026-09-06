@@ -140,6 +140,11 @@ class MLPPPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # ``tanh`` gives bounded units, which a local Hebbian rule needs (unbounded
     # units explode or die under it) and which match the connectome's.
     activation: Literal["relu", "tanh"] = "relu"
+    # Which linear layers a plastic rule may write. ``all`` is the historical
+    # build; ``hidden`` freezes the output layer so the network learns behind a
+    # fixed decoder, as the connectome does under its anatomical readout. No
+    # effect under the gradient rule, which trains every parameter.
+    plastic_layers: Literal["all", "hidden"] = "all"
 
     @field_validator("sensory_modules")
     @classmethod
@@ -342,6 +347,7 @@ class MLPPPOBrain(ClassicalBrain):
             self.actor,
             enable_activity_traces=config.enable_activity_traces,
             trace_decay=config.trace_decay,
+            plastic_layers=config.plastic_layers,
         )
         self._rule: ThreeFactorRule | None = None
         if not self._uses_ppo:
