@@ -6,8 +6,8 @@ Under modulator normalisation the rule computes `u = tanh(δ / σ)` with `δ = r
 bias-corrected running RMS of `δ`. `δ` is zero-mean under the agent's policy because `b` is
 its running mean. `u` is not: `tanh` is bounded, so rare large negatives (a `−10` death) and
 frequent moderate positives (a `+2` food) both saturate at `±1`, and the frequency asymmetry
-that the raw mean balanced now sets the sign of `E[u]`. On the panel's cell `E[u] ≈ +0.012` per
-step. A modulator with a non-zero mean multiplies the trace by a constant on average, which is
+that the raw mean balanced now sets the sign of `E[u]`. On the panel's cell `E[u]` is of order `+0.01` to `+0.04` per step, the small distance rewards
+compressing positive alongside the foods. A modulator with a non-zero mean multiplies the trace by a constant on average, which is
 plain Hebbian drift: coherent across steps and episodes, blind to reward, compounding on any
 substrate without an activation bound.
 
@@ -52,8 +52,8 @@ instead would zero the first modulated step for no reason.
 ### D3. One mode, redefined; no new switch
 
 The uncentred compression has never been used in a pinned recipe or a panel run: the panel's
-configs turned the switches on days ago and the first probe with them on is what found the
-defect. Forking a second switch would preserve, as a selectable option, a modulator known to
+configs turned the switches on, on the panel branch, and the first probe with them on is what
+found the defect. Forking a second switch would preserve, as a selectable option, a modulator known to
 drift. The mode's requirement is modified instead, every scenario keeping its name; the raw
 rule (switch off) is untouched and the frozen-reference test keeps proving it.
 
@@ -69,19 +69,28 @@ rule (switch off) is untouched and the frozen-reference test keeps proving it.
 
 ### D5. What the zero-mean test proves
 
-A synthetic stream mimicking the cell — many small steps around zero, frequent `+2`, rare
-`−10`, all baselined so the raw `δ` is zero-mean — drives the rule for a few thousand steps.
-The mean of the centred modulator over the post-warm-up steps SHALL be within `0.005` of zero,
-and the mean of the uncentred `tanh(δ / σ)` on the same stream SHALL exceed `0.005` in
-magnitude. The second assertion is what makes the first meaningful: it shows the test would
-have caught the defect.
+A **deterministic, periodic** stream mimicking the cell: one period of 203 steps holding three
+`+2` foods, one `−10` death, and small steps sized so the raw period sums to exactly zero (the
+baseline then has nothing to absorb and the raw `δ` is zero-mean by construction). The rule is
+driven through whole periods of warm-up and measured over whole periods. In steady state an EMA
+of a periodic input is periodic with the same mean, so the centred residual averages to zero
+over full periods up to floating-point margin: the mean of the centred modulator SHALL be within
+`0.005` of zero, and the mean of the uncentred `tanh(δ / σ)` on the same steps SHALL exceed
+`0.005` in magnitude. A random stream would not do: the compressed value's standard deviation is
+near `0.15`, so a random sample mean over a few thousand steps has a standard error near
+`0.003` and the tolerance would be under two standard errors. The second assertion is what makes
+the first meaningful: it shows the test would have caught the defect.
+
+One consequence of a bounded modulator is worth stating for the logbook: after centring, a death
+and a food carry nearly equal weight per event, and their asymmetry survives only in frequency.
+That is inherent to the compression that was ratified, not to the centring.
 
 ## Risks / Trade-offs
 
 - **The centre lags a non-stationary stream.** As the agent learns, food becomes more frequent
   and `c` drifts up with a lag of about `1 / r_s` steps. During that lag the modulator carries a
   small positive mean — the same lag the baseline already has, and far smaller than the
-  uncorrected `+0.012`.
+  uncorrected few hundredths.
 - **The MLP may still grow.** A zero-mean modulator removes the coherent drive, not Hebbian
   positive feedback along reward-correlated directions. Whether a dense ReLU substrate stays
   bounded under the matched rule is now a fair question for the re-probe rather than an

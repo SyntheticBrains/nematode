@@ -35,9 +35,10 @@ prediction error SHALL still be reported.
 
 #### Scenario: The modulator is zero-mean under a skewed reward stream
 
-- **GIVEN** modulator normalisation on and a baselined stream of prediction errors with many
-  small values, frequent moderate positives and rare large negatives, zero-mean in the raw
-- **WHEN** the rule steps through the stream past its warm-up
+- **GIVEN** modulator normalisation on and a deterministic periodic stream of prediction errors
+  with many small values, frequent moderate positives and rare large negatives, whose raw values
+  sum to zero over each period
+- **WHEN** the rule steps through whole periods past a whole-period warm-up
 - **THEN** the mean of the modulator over those steps SHALL be within `0.005` of zero
 - **AND** the mean of the uncentred `tanh(δ / σ)` on the same steps SHALL exceed `0.005` in
   magnitude, so the centring is shown to be load-bearing

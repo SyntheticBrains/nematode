@@ -10,7 +10,8 @@ On the panel's cell an episode carries about 3.4 food rewards of `+2`, one termi
 `−10`, and some two hundred small steps. Raw, the prediction error `δ = r − b` is zero-mean by
 construction: the baseline absorbs the average. Compressed, a `+2` and a `−10` both map to `±1`,
 so the asymmetry that made the raw stream zero-mean is erased and the frequent events win:
-the compressed modulator averages about `+0.012` per step. That is a steady, reward-blind
+the compressed modulator averages of order `+0.01` to `+0.04` per step, depending on how the
+small step rewards compress (they lean positive too). That is a steady, reward-blind
 Hebbian drive of order `2η` per episode along whatever the trace already correlates — exactly
 the runaway the baseline exists to prevent, now reintroduced downstream of it.
 

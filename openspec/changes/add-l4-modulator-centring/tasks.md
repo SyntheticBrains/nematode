@@ -14,8 +14,9 @@
 
 - [ ] 2.1 The centred value equals `tanh(δ / σ_prev) − c_prev` against an independent
   bias-corrected mean; `c = 0` on the first step; the range `[−2, 2]`.
-- [ ] 2.2 Zero mean on a synthetic skewed, baselined stream (within `0.005`), with the uncentred
-  compression's mean on the same stream exceeding `0.005` in magnitude.
+- [ ] 2.2 Zero mean on a deterministic periodic stream (three foods, one death, small steps summing
+  the raw period to zero), measured over whole periods after whole-period warm-up (within `0.005`),
+  with the uncentred compression's mean on the same steps exceeding `0.005` in magnitude.
 - [ ] 2.3 Freeze advances `c` and writes nothing; unmodulated keeps `1.0` and still reports `c`.
 - [ ] 2.4 The key and the recorder; the existing scaling tests updated to the centred value.
 - [ ] 2.5 The frozen-reference byte-identity test keeps passing with the switch off.
