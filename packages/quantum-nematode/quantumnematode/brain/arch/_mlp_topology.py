@@ -38,14 +38,18 @@ class MLPTopology(nn.Module):
     Parameters
     ----------
     actor
-        The brain's actor, held by reference. Every ``nn.Linear`` in it is
-        a plastic layer; every other module is treated as the activation
+        The brain's actor, held by reference. The plastic layers are its
+        ``nn.Linear`` modules as ``plastic_layers`` selects them -- all of
+        them, or all but the output layer; every other module is treated as the activation
         that follows the preceding layer.
     enable_activity_traces
         Allocate traces. When false nothing is allocated and the traced
         forward degrades to the plain forward.
     trace_decay
         Per-step multiplicative decay of every trace.
+    plastic_layers
+        ``"all"`` (every ``Linear``) or ``"hidden"`` (every ``Linear`` but the
+        output layer, which then has no trace and is never written).
     """
 
     # The wrapped actor. Declared at class level so the type checker knows it
