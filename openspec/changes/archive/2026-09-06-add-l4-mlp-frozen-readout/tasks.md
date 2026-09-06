@@ -24,6 +24,6 @@
 - [x] 3.1 `docs/architectures.md`: the plasticity row's "every Linear weight is plastic including the
   output layer — a deliberate asymmetry in the MLP's favour" is reworded to the selectable depth and
   its reason; `configs/README.md`'s "every Linear weight plastic" likewise; `CHANGELOG.md`.
-- [x] 3.2 Pre-commit gate on all files exit 0; full suite green. (4610 passed as CI runs it)
+- [x] 3.2 Pre-commit gate on all files exit 0; full suite green. (4613 passed as CI runs it)
 - [x] 3.3 No implementation code or docstring references a planning document.
 - [x] 3.4 Re-review for drift, archive, review the branch, open the PR. (every new scenario maps to a named test; the kept scenarios to the existing MLP suites)
