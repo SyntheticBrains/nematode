@@ -129,8 +129,10 @@ arm ≤ 20 (median 3–5); the MLP in the tens of thousands.
 
 ## Analysis
 
-1. **Outcomes are fixed points, seeded by the initial weights.** Every connectome arm's plateau
-   is reached within a few hundred episodes and depends more on the seed than on the rule. The
+1. **Outcomes are fixed points, seeded by the initial weights.** All but one connectome run reach
+   their plateau within a few hundred episodes, and where they land depends more on the seed than
+   on the rule (the exception, wild-type plastic seed 3, was still climbing at 3000 and converged
+   only in its fresh 4500-episode extension, at 28.4%). The
    frozen wild-type arm alone spans 0.4% to 36.9% across seeds on identical wiring. The Hebbian
    floor — no reward — settles within its first block at 78%, 64%, 67%, 27%, or at 0%. Under
    homeostasis the unmodulated rule converges to a fixed point of the wiring's correlation
