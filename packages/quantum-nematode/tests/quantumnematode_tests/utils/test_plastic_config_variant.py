@@ -40,7 +40,7 @@ _EXPECTED_ADDED = {
     "brain.config.plasticity_rate",
 }
 # The MLP yardstick additionally swaps its hidden non-linearity for bounded units.
-_EXPECTED_ADDED_MLP = _EXPECTED_ADDED | {"brain.config.activation"}
+_EXPECTED_ADDED_MLP = _EXPECTED_ADDED | {"brain.config.activation", "brain.config.plastic_layers"}
 
 
 def _flatten(data: object, prefix: str = "") -> dict[str, object]:
@@ -160,6 +160,7 @@ class TestMatchedRuleMLPConfig:
         assert brain_config.learning_rule == "three_factor"
         assert brain_config.enable_activity_traces is True
         assert brain_config.activation == "tanh"
+        assert brain_config.plastic_layers == "hidden"
 
     def test_mlp_and_connectome_plastic_arms_share_every_plasticity_value(self) -> None:
         """Matched means the same numbers, read from the actual arm configs."""

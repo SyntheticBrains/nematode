@@ -73,6 +73,11 @@ brain:
     # Bounded hidden units, like the connectome's: under a local Hebbian rule
     # unbounded ReLU units explode or die.
     activation: tanh
+    # Frozen readout, like the connectome's anatomical one: a plastic output
+    # layer takes its own output as its post-synaptic factor and rotates into
+    # saturation under the rule (a frozen tanh MLP that foraged at 96%
+    # collapsed to zero within three episodes once its readout learned).
+    plastic_layers: hidden
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

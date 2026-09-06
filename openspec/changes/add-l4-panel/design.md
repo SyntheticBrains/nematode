@@ -319,6 +319,12 @@ metric, tests, family, verdict map, band rule, extensions and sensitivity pass a
   35.1 against 7.8, 8.7 and 4.4 at 0, −0.5 and −1.5); `activation: tanh` on the MLP arm. The
   plastic wild-type arm is therefore a six-key delta from its PPO parent and the MLP arm a
   seven-key one; every floor and rewired arm inherits its parent's keys.
+- **Yardstick readout (further amendment dated 2026-09-06, from probe 5,
+  `supporting/040-l4-panel/probe-5-foraging-yardstick.md`)**: `plastic_layers: hidden` on the MLP
+  arm. Its plastic output layer, taking its own output as the post-synaptic factor, rotated into
+  saturation under the rule and destroyed a 96% foraging policy within three episodes; the arm now
+  learns its hidden weights under a frozen readout as the connectome does. The MLP arm is an
+  eight-key delta from its PPO parent. Confirmed by probe 6 before launch.
 - **Recipe** (`plasticity_rate`): **`0.001`**, pinned 2026-09-06 from pilot 3 by the registered
   pooled rule (pooled plateau-tail 16.3 against 8.1 at 3e-4 and 11.8 at 3e-3), written into all
   seven arm configs. Record: `supporting/040-l4-panel/pilot-3-notes.md`, summary `pilot.json`.
