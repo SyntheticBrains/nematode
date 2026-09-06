@@ -8,9 +8,11 @@ rules, plus the matched-rule MLP under the three-factor rule. Every arm SHALL ru
 seed list (seeds 1–8), with the rewired arms' `rewire_seed` derived from the run seed so wild-type
 and rewired arms pair seed for seed. The per-seed ranked metric SHALL be the committed plateau-tail
 (final-quarter) full-clear success rate, and the per-seed convergence verdict SHALL be the
-level-agnostic plateau detector's, read from the run's experiment record. The two rewired floors
-SHALL each be a one-key (`wiring`) delta from their wild-type parent config, and SHALL share the
-plastic rewired-null arm's wiring seed for seed, with `rewire_seed` derived from the run seed.
+level-agnostic plateau detector's, read from the run's experiment record. Every arm SHALL run with
+both scaling switches of the three-factor rule on, so the rate means the same root-mean-square
+step per unit modulator on every arm. The two rewired floors SHALL each be a one-key (`wiring`)
+delta from their wild-type parent config, and SHALL share the plastic rewired-null arm's wiring
+seed for seed, with `rewire_seed` derived from the run seed.
 
 #### Scenario: Each rewired floor is a one-key delta from its wild-type parent
 
@@ -100,13 +102,13 @@ how many paired seeds have a positive delta.
 
 ### Requirement: The pilot pins the shared recipe and the budget by pre-registered rules
 
-Before the panel runs, a pilot SHALL run the rule-bearing arms at `plasticity_rate` values of 0.003,
-0.01 and 0.03 and the frozen arms once, on pilot seeds 101 and 102 only, at 3000 episodes, with one
+Before the panel runs, a pilot SHALL run the rule-bearing arms at `plasticity_rate` values of 3e-4, 1e-3
+and 3e-3 and the frozen arms once, on pilot seeds 101 and 102 only, at 3000 episodes, with one
 extension to 6000 for any three-factor arm not converged on either seed at the selected rate; if that arm still has no plateau at 6000, the budget SHALL be pinned at 6000
 and the arm flagged. Every extension, pilot or panel, SHALL be a fresh run at the longer budget at
 the same seed, whose log replaces the shorter run's. The
 selected rate SHALL be the one maximising the pooled mean plateau-tail success of the three
-three-factor arms over the pilot seeds, ties to the default 0.01, and SHALL be written explicitly into
+three-factor arms over the pilot seeds, ties to the default 1e-3, and SHALL be written explicitly into
 every plastic-family panel config. The panel's uniform budget SHALL be the smallest multiple of 500
 episodes at or above 1.25 times the latest convergence onset among converged pilot runs at the
 selected rate, and never below 2000. Both values SHALL be recorded in the change's design by dated
@@ -119,7 +121,7 @@ registered protocol SHALL change after the pilot.
 - **WHEN** the pilot summary selects the recipe
 - **THEN** it SHALL choose the rate whose pooled mean across those three arms and both pilot seeds is
   highest
-- **AND** on a tie it SHALL choose 0.01
+- **AND** on a tie it SHALL choose 1e-3
 
 #### Scenario: The budget rule rounds up from the slowest converger
 

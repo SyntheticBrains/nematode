@@ -38,8 +38,9 @@
 
 - [x] 4.0 Pilot 1 ran as registered (2026-09-06) and pinned nothing: grid two orders too hot, MLP
   dead or frozen at every shared rate. Recorded under `supporting/040-l4-panel/pilot-1-*`.
-  **Blocked on** the rule-scaling change; then re-register the grid here by dated amendment.
-- [ ] 4.1 Re-run the pilot on the re-registered grid (seeds 101–102, 3000 episodes, three points); extend any
+  Unblocked 2026-09-06: the rule-scaling and modulator-centring changes landed (PRs #313, #314); probes
+  2 and 3 recorded; the grid re-registered as {3e-4, 1e-3, 3e-3}, ties to 1e-3, by dated amendment.
+- [ ] 4.1 Re-run the pilot on the re-registered grid {3e-4, 1e-3, 3e-3} (seeds 101–102, 3000 episodes); extend any
   non-converged three-factor arm at the selected rate once to 6000 as a separate campaign
   invocation (a fresh run; episode counts are uniform per campaign). If it still has no plateau,
   pin the budget at 6000 and flag the arm in the summary.

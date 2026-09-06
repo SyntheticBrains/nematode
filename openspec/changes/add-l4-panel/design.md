@@ -250,6 +250,38 @@ unchanged. D9 anticipated this branch ("the rule never leaves chance at any grid
 routed it to a new change rather than to a wider grid here; what the pilot added is that the
 defect is scale, not the rule's ability to learn.
 
+## Grid re-registration (amendment dated 2026-09-06)
+
+Between pilot 1 and this amendment the rule changed twice, each in its own pre-registered
+change: substrate-invariant scaling (a bounded modulator `tanh(δ / σ)` and a per-tensor trace
+normalisation `E / ρ`), then centring of the compressed modulator (`tanh(δ / σ) − c`) after the
+first probe with the switches on showed the uncentred form carries a positive mean on this
+cell's skewed reward stream and drives a reward-blind Hebbian drift — the connectome collapsed
+below its frozen floor and the MLP's activations exploded. Records:
+`supporting/040-l4-panel/probe-2-uncentred-normalisation.md` and
+`supporting/040-l4-panel/probe-3-centred-grid.md`.
+
+**What changes in the registration, and only this:**
+
+- Every arm config runs with both scaling switches on (`plasticity_normalise_modulator`,
+  `plasticity_normalise_trace`); the plastic wild-type arm is therefore a four-key delta from its
+  PPO parent, and every floor and rewired arm inherits all four. "One recipe, every arm" holds.
+- The pilot grid is `plasticity_rate ∈ {3e-4, 1e-3, 3e-3}` with ties to `1e-3`, in the
+  normalised units the rate now has (the root-mean-square Hebbian step per unit modulator).
+  Ratified with Chris over a lower grid `{1e-4, 3e-4, 1e-3}` and a higher one
+  `{1e-3, 3e-3, 1e-2}`: probe 3 shows both connectome wirings learning above the frozen floor at
+  every rate, with saturation appearing only at `3e-3` (14–17% of synapses on the bound by
+  episode 600), which is also the strongest learner at that horizon. The grid brackets it with a
+  rate that learns without touching the bound, and the pilot's 3000-episode plateau-tail selection
+  decides whether `3e-3` survives its saturation.
+
+Arms, panel seeds, pilot seeds, pilot budget, metric, tests, family, verdict map, band rule,
+extension rules and sensitivity pass are unchanged. One reading is recorded in advance: in
+probe 3 the MLP yardstick learns at no rate and its trace scale still grows (`1e2–1e5` from
+`0.01`), a property of a dense ReLU stack under a local Hebbian rule rather than an artefact. If
+that holds in the pilot, D2 test (ii) passes by construction, and the band test's stated
+asymmetry (D4) is what the logbook must say about it.
+
 ## Pinned values (filled by dated amendment before launch)
 
 - **Recipe** (`plasticity_rate`): *pending the pilot.*

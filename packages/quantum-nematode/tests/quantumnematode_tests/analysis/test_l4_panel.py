@@ -122,13 +122,13 @@ class TestScanCampaign:
         logs = tmp_path / "logs"
         logs.mkdir()
         _log(logs / f"{_STEM}-seed1.log", ["SUCCESS"] * 40)
-        _log(logs / f"{_STEM}_rewired_null__rate_0p003-seed101.log", ["FAILED"] * 40)
+        _log(logs / f"{_STEM}_rewired_null__rate_0p0003-seed101.log", ["FAILED"] * 40)
         _log(logs / "not_an_arm-seed1.log", ["SUCCESS"] * 40)
         _log(logs / "weird.log", ["SUCCESS"] * 40)
         scanned = lp.scan_campaign(tmp_path, tmp_path / "experiments")
         assert [(a, r, s) for a, r, s, _ in scanned] == [
             ("wt_plastic", None, 1),
-            ("rn_plastic", 0.003, 101),
+            ("rn_plastic", 0.0003, 101),
         ]
         warned = capsys.readouterr().out
         assert "not a registered arm" in warned
@@ -162,7 +162,7 @@ def test_rate_encoding_round_trips_the_grid() -> None:
     """The filename-safe rate encoding is lossless on every grid point."""
     for rate in lp.RATE_GRID:
         assert lp.decode_rate(lp.encode_rate(rate)) == rate
-    assert lp.encode_rate(0.003) == "0p003"
+    assert lp.encode_rate(0.0003) == "0p0003"
 
 
 # --- the confirmatory family and the verdict map ----------------------------------------
@@ -298,12 +298,12 @@ class TestBudgetRule:
 
 class TestSelectRate:
     def test_highest_pooled_mean_wins(self) -> None:
-        assert lp.select_rate({0.003: 40.0, 0.01: 55.0, 0.03: 50.0}) == 0.01
-        assert lp.select_rate({0.003: 60.0, 0.01: 55.0, 0.03: 50.0}) == 0.003
+        assert lp.select_rate({0.0003: 40.0, 0.001: 55.0, 0.003: 50.0}) == 0.001
+        assert lp.select_rate({0.0003: 60.0, 0.001: 55.0, 0.003: 50.0}) == 0.0003
 
     def test_tie_goes_to_the_default(self) -> None:
-        assert lp.select_rate({0.003: 55.0, 0.01: 55.0, 0.03: 55.0}) == lp.DEFAULT_RATE
-        assert lp.select_rate({0.003: 55.0, 0.03: 55.0}) == 0.003  # no default among the tied
+        assert lp.select_rate({0.0003: 55.0, 0.001: 55.0, 0.003: 55.0}) == lp.DEFAULT_RATE
+        assert lp.select_rate({0.0003: 55.0, 0.003: 55.0}) == 0.0003  # no default among the tied
 
     def test_empty_is_none(self) -> None:
         assert lp.select_rate({}) is None
@@ -355,11 +355,11 @@ def _grid(
 class TestAnalysePilot:
     def test_pooled_selection_and_budget(self) -> None:
         out = lp.analyse_pilot(
-            _pilot(_grid({0.003: (40.0, 900), 0.01: (55.0, 1800), 0.03: (50.0, 1200)})),
+            _pilot(_grid({0.0003: (40.0, 900), 0.001: (55.0, 1800), 0.003: (50.0, 1200)})),
             {},
         )
-        assert out["selected_rate"] == 0.01
-        assert out["pooled"]["0p01"] == pytest.approx(55.0)
+        assert out["selected_rate"] == 0.001
+        assert out["pooled"]["0p001"] == pytest.approx(55.0)
         # Latest onset at the selected rate is 1800 (three-factor arms); 1.25 x 1800 = 2250 -> 2500.
         assert out["budget"] == 2500
         assert out["budget_basis"]["latest_onset"] == 1800
@@ -368,40 +368,40 @@ class TestAnalysePilot:
         assert set(out["floors"]) == set(lp.FROZEN_ARMS)
 
     def test_non_converged_arm_owes_an_extension(self) -> None:
-        grid = _grid({0.003: (40.0, 900), 0.01: (55.0, 1800), 0.03: (50.0, 1200)})
-        grid[0.01]["mlp_plastic"] = (60.0, None)
+        grid = _grid({0.0003: (40.0, 900), 0.001: (55.0, 1800), 0.003: (50.0, 1200)})
+        grid[0.001]["mlp_plastic"] = (60.0, None)
         out = lp.analyse_pilot(_pilot(grid), {})
         assert out["non_converged_three_factor_arms"] == ["mlp_plastic"]
         assert any("extend it once to 6000" in a for a in out["action_required"])
         assert out["budget"] == 2500  # the converged arms still give the rule an input
 
     def test_still_non_converged_at_the_extended_budget_pins_it(self) -> None:
-        grid = _grid({0.003: (40.0, 900), 0.01: (55.0, 1800), 0.03: (50.0, 1200)})
-        grid[0.01]["mlp_plastic"] = (60.0, None)
+        grid = _grid({0.0003: (40.0, 900), 0.001: (55.0, 1800), 0.003: (50.0, 1200)})
+        grid[0.001]["mlp_plastic"] = (60.0, None)
         out = lp.analyse_pilot(_pilot(grid, episodes=6000), {})
         assert out["budget"] == lp.PILOT_EXTENDED_BUDGET
         assert out["budget_basis"]["pinned_at_extended_budget_for"] == ["mlp_plastic"]
 
     def test_rate_missing_a_three_factor_arm_is_ineligible(self, capsys) -> None:
-        grid = _grid({0.003: (90.0, 900), 0.01: (55.0, 1800)})
-        del grid[0.003]["mlp_plastic"]
+        grid = _grid({0.0003: (90.0, 900), 0.001: (55.0, 1800)})
+        del grid[0.0003]["mlp_plastic"]
         out = lp.analyse_pilot(_pilot(grid), {})
-        assert out["selected_rate"] == 0.01
+        assert out["selected_rate"] == 0.001
         assert "ineligible" in capsys.readouterr().out
 
     def test_rate_with_a_missing_pilot_seed_is_ineligible(self, capsys) -> None:
-        grid = _grid({0.003: (90.0, 900), 0.01: (55.0, 1800)})
+        grid = _grid({0.0003: (90.0, 900), 0.001: (55.0, 1800)})
         scanned = [
             row
             for row in _pilot(grid)
-            if not (row[0] == "mlp_plastic" and row[1] == 0.003 and row[2] == 102)
+            if not (row[0] == "mlp_plastic" and row[1] == 0.0003 and row[2] == 102)
         ]
         out = lp.analyse_pilot(scanned, {})
-        assert out["selected_rate"] == 0.01
+        assert out["selected_rate"] == 0.001
         assert "ineligible" in capsys.readouterr().out
 
     def test_budget_basis_ignores_the_floors(self) -> None:
-        scanned = _pilot(_grid({0.01: (55.0, 1000)}))
+        scanned = _pilot(_grid({0.001: (55.0, 1000)}))
         for row in scanned:
             if row[0] in lp.FROZEN_ARMS:
                 row[3].onset = 2900  # a late floor onset must not set the budget
@@ -410,17 +410,17 @@ class TestAnalysePilot:
         assert out["budget"] == 2000
 
     def test_summary_is_stamped_unpinned(self) -> None:
-        out = lp.analyse_pilot(_pilot(_grid({0.01: (55.0, 1800)})), {})
+        out = lp.analyse_pilot(_pilot(_grid({0.001: (55.0, 1800)})), {})
         assert out["pinned"] is False
         assert "dated amendment" in out["pin_note"]
         none = lp.analyse_pilot([], {})
         assert none["pinned"] is False
 
     def test_panel_seed_in_a_pilot_is_ignored(self, capsys) -> None:
-        scanned = _pilot(_grid({0.01: (55.0, 1800)}))
-        scanned.append(("wt_plastic", 0.01, 3, _record(99.0, 10)))
+        scanned = _pilot(_grid({0.001: (55.0, 1800)}))
+        scanned.append(("wt_plastic", 0.001, 3, _record(99.0, 10)))
         out = lp.analyse_pilot(scanned, {})
-        assert out["grid"]["0p01"]["wt_plastic"]["per_seed"] == {101: 55.0, 102: 55.0}
+        assert out["grid"]["0p001"]["wt_plastic"]["per_seed"] == {101: 55.0, 102: 55.0}
         assert "not a pilot seed" in capsys.readouterr().out
 
 

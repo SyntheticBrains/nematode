@@ -83,8 +83,11 @@ RULE_BEARING_ARMS: tuple[str, ...] = tuple(a for a in ARM_KEYS if a not in FROZE
 
 PANEL_SEEDS: tuple[int, ...] = tuple(range(1, 9))
 PILOT_SEEDS: tuple[int, ...] = (101, 102)
-RATE_GRID: tuple[float, ...] = (0.003, 0.01, 0.03)
-DEFAULT_RATE = 0.01
+# Re-registered after the centred-modulator probe: brackets the strongest learner seen at
+# 600 episodes (3e-3, which also starts to saturate) with a rate that learns without
+# touching the bound (3e-4); the tie-break sits in the middle.
+RATE_GRID: tuple[float, ...] = (3e-4, 1e-3, 3e-3)
+DEFAULT_RATE = 1e-3
 PILOT_BUDGET = 3000
 PILOT_EXTENDED_BUDGET = 6000
 BUDGET_HEADROOM = 1.25
