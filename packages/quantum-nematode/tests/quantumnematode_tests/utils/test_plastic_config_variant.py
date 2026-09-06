@@ -37,6 +37,7 @@ _EXPECTED_ADDED = {
     "brain.config.plasticity_normalise_trace",
     "brain.config.plasticity_homeostasis",
     "brain.config.initial_log_std",
+    "brain.config.plasticity_rate",
 }
 # The MLP yardstick additionally swaps its hidden non-linearity for bounded units.
 _EXPECTED_ADDED_MLP = _EXPECTED_ADDED | {"brain.config.activation"}
@@ -77,6 +78,7 @@ class TestPlasticVariantIsAMinimalDelta:
         assert brain_config.plasticity_normalise_trace is True
         assert brain_config.plasticity_homeostasis is True
         assert brain_config.initial_log_std == -1.0
+        assert brain_config.plasticity_rate == 0.001
 
     def test_parent_is_unchanged(self) -> None:
         """The PPO record the plastic arm derives from stays on the PPO rule."""

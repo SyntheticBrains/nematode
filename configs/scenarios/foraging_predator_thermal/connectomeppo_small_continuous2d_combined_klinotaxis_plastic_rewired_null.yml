@@ -71,6 +71,10 @@ brain:
     # arm near its floor, and std 0.22 rose and collapsed.
     plasticity_homeostasis: true
     initial_log_std: -1.0
+    # The panel recipe: selected by the pilot's pooled rule on the registered
+    # grid and pinned here explicitly, so the rate is visible in the file
+    # rather than inherited from a default. Every arm shares it.
+    plasticity_rate: 0.001
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

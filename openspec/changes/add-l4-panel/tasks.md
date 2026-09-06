@@ -40,13 +40,13 @@
   dead or frozen at every shared rate. Recorded under `supporting/040-l4-panel/pilot-1-*`.
   Unblocked 2026-09-06: the rule-scaling and modulator-centring changes landed (PRs #313, #314); probes
   2 and 3 recorded; the grid re-registered as {3e-4, 1e-3, 3e-3}, ties to 1e-3, by dated amendment.
-- [ ] 4.1 Re-run the pilot on the re-registered grid {3e-4, 1e-3, 3e-3} (seeds 101–102, 3000 episodes); extend any
+- [x] 4.1 Re-run the pilot on the re-registered grid {3e-4, 1e-3, 3e-3} (seeds 101–102, 3000 episodes); extend any
   non-converged three-factor arm at the selected rate once to 6000 as a separate campaign
   invocation (a fresh run; episode counts are uniform per campaign). If it still has no plateau,
   pin the budget at 6000 and flag the arm in the summary.
-- [ ] 4.2 Summarise with `l4_panel.py --pilot`; commit `pilot.json` under
+- [x] 4.2 Summarise with `l4_panel.py --pilot`; commit `pilot.json` under
   `docs/experiments/logbooks/supporting/040-l4-panel/`.
-- [ ] 4.3 Pin the recipe and the budget in `design.md § Pinned values` by dated amendment; write the
+- [x] 4.3 Pin the recipe and the budget in `design.md § Pinned values` by dated amendment; write the
   selected `plasticity_rate` explicitly into all seven plastic-family configs, the MLP
   included.
 - [ ] 4.4 Write `launch.md` (commit SHA, command, seeds, budget, recipe) and commit it **before**

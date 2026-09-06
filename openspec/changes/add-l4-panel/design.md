@@ -319,6 +319,10 @@ metric, tests, family, verdict map, band rule, extensions and sensitivity pass a
   35.1 against 7.8, 8.7 and 4.4 at 0, −0.5 and −1.5); `activation: tanh` on the MLP arm. The
   plastic wild-type arm is therefore a six-key delta from its PPO parent and the MLP arm a
   seven-key one; every floor and rewired arm inherits its parent's keys.
-- **Recipe** (`plasticity_rate`): *pending pilot 3.*
-- **Uniform budget** (episodes): *pending pilot 3.*
-- **Pilot summary**: *pending* — `docs/experiments/logbooks/supporting/040-l4-panel/pilot.json`.
+- **Recipe** (`plasticity_rate`): **`0.001`**, pinned 2026-09-06 from pilot 3 by the registered
+  pooled rule (pooled plateau-tail 16.3 against 8.1 at 3e-4 and 11.8 at 3e-3), written into all
+  seven arm configs. Record: `supporting/040-l4-panel/pilot-3-notes.md`, summary `pilot.json`.
+- **Uniform budget** (episodes): **3000**, pinned 2026-09-06 by the registered rule (latest
+  converged onset at the selected rate 2090, × 1.25 = 2612, rounded up to the next 500). The
+  single pre-registered extension for a seed still climbing at 3000 is a fresh run at 4500.
+- **Pilot summary**: `docs/experiments/logbooks/supporting/040-l4-panel/pilot.json` (pilot 3).
