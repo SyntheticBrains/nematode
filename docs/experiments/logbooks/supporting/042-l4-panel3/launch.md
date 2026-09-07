@@ -31,3 +31,7 @@ uv run python scripts/run_campaign.py \
   `uv run python scripts/analysis/l4_panel3.py --campaign-dir campaigns/l4-panel3 --out docs/experiments/logbooks/supporting/042-l4-panel3/panel3.json --csv docs/experiments/logbooks/supporting/042-l4-panel3/per-seed.csv --curves docs/experiments/logbooks/supporting/042-l4-panel3/curves.csv`;
   the confirmatory family and the verdict map are the ones fixed in that script and in the
   registration.
+
+- **Run**: 96 runs, 20:06–21:08 on 16 workers; exit 0; no tracebacks.
+
+- **Extensions applied**: none. Every run had a detected plateau at 1000 episodes.
