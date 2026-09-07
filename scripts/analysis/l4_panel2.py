@@ -201,7 +201,12 @@ def family_tests(values: dict[str, dict[int, float]]) -> dict[str, dict]:
     for test, q in zip(FAMILY, qs, strict=True):
         stats = raw[test]
         stats["bh_q"] = q
+        # The registered sufficiency rule (a paired Wilcoxon needs two common seeds) decides
+        # the verdict; ``complete`` is descriptive and says whether every registered seed of
+        # the pair is present, so a partial campaign is visible beside its result.
         stats["sufficient"] = stats["n"] >= MIN_PAIRED_SEEDS
+        registered = SWEEP_SEEDS if test == "P4" else HEBBIAN_SEEDS
+        stats["complete"] = tuple(stats["seeds"]) == registered
         stats["pass"] = bool(stats["sufficient"] and q < SIG_Q and stats["mean_delta"] > 0)
         stats["reverse"] = bool(stats["sufficient"] and stats["ci_hi"] < 0.0)
         stats["reads"] = READS[test]
@@ -367,6 +372,8 @@ def _print_panel(out: dict) -> None:
             f"p={t['wilcoxon_p']:.3f}  q={t['bh_q']:.3f}  +seeds={t['positive_seeds']}/{t['n']}  "
             f"{flag}   {t['reads']}",
         )
+        if not t["complete"]:
+            print(f"        INCOMPLETE: {t['n']} of the registered seeds present")
     print(f"\n  Prior sweep (competent fraction at >= {out['prior_sweep']['threshold']:.0f}%):")
     for arm in FROZEN_ARMS:
         d = out["prior_sweep"]["arms"][arm]

@@ -46,6 +46,7 @@
       "ci_width": 22.268333333333338,
       "bh_q": 0.27707953018215103,
       "sufficient": true,
+      "complete": true,
       "pass": false,
       "reverse": false,
       "reads": "wild-type Hebbian > rewired-null Hebbian, degree-scaled init (primary)"
@@ -96,6 +97,7 @@
       "ci_width": 19.429166666666667,
       "bh_q": 0.467135608167788,
       "sufficient": true,
+      "complete": true,
       "pass": false,
       "reverse": false,
       "reads": "wild-type Hebbian > rewired-null Hebbian, count-scaled init"
@@ -146,6 +148,7 @@
       "ci_width": 24.626666666666665,
       "bh_q": 0.92047119140625,
       "sufficient": true,
+      "complete": true,
       "pass": false,
       "reverse": true,
       "reads": "count-scaled > degree-scaled on the wild-type Hebbian arm"
@@ -292,6 +295,7 @@
       "ci_width": 6.857291666666669,
       "bh_q": 0.27707953018215103,
       "sufficient": true,
+      "complete": true,
       "pass": false,
       "reverse": false,
       "reads": "wild-type frozen > rewired-null frozen over the sweep seeds (the prior)"

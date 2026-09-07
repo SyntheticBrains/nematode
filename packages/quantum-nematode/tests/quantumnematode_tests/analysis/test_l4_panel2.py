@@ -166,6 +166,18 @@ class TestFamily:
         tests = p2.family_tests(values)
         assert 40 not in tests["P1"]["seeds"]
 
+    def test_completeness_is_reported_beside_the_registered_rule(self) -> None:
+        full = p2.family_tests(_values())
+        assert all(t["complete"] for t in full.values())
+        values = _values()
+        del values["wt_hebbian"][16]
+        del values["rn_frozen"][64]
+        partial = p2.family_tests(values)
+        assert partial["P1"]["complete"] is False
+        assert partial["P1"]["sufficient"] is True  # the registered rule is unchanged
+        assert partial["P4"]["complete"] is False
+        assert partial["P2"]["complete"] is True
+
     def test_pass_requires_positive_direction(self) -> None:
         tests = p2.family_tests(_values(wt_hebbian=15.0, rn_hebbian=40.0))
         assert not tests["P1"]["pass"]

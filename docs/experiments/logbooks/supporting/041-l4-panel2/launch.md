@@ -38,7 +38,7 @@ uv run python scripts/run_campaign.py \
 ```
 
 - **Analysis**:
-  `uv run python scripts/analysis/l4_panel2.py --campaign-dir campaigns/l4-panel2 --sweep-dir campaigns/l4-panel2-sweep --out docs/experiments/logbooks/supporting/041-l4-panel2/panel2.json --csv .../per-seed.csv --curves .../curves.csv`;
+  `uv run python scripts/analysis/l4_panel2.py --campaign-dir campaigns/l4-panel2 --sweep-dir campaigns/l4-panel2-sweep --out docs/experiments/logbooks/supporting/041-l4-panel2/panel2.json --csv docs/experiments/logbooks/supporting/041-l4-panel2/per-seed.csv --curves docs/experiments/logbooks/supporting/041-l4-panel2/curves.csv`;
   the confirmatory family and the verdict map are the ones fixed in that script and in the
   registration.
 
