@@ -31,6 +31,7 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
+from quantumnematode.brain.rollouts import RolloutRecorder
 from quantumnematode.brain.weights import WeightPersistence, load_weights, save_weights
 from quantumnematode.env import MIN_GRID_SIZE, Direction
 from quantumnematode.env.theme import DEFAULT_THEME, Theme
@@ -231,6 +232,15 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
         help="Path to save weights after training completes.",
     )
+    parser.add_argument(
+        "--record-rollouts",
+        type=str,
+        default=None,
+        help=(
+            "Write one JSON line per step (the brain's observation, sampled action, action "
+            "mean and probability) to this path. Single-agent runs only."
+        ),
+    )
 
     return parser.parse_args()
 
@@ -421,6 +431,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         unsupported_flags = []
         if args.load_weights or args.save_weights:
             unsupported_flags.append("--load-weights/--save-weights")
+        if args.record_rollouts:
+            unsupported_flags.append("--record-rollouts")
         if args.manyworlds:
             unsupported_flags.append("--manyworlds")
         if args.track_per_run:
@@ -585,6 +597,25 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         satiety_config=satiety_config,
         sensing_config=sensing_config,
     )
+    rollout_recorder: RolloutRecorder | None = None
+    if args.record_rollouts:
+        if args.manyworlds:
+            print(
+                "error: --record-rollouts records the standard single-agent runner; "
+                "it cannot be combined with --manyworlds",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        if not getattr(brain, "continuous", False):
+            print(
+                "error: --record-rollouts records continuous actions and their means; "
+                f"{brain_type.value} runs discrete actions here",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        rollout_recorder = RolloutRecorder(Path(args.record_rollouts))
+        agent.rollout_recorder = rollout_recorder
+        logger.info("Recording rollouts to %s", rollout_recorder.path)
 
     # Set the plot and data directories
     plot_dir = Path.cwd() / "exports" / session_id / "session" / "plots"
@@ -686,6 +717,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 render_text=render_text,
                 show_last_frame_only=show_last_frame_only,
             )
+            if rollout_recorder is not None:
+                rollout_recorder.end_episode()
 
             steps_taken = agent._episode_tracker.steps
             total_reward = agent._episode_tracker.rewards
@@ -942,6 +975,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
     finally:
         # Ensure incremental writers are always closed (safe to call twice)
+        if rollout_recorder is not None:
+            rollout_recorder.close()
         if not path_csv_file.closed:
             path_csv_file.close()
         if not sim_results_csv_file.closed:

@@ -55,6 +55,7 @@ from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_evaluate_torch,
     categorical_sample_torch,
+    continuous_deterministic_action,
     continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
@@ -719,6 +720,9 @@ class MLPPPOBrain(ClassicalBrain):
             self._action_high,
         )
         continuous_action = (action_vec[0].item(), action_vec[1].item())
+        with torch.no_grad():
+            mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
+        continuous_mean = (mean_vec[0].item(), mean_vec[1].item())
 
         # Store current step info for the buffer (added when the reward arrives);
         # the stored action is the pre-squash sample for re-scoring in the update.
@@ -733,6 +737,7 @@ class MLPPPOBrain(ClassicalBrain):
             action=None,
             probability=torch.exp(log_prob.detach()).item(),
             continuous=continuous_action,
+            continuous_mean=continuous_mean,
         )
         self.latest_data.action = action_data
         self.history_data.actions.append(action_data)

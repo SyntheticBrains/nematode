@@ -40,6 +40,7 @@ from quantumnematode.brain.arch._plasticity_config import (
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_sample_torch,
+    continuous_deterministic_action,
     continuous_sample_tanh_gaussian,
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
@@ -48,8 +49,10 @@ from quantumnematode.brain.arch._std_head import (
     LOG_STD_CLAMPED_MAX_KEY,
     LOG_STD_CLAMPED_MEAN_KEY,
     StateDependentLogStdHead,
+    raise_on_std_mode_mismatch,
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
+from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
 from quantumnematode.env.env import ContactZone
@@ -1651,6 +1654,9 @@ class ConnectomePPOBrain(ClassicalBrain):
             self._action_high,
         )
         continuous_action = (action_vec[0].item(), action_vec[1].item())
+        with torch.no_grad():
+            mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
+        continuous_mean = (mean_vec[0].item(), mean_vec[1].item())
 
         self._pending_state = state
         self._pending_action = pre_tanh.detach().cpu().numpy()
@@ -1663,6 +1669,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             action=None,
             probability=torch.exp(log_prob.detach()).item(),
             continuous=continuous_action,
+            continuous_mean=continuous_mean,
         )
         self.latest_data.action = action_data
         self.history_data.actions.append(action_data)
@@ -1763,6 +1770,135 @@ class ConnectomePPOBrain(ClassicalBrain):
 
     def update_memory(self, reward: float | None = None) -> None:
         """No-op (Brain Protocol surface; weight updates land in ``learn``)."""
+
+    # ── Weight persistence ─────────────────────────────────────────────
+    def get_weight_components(
+        self,
+        *,
+        components: set[str] | None = None,
+    ) -> dict[str, WeightComponent]:
+        """Return weight components for persistence.
+
+        Components
+        ----------
+        ``"topology"``
+            The topology module's complete state: chemical weights, every sensory
+            gain, the readout, the noise parameter or std head, and the wiring
+            buffers (chemical mask, gap-junction matrix, projection indices).
+        ``"value"`` / ``"optimizer"``
+            The PPO critic and optimiser, present only while the PPO rule is live.
+        ``"training_state"``
+            The std mode (so cross-mode loads fail), the learning rule, the wiring,
+            the initialisation and the connectome source, recorded for the file's
+            reader; none of them is enforced on load except the std mode.
+        """
+        all_components: dict[str, WeightComponent] = {
+            "topology": WeightComponent(
+                name="topology",
+                state={
+                    k: v.detach().clone()
+                    for k, v in self.topology.state_dict().items()
+                    if k not in self._TRANSIENT_BUFFERS
+                },
+            ),
+            "training_state": WeightComponent(
+                name="training_state",
+                state={
+                    "continuous_std_mode": self.config.continuous_std_mode,
+                    "learning_rule": self.config.learning_rule,
+                    "wiring": self.config.wiring,
+                    "weight_init": self.config.weight_init,
+                    "connectome_source": self.config.connectome_source,
+                },
+            ),
+        }
+        if self._ppo_rule is not None:
+            all_components["value"] = WeightComponent(
+                name="value",
+                state=self._ppo_rule.critic.state_dict(),
+            )
+            all_components["optimizer"] = WeightComponent(
+                name="optimizer",
+                state=self._ppo_rule.optimizer.state_dict(),
+            )
+        if components is None:
+            return all_components
+        unknown = components - set(all_components)
+        if unknown:
+            msg = f"Unknown weight components: {unknown}. Valid components: {set(all_components)}"
+            raise ValueError(msg)
+        return {k: v for k, v in all_components.items() if k in components}
+
+    _WIRING_BUFFERS: tuple[str, ...] = ("m_chem", "g_gap")
+    # Per-episode activity-trace state: registered buffers when activity traces are
+    # enabled, absent otherwise, and reset at every episode. Never persisted, so a
+    # file saved under either rule loads under the other.
+    _TRANSIENT_BUFFERS: tuple[str, ...] = (
+        "activity_traces",
+        "prev_activity",
+        "prev_activity_valid",
+    )
+
+    def load_weight_components(
+        self,
+        components: dict[str, WeightComponent],
+    ) -> None:
+        """Load weight components into this brain.
+
+        Validates before mutating: the std mode must match, and the saved wiring
+        buffers must equal this brain's (a warm start onto a different wiring is
+        refused rather than silently loading weights onto edges that do not carry
+        them). Then loads the topology, the PPO critic and optimiser only when both
+        are present and the PPO rule is live, resets the rollout buffer, and under
+        the plastic rule returns the rule's running state to its construction values.
+        """
+        raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
+        topology_state = components["topology"].state if "topology" in components else None
+        if topology_state is not None:
+            current = self.topology.state_dict()
+            for name in self._WIRING_BUFFERS:
+                saved = topology_state.get(name)
+                if saved is None:
+                    msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
+                    raise ValueError(msg)
+                mine = current[name]
+                if tuple(saved.shape) != tuple(mine.shape) or not torch.equal(
+                    saved.to(mine.device, mine.dtype),
+                    mine,
+                ):
+                    msg = (
+                        f"Weight file was saved on a different wiring ({name!r} differs); "
+                        "a connectome brain loads only weights saved on its own wiring."
+                    )
+                    raise ValueError(msg)
+            persisted = {
+                k: v for k, v in topology_state.items() if k not in self._TRANSIENT_BUFFERS
+            }
+            expected = {k for k in current if k not in self._TRANSIENT_BUFFERS}
+            missing, unexpected = expected - set(persisted), set(persisted) - expected
+            if missing or unexpected:
+                msg = (
+                    f"Weight file's topology component does not match this brain: "
+                    f"missing {sorted(missing)}, unexpected {sorted(unexpected)}."
+                )
+                raise ValueError(msg)
+            self.topology.load_state_dict(persisted, strict=False)
+        if self._ppo_rule is not None:
+            if "value" in components:
+                self._ppo_rule.critic.load_state_dict(components["value"].state)
+            if "optimizer" in components:
+                self._ppo_rule.optimizer.load_state_dict(components["optimizer"].state)
+        self.buffer.reset()
+        # Lazy import for the same reason the constructor's is: the learning-rules
+        # package imports this module at load.
+        from quantumnematode.learning_rules.three_factor import ThreeFactorRule
+
+        if isinstance(self._rule, ThreeFactorRule):
+            self._rule.reset_state()
+        logger.info(
+            "ConnectomePPOBrain weights loaded (components: %s)",
+            list(components.keys()),
+        )
 
     def prepare_episode(self) -> None:
         """Reset per-episode learning-rule state at episode start.

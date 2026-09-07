@@ -49,12 +49,18 @@ class ActionData(BaseModel):  # pragma: no cover
         or ``None`` on the discrete grid substrate. On the continuous substrate the
         values are normalized (``speed ∈ [0, 1]``, ``turn ∈ [-1, 1]``); the
         environment rescales them to physical units.
+    continuous_mean : tuple[float, float] | None
+        The noiseless continuous action -- the policy's Gaussian mean squashed and
+        rescaled exactly as the sample is -- on brains that report it, else ``None``.
+        Nothing in a default run reads it; it exists so a recorded rollout carries
+        what the policy meant to do beside what it did.
     """
 
     state: str
     action: Action | None = None
     probability: float
     continuous: tuple[float, float] | None = None
+    continuous_mean: tuple[float, float] | None = None
 
     @model_validator(mode="after")
     def _exactly_one_action_payload(self) -> "ActionData":
