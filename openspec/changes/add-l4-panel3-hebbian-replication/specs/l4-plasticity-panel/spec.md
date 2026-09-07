@@ -4,7 +4,8 @@
 
 The third L4 panel SHALL run the two degree-scaled Hebbian arms of panel 2, unchanged, on paired
 seeds 17–64 at 1000 episodes, with no pilot and no other arm. The frozen floors for those seeds
-SHALL be panel 2's prior-sweep runs, read by seed and not re-run. The per-seed ranked metric SHALL
+SHALL be panel 2's prior-sweep runs, read by seed from panel 2's committed per-seed table and not
+re-run. The per-seed ranked metric SHALL
 be the committed plateau-tail full-clear success. The confirmatory family SHALL be exactly two
 one-sided paired tests corrected together at α = 0.05: (R1) wild-type Hebbian over rewired-null
 Hebbian by the committed paired Wilcoxon, the primary; (R2) wild-type over rewired-null in
@@ -37,12 +38,15 @@ shorter log.
 - **WHEN** R2 is computed
 - **THEN** its p-value SHALL be the exact binomial `P(X ≥ b)` for `X ~ Bin(b + c, ½)`, and R2 SHALL
   pass only when its corrected q is below α and `b > c`
+- **AND** with no discordant pairs R2 SHALL report p = 1.0 and fail
 
-#### Scenario: The floors come from panel 2's sweep
+#### Scenario: The floors come from panel 2's sweep via its committed table
 
 - **WHEN** the harness computes learning gains for seeds 17–64
-- **THEN** each Hebbian arm's floor SHALL be panel 2's frozen run at the same seed, and the record
-  SHALL name the campaign they were read from
+- **THEN** each Hebbian arm's floor SHALL be panel 2's frozen value at the same seed, read from
+  panel 2's committed per-seed table, and the record SHALL name that table and the campaign it
+  came from
+- **AND** each family test SHALL report whether its seed set equals the registered seeds 17–64
 
 #### Scenario: The launch precedes the run and the extension is bounded
 

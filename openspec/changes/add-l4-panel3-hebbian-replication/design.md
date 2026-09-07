@@ -29,8 +29,10 @@ reproducible from their campaign logs.
 **17–64**, paired by run seed (`rewire_seed` derived from it, as in every earlier panel), 1000
 episodes. A seed the committed plateau detector marks non-converged at 1000 receives the single
 registered extension, a fresh run at 1500 replacing the shorter log. The frozen floors for seeds
-17–64 are panel 2's sweep runs (`wt_frozen`, `rn_frozen`, 600 episodes), read from that campaign
-for the learning gains; nothing is re-run. Cost: 96 runs, about seventy minutes on 16 workers
+17–64 are panel 2's sweep runs (`wt_frozen`, `rn_frozen`, 600 episodes), read by seed from panel
+2's committed per-seed table (`supporting/041-l4-panel2/per-seed.csv`) for the learning gains, so
+the analysis is reproducible from the repository alone; nothing is re-run, and the record names
+the table and the campaign it came from. Cost: 96 runs, about seventy minutes on 16 workers
 (panel 2's 64 Hebbian runs took 47 minutes). No pilot: every value is panel 1's pin.
 
 ### D2. Metric and statistics
@@ -43,14 +45,19 @@ BH-FDR family at α = 0.05:
 | **R1** | `wt_hebbian` vs `rn_hebbian`, seeds 17–64 | wild-type > rewired | the committed paired one-sided Wilcoxon, 80% bootstrap CI |
 | **R2** | competent-fraction discordance, seeds 17–64 | wild-type > rewired | exact binomial on the discordant pairs: with `b` seeds where only the wild-type is competent (plateau tail ≥ 20%) and `c` where only the rewired is, `P(X ≥ b)` for `X ~ Bin(b + c, ½)` |
 
-R1 passes at q < 0.05 with a positive mean delta; R2 at q < 0.05 with `b > c`. R2's threshold is
+R1 passes at q < 0.05 with a positive mean delta; R2 at q < 0.05 with `b > c`; with no
+discordant pairs (`b + c = 0`) R2 reports p = 1.0 and fails. R2's threshold is
 panel 2's registered competent threshold, 20%, unchanged.
 
 **Power** (stated so the result can be read against it): with the observed spread of 36.5 and a
-true effect of +12 to +14, R1 at n = 48 has roughly 75–85% power one-sided at α = 0.05. With
-panel 2's competent fractions (0.56 against 0.31) and its discordance rate, R2 at n = 48 has
-comparable power. Neither is high; a null here is "not confirmed at n = 48", and the pooled
-descriptive over 64 seeds is reported beside it.
+true effect of +12 to +14, R1 at n = 48 has roughly 75–85% power one-sided at the raw α = 0.05,
+which is what it faces when R2 also falls under α; when R2 fails, BH requires R1 at p < 0.025,
+and its power is roughly 63–75%. R2 is projected from panel 2's discordance directly: eight seeds
+where only the wild-type was competent, four where only the rewired-null was (p = 0.19 at
+n = 16); at the same rates over 48 seeds that is 24 against 12 (p ≈ 0.03), so R2's power is
+moderate, roughly 55–65%, and lower than R1's — it is the registered secondary, not a second
+chance. Neither is high; a null here is "not confirmed at n = 48", and the pooled descriptive
+over 64 seeds is reported beside it.
 
 ### D3. Verdict
 
@@ -72,8 +79,9 @@ distribution of plateau tails per arm; the per-seed sign count for R1.
 
 `scripts/analysis/l4_panel3.py`: imports panel 2's registry, reader, `paired`, `restrict` and
 `distribution`; `REPLICATION_SEEDS = 17–64`; confirmatory grouping rejects a Hebbian log outside
-17–64; `--campaign-dir` for the Hebbian runs, `--sweep-dir` for panel 2's frozen sweep,
-`--panel2-csv` for the descriptive pooling; R1/R2, the verdict, the annotations, the pooled
+17–64; `--campaign-dir` for the Hebbian runs, `--panel2-csv` for panel 2's committed per-seed
+table, which supplies both the frozen floors for 17–64 and the descriptive pooling of 1–16; R1/R2
+each carrying panel 2's `complete` flag (seed set equals 17–64); the verdict, the annotations, the pooled
 descriptive, per-seed CSV and curves; a launch record before the run; everything promoted to
 `supporting/042-l4-panel3/`. Tests on synthetic values: seed-range enforcement, R2's exact
 p-value on a known `(b, c)`, R1/R2 directions, every verdict row, the R2-annotation case, the
