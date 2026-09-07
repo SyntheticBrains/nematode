@@ -101,6 +101,20 @@ class TestBuildAndDataset:
         assert len(set(episodes[held])) == 2
         assert not set(episodes[held]) & set(episodes[train])
 
+    def test_full_set_leaves_out_a_state_dependent_std_head(self) -> None:
+        brain = bc.build_student(_CONFIG, _SEED)
+        config = brain.config.model_copy(update={"continuous_std_mode": "state_dependent"})
+        brain = bc.ConnectomePPOBrain(config=config, device=bc.DeviceType.CPU)
+        head = {id(p) for p in brain.topology.log_std_head.parameters()}
+        chosen = {id(p) for p in bc.parameter_set(brain, "full")}
+        assert head
+        assert not head & chosen
+        assert id(brain.topology.w_chem) in chosen
+
+    def test_unknown_parameter_set_is_rejected(self) -> None:
+        with pytest.raises(ValueError, match="unknown parameter set"):
+            bc.parameter_set(bc.build_student(_CONFIG, _SEED), "all")
+
     def test_holdout_never_takes_every_episode(self) -> None:
         episodes = np.array([0, 0, 1, 1])
         train, held = bc.split_episodes(episodes, 0.9, np.random.default_rng(0))
