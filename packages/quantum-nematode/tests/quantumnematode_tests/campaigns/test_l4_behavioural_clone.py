@@ -101,6 +101,32 @@ class TestBuildAndDataset:
         assert len(set(episodes[held])) == 2
         assert not set(episodes[held]) & set(episodes[train])
 
+    def test_holdout_never_takes_every_episode(self) -> None:
+        episodes = np.array([0, 0, 1, 1])
+        train, held = bc.split_episodes(episodes, 0.9, np.random.default_rng(0))
+        assert len(train) == 2
+        assert len(held) == 2
+        with pytest.raises(ValueError, match="holdout must be in"):
+            bc.split_episodes(episodes, 1.0, np.random.default_rng(0))
+
+    def test_main_rejects_bad_batch_size_and_holdout(self, rollouts: Path, tmp_path: Path) -> None:
+        base = [
+            "--config",
+            str(_CONFIG),
+            "--seed",
+            "1",
+            "--rollouts",
+            str(rollouts),
+            "--parameter-set",
+            "plastic",
+            "--out",
+            str(tmp_path / "x.pt"),
+        ]
+        with pytest.raises(SystemExit):
+            bc.main([*base, "--batch-size", "0"])
+        with pytest.raises(SystemExit):
+            bc.main([*base, "--holdout", "1.0"])
+
     def test_rows_without_a_mean_are_refused(self, tmp_path: Path) -> None:
         brain = bc.build_student(_CONFIG, _SEED)
         with pytest.raises(ValueError, match="no action mean"):
@@ -155,14 +181,20 @@ class TestSelfCloning:
         assert record["final_loss"] < record["initial_loss"] / 10
         assert record["n_held_out"] == 2 * _STEPS
         assert record["rollouts_sha256"]
-        # The saved file loads into a fresh student and reproduces the clone's mean.
+        # The saved file loads into a fresh student and carries the fit: on the first five
+        # recorded observations the loaded means sit far closer to the teacher's than a
+        # fresh student's do, and differ from the fresh student's element-wise.
+        fresh = bc.build_student(_CONFIG, _SEED)
         loaded = bc.build_student(_CONFIG, _SEED)
         load_weights(loaded, out)
         rows = bc.read_rollouts(rollouts)
-        states, _targets, _eps = bc.load_dataset(rows[:5], loaded)
+        states, targets, _eps = bc.load_dataset(rows[:5], loaded)
         with torch.no_grad():
             reproduced = bc.student_mean(loaded, states)
+            untrained = bc.student_mean(fresh, states)
         assert reproduced.shape == (5, 2)
+        assert not torch.allclose(reproduced, untrained)
+        assert torch.mean((reproduced - targets) ** 2) < torch.mean((untrained - targets) ** 2) / 4
 
     def test_plastic_set_touches_only_the_chemical_weights(self, rollouts: Path) -> None:
         brain = bc.build_student(_CONFIG, _SEED)
@@ -210,6 +242,9 @@ class TestSelfCloning:
         after = _snapshot(brain)
         for key in ("w_chem", "food_gains", "readout"):
             assert not torch.equal(before[key], after[key]), key
+        # A mean-only record gives the noise parameter no gradient; it is left out of the set.
+        assert torch.equal(before["log_std"], after["log_std"])
+        assert all(p is not brain.topology.log_std for p in bc.parameter_set(brain, "full"))
 
     def test_no_improvement_writes_nothing(self, rollouts: Path, tmp_path: Path) -> None:
         out = tmp_path / "none.pt"

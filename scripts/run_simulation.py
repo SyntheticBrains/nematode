@@ -599,6 +599,20 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     )
     rollout_recorder: RolloutRecorder | None = None
     if args.record_rollouts:
+        if args.manyworlds:
+            print(
+                "error: --record-rollouts records the standard single-agent runner; "
+                "it cannot be combined with --manyworlds",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        if not getattr(brain, "continuous", False):
+            print(
+                "error: --record-rollouts records continuous actions and their means; "
+                f"{brain_type.value} runs discrete actions here",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
         rollout_recorder = RolloutRecorder(Path(args.record_rollouts))
         agent.rollout_recorder = rollout_recorder
         logger.info("Recording rollouts to %s", rollout_recorder.path)

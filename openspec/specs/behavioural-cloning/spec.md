@@ -36,7 +36,8 @@ own feature path, compute the student's squashed and rescaled action mean in bat
 minimise the mean squared error against the teacher's recorded action mean in the action space
 by Adam over a chosen parameter set. Under `plastic` the set SHALL be the chemical weights alone,
 with the update masked to the wiring, behind whatever readout the configuration built; under
-`full` it SHALL be every parameter PPO trains. A seeded fraction of episodes SHALL be held out.
+`full` it SHALL be every parameter PPO trains except the noise parameter, which a mean-only
+record gives no gradient and therefore no target. A seeded fraction of episodes SHALL be held out.
 The trainer SHALL report the initial, final and held-out losses and the parameter set's norm
 change, SHALL refuse to save when the final loss is not below the initial, and SHALL otherwise
 save through `save_weights` with a clone record beside the file (named after the weight file,
@@ -60,7 +61,8 @@ losses and the seed. The trainer SHALL never run the environment.
 #### Scenario: The full set trains what PPO trains
 
 - **WHEN** a student is cloned under `full`
-- **THEN** its chemical weights, sensory gains, readout and noise parameter SHALL all change
+- **THEN** its chemical weights, sensory gains and readout SHALL all change, and its noise
+  parameter SHALL be bit-identical before and after
 
 #### Scenario: No improvement, no file
 

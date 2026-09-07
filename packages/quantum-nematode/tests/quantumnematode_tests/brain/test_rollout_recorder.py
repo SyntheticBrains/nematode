@@ -110,6 +110,41 @@ class TestRecorderEndToEnd:
             steps = [r["step"] for r in rows if r["episode"] == episode]
             assert steps == list(range(steps_by_run[run]))
 
+    def test_manyworlds_is_rejected(self, tmp_path: Path) -> None:
+        result = self._run(tmp_path, "--record-rollouts", str(tmp_path / "r.jsonl"), "--manyworlds")
+        assert result.returncode == 2
+        assert "cannot be combined with --manyworlds" in result.stderr
+        assert not (tmp_path / "r.jsonl").exists()
+
+    def test_discrete_brain_is_rejected(self, tmp_path: Path) -> None:
+        discrete = (
+            _REPO_ROOT / "configs" / "scenarios" / "foraging" / "connectomeppo_small_klinotaxis.yml"
+        )
+        result = subprocess.run(  # noqa: S603
+            [
+                sys.executable,
+                str(_SCRIPT),
+                "--config",
+                str(discrete),
+                "--runs",
+                "1",
+                "--seed",
+                "3",
+                "--theme",
+                "headless",
+                "--record-rollouts",
+                str(tmp_path / "r.jsonl"),
+            ],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=600,
+        )
+        assert result.returncode == 2
+        assert "discrete actions" in result.stderr
+        assert not (tmp_path / "r.jsonl").exists()
+
     def test_no_flag_writes_nothing(self, tmp_path: Path) -> None:
         result = self._run(tmp_path)
         assert result.returncode == 0, result.stderr[-2000:]

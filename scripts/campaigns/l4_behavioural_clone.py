@@ -15,7 +15,8 @@ Two parameter sets::
 
     plastic   the chemical weights alone, their update masked to the wiring, behind
               whatever readout the config built (anatomical under the plastic configs)
-    full      every parameter PPO trains: chemical weights, sensory gains, readout, noise
+    full      every parameter PPO trains except the noise parameter: chemical weights,
+              sensory gains, readout (a mean-only record gives the noise no gradient)
 
 A seeded fraction of episodes is held out. The trainer reports the initial, final and
 held-out losses and the set's norm change, refuses to save when the final loss is not
@@ -120,8 +121,12 @@ def split_episodes(
     rng: np.random.Generator,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Seeded held-out split by episode; the held-out set is empty when there is one episode."""
+    if not 0.0 <= holdout < 1.0:
+        msg = f"holdout must be in [0, 1), got {holdout}"
+        raise ValueError(msg)
     ids = np.unique(episodes)
-    n_held = round(len(ids) * holdout) if len(ids) > 1 else 0
+    # Never hold out every episode: rounding can select all of a small set.
+    n_held = min(round(len(ids) * holdout), len(ids) - 1) if len(ids) > 1 else 0
     held = set(rng.choice(ids, size=n_held, replace=False).tolist()) if n_held else set()
     mask = np.array([e in held for e in episodes])
     return np.flatnonzero(~mask), np.flatnonzero(mask)
@@ -145,7 +150,12 @@ def parameter_set(brain: ConnectomePPOBrain, name: str) -> list[torch.nn.Paramet
     if name == "plastic":
         return [brain.topology.w_chem]
     if name == "full":
-        return list(brain.topology.learnable_parameters)
+        # The recorded target is a mean, so the noise parameter (and a state-dependent std
+        # head) would receive no gradient; leaving it in the optimiser would only pretend.
+        noise = {id(brain.topology.log_std)} if brain.continuous else set()
+        if brain.topology.state_dependent_std:
+            noise |= {id(p) for p in brain.topology.log_std_head.parameters()}
+        return [p for p in brain.topology.learnable_parameters if id(p) not in noise]
     msg = f"unknown parameter set {name!r}; choose from {PARAMETER_SETS}"
     raise ValueError(msg)
 
@@ -234,6 +244,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--batch-size", type=int, default=256)
     ap.add_argument("--holdout", type=float, default=0.2)
     args = ap.parse_args(argv)
+    if args.batch_size <= 0:
+        ap.error(f"--batch-size must be positive, got {args.batch_size}")
+    if not 0.0 <= args.holdout < 1.0:
+        ap.error(f"--holdout must be in [0, 1), got {args.holdout}")
 
     rows = read_rollouts(args.rollouts)
     if not rows:
