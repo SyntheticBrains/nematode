@@ -397,6 +397,20 @@ def continuous_sample_tanh_gaussian(
     return action, log_prob, entropy, pre_tanh
 
 
+def continuous_deterministic_action(
+    mean: torch.Tensor,
+    action_low: torch.Tensor,
+    action_high: torch.Tensor,
+) -> torch.Tensor:
+    """Return the noiseless bounded action: the Gaussian mean squashed and rescaled as a sample is.
+
+    ``center + half_range * tanh(mean)`` -- the same affine map ``continuous_sample_tanh_gaussian``
+    applies to its pre-squash sample, applied to the mean instead.
+    """
+    center, half_range = _affine_center_half_range(action_low, action_high)
+    return center + half_range * torch.tanh(mean)
+
+
 def continuous_evaluate_tanh_gaussian(
     mean: torch.Tensor,
     log_std: torch.Tensor,

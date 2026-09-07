@@ -1,4 +1,16 @@
-## ADDED Requirements
+# behavioural-cloning Specification
+
+## Purpose
+
+This capability is the imitation warm start's supply chain: a way to record exactly what a
+teacher brain saw and meant to do, and a trainer that fits a connectome student's action mean
+to that record over a chosen parameter set. It exists because three panels showed that on this
+cell the random initial weights decide what any local learning rule can do, so the question the
+rule is asked has to start from a competent policy on every seed. The recorder writes one line
+per step with the observation, the sampled action and the action mean; the trainer never runs
+the environment, so a clone's fit is a number and its behaviour is a separate measurement.
+
+## Requirements
 
 ### Requirement: Rollout recorder
 
@@ -27,8 +39,9 @@ with the update masked to the wiring, behind whatever readout the configuration 
 `full` it SHALL be every parameter PPO trains. A seeded fraction of episodes SHALL be held out.
 The trainer SHALL report the initial, final and held-out losses and the parameter set's norm
 change, SHALL refuse to save when the final loss is not below the initial, and SHALL otherwise
-save through `save_weights` with a `clone.json` beside the file recording the arguments, the
-rollout file's hash, the losses and the seed. The trainer SHALL never run the environment.
+save through `save_weights` with a clone record beside the file (named after the weight file,
+so several clones can share a directory) recording the arguments, the rollout file's hash, the
+losses and the seed. The trainer SHALL never run the environment.
 
 #### Scenario: Self-cloning recovers the teacher
 

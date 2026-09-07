@@ -3,8 +3,10 @@
 ### Requirement: Connectome PPO Weight Persistence
 
 `ConnectomePPOBrain` SHALL implement the `WeightPersistence` protocol. `get_weight_components`
-SHALL return a `topology` component holding the topology module's complete state, including the
-chemical mask and gap-junction buffers, a `training_state` component recording the episode
+SHALL return a `topology` component holding the topology module's complete state — every
+parameter and the chemical mask and gap-junction buffers — except the per-episode activity-trace
+buffers, which exist only when activity traces are enabled and are reset at every episode, so a
+file saved under either rule loads under the other; a `training_state` component recording the episode
 count, `continuous_std_mode`, `learning_rule`, `wiring`, `weight_init` and `connectome_source`,
 and, only while the PPO rule is live, `value` and `optimizer` components. `load_weight_components`
 SHALL validate the std mode and the wiring (the saved chemical mask and gap-junction buffers

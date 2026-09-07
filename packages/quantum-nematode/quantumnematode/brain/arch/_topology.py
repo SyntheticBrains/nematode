@@ -101,3 +101,7 @@ class PlasticTopology(Protocol):
     def plastic_fan_in_axes(self) -> list[int]:
         """Per plastic weight, the axis to reduce over for one unit's incoming weights."""
         ...
+
+    def reset_traces(self) -> None:
+        """Zero every eligibility trace; a documented no-op when traces are off."""
+        ...

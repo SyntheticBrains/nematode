@@ -769,6 +769,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             top_only=True,
             top_randomize=True,
         )
+        if agent.rollout_recorder is not None and action:
+            agent.rollout_recorder.record(params, action[0])
         if len(action) != 1:
             error_msg = f"Invalid action length: {len(action)}. Expected 1."
             raise ValueError(error_msg)
@@ -875,6 +877,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             top_only=True,
             top_randomize=True,
         )
+        if agent.rollout_recorder is not None and action:
+            agent.rollout_recorder.record(params, action[0])
         if len(action) != 1:
             error_msg = f"Invalid action length: {len(action)}. Expected 1."
             raise ValueError(error_msg)
@@ -1052,6 +1056,8 @@ class StandardEpisodeRunner(EpisodeRunner):
                 top_only=True,
                 top_randomize=True,
             )
+            if agent.rollout_recorder is not None and action:
+                agent.rollout_recorder.record(params, action[0])
 
             # Only one action is supported
             if len(action) != 1:

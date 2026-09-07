@@ -35,7 +35,7 @@ and `training_state` components and a std-mode check; the connectome mirrors tha
 
 | component | contents | when |
 |---|---|---|
-| `topology` | the topology module's full `state_dict`: `w_chem`, every sensory gain, `readout`, `log_std` or the std head, plus the wiring buffers `m_chem` and `g_gap` | always |
+| `topology` | the topology module's `state_dict` minus the per-episode activity-trace buffers (present only with traces on, reset every episode): `w_chem`, every sensory gain, `readout`, `log_std` or the std head, the wiring buffers `m_chem` and `g_gap`, the projection index buffers | always |
 | `value` | the PPO critic's `state_dict` | PPO rule live |
 | `optimizer` | the PPO optimiser's `state_dict` | PPO rule live |
 | `training_state` | `continuous_std_mode`, `learning_rule`, `wiring`, `weight_init`, `connectome_source` (no episode count: the connectome brain keeps none and nothing reads one) | always |
@@ -100,8 +100,8 @@ recorded with `freeze_updates: true` so its policy is stationary across the reco
    noise parameter — what PPO trains.
 5. Hold out a seeded fraction of episodes; report initial, final train and held-out loss, and
    the parameter set's norm change; refuse to save if the final loss is not below the initial.
-6. Save through `save_weights` with the `topology` and `training_state` components; a
-   `clone.json` beside it records the arguments, the rollout file's hash, the losses and the
+6. Save through `save_weights` with the `topology` and `training_state` components; a clone
+   record beside it, named after the weight file, records the arguments, the rollout file's hash, the losses and the
    student's seed.
 
 Deterministic given the seed (the holdout split and batch order draw from a generator seeded by

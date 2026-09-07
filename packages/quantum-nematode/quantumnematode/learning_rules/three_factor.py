@@ -527,6 +527,23 @@ class ThreeFactorRule:
             },
         )
 
+    def reset_state(self) -> None:
+        """Return every running quantity to its construction value.
+
+        The baseline, the modulator scale, the trace scales and the modulator centre
+        restart from their priors, and the topology's eligibility traces are cleared.
+        Used when weights are loaded into a brain: a warm start begins from better
+        weights, not from another run's reward statistics.
+        """
+        self.baseline = 0.0
+        self._modulator_scale = _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
+        self._trace_scales = [
+            _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
+            for _ in self._trace_scales
+        ]
+        self._modulator_centre = _RunningMean(self.scaling.scale_rate)
+        self._topology.reset_traces()
+
     def reset_episode(self) -> None:
         """No per-episode rule state to clear.
 

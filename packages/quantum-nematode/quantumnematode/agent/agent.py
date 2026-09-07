@@ -28,6 +28,7 @@ from quantumnematode.report.dtypes import BehaviourStep, PerformanceMetrics
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
     from quantumnematode.agent.runners import EpisodeResult
+    from quantumnematode.brain.rollouts import RolloutRecorder
     from quantumnematode.env.pygame_renderer import Continuous2DRenderer, PygameRenderer
     from quantumnematode.utils.config_loader import SensingConfig
 
@@ -431,6 +432,9 @@ class QuantumNematodeAgent:
 
         self.agent_id = agent_id
         self.brain = brain
+        # Optional per-step rollout recorder; the runners call it after every
+        # ``run_brain`` when it is set and do nothing when it is None.
+        self.rollout_recorder: RolloutRecorder | None = None
         self.satiety_config = satiety_config or SatietyConfig()
         self.sensing_config: SensingConfig = sensing_config or SensingConfig()
 
