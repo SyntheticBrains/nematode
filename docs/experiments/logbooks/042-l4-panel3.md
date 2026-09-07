@@ -118,12 +118,13 @@ Mean Δ **+9.6**, CI[+4.3, +15.0], 34/64 positive; discordance 19 against 10; co
 ## Conclusions
 
 - The Hebbian wiring contrast is **not confirmed** after 64 paired seeds and is **closed as a
-  registered question**. The effect is real in the pooled interval and small (about +9 points),
-  and it lives in the level of the wild-type's good fixed points rather than in their frequency.
+  registered question**. The pooled 64-seed estimate is positive and small (about +9 points, its 80%
+  interval clear of zero, descriptive), and the difference lives in the level of the wild-type's good fixed points rather than in their frequency.
   The claim type is performance; the result is descriptive.
 - Nothing here changes the ordering. The dominant fact across panels 1–3 is that initialisation
   decides the outcome and most random initialisations are dead; the imitation warm start (S.2)
-  supplies a competent policy on every seed and is on the path to the reward-modulated headline.
+  will test whether a warm start supplies a competent policy on every seed, and it is on the path
+  to the reward-modulated headline.
 
 ## Limitations
 
