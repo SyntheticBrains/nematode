@@ -6,11 +6,14 @@ The warm-start panel SHALL train the MLP-PPO champion configuration on seeds 1�
 episodes, select the seed with the highest committed plateau tail as the one teacher, record it
 frozen for 300 episodes at seed 101 with its action means, and clone its policy into every
 student at its run seed under two parameter sets — the plastic set (chemical weights behind the
-anatomical readout) and the full set (every parameter PPO trains except the noise) — with
+anatomical readout, its student the plastic frozen arm) and the full set (every parameter PPO
+trains except the noise, its student a low-noise PPO arm carrying `initial_log_std: -1.0` so the
+clone's saved noise matches the plastic arms') — with
 cloning hyperparameters fixed before any run (300 epochs, learning rate 1e-3, batch 256, holdout
 0.2) and every clone's fit recorded. Twelve arms SHALL run on paired seeds 1–8: from the
 plastic-set clone the frozen, unmodulated-Hebbian and three-factor arms on both wirings; from the
-full-set clone the frozen arm and the PPO arm on both wirings; and PPO from random weights on both
+full-set clone the frozen arm and the PPO arm on both wirings; and low-noise PPO from random
+weights on both
 wirings. Frozen arms SHALL run 600 episodes, plastic and Hebbian arms 2000, PPO arms 3000, each
 with the single registered extension (a fresh run at 1.5× replacing the shorter log) for a run
 the plateau detector marks non-converged. No pilot SHALL precede the panel. The per-seed ranked
@@ -20,7 +23,7 @@ frozen clone over panel 2's random-initialisation wild-type frozen floor on the 
 (W2) the wild-type over the rewired plastic-set frozen clone; (W3) the wild-type over the
 rewired three-factor arm from the plastic-set clone, the primary; (W4) that arm over its frozen
 clone; (W5) that arm over its Hebbian clone; (W6) the wild-type PPO arm from the full-set clone
-over wild-type PPO from random weights. The verdict SHALL be assigned in order as
+over wild-type low-noise PPO from random weights, both starting at the same noise. The verdict SHALL be assigned in order as
 `insufficient_seeds`, `clone_fail` (W1 fails), `sanity_floor_fail` (W4 or W5 fails),
 `rewired_beats_wild_type` (W3's interval entirely below zero), `specific_wiring` (W3 passes),
 `degree_statistics` (W3's interval spans zero) or `inconclusive`; W2 and W6 SHALL annotate and

@@ -45,17 +45,31 @@ rate 1e-3, batch 256, holdout 0.2 by episode.
 |---|---|---|---|
 | plastic-set, wild-type | the plastic frozen arm | `plastic` (chemical weights behind the anatomical readout) | `clones/plastic_wt_seed{seed}.pt` |
 | plastic-set, rewired | the plastic frozen rewired-null arm | `plastic` | `clones/plastic_rn_seed{seed}.pt` |
-| full-set, wild-type | the PPO arm | `full` (chemical weights, gains, readout) | `clones/full_wt_seed{seed}.pt` |
-| full-set, rewired | the PPO rewired-null arm | `full` | `clones/full_rn_seed{seed}.pt` |
+| full-set, wild-type | the low-noise PPO arm (`_lowstd`, the PPO config plus `initial_log_std: -1.0`) | `full` (chemical weights, gains, readout; the noise is saved at −1.0, untrained) | `clones/full_wt_seed{seed}.pt` |
+| full-set, rewired | the low-noise PPO rewired-null arm | `full` | `clones/full_rn_seed{seed}.pt` |
 
 Every clone's initial, final and held-out loss is recorded in `clones.json`; a clone whose
 held-out loss does not fall below half its initial is flagged, not excluded. The student's seed
-is the run seed, so a clone loads into exactly the brain whose initial weights it started from.
+is the run seed, so a clone loads into exactly the brain whose initial weights it started from;
+for the rewired arms that is also what keeps them paired — a clone made at seed S draws the same
+rewiring as the arm at seed S and is refused by the wiring check at any other seed, which the
+tests exercise.
+
+**Why the full-set student is low-noise.** The trainer leaves the noise parameter untrained but
+saves it, so a clone carries its student's `initial_log_std` into whatever arm loads it. Built
+from the PPO config that would be 0 (std 1.0), and the full-set frozen arm would be evaluated at
+the noise panel 1 showed caps every arm — incomparable with the plastic-set frozen clone at −1.0.
+The full-set student is therefore built from a one-key derivation of the PPO config with
+`initial_log_std: -1.0`, and the from-scratch PPO comparator for W6 is that same derived config
+without weights, so both PPO arms start at the same noise and the clone is their only difference.
+Logbook 029's original PPO arm (noise 0, 6000 episodes) is cited descriptively, not run.
 
 ### D3. Per-seed weight paths
 
 `weights_path` accepts `{seed}`, which the entry point substitutes with the run seed before
-loading; a path with braces left after substitution is an error. This is the only package-side
+loading; a path with braces left after substitution is an error. A relative path is resolved
+against the working directory, and the campaign runner runs from the repository root, so the
+clone paths below are repository-relative. This is the only package-side
 change and it is inert for every existing config.
 
 ### D4. Arms, seeds, budgets
@@ -70,8 +84,19 @@ seed), three budgets, the committed plateau detector deciding the single registe
 | `wt_clone_hebbian`, `rn_clone_hebbian` | plastic Hebbian arms + `weights_path` | plastic-set clone | unmodulated Hebbian | 2000 |
 | `wt_clone_plastic`, `rn_clone_plastic` | plastic arms + `weights_path` | plastic-set clone | three-factor | 2000 |
 | `wt_fullclone_frozen`, `rn_fullclone_frozen` | plastic frozen arms + `weights_path` | full-set clone | frozen | 600 |
-| `wt_fullclone_ppo`, `rn_fullclone_ppo` | PPO arms + `weights_path` | full-set clone | PPO | 3000 |
-| `wt_ppo`, `rn_ppo` | the existing PPO arms | random | PPO | 3000 |
+| `wt_fullclone_ppo`, `rn_fullclone_ppo` | low-noise PPO arms + `weights_path` | full-set clone | PPO | 3000 |
+| `wt_ppo`, `rn_ppo` | the low-noise PPO arms (`_lowstd`) | random | PPO | 3000 |
+
+**Configs** (twelve new, under `configs/scenarios/foraging_predator_thermal/`, stem
+`connectomeppo_small_continuous2d_combined_klinotaxis`): `<stem>_plastic_frozen_clone`,
+`<stem>_plastic_frozen_rewired_null_clone`, `<stem>_plastic_hebbian_clone`,
+`<stem>_plastic_hebbian_rewired_null_clone`, `<stem>_plastic_clone`,
+`<stem>_plastic_rewired_null_clone` (plastic-set clones, one `weights_path` key off their
+parents); `<stem>_plastic_frozen_fullclone`, `<stem>_plastic_frozen_rewired_null_fullclone`
+(full-set frozen, one key off the plastic frozen arms); `<stem>_lowstd`,
+`<stem>_rewired_null_lowstd` (the PPO arms plus `initial_log_std: -1.0`, one key off their
+parents; the from-scratch comparators and the full-set students); `<stem>_lowstd_fullclone`,
+`<stem>_rewired_null_lowstd_fullclone` (one `weights_path` key off the low-noise arms).
 
 The full-set clone's readout replaces the anatomical one where it is loaded; the arm key says
 so. Every value the plastic arms run with is panel 1's pin; the PPO arms run the committed 029
@@ -94,6 +119,13 @@ the random-initialisation frozen floor on seeds 1–8 for the gate.
 | **W4** | `wt_clone_plastic` vs `wt_clone_frozen` | plastic > frozen | the rule improves on a competent start |
 | **W5** | `wt_clone_plastic` vs `wt_clone_hebbian` | plastic > Hebbian | reward matters from a competent start |
 | **W6** | `wt_fullclone_ppo` vs `wt_ppo` | warm-started > scratch | the warm start helps PPO on the connectome (D13) |
+
+**Power at n = 8, stated in advance.** The exact one-sided Wilcoxon on eight paired seeds has a
+smallest attainable p of 1/256; under BH over six tests the best-ranked test passes only at
+p ≤ 0.0083, so a test passes only with seven or eight concordant seeds. The family is built to
+detect large, consistent effects — which is what a competent start on every seed is meant to
+produce — and the descriptive layer carries everything smaller. Eight seeds is the ratified
+sample for cost (about four hours); a null here reads "not confirmed at n = 8".
 
 A test passes at q < 0.05 with a positive mean delta. Reverses (interval entirely below zero)
 are named. **Descriptive**: the full-set frozen pair; `wt_fullclone_ppo` vs `rn_fullclone_ppo`;

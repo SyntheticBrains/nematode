@@ -8,16 +8,19 @@
 
 ## 2. Configs
 
-- [ ] 2.1 Ten warm-started configs, each one `weights_path` key off its parent (`_clone` and
-  `_fullclone` suffixes); variant tests for the delta and the naming; excluded from the smoke
-  list with the reason stated there.
+- [ ] 2.1 Twelve configs — ten warm-started, each one `weights_path` key off its parent (`_clone` and
+  `_fullclone` suffixes), and two low-noise PPO arms (`_lowstd`, one `initial_log_std` key off
+  the PPO arms); variant tests for the delta and the naming; the clone configs excluded from the
+  smoke list with the reason stated there.
 
 ## 3. The campaign script
 
 - [ ] 3.1 `scripts/campaigns/l4_warm_start.py teacher`: select the best MLP seed by plateau tail,
   copy its weights, write the frozen recording config, run the recording; `clone`: the 32
   clones at the registered hyperparameters, `clones.json` with every fit and the flag.
-- [ ] 3.2 Tests on synthetic inputs: selection, config derivation, clone naming, the flag.
+- [ ] 3.2 Tests on synthetic inputs: selection, config derivation, clone naming, the flag; and the
+  pairing check — a rewired clone made at seed S loads into the rewired arm at seed S and is
+  refused at another seed.
 
 ## 4. The harness
 

@@ -23,10 +23,12 @@ student — the plastic set the rule can inherit, and the full PPO set; the warm
 
 - **Per-seed weight paths**: `weights_path` may contain `{seed}`, resolved with the run seed
   before loading, so one committed config addresses one clone file per seed.
-- **Ten configs**, each one key (`weights_path`) off an existing arm: the frozen, Hebbian and
+- **Twelve configs**, each one key off an existing arm: the frozen, Hebbian and
   three-factor arms on both wirings warm-started from the plastic-set clone; the frozen arm on
   both wirings warm-started from the full-set clone; and the PPO arm on both wirings warm-started
-  from the full-set clone. With the two existing from-scratch PPO configs that is twelve arms.
+  from the full-set clone; and a low-noise PPO arm on both wirings (`initial_log_std: -1.0`),
+  which is both the full-set clone's student and the from-scratch comparator, so the warm-started
+  and scratch PPO arms start at the same noise. Twelve arms.
 - **The registration**: teacher selection and recording rules; clone hyperparameters fixed in
   advance and every clone's fit reported; twelve arms on paired seeds 1–8 at three budgets; a
   six-test BH-FDR family with the warm-started wild-type-over-rewired three-factor contrast as
