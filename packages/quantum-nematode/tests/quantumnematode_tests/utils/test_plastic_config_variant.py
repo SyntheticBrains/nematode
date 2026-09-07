@@ -283,3 +283,48 @@ class TestRewiredFloorConfigs:
     def test_names_keep_the_wild_type_floor_as_a_prefix(self) -> None:
         assert _FROZEN_REWIRED.name.startswith(_FROZEN.name.removesuffix(".yml"))
         assert _HEBBIAN_REWIRED.name.startswith(_HEBBIAN.name.removesuffix(".yml"))
+
+
+_COUNT_INIT = [
+    (path, path.with_name(path.name.replace(".yml", "_countinit.yml")))
+    for path in (_FROZEN, _FROZEN_REWIRED, _HEBBIAN, _HEBBIAN_REWIRED)
+]
+
+
+class TestCountInitConfigs:
+    """Each count-initialised floor is one key off its degree-scaled parent."""
+
+    @pytest.mark.parametrize(
+        ("parent", "derived"),
+        _COUNT_INIT,
+        ids=["frozen", "frozen_rewired", "hebbian", "hebbian_rewired"],
+    )
+    def test_adds_only_the_init_key(self, parent: Path, derived: Path) -> None:
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.weight_init"}
+        assert set(base) - set(variant) == set()
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+        assert variant["brain.config.weight_init"] == "count_scaled"
+
+    @pytest.mark.parametrize(
+        ("parent", "derived"),
+        _COUNT_INIT,
+        ids=["frozen", "frozen_rewired", "hebbian", "hebbian_rewired"],
+    )
+    def test_loads_with_the_parent_rule_and_wiring(self, parent: Path, derived: Path) -> None:
+        base = load_simulation_config(str(parent)).brain
+        variant = load_simulation_config(str(derived)).brain
+        assert base is not None
+        assert variant is not None
+        assert isinstance(base.config, ConnectomePPOBrainConfig)
+        assert isinstance(variant.config, ConnectomePPOBrainConfig)
+        assert variant.config.weight_init == "count_scaled"
+        assert base.config.weight_init == "degree_scaled"
+        assert variant.config.learning_rule == base.config.learning_rule
+        assert variant.config.wiring == base.config.wiring
+        assert variant.config.freeze_updates == base.config.freeze_updates
+
+    def test_parents_keep_the_degree_scaled_default(self) -> None:
+        for parent, _ in _COUNT_INIT:
+            assert "weight_init" not in parent.read_text()

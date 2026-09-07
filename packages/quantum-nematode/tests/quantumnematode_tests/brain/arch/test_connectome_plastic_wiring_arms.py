@@ -66,6 +66,7 @@ _PLASTICITY_FIELDS = (
     "plasticity_scale_floor",
     "plasticity_homeostasis",
     "initial_log_std",
+    "weight_init",
 )
 
 

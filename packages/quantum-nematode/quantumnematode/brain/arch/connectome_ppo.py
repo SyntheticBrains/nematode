@@ -167,6 +167,16 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # paired run draws its own null topology from a dedicated RNG while the weight-init
     # RNG stream is left untouched (matched init vs wild-type for the same seed).
     rewire_seed: int | None = None
+    # Chemical-weight initialisation. "degree_scaled" draws every incoming edge of a
+    # neuron from N(0, 1/sqrt(k)), k its chemical in-degree, so the synapse counts in
+    # the connectome data never reach a weight. "count_scaled" draws z ~ N(0, 1) per
+    # edge in the same order from the same generator and scales it by
+    # n / sqrt(sum n^2) over the neuron's incoming counts: magnitudes proportional to
+    # count, signs still random, and the expected squared incoming norm 1 under both
+    # settings (so per-unit homeostatic targets are unchanged). Chemical weights only;
+    # gap junctions already carry their counts through the fan-in normalisation.
+    # Default degree_scaled is byte-identical to the pre-option brain.
+    weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled"
     enable_gap_junctions: bool = True
     chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"
     # Sensing mode controls what env-side fields the sensor projection
@@ -272,6 +282,7 @@ class ConnectomeTopology(nn.Module):
         enable_activity_traces: bool = False,
         trace_decay: float = 0.9,
         initial_log_std: float = 0.0,
+        weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled",
     ) -> None:
         super().__init__()
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
@@ -304,12 +315,20 @@ class ConnectomeTopology(nn.Module):
         self._idx = {name: i for i, name in enumerate(self.neuron_names)}
 
         # ── Chemical synapses: strict-mask + learnable weights ──────────
-        # Initialised at N(0, 1/sqrt(fan_in)) along existing edges; zero
-        # elsewhere. The boolean mask is registered as a buffer (moves
-        # with .to(device) but is not a learnable parameter).
+        # Initialised along existing edges, zero elsewhere. Degree-scaled:
+        # N(0, 1/sqrt(fan_in)). Count-scaled: z ~ N(0, 1) times
+        # n / sqrt(sum n^2) over the post-synaptic neuron's incoming synapse
+        # counts, drawn in the same edge order from the same generator, so
+        # both settings give every neuron with inputs an expected squared
+        # incoming norm of 1 and differ only in the relative magnitudes
+        # within a neuron's inputs. The boolean mask is registered as a
+        # buffer (moves with .to(device) but is not a learnable parameter).
+        self.weight_init = weight_init
         chem_in_degree = np.zeros(self.n_neurons, dtype=np.int64)
+        count_sq_sum = np.zeros(self.n_neurons, dtype=np.float64)
         for syn in connectome.chemical_synapses:
             chem_in_degree[self._idx[syn.post]] += 1
+            count_sq_sum[self._idx[syn.post]] += float(syn.weight) ** 2
 
         safe_in = np.where(chem_in_degree > 0, chem_in_degree, 1)
         chem_scale = np.where(
@@ -317,6 +336,7 @@ class ConnectomeTopology(nn.Module):
             1.0 / np.sqrt(safe_in.astype(np.float64)),
             0.0,
         )
+        count_norm = np.sqrt(np.where(count_sq_sum > 0, count_sq_sum, 1.0))
 
         m_chem_np = np.zeros((self.n_neurons, self.n_neurons), dtype=bool)
         w_chem_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.float32)
@@ -324,9 +344,13 @@ class ConnectomeTopology(nn.Module):
             pre_i = self._idx[syn.pre]
             post_j = self._idx[syn.post]
             m_chem_np[pre_i, post_j] = True
-            w_chem_np[pre_i, post_j] = np.float32(
-                rng.normal(loc=0.0, scale=float(chem_scale[post_j])),
-            )
+            if weight_init == "count_scaled":
+                factor = float(syn.weight) / float(count_norm[post_j])
+                w_chem_np[pre_i, post_j] = np.float32(rng.normal(loc=0.0, scale=1.0) * factor)
+            else:
+                w_chem_np[pre_i, post_j] = np.float32(
+                    rng.normal(loc=0.0, scale=float(chem_scale[post_j])),
+                )
 
         self.register_buffer(
             "m_chem",
@@ -1203,6 +1227,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             enable_activity_traces=config.enable_activity_traces,
             trace_decay=config.trace_decay,
             initial_log_std=config.initial_log_std,
+            weight_init=config.weight_init,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
