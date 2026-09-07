@@ -41,3 +41,12 @@ uv run python scripts/run_campaign.py \
   `uv run python scripts/analysis/l4_panel2.py --campaign-dir campaigns/l4-panel2 --sweep-dir campaigns/l4-panel2-sweep --out docs/experiments/logbooks/supporting/041-l4-panel2/panel2.json --csv .../per-seed.csv --curves .../curves.csv`;
   the confirmatory family and the verdict map are the ones fixed in that script and in the
   registration.
+
+- **Extensions applied**: three. `wt_hebbian` seed 14, `wt_hebbian_count` seed 3 and
+  `rn_hebbian_count` seed 10 had no detected plateau at 1000 episodes and each received the single
+  registered extension: a fresh run at 1500 episodes (`campaigns/l4-panel2-ext`, the 1000-episode
+  logs kept in place), all three converging (onsets 1415, 991, 1132) with tails within four points
+  of the shorter runs (70.7 vs 74.8, 67.2 vs 61.6, 30.1 vs 34.0). The extended logs replace the
+  shorter ones in `_manifest.txt`; the family and the verdict were unchanged.
+
+- **Reproduction check**: passed — 32 of 32 comparisons identical (see `details.md`).
