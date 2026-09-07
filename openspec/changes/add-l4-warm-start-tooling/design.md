@@ -38,16 +38,19 @@ and `training_state` components and a std-mode check; the connectome mirrors tha
 | `topology` | the topology module's full `state_dict`: `w_chem`, every sensory gain, `readout`, `log_std` or the std head, plus the wiring buffers `m_chem` and `g_gap` | always |
 | `value` | the PPO critic's `state_dict` | PPO rule live |
 | `optimizer` | the PPO optimiser's `state_dict` | PPO rule live |
-| `training_state` | episode count, `continuous_std_mode`, `learning_rule`, `wiring`, `weight_init`, `connectome_source` | always |
+| `training_state` | `continuous_std_mode`, `learning_rule`, `wiring`, `weight_init`, `connectome_source` (no episode count: the connectome brain keeps none and nothing reads one) | always |
 
 `load_weight_components` validates before mutating: the std mode through the existing
-`raise_on_std_mode_mismatch`; the wiring by comparing the saved `m_chem` and `g_gap` buffers to
+`raise_on_std_mode_mismatch` (in `brain/arch/_std_head.py`, the helper the MLP brain already
+imports); the wiring by comparing the saved `m_chem` and `g_gap` buffers to
 the receiving brain's (a warm start onto a different wiring is a silent error the mechanism must
 refuse; the rewired arm loads a clone made on its own wiring). It then loads `topology`, loads
 `value` and `optimizer` only if present and the PPO rule is live (a plastic-rule brain ignores
 them; a PPO brain given a file without them keeps its fresh critic and optimiser, which is the
 warm-start case), resets the rollout buffer, and under the plastic rule resets the rule's
-running state. `learning_rule` and `weight_init` in `training_state` are recorded, not
+running state through a new `ThreeFactorRule.reset_state()` — baseline, both running scales,
+the centring mean and the traces — since the rule today exposes only the per-episode
+`reset_episode`. `learning_rule` and `weight_init` in `training_state` are recorded, not
 enforced: loading a full-set clone made under the PPO config into a plastic-rule brain is the
 intended path, and the readout it carries replaces the anatomical one — a deliberate,
 config-visible choice the panel registers per arm. A round trip is bit-identical.
@@ -63,7 +66,8 @@ default run.
 ### D3. Rollout recording
 
 A `RolloutRecorder` (new module beside the brain package's actions) is attached to the agent when
-`--record-rollouts PATH` is given. The runners call `recorder.record(episode, step, params, action_data)` immediately after `run_brain` returns, and make no call when no recorder is
+`--record-rollouts PATH` is given. The single-agent runners call `recorder.record(episode, step, params, action_data)` at every
+site where they call `run_brain` (three today), immediately after `run_brain` returns, and make no call when no recorder is
 attached — the default path is untouched. Each call appends one JSON line: `episode`, `step`,
 `params` (the `BrainParams` dump with `None` fields and the `action` field dropped), `action`
 (the sampled continuous action), `action_mean`, `probability`. The file is flushed per episode
@@ -74,12 +78,20 @@ recorded with `freeze_updates: true` so its policy is stationary across the reco
 
 `scripts/campaigns/l4_behavioural_clone.py --config C --seed S --rollouts R --parameter-set {plastic,full} --out W [--epochs --lr --batch-size --holdout]`:
 
-1. Build the student from config `C` at seed `S` through the same factory the entry point uses,
-   so its initial weights are exactly the arm's at that seed.
-2. Read `R`; reconstruct each `BrainParams`; run the student's own preprocessing to the feature
-   arrays it feeds its batched forward; stack them.
-3. Forward in batches; map the pooled motor activity through the student's readout to the
-   Gaussian mean; squash and rescale exactly as sampling does; loss = mean squared error against
+1. Build the student from config `C` at seed `S` the way the entry point does: load it through
+   `load_simulation_config`, set the seed as the entry point sets it, and call
+   `setup_brain_model` with the same config-derived arguments (brain type, device, learning rate,
+   gradient settings, initialiser config), so its initial weights are exactly the arm's at that
+   seed.
+2. Read `R`; reconstruct each `BrainParams`; run the student's `preprocess` on each to the flat
+   state array the PPO update stores; stack them; unpack the stack into the batched feature
+   tensors through the same routine the PPO batch uses (`ConnectomePPOBatch.unpack_batched`,
+   extracted to a free function if it stays bound to the batch object, since a plastic-rule
+   student builds no PPO batch).
+3. Call `forward_with_hidden_batched` in batches and take its first return as the Gaussian
+   mean: in continuous mode that return is already the readout-mapped mean (the readout is 2 × 4
+   and the batched pass computes `motor_acts @ readout.T`), so the trainer applies no readout of
+   its own. Squash and rescale exactly as sampling does; loss = mean squared error against
    the teacher's `action_mean` in the action space (bounded, scale-consistent; a target the
    teacher saturated is matched at the bound rather than chased to infinity).
 4. Optimise with Adam over the chosen set. `plastic`: `w_chem` alone, with the mask applied to
