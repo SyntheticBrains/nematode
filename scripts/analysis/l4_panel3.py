@@ -95,8 +95,25 @@ def group_panel(scanned: Scanned) -> dict[str, dict[int, SeedRecord]]:
             )
             raise ValueError(msg)
         seeds = panel.setdefault(arm, {})
-        if seed in seeds:
-            print(f"  WARN {arm} seed {seed}: duplicate run - the later log overwrites the earlier")
+        held = seeds.get(seed)
+        if held is not None:
+            # An extension is a fresh, longer run replacing its predecessor, and the two logs may
+            # arrive in either order, so the longer run wins by episode count rather than by
+            # position. Two runs of equal length are a genuine conflict, not an extension.
+            if held.episodes == record.episodes:
+                msg = (
+                    f"{arm} seed {seed}: two runs of {record.episodes} episodes - a duplicate that "
+                    "is not an extension; resolve the campaign before analysing"
+                )
+                raise ValueError(msg)
+            keep = max(held, record, key=lambda r: r.episodes)
+            drop = min(held, record, key=lambda r: r.episodes)
+            print(
+                f"  WARN {arm} seed {seed}: keeping the {keep.episodes}-episode run over the "
+                f"{drop.episodes}-episode one (the registered extension)",
+            )
+            seeds[seed] = keep
+            continue
         seeds[seed] = record
     return panel
 
@@ -134,7 +151,8 @@ def discordance(wt: dict[int, float], rn: dict[int, float], seeds: tuple[int, ..
         "both": len(wt_c & rn_c),
         "wild_type_competent": len(wt_c),
         "rewired_competent": len(rn_c),
-        "wilcoxon_p": p,  # the family reads one p-value key per test
+        "exact_p": p,  # an exact binomial, never a Wilcoxon; the family reads ``p_value``
+        "p_value": p,
         "mean_delta": float(b - c),
         "positive_seeds": b,
     }
@@ -145,7 +163,8 @@ def family_tests(values: dict[str, dict[int, float]]) -> dict[str, dict]:
     wt = restrict(values.get("wt_hebbian", {}), REPLICATION_SEEDS)
     rn = restrict(values.get("rn_hebbian", {}), REPLICATION_SEEDS)
     raw = {"R1": paired(wt, rn), "R2": discordance(wt, rn, REPLICATION_SEEDS)}
-    qs = bh_fdr([raw[t]["wilcoxon_p"] for t in FAMILY])
+    raw["R1"]["p_value"] = raw["R1"]["wilcoxon_p"]  # R1 is the Wilcoxon; R2 carries ``exact_p``
+    qs = bh_fdr([raw[t]["p_value"] for t in FAMILY])
     for test, q in zip(FAMILY, qs, strict=True):
         stats = raw[test]
         stats["bh_q"] = q
@@ -198,6 +217,22 @@ def annotate(result: str, tests: dict[str, dict]) -> dict[str, bool | str]:
 # --- descriptive ------------------------------------------------------------------------
 
 
+def check_panel2_inputs(panel2: dict[str, dict[int, float]]) -> None:
+    """Refuse to analyse on an incomplete panel-2 table: the floors and the pooling are registered."""
+    missing: list[str] = []
+    for arm in FLOOR_OF.values():
+        absent = [s for s in REPLICATION_SEEDS if s not in panel2.get(arm, {})]
+        if absent:
+            missing.append(f"{arm} floors for seeds {absent}")
+    for arm in ARMS3:
+        absent = [s for s in PANEL2_SEEDS if s not in panel2.get(arm, {})]
+        if absent:
+            missing.append(f"{arm} values for the pooled seeds {absent}")
+    if missing:
+        msg = f"panel 2's table is incomplete, so the gains and the pooling would silently drop seeds: {'; '.join(missing)}"
+        raise ValueError(msg)
+
+
 def learning_gains(
     values: dict[str, dict[int, float]],
     floors: dict[str, dict[int, float]],
@@ -247,6 +282,7 @@ def analyse(
     out: dict,
 ) -> dict:
     """Family, verdict, annotation, gains, distributions and the pooled descriptive."""
+    check_panel2_inputs(panel2)
     values = successes(panel)
     tests = family_tests(values)
     result = verdict(tests)
@@ -297,7 +333,7 @@ def _print_panel(out: dict) -> None:
     )
     print(
         f"    R2  b={r2['b_wild_type_only']} c={r2['c_rewired_only']} both={r2['both']}  "
-        f"p={r2['wilcoxon_p']:.3f}  q={r2['bh_q']:.3f}  {'PASS' if r2['pass'] else 'fail'}",
+        f"p={r2['exact_p']:.3f}  q={r2['bh_q']:.3f}  {'PASS' if r2['pass'] else 'fail'}",
     )
     for test in FAMILY:
         if not out["family"][test]["complete"]:
@@ -357,10 +393,10 @@ def main(argv: list[str] | None = None) -> int:
     out: dict = {}
     try:
         panel = group_panel(scanned)
+        analyse(panel, read_panel2_csv(args.panel2_csv), out)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    analyse(panel, read_panel2_csv(args.panel2_csv), out)
     _print_panel(out)
     if args.csv:
         write_per_seed_csv(panel, args.csv)

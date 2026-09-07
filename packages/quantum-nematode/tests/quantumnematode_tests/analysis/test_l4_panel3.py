@@ -113,13 +113,15 @@ class TestDiscordance:
         rn = {s: (50.0 if s in (17, 27, 28, 29) else 0.0) for s in _REP}  # 17 both; 27-29 rn-only
         d = p3.discordance(wt, rn, _REP)
         assert (d["b_wild_type_only"], d["c_rewired_only"], d["both"]) == (9, 3, 1)
-        assert d["wilcoxon_p"] == pytest.approx(299 / 4096)
+        assert d["exact_p"] == pytest.approx(299 / 4096)
+        assert d["p_value"] == d["exact_p"]
+        assert "wilcoxon_p" not in d  # R2 is an exact binomial, never a Wilcoxon
 
     def test_no_discordant_pairs_reports_p_one(self) -> None:
         wt = dict.fromkeys(_REP, 50.0)
         d = p3.discordance(wt, dict(wt), _REP)
         assert (d["b_wild_type_only"], d["c_rewired_only"]) == (0, 0)
-        assert d["wilcoxon_p"] == 1.0
+        assert d["exact_p"] == 1.0
         tests = p3.family_tests({"wt_hebbian": wt, "rn_hebbian": dict(wt)})
         assert tests["R2"]["pass"] is False
 
@@ -190,6 +192,48 @@ class TestFamilyAndVerdict:
         tests = p3.family_tests(_values())
         notes = p3.annotate(p3.verdict(tests), tests)
         assert "and on the competent fraction" in notes["reading"]
+
+
+class TestDuplicatesAndInputs:
+    """An extension arriving in either order, and an incomplete panel-2 table."""
+
+    @pytest.mark.parametrize("longer_first", [True, False], ids=["longer-first", "shorter-first"])
+    def test_the_longer_run_wins_whatever_the_order(self, *, longer_first: bool) -> None:
+        short = _record(10.0, episodes=1000, converged=False)
+        long_ = _record(40.0, episodes=1500)
+        order = [long_, short] if longer_first else [short, long_]
+        panel = p3.group_panel([("wt_hebbian", 20, r) for r in order])
+        assert panel["wt_hebbian"][20].episodes == 1500
+        assert panel["wt_hebbian"][20].success == 40.0
+
+    def test_equal_length_duplicates_are_rejected(self) -> None:
+        with pytest.raises(ValueError, match="not an extension"):
+            p3.group_panel(
+                [("wt_hebbian", 20, _record(10.0)), ("wt_hebbian", 20, _record(40.0))],
+            )
+
+    def test_missing_floor_seeds_are_refused(self) -> None:
+        panel2 = _panel2()
+        del panel2["wt_frozen"][30]
+        with pytest.raises(ValueError, match=r"wt_frozen floors for seeds \[30\]"):
+            p3.analyse(_panel(_values()), panel2, {})
+
+    def test_missing_pooled_seeds_are_refused(self) -> None:
+        panel2 = _panel2()
+        del panel2["rn_hebbian"][4]
+        with pytest.raises(ValueError, match=r"rn_hebbian values for the pooled seeds \[4\]"):
+            p3.analyse(_panel(_values()), panel2, {})
+
+    def test_main_reports_an_incomplete_table(self, tmp_path: Path) -> None:
+        logs = tmp_path / "logs"
+        logs.mkdir()
+        for seed in _REP:
+            _log(logs / f"{_STEM}_hebbian-seed{seed}.log", ["SUCCESS"] * 40)
+            _log(logs / f"{_STEM}_hebbian_rewired_null-seed{seed}.log", ["FAILED"] * 40)
+        values = _panel2()
+        del values["wt_frozen"][40]
+        p2csv = _write_panel2_csv(tmp_path / "p2.csv", values)
+        assert p3.main(["--campaign-dir", str(tmp_path), "--panel2-csv", str(p2csv)]) == 2
 
 
 class TestDescriptive:

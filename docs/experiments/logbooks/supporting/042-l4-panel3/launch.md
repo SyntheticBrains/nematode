@@ -8,11 +8,13 @@ Written and committed before the campaign command ran, per the registration.
   carrying this record precedes the launch.
 - **Arms** (two): `wt_hebbian` and `rn_hebbian` — panel 2's degree-scaled unmodulated-Hebbian
   stems, as registered in `scripts/analysis/l4_panel2.py` and reused by `l4_panel3.py`
-- **Seeds**: 17–64, paired (`rewire_seed` derived from the run seed); no earlier panel used them
+- **Seeds**: 17–64, paired (`rewire_seed` derived from the run seed). The Hebbian runs on these
+  seeds are fresh: no earlier panel ran either Hebbian arm on them. Panel 2 did run its frozen
+  prior sweep over seeds 1–64, so the floors below are reused, not new.
 - **Budget**: 1000 episodes, uniform. The single registered extension for a seed the plateau
   detector marks non-converged at 1000 is a fresh run at 1500 replacing the shorter log.
-- **Frozen floors**: panel 2's prior-sweep values for seeds 17–64 (`wt_frozen`, `rn_frozen`,
-  600 episodes), read from the committed table
+- **Frozen floors**: reused, not re-run — panel 2's prior-sweep values for seeds 17–64
+  (`wt_frozen`, `rn_frozen`, 600 episodes), read from the committed table
   `docs/experiments/logbooks/supporting/041-l4-panel2/per-seed.csv`; originally produced by the
   `campaigns/l4-panel2-sweep` campaign. Nothing is re-run.
 - **Descriptive pooling**: seeds 1–16 from the same table, never confirmatory.
