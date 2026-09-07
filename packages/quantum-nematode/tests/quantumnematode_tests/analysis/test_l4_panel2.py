@@ -347,6 +347,21 @@ class TestExtensionsAndOutput:
         assert data["family"]["P4"]["n"] == 64
         assert data["prior_sweep"]["arms"]["wt_frozen"]["competent_fraction"] == 0.0
 
+    def test_main_flags_an_incomplete_campaign(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        logs = tmp_path / "logs"
+        logs.mkdir()
+        for seed in (1, 2, 3):
+            _log(logs / f"{_STEM}_hebbian-seed{seed}.log", ["SUCCESS"] * 40)
+            _log(logs / f"{_STEM}_hebbian_rewired_null-seed{seed}.log", ["FAILED"] * 40)
+        assert p2.main(["--campaign-dir", str(tmp_path)]) == 0
+        printed = capsys.readouterr().out
+        assert "INCOMPLETE: 3 of the registered seeds present" in printed
+        assert "VERDICT:" in printed
+
     def test_main_rejects_an_out_of_range_seed(self, tmp_path: Path) -> None:
         logs = tmp_path / "logs"
         logs.mkdir()
