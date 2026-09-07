@@ -137,9 +137,10 @@ Learning gains (Hebbian minus own frozen, seeds 1–16): wild-type **+25.7** (11
    43, 41, 41). Every plasticity result on this cell is read against a floor whose seed-to-seed
    range is 0–74 points; a plastic arm's mean over eight seeds is mostly a statement about which
    seeds it drew.
-4. **Synapse counts, used linearly, hurt the Hebbian fixed point and leave the prior alone.** The
-   frozen arms are unchanged under count-scaled initialisation (the untrained network does not
-   exploit the count structure either way), but the wild-type Hebbian arm falls from 9 competent
+4. **Synapse counts, used linearly, hurt the Hebbian fixed point and leave no detectable mark on
+   the prior.** The frozen arms show no detectable difference under count-scaled initialisation
+   (−0.4 and −0.3, both intervals spanning zero; no equivalence test was registered, so this is a
+   failure to detect a difference, not evidence of none), but the wild-type Hebbian arm falls from 9 competent
    seeds to 3 and its learning gain from +25.7 to +9.3, while the rewired arm barely moves. Linear
    scaling concentrates each neuron's input on its few high-count edges (the largest edge carries
    a median 29% of a neuron's input); Hebbian alignment then amplifies inputs that are already
@@ -160,7 +161,7 @@ Learning gains (Hebbian minus own frozen, seeds 1–16): wild-type **+25.7** (11
 - The prior over policies on this cell is broad and nearly the same on both wirings; the wiring's
   advantage under the unmodulated rule, where it exists, is created by alignment.
 - Count-scaled initialisation as registered (linear, random signs) is **harmful** to the Hebbian
-  fixed point and neutral to the prior. It is not a free improvement to carry into the plastic
+  fixed point, with no detectable effect on the prior. It is not a free improvement to carry into the plastic
   arms; the follow-ups noted in 040 (sparse random MLP; a rule with anti-Hebbian/decorrelating
   terms) stand, and count structure returns only with signs (7a-ii).
 
