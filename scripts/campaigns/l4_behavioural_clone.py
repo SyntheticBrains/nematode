@@ -152,9 +152,11 @@ def parameter_set(brain: ConnectomePPOBrain, name: str) -> list[torch.nn.Paramet
     if name == "full":
         # The recorded target is a mean, so the noise parameter (and a state-dependent std
         # head) would receive no gradient; leaving it in the optimiser would only pretend.
-        noise = {id(brain.topology.log_std)} if brain.continuous else set()
+        noise: set[int] = set()
         if brain.topology.state_dependent_std:
             noise |= {id(p) for p in brain.topology.log_std_head.parameters()}
+        elif brain.continuous:
+            noise.add(id(brain.topology.log_std))
         return [p for p in brain.topology.learnable_parameters if id(p) not in noise]
     msg = f"unknown parameter set {name!r}; choose from {PARAMETER_SETS}"
     raise ValueError(msg)
