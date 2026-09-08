@@ -50,3 +50,19 @@ uv run python scripts/run_campaign.py \
   `uv run python scripts/analysis/l4_warm_start.py --campaign-dir campaigns/l4-warm-start-panel --teacher-json campaigns/l4-warm-start/teacher.json --clones-json campaigns/l4-warm-start/clones.json --out docs/experiments/logbooks/supporting/043-l4-warm-start/panel.json --csv docs/experiments/logbooks/supporting/043-l4-warm-start/per-seed.csv --curves docs/experiments/logbooks/supporting/043-l4-warm-start/curves.csv`;
   the confirmatory family and the verdict map are the ones fixed in that script and in the
   registration.
+
+- **Teacher campaign**: 8 runs at 6000 episodes, 13:31–14:03 on 8 workers, exit 0. Plateau tails by
+  seed: 1 93.3, 2 91.6, 3 92.6, 4 73.7, 5 79.9, 6 92.4, **7 95.5**, 8 93.1. Seed 7 selected; its
+  weights copied to `campaigns/l4-warm-start/teacher.pt`; recorded frozen for 300 episodes at
+  seed 101 (103,827 steps); **ceiling 98.7%**. The recording config is committed beside this
+  record.
+
+- **Clones**: 32 of 32 made at the registered hyperparameters, none failed (`clones.json` beside
+  this record). Run as eight parallel per-seed workers with two torch threads each after a
+  sequential attempt proved too slow and an uncapped parallel attempt thrashed 18 cores; the
+  script gained `--part`, `--skip-existing` and a `merge` step for that, nothing else. Held-out
+  losses: plastic-set 0.29–0.33 (11 of 16 flagged weak by the registered criterion), full-set
+  0.25–0.28 (1 of 16 flagged). The reading, written before the panel ran, is in
+  `clone-fit-notes.md`.
+
+- **Panel launch**: 14:53, the three campaigns in the order above.
