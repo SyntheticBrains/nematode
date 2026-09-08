@@ -39,3 +39,11 @@ uv run python scripts/run_campaign.py \
   `uv run python scripts/analysis/l4_atlas_signs.py --campaign-dir campaigns/l4-atlas-signs --out docs/experiments/logbooks/supporting/044-l4-atlas-signs/panel.json --csv docs/experiments/logbooks/supporting/044-l4-atlas-signs/per-seed.csv --curves docs/experiments/logbooks/supporting/044-l4-atlas-signs/curves.csv`;
   the confirmatory family, the substrate gate and the verdict map are the ones fixed in that
   script and in the registration.
+
+- **Runs**: prior sweep 128 runs 00:22–01:07; Hebbian contrast 64 runs 01:07–01:35; both exit 0,
+  no tracebacks. **Extensions applied**: eight (`wt_frozen_atlas` seeds 35, 48 and
+  `rn_frozen_atlas` seeds 9, 11, 24, 27 at 900; `wt_hebbian_atlas` seed 2 and
+  `rn_hebbian_atlas` seed 4 at 1500); `_manifest.txt` substitutes them. The family and the
+  verdict were unchanged by the extensions.
+
+- **Verdict**: `degree_statistics`; the substrate gate did not fire.
