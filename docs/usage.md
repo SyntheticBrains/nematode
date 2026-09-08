@@ -21,7 +21,7 @@ A *session* is `--runs` episodes of one scenario with one brain that learns acro
 | `--track-experiment` | Save reproducibility metadata to `experiments/<id>/<id>.json` (see [Experiment tracking](#experiment-tracking)) |
 | `--track-per-run` | Write tracked brain data as separate plots per run, in per-run subfolders |
 | `--validate-chemotaxis` | Print chemotaxis-index validation against the *C. elegans* literature values in `data/chemotaxis/` |
-| `--save-weights PATH` / `--load-weights PATH` | Persist trained weights after the session, or warm-start from a saved file (MLP-PPO, hybrid-classical and connectome brains) |
+| `--save-weights PATH` / `--load-weights PATH` | Persist trained weights after the session, or warm-start from a saved file (MLP-PPO, hybrid-classical and connectome brains). A config-level `weights_path` does the same and may contain `{seed}`, resolved with the run seed, so one config addresses one weight file per seed |
 | `--record-rollouts PATH` | Write one JSON line per step — the brain's observation, sampled action, action mean and probability — for behavioural cloning (`scripts/campaigns/l4_behavioural_clone.py`); single-agent runs only |
 | `--show-last-frame-only` | In terminal themes, print only each run's final frame |
 | `--manyworlds` | Overlay the top two candidate actions at each step (single run only) |

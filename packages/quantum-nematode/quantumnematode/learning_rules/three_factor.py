@@ -528,12 +528,14 @@ class ThreeFactorRule:
         )
 
     def reset_state(self) -> None:
-        """Return every running quantity to its construction value.
+        """Return every running quantity to its prior; re-anchor homeostasis to the current weights.
 
         The baseline, the modulator scale, the trace scales and the modulator centre
-        restart from their priors, and the topology's eligibility traces are cleared.
-        Used when weights are loaded into a brain: a warm start begins from better
-        weights, not from another run's reward statistics.
+        restart from their priors, the topology's eligibility traces are cleared, and the
+        homeostatic norm targets are recomputed from the weights as they are now. Used
+        when weights are loaded into a brain: a warm start begins from better weights,
+        not from another run's reward statistics and not from the norms of weights it no
+        longer has.
         """
         self.baseline = 0.0
         self._modulator_scale = _RunningScale(self.scaling.scale_rate, self.scaling.scale_floor)
@@ -543,6 +545,20 @@ class ThreeFactorRule:
         ]
         self._modulator_centre = _RunningMean(self.scaling.scale_rate)
         self._topology.reset_traces()
+        # The homeostatic targets are re-anchored to the weights the rule now starts from.
+        # Left at their construction values they would drag a loaded policy back to the
+        # incoming norms of the random initialisation on the first step.
+        if self.homeostasis:
+            with torch.no_grad():
+                self._norm_targets = [
+                    _incoming_norms(w, mask, axis)
+                    for w, mask, axis in zip(
+                        self._topology.plastic_weights,
+                        self._topology.plastic_masks,
+                        self._fan_in_axes,
+                        strict=True,
+                    )
+                ]
 
     def reset_episode(self) -> None:
         """No per-episode rule state to clear.

@@ -55,6 +55,11 @@ SIMULATION_CONFIGS = [
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen_rewired_null_countinit.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_countinit.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null_countinit.yml",
+    # The warm-started arms (*_clone.yml, *_fullclone.yml) are deliberately absent: each
+    # loads a per-seed clone file a campaign produces, which no checkout carries. The
+    # low-noise PPO arms they derive from are plain configs and run here.
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_lowstd.yml",
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_rewired_null_lowstd.yml",
     # The matched-rule MLP arm: the same plastic path on a dense substrate.
     "scenarios/foraging_predator_thermal/mlpppo_small_continuous2d_combined_klinotaxis_plastic.yml",
     # Evolution-mode YAMLs: run_simulation.py ignores the

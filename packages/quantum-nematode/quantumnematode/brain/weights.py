@@ -148,6 +148,25 @@ def _build_metadata(
 # ---------------------------------------------------------------------------
 
 
+SEED_PLACEHOLDER = "{seed}"
+
+
+def resolve_weights_path(path: str, seed: int) -> str:
+    """Substitute the run seed for ``{seed}`` in a configured weights path.
+
+    A path without the placeholder is returned as written; a path that still
+    carries a brace after substitution names a placeholder nobody resolves and is
+    rejected, so a typo cannot silently load nothing.
+    """
+    resolved = path.replace(SEED_PLACEHOLDER, str(seed))
+    if "{" in resolved or "}" in resolved:
+        msg = (
+            f"weights_path {path!r} has an unresolved placeholder; only {SEED_PLACEHOLDER} is known"
+        )
+        raise ValueError(msg)
+    return resolved
+
+
 def save_weights(
     brain: Brain,
     path: Path,
