@@ -232,6 +232,7 @@ class ThreeFactorRule:
         device: torch.device,
         scaling: ScalingOptions | None = None,
         homeostasis: bool = False,
+        synapse_signs: list[torch.Tensor] | None = None,
     ) -> None:
         self._topology = topology
         self.plasticity_rate = plasticity_rate
@@ -278,6 +279,10 @@ class ThreeFactorRule:
         # Targets are captured here, so they are whatever norm the substrate
         # carried at construction (its initialisation, for a freshly built brain).
         self.homeostasis = homeostasis
+        # Dale's law. One signed matrix per plastic tensor, aligned with the seam's weights:
+        # +1 excitatory, -1 inhibitory, 0 for a synapse whose source implies no sign. Empty
+        # when enforcement is off, which is the default and leaves every update untouched.
+        self._synapse_signs: list[torch.Tensor] = list(synapse_signs) if synapse_signs else []
         self._fan_in_axes: list[int] = []
         self._norm_targets: list[torch.Tensor] = []
         if homeostasis:
@@ -472,6 +477,10 @@ class ThreeFactorRule:
                     # no-op by construction.
                     update = update * mask.to(update.dtype)
                     w.data.add_(update)
+                    # Dale's law, before the homeostatic rescale so the rescale acts on
+                    # permitted weights; it multiplies by a positive per-unit factor and
+                    # cannot reintroduce a forbidden sign, and the clamp still comes last.
+                    self._project_signs(index, w)
                     if self.homeostasis:
                         # Drift is measured after the update and before the
                         # rescale; the clamp comes last so the bound always holds.
@@ -525,6 +534,17 @@ class ThreeFactorRule:
                 TRACE_SCALE_KEY: trace_scale,
                 NORM_DRIFT_KEY: _pooled_drift(drifts),
             },
+        )
+
+    def _project_signs(self, index: int, weight: torch.Tensor) -> None:
+        """Clamp each grounded synapse to its sign; ungrounded synapses are left alone."""
+        if not self._synapse_signs:
+            return
+        signs = self._synapse_signs[index]
+        weight.data = torch.where(
+            signs > 0,
+            weight.data.clamp_min(0.0),
+            torch.where(signs < 0, weight.data.clamp_max(0.0), weight.data),
         )
 
     def reset_state(self) -> None:
