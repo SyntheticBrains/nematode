@@ -81,3 +81,10 @@ uv run python scripts/run_campaign.py \
   seeds 1, 3, 4 at 900; `wt_fullclone_ppo` seeds 1, 2, 3, 5, 6, 7, 8, `rn_fullclone_ppo` seeds
   1, 2, `wt_ppo` seed 6 and `rn_ppo` seeds 1, 5, 6, 7 at 4500 — queued behind the re-run into
   `campaigns/l4-warm-start-panel-ext`.
+
+- **Plastic-set re-run**: 32 runs, 16:57–18:10, exit 0. **Extensions applied**: 25 (the first
+  pass of 18 plus seven plastic-set runs the re-run owed: `wt_clone_hebbian` seed 6,
+  `wt_clone_plastic` seeds 3, 8, `rn_clone_plastic` seeds 3, 5, 7, 8 at 3000), 18:10–20:05,
+  exit 0; eight remained non-converged after their single extension and are read on the extended
+  tail. `_manifest.txt` substitutes every extended log. The family and the verdict were unchanged
+  by the extensions.
