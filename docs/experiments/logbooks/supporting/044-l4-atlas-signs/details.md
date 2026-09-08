@@ -57,6 +57,30 @@ Annotations: `prior_changed` false, `prior_worsened` false, `contrast_holds_unde
   panel 2's +14.1 at the same seeds and also unconfirmed. Grounded signs neither confirm nor
   reverse the contrast; the verdict is `degree_statistics`.
 
+## What the rules did to the sign structure
+
+Read from each run's own auto-saved endpoint, which carries both the final weights and the sign
+buffer they were grounded to. Two quantities, kept apart because they are what separates the
+enforced arms from the rest: **violated** is the share of grounded synapses ending with the
+opposite sign, **silenced** the share driven to exactly zero.
+
+| arm | violated (mean / max) | silenced (mean / max) |
+|---|---|---|
+| wt_frozen_atlas | 0.000 / 0.000 | 0.000 / 0.000 |
+| rn_frozen_atlas | 0.000 / 0.000 | 0.000 / 0.000 |
+| wt_hebbian_atlas | **0.153** / 0.330 | 0.000 / 0.000 |
+| rn_hebbian_atlas | **0.136** / 0.274 | 0.000 / 0.000 |
+| wt_hebbian_dale | 0.000 / 0.000 | **0.131** / 0.306 |
+| rn_hebbian_dale | 0.000 / 0.000 | **0.135** / 0.262 |
+
+The frozen arms take no update and move nothing, as they must. Left free, the Hebbian rule ends
+with about a seventh of the grounded synapses carrying the opposite sign to the transmitter their
+source releases — it does not respect Dale's law and never did, on random signs or real ones.
+Enforcement holds every sign, exactly as registered, and the cost is visible in the same row:
+it converts those attempted flips into **silences**, switching roughly the same seventh of
+synapses off. That is why G4 reverses. Dale's law as a constraint does not make the rule
+respect the biology; it removes the synapses the rule wanted to invert.
+
 ## What this says about the ladder
 
 The first rung's answer is that **the substrate's random signs were not what limited the rule** —

@@ -99,15 +99,21 @@ def _rows(path: Path) -> Iterator[tuple[str, str]]:
     if not path.is_file():
         msg = f"Neurotransmitter atlas not found at {path}. Run `git lfs pull` to fetch it."
         raise FileNotFoundError(msg)
-    worksheet = openpyxl.load_workbook(path, read_only=True, data_only=True)[ATLAS_SHEET]
-    for index, row in enumerate(worksheet.iter_rows(values_only=True)):
-        if index <= _HEADER_ROW:
-            continue
-        name = row[_NEURON_COL]
-        if not name:
-            continue
-        raw = row[_TRANSMITTER_COL] if len(row) > _TRANSMITTER_COL else None
-        yield str(name).strip(), ("" if raw is None else str(raw))
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        worksheet = workbook[ATLAS_SHEET]
+        for index, row in enumerate(worksheet.iter_rows(values_only=True)):
+            if index <= _HEADER_ROW:
+                continue
+            name = row[_NEURON_COL]
+            if not name:
+                continue
+            raw = row[_TRANSMITTER_COL] if len(row) > _TRANSMITTER_COL else None
+            yield str(name).strip(), ("" if raw is None else str(raw))
+    finally:
+        # A read-only workbook holds the file open; close it on normal completion and on an
+        # early generator exit alike.
+        workbook.close()
 
 
 def read_atlas_transmitters(path: Path = ATLAS_PATH) -> dict[str, str | None]:

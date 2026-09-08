@@ -296,3 +296,77 @@ class TestDescriptiveAndOutput:
             ),
         )
         assert gs.main(["--campaign-dir", str(tmp_path)]) == 2
+
+
+class TestSignFlipTelemetry:
+    """What each run did to its grounded sign structure, read from its own endpoint."""
+
+    @staticmethod
+    def _endpoint(tmp_path: Path, weights: list[float], signs: list[int]) -> tuple[Path, Path]:
+        """Write a log naming an experiment whose export holds a topology with these values."""
+        import torch
+
+        experiments = tmp_path / "experiments"
+        exports = tmp_path / "exports" / "e1" / "weights"
+        exports.mkdir(parents=True)
+        torch.save(
+            {
+                "topology": {
+                    "w_chem": torch.tensor(weights, dtype=torch.float32),
+                    "chem_sign": torch.tensor(signs, dtype=torch.int8),
+                },
+            },
+            exports / "final.pt",
+        )
+        (experiments / "e1").mkdir(parents=True)
+        (experiments / "e1" / "e1.json").write_text(
+            json.dumps(
+                {
+                    "exports_path": str(exports.parent.relative_to(gs.REPO))
+                    if exports.is_relative_to(gs.REPO)
+                    else str(exports.parent),
+                },
+            ),
+        )
+        log = tmp_path / "run.log"
+        log.write_text(
+            "  Experiment ID: e1\nRun: 1   Status: SUCCESS Reason: x Steps: 1    Eaten: 10/10  ",
+        )
+        return log, experiments
+
+    def test_violations_and_silences_are_counted_separately(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(gs, "REPO", tmp_path)
+        # four grounded synapses: one kept, one violated, one silenced, one kept; one ungrounded.
+        log, experiments = self._endpoint(
+            tmp_path,
+            weights=[0.4, -0.3, 0.0, -0.5, 0.9],
+            signs=[1, 1, 1, -1, 0],
+        )
+        measured = gs.run_sign_flips(log, experiments)
+        assert measured is not None
+        assert measured["violated"] == pytest.approx(0.25)
+        assert measured["silenced"] == pytest.approx(0.25)
+
+    def test_a_missing_endpoint_reads_as_none(self, tmp_path: Path) -> None:
+        log = tmp_path / "run.log"
+        log.write_text("Run: 1   Status: SUCCESS Reason: x Steps: 1    Eaten: 10/10  ")
+        assert gs.run_sign_flips(log, tmp_path / "experiments") is None
+
+    def test_per_arm_summary_reports_both_and_tolerates_gaps(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(gs, "REPO", tmp_path)
+        log, experiments = self._endpoint(tmp_path, weights=[0.4, -0.3], signs=[1, 1])
+        panel = _panel(_values())
+        logs = {("wt_hebbian_atlas", 1): log}  # one run readable, the rest absent
+        summary = gs.sign_flips(panel, logs, experiments)
+        assert summary["wt_hebbian_atlas"]["n_read"] == 1
+        assert summary["wt_hebbian_atlas"]["violated_mean"] == pytest.approx(0.5)
+        assert summary["wt_frozen_atlas"]["n_read"] == 0
+        assert summary["wt_frozen_atlas"]["violated_mean"] is None

@@ -24,7 +24,7 @@ in a single chemical-synapse hop.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import torch
@@ -1880,6 +1880,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "learning_rule": self.config.learning_rule,
                     "wiring": self.config.wiring,
                     "weight_init": self.config.weight_init,
+                    "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
                 },
             ),
@@ -1901,7 +1902,11 @@ class ConnectomePPOBrain(ClassicalBrain):
             raise ValueError(msg)
         return {k: v for k, v in all_components.items() if k in components}
 
-    _WIRING_BUFFERS: tuple[str, ...] = ("m_chem", "g_gap")
+    # Buffers that define what the weights *mean*: which synapses exist, how gap junctions
+    # couple, and which sign each synapse is allowed to carry. A file whose signs came from a
+    # different sign model describes different weights, so a mismatch is refused before any
+    # state is loaded, exactly as a different wiring is.
+    _WIRING_BUFFERS: tuple[str, ...] = ("m_chem", "g_gap", "chem_sign")
     # Per-episode activity-trace state: registered buffers when activity traces are
     # enabled, absent otherwise, and reset at every episode. Never persisted, so a
     # file saved under either rule loads under the other.
@@ -1910,6 +1915,54 @@ class ConnectomePPOBrain(ClassicalBrain):
         "prev_activity",
         "prev_activity_valid",
     )
+
+    def _load_topology_state(self, topology_state: dict[str, Any]) -> None:
+        """Validate a saved topology against this brain, then load it.
+
+        The wiring buffers say which synapses exist, how gap junctions couple and which sign
+        each synapse may carry: weights saved against different ones describe a different
+        network, so a mismatch is refused before anything is written.
+        """
+        current = self.topology.state_dict()
+        for name in self._WIRING_BUFFERS:
+            saved = topology_state.get(name)
+            if saved is None:
+                msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
+                raise ValueError(msg)
+            mine = current[name]
+            if tuple(saved.shape) != tuple(mine.shape) or not torch.equal(
+                saved.to(mine.device, mine.dtype),
+                mine,
+            ):
+                what = (
+                    "a different synapse-sign model"
+                    if name == "chem_sign"
+                    else "a different wiring"
+                )
+                msg = (
+                    f"Weight file was saved on {what} ({name!r} differs); a connectome brain "
+                    "loads only weights saved on its own wiring and sign model."
+                )
+                raise ValueError(msg)
+        persisted = {k: v for k, v in topology_state.items() if k not in self._TRANSIENT_BUFFERS}
+        expected = {k for k in current if k not in self._TRANSIENT_BUFFERS}
+        missing, unexpected = expected - set(persisted), set(persisted) - expected
+        if missing or unexpected:
+            detail = ""
+            if "chem_sign" in missing:
+                # Files written before synapse signs existed carry no sign buffer. There is
+                # nothing to migrate to — the signs those weights carry were drawn, not derived
+                # — so such a file is refused rather than silently reinterpreted.
+                detail = (
+                    " The file predates atlas-grounded synapse signs; load it into a brain built "
+                    "from the configuration that produced it."
+                )
+            msg = (
+                f"Weight file's topology component does not match this brain: "
+                f"missing {sorted(missing)}, unexpected {sorted(unexpected)}.{detail}"
+            )
+            raise ValueError(msg)
+        self.topology.load_state_dict(persisted, strict=False)
 
     def load_weight_components(
         self,
@@ -1927,34 +1980,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
-            current = self.topology.state_dict()
-            for name in self._WIRING_BUFFERS:
-                saved = topology_state.get(name)
-                if saved is None:
-                    msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
-                    raise ValueError(msg)
-                mine = current[name]
-                if tuple(saved.shape) != tuple(mine.shape) or not torch.equal(
-                    saved.to(mine.device, mine.dtype),
-                    mine,
-                ):
-                    msg = (
-                        f"Weight file was saved on a different wiring ({name!r} differs); "
-                        "a connectome brain loads only weights saved on its own wiring."
-                    )
-                    raise ValueError(msg)
-            persisted = {
-                k: v for k, v in topology_state.items() if k not in self._TRANSIENT_BUFFERS
-            }
-            expected = {k for k in current if k not in self._TRANSIENT_BUFFERS}
-            missing, unexpected = expected - set(persisted), set(persisted) - expected
-            if missing or unexpected:
-                msg = (
-                    f"Weight file's topology component does not match this brain: "
-                    f"missing {sorted(missing)}, unexpected {sorted(unexpected)}."
-                )
-                raise ValueError(msg)
-            self.topology.load_state_dict(persisted, strict=False)
+            self._load_topology_state(topology_state)
         if self._ppo_rule is not None:
             if "value" in components:
                 self._ppo_rule.critic.load_state_dict(components["value"].state)

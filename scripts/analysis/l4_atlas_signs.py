@@ -41,7 +41,7 @@ from itertools import combinations
 from pathlib import Path
 
 from l4_panel import _LABEL as LABEL
-from l4_panel import EXPERIMENTS, REPO, SeedRecord, paired, read_log
+from l4_panel import EXPERIMENTS, REPO, SeedRecord, _experiment_json, paired, read_log
 from l4_panel2 import COMPETENT_THRESHOLD, distribution, restrict
 from weight_search_architecture_ranking import bh_fdr
 
@@ -103,13 +103,21 @@ READS: dict[str, str] = {
 GATE_TESTS: tuple[str, ...] = ("G1", "G2")
 
 Scanned = list[tuple[str, int, SeedRecord]]
+# Per run: the log the record came from. The log names the experiment, whose export carries the
+# auto-saved endpoint weights the sign-flip telemetry reads.
+LogOf = dict[tuple[str, int], Path]
 
 
 # --- reading ----------------------------------------------------------------------------
 
 
-def scan_campaign(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> Scanned:
+def scan_campaign(
+    campaign_dir: Path,
+    experiments: Path = EXPERIMENTS,
+    logs: LogOf | None = None,
+) -> Scanned:
     """Read every registered run log under ``<campaign_dir>/logs`` (or the dir itself)."""
+    logs = {} if logs is None else logs
     log_dir = campaign_dir / "logs" if (campaign_dir / "logs").is_dir() else campaign_dir
     found: Scanned = []
     for log in sorted(log_dir.glob("*.log")):
@@ -126,11 +134,17 @@ def scan_campaign(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> Scanne
             print(f"  WARN: no parseable run lines in {log.name} - dropped")
             continue
         found.append((ARMS[stem], int(match.group("seed")), record))
+        logs[(ARMS[stem], int(match.group("seed")))] = log
     return found
 
 
-def read_manifest(manifest: Path, experiments: Path = EXPERIMENTS) -> Scanned:
+def read_manifest(
+    manifest: Path,
+    experiments: Path = EXPERIMENTS,
+    logs: LogOf | None = None,
+) -> Scanned:
     """``<arm> <seed> <log>`` per line; blank and ``#`` lines skipped."""
+    logs = {} if logs is None else logs
     found: Scanned = []
     for raw in manifest.read_text().splitlines():
         line = raw.strip()
@@ -145,6 +159,7 @@ def read_manifest(manifest: Path, experiments: Path = EXPERIMENTS) -> Scanned:
             print(f"  WARN {parts[0]} seed {parts[1]}: no parseable plateau - dropped")
             continue
         found.append((parts[0], int(parts[1]), record))
+        logs[(parts[0], int(parts[1]))] = REPO / parts[2]
     return found
 
 
@@ -333,6 +348,70 @@ def descriptive_pairs(values: dict[str, dict[int, float]]) -> list[dict]:
     return rows
 
 
+def run_sign_flips(log: Path, experiments: Path = EXPERIMENTS) -> dict[str, float] | None:
+    """Return what a run did to its grounded sign structure, read from its own endpoint.
+
+    Two distinct quantities, because they are what separates the enforced arms from the rest:
+
+    ``violated``
+        the share of grounded synapses whose final weight carries the *opposite* sign. Dale's
+        law exists to hold this at zero; the unenforced arms say how much it removes.
+    ``silenced``
+        the share driven to exactly zero. Enforcement produces these — it projects a synapse
+        that tried to change sign onto zero rather than preserving it — so a synapse it "held"
+        may be one it switched off. Counting a zero as a flip would confuse the two.
+
+    ``None`` when the endpoint is not on disk or the arm grounds nothing.
+    """
+    import torch
+
+    experiment = _experiment_json(log.read_text(), experiments)
+    exports = experiment.get("exports_path") if experiment else None
+    weights = (REPO / exports / "weights" / "final.pt") if exports else None
+    if weights is None or not weights.is_file():
+        return None
+    topology = torch.load(weights, weights_only=True)["topology"]
+    signs = topology["chem_sign"]
+    grounded = signs != 0
+    if not bool(grounded.any()):
+        return None
+    final = topology["w_chem"][grounded]
+    expected = signs[grounded].to(final.dtype)
+    return {
+        "violated": float(((final * expected) < 0).to(torch.float64).mean()),
+        "silenced": float((final == 0).to(torch.float64).mean()),
+    }
+
+
+def sign_flips(
+    panel: dict[str, dict[int, SeedRecord]],
+    logs: LogOf,
+    experiments: Path = EXPERIMENTS,
+) -> dict:
+    """Report per arm how much of the grounded sign structure each rule walked away from.
+
+    Enforcement exists to hold this at zero; the unenforced arms say how much it removes.
+    """
+    out: dict = {}
+    for arm in ARM_KEYS:
+        per_seed: dict[int, dict[str, float]] = {}
+        for seed in sorted(panel.get(arm, {})):
+            log = logs.get((arm, seed))
+            measured = run_sign_flips(log, experiments) if log else None
+            if measured is not None:
+                per_seed[seed] = measured
+        rows = list(per_seed.values())
+        out[arm] = {
+            "per_seed": per_seed,
+            "n_read": len(rows),
+            "violated_mean": (sum(r["violated"] for r in rows) / len(rows)) if rows else None,
+            "violated_max": max((r["violated"] for r in rows), default=None),
+            "silenced_mean": (sum(r["silenced"] for r in rows) / len(rows)) if rows else None,
+            "silenced_max": max((r["silenced"] for r in rows), default=None),
+        }
+    return out
+
+
 def extensions_needed(panel: dict[str, dict[int, SeedRecord]]) -> list[dict]:
     """List the runs marked non-converged at their budget; each gets one fresh run at 1.5x."""
     rows = []
@@ -350,6 +429,9 @@ def analyse(
     panel: dict[str, dict[int, SeedRecord]],
     random_signs: dict[str, dict[int, float]],
     out: dict,
+    *,
+    logs: LogOf | None = None,
+    experiments: Path = EXPERIMENTS,
 ) -> dict:
     """Family, substrate check, verdict, annotations and the descriptive layers."""
     values = successes(panel)
@@ -376,11 +458,27 @@ def analyse(
     out["competent_threshold"] = COMPETENT_THRESHOLD
     out["against_random_signs"] = against_random(values, random_signs)
     out["descriptive_pairs"] = descriptive_pairs(values)
+    out["sign_flips"] = sign_flips(panel, logs or {}, experiments)
     out["extensions_needed"] = extensions_needed(panel)
     return out
 
 
 # --- output -----------------------------------------------------------------------------
+
+
+def _print_sign_flips(flips: dict) -> None:
+    """Print what each arm did to its grounded sign structure, when any endpoint was readable."""
+    if not any(row["n_read"] for row in flips.values()):
+        return
+    print("\n  Grounded synapses at each run's end (share violating their sign / silenced):")
+    for arm in ARM_KEYS:
+        row = flips.get(arm, {})
+        if row.get("n_read"):
+            print(
+                f"    {arm:18} violated={row['violated_mean']:.3f} (max {row['violated_max']:.3f})"
+                f"  silenced={row['silenced_mean']:.3f} (max {row['silenced_max']:.3f})"
+                f"  ({row['n_read']} runs read)",
+            )
 
 
 def _print_panel(out: dict) -> None:
@@ -417,6 +515,7 @@ def _print_panel(out: dict) -> None:
         )
         if not t["complete"]:
             print(f"        INCOMPLETE: {t['n']} of the registered seeds present")
+    _print_sign_flips(out.get("sign_flips") or {})
     v = out["verdict"]
     print("-" * 78)
     print(f"  VERDICT: {v['verdict']}   annotations: {v['annotations']}")
@@ -482,15 +581,22 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     scanned: Scanned = []
+    logs: LogOf = {}
     if args.campaign_dir:
         for directory in args.campaign_dir:
-            scanned += scan_campaign(directory, args.experiments_dir)
+            scanned += scan_campaign(directory, args.experiments_dir, logs)
     else:
-        scanned = read_manifest(args.manifest, args.experiments_dir)
+        scanned = read_manifest(args.manifest, args.experiments_dir, logs)
     out: dict = {}
     try:
         panel = group_panel(scanned)
-        analyse(panel, read_panel2(args.panel2_csv), out)
+        analyse(
+            panel,
+            read_panel2(args.panel2_csv),
+            out,
+            logs=logs,
+            experiments=args.experiments_dir,
+        )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

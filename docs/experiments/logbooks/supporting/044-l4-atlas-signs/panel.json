@@ -1967,5 +1967,829 @@
       "descriptive": true
     }
   ],
+  "sign_flips": {
+    "wt_frozen_atlas": {
+      "per_seed": {
+        "1": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "2": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "3": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "4": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "5": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "6": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "7": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "8": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "9": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "10": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "11": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "12": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "13": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "14": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "15": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "16": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "17": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "18": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "19": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "20": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "21": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "22": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "23": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "24": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "25": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "26": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "27": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "28": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "29": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "30": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "31": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "32": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "33": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "34": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "35": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "36": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "37": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "38": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "39": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "40": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "41": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "42": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "43": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "44": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "45": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "46": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "47": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "48": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "49": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "50": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "51": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "52": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "53": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "54": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "55": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "56": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "57": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "58": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "59": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "60": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "61": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "62": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "63": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "64": {
+          "violated": 0.0,
+          "silenced": 0.0
+        }
+      },
+      "n_read": 64,
+      "violated_mean": 0.0,
+      "violated_max": 0.0,
+      "silenced_mean": 0.0,
+      "silenced_max": 0.0
+    },
+    "rn_frozen_atlas": {
+      "per_seed": {
+        "1": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "2": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "3": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "4": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "5": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "6": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "7": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "8": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "9": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "10": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "11": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "12": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "13": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "14": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "15": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "16": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "17": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "18": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "19": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "20": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "21": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "22": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "23": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "24": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "25": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "26": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "27": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "28": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "29": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "30": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "31": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "32": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "33": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "34": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "35": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "36": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "37": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "38": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "39": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "40": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "41": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "42": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "43": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "44": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "45": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "46": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "47": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "48": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "49": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "50": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "51": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "52": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "53": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "54": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "55": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "56": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "57": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "58": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "59": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "60": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "61": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "62": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "63": {
+          "violated": 0.0,
+          "silenced": 0.0
+        },
+        "64": {
+          "violated": 0.0,
+          "silenced": 0.0
+        }
+      },
+      "n_read": 64,
+      "violated_mean": 0.0,
+      "violated_max": 0.0,
+      "silenced_mean": 0.0,
+      "silenced_max": 0.0
+    },
+    "wt_hebbian_atlas": {
+      "per_seed": {
+        "1": {
+          "violated": 0.14609571788413098,
+          "silenced": 0.0
+        },
+        "2": {
+          "violated": 0.12814861460957178,
+          "silenced": 0.0
+        },
+        "3": {
+          "violated": 0.19175062972292192,
+          "silenced": 0.0
+        },
+        "4": {
+          "violated": 0.14074307304785894,
+          "silenced": 0.0
+        },
+        "5": {
+          "violated": 0.12122166246851386,
+          "silenced": 0.0
+        },
+        "6": {
+          "violated": 0.15270780856423175,
+          "silenced": 0.0
+        },
+        "7": {
+          "violated": 0.09130982367758186,
+          "silenced": 0.0
+        },
+        "8": {
+          "violated": 0.08501259445843828,
+          "silenced": 0.0
+        },
+        "9": {
+          "violated": 0.2959697732997481,
+          "silenced": 0.0
+        },
+        "10": {
+          "violated": 0.11964735516372796,
+          "silenced": 0.0
+        },
+        "11": {
+          "violated": 0.07462216624685139,
+          "silenced": 0.0
+        },
+        "12": {
+          "violated": 0.07021410579345089,
+          "silenced": 0.0
+        },
+        "13": {
+          "violated": 0.08847607052896725,
+          "silenced": 0.0
+        },
+        "14": {
+          "violated": 0.3302896725440806,
+          "silenced": 0.0
+        },
+        "15": {
+          "violated": 0.08595717884130982,
+          "silenced": 0.0
+        },
+        "16": {
+          "violated": 0.3230478589420655,
+          "silenced": 0.0
+        }
+      },
+      "n_read": 16,
+      "violated_mean": 0.15282588161209068,
+      "violated_max": 0.3302896725440806,
+      "silenced_mean": 0.0,
+      "silenced_max": 0.0
+    },
+    "rn_hebbian_atlas": {
+      "per_seed": {
+        "1": {
+          "violated": 0.1429471032745592,
+          "silenced": 0.0
+        },
+        "2": {
+          "violated": 0.20717884130982367,
+          "silenced": 0.0
+        },
+        "3": {
+          "violated": 0.10894206549118388,
+          "silenced": 0.0
+        },
+        "4": {
+          "violated": 0.1489294710327456,
+          "silenced": 0.0
+        },
+        "5": {
+          "violated": 0.1294080604534005,
+          "silenced": 0.0
+        },
+        "6": {
+          "violated": 0.17663727959697734,
+          "silenced": 0.0
+        },
+        "7": {
+          "violated": 0.11523929471032746,
+          "silenced": 0.0
+        },
+        "8": {
+          "violated": 0.0834382871536524,
+          "silenced": 0.0
+        },
+        "9": {
+          "violated": 0.12374055415617129,
+          "silenced": 0.0
+        },
+        "10": {
+          "violated": 0.14105793450881612,
+          "silenced": 0.0
+        },
+        "11": {
+          "violated": 0.08406801007556675,
+          "silenced": 0.0
+        },
+        "12": {
+          "violated": 0.06832493702770781,
+          "silenced": 0.0
+        },
+        "13": {
+          "violated": 0.10075566750629723,
+          "silenced": 0.0
+        },
+        "14": {
+          "violated": 0.095088161209068,
+          "silenced": 0.0
+        },
+        "15": {
+          "violated": 0.181360201511335,
+          "silenced": 0.0
+        },
+        "16": {
+          "violated": 0.2739294710327456,
+          "silenced": 0.0
+        }
+      },
+      "n_read": 16,
+      "violated_mean": 0.1363153337531486,
+      "violated_max": 0.2739294710327456,
+      "silenced_mean": 0.0,
+      "silenced_max": 0.0
+    },
+    "wt_hebbian_dale": {
+      "per_seed": {
+        "1": {
+          "violated": 0.0,
+          "silenced": 0.10107052896725441
+        },
+        "2": {
+          "violated": 0.0,
+          "silenced": 0.1130352644836272
+        },
+        "3": {
+          "violated": 0.0,
+          "silenced": 0.18356423173803527
+        },
+        "4": {
+          "violated": 0.0,
+          "silenced": 0.16561712846347607
+        },
+        "5": {
+          "violated": 0.0,
+          "silenced": 0.11272040302267003
+        },
+        "6": {
+          "violated": 0.0,
+          "silenced": 0.14546599496221663
+        },
+        "7": {
+          "violated": 0.0,
+          "silenced": 0.09256926952141058
+        },
+        "8": {
+          "violated": 0.0,
+          "silenced": 0.08532745591939547
+        },
+        "9": {
+          "violated": 0.0,
+          "silenced": 0.08217884130982368
+        },
+        "10": {
+          "violated": 0.0,
+          "silenced": 0.10547858942065491
+        },
+        "11": {
+          "violated": 0.0,
+          "silenced": 0.0743073047858942
+        },
+        "12": {
+          "violated": 0.0,
+          "silenced": 0.0698992443324937
+        },
+        "13": {
+          "violated": 0.0,
+          "silenced": 0.09351385390428212
+        },
+        "14": {
+          "violated": 0.0,
+          "silenced": 0.30573047858942065
+        },
+        "15": {
+          "violated": 0.0,
+          "silenced": 0.09256926952141058
+        },
+        "16": {
+          "violated": 0.0,
+          "silenced": 0.2717254408060453
+        }
+      },
+      "n_read": 16,
+      "violated_mean": 0.0,
+      "violated_max": 0.0,
+      "silenced_mean": 0.13092333123425692,
+      "silenced_max": 0.30573047858942065
+    },
+    "rn_hebbian_dale": {
+      "per_seed": {
+        "1": {
+          "violated": 0.0,
+          "silenced": 0.14798488664987405
+        },
+        "2": {
+          "violated": 0.0,
+          "silenced": 0.2619647355163728
+        },
+        "3": {
+          "violated": 0.0,
+          "silenced": 0.08973551637279598
+        },
+        "4": {
+          "violated": 0.0,
+          "silenced": 0.14042821158690177
+        },
+        "5": {
+          "violated": 0.0,
+          "silenced": 0.14483627204030228
+        },
+        "6": {
+          "violated": 0.0,
+          "silenced": 0.24275818639798488
+        },
+        "7": {
+          "violated": 0.0,
+          "silenced": 0.11460957178841309
+        },
+        "8": {
+          "violated": 0.0,
+          "silenced": 0.07777078085642318
+        },
+        "9": {
+          "violated": 0.0,
+          "silenced": 0.11429471032745592
+        },
+        "10": {
+          "violated": 0.0,
+          "silenced": 0.12311083123425692
+        },
+        "11": {
+          "violated": 0.0,
+          "silenced": 0.09162468513853904
+        },
+        "12": {
+          "violated": 0.0,
+          "silenced": 0.06832493702770781
+        },
+        "13": {
+          "violated": 0.0,
+          "silenced": 0.09256926952141058
+        },
+        "14": {
+          "violated": 0.0,
+          "silenced": 0.07682619647355164
+        },
+        "15": {
+          "violated": 0.0,
+          "silenced": 0.1605793450881612
+        },
+        "16": {
+          "violated": 0.0,
+          "silenced": 0.20654911838790932
+        }
+      },
+      "n_read": 16,
+      "violated_mean": 0.0,
+      "violated_max": 0.0,
+      "silenced_mean": 0.1346229534005038,
+      "silenced_max": 0.2619647355163728
+    }
+  },
   "extensions_needed": []
 }
