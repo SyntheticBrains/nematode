@@ -208,7 +208,8 @@ and, only while the PPO rule is live, `value` and `optimizer` components. `load_
 SHALL validate the std mode and the wiring (the saved chemical mask and gap-junction buffers
 equal the receiving brain's) before mutating any state and SHALL raise on a mismatch; it SHALL
 then load `topology`, load `value` and `optimizer` only when present and the PPO rule is live,
-reset the rollout buffer, and under the plastic rule reset the rule's running state. A save
+reset the rollout buffer, and under the plastic rule reset the rule's running state and re-anchor
+its homeostatic norm targets to the loaded weights. A save
 followed by a load into a brain built from the same configuration and seed SHALL reproduce every
 parameter bit for bit. A brain that never saves or loads SHALL be bit-identical to the brain
 without this requirement.
@@ -236,4 +237,5 @@ without this requirement.
 
 - **WHEN** weights are loaded
 - **THEN** the rollout buffer SHALL be empty and, under the plastic rule, the rule's baseline,
-  scales and traces SHALL be at their initial values
+  scales and traces SHALL be at their initial values and its homeostatic norm targets SHALL equal
+  the loaded weights' incoming norms

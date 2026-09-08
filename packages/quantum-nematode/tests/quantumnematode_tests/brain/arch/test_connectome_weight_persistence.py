@@ -157,6 +157,26 @@ class TestRoundTrip:
         for trace in target.topology.eligibility_traces:
             assert torch.count_nonzero(trace) == 0
 
+    def test_load_reanchors_the_homeostatic_targets_to_the_loaded_weights(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A loaded policy keeps its norms: the targets follow the weights, not the init."""
+        source = _brain(_PLASTIC)
+        with torch.no_grad():
+            source.topology.w_chem.mul_(6.0)  # a clone with inflated norms, as cloning produces
+        file = tmp_path / "w.pt"
+        save_weights(source, file)
+        target = _brain(_PLASTIC, seed=_SEED + 1)
+        rule = target._rule
+        assert isinstance(rule, ThreeFactorRule)
+        before = rule.norm_targets[0].clone()
+        load_weights(target, file)
+        mask = target.topology.m_chem
+        loaded_norms = torch.sqrt(((target.topology.w_chem * mask) ** 2).sum(0))
+        assert torch.allclose(rule.norm_targets[0], loaded_norms, atol=1e-5)
+        assert not torch.allclose(rule.norm_targets[0], before)
+
     def test_plastic_brain_ignores_ppo_components(self, tmp_path: Path) -> None:
         source = _brain(_PPO)
         _drive(source)

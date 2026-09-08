@@ -173,3 +173,20 @@ selection on a synthetic campaign; the recording config derivation; the clone fi
 ## Open Questions
 
 None.
+
+## Amendment 2026-09-08: homeostatic targets re-anchored on load; the plastic-set learning arms re-run
+
+The first run of the four plastic-set learning arms (Hebbian and three-factor on both wirings)
+found the rule taking a competent clone apart on the first step — the wild-type three-factor
+arm at 7.7% in its first block against the frozen clone's 37.7%, episode 1 dead at step 90. The
+cause is a defect in the warm-start load path, not the rule: the rule's homeostatic norm
+targets were the incoming norms at construction (random initialisation, median 0.95) and were
+not refreshed on load, while the clone's norms sit six times higher (median 5.4). The first
+plastic step rescaled every unit back to its random-init norm and undid the saturated switch
+policy the clone encodes. The Hebbian arm's immediate drop from 37 to 31 is that rescaling
+alone.
+
+Ratified with Chris: the load now re-anchors the targets to the loaded weights (the active
+persistence spec says so, with a test), the first run is kept as **attempt 1** beside the
+results, and the four plastic-set learning arms are re-run. The frozen arms take no rule step
+and the PPO arms run no homeostasis, so they stand. No other value changes.
