@@ -6,13 +6,18 @@ weights decide what any local rule can do; this one removed that confound by clo
 competent policy into the connectome on every seed and asking what happens next. The clone
 gate passes on every seed: behavioural cloning into the chemical weights alone, behind the fixed
 anatomical readout, turns an 8% random policy into a **39%** one, and cloning every parameter PPO
-trains reaches **74%**, three quarters of the teacher's 99% — the connectome can hold a competent
-policy, and the degree-preserving rewired null holds it at least as well, so the fifth-of-six
-rank of [Logbook 029](029-continuous-architecture-ranking.md) was neither a representability
-limit nor a wiring one. From that start the reward-modulated three-factor rule takes the policy
-apart on both wirings (W4 **−25.7**, W5 **−25.7**, intervals far from zero), the unmodulated
-Hebbian rule holds it on the wild-type (39%, six of eight seeds competent) and not on the rewired
-null (18%), and PPO fine-tuning from the 74% clone loses by **34 points** to PPO from random
+trains reaches **74%**, three quarters of the teacher's 99%, and the degree-preserving rewired
+null carries it at least as well. The connectome can therefore *hold* a cloned copy of this one
+teacher's policy at that level, so the fifth-of-six rank of
+[Logbook 029](029-continuous-architecture-ranking.md) is not explained by an inability to carry a
+policy of that quality on either wiring — a claim about one cloned policy, not about the policies
+the substrate was never given or about its access to them under learning. From that start the
+reward-modulated three-factor rule falls **below its own frozen clone** on the wild-type
+(W4 **−25.7**, registered) and on the rewired null (**−22.6**, CI[−30.0, −14.7], 1/8,
+descriptive), and below its Hebbian clone on the wild-type (W5 **−25.7**, registered) though not
+on the rewired null (+2.2, not significant). The unmodulated Hebbian rule holds the clone on the
+wild-type (39%, six of eight seeds competent) and not on the rewired null (18%), and PPO
+fine-tuning from the 74% clone loses by **34 points** to PPO from random
 weights at the same initial noise, which itself reaches 69% and 81% in 3000 episodes against
 029's 52% in 6000. One defect surfaced mid-panel and was fixed under a dated amendment.
 
@@ -135,16 +140,22 @@ wt_clone_frozen +34.9 (8/8). Curves and every pair in `supporting/043-l4-warm-st
 
 ## Analysis
 
-1. **Representability is settled, in the connectome's favour and against the wiring.** With
-   only the chemical weights free behind a readout that is anatomy rather than a trained
-   decoder, the clone holds 39% of a bang-bang policy on every seed; with gains and readout free
-   it holds 74%. The rewired null holds the policy at least as well under both sets. The fixed
-   points of panels 1–3 were about where the rule started, not about what the substrate can
-   express.
-2. **The three-factor rule takes a competent policy apart, on both wirings.** From a 39% clone
-   the wild-type arm rises briefly in the first thousand episodes and then collapses to 13%; the
-   rewired arm from 43% to 20%. This is the rule acting on the clone as loaded, after the load
-   defect was fixed and verified. The registered map names it: `rule_destroys_clone`. The rule's
+1. **The connectome can retain a competent policy, on either wiring.** With only the chemical
+   weights free behind a readout that is anatomy rather than a trained decoder, the clone scores
+   39% on every seed; with gains and readout free it scores 74%. The rewired null carries the
+   policy at least as well under both sets. What this settles is retention of the one policy it
+   was given: the substrate can express and run a policy of that quality, so the fixed points of
+   panels 1–3 are not explained by an inability to hold one. It does not establish that the
+   connectome could represent a better policy, nor that its rank under PPO has no
+   representability component at all — one cloned teacher is one point in policy space.
+2. **The three-factor rule takes a competent policy apart.** From a 39% clone the wild-type arm
+   rises briefly in the first thousand episodes and then collapses to 13%; the rewired arm from
+   43% to 20%. Only the wild-type contrasts are registered (W4, W5); the rewired equivalent is
+   descriptive — below its frozen clone by −22.6 (CI[−30.0, −14.7], 1 of 8 seeds positive) and
+   level with its Hebbian clone (+2.2, not significant) — so "on both wirings" holds for the
+   frozen comparison and is untested for the reward contrast. This is the rule acting on the
+   clone as loaded, after the load defect was fixed and verified. The registered map names it:
+   `rule_destroys_clone`. The rule's
    reward-modulated updates do not preserve a policy that reward alone would reward; they move
    the weights toward the rule's own fixed point, which on this cell is worse than the clone.
 3. **The Hebbian rule holds the clone on the wild-type and not on the scramble.** The
@@ -167,10 +178,12 @@ wt_clone_frozen +34.9 (8/8). Curves and every pair in `supporting/043-l4-warm-st
 
 ## Conclusions
 
-- The connectome holds a competent policy; the specific wiring is not what limits it. D13's
-  representability question is answered.
+- The connectome retains a cloned competent policy on either wiring, at 39% of the ceiling
+  through the chemical weights alone and 74% with every PPO parameter. D13's representability
+  question is answered for a policy of that quality; nothing here speaks to policies the
+  substrate was never handed.
 - The minimal reward-modulated three-factor rule, as registered, destroys a competent policy on
-  both wirings. From a competent start as from a random one, the rule's fixed points are its
+  the wild-type wiring (registered) and on the rewired null (descriptive). From a competent start as from a random one, the rule's fixed points are its
   own, and they are poor. The Phase 7 headline's rule family needs a different mechanism — a
   structured, pathway-specific third factor (7a-ii) or decorrelating terms — before another
   panel is worth running.
