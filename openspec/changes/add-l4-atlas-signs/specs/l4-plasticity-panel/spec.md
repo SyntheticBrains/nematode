@@ -18,7 +18,7 @@ The confirmatory family SHALL be exactly four one-sided paired tests corrected t
 on seeds 1–64; (G2) the grounded wild-type over the grounded rewired-null Hebbian arm without
 enforcement, the primary; (G3) the same with enforcement; (G4) the enforced over the unenforced
 wild-type Hebbian arm. The verdict SHALL be assigned in order as `insufficient_seeds`,
-`substrate_fail` when the grounded frozen arms' competent fraction falls below a fifth of the
+`substrate_fail` when the grounded frozen arms' competent fraction falls below half of the
 committed random-sign value, and then from G2 alone as `specific_wiring`,
 `rewired_beats_wild_type`, `degree_statistics` or `inconclusive`; G1, G3 and G4 SHALL annotate the
 verdict and never change it. A launch record SHALL be committed before any run.
@@ -38,7 +38,7 @@ verdict and never change it. A launch record SHALL be committed before any run.
 
 #### Scenario: A broken substrate is named, not rationalised
 
-- **GIVEN** grounded frozen arms whose competent fraction is below a fifth of the committed
+- **GIVEN** grounded frozen arms whose competent fraction is below half of the committed
   random-sign value
 - **WHEN** the verdict is assigned
 - **THEN** it SHALL be `substrate_fail` and the record SHALL state that nothing downstream of it is

@@ -10,8 +10,10 @@ return a release identity for each of the 302 hermaphrodite neurons, normalising
 editorial annotation (a leading `*`, a trailing `- NEW`, letter case, and a parenthetical
 qualifier separated from the base label) and mapping the atlas's `DB1/3` and `DB3/1` to the
 project's `DB1` and `DB3`. An entry qualified as uptake SHALL NOT yield a release identity. The
-302-entry neuron classification table's transmitter slot SHALL be populated from that loader, and
-`Neuron.neurotransmitter` SHALL carry it through the connectome loader.
+302-entry neuron classification table's transmitter slot SHALL be populated from that loader's
+output as committed literal values, not read from the vendored file at import, and a test SHALL
+assert that the committed values equal what the loader re-derives; `Neuron.neurotransmitter` SHALL
+carry them through the connectome loader.
 
 The substrate SHALL derive a per-transmitter sign — acetylcholine and glutamate excitatory, GABA
 inhibitory, monoamines and orphan or uptake-only identities unknown — and SHALL document, where

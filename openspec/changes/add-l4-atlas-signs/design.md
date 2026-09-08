@@ -10,8 +10,8 @@ withdrew Dale's law precisely because those signs were noise.
 
 Recon against the vendored-candidate atlas file (`elife-95402-supp2-v1.xlsx`, OpenWorm cect
 mirror, downloaded and inspected 2026-09-08): sheet `Supp File 2`, 302 neuron rows, a curated
-`Neurotransmitter(s)` column plus two unnamed columns carrying secondary identities, sixteen
-reporter-allele columns behind them, and prior-report staining columns. Normalising the primary
+`Neurotransmitter(s)` column plus two unnamed columns carrying secondary identities, thirteen
+reporter-allele columns behind them, and three prior-report staining columns. Normalising the primary
 column gives ACh 161, Glu 76, GABA 31, DA 8, orphan/unknown 16, betaine-uptake 4, GABA-uptake 2,
 5-HT 2, octopamine 2.
 
@@ -45,6 +45,13 @@ mirror, licence and redistribution rationale as the Cook 2019 file already vendo
 pattern.
 
 ### D2. Normalisation and the sign table
+
+**The table stays static and hand-reviewable.** `NEURON_CLASSIFICATION` is a checked-in literal
+with an import-time size assertion, and the substrate capability calls it the project's canonical
+reference; reading a spreadsheet at import would put `openpyxl` on a hot path and make the module
+fail without the vendored file. So a generation script writes the transmitter values *into* the
+literal, the result is committed and reviewable line by line, and a test re-derives them from the
+atlas and asserts equality. Nothing at run time — the brain included — reads the spreadsheet.
 
 The atlas's primary column carries editorial annotation. The loader normalises: strip a leading
 `*`, strip a trailing `- NEW`, case-fold the `Unknown`/`unknown` variants, and split a
@@ -83,13 +90,15 @@ sign structure and nothing else. `random` is the existing code path, byte-identi
 
 ### D4. Dale's law
 
-`enforce_synapse_signs: bool = False` on the plasticity mixin. When on, the rule projects each
-plastic weight back onto its synapse's sign after the update and before the magnitude clamp:
-positive synapses are floored at zero, negative synapses ceilinged at zero, unknown ones
-unconstrained. Ordering is update → decay → **projection** → clamp → homeostasis, so the
-homeostatic rescale acts on the projected weights and cannot reintroduce a forbidden sign.
-Enforcement without grounding is refused at construction: signs must come from the atlas before
-they can be law.
+`enforce_synapse_signs: bool = False` on **`ConnectomePPOBrainConfig`**, beside `synapse_signs`,
+not on the shared `PlasticityConfigMixin`: the MLP brain inherits that mixin and synapse signs are
+meaningless on a dense layer. When on, the rule projects each plastic weight back onto its
+synapse's sign — positive synapses floored at zero, negative ceilinged at zero, unknown ones
+unconstrained. Ordering follows the rule as written, where the homeostatic rescale precedes the
+clamp so the bound always holds last: update → decay → **projection** → homeostasis → clamp. The
+projection is safe before the rescale because homeostasis multiplies by a positive per-unit factor
+and cannot flip a sign. Enforcement without grounding is refused at construction: signs must come
+from the atlas before they can be law.
 
 ### D5. The registered test
 
@@ -122,10 +131,13 @@ mean absolute weight and saturation telemetry, because a mostly-excitatory netwo
 units may saturate.
 
 **The verdict map**, in order: `insufficient_seeds`; **`substrate_fail`** — the grounded frozen
-arms' competent fraction is below a fifth of panel 2's random-sign 0.22, i.e. grounding breaks
+arms' competent fraction is below half of panel 2's random-sign 0.22, i.e. grounding breaks
 the substrate rather than informing it, and nothing downstream is interpretable; then from G2 as
 in panels 2–3: `specific_wiring`, `rewired_beats_wild_type`, `degree_statistics`,
 `inconclusive`. G1, G3 and G4 annotate and never change the verdict.
+
+Half, not a fifth: a grounding that halves the competent fraction has damaged the substrate, and a
+threshold set at near-total collapse would let that pass while G1 alone carried the reading.
 
 `substrate_fail` is registered because it is a real possibility: an 80% excitatory network of
 tanh units may settle at saturation and express nothing, and that outcome must be named in

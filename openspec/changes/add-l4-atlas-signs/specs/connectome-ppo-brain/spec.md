@@ -26,18 +26,20 @@ the default, construction SHALL be bit-identical to the brain without this requi
 
 ### Requirement: Dale's law enforcement during plasticity
 
-The plasticity configuration SHALL accept `enforce_synapse_signs`, default false. When true, each
-plastic update SHALL be projected back onto its synapse's derived sign — a positive synapse
-floored at zero, a negative synapse ceilinged at zero, a synapse without a derived sign
-unconstrained — after the decay term and before the magnitude clamp, so that the homeostatic
-rescale acts on projected weights. Enabling it without atlas-grounded signs SHALL be refused at
-construction. With it false, updates SHALL be bit-identical to the rule without this requirement.
+The connectome brain configuration SHALL accept `enforce_synapse_signs`, default false; it SHALL
+NOT be added to the plasticity configuration shared with brains that have no synapse signs. When
+true, each plastic update SHALL be projected back onto its synapse's derived sign — a positive
+synapse floored at zero, a negative synapse ceilinged at zero, a synapse without a derived sign
+unconstrained — after the decay term and before the homeostatic rescale, which itself precedes the
+magnitude clamp. Enabling it without atlas-grounded signs SHALL be refused at construction. With
+it false, updates SHALL be bit-identical to the rule without this requirement.
 
 #### Scenario: No grounded sign is ever violated
 
 - **GIVEN** a plastic brain with grounded signs and enforcement on
 - **WHEN** it runs many updates
-- **THEN** every synapse with a derived sign SHALL still carry that sign, after homeostasis
+- **THEN** every synapse with a derived sign SHALL still carry that sign, after the homeostatic
+  rescale and the clamp
 - **AND** synapses without a derived sign MAY have changed sign
 
 #### Scenario: Enforcement requires grounding
