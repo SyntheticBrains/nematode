@@ -15,7 +15,7 @@
 
 ## 3. The campaign script
 
-- [ ] 3.1 `scripts/campaigns/l4_warm_start.py teacher`: select the best MLP seed by plateau tail,
+- [ ] 3.1 `scripts/campaigns/l4_warm_start_campaign.py teacher`: select the best MLP seed by plateau tail,
   copy its weights, write the frozen recording config, run the recording; `clone`: the 32
   clones at the registered hyperparameters, `clones.json` with every fit and the flag.
 - [ ] 3.2 Tests on synthetic inputs: selection, config derivation, clone naming, the flag; and the

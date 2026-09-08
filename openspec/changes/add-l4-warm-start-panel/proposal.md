@@ -34,7 +34,7 @@ student — the plastic set the rule can inherit, and the full PPO set; the warm
   six-test BH-FDR family with the warm-started wild-type-over-rewired three-factor contrast as
   the primary, a clone-competence gate, two sanity floors and the D13 PPO contrast; an ordered
   verdict map; one bounded extension per run; no pilot.
-- **A campaign script** (`scripts/campaigns/l4_warm_start.py`) that selects the teacher, records
+- **A campaign script** (`scripts/campaigns/l4_warm_start_campaign.py`) that selects the teacher, records
   it frozen, and clones every student; **a harness** (`scripts/analysis/l4_warm_start.py`) that
   fixes the analysis before any data exist.
 - The launch record, the runs, the records under `supporting/043-l4-warm-start/`, tests, docs.

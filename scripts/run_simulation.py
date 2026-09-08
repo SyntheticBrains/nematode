@@ -32,7 +32,12 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.brain.rollouts import RolloutRecorder
-from quantumnematode.brain.weights import WeightPersistence, load_weights, save_weights
+from quantumnematode.brain.weights import (
+    WeightPersistence,
+    load_weights,
+    resolve_weights_path,
+    save_weights,
+)
 from quantumnematode.env import MIN_GRID_SIZE, Direction
 from quantumnematode.env.theme import DEFAULT_THEME, Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
@@ -529,6 +534,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Weight persistence: resolve load path (CLI overrides config)
     load_weights_path = args.load_weights or getattr(brain_config, "weights_path", None)
+    if load_weights_path:
+        try:
+            load_weights_path = resolve_weights_path(str(load_weights_path), simulation_seed)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
     save_weights_path = args.save_weights
 
     # Validate: if weight persistence requested, brain must implement it

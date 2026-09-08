@@ -328,3 +328,76 @@ class TestCountInitConfigs:
     def test_parents_keep_the_degree_scaled_default(self) -> None:
         for parent, _ in _COUNT_INIT:
             assert "weight_init" not in parent.read_text()
+
+
+_WARM = {
+    "clone": [
+        (_FROZEN, "_clone"),
+        (_FROZEN_REWIRED, "_clone"),
+        (_HEBBIAN, "_clone"),
+        (_HEBBIAN_REWIRED, "_clone"),
+        (_VARIANT, "_clone"),
+        (_REWIRED, "_clone"),
+        (_FROZEN, "_fullclone"),
+        (_FROZEN_REWIRED, "_fullclone"),
+    ],
+}
+_LOWSTD = _PARENT.with_name(_PARENT.name.replace(".yml", "_lowstd.yml"))
+_LOWSTD_REWIRED = _PARENT.with_name(_PARENT.name.replace(".yml", "_rewired_null_lowstd.yml"))
+
+
+class TestWarmStartConfigs:
+    """Each warm-started arm is one key off its parent.
+
+    The clone arms add `weights_path`; the low-noise PPO arms add `initial_log_std`; the
+    fine-tune arms add `weights_path` to the low-noise arms.
+    """
+
+    @pytest.mark.parametrize(
+        ("parent", "suffix"),
+        _WARM["clone"],
+        ids=lambda x: getattr(x, "name", x),
+    )
+    def test_clone_arms_add_only_the_weights_path(self, parent: Path, suffix: str) -> None:
+        derived = parent.with_name(parent.name.replace(".yml", f"{suffix}.yml"))
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.weights_path"}
+        assert set(base) - set(variant) == set()
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+        expected_set = "full" if suffix == "_fullclone" else "plastic"
+        wiring = "rn" if "rewired_null" in parent.name else "wt"
+        assert (
+            variant["brain.config.weights_path"]
+            == f"campaigns/l4-warm-start/clones/{expected_set}_{wiring}_seed{{seed}}.pt"
+        )
+
+    @pytest.mark.parametrize(
+        ("parent", "derived"),
+        [
+            (_PARENT, _LOWSTD),
+            (_PARENT.with_name(_PARENT.name.replace(".yml", "_rewired_null.yml")), _LOWSTD_REWIRED),
+        ],
+        ids=["wt", "rn"],
+    )
+    def test_lowstd_arms_add_only_the_noise_key(self, parent: Path, derived: Path) -> None:
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.initial_log_std"}
+        assert variant["brain.config.initial_log_std"] == -1.0
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+
+    @pytest.mark.parametrize("parent", [_LOWSTD, _LOWSTD_REWIRED], ids=["wt", "rn"])
+    def test_fine_tune_arms_add_only_the_weights_path(self, parent: Path) -> None:
+        derived = parent.with_name(parent.name.replace(".yml", "_fullclone.yml"))
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.weights_path"}
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+
+    def test_every_warm_started_config_loads(self) -> None:
+        for path in _VARIANT.parent.glob("connectomeppo_*clone*.yml"):
+            config = load_simulation_config(str(path)).brain
+            assert config is not None
+            assert isinstance(config.config, ConnectomePPOBrainConfig)
+            assert config.config.weights_path is not None

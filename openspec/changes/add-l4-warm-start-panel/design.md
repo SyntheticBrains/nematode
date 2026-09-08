@@ -148,7 +148,7 @@ Claim type: performance throughout.
 
 ### D8. Scripts and records
 
-`scripts/campaigns/l4_warm_start.py`: `teacher` (select the best seed from the MLP campaign by
+`scripts/campaigns/l4_warm_start_campaign.py`: `teacher` (select the best seed from the MLP campaign by
 plateau tail, copy its weights, write the frozen recording config, run the recording), `clone`
 (the 32 clones, `clones.json`); both write beside the campaign results.
 `scripts/analysis/l4_warm_start.py`: the twelve-arm registry, seed range 1–8 enforced, panel 2's table for W1, the
