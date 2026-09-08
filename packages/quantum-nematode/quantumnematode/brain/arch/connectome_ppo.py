@@ -24,10 +24,11 @@ in a single chemical-synapse hop.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import torch
+from pydantic import model_validator
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -54,6 +55,7 @@ from quantumnematode.brain.arch._std_head import (
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+from quantumnematode.connectome.neurotransmitters import sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
 from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
@@ -170,6 +172,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # paired run draws its own null topology from a dedicated RNG while the weight-init
     # RNG stream is left untouched (matched init vs wild-type for the same seed).
     rewire_seed: int | None = None
+
     # Chemical-weight initialisation. "degree_scaled" draws every incoming edge of a
     # neuron from N(0, 1/sqrt(k)), k its chemical in-degree, so the synapse counts in
     # the connectome data never reach a weight. "count_scaled" draws z ~ N(0, 1) per
@@ -180,6 +183,20 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # gap junctions already carry their counts through the fan-in normalisation.
     # Default degree_scaled is byte-identical to the pre-option brain.
     weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled"
+    # Chemical-synapse signs. "random" keeps the sign each weight drew, so half the network is
+    # inhibitory by construction. "atlas" replaces it with the sign the pre-synaptic neuron's
+    # released transmitter implies (acetylcholine and glutamate excitatory, GABA inhibitory),
+    # leaving monoaminergic, orphan and uptake-only sources on the sign they drew; magnitudes,
+    # the per-neuron scale and the RNG stream are untouched, so the two settings differ in sign
+    # structure and nothing else. A transmitter is a per-neuron approximation of a synapse's
+    # sign, which the post-synaptic receptor actually sets — see the connectome package's
+    # neurotransmitters module. Default "random" is byte-identical to the pre-option brain.
+    synapse_signs: Literal["random", "atlas"] = "random"
+    # Dale's law during plasticity: project every plastic update back onto its synapse's
+    # atlas-derived sign, leaving synapses without one unconstrained. Requires
+    # synapse_signs: atlas — constraining drawn signs would only freeze noise. Lives here and
+    # not on the shared plasticity mixin because a dense MLP has no synapse signs to enforce.
+    enforce_synapse_signs: bool = False
     enable_gap_junctions: bool = True
     chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"
     # Sensing mode controls what env-side fields the sensor projection
@@ -225,6 +242,22 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     num_minibatches: int = _DEFAULT_NUM_MINIBATCHES
     rollout_buffer_size: int = _DEFAULT_ROLLOUT_BUFFER_SIZE
     max_grad_norm: float = _DEFAULT_MAX_GRAD_NORM
+
+    @model_validator(mode="after")
+    def _validate_synapse_signs(self) -> ConnectomePPOBrainConfig:
+        """Refuse to enforce signs that were drawn rather than grounded.
+
+        Dale's law on random signs would freeze noise into a constraint — the reason the
+        rule review withdrew it when signs carried no biology. It becomes meaningful only
+        once the signs come from the transmitter atlas.
+        """
+        if self.enforce_synapse_signs and self.synapse_signs != "atlas":
+            msg = (
+                "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
+                "that were drawn at random would constrain noise, not biology."
+            )
+            raise ValueError(msg)
+        return self
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -286,6 +319,7 @@ class ConnectomeTopology(nn.Module):
         trace_decay: float = 0.9,
         initial_log_std: float = 0.0,
         weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled",
+        synapse_signs: Literal["random", "atlas"] = "random",
     ) -> None:
         super().__init__()
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
@@ -341,23 +375,46 @@ class ConnectomeTopology(nn.Module):
         )
         count_norm = np.sqrt(np.where(count_sq_sum > 0, count_sq_sum, 1.0))
 
+        # Per-neuron sign from the transmitter atlas, empty under "random". The matrix of
+        # per-synapse signs is registered as a buffer so Dale's law can read it on every update
+        # and it travels with the weights through persistence and `.to(device)`.
+        self.synapse_signs = synapse_signs
+        sign_by_neuron: dict[str, int] = (
+            {
+                name: sign
+                for name, neuron in connectome.neurons.items()
+                if (sign := sign_for(neuron.neurotransmitter))
+            }
+            if synapse_signs == "atlas"
+            else {}
+        )
         m_chem_np = np.zeros((self.n_neurons, self.n_neurons), dtype=bool)
         w_chem_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.float32)
+        sign_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.int8)
         for syn in connectome.chemical_synapses:
             pre_i = self._idx[syn.pre]
             post_j = self._idx[syn.post]
             m_chem_np[pre_i, post_j] = True
             if weight_init == "count_scaled":
                 factor = float(syn.weight) / float(count_norm[post_j])
-                w_chem_np[pre_i, post_j] = np.float32(rng.normal(loc=0.0, scale=1.0) * factor)
+                drawn = rng.normal(loc=0.0, scale=1.0) * factor
             else:
-                w_chem_np[pre_i, post_j] = np.float32(
-                    rng.normal(loc=0.0, scale=float(chem_scale[post_j])),
-                )
+                drawn = rng.normal(loc=0.0, scale=float(chem_scale[post_j]))
+            # Sign grounding replaces the drawn sign where the pre-synaptic neuron's released
+            # transmitter implies one, keeping the drawn magnitude — so the RNG stream, the
+            # per-neuron scale and every magnitude are identical to the random-sign build.
+            sign = sign_by_neuron.get(syn.pre)
+            w_chem_np[pre_i, post_j] = np.float32(abs(drawn) * sign if sign else drawn)
+            if sign:
+                sign_np[pre_i, post_j] = np.int8(sign)
 
         self.register_buffer(
             "m_chem",
             torch.from_numpy(m_chem_np).to(device=device),
+        )
+        self.register_buffer(
+            "chem_sign",
+            torch.from_numpy(sign_np).to(device=device),
         )
         self.w_chem = nn.Parameter(torch.from_numpy(w_chem_np).to(device=device))
 
@@ -1215,6 +1272,15 @@ class ConnectomePPOBrain(ClassicalBrain):
         # is the structural choice that pins gradient flow to wild-type edges
         # under "strict" mode; under "soft_prior" the forward uses raw
         # ``w_chem`` so the optimiser can grow new edges.
+        if config.enforce_synapse_signs and config.synapse_signs != "atlas":
+            # Also guarded by a config validator; repeated here because a config built by
+            # `model_copy` skips validators, and enforcing drawn signs would silently
+            # constrain noise rather than biology.
+            msg = (
+                "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
+                "that were drawn at random would constrain noise, not biology."
+            )
+            raise ValueError(msg)
         self.topology = ConnectomeTopology(
             connectome,
             enable_gap_junctions=config.enable_gap_junctions,
@@ -1231,6 +1297,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             trace_decay=config.trace_decay,
             initial_log_std=config.initial_log_std,
             weight_init=config.weight_init,
+            synapse_signs=config.synapse_signs,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -1285,6 +1352,11 @@ class ConnectomePPOBrain(ClassicalBrain):
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
                 homeostasis=config.plasticity_homeostasis,
+                synapse_signs=(
+                    [cast("torch.Tensor", self.topology.chem_sign)]
+                    if config.enforce_synapse_signs
+                    else None
+                ),
                 scaling=ScalingOptions(
                     normalise_modulator=config.plasticity_normalise_modulator,
                     normalise_trace=config.plasticity_normalise_trace,
@@ -1808,6 +1880,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "learning_rule": self.config.learning_rule,
                     "wiring": self.config.wiring,
                     "weight_init": self.config.weight_init,
+                    "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
                 },
             ),
@@ -1829,7 +1902,11 @@ class ConnectomePPOBrain(ClassicalBrain):
             raise ValueError(msg)
         return {k: v for k, v in all_components.items() if k in components}
 
-    _WIRING_BUFFERS: tuple[str, ...] = ("m_chem", "g_gap")
+    # Buffers that define what the weights *mean*: which synapses exist, how gap junctions
+    # couple, and which sign each synapse is allowed to carry. A file whose signs came from a
+    # different sign model describes different weights, so a mismatch is refused before any
+    # state is loaded, exactly as a different wiring is.
+    _WIRING_BUFFERS: tuple[str, ...] = ("m_chem", "g_gap", "chem_sign")
     # Per-episode activity-trace state: registered buffers when activity traces are
     # enabled, absent otherwise, and reset at every episode. Never persisted, so a
     # file saved under either rule loads under the other.
@@ -1838,6 +1915,54 @@ class ConnectomePPOBrain(ClassicalBrain):
         "prev_activity",
         "prev_activity_valid",
     )
+
+    def _load_topology_state(self, topology_state: dict[str, Any]) -> None:
+        """Validate a saved topology against this brain, then load it.
+
+        The wiring buffers say which synapses exist, how gap junctions couple and which sign
+        each synapse may carry: weights saved against different ones describe a different
+        network, so a mismatch is refused before anything is written.
+        """
+        current = self.topology.state_dict()
+        for name in self._WIRING_BUFFERS:
+            saved = topology_state.get(name)
+            if saved is None:
+                msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
+                raise ValueError(msg)
+            mine = current[name]
+            if tuple(saved.shape) != tuple(mine.shape) or not torch.equal(
+                saved.to(mine.device, mine.dtype),
+                mine,
+            ):
+                what = (
+                    "a different synapse-sign model"
+                    if name == "chem_sign"
+                    else "a different wiring"
+                )
+                msg = (
+                    f"Weight file was saved on {what} ({name!r} differs); a connectome brain "
+                    "loads only weights saved on its own wiring and sign model."
+                )
+                raise ValueError(msg)
+        persisted = {k: v for k, v in topology_state.items() if k not in self._TRANSIENT_BUFFERS}
+        expected = {k for k in current if k not in self._TRANSIENT_BUFFERS}
+        missing, unexpected = expected - set(persisted), set(persisted) - expected
+        if missing or unexpected:
+            detail = ""
+            if "chem_sign" in missing:
+                # Files written before synapse signs existed carry no sign buffer. There is
+                # nothing to migrate to — the signs those weights carry were drawn, not derived
+                # — so such a file is refused rather than silently reinterpreted.
+                detail = (
+                    " The file predates atlas-grounded synapse signs; load it into a brain built "
+                    "from the configuration that produced it."
+                )
+            msg = (
+                f"Weight file's topology component does not match this brain: "
+                f"missing {sorted(missing)}, unexpected {sorted(unexpected)}.{detail}"
+            )
+            raise ValueError(msg)
+        self.topology.load_state_dict(persisted, strict=False)
 
     def load_weight_components(
         self,
@@ -1855,34 +1980,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
-            current = self.topology.state_dict()
-            for name in self._WIRING_BUFFERS:
-                saved = topology_state.get(name)
-                if saved is None:
-                    msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
-                    raise ValueError(msg)
-                mine = current[name]
-                if tuple(saved.shape) != tuple(mine.shape) or not torch.equal(
-                    saved.to(mine.device, mine.dtype),
-                    mine,
-                ):
-                    msg = (
-                        f"Weight file was saved on a different wiring ({name!r} differs); "
-                        "a connectome brain loads only weights saved on its own wiring."
-                    )
-                    raise ValueError(msg)
-            persisted = {
-                k: v for k, v in topology_state.items() if k not in self._TRANSIENT_BUFFERS
-            }
-            expected = {k for k in current if k not in self._TRANSIENT_BUFFERS}
-            missing, unexpected = expected - set(persisted), set(persisted) - expected
-            if missing or unexpected:
-                msg = (
-                    f"Weight file's topology component does not match this brain: "
-                    f"missing {sorted(missing)}, unexpected {sorted(unexpected)}."
-                )
-                raise ValueError(msg)
-            self.topology.load_state_dict(persisted, strict=False)
+            self._load_topology_state(topology_state)
         if self._ppo_rule is not None:
             if "value" in components:
                 self._ppo_rule.critic.load_state_dict(components["value"].state)

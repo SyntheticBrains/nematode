@@ -35,6 +35,33 @@ This directory contains *C. elegans* connectome data files used by the
   SI. Any consumer of our codebase should also cite Cook et al. 2019 when
   publishing derived results.
 
+### `elife-95402-supp2-v1.xlsx`
+
+- **Description**: Supplementary File 2 of the *C. elegans* neurotransmitter atlas — a
+  per-neuron table of CRISPR/Cas9 knock-in reporter expression for the transmitter-related
+  genes (`eat-4`, `unc-17`, `unc-25`, `unc-47`, `cat-1`, `tph-1`, `cat-2`, `bas-1`, `tdc-1`,
+  `tbh-1`, `mod-5`, `snf-3`, `oct-1`), the prior-report staining columns, and a curated
+  `Neurotransmitter(s)` column giving each of the 302 hermaphrodite neurons a release identity.
+  Consumed to populate the `neurotransmitter` slot of the project's 302-entry classification
+  table.
+- **Original filename in upstream mirror**: `elife-95402-supp2-v1.xlsx`
+- **Size**: 73,537 bytes (~74 KB)
+- **SHA256**: `0013e4b5f366b82a6b0ec0d682c3bace4027545c957823841293de93feafc0e2`
+- **Source URL**: <https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/elife-95402-supp2-v1.xlsx>
+- **Mirror licence**: MIT (the same OpenWorm ConnectomeToolbox mirror the Cook 2019 file above
+  is vendored from; see that entry's note on the `LICENSE` / `setup.cfg` discrepancy)
+- **Retrieval date**: 2026-09-08
+- **Accompanying paper**:
+  - **Title**: A neurotransmitter atlas of *C. elegans* males and hermaphrodites
+  - **Authors**: Chen Wang, Berta Vidal, Surojit Sural, Curtis Loer, G. Robert Aguilar,
+    Daniel M. Merritt, Itai Antoine Toker, Merly C. Vogt, Cyril Cros, Oliver Hobert
+  - **Journal**: *eLife* 13:RP95402 (2024)
+  - **DOI**: <https://doi.org/10.7554/eLife.95402>
+- **Redistribution rationale**: as for the Cook 2019 file — academic re-use of open-access
+  Supplementary Information, sourced from OpenWorm cect's MIT-licensed mirror. *eLife* publishes
+  under CC BY. Any consumer of our codebase should cite Wang et al. 2024 when publishing results
+  derived from these identities.
+
 ### `witvliet_2020_dataset8_adult.xlsx`
 
 - **Description**: One of eight developmental connectomes from the Witvliet

@@ -401,3 +401,59 @@ class TestWarmStartConfigs:
             assert config is not None
             assert isinstance(config.config, ConnectomePPOBrainConfig)
             assert config.config.weights_path is not None
+
+
+_ATLAS_SIGNS = [
+    (_FROZEN, "_atlassigns"),
+    (_FROZEN_REWIRED, "_atlassigns"),
+    (_HEBBIAN, "_atlassigns"),
+    (_HEBBIAN_REWIRED, "_atlassigns"),
+]
+
+
+class TestAtlasSignConfigs:
+    """Grounded arms are one `synapse_signs` key off their parent; Dale arms one key off those."""
+
+    @pytest.mark.parametrize(
+        ("parent", "suffix"),
+        _ATLAS_SIGNS,
+        ids=["frozen", "frozen_rewired", "hebbian", "hebbian_rewired"],
+    )
+    def test_grounded_arms_add_only_the_sign_key(self, parent: Path, suffix: str) -> None:
+        derived = parent.with_name(parent.name.replace(".yml", f"{suffix}.yml"))
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.synapse_signs"}
+        assert set(base) - set(variant) == set()
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+        assert variant["brain.config.synapse_signs"] == "atlas"
+
+    @pytest.mark.parametrize(
+        "parent",
+        [
+            _HEBBIAN.with_name(_HEBBIAN.name.replace(".yml", "_atlassigns.yml")),
+            _HEBBIAN_REWIRED.with_name(_HEBBIAN_REWIRED.name.replace(".yml", "_atlassigns.yml")),
+        ],
+        ids=["wt", "rn"],
+    )
+    def test_dale_arms_add_only_the_enforcement_key(self, parent: Path) -> None:
+        derived = parent.with_name(parent.name.replace(".yml", "_dale.yml"))
+        base = _flatten(yaml.safe_load(parent.read_text()))
+        variant = _flatten(yaml.safe_load(derived.read_text()))
+        assert set(variant) - set(base) == {"brain.config.enforce_synapse_signs"}
+        assert variant["brain.config.enforce_synapse_signs"] is True
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
+
+    def test_every_grounded_config_loads_with_grounded_signs(self) -> None:
+        paths = sorted(_VARIANT.parent.glob("connectomeppo_*atlassigns*.yml"))
+        assert len(paths) == 6
+        for path in paths:
+            config = load_simulation_config(str(path)).brain
+            assert config is not None
+            assert isinstance(config.config, ConnectomePPOBrainConfig)
+            assert config.config.synapse_signs == "atlas"
+            assert config.config.enforce_synapse_signs == path.name.endswith("_dale.yml")
+
+    def test_parents_keep_random_signs(self) -> None:
+        for parent, _suffix in _ATLAS_SIGNS:
+            assert "synapse_signs" not in parent.read_text()
