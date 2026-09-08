@@ -31,7 +31,7 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 ## Shipment 7a-i — Platform Freeze + Minimal Rule + the 2×2 Panel
 
 **OpenSpec changes**: `add-l4-trace-substrate` (merged 2026-09-05, archived `2026-09-04-add-l4-trace-substrate` — A.1/A.2 done), `add-state-dependent-action-std` (merged 2026-09-05, archived `2026-09-05-add-state-dependent-action-std` — the P.1–P.5 platform tranche, closed under Amendment A), then a panel change (placeholder; created per milestone)
-**Status**: 🟡 in progress (A.1–A.8 done 2026-09-06 — the 7a-i panel resolved to `sanity_floor_fail`, Logbook 040; P.1–P.5 closed 2026-09-05 under Amendment A — substrate FROZEN mode-off; A.9 panel 2 and A.10 panel 3 both resolved `inconclusive` 2026-09-07, Logbooks 041 and 042 written; S.2 resolved `sanity_floor_fail` + `rule_destroys_clone` 2026-09-08, Logbook 043 written; next: 7a-ii)
+**Status**: 🟡 in progress (A.1–A.8 done 2026-09-06 — the 7a-i panel resolved to `sanity_floor_fail`, Logbook 040; P.1–P.5 closed 2026-09-05 under Amendment A — substrate FROZEN mode-off; A.9 panel 2 and A.10 panel 3 both resolved `inconclusive` 2026-09-07, Logbooks 041 and 042 written; S.2 resolved `sanity_floor_fail` + `rule_destroys_clone` 2026-09-08, Logbook 043 written; clone-destruction diagnostic done and 7a-ii restructured 2026-09-08 — consolidation before instruction, the atlas first as a substrate deliverable, B.5 and 7b's comparative runs gated; next: 7a-ii B.1)
 **Roadmap layer**: L4 (minimal)
 **Approx effort**: ~3-5 active weeks (roadmap § estimate restatement)
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 1, D1/D2/D5/D7/D8/D10/D13
@@ -65,18 +65,19 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 ## Shipment 7a-ii — Receptor-Grounded Neuromodulator Stack
 
 **OpenSpec change**: placeholder; created at milestone start
-**Status**: 🔲 not started
+**Status**: 🟡 restructured 2026-09-08 (diagnostic done; B.1 may start)
 **Roadmap layer**: L4 (grounded)
 **Approx effort**: ~4-6 active weeks
 **Dependencies**: 7a-i panel closed
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 1, D4/D12
 
-- [ ] B.1 Receptor/transmitter metadata as a **vendored-data sub-deliverable** with its own provenance doc: release identities from the Wang 2024 CRISPR neurotransmitter atlas; receptor classes from bulk-integrated CeNGEN profiles (~1-2 focused weeks of two-atlas curation).
+- [x] B.0 **Clone-destruction diagnostic** (probe, 2026-09-08; [record](../../../docs/experiments/logbooks/supporting/043-l4-warm-start/destruction-diagnostic.md)): both local rules rewrite a cloned competent policy on every seed (cosine 0.2–0.45 at 2000 episodes) at a near-constant, rate-insensitive drift; the reward rule finds better policies (76% at 250 episodes) and leaves them; there is no start-independent Hebbian fixed point (endpoints from clone and from random are orthogonal), yet Hebbian drift from a competent start stays competent on the wild-type (50–58%) and not from a random one (0–4%). Diagnosis: no consolidation — the normalised modulator and trace give a constant step and homeostasis removes decay as a brake. Consequence: consolidation before instruction; the one-hour clone assay gates B.5.
+- [ ] B.1 **Substrate deliverable, starts first**: receptor/transmitter metadata as a **vendored-data sub-deliverable** with its own provenance doc: release identities from the Wang 2024 CRISPR neurotransmitter atlas; receptor classes from bulk-integrated CeNGEN profiles (~1-2 focused weeks of two-atlas curation). **With its own registered test**: grounded signs on the Cook 2019 wiring re-run through the frozen prior sweep and the Hebbian wiring contrast (Logbooks 041–042's protocol), asking whether the sign structure alone changes either answer.
 - [ ] B.2 Internal-state sensory module (satiety/health into the observation — `BrainParams` plumbing exists; this is the minimal metabolic-state grounding).
 - [ ] B.3 Diffusible-signal layer v1 per **D12**: per-modulator global scalars (serotonin, dopamine), brain-internal, receptor-class gating; head-scope source policy as pinned (internal-state-only drive on truncated arms).
-- [ ] B.4 Modulated three-factor rules — third factor = modulator concentration; receptor metadata routes which synapses see which modulators.
+- [ ] B.4 **Consolidation first** *(reordered 2026-09-08 after B.0)*: a rule mechanism that slows or stops updating once a policy is good — an update magnitude that scales monotonically with the prediction error's magnitude, so a small `|δ|` produces a small weight change (today's RMS normalisation gives a full-size step however small the raw error is), or a slow protective variable (dopamine-gated consolidation rather than dopamine-gated change) — designed and cleared through the [clone assay](../../../docs/experiments/logbooks/supporting/043-l4-warm-start/destruction-diagnostic.md#the-clone-assay), the single protocol defined with the diagnostic (wild-type clone arm, seeds 1–8, 2000 episodes, plateau tail against Logbook 043's frozen-clone values, pass = holds or improves), before any panel. Then the modulated three-factor rules — third factor = modulator concentration; receptor metadata routes which synapses see which modulators.
 - [ ] B.4b **Structured (pathway-specific) instruction** *(added 2026-09-07 after Logbook 040 and Perks et al. 2026)*: the third factor SHALL be routed per instructive pathway — which synapses receive credit is determined by the receptor/transmitter metadata *and* by the connectivity that carries the modulatory signal to them — not only by modulator concentration and receptor class. Acceptance: the 7a-ii OpenSpec states the pathway model, its provenance, and a test that credit reaches only the synapses the wiring instructs; the 7a-i panel's global-scalar result is the registered baseline.
-- [ ] B.5 2×2 panel **re-run under the grounded rule** (same protocol, same frozen substrate).
+- [ ] B.5 2×2 panel **re-run under the grounded rule** (same protocol, same frozen substrate) — **gated**: only after a rule variant passes the [clone assay](../../../docs/experiments/logbooks/supporting/043-l4-warm-start/destruction-diagnostic.md#the-clone-assay); the warm-started arms (Logbook 043's registry) join the panel as the competent-start half.
 - [ ] B.6 SHOULD: learnable-gap-junction ablation on the *C. elegans* L4 substrate (D4).
 - [ ] B.7 SHOULD: co-primary biological validation — dopamine-gated forgetting + Leifer navigation re-weighting, **sign/shape-level** (behavioural-curve machinery; the forgetting target's full reproduction depends on the MAY slow-memory chain and is reported as such).
 - [ ] B.8 *(blocked until B.4b is satisfied)* 7a-ii logbook + **7a shipment decision** recorded (GO → roadmap status "7a complete / 7b pending" — never Phase 7 COMPLETE).
@@ -87,7 +88,7 @@ Every Phase 7 milestone PR updates this checklist as part of its diff.
 **Status**: 🔲 not started
 **Roadmap layer**: cross-species
 **Approx effort**: ~8-12 active weeks; lands beyond the window by default expectation
-**Dependencies**: pipeline tasks (C.1/C.2/C.4) are rule-independent and may start after 7a-i; the comparative runs (C.3/C.5) use the **grounded modulated rule** and depend on 7a-ii — D12's head-scope third-factor source policy presupposes the diffusible layer
+**Dependencies**: pipeline tasks (C.1/C.2/C.4) are rule-independent and may start after 7a-i; the comparative runs (C.3/C.5) use the **grounded modulated rule** and are **gated (2026-09-08) on a fidelity rung turning positive** — a registered result in which the wild-type wiring beats its rewired null under a local rule — because transferring a wiring-indifferent learner between species measures nothing about wiring; D12's head-scope third-factor source policy presupposes the diffusible layer.
 **Roadmap reference**: `docs/roadmap.md` § Phase 7 § Required deliverables 2, D3/D9/D11/D12
 
 - [ ] C.1 **D9 scaffold**: AVA/AVB command-interneuron readout for head-truncated arms + scaffold-sensitivity check (second readout on one behaviour) + per-behaviour sensor-coverage audit of the truncated scope (evasion declared distal-only).
