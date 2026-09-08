@@ -20,7 +20,7 @@ a few extra runs. A probe, not a registered panel: every number here is descript
 
 ## 1. Both rules rewrite the clone, on every seed
 
-| wiring | arm | cos(clone, endpoint) | mean |Δw| / mean |w| | sign flips | incoming-norm ratio |
+| wiring | arm | cos(clone, endpoint) | mean abs Δw over mean abs w | sign flips | incoming-norm ratio |
 |---|---|---|---|---|---|
 | wild-type | three-factor | 0.29–0.45 (median 0.38) | 1.35–1.55 (median 1.43) | 0.33–0.43 (median 0.37) | 1.000 |
 | wild-type | Hebbian | 0.22–0.36 (median 0.26) | 1.47–1.58 (median 1.52) | 0.37–0.43 (median 0.41) | 1.000 |
@@ -98,15 +98,43 @@ seed 3); at lower rates it only degrades the clone more slowly; the raw modulato
   start and the rewired null does not — the same wiring-specific signal panels 1–3 saw, now with
   a mechanism-level reading: the wild-type's correlation structure keeps Hebbian drift inside a
   competent region. It remains descriptive.
-- The one-hour clone assay (load a competent policy, run a rule, does it hold or improve) is the
-  test bed any new rule mechanism should clear before a registered panel.
+- The clone assay below is the test bed any new rule mechanism should clear before a registered
+  panel.
 
 ## Implications carried into 7a-ii's design
 
 1. A consolidation mechanism is the first candidate, ahead of structured routing: an update
-   magnitude that falls with the prediction error's magnitude (un-normalised, or normalised
-   with an annealed scale), or a slow protective variable — biologically, dopamine-gated
-   consolidation rather than dopamine-gated change.
-2. The clone assay gates 7a-ii's panel (B.5): a rule variant must hold or improve the clone on
-   the wild-type before the expensive 2×2 is re-run.
+   magnitude that **scales monotonically with the prediction error's magnitude**, so that a
+   small `|δ|` — the policy performing as its baseline expects, which is what a good policy
+   looks like to this rule — produces a small weight change. Today's normalisation does the
+   opposite: dividing δ by its running RMS gives a full-size step however small the raw error
+   is. Candidate forms: an un-normalised or annealed-scale modulator, or a slow protective
+   variable that resists change where the trace has been consistently rewarded — biologically,
+   dopamine-gated consolidation rather than dopamine-gated change.
+2. The clone assay (§ The clone assay, below) gates 7a-ii's panel (B.5): a variant must pass it
+   before the expensive 2×2 is re-run.
 3. The atlas (B.1) is a substrate deliverable in its own right and proceeds regardless.
+
+## The clone assay
+
+One protocol, defined once here and referenced by the roadmap's 7a-ii entry and by tracker items
+B.4 and B.5. It is a **screen, not a confirmatory test**: it uses seeds that Logbook 043 already
+reported, so a pass licenses running the registered panel and nothing more.
+
+| element | value |
+|---|---|
+| arms | the wild-type plastic-set clone arm (`…_plastic_clone.yml`) with the variant's rule keys and nothing else changed |
+| start | the S.2 plastic-set wild-type clone for that seed (`campaigns/l4-warm-start/clones/plastic_wt_seed{seed}.pt`) |
+| seeds | 1–8, paired |
+| budget | 2000 episodes, the panel's plastic budget; no extension |
+| metric | the committed plateau-tail full-clear success |
+| comparator | the same seeds' `wt_clone_frozen` values from Logbook 043 (per-seed 39.3, 44.0, 40.0, 21.3, 47.1, 33.3, 61.3, 23.3; mean 38.7) |
+| **holds** | mean within 5 points of the frozen clone's mean **and** at least 6 of 8 seeds no more than 10 points below their own frozen clone |
+| **improves** | mean above the frozen clone's **and** at least 6 of 8 seeds above their own |
+| **pass** | holds or improves |
+| cost | 8 runs, about twenty minutes on 16 workers (S.2's 32-run plastic stage took 73) |
+
+Reported per variant as the eight per-seed values, the mean delta against the frozen clone, the
+count of seeds at or above it, and the cosine of the endpoint to the clone — the last because a
+variant can pass on behaviour while still rewriting the policy, which this diagnostic showed the
+Hebbian rule does.
