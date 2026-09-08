@@ -66,3 +66,18 @@ uv run python scripts/run_campaign.py \
   `clone-fit-notes.md`.
 
 - **Panel launch**: 14:53, the three campaigns in the order above.
+
+- **Frozen stage**: 32 runs, 14:53–15:07, exit 0. **Plastic stage (attempt 1)**: 32 runs,
+  15:07–16:07, exit 0 — superseded, see `attempt1-plastic.md`. **PPO stage**: 32 runs,
+  16:07–16:57, exit 0.
+
+- **Amendment 2026-09-08** (ratified with Chris): the load path re-anchors the rule's
+  homeostatic norm targets to the loaded weights (commit `87793159`, with a test and the
+  persistence spec updated); the four plastic-set learning arms re-run at the same configs,
+  seeds and budget, their attempt-1 logs kept aside; frozen and PPO arms stand. Re-run
+  launched 16:57.
+
+- **Extensions owed after the first pass**: `wt_clone_frozen` seed 5 and `rn_fullclone_frozen`
+  seeds 1, 3, 4 at 900; `wt_fullclone_ppo` seeds 1, 2, 3, 5, 6, 7, 8, `rn_fullclone_ppo` seeds
+  1, 2, `wt_ppo` seed 6 and `rn_ppo` seeds 1, 5, 6, 7 at 4500 — queued behind the re-run into
+  `campaigns/l4-warm-start-panel-ext`.
