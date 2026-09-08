@@ -222,6 +222,21 @@ def clone(args: argparse.Namespace) -> int:
     for (parameter_set, wiring), stem in STUDENT_CONFIGS.items():
         for seed in args.seeds:
             out = clones_dir / clone_file(parameter_set, wiring, seed)
+            record_file = out.with_name(f"{out.stem}.clone.json")
+            if args.skip_existing and out.is_file() and record_file.is_file():
+                record = {
+                    "parameter_set": parameter_set,
+                    "wiring": wiring,
+                    "seed": seed,
+                    "file": str(out),
+                }
+                record.update(json.loads(record_file.read_text()))
+                record["weak"] = flag_clone(record)
+                fits.append(record)
+                print(
+                    f"  {parameter_set} {wiring} seed {seed}: kept existing clone (weak={record['weak']})",
+                )
+                continue
             code = bc.main(
                 [
                     "--config",
@@ -259,11 +274,29 @@ def clone(args: argparse.Namespace) -> int:
             print(
                 f"  {parameter_set} {wiring} seed {seed}: held-out {record.get('held_out_loss')} weak={record['weak']}",
             )
-    (out_dir / "clones.json").write_text(json.dumps(fits, indent=2))
+    name = f"clones.{args.part}.json" if args.part else "clones.json"
+    (out_dir / name).write_text(json.dumps(fits, indent=2))
     failed = [f for f in fits if "failed" in f]
     if failed:
         print(f"error: {len(failed)} clone(s) failed", file=sys.stderr)
         return 1
+    return 0
+
+
+def merge(args: argparse.Namespace) -> int:
+    """Combine the per-part clone records into ``clones.json``, ordered by set, wiring, seed."""
+    parts = sorted(args.out_dir.glob("clones.*.json"))
+    if not parts:
+        print(f"error: no clones.<part>.json under {args.out_dir}", file=sys.stderr)
+        return 2
+    merged: dict[tuple[str, str, int], dict[str, Any]] = {}
+    for part in parts:
+        for record in json.loads(part.read_text()):
+            merged[(record["parameter_set"], record["wiring"], int(record["seed"]))] = record
+    order = {key: i for i, key in enumerate(STUDENT_CONFIGS)}
+    fits = [merged[k] for k in sorted(merged, key=lambda k: (order[(k[0], k[1])], k[2]))]
+    (args.out_dir / "clones.json").write_text(json.dumps(fits, indent=2))
+    print(f"merged {len(fits)} clone records from {len(parts)} parts")
     return 0
 
 
@@ -290,8 +323,18 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("clone")
     c.add_argument("--out-dir", type=Path, required=True)
     c.add_argument("--seeds", type=_seeds, default=PANEL_SEEDS)
+    c.add_argument(
+        "--part",
+        type=str,
+        default=None,
+        help="write clones.<part>.json (for parallel workers)",
+    )
+    c.add_argument("--skip-existing", action="store_true", help="keep clones already on disk")
+    m = sub.add_parser("merge")
+    m.add_argument("--out-dir", type=Path, required=True)
     args = ap.parse_args(argv)
-    return teacher(args) if args.step == "teacher" else clone(args)
+    steps = {"teacher": teacher, "clone": clone, "merge": merge}
+    return steps[args.step](args)
 
 
 if __name__ == "__main__":
