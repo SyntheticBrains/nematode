@@ -1,0 +1,60 @@
+{
+  "candidates": [
+    {
+      "seed": 1,
+      "plateau_tail": 93.33333333333333,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed1.log",
+      "weights": "exports/20260908_033126_4f5b9377/weights/final.pt"
+    },
+    {
+      "seed": 2,
+      "plateau_tail": 91.60000000000001,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed2.log",
+      "weights": "exports/20260908_033126_6d2c5b81/weights/final.pt"
+    },
+    {
+      "seed": 3,
+      "plateau_tail": 92.60000000000001,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed3.log",
+      "weights": "exports/20260908_033126_acd13dd9/weights/final.pt"
+    },
+    {
+      "seed": 4,
+      "plateau_tail": 73.66666666666667,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed4.log",
+      "weights": "exports/20260908_033126_2f1f1a49/weights/final.pt"
+    },
+    {
+      "seed": 5,
+      "plateau_tail": 79.93333333333334,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed5.log",
+      "weights": "exports/20260908_033126_fb4f2989/weights/final.pt"
+    },
+    {
+      "seed": 6,
+      "plateau_tail": 92.4,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed6.log",
+      "weights": "exports/20260908_033126_e2c12156/weights/final.pt"
+    },
+    {
+      "seed": 7,
+      "plateau_tail": 95.53333333333333,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed7.log",
+      "weights": "exports/20260908_033126_0c2775bc/weights/final.pt"
+    },
+    {
+      "seed": 8,
+      "plateau_tail": 93.06666666666666,
+      "log": "campaigns/l4-teacher/logs/mlpppo_small_continuous2d_combined_klinotaxis-seed8.log",
+      "weights": "exports/20260908_033126_2b099d4b/weights/final.pt"
+    }
+  ],
+  "selected_seed": 7,
+  "selected_plateau_tail": 95.53333333333333,
+  "weights": "campaigns/l4-warm-start/teacher.pt",
+  "recording_config": "campaigns/l4-warm-start/mlpppo_small_continuous2d_combined_klinotaxis_teacher_frozen.yml",
+  "record_seed": 101,
+  "record_episodes": 300,
+  "rollouts": "campaigns/l4-warm-start/rollouts.jsonl",
+  "ceiling_plateau_tail": 98.66666666666667
+}
