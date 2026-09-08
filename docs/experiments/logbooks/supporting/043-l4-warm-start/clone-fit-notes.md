@@ -24,8 +24,10 @@ Read against the baselines: a clone at 0.30 explains about a third of the target
 sits about as far from the teacher's mean as the teacher's own noisy actions do. The full set,
 with gains and readout free, gains only a little over the chemical weights alone, and both
 inflate the weight norm five- to seven-fold — the optimiser driving the tanh units toward
-saturation to reproduce a switch. Every plastic-set clone is flagged weak by the registered
-criterion (held-out loss not below half its initial); the full-set clones just clear it.
+saturation to reproduce a switch. By the registered criterion (held-out loss not below half
+its initial) 11 of the 16 plastic-set clones are flagged weak — 6 wild-type and 5 rewired — and
+1 of the 16 full-set clones (counts corrected once all 32 had run; the reading was written at
+nineteen).
 
 ## What this does and does not say
 

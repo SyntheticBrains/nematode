@@ -1731,7 +1731,10 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                         f"{ac.weights_path}."
                     )
                     raise TypeError(msg)
-                load_weights(agent_brain, Path(ac.weights_path))
+                load_weights(
+                    agent_brain,
+                    Path(resolve_weights_path(str(ac.weights_path), simulation_seed)),
+                )
 
             # Add agent to environment with min_distance separation
             env.add_agent(

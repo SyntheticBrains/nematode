@@ -151,12 +151,23 @@ def read_manifest(manifest: Path, experiments: Path = EXPERIMENTS) -> Scanned:
 
 
 def group_panel(scanned: Scanned) -> dict[str, dict[int, SeedRecord]]:
-    """``{arm: {seed: record}}``; refuses any seed outside 1-8; the longer run wins a duplicate."""
+    """Group by arm and seed; seeds 1-8 only.
+
+    A run's length must be the arm's budget or its registered extension, and of a
+    duplicate the extension wins.
+    """
     panel: dict[str, dict[int, SeedRecord]] = {}
     for arm, seed, record in scanned:
         if seed not in PANEL_SEEDS:
             msg = (
                 f"seed {seed} ({arm}) is outside the panel seeds {PANEL_SEEDS[0]}-{PANEL_SEEDS[-1]}"
+            )
+            raise ValueError(msg)
+        allowed = {BUDGETS[arm], int(BUDGETS[arm] * EXTENSION)}
+        if record.episodes not in allowed:
+            msg = (
+                f"{arm} seed {seed}: a run of {record.episodes} episodes is neither the budget "
+                f"nor its registered extension ({sorted(allowed)})"
             )
             raise ValueError(msg)
         seeds = panel.setdefault(arm, {})
@@ -266,6 +277,7 @@ def descriptive_pairs(values: dict[str, dict[int, float]]) -> list[dict]:
         key = (a, b)
         if (
             key in seen
+            or key[::-1] in seen
             or key in family
             or key[::-1] in family
             or a not in values

@@ -78,6 +78,10 @@ def scan_teacher_campaign(
         match = _LABEL.match(log.name)
         if match is None or match.group("stem") != TEACHER_STEM:
             continue
+        seed = int(match.group("seed"))
+        if seed not in TEACHER_SEEDS:
+            print(f"  WARN: {log.name} is not a registered teacher seed - skipped")
+            continue
         tail = t7.plateau_tail(log)
         if tail is None:
             print(f"  WARN: no parseable plateau in {log.name} - skipped")
@@ -87,7 +91,7 @@ def scan_teacher_campaign(
         weights = (REPO / exports / "weights" / "final.pt") if exports else None
         records.append(
             {
-                "seed": int(match.group("seed")),
+                "seed": seed,
                 "plateau_tail": float(tail[0]),
                 "log": str(log),
                 "weights": str(weights) if weights else None,
@@ -292,7 +296,19 @@ def merge(args: argparse.Namespace) -> int:
     merged: dict[tuple[str, str, int], dict[str, Any]] = {}
     for part in parts:
         for record in json.loads(part.read_text()):
-            merged[(record["parameter_set"], record["wiring"], int(record["seed"]))] = record
+            key = (record["parameter_set"], record["wiring"], int(record["seed"]))
+            if key in merged:
+                print(f"error: {key} appears in more than one part", file=sys.stderr)
+                return 1
+            if "failed" in record:
+                print(f"error: {key} is a failed clone; re-run it before merging", file=sys.stderr)
+                return 1
+            merged[key] = record
+    expected = {(s, w, seed) for (s, w) in STUDENT_CONFIGS for seed in args.seeds}
+    missing = sorted(expected - set(merged))
+    if missing:
+        print(f"error: {len(missing)} clone record(s) missing: {missing[:6]}", file=sys.stderr)
+        return 1
     order = {key: i for i, key in enumerate(STUDENT_CONFIGS)}
     fits = [merged[k] for k in sorted(merged, key=lambda k: (order[(k[0], k[1])], k[2]))]
     (args.out_dir / "clones.json").write_text(json.dumps(fits, indent=2))
@@ -332,6 +348,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--skip-existing", action="store_true", help="keep clones already on disk")
     m = sub.add_parser("merge")
     m.add_argument("--out-dir", type=Path, required=True)
+    m.add_argument("--seeds", type=_seeds, default=PANEL_SEEDS)
     args = ap.parse_args(argv)
     steps = {"teacher": teacher, "clone": clone, "merge": merge}
     return steps[args.step](args)

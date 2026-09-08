@@ -90,8 +90,12 @@ class TestRegistry:
         for order in ([short, long_], [long_, short]):
             panel = ws.group_panel([("wt_clone_plastic", 3, r) for r in order])
             assert panel["wt_clone_plastic"][3].episodes == 3000
+        same = [
+            ("wt_ppo", 1, _record(1.0, episodes=3000)),
+            ("wt_ppo", 1, _record(2.0, episodes=3000)),
+        ]
         with pytest.raises(ValueError, match="not an extension"):
-            ws.group_panel([("wt_ppo", 1, _record(1.0)), ("wt_ppo", 1, _record(2.0))])
+            ws.group_panel(same)
 
     def test_random_floor_comes_from_panel2(self) -> None:
         floor = ws.read_random_floor()
@@ -218,9 +222,10 @@ class TestDescriptiveAndOutput:
         for stem, arm in ws.ARMS.items():
             good = arm.startswith("wt_clone") or arm in ("wt_fullclone_ppo", "wt_fullclone_frozen")
             for seed in _SEEDS:
-                statuses = ["SUCCESS" if good or seed % 4 == 0 else "FAILED"] * 40
+                budget = ws.BUDGETS[arm]
+                statuses = ["SUCCESS" if good or seed % 4 == 0 else "FAILED"] * budget
                 if arm == "wt_clone_plastic":
-                    statuses = ["SUCCESS"] * 40
+                    statuses = ["SUCCESS"] * budget
                 (logs / f"{stem}-seed{seed}.log").write_text(
                     "\n".join(
                         f"Run: {i}   Status: {s:<7} Reason: x Steps: 10    "
@@ -243,3 +248,25 @@ class TestDescriptiveAndOutput:
         }
         with (tmp_path / "s.csv").open(newline="") as handle:
             assert len(list(csv.DictReader(handle))) == 12 * 8
+
+
+class TestReviewGuards:
+    def test_descriptive_pairs_are_unique_across_orderings(self) -> None:
+        rows = ws.descriptive_pairs(_values())
+        unordered = [frozenset((r["a"], r["b"])) for r in rows]
+        assert len(unordered) == len(set(unordered))
+        # every named pair present exactly once, in the named orientation
+        for a, b in ws.DESCRIPTIVE_PAIRS:
+            assert sum(1 for r in rows if {r["a"], r["b"]} == {a, b}) == 1
+            assert any(r["a"] == a and r["b"] == b for r in rows)
+
+    def test_unregistered_run_length_is_rejected(self) -> None:
+        with pytest.raises(ValueError, match="neither the budget nor its registered extension"):
+            ws.group_panel([("wt_ppo", 1, _record(1.0, episodes=6000))])
+        panel = ws.group_panel(
+            [
+                ("wt_ppo", 1, _record(1.0, episodes=3000)),
+                ("wt_ppo", 1, _record(2.0, episodes=4500)),
+            ],
+        )
+        assert panel["wt_ppo"][1].episodes == 4500
