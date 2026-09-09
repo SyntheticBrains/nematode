@@ -27,10 +27,13 @@ def _runs(**scores: float) -> list[dict]:
     """Synthetic runs: one score per arm, repeated across every seed and rate."""
     out: list[dict] = []
     for seed in pc.SEEDS:
-        for arm in ("analytic", "hebbian"):
-            out.append(_run(arm, seed, scores.get(arm, _FLOOR - 0.1)))
-        for rate in pc.RATE_GRID:
-            out.append(_run("three_factor", seed, scores.get("three_factor", _FLOOR - 0.1), rate))
+        out.extend(
+            _run(arm, seed, scores.get(arm, _FLOOR - 0.1)) for arm in ("analytic", "hebbian")
+        )
+        out.extend(
+            _run("three_factor", seed, scores.get("three_factor", _FLOOR - 0.1), rate)
+            for rate in pc.RATE_GRID
+        )
     return out
 
 

@@ -82,4 +82,10 @@ uv run python scripts/analysis/l4_rule_positive_control.py \
 
 ## Results
 
-*(written here after the run)*
+Run 2026-09-10, 40 runs (8 seeds × 5 arm/rate combinations). **Outcome `fail`, control valid.**
+The analytic reference closes 99.9% of the floor-to-optimum gap on 8 of 8 seeds (−0.1361 against
+an optimum of −0.1353) and the unmodulated arm does not pass, so both validity conditions hold.
+The three-factor arm does not pass at any rate across two orders of magnitude, and ends **below
+the cue-blind floor** (≈ −0.75 against −0.69). The diagnosis: a live trace, a well-behaved
+modulator, and a gradient alignment of **+0.009 at the median** — the update is nearly orthogonal
+to the policy gradient. Full reading in `details.md`.

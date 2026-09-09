@@ -78,7 +78,10 @@ class ContextualAssociation:
         return -float(np.var(self.targets)) - noise**2
 
     def optimum(self, noise: float) -> float:
-        """Return the best expected reward available at all: ``mu(c) = t(c)``, paying only the noise."""
+        """Return the best expected reward available at all.
+
+        Achieved by ``mu(c) = t(c)``, which pays only the exploration noise.
+        """
         return -(noise**2)
 
     def gap(self, noise: float) -> float:

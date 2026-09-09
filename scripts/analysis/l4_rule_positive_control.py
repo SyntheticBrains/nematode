@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""The rule's positive control: does the three-factor rule learn where learning is easiest?
+"""The rule's positive control: does the rule learn where learning is easiest.
 
 Drives the committed ``ThreeFactorRule`` over the committed ``MLPTopology`` seam on a one-step
 contextual association whose optimum and cue-blind floor are both closed-form. No environment,
@@ -64,12 +64,39 @@ ARMS = ("three_factor", "hebbian", "analytic")
 
 def _actor(n_cues: int, generator: torch.Generator) -> nn.Sequential:
     """``Linear(K, 8) -> tanh -> Linear(8, 1)``: the panels' arrangement, hidden layer plastic."""
-    actor = nn.Sequential(nn.Linear(n_cues, HIDDEN), nn.Tanh(), nn.Linear(HIDDEN, 1))
+    first, readout = nn.Linear(n_cues, HIDDEN), nn.Linear(HIDDEN, 1)
     with torch.no_grad():
-        for layer in (actor[0], actor[2]):
+        for layer in (first, readout):
             nn.init.orthogonal_(layer.weight, generator=generator)
             layer.bias.zero_()
-    return actor
+    return nn.Sequential(first, nn.Tanh(), readout)
+
+
+def _descend(topology: MLPTopology, gradients: tuple[torch.Tensor | None, ...]) -> None:
+    """Take the analytic reference's step: plain gradient descent on the task's own loss."""
+    with torch.no_grad():
+        for weight, gradient in zip(topology.plastic_weights, gradients, strict=True):
+            if gradient is not None:
+                weight.add_(-ANALYTIC_RATE * gradient)
+
+
+def _block_alignment(
+    update: list[torch.Tensor],
+    gradient: list[torch.Tensor],
+) -> float | None:
+    """Cosine between a block's accumulated update and that block's summed gradient.
+
+    Measured over a block rather than a step because a single-step cosine of a stochastic
+    estimator is noisy by nature and would read near zero even for a correct rule. ``None``
+    when either side is identically zero and the angle is undefined.
+    """
+    flat_update = torch.cat([u.reshape(-1) for u in update])
+    flat_gradient = torch.cat([g.reshape(-1) for g in gradient])
+    if float(flat_update.norm()) == 0.0 or float(flat_gradient.norm()) == 0.0:
+        return None
+    return float(
+        torch.nn.functional.cosine_similarity(flat_update, flat_gradient, dim=0).item(),
+    )
 
 
 def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the control
@@ -128,14 +155,10 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         loss = (mean - float(task.targets[cue])) ** 2
         gradients = torch.autograd.grad(loss, list(topology.plastic_weights), allow_unused=True)
 
-        if arm == "analytic":
-            with torch.no_grad():
-                for weight, gradient in zip(topology.plastic_weights, gradients, strict=True):
-                    if gradient is not None:
-                        weight.add_(-ANALYTIC_RATE * gradient)
+        if rule is None:
+            _descend(topology, gradients)
             continue
 
-        assert rule is not None
         before = [w.detach().clone() for w in topology.plastic_weights]
         report = rule.step(topology, ThreeFactorBatch(reward=reward))
         with torch.no_grad():
@@ -147,18 +170,9 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         traces.append(float(report.extra["plasticity_mean_abs_delta"]))
 
         if (trial + 1) % BLOCK == 0:
-            flat_update = torch.cat([u.reshape(-1) for u in block_update])
-            flat_gradient = torch.cat([g.reshape(-1) for g in block_gradient])
-            if float(flat_update.norm()) > 0 and float(flat_gradient.norm()) > 0:
-                alignments.append(
-                    float(
-                        torch.nn.functional.cosine_similarity(
-                            flat_update,
-                            flat_gradient,
-                            dim=0,
-                        ).item(),
-                    ),
-                )
+            aligned = _block_alignment(block_update, block_gradient)
+            if aligned is not None:
+                alignments.append(aligned)
             block_update = [torch.zeros_like(w) for w in topology.plastic_weights]
             block_gradient = [torch.zeros_like(w) for w in topology.plastic_weights]
 
@@ -323,10 +337,10 @@ def main(argv: list[str] | None = None) -> int:
     task = ContextualAssociation.default()
     runs: list[dict[str, Any]] = []
     for seed in SEEDS:
-        for arm in ("analytic", "hebbian"):
-            runs.append(run_arm(arm, seed, task, trials=args.trials))
-        for rate in RATE_GRID:
-            runs.append(run_arm("three_factor", seed, task, rate=rate, trials=args.trials))
+        runs.extend(run_arm(arm, seed, task, trials=args.trials) for arm in ("analytic", "hebbian"))
+        runs.extend(
+            run_arm("three_factor", seed, task, rate=rate, trials=args.trials) for rate in RATE_GRID
+        )
     out = analyse(runs, task, trials=args.trials)
     _print_control(out)
     if args.out:
