@@ -69,11 +69,14 @@ the step reinforced:
 
 ```text
 u   = η / (1 + κ_c · c) · m · E / ρ_E − η · λ_w · w
-c  ← (1 − λ_c) · c + γ_c · max(m, 0) · |E|
+c  ← (1 − λ_c) · c + γ_c · max(m, 0) · |E| / ρ_E
 ```
 
 `γ_c` is the growth rate, `λ_c` the decay and `κ_c` the strength, all configured, growth zero by
-default. Rigidity accumulates where a positive modulator has repeatedly gated a large trace — the
+default. The trace enters growth as the update sees it — divided by the running trace scale
+`ρ_E` when trace normalisation is on — so a pinned `γ_c` means the same root-mean-square
+growth on the sparse connectome and on the dense yardstick, which is the invariance the rest
+of the rule already keeps. Rigidity accumulates where a positive modulator has repeatedly gated a large trace — the
 synapses reward has been writing — and decays slowly everywhere, so nothing is frozen forever.
 Under the unmodulated Hebbian floor `m` is `1.0` and rigidity accumulates wherever the trace is
 large, which is the same mechanism with the reward gate removed, matching how every other switch
@@ -97,6 +100,16 @@ it the rule is unchanged. The flag arrives through the brain's existing
 `post_process_episode(episode_success=...)` hook, which is a no-op on this brain today, so no new
 plumbing crosses the runner boundary.
 
+Two structural facts about this arm are recorded so its result is read correctly. With `s_ref`
+pinned just above the comparator's mean, the multiplier is about 0.03 once the trailing estimate
+reaches the clone's own level: the arm is a thermostat at the frozen clone's performance, and
+**"improves" is unavailable to it by construction** — it bounds *holding*, nothing else. And the
+trailing estimate starts at zero, so the first hundred or so episodes run at close to the full
+rate before the gate closes; if that early window is enough to take the clone apart, the arm
+will show it, and that is a result about the rule's speed rather than about gating. Pinning
+`s_ref` above the comparator so that improvement were possible was considered and not taken:
+it would turn a bound into a tuned candidate.
+
 This is an oracle. Episode success is a property of the task's scoring, not of anything the
 animal could compute from its own reward stream, and the docstring and the spec say so. It exists
 because a negative screen on the two shippable mechanisms is ambiguous on its own: if the oracle
@@ -119,6 +132,15 @@ The order is fixed and each position is load-bearing:
 
 Consolidation state is updated after the write for the same reason the modulator scale is
 estimated before it: each quantity is measured against the step it actually saw.
+
+**Why homeostasis does not undo these brakes as it undoes decay.** The diagnostic's reason that
+decay is not a brake on this substrate is exact: decay shrinks every incoming weight of a unit
+by the same factor, and the incoming-norm rescale multiplies them back by its inverse. The
+restoring term is not uniform across a unit's incoming weights — it points from each weight
+toward its own anchor — so the rescale, a single positive scalar per unit, cancels only its
+radial component and leaves the change of direction it made. The protective variable is a
+per-synapse rate divisor applied before the write, which a per-unit scalar after the write
+cannot touch. Both act in the space the rescale leaves free, which is the space drift lives in.
 
 ## State lifecycle
 
@@ -146,13 +168,16 @@ One selector plus each mechanism's own parameters on the shared plasticity mixin
 | `plasticity_rigidity_growth` | `0.0` | `γ_c`, `≥ 0` |
 | `plasticity_rigidity_decay` | `0.0` | `λ_c`, `[0, 1)` |
 | `plasticity_rigidity_strength` | `0.0` | `κ_c`, `≥ 0` |
-| `plasticity_oracle_reference` | `0.4` | `s_ref`, the success rate at which updating stops, `(0, 1]` |
+| `plasticity_oracle_reference` | `1.0` | `s_ref`, the success rate at which updating stops, `(0, 1]`; pinned per screen |
 | `plasticity_oracle_rate` | `0.01` | the EMA rate of the trailing success estimate, `(0, 1]` |
 
 A selector rather than independent booleans: the mechanisms are alternatives being screened, and
-a config that silently ran two at once would produce a result attributable to neither. Selecting
-a mechanism while its parameters are all zero is rejected at load, since that is a config that
-looks like it consolidates and does not.
+a config that silently ran two at once would produce a result attributable to neither. Selecting a
+mechanism that its own parameters leave inert is rejected at load, since that is a config that
+looks like it consolidates and does not: `anchor` with a stiffness of zero, `rigidity` with a
+growth or a strength of zero. The oracle's reference defaults to `1.0`, which never closes the
+gate, so a run that selects it pins the reference in its launch record rather than inheriting a
+number from one panel.
 
 ## Telemetry
 

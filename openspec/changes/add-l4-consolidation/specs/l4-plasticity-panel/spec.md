@@ -66,3 +66,5 @@ of running a pilot.
 - **THEN** the record SHALL state that it consumes the environment's episode-success flag, that it
   is not a mechanism the animal could host, and that it exists to bound what a quality-gated
   consolidation could achieve
+- **AND** the launch record SHALL state, before the run, that with its reference pinned at the
+  comparator the arm bounds holding only and cannot register as improving

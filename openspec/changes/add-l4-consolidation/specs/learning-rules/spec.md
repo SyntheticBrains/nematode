@@ -6,8 +6,9 @@ The three-factor rule SHALL offer a **consolidation mechanism** selected by a si
 configuration value shared by every plastic brain through the plasticity configuration mixin,
 one of `none`, `anchor`, `rigidity` or `oracle`, defaulting to `none`. With `none` selected the
 rule SHALL be bit-identical to the rule without this requirement, SHALL allocate no consolidation
-state, and SHALL add no operation to the update. A selector other than `none` whose own
-parameters are all zero SHALL be rejected at load, since it names a mechanism that would not act.
+state, and SHALL add no operation to the update. A selector other than `none` that its own
+parameters leave inert SHALL be rejected at load, since it names a mechanism that would not act:
+`anchor` with a stiffness of zero, `rigidity` with a growth or a strength of zero.
 
 With `anchor` selected, each plastic tensor SHALL carry an anchor of its own shape, initialised
 to the weights the rule was constructed over. The update SHALL gain a restoring term
@@ -18,17 +19,21 @@ anchor rate of zero SHALL hold the anchor fixed at the weights the rule started 
 With `rigidity` selected, each plastic tensor SHALL carry a non-negative protective variable of
 its own shape, zero at construction. The Hebbian term's rate SHALL be divided by `1 + κ_c · c`
 using the protective variable's value from **before** this step's growth, and after the update the
-protective variable SHALL advance as `c ← (1 − λ_c) · c + γ_c · max(m, 0) · |E|`, where `m` is the
-effective modulator and `E` the eligibility trace. Under the unmodulated mode `m` is `1.0` and the
+protective variable SHALL advance as `c ← (1 − λ_c) · c + γ_c · max(m, 0) · |E| / ρ_E`, where `m`
+is the effective modulator, `E` the eligibility trace and `ρ_E` the running trace scale when trace
+normalisation is on and `1` otherwise, so the growth is measured on the trace as the update sees
+it and a pinned growth rate means the same thing on every substrate. Under the unmodulated mode `m` is `1.0` and the
 growth term SHALL follow the trace alone, so the two arms differ in the modulator and nowhere
 else.
 
 With `oracle` selected, the rule SHALL maintain a trailing episode-success rate as an exponential
 moving average of an episode-success flag supplied by the brain at the end of each episode, and
 SHALL scale the plasticity rate by `clamp(1 − s / s_ref, 0, 1)` for a configured reference rate
-`s_ref`. This mechanism consumes a quantity that is a property of the task's scoring rather than
-of the reward stream the rule observes; its implementation SHALL say so, and it SHALL NOT be
-offered as a default or presented as a biologically plausible mechanism.
+`s_ref`. The reference SHALL default to `1.0`, at which the gate never closes, so that a run selecting
+this mechanism pins its reference explicitly. This mechanism consumes a quantity that is a
+property of the task's scoring rather than of the reward stream the rule observes; its
+implementation SHALL say so, and it SHALL NOT be offered as a default or presented as a
+biologically plausible mechanism.
 
 Consolidation SHALL compose with, and never replace, the existing terms: the Hebbian term, the
 weight decay, the mask, Dale's-law sign projection, the homeostatic rescale and the magnitude
@@ -44,7 +49,7 @@ the write.
 #### Scenario: A named mechanism with no effect is rejected
 
 - **GIVEN** a configuration selecting `anchor` with a stiffness of zero, or `rigidity` with a
-  growth of zero
+  growth of zero or a strength of zero
 - **WHEN** the configuration is loaded
 - **THEN** loading SHALL fail with a message naming the parameter that leaves the mechanism inert
 
@@ -83,6 +88,7 @@ the write.
 - **WHEN** the trailing episode-success rate reaches or exceeds `s_ref`
 - **THEN** the effective plasticity rate SHALL be zero and no weight SHALL change
 - **AND** when the trailing rate is far below `s_ref` the rate SHALL be the configured rate
+- **AND** with the reference at its default of `1.0` the rate SHALL never reach zero
 
 #### Scenario: Consolidation is applied before the bound and after the sign
 

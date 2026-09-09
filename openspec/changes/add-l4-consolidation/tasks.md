@@ -6,8 +6,9 @@
   load-time bounds: selector `none|anchor|rigidity|oracle`, anchor rate `[0, 1)`, stiffness `≥ 0`,
   rigidity growth `≥ 0`, decay `[0, 1)`, strength `≥ 0`, oracle reference `(0, 1]`, oracle rate
   `(0, 1]`.
-- [ ] 1.2 Validator: a selector other than `none` whose own parameters leave it inert is rejected,
-  with a message naming the parameter.
+- [ ] 1.2 Validator: a selector other than `none` that its own parameters leave inert is rejected
+  with a message naming the parameter — `anchor` at stiffness zero, `rigidity` at growth or
+  strength zero. The oracle reference defaults to `1.0` (never gates) and is pinned per screen.
 - [ ] 1.3 Tests: each bound; the inert-mechanism rejection for `anchor` and `rigidity`; the
   default config is unchanged field for field from today's.
 
@@ -25,7 +26,8 @@
 - [ ] 3.1 Allocate one protective variable per plastic tensor, zero at construction, only when
   `rigidity` is selected.
 - [ ] 3.2 Divide the Hebbian term's rate by `1 + κ_c · c` using the pre-growth value; advance
-  `c ← (1 − λ_c) c + γ_c · max(m, 0) · |E|` after the update.
+  `c ← (1 − λ_c) c + γ_c · max(m, 0) · |E| / ρ_E` after the update, on the trace as the update
+  sees it (the running trace scale when normalisation is on, `1` otherwise).
 - [ ] 3.3 Tests: rigidity grows where a positive modulator meets a large trace and not where the
   modulator is negative; the pre-growth divisor; decay toward zero without reinforcement; the
   unmodulated arm accumulates on the trace alone.
@@ -65,11 +67,18 @@
   clone config with the rule keys and nothing else changed.
 - [ ] 7.2 A screen harness reading the campaign directory and reporting, per variant, the eight
   per-seed plateau tails, the mean delta against the committed frozen-clone values, the count at
-  or above, the endpoint cosine to the clone, and the mean effective rate multiplier.
+  or above, the endpoint cosine to the clone, and the mean effective rate multiplier. Assemble it
+  from what exists: the manifest, plateau-tail and per-seed machinery in
+  `scripts/analysis/l4_warm_start.py`, and the auto-saved `final.pt` topology loader in
+  `scripts/analysis/l4_atlas_signs.py`; the cosine is computed on the wiring's own entries
+  against the clone the run started from.
 - [ ] 7.3 Tests for the harness: the hold and improve rules at their boundaries; a missing run is
   reported and never imputed; the comparator values are the committed ones.
 - [ ] 7.4 Run the declared pilot (seeds 1–2 over the grid) and write its grid, criterion and pins
-  into the launch record.
+  into the launch record, together with the oracle's declaration: that it consumes the
+  environment's episode-success flag, is not a mechanism the animal could host, bounds holding
+  only with its reference pinned at the comparator, and runs its first episodes near the full
+  rate while the trailing estimate warms up.
 - [ ] 7.5 Commit the launch record, then run the three screens (seeds 1–8, 2000 episodes).
 - [ ] 7.6 Records under `docs/experiments/logbooks/supporting/045-l4-consolidation/`: `launch.md`,
   `screen.json`, `per-seed.csv`, `_manifest.txt`, `details.md`.
