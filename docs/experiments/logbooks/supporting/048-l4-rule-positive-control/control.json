@@ -43,6 +43,12 @@
     }
   },
   "diagnosis": {
+    "analytic": {
+      "alignment": 0.45362707619783776,
+      "alignment_median": 0.4036972266063761,
+      "mean_abs_delta": NaN,
+      "modulator": NaN
+    },
     "hebbian": {
       "alignment": -0.010404603138158561,
       "alignment_median": -0.01505771256517619,

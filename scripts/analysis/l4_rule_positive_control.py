@@ -155,12 +155,16 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         loss = (mean - float(task.targets[cue])) ** 2
         gradients = torch.autograd.grad(loss, list(topology.plastic_weights), allow_unused=True)
 
+        # Both arms are measured on the same accumulation path, so the reference's alignment is
+        # an end-to-end check on the sign convention rather than a unit-level assumption: the
+        # arm that IS gradient descent must come out at +1.
+        before = [w.detach().clone() for w in topology.plastic_weights]
         if rule is None:
             _descend(topology, gradients)
-            continue
-
-        before = [w.detach().clone() for w in topology.plastic_weights]
-        report = rule.step(topology, ThreeFactorBatch(reward=reward))
+        else:
+            report = rule.step(topology, ThreeFactorBatch(reward=reward))
+            modulators.append(float(report.extra["plasticity_modulator"]))
+            traces.append(float(report.extra["plasticity_mean_abs_delta"]))
         with torch.no_grad():
             for index, weight in enumerate(topology.plastic_weights):
                 block_update[index] += weight.detach() - before[index]
@@ -168,8 +172,6 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
                     # The gradient-DESCENT direction, so a rule that reduces the loss aligns
                     # positively. The raw gradient would give a correct rule a cosine of -1.
                     block_gradient[index] += -gradients[index]
-        modulators.append(float(report.extra["plasticity_modulator"]))
-        traces.append(float(report.extra["plasticity_mean_abs_delta"]))
 
         if (trial + 1) % BLOCK == 0:
             aligned = _block_alignment(block_update, block_gradient)
@@ -240,7 +242,7 @@ def analyse(
         )
     outcome = "void" if void_reason else ("pass" if by_arm["three_factor"]["passes"] else "fail")
 
-    diagnosis = {arm: _diagnose(runs, arm) for arm in ("three_factor", "hebbian")}
+    diagnosis = {arm: _diagnose(runs, arm) for arm in ARMS}
     # Per rate as well as pooled: a rule whose alignment depended on the rate would be a
     # different finding from one whose updates are unaimed at every rate.
     diagnosis["three_factor"]["by_rate"] = {
@@ -301,9 +303,11 @@ def _print_control(out: dict[str, Any]) -> None:
     )
     for arm in ("analytic", "hebbian"):
         row = out["arms"][arm]
+        alignment = out["diagnosis"].get(arm, {}).get("alignment", float("nan"))
         print(
             f"  {arm:12} mean {row['mean']:+.4f}  {row['seeds_above_floor']}/{row['n']} above "
-            f"floor  -> {'passes' if row['passes'] else 'does not pass'}",
+            f"floor  alignment {alignment:+.4f}  "
+            f"-> {'passes' if row['passes'] else 'does not pass'}",
         )
     print("  three_factor by rate:")
     for rate, row in out["arms"]["three_factor"]["by_rate"].items():

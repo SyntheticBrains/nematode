@@ -180,11 +180,18 @@ class TestTheAlignmentSign:
             [torch.tensor([2.0, 0.0])],
         ) == pytest.approx(-1.0)
 
-    def test_the_reference_arm_aligns_with_its_own_descent_direction(self) -> None:
-        # End to end: the analytic arm IS gradient descent, so the sign convention must give it
-        # a positive alignment. Measured on the rule's own accumulation path.
+    def test_the_rule_arm_produces_a_readable_alignment(self) -> None:
+        # A real run of the arm under test must yield an alignment at all; what its value says
+        # about the rule is the control's finding, not this test's business.
         run = pc.run_arm("three_factor", seed=1, task=_TASK, trials=300)
         assert not np.isnan(run["alignment"])
+
+    def test_the_reference_arm_aligns_with_its_own_descent_direction(self) -> None:
+        # End to end on the same accumulation path the rule uses: the analytic arm IS gradient
+        # descent, so the sign convention must put it at +1. This is what makes the rule arm's
+        # near-zero alignment a finding rather than a possible sign error in the measurement.
+        run = pc.run_arm("analytic", seed=1, task=_TASK, trials=300)
+        assert run["alignment"] == pytest.approx(1.0, abs=1e-6)
 
     def test_a_degenerate_block_has_no_alignment(self) -> None:
         import torch

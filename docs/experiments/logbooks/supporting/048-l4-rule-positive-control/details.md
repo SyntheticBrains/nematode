@@ -8,7 +8,7 @@ trials × 5 arm/rate combinations, scored on mean reward over each run's final 1
 
 | arm | mean | seeds above floor | result |
 |---|---|---|---|
-| `analytic` (reference) | **−0.1361** | 8/8 | **passes** |
+| `analytic` (reference) | **−0.1361** | 8/8 | **passes** (alignment +1.0 while learning) |
 | `hebbian` (floor) | −0.8753 | 3/8 | does not pass |
 | `three_factor` @ 1e-4 | −0.7895 | 1/8 | does not pass |
 | `three_factor` @ 1e-3 (pinned) | −0.7482 | 1/8 | does not pass |
@@ -39,8 +39,18 @@ of magnitude, so this is not a rate artefact.
 
 The rule is not inert and it is not starved of reward information: the trace is live, the weights
 move every step, and the modulator is a well-behaved centred prediction error. What the update is
-not is *aimed*. Its cosine against the gradient-descent direction of the same trials is **+0.031 mean and +0.009 median** — indistinguishable from orthogonal — while the reference arm's is 1.0 by construction. Both statistics are recorded because the mean of a long-tailed per-run quantity overstates the typical run: one seed reaches +0.26 while the median sits at +0.009. The per-rate breakdown says the same thing at every rate, falling from +0.077 at 1e-4 to −0.002 at 1e-2.
-The unmodulated arm's alignment is −0.015, statistically the same thing.
+not is *aimed*. Its cosine against the gradient-descent direction of the same trials is **+0.031 mean and +0.009 median** — indistinguishable from orthogonal — while the reference arm, measured on the same accumulation path, reads **+1.0 while it is learning**. Both statistics are recorded because the mean of a long-tailed per-run quantity overstates the typical run: one seed reaches +0.26 while the median sits at +0.009. The per-rate breakdown says the same thing at every rate, falling from +0.077 at 1e-4 to −0.002 at 1e-2.
+The unmodulated arm's alignment is −0.010, statistically the same thing.
+
+**A caveat on the reference arm's pooled figure.** Over the full 20,000 trials the reference arm
+reports +0.45, not +1.0, and the reason is worth stating because it bears on how the rule arm's
+number is read. The arm converges after roughly 5,000 trials; past that its per-block gradient is
+numerically negligible, the accumulated update is dominated by float rounding, and the cosine
+decays into noise. Measured while it is still learning — 300 or 1,000 trials — it is **exactly
++1.0**, which is the end-to-end check that the sign convention and the accumulation are right.
+**No such dilution applies to the three-factor arm**: it never converges, ending below the
+cue-blind floor, so every one of its blocks is a block in which a learning rule would have had a
+gradient to follow.
 
 That is the measurement the reframing predicted. With a Hebbian eligibility (`pre × post`) and
 exploration noise applied only at the action, an internal synapse's update carries no information
