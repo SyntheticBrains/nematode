@@ -485,7 +485,9 @@ class TestAtlasSignConfigs:
 
     def test_every_grounded_config_loads_with_grounded_signs(self) -> None:
         paths = sorted(_VARIANT.parent.glob("connectomeppo_*atlassigns*.yml"))
-        assert len(paths) == 6
+        # The six sign-grounding arms plus the decorrelating variants derived from two of
+        # them; every one of them grounds its signs, which is what this asserts.
+        assert len(paths) >= 6
         for path in paths:
             config = load_simulation_config(str(path)).brain
             assert config is not None

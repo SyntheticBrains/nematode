@@ -73,6 +73,7 @@ NORM_DRIFT_KEY = "plasticity_norm_drift"
 RATE_MULTIPLIER_KEY = "plasticity_rate_multiplier"
 ANCHOR_DEPARTURE_KEY = "plasticity_anchor_departure"
 RIGIDITY_KEY = "plasticity_rigidity"
+DECORRELATION_SHARE_KEY = "plasticity_decorrelation_share"
 
 
 @dataclass
@@ -163,6 +164,49 @@ class ConsolidationOptions:
             if getattr(self, name) < 0.0:
                 msg = f"{name} must be non-negative, got {getattr(self, name)}"
                 raise ValueError(msg)
+
+
+@dataclass(frozen=True)
+class DecorrelationOptions:
+    """The rule's decorrelating term and its coefficient.
+
+    The minimal update potentiates a synapse where pre- and post-synaptic
+    activity agree in sign and depresses it where they disagree, so on a network
+    that is mostly excitatory the dominant loop is positive feedback, checked
+    only by the bound and whatever normalisation is on. These oppose it.
+
+    ``anti_hebbian_inhibitory`` negates the Hebbian term wherever the synapse's
+    grounded sign is inhibitory, leaving grounded excitatory and ungrounded
+    synapses alone. Co-activity then strengthens what such a synapse does rather
+    than unwinding it. The magnitude is untouched, so the variant redirects the
+    update rather than resizing it, and it keys on transmitter identity: without
+    grounded signs there is no inhibitory synapse to key on.
+
+    ``oja`` subtracts ``eta * gamma * y**2 * w``, the classic normalisation:
+    growth is opposed in proportion to how active the post-synaptic unit is and
+    how large the weight already is. It needs no identity and runs anywhere.
+    """
+
+    mechanism: str = "none"
+    oja_coefficient: float = 0.0
+
+    def __post_init__(self) -> None:
+        """Hold a direct construction to the bounds the brain configs enforce at load."""
+        if self.mechanism not in {"none", "anti_hebbian_inhibitory", "oja"}:
+            msg = f"unknown decorrelation mechanism {self.mechanism!r}"
+            raise ValueError(msg)
+        if not math.isfinite(self.oja_coefficient):
+            # Checked before the comparisons below: NaN fails every ordering test, so a
+            # NaN coefficient would pass both of them and then poison every weight it
+            # touched on the first step.
+            msg = f"oja_coefficient must be finite, got {self.oja_coefficient}"
+            raise ValueError(msg)
+        if self.oja_coefficient < 0.0:
+            msg = f"oja_coefficient must be non-negative, got {self.oja_coefficient}"
+            raise ValueError(msg)
+        if self.mechanism == "oja" and self.oja_coefficient == 0.0:
+            msg = "oja_coefficient must be positive when the oja term is selected"
+            raise ValueError(msg)
 
 
 class _RunningScale:
@@ -286,8 +330,10 @@ class ThreeFactorRule:
         device: torch.device,
         scaling: ScalingOptions | None = None,
         consolidation: ConsolidationOptions | None = None,
+        decorrelation: DecorrelationOptions | None = None,
         homeostasis: bool = False,
         synapse_signs: list[torch.Tensor] | None = None,
+        enforce_signs: bool = True,
     ) -> None:
         self._topology = topology
         self.plasticity_rate = plasticity_rate
@@ -313,6 +359,8 @@ class ThreeFactorRule:
         # Consolidation. One brake or none; ``none`` allocates nothing and adds
         # no operation, so the default path is the rule without this feature.
         self.consolidation = consolidation if consolidation is not None else ConsolidationOptions()
+        # The decorrelating term, if any. ``none`` adds no operation.
+        self.decorrelation = decorrelation if decorrelation is not None else DecorrelationOptions()
 
         # Running estimate of the task's reward level. Persists across
         # episodes: it describes the task, not one episode, and resetting
@@ -355,7 +403,29 @@ class ThreeFactorRule:
         # Dale's law. One signed matrix per plastic tensor, aligned with the seam's weights:
         # +1 excitatory, -1 inhibitory, 0 for a synapse whose source implies no sign. Empty
         # when enforcement is off, which is the default and leaves every update untouched.
+        # One signed matrix per plastic tensor when the substrate's signs are grounded,
+        # aligned with the seam's weights: +1 excitatory, -1 inhibitory, 0 where the source
+        # implies no sign. Two independent consumers -- Dale's law, which constrains where a
+        # weight may go, and the anti-Hebbian variant, which reads the same identities to
+        # decide which way an update points -- so the signs are held whenever they exist and
+        # ``enforce_signs`` says whether the first of them acts.
         self._synapse_signs: list[torch.Tensor] = list(synapse_signs) if synapse_signs else []
+        self.enforce_signs = enforce_signs
+        if self.decorrelation.mechanism == "anti_hebbian_inhibitory" and not self._synapse_signs:
+            msg = (
+                "anti_hebbian_inhibitory needs grounded synapse signs: without them there is "
+                "no inhibitory synapse to key on, only an arbitrary draw to negate."
+            )
+            raise ValueError(msg)
+        # Pre-computed once: -1 where a synapse is grounded inhibitory, +1 elsewhere. The
+        # variant is one elementwise product, so selecting it costs a multiply per step.
+        self._hebbian_signs: list[torch.Tensor] = []
+        if self.decorrelation.mechanism == "anti_hebbian_inhibitory":
+            with torch.no_grad():
+                self._hebbian_signs = [
+                    torch.where(signs < 0, -torch.ones_like(w), torch.ones_like(w))
+                    for signs, w in zip(self._synapse_signs, topology.plastic_weights, strict=True)
+                ]
         self._fan_in_axes: list[int] = []
         self._norm_targets: list[torch.Tensor] = []
         if homeostasis:
@@ -542,6 +612,14 @@ class ThreeFactorRule:
                 masks,
                 multiplier,
             )
+            decorrelation_share = self._decorrelation_share(
+                weights,
+                traces,
+                masks,
+                modulator,
+                rate,
+                divisors,
+            )
 
             if not self.freeze_updates:
                 for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
@@ -643,6 +721,7 @@ class ThreeFactorRule:
                 RATE_MULTIPLIER_KEY: rate_multiplier,
                 ANCHOR_DEPARTURE_KEY: anchor_departure,
                 RIGIDITY_KEY: rigidity_mean,
+                DECORRELATION_SHARE_KEY: decorrelation_share,
             },
         )
 
@@ -674,7 +753,18 @@ class ThreeFactorRule:
         update = hebbian_rate * modulator * trace
         if divisor is not None:
             update = update / divisor
+        if self._hebbian_signs:
+            # Negated at grounded inhibitory synapses, so co-activity strengthens what such
+            # a synapse does rather than unwinding it. Elementwise +-1, so the term's
+            # magnitude is untouched: the variant redirects the update, never resizes it.
+            update = update * self._hebbian_signs[index]
         update = update - rate * self.weight_decay * weight
+        if self.decorrelation.mechanism == "oja":
+            # Growth opposed in proportion to how active the post-synaptic unit is and how
+            # large the weight already is. Broadcast along the post-synaptic axis, which is
+            # the one the fan-in axis is not.
+            post = self._post_activity(index)
+            update = update - rate * self.decorrelation.oja_coefficient * post.square() * weight
         if self._anchors:
             # Unlike decay, this is not a uniform per-unit shrink, so the
             # homeostatic rescale cancels only its radial part and leaves the
@@ -715,6 +805,68 @@ class ThreeFactorRule:
                 self._edge_mean(self._rigidity, masks),
             )
         return multiplier, math.nan, math.nan
+
+    def _decorrelation_share(  # noqa: PLR0913 — the factors the update itself is built from
+        self,
+        weights: list[torch.Tensor],
+        traces: list[torch.Tensor],
+        masks: list[torch.Tensor],
+        modulator: float,
+        rate: float,
+        divisors: list[float] | None,
+    ) -> float:
+        """Share of the update's absolute magnitude the decorrelating term accounts for.
+
+        Measured on the components the update is actually built from — the same
+        rate, modulator, rigidity divisor and trace scale ``_proposed_update``
+        applies — because a ratio of raw traces to a scaled Oja term compares
+        quantities in different units and would misreport how much of the step
+        each accounts for.
+
+        Under the anti-Hebbian variant the magnitude is unchanged by construction,
+        so this is the share of it that was *redirected*: the negated subset's
+        weight in the Hebbian term's total. Under the Oja term it is that term's
+        own contribution to the two together. Zero when no term is selected, and
+        zero when the step carries no effective modulation at all.
+        """
+        mechanism = self.decorrelation.mechanism
+        if mechanism == "none":
+            return 0.0
+        hebbian_total = 0.0
+        part = 0.0
+        for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
+            edges = mask.to(torch.bool)
+            hebbian_rate = (
+                rate / (1.0 + self.consolidation.rigidity_strength * self._rigidity[index])
+                if self._rigidity
+                else rate
+            )
+            hebbian = (hebbian_rate * modulator * trace).abs()
+            if divisors is not None:
+                hebbian = hebbian / divisors[index]
+            hebbian_total += float(hebbian[edges].sum().item())
+            if mechanism == "anti_hebbian_inhibitory":
+                part += float(hebbian[(self._hebbian_signs[index] < 0) & edges].sum().item())
+            else:
+                oja = (
+                    (rate * self.decorrelation.oja_coefficient)
+                    * self._post_activity(index).square()
+                    * w.detach().abs()
+                )
+                part += float(oja[edges].sum().item())
+        denominator = hebbian_total + (part if mechanism == "oja" else 0.0)
+        return part / denominator if denominator > 0.0 else 0.0
+
+    def _post_activity(self, index: int) -> torch.Tensor:
+        """Shape this tensor's post-synaptic activity to broadcast along its post axis.
+
+        The seam gives one vector per plastic tensor, indexed along the axis the
+        fan-in axis is not; a 2-D weight therefore needs it as a row when the
+        fan-in axis is 0 and as a column when it is 1.
+        """
+        post = self._topology.plastic_post_activities[index]
+        fan_in = self._topology.plastic_fan_in_axes[index]
+        return post.reshape(1, -1) if fan_in == 0 else post.reshape(-1, 1)
 
     def _rate_multiplier(self) -> float:
         """Global rate factor from the oracle gate; ``1.0`` under every other mechanism."""
@@ -767,7 +919,14 @@ class ThreeFactorRule:
         return total / count if count else math.nan
 
     def _project_signs(self, index: int, weight: torch.Tensor) -> None:
-        """Clamp each grounded synapse to its sign; ungrounded synapses are left alone."""
+        """Clamp each grounded synapse to its sign; ungrounded synapses are left alone.
+
+        A no-op unless Dale's law is enforced: the signs are held whenever the
+        substrate grounds them, because a decorrelating variant reads the same
+        identities without constraining any weight.
+        """
+        if not self.enforce_signs:
+            return
         if not self._synapse_signs:
             return
         signs = self._synapse_signs[index]
@@ -874,6 +1033,7 @@ def record_plasticity_report(
     history_data.plasticity_rate_multiplier.append(extra[RATE_MULTIPLIER_KEY])
     history_data.plasticity_anchor_departure.append(extra[ANCHOR_DEPARTURE_KEY])
     history_data.plasticity_rigidity.append(extra[RIGIDITY_KEY])
+    history_data.plasticity_decorrelation_share.append(extra[DECORRELATION_SHARE_KEY])
     history_data.rewards.append(reward)
 
 

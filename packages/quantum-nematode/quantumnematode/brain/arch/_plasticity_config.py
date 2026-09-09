@@ -21,6 +21,12 @@ LearningRuleName = Literal["ppo", "three_factor", "hebbian"]
 # one at a time rather than composed, since two brakes at once give a result attributable
 # to neither.
 ConsolidationName = Literal["none", "anchor", "rigidity", "oracle"]
+# Decorrelating terms. The minimal rule potentiates where pre- and post-synaptic
+# activity agree in sign and depresses where they disagree, so on a network that is
+# mostly excitatory the dominant loop is positive feedback. These oppose it: one by
+# learning with the opposite sign at synapses whose transmitter is inhibitory, the
+# other by the classic normalisation that needs no identity at all.
+DecorrelationName = Literal["none", "anti_hebbian_inhibitory", "oja"]
 
 # Rules that read the eligibility trace, and so require it to be enabled.
 PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
@@ -124,6 +130,19 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_oracle_reference: float = Field(default=1.0, gt=0.0, le=1.0)
     plasticity_oracle_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
+    # ── Decorrelation (opt-in) ───────────────────────────────
+    # ``anti_hebbian_inhibitory`` negates the Hebbian term at synapses whose
+    # grounded sign is inhibitory, so co-activity strengthens what such a
+    # synapse does rather than unwinding it; the term's magnitude is unchanged,
+    # so the variant redirects the update rather than resizing it. It keys on
+    # transmitter identity and is refused where the signs were drawn rather than
+    # grounded -- negating an arbitrary sign would be negating a coin flip.
+    # ``oja`` subtracts the classic normalisation term, opposing growth in
+    # proportion to how active a post-synaptic unit is and how large the weight
+    # already is; it needs no identity and so runs on any substrate.
+    plasticity_decorrelation: DecorrelationName = "none"
+    plasticity_oja_coefficient: float = Field(default=0.0, ge=0.0)
+
     # ── Homeostatic incoming-norm scaling (opt-in) ───────────
     # After each plastic update every unit's incoming plastic weights are
     # rescaled, over the edge set only, to the norm they had when the rule
@@ -172,6 +191,24 @@ class PlasticityConfigMixin(BaseModel):
                 "initial_log_std has no effect under the state-dependent std head, whose "
                 "log-std is a function of the hidden state; a non-zero value would silently "
                 "do nothing."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_decorrelation(self) -> PlasticityConfigMixin:
+        """Reject a decorrelating term its own coefficient leaves inert.
+
+        The grounded-signs requirement of ``anti_hebbian_inhibitory`` is not
+        checked here: this mixin is shared with substrates that have no
+        transmitter identities at all, so the check belongs where the identities
+        do.
+        """
+        if self.plasticity_decorrelation == "oja" and self.plasticity_oja_coefficient == 0.0:
+            msg = (
+                "plasticity_decorrelation='oja' is inert with plasticity_oja_coefficient=0: "
+                "the term would be selected and never act, and its runs would be read as "
+                "evidence about it."
             )
             raise ValueError(msg)
         return self

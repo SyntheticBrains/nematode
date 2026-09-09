@@ -102,6 +102,13 @@ class MLPTopology(nn.Module):
         if enable_activity_traces:
             for index, layer in enumerate(self._layers):
                 self.register_buffer(f"trace_{index}", torch.zeros_like(layer.weight))
+                # The post-synaptic activity that trace was built from, kept so a
+                # rule term that needs what the units did can read it through the
+                # seam. One vector per plastic layer, its rows' worth of units.
+                self.register_buffer(
+                    f"post_activity_{index}",
+                    torch.zeros(layer.weight.shape[0]),
+                )
 
     # ── PlasticTopology seam ──────────────────────────────────
 
@@ -133,6 +140,11 @@ class MLPTopology(nn.Module):
     def plastic_fan_in_axes(self) -> list[int]:
         """A ``Linear`` weight is ``[out, in]``: a unit's incoming weights are a row."""
         return [1] * len(self._layers)
+
+    @property
+    def plastic_post_activities(self) -> list[torch.Tensor]:
+        """One ``(out,)`` activity vector per layer: a ``[out, in]`` weight's post axis is ``0``."""
+        return [getattr(self, f"post_activity_{index}") for index in range(len(self._layers))]
 
     # ── BrainTopology seam ────────────────────────────────────
 
@@ -203,6 +215,9 @@ class MLPTopology(nn.Module):
                     with torch.no_grad():
                         trace = getattr(self, f"trace_{layer_index}")
                         trace.mul_(self.trace_decay).add_(torch.outer(x.detach(), pre.detach()))
+                        # The same post-synaptic factor the trace just took, so a
+                        # term reading it and the Hebbian term agree on the step.
+                        getattr(self, f"post_activity_{layer_index}").copy_(x.detach())
                     layer_index += 1
             else:
                 # An activation not preceded by a Linear (never the case for
