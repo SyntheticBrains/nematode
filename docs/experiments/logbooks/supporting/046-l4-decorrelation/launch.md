@@ -62,7 +62,25 @@ uv run python scripts/run_campaign.py \
 
 ## Pilot results
 
-*(written here after the pilot and before the test)*
+Run 2026-09-09, 6 runs, all exit 0, 8 minutes on 16 workers. Plateau-tail full-clear success on
+the two pilot seeds; the committed grounded Hebbian arm scores 10.0 and 32.8 on these seeds
+(mean **21.4**).
+
+| `γ` | seed 1 | seed 2 | mean |
+|---|---|---|---|
+| 0.01 | 10.0 | 27.6 | 18.80 |
+| **0.1** | 12.4 | 32.0 | **22.20** |
+| 1.0 | 10.8 | 28.0 | 19.40 |
+
+**Pin**: `γ = 0.1`, by the declared criterion (highest mean; no tie), which is the value the
+committed arm config already carried.
+
+Read before the test and recorded here so the test is read against it: on these two seeds the Oja
+term is within a point of the comparator rather than above it, and both seeds are dominated by
+which seed they are (10.0 against 32.8 in the comparator itself). Two seeds license nothing; this
+is a pin, not a signal.
+
+**The anti-Hebbian variant has no pilot**, as declared — there is no coefficient to choose.
 
 ## Test results
 
