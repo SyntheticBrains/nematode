@@ -92,9 +92,12 @@ and because a registered statistic matched to it is the standing lesson from Log
 - **The wiring contrast is again unconfirmed** (+2.6 and +2.0, both intervals spanning zero),
   as in every panel since the first.
 - **A negative with a measured cause is worth more than a negative without one.** The share
-  annotation converted "two terms failed" into "one term did all it could, and the other was
-  applied at a fiftieth of the Hebbian term's strength", and the two carry different weight as
-  evidence about the hypothesis.
+  annotation converted "two terms failed" into "one term did all it could, and the other supplied
+  2.2% of the combined update", and the two carry different weight as evidence about the
+  hypothesis. (The reported share is the term's fraction of the effective update, Oja over Oja
+  plus Hebbian. Expressed instead as a ratio between the two terms it is 0.022 — about one part in
+  45 — a different denominator and a separate calculation, quoted here so the two are not
+  conflated.)
 - **The share figures reported here are the corrected ones.** The first computation of this
   annotation compared raw eligibility traces against a rate-scaled Oja term — quantities in
   different units — and reported the Oja share as 0.0026. It is now measured on the components the
