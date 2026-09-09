@@ -60,7 +60,7 @@ brain:
     plasticity_consolidation: rigidity
     plasticity_rigidity_growth: 0.01
     plasticity_rigidity_decay: 0.001
-    plasticity_rigidity_strength: 1.0
+    plasticity_rigidity_strength: 10.0
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

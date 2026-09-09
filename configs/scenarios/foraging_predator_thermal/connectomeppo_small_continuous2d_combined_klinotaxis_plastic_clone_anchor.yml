@@ -58,7 +58,7 @@ brain:
     plasticity_rate: 0.001
     plasticity_consolidation: anchor
     plasticity_anchor_rate: 0.001
-    plasticity_anchor_stiffness: 0.1
+    plasticity_anchor_stiffness: 1.0
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5

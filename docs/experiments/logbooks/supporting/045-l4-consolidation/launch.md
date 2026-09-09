@@ -71,7 +71,35 @@ the pass rule, the comparator and the reporting are the ones fixed in that scrip
 
 ## Pilot results
 
-*(written here after the pilot and before the screen)*
+Run 2026-09-09, 20 runs, all exit 0, 39 minutes on 16 workers. Plateau-tail full-clear success
+on the two pilot seeds; the comparator on these seeds is the frozen clone's 39.3 and 44.0
+(mean **41.65**).
+
+| combination | seed 1 | seed 2 | mean |
+|---|---|---|---|
+| anchor κ=0.01, ρ=0 | 8.4 | 2.8 | 5.60 |
+| anchor κ=0.01, ρ=0.001 | 1.8 | 46.8 | 24.30 |
+| anchor κ=0.1, ρ=0 | 32.8 | 1.8 | 17.30 |
+| anchor κ=0.1, ρ=0.001 | 22.4 | 0.0 | 11.20 |
+| anchor κ=1.0, ρ=0 | 23.8 | 8.8 | 16.30 |
+| **anchor κ=1.0, ρ=0.001** | 13.8 | 37.6 | **25.70** |
+| **rigidity κ=10, γ=0.01** | 37.4 | 36.6 | **37.00** |
+| rigidity κ=10, γ=0.1 | 17.4 | 9.6 | 13.50 |
+| rigidity κ=1, γ=0.01 | 38.2 | 0.0 | 19.10 |
+| rigidity κ=1, γ=0.1 | 19.2 | 34.8 | 27.00 |
+
+**Pins**, by the declared criterion (highest mean across the two seeds; no tie arose):
+
+- **anchor**: stiffness `κ_a = 1.0`, anchor rate `ρ_a = 0.001`.
+- **rigidity**: strength `κ_c = 10`, growth `γ_c = 0.01`, decay `λ_c = 0.001`.
+- **oracle**: `s_ref = 0.4`, EMA rate `0.01`, fixed by the comparator as declared.
+
+Read before the screen, and recorded here so the screen is read against it: no anchor
+combination came within 16 points of the comparator on these two seeds, and the family's spread
+is seed-dominated (one seed at 46.8 and its pair at 1.8 within the same combination). The
+rigidity pin is the only combination whose two seeds agree and whose mean is within the assay's
+5-point hold band on these seeds. This is a pilot on two seeds and licenses nothing; it pins
+parameters and predicts, informally, that the anchor arm will not pass.
 
 ## Screen results
 
