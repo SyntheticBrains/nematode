@@ -186,6 +186,14 @@ class BrainHistoryData(BaseModel):
             "not selected)"
         ),
     )
+    plasticity_decorrelation_share: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Share of the update's absolute magnitude the decorrelating term accounts for: "
+            "the redirected subset under the anti-Hebbian variant, the Oja term's own "
+            "contribution under Oja, zero when no term is selected"
+        ),
+    )
     probabilities: list[float] = Field(
         default_factory=list,
         description="Probabilities of actions taken by the agent",

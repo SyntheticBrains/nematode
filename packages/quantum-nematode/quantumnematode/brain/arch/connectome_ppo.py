@@ -257,6 +257,16 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
                 "that were drawn at random would constrain noise, not biology."
             )
             raise ValueError(msg)
+        if self.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
+            self.synapse_signs != "atlas"
+        ):
+            msg = (
+                "plasticity_decorrelation='anti_hebbian_inhibitory' requires "
+                "synapse_signs='atlas': the variant learns with the opposite sign at "
+                "inhibitory synapses, and where the signs were drawn there is no inhibitory "
+                "synapse to key on — only a coin flip to negate."
+            )
+            raise ValueError(msg)
         return self
 
 
@@ -754,6 +764,17 @@ class ConnectomeTopology(nn.Module):
     def plastic_fan_in_axes(self) -> list[int]:
         """The chemical matrix is ``[pre, post]``: a neuron's incoming synapses are a column."""
         return [0]
+
+    @property
+    def plastic_post_activities(self) -> list[torch.Tensor]:
+        """The activity the trace's post-synaptic factor was built from.
+
+        ``[pre, post]`` puts the post-synaptic units on axis 1. ``prev_activity``
+        holds the state the last trace step took as its post-synaptic factor and
+        the next step will take as its pre-synaptic one, so it is that vector
+        exactly -- a view over state the trace update already keeps.
+        """
+        return [self.prev_activity]
 
     def set_anatomical_readout(self) -> None:
         """Overwrite the motor readout with the contrast its pools imply.
@@ -1281,6 +1302,19 @@ class ConnectomePPOBrain(ClassicalBrain):
                 "that were drawn at random would constrain noise, not biology."
             )
             raise ValueError(msg)
+        if config.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
+            config.synapse_signs != "atlas"
+        ):
+            # Guarded by a config validator too, and repeated here for the same reason:
+            # a config built by `model_copy` skips validators, and negating the update at
+            # "inhibitory" synapses that were drawn at random would negate a coin flip.
+            msg = (
+                "plasticity_decorrelation='anti_hebbian_inhibitory' requires "
+                "synapse_signs='atlas': the variant learns with the opposite sign at "
+                "inhibitory synapses, and where the signs were drawn there is no inhibitory "
+                "synapse to key on — only a coin flip to negate."
+            )
+            raise ValueError(msg)
         self.topology = ConnectomeTopology(
             connectome,
             enable_gap_junctions=config.enable_gap_junctions,
@@ -1341,6 +1375,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             from quantumnematode.learning_rules.three_factor import (
                 ConnectomeThreeFactorRule,
                 ConsolidationOptions,
+                DecorrelationOptions,
                 ScalingOptions,
             )
 
@@ -1353,10 +1388,19 @@ class ConnectomePPOBrain(ClassicalBrain):
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
                 homeostasis=config.plasticity_homeostasis,
+                # Handed over whenever the signs are grounded, not only when Dale's law
+                # is enforced: enforcement constrains where a weight may go, and the
+                # decorrelating variant reads the same identities to decide which way an
+                # update points. The two are independent switches.
                 synapse_signs=(
                     [cast("torch.Tensor", self.topology.chem_sign)]
-                    if config.enforce_synapse_signs
+                    if config.synapse_signs == "atlas"
                     else None
+                ),
+                enforce_signs=config.enforce_synapse_signs,
+                decorrelation=DecorrelationOptions(
+                    mechanism=config.plasticity_decorrelation,
+                    oja_coefficient=config.plasticity_oja_coefficient,
                 ),
                 scaling=ScalingOptions(
                     normalise_modulator=config.plasticity_normalise_modulator,

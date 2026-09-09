@@ -17,6 +17,7 @@ from quantumnematode.learning_rules.ppo import ConnectomePPOBatch, ConnectomePPO
 from quantumnematode.learning_rules.three_factor import (
     ConnectomeThreeFactorRule,
     ConsolidationOptions,
+    DecorrelationOptions,
     ScalingOptions,
     ThreeFactorBatch,
     ThreeFactorRule,
@@ -27,6 +28,7 @@ __all__ = [
     "ConnectomePPORule",
     "ConnectomeThreeFactorRule",
     "ConsolidationOptions",
+    "DecorrelationOptions",
     "ScalingOptions",
     "ThreeFactorBatch",
     "ThreeFactorRule",

@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from quantumnematode.brain.weights import WeightComponent
     from quantumnematode.initializers._initializer import ParameterInitializer
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
@@ -146,6 +146,25 @@ class MLPPPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # fixed decoder, as the connectome does under its anatomical readout. No
     # effect under the gradient rule, which trains every parameter.
     plastic_layers: Literal["all", "hidden"] = "all"
+
+    @model_validator(mode="after")
+    def _reject_sign_keyed_decorrelation(self) -> MLPPPOBrainConfig:
+        """Refuse a decorrelating term that keys on transmitter identity.
+
+        The anti-Hebbian variant negates the update at synapses whose grounded
+        sign is inhibitory. A dense layer has no transmitter identities at all,
+        so there is nothing to key on and the arm would silently be the plain
+        rule -- which, as the matched-rule yardstick, is exactly the comparison
+        it would corrupt.
+        """
+        if self.plasticity_decorrelation == "anti_hebbian_inhibitory":
+            msg = (
+                "plasticity_decorrelation='anti_hebbian_inhibitory' is not available on this "
+                "substrate: it keys on grounded transmitter identities, which a dense layer "
+                "does not have."
+            )
+            raise ValueError(msg)
+        return self
 
     @field_validator("sensory_modules")
     @classmethod

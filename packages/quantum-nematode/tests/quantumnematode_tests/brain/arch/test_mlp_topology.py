@@ -64,10 +64,21 @@ class TestWrapsRatherThanRebuilds:
         MLPTopology(actor, enable_activity_traces=True, trace_decay=0.9)
         assert not any("trace" in key for key in actor.state_dict())
 
-    def test_topology_state_dict_holds_only_traces(self) -> None:
-        """Layers are referenced, not registered, so no weight is duplicated."""
+    def test_topology_state_dict_holds_only_trace_state(self) -> None:
+        """Layers are referenced, not registered, so no weight is duplicated.
+
+        The per-layer post-synaptic activity is trace state too: it is the factor the
+        trace was built from, kept so a rule term can read what the units did.
+        """
         topo = MLPTopology(_actor(), enable_activity_traces=True, trace_decay=0.9)
-        assert set(topo.state_dict()) == {"trace_0", "trace_1", "trace_2"}
+        assert set(topo.state_dict()) == {
+            "trace_0",
+            "trace_1",
+            "trace_2",
+            "post_activity_0",
+            "post_activity_1",
+            "post_activity_2",
+        }
 
     def test_traces_off_allocates_nothing(self) -> None:
         topo = MLPTopology(_actor(), enable_activity_traces=False, trace_decay=0.9)

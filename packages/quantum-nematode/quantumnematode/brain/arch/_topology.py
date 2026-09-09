@@ -102,6 +102,18 @@ class PlasticTopology(Protocol):
         """Per plastic weight, the axis to reduce over for one unit's incoming weights."""
         ...
 
+    @property
+    def plastic_post_activities(self) -> list[torch.Tensor]:
+        """Per plastic weight, the activity of its post-synaptic units at the last trace step.
+
+        Indexed along the axis complementary to that weight's fan-in axis, and
+        the same vector the trace's post-synaptic factor was built from, so a
+        rule term reading it and the Hebbian term agree on what the unit did.
+        Read only by terms that need it; a substrate pays nothing for exposing
+        a view over state it already keeps.
+        """
+        ...
+
     def reset_traces(self) -> None:
         """Zero every eligibility trace; a documented no-op when traces are off."""
         ...

@@ -68,6 +68,10 @@ SIMULATION_CONFIGS = [
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen_rewired_null_atlassigns.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_atlassigns.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_atlassigns_dale.yml",
+    # The decorrelating variants of the grounded Hebbian arms: one key block off their
+    # parents, and the anti-Hebbian one only loads at all where the signs are grounded.
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_atlassigns_antihebb.yml",
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_atlassigns_oja.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null_atlassigns.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null_atlassigns_dale.yml",
     # The matched-rule MLP arm: the same plastic path on a dense substrate.

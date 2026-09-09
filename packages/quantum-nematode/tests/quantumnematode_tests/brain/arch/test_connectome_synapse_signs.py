@@ -150,9 +150,25 @@ class TestDalesLaw:
         with pytest.raises(ValueError, match="requires synapse_signs='atlas'"):
             ConnectomePPOBrain(config=unchecked, device=DeviceType.CPU)
 
-    def test_off_by_default_and_no_signs_reach_the_rule(self) -> None:
+    def test_off_by_default_and_the_signs_constrain_nothing(self) -> None:
+        # The rule holds the grounded signs whenever the substrate has them, because a
+        # decorrelating variant reads the same identities without constraining any weight.
+        # Enforcement is the separate switch, and with it off no projection happens.
         brain = _brain(_PLASTIC, synapse_signs="atlas")
         rule = brain._rule
+        assert isinstance(rule, ThreeFactorRule)
+        assert len(rule._synapse_signs) == 1
+        assert rule.enforce_signs is False
+        weights = brain.topology.w_chem
+        signs = _buffer(brain, "chem_sign")
+        with torch.no_grad():
+            weights.data.copy_(-torch.sign(signs).to(weights.dtype))  # every grounded sign violated
+        violated = weights.detach().clone()
+        rule._project_signs(0, weights)
+        assert torch.equal(weights.detach(), violated)
+
+    def test_an_ungrounded_brain_hands_the_rule_no_signs(self) -> None:
+        rule = _brain(_PLASTIC)._rule
         assert isinstance(rule, ThreeFactorRule)
         assert rule._synapse_signs == []
 
