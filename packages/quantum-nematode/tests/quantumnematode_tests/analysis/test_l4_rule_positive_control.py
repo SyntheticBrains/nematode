@@ -1,0 +1,233 @@
+"""The positive control's harness: the arms, the pass rule, and what makes a result void."""
+
+from __future__ import annotations
+
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+_root = Path(__file__).resolve()
+while _root != _root.parent and not (_root / "scripts" / "analysis").is_dir():
+    _root = _root.parent
+sys.path.insert(0, str(_root / "scripts" / "analysis"))
+
+import l4_rule_positive_control as pc  # noqa: E402  # pyright: ignore[reportMissingImports]
+from quantumnematode.plasticity.positive_control import (  # noqa: E402
+    ContextualAssociation,
+)
+
+_TASK = ContextualAssociation.default()
+_FLOOR = _TASK.cue_blind_floor(pc.NOISE)
+_OPTIMUM = _TASK.optimum(pc.NOISE)
+
+
+def _runs(**scores: float) -> list[dict]:
+    """Synthetic runs: one score per arm, repeated across every seed and rate."""
+    out: list[dict] = []
+    for seed in pc.SEEDS:
+        out.extend(
+            _run(arm, seed, scores.get(arm, _FLOOR - 0.1)) for arm in ("analytic", "hebbian")
+        )
+        out.extend(
+            _run("three_factor", seed, scores.get("three_factor", _FLOOR - 0.1), rate)
+            for rate in pc.RATE_GRID
+        )
+    return out
+
+
+def _run(arm: str, seed: int, score: float, rate: float | None = None) -> dict:
+    return {
+        "arm": arm,
+        "seed": seed,
+        "rate": rate,
+        "score": score,
+        "modulator": 0.1,
+        "mean_abs_delta": 1e-4,
+        "alignment": 0.05,
+    }
+
+
+class TestThePinnedProtocol:
+    def test_the_instrument_is_the_panels_recipe(self) -> None:
+        assert pc.PLASTICITY_RATE == 1e-3
+        assert pc.WEIGHT_BOUND == 3.0
+        assert pc.TRACE_DECAY == 0.9
+        assert pytest.approx(np.exp(-1.0)) == pc.NOISE  # the arms' frozen initial_log_std
+
+    def test_the_pass_rule_is_the_registered_one(self) -> None:
+        assert tuple(range(1, 9)) == pc.SEEDS
+        assert pc.TRIALS == 20_000
+        assert pc.PASS_SEEDS == 7
+        assert pc.PASS_FRACTION == 0.5
+        assert pc.RATE_GRID == (1e-4, 1e-3, 1e-2)
+
+
+class TestThePassRule:
+    def test_an_arm_at_the_optimum_passes(self) -> None:
+        result = pc.assess([_OPTIMUM] * 8, _FLOOR, _OPTIMUM)
+        assert result["passes"]
+
+    def test_an_arm_at_the_floor_does_not(self) -> None:
+        assert not pc.assess([_FLOOR] * 8, _FLOOR, _OPTIMUM)["passes"]
+
+    def test_beating_the_floor_is_not_enough_without_the_halfway_mark(self) -> None:
+        # Just above the floor on every seed, but nowhere near halfway.
+        result = pc.assess([_FLOOR + 0.01] * 8, _FLOOR, _OPTIMUM)
+        assert result["seeds_above_floor"] == 8
+        assert not result["passes"]
+
+    def test_halfway_is_not_enough_without_the_seeds(self) -> None:
+        # Four scores high enough that the MEAN clears the halfway mark, four below the floor:
+        # the seed-count clause alone must reject it. `assess` permits above-optimum scores,
+        # which is what makes the mean clause reachable while half the seeds fail.
+        scores = [2.0] * 4 + [_FLOOR - 1.0] * 4
+        result = pc.assess(scores, _FLOOR, _OPTIMUM)
+        assert result["mean"] > result["halfway_threshold"]  # the mean clause passes
+        assert result["seeds_above_floor"] == 4  # the seed clause does not
+        assert not result["passes"]
+
+    def test_an_incomplete_arm_cannot_pass(self) -> None:
+        assert not pc.assess([_OPTIMUM] * 7, _FLOOR, _OPTIMUM)["passes"]
+
+
+class TestTheOutcome:
+    def test_a_learning_rule_passes(self) -> None:
+        out = pc.analyse(_runs(analytic=_OPTIMUM, three_factor=_OPTIMUM), _TASK)
+        assert out["outcome"] == "pass"
+        assert out["void_reason"] is None
+
+    def test_a_rule_that_does_not_learn_fails(self) -> None:
+        out = pc.analyse(_runs(analytic=_OPTIMUM), _TASK)
+        assert out["outcome"] == "fail"
+
+    def test_a_failed_reference_voids_the_control(self) -> None:
+        # The reference is the only thing between a broken control and a false conclusion.
+        out = pc.analyse(_runs(three_factor=_OPTIMUM), _TASK)
+        assert out["outcome"] == "void"
+        assert "carries no information" in out["void_reason"]
+
+    def test_a_floor_arm_that_solves_it_voids_the_control(self) -> None:
+        out = pc.analyse(_runs(analytic=_OPTIMUM, hebbian=_OPTIMUM, three_factor=_OPTIMUM), _TASK)
+        assert out["outcome"] == "void"
+        assert "leaks its answer" in out["void_reason"]
+
+    def test_any_rate_passing_counts_as_a_pass(self) -> None:
+        runs = _runs(analytic=_OPTIMUM)
+        for run in runs:
+            if run["arm"] == "three_factor" and run["rate"] == 1e-2:
+                run["score"] = _OPTIMUM
+        out = pc.analyse(runs, _TASK)
+        assert out["outcome"] == "pass"
+        assert out["arms"]["three_factor"]["by_rate"]["0.01"]["passes"]
+        assert not out["arms"]["three_factor"]["by_rate"]["0.001"]["passes"]
+
+    def test_the_diagnosis_is_kept_whatever_the_outcome(self) -> None:
+        out = pc.analyse(_runs(analytic=_OPTIMUM), _TASK)
+        assert out["outcome"] == "fail"
+        for key in ("modulator", "mean_abs_delta", "alignment"):
+            assert not np.isnan(out["diagnosis"]["three_factor"][key])
+
+    def test_an_arm_with_no_finite_alignment_reports_nan_without_warning(self) -> None:
+        # A run can end with no readable alignment (every block degenerate); the diagnosis must
+        # carry NaN for it rather than raising or warning on an empty slice.
+        runs = _runs(analytic=_OPTIMUM)
+        for run in runs:
+            if run["arm"] == "three_factor":
+                run["alignment"] = float("nan")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            out = pc.analyse(runs, _TASK)
+        assert np.isnan(out["diagnosis"]["three_factor"]["alignment"])
+        assert np.isnan(out["diagnosis"]["three_factor"]["alignment_median"])
+        assert not np.isnan(out["diagnosis"]["three_factor"]["modulator"])
+
+    def test_the_alignment_carries_a_median_beside_the_mean(self) -> None:
+        # The mean of a long-tailed per-run statistic overstates the typical run, so the record
+        # carries both and the prose can quote the same number the harness computed.
+        runs = _runs(analytic=_OPTIMUM)
+        for index, run in enumerate(r for r in runs if r["arm"] == "three_factor"):
+            run["alignment"] = 1.0 if index == 0 else 0.0
+        diagnosis = pc.analyse(runs, _TASK)["diagnosis"]["three_factor"]
+        assert diagnosis["alignment"] > diagnosis["alignment_median"]
+        assert diagnosis["alignment_median"] == pytest.approx(0.0)
+
+    def test_the_diagnosis_is_broken_out_per_rate(self) -> None:
+        out = pc.analyse(_runs(analytic=_OPTIMUM), _TASK)
+        by_rate = out["diagnosis"]["three_factor"]["by_rate"]
+        assert set(by_rate) == {str(rate) for rate in pc.RATE_GRID}
+        assert not np.isnan(by_rate[str(pc.PLASTICITY_RATE)]["alignment"])
+
+    def test_the_record_reports_the_budget_actually_run(self) -> None:
+        assert pc.analyse(_runs(), _TASK, trials=250)["protocol"]["trials"] == 250
+
+
+class TestTheAlignmentSign:
+    def test_descending_the_loss_aligns_positively(self) -> None:
+        import torch
+
+        update = [torch.tensor([1.0, 0.0])]
+        descent = [torch.tensor([2.0, 0.0])]  # already the -gradient direction
+        assert pc._block_alignment(update, descent) == pytest.approx(1.0)
+
+    def test_ascending_the_loss_aligns_negatively(self) -> None:
+        import torch
+
+        assert pc._block_alignment(
+            [torch.tensor([-1.0, 0.0])],
+            [torch.tensor([2.0, 0.0])],
+        ) == pytest.approx(-1.0)
+
+    def test_the_rule_arm_produces_a_readable_alignment(self) -> None:
+        # A real run of the arm under test must yield an alignment at all; what its value says
+        # about the rule is the control's finding, not this test's business.
+        run = pc.run_arm("three_factor", seed=1, task=_TASK, trials=300)
+        assert not np.isnan(run["alignment"])
+
+    def test_the_reference_arm_aligns_with_its_own_descent_direction(self) -> None:
+        # End to end on the same accumulation path the rule uses: the analytic arm IS gradient
+        # descent, so the sign convention must put it at +1. This is what makes the rule arm's
+        # near-zero alignment a finding rather than a possible sign error in the measurement.
+        run = pc.run_arm("analytic", seed=1, task=_TASK, trials=300)
+        assert run["alignment"] == pytest.approx(1.0, abs=1e-6)
+
+    def test_a_degenerate_block_has_no_alignment(self) -> None:
+        import torch
+
+        assert pc._block_alignment([torch.zeros(2)], [torch.ones(2)]) is None
+
+
+class TestTheArmsThemselves:
+    def test_the_reference_arm_learns_the_task(self) -> None:
+        # The control's validity check, run for real at a short budget.
+        run = pc.run_arm("analytic", seed=1, task=_TASK, trials=1500)
+        assert run["score"] > _FLOOR + 0.5 * (_OPTIMUM - _FLOOR)
+
+    def test_the_unmodulated_arm_does_not(self) -> None:
+        run = pc.run_arm("hebbian", seed=1, task=_TASK, trials=1500)
+        assert run["score"] < _FLOOR + 0.5 * (_OPTIMUM - _FLOOR)
+
+    def test_every_trial_starts_from_a_cleared_trace(self) -> None:
+        # Without this the eligibility gating a trial's reward carries the previous cue.
+        from quantumnematode.brain.arch._mlp_topology import MLPTopology
+
+        seen: list[float] = []
+        original = MLPTopology.reset_traces
+
+        def spy(self: MLPTopology) -> None:
+            seen.append(float(sum(float(t.abs().sum()) for t in self.eligibility_traces)))
+            original(self)
+
+        MLPTopology.reset_traces = spy  # type: ignore[method-assign]
+        try:
+            pc.run_arm("three_factor", seed=1, task=_TASK, trials=5)
+        finally:
+            MLPTopology.reset_traces = original  # type: ignore[method-assign]
+        assert len(seen) == 5
+        # The magnitudes are what matter, not the call count: the first trial starts from a
+        # cleared trace, and every later one arrives carrying the previous trial's eligibility,
+        # which is exactly what the reset exists to discard.
+        assert seen[0] == pytest.approx(0.0)
+        assert all(value > 0.0 for value in seen[1:])
