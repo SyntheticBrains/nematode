@@ -1916,7 +1916,9 @@ class ConnectomePPOBrain(ClassicalBrain):
     # Buffers that define what the weights *mean*: which synapses exist, how gap junctions
     # couple, and which sign each synapse is allowed to carry. A file whose signs came from a
     # different sign model describes different weights, so a mismatch is refused before any
-    # state is loaded, exactly as a different wiring is.
+    # state is loaded, exactly as a different wiring is. A file that predates sign grounding
+    # carries no sign buffer at all; that silence says no sign was grounded, which is the
+    # all-zero buffer, and it is held to exactly that comparison.
     _WIRING_BUFFERS: tuple[str, ...] = ("m_chem", "g_gap", "chem_sign")
     # Per-episode activity-trace state: registered buffers when activity traces are
     # enabled, absent otherwise, and reset at every episode. Never persisted, so a
@@ -1938,8 +1940,15 @@ class ConnectomePPOBrain(ClassicalBrain):
         for name in self._WIRING_BUFFERS:
             saved = topology_state.get(name)
             if saved is None:
-                msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
-                raise ValueError(msg)
+                if name != "chem_sign":
+                    msg = f"Weight file's topology component lacks the wiring buffer {name!r}."
+                    raise ValueError(msg)
+                # A file written before sign grounding existed carries no sign buffer, and its
+                # absence has exactly one meaning: nothing was grounded, which is the all-zero
+                # buffer a random-sign build has. Reading it that way is not a guess, and it
+                # keeps the check that matters — such a file still fails the comparison below
+                # against a brain whose signs ARE grounded, because zeros are not those signs.
+                saved = torch.zeros_like(current[name])
             mine = current[name]
             if tuple(saved.shape) != tuple(mine.shape) or not torch.equal(
                 saved.to(mine.device, mine.dtype),
@@ -1957,20 +1966,15 @@ class ConnectomePPOBrain(ClassicalBrain):
                 raise ValueError(msg)
         persisted = {k: v for k, v in topology_state.items() if k not in self._TRANSIENT_BUFFERS}
         expected = {k for k in current if k not in self._TRANSIENT_BUFFERS}
+        if "chem_sign" in current and "chem_sign" not in persisted:
+            # Supplied for the same reason it was compared above: the file's silence about
+            # signs says none were grounded, and it has already been held to that.
+            persisted["chem_sign"] = torch.zeros_like(current["chem_sign"])
         missing, unexpected = expected - set(persisted), set(persisted) - expected
         if missing or unexpected:
-            detail = ""
-            if "chem_sign" in missing:
-                # Files written before synapse signs existed carry no sign buffer. There is
-                # nothing to migrate to — the signs those weights carry were drawn, not derived
-                # — so such a file is refused rather than silently reinterpreted.
-                detail = (
-                    " The file predates atlas-grounded synapse signs; load it into a brain built "
-                    "from the configuration that produced it."
-                )
             msg = (
                 f"Weight file's topology component does not match this brain: "
-                f"missing {sorted(missing)}, unexpected {sorted(unexpected)}.{detail}"
+                f"missing {sorted(missing)}, unexpected {sorted(unexpected)}."
             )
             raise ValueError(msg)
         self.topology.load_state_dict(persisted, strict=False)
