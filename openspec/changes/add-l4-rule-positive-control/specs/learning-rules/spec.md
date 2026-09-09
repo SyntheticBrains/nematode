@@ -9,9 +9,7 @@ seam with synthetic observations and rewards. The control SHALL NOT use an envir
 a reward-shaping configuration or a plateau metric, so that a null result cannot be attributed to
 any of them.
 
-The task SHALL present a cue drawn uniformly from a fixed set, map it to a continuous action
-through the seam's topology with exploration noise at the action, and reward the negative squared
-distance between the action and that cue's fixed target. The targets SHALL NOT appear in the
+The task SHALL present a cue drawn uniformly from a fixed set, map it to an unsquashed continuous action — the topology's raw mean plus Gaussian exploration noise; the brain's action head is not under test — and reward the negative squared distance between the action and that cue's fixed target. The harness SHALL reset the topology's traces before every trial, so that each one-step trial's eligibility is its own. The targets SHALL NOT appear in the
 observation, so that the association is discoverable only from reward.
 
 #### Scenario: The control isolates the rule
@@ -24,8 +22,12 @@ observation, so that the association is discoverable only from reward.
 #### Scenario: The floor and the optimum are computed, not measured
 
 - **WHEN** the control reports a result
-- **THEN** the cue-blind floor SHALL be the negative variance of the targets and the optimum the
-  negative exploration variance, both derived from the task's own parameters
+- **THEN** the cue-blind floor SHALL be the negative target variance less the exploration variance, and the optimum the negative exploration variance, both derived from the task's own parameters
+
+#### Scenario: Each trial's eligibility is its own
+
+- **WHEN** a trial begins
+- **THEN** the topology's traces SHALL have been reset since the previous trial
 
 #### Scenario: The answer is reachable only through reward
 
@@ -34,8 +36,7 @@ observation, so that the association is discoverable only from reward.
 
 ### Requirement: The control is bounded by a reference arm and a floor arm
 
-The control SHALL run three arms: the modulated three-factor rule under test, the **unmodulated**
-rule as a floor, and an **analytic reference** that descends the task's exact gradient through the
+The control SHALL run the rule at the panels' pinned recipe and topology arrangement — the hidden layer plastic behind a frozen readout — with a declared sensitivity grid on the plasticity rate under which any rate passing counts as a pass. It SHALL run three arms: the modulated three-factor rule under test, the **unmodulated** rule as a floor, and an **analytic reference** that descends the task's exact gradient through the
 same topology. The reference arm establishes that the task is learnable in this setup and that the
 topology can express the answer; the unmodulated arm establishes that the task's answer is not
 available without reward.
@@ -62,7 +63,7 @@ SHALL NOT be reported as a negative result about the rule.
 ### Requirement: The control reports the alignment between its update and the gradient
 
 The control SHALL report, per run, the effective modulator, the eligibility magnitude, and the
-**cosine between the weight update the rule applies and the analytic gradient of the same step**,
+**cosine between the rule's weight update accumulated over a block of trials and the analytic gradient summed over the same block**,
 and SHALL retain them whatever the outcome. The alignment distinguishes a rule that learns slowly
 from one whose updates are unrelated to reward, which a pass/fail bar alone cannot.
 

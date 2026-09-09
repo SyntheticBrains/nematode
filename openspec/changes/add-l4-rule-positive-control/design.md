@@ -19,25 +19,28 @@ A one-step continuous contextual association, with the smallest structure that r
 Hebbian learning is supposed to solve:
 
 - A cue `c` is drawn uniformly from `K` one-hot alternatives (`K = 4`).
-- The policy maps the cue to a scalar action `a` through the topology's actor, with exploration
-  noise added at the action, as the plastic arms do.
+- The policy maps the cue to a scalar action `a = μ(c) + ε`, `ε ~ N(0, σ²)`: the topology's actor gives the mean and Gaussian noise is added at the action. The action is **unsquashed**. The brain's tanh-squashed Gaussian head lives in the brain, not in the topology, and is deliberately not under test — leaving it out is what keeps the floor and the optimum in closed form.
 - Each cue has a target `t(c)`, fixed at construction and spread across the action range.
 - Reward is `r = −(a − t(c))²`, so the optimum is `a = t(c)` and reward is bounded above by 0.
 
 Two floors are computable in closed form rather than measured, which is what makes this a control:
 
-- **Cue-blind floor.** A policy emitting a constant `a₀` regardless of cue earns at best the
-  variance of the targets, `−Var[t]`, achieved at `a₀ = E[t]`. No cue-insensitive policy beats it.
-- **Optimum.** A cue-sensitive policy earns `−σ²` where `σ` is the exploration noise, since the
-  action is sampled.
+- **Cue-blind floor.** A policy emitting a constant mean `a₀` regardless of cue earns at best `−Var[t] − σ²`, achieved at `a₀ = E[t]`; the exploration noise costs every policy `σ²`, so it appears on both sides. No cue-insensitive policy beats it.
+- **Optimum.** A cue-sensitive policy with `μ(c) = t(c)` earns `−σ²`. The gap between floor and optimum is therefore exactly `Var[t]`, and the pass bar is anchored on it.
 
 The gap between them is the whole signal, and it exists only if the learner uses the cue — which
 it can only discover from reward, because the targets are not in the observation.
 
-**Why this task and not a bandit.** A discrete bandit would need a different action head from the
-one the panels run; keeping the continuous head means the control tests the same code path the
-connectome arms use, including the squashed action mean and the noise the plastic arms explore
-with.
+**Why this task and not a bandit.** A discrete bandit would need a different action head from the one the panels run. Keeping a continuous action keeps the rule's code path — the seam, the trace accumulation in the topology's forward, the modulator, the scaling switches — identical to the connectome arms'. What is *not* shared is the brain's action head, which the topology does not contain; the harness adds Gaussian noise to the raw mean instead, at the plastic arms' `σ` (the `log_std −1.0` every panel arm is frozen at).
+
+## Each trial is an episode
+
+Trials are independent, but `MLPTopology` decays its trace across forward calls, so without a
+reset the eligibility gating trial *n*'s reward would carry trial *n−1*'s cue — the horizon
+confound this control exists to remove, reintroduced by accident. The harness calls
+`reset_traces()` before every trial, exactly as the panels reset traces per episode. With a
+one-step trial the eligibility is then that step's `pre × post` and nothing else, which is also
+what makes the gradient-alignment measurement below well defined.
 
 ## The three arms
 
@@ -52,13 +55,31 @@ it fails, the control is **void** — the task, the topology or the optimiser is
 three-factor arm's result carries no information. That outcome is registered here so a void control
 cannot be reported as a negative.
 
-The `hebbian` arm is the mirror check: unmodulated learning solving a reward-only task would mean
-the task leaks its answer through the observation statistics, which would also void the control.
+The `hebbian` arm is the mirror check: unmodulated learning solving a reward-only task would mean the task leaks its answer through the observation statistics, which would also void the control. The bar — seven of eight seeds and halfway to the optimum — is not reachable by chance, so a void on this condition is a real leak and not noise.
+
+## The instrument, pinned
+
+The rule under test is the panels' rule at the panels' pins, because that is the instrument every
+registered result used: `plasticity_rate 1e-3`, both scaling switches on (modulator and trace
+normalisation), homeostasis on, `weight_decay` and `weight_bound` at the panels' values, and
+exploration at `log_std −1.0`. A control run at some other setting would say nothing about the
+rule the panels ran.
+
+One declared sensitivity grid, on the rate alone: `{1e-4, 1e-3, 1e-2}`, run as three sub-arms of
+the three-factor arm. **Any rate passing counts as a pass**, because the claim under test is that
+the rule can learn at all, and a fail must not be a rate artefact. The pinned rate is reported as
+the primary and the others beside it.
+
+The topology is `Linear(4, 8) → tanh → Linear(8, 1)` with the **hidden layer plastic and the
+readout frozen** — the panels' arrangement (`plastic_layers: hidden`), and the one most
+favourable to the rule, since Logbook 040 found a plastic output layer collapses on its own
+output. With one-hot cues the hidden layer alone can express `μ(c) = t(c)` for all four cues (32
+free weights against four constraints), which the analytic arm demonstrates. The all-plastic
+variant is a named follow-up, not an arm of the control.
 
 ## The pass rule, fixed before any run
 
-Over `n = 8` seeds, at a budget of 20,000 trials (a scale at which the analytic arm converges in
-pilot-free closed form, so no pilot is needed):
+Over `n = 8` seeds, at a budget of 20,000 trials — chosen so the analytic arm converges with margin at a conservative step size, verified by its own test rather than a pilot:
 
 - **Pass** — the three-factor arm's mean final reward beats the cue-blind floor on at least 7 of 8
   seeds, and its mean is at least halfway from that floor to the optimum.
@@ -76,8 +97,7 @@ get one:
 
 - the **modulator** and its scale, which say whether the third factor carries reward information;
 - the **eligibility magnitude**, which says whether there is a trace to gate;
-- the **gradient alignment** — the cosine between the update the rule applies and the analytic
-  gradient of the same step. This is the quantity that separates "learns slowly" from "moves in a
+- the **gradient alignment** — the cosine between the rule's update **accumulated over a block of 100 trials** and the analytic gradient summed over the same block. A single-step cosine of a stochastic estimator is noisy by nature and would read near zero even for a correct rule; over a block a correct estimator's alignment is clearly positive. This is the quantity that separates "learns slowly" from "moves in a
   direction unrelated to reward", and it is the direct measurement of the theoretical concern the
   reframing named: with a Hebbian eligibility and noise only at the action, an internal synapse's
   update need not correlate with the policy gradient at all.
