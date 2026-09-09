@@ -186,6 +186,20 @@ class BrainHistoryData(BaseModel):
             "not selected)"
         ),
     )
+    plasticity_instructed_fraction: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Share of plastic synapses the instructive pathway reaches (NaN when the third "
+            "factor is broadcast rather than routed)"
+        ),
+    )
+    plasticity_instructed_share: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Share of the Hebbian term's magnitude carried by instructed synapses; the whole "
+            "when the third factor is broadcast"
+        ),
+    )
     plasticity_decorrelation_share: list[float] = Field(
         default_factory=list,
         description=(

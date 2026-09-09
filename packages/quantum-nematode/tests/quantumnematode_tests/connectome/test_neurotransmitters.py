@@ -5,8 +5,12 @@ from __future__ import annotations
 import hashlib
 
 import pytest
+from quantumnematode.connectome import neurotransmitters as nt
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
-from quantumnematode.connectome.neurons import NEURON_CLASSIFICATION
+from quantumnematode.connectome.neurons import (
+    NEURON_CLASSIFICATION,
+    NEURON_CO_TRANSMITTERS,
+)
 from quantumnematode.connectome.neurotransmitters import (
     ATLAS_NAME_MAP,
     ATLAS_PATH,
@@ -109,3 +113,87 @@ class TestDerivedSigns:
         assert len(grounded) == _EXPECTED_GROUNDED
         assert sum(1 for s in grounded if sign_for(atlas[s.pre]) == 1) == _EXPECTED_EXCITATORY
         assert sum(1 for s in grounded if sign_for(atlas[s.pre]) == -1) == _EXPECTED_INHIBITORY
+
+
+class TestCoTransmitterIdentities:
+    """The atlas writes identities across three columns; the first alone hides co-transmitters."""
+
+    def test_the_known_co_transmitters_carry_both_identities(self) -> None:
+        identities = nt.read_atlas_identities()
+        assert identities["ADFL"] == ("ACh", "5-HT")
+        assert identities["HSNL"] == ("ACh", "5-HT")
+        assert identities["RIML"] == ("Glu", "tyramine")
+        assert identities["RICL"] == ("octopamine", "Glu")
+
+    def test_uptake_only_neurons_carry_no_amine(self) -> None:
+        identities = nt.read_atlas_identities()
+        # AIM and RIH are annotated "5-HT (uptake)": they recover the amine without making it.
+        assert identities["AIML"] == ("Glu",)
+        assert identities["RIH"] == ("ACh",)
+
+    def test_synthesis_with_uptake_is_release(self) -> None:
+        # ADF's "5-HT (synthesis + uptake)" is a releasing neuron, unlike a bare "(uptake)".
+        assert nt.release_identity("5-HT (synthesis + uptake)") == "5-HT"
+        assert nt.release_identity("5-HT (uptake)") is None
+
+    def test_the_atlas_own_hedges_yield_no_release_identity(self) -> None:
+        identities = nt.read_atlas_identities()
+        for name in ("I5", "MI", "VC4", "VC5"):
+            assert all(value not in nt.AMINERGIC for value in identities[name]), name
+        assert identities["PVWL"] == ()
+        assert nt.release_identity("bas-1-depen unknown monoamine?") is None
+
+    def test_the_aminergic_set_is_the_registered_eighteen(self) -> None:
+        assert nt.aminergic_neurons(nt.read_atlas_identities()) == {
+            "ADEL",
+            "ADER",
+            "CEPDL",
+            "CEPDR",
+            "CEPVL",
+            "CEPVR",
+            "PDEL",
+            "PDER",
+            "NSML",
+            "NSMR",
+            "ADFL",
+            "ADFR",
+            "HSNL",
+            "HSNR",
+            "RICL",
+            "RICR",
+            "RIML",
+            "RIMR",
+        }
+
+    def test_the_committed_co_transmitter_table_matches_the_atlas(self) -> None:
+        identities = nt.read_atlas_identities()
+        expected = {name: rest[1:] for name, rest in identities.items() if len(rest) > 1}
+        assert expected == NEURON_CO_TRANSMITTERS
+
+    def test_sign_grounding_is_unchanged_by_the_extra_columns(self) -> None:
+        # The primary identity is what signs come from, and it is the first column's.
+        primary = nt.read_atlas_transmitters()
+        identities = nt.read_atlas_identities()
+        for name, carried in identities.items():
+            assert primary[name] == (carried[0] if carried else None)
+        for name in ("ADFL", "RIML", "SMDDL"):
+            assert nt.sign_for(primary[name]) == nt.sign_for(NEURON_CLASSIFICATION[name][1])
+
+
+class TestTheInstructivePathway:
+    def test_the_reach_is_the_registered_one(self) -> None:
+        connectome = load_cook_2019_hermaphrodite()
+        instructed = nt.instructed_neurons(connectome)
+        assert len(instructed) == 169
+        synapses = connectome.chemical_synapses
+        reached = sum(1 for synapse in synapses if synapse.post in instructed)
+        assert reached == 2636
+        assert reached / len(synapses) == pytest.approx(0.711, abs=0.001)
+
+    def test_a_rewired_connectome_derives_its_own_pathway(self) -> None:
+        import numpy as np
+        from quantumnematode.connectome.rewiring import rewire_degree_preserving
+
+        connectome = load_cook_2019_hermaphrodite()
+        rewired = rewire_degree_preserving(connectome, np.random.default_rng(7))
+        assert nt.instructed_neurons(rewired) != nt.instructed_neurons(connectome)

@@ -157,6 +157,13 @@ class MLPPPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         rule -- which, as the matched-rule yardstick, is exactly the comparison
         it would corrupt.
         """
+        if self.third_factor == "pathway":
+            msg = (
+                "third_factor='pathway' is not available on this substrate: it routes the "
+                "modulator through the aminergic wiring, and a dense layer has no neurons with "
+                "transmitter identities to route from."
+            )
+            raise ValueError(msg)
         if self.plasticity_decorrelation == "anti_hebbian_inhibitory":
             msg = (
                 "plasticity_decorrelation='anti_hebbian_inhibitory' is not available on this "

@@ -352,6 +352,42 @@ NEURON_CLASSIFICATION: dict[str, tuple[CellClass, str | None]] = {
     "VD9": ("motor", "GABA"),
 }
 
+NEURON_CO_TRANSMITTERS: dict[str, tuple[str, ...]] = {
+    "ADFL": ("5-HT",),
+    "ADFR": ("5-HT",),
+    "AFDL": ("ACh",),
+    "AFDR": ("ACh",),
+    "DVA": ("Glu",),
+    "HSNL": ("5-HT",),
+    "HSNR": ("5-HT",),
+    "M5": ("Glu",),
+    "PDEL": ("Glu",),
+    "PDER": ("Glu",),
+    "PVNL": ("Glu",),
+    "PVNR": ("Glu",),
+    "RICL": ("Glu",),
+    "RICR": ("Glu",),
+    "RIML": ("tyramine",),
+    "RIMR": ("tyramine",),
+    "SMDDL": ("GABA",),
+    "SMDDR": ("GABA",),
+    "SMDVL": ("GABA",),
+    "SMDVR": ("GABA",),
+}
+"""Release identities beyond the primary one, from the atlas's co-transmitter columns.
+
+``NEURON_CLASSIFICATION`` above carries each neuron's primary identity, which is what synapse
+signs are derived from. The atlas records further release identities for 20 neurons in two
+more columns, and they are what identify the modulatory sources: ADF and HSN release serotonin
+beside acetylcholine, RIM tyramine beside glutamate, RIC glutamate beside octopamine. Generated
+from the vendored atlas by ``scripts/generate_neuron_transmitters.py`` and checked against it by
+test; nothing at run time reads the spreadsheet.
+
+Note that a neuron may carry identities of opposite sign (SMDD and SMDV are cholinergic and
+GABAergic). Sign grounding reads the primary identity only, so this table does not change any
+synapse's sign.
+"""
+
 CANONICAL_NAME_ALIASES: dict[str, str] = {
     # Cross-dataset name normalisation. Map non-canonical variants to the
     # canonical form used by NEURON_CLASSIFICATION above.
