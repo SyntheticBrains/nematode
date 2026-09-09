@@ -26,7 +26,11 @@ from quantumnematode.brain.arch.connectome_ppo import (
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrainConfig
 from quantumnematode.brain.modules import ModuleName
-from quantumnematode.learning_rules import DecorrelationOptions, ThreeFactorRule
+from quantumnematode.learning_rules import (
+    DecorrelationOptions,
+    ScalingOptions,
+    ThreeFactorRule,
+)
 from quantumnematode.learning_rules.three_factor import (
     DECORRELATION_SHARE_KEY,
     ThreeFactorBatch,
@@ -149,7 +153,13 @@ class TestConfigurationRefusals:
 
     @pytest.mark.parametrize(
         "options",
-        [{"mechanism": "nonsense"}, {"mechanism": "oja"}, {"oja_coefficient": -1.0}],
+        [
+            {"mechanism": "nonsense"},
+            {"mechanism": "oja"},
+            {"oja_coefficient": -1.0},
+            {"mechanism": "oja", "oja_coefficient": float("nan")},
+            {"mechanism": "oja", "oja_coefficient": float("inf")},
+        ],
     )
     def test_direct_construction_is_held_to_the_same_bounds(self, options: dict) -> None:
         with pytest.raises(ValueError, match=r"."):
@@ -316,6 +326,60 @@ class TestOja:
             not torch.equal(w.detach(), b)
             for w, b in zip(topo.plastic_weights, before, strict=True)
         )
+
+
+class TestTheShareIsMeasuredOnTheEffectiveUpdate:
+    def test_the_anti_hebbian_share_is_the_inhibitory_weight_of_the_hebbian_term(self) -> None:
+        topo = _topology(synapse_signs="atlas")
+        rule = _rule(
+            topo,
+            synapse_signs=_signs_of(topo),
+            enforce_signs=False,
+            decorrelation=DecorrelationOptions(mechanism="anti_hebbian_inhibitory"),
+        )
+        trace = topo.eligibility_traces[0].detach().clone()
+        signs = cast("torch.Tensor", topo.chem_sign)
+        edges = _edges(topo)
+        share = _step(rule, 2.0).extra[DECORRELATION_SHARE_KEY]
+        # Per-step scalars cancel in this ratio, so it is the inhibitory subset's weight
+        # in the trace magnitude -- but it must be computed from the term, not the raw trace.
+        expected = float(trace.abs()[(signs < 0) & edges].sum()) / float(trace.abs()[edges].sum())
+        assert share == pytest.approx(expected, rel=1e-5)
+
+    def test_the_oja_share_compares_the_two_terms_in_the_same_units(self) -> None:
+        coefficient = 0.5
+        topo = _topology()
+        rule = _rule(
+            topo,
+            scaling=ScalingOptions(normalise_trace=True, scale_rate=1.0),
+            decorrelation=DecorrelationOptions(mechanism="oja", oja_coefficient=coefficient),
+        )
+        trace = topo.eligibility_traces[0].detach().clone()
+        weight = topo.plastic_weights[0].detach().clone()
+        post = topo.plastic_post_activities[0].detach().clone().reshape(1, -1)
+        edges = _edges(topo)
+        report = _step(rule, 2.0)
+        modulator = report.extra["plasticity_modulator"]
+        divisor = report.extra["plasticity_trace_scale"]
+        hebbian = float((_ETA * modulator * trace).abs()[edges].sum()) / divisor
+        oja = float((_ETA * coefficient * post.square() * weight.abs())[edges].sum())
+        assert report.extra[DECORRELATION_SHARE_KEY] == pytest.approx(
+            oja / (hebbian + oja),
+            rel=1e-5,
+        )
+
+    def test_a_step_with_no_effective_modulation_reports_no_hebbian_share(self) -> None:
+        topo = _topology(synapse_signs="atlas")
+        rule = _rule(
+            topo,
+            synapse_signs=_signs_of(topo),
+            enforce_signs=False,
+            modulated=True,
+            decorrelation=DecorrelationOptions(mechanism="anti_hebbian_inhibitory"),
+        )
+        # A zero prediction error makes the whole Hebbian term zero, so there is no
+        # magnitude to take a share of.
+        assert _step(rule, 0.0).extra[DECORRELATION_SHARE_KEY] == 0.0
 
 
 class TestTheSeam:

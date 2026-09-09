@@ -195,6 +195,12 @@ class DecorrelationOptions:
         if self.mechanism not in {"none", "anti_hebbian_inhibitory", "oja"}:
             msg = f"unknown decorrelation mechanism {self.mechanism!r}"
             raise ValueError(msg)
+        if not math.isfinite(self.oja_coefficient):
+            # Checked before the comparisons below: NaN fails every ordering test, so a
+            # NaN coefficient would pass both of them and then poison every weight it
+            # touched on the first step.
+            msg = f"oja_coefficient must be finite, got {self.oja_coefficient}"
+            raise ValueError(msg)
         if self.oja_coefficient < 0.0:
             msg = f"oja_coefficient must be non-negative, got {self.oja_coefficient}"
             raise ValueError(msg)
@@ -606,7 +612,14 @@ class ThreeFactorRule:
                 masks,
                 multiplier,
             )
-            decorrelation_share = self._decorrelation_share(weights, traces, masks, rate)
+            decorrelation_share = self._decorrelation_share(
+                weights,
+                traces,
+                masks,
+                modulator,
+                rate,
+                divisors,
+            )
 
             if not self.freeze_updates:
                 for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
@@ -793,40 +806,55 @@ class ThreeFactorRule:
             )
         return multiplier, math.nan, math.nan
 
-    def _decorrelation_share(
+    def _decorrelation_share(  # noqa: PLR0913 — the factors the update itself is built from
         self,
         weights: list[torch.Tensor],
         traces: list[torch.Tensor],
         masks: list[torch.Tensor],
+        modulator: float,
         rate: float,
+        divisors: list[float] | None,
     ) -> float:
         """Share of the update's absolute magnitude the decorrelating term accounts for.
 
+        Measured on the components the update is actually built from — the same
+        rate, modulator, rigidity divisor and trace scale ``_proposed_update``
+        applies — because a ratio of raw traces to a scaled Oja term compares
+        quantities in different units and would misreport how much of the step
+        each accounts for.
+
         Under the anti-Hebbian variant the magnitude is unchanged by construction,
-        so this is the share of it that was *redirected* — the negated subset's
-        weight in the total. Under the Oja term it is that term's own contribution.
-        Zero when no term is selected, so an arm that improved by decorrelating and
-        one that improved by some other route are told apart.
+        so this is the share of it that was *redirected*: the negated subset's
+        weight in the Hebbian term's total. Under the Oja term it is that term's
+        own contribution to the two together. Zero when no term is selected, and
+        zero when the step carries no effective modulation at all.
         """
         mechanism = self.decorrelation.mechanism
         if mechanism == "none":
             return 0.0
-        total = 0.0
+        hebbian_total = 0.0
         part = 0.0
         for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
             edges = mask.to(torch.bool)
+            hebbian_rate = (
+                rate / (1.0 + self.consolidation.rigidity_strength * self._rigidity[index])
+                if self._rigidity
+                else rate
+            )
+            hebbian = (hebbian_rate * modulator * trace).abs()
+            if divisors is not None:
+                hebbian = hebbian / divisors[index]
+            hebbian_total += float(hebbian[edges].sum().item())
             if mechanism == "anti_hebbian_inhibitory":
-                magnitude = trace.abs()
-                flipped = magnitude * (self._hebbian_signs[index] < 0)
+                part += float(hebbian[(self._hebbian_signs[index] < 0) & edges].sum().item())
             else:
-                magnitude = trace.abs()
-                post = self._post_activity(index)
-                flipped = (
-                    self.decorrelation.oja_coefficient * post.square() * w.detach().abs()
-                ) * (rate / self.plasticity_rate if self.plasticity_rate else 1.0)
-            total += float(magnitude[edges].sum().item())
-            part += float(flipped[edges].sum().item())
-        denominator = total + (part if mechanism == "oja" else 0.0)
+                oja = (
+                    (rate * self.decorrelation.oja_coefficient)
+                    * self._post_activity(index).square()
+                    * w.detach().abs()
+                )
+                part += float(oja[edges].sum().item())
+        denominator = hebbian_total + (part if mechanism == "oja" else 0.0)
         return part / denominator if denominator > 0.0 else 0.0
 
     def _post_activity(self, index: int) -> torch.Tensor:

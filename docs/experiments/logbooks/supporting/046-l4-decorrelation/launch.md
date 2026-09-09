@@ -91,5 +91,8 @@ unconfirmed under both variants (D3 +2.58, D4 +2.02) and `full_recovery` is fals
 The decorrelation share separates the two failures and is why it was registered: the anti-Hebbian
 arm's 0.057 is exactly the grounded inhibitory fraction of the substrate (214 of 3,709 synapses),
 so the term redirected every synapse it could and changed the outcome by −0.9 points; the Oja
-arm's 0.0026 says its term contributed a quarter of a percent of the update, so that arm never
-tested the idea. Full reading in `details.md`.
+arm's 0.022 says its term contributed a little over two percent of the update at the pinned
+`γ = 0.1`, a weak test of the idea — the grid's top value of `1.0` would have contributed about
+18%, and the pilot chose against it on two seeds. Full reading in `details.md`. The share figures
+are the corrected ones: the first computation compared quantities in different units and the 64
+runs were repeated under corrected telemetry, reproducing every per-seed value exactly.

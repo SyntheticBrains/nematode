@@ -555,9 +555,10 @@ SHALL keep their order, with the clamp last.
 
 - **GIVEN** `anti_hebbian_inhibitory` selected on a substrate with grounded signs
 - **WHEN** a step is applied
-- **THEN** the update at each grounded inhibitory synapse SHALL equal the negation of the update
-  the rule would have applied there with the selector off
-- **AND** the update at grounded excitatory and ungrounded synapses SHALL be unchanged
+- **THEN** the **Hebbian term** at each grounded inhibitory synapse SHALL equal the negation of the
+  Hebbian term the rule would have applied there with the selector off, leaving the weight decay,
+  the Oja term and any consolidation term as they were
+- **AND** the Hebbian term at grounded excitatory and ungrounded synapses SHALL be unchanged
 
 #### Scenario: The variant redirects the update without resizing it
 

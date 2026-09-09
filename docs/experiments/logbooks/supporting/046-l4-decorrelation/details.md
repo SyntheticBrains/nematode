@@ -23,8 +23,8 @@ in which the sign-grounding test's prediction fails.
 |---|---|---|---|---|---|
 | wt_antihebb | 13.1 | 7.4 … 19.0 | 31.5 | no | **0.057** |
 | rn_antihebb | 10.5 | 6.6 … 14.8 | 17.4 | no | 0.058 |
-| wt_oja | 11.4 | 6.7 … 16.6 | 31.5 | no | **0.0026** |
-| rn_oja | 9.3 | 6.0 … 13.0 | 17.4 | no | 0.0026 |
+| wt_oja | 11.4 | 6.7 … 16.6 | 31.5 | no | **0.022** |
+| rn_oja | 9.3 | 6.0 … 13.0 | 17.4 | no | 0.024 |
 
 `full_recovery` is false for every arm; no interval comes near its random-sign target.
 
@@ -39,14 +39,16 @@ The decorrelation share is what separates them, and it is why the annotation was
   at this fidelity*: negating the update on every inhibitory synapse the transmitter atlas can
   identify changes the outcome by −0.9 points. **There is not enough grounded inhibition here to
   build a brake out of.**
-- **The Oja arm did not test its term.** Its share is 0.0026 — the term contributed a quarter of a
-  percent of the update's magnitude at the pinned `γ = 0.1`. The per-seed table shows the
-  consequence directly: on eight of sixteen seeds the arm reproduces the committed grounded
-  Hebbian value **exactly** (7.6, 7.6, 13.2, 1.6, 5.6, 1.2, 2.0, 0.4). Share scales with `γ`, so
-  the declared grid's top value of 1.0 would have reached about 2.6%; **`γ` would need to be
-  roughly 40 for the term to be comparable in magnitude to the Hebbian term**, and the registered
-  grid never approached that. D2's failure is therefore weakly informative: it is a fact about the
-  grid, not about Oja decorrelation.
+- **The Oja arm tested its term weakly, at a setting the pilot chose over a stronger one.** Its
+  share is 0.022 — the term contributed a little over two percent of the update's magnitude at the
+  pinned `γ = 0.1`. The per-seed table shows what that buys: on eight of sixteen seeds the arm
+  reproduces the committed grounded Hebbian value **exactly** (7.6, 7.6, 13.2, 1.6, 5.6, 1.2, 2.0,
+  0.4). Share scales with `γ`, so the declared grid's top value of `1.0` would have contributed
+  about **18%** of the update — a substantial perturbation — and parity with the Hebbian term
+  would come at `γ ≈ 4.5`. The grid therefore *did* contain a setting that would have tested the
+  idea properly; the pilot chose against it, on two seeds, because it scored 19.4 against 22.2.
+  D2's failure is a real result about the term at the pinned strength, and says less about the
+  term at the strength the grid also offered.
 
 ## Per-seed, wild-type
 
@@ -90,8 +92,17 @@ and because a registered statistic matched to it is the standing lesson from Log
 - **The wiring contrast is again unconfirmed** (+2.6 and +2.0, both intervals spanning zero),
   as in every panel since the first.
 - **A negative with a measured cause is worth more than a negative without one.** The share
-  annotation converted "two terms failed" into "one term did all it could and the other was never
-  turned up", and only the first of those is evidence about the hypothesis.
+  annotation converted "two terms failed" into "one term did all it could, and the other was
+  applied at a fiftieth of the Hebbian term's strength", and the two carry different weight as
+  evidence about the hypothesis.
+- **The share figures reported here are the corrected ones.** The first computation of this
+  annotation compared raw eligibility traces against a rate-scaled Oja term — quantities in
+  different units — and reported the Oja share as 0.0026. It is now measured on the components the
+  update is actually built from, and the corrected value is 0.022. The anti-Hebbian share is
+  unchanged at 0.057, because the per-step factors appear in that ratio's numerator and
+  denominator alike and cancel; the Oja ratio has no such symmetry, which is why it moved by a
+  factor of eight. All 64 runs were re-run under the corrected telemetry and **every per-seed
+  value is identical**, confirming the annotation never entered the update.
 
 ## Campaign facts
 
@@ -100,3 +111,5 @@ and because a registered statistic matched to it is the standing lesson from Log
 - Test: 64 runs (4 arms × seeds 1–16 × 1000 episodes), 42 minutes, all exit 0, no tracebacks.
 - Extensions: none needed; every run converged at the budget.
 - The anti-Hebbian variant has no hyperparameter, so it was neither piloted nor tuned.
+- Re-run 2026-09-09 under corrected share telemetry: 64 runs, all exit 0, 42 minutes, every
+  per-seed value identical to the first pass.
