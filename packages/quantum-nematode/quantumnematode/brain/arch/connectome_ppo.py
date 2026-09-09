@@ -1340,6 +1340,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         else:
             from quantumnematode.learning_rules.three_factor import (
                 ConnectomeThreeFactorRule,
+                ConsolidationOptions,
                 ScalingOptions,
             )
 
@@ -1362,6 +1363,16 @@ class ConnectomePPOBrain(ClassicalBrain):
                     normalise_trace=config.plasticity_normalise_trace,
                     scale_rate=config.plasticity_scale_rate,
                     scale_floor=config.plasticity_scale_floor,
+                ),
+                consolidation=ConsolidationOptions(
+                    mechanism=config.plasticity_consolidation,
+                    anchor_rate=config.plasticity_anchor_rate,
+                    anchor_stiffness=config.plasticity_anchor_stiffness,
+                    rigidity_growth=config.plasticity_rigidity_growth,
+                    rigidity_decay=config.plasticity_rigidity_decay,
+                    rigidity_strength=config.plasticity_rigidity_strength,
+                    oracle_reference=config.plasticity_oracle_reference,
+                    oracle_rate=config.plasticity_oracle_rate,
                 ),
                 device=self.device,
             )
@@ -2010,7 +2021,14 @@ class ConnectomePPOBrain(ClassicalBrain):
         self._rule.reset_episode()
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:
-        """No-op."""
+        """Hand the episode's outcome to a rule that consumes one.
+
+        Only the oracle consolidation gate reads it; every other rule and
+        mechanism ignores the flag, and the PPO path has no such hook.
+        """
+        observe = getattr(self._rule, "observe_episode", None)
+        if observe is not None:
+            observe(success=episode_success)
 
     def copy(self) -> ConnectomePPOBrain:
         """ConnectomePPOBrain does not support copying."""

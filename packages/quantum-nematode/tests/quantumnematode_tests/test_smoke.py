@@ -55,9 +55,11 @@ SIMULATION_CONFIGS = [
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen_rewired_null_countinit.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_countinit.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null_countinit.yml",
-    # The warm-started arms (*_clone.yml, *_fullclone.yml) are deliberately absent: each
-    # loads a per-seed clone file a campaign produces, which no checkout carries. The
-    # low-noise PPO arms they derive from are plain configs and run here.
+    # The warm-started arms (*_clone.yml, *_fullclone.yml, and the consolidation variants
+    # derived from them) are deliberately absent: each loads a per-seed clone file a
+    # campaign produces, which no checkout carries. The low-noise PPO arms they derive
+    # from are plain configs and run here, and the consolidation mechanisms themselves are
+    # exercised by the rule's own tests, which need no clone.
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_lowstd.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_rewired_null_lowstd.yml",
     # The atlas-grounded arms. The vendored neurotransmitter atlas lives under `data/**`,
