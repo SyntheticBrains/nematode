@@ -379,11 +379,24 @@ class TestOracleGate:
             atol=1e-7,
         )
 
-    def test_the_default_reference_never_closes_the_gate(self) -> None:
+    def test_the_default_reference_leaves_the_gate_open_below_a_saturated_estimate(self) -> None:
         rule = _rule(_topology(), consolidation=ConsolidationOptions(mechanism="oracle"))
         for _ in range(50):
             rule.observe_episode(success=True)
+        assert rule.success_rate < 1.0
         assert _step(rule, 1.0).extra[RATE_MULTIPLIER_KEY] > 0.0
+
+    def test_a_saturated_estimate_closes_even_the_default_reference(self) -> None:
+        # An unbroken run of successes drives the estimate to exactly the reference, and the
+        # scaling closes there at any reference including 1.0. Reached here in one episode
+        # because the EMA rate is 1.0; at the default rate the estimate only approaches it.
+        rule = _rule(
+            _topology(),
+            consolidation=ConsolidationOptions(mechanism="oracle", oracle_rate=1.0),
+        )
+        rule.observe_episode(success=True)
+        assert rule.success_rate == 1.0
+        assert _step(rule, 1.0).extra[RATE_MULTIPLIER_KEY] == 0.0
 
     def test_no_other_mechanism_reads_the_flag(self) -> None:
         for options in (

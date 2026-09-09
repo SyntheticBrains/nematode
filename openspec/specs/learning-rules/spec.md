@@ -408,7 +408,7 @@ else.
 With `oracle` selected, the rule SHALL maintain a trailing episode-success rate as an exponential
 moving average of an episode-success flag supplied by the brain at the end of each episode, and
 SHALL scale the plasticity rate by `clamp(1 − s / s_ref, 0, 1)` for a configured reference rate
-`s_ref`. The reference SHALL default to `1.0`, at which the gate never closes, so that a run selecting
+`s_ref`. The reference SHALL default to `1.0`, at which the gate stays open for every trailing estimate below `1.0` — closing only on an estimate saturated at `1.0`, which the scaling already implies — so that a run selecting
 this mechanism pins its reference explicitly. This mechanism consumes a quantity that is a
 property of the task's scoring rather than of the reward stream the rule observes; its
 implementation SHALL say so, and it SHALL NOT be offered as a default or presented as a
@@ -467,7 +467,7 @@ the write.
 - **WHEN** the trailing episode-success rate reaches or exceeds `s_ref`
 - **THEN** the effective plasticity rate SHALL be zero and no weight SHALL change
 - **AND** when the trailing rate is far below `s_ref` the rate SHALL be the configured rate
-- **AND** with the reference at its default of `1.0` the rate SHALL never reach zero
+- **AND** with the reference at its default of `1.0` the rate SHALL NOT reach zero while the trailing estimate is below `1.0`
 
 #### Scenario: Consolidation is applied before the bound and after the sign
 

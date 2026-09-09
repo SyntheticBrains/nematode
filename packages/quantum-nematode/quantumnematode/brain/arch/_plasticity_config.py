@@ -117,8 +117,10 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_rigidity_growth: float = Field(default=0.0, ge=0.0)
     plasticity_rigidity_decay: float = Field(default=0.0, ge=0.0, lt=1.0)
     plasticity_rigidity_strength: float = Field(default=0.0, ge=0.0)
-    # 1.0 never closes the gate: a run that selects the oracle pins its own
-    # reference, rather than inheriting one panel's comparator from a default.
+    # 1.0 leaves the gate open at every trailing estimate below it, so a run that
+    # selects the oracle pins its own reference rather than inheriting one panel's
+    # comparator from a default. An estimate saturated at 1.0 does close it, which
+    # is what an unbroken run of successes should mean at any reference.
     plasticity_oracle_reference: float = Field(default=1.0, gt=0.0, le=1.0)
     plasticity_oracle_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
