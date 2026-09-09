@@ -62,11 +62,11 @@
 - [x] 7.3 Tests for the harness: each verdict branch including `no_recovery`; the comparator is the
   committed table; a missing run is reported and never imputed; the annotations cannot change the
   verdict.
-- [ ] 7.4 Run the declared pilot for the Oja coefficient (seeds 1–2, `γ ∈ {0.01, 0.1, 1.0}`) and
+- [x] 7.4 Run the declared pilot for the Oja coefficient (seeds 1–2, `γ ∈ {0.01, 0.1, 1.0}`) and
   write its grid, criterion and pin into the launch record; the anti-Hebbian variant has no
   hyperparameter and records that instead.
-- [ ] 7.5 Commit the launch record, then run the four arms (seeds 1–16, 1000 episodes).
-- [ ] 7.6 Records under `docs/experiments/logbooks/supporting/046-l4-decorrelation/`: `launch.md`,
+- [x] 7.5 Commit the launch record, then run the four arms (seeds 1–16, 1000 episodes).
+- [x] 7.6 Records under `docs/experiments/logbooks/supporting/046-l4-decorrelation/`: `launch.md`,
   `panel.json`, `per-seed.csv`, `curves.csv`, `_manifest.txt`, `details.md`.
 
 ## 8. Documentation
@@ -74,4 +74,4 @@
 - [x] 8.1 `docs/architectures.md`: the selector, the two variants, and that the anti-Hebbian one
   requires grounded signs.
 - [x] 8.2 `CHANGELOG.md`.
-- [ ] 8.3 Tracker and roadmap updated with the verdict at close-out.
+- [x] 8.3 Tracker and roadmap updated with the verdict at close-out.

@@ -84,4 +84,12 @@ is a pin, not a signal.
 
 ## Test results
 
-*(written here after the test)*
+Run 2026-09-09, 64 runs, all exit 0, 42 minutes on 16 workers, no extensions needed.
+**Verdict `no_recovery`**: D1 −0.90 (q = .487), D2 −2.60 (q = .487); the wiring contrast is
+unconfirmed under both variants (D3 +2.58, D4 +2.02) and `full_recovery` is false everywhere.
+
+The decorrelation share separates the two failures and is why it was registered: the anti-Hebbian
+arm's 0.057 is exactly the grounded inhibitory fraction of the substrate (214 of 3,709 synapses),
+so the term redirected every synapse it could and changed the outcome by −0.9 points; the Oja
+arm's 0.0026 says its term contributed a quarter of a percent of the update, so that arm never
+tested the idea. Full reading in `details.md`.
