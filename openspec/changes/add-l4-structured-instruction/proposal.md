@@ -10,15 +10,18 @@ instructive input (Perks et al., *Nature*, 2026-09-02) — is that credit assign
 the circuit, not a number in the air. This change routes the third factor through the wiring that
 carries it and tests whether that matters.
 
-The atlas makes the routing derivable for the first time. It identifies **12 aminergic neurons**
-— 8 dopaminergic (`ADEL/R`, `CEPDL/R`, `CEPVL/R`, `PDEL/R`), 2 serotonergic (`NSML/R`) and 2
-octopaminergic (`RICL/R`) — and Cook 2019 says who they synapse onto: **123 of 302 neurons**,
-covering **2,024 of 3,709 chemical synapses (54.6%)** when a synapse counts as instructed by its
-post-synaptic neuron. That is the property this test needs and the previous rung lacked. The
+The atlas makes the routing derivable for the first time. Read across all of its identity
+columns — the vendored reader took only the first, which is why the sign-grounding work saw no
+co-transmitters — it identifies **18 aminergic neurons** with a release identity: 8 dopaminergic
+(`ADEL/R`, `CEPDL/R`, `CEPVL/R`, `PDEL/R`), 6 serotonergic (`NSML/R`, `ADFL/R`, `HSNL/R`), 2
+octopaminergic (`RICL/R`) and 2 tyraminergic (`RIML/R`). Cook 2019 says who they synapse onto:
+**169 of 302 neurons**, covering **2,636 of 3,709 chemical synapses (71.1%)** when a
+synapse counts as instructed by its post-synaptic neuron. That is the property this test needs and the previous rung lacked. The
 decorrelation test failed because a transmitter-only atlas grounds just 5.8% of synapses as
 inhibitory — too few to build a brake from. Here the same metadata yields a subset that is
-selective without being negligible, so a routed third factor is a real intervention rather than
-either a no-op or a relabelling of the whole substrate.
+selective without being negligible — though at seven synapses in ten the margin on the
+"not the whole substrate" side is thinner than it first appeared, and the record says so — so a
+routed third factor is a real intervention rather than either a no-op or a relabelling.
 
 Ratified with Chris 2026-09-09: four arms at n = 16, with the global-scalar comparator **re-run
 concurrently** rather than read from panel 1's committed table, because that arm has only 8
@@ -26,6 +29,11 @@ committed seeds and four panels have now found n = 8 too weak for this bimodal o
 
 ## What Changes
 
+- **Co-transmitter identities from the atlas**: the reader captures every release identity a
+  neuron carries rather than the first column alone, and the classification table records
+  them, so ADF and HSN are serotonergic and RIM tyraminergic as the atlas says. Uptake-only
+  annotations remain excluded; five entries the atlas itself qualifies ("alternative
+  synthesis/uptake mechanism", a precursor, a male-only note) are excluded by a stated rule.
 - **A derived instructive pathway** on the connectome substrate: the set of neurons receiving
   chemical input from an aminergic source, computed from the vendored atlas and the Cook 2019
   wiring, exposed as a per-synapse boolean mask and reported as a fraction so a build that routes
@@ -56,7 +64,8 @@ third factor and its telemetry), `l4-plasticity-panel` (the registered test).
 ## Impact
 
 - New: the pathway derivation and its mask, config fields, four arm configs, an analysis harness,
-  the supporting directory. Edited: `connectome/` loader surface,
+  the supporting directory. Edited: `connectome/neurotransmitters.py` and the classification
+  table (secondary identities), `connectome/` loader surface,
   `brain/arch/_plasticity_config.py`, `brain/arch/connectome_ppo.py`,
   `learning_rules/three_factor.py`, `docs/architectures.md`, `CHANGELOG.md`.
 - Defaults are byte-identical: `third_factor: global` takes today's code path and derives no mask.

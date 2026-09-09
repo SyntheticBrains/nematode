@@ -14,9 +14,11 @@ weight decay, any decorrelating term, any consolidation term, the mask, Dale's-l
 homeostatic rescale and the magnitude clamp SHALL keep their order and meaning, with the clamp
 last.
 
-Selecting `pathway` SHALL be rejected where the substrate exposes no instructive pathway. Under the
-unmodulated mode the modulator is already `1.0` everywhere, so routing SHALL be a no-op there, and
-the rule SHALL NOT present the combination as a distinct arm.
+Selecting `pathway` SHALL be rejected where the substrate exposes no instructive pathway, and
+SHALL be rejected with the unmodulated rule, where the modulator is already `1.0` everywhere and
+routing would be a no-op presented as a distinct arm. The rule SHALL receive the pathway as an
+aligned per-tensor list of boolean masks at construction, as it receives synapse signs, and
+SHALL NOT read a substrate's attributes to obtain it.
 
 #### Scenario: The default path is unchanged
 
@@ -32,11 +34,11 @@ the rule SHALL NOT present the combination as a distinct arm.
 - **AND** the update at each uninstructed synapse SHALL equal the update the **unmodulated** rule
   would have applied there
 
-#### Scenario: Routing is a no-op without a modulator
+#### Scenario: Routing the unmodulated rule is refused
 
-- **GIVEN** the unmodulated mode and `pathway` selected
-- **WHEN** a step is applied
-- **THEN** the weight trajectory SHALL equal the unmodulated rule's with routing off
+- **GIVEN** a configuration selecting `pathway` with the unmodulated learning rule
+- **WHEN** the configuration is loaded
+- **THEN** loading SHALL fail with a message saying the combination is the plain Hebbian floor
 
 #### Scenario: Routing without a pathway is refused
 
@@ -49,11 +51,12 @@ the rule SHALL NOT present the combination as a distinct arm.
 The rule SHALL report the **instructed fraction** of the substrate and the share of the update's
 absolute magnitude carried by instructed synapses, measured on the effective update, beside its
 existing plasticity telemetry and recorded by the shared plasticity report. Under `global` the
-share SHALL be reported as the whole. These make "credit reached only the instructed synapses" a
-measurement rather than an assumption, and make a pathway that turned out to cover nearly all or
-nearly none of the substrate visible in the result.
+share SHALL be reported as the whole. The share reports how the step's magnitude split between
+the two sets; confinement of the modulated part to the instructed set is asserted by test, not by
+this quantity. The fraction makes a pathway that turned out to cover nearly all or nearly none of
+the substrate visible in the result.
 
-#### Scenario: The instructed share is measured, not assumed
+#### Scenario: The instructed split is reported per step
 
 - **WHEN** a run under `pathway` is read
 - **THEN** the instructed fraction and the instructed share of the update SHALL be available per

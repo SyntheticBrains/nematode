@@ -21,11 +21,11 @@ neither S1 nor S2 confirms; then `routing_helps_both`, `routing_helps_wild_type_
 `routing_helps_rewired_only`. S3 and S4 SHALL annotate the verdict and never change it. A launch
 record SHALL be committed before any run.
 
-The record SHALL report the substrate's instructed fraction and each arm's mean instructed share of
-the update, and SHALL state that the pathway is a model of aminergic reach by synaptic
-connectivity — a lower bound, since aminergic transmission in this animal is substantially
-extrasynaptic — so that a negative is recorded as refuting this proxy rather than structured
-instruction itself.
+The record SHALL report **each arm's** instructed fraction — the rewired null derives its own
+pathway from its own edges — and each arm's mean instructed share of the update, and SHALL state
+that the pathway is a model of aminergic reach by synaptic connectivity — a lower bound, since
+aminergic transmission in this animal is substantially extrasynaptic — so that a negative is
+recorded as refuting this proxy rather than structured instruction itself.
 
 #### Scenario: Routing changing nothing is a nameable outcome
 
@@ -46,7 +46,7 @@ instruction itself.
 #### Scenario: The proxy's coverage is reported with the result
 
 - **WHEN** the test is written up
-- **THEN** the instructed fraction SHALL be reported
+- **THEN** each arm's instructed fraction SHALL be reported
 - **AND** each arm's mean instructed share of the update SHALL be reported
 
 #### Scenario: The panel stays gated
