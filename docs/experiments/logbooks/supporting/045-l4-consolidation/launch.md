@@ -103,4 +103,8 @@ parameters and predicts, informally, that the anchor arm will not pass.
 
 ## Screen results
 
-*(written here after the screen)*
+Run 2026-09-09, 24 runs, all exit 0, 50 minutes on 16 workers. **No mechanism passes**: anchor
+13.0 (−25.7, 2/8 within hold), rigidity 29.4 (−9.4, 6/8 within hold, cosine 0.74, rate ×0.09),
+oracle 28.9 (−9.8, 4/8 within hold). Full reading in `details.md`; the oracle failed in the way
+this record predicted before the run, its trailing estimate arriving a hundred episodes after the
+policy was gone.

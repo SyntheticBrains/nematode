@@ -74,13 +74,13 @@
   against the clone the run started from.
 - [x] 7.3 Tests for the harness: the hold and improve rules at their boundaries; a missing run is
   reported and never imputed; the comparator values are the committed ones.
-- [ ] 7.4 Run the declared pilot (seeds 1–2 over the grid) and write its grid, criterion and pins
+- [x] 7.4 Run the declared pilot (seeds 1–2 over the grid) and write its grid, criterion and pins
   into the launch record, together with the oracle's declaration: that it consumes the
   environment's episode-success flag, is not a mechanism the animal could host, bounds holding
   only with its reference pinned at the comparator, and runs its first episodes near the full
   rate while the trailing estimate warms up.
-- [ ] 7.5 Commit the launch record, then run the three screens (seeds 1–8, 2000 episodes).
-- [ ] 7.6 Records under `docs/experiments/logbooks/supporting/045-l4-consolidation/`: `launch.md`,
+- [x] 7.5 Commit the launch record, then run the three screens (seeds 1–8, 2000 episodes).
+- [x] 7.6 Records under `docs/experiments/logbooks/supporting/045-l4-consolidation/`: `launch.md`,
   `screen.json`, `per-seed.csv`, `_manifest.txt`, `details.md`.
 
 ## 8. Documentation
@@ -88,4 +88,4 @@
 - [x] 8.1 `docs/architectures.md` and `configs/README.md`: the selector, its parameters and the
   oracle's status as a bound rather than a mechanism.
 - [x] 8.2 `CHANGELOG.md`.
-- [ ] 8.3 Tracker and roadmap updated with the screen's outcome at close-out.
+- [x] 8.3 Tracker and roadmap updated with the screen's outcome at close-out.
