@@ -1,0 +1,70 @@
+# Tasks: a decorrelating term for the local rule
+
+## 1. Configuration
+
+- [ ] 1.1 Add the decorrelation selector (`none|anti_hebbian_inhibitory|oja`) and the Oja
+  coefficient to the shared plasticity mixin, with load-time bounds.
+- [ ] 1.2 Validator: `oja` with a zero coefficient is rejected naming the coefficient;
+  `anti_hebbian_inhibitory` is rejected on a brain whose signs are not grounded.
+- [ ] 1.3 Tests: both rejections; the default config is unchanged field for field.
+
+## 2. Anti-Hebbian inhibitory plasticity
+
+- [ ] 2.1 Negate the Hebbian term where the grounded sign is inhibitory; leave grounded excitatory
+  and ungrounded synapses untouched.
+- [ ] 2.2 Tests: the negation is exact against the same step with the selector off; excitatory and
+  ungrounded entries are untouched; the term's total magnitude is unchanged; nothing is written
+  off the edge set.
+
+## 3. Oja decorrelation
+
+- [ ] 3.1 Apply `− η · γ · y² · w` inside the masked update beside the decay, broadcasting the
+  post-synaptic activity along each weight's post-synaptic axis.
+- [ ] 3.2 The rule reads the post-synaptic activity through the plastic-topology seam, so the MLP
+  yardstick drives the same code path.
+- [ ] 3.3 Tests: the term's sign and magnitude; an inactive unit receives none; a zero weight
+  receives none; the MLP substrate takes the same path.
+
+## 4. Signs without enforcement
+
+- [ ] 4.1 Hand the sign vector to the rule whenever signs are grounded, independent of Dale's law.
+- [ ] 4.2 Tests: a grounded brain's rule holds the signs with enforcement off; an ungrounded
+  brain's does not; enforcement and the anti-Hebbian variant compose.
+
+## 5. Telemetry
+
+- [ ] 5.1 Report the decorrelating term's share of the update's total absolute magnitude; record
+  it in the shared plasticity report.
+- [ ] 5.2 Tests: the share is zero under `none`, positive under each variant, and present in the
+  history record.
+
+## 6. Byte-identity and integration
+
+- [ ] 6.1 Test: with the selector `none`, a fixed-seed run's weight trajectory is bit-identical.
+- [ ] 6.2 Test: the variants compose with consolidation, Dale's law and homeostasis in the
+  registered order, with the clamp last.
+- [ ] 6.3 Smoke-test entries for one decorrelated config.
+
+## 7. The registered test
+
+- [ ] 7.1 Four arm configs: wild-type and rewired-null grounded Hebbian under each variant, each
+  one key block off its committed parent.
+- [ ] 7.2 An analysis harness fixing the four-arm registry, the D1–D4 family, the ordered verdict
+  map, the `full_recovery` and decorrelation-share annotations, and the extension list, reading
+  the sign-grounding test's committed per-seed table as the comparator.
+- [ ] 7.3 Tests for the harness: each verdict branch including `no_recovery`; the comparator is the
+  committed table; a missing run is reported and never imputed; the annotations cannot change the
+  verdict.
+- [ ] 7.4 Run the declared pilot for the Oja coefficient (seeds 1–2, `γ ∈ {0.01, 0.1, 1.0}`) and
+  write its grid, criterion and pin into the launch record; the anti-Hebbian variant has no
+  hyperparameter and records that instead.
+- [ ] 7.5 Commit the launch record, then run the four arms (seeds 1–16, 1000 episodes).
+- [ ] 7.6 Records under `docs/experiments/logbooks/supporting/046-l4-decorrelation/`: `launch.md`,
+  `panel.json`, `per-seed.csv`, `curves.csv`, `_manifest.txt`, `details.md`.
+
+## 8. Documentation
+
+- [ ] 8.1 `docs/architectures.md`: the selector, the two variants, and that the anti-Hebbian one
+  requires grounded signs.
+- [ ] 8.2 `CHANGELOG.md`.
+- [ ] 8.3 Tracker and roadmap updated with the verdict at close-out.
