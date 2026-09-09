@@ -62,9 +62,7 @@ SHALL NOT be reported as a negative result about the rule.
 
 ### Requirement: The control reports the alignment between its update and the gradient
 
-The control SHALL report, per run, the effective modulator, the eligibility magnitude, and the
-**cosine between the rule's weight update accumulated over a block of trials and the analytic gradient summed over the same block**,
-and SHALL retain them whatever the outcome. The alignment distinguishes a rule that learns slowly
+The control SHALL report, **for each arm driven by the rule**, the effective modulator, the eligibility magnitude, and the **cosine between the rule's weight update accumulated over a block of trials and the gradient-descent direction — the negative analytic gradient — summed over the same block**, so that a rule reducing the loss aligns positively. The alignment SHALL be reported as both a mean and a median over runs, since it is a per-run statistic with a long tail. Arms not driven by the rule SHALL report these as not-a-number rather than being required to synthesise rule telemetry. All of it SHALL be retained whatever the outcome. The alignment distinguishes a rule that learns slowly
 from one whose updates are unrelated to reward, which a pass/fail bar alone cannot.
 
 #### Scenario: A failure carries its diagnosis
@@ -72,4 +70,6 @@ from one whose updates are unrelated to reward, which a pass/fail bar alone cann
 - **GIVEN** a control the three-factor arm does not pass
 - **WHEN** the result is recorded
 - **THEN** the modulator, the eligibility magnitude and the gradient alignment SHALL be reported
-  beside it
+  beside it, for every arm the rule drove
+- **AND** the alignment SHALL be positive for a rule that descends the loss and negative for one
+  that ascends it

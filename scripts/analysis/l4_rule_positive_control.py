@@ -84,7 +84,7 @@ def _block_alignment(
     update: list[torch.Tensor],
     gradient: list[torch.Tensor],
 ) -> float | None:
-    """Cosine between a block's accumulated update and that block's summed gradient.
+    """Cosine between a block's accumulated update and its summed gradient-descent direction.
 
     Measured over a block rather than a step because a single-step cosine of a stochastic
     estimator is noisy by nature and would read near zero even for a correct rule. ``None``
@@ -165,6 +165,8 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
             for index, weight in enumerate(topology.plastic_weights):
                 block_update[index] += weight.detach() - before[index]
                 if gradients[index] is not None:
+                    # The gradient-DESCENT direction, so a rule that reduces the loss aligns
+                    # positively. The raw gradient would give a correct rule a cosine of -1.
                     block_gradient[index] += -gradients[index]
         modulators.append(float(report.extra["plasticity_modulator"]))
         traces.append(float(report.extra["plasticity_mean_abs_delta"]))
@@ -238,14 +240,11 @@ def analyse(
         )
     outcome = "void" if void_reason else ("pass" if by_arm["three_factor"]["passes"] else "fail")
 
-    diagnosis = {
-        arm: {
-            key: float(np.mean([r[key] for r in runs if r["arm"] == arm and not np.isnan(r[key])]))
-            if any(r["arm"] == arm and not np.isnan(r[key]) for r in runs)
-            else float("nan")
-            for key in ("modulator", "mean_abs_delta", "alignment")
-        }
-        for arm in ("three_factor", "hebbian")
+    diagnosis = {arm: _diagnose(runs, arm) for arm in ("three_factor", "hebbian")}
+    # Per rate as well as pooled: a rule whose alignment depended on the rate would be a
+    # different finding from one whose updates are unaimed at every rate.
+    diagnosis["three_factor"]["by_rate"] = {
+        str(rate): _diagnose(runs, "three_factor", rate=rate) for rate in RATE_GRID
     }
     return {
         "task": {
@@ -269,6 +268,24 @@ def analyse(
         "outcome": outcome,
         "void_reason": void_reason,
     }
+
+
+def _diagnose(runs: list[dict[str, Any]], arm: str, rate: float | None = None) -> dict[str, Any]:
+    """Summarise one arm's diagnostic series, pooled or at one rate.
+
+    The alignment carries a median as well as a mean: it is a per-run statistic with a long
+    tail (one seed reaching +0.26 while the rest sit near zero), and a mean over eight such
+    runs overstates the typical run. Both are recorded so the record and the prose can quote
+    the same numbers.
+    """
+    selected = [r for r in runs if r["arm"] == arm and (rate is None or r["rate"] == rate)]
+    out: dict[str, Any] = {}
+    for key in ("modulator", "mean_abs_delta", "alignment"):
+        values = [r[key] for r in selected if not np.isnan(r[key])]
+        out[key] = float(np.mean(values)) if values else float("nan")
+        if key == "alignment":
+            out["alignment_median"] = float(np.median(values)) if values else float("nan")
+    return out
 
 
 def _print_control(out: dict[str, Any]) -> None:
@@ -297,7 +314,8 @@ def _print_control(out: dict[str, Any]) -> None:
     diag = out["diagnosis"]["three_factor"]
     print(
         f"\n  diagnosis (three_factor): modulator {diag['modulator']:+.4f}  "
-        f"|dw| {diag['mean_abs_delta']:.2e}  gradient alignment {diag['alignment']:+.4f}",
+        f"|dw| {diag['mean_abs_delta']:.2e}  gradient alignment "
+        f"{diag['alignment']:+.4f} mean / {diag['alignment_median']:+.4f} median",
     )
     print(f"\n  OUTCOME: {out['outcome']}")
     if out["void_reason"]:
@@ -348,7 +366,9 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
     if args.csv:
         write_per_seed_csv(runs, args.csv)
-    return 0
+    # A `fail` is a valid experimental result and exits zero; a `void` means the control itself
+    # did not hold and needs rebuilding, which is an operational failure.
+    return 1 if out["outcome"] == "void" else 0
 
 
 if __name__ == "__main__":

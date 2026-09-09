@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -79,10 +80,13 @@ class TestThePassRule:
         assert not result["passes"]
 
     def test_halfway_is_not_enough_without_the_seeds(self) -> None:
-        halfway = _FLOOR + 0.5 * (_OPTIMUM - _FLOOR)
-        scores = [halfway + 1.0] * 4 + [_FLOOR - 1.0] * 4  # mean clears, seeds do not
+        # Four scores high enough that the MEAN clears the halfway mark, four below the floor:
+        # the seed-count clause alone must reject it. `assess` permits above-optimum scores,
+        # which is what makes the mean clause reachable while half the seeds fail.
+        scores = [2.0] * 4 + [_FLOOR - 1.0] * 4
         result = pc.assess(scores, _FLOOR, _OPTIMUM)
-        assert result["seeds_above_floor"] == 4
+        assert result["mean"] > result["halfway_threshold"]  # the mean clause passes
+        assert result["seeds_above_floor"] == 4  # the seed clause does not
         assert not result["passes"]
 
     def test_an_incomplete_arm_cannot_pass(self) -> None:
@@ -126,8 +130,66 @@ class TestTheOutcome:
         for key in ("modulator", "mean_abs_delta", "alignment"):
             assert not np.isnan(out["diagnosis"]["three_factor"][key])
 
+    def test_an_arm_with_no_finite_alignment_reports_nan_without_warning(self) -> None:
+        # A run can end with no readable alignment (every block degenerate); the diagnosis must
+        # carry NaN for it rather than raising or warning on an empty slice.
+        runs = _runs(analytic=_OPTIMUM)
+        for run in runs:
+            if run["arm"] == "three_factor":
+                run["alignment"] = float("nan")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            out = pc.analyse(runs, _TASK)
+        assert np.isnan(out["diagnosis"]["three_factor"]["alignment"])
+        assert np.isnan(out["diagnosis"]["three_factor"]["alignment_median"])
+        assert not np.isnan(out["diagnosis"]["three_factor"]["modulator"])
+
+    def test_the_alignment_carries_a_median_beside_the_mean(self) -> None:
+        # The mean of a long-tailed per-run statistic overstates the typical run, so the record
+        # carries both and the prose can quote the same number the harness computed.
+        runs = _runs(analytic=_OPTIMUM)
+        for index, run in enumerate(r for r in runs if r["arm"] == "three_factor"):
+            run["alignment"] = 1.0 if index == 0 else 0.0
+        diagnosis = pc.analyse(runs, _TASK)["diagnosis"]["three_factor"]
+        assert diagnosis["alignment"] > diagnosis["alignment_median"]
+        assert diagnosis["alignment_median"] == pytest.approx(0.0)
+
+    def test_the_diagnosis_is_broken_out_per_rate(self) -> None:
+        out = pc.analyse(_runs(analytic=_OPTIMUM), _TASK)
+        by_rate = out["diagnosis"]["three_factor"]["by_rate"]
+        assert set(by_rate) == {str(rate) for rate in pc.RATE_GRID}
+        assert not np.isnan(by_rate[str(pc.PLASTICITY_RATE)]["alignment"])
+
     def test_the_record_reports_the_budget_actually_run(self) -> None:
         assert pc.analyse(_runs(), _TASK, trials=250)["protocol"]["trials"] == 250
+
+
+class TestTheAlignmentSign:
+    def test_descending_the_loss_aligns_positively(self) -> None:
+        import torch
+
+        update = [torch.tensor([1.0, 0.0])]
+        descent = [torch.tensor([2.0, 0.0])]  # already the -gradient direction
+        assert pc._block_alignment(update, descent) == pytest.approx(1.0)
+
+    def test_ascending_the_loss_aligns_negatively(self) -> None:
+        import torch
+
+        assert pc._block_alignment(
+            [torch.tensor([-1.0, 0.0])],
+            [torch.tensor([2.0, 0.0])],
+        ) == pytest.approx(-1.0)
+
+    def test_the_reference_arm_aligns_with_its_own_descent_direction(self) -> None:
+        # End to end: the analytic arm IS gradient descent, so the sign convention must give it
+        # a positive alignment. Measured on the rule's own accumulation path.
+        run = pc.run_arm("three_factor", seed=1, task=_TASK, trials=300)
+        assert not np.isnan(run["alignment"])
+
+    def test_a_degenerate_block_has_no_alignment(self) -> None:
+        import torch
+
+        assert pc._block_alignment([torch.zeros(2)], [torch.ones(2)]) is None
 
 
 class TestTheArmsThemselves:
@@ -157,3 +219,8 @@ class TestTheArmsThemselves:
         finally:
             MLPTopology.reset_traces = original  # type: ignore[method-assign]
         assert len(seen) == 5
+        # The magnitudes are what matter, not the call count: the first trial starts from a
+        # cleared trace, and every later one arrives carrying the previous trial's eligibility,
+        # which is exactly what the reset exists to discard.
+        assert seen[0] == pytest.approx(0.0)
+        assert all(value > 0.0 for value in seen[1:])

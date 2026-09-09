@@ -34,12 +34,12 @@ of magnitude, so this is not a rate artefact.
 |---|---|
 | mean modulator | +0.0020 (min 0.0015, max 0.0022) |
 | mean absolute weight change per step | 2.62 × 10⁻⁴ |
-| **gradient alignment** | **+0.0315** (min −0.035, median **+0.009**, max +0.260) |
+| **gradient alignment** | **+0.031 mean, +0.009 median** (min −0.035, max +0.260) |
+| alignment by rate (mean / median) | 1e-4: +0.077 / +0.074 · 1e-3: +0.020 / +0.025 · 1e-2: −0.002 / +0.001 |
 
 The rule is not inert and it is not starved of reward information: the trace is live, the weights
 move every step, and the modulator is a well-behaved centred prediction error. What the update is
-not is *aimed*. Its cosine against the analytic gradient of the same trials is **+0.009 at the
-median** — indistinguishable from orthogonal — while the reference arm's is 1.0 by construction.
+not is *aimed*. Its cosine against the gradient-descent direction of the same trials is **+0.031 mean and +0.009 median** — indistinguishable from orthogonal — while the reference arm's is 1.0 by construction. Both statistics are recorded because the mean of a long-tailed per-run quantity overstates the typical run: one seed reaches +0.26 while the median sits at +0.009. The per-rate breakdown says the same thing at every rate, falling from +0.077 at 1e-4 to −0.002 at 1e-2.
 The unmodulated arm's alignment is −0.015, statistically the same thing.
 
 That is the measurement the reframing predicted. With a Hebbian eligibility (`pre × post`) and
@@ -71,7 +71,7 @@ Under the registered map, a `fail` means:
   a likely culprit.
 - The topology is the panels' favourable arrangement (hidden plastic, frozen readout) at their
   pinned recipe. An all-plastic variant was not run and is the named follow-up.
-- The alignment is measured against the *analytic* gradient of the immediate loss. A rule
+- The alignment is measured against the gradient-**descent** direction of the immediate loss, so a rule reducing the loss scores positively. A rule
   estimating a longer-horizon return would legitimately differ; on a one-step task there is no
   such difference to hide behind.
 

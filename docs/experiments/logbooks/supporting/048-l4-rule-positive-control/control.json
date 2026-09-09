@@ -45,11 +45,33 @@
   "diagnosis": {
     "hebbian": {
       "alignment": -0.010404603138158561,
+      "alignment_median": -0.01505771256517619,
       "mean_abs_delta": 0.0006113790909190356,
       "modulator": 1.0
     },
     "three_factor": {
       "alignment": 0.03148445350477535,
+      "alignment_median": 0.008581560207530856,
+      "by_rate": {
+        "0.0001": {
+          "alignment": 0.07695370273519074,
+          "alignment_median": 0.07383565073367207,
+          "mean_abs_delta": 2.227971157489037e-05,
+          "modulator": 0.002014182669693555
+        },
+        "0.001": {
+          "alignment": 0.019696862551227243,
+          "alignment_median": 0.02506178416639159,
+          "mean_abs_delta": 9.545471534102953e-05,
+          "modulator": 0.0020216679341721194
+        },
+        "0.01": {
+          "alignment": -0.002197204772091936,
+          "alignment_median": 0.0009348182973917573,
+          "mean_abs_delta": 0.0006674494089115295,
+          "modulator": 0.0020181015593599898
+        }
+      },
       "mean_abs_delta": 0.00026172794527581645,
       "modulator": 0.0020179840544085545
     }
