@@ -15,6 +15,12 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 LearningRuleName = Literal["ppo", "three_factor", "hebbian"]
+# Consolidation mechanisms. A mechanism slows or stops the rule writing where it has
+# already written, which the minimal rule does not do at any rate: its update magnitude
+# is set by the normalised modulator and trace, not by how good the policy is. Selected
+# one at a time rather than composed, since two brakes at once give a result attributable
+# to neither.
+ConsolidationName = Literal["none", "anchor", "rigidity", "oracle"]
 
 # Rules that read the eligibility trace, and so require it to be enabled.
 PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
@@ -88,6 +94,36 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_scale_rate: float = Field(default=0.01, gt=0.0, le=1.0)
     plasticity_scale_floor: float = Field(default=1e-6, gt=0.0)
 
+    # ── Consolidation (opt-in) ───────────────────────────────
+    # ``anchor`` gives every plastic tensor a slow moving average of its own
+    # weights and adds a restoring term toward it, so a steady departure
+    # builds a force against itself; an anchor rate of zero holds the anchor
+    # at the weights the rule started from. ``rigidity`` gives every synapse a
+    # protective variable that grows where a positive modulator met a large
+    # trace and divides the rate by ``1 + strength * c``, so synapses reward
+    # has repeatedly written become progressively harder to write. ``oracle``
+    # scales the rate by how far a trailing episode-success rate sits below a
+    # reference: it reads the environment's success flag rather than the
+    # reward stream, so it is a diagnostic bound on what a quality-gated brake
+    # could do and not a mechanism an animal could host.
+    #
+    # Each mechanism's parameters default to values that leave it inert, and
+    # selecting a mechanism that its own parameters leave inert is rejected
+    # below: a config that names a brake and does not brake would be read as
+    # evidence about the brake.
+    plasticity_consolidation: ConsolidationName = "none"
+    plasticity_anchor_rate: float = Field(default=0.0, ge=0.0, lt=1.0)
+    plasticity_anchor_stiffness: float = Field(default=0.0, ge=0.0)
+    plasticity_rigidity_growth: float = Field(default=0.0, ge=0.0)
+    plasticity_rigidity_decay: float = Field(default=0.0, ge=0.0, lt=1.0)
+    plasticity_rigidity_strength: float = Field(default=0.0, ge=0.0)
+    # 1.0 leaves the gate open at every trailing estimate below it, so a run that
+    # selects the oracle pins its own reference rather than inheriting one panel's
+    # comparator from a default. An estimate saturated at 1.0 does close it, which
+    # is what an unbroken run of successes should mean at any reference.
+    plasticity_oracle_reference: float = Field(default=1.0, gt=0.0, le=1.0)
+    plasticity_oracle_rate: float = Field(default=0.01, gt=0.0, le=1.0)
+
     # ── Homeostatic incoming-norm scaling (opt-in) ───────────
     # After each plastic update every unit's incoming plastic weights are
     # rescaled, over the edge set only, to the norm they had when the rule
@@ -136,6 +172,30 @@ class PlasticityConfigMixin(BaseModel):
                 "initial_log_std has no effect under the state-dependent std head, whose "
                 "log-std is a function of the hidden state; a non-zero value would silently "
                 "do nothing."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_consolidation(self) -> PlasticityConfigMixin:
+        """Reject a consolidation mechanism its own parameters leave inert.
+
+        A config that names a brake and does not brake is worse than one
+        that names none: its runs would be read as evidence about the
+        mechanism. Each mechanism is inert when the parameter it multiplies
+        through is zero.
+        """
+        inert = {
+            "anchor": ("plasticity_anchor_stiffness",),
+            "rigidity": ("plasticity_rigidity_growth", "plasticity_rigidity_strength"),
+            "oracle": (),
+        }.get(self.plasticity_consolidation, ())
+        zeroed = [name for name in inert if getattr(self, name) == 0.0]
+        if zeroed:
+            msg = (
+                f"plasticity_consolidation={self.plasticity_consolidation!r} is inert with "
+                f"{', '.join(f'{name}=0' for name in zeroed)}: the mechanism would be selected "
+                "and never act, and its runs would be read as evidence about it."
             )
             raise ValueError(msg)
         return self

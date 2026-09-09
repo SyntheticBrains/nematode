@@ -165,6 +165,27 @@ class BrainHistoryData(BaseModel):
             "Hebbian term is normalised by (NaN when trace normalisation is off)"
         ),
     )
+    plasticity_rate_multiplier: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Factor the plasticity rate was actually scaled by: the oracle gate's value, or "
+            "the mean per-synapse divisor rigidity applied (1.0 when no mechanism is selected)"
+        ),
+    )
+    plasticity_anchor_departure: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Mean absolute departure of the plastic weights from their anchor over the edge "
+            "set (NaN when the anchor mechanism is not selected)"
+        ),
+    )
+    plasticity_rigidity: list[float] = Field(
+        default_factory=list,
+        description=(
+            "Mean protective variable over the edge set (NaN when the rigidity mechanism is "
+            "not selected)"
+        ),
+    )
     probabilities: list[float] = Field(
         default_factory=list,
         description="Probabilities of actions taken by the agent",

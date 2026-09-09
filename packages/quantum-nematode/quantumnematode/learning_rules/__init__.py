@@ -16,6 +16,7 @@ catastrophic-forgetting metrics), not learning rules.
 from quantumnematode.learning_rules.ppo import ConnectomePPOBatch, ConnectomePPORule
 from quantumnematode.learning_rules.three_factor import (
     ConnectomeThreeFactorRule,
+    ConsolidationOptions,
     ScalingOptions,
     ThreeFactorBatch,
     ThreeFactorRule,
@@ -25,6 +26,7 @@ __all__ = [
     "ConnectomePPOBatch",
     "ConnectomePPORule",
     "ConnectomeThreeFactorRule",
+    "ConsolidationOptions",
     "ScalingOptions",
     "ThreeFactorBatch",
     "ThreeFactorRule",

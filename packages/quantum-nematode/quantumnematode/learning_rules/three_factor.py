@@ -70,6 +70,9 @@ MODULATOR_SCALE_KEY = "plasticity_modulator_scale"
 MODULATOR_CENTRE_KEY = "plasticity_modulator_centre"
 TRACE_SCALE_KEY = "plasticity_trace_scale"
 NORM_DRIFT_KEY = "plasticity_norm_drift"
+RATE_MULTIPLIER_KEY = "plasticity_rate_multiplier"
+ANCHOR_DEPARTURE_KEY = "plasticity_anchor_departure"
+RIGIDITY_KEY = "plasticity_rigidity"
 
 
 @dataclass
@@ -109,6 +112,57 @@ class ScalingOptions:
         if self.scale_floor <= 0.0:
             msg = f"scale_floor must be positive, got {self.scale_floor}"
             raise ValueError(msg)
+
+
+@dataclass(frozen=True)
+class ConsolidationOptions:
+    """The rule's consolidation mechanism and its parameters.
+
+    ``mechanism`` selects one brake or none; the parameters belonging to the
+    others are ignored. ``none`` reproduces the rule without consolidation bit
+    for bit and allocates nothing.
+
+    ``anchor`` holds a slow moving average of each plastic tensor's own weights
+    and adds a restoring term toward it, so a steady departure builds a force
+    against itself. ``rigidity`` grows a per-synapse protective variable where a
+    positive modulator met a large trace and divides the Hebbian rate by
+    ``1 + strength * c``. ``oracle`` scales the rate by how far a trailing
+    episode-success rate sits below ``oracle_reference``; it reads a flag the
+    environment supplies rather than the reward stream the rule observes, so it
+    bounds what a quality-gated brake could do and is not a mechanism a nervous
+    system could host.
+    """
+
+    mechanism: str = "none"
+    anchor_rate: float = 0.0
+    anchor_stiffness: float = 0.0
+    rigidity_growth: float = 0.0
+    rigidity_decay: float = 0.0
+    rigidity_strength: float = 0.0
+    oracle_reference: float = 1.0
+    oracle_rate: float = 0.01
+
+    def __post_init__(self) -> None:
+        """Hold a direct construction to the bounds the brain configs enforce at load."""
+        if self.mechanism not in {"none", "anchor", "rigidity", "oracle"}:
+            msg = f"unknown consolidation mechanism {self.mechanism!r}"
+            raise ValueError(msg)
+        if not 0.0 <= self.anchor_rate < 1.0:
+            msg = f"anchor_rate must be in [0, 1), got {self.anchor_rate}"
+            raise ValueError(msg)
+        if not 0.0 <= self.rigidity_decay < 1.0:
+            msg = f"rigidity_decay must be in [0, 1), got {self.rigidity_decay}"
+            raise ValueError(msg)
+        if not 0.0 < self.oracle_reference <= 1.0:
+            msg = f"oracle_reference must be in (0, 1], got {self.oracle_reference}"
+            raise ValueError(msg)
+        if not 0.0 < self.oracle_rate <= 1.0:
+            msg = f"oracle_rate must be in (0, 1], got {self.oracle_rate}"
+            raise ValueError(msg)
+        for name in ("anchor_stiffness", "rigidity_growth", "rigidity_strength"):
+            if getattr(self, name) < 0.0:
+                msg = f"{name} must be non-negative, got {getattr(self, name)}"
+                raise ValueError(msg)
 
 
 class _RunningScale:
@@ -231,6 +285,7 @@ class ThreeFactorRule:
         modulated: bool,
         device: torch.device,
         scaling: ScalingOptions | None = None,
+        consolidation: ConsolidationOptions | None = None,
         homeostasis: bool = False,
         synapse_signs: list[torch.Tensor] | None = None,
     ) -> None:
@@ -255,6 +310,9 @@ class ThreeFactorRule:
         self.modulated = modulated
         self.device = device
         self.scaling = scaling if scaling is not None else ScalingOptions()
+        # Consolidation. One brake or none; ``none`` allocates nothing and adds
+        # no operation, so the default path is the rule without this feature.
+        self.consolidation = consolidation if consolidation is not None else ConsolidationOptions()
 
         # Running estimate of the task's reward level. Persists across
         # episodes: it describes the task, not one episode, and resetting
@@ -278,6 +336,21 @@ class ThreeFactorRule:
         # Hebbian positive feedback from running the weights onto the bound.
         # Targets are captured here, so they are whatever norm the substrate
         # carried at construction (its initialisation, for a freshly built brain).
+        # Consolidation state, allocated only for the mechanism selected.
+        # The anchor starts at the weights the rule was built over: with the
+        # anchor rate at zero that is where it stays, which is the limiting
+        # case of the mechanism rather than a separate one.
+        self._anchors: list[torch.Tensor] = []
+        self._rigidity: list[torch.Tensor] = []
+        # Trailing episode-success rate for the oracle gate. Starts at zero, so
+        # a run's opening episodes are ungated while the estimate warms up.
+        self._success_rate = 0.0
+        if self.consolidation.mechanism == "anchor":
+            with torch.no_grad():
+                self._anchors = [w.detach().clone() for w in topology.plastic_weights]
+        elif self.consolidation.mechanism == "rigidity":
+            self._rigidity = [torch.zeros_like(w) for w in topology.plastic_weights]
+
         self.homeostasis = homeostasis
         # Dale's law. One signed matrix per plastic tensor, aligned with the seam's weights:
         # +1 excitatory, -1 inhibitory, 0 for a synapse whose source implies no sign. Empty
@@ -459,15 +532,27 @@ class ThreeFactorRule:
             befores = [w.detach().clone() for w in weights]
             drifts: list[tuple[float, int]] = []
 
+            # Oracle gate, if selected: one factor on the whole update, so at
+            # the reference success rate nothing is written at all.
+            multiplier = self._rate_multiplier()
+            rate = self.plasticity_rate * multiplier
+
+            rate_multiplier, anchor_departure, rigidity_mean = self._consolidation_telemetry(
+                weights,
+                masks,
+                multiplier,
+            )
+
             if not self.freeze_updates:
                 for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
-                    # Hebbian term over the eligibility trace, plus decay
-                    # toward zero. Decay is what keeps unreinforced synapses
-                    # from holding whatever a transient correlation put there.
-                    update = self.plasticity_rate * modulator * trace
-                    if divisors is not None:
-                        update = update / divisors[index]
-                    update -= self.plasticity_rate * self.weight_decay * w
+                    update = self._proposed_update(
+                        index,
+                        w,
+                        trace,
+                        modulator,
+                        rate,
+                        divisors[index] if divisors is not None else None,
+                    )
                     # The trace is already on the edge set, but the decay
                     # term is not: it is proportional to the weights, which
                     # may hold values off the allowed edges (the connectome's
@@ -487,6 +572,14 @@ class ThreeFactorRule:
                         drifts.append(self._norm_drift(index, w, mask))
                         self._rescale_incoming(index, w, mask)
                     w.data.clamp_(-self.weight_bound, self.weight_bound)
+                    self._advance_consolidation(
+                        index,
+                        w,
+                        trace,
+                        mask,
+                        modulator,
+                        divisors[index] if divisors is not None else None,
+                    )
             elif self.homeostasis:
                 # Nothing is written under a freeze; the drift of the unchanged
                 # weights is still reported so the arms stay comparable.
@@ -494,6 +587,20 @@ class ThreeFactorRule:
                     self._norm_drift(index, w, mask)
                     for index, (w, mask) in enumerate(zip(weights, masks, strict=True))
                 ]
+            if self.freeze_updates:
+                # Consolidation state advances under a freeze, like the
+                # baseline and the running scales: a frozen arm must report
+                # what the plastic arm would. No weight is touched by it.
+                for index, (w, trace, mask) in enumerate(zip(weights, traces, masks, strict=True)):
+                    self._advance_consolidation(
+                        index,
+                        w,
+                        trace,
+                        mask,
+                        modulator,
+                        divisors[index] if divisors is not None else None,
+                    )
+
             # Under a freeze nothing is written at all — not the Hebbian
             # term, not the decay, not the clamp. A clamp alone would still
             # edit a weight that started outside the bound, which is
@@ -533,8 +640,131 @@ class ThreeFactorRule:
                 MODULATOR_CENTRE_KEY: modulator_centre,
                 TRACE_SCALE_KEY: trace_scale,
                 NORM_DRIFT_KEY: _pooled_drift(drifts),
+                RATE_MULTIPLIER_KEY: rate_multiplier,
+                ANCHOR_DEPARTURE_KEY: anchor_departure,
+                RIGIDITY_KEY: rigidity_mean,
             },
         )
+
+    def _proposed_update(  # noqa: PLR0913 — one term per factor of the update
+        self,
+        index: int,
+        weight: torch.Tensor,
+        trace: torch.Tensor,
+        modulator: float,
+        rate: float,
+        divisor: float | None,
+    ) -> torch.Tensor:
+        """Compute the unmasked weight change for one plastic tensor.
+
+        Hebbian term over the eligibility trace, plus decay toward zero — decay
+        is what keeps unreinforced synapses from holding whatever a transient
+        correlation put there — plus, when the anchor is selected, a restoring
+        force toward it.
+        """
+        if self._rigidity:
+            # Rigidity divides the Hebbian rate per synapse, at the value from
+            # before this step's growth: a step is not charged for the rigidity
+            # it is about to create.
+            hebbian_rate = rate / (
+                1.0 + self.consolidation.rigidity_strength * self._rigidity[index]
+            )
+        else:
+            hebbian_rate = rate
+        update = hebbian_rate * modulator * trace
+        if divisor is not None:
+            update = update / divisor
+        update = update - rate * self.weight_decay * weight
+        if self._anchors:
+            # Unlike decay, this is not a uniform per-unit shrink, so the
+            # homeostatic rescale cancels only its radial part and leaves the
+            # change of direction it made.
+            update = update - (
+                rate * self.consolidation.anchor_stiffness * (weight - self._anchors[index])
+            )
+        return update
+
+    def _consolidation_telemetry(
+        self,
+        weights: list[torch.Tensor],
+        masks: list[torch.Tensor],
+        multiplier: float,
+    ) -> tuple[float, float, float]:
+        """Measure the rate multiplier applied, the anchor departure and the protective variable.
+
+        Measured on the state the step is taken at rather than the state it
+        leaves behind — the same pre-update convention the modulator scale and
+        the trace scales follow, and the only one under which the reported
+        multiplier is the multiplier actually applied. NaN where a mechanism is
+        not selected, as the scaling telemetry reports an estimator that never
+        ran.
+        """
+        if self._anchors:
+            departure = self._edge_mean(
+                [(w.detach() - a).abs() for w, a in zip(weights, self._anchors, strict=True)],
+                masks,
+            )
+            return multiplier, departure, math.nan
+        if self._rigidity:
+            divisors = [
+                1.0 / (1.0 + self.consolidation.rigidity_strength * c) for c in self._rigidity
+            ]
+            return (
+                self._edge_mean(divisors, masks),
+                math.nan,
+                self._edge_mean(self._rigidity, masks),
+            )
+        return multiplier, math.nan, math.nan
+
+    def _rate_multiplier(self) -> float:
+        """Global rate factor from the oracle gate; ``1.0`` under every other mechanism."""
+        if self.consolidation.mechanism != "oracle":
+            return 1.0
+        ratio = self._success_rate / self.consolidation.oracle_reference
+        return float(min(max(1.0 - ratio, 0.0), 1.0))
+
+    def _advance_consolidation(  # noqa: PLR0913 — the step it is advanced from
+        self,
+        index: int,
+        weight: torch.Tensor,
+        trace: torch.Tensor,
+        mask: torch.Tensor,
+        modulator: float,
+        divisor: float | None,
+    ) -> None:
+        """Advance the selected mechanism's state from the step just taken.
+
+        After the write, for the same reason the running scales are estimated
+        before it: each quantity is measured against the step it actually saw.
+        Advanced under a freeze as well, like the baseline and the scales, so a
+        frozen arm reports what the plastic arm would.
+        """
+        if self._anchors:
+            anchor = self._anchors[index]
+            anchor.add_(self.consolidation.anchor_rate * (weight.detach() - anchor))
+        elif self._rigidity:
+            growth = trace.abs() * (self.consolidation.rigidity_growth * max(modulator, 0.0))
+            if divisor is not None:
+                # On the trace as the update saw it, so a pinned growth rate is
+                # the same root-mean-square growth on every substrate.
+                growth = growth / divisor
+            rigidity = self._rigidity[index]
+            rigidity.mul_(1.0 - self.consolidation.rigidity_decay)
+            rigidity.add_(growth * mask.to(growth.dtype))
+
+    def _edge_mean(self, values: list[torch.Tensor], masks: list[torch.Tensor]) -> float:
+        """Mean of a per-synapse quantity over the edge set, NaN when there is none."""
+        if not values:
+            return math.nan
+        total = 0.0
+        count = 0
+        for value, mask in zip(values, masks, strict=True):
+            edges = mask.to(torch.bool)
+            on_edges = int(edges.sum().item())
+            if on_edges:
+                total += float(value[edges].sum().item())
+                count += on_edges
+        return total / count if count else math.nan
 
     def _project_signs(self, index: int, weight: torch.Tensor) -> None:
         """Clamp each grounded synapse to its sign; ungrounded synapses are left alone."""
@@ -565,6 +795,17 @@ class ThreeFactorRule:
         ]
         self._modulator_centre = _RunningMean(self.scaling.scale_rate)
         self._topology.reset_traces()
+        # Consolidation state follows the weights the rule now starts from. An
+        # anchor left at a previous substrate's values would pull a loaded
+        # policy toward weights it no longer has, with a force proportional to
+        # the distance between them -- the failure the homeostatic targets
+        # below had before they were re-anchored here.
+        if self._anchors:
+            with torch.no_grad():
+                self._anchors = [w.detach().clone() for w in self._topology.plastic_weights]
+        if self._rigidity:
+            self._rigidity = [torch.zeros_like(w) for w in self._topology.plastic_weights]
+        self._success_rate = 0.0
         # The homeostatic targets are re-anchored to the weights the rule now starts from.
         # Left at their construction values they would drag a loaded policy back to the
         # incoming norms of the random initialisation on the first step.
@@ -579,6 +820,25 @@ class ThreeFactorRule:
                         strict=True,
                     )
                 ]
+
+    def observe_episode(self, *, success: bool | None) -> None:
+        """Absorb one episode's success flag into the oracle's trailing estimate.
+
+        Ignored under every other mechanism, and by a rule that never sees a
+        flag. The flag is a property of the task's scoring rather than of the
+        reward stream this rule observes, which is why the mechanism that reads
+        it is a bound on what a quality-gated brake could do and not a
+        mechanism a nervous system could host.
+        """
+        if self.consolidation.mechanism != "oracle" or success is None:
+            return
+        rate = self.consolidation.oracle_rate
+        self._success_rate += rate * (float(success) - self._success_rate)
+
+    @property
+    def success_rate(self) -> float:
+        """The oracle's trailing episode-success estimate; zero under every other mechanism."""
+        return self._success_rate
 
     def reset_episode(self) -> None:
         """No per-episode rule state to clear.
@@ -611,6 +871,9 @@ def record_plasticity_report(
     history_data.plasticity_modulator_centre.append(extra[MODULATOR_CENTRE_KEY])
     history_data.plasticity_trace_scale.append(extra[TRACE_SCALE_KEY])
     history_data.plasticity_norm_drift.append(extra[NORM_DRIFT_KEY])
+    history_data.plasticity_rate_multiplier.append(extra[RATE_MULTIPLIER_KEY])
+    history_data.plasticity_anchor_departure.append(extra[ANCHOR_DEPARTURE_KEY])
+    history_data.plasticity_rigidity.append(extra[RIGIDITY_KEY])
     history_data.rewards.append(reward)
 
 

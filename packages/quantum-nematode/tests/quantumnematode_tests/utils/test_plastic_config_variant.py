@@ -53,6 +53,45 @@ def _flatten(data: object, prefix: str = "") -> dict[str, object]:
     return {prefix.rstrip("."): data}
 
 
+_CONSOLIDATION = {
+    "anchor": {"brain.config.plasticity_anchor_rate", "brain.config.plasticity_anchor_stiffness"},
+    "rigidity": {
+        "brain.config.plasticity_rigidity_growth",
+        "brain.config.plasticity_rigidity_decay",
+        "brain.config.plasticity_rigidity_strength",
+    },
+    "oracle": {
+        "brain.config.plasticity_oracle_reference",
+        "brain.config.plasticity_oracle_rate",
+    },
+}
+
+
+class TestConsolidationVariantsAreMinimalDeltas:
+    """Each consolidation arm differs from the clone arm in its own keys and nothing else."""
+
+    @pytest.mark.parametrize("mechanism", sorted(_CONSOLIDATION))
+    def test_only_the_mechanism_keys_differ(self, mechanism: str) -> None:
+        clone = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_clone.yml"))
+        variant = clone.with_name(clone.name.replace(".yml", f"_{mechanism}.yml"))
+        parent_keys = _flatten(yaml.safe_load(clone.read_text()))
+        variant_keys = _flatten(yaml.safe_load(variant.read_text()))
+        added = set(variant_keys) - set(parent_keys)
+        changed = {k for k in parent_keys if variant_keys.get(k) != parent_keys[k]}
+        assert added == {"brain.config.plasticity_consolidation"} | _CONSOLIDATION[mechanism]
+        assert changed == set()
+
+    @pytest.mark.parametrize("mechanism", sorted(_CONSOLIDATION))
+    def test_the_variant_loads_and_selects_the_mechanism(self, mechanism: str) -> None:
+        clone = _VARIANT.with_name(_VARIANT.name.replace(".yml", "_clone.yml"))
+        variant = clone.with_name(clone.name.replace(".yml", f"_{mechanism}.yml"))
+        config = ConnectomePPOBrainConfig(
+            **yaml.safe_load(variant.read_text())["brain"]["config"],
+        )
+        assert config.plasticity_consolidation == mechanism
+        assert config.learning_rule == "three_factor"
+
+
 class TestPlasticVariantIsAMinimalDelta:
     """Exactly the rule selection, the trace it reads, and the two scaling switches."""
 

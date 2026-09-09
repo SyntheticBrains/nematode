@@ -219,6 +219,43 @@ class TestRefusals:
             load_weights(target, file)
         assert _same(before, _params(target))
 
+    def test_a_file_predating_sign_grounding_loads_into_an_ungrounded_brain(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # Such a file carries no sign buffer at all. Its silence says no sign was grounded,
+        # which is exactly the state an ungrounded brain is in, so it loads.
+        file = tmp_path / "w.pt"
+        source = _brain(_PLASTIC)
+        _drive(source)
+        save_weights(source, file)
+        blob = torch.load(file, weights_only=False)
+        del blob["topology"]["chem_sign"]
+        torch.save(blob, file)
+        target = _brain(_PLASTIC)
+        load_weights(target, file)
+        assert torch.equal(
+            target.topology.state_dict()["w_chem"],
+            source.topology.state_dict()["w_chem"],
+        )
+
+    def test_a_file_predating_sign_grounding_is_refused_by_a_grounded_brain(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # The check that matters survives: those weights were drawn under no sign model, and
+        # a brain whose signs are grounded would be reinterpreting them.
+        file = tmp_path / "w.pt"
+        save_weights(_brain(_PLASTIC), file)
+        blob = torch.load(file, weights_only=False)
+        del blob["topology"]["chem_sign"]
+        torch.save(blob, file)
+        target = _brain(_PLASTIC, synapse_signs="atlas")
+        before = _params(target)
+        with pytest.raises(ValueError, match="different synapse-sign model"):
+            load_weights(target, file)
+        assert _same(before, _params(target))
+
     def test_std_mode_mismatch_is_refused_before_mutation(self, tmp_path: Path) -> None:
         file = tmp_path / "w.pt"
         save_weights(_brain(_PPO), file)
