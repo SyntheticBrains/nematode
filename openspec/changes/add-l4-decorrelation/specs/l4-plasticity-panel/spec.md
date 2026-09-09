@@ -9,8 +9,8 @@ sign-grounding test's own Hebbian protocol under each decorrelating variant: the
 rewired-null grounded Hebbian arms, paired seeds 1–16, a 1000-episode budget, the committed
 plateau-tail full-clear metric, and the single registered extension of a fresh run at 1.5×
 replacing a shorter log the plateau detector marks non-converged. The comparators SHALL be the
-sign-grounding test's committed per-seed values, read from its published table, and no grounded
-Hebbian arm SHALL be re-run.
+sign-grounding test's committed per-seed values on the same seeds 1–16, read from its published
+table and paired seed for seed, and no grounded Hebbian arm SHALL be re-run.
 
 The confirmatory family SHALL be exactly four one-sided paired tests corrected together under
 BH-FDR: **D1** the wild-type anti-Hebbian arm over the committed wild-type grounded Hebbian
@@ -23,7 +23,8 @@ neither D1 nor D2 confirms; then `recovery_specific` (D1 only), `recovery_genera
 be committed before any run.
 
 Two annotations SHALL be computed and reported without changing the verdict: `full_recovery`,
-true when a recovered arm's interval reaches the committed random-sign mean for the same wiring,
+true when the 80% bootstrap interval of a recovered arm's mean plateau tail over seeds 1–16
+includes or exceeds the committed random-sign mean for the same wiring,
 which separates a term that helps from one that restores what grounding cost; and the mean
 decorrelation share from the rule's telemetry, so that a recovery whose share is near zero is
 recorded as attributable to something other than the term.
@@ -38,8 +39,8 @@ recorded as attributable to something other than the term.
 #### Scenario: Helping and restoring are distinguished
 
 - **WHEN** a variant's arm confirms its recovery test
-- **THEN** the record SHALL report whether its interval reaches the committed random-sign mean for
-  the same wiring
+- **THEN** the record SHALL report whether the 80% bootstrap interval of its mean plateau tail
+  includes or exceeds the committed random-sign mean for the same wiring
 
 #### Scenario: A recovery is attributed to the term or not
 

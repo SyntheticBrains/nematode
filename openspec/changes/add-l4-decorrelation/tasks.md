@@ -4,9 +4,12 @@
 
 - [ ] 1.1 Add the decorrelation selector (`none|anti_hebbian_inhibitory|oja`) and the Oja
   coefficient to the shared plasticity mixin, with load-time bounds.
-- [ ] 1.2 Validator: `oja` with a zero coefficient is rejected naming the coefficient;
-  `anti_hebbian_inhibitory` is rejected on a brain whose signs are not grounded.
-- [ ] 1.3 Tests: both rejections; the default config is unchanged field for field.
+- [ ] 1.2 Validators: on the mixin, `oja` with a zero coefficient is rejected naming the
+  coefficient; on the connectome config beside the synapse-sign validator, and duplicated as a
+  brain-construction guard, `anti_hebbian_inhibitory` requires `synapse_signs: atlas`; the MLP
+  config rejects `anti_hebbian_inhibitory` outright.
+- [ ] 1.3 Tests: every rejection, including the construction guard on a `model_copy`-derived
+  config; the default config is unchanged field for field.
 
 ## 2. Anti-Hebbian inhibitory plasticity
 
@@ -20,8 +23,12 @@
 
 - [ ] 3.1 Apply `− η · γ · y² · w` inside the masked update beside the decay, broadcasting the
   post-synaptic activity along each weight's post-synaptic axis.
-- [ ] 3.2 The rule reads the post-synaptic activity through the plastic-topology seam, so the MLP
-  yardstick drives the same code path.
+- [ ] 3.2 Extend the `PlasticTopology` seam with `plastic_post_activities`: the connectome exposes
+  a view over the activity buffer its trace update keeps; the MLP topology retains each layer's
+  post-activation at trace time. The rule reads it only under `oja`.
+- [ ] 3.2b Tests: both topologies satisfy the extended seam; each vector's length equals the
+  weight's extent along the axis complementary to the fan-in axis; the vector equals the
+  post-synaptic factor the trace was just built from; the connectome's is a view, not a copy.
 - [ ] 3.3 Tests: the term's sign and magnitude; an inactive unit receives none; a zero weight
   receives none; the MLP substrate takes the same path.
 

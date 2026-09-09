@@ -62,8 +62,15 @@ The substrate-general alternative, needing no sign information:
 u = η · m · E / ρ_E − η · λ_w · w − η · γ · y² · w
 ```
 
-`y` is the post-synaptic activity of the step (the same `h` the trace was built from), broadcast
-along each weight's post-synaptic axis, and `γ` is a configured coefficient. The subtractive term
+`y` is the post-synaptic activity of the step — the same vector the trace's post-synaptic factor
+was built from — broadcast along each weight's post-synaptic axis, and `γ` is a configured
+coefficient. **The seam does not carry that activity today**: it exposes weights, traces, masks
+and fan-in axes and nothing about what the units did. This change adds `plastic_post_activities`
+to the `PlasticTopology` seam, one vector per plastic tensor, indexed along the axis complementary
+to the fan-in axis (axis `1` for the connectome's `[pre, post]` matrix, axis `0` for a `Linear`
+`[out, in]` weight). The connectome exposes it as a view over the activity buffer its trace update
+already keeps; the MLP topology retains each layer's post-activation at trace time. The rule
+reads it only under `oja`, so a topology that never selects the term pays nothing. The subtractive term
 is the classic Oja normalisation: growth is opposed in proportion to how active the post-synaptic
 unit is and how large the weight already is, which both removes runaway growth and decorrelates a
 unit's inputs.
@@ -78,6 +85,22 @@ committed values were produced under.
 `γ` has no value to inherit and is pinned by a small declared pilot: seeds 1–2 of the wild-type
 grounded arm at the panel budget over `γ ∈ {0.01, 0.1, 1.0}`, pinning the highest mean plateau
 tail, ties toward the smaller `γ`.
+
+## Configuration
+
+Two fields on the shared plasticity mixin, defaults off:
+
+| field | default | meaning |
+|---|---|---|
+| `plasticity_decorrelation` | `none` | one of `none`, `anti_hebbian_inhibitory`, `oja` |
+| `plasticity_oja_coefficient` | `0.0` | `γ`, `≥ 0`; zero with `oja` selected is rejected |
+
+`anti_hebbian_inhibitory` has no field of its own. Its load-time check cannot sit on the mixin,
+which the MLP config shares and which knows nothing about signs: it lives on the connectome config
+beside the existing synapse-sign validator, requiring `synapse_signs: atlas`, and is **duplicated
+as a brain-construction guard**, since `model_copy` skips validators and the campaign runner
+derives configs that way — the defect the sign-grounding work found and fixed once already. The
+MLP config rejects the variant outright: it has no transmitter identities to key on.
 
 ## Where the terms sit
 
@@ -107,17 +130,20 @@ let any synapse cross its sign.
 
 One key beside the existing plasticity series: the share of the update's total magnitude carried
 by the decorrelating term — the flipped subset's share under variant 1, the Oja term's share
-under variant 2, zero under `none`. An arm that recovers by decorrelating and an arm that recovers
-by updating less are different results, and this separates them, as the rate multiplier did for
-consolidation.
+under variant 2, zero under `none`. Read per variant: under variant 1 the update's magnitude is
+unchanged by construction, so the share says how much of it was *redirected*; under variant 2 it
+says how much of the change the Oja term contributed, and an arm that recovers with a near-zero
+share recovered by something other than the term — as the rate multiplier separated consolidating
+from not moving.
 
 ## The registered test
 
 Logbook 044's grounded Hebbian protocol, unchanged except for the rule keys: `wt_hebbian_atlas`
 and `rn_hebbian_atlas` under each variant, seeds 1–16 paired, 1000 episodes, plateau-tail
 full-clear success, the single registered extension of a fresh run at 1.5× for a non-converged
-run. Four arms, 64 runs. The comparators are **committed and not re-run**: 044's grounded values
-(wild-type mean 14.0, rewired 9.1) and, descriptively, panel 2's random-sign values (31.5, 17.4).
+run. Four arms, 64 runs. The comparators are **committed and not re-run**: 044's grounded per-seed values on the same seeds
+1–16 (wild-type mean 14.0, rewired 9.1), paired seed for seed, and, descriptively, panel 2's
+random-sign values (31.5, 17.4).
 
 Four one-sided paired tests corrected together under BH-FDR at α = 0.05:
 
@@ -134,9 +160,10 @@ both do. D3 and D4 annotate the verdict and never change it, since the wiring co
 different question and has been unconfirmable at this sample size in four panels.
 
 Two further annotations, computed and reported but never verdict-changing:
-`full_recovery`, when a recovered arm's 80% interval reaches panel 2's committed random-sign mean
-for the same wiring — the difference between "the term helps" and "the term restores what
-grounding cost"; and `decorrelation_share`, the telemetry above, so that a recovery with a
+`full_recovery`, when the 80% bootstrap interval of a recovered arm's mean plateau tail over seeds
+1–16 includes or exceeds panel 2's committed random-sign mean for the same wiring (31.5 wild-type,
+17.4 rewired) — the difference between "the term helps" and "the term restores what grounding
+cost"; and `decorrelation_share`, the telemetry above, so that a recovery with a
 near-zero share is flagged as attributable to something other than the term.
 
 ## What a result means

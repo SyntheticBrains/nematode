@@ -1,3 +1,37 @@
+## MODIFIED Requirements
+
+### Requirement: Plastic-topology seam
+
+The project SHALL define a `PlasticTopology` Protocol carrying exactly what a local plasticity rule touches, so the same rule can drive different substrates without naming any of them: an ordered list of plastic weight tensors, an aligned list of eligibility traces of the same shapes, an aligned list of boolean edge masks, an aligned list of fan-in axes (`plastic_fan_in_axes`, for each tensor the axis to reduce over to obtain one unit's incoming weights), an aligned list of post-synaptic activities (`plastic_post_activities`, for each tensor the activity vector of its post-synaptic units from the step the trace was last accumulated on, indexed along the axis complementary to the fan-in axis), and a flag stating whether traces are enabled. Masking is expressed through the aligned masks: the rule multiplies each tensor's update by its own mask, which on a 0/1 mask is bitwise-identical to the connectome's projector and needs no projector member on the seam.
+
+The seam SHALL be a list from the outset, so that a substrate with one plastic tensor and a substrate with one per layer are handled by the same code path. A dense substrate SHALL expose an all-true mask rather than omitting one, so mask-dependent telemetry has the same meaning on every substrate.
+
+The connectome topology SHALL expose the seam as views over its existing chemical-weight, edge-mask, trace and activity tensors, adding no state and leaving its trace update unchanged. Its chemical matrix is indexed `[pre, post]`, so its fan-in axis SHALL be `0` and its post-synaptic activity is indexed along axis `1`; a `Linear` weight is `[out, in]`, so the MLP topology's fan-in axis SHALL be `1` for every layer and its post-synaptic activity is indexed along axis `0`. The post-synaptic activity SHALL be the same vector the trace's post-synaptic factor was built from, so that a term reading it and the Hebbian term agree on what the unit did.
+
+#### Scenario: Both substrates satisfy the seam
+
+- **WHEN** the connectome topology and the MLP topology are inspected
+- **THEN** each SHALL satisfy the `PlasticTopology` Protocol at runtime
+- **AND** each SHALL expose aligned lists whose traces and masks match their weights' shapes entry for entry
+- **AND** each SHALL expose one fan-in axis per plastic tensor: `0` for the chemical matrix, `1` for each MLP layer
+- **AND** each SHALL expose one post-synaptic activity vector per plastic tensor whose length equals the weight's extent along the axis complementary to its fan-in axis
+
+#### Scenario: The connectome seam is a view, not a copy
+
+- **WHEN** the connectome's seam is read
+- **THEN** its plastic weight SHALL be the same tensor object as `w_chem`
+- **AND** its trace SHALL be the same tensor object as the topology's eligibility buffer
+
+#### Scenario: A dense substrate exposes a full mask
+
+- **WHEN** the MLP topology's masks are read
+- **THEN** every mask SHALL be all-true with the shape of its weight
+
+#### Scenario: The post-synaptic activity is the trace's own
+
+- **WHEN** a trace has just been accumulated from pre-synaptic activity `x` and post-synaptic activity `y`
+- **THEN** the seam's post-synaptic activity for that tensor SHALL equal `y`
+
 ## ADDED Requirements
 
 ### Requirement: Decorrelating terms for the three-factor update
