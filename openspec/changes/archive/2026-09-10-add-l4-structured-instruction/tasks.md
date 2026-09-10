@@ -63,9 +63,9 @@
 - [x] 5.3 Tests for the harness: each verdict branch including `no_routing_effect`; the committed
   values are not used as a comparator; a missing run is reported and never imputed; S3 and S4
   cannot change the verdict.
-- [ ] 5.4 Commit the launch record — protocol, family, verdict map, the extrasynaptic caveat and
+- [x] 5.4 Commit the launch record — protocol, family, verdict map, the extrasynaptic caveat and
   the instructed fraction — then run the four arms (seeds 1–16, 3000 episodes).
-- [ ] 5.5 Records under `docs/experiments/logbooks/supporting/047-l4-structured-instruction/`:
+- [x] 5.5 Records under `docs/experiments/logbooks/supporting/047-l4-structured-instruction/`:
   `launch.md`, `panel.json`, `per-seed.csv`, `curves.csv`, `_manifest.txt`, `details.md`.
 
 ## 6. Documentation
@@ -73,4 +73,4 @@
 - [x] 6.1 `docs/architectures.md`: the routing mode, the pathway's derivation and its status as a
   synaptic proxy for aminergic reach.
 - [x] 6.2 `CHANGELOG.md`.
-- [ ] 6.3 Tracker and roadmap updated with the verdict at close-out.
+- [x] 6.3 Tracker and roadmap updated with the verdict at close-out.

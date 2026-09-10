@@ -87,4 +87,16 @@ uv run python scripts/run_campaign.py \
 
 ## Results
 
-*(written here after the runs)*
+Run 2026-09-10, 64 runs at 3000 episodes with one registered extension applied. **Verdict
+`no_routing_effect`**: S1 −3.18, S2 −7.30, S3 +0.87, S4 −3.24, all q = 0.975. Routing made both
+arms worse and removed their good seeds — the best wild-type seed falls from 70.5 to 24.3 and
+competent seeds from 3/16 to 1/16 — while the instructed share of the update (0.92) confirms the
+intervention was real. The registered consistency check reproduces panel 1's committed values
+**bit-for-bit** on the shared seeds, so the substrate has not drifted in six panels. Seven runs
+were lost to a mid-campaign branch switch and re-run; one log was destroyed by a bad copy and
+regenerated. Full reading in `details.md`, which also records where the pre-committed prediction
+was wrong.
+
+**This panel must be read against the rule's positive control**, which the rule failed the same
+day: it measures what a non-learning rule does under two routing regimes, not whether aminergic
+pathways matter in the animal.
