@@ -45,16 +45,40 @@ values, where retention is decided, than a linear one does. It reaches σ_final 
 is constant after, so the arm's endpoint is a stated σ rather than whatever the schedule happened
 to reach.
 
-`σ_final = 0` is permitted and means the arm stops exploring entirely at `E`; the eligibility is
-then identically zero and the rule writes nothing further, which is a frozen policy by a different
-route and is a legitimate endpoint to register. The load-time refusal of a zero σ applies to the
-*initial* scale only.
+**Registered values.** σ₀ = 0.2, σ_final = 0.02, E = half the budget: 1,000 of the assay's
+2,000 episodes and 10,000 of the control's 20,000 trials. σ₀ is the scale that passed the control.
+σ_final sits an order of magnitude below it — under the grid's 0.05, which still cost 7 of 8 seeds
+the learning bar, and above 0.01, where the estimator was inert — so the floor is a scale at which
+the perturbation should be nearly harmless and the estimator nearly silent. E = half so that the
+final quarter, which the plateau-tail metric, the control's score window and the trajectory
+annotation all read, sits entirely at σ_final rather than partway down the decay.
+
+**σ_final must be positive.** Both substrates decide *at forward time* whether they are
+perturbing by testing the scale against zero, and when they are not, the trace falls back to the
+activity: `post_factor = self.node_perturbation if self.node_noise > 0.0 else h`. A schedule that
+reached zero would therefore not silence the eligibility — it would silently turn it back into the
+Hebbian `pre ⊗ post` the whole sequence exists to replace. Rather than re-gate two forward passes
+on the mode for a case no arm needs, a zero floor is refused at load, and the existing refusal of a
+zero *initial* scale stands.
 
 ## Where it advances
 
-`prepare_episode()` is called by the runner at the start of every episode and already resets the
-traces and the rule's per-episode state. The counter advances there, in the brain, and the
-topologies read the current σ rather than a construction-time constant.
+The counter lives on the **topology**, not the brain, and advances through an explicit seam
+method — call it `advance_schedule()` — that the brain's `prepare_episode()` calls beside
+`reset_traces()`. Two facts force that placement:
+
+- The positive control has no brain. It builds `MLPTopology` directly and drives the rule over the
+  seam, calling `reset_traces()` once per trial. A counter in the brain would never advance there,
+  and the annealed control arm would run at σ₀ throughout, pass, and license the assay on a false
+  gate. With the counter on the topology, the harness advances it once per trial: **the control's
+  trial is its schedule step**, and E = 10,000 counts trials.
+- `reset_traces()` is not only the per-episode hook. The rule's load-time reset calls it too, and a
+  load must *restart* the schedule, not advance it. So the counter does not ride on
+  `reset_traces()`; it advances only where an episode (or trial) actually begins, and a policy load
+  sets it back to zero.
+
+The counter is a plain integer on the topology. It is not a buffer, never enters `state_dict`, and
+needs no transient-buffer bookkeeping: a checkpoint written before this change loads unchanged.
 
 Two consequences to state rather than discover:
 
@@ -63,9 +87,9 @@ Two consequences to state rather than discover:
   annealing on probe episodes as well as training ones, and must not read this schedule as
   episode-indexed training time.
 - On a **warm start** the counter begins at zero, so a loaded competent policy is annealed from
-  σ_0. That is the intended reading for the clone assay: the arm explores at the σ that learns and
-  decays from there, which is exactly the question. It is *not* transparent to a checkpoint that
-  was saved mid-anneal; the counter is transient state, cleared per load, never persisted.
+  σ₀. That is the intended reading for the clone assay: the arm explores at the σ that learns and
+  decays from there, which is exactly the question. A checkpoint saved mid-anneal restarts the
+  schedule on load rather than resuming it.
 
 ## The scale coupling, and why it is registered rather than fixed
 
@@ -81,7 +105,10 @@ its exploration. That is a confound, and there are two honest regimes:
 - **`plasticity_normalise_trace: true`** — every panel arm and both I.1 arms enable this. Each
   tensor's Hebbian term is divided by a running RMS of its own trace, and since the trace scales
   with σ, so does the RMS: most of the coupling cancels, and the arm anneals exploration at a
-  roughly fixed step size. This is the registered regime for both gates.
+  roughly fixed step size. The RMS is an EMA with `scale_rate` 0.01, a time constant of about a
+  hundred updates, so it lags a decaying σ by that much — negligible against a decay spread over
+  a thousand episodes or ten thousand trials, and stated so the residual is known rather than
+  discovered. This is the registered regime for both gates.
 - **`plasticity_normalise_trace: false`** — the coupling is live and the anneal is a joint decay of
   exploration and rate. Permitted, but the arm must declare it, and a result from such an arm is
   not comparable with a normalised one.
@@ -96,15 +123,22 @@ registered variant, not a mid-flight repair.
 1. **The positive control, under the schedule.** The annealed arm runs the same one-step contextual
    association with the same three validity arms, over the same seeds, with the anneal compressed
    to the control's episode budget. It must clear the registered bar — 7 of 8 seeds and half the
-   floor-to-optimum gap — with its alignment reported at both ends of the schedule. *Licenses:* the
-   schedule is still a learner. A schedule that anneals away its own signal fails here, and that is
-   a cheap and decisive place to find out.
+   floor-to-optimum gap. The score window is the last 1,000 trials, which under E = 10,000 sits
+   entirely at σ_final, so a pass means the policy the schedule *left behind* is competent under the
+   perturbation it will actually run with. Alignment is reported separately over the decay (the
+   first E trials) and the floor (the rest). At the floor the estimator is nearly silent by
+   construction, so a low floor-phase alignment is expected of a good schedule and is not the
+   failure signature; the signature of a schedule that anneals away its own signal is a **decay-phase
+   alignment that does not rise with the constant-σ arm's and a floor-phase score below the bar**.
+   *Licenses:* the schedule is still a learner, and that is a cheap and decisive place to find out.
 2. **The clone assay, with a frozen control beside it.** The same registered screening arm,
    comparator, budget, metric and pass rule, plus a frozen-perturbation control running the
    *identical schedule* with `freeze_updates: true`. The control is not optional and its meaning is
    sharper than in I.1: under a schedule the frozen arm's score *recovers as σ falls*, so it traces
-   the damage the schedule alone does over its whole path. The learning arm is read against that
-   trace, not against a single number. *Licenses:* nothing beyond itself — the panel stays gated on
+   the damage the schedule alone does over its whole path. Both arms' curves are binned per 250
+   episodes — eight bins, the first four spanning the decay and the last four at the floor — with
+   the bin's σ(e) stated beside it, and the learning arm is read against the frozen arm bin by bin,
+   not against a single number. *Licenses:* nothing beyond itself — the panel stays gated on
    I.2 regardless of the outcome.
 
 Gate 1 before gate 2, and a failure at gate 1 stops there.

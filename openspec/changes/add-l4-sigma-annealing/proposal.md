@@ -28,8 +28,11 @@ This registers that mechanism and the two gates it must clear, before it runs.
 
 - **A schedule for the perturbation scale.** `plasticity_node_noise` becomes the *initial* σ;
   `plasticity_node_noise_final` and `plasticity_node_noise_anneal_episodes` add a decay toward a
-  floor, advanced once per episode at the existing `prepare_episode` hook. Absent the new fields
-  the scale is constant and every existing arm is byte-identical.
+  floor, advanced once per episode. **The values are registered here**: σ₀ = 0.2 (the scale
+  that passed the control), σ_final = 0.02 (an order of magnitude down — below the grid's 0.05,
+  which still cost 7 of 8 seeds the learning bar, and above 0.01, where the estimator was inert),
+  and E = half of each gate's budget, so the final quarter every metric reads sits entirely at
+  σ_final. Absent the new fields the scale is constant and every existing arm is byte-identical.
 - **The scale coupling stated and tested.** The trace carries `pre ⊗ ξ` with `ξ ~ N(0, σ²)` drawn
   as `randn · σ`, so the update's magnitude scales with σ *linearly* — decaying σ shrinks the step
   as well as the exploration. `plasticity_normalise_trace`, which every panel arm enables, divides

@@ -12,19 +12,23 @@ With both set, the scale in an episode indexed `e` (counting episodes begun, fro
 configured perturbation scale and `E` the anneal length. The schedule SHALL therefore be monotone,
 SHALL reach `σ_final` exactly at `E`, and SHALL be constant thereafter.
 
-A final scale of zero SHALL be permitted and SHALL mean the arm stops exploring at `E`, after which
-the eligibility is identically zero and the rule writes nothing further. The existing refusal of a
-zero perturbation scale SHALL apply to the initial scale only.
+A final scale of zero SHALL be rejected at load: the substrates decide at forward time whether
+they perturb by testing the scale against zero, and a scale that reached zero would return the
+eligibility to pre-synaptic times post-synaptic activity rather than silencing it. The existing
+refusal of a zero initial scale SHALL stand.
 
 Setting a final scale without an anneal length, or an anneal length without a final scale, SHALL be
 rejected at load, since neither alone defines a schedule; a final scale exceeding the initial scale
-SHALL be rejected, since the mechanism is a decay. Both refusals SHALL be repeated at brain
+SHALL be rejected, since the mechanism is a decay. Every refusal SHALL be repeated at brain
 construction, since a copied configuration skips validators.
 
-The schedule SHALL advance once per episode at the same hook that resets the per-episode learning
-state, and its counter SHALL be transient — reset when a policy is loaded, never persisted — so
-that a warm-started arm begins its schedule at `σ_0` and a checkpoint written before this
-requirement still loads.
+The schedule's counter SHALL live on the plastic topology and SHALL advance only through an
+explicit seam method that a caller invokes where an episode begins — the brain at episode start,
+and a harness driving the topology without a brain at each of its trials, a trial being that
+harness's schedule step. The counter SHALL NOT advance when the traces are reset, since the traces
+are also reset when a policy is loaded, and a load SHALL set the counter to zero. The counter SHALL
+NOT be persisted, so that a warm-started arm begins its schedule at `σ_0` and a checkpoint written
+before this requirement still loads.
 
 #### Scenario: The default path is unchanged
 
@@ -42,9 +46,22 @@ requirement still loads.
 #### Scenario: A schedule that is only half specified is refused
 
 - **GIVEN** a configuration setting a final scale but no anneal length, or an anneal length but no
-  final scale, or a final scale above the initial scale
+  final scale, or a final scale above the initial scale, or a final scale of zero
 - **WHEN** the configuration is loaded, or a brain is built from a copy of it
-- **THEN** it SHALL fail with a message naming the missing or inverted bound
+- **THEN** it SHALL fail with a message naming the missing, inverted or zero bound
+
+#### Scenario: Resetting the traces does not advance the schedule
+
+- **GIVEN** an annealed arm partway through its schedule
+- **WHEN** the traces are reset without an episode beginning
+- **THEN** the scheduled scale SHALL be unchanged
+
+#### Scenario: A harness without a brain advances the schedule itself
+
+- **GIVEN** a plastic topology driven directly, with no brain, by a harness that invokes the seam
+  method once per trial
+- **WHEN** `E` trials have begun
+- **THEN** the scheduled scale SHALL equal the final scale
 
 #### Scenario: A warm start begins the schedule again
 
