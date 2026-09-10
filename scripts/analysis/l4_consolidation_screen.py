@@ -63,9 +63,48 @@ ARMS: dict[str, str] = {
     # it bin by bin.
     f"{_STEM}_plastic_clone_nodeperturbation_annealed": "perturbation_annealed",
     f"{_STEM}_plastic_clone_nodeperturbation_annealed_frozen": "perturbation_annealed_frozen",
+    # Not a mechanism either: the node-perturbation arm's ENDPOINT weights run with the
+    # perturbation off. Every score above was taken while the arm's own perturbation ran, which
+    # measures what it does while training rather than what it learned. This is the comparator's
+    # condition on those weights.
+    f"{_STEM}_plastic_frozen_endpoint_nodeperturbation": "endpoint_nodeperturbation",
 }
 ARM_KEYS = tuple(ARMS.values())
 ANNEALED_ARMS = frozenset({"perturbation_annealed", "perturbation_annealed_frozen"})
+
+# Arms that evaluate another arm's endpoint weights: the arm whose endpoint they run, and the
+# per-seed cosine-to-clone that arm recorded. With updates frozen a run's final weights ARE the
+# weights it loaded, so the cosine must reproduce the recorded value; a cosine near 1.00 means
+# the clone was loaded instead of the endpoint, which would read as a policy that held.
+ENDPOINT_ARMS: dict[str, str] = {"endpoint_nodeperturbation": "node_perturbation"}
+# From the 050 record's `node_perturbation.cosine_to_clone`, committed there before this arm existed.
+ENDPOINT_SOURCE_COSINE: dict[str, dict[int, float]] = {
+    "endpoint_nodeperturbation": {
+        1: 0.688,
+        2: 0.725,
+        3: 0.722,
+        4: 0.678,
+        5: 0.691,
+        6: 0.748,
+        7: 0.679,
+        8: 0.649,
+    },
+}
+COSINE_TOLERANCE = 0.01
+# The source arm's own per-seed scores, from the same record: the endpoint's score against these
+# is the perturbation tax the rule was paying at the end of training. Descriptive only.
+ENDPOINT_UNDER_PERTURBATION: dict[str, dict[int, float]] = {
+    "endpoint_nodeperturbation": {
+        1: 7.0,
+        2: 24.6,
+        3: 12.4,
+        4: 2.8,
+        5: 7.2,
+        6: 3.0,
+        7: 10.2,
+        8: 29.0,
+    },
+}
 
 SEEDS = tuple(range(1, 9))
 BUDGET = 2000
@@ -278,6 +317,32 @@ def binned_trajectory(panel: dict[str, dict[int, SeedRecord]], arm: str) -> dict
     }
 
 
+def endpoint_integrity(arm: str, cosines: dict[str, float | None]) -> dict[str, Any]:
+    """Check an endpoint arm actually loaded the endpoint, not the clone it started from.
+
+    Frozen updates mean the run's final weights are the ones it loaded, so its cosine to the
+    clone must reproduce the value the source arm recorded. A seed that departs is void, and a
+    void seed voids the verdict: the alternative is scoring a run of the clone as if it were a
+    run of what the rule learned, which reads as a policy that held.
+    """
+    expected = ENDPOINT_SOURCE_COSINE[arm]
+    per_seed: dict[str, Any] = {}
+    void: list[int] = []
+    for seed, recorded in sorted(expected.items()):
+        seen = cosines.get(str(seed))
+        ok = seen is not None and abs(seen - recorded) <= COSINE_TOLERANCE
+        per_seed[str(seed)] = {"recorded": recorded, "seen": seen, "ok": ok}
+        if not ok:
+            void.append(seed)
+    return {
+        "source_arm": ENDPOINT_ARMS[arm],
+        "tolerance": COSINE_TOLERANCE,
+        "per_seed": per_seed,
+        "void_seeds": void,
+        "verdict_void": bool(void),
+    }
+
+
 def assess(values: dict[int, float]) -> dict[str, Any]:
     """Apply the assay's pass rule to one arm's per-seed values."""
     seeds = sorted(values)
@@ -340,6 +405,13 @@ def analyse(
         result["rate_multiplier"] = multipliers
         result["rate_multiplier_mean"] = float(np.mean(used)) if used else float("nan")
         result["trajectory"] = trajectory(panel, arm)
+        if arm in ENDPOINT_ARMS:
+            result["integrity"] = endpoint_integrity(arm, cosines)
+            # Descriptive, not a verdict input: what the source arm scored while its own
+            # perturbation was running, beside what its endpoint scores without it.
+            result["under_perturbation"] = {
+                str(s): v for s, v in sorted(ENDPOINT_UNDER_PERTURBATION[arm].items())
+            }
         if arm in ANNEALED_ARMS:
             result["binned_trajectory"] = binned_trajectory(panel, arm)
             result["schedule"] = {
