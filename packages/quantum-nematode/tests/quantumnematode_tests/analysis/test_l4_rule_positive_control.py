@@ -262,6 +262,28 @@ class TestTheAnnealedArm:
         assert seen[50] < seen[0]
         assert run["schedule"] == {"initial": 0.2, "final": 0.02, "decay_trials": 100}
 
+    def test_a_non_aligned_budget_files_blocks_by_phase(self) -> None:
+        # 2500 is a permitted budget whose decay ends at 1250, mid-block. Without a flush at
+        # that point the block spanning it would be filed whole by whichever phase its last
+        # trial fell in, mixing decay trials into the floor average.
+        schedule = pc.annealed_schedule(2500)
+        assert schedule.episodes % pc.BLOCK != 0, "this budget must straddle a block boundary"
+        run = pc.run_arm(
+            "node_perturbation_annealed",
+            seed=1,
+            task=_TASK,
+            trials=2500,
+            node_noise=pc.ANNEAL_INITIAL,
+            schedule=schedule,
+        )
+        assert not np.isnan(run["alignment_decay"])
+        assert not np.isnan(run["alignment_floor"])
+
+    def test_the_registered_budget_needs_no_extra_flush(self) -> None:
+        # The decay length is a multiple of BLOCK there, so the boundary condition never fires
+        # on its own and the blocks are exactly as they were before it was added.
+        assert pc.annealed_schedule(pc.TRIALS).episodes % pc.BLOCK == 0
+
     def test_it_records_the_pinned_rate(self) -> None:
         # It runs at the pinned rate like every other learning arm; a null there would make
         # the row and its CSV line under-describe the run.

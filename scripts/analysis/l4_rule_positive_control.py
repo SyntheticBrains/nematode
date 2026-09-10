@@ -216,7 +216,11 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
                     # positively. The raw gradient would give a correct rule a cosine of -1.
                     block_gradient[index] += -gradients[index]
 
-        if (trial + 1) % BLOCK == 0:
+        # A block is closed on its own boundary and again exactly where the decay ends, so a
+        # block spanning that point is not filed whole by whichever phase its last trial fell
+        # in. Where the decay length is a multiple of BLOCK -- as the registered budget's is --
+        # the second condition never fires on its own and the blocks are unchanged.
+        if (trial + 1) % BLOCK == 0 or (0 < decay_trials == trial + 1):
             aligned = _block_alignment(block_update, block_gradient)
             if aligned is not None:
                 alignments.append(aligned)

@@ -301,6 +301,27 @@ class TestTheYardstickBrainPerturbsToo:
         brain.prepare_episode()
         assert brain.topology.current_node_noise < first
 
+    def test_loading_a_policy_restarts_the_schedule(self) -> None:
+        # A warm start explores the loaded policy from the initial scale. The connectome gets
+        # this through the rule's state reset; this brain's load path does not call it, so
+        # without an explicit restart a warm-started arm would resume the saving run's decay.
+        from quantumnematode.brain.weights import WeightComponent
+
+        brain = self._mlp_brain(
+            plasticity_eligibility="node_perturbation",
+            plasticity_node_noise=_INITIAL,
+            plasticity_node_noise_final=_FINAL,
+            plasticity_node_noise_anneal_episodes=_EPISODES,
+        )
+        for _ in range(_EPISODES + 1):
+            brain.prepare_episode()
+        assert brain.topology.current_node_noise == pytest.approx(_FINAL)
+
+        brain.load_weight_components(
+            {"policy": WeightComponent(name="policy", state=brain.actor.state_dict())},
+        )
+        assert brain.topology.current_node_noise == pytest.approx(_INITIAL)
+
     def test_the_default_construction_is_unchanged(self) -> None:
         # Wiring these through must not alter any arm that does not ask for them.
         brain = self._mlp_brain()

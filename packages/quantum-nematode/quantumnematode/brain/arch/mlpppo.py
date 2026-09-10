@@ -1080,6 +1080,11 @@ class MLPPPOBrain(ClassicalBrain):
         # Load networks first (catches shape mismatches before optimizer)
         if "policy" in components:
             self.actor.load_state_dict(components["policy"].state)
+            # A warm start explores the loaded policy from the initial perturbation scale,
+            # not from wherever the saving run's schedule had reached. The connectome gets
+            # this through the rule's state reset, which this brain's load path does not
+            # call, so the schedule is restarted here directly.
+            self.topology.reset_schedule()
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
 
