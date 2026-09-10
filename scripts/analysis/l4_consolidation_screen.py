@@ -52,6 +52,9 @@ ARMS: dict[str, str] = {
     # positive control and must clear this same gate before any connectome arm. The assay is
     # unchanged, which is what makes its result comparable with the three above.
     f"{_STEM}_plastic_clone_nodeperturbation": "node_perturbation",
+    # The same arm with updates frozen: what the perturbation alone costs a competent
+    # policy. A failing plastic arm is attributable to the rule only against this.
+    f"{_STEM}_plastic_clone_nodeperturbation_frozen": "perturbation_frozen",
 }
 ARM_KEYS = tuple(ARMS.values())
 
@@ -186,6 +189,34 @@ def rate_multiplier(log: Path, experiments: Path = EXPERIMENTS) -> float | None:
     return float(np.mean(values)) if values else None
 
 
+def trajectory(panel: dict[str, dict[int, SeedRecord]], arm: str) -> dict[str, Any]:
+    """Compare an arm's success over its final quarter against its first, from the curves.
+
+    A perturbing mechanism costs a competent policy something immediately, before any question
+    of retention. This separates "started near the clone and stayed there, paying that cost"
+    from "started near the clone and was taken apart": the first shows a flat or rising
+    trajectory, the second a falling one. Not a verdict input.
+    """
+    firsts: list[float] = []
+    lasts: list[float] = []
+    for record in panel.get(arm, {}).values():
+        curve = record.curve
+        if len(curve) < 4:
+            continue
+        quarter = len(curve) // 4
+        firsts.append(float(np.mean(curve[:quarter])))
+        lasts.append(float(np.mean(curve[-quarter:])))
+    if not firsts:
+        return {"first_quarter": None, "final_quarter": None, "change": None, "n_read": 0}
+    first, last = float(np.mean(firsts)), float(np.mean(lasts))
+    return {
+        "first_quarter": first,
+        "final_quarter": last,
+        "change": last - first,
+        "n_read": len(firsts),
+    }
+
+
 def assess(values: dict[int, float]) -> dict[str, Any]:
     """Apply the assay's pass rule to one arm's per-seed values."""
     seeds = sorted(values)
@@ -247,6 +278,7 @@ def analyse(
         result["cosine_mean"] = float(np.mean(read)) if read else float("nan")
         result["rate_multiplier"] = multipliers
         result["rate_multiplier_mean"] = float(np.mean(used)) if used else float("nan")
+        result["trajectory"] = trajectory(panel, arm)
         out["arms"][arm] = result
     return out
 
@@ -263,6 +295,12 @@ def _print_arm(arm: str, result: dict) -> None:
         f"  cos {result['cosine_mean']:.2f}  rate x{result['rate_multiplier_mean']:.2f}"
         f"  -> {outcome}",
     )
+    trend = result.get("trajectory") or {}
+    if trend.get("n_read"):
+        print(
+            f"    trajectory: first quarter {trend['first_quarter']:5.1f} -> final quarter "
+            f"{trend['final_quarter']:5.1f} ({trend['change']:+.1f})",
+        )
     if result["missing_seeds"]:
         print(f"    incomplete: seeds {result['missing_seeds']} not read - no pass is possible")
 

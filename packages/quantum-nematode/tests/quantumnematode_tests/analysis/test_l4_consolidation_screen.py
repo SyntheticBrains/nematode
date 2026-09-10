@@ -204,8 +204,16 @@ class TestGrouping:
 
 
 class TestTheRegistry:
-    def test_one_arm_per_mechanism(self) -> None:
-        assert cs.ARM_KEYS == ("anchor", "rigidity", "oracle", "node_perturbation")
+    def test_the_registry_covers_every_screened_arm(self) -> None:
+        assert cs.ARM_KEYS == (
+            "anchor",
+            "rigidity",
+            "oracle",
+            "node_perturbation",
+            # Its frozen control: perturbation applied, no weight written, so a failing
+            # plastic arm can be attributed to the rule rather than to the exploration.
+            "perturbation_frozen",
+        )
 
     def test_every_arm_config_exists(self) -> None:
         configs = _root / "configs" / "scenarios" / "foraging_predator_thermal"

@@ -74,4 +74,14 @@ uv run python scripts/run_campaign.py --config ${P}.yml --seeds 1-8 --runs 2000 
 
 ## Results
 
-*(written here after the runs)*
+Run 2026-09-10, 16 runs across both arms. **The variant fails the assay** (mean 12.0 against the
+frozen clone's 38.7, 1/8 within hold) — and the frozen-perturbation control, registered by spec
+review while the plastic arm was running, changes what that failure means. With its weights
+untouched (cosine 1.00) it scores **8.9**: perturbation alone takes the clone from 38.7 to 8.9,
+and it is already at 9.1 in its first quarter. The plastic arm scores **12.0, above** that
+baseline, starting at 15.2 and settling at 12.0.
+
+**The rule did not take the clone apart; the perturbation did, before the rule acted.** The assay
+at this σ could not test retention because no competent policy survived to be retained. The
+registered fail stands; the finding is the tension it exposes — the σ that makes the rule learn is
+the σ that makes a competent policy unrunnable. Full reading in `details.md`.
