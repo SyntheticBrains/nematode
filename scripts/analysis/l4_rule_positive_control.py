@@ -378,7 +378,16 @@ def write_per_seed_csv(runs: list[dict[str, Any]], path: Path) -> None:
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            ["arm", "rate", "seed", "score", "modulator", "mean_abs_delta", "alignment"],
+            [
+                "arm",
+                "rate",
+                "node_noise",
+                "seed",
+                "score",
+                "modulator",
+                "mean_abs_delta",
+                "alignment",
+            ],
         )
         for run in runs:
             writer.writerow(

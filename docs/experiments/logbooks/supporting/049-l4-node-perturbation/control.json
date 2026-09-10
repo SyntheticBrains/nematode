@@ -1,0 +1,173 @@
+{
+  "arms": {
+    "analytic": {
+      "halfway_threshold": -0.4131130610143905,
+      "mean": -0.13610593269887653,
+      "n": 8,
+      "passes": true,
+      "seeds_above_floor": 8
+    },
+    "hebbian": {
+      "halfway_threshold": -0.4131130610143905,
+      "mean": -0.8753059262986443,
+      "n": 8,
+      "passes": false,
+      "seeds_above_floor": 3
+    },
+    "node_perturbation": {
+      "by_node_noise": {
+        "0.01": {
+          "halfway_threshold": -0.4131130610143905,
+          "mean": -0.7768684473960282,
+          "n": 8,
+          "passes": false,
+          "seeds_above_floor": 4
+        },
+        "0.05": {
+          "halfway_threshold": -0.4131130610143905,
+          "mean": -0.4772917212388949,
+          "n": 8,
+          "passes": false,
+          "seeds_above_floor": 7
+        },
+        "0.2": {
+          "halfway_threshold": -0.4131130610143905,
+          "mean": -0.19623935494991745,
+          "n": 8,
+          "passes": true,
+          "seeds_above_floor": 8
+        }
+      },
+      "passes": true
+    },
+    "three_factor": {
+      "by_rate": {
+        "0.0001": {
+          "halfway_threshold": -0.4131130610143905,
+          "mean": -0.7894616272218979,
+          "n": 8,
+          "passes": false,
+          "seeds_above_floor": 1
+        },
+        "0.001": {
+          "halfway_threshold": -0.4131130610143905,
+          "mean": -0.748160459229803,
+          "n": 8,
+          "passes": false,
+          "seeds_above_floor": 1
+        },
+        "0.01": {
+          "halfway_threshold": -0.4131130610143905,
+          "mean": -0.7503982286225563,
+          "n": 8,
+          "passes": false,
+          "seeds_above_floor": 2
+        }
+      },
+      "passes": false,
+      "pinned_rate": "0.001"
+    }
+  },
+  "diagnosis": {
+    "analytic": {
+      "alignment": 0.45362707619783776,
+      "alignment_median": 0.4036972266063761,
+      "mean_abs_delta": NaN,
+      "modulator": NaN
+    },
+    "hebbian": {
+      "alignment": -0.010404603138158561,
+      "alignment_median": -0.01505771256517619,
+      "mean_abs_delta": 0.0006113790909190356,
+      "modulator": 1.0
+    },
+    "node_perturbation": {
+      "alignment": 0.13621022676466965,
+      "alignment_median": 0.12039909622166306,
+      "by_node_noise": {
+        "0.01": {
+          "alignment": 0.02740628645115066,
+          "alignment_median": 0.026960333143360913,
+          "mean_abs_delta": 0.000262506581981005,
+          "modulator": 0.0020859785366099093
+        },
+        "0.05": {
+          "alignment": 0.11837839548301418,
+          "alignment_median": 0.12039909622166306,
+          "mean_abs_delta": 0.0002517557234751511,
+          "modulator": 0.0021606809125104785
+        },
+        "0.2": {
+          "alignment": 0.2628459983598441,
+          "alignment_median": 0.24386261326959358,
+          "mean_abs_delta": 0.00023358642066068072,
+          "modulator": 0.0020821098364591237
+        }
+      },
+      "mean_abs_delta": 0.00024928290870561225,
+      "modulator": 0.002109589761859837
+    },
+    "three_factor": {
+      "alignment": 0.03148445350477535,
+      "alignment_median": 0.008581560207530856,
+      "by_rate": {
+        "0.0001": {
+          "alignment": 0.07695370273519074,
+          "alignment_median": 0.07383565073367207,
+          "mean_abs_delta": 2.227971157489037e-05,
+          "modulator": 0.002014182669693555
+        },
+        "0.001": {
+          "alignment": 0.019696862551227243,
+          "alignment_median": 0.02506178416639159,
+          "mean_abs_delta": 9.545471534102953e-05,
+          "modulator": 0.0020216679341721194
+        },
+        "0.01": {
+          "alignment": -0.002197204772091936,
+          "alignment_median": 0.0009348182973917573,
+          "mean_abs_delta": 0.0006674494089115295,
+          "modulator": 0.0020181015593599898
+        }
+      },
+      "mean_abs_delta": 0.00026172794527581645,
+      "modulator": 0.0020179840544085545
+    }
+  },
+  "outcome": "fail",
+  "protocol": {
+    "note": "any rate passing counts; the claim under test is that the rule learns at all",
+    "pass_fraction_of_gap": 0.5,
+    "pass_seeds": 7,
+    "rate_grid": [
+      0.0001,
+      0.001,
+      0.01
+    ],
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "trials": 20000
+  },
+  "task": {
+    "cue_blind_floor": -0.6908908387921683,
+    "gap": 0.5555555555555556,
+    "n_cues": 4,
+    "noise": 0.36787944117144233,
+    "optimum": -0.1353352832366127,
+    "targets": [
+      -1.0,
+      -0.33333333333333337,
+      0.33333333333333326,
+      1.0
+    ]
+  },
+  "void_reason": null
+}

@@ -72,4 +72,10 @@ uv run python scripts/analysis/l4_rule_positive_control.py \
 
 ## Results
 
-*(written here after the run)*
+Run 2026-09-10, 48 runs. **The variant passes**, at σ = 0.2: mean **−0.1962** against a floor of
+−0.6909 and a halfway threshold of −0.4131, on **8 of 8 seeds**, with per-seed scores spanning
+−0.184 to −0.213. The control is valid — the analytic reference passes, the unmodulated floor does
+not. Performance and alignment rise together across the grid (−0.777/+0.027, −0.477/+0.118,
+−0.196/+0.263), so the "passed by some other route" branch does not fire: the passing arm's
+alignment is **+0.263** against the old rule's +0.009. The eligibility was the defect, and carrying
+the perturbation repairs it. Full reading in `details.md`.
