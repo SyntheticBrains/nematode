@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -191,7 +192,8 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     return {
         "arm": arm,
         "seed": seed,
-        "rate": rate if arm == "three_factor" else None,
+        # The variant runs at the pinned rate too; recording it keeps the row self-describing.
+        "rate": rate if arm in {"three_factor", "node_perturbation"} else None,
         "node_noise": node_noise if arm == "node_perturbation" else None,
         # The arm's score: mean reward over the last 1000 trials, so a run is judged
         # on where it ended rather than on the exploration it did getting there.
@@ -263,6 +265,9 @@ def analyse(
             "the unmodulated arm passed: the task leaks its answer without reward, so the "
             "three-factor arm's result carries no information about the rule"
         )
+    # `outcome` scores the ORIGINAL rule, which is the question this control was registered to
+    # answer. A variant arm carries its own `passes` flag and is read from there, so that adding
+    # an arm can never change what the control says about the rule it was built for.
     outcome = "void" if void_reason else ("pass" if by_arm["three_factor"]["passes"] else "fail")
 
     diagnosis = {arm: _diagnose(runs, arm) for arm in ARMS}
@@ -288,6 +293,7 @@ def analyse(
             "seeds": list(SEEDS),
             "trials": trials,
             "rate_grid": list(RATE_GRID),
+            "node_noise_grid": list(NODE_NOISE_GRID),
             "pass_seeds": PASS_SEEDS,
             "pass_fraction_of_gap": PASS_FRACTION,
             "note": "any rate passing counts; the claim under test is that the rule learns at all",
@@ -297,6 +303,17 @@ def analyse(
         "outcome": outcome,
         "void_reason": void_reason,
     }
+
+
+def _jsonable(value: object) -> object:
+    """Replace not-a-number with null, recursively, so the record is strict JSON."""
+    if isinstance(value, dict):
+        return {k: _jsonable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 def _diagnose(
@@ -427,7 +444,12 @@ def main(argv: list[str] | None = None) -> int:
     _print_control(out)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+        # `allow_nan=False` refuses bare NaN, which is not JSON and which a strict reader
+        # rejects; unavailable diagnostics (the analytic arm has no modulator or eligibility)
+        # are written as null instead.
+        args.out.write_text(
+            json.dumps(_jsonable(out), indent=2, sort_keys=True, allow_nan=False) + "\n",
+        )
     if args.csv:
         write_per_seed_csv(runs, args.csv)
     # A `fail` is a valid experimental result and exits zero; a `void` means the control itself

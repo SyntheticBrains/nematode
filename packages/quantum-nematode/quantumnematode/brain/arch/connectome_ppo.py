@@ -914,9 +914,13 @@ class ConnectomeTopology(nn.Module):
         """
         if self.enable_activity_traces:
             self.activity_traces.zero_()
-            self.node_perturbation.zero_()
             self.prev_activity.zero_()
             self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
+        # Outside the trace guard: perturbation is a property of the forward pass, not of the
+        # trace, so a topology perturbing with traces disabled must still start each episode
+        # with the previous one's perturbation cleared.
+        if self.node_noise > 0.0:
+            self.node_perturbation.zero_()
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
         """Per-state ``log_std`` from the settled hidden state.

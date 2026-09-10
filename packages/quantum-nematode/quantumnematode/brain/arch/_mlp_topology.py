@@ -127,6 +127,10 @@ class MLPTopology(nn.Module):
                 self.register_buffer(
                     f"perturbation_{index}",
                     torch.zeros(layer.weight.shape[0]),
+                    # Not persisted: per-step state, redrawn every forward and cleared every
+                    # episode. Keeping it out of the state dict is what lets a checkpoint
+                    # written before perturbation existed load unchanged.
+                    persistent=False,
                 )
 
     # ── PlasticTopology seam ──────────────────────────────────
@@ -241,6 +245,9 @@ class MLPTopology(nn.Module):
                     # its own nonlinearity. Perturbing the output instead would drop the
                     # activation's derivative and give a rescaled, not unbiased, estimator.
                     with torch.no_grad():
+                        # Drawn on the generator's own device (CPU) and moved to the
+                        # activation's: a CPU generator cannot fill a non-CPU tensor, so a
+                        # dedicated generator and a GPU substrate would otherwise collide.
                         noise = (
                             torch.randn(
                                 x.shape,
@@ -248,7 +255,7 @@ class MLPTopology(nn.Module):
                                 dtype=x.dtype,
                             )
                             * self.node_noise
-                        )
+                        ).to(x.device)
                         getattr(self, f"perturbation_{layer_index}").copy_(noise)
                     x = x + noise
                 # The activation following a layer is part of that layer's

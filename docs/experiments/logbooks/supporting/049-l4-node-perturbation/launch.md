@@ -72,7 +72,7 @@ uv run python scripts/analysis/l4_rule_positive_control.py \
 
 ## Results
 
-Run 2026-09-10, 48 runs. **The variant passes**, at σ = 0.2: mean **−0.1962** against a floor of
+Run 2026-09-10, 64 runs. **The variant passes**, at σ = 0.2: mean **−0.1962** against a floor of
 −0.6909 and a halfway threshold of −0.4131, on **8 of 8 seeds**, with per-seed scores spanning
 −0.184 to −0.213. The control is valid — the analytic reference passes, the unmodulated floor does
 not. Performance and alignment rise together across the grid (−0.777/+0.027, −0.477/+0.118,

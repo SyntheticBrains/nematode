@@ -157,19 +157,32 @@ class TestItDoesNotDisturbTheRestOfTheStream:
     def test_the_action_noise_is_untouched(self) -> None:
         # "Same seed, perturbation on against off" must differ by the perturbation alone, so
         # the perturbation is drawn from its own generator.
+        # Sampled AFTER each drive without reseeding: reseeding first would make the
+        # comparison vacuous, since it would restore the stream the drive had advanced.
         torch.manual_seed(101)
-        before = torch.randn(3)
         plain = _brain()
         _drive(plain)
-        torch.manual_seed(101)
         after_plain = torch.randn(3)
+
         torch.manual_seed(101)
         perturbed = _brain(plasticity_eligibility="node_perturbation", plasticity_node_noise=0.05)
         _drive(perturbed)
-        torch.manual_seed(101)
         after_perturbed = torch.randn(3)
-        assert torch.equal(before, after_plain)
-        assert torch.equal(before, after_perturbed)
+
+        # The two drives consumed the global stream identically, so what follows them is the
+        # same: the perturbation came from its own generator and shifted nothing.
+        assert torch.equal(after_plain, after_perturbed)
+
+    def test_the_perturbation_would_shift_the_stream_if_it_shared_one(self) -> None:
+        # Guards the test above from passing for the wrong reason: drawing the same shapes
+        # from the GLOBAL stream does advance it, so an implementation without a dedicated
+        # generator would fail the assertion above.
+        torch.manual_seed(101)
+        untouched = torch.randn(3)
+        torch.manual_seed(101)
+        torch.randn(302)  # what a shared-stream perturbation would have drawn
+        shifted = torch.randn(3)
+        assert not torch.equal(untouched, shifted)
 
 
 class TestPersistence:

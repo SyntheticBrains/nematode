@@ -72,8 +72,8 @@
     "analytic": {
       "alignment": 0.45362707619783776,
       "alignment_median": 0.4036972266063761,
-      "mean_abs_delta": NaN,
-      "modulator": NaN
+      "mean_abs_delta": null,
+      "modulator": null
     },
     "hebbian": {
       "alignment": -0.010404603138158561,
@@ -136,6 +136,11 @@
   },
   "outcome": "fail",
   "protocol": {
+    "node_noise_grid": [
+      0.01,
+      0.05,
+      0.2
+    ],
     "note": "any rate passing counts; the claim under test is that the rule learns at all",
     "pass_fraction_of_gap": 0.5,
     "pass_seeds": 7,
