@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -236,8 +237,26 @@ class TestOutput:
         assert out["comparator"]["mean"] == pytest.approx(cs.FROZEN_MEAN)
         assert out["rule"]["hold_seeds_of_eight"] == cs.HOLD_SEEDS
 
-    def test_it_is_json_serialisable(self) -> None:
-        json.dumps(self._out())
+    def test_the_record_is_strict_json(self) -> None:
+        # Bare NaN is not JSON; an arm with no endpoint weights has no cosine to report,
+        # and the record must carry that as null so a strict reader accepts it.
+        out = self._out()
+        assert math.isnan(out["arms"]["anchor"]["cosine_mean"])
+        text = json.dumps(cs._jsonable(out), allow_nan=False)
+        json.loads(text, parse_constant=lambda c: pytest.fail(f"bare {c} in the record"))
+
+    def test_unavailable_measurements_become_null(self) -> None:
+        assert cs._jsonable(float("nan")) is None
+        assert cs._jsonable(float("inf")) is None
+        assert cs._jsonable(float("-inf")) is None
+
+    def test_it_replaces_them_wherever_they_are_nested(self) -> None:
+        out = cs._jsonable({"a": [{"b": float("nan")}, 1.0], "c": {"d": [float("inf")]}})
+        assert out == {"a": [{"b": None}, 1.0], "c": {"d": [None]}}
+
+    def test_it_leaves_finite_values_and_non_numbers_alone(self) -> None:
+        out = cs._jsonable({"f": 0.5, "i": 3, "s": "x", "n": None, "b": True})
+        assert out == {"f": 0.5, "i": 3, "s": "x", "n": None, "b": True}
 
     def test_the_csv_carries_the_cosine_and_multiplier(self, tmp_path: Path) -> None:
         out = self._out()
