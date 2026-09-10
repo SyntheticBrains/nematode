@@ -33,6 +33,12 @@ DecorrelationName = Literal["none", "anti_hebbian_inhibitory", "oja"]
 # chemical input from an aminergic neuron -- and leaves the unmodulated Hebbian term
 # elsewhere, so the arm is an interpolation between two floors the panels already measured.
 ThirdFactorRouting = Literal["global", "pathway"]
+# What the eligibility trace carries. "hebbian" is pre x post: the co-activity every panel
+# ran, which correlates reward surprise with the network's ordinary activity.
+# "node_perturbation" is pre x xi, the part of a unit's output it actually varied, which is
+# what makes the update an estimate of the reward gradient rather than reinforced
+# correlation.
+EligibilityMode = Literal["hebbian", "node_perturbation"]
 
 # Rules that read the eligibility trace, and so require it to be enabled.
 PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
@@ -136,6 +142,17 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_oracle_reference: float = Field(default=1.0, gt=0.0, le=1.0)
     plasticity_oracle_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
+    # ── Eligibility (opt-in) ─────────────────────────────────
+    # Off by default: "hebbian" is the trace every registered result used. Under
+    # "node_perturbation" each plastic unit's PRE-activation is perturbed by
+    # N(0, node_noise^2) and the trace carries that perturbation instead of the
+    # unit's activity, so the rule estimates the reward gradient over what the
+    # network could have done differently. The perturbation changes the forward
+    # pass -- the unit must act on it, or the eligibility describes a
+    # counterfactual the network never took -- so an arm using it is a new arm.
+    plasticity_eligibility: EligibilityMode = "hebbian"
+    plasticity_node_noise: float = Field(default=0.0, ge=0.0)
+
     # ── Third-factor routing (opt-in) ────────────────────────
     # Off by default: "global" is the broadcast scalar every panel has run. "pathway" needs a
     # substrate that derives an instructive pathway, so it is refused on the dense yardstick and
@@ -205,6 +222,25 @@ class PlasticityConfigMixin(BaseModel):
                 "initial_log_std has no effect under the state-dependent std head, whose "
                 "log-std is a function of the hidden state; a non-zero value would silently "
                 "do nothing."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_eligibility(self) -> PlasticityConfigMixin:
+        """Reject an eligibility mode with nothing to build a trace from.
+
+        With a zero perturbation the trace is identically zero, and the arm would look like a
+        rule that learns nothing when it is a rule that was never given anything to learn
+        from. Whether the substrate can perturb at all is the rule's check, not this one:
+        this mixin is shared with substrates whose topologies differ.
+        """
+        if self.plasticity_eligibility == "node_perturbation" and self.plasticity_node_noise == 0.0:
+            msg = (
+                "plasticity_eligibility='node_perturbation' requires a positive "
+                "plasticity_node_noise: with no perturbation the eligibility is identically "
+                "zero, and the arm would look like a rule that learns nothing rather than one "
+                "given nothing to learn from."
             )
             raise ValueError(msg)
         return self

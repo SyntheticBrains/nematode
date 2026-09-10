@@ -337,6 +337,7 @@ class ThreeFactorRule:
         homeostasis: bool = False,
         synapse_signs: list[torch.Tensor] | None = None,
         enforce_signs: bool = True,
+        eligibility: str = "hebbian",
     ) -> None:
         self._topology = topology
         self.plasticity_rate = plasticity_rate
@@ -425,6 +426,18 @@ class ThreeFactorRule:
             on = sum(int(m.sum().item()) for m in self._pathway_masks)
             edges = sum(int(m.sum().item()) for m in topology.plastic_masks)
             self.instructed_fraction = on / edges if edges else 0.0
+        # The eligibility mode the topology's trace was built under. The rule does not build
+        # the trace -- the topology does -- so this is a check that the substrate is actually
+        # perturbing, not a switch: a mode selected over a topology that cannot perturb would
+        # read a trace of ordinary co-activity while reporting itself a gradient estimator.
+        self.eligibility = eligibility
+        if eligibility == "node_perturbation" and not topology.plastic_perturbations:
+            msg = (
+                "eligibility='node_perturbation' needs a topology that perturbs its units: "
+                "this one exposes no perturbations, so the trace would carry ordinary "
+                "co-activity while the rule reported itself a gradient estimator."
+            )
+            raise ValueError(msg)
         if self.decorrelation.mechanism == "anti_hebbian_inhibitory" and not self._synapse_signs:
             msg = (
                 "anti_hebbian_inhibitory needs grounded synapse signs: without them there is "

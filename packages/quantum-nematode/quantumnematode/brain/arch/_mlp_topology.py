@@ -28,6 +28,8 @@ the raw output for a final layer with none.
 
 from __future__ import annotations
 
+from typing import cast
+
 import torch
 from torch import nn
 
@@ -59,13 +61,15 @@ class MLPTopology(nn.Module):
     _actor: nn.Sequential
 
     # Traces are registered only when enabled (guard every use).
-    def __init__(
+    def __init__(  # noqa: PLR0913 — one parameter per substrate switch
         self,
         actor: nn.Sequential,
         *,
         enable_activity_traces: bool,
         trace_decay: float,
         plastic_layers: str = "all",
+        node_noise: float = 0.0,
+        perturbation_seed: int | None = None,
     ) -> None:
         super().__init__()
         # References, deliberately not registered as submodules: the actor
@@ -92,6 +96,14 @@ class MLPTopology(nn.Module):
         self._plastic_ids: set[int] = {id(layer) for layer in self._layers}
         self.enable_activity_traces = enable_activity_traces
         self.trace_decay = trace_decay
+        # Per-unit perturbation. Zero (the default) draws nothing and leaves the forward pass
+        # bit-identical. Its own generator, seeded from the run seed, so enabling perturbation
+        # shifts nothing else in the random stream -- "same seed, on against off" must differ
+        # by the perturbation alone.
+        self.node_noise = node_noise
+        self._perturbation_generator = torch.Generator()
+        if perturbation_seed is not None:
+            self._perturbation_generator.manual_seed(perturbation_seed)
 
         # Dense substrate: every entry is a synapse. Masks are all-true so the
         # rule's mask-dependent telemetry means the same thing here as on a
@@ -108,6 +120,17 @@ class MLPTopology(nn.Module):
                 self.register_buffer(
                     f"post_activity_{index}",
                     torch.zeros(layer.weight.shape[0]),
+                )
+                # The perturbation those units acted on. Transient like the trace: cleared per
+                # episode, never persisted, so a checkpoint written before perturbation
+                # existed loads unchanged.
+                self.register_buffer(
+                    f"perturbation_{index}",
+                    torch.zeros(layer.weight.shape[0]),
+                    # Not persisted: per-step state, redrawn every forward and cleared every
+                    # episode. Keeping it out of the state dict is what lets a checkpoint
+                    # written before perturbation existed load unchanged.
+                    persistent=False,
                 )
 
     # ── PlasticTopology seam ──────────────────────────────────
@@ -146,6 +169,16 @@ class MLPTopology(nn.Module):
         """One ``(out,)`` activity vector per layer: a ``[out, in]`` weight's post axis is ``0``."""
         return [getattr(self, f"post_activity_{index}") for index in range(len(self._layers))]
 
+    @property
+    def plastic_perturbations(self) -> list[torch.Tensor]:
+        """One ``(out,)`` perturbation per layer; empty when this topology is not perturbing."""
+        if self.node_noise <= 0.0:
+            return []
+        return [
+            cast("torch.Tensor", getattr(self, f"perturbation_{index}"))
+            for index in range(len(self._layers))
+        ]
+
     # ── BrainTopology seam ────────────────────────────────────
 
     @property
@@ -164,6 +197,9 @@ class MLPTopology(nn.Module):
         if self.enable_activity_traces:
             for trace in self.eligibility_traces:
                 trace.zero_()
+            # Perturbation state is per-step and belongs to the episode that drew it.
+            for perturbation in self.plastic_perturbations:
+                perturbation.zero_()
 
     # ── Forward ───────────────────────────────────────────────
 
@@ -198,11 +234,30 @@ class MLPTopology(nn.Module):
         x = features
         layer_index = 0
         i = 0
+        perturbing = self.node_noise > 0.0
         while i < len(modules):
             module = modules[i]
             if isinstance(module, nn.Linear):
                 pre = x
                 x = module(x)
+                if perturbing and id(module) in self._plastic_ids:
+                    # Into the PRE-activation, so the unit acts on its perturbation through
+                    # its own nonlinearity. Perturbing the output instead would drop the
+                    # activation's derivative and give a rescaled, not unbiased, estimator.
+                    with torch.no_grad():
+                        # Drawn on the generator's own device (CPU) and moved to the
+                        # activation's: a CPU generator cannot fill a non-CPU tensor, so a
+                        # dedicated generator and a GPU substrate would otherwise collide.
+                        noise = (
+                            torch.randn(
+                                x.shape,
+                                generator=self._perturbation_generator,
+                                dtype=x.dtype,
+                            )
+                            * self.node_noise
+                        ).to(x.device)
+                        getattr(self, f"perturbation_{layer_index}").copy_(noise)
+                    x = x + noise
                 # The activation following a layer is part of that layer's
                 # "post": it is the rate the next population actually sees.
                 if i + 1 < len(modules) and not isinstance(modules[i + 1], nn.Linear):
@@ -214,7 +269,17 @@ class MLPTopology(nn.Module):
                 if id(module) in self._plastic_ids:
                     with torch.no_grad():
                         trace = getattr(self, f"trace_{layer_index}")
-                        trace.mul_(self.trace_decay).add_(torch.outer(x.detach(), pre.detach()))
+                        # Perturbing, the eligibility carries what the unit VARIED rather than
+                        # what it did: `pre (x) xi` is the part of its output the network could
+                        # have done otherwise, which is what a reward surprise can be
+                        # correlated with. `pre (x) post` correlates reward with ordinary
+                        # activity, which is reinforced correlation and not a gradient estimate.
+                        post = (
+                            getattr(self, f"perturbation_{layer_index}")
+                            if perturbing
+                            else x.detach()
+                        )
+                        trace.mul_(self.trace_decay).add_(torch.outer(post, pre.detach()))
                         # The same post-synaptic factor the trace just took, so a
                         # term reading it and the Hebbian term agree on the step.
                         getattr(self, f"post_activity_{layer_index}").copy_(x.detach())

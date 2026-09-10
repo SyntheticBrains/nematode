@@ -298,6 +298,12 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
             "synapse to key on — only a coin flip to negate."
         )
         raise ValueError(msg)
+    if config.plasticity_eligibility == "node_perturbation" and config.plasticity_node_noise == 0.0:
+        msg = (
+            "plasticity_eligibility='node_perturbation' requires a positive "
+            "plasticity_node_noise: with no perturbation the eligibility is identically zero."
+        )
+        raise ValueError(msg)
     if config.third_factor == "pathway" and config.learning_rule in UNMODULATED_RULES:
         msg = (
             f"third_factor='pathway' has no effect under learning_rule="
@@ -327,6 +333,7 @@ class ConnectomeTopology(nn.Module):
     g_gap: torch.Tensor
     # Allocated only when ``enable_activity_traces`` is on (guard every use).
     activity_traces: torch.Tensor
+    node_perturbation: torch.Tensor
     prev_activity: torch.Tensor
     prev_activity_valid: torch.Tensor
     _food_neuron_indices: torch.Tensor
@@ -349,6 +356,8 @@ class ConnectomeTopology(nn.Module):
         *,
         enable_gap_junctions: bool,
         forward_pass_depth: int,
+        node_noise: float = 0.0,
+        perturbation_seed: int | None = None,
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
@@ -376,6 +385,13 @@ class ConnectomeTopology(nn.Module):
             msg = f"n_food_features must be >= 1, got {n_food_features}"
             raise ValueError(msg)
         self.forward_pass_depth = forward_pass_depth
+        # Per-unit perturbation. Zero (the default) draws nothing and leaves the forward pass
+        # bit-identical. Its own generator, seeded from the run seed, so enabling perturbation
+        # shifts nothing else in the random stream.
+        self.node_noise = node_noise
+        self._perturbation_generator = torch.Generator()
+        if perturbation_seed is not None:
+            self._perturbation_generator.manual_seed(perturbation_seed)
         self.enable_gap_junctions = enable_gap_junctions
         self.n_food_features = n_food_features
         self.enable_predator_projection = enable_predator_projection
@@ -474,6 +490,12 @@ class ConnectomeTopology(nn.Module):
         self.register_buffer(
             "chem_pathway",
             torch.from_numpy(pathway_np).to(device=device),
+        )
+        # The perturbation each unit acted on, summed over the settling steps. Transient like
+        # the traces: cleared per episode, never persisted.
+        self.register_buffer(
+            "node_perturbation",
+            torch.zeros(self.n_neurons, device=device),
         )
         edges = int(m_chem_np.astype(bool).sum())
         self.instructed_fraction: float = float(pathway_np.sum()) / edges if edges else 0.0
@@ -817,6 +839,13 @@ class ConnectomeTopology(nn.Module):
         return [0]
 
     @property
+    def plastic_perturbations(self) -> list[torch.Tensor]:
+        """The settling-summed perturbation; empty when this topology is not perturbing."""
+        if self.node_noise <= 0.0:
+            return []
+        return [self.node_perturbation]
+
+    @property
     def plastic_post_activities(self) -> list[torch.Tensor]:
         """The activity the trace's post-synaptic factor was built from.
 
@@ -887,6 +916,11 @@ class ConnectomeTopology(nn.Module):
             self.activity_traces.zero_()
             self.prev_activity.zero_()
             self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
+        # Outside the trace guard: perturbation is a property of the forward pass, not of the
+        # trace, so a topology perturbing with traces disabled must still start each episode
+        # with the previous one's perturbation cleared.
+        if self.node_noise > 0.0:
+            self.node_perturbation.zero_()
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
         """Per-state ``log_std`` from the settled hidden state.
@@ -1052,9 +1086,31 @@ class ConnectomeTopology(nn.Module):
         # ``w_chem`` so the optimiser can grow new edges from zero init.
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
+        perturbation = None
         for _ in range(self.forward_pass_depth):
             preact = chem_mat.T @ h + gap_mat.T @ h
+            if self.node_noise > 0.0:
+                # Into the PRE-activation, at EVERY settling step. Perturbing only the settled
+                # state leaves a synapse's effect through the later steps uncredited, and
+                # perturbing after the tanh would drop the activation's derivative -- either
+                # gives a rescaled rather than unbiased estimate of the reward gradient.
+                with torch.no_grad():
+                    step_noise = (
+                        torch.randn(
+                            preact.shape,
+                            generator=self._perturbation_generator,
+                            dtype=preact.dtype,
+                        )
+                        * self.node_noise
+                    )
+                perturbation = step_noise if perturbation is None else perturbation + step_noise
+                preact = preact + step_noise
             h = torch.tanh(preact)
+        if perturbation is not None:
+            with torch.no_grad():
+                # The unit's total perturbation over the settling, which is what its activity
+                # was actually displaced by and therefore what the eligibility must carry.
+                self.node_perturbation.copy_(perturbation)
 
         # Activity-trace update (opt-in; causal co-activity eligibility:
         # E ← trace_decay·E + M_chem ∘ (h_prev ⊗ h), with E[i, j] pre-i →
@@ -1080,8 +1136,9 @@ class ConnectomeTopology(nn.Module):
                     # single masking seam — rather than an inline m_chem multiply
                     # (bitwise-identical: 0/1 mask multiplication is exact and
                     # commutative).
+                    post_factor = self.node_perturbation if self.node_noise > 0.0 else h
                     self.activity_traces.mul_(self.trace_decay).add_(
-                        self.apply_weight_mask(torch.outer(self.prev_activity, h)),
+                        self.apply_weight_mask(torch.outer(self.prev_activity, post_factor)),
                     )
                 else:
                     # First step of an episode: no presynaptic history, so
@@ -1349,6 +1406,8 @@ class ConnectomePPOBrain(ClassicalBrain):
             connectome,
             enable_gap_junctions=config.enable_gap_junctions,
             forward_pass_depth=config.forward_pass_depth,
+            node_noise=config.plasticity_node_noise,
+            perturbation_seed=self.seed,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,
@@ -1428,6 +1487,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     else None
                 ),
                 enforce_signs=config.enforce_synapse_signs,
+                eligibility=config.plasticity_eligibility,
                 pathway_masks=(
                     [cast("torch.Tensor", self.topology.chem_pathway)]
                     if config.third_factor == "pathway"
@@ -2012,6 +2072,8 @@ class ConnectomePPOBrain(ClassicalBrain):
         # routing existed -- including the clone assay's start points -- for no gain, since a
         # brain rebuilds it from its own wiring.
         "chem_pathway",
+        # Per-step perturbation state, drawn fresh and cleared per episode.
+        "node_perturbation",
     )
 
     def _load_topology_state(self, topology_state: dict[str, Any]) -> None:

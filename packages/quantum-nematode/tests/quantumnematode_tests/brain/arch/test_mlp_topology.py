@@ -79,6 +79,11 @@ class TestWrapsRatherThanRebuilds:
             "post_activity_1",
             "post_activity_2",
         }
+        # The perturbation each unit acted on is registered non-persistently, so it stays out
+        # of the state dict entirely: a checkpoint written before perturbation existed must
+        # load into a perturbing topology unchanged.
+        assert not any("perturbation" in key for key in topo.state_dict())
+        assert len(topo.plastic_perturbations) == 0  # and nothing is exposed when off
 
     def test_traces_off_allocates_nothing(self) -> None:
         topo = MLPTopology(_actor(), enable_activity_traces=False, trace_decay=0.9)
