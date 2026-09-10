@@ -352,6 +352,16 @@ def write_per_seed_csv(out: dict, path: Path) -> None:
                 )
 
 
+def write_screen_json(out: dict, path: Path) -> None:
+    """Write the screen as strict JSON.
+
+    `allow_nan=False` refuses bare NaN, which is not JSON; unavailable measurements
+    (an arm whose endpoint weights were not retained) are written as null instead.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_jsonable(out), indent=2, sort_keys=True, allow_nan=False) + "\n")
+
+
 def main(argv: list[str] | None = None) -> int:
     """Read the screen's runs, apply the pass rule and write the records."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -375,12 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     out = analyse(panel, logs, args.experiments)
     _print_screen(out)
     if args.out:
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        # `allow_nan=False` refuses bare NaN, which is not JSON; unavailable measurements
-        # (an arm whose endpoint weights were not retained) are written as null instead.
-        args.out.write_text(
-            json.dumps(_jsonable(out), indent=2, sort_keys=True, allow_nan=False) + "\n",
-        )
+        write_screen_json(out, args.out)
     if args.csv:
         write_per_seed_csv(out, args.csv)
     return 0
