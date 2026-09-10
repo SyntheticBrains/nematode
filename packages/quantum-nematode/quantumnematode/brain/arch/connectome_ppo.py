@@ -55,7 +55,7 @@ from quantumnematode.brain.arch._std_head import (
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
-from quantumnematode.connectome.neurotransmitters import sign_for
+from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
 from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
@@ -275,6 +275,38 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse plasticity modes this build cannot honour, before anything is constructed.
+
+    Each of these is also a config validator. They are repeated at construction because a
+    config built by ``model_copy`` skips validators, which is how the campaign runner derives
+    its arms -- the defect the sign-grounding work found and fixed once already.
+    """
+    if config.enforce_synapse_signs and config.synapse_signs != "atlas":
+        msg = (
+            "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
+            "that were drawn at random would constrain noise, not biology."
+        )
+        raise ValueError(msg)
+    if config.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
+        config.synapse_signs != "atlas"
+    ):
+        msg = (
+            "plasticity_decorrelation='anti_hebbian_inhibitory' requires "
+            "synapse_signs='atlas': the variant learns with the opposite sign at "
+            "inhibitory synapses, and where the signs were drawn there is no inhibitory "
+            "synapse to key on — only a coin flip to negate."
+        )
+        raise ValueError(msg)
+    if config.third_factor == "pathway" and config.learning_rule in UNMODULATED_RULES:
+        msg = (
+            f"third_factor='pathway' has no effect under learning_rule="
+            f"{config.learning_rule!r}: that rule applies no neuromodulatory factor, so the "
+            "routed arm would be the unmodulated Hebbian floor under another name."
+        )
+        raise ValueError(msg)
+
+
 class ConnectomeTopology(nn.Module):
     """Forward-pass network whose connectivity is the Cook 2019 connectome.
 
@@ -426,6 +458,25 @@ class ConnectomeTopology(nn.Module):
             "chem_sign",
             torch.from_numpy(sign_np).to(device=device),
         )
+        # The instructive pathway: synapses whose POST-synaptic neuron receives chemical input
+        # from an aminergic neuron. A modulator gates plasticity by acting on the cell that owns
+        # the synapse, and here that cell owns the column, so the mask is keyed on `post`.
+        # Derived from THIS connectome, so a rewired substrate gets its own pathway. Not a
+        # wiring buffer: it changes how learning is applied, not what the weights are, so a
+        # weight file crosses routing modes freely.
+        instructed = instructed_neurons(connectome)
+        pathway_np = np.zeros_like(m_chem_np, dtype=bool)
+        for name in instructed:
+            index = self._idx.get(name)
+            if index is not None:
+                pathway_np[:, index] = True
+        pathway_np &= m_chem_np.astype(bool)
+        self.register_buffer(
+            "chem_pathway",
+            torch.from_numpy(pathway_np).to(device=device),
+        )
+        edges = int(m_chem_np.astype(bool).sum())
+        self.instructed_fraction: float = float(pathway_np.sum()) / edges if edges else 0.0
         self.w_chem = nn.Parameter(torch.from_numpy(w_chem_np).to(device=device))
 
         # ── Gap junctions: non-learnable, symmetric, fan-in normalised ──
@@ -1293,28 +1344,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         # is the structural choice that pins gradient flow to wild-type edges
         # under "strict" mode; under "soft_prior" the forward uses raw
         # ``w_chem`` so the optimiser can grow new edges.
-        if config.enforce_synapse_signs and config.synapse_signs != "atlas":
-            # Also guarded by a config validator; repeated here because a config built by
-            # `model_copy` skips validators, and enforcing drawn signs would silently
-            # constrain noise rather than biology.
-            msg = (
-                "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
-                "that were drawn at random would constrain noise, not biology."
-            )
-            raise ValueError(msg)
-        if config.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
-            config.synapse_signs != "atlas"
-        ):
-            # Guarded by a config validator too, and repeated here for the same reason:
-            # a config built by `model_copy` skips validators, and negating the update at
-            # "inhibitory" synapses that were drawn at random would negate a coin flip.
-            msg = (
-                "plasticity_decorrelation='anti_hebbian_inhibitory' requires "
-                "synapse_signs='atlas': the variant learns with the opposite sign at "
-                "inhibitory synapses, and where the signs were drawn there is no inhibitory "
-                "synapse to key on — only a coin flip to negate."
-            )
-            raise ValueError(msg)
+        _reject_unsupported_plasticity_modes(config)
         self.topology = ConnectomeTopology(
             connectome,
             enable_gap_junctions=config.enable_gap_junctions,
@@ -1398,6 +1428,11 @@ class ConnectomePPOBrain(ClassicalBrain):
                     else None
                 ),
                 enforce_signs=config.enforce_synapse_signs,
+                pathway_masks=(
+                    [cast("torch.Tensor", self.topology.chem_pathway)]
+                    if config.third_factor == "pathway"
+                    else None
+                ),
                 decorrelation=DecorrelationOptions(
                     mechanism=config.plasticity_decorrelation,
                     oja_coefficient=config.plasticity_oja_coefficient,
@@ -1933,6 +1968,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 state={
                     "continuous_std_mode": self.config.continuous_std_mode,
                     "learning_rule": self.config.learning_rule,
+                    "third_factor": self.config.third_factor,
                     "wiring": self.config.wiring,
                     "weight_init": self.config.weight_init,
                     "synapse_signs": self.config.synapse_signs,
@@ -1971,6 +2007,11 @@ class ConnectomePPOBrain(ClassicalBrain):
         "activity_traces",
         "prev_activity",
         "prev_activity_valid",
+        # Derived at construction from the connectome and the atlas, not learned and not part
+        # of what the weights mean: persisting it would refuse every checkpoint written before
+        # routing existed -- including the clone assay's start points -- for no gain, since a
+        # brain rebuilds it from its own wiring.
+        "chem_pathway",
     )
 
     def _load_topology_state(self, topology_state: dict[str, Any]) -> None:

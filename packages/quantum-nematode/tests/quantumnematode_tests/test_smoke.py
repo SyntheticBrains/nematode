@@ -72,6 +72,10 @@ SIMULATION_CONFIGS = [
     # parents, and the anti-Hebbian one only loads at all where the signs are grounded.
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_atlassigns_antihebb.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_atlassigns_oja.yml",
+    # The routed third factor: one key off the plastic arms, and it derives its pathway
+    # from the vendored atlas and the wiring at construction.
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_pathway.yml",
+    "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_rewired_null_pathway.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null_atlassigns.yml",
     "scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_hebbian_rewired_null_atlassigns_dale.yml",
     # The matched-rule MLP arm: the same plastic path on a dense substrate.

@@ -74,6 +74,8 @@ RATE_MULTIPLIER_KEY = "plasticity_rate_multiplier"
 ANCHOR_DEPARTURE_KEY = "plasticity_anchor_departure"
 RIGIDITY_KEY = "plasticity_rigidity"
 DECORRELATION_SHARE_KEY = "plasticity_decorrelation_share"
+INSTRUCTED_FRACTION_KEY = "plasticity_instructed_fraction"
+INSTRUCTED_SHARE_KEY = "plasticity_instructed_share"
 
 
 @dataclass
@@ -331,6 +333,7 @@ class ThreeFactorRule:
         scaling: ScalingOptions | None = None,
         consolidation: ConsolidationOptions | None = None,
         decorrelation: DecorrelationOptions | None = None,
+        pathway_masks: list[torch.Tensor] | None = None,
         homeostasis: bool = False,
         synapse_signs: list[torch.Tensor] | None = None,
         enforce_signs: bool = True,
@@ -411,6 +414,17 @@ class ThreeFactorRule:
         # ``enforce_signs`` says whether the first of them acts.
         self._synapse_signs: list[torch.Tensor] = list(synapse_signs) if synapse_signs else []
         self.enforce_signs = enforce_signs
+        # The instructive pathway, one boolean mask per plastic tensor when the third factor is
+        # routed and empty when it is broadcast. Handed in like the sign vector rather than read
+        # off a substrate, so the rule still names no substrate. Where the mask is false the
+        # modulator is replaced by 1.0 -- the unmodulated Hebbian term, the panel's other
+        # registered floor -- so a routed arm is an interpolation between two measured arms.
+        self._pathway_masks: list[torch.Tensor] = list(pathway_masks) if pathway_masks else []
+        self.instructed_fraction = math.nan
+        if self._pathway_masks:
+            on = sum(int(m.sum().item()) for m in self._pathway_masks)
+            edges = sum(int(m.sum().item()) for m in topology.plastic_masks)
+            self.instructed_fraction = on / edges if edges else 0.0
         if self.decorrelation.mechanism == "anti_hebbian_inhibitory" and not self._synapse_signs:
             msg = (
                 "anti_hebbian_inhibitory needs grounded synapse signs: without them there is "
@@ -612,6 +626,7 @@ class ThreeFactorRule:
                 masks,
                 multiplier,
             )
+            instructed_share = self._instructed_share(weights, traces, masks, modulator, rate)
             decorrelation_share = self._decorrelation_share(
                 weights,
                 traces,
@@ -722,6 +737,8 @@ class ThreeFactorRule:
                 ANCHOR_DEPARTURE_KEY: anchor_departure,
                 RIGIDITY_KEY: rigidity_mean,
                 DECORRELATION_SHARE_KEY: decorrelation_share,
+                INSTRUCTED_FRACTION_KEY: self.instructed_fraction,
+                INSTRUCTED_SHARE_KEY: instructed_share,
             },
         )
 
@@ -750,7 +767,17 @@ class ThreeFactorRule:
             )
         else:
             hebbian_rate = rate
-        update = hebbian_rate * modulator * trace
+        if self._pathway_masks:
+            # Routed: the modulator reaches the instructed synapses; everywhere else the third
+            # factor is 1.0, which is the unmodulated rule's update at those synapses.
+            gated = torch.where(
+                self._pathway_masks[index],
+                torch.full_like(trace, modulator),
+                torch.ones_like(trace),
+            )
+            update = hebbian_rate * gated * trace
+        else:
+            update = hebbian_rate * modulator * trace
         if divisor is not None:
             update = update / divisor
         if self._hebbian_signs:
@@ -805,6 +832,39 @@ class ThreeFactorRule:
                 self._edge_mean(self._rigidity, masks),
             )
         return multiplier, math.nan, math.nan
+
+    def _instructed_share(
+        self,
+        weights: list[torch.Tensor],
+        traces: list[torch.Tensor],
+        masks: list[torch.Tensor],
+        modulator: float,
+        rate: float,
+    ) -> float:
+        """How the step's Hebbian magnitude split between the instructed set and the rest.
+
+        Measured on the effective update, like the decorrelation share. Reported as the whole
+        under a broadcast third factor, since every synapse is then instructed in the only sense
+        that applies. This describes the split; that the *modulated* part reaches only the
+        instructed set is asserted by test against the global and unmodulated rules, entry for
+        entry, not by this number.
+        """
+        if not self._pathway_masks:
+            return 1.0
+        del weights
+        total = 0.0
+        part = 0.0
+        for index, (trace, mask) in enumerate(zip(traces, masks, strict=True)):
+            edges = mask.to(torch.bool)
+            gated = torch.where(
+                self._pathway_masks[index],
+                torch.full_like(trace, modulator),
+                torch.ones_like(trace),
+            )
+            magnitude = (rate * gated * trace).abs()
+            total += float(magnitude[edges].sum().item())
+            part += float(magnitude[self._pathway_masks[index] & edges].sum().item())
+        return part / total if total > 0.0 else 0.0
 
     def _decorrelation_share(  # noqa: PLR0913 — the factors the update itself is built from
         self,
@@ -1034,6 +1094,8 @@ def record_plasticity_report(
     history_data.plasticity_anchor_departure.append(extra[ANCHOR_DEPARTURE_KEY])
     history_data.plasticity_rigidity.append(extra[RIGIDITY_KEY])
     history_data.plasticity_decorrelation_share.append(extra[DECORRELATION_SHARE_KEY])
+    history_data.plasticity_instructed_fraction.append(extra[INSTRUCTED_FRACTION_KEY])
+    history_data.plasticity_instructed_share.append(extra[INSTRUCTED_SHARE_KEY])
     history_data.rewards.append(reward)
 
 

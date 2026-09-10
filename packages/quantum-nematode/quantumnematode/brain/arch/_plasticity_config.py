@@ -27,6 +27,12 @@ ConsolidationName = Literal["none", "anchor", "rigidity", "oracle"]
 # learning with the opposite sign at synapses whose transmitter is inhibitory, the
 # other by the classic normalisation that needs no identity at all.
 DecorrelationName = Literal["none", "anti_hebbian_inhibitory", "oja"]
+# Where the neuromodulatory third factor reaches. "global" broadcasts one scalar to every
+# plastic synapse, which is what every panel so far has run. "pathway" applies it only where
+# the wiring carries a modulatory signal -- synapses whose post-synaptic neuron receives
+# chemical input from an aminergic neuron -- and leaves the unmodulated Hebbian term
+# elsewhere, so the arm is an interpolation between two floors the panels already measured.
+ThirdFactorRouting = Literal["global", "pathway"]
 
 # Rules that read the eligibility trace, and so require it to be enabled.
 PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
@@ -130,6 +136,14 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_oracle_reference: float = Field(default=1.0, gt=0.0, le=1.0)
     plasticity_oracle_rate: float = Field(default=0.01, gt=0.0, le=1.0)
 
+    # ── Third-factor routing (opt-in) ────────────────────────
+    # Off by default: "global" is the broadcast scalar every panel has run. "pathway" needs a
+    # substrate that derives an instructive pathway, so it is refused on the dense yardstick and
+    # wherever transmitter identities are absent, and it is refused with the unmodulated rule,
+    # where the modulator is already 1.0 everywhere and routing would be a no-op wearing the
+    # name of an arm.
+    third_factor: ThirdFactorRouting = "global"
+
     # ── Decorrelation (opt-in) ───────────────────────────────
     # ``anti_hebbian_inhibitory`` negates the Hebbian term at synapses whose
     # grounded sign is inhibitory, so co-activity strengthens what such a
@@ -191,6 +205,23 @@ class PlasticityConfigMixin(BaseModel):
                 "initial_log_std has no effect under the state-dependent std head, whose "
                 "log-std is a function of the hidden state; a non-zero value would silently "
                 "do nothing."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_third_factor_routing(self) -> PlasticityConfigMixin:
+        """Reject routing a modulator that is already constant.
+
+        Under the unmodulated rule the third factor is 1.0 at every synapse, so routing it
+        changes nothing; a config that names the routed arm and runs the plain Hebbian floor
+        would have its runs read as evidence about routing.
+        """
+        if self.third_factor == "pathway" and self.learning_rule in UNMODULATED_RULES:
+            msg = (
+                f"third_factor='pathway' has no effect under learning_rule="
+                f"{self.learning_rule!r}: that rule applies no neuromodulatory factor, so the "
+                "routed arm would be the unmodulated Hebbian floor under another name."
             )
             raise ValueError(msg)
         return self
