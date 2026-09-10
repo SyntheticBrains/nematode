@@ -4,19 +4,13 @@
 
 - [ ] 1.1 Add `plastic_perturbations` to the `PlasticTopology` Protocol, aligned like the other seam
   members and indexed along the axis complementary to the fan-in axis.
-- [ ] 1.2 Implement it on `MLPTopology`: when enabled, draw `ξ ~ N(0, σ_node²)` per plastic unit in
-  the trace-accumulating forward, **add it to the activity the layer passes on**, and accumulate
-  `pre ⊗ ξ`. Off by default and byte-identical off.
-- [ ] 1.3 Implement it on `ConnectomeTopology` the same way, on the settled hidden state.
-- [ ] 1.4 Tests: the unit acts on its own perturbation (its activity differs by exactly the exposed
-  value); disabled is bit-identical on both substrates; the vectors are aligned with the weights;
-  perturbations are redrawn per step and are not carried between steps.
+- [ ] 1.2 Implement it on `MLPTopology`: when enabled, draw `ξ ~ N(0, σ_node²)` per plastic unit from a dedicated `torch.Generator` seeded from the run seed, **add it to the layer's pre-activation** so the nonlinearity sees it, and accumulate `pre ⊗ ξ`. Off by default and byte-identical off, drawing nothing.
+- [ ] 1.3 Implement it on `ConnectomeTopology` the same way, with an independent `ξ` injected into the pre-activation at **every settling step**; the settled-only form is the approximation the design names, not what ships.
+- [ ] 1.4 Tests: the unit acts on its own perturbation (its pre-activation differs by exactly the exposed value and its activity is the nonlinearity of that); disabled is bit-identical on both substrates and draws nothing; enabling it leaves the action-noise stream identical at the same seed; the vectors are aligned with the weights; perturbations are redrawn per step, cleared per episode, and absent from the persisted topology so a pre-change checkpoint loads.
 
 ## 2. The eligibility mode
 
-- [ ] 2.1 Add the eligibility mode and the noise scale to the plasticity mixin, with load-time
-  bounds; refuse `node_perturbation` at zero noise and on a substrate that does not perturb — on the
-  config and, duplicated, at brain construction, since `model_copy` skips validators.
+- [ ] 2.1 Add the eligibility mode and the noise scale to the plasticity mixin, with load-time bounds; refuse `node_perturbation` at zero noise on the config and, duplicated, at brain construction, since `model_copy` skips validators. The rule refuses construction over a topology exposing no perturbation, as it does for signs and the pathway.
 - [ ] 2.2 Accumulate `pre ⊗ ξ` under the mode; leave every other term untouched.
 - [ ] 2.3 Tests: the trace equals pre × perturbation and not pre × activity; `hebbian` is
   bit-identical; every refusal including the construction guard on a copied config; the mode

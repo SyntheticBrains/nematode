@@ -30,8 +30,7 @@ where the trace is built.
 
 One optional behaviour, expressed as state a topology already owns:
 
-- when **perturbation is enabled**, a trace-accumulating forward draws `ξ ~ N(0, σ_node²)` per
-  plastic unit, adds it to that unit's activity, and accumulates `pre ⊗ ξ` instead of `pre ⊗ post`;
+- when **perturbation is enabled**, a trace-accumulating forward draws `ξ ~ N(0, σ_node²)` per plastic unit, adds it to that unit's **pre-activation** — `h = tanh(a + ξ)`, not `tanh(a) + ξ` — and accumulates `pre ⊗ ξ` instead of `pre ⊗ post`;
 - the perturbation is exposed on the seam as `plastic_perturbations`, aligned like the other seam
   members, so a rule or a harness can read what was injected.
 
@@ -41,10 +40,35 @@ never took, and the estimator is biased. That means perturbation changes the for
 why it is off by default and why every arm that uses it is a new arm rather than a re-reading of an
 old one.
 
+**Why the pre-activation.** Perturbing the *output* of the nonlinearity estimates the gradient with
+respect to an additive input at the output, which omits the activation's derivative `tanh′(a_j)`.
+That factor is positive, so the direction is still a descent direction in expectation — but it is a
+rescaled one, and the record would be claiming an unbiased estimator it did not have. Injecting
+before the nonlinearity is the exact form, and it is also what makes "the unit acts on its
+perturbation" true: the perturbation passes through the same squashing everything else does.
+
+**Where it enters on the connectome.** The connectome settles over `forward_pass_depth` iterations,
+and a synapse's effect propagates through the later ones. Perturbing only the *settled* state is
+exact for the readout path and approximate for the recurrent path — a synapse's contribution
+through subsequent settling steps goes uncredited. The exact form injects an independent `ξ` at
+**every settling step**, and that is what this change implements; the settled-only form is named
+here as the approximation it is, so a later reader knows which was run. On the MLP there is one
+step per layer and no distinction.
+
 **Why not reuse the action noise.** The obvious alternative — propagate the action-level noise back
 into the trace — requires knowing each unit's contribution to the action, which is a credit
 assignment problem and needs weight transport. That is exactly the non-locality this rule family
 exists to avoid, and it would make the result uninteresting even if it worked.
+
+**Its own generator.** `ξ` is drawn from a `torch.Generator` seeded from the run seed and used for
+nothing else, following the rewired-null precedent of a dedicated RNG. Drawing from the global
+stream would shift the action noise, so "same seed, perturbation on against off" would differ by
+two things; with a dedicated generator it differs by `ξ` alone, which is the comparison worth
+having.
+
+**Transient, like the traces.** The perturbations are per-step state: cleared with the traces at
+the start of every episode, never persisted with weights, and absent from the topology's persisted
+state so that no checkpoint written before this change is refused for lacking them.
 
 ## What the rule gains
 
@@ -66,13 +90,19 @@ modes, which is what makes the two comparable at all.
 | `plasticity_eligibility` | `hebbian` | `hebbian` or `node_perturbation` |
 | `plasticity_node_noise` | `0.0` | `σ_node`, the per-unit perturbation, `≥ 0` |
 
-`node_perturbation` with a zero noise is rejected at load: the trace would be identically zero and
-the arm would look like a rule that learns nothing when it is a rule that was never given anything
-to learn from. The mode is also rejected on a substrate whose topology does not implement
-perturbation.
+`node_perturbation` with a zero noise is rejected at load: the trace would be identically zero and the arm would look like a rule that learns nothing when it is a rule that was never given anything to learn from. That is the config-level refusal, and it is duplicated at brain construction since `model_copy` skips validators. The other refusal — a topology that exposes no perturbation — cannot live on the config, which knows nothing about the topology; it lives in the **rule**, which checks the seam member at construction exactly as it checks for signs and the pathway, and both topologies in this change implement it.
 
-`σ_node` has no value to inherit. It is pinned by the control itself rather than by a separate
-pilot: the positive control is cheap, deterministic and already the clearance gate, so the variant
+A property of the grid worth stating before it is read: with trace normalisation on, the Hebbian
+term is divided by the trace's running RMS, and for `pre ⊗ ξ` that RMS scales with `σ_node`. The
+learning step is therefore roughly σ-invariant, and **the grid is a behavioural-perturbation grid**
+— it sets how much each unit's activity is jittered, not how fast the weights move. A `σ_node` that
+passes says the network can tolerate that much per-unit noise and still learn from it.
+
+The action noise stays at the arms' pinned `σ`. It adds variance to `δ` that is uncorrelated with
+`ξ`, so the estimator is unbiased but noisier than one exploring through perturbation alone; the
+cost is accepted for comparability with every panel arm.
+
+`σ_node` has no value to inherit. It is pinned by the control itself rather than by a separate pilot: the positive control is cheap, deterministic and already the clearance gate, so the variant
 runs it over a declared grid `σ_node ∈ {0.01, 0.05, 0.2}` and the pinned value is the one that
 passes, ties to the smaller. A grid that fails at every value is a failure of the variant, and the
 record says so rather than widening the grid.

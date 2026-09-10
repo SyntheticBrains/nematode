@@ -14,10 +14,7 @@ its order and meaning: the modulator, both scaling switches, the weight decay, t
 decorrelating or consolidation term, Dale's-law projection, third-factor routing, the homeostatic
 rescale, and the magnitude clamp last.
 
-Selecting `node_perturbation` SHALL be rejected at load where the perturbation scale is zero, since
-the eligibility would be identically zero and the arm would appear to be a rule that learns nothing
-rather than one that was given nothing to learn from. It SHALL also be rejected where the
-substrate's topology does not support perturbation.
+Selecting `node_perturbation` SHALL be rejected at load where the perturbation scale is zero, since the eligibility would be identically zero and the arm would appear to be a rule that learns nothing rather than one that was given nothing to learn from; that refusal SHALL be repeated at brain construction, since a copied configuration skips validators. The rule itself SHALL refuse construction over a topology that exposes no perturbation, as it refuses a sign-keyed variant without signs and a routed one without a pathway.
 
 #### Scenario: The default path is unchanged
 
@@ -33,10 +30,15 @@ substrate's topology does not support perturbation.
 
 #### Scenario: A mode with nothing to learn from is refused
 
-- **GIVEN** a configuration selecting `node_perturbation` with a perturbation scale of zero, or on a
-  substrate whose topology does not perturb
-- **WHEN** the configuration is loaded
-- **THEN** loading SHALL fail with a message naming the missing perturbation
+- **GIVEN** a configuration selecting `node_perturbation` with a perturbation scale of zero
+- **WHEN** the configuration is loaded, or a brain is built from a copy of it
+- **THEN** it SHALL fail with a message naming the zero perturbation
+
+#### Scenario: The rule refuses a topology that cannot perturb
+
+- **GIVEN** `node_perturbation` selected and a topology exposing no perturbation
+- **WHEN** the rule is constructed over it
+- **THEN** construction SHALL fail with a message naming the missing seam member
 
 ### Requirement: A new eligibility clears the rule's positive control before any substrate arm
 
