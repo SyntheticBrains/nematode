@@ -245,6 +245,14 @@ class TestOutput:
         text = json.dumps(cs._jsonable(out), allow_nan=False)
         json.loads(text, parse_constant=lambda c: pytest.fail(f"bare {c} in the record"))
 
+    def test_the_written_record_is_strict_json(self, tmp_path: Path) -> None:
+        path = tmp_path / "nested" / "screen.json"
+        cs.write_screen_json(self._out(), path)
+        text = path.read_text()
+        assert "NaN" not in text
+        loaded = json.loads(text, parse_constant=lambda c: pytest.fail(f"bare {c} in the record"))
+        assert loaded["arms"]["anchor"]["cosine_mean"] is None
+
     def test_unavailable_measurements_become_null(self) -> None:
         assert cs._jsonable(float("nan")) is None
         assert cs._jsonable(float("inf")) is None
