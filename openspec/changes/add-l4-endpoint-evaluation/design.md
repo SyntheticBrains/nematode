@@ -30,7 +30,10 @@ the process is stationary, so the longer run only tightens the estimate.
 
 ## The endpoints
 
-The I.1 clone-assay learning arm auto-saved its final weights per seed. They are copied to
+The I.1 clone-assay learning arm auto-saved its final weights per seed: `final.pt` is the
+runner's end-of-run save, which also fires on an interrupted run, so completion is a stated
+precondition — all eight source runs completed their 2000 episodes (verified from the logs before
+this was written). They are copied to
 `campaigns/l4-perturbation-clone/endpoints/nodeperturbation_wt_seed{seed}.pt`, the source export
 of each recorded in the launch record, the way the clones were staged under `l4-warm-start/`. The
 staged files are the assay's endpoints and nothing else: no re-training, no selection.
@@ -38,6 +41,17 @@ staged files are the assay's endpoints and nothing else: no re-training, no sele
 Two episodes of seed 1 were observed while confirming that an endpoint loads through the runner
 (both `health_depleted`, 170 and 108 steps). Disclosed here; they carry no information at n = 2
 and are not part of the record.
+
+## A load-integrity check the harness already computes
+
+For every arm the screen harness reports the cosine between the run's final weights and the clone
+it started from. For a *frozen* run the final weights are exactly the weights that were loaded, so
+this arm's cosine must reproduce the I.1 endpoints' own per-seed values — 0.649 to 0.748, committed
+in the 050 record. That is the one check that separates the intended run from its only silent
+failure mode: a cosine near 1.00 means the clone loaded rather than the endpoint, which would
+produce a false "holds". **A seed whose cosine departs from its committed value by more than 0.01
+voids that seed; any voided seed voids the verdict**, and the run is repeated after the cause is
+found, not scored around.
 
 ## The rule, and what each outcome licenses — fixed before the run
 

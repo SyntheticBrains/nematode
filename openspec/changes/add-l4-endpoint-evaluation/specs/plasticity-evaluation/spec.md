@@ -26,6 +26,15 @@ registration that follows SHALL be the one the outcome selects.
   equal the comparator's, so that the configuration differs from the comparator's in the weights
   alone
 
+#### Scenario: The loaded weights are verified to be the endpoint
+
+- **GIVEN** the per-seed cosine between the perturbing arm's endpoint and its clone, as the assay
+  recorded it
+- **WHEN** the evaluation's own final weights are compared to the clone
+- **THEN** each seed's cosine SHALL reproduce the recorded value within 0.01, and a seed that does
+  not SHALL be void and SHALL void the verdict, since a cosine near one means the clone was
+  evaluated rather than the endpoint
+
 #### Scenario: The rule is the assay's
 
 - **WHEN** the endpoint's scores are assessed

@@ -18,6 +18,9 @@
   the assay's committed per-seed table.
 - [ ] 2.3 Test: the config is the comparator's plus one key; the arm assesses under the registered
   rule; the annotation reads the committed 050 values.
+- [ ] 2.4 The load-integrity check: the harness compares this arm's per-seed cosine to the clone
+  against the 050 record's committed values and voids a seed that departs by more than 0.01, with
+  a test that a cosine near 1.00 (the clone loaded instead) voids the verdict.
 
 ## 3. The run
 
@@ -25,7 +28,9 @@
   licenses, the endpoint sources, the two disclosed episodes.
 - [ ] 3.2 Run: 8 seeds × 2000 episodes, `--track-experiment`, from `main`, no branch switch while
   it runs.
-- [ ] 3.3 Records under `supporting/052-l4-endpoint-evaluation/`: `screen.json`, `per-seed.csv`,
+- [ ] 3.3 Read the integrity check before anything else; a voided seed stops the scoring and
+  the cause is found and the run repeated.
+- [ ] 3.4 Records under `supporting/052-l4-endpoint-evaluation/`: `screen.json`, `per-seed.csv`,
   `_manifest.txt`, `details.md`.
 
 ## 4. Close-out
