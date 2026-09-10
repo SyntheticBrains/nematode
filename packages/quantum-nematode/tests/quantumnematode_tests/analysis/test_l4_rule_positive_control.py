@@ -47,6 +47,11 @@ def _run(arm: str, seed: int, score: float, rate: float | None = None) -> dict:
         "modulator": 0.1,
         "mean_abs_delta": 1e-4,
         "alignment": 0.05,
+        "alignment_decay": 0.05,
+        "alignment_floor": 0.05,
+        "node_noise": None,
+        "schedule": None,
+        "normalise_trace": True,
     }
 
 
@@ -63,6 +68,26 @@ class TestThePinnedProtocol:
         assert pc.PASS_SEEDS == 7
         assert pc.PASS_FRACTION == 0.5
         assert pc.RATE_GRID == (1e-4, 1e-3, 1e-2)
+
+    def test_the_annealed_schedule_is_the_registered_one(self) -> None:
+        # Registered before the run: 0.2 is the scale that passed this control, 0.02 sits an
+        # order of magnitude below it, and the decay spans the first half of the budget so the
+        # score window lies entirely at the floor.
+        assert pc.ANNEAL_INITIAL == 0.2
+        assert pc.ANNEAL_FINAL == 0.02
+        assert pc.ANNEAL_FRACTION == 0.5
+        schedule = pc.annealed_schedule(pc.TRIALS)
+        assert schedule.episodes == 10_000
+        assert schedule.scale_at(0) == pytest.approx(0.2)
+        assert schedule.scale_at(pc.TRIALS) == pytest.approx(0.02)
+
+    def test_the_score_window_lies_entirely_at_the_floor(self) -> None:
+        # The score is the mean over the last BLOCK * 10 trials. If the decay reached into
+        # that window, a pass would be scored partly on exploration the arm will not do when
+        # it runs.
+        schedule = pc.annealed_schedule(pc.TRIALS)
+        window_start = pc.TRIALS - pc.BLOCK * 10
+        assert window_start > schedule.episodes
 
 
 class TestThePassRule:
@@ -197,6 +222,122 @@ class TestTheAlignmentSign:
         import torch
 
         assert pc._block_alignment([torch.zeros(2)], [torch.ones(2)]) is None
+
+
+class TestTheAnnealedArm:
+    def test_the_harness_advances_the_schedule_itself(self) -> None:
+        # This control never builds a brain: it drives the topology directly. If the counter
+        # only advanced from a brain, an annealed arm would run at its initial scale for every
+        # trial and pass a gate the schedule was never tested by. Recording the scale the
+        # topology actually perturbs at, rather than the metadata the row reports, is what
+        # makes this test able to fail in that case.
+        from quantumnematode.brain.arch._mlp_topology import MLPTopology
+
+        seen: list[float] = []
+        original = MLPTopology.forward
+
+        def spy(self: MLPTopology, features: object) -> object:
+            seen.append(self.current_node_noise)
+            return original(self, features)  # type: ignore[arg-type]
+
+        MLPTopology.forward = spy  # type: ignore[method-assign, assignment]
+        try:
+            run = pc.run_arm(
+                "node_perturbation_annealed",
+                seed=1,
+                task=_TASK,
+                trials=200,
+                node_noise=pc.ANNEAL_INITIAL,
+                schedule=pc.annealed_schedule(200),
+            )
+        finally:
+            MLPTopology.forward = original  # type: ignore[method-assign]
+
+        assert len(seen) == 200
+        # The first trial runs at the initial scale, the scale falls, and by the end of the
+        # decay it is at the floor and stays there.
+        assert seen[0] == pytest.approx(pc.ANNEAL_INITIAL)
+        assert seen[-1] == pytest.approx(pc.ANNEAL_FINAL)
+        assert seen[100] == pytest.approx(pc.ANNEAL_FINAL)
+        assert seen[50] < seen[0]
+        assert run["schedule"] == {"initial": 0.2, "final": 0.02, "decay_trials": 100}
+
+    def test_a_non_aligned_budget_files_blocks_by_phase(self) -> None:
+        # 2500 is a permitted budget whose decay ends at 1250, mid-block. Without a flush at
+        # that point the block spanning it would be filed whole by whichever phase its last
+        # trial fell in, mixing decay trials into the floor average.
+        schedule = pc.annealed_schedule(2500)
+        assert schedule.episodes % pc.BLOCK != 0, "this budget must straddle a block boundary"
+        run = pc.run_arm(
+            "node_perturbation_annealed",
+            seed=1,
+            task=_TASK,
+            trials=2500,
+            node_noise=pc.ANNEAL_INITIAL,
+            schedule=schedule,
+        )
+        assert not np.isnan(run["alignment_decay"])
+        assert not np.isnan(run["alignment_floor"])
+
+    def test_the_registered_budget_needs_no_extra_flush(self) -> None:
+        # The decay length is a multiple of BLOCK there, so the boundary condition never fires
+        # on its own and the blocks are exactly as they were before it was added.
+        assert pc.annealed_schedule(pc.TRIALS).episodes % pc.BLOCK == 0
+
+    def test_it_records_the_pinned_rate(self) -> None:
+        # It runs at the pinned rate like every other learning arm; a null there would make
+        # the row and its CSV line under-describe the run.
+        run = pc.run_arm(
+            "node_perturbation_annealed",
+            seed=1,
+            task=_TASK,
+            trials=200,
+            node_noise=pc.ANNEAL_INITIAL,
+            schedule=pc.annealed_schedule(200),
+        )
+        assert run["rate"] == pc.PLASTICITY_RATE
+
+    def test_it_perturbs_and_records_its_regime(self) -> None:
+        run = pc.run_arm(
+            "node_perturbation_annealed",
+            seed=1,
+            task=_TASK,
+            trials=200,
+            node_noise=pc.ANNEAL_INITIAL,
+            schedule=pc.annealed_schedule(200),
+        )
+        assert run["node_noise"] == pc.ANNEAL_INITIAL
+        # The rate regime travels with the number: the trace carries the perturbation, so
+        # without trace normalisation the decay would cut the effective rate as well.
+        assert run["normalise_trace"] is True
+
+    def test_the_two_phases_are_reported_apart(self) -> None:
+        # A low floor-phase alignment is what a good schedule looks like, so averaging the
+        # phases would hide the failure signature rather than expose it.
+        run = pc.run_arm(
+            "node_perturbation_annealed",
+            seed=1,
+            task=_TASK,
+            trials=400,
+            node_noise=pc.ANNEAL_INITIAL,
+            schedule=pc.annealed_schedule(400),
+        )
+        assert not np.isnan(run["alignment_decay"])
+        assert not np.isnan(run["alignment_floor"])
+        assert run["alignment_decay"] != run["alignment_floor"]
+
+    def test_an_unscheduled_arm_reports_no_decay_phase(self) -> None:
+        run = pc.run_arm(
+            "node_perturbation",
+            seed=1,
+            task=_TASK,
+            trials=200,
+            node_noise=0.2,
+        )
+        assert run["schedule"] is None
+        # No schedule means no decay phase to separate: every block is at the fixed scale.
+        assert np.isnan(run["alignment_decay"])
+        assert not np.isnan(run["alignment_floor"])
 
 
 class TestTheArmsThemselves:

@@ -130,3 +130,21 @@ class PlasticTopology(Protocol):
     def reset_traces(self) -> None:
         """Zero every eligibility trace; a documented no-op when traces are off."""
         ...
+
+    def advance_schedule(self) -> None:
+        """Advance the perturbation schedule by one step; a no-op without one.
+
+        Called where a unit of training begins -- an episode for a brain, a trial for a
+        harness driving the topology directly. Deliberately separate from
+        ``reset_traces``: the traces are also reset when a policy is loaded, and a load
+        must restart the schedule rather than advance it.
+        """
+        ...
+
+    def reset_schedule(self) -> None:
+        """Return the perturbation schedule to its initial scale; a no-op without one.
+
+        Called where a policy is loaded: a warm start explores the loaded weights from the
+        initial scale rather than from wherever a previous run's schedule had reached.
+        """
+        ...

@@ -375,6 +375,13 @@ class MLPPPOBrain(ClassicalBrain):
             enable_activity_traces=config.enable_activity_traces,
             trace_decay=config.trace_decay,
             plastic_layers=config.plastic_layers,
+            # The yardstick is only matched to the connectome if it perturbs the same way.
+            # Without these the brain built a topology that could not perturb and a rule that
+            # ignored the configured eligibility, so a `node_perturbation` arm here ran the
+            # Hebbian rule under the variant's name. Defaults leave the construction unchanged.
+            node_noise=config.plasticity_node_noise,
+            node_noise_schedule=config.node_noise_schedule(),
+            perturbation_seed=self.seed,
         )
         self._rule: ThreeFactorRule | None = None
         if not self._uses_ppo:
@@ -405,6 +412,7 @@ class MLPPPOBrain(ClassicalBrain):
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
+                eligibility=config.plasticity_eligibility,
                 homeostasis=config.plasticity_homeostasis,
                 scaling=ScalingOptions(
                     normalise_modulator=config.plasticity_normalise_modulator,
@@ -958,6 +966,9 @@ class MLPPPOBrain(ClassicalBrain):
         the pre-change brain there.
         """
         self.topology.reset_traces()
+        # Separate from the trace reset: the rule's load-time reset also clears the traces,
+        # and a load must restart the perturbation schedule rather than advance it.
+        self.topology.advance_schedule()
         if self._rule is not None:
             self._rule.reset_episode()
 
@@ -1069,6 +1080,11 @@ class MLPPPOBrain(ClassicalBrain):
         # Load networks first (catches shape mismatches before optimizer)
         if "policy" in components:
             self.actor.load_state_dict(components["policy"].state)
+            # A warm start explores the loaded policy from the initial perturbation scale,
+            # not from wherever the saving run's schedule had reached. The connectome gets
+            # this through the rule's state reset, which this brain's load path does not
+            # call, so the schedule is restarted here directly.
+            self.topology.reset_schedule()
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
 

@@ -28,10 +28,13 @@ the raw output for a final layer with none.
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import torch
 from torch import nn
+
+if TYPE_CHECKING:
+    from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
 
 
 class MLPTopology(nn.Module):
@@ -69,6 +72,7 @@ class MLPTopology(nn.Module):
         trace_decay: float,
         plastic_layers: str = "all",
         node_noise: float = 0.0,
+        node_noise_schedule: NodeNoiseSchedule | None = None,
         perturbation_seed: int | None = None,
     ) -> None:
         super().__init__()
@@ -101,6 +105,13 @@ class MLPTopology(nn.Module):
         # shifts nothing else in the random stream -- "same seed, on against off" must differ
         # by the perturbation alone.
         self.node_noise = node_noise
+        # ``node_noise`` is the INITIAL scale and answers "does this topology perturb at all",
+        # which a schedule never changes: a schedule's floor is required to be positive, so a
+        # perturbing topology stays perturbing. Only the magnitude is scheduled, read through
+        # ``current_node_noise`` at draw time. A plain integer, not a buffer: it never enters
+        # the state dict, so a checkpoint written before schedules existed still loads.
+        self._node_noise_schedule = node_noise_schedule
+        self._schedule_steps_begun = 0
         self._perturbation_generator = torch.Generator()
         if perturbation_seed is not None:
             self._perturbation_generator.manual_seed(perturbation_seed)
@@ -170,6 +181,24 @@ class MLPTopology(nn.Module):
         return [getattr(self, f"post_activity_{index}") for index in range(len(self._layers))]
 
     @property
+    def current_node_noise(self) -> float:
+        """The perturbation scale for the current step: the initial one absent a schedule."""
+        if self._node_noise_schedule is None:
+            return self.node_noise
+        # The counter records steps BEGUN, so the one currently running is indexed one
+        # lower: the first step must run at the initial scale, not one step into the decay.
+        return self._node_noise_schedule.scale_at(max(0, self._schedule_steps_begun - 1))
+
+    def advance_schedule(self) -> None:
+        """Advance the perturbation schedule by one step; a no-op without one."""
+        if self._node_noise_schedule is not None:
+            self._schedule_steps_begun += 1
+
+    def reset_schedule(self) -> None:
+        """Return the schedule to its initial scale, as a policy load does."""
+        self._schedule_steps_begun = 0
+
+    @property
     def plastic_perturbations(self) -> list[torch.Tensor]:
         """One ``(out,)`` perturbation per layer; empty when this topology is not perturbing."""
         if self.node_noise <= 0.0:
@@ -235,6 +264,7 @@ class MLPTopology(nn.Module):
         layer_index = 0
         i = 0
         perturbing = self.node_noise > 0.0
+        scale = self.current_node_noise
         while i < len(modules):
             module = modules[i]
             if isinstance(module, nn.Linear):
@@ -254,7 +284,7 @@ class MLPTopology(nn.Module):
                                 generator=self._perturbation_generator,
                                 dtype=x.dtype,
                             )
-                            * self.node_noise
+                            * scale
                         ).to(x.device)
                         getattr(self, f"perturbation_{layer_index}").copy_(noise)
                     x = x + noise
