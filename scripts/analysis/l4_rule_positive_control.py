@@ -59,7 +59,8 @@ PASS_SEEDS = 7
 PASS_FRACTION = 0.5  # of the floor-to-optimum gap
 ANALYTIC_RATE = 0.05
 
-ARMS = ("three_factor", "hebbian", "analytic")
+NODE_NOISE_GRID = (0.01, 0.05, 0.2)
+ARMS = ("three_factor", "node_perturbation", "hebbian", "analytic")
 
 
 def _actor(n_cues: int, generator: torch.Generator) -> nn.Sequential:
@@ -106,17 +107,23 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     rate: float = PLASTICITY_RATE,
     trials: int = TRIALS,
     noise: float = NOISE,
+    node_noise: float = 0.0,
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
     rng = np.random.default_rng(seed)
     generator = torch.Generator().manual_seed(seed)
     torch.manual_seed(seed)
     actor = _actor(task.n_cues, generator)
+    perturbing = arm == "node_perturbation"
     topology = MLPTopology(
         actor,
         enable_activity_traces=True,
         trace_decay=TRACE_DECAY,
         plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
+        # The variant's own perturbation, from a dedicated generator; zero for every other arm,
+        # which then draws nothing and runs the forward pass unchanged.
+        node_noise=node_noise if perturbing else 0.0,
+        perturbation_seed=seed if perturbing else None,
     )
     rule = None
     if arm != "analytic":
@@ -127,7 +134,8 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
             weight_bound=WEIGHT_BOUND,
             baseline_rate=BASELINE_RATE,
             freeze_updates=False,
-            modulated=(arm == "three_factor"),
+            modulated=arm in {"three_factor", "node_perturbation"},
+            eligibility="node_perturbation" if perturbing else "hebbian",
             scaling=ScalingOptions(normalise_modulator=True, normalise_trace=True),
             homeostasis=True,
             device=torch.device("cpu"),
@@ -184,6 +192,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         "arm": arm,
         "seed": seed,
         "rate": rate if arm == "three_factor" else None,
+        "node_noise": node_noise if arm == "node_perturbation" else None,
         # The arm's score: mean reward over the last 1000 trials, so a run is judged
         # on where it ended rather than on the exploration it did getting there.
         "score": float(np.mean(rewards[-BLOCK * 10 :])) if rewards else float("nan"),
@@ -222,6 +231,20 @@ def analyse(
     for rate in RATE_GRID:
         scores = [r["score"] for r in runs if r["arm"] == "three_factor" and r["rate"] == rate]
         rates[str(rate)] = assess(scores, floor, optimum)
+    noises: dict[str, Any] = {}
+    for node_noise in NODE_NOISE_GRID:
+        scores = [
+            r["score"]
+            for r in runs
+            if r["arm"] == "node_perturbation" and r["node_noise"] == node_noise
+        ]
+        noises[str(node_noise)] = assess(scores, floor, optimum)
+    by_arm["node_perturbation"] = {
+        "by_node_noise": noises,
+        # Any perturbation scale passing counts, as any rate does for the three-factor arm:
+        # the claim under test is that the variant learns at all.
+        "passes": any(v["passes"] for v in noises.values()),
+    }
     by_arm["three_factor"] = {
         "by_rate": rates,
         # Any rate passing counts: the claim is that the rule learns at all.
@@ -248,6 +271,10 @@ def analyse(
     diagnosis["three_factor"]["by_rate"] = {
         str(rate): _diagnose(runs, "three_factor", rate=rate) for rate in RATE_GRID
     }
+    diagnosis["node_perturbation"]["by_node_noise"] = {
+        str(node_noise): _diagnose(runs, "node_perturbation", node_noise=node_noise)
+        for node_noise in NODE_NOISE_GRID
+    }
     return {
         "task": {
             "n_cues": task.n_cues,
@@ -272,7 +299,12 @@ def analyse(
     }
 
 
-def _diagnose(runs: list[dict[str, Any]], arm: str, rate: float | None = None) -> dict[str, Any]:
+def _diagnose(
+    runs: list[dict[str, Any]],
+    arm: str,
+    rate: float | None = None,
+    node_noise: float | None = None,
+) -> dict[str, Any]:
     """Summarise one arm's diagnostic series, pooled or at one rate.
 
     The alignment carries a median as well as a mean: it is a per-run statistic with a long
@@ -280,7 +312,13 @@ def _diagnose(runs: list[dict[str, Any]], arm: str, rate: float | None = None) -
     runs overstates the typical run. Both are recorded so the record and the prose can quote
     the same numbers.
     """
-    selected = [r for r in runs if r["arm"] == arm and (rate is None or r["rate"] == rate)]
+    selected = [
+        r
+        for r in runs
+        if r["arm"] == arm
+        and (rate is None or r["rate"] == rate)
+        and (node_noise is None or r["node_noise"] == node_noise)
+    ]
     out: dict[str, Any] = {}
     for key in ("modulator", "mean_abs_delta", "alignment"):
         values = [r[key] for r in selected if not np.isnan(r[key])]
@@ -315,6 +353,14 @@ def _print_control(out: dict[str, Any]) -> None:
             f"    rate {rate:>7} mean {row['mean']:+.4f}  {row['seeds_above_floor']}/{row['n']} "
             f"above floor  -> {'passes' if row['passes'] else 'does not pass'}",
         )
+    print("  node_perturbation by sigma:")
+    for node_noise, row in out["arms"]["node_perturbation"]["by_node_noise"].items():
+        alignment = out["diagnosis"]["node_perturbation"]["by_node_noise"][node_noise]["alignment"]
+        print(
+            f"    sigma {node_noise:>6} mean {row['mean']:+.4f}  "
+            f"{row['seeds_above_floor']}/{row['n']} above floor  alignment {alignment:+.4f}"
+            f"  -> {'passes' if row['passes'] else 'does not pass'}",
+        )
     diag = out["diagnosis"]["three_factor"]
     print(
         f"\n  diagnosis (three_factor): modulator {diag['modulator']:+.4f}  "
@@ -339,6 +385,7 @@ def write_per_seed_csv(runs: list[dict[str, Any]], path: Path) -> None:
                 [
                     run["arm"],
                     run["rate"],
+                    run["node_noise"],
                     run["seed"],
                     f"{run['score']:.6f}",
                     f"{run['modulator']:.6f}",
@@ -362,6 +409,10 @@ def main(argv: list[str] | None = None) -> int:
         runs.extend(run_arm(arm, seed, task, trials=args.trials) for arm in ("analytic", "hebbian"))
         runs.extend(
             run_arm("three_factor", seed, task, rate=rate, trials=args.trials) for rate in RATE_GRID
+        )
+        runs.extend(
+            run_arm("node_perturbation", seed, task, trials=args.trials, node_noise=node_noise)
+            for node_noise in NODE_NOISE_GRID
         )
     out = analyse(runs, task, trials=args.trials)
     _print_control(out)

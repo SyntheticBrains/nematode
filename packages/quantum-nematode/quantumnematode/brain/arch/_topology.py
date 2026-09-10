@@ -103,6 +103,19 @@ class PlasticTopology(Protocol):
         ...
 
     @property
+    def plastic_perturbations(self) -> list[torch.Tensor]:
+        """Per plastic weight, the perturbation its post-synaptic units acted on last step.
+
+        Empty unless the topology is perturbing. Indexed like
+        ``plastic_post_activities``, along the axis complementary to the fan-in
+        axis. The perturbation is added to the unit's PRE-activation, so the
+        unit acts on it through its own nonlinearity -- an eligibility built
+        from a perturbation the unit did not act on describes a counterfactual
+        the network never took, and the resulting estimator is biased.
+        """
+        ...
+
+    @property
     def plastic_post_activities(self) -> list[torch.Tensor]:
         """Per plastic weight, the activity of its post-synaptic units at the last trace step.
 

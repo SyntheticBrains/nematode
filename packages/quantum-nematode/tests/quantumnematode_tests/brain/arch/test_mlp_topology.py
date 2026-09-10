@@ -78,6 +78,11 @@ class TestWrapsRatherThanRebuilds:
             "post_activity_0",
             "post_activity_1",
             "post_activity_2",
+            # The perturbation each unit acted on: per-step trace state like the rest, and
+            # like the rest it is cleared per episode and never persisted with weights.
+            "perturbation_0",
+            "perturbation_1",
+            "perturbation_2",
         }
 
     def test_traces_off_allocates_nothing(self) -> None:
