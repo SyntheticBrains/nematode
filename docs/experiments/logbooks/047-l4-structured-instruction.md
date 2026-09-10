@@ -106,10 +106,14 @@ never as a comparator.
 | S3 | wt − rn under routing | +0.87 | −3.21 … +5.02 | 0.975 | 8/16 | fail |
 | S4 | wt − rn under the global scalar | −3.24 | −10.85 … +5.19 | 0.975 | 6/16 | fail |
 
-**Verdict `no_routing_effect`** — and the name understates what was seen. The family is one-sided:
-each test asks whether routing *helps*, so a large negative effect produces a high q and reads as
-"no confirmed benefit". Descriptively the effect was negative on both wirings and S2's interval lies
-entirely below zero. The verdict is kept as registered rather than renamed after the fact; the
+**Verdict `no_routing_effect`** — and the name understates what was seen. All four tests are
+one-sided, but they ask different questions. **S1 and S2** ask whether routing *helps*, each arm
+against its own broadcast control, so a large negative effect produces a high q and reads as "no
+confirmed benefit" rather than "no effect"; descriptively the effect was negative on both wirings
+and S2's interval lies entirely below zero. **S3 and S4** are the wiring contrast in its registered
+direction — wild type over rewired null, under routing and under the global scalar respectively —
+and neither confirms; S4's estimate is negative, meaning the scramble scored above the animal at
+n = 16. The verdict is kept as registered rather than renamed after the fact; the
 honest reading is **no confirmed benefit, with observed degradation**, and a future map of this
 shape should carry an explicit harm branch.
 

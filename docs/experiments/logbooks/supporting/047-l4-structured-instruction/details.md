@@ -22,10 +22,13 @@ not be read as one.
 | S4 | wt − rn under the global scalar | −3.24 | −10.85 … +5.19 | 0.975 | 6/16 | fail |
 
 Neither S1 nor S2 confirms, so the registered map gives `no_routing_effect`. **That name understates
-what was observed, and the map's gap is worth stating.** The tests are one-sided — each asks whether
-routing *helps* — so a large negative effect produces a high q and reads as "no confirmed benefit",
-not as "no effect". Descriptively the effect was negative on both wirings, and S2's interval
-(−11.77 … −3.01) lies entirely below zero. The verdict name is kept as registered rather than
+what was observed, and the map's gap is worth stating.** All four tests are one-sided, but they ask different questions. **S1 and S2** ask whether routing
+*helps*, each arm against its own broadcast control, so a large negative effect produces a high q
+and reads as "no confirmed benefit", not as "no effect"; descriptively the effect was negative on
+both wirings, and S2's interval (−11.77 … −3.01) lies entirely below zero. **S3 and S4** are the
+wiring contrast in its registered direction — wild type over rewired null, under routing and under
+the global scalar — and are not tests of routing at all; neither confirms, and S4's negative
+estimate has the scramble above the animal. The verdict name is kept as registered rather than
 renamed after seeing the data; the honest reading is **no confirmed benefit, with observed
 degradation**, and a future map of this shape should carry an explicit harm branch. S3 and S4
 annotate and do not decide.
