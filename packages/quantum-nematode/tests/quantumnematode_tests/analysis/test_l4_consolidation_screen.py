@@ -6,6 +6,7 @@ import csv
 import json
 import math
 import sys
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,81 @@ def _values(**over: float) -> dict[int, float]:
     for seed, value in over.items():
         values[int(seed.removeprefix("s"))] = value
     return values
+
+
+def _record(curve: list[float]) -> object:
+    """Build a SeedRecord carrying just the curve the trajectory reads."""
+    from l4_panel import SeedRecord  # pyright: ignore[reportMissingImports]
+
+    return SeedRecord(
+        success=float(curve[-1]) if curve else 0.0,
+        foods=0.0,
+        episodes=len(curve),
+        converged=None,
+        onset=None,
+        evasion_rate=None,
+        temp_comfort=None,
+        curve=curve,
+        peak_action_density=None,
+    )
+
+
+class TestTheAnnealedArmsSchedule:
+    def test_the_registered_schedule_is_the_control_s(self) -> None:
+        # The same bounds the positive control gates on, so a pass there is a statement about
+        # the schedule this assay runs.
+        assert cs.ANNEAL_INITIAL == 0.2
+        assert cs.ANNEAL_FINAL == 0.02
+        assert cs.ANNEAL_EPISODES == cs.BUDGET // 2
+
+    def test_the_scale_reaches_its_floor_at_the_halfway_point(self) -> None:
+        assert cs._scheduled_scale(0) == pytest.approx(0.2)
+        assert cs._scheduled_scale(cs.ANNEAL_EPISODES) == pytest.approx(0.02)
+        assert cs._scheduled_scale(cs.BUDGET) == pytest.approx(0.02)
+
+    def test_both_annealed_arms_are_registered(self) -> None:
+        assert "perturbation_annealed" in cs.ARM_KEYS
+        assert "perturbation_annealed_frozen" in cs.ARM_KEYS
+        assert {"perturbation_annealed", "perturbation_annealed_frozen"} == cs.ANNEALED_ARMS
+
+
+class TestTheBinnedTrajectory:
+    def test_it_reports_one_bin_per_eighth_with_its_scale(self) -> None:
+        panel = {"perturbation_annealed": {1: _record([float(i) for i in range(80)])}}
+        out = cs.binned_trajectory(panel, "perturbation_annealed")  # type: ignore[arg-type]
+        assert out["n_read"] == 1
+        assert len(out["bins"]) == cs.BINS
+        # The first four bins span the decay, the last four sit at the floor.
+        assert out["bins"][0]["scale"] == pytest.approx(0.2)
+        assert out["bins"][cs.BINS // 2]["scale"] == pytest.approx(0.02)
+        assert out["bins"][-1]["scale"] == pytest.approx(0.02)
+
+    def test_the_bins_follow_the_curve(self) -> None:
+        # A flat-then-rising curve must read as flat then rising, not be averaged away.
+        curve = [0.0] * 40 + [10.0] * 40
+        panel = {"perturbation_annealed": {1: _record(curve)}}
+        out = cs.binned_trajectory(panel, "perturbation_annealed")  # type: ignore[arg-type]
+        means = [b["mean"] for b in out["bins"]]
+        assert means[0] == pytest.approx(0.0)
+        assert means[-1] == pytest.approx(10.0)
+
+    def test_a_recovering_frozen_arm_is_visible_as_a_path(self) -> None:
+        # The point of the control: with weights frozen, a decaying scale lets the policy
+        # recover, so the arm's cost is a path rather than the single number a fixed scale gave.
+        curve = [5.0] * 20 + [15.0] * 20 + [30.0] * 20 + [35.0] * 20
+        panel = {"perturbation_annealed_frozen": {1: _record(curve)}}
+        out = cs.binned_trajectory(panel, "perturbation_annealed_frozen")  # type: ignore[arg-type]
+        means = [b["mean"] for b in out["bins"]]
+        assert all(later >= earlier for earlier, later in pairwise(means))
+        assert means[-1] > means[0]
+
+    def test_a_short_curve_is_not_imputed(self) -> None:
+        panel = {"perturbation_annealed": {1: _record([1.0, 2.0])}}
+        out = cs.binned_trajectory(panel, "perturbation_annealed")  # type: ignore[arg-type]
+        assert out == {"bins": None, "n_read": 0}
+
+    def test_an_absent_arm_reads_nothing(self) -> None:
+        assert cs.binned_trajectory({}, "perturbation_annealed")["n_read"] == 0  # type: ignore[arg-type]
 
 
 class TestTheComparatorIsTheCommittedTable:
@@ -214,6 +290,11 @@ class TestTheRegistry:
             # Its frozen control: perturbation applied, no weight written, so a failing
             # plastic arm can be attributed to the rule rather than to the exploration.
             "perturbation_frozen",
+            # The same eligibility with the scale annealed, and its own frozen control on the
+            # identical schedule. That control recovers as the scale falls, so it is read as a
+            # path rather than the single number a fixed scale gave.
+            "perturbation_annealed",
+            "perturbation_annealed_frozen",
         )
 
     def test_every_arm_config_exists(self) -> None:

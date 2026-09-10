@@ -37,6 +37,7 @@ from typing import Any
 import numpy as np
 import torch
 from quantumnematode.brain.arch._mlp_topology import MLPTopology
+from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
 from quantumnematode.learning_rules import ScalingOptions, ThreeFactorRule
 from quantumnematode.learning_rules.three_factor import ThreeFactorBatch
 from quantumnematode.plasticity.positive_control import ContextualAssociation
@@ -61,7 +62,16 @@ PASS_FRACTION = 0.5  # of the floor-to-optimum gap
 ANALYTIC_RATE = 0.05
 
 NODE_NOISE_GRID = (0.01, 0.05, 0.2)
-ARMS = ("three_factor", "node_perturbation", "hebbian", "analytic")
+# The registered schedule. 0.2 is the scale that passed this control; 0.02 sits an order of
+# magnitude below it -- under the grid's 0.05, which still cost 7 of 8 seeds the learning bar,
+# and above 0.01, where the estimator was inert. The decay spans the first half of the budget,
+# so the score window (the last BLOCK * 10 trials) lies entirely at the floor: a pass means the
+# policy the schedule LEFT BEHIND is competent under the perturbation it will actually run with.
+ANNEAL_INITIAL = 0.2
+ANNEAL_FINAL = 0.02
+ANNEAL_FRACTION = 0.5  # of the trial budget
+PERTURBING_ARMS = frozenset({"node_perturbation", "node_perturbation_annealed"})
+ARMS = ("three_factor", "node_perturbation", "node_perturbation_annealed", "hebbian", "analytic")
 
 
 def _actor(n_cues: int, generator: torch.Generator) -> nn.Sequential:
@@ -101,6 +111,15 @@ def _block_alignment(
     )
 
 
+def annealed_schedule(trials: int) -> NodeNoiseSchedule:
+    """Build the registered schedule, with its decay scaled to a trial budget."""
+    return NodeNoiseSchedule(
+        initial=ANNEAL_INITIAL,
+        final=ANNEAL_FINAL,
+        episodes=max(1, int(trials * ANNEAL_FRACTION)),
+    )
+
+
 def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the control
     arm: str,
     seed: int,
@@ -109,13 +128,14 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     trials: int = TRIALS,
     noise: float = NOISE,
     node_noise: float = 0.0,
+    schedule: NodeNoiseSchedule | None = None,
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
     rng = np.random.default_rng(seed)
     generator = torch.Generator().manual_seed(seed)
     torch.manual_seed(seed)
     actor = _actor(task.n_cues, generator)
-    perturbing = arm == "node_perturbation"
+    perturbing = arm in PERTURBING_ARMS
     topology = MLPTopology(
         actor,
         enable_activity_traces=True,
@@ -124,6 +144,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # The variant's own perturbation, from a dedicated generator; zero for every other arm,
         # which then draws nothing and runs the forward pass unchanged.
         node_noise=node_noise if perturbing else 0.0,
+        node_noise_schedule=schedule if perturbing else None,
         perturbation_seed=seed if perturbing else None,
     )
     rule = None
@@ -135,7 +156,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
             weight_bound=WEIGHT_BOUND,
             baseline_rate=BASELINE_RATE,
             freeze_updates=False,
-            modulated=arm in {"three_factor", "node_perturbation"},
+            modulated=arm in {"three_factor", *PERTURBING_ARMS},
             eligibility="node_perturbation" if perturbing else "hebbian",
             scaling=ScalingOptions(normalise_modulator=True, normalise_trace=True),
             homeostasis=True,
@@ -146,6 +167,11 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     modulators: list[float] = []
     traces: list[float] = []
     alignments: list[float] = []
+    decay_alignments: list[float] = []
+    floor_alignments: list[float] = []
+    # Where the decay ends, in trials. Without a schedule everything is "floor": the scale never
+    # moved, so there is no decay phase to separate.
+    decay_trials = schedule.episodes if schedule is not None else 0
     block_update = [torch.zeros_like(w) for w in topology.plastic_weights]
     block_gradient = [torch.zeros_like(w) for w in topology.plastic_weights]
 
@@ -153,6 +179,11 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # Each trial is its own episode: without this the eligibility gating this trial's reward
         # would carry the previous trial's cue -- the horizon confound this control removes.
         topology.reset_traces()
+        # This control drives the topology directly and never builds a brain, so nothing else
+        # would advance the schedule: the trial IS the schedule's step. A counter that only
+        # advanced from a brain would leave an annealed arm at its initial scale throughout and
+        # pass a gate the schedule was never tested by.
+        topology.advance_schedule()
         cue = task.sample_cue(rng)
         observation = torch.from_numpy(task.observation(cue))
         mean = topology(observation).squeeze()
@@ -186,6 +217,15 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
             aligned = _block_alignment(block_update, block_gradient)
             if aligned is not None:
                 alignments.append(aligned)
+                # At the floor the estimator is nearly silent BY DESIGN, so a low
+                # floor-phase alignment is what a good schedule looks like and is not the
+                # failure signature. The signature is a decay-phase alignment that does not
+                # rise together with a floor-phase score below the bar, which needs the two
+                # phases kept apart rather than averaged into one number.
+                if trial < decay_trials:
+                    decay_alignments.append(aligned)
+                else:
+                    floor_alignments.append(aligned)
             block_update = [torch.zeros_like(w) for w in topology.plastic_weights]
             block_gradient = [torch.zeros_like(w) for w in topology.plastic_weights]
 
@@ -194,13 +234,29 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         "seed": seed,
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
         "rate": rate if arm in {"three_factor", "node_perturbation"} else None,
-        "node_noise": node_noise if arm == "node_perturbation" else None,
+        "node_noise": node_noise if perturbing else None,
+        "schedule": (
+            {
+                "initial": schedule.initial,
+                "final": schedule.final,
+                "decay_trials": schedule.episodes,
+            }
+            if schedule is not None
+            else None
+        ),
+        # Trace normalisation is on for every arm here. It matters to an annealed arm
+        # specifically: the trace carries the perturbation, so the update's magnitude is
+        # linear in the scale, and without this the decay would cut the effective rate as
+        # well as the exploration. Recorded so the regime travels with the number.
+        "normalise_trace": True,
         # The arm's score: mean reward over the last 1000 trials, so a run is judged
         # on where it ended rather than on the exploration it did getting there.
         "score": float(np.mean(rewards[-BLOCK * 10 :])) if rewards else float("nan"),
         "modulator": float(np.mean(modulators)) if modulators else float("nan"),
         "mean_abs_delta": float(np.mean(traces)) if traces else float("nan"),
         "alignment": float(np.mean(alignments)) if alignments else float("nan"),
+        "alignment_decay": (float(np.mean(decay_alignments)) if decay_alignments else float("nan")),
+        "alignment_floor": (float(np.mean(floor_alignments)) if floor_alignments else float("nan")),
     }
 
 
@@ -247,6 +303,22 @@ def analyse(
         # the claim under test is that the variant learns at all.
         "passes": any(v["passes"] for v in noises.values()),
     }
+    annealed = [r for r in runs if r["arm"] == "node_perturbation_annealed"]
+    by_arm["node_perturbation_annealed"] = assess(
+        [r["score"] for r in annealed],
+        floor,
+        optimum,
+    )
+    by_arm["node_perturbation_annealed"]["schedule"] = annealed[0]["schedule"] if annealed else None
+    # The two phases kept apart. A low floor-phase alignment is expected of a good schedule --
+    # the estimator is nearly silent once the scale is small -- so the failure signature is a
+    # decay-phase alignment that does not rise together with a floor-phase score below the bar,
+    # and averaging the phases would hide exactly that.
+    for phase in ("alignment_decay", "alignment_floor"):
+        values = [r[phase] for r in annealed if not math.isnan(r[phase])]
+        by_arm["node_perturbation_annealed"][phase] = (
+            float(np.mean(values)) if values else float("nan")
+        )
     by_arm["three_factor"] = {
         "by_rate": rates,
         # Any rate passing counts: the claim is that the rule learns at all.
@@ -378,6 +450,20 @@ def _print_control(out: dict[str, Any]) -> None:
             f"{row['seeds_above_floor']}/{row['n']} above floor  alignment {alignment:+.4f}"
             f"  -> {'passes' if row['passes'] else 'does not pass'}",
         )
+    annealed = out["arms"].get("node_perturbation_annealed")
+    if annealed is not None:
+        schedule = annealed.get("schedule") or {}
+        print(
+            f"  node_perturbation_annealed (sigma {schedule.get('initial')} -> "
+            f"{schedule.get('final')} over {schedule.get('decay_trials')} trials):",
+        )
+        print(
+            f"    mean {annealed['mean']:+.4f}  "
+            f"{annealed['seeds_above_floor']}/{annealed['n']} above floor  "
+            f"alignment {annealed['alignment_decay']:+.4f} decay / "
+            f"{annealed['alignment_floor']:+.4f} floor"
+            f"  -> {'passes' if annealed['passes'] else 'does not pass'}",
+        )
     diag = out["diagnosis"]["three_factor"]
     print(
         f"\n  diagnosis (three_factor): modulator {diag['modulator']:+.4f}  "
@@ -404,6 +490,8 @@ def write_per_seed_csv(runs: list[dict[str, Any]], path: Path) -> None:
                 "modulator",
                 "mean_abs_delta",
                 "alignment",
+                "alignment_decay",
+                "alignment_floor",
             ],
         )
         for run in runs:
@@ -417,6 +505,8 @@ def write_per_seed_csv(runs: list[dict[str, Any]], path: Path) -> None:
                     f"{run['modulator']:.6f}",
                     f"{run['mean_abs_delta']:.8f}",
                     f"{run['alignment']:.6f}",
+                    f"{run['alignment_decay']:.6f}",
+                    f"{run['alignment_floor']:.6f}",
                 ],
             )
 
@@ -432,6 +522,16 @@ def main(argv: list[str] | None = None) -> int:
     task = ContextualAssociation.default()
     runs: list[dict[str, Any]] = []
     for seed in SEEDS:
+        runs.append(
+            run_arm(
+                "node_perturbation_annealed",
+                seed,
+                task,
+                trials=args.trials,
+                node_noise=ANNEAL_INITIAL,
+                schedule=annealed_schedule(args.trials),
+            ),
+        )
         runs.extend(run_arm(arm, seed, task, trials=args.trials) for arm in ("analytic", "hebbian"))
         runs.extend(
             run_arm("three_factor", seed, task, rate=rate, trials=args.trials) for rate in RATE_GRID

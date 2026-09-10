@@ -958,6 +958,9 @@ class MLPPPOBrain(ClassicalBrain):
         the pre-change brain there.
         """
         self.topology.reset_traces()
+        # Separate from the trace reset: the rule's load-time reset also clears the traces,
+        # and a load must restart the perturbation schedule rather than advance it.
+        self.topology.advance_schedule()
         if self._rule is not None:
             self._rule.reset_episode()
 

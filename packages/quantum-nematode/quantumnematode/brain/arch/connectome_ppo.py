@@ -62,6 +62,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 if TYPE_CHECKING:
+    from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
     from quantumnematode.connectome.model import Connectome
     from quantumnematode.learning_rules.ppo import ConnectomePPORule
 
@@ -304,6 +305,28 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
             "plasticity_node_noise: with no perturbation the eligibility is identically zero."
         )
         raise ValueError(msg)
+    final = config.plasticity_node_noise_final
+    episodes = config.plasticity_node_noise_anneal_episodes
+    if (final is None) != (episodes is None):
+        msg = (
+            "plasticity_node_noise_final and plasticity_node_noise_anneal_episodes must be "
+            "set together: one alone does not define a schedule."
+        )
+        raise ValueError(msg)
+    if final is not None:
+        if final == 0.0:
+            msg = (
+                "plasticity_node_noise_final must be positive: a scale of zero does not "
+                "silence the eligibility, it returns it to pre-synaptic times post-synaptic "
+                "activity."
+            )
+            raise ValueError(msg)
+        if final >= config.plasticity_node_noise:
+            msg = (
+                f"plasticity_node_noise_final ({final}) must be below plasticity_node_noise "
+                f"({config.plasticity_node_noise}): the schedule is a decay."
+            )
+            raise ValueError(msg)
     if config.third_factor == "pathway" and config.learning_rule in UNMODULATED_RULES:
         msg = (
             f"third_factor='pathway' has no effect under learning_rule="
@@ -357,6 +380,7 @@ class ConnectomeTopology(nn.Module):
         enable_gap_junctions: bool,
         forward_pass_depth: int,
         node_noise: float = 0.0,
+        node_noise_schedule: NodeNoiseSchedule | None = None,
         perturbation_seed: int | None = None,
         n_food_features: int,
         enforce_strict_mask: bool,
@@ -389,6 +413,13 @@ class ConnectomeTopology(nn.Module):
         # bit-identical. Its own generator, seeded from the run seed, so enabling perturbation
         # shifts nothing else in the random stream.
         self.node_noise = node_noise
+        # ``node_noise`` is the INITIAL scale and answers "does this topology perturb at all",
+        # which a schedule never changes: a schedule's floor is required to be positive. Only
+        # the magnitude is scheduled, read through ``current_node_noise`` at draw time. A plain
+        # integer, not a buffer: it never enters the state dict, so a checkpoint written before
+        # schedules existed still loads.
+        self._node_noise_schedule = node_noise_schedule
+        self._schedule_step = 0
         self._perturbation_generator = torch.Generator()
         if perturbation_seed is not None:
             self._perturbation_generator.manual_seed(perturbation_seed)
@@ -899,6 +930,22 @@ class ConnectomeTopology(nn.Module):
             self.readout[_SPEED_ACTION_INDEX].copy_(forward / forward.norm())
             self.readout[_TURN_ACTION_INDEX].copy_(dorsal / dorsal.norm())
 
+    @property
+    def current_node_noise(self) -> float:
+        """The perturbation scale for the current episode: the initial one absent a schedule."""
+        if self._node_noise_schedule is None:
+            return self.node_noise
+        return self._node_noise_schedule.scale_at(self._schedule_step)
+
+    def advance_schedule(self) -> None:
+        """Advance the perturbation schedule by one episode; a no-op without one."""
+        if self._node_noise_schedule is not None:
+            self._schedule_step += 1
+
+    def reset_schedule(self) -> None:
+        """Return the schedule to its initial scale, as a policy load does."""
+        self._schedule_step = 0
+
     def reset_traces(self) -> None:
         """Zero the eligibility traces and drop the previous state.
 
@@ -1087,6 +1134,9 @@ class ConnectomeTopology(nn.Module):
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
         perturbation = None
+        # One scale for the whole episode's settling steps: the schedule is indexed by
+        # episode, so every step within one draws at the same magnitude.
+        scale = self.current_node_noise
         for _ in range(self.forward_pass_depth):
             preact = chem_mat.T @ h + gap_mat.T @ h
             if self.node_noise > 0.0:
@@ -1101,7 +1151,7 @@ class ConnectomeTopology(nn.Module):
                             generator=self._perturbation_generator,
                             dtype=preact.dtype,
                         )
-                        * self.node_noise
+                        * scale
                     )
                 perturbation = step_noise if perturbation is None else perturbation + step_noise
                 preact = preact + step_noise
@@ -1407,6 +1457,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             enable_gap_junctions=config.enable_gap_junctions,
             forward_pass_depth=config.forward_pass_depth,
             node_noise=config.plasticity_node_noise,
+            node_noise_schedule=config.node_noise_schedule(),
             perturbation_seed=self.seed,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
@@ -2169,6 +2220,9 @@ class ConnectomePPOBrain(ClassicalBrain):
         ``learn(..., episode_done=True)`` call and resets here.
         """
         self.topology.reset_traces()
+        # Separate from the trace reset: the rule's load-time reset also clears the traces,
+        # and a load must restart the perturbation schedule rather than advance it.
+        self.topology.advance_schedule()
         self._rule.reset_episode()
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:

@@ -1027,6 +1027,9 @@ class ThreeFactorRule:
         ]
         self._modulator_centre = _RunningMean(self.scaling.scale_rate)
         self._topology.reset_traces()
+        # A warm start begins the perturbation schedule again: the loaded policy is explored
+        # from the initial scale, not from wherever the previous run's schedule had reached.
+        self._topology.reset_schedule()
         # Consolidation state follows the weights the rule now starts from. An
         # anchor left at a previous substrate's values would pull a loaded
         # policy toward weights it no longer has, with a force proportional to

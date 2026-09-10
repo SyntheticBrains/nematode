@@ -56,8 +56,16 @@ ARMS: dict[str, str] = {
     # The same arm with updates frozen: what the perturbation alone costs a competent
     # policy. A failing plastic arm is attributable to the rule only against this.
     f"{_STEM}_plastic_clone_nodeperturbation_frozen": "perturbation_frozen",
+    # The same eligibility with the perturbation scale annealed from the scale that learns to
+    # one a competent policy can be run under, and its own frozen control on the identical
+    # schedule. A frozen arm under a decaying scale RECOVERS as the scale falls, so this
+    # control is a trajectory rather than a single number and the learning arm is read against
+    # it bin by bin.
+    f"{_STEM}_plastic_clone_nodeperturbation_annealed": "perturbation_annealed",
+    f"{_STEM}_plastic_clone_nodeperturbation_annealed_frozen": "perturbation_annealed_frozen",
 }
 ARM_KEYS = tuple(ARMS.values())
+ANNEALED_ARMS = frozenset({"perturbation_annealed", "perturbation_annealed_frozen"})
 
 SEEDS = tuple(range(1, 9))
 BUDGET = 2000
@@ -218,6 +226,58 @@ def trajectory(panel: dict[str, dict[int, SeedRecord]], arm: str) -> dict[str, A
     }
 
 
+# The registered schedule for the annealed arms, stated here so the harness reports the scale
+# each bin ran at rather than leaving it to be read off a config.
+ANNEAL_INITIAL = 0.2
+ANNEAL_FINAL = 0.02
+ANNEAL_EPISODES = BUDGET // 2
+BINS = 8
+
+
+def _scheduled_scale(episode: int) -> float:
+    """Return the annealed arms' perturbation scale at an episode index."""
+    if episode >= ANNEAL_EPISODES:
+        return ANNEAL_FINAL
+    return ANNEAL_INITIAL * (ANNEAL_FINAL / ANNEAL_INITIAL) ** (episode / ANNEAL_EPISODES)
+
+
+def binned_trajectory(panel: dict[str, dict[int, SeedRecord]], arm: str) -> dict[str, Any]:
+    """Mean success per equal bin of the budget, with the scale each bin ran at.
+
+    A frozen arm under a decaying perturbation recovers as the scale falls, so what it costs a
+    competent policy is a path rather than an endpoint. Reading the learning arm against that
+    path bin by bin is what separates "the rule damaged the policy" from "the perturbation did,
+    and the rule was recovering ground behind it".
+    """
+    per_bin: list[list[float]] = [[] for _ in range(BINS)]
+    n_read = 0
+    for record in panel.get(arm, {}).values():
+        curve = record.curve
+        if len(curve) < BINS:
+            continue
+        n_read += 1
+        width = len(curve) / BINS
+        for index in range(BINS):
+            start = int(index * width)
+            stop = int((index + 1) * width) if index < BINS - 1 else len(curve)
+            if stop > start:
+                per_bin[index].append(float(np.mean(curve[start:stop])))
+    if not n_read:
+        return {"bins": None, "n_read": 0}
+    return {
+        "bins": [
+            {
+                "bin": index + 1,
+                "episode_from": int(index * BUDGET / BINS),
+                "scale": _scheduled_scale(int(index * BUDGET / BINS)),
+                "mean": float(np.mean(values)) if values else None,
+            }
+            for index, values in enumerate(per_bin)
+        ],
+        "n_read": n_read,
+    }
+
+
 def assess(values: dict[int, float]) -> dict[str, Any]:
     """Apply the assay's pass rule to one arm's per-seed values."""
     seeds = sorted(values)
@@ -280,6 +340,13 @@ def analyse(
         result["rate_multiplier"] = multipliers
         result["rate_multiplier_mean"] = float(np.mean(used)) if used else float("nan")
         result["trajectory"] = trajectory(panel, arm)
+        if arm in ANNEALED_ARMS:
+            result["binned_trajectory"] = binned_trajectory(panel, arm)
+            result["schedule"] = {
+                "initial": ANNEAL_INITIAL,
+                "final": ANNEAL_FINAL,
+                "anneal_episodes": ANNEAL_EPISODES,
+            }
         out["arms"][arm] = result
     return out
 

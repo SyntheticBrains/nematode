@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
+
 LearningRuleName = Literal["ppo", "three_factor", "hebbian"]
 # Consolidation mechanisms. A mechanism slows or stops the rule writing where it has
 # already written, which the minimal rule does not do at any rate: its update magnitude
@@ -153,6 +155,22 @@ class PlasticityConfigMixin(BaseModel):
     plasticity_eligibility: EligibilityMode = "hebbian"
     plasticity_node_noise: float = Field(default=0.0, ge=0.0)
 
+    # The perturbation scale may decay over episodes rather than stay fixed. It has two
+    # incompatible jobs: as a probe it must be large enough to move behaviour, or the
+    # eligibility is indistinguishable from noise; as jitter on a competent policy it is
+    # damage. Nothing requires one value to serve both, so ``plasticity_node_noise`` becomes
+    # the INITIAL scale and these two give it a geometric decay to a floor:
+    #
+    #     sigma(e) = sigma_final                                if e >= anneal_episodes
+    #     sigma(e) = sigma_0 * (sigma_final / sigma_0) ** (e / anneal_episodes)
+    #
+    # Both unset leaves the scale constant and every arm bit-identical. The floor must be
+    # positive: the substrates decide at forward time whether they are perturbing by testing
+    # the scale against zero, and a scale that reached zero would return the trace to
+    # pre x post -- the Hebbian eligibility -- rather than silencing it.
+    plasticity_node_noise_final: float | None = Field(default=None, ge=0.0)
+    plasticity_node_noise_anneal_episodes: int | None = Field(default=None, gt=0)
+
     # ── Third-factor routing (opt-in) ────────────────────────
     # Off by default: "global" is the broadcast scalar every panel has run. "pathway" needs a
     # substrate that derives an instructive pathway, so it is refused on the dense yardstick and
@@ -241,6 +259,53 @@ class PlasticityConfigMixin(BaseModel):
                 "plasticity_node_noise: with no perturbation the eligibility is identically "
                 "zero, and the arm would look like a rule that learns nothing rather than one "
                 "given nothing to learn from."
+            )
+            raise ValueError(msg)
+        return self
+
+    def node_noise_schedule(self) -> NodeNoiseSchedule | None:
+        """Build the perturbation schedule this config describes, or ``None`` for a fixed scale."""
+        if self.plasticity_node_noise_final is None:
+            return None
+        if self.plasticity_node_noise_anneal_episodes is None:
+            return None
+        return NodeNoiseSchedule(
+            initial=self.plasticity_node_noise,
+            final=self.plasticity_node_noise_final,
+            episodes=self.plasticity_node_noise_anneal_episodes,
+        )
+
+    @model_validator(mode="after")
+    def _validate_node_noise_schedule(self) -> PlasticityConfigMixin:
+        """Reject a perturbation schedule that is half stated, inverted, or reaches zero.
+
+        Either bound alone leaves the shape undefined, and a floor at or above the initial
+        scale is not a decay. A floor of zero is refused for a substrate reason: perturbing
+        is decided at forward time by testing the scale against zero, and where a topology is
+        not perturbing the trace carries post-synaptic activity, so a schedule reaching zero
+        would silently restore the Hebbian eligibility instead of silencing the arm.
+        """
+        final = self.plasticity_node_noise_final
+        episodes = self.plasticity_node_noise_anneal_episodes
+        if (final is None) != (episodes is None):
+            msg = (
+                "plasticity_node_noise_final and plasticity_node_noise_anneal_episodes must "
+                "be set together: one alone does not define a schedule."
+            )
+            raise ValueError(msg)
+        if final is None:
+            return self
+        if final == 0.0:
+            msg = (
+                "plasticity_node_noise_final must be positive: a scale of zero does not "
+                "silence the eligibility, it returns it to pre-synaptic times post-synaptic "
+                "activity, which is the eligibility the perturbation replaces."
+            )
+            raise ValueError(msg)
+        if final >= self.plasticity_node_noise:
+            msg = (
+                f"plasticity_node_noise_final ({final}) must be below plasticity_node_noise "
+                f"({self.plasticity_node_noise}): the schedule is a decay."
             )
             raise ValueError(msg)
         return self
