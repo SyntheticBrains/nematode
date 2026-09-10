@@ -386,6 +386,17 @@ class MLPPPOBrain(ClassicalBrain):
                 ThreeFactorRule,
             )
 
+            if config.third_factor == "pathway":
+                # Guarded by a config validator too, and repeated here because a config built
+                # by `model_copy` skips validators: this substrate has no transmitter
+                # identities, so a routed arm here would silently be the plain rule -- the
+                # matched-rule yardstick's comparison, corrupted.
+                msg = (
+                    "third_factor='pathway' is not available on this substrate: it routes the "
+                    "modulator through the aminergic wiring, and a dense layer has no neurons "
+                    "with transmitter identities to route from."
+                )
+                raise ValueError(msg)
             self._rule = ThreeFactorRule(
                 self.topology,
                 plasticity_rate=config.plasticity_rate,

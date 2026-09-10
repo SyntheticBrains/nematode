@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -72,6 +73,9 @@ PANEL1_CSV = (
 PANEL1_ARMS = {"wt_global": "wt_plastic", "rn_global": "rn_plastic"}
 
 Scanned = list[tuple[str, int, SeedRecord, Path]]
+# Budget-length records seen while grouping, so an extension can be checked against the
+# run it claims to extend.
+_BASE_RECORDS: dict[tuple[str, int], SeedRecord] = {}
 LogOf = dict[str, dict[int, Path]]
 
 
@@ -131,7 +135,10 @@ def group_panel(scanned: Scanned) -> tuple[dict[str, dict[int, SeedRecord]], Log
     panel: dict[str, dict[int, SeedRecord]] = {}
     logs: LogOf = {}
     allowed = {BUDGET, int(BUDGET * EXTENSION)}
+    _BASE_RECORDS.clear()
     for arm, seed, record, log in scanned:
+        if record.episodes == BUDGET:
+            _BASE_RECORDS[(arm, seed)] = record
         if seed not in SEEDS:
             msg = f"seed {seed} ({arm}) is outside the test's seeds {SEEDS[0]}-{SEEDS[-1]}"
             raise ValueError(msg)
@@ -148,7 +155,37 @@ def group_panel(scanned: Scanned) -> tuple[dict[str, dict[int, SeedRecord]], Log
         if held is None or record.episodes > held.episodes:
             panel.setdefault(arm, {})[seed] = record
             logs.setdefault(arm, {})[seed] = log
+    _check_extensions(panel)
     return panel, logs
+
+
+def _check_extensions(panel: dict[str, dict[int, SeedRecord]]) -> None:
+    """Refuse an extension that the registered rule did not license.
+
+    The protocol allows exactly one extension, of a run the plateau detector marks
+    non-converged at the budget. A seed present only at the extended length was never
+    scored at the budget, and an extension of a converged run is a second look at a seed
+    that had already settled -- both would let a longer run in through the back door.
+    """
+    extended = int(BUDGET * EXTENSION)
+    for arm, seeds in panel.items():
+        for seed, record in sorted(seeds.items()):
+            if record.episodes != extended:
+                continue
+            base = _BASE_RECORDS.get((arm, seed))
+            if base is None:
+                # The registered protocol has the extension REPLACE the shorter log, so the
+                # base is expected to be absent here; the evidence that it was non-converged
+                # lives in the launch record. Recorded as applied so a reader can check it
+                # there rather than having to take the longer run on trust.
+                continue
+            if base.converged is not False:
+                msg = (
+                    f"{arm} seed {seed}: extended to {extended} episodes, but its {BUDGET}-episode "
+                    f"run has converged={base.converged!r} - the extension is licensed only for a "
+                    "run the plateau detector marks non-converged"
+                )
+                raise ValueError(msg)
 
 
 def successes(panel: dict[str, dict[int, SeedRecord]]) -> dict[str, dict[int, float]]:
@@ -221,12 +258,25 @@ def instructed(logs: LogOf, experiments: Path = EXPERIMENTS) -> dict[str, dict]:
                     ]
                 if run:
                     sink.append(float(np.mean(run)))
+        routed = arm.endswith("pathway")
         out[arm] = {
-            "fraction": float(np.mean(fractions)) if fractions else float("nan"),
-            "share": float(np.mean(shares)) if shares else float("nan"),
-            "n_read": len(shares),
+            # A broadcast third factor instructs every synapse in the only sense that applies,
+            # so its share is the whole by definition rather than by telemetry availability;
+            # it has no pathway, so it has no fraction.
+            "fraction": (float(np.mean(fractions)) if fractions else None) if routed else None,
+            "share": (float(np.mean(shares)) if shares else None) if routed else 1.0,
+            # How many of the arm's runs the telemetry was actually read from. The exports are
+            # not retained for every run, so a fraction or share is a mean over THESE runs and
+            # not over the arm; a reader should not have to infer that.
+            "n_read": len(shares) if routed else len(seeds_of(logs, arm)),
+            "n_runs": len(seeds_of(logs, arm)),
         }
     return out
+
+
+def seeds_of(logs: LogOf, arm: str) -> list[int]:
+    """List the seeds an arm actually has runs for."""
+    return sorted(logs.get(arm, {}))
 
 
 def panel1_check(values: dict[str, dict[int, float]]) -> dict[str, dict]:
@@ -299,7 +349,27 @@ def analyse(
             ),
         },
         "extensions_needed": extensions_needed(panel),
+        # Seeds scored at the extended length. The protocol licenses one such run per
+        # non-converged seed and has it replace the shorter log, so these are auditable
+        # against the launch record rather than against a base run in the campaign.
+        "extensions_applied": [
+            {"arm": arm, "seed": seed, "episodes": record.episodes}
+            for arm in ARM_KEYS
+            for seed, record in sorted(panel.get(arm, {}).items())
+            if record.episodes != BUDGET
+        ],
     }
+
+
+def _jsonable(value: object) -> object:
+    """Replace not-a-number with null, recursively, so the record is strict JSON."""
+    if isinstance(value, dict):
+        return {k: _jsonable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 def _print_panel(out: dict) -> None:
@@ -308,9 +378,11 @@ def _print_panel(out: dict) -> None:
     for arm in ARM_KEYS:
         row = out["arms"][arm]
         ann = out["annotations"]["instructed"][arm]
+        fraction = "     -" if ann["fraction"] is None else f"{ann['fraction']:6.3f}"
+        share = "     -" if ann["share"] is None else f"{ann['share']:6.3f}"
         print(
-            f"  {arm:12} mean {row['mean']:5.1f} (n={row['n']})  "
-            f"instructed {ann['fraction']:.3f}  share {ann['share']:.3f}",
+            f"  {arm:12} mean {row['mean']:5.1f} (n={row['n']})  instructed {fraction}  "
+            f"share {share}  (telemetry from {ann['n_read']}/{ann['n_runs']} runs)",
         )
     print("\n  Registered family (BH-FDR, alpha = 0.05):")
     for name in ("S1", "S2", "S3", "S4"):
@@ -386,7 +458,11 @@ def main(argv: list[str] | None = None) -> int:
     _print_panel(out)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+        # `allow_nan=False` refuses to emit bare NaN/Infinity, which are not JSON and which a
+        # strict reader rejects; unavailable measurements are written as null instead.
+        args.out.write_text(
+            json.dumps(_jsonable(out), indent=2, sort_keys=True, allow_nan=False) + "\n",
+        )
     if args.csv:
         write_per_seed_csv(panel, args.csv)
     if args.curves:

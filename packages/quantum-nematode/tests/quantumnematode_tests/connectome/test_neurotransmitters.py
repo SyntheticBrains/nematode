@@ -170,6 +170,18 @@ class TestCoTransmitterIdentities:
         expected = {name: rest[1:] for name, rest in identities.items() if len(rest) > 1}
         assert expected == NEURON_CO_TRANSMITTERS
 
+    def test_an_excluded_first_column_yields_no_primary_identity(self) -> None:
+        # The primary comes from the FIRST identity column itself, not from the compacted list:
+        # if that column is excluded, taking identities[0] would promote a co-transmitter into
+        # the sign table and silently change a synapse's sign.
+        assert nt.release_identity("5-HT (uptake)") is None
+        assert nt.release_identity("ACh") == "ACh"
+        cells = ("5-HT (uptake)", "ACh")
+        primary = nt.release_identity(cells[0]) if cells[0] else None
+        compacted = tuple(i for i in (nt.release_identity(c) for c in cells if c) if i)
+        assert primary is None
+        assert compacted == ("ACh",)  # what the compacted list would have promoted
+
     def test_sign_grounding_is_unchanged_by_the_extra_columns(self) -> None:
         # The primary identity is what signs come from, and it is the first column's.
         primary = nt.read_atlas_transmitters()

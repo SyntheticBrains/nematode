@@ -94,6 +94,34 @@ class TestTheCommittedPanelIsOnlyAConsistencyCheck:
             assert "committed" not in test["contrast"]
 
 
+class TestTelemetryReporting:
+    def test_a_global_arm_reports_the_whole_update_and_no_fraction(self, tmp_path: Path) -> None:
+        # By definition, not by telemetry availability: a broadcast third factor instructs
+        # every synapse in the only sense that applies, and has no pathway.
+        log = tmp_path / "a.log"
+        log.write_text("no experiment record here\n")
+        out = si.instructed({"wt_global": {1: log}}, tmp_path)
+        assert out["wt_global"]["share"] == 1.0
+        assert out["wt_global"]["fraction"] is None
+        assert out["wt_global"]["n_read"] == out["wt_global"]["n_runs"] == 1
+
+    def test_a_routed_arm_with_no_telemetry_reports_null(self, tmp_path: Path) -> None:
+        log = tmp_path / "a.log"
+        log.write_text("no experiment record here\n")
+        out = si.instructed({"wt_pathway": {1: log}}, tmp_path)
+        assert out["wt_pathway"]["share"] is None
+        assert out["wt_pathway"]["fraction"] is None
+        assert out["wt_pathway"]["n_read"] == 0
+        assert out["wt_pathway"]["n_runs"] == 1
+
+    def test_the_record_is_strict_json(self) -> None:
+        # Bare NaN is not JSON; a strict reader must accept the record.
+        empty: dict = {arm: {} for arm in si.ARM_KEYS}
+        out = si.analyse(empty, empty)  # type: ignore[arg-type]
+        text = json.dumps(si._jsonable(out), allow_nan=False)
+        json.loads(text, parse_constant=lambda c: pytest.fail(f"bare {c} in the record"))
+
+
 class TestOutput:
     def _out(self) -> dict:
         empty: dict = {arm: {} for arm in si.ARM_KEYS}
@@ -154,11 +182,31 @@ class TestGrouping:
             )
 
     def test_the_extension_wins(self) -> None:
+        # The base must be non-converged for the extension to be licensed at all, which is
+        # what makes the longer run the one to score.
         panel, _ = si.group_panel(
             [
-                ("wt_global", 1, self._record(10.0), Path("a.log")),
+                ("wt_global", 1, self._record(10.0, converged=False), Path("a.log")),
                 ("wt_global", 1, self._record(20.0, episodes=4500), Path("b.log")),
             ],
+        )
+        assert panel["wt_global"][1].episodes == 4500
+
+    def test_an_extension_of_a_converged_run_is_refused(self) -> None:
+        # The protocol licenses an extension only for a run the detector marks non-converged.
+        with pytest.raises(ValueError, match="non-converged"):
+            si.group_panel(
+                [
+                    ("wt_global", 1, self._record(10.0, converged=True), Path("a.log")),
+                    ("wt_global", 1, self._record(20.0, episodes=4500), Path("b.log")),
+                ],
+            )
+
+    def test_an_extension_replacing_its_base_is_accepted(self) -> None:
+        # The registered protocol has the extension REPLACE the shorter log, so a lone
+        # extended run is expected; it is recorded as applied for auditing instead.
+        panel, _ = si.group_panel(
+            [("wt_global", 1, self._record(20.0, episodes=4500), Path("b.log"))],
         )
         assert panel["wt_global"][1].episodes == 4500
 

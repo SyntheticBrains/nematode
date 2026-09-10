@@ -185,10 +185,14 @@ def read_atlas_transmitters(path: Path = ATLAS_PATH) -> dict[str, str | None]:
     unchanged by the co-transmitter columns this module also reads. Used to generate the
     committed table and, in tests, to prove the committed values still match the file.
     """
-    return {
-        name: (identities[0] if identities else None)
-        for name, identities in read_atlas_identities(path).items()
-    }
+    # Derived from the FIRST identity column itself, not from the compacted list: if that
+    # column's entry is one the exclusion rule drops, the neuron has no primary identity, and
+    # taking `identities[0]` would silently promote a co-transmitter into the sign table.
+    out: dict[str, str | None] = {}
+    for raw_name, cells in _rows(path):
+        name = ATLAS_NAME_MAP.get(raw_name, raw_name)
+        out[name] = release_identity(cells[0]) if cells and cells[0] else None
+    return out
 
 
 def aminergic_neurons(identities: dict[str, tuple[str, ...]]) -> set[str]:

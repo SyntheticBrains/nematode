@@ -23,8 +23,7 @@ glutamatergic — the aminergic release set is **18 neurons**:
 | **all four** | **18** | **169 of 302 neurons** |
 
 Keyed on the post-synaptic neuron, that is **2,636 of 3,709 chemical synapses (71.1%)** on the
-wild type. The rewired null derives its own pathway from its own edges and covers **75.5%**; both
-fractions are reported with the result.
+wild type. The rewired null derives its own pathway from its own edges: **75.5% at seed 1**, and **78.1% averaged over the runs whose telemetry was read** — different seeds rewire differently, so the two are a fixed-seed figure and a campaign aggregate, not a discrepancy. Both are reported with the result.
 
 Excluded by a stated rule, and recorded here so the choice is visible: uptake-only annotations
 (`AIM`, `RIH`), the atlas's own "alternative synthesis/uptake mechanism" hedges (`I5`, `VC4`,

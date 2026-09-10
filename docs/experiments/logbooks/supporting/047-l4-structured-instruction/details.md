@@ -21,15 +21,23 @@ not be read as one.
 | S3 | wt − rn under routing | +0.87 | −3.21 … +5.02 | 0.975 | 8/16 | fail |
 | S4 | wt − rn under the global scalar | −3.24 | −10.85 … +5.19 | 0.975 | 6/16 | fail |
 
-Neither S1 nor S2 confirms, so the global scalar was not the limitation — under the registered map
-that is `no_routing_effect`. S3 and S4 annotate and do not decide.
+Neither S1 nor S2 confirms, so the registered map gives `no_routing_effect`. **That name understates
+what was observed, and the map's gap is worth stating.** The tests are one-sided — each asks whether
+routing *helps* — so a large negative effect produces a high q and reads as "no confirmed benefit",
+not as "no effect". Descriptively the effect was negative on both wirings, and S2's interval
+(−11.77 … −3.01) lies entirely below zero. The verdict name is kept as registered rather than
+renamed after seeing the data; the honest reading is **no confirmed benefit, with observed
+degradation**, and a future map of this shape should carry an explicit harm branch. S3 and S4
+annotate and do not decide.
 
 | arm | mean | median | max | competent (≥20%) | instructed fraction | instructed share |
 |---|---|---|---|---|---|---|
 | wt_global | 10.8 | 3.2 | 70.5 | 3/16 | — | — |
-| wt_pathway | 7.7 | 4.5 | 24.3 | 1/16 | 0.711 | 0.924 |
+| wt_pathway | 7.7 | 4.5 | 24.3 | 1/16 | 0.711 † | 0.924 † |
 | rn_global | 14.1 | 6.0 | 52.9 | 4/16 | — | — |
-| rn_pathway | 6.8 | 3.1 | 33.1 | 1/16 | 0.781 | 0.904 |
+| rn_pathway | 6.8 | 3.1 | 33.1 | 1/16 | 0.781 † | 0.904 † |
+
+† Averaged over the runs whose telemetry exports were retained — **10 of 16** for `wt_pathway` and **7 of 16** for `rn_pathway`, reported per arm in `panel.json` as `n_read`. The instructed *fraction* is a deterministic property of each build, so a subset mean is a fair estimate of it; the *share* is a mean over those runs and not over the arm. The global arms have no pathway, so their fraction is null and their share is the whole update by definition rather than by measurement.
 
 ## Reading
 
@@ -42,7 +50,7 @@ that is `no_routing_effect`. S3 and S4 annotate and do not decide.
   0.92 on the wild type against an instructed *fraction* of 0.71, so the routed synapses carry
   disproportionately more of the learning than their count suggests. A null here is not a null
   because nothing happened.
-- **The rewired null derives a wider pathway than the animal** — 0.781 against 0.711 — because
+- **The rewired null derives a wider pathway than the animal** — 0.781 against 0.711, and 75.5% against 71.1% at seed 1 — because
   degree-preserving rewiring spreads the aminergic neurons' targets over more of the network. It
   therefore received *less* of the unmodulated Hebbian term, and lost more. That is the opposite
   of what the pre-registered informal prediction expected (below), and it is descriptive.

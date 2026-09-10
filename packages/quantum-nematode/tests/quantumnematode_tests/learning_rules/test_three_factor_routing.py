@@ -132,6 +132,29 @@ class TestRefusals:
                 third_factor="pathway",
             )
 
+    def test_the_construction_guard_catches_a_copied_config(self) -> None:
+        # `model_copy` skips validators, which is how the campaign runner derives its arms.
+        config = ConnectomePPOBrainConfig(
+            seed=_SEED,
+            action_mode="continuous",
+            learning_rule="three_factor",
+            enable_activity_traces=True,
+            third_factor="pathway",
+        ).model_copy(update={"learning_rule": "hebbian"})
+        with pytest.raises(ValueError, match="unmodulated Hebbian floor"):
+            ConnectomePPOBrain(config=config, device=DeviceType.CPU)
+
+    def test_the_dense_substrate_guard_catches_a_copied_config(self) -> None:
+        from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
+
+        config = MLPPPOBrainConfig(
+            sensory_modules=[next(iter(ModuleName))],
+            learning_rule="three_factor",
+            enable_activity_traces=True,
+        ).model_copy(update={"third_factor": "pathway"})
+        with pytest.raises(ValueError, match="not available on this substrate"):
+            MLPPPOBrain(config=config, device=DeviceType.CPU)
+
     def test_the_modulated_rule_accepts_routing(self) -> None:
         config = ConnectomePPOBrainConfig(
             learning_rule="three_factor",
@@ -209,6 +232,51 @@ class TestTelemetry:
         )
         assert len(history.plasticity_instructed_fraction) == 1
         assert len(history.plasticity_instructed_share) == 1
+
+
+class TestThePathwayIsNotPersisted:
+    def test_it_is_absent_from_the_persisted_topology(self) -> None:
+        # Derived from the connectome at construction, not learned: persisting it would refuse
+        # every checkpoint written before routing existed, the clone assay's start points
+        # included.
+        brain = ConnectomePPOBrain(
+            config=ConnectomePPOBrainConfig(
+                seed=_SEED,
+                action_mode="continuous",
+                learning_rule="three_factor",
+                enable_activity_traces=True,
+                third_factor="pathway",
+            ),
+            device=DeviceType.CPU,
+        )
+        assert "chem_pathway" in ConnectomePPOBrain._TRANSIENT_BUFFERS
+        components = brain.get_weight_components(components={"topology"})
+        assert "chem_pathway" not in components["topology"].state
+
+    def test_a_checkpoint_without_it_still_loads(self, tmp_path: Path) -> None:
+        from quantumnematode.brain.weights import load_weights, save_weights
+
+        def build(**over: object) -> ConnectomePPOBrain:
+            config: dict[str, object] = {
+                "seed": _SEED,
+                "action_mode": "continuous",
+                "learning_rule": "three_factor",
+                "enable_activity_traces": True,
+            }
+            config.update(over)
+            return ConnectomePPOBrain(
+                config=ConnectomePPOBrainConfig(**config),  # type: ignore[arg-type]
+                device=DeviceType.CPU,
+            )
+
+        file = tmp_path / "w.pt"
+        save_weights(build(), file)
+        blob = torch.load(file, weights_only=False)
+        blob["topology"].pop("chem_pathway", None)  # a file written before routing existed
+        torch.save(blob, file)
+        target = build(third_factor="pathway")
+        load_weights(target, file)
+        assert int(cast("torch.Tensor", target.topology.chem_pathway).sum()) == 2636
 
 
 class TestWeightFilesCrossRoutingModes:
