@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-"""The clone assay: does a consolidation mechanism hold a competent policy.
+"""The clone assay: does a rule variant hold a competent policy.
 
 A screen, not a confirmatory test. It reuses the seeds the warm-start panel already
 reported, so it declares no multiple-comparisons family and assigns no verdict: a pass
 licenses running the registered panel and nothing more.
 
-One arm per mechanism, each the wild-type plastic clone arm with the mechanism's rule keys
-and nothing else changed, started from that seed's plastic-set clone. Seeds 1-8 paired,
+One arm per variant, each the wild-type plastic clone arm with that variant's rule keys and
+nothing else changed, started from that seed's plastic-set clone. The three consolidation
+mechanisms were the first through it; the node-perturbation eligibility follows, at the sigma
+its positive control pinned rather than one chosen against this assay's outcome. Seeds 1-8 paired,
 2000 episodes, no extension, the committed plateau-tail full-clear metric, read against the
 warm-start panel's published frozen-clone values on the same seeds.
 
@@ -46,6 +48,10 @@ ARMS: dict[str, str] = {
     f"{_STEM}_plastic_clone_anchor": "anchor",
     f"{_STEM}_plastic_clone_rigidity": "rigidity",
     f"{_STEM}_plastic_clone_oracle": "oracle",
+    # Not a consolidation mechanism: the node-perturbation eligibility, which passed the rule's
+    # positive control and must clear this same gate before any connectome arm. The assay is
+    # unchanged, which is what makes its result comparable with the three above.
+    f"{_STEM}_plastic_clone_nodeperturbation": "node_perturbation",
 }
 ARM_KEYS = tuple(ARMS.values())
 
