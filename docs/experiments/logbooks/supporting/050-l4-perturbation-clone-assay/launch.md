@@ -64,7 +64,8 @@ drifts. The assay measures the net, and neither direction should be read as a su
 
 ```bash
 P=configs/scenarios/foraging_predator_thermal/connectomeppo_small_continuous2d_combined_klinotaxis_plastic_clone_nodeperturbation
-uv run python scripts/run_campaign.py --config ${P}.yml --seeds 1-8 --runs 2000 \
+uv run python scripts/run_campaign.py --config ${P}.yml --config ${P}_frozen.yml \
+  --seeds 1-8 --runs 2000 \
   --output-dir campaigns/l4-perturbation-clone -- --theme headless --track-experiment
 ```
 

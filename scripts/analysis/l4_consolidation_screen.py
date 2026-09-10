@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -283,6 +284,17 @@ def analyse(
     return out
 
 
+def _jsonable(value: object) -> object:
+    """Replace not-a-number with null, recursively, so the record is strict JSON."""
+    if isinstance(value, dict):
+        return {k: _jsonable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
 def _print_arm(arm: str, result: dict) -> None:
     """Print one arm's line of the screen."""
     if not result["n"]:
@@ -364,7 +376,11 @@ def main(argv: list[str] | None = None) -> int:
     _print_screen(out)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+        # `allow_nan=False` refuses bare NaN, which is not JSON; unavailable measurements
+        # (an arm whose endpoint weights were not retained) are written as null instead.
+        args.out.write_text(
+            json.dumps(_jsonable(out), indent=2, sort_keys=True, allow_nan=False) + "\n",
+        )
     if args.csv:
         write_per_seed_csv(out, args.csv)
     return 0

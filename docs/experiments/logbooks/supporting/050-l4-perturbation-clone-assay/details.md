@@ -19,7 +19,12 @@ by construction, since `freeze_updates` writes nothing — and it still scores *
 *alone*, with no learning whatsoever, takes a competent 38.7 policy to 8.9. The plastic arm scores
 **12.0**, which is **3.1 points better than the frozen baseline**, not worse.
 
-**The rule did not take the clone apart. The perturbation did, before the rule acted.**
+**Perturbation dominates the loss.** The frozen control bounds what σ = 0.2 costs a policy whose
+weights never move: 29.8 of the 26.7-point shortfall, which is to say all of it and more. The
+plastic arm ends **3.1 points above** that baseline rather than below it, so on this evidence the
+rule's updates are not adding damage. The comparison is not a strict decomposition — the plastic
+arm's weights change, so its perturbation acts on a moving policy rather than the fixed one the
+control measures — but nothing here supports attributing the collapse to the rule.
 
 ## The trajectory annotation confirms the mechanism
 
@@ -43,9 +48,9 @@ did at 0.2–0.45.
   estimate is large enough to wreck the behaviour being estimated for. The control's own
   dose-response already hinted at it: σ = 0.05 reached 7 of 8 seeds above the floor but did not
   clear the learning bar.
-- **The registered fail is honest and uninformative about the rule.** Reporting it without the
-  frozen control would have said "the variant destroys competent policies", which the evidence
-  contradicts.
+- **The registered fail is honest and largely uninformative about the rule.** Reporting it
+  without the frozen control would have invited "the variant destroys competent policies",
+  which this evidence does not support.
 
 ## What it does not establish
 

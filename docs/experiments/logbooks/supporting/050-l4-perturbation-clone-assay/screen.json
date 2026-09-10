@@ -1,13 +1,13 @@
 {
   "arms": {
     "anchor": {
-      "cosine_mean": NaN,
+      "cosine_mean": null,
       "cosine_to_clone": {},
       "delta": {},
       "holds": false,
       "improves": false,
-      "mean": NaN,
-      "mean_delta": NaN,
+      "mean": null,
+      "mean_delta": null,
       "missing_seeds": [
         1,
         2,
@@ -22,7 +22,7 @@
       "pass": false,
       "per_seed": {},
       "rate_multiplier": {},
-      "rate_multiplier_mean": NaN,
+      "rate_multiplier_mean": null,
       "seeds_at_or_above": 0,
       "seeds_within_hold": 0,
       "trajectory": {
@@ -92,13 +92,13 @@
       }
     },
     "oracle": {
-      "cosine_mean": NaN,
+      "cosine_mean": null,
       "cosine_to_clone": {},
       "delta": {},
       "holds": false,
       "improves": false,
-      "mean": NaN,
-      "mean_delta": NaN,
+      "mean": null,
+      "mean_delta": null,
       "missing_seeds": [
         1,
         2,
@@ -113,7 +113,7 @@
       "pass": false,
       "per_seed": {},
       "rate_multiplier": {},
-      "rate_multiplier_mean": NaN,
+      "rate_multiplier_mean": null,
       "seeds_at_or_above": 0,
       "seeds_within_hold": 0,
       "trajectory": {
@@ -183,13 +183,13 @@
       }
     },
     "rigidity": {
-      "cosine_mean": NaN,
+      "cosine_mean": null,
       "cosine_to_clone": {},
       "delta": {},
       "holds": false,
       "improves": false,
-      "mean": NaN,
-      "mean_delta": NaN,
+      "mean": null,
+      "mean_delta": null,
       "missing_seeds": [
         1,
         2,
@@ -204,7 +204,7 @@
       "pass": false,
       "per_seed": {},
       "rate_multiplier": {},
-      "rate_multiplier_mean": NaN,
+      "rate_multiplier_mean": null,
       "seeds_at_or_above": 0,
       "seeds_within_hold": 0,
       "trajectory": {

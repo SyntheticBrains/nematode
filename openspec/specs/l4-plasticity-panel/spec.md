@@ -599,10 +599,7 @@ recorded as refuting this proxy rather than structured instruction itself.
 ### Requirement: An eligibility variant clears the clone assay before any panel arm
 
 A variant of the three-factor rule that has passed the rule's positive control SHALL be run
-through the clone assay before any arm of it enters a registered panel. The assay SHALL be the one
-registered with the clone-destruction diagnostic, unchanged in arms, comparator, budget, metric and
-pass rule, so that the variant's result is directly comparable with the mechanisms already screened
-by it.
+through the clone assay before any arm of it enters a registered panel. The assay SHALL be the one registered with the clone-destruction diagnostic: its screening arm, comparator, budget, metric and pass rule SHALL be unchanged, so that the variant's result is directly comparable with the mechanisms already screened by it. A perturbing variant SHALL additionally run the frozen control required below, which is an extra arm beside the screening arm and changes neither the comparator nor the rule the screening arm is judged by.
 
 The variant SHALL be run at the parameter value its positive control pinned. That value SHALL NOT
 be re-tuned against the assay's outcome: a gate whose parameter is chosen by its own result is a
@@ -621,8 +618,7 @@ Neither SHALL change the verdict, which remains whatever the registered pass rul
 #### Scenario: The assay is unchanged
 
 - **WHEN** an eligibility variant is screened
-- **THEN** the arms, comparator, budget, metric and pass rule SHALL be those registered with the
-  clone-destruction diagnostic
+- **THEN** the screening arm, comparator, budget, metric and pass rule SHALL be those registered with the clone-destruction diagnostic, whatever additional control arms the variant requires
 
 #### Scenario: The parameter comes from the control
 

@@ -20,7 +20,7 @@ brain:
     enable_predator_projection: true
     enable_thermotaxis_projection: true
     forward_pass_depth: 4
-    freeze_updates: false
+    freeze_updates: true
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95
@@ -57,7 +57,6 @@ brain:
     plasticity_rate: 0.001
     plasticity_eligibility: node_perturbation
     plasticity_node_noise: 0.2
-    freeze_updates: true
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
