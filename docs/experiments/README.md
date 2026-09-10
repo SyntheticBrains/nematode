@@ -87,6 +87,16 @@ Human-written analysis of every experiment series: the objective, the pre-regist
 
 Each logbook follows the same structure: **Objective** (the question), **Hypothesis** (what was expected and why), **Method** (configs, seeds, statistics), **Results**, **Analysis**, **Conclusions** and **Next Steps**, plus **Data References** — the session IDs, config files and artifact paths needed to reproduce it. Phase-level syntheses roll the milestone logbooks into an exit-criteria walkthrough and a gate decision: [021](logbooks/021-phase5-synthesis.md) for Phase 5 and [037](logbooks/037-phase6a-synthesis.md) for Phase 6a.
 
+### Reading a substrate result against the rule's positive control
+
+A registered result about a *substrate* — a wiring contrast, a rewired null, a prior sweep — is only
+evidence about that substrate if the learning rule it ran under is known to learn. Where it is not, a
+null is **recorded as consistent with the rule not learning**, not as a finding about the wiring: the
+two are indistinguishable until the rule has cleared a positive control. Logbooks 040–047 are read
+under this convention, since the three-factor rule they ran under failed its control
+([048](logbooks/048-l4-rule-positive-control.md)) and the repair that passes one
+([049 records](logbooks/supporting/049-l4-node-perturbation/details.md)) postdates them.
+
 ## Creating a new logbook
 
 1. Copy [`templates/experiment.md`](templates/experiment.md) to `logbooks/NNN-descriptive-name.md` using the next sequential number.

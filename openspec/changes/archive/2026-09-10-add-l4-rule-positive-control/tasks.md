@@ -27,8 +27,8 @@
 
 ## 4. Documentation
 
-- [ ] 4.1 `docs/architectures.md`: the control, what it isolates, and that a substrate null is read against it.
-- [ ] 4.1b `docs/experiments/README.md`: the convention that a registered substrate result is read against the rule's positive control, and that while the control has not passed a null is recorded as consistent with the rule not learning.
-- [ ] 4.2 `CHANGELOG.md`.
-- [ ] 4.3 Tracker and roadmap updated with the outcome at close-out; if the control fails, the
+- [x] 4.1 `docs/architectures.md`: the control, what it isolates, and that a substrate null is read against it.
+- [x] 4.1b `docs/experiments/README.md`: the convention that a registered substrate result is read against the rule's positive control, and that while the control has not passed a null is recorded as consistent with the rule not learning.
+- [x] 4.2 `CHANGELOG.md`.
+- [x] 4.3 Tracker and roadmap updated with the outcome at close-out; if the control fails, the
   re-read of 040–046 (I.4) is what carries the reframing, not this record.
