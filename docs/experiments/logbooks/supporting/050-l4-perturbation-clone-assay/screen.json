@@ -1,0 +1,239 @@
+{
+  "arms": {
+    "anchor": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "node_perturbation": {
+      "cosine_mean": 0.6976056918501854,
+      "cosine_to_clone": {
+        "1": 0.6881658434867859,
+        "2": 0.7251425385475159,
+        "3": 0.7224974632263184,
+        "4": 0.677605390548706,
+        "5": 0.6908360123634338,
+        "6": 0.7483609318733215,
+        "7": 0.6788021922111511,
+        "8": 0.6494351625442505
+      },
+      "delta": {
+        "1": -32.3,
+        "2": -19.4,
+        "3": -27.6,
+        "4": -18.5,
+        "5": -39.900000000000006,
+        "6": -30.299999999999997,
+        "7": -51.099999999999994,
+        "8": 5.699999999999996
+      },
+      "holds": false,
+      "improves": false,
+      "mean": 12.024999999999999,
+      "mean_delta": -26.675000000000004,
+      "missing_seeds": [],
+      "n": 8,
+      "pass": false,
+      "per_seed": {
+        "1": 7.000000000000001,
+        "2": 24.6,
+        "3": 12.4,
+        "4": 2.8000000000000003,
+        "5": 7.199999999999999,
+        "6": 3.0,
+        "7": 10.2,
+        "8": 28.999999999999996
+      },
+      "rate_multiplier": {
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0,
+        "8": 1.0
+      },
+      "rate_multiplier_mean": 1.0,
+      "seeds_at_or_above": 1,
+      "seeds_within_hold": 1,
+      "trajectory": {
+        "change": -3.1999999999999957,
+        "final_quarter": 12.025000000000002,
+        "first_quarter": 15.224999999999998,
+        "n_read": 8
+      }
+    },
+    "oracle": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "perturbation_frozen": {
+      "cosine_mean": 0.9999999701976776,
+      "cosine_to_clone": {
+        "1": 1.0000001192092896,
+        "2": 1.0,
+        "3": 1.000000238418579,
+        "4": 1.0,
+        "5": 0.9999996423721313,
+        "6": 1.0,
+        "7": 0.9999997615814209,
+        "8": 1.0
+      },
+      "delta": {
+        "1": -36.9,
+        "2": -32.6,
+        "3": -39.0,
+        "4": -18.3,
+        "5": -46.1,
+        "6": 9.300000000000004,
+        "7": -61.3,
+        "8": -13.3
+      },
+      "holds": false,
+      "improves": false,
+      "mean": 8.925,
+      "mean_delta": -29.775000000000002,
+      "missing_seeds": [],
+      "n": 8,
+      "pass": false,
+      "per_seed": {
+        "1": 2.4,
+        "2": 11.4,
+        "3": 1.0,
+        "4": 3.0,
+        "5": 1.0,
+        "6": 42.6,
+        "7": 0.0,
+        "8": 10.0
+      },
+      "rate_multiplier": {
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0,
+        "8": 1.0
+      },
+      "rate_multiplier_mean": 1.0,
+      "seeds_at_or_above": 1,
+      "seeds_within_hold": 1,
+      "trajectory": {
+        "change": -0.22499999999999787,
+        "final_quarter": 8.925,
+        "first_quarter": 9.149999999999999,
+        "n_read": 8
+      }
+    },
+    "rigidity": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    }
+  },
+  "comparator": {
+    "arm": "wt_clone_frozen",
+    "mean": 38.7,
+    "per_seed": {
+      "1": 39.3,
+      "2": 44.0,
+      "3": 40.0,
+      "4": 21.3,
+      "5": 47.1,
+      "6": 33.3,
+      "7": 61.3,
+      "8": 23.3
+    },
+    "source": "the warm-start panel's committed per-seed table"
+  },
+  "rule": {
+    "hold_mean_points": 5.0,
+    "hold_seed_points": 10.0,
+    "hold_seeds_of_eight": 6
+  },
+  "screen_not_test": "Reuses seeds already reported; declares no multiple-comparisons family and no verdict. A pass licenses running the registered panel and nothing more."
+}

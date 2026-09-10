@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -43,6 +44,49 @@ class TestTheComparatorIsTheCommittedTable:
         assert (cs.HOLD_MEAN, cs.HOLD_SEED, cs.HOLD_SEEDS) == (5.0, 10.0, 6)
         assert tuple(range(1, 9)) == cs.SEEDS
         assert cs.BUDGET == 2000
+
+
+class TestTheAssayIsUnchangedForANewArm:
+    def test_the_eligibility_variant_is_screened_by_the_same_rule(self) -> None:
+        # The variant's result must be comparable with the three mechanisms that failed, which
+        # it is only if the comparator, budget, metric and pass rule are untouched.
+        assert "node_perturbation" in cs.ARM_KEYS
+        assert cs.FROZEN_CLONE[1] == 39.3  # the committed comparator, unchanged
+        assert (cs.HOLD_MEAN, cs.HOLD_SEED, cs.HOLD_SEEDS) == (5.0, 10.0, 6)
+        assert cs.BUDGET == 2000
+
+    def test_its_arm_config_carries_the_control_pinned_sigma(self) -> None:
+        import yaml
+
+        configs = _root / "configs" / "scenarios" / "foraging_predator_thermal"
+        stem = next(k for k, v in cs.ARMS.items() if v == "node_perturbation")
+        config = yaml.safe_load((configs / f"{stem}.yml").read_text())["brain"]["config"]
+        assert config["plasticity_eligibility"] == "node_perturbation"
+        # The value the positive control pinned; re-tuning it here would make the gate a search.
+        assert config["plasticity_node_noise"] == 0.2
+
+    def test_its_arm_is_a_single_key_block_delta_from_the_clone_arm(self) -> None:
+        import yaml
+
+        configs = _root / "configs" / "scenarios" / "foraging_predator_thermal"
+        parent = configs / "connectomeppo_small_continuous2d_combined_klinotaxis_plastic_clone.yml"
+        stem = next(k for k, v in cs.ARMS.items() if v == "node_perturbation")
+
+        def flat(data: object, prefix: str = "") -> dict:
+            if isinstance(data, dict):
+                out: dict = {}
+                for key, value in data.items():
+                    out.update(flat(value, f"{prefix}{key}."))
+                return out
+            return {prefix.rstrip("."): data}
+
+        base = flat(yaml.safe_load(parent.read_text()))
+        variant = flat(yaml.safe_load((configs / f"{stem}.yml").read_text()))
+        assert set(variant) - set(base) == {
+            "brain.config.plasticity_eligibility",
+            "brain.config.plasticity_node_noise",
+        }
+        assert {k for k in set(base) & set(variant) if base[k] != variant[k]} == set()
 
 
 class TestTheHoldRule:
@@ -161,8 +205,16 @@ class TestGrouping:
 
 
 class TestTheRegistry:
-    def test_one_arm_per_mechanism(self) -> None:
-        assert cs.ARM_KEYS == ("anchor", "rigidity", "oracle")
+    def test_the_registry_covers_every_screened_arm(self) -> None:
+        assert cs.ARM_KEYS == (
+            "anchor",
+            "rigidity",
+            "oracle",
+            "node_perturbation",
+            # Its frozen control: perturbation applied, no weight written, so a failing
+            # plastic arm can be attributed to the rule rather than to the exploration.
+            "perturbation_frozen",
+        )
 
     def test_every_arm_config_exists(self) -> None:
         configs = _root / "configs" / "scenarios" / "foraging_predator_thermal"
@@ -185,8 +237,26 @@ class TestOutput:
         assert out["comparator"]["mean"] == pytest.approx(cs.FROZEN_MEAN)
         assert out["rule"]["hold_seeds_of_eight"] == cs.HOLD_SEEDS
 
-    def test_it_is_json_serialisable(self) -> None:
-        json.dumps(self._out())
+    def test_the_record_is_strict_json(self) -> None:
+        # Bare NaN is not JSON; an arm with no endpoint weights has no cosine to report,
+        # and the record must carry that as null so a strict reader accepts it.
+        out = self._out()
+        assert math.isnan(out["arms"]["anchor"]["cosine_mean"])
+        text = json.dumps(cs._jsonable(out), allow_nan=False)
+        json.loads(text, parse_constant=lambda c: pytest.fail(f"bare {c} in the record"))
+
+    def test_unavailable_measurements_become_null(self) -> None:
+        assert cs._jsonable(float("nan")) is None
+        assert cs._jsonable(float("inf")) is None
+        assert cs._jsonable(float("-inf")) is None
+
+    def test_it_replaces_them_wherever_they_are_nested(self) -> None:
+        out = cs._jsonable({"a": [{"b": float("nan")}, 1.0], "c": {"d": [float("inf")]}})
+        assert out == {"a": [{"b": None}, 1.0], "c": {"d": [None]}}
+
+    def test_it_leaves_finite_values_and_non_numbers_alone(self) -> None:
+        out = cs._jsonable({"f": 0.5, "i": 3, "s": "x", "n": None, "b": True})
+        assert out == {"f": 0.5, "i": 3, "s": "x", "n": None, "b": True}
 
     def test_the_csv_carries_the_cosine_and_multiplier(self, tmp_path: Path) -> None:
         out = self._out()

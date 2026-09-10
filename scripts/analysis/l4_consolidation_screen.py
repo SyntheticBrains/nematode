@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-"""The clone assay: does a consolidation mechanism hold a competent policy.
+"""The clone assay: does a rule variant hold a competent policy.
 
 A screen, not a confirmatory test. It reuses the seeds the warm-start panel already
 reported, so it declares no multiple-comparisons family and assigns no verdict: a pass
 licenses running the registered panel and nothing more.
 
-One arm per mechanism, each the wild-type plastic clone arm with the mechanism's rule keys
-and nothing else changed, started from that seed's plastic-set clone. Seeds 1-8 paired,
+One arm per variant, each the wild-type plastic clone arm with that variant's rule keys and
+nothing else changed, started from that seed's plastic-set clone. The three consolidation
+mechanisms were the first through it; the node-perturbation eligibility follows, at the sigma
+its positive control pinned rather than one chosen against this assay's outcome. Seeds 1-8 paired,
 2000 episodes, no extension, the committed plateau-tail full-clear metric, read against the
 warm-start panel's published frozen-clone values on the same seeds.
 
@@ -31,6 +33,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -46,6 +49,13 @@ ARMS: dict[str, str] = {
     f"{_STEM}_plastic_clone_anchor": "anchor",
     f"{_STEM}_plastic_clone_rigidity": "rigidity",
     f"{_STEM}_plastic_clone_oracle": "oracle",
+    # Not a consolidation mechanism: the node-perturbation eligibility, which passed the rule's
+    # positive control and must clear this same gate before any connectome arm. The assay is
+    # unchanged, which is what makes its result comparable with the three above.
+    f"{_STEM}_plastic_clone_nodeperturbation": "node_perturbation",
+    # The same arm with updates frozen: what the perturbation alone costs a competent
+    # policy. A failing plastic arm is attributable to the rule only against this.
+    f"{_STEM}_plastic_clone_nodeperturbation_frozen": "perturbation_frozen",
 }
 ARM_KEYS = tuple(ARMS.values())
 
@@ -180,6 +190,34 @@ def rate_multiplier(log: Path, experiments: Path = EXPERIMENTS) -> float | None:
     return float(np.mean(values)) if values else None
 
 
+def trajectory(panel: dict[str, dict[int, SeedRecord]], arm: str) -> dict[str, Any]:
+    """Compare an arm's success over its final quarter against its first, from the curves.
+
+    A perturbing mechanism costs a competent policy something immediately, before any question
+    of retention. This separates "started near the clone and stayed there, paying that cost"
+    from "started near the clone and was taken apart": the first shows a flat or rising
+    trajectory, the second a falling one. Not a verdict input.
+    """
+    firsts: list[float] = []
+    lasts: list[float] = []
+    for record in panel.get(arm, {}).values():
+        curve = record.curve
+        if len(curve) < 4:
+            continue
+        quarter = len(curve) // 4
+        firsts.append(float(np.mean(curve[:quarter])))
+        lasts.append(float(np.mean(curve[-quarter:])))
+    if not firsts:
+        return {"first_quarter": None, "final_quarter": None, "change": None, "n_read": 0}
+    first, last = float(np.mean(firsts)), float(np.mean(lasts))
+    return {
+        "first_quarter": first,
+        "final_quarter": last,
+        "change": last - first,
+        "n_read": len(firsts),
+    }
+
+
 def assess(values: dict[int, float]) -> dict[str, Any]:
     """Apply the assay's pass rule to one arm's per-seed values."""
     seeds = sorted(values)
@@ -241,8 +279,20 @@ def analyse(
         result["cosine_mean"] = float(np.mean(read)) if read else float("nan")
         result["rate_multiplier"] = multipliers
         result["rate_multiplier_mean"] = float(np.mean(used)) if used else float("nan")
+        result["trajectory"] = trajectory(panel, arm)
         out["arms"][arm] = result
     return out
+
+
+def _jsonable(value: object) -> object:
+    """Replace not-a-number with null, recursively, so the record is strict JSON."""
+    if isinstance(value, dict):
+        return {k: _jsonable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 def _print_arm(arm: str, result: dict) -> None:
@@ -257,6 +307,12 @@ def _print_arm(arm: str, result: dict) -> None:
         f"  cos {result['cosine_mean']:.2f}  rate x{result['rate_multiplier_mean']:.2f}"
         f"  -> {outcome}",
     )
+    trend = result.get("trajectory") or {}
+    if trend.get("n_read"):
+        print(
+            f"    trajectory: first quarter {trend['first_quarter']:5.1f} -> final quarter "
+            f"{trend['final_quarter']:5.1f} ({trend['change']:+.1f})",
+        )
     if result["missing_seeds"]:
         print(f"    incomplete: seeds {result['missing_seeds']} not read - no pass is possible")
 
@@ -320,7 +376,11 @@ def main(argv: list[str] | None = None) -> int:
     _print_screen(out)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+        # `allow_nan=False` refuses bare NaN, which is not JSON; unavailable measurements
+        # (an arm whose endpoint weights were not retained) are written as null instead.
+        args.out.write_text(
+            json.dumps(_jsonable(out), indent=2, sort_keys=True, allow_nan=False) + "\n",
+        )
     if args.csv:
         write_per_seed_csv(out, args.csv)
     return 0
