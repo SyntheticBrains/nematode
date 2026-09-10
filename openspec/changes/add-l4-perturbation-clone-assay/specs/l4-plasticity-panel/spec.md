@@ -15,6 +15,13 @@ search, and the record SHALL state the value it was run at.
 The result SHALL be reported with the endpoint cosine to the clone the run started from, since a
 variant can hold the metric while having rewritten the policy underneath it.
 
+A variant whose mechanism perturbs the substrate SHALL additionally be reported with **a trajectory
+annotation** — its plateau tail over the final quarter of the run against the first quarter — and
+against **a frozen control**: the same arm with updates frozen and the perturbation applied. A
+perturbing mechanism costs a competent policy something before any question of retention arises,
+and without these two a fail cannot be attributed to the rule rather than to the exploration.
+Neither SHALL change the verdict, which remains whatever the registered pass rule gives.
+
 #### Scenario: The assay is unchanged
 
 - **WHEN** an eligibility variant is screened
@@ -26,6 +33,13 @@ variant can hold the metric while having rewritten the policy underneath it.
 - **WHEN** the variant is run
 - **THEN** it SHALL use the parameter value its positive control pinned
 - **AND** the record SHALL state that value
+
+#### Scenario: A perturbing variant is read against its own frozen control
+
+- **GIVEN** a variant whose mechanism perturbs the substrate
+- **WHEN** its assay result is recorded
+- **THEN** the frozen control's result and the trajectory annotation SHALL be reported beside it
+- **AND** neither SHALL change the verdict the registered pass rule gives
 
 #### Scenario: Failing the assay does not stop at the metric
 

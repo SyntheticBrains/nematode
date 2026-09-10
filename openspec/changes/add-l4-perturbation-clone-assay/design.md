@@ -34,6 +34,30 @@ degrade a competent policy's *immediate* behaviour, since a policy at its optimu
 worse by jitter. But it is also what makes the rule able to hold anything at all, since without it
 the rule drifts. The assay measures the net.
 
+## The exploration tax, and how the record separates it from destruction
+
+The pass rule cannot express the outcome this arm is most likely to produce. "Holds" needs the mean
+within 5 points of 38.7 and at least 6 of 8 seeds within 10 of their own — but σ = 0.2 jitter on
+activities bounded in (−1, 1) will cost a competent policy something *immediately*, before any
+question of whether the rule retains it. A result that keeps most of the clone while paying a
+visible exploration tax scores as a plain **fail**, indistinguishable in the record from the anchor
+arm's collapse to 13.0. The three consolidation mechanisms paid no such tax, so a bare pass/fail
+comparison against them is not like-for-like.
+
+Two things are registered here to make the distinction, neither of which changes the pass rule:
+
+- **A trajectory annotation.** Each arm's plateau tail over its **final** quarter against its
+  **first** quarter, from the curves the harness already reads. A run that starts near the clone and
+  stays there has held it and paid a tax; one that starts near the clone and ends near zero has been
+  destroyed.
+- **A frozen-perturbation control.** The same clone arm with `freeze_updates: true` at the same σ:
+  perturbation applied, no weight ever written. It measures what the jitter alone costs a competent
+  policy, so a fail can be attributed to the rule or to the exploration rather than left ambiguous.
+  Eight runs, its own arm in the same harness.
+
+Neither is a verdict. If the variant fails, it fails; these say *why*, as the consolidation
+screen's rate-multiplier and cosine annotations did for their arms.
+
 ## What is not measured here
 
 The endpoint cosine to the clone, which the consolidation screen reported, is reported here too —
@@ -43,7 +67,7 @@ different results. Nothing else is added: the harness's existing reporting is th
 ## What each outcome licenses
 
 - **Pass** — the variant learns from random weights *and* holds a competent policy. The registered
-  order's step 4 opens: a connectome arm becomes buildable, still behind I.2's statistic and metric
+  order's step 4 opens: a connectome **panel** arm becomes buildable, still behind I.2's statistic and metric
   before any panel is read from it. This would be the first time in Phase 7 that a rule cleared
   both gates.
 - **Fail** — the variant learns but does not hold, which is the consolidation mechanisms' failure
