@@ -13,6 +13,7 @@ the small values, where retention is decided.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -37,6 +38,13 @@ class NodeNoiseSchedule:
         harness that never loads a config, and a silently inverted or zero-floored one would
         anneal the wrong way or restore the Hebbian eligibility.
         """
+        if not math.isfinite(self.initial) or not math.isfinite(self.final):
+            msg = (
+                f"schedule bounds must be finite, got initial={self.initial}, "
+                f"final={self.final}: a non-finite bound makes every scale it produces "
+                "not-a-number, which perturbs nothing and silently voids the arm."
+            )
+            raise ValueError(msg)
         if self.episodes <= 0:
             msg = f"anneal length must be positive, got {self.episodes}"
             raise ValueError(msg)

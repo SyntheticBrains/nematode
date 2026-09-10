@@ -228,7 +228,43 @@ class TestTheAnnealedArm:
     def test_the_harness_advances_the_schedule_itself(self) -> None:
         # This control never builds a brain: it drives the topology directly. If the counter
         # only advanced from a brain, an annealed arm would run at its initial scale for every
-        # trial and pass a gate the schedule was never tested by.
+        # trial and pass a gate the schedule was never tested by. Recording the scale the
+        # topology actually perturbs at, rather than the metadata the row reports, is what
+        # makes this test able to fail in that case.
+        from quantumnematode.brain.arch._mlp_topology import MLPTopology
+
+        seen: list[float] = []
+        original = MLPTopology.forward
+
+        def spy(self: MLPTopology, features: object) -> object:
+            seen.append(self.current_node_noise)
+            return original(self, features)  # type: ignore[arg-type]
+
+        MLPTopology.forward = spy  # type: ignore[method-assign, assignment]
+        try:
+            run = pc.run_arm(
+                "node_perturbation_annealed",
+                seed=1,
+                task=_TASK,
+                trials=200,
+                node_noise=pc.ANNEAL_INITIAL,
+                schedule=pc.annealed_schedule(200),
+            )
+        finally:
+            MLPTopology.forward = original  # type: ignore[method-assign]
+
+        assert len(seen) == 200
+        # The first trial runs at the initial scale, the scale falls, and by the end of the
+        # decay it is at the floor and stays there.
+        assert seen[0] == pytest.approx(pc.ANNEAL_INITIAL)
+        assert seen[-1] == pytest.approx(pc.ANNEAL_FINAL)
+        assert seen[100] == pytest.approx(pc.ANNEAL_FINAL)
+        assert seen[50] < seen[0]
+        assert run["schedule"] == {"initial": 0.2, "final": 0.02, "decay_trials": 100}
+
+    def test_it_records_the_pinned_rate(self) -> None:
+        # It runs at the pinned rate like every other learning arm; a null there would make
+        # the row and its CSV line under-describe the run.
         run = pc.run_arm(
             "node_perturbation_annealed",
             seed=1,
@@ -237,7 +273,7 @@ class TestTheAnnealedArm:
             node_noise=pc.ANNEAL_INITIAL,
             schedule=pc.annealed_schedule(200),
         )
-        assert run["schedule"] == {"initial": 0.2, "final": 0.02, "decay_trials": 100}
+        assert run["rate"] == pc.PLASTICITY_RATE
 
     def test_it_perturbs_and_records_its_regime(self) -> None:
         run = pc.run_arm(

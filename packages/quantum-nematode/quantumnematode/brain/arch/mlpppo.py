@@ -375,6 +375,13 @@ class MLPPPOBrain(ClassicalBrain):
             enable_activity_traces=config.enable_activity_traces,
             trace_decay=config.trace_decay,
             plastic_layers=config.plastic_layers,
+            # The yardstick is only matched to the connectome if it perturbs the same way.
+            # Without these the brain built a topology that could not perturb and a rule that
+            # ignored the configured eligibility, so a `node_perturbation` arm here ran the
+            # Hebbian rule under the variant's name. Defaults leave the construction unchanged.
+            node_noise=config.plasticity_node_noise,
+            node_noise_schedule=config.node_noise_schedule(),
+            perturbation_seed=self.seed,
         )
         self._rule: ThreeFactorRule | None = None
         if not self._uses_ppo:
@@ -405,6 +412,7 @@ class MLPPPOBrain(ClassicalBrain):
                 baseline_rate=config.plasticity_baseline_rate,
                 freeze_updates=config.freeze_updates,
                 modulated=config.learning_rule not in UNMODULATED_RULES,
+                eligibility=config.plasticity_eligibility,
                 homeostasis=config.plasticity_homeostasis,
                 scaling=ScalingOptions(
                     normalise_modulator=config.plasticity_normalise_modulator,

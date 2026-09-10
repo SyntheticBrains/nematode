@@ -41,10 +41,10 @@
       "passes": true
     },
     "node_perturbation_annealed": {
-      "alignment_decay": 0.17558335345820525,
-      "alignment_floor": 0.05099945928552188,
+      "alignment_decay": 0.1756155707204016,
+      "alignment_floor": 0.050997542991535735,
       "halfway_threshold": -0.4131130610143905,
-      "mean": -0.4795171617064572,
+      "mean": -0.4794676458621148,
       "n": 8,
       "passes": false,
       "schedule": {
@@ -122,10 +122,10 @@
       "modulator": 0.002109589761859837
     },
     "node_perturbation_annealed": {
-      "alignment": 0.11329140637186355,
-      "alignment_median": 0.1170202775276266,
-      "mean_abs_delta": 0.00024384469902686022,
-      "modulator": 0.0021437880525208373
+      "alignment": 0.11330655685596866,
+      "alignment_median": 0.11703949351562187,
+      "mean_abs_delta": 0.00024384089491687747,
+      "modulator": 0.0021437607910387633
     },
     "three_factor": {
       "alignment": 0.03148445350477535,

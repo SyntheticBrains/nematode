@@ -9,14 +9,14 @@
 | analytic reference | −0.1361 | 99.8% | 8/8 | +0.4536 | passes — control valid |
 | unmodulated floor | −0.8753 | — | 3/8 | −0.0104 | does not pass — control valid |
 | constant σ = 0.2 | −0.1962 | **89.0%** | 8/8 | +0.2628 | **passes** |
-| **annealed 0.2 → 0.02** | **−0.4795** | **38.0%** | 7/8 | +0.1756 decay / +0.0510 floor | **does not pass** |
+| **annealed 0.2 → 0.02** | **−0.4795** | **38.1%** | 7/8 | +0.1756 decay / +0.0510 floor | **does not pass** |
 | constant σ = 0.05 | −0.4773 | 38.4% | 7/8 | +0.1184 | does not pass |
 | constant σ = 0.01 | −0.7769 | — | 4/8 | +0.0274 | does not pass |
 
 Floor −0.6909, optimum −0.1353, pass threshold −0.4131. The control is valid: the analytic
 reference passes and the unmodulated floor does not.
 
-**The annealed arm lands on the constant σ = 0.05 arm** — 38.0% of the gap against 38.4% — not on
+**The annealed arm lands on the constant σ = 0.05 arm** — 38.1% of the gap against 38.4% — not on
 the σ = 0.2 arm it starts from.
 
 ## Why: it annealed *through* the learning phase, not after it
@@ -45,9 +45,9 @@ spent rather than in the estimator being broken by the schedule.
 
 | seed | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|---|
-| score | −0.489 | −0.299 | −0.338 | −0.535 | −0.387 | **−1.024** | −0.414 | −0.351 |
+| score | −0.489 | −0.298 | −0.338 | −0.535 | −0.387 | **−1.024** | −0.414 | −0.351 |
 
-Seed 6 sits far below the floor and decides the mean clause: the median is **−0.4005** and the
+Seed 6 sits far below the floor and decides the mean clause: the median is **−0.4004** and the
 mean without that seed **−0.4017**, both marginally *above* the −0.4131 threshold. Reported because
 it is true, not as a reason to discount the verdict — the registered rule is a mean over eight
 seeds and it is not met, the seed clause (7/8 above floor) is met, and no seed is dropped. Even

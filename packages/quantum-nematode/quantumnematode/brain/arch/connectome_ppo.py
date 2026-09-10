@@ -419,7 +419,7 @@ class ConnectomeTopology(nn.Module):
         # integer, not a buffer: it never enters the state dict, so a checkpoint written before
         # schedules existed still loads.
         self._node_noise_schedule = node_noise_schedule
-        self._schedule_step = 0
+        self._schedule_steps_begun = 0
         self._perturbation_generator = torch.Generator()
         if perturbation_seed is not None:
             self._perturbation_generator.manual_seed(perturbation_seed)
@@ -935,16 +935,18 @@ class ConnectomeTopology(nn.Module):
         """The perturbation scale for the current episode: the initial one absent a schedule."""
         if self._node_noise_schedule is None:
             return self.node_noise
-        return self._node_noise_schedule.scale_at(self._schedule_step)
+        # The counter records episodes BEGUN, so the one currently running is indexed one
+        # lower: the first episode must run at the initial scale, not one step into the decay.
+        return self._node_noise_schedule.scale_at(max(0, self._schedule_steps_begun - 1))
 
     def advance_schedule(self) -> None:
         """Advance the perturbation schedule by one episode; a no-op without one."""
         if self._node_noise_schedule is not None:
-            self._schedule_step += 1
+            self._schedule_steps_begun += 1
 
     def reset_schedule(self) -> None:
         """Return the schedule to its initial scale, as a policy load does."""
-        self._schedule_step = 0
+        self._schedule_steps_begun = 0
 
     def reset_traces(self) -> None:
         """Zero the eligibility traces and drop the previous state.

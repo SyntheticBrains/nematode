@@ -38,16 +38,16 @@
   with the number.
 - [x] 3.4 Run it. Records under `supporting/051-l4-sigma-annealing/`. **A failure stops here** and
   is written up as a property of this schedule. **Ran 2026-09-10: FAILS.** Mean −0.4795 against a
-  −0.4131 threshold, 38.0% of the gap where the constant σ = 0.2 arm closes 89.0%; 7/8 seeds above
+  −0.4131 threshold, 38.1% of the gap where the constant σ = 0.2 arm closes 89.0%; 7/8 seeds above
   floor, so the seed clause is met and the mean clause is not. The arm lands on the constant
   σ = 0.05 arm (38.4%), because a geometric decay puts σ below 0.05 at trial 6,021 — **70% of the
   budget runs below a scale already shown not to clear the bar.** Alignment +0.1756 over the decay
   against +0.0510 at the floor, so the estimator was aimed while the scale was large: the failure
   is in how the budget was spent, not in the schedule breaking the estimator.
 
-## 4. The clone assay, only if 3 passes — NOT RUN
+## 4. The clone assay, only if the positive-control gate passes — NOT RUN
 
-**Gate 3 failed, so this section did not run**, as registered. The arms, their configs and the
+**The positive-control gate failed, so this section did not run**, as registered. The arms, their configs and the
 harness's binned trajectory are implemented and tested, so a later schedule can be screened
 without rebuilding them; no campaign was launched and no assay result exists.
 
@@ -58,7 +58,7 @@ without rebuilding them; no campaign was launched and no assay result exists.
   metric are untouched.
 - [~] 4.3 (built, not run) The harness bins both arms' curves per 250 episodes with σ(e) stated per bin, so the
   learning arm is read against the frozen control bin by bin rather than against a single endpoint.
-- [ ] 4.4 Run both arms. **Not run**: gate 3 failed.
+- [ ] 4.4 Run both arms. **Not run**: the positive-control gate failed.
 
 ## 5. Documentation
 

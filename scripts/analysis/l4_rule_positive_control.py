@@ -31,6 +31,7 @@ import argparse
 import csv
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -182,7 +183,9 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # This control drives the topology directly and never builds a brain, so nothing else
         # would advance the schedule: the trial IS the schedule's step. A counter that only
         # advanced from a brain would leave an annealed arm at its initial scale throughout and
-        # pass a gate the schedule was never tested by.
+        # pass a gate the schedule was never tested by. The topology counts trials BEGUN and
+        # indexes the running one at that count minus one, so this first trial runs at the
+        # initial scale rather than one step into the decay.
         topology.advance_schedule()
         cue = task.sample_cue(rng)
         observation = torch.from_numpy(task.observation(cue))
@@ -233,7 +236,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         "arm": arm,
         "seed": seed,
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
-        "rate": rate if arm in {"three_factor", "node_perturbation"} else None,
+        "rate": rate if arm in {"three_factor", *PERTURBING_ARMS} else None,
         "node_noise": node_noise if perturbing else None,
         "schedule": (
             {
@@ -518,6 +521,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path)
     parser.add_argument("--csv", type=Path)
     args = parser.parse_args(argv)
+
+    # The annealed arm decays over the first half of its budget and is scored on the last
+    # BLOCK * 10 trials. Below twice that window the score would be taken partly during the
+    # decay, so it would measure the exploration the arm did rather than the policy it left.
+    minimum = BLOCK * 10 * 2
+    if args.trials < minimum:
+        print(
+            f"--trials must be at least {minimum} to run the annealed arm: at {args.trials} the "
+            f"decay (first {int(args.trials * ANNEAL_FRACTION)} trials) reaches into the "
+            f"{BLOCK * 10}-trial score window.",
+            file=sys.stderr,
+        )
+        return 2
 
     task = ContextualAssociation.default()
     runs: list[dict[str, Any]] = []
