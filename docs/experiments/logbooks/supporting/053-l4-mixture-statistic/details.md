@@ -31,10 +31,16 @@ effect is*, not how often chance produces one this large. The null is built by p
 arms' competent seeds and re-splitting at the observed sizes; the interval still comes from the
 bootstrap of the arms as observed, which is what an interval is for.
 
+The null is **enumerated exactly**, not sampled. Every committed panel is small enough — the
+largest pool splits 12,870 ways — and exactness matters for more than precision: a sampled null
+makes the p-value depend on the order values happen to arrive in, since a seeded generator applies
+the same index permutation to whatever array it is handed, and seed-to-value assignment is
+arbitrary. Enumerating makes the result a function of the two multisets and nothing else.
+
 This correction changed the result. An earlier build used the uncentred draws as a p-value and
-reported two contrasts at `level_only`; under the permutation null they are **p = 0.084 and
-0.056**, and the rank test agrees (0.133, 0.071). **No contrast reaches `level_only`.** The
-finding below is what survives a correct test.
+reported two contrasts at `level_only`; under the exact null they are **p = 0.1333 and 0.0536**,
+and the rank test agrees closely (0.133, 0.071). **No contrast reaches `level_only`.** The finding
+below is what survives a correct test.
 
 **The registered split criterion was demoted to descriptive.** It was to decide the
 doubly-non-significant cell: "improves ≥ 1 seed and degrades ≥ 1 beyond the band". Simulated

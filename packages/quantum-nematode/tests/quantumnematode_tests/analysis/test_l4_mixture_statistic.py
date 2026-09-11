@@ -268,6 +268,43 @@ class TestTheLevelPValueComesFromANull:
         b = dict(zip(range(1, 7), (25.0, 30.0, 22.0, 28.0, 24.0, 26.0), strict=True))
         assert ms.level_contrast(a, b)["p_improve"] <= ms.SIG_Q
 
+    def test_the_p_value_depends_only_on_the_two_multisets(self) -> None:
+        # Seed-to-value assignment is arbitrary, so the result must not move with it. A sampled
+        # null fails this: a seeded generator applies the same index permutation to whatever
+        # array it is handed, so re-ordering the pool changes the draws it produces.
+        import numpy as np
+
+        a_values = [70.0, 55.0, 60.0, 52.0, 58.0]
+        b_values = [45.0, 50.0, 42.0, 48.0, 44.0]
+        rng = np.random.default_rng(0)
+        seen = set()
+        for _ in range(12):
+            shuffled_a = [float(v) for v in rng.permutation(a_values)]
+            shuffled_b = [float(v) for v in rng.permutation(b_values)]
+            out = ms.level_contrast(
+                dict(enumerate(shuffled_a, start=1)),
+                dict(enumerate(shuffled_b, start=1)),
+            )
+            seen.add((out["p_improve"], out["p_degrade"]))
+        assert len(seen) == 1
+
+    def test_a_small_pool_is_enumerated_exactly(self) -> None:
+        a = _arm({1: 70.0, 2: 75.0, 3: 80.0}, (4, 5))
+        b = _arm({1: 30.0, 2: 25.0, 3: 35.0}, (4, 5))
+        out = ms.level_contrast(a, b)
+        assert out["exact"] is True
+        # Twenty ways to split six values three and three; the exact p is a count over them.
+        assert out["p_improve"] == pytest.approx(1 / 20)
+
+    def test_the_enumerated_p_needs_no_finite_sample_correction(self) -> None:
+        # The observed split is one of the enumerated ones and is always at least as extreme as
+        # itself, so the count is never zero and the exact share needs no offset.
+        a = _arm({1: 90.0, 2: 95.0, 3: 99.0}, (4, 5))
+        b = _arm({1: 21.0, 2: 22.0, 3: 23.0}, (4, 5))
+        out = ms.level_contrast(a, b)
+        assert out["p_improve"] > 0.0
+        assert out["p_improve"] == pytest.approx(1 / 20)
+
     def test_the_interval_still_comes_from_the_observed_arms(self) -> None:
         a = _arm({1: 60.0, 2: 70.0, 3: 80.0}, (4, 5))
         b = _arm({1: 30.0, 2: 25.0, 3: 35.0}, (4, 5))

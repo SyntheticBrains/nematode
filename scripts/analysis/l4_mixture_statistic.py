@@ -53,6 +53,8 @@ result, and is recorded here so it is read with them rather than discovered afte
 
 from __future__ import annotations
 
+import itertools
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -77,6 +79,10 @@ BOOTSTRAP_SEED = 42
 SPLIT_BAND = 10.0
 
 MEMBERS: tuple[str, ...] = ("F", "L", "W")
+# Enumerate the null exactly up to this many splits; every committed panel is far below it
+# (the largest is sixteen competent seeds split evenly, 12,870 ways).
+ENUMERATION_CAP = 200_000
+_TOL = 1e-9
 
 
 def _paired(a: dict[int, float], b: dict[int, float]) -> list[int]:
@@ -126,6 +132,18 @@ def frequency_contrast(
     }
 
 
+def _permutation_p(null: np.ndarray, observed: float, *, improve: bool, exact: bool) -> float:
+    """Return the share of the null at least as extreme as the observed difference."""
+    # A hair of tolerance so a split that equals the observed one is counted as extreme rather
+    # than lost to floating-point drift in the summation.
+    count = int(
+        np.sum(null >= observed - _TOL) if improve else np.sum(null <= observed + _TOL),
+    )
+    if exact:
+        return float(count / null.size)
+    return float((count + 1) / (BOOTSTRAP_DRAWS + 1))
+
+
 def level_contrast(
     a: dict[int, float],
     b: dict[int, float],
@@ -167,14 +185,9 @@ def level_contrast(
     # The p-value needs a distribution under the NULL, which those draws are not: they are
     # centred on the observed difference, so reading the share of them below zero asks where the
     # effect is rather than how often chance produces one this large. The null here is that the
-    # two arms' competent seeds come from one level, so it is built by pooling them and
-    # re-splitting at the observed sizes.
-    pooled = np.concatenate([a_arr, b_arr])
-    permute = np.random.default_rng(BOOTSTRAP_SEED)
-    null = np.empty(BOOTSTRAP_DRAWS)
-    for i in range(BOOTSTRAP_DRAWS):
-        shuffled = permute.permutation(pooled)
-        null[i] = shuffled[: a_arr.size].mean() - shuffled[a_arr.size :].mean()
+    # two arms' competent seeds come from one level, so it is built by re-splitting the pool at
+    # the observed sizes.
+    null, exact = _null_differences(a_arr, b_arr)
     return {
         "defined": True,
         "threshold": threshold,
@@ -184,9 +197,12 @@ def level_contrast(
         "b_mean": float(b_arr.mean()),
         "effect": float(a_arr.mean() - b_arr.mean()),
         "ci80": [float(np.quantile(draws, 0.1)), float(np.quantile(draws, 0.9))],
-        # (count + 1) / (draws + 1): the standard finite-sample correction, never exactly zero.
-        "p_improve": float((int(np.sum(null >= observed)) + 1) / (BOOTSTRAP_DRAWS + 1)),
-        "p_degrade": float((int(np.sum(null <= observed)) + 1) / (BOOTSTRAP_DRAWS + 1)),
+        # Enumerated: the share of splits at least as extreme, which already counts the observed
+        # one, so it is exact and needs no correction. Sampled: the standard (count + 1) /
+        # (draws + 1), never exactly zero.
+        "exact": exact,
+        "p_improve": _permutation_p(null, observed, improve=True, exact=exact),
+        "p_degrade": _permutation_p(null, observed, improve=False, exact=exact),
         # Reported beside it, not used: it cannot reach significance at small subset sizes.
         "rank_p_improve": float(
             getattr(mannwhitneyu(a_arr, b_arr, alternative="greater"), "pvalue", 1.0),
@@ -195,6 +211,38 @@ def level_contrast(
             getattr(mannwhitneyu(a_arr, b_arr, alternative="less"), "pvalue", 1.0),
         ),
     }
+
+
+def _null_differences(a_arr: np.ndarray, b_arr: np.ndarray) -> tuple[np.ndarray, bool]:
+    """Differences in mean under the null that both arms' seeds come from one level.
+
+    Enumerated exactly where the pool is small enough, which every committed panel is: the
+    largest is sixteen competent seeds split eight and eight, 12,870 ways. Exactness matters here
+    for a reason beyond precision -- a sampled null makes the p-value depend on the order the
+    values happen to arrive in, since a seeded generator applies the same index permutation to
+    whatever array it is given, and seed-to-value assignment is arbitrary. Enumerating makes the
+    result a function of the two multisets and nothing else.
+
+    Above the cap the pool is re-split at random, from a canonically sorted copy so the sampled
+    null stays a function of the multisets too.
+    """
+    pooled = np.concatenate([a_arr, b_arr])
+    take = a_arr.size
+    total = pooled.size
+    if math.comb(total, take) <= ENUMERATION_CAP:
+        whole = pooled.sum()
+        splits = np.array(
+            [sum(subset) for subset in itertools.combinations(pooled, take)],
+            dtype=float,
+        )
+        return splits / take - (whole - splits) / (total - take), True
+    ordered = np.sort(pooled)
+    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    null = np.empty(BOOTSTRAP_DRAWS)
+    for i in range(BOOTSTRAP_DRAWS):
+        shuffled = rng.permutation(ordered)
+        null[i] = shuffled[:take].mean() - shuffled[take:].mean()
+    return null, False
 
 
 def shift_contrast(a: dict[int, float], b: dict[int, float]) -> dict[str, Any]:

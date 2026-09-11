@@ -31,7 +31,7 @@ other no effect. So the registered family has one member for each, plus the exis
 | | member | statistic | reads |
 |---|---|---|---|
 | **F** | frequency | paired competent-fraction discordance at 20.0 — exact binomial on the discordant pairs, panel 3's registered R2 generalised | how *often* an arm lands competent |
-| **L** | level | difference in the mean level among competent seeds, each arm over its **own** competent subset; p from a seeded pooled-label permutation, interval from a bootstrap of the arms as observed | how *good* it is when it does |
+| **L** | level | difference in the mean level among competent seeds, each arm over its **own** competent subset; p from an exactly enumerated pooled-label permutation, interval from a bootstrap of the arms as observed | how *good* it is when it does |
 | **W** | all-seeds | the existing paired one-sided Wilcoxon + 80% bootstrap CI | the shift, if the outcome is unimodal after all |
 
 Every member is one-sided in the arm-improves direction at α = 0.05, corrected together by BH-FDR
