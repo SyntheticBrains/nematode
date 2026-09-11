@@ -97,7 +97,7 @@ action taken, `D` steps run against a constant filler observation, and the rewar
 the end. The bounds depend on the targets and the exploration noise alone, so a delayed arm is
 scored by the same registered pass rule and a delay of zero is the undelayed control.
 
-What a delay imposes is **dilution, not decay**: the credited step is one term among `D + 1` when
+What a delay imposes is **dilution, not decay**: the scored step is one term among `D + 1` when
 the modulator arrives. That distinction is load-bearing, because a rule that normalises its trace
 divides a pure scalar decay straight out — a delay whose filler added nothing to the trace reads
 identically at every length. The filler must drive the plastic layer while carrying nothing about

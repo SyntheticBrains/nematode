@@ -74,7 +74,7 @@ def _cell(  # noqa: PLR0913 - one parameter per knob under examination
     scored["alignment"] = float(
         np.mean([r["alignment"] for r in runs if not math.isnan(r["alignment"])] or [math.nan]),
     )
-    scored["credited_share"] = runs[0]["credited_share"]
+    scored["nominal_credit_ratio"] = runs[0]["nominal_credit_ratio"]
     scored["knobs"] = {
         "delay": runs[0]["delay"],
         "trace_decay": runs[0]["trace_decay"],
@@ -136,14 +136,14 @@ def _print(out: dict[str, Any]) -> None:
             f"         | {'PASS' if cell['passes'] else '-'}{mark}",
         )
 
-    print("\n  horizon: gap closed by delay (credited share in brackets)")
+    print("\n  horizon: gap closed by delay (nominal credit ratio in brackets)")
     header = "".join(f"{d:>16}" for d in pc.DELAY_GRID)
     print(f"  {'trace_decay':>12}{header}")
     for decay in pc.TRACE_DECAY_GRID:
         row = ""
         for delay in pc.DELAY_GRID:
             cell = out["horizon"][f"{decay}|{delay}"]
-            row += f"{cell['gap_closed']:>9.1%} [{cell['credited_share']:.2f}]"
+            row += f"{cell['gap_closed']:>9.1%} [{cell['nominal_credit_ratio']:.2f}]"
         mark = "  (pinned)" if decay == pc.TRACE_DECAY else ""
         print(f"  {decay:>12}{row}{mark}")
 
@@ -191,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
                     "trace_decay",
                     "homeostasis",
                     "action_noise",
-                    "credited_share",
+                    "nominal_credit_ratio",
                     "mean",
                     "gap_closed",
                     "seeds_above_floor",
@@ -210,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
                             knobs["trace_decay"],
                             knobs["homeostasis"],
                             f"{knobs['action_noise']:.4f}",
-                            f"{cell['credited_share']:.4f}",
+                            f"{cell['nominal_credit_ratio']:.4f}",
                             f"{cell['mean']:.6f}",
                             f"{cell['gap_closed']:.4f}",
                             cell["seeds_above_floor"],

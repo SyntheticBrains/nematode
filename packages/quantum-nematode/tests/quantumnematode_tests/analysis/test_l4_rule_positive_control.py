@@ -356,7 +356,7 @@ class TestTheDelay:
             delay=0,
         )
         assert delayed["score"] == plain["score"]
-        assert delayed["credited_share"] == 1.0
+        assert delayed["nominal_credit_ratio"] == 1.0
 
     def test_the_horizon_is_unmeasurable_without_a_delay(self) -> None:
         # Why the delay exists: the undelayed control resets the trace every trial, so the decay
@@ -389,6 +389,19 @@ class TestTheDelay:
         }
         assert len(set(scores.values())) > 1
 
+    def test_a_negative_delay_is_refused(self) -> None:
+        # `range(delay)` is empty below zero, so the trial would run undelayed while the record
+        # described it as delayed.
+        with pytest.raises(ValueError, match="non-negative"):
+            pc.run_arm(
+                "node_perturbation",
+                seed=1,
+                task=_TASK,
+                trials=10,
+                node_noise=0.2,
+                delay=-1,
+            )
+
     def test_the_run_records_the_knobs_it_used(self) -> None:
         run = pc.run_arm(
             "node_perturbation",
@@ -403,7 +416,7 @@ class TestTheDelay:
         assert run["delay"] == 5
         assert run["trace_decay"] == 0.99
         assert run["homeostasis"] is False
-        assert run["credited_share"] == pytest.approx(_TASK.credited_share(0.99, 5))
+        assert run["nominal_credit_ratio"] == pytest.approx(_TASK.nominal_credit_ratio(0.99, 5))
 
 
 class TestTheKnobsReachTheRule:

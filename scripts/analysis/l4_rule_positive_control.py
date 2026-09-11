@@ -134,6 +134,17 @@ def annealed_schedule(trials: int) -> NodeNoiseSchedule:
     )
 
 
+def _validate_delay(delay: int) -> None:
+    """Refuse a negative delay, which would run undelayed while reporting itself delayed.
+
+    ``range(delay)`` is empty below zero, so the filler steps would simply not happen and the
+    record would describe a trial that never ran.
+    """
+    if delay < 0:
+        msg = f"delay must be non-negative, got {delay}"
+        raise ValueError(msg)
+
+
 def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the control
     arm: str,
     seed: int,
@@ -191,6 +202,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     homeostasis: bool = True,
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
+    _validate_delay(delay)
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     perturbing = arm in PERTURBING_ARMS
@@ -298,7 +310,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         "trace_decay": trace_decay,
         "homeostasis": homeostasis,
         "action_noise": noise,
-        "credited_share": task.credited_share(trace_decay, delay),
+        "nominal_credit_ratio": task.nominal_credit_ratio(trace_decay, delay),
         "schedule": (
             {
                 "initial": schedule.initial,

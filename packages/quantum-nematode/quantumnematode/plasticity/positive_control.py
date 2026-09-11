@@ -99,14 +99,22 @@ class ContextualAssociation:
         """Score an action: ``-(a - t(c))^2``, zero at the target and falling away quadratically."""
         return -float((action - self.targets[cue]) ** 2)
 
-    def credited_share(self, decay: float, delay: int) -> float:
-        """Return the credited step's share of the trace when a delayed reward arrives.
+    def nominal_credit_ratio(self, decay: float, delay: int) -> float:
+        """Return the decay weight on the scored step over the total, at a delayed reward.
 
-        The scored step contributes ``decay ** delay`` by the time the modulator lands; each
-        intervening step contributes its own term, which is what *dilutes* the credited one. A
-        rule that normalises its trace rescales the whole sum, so the share -- not the magnitude --
-        is what a delay actually changes, and it is what this control measures.
+        A **nominal** quantity, and the name says so deliberately. It weights every step equally
+        and asks only what the decay does: the scored step carries ``decay ** delay`` by the time
+        the modulator lands, each intervening step carries its own term, and this is the first
+        over the sum. It is *not* the scored step's share of the eligibility tensor -- those
+        contributions are outer products whose norms depend on the activities and perturbations
+        involved, which this does not measure.
+
+        What it is good for is ordering cells within the horizon grid: it captures the dilution
+        the delay imposes, which is the part a rule normalising its trace cannot divide out.
         """
+        if delay < 0:
+            msg = f"delay must be non-negative, got {delay}"
+            raise ValueError(msg)
         credited = decay**delay
         intervening = sum(decay**step for step in range(delay))
         return credited / (credited + intervening)

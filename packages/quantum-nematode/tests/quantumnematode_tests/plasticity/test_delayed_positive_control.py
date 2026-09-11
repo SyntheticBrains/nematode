@@ -61,29 +61,43 @@ class TestTheBoundsDoNotMoveWithTheDelay:
         assert task.gap(_NOISE) == pytest.approx(float(np.var(task.targets)))
 
 
-class TestTheCreditedShare:
+class TestTheNominalCreditRatio:
     def test_zero_delay_credits_the_scored_step_entirely(
         self,
         task: ContextualAssociation,
     ) -> None:
-        assert task.credited_share(0.9, 0) == pytest.approx(1.0)
+        assert task.nominal_credit_ratio(0.9, 0) == pytest.approx(1.0)
 
     def test_it_falls_with_the_delay(self, task: ContextualAssociation) -> None:
-        shares = [task.credited_share(0.9, d) for d in (0, 2, 5, 10, 20)]
+        shares = [task.nominal_credit_ratio(0.9, d) for d in (0, 2, 5, 10, 20)]
         assert all(b < a for a, b in pairwise(shares))
 
     def test_a_longer_horizon_credits_the_scored_step_more(
         self,
         task: ContextualAssociation,
     ) -> None:
-        # What the horizon grid asks: does raising trace_decay recover the credited share?
-        assert task.credited_share(0.999, 10) > task.credited_share(0.9, 10)
+        # What the horizon grid asks: does raising trace_decay recover the nominal credit ratio?
+        assert task.nominal_credit_ratio(0.999, 10) > task.nominal_credit_ratio(0.9, 10)
 
     def test_it_is_a_share_not_a_magnitude(self, task: ContextualAssociation) -> None:
         # The quantity that survives trace normalisation. A pure decay would be divided out; the
         # share is what a delay actually changes, so it is what the control measures.
         for delay in (0, 2, 5, 10):
-            assert 0.0 < task.credited_share(0.9, delay) <= 1.0
+            assert 0.0 < task.nominal_credit_ratio(0.9, delay) <= 1.0
+
+    def test_a_negative_delay_is_refused(self, task: ContextualAssociation) -> None:
+        # Unguarded it returns 1.0, which reads as "the scored step keeps everything" — the
+        # opposite of what a caller passing a negative delay could possibly mean.
+        with pytest.raises(ValueError, match="non-negative"):
+            task.nominal_credit_ratio(0.9, -1)
+
+    def test_it_is_nominal_not_a_measured_tensor_share(
+        self,
+        task: ContextualAssociation,
+    ) -> None:
+        # It weights every step equally and asks only what the decay does. With no decay at all
+        # it is exactly 1/(delay+1), which no measurement of outer-product norms would be.
+        assert task.nominal_credit_ratio(1.0, 9) == pytest.approx(0.1)
 
     def test_a_perfectly_retentive_trace_still_dilutes(
         self,
@@ -91,4 +105,4 @@ class TestTheCreditedShare:
     ) -> None:
         # Even with no decay at all the credited step is one term among delay + 1, so dilution is
         # a property of the delay rather than of the decay. This is why the control works.
-        assert task.credited_share(1.0, 3) == pytest.approx(1 / 4)
+        assert task.nominal_credit_ratio(1.0, 3) == pytest.approx(1 / 4)

@@ -1,4 +1,4 @@
-grid,cell,delay,trace_decay,homeostasis,action_noise,credited_share,mean,gap_closed,seeds_above_floor,alignment,passes
+grid,cell,delay,trace_decay,homeostasis,action_noise,nominal_credit_ratio,mean,gap_closed,seeds_above_floor,alignment,passes
 homeostasis,True,0,0.9,True,0.3679,1.0000,-0.196239,0.8904,8,0.2628,True
 homeostasis,False,0,0.9,False,0.3679,1.0000,-0.161984,0.9520,8,0.2924,True
 action_noise,0.2200,0,0.9,True,0.2200,1.0000,-0.090957,0.9234,8,0.2792,True

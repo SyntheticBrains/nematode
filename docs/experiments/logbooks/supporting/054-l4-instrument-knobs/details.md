@@ -6,14 +6,19 @@ was not usable and was replaced, as the change records.
 
 ## The horizon
 
-Gap closed by delay, at σ = 0.2, 8 seeds, 20,000 trials. Credited share in brackets — the scored
-step's share of the trace when the modulator arrives.
+Gap closed by delay, at σ = 0.2, 8 seeds, 20,000 trials. In brackets, the **nominal credit
+ratio**: the decay weight on the scored step over the total. It weights every step equally and
+asks only what the decay does — it is not the scored step's share of the eligibility tensor, whose
+contributions are outer products with norms this does not measure.
 
 | `trace_decay` | D = 0 | D = 2 | D = 5 | D = 10 | D = 20 |
 |---|---|---|---|---|---|
-| **0.9** (pinned) | 89.0% [1.00] | 82.7% [0.30] | 71.0% [0.13] | 44.8% [0.05] | **−6.8%** [0.01] |
-| 0.99 | 89.0% [1.00] | 84.3% [0.33] | 79.2% [0.16] | 69.3% [0.09] | **45.3%** [0.04] |
-| 0.999 | 89.0% [1.00] | 84.4% [0.33] | 79.8% [0.17] | 70.9% [0.09] | **49.8%** [0.05] |
+| **0.9** (pinned) | 89.0% [1.00] | 82.7% [0.30] | 71.0% [0.13] | 44.8% [0.05] ✗ | **−6.8%** [0.01] ✗ |
+| 0.99 | 89.0% [1.00] | 84.3% [0.33] | 79.2% [0.16] | 69.3% [0.09] | **45.3%** [0.04] ✗ |
+| 0.999 | 89.0% [1.00] | 84.4% [0.33] | 79.8% [0.17] | 70.9% [0.09] | **49.8%** [0.05] ✗ |
+
+✗ marks a cell below the registered bar (half the floor-to-optimum gap). Four cells fail; the
+recovery at `0.99` and `0.999` is large but does not clear the bar at twenty steps.
 
 **At the pinned decay the rule dies with delay.** Twenty steps of dilution takes it from 89% of the
 floor-to-optimum gap to **below the cue-blind floor** — worse than ignoring the cue entirely. Ten
@@ -23,9 +28,14 @@ steps halves it.
 52-point swing from one setting, on a task where nothing else changed. `0.999` adds little over
 `0.99`, so the useful range is bounded.
 
-The credited share tracks the collapse and explains it: passing cells sit at a share of 0.04 or
-above, the failing cell at 0.01. What kills the rule is that the credited step's contribution is
-swamped by the steps that follow it, and a longer trace keeps its share high enough to survive.
+The nominal credit ratio tracks the collapse closely — Spearman **+0.989** against gap closed over
+the fifteen cells — which is what makes dilution the readable account of it: the scored step's
+weight is swamped by the steps that follow, and a longer trace keeps more of it.
+
+**It is a correlation, not a threshold, and the grid does not support one.** Four cells fail
+(`0.9|10`, `0.9|20`, `0.99|20`, `0.999|20`) and their ratios run to **0.051**, above the 0.043 of
+another failing cell and not far below the 0.086 of the lowest passing one. With fifteen cells and
+one scored action there is no cutoff to read off, only an ordering.
 
 ## The other two
 

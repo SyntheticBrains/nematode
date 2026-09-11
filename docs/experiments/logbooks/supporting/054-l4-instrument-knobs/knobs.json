@@ -2,7 +2,6 @@
   "action_noise": {
     "0.2200": {
       "alignment": 0.2792267198656918,
-      "credited_share": 1.0,
       "gap_closed": 0.9233977764174984,
       "halfway_threshold": -0.3261777777777778,
       "knobs": {
@@ -13,6 +12,7 @@
       },
       "mean": -0.09095679087916747,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.10146761709906281,
@@ -28,7 +28,6 @@
     },
     "0.3679": {
       "alignment": 0.2628459983598441,
-      "credited_share": 1.0,
       "gap_closed": 0.8903726709160514,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -39,6 +38,7 @@
       },
       "mean": -0.19623935494991745,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.20987283056535677,
@@ -54,7 +54,6 @@
     },
     "0.6100": {
       "alignment": 0.22416992650105386,
-      "credited_share": 1.0,
       "gap_closed": 0.7696665317467498,
       "halfway_threshold": -0.6498777777777778,
       "knobs": {
@@ -65,6 +64,7 @@
       },
       "mean": -0.5000630379184723,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.518287896585241,
@@ -80,7 +80,6 @@
     },
     "1.0000": {
       "alignment": 0.15762125990528147,
-      "credited_share": 1.0,
       "gap_closed": 0.48416679224105474,
       "halfway_threshold": -1.2777777777777777,
       "knobs": {
@@ -91,6 +90,7 @@
       },
       "mean": -1.2865740043105252,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": false,
       "per_seed": {
         "1": -1.2613881288596354,
@@ -109,7 +109,6 @@
   "homeostasis": {
     "False": {
       "alignment": 0.292448290871107,
-      "credited_share": 1.0,
       "gap_closed": 0.9520324576418675,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -120,6 +119,7 @@
       },
       "mean": -0.1619839178800196,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.15331737480884794,
@@ -135,7 +135,6 @@
     },
     "True": {
       "alignment": 0.2628459983598441,
-      "credited_share": 1.0,
       "gap_closed": 0.8903726709160514,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -146,6 +145,7 @@
       },
       "mean": -0.19623935494991745,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.20987283056535677,
@@ -163,7 +163,6 @@
   "horizon": {
     "0.999|0": {
       "alignment": 0.2628459983598441,
-      "credited_share": 1.0,
       "gap_closed": 0.8903726709160514,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -174,6 +173,7 @@
       },
       "mean": -0.19623935494991745,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.20987283056535677,
@@ -189,7 +189,6 @@
     },
     "0.999|10": {
       "alignment": 0.21115099233866202,
-      "credited_share": 0.09045500090845136,
       "gap_closed": 0.7092490123874212,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -200,6 +199,7 @@
       },
       "mean": -0.29686360968804537,
       "n": 8,
+      "nominal_credit_ratio": 0.09045500090845136,
       "passes": true,
       "per_seed": {
         "1": -0.33495716046357304,
@@ -215,7 +215,6 @@
     },
     "0.999|2": {
       "alignment": 0.25188483646139503,
-      "credited_share": 0.33299988888892595,
       "gap_closed": 0.844235408970474,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -226,6 +225,7 @@
       },
       "mean": -0.2218711671419049,
       "n": 8,
+      "nominal_credit_ratio": 0.33299988888892595,
       "passes": true,
       "per_seed": {
         "1": -0.24394033957625877,
@@ -241,7 +241,6 @@
     },
     "0.999|20": {
       "alignment": 0.1657121434545843,
-      "credited_share": 0.04714412911681765,
       "gap_closed": 0.4976416504330385,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -252,6 +251,7 @@
       },
       "mean": -0.414423255218258,
       "n": 8,
+      "nominal_credit_ratio": 0.04714412911681765,
       "passes": false,
       "per_seed": {
         "1": -0.41524288487219213,
@@ -267,7 +267,6 @@
     },
     "0.999|5": {
       "alignment": 0.23877713418158236,
-      "credited_share": 0.16625006975711903,
       "gap_closed": 0.7977908347321003,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -278,6 +277,7 @@
       },
       "mean": -0.24767370838544583,
       "n": 8,
+      "nominal_credit_ratio": 0.16625006975711903,
       "passes": true,
       "per_seed": {
         "1": -0.28891862067185636,
@@ -293,7 +293,6 @@
     },
     "0.99|0": {
       "alignment": 0.2628459983598441,
-      "credited_share": 1.0,
       "gap_closed": 0.8903726709160514,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -304,6 +303,7 @@
       },
       "mean": -0.19623935494991745,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.20987283056535677,
@@ -319,7 +319,6 @@
     },
     "0.99|10": {
       "alignment": 0.20696824811806436,
-      "credited_share": 0.08640999331736478,
       "gap_closed": 0.6933589136257267,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -330,6 +329,7 @@
       },
       "mean": -0.3056914423334312,
       "n": 8,
+      "nominal_credit_ratio": 0.08640999331736478,
       "passes": true,
       "per_seed": {
         "1": -0.34530310175993895,
@@ -345,7 +345,6 @@
     },
     "0.99|2": {
       "alignment": 0.251481152389897,
-      "credited_share": 0.32998888926298775,
       "gap_closed": 0.8430159720242555,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -356,6 +355,7 @@
       },
       "mean": -0.2225486321120263,
       "n": 8,
+      "nominal_credit_ratio": 0.32998888926298775,
       "passes": true,
       "per_seed": {
         "1": -0.24478194887218443,
@@ -371,7 +371,6 @@
     },
     "0.99|20": {
       "alignment": 0.15624364367642557,
-      "credited_share": 0.0429861656539559,
       "gap_closed": 0.45288858711673,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -382,6 +381,7 @@
       },
       "mean": -0.4392860681717627,
       "n": 8,
+      "nominal_credit_ratio": 0.0429861656539559,
       "passes": false,
       "per_seed": {
         "1": -0.43656738174901577,
@@ -397,7 +397,6 @@
     },
     "0.99|5": {
       "alignment": 0.2371991140366299,
-      "credited_share": 0.16250725867646879,
       "gap_closed": 0.792455066242923,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -408,6 +407,7 @@
       },
       "mean": -0.2506380242127666,
       "n": 8,
+      "nominal_credit_ratio": 0.16250725867646879,
       "passes": true,
       "per_seed": {
         "1": -0.29299918045585444,
@@ -423,7 +423,6 @@
     },
     "0.9|0": {
       "alignment": 0.2628459983598441,
-      "credited_share": 1.0,
       "gap_closed": 0.8903726709160514,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -434,6 +433,7 @@
       },
       "mean": -0.19623935494991745,
       "n": 8,
+      "nominal_credit_ratio": 1.0,
       "passes": true,
       "per_seed": {
         "1": -0.20987283056535677,
@@ -449,7 +449,6 @@
     },
     "0.9|10": {
       "alignment": 0.14881049564748536,
-      "credited_share": 0.0508137313274124,
       "gap_closed": 0.44802464398510167,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -460,6 +459,7 @@
       },
       "mean": -0.4419882588004451,
       "n": 8,
+      "nominal_credit_ratio": 0.0508137313274124,
       "passes": false,
       "per_seed": {
         "1": -0.47223831337728783,
@@ -475,7 +475,6 @@
     },
     "0.9|2": {
       "alignment": 0.24643166704074249,
-      "credited_share": 0.2988929889298893,
       "gap_closed": 0.8273449783107061,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -486,6 +485,7 @@
       },
       "mean": -0.2312547397306649,
       "n": 8,
+      "nominal_credit_ratio": 0.2988929889298893,
       "passes": true,
       "per_seed": {
         "1": -0.25530946670083465,
@@ -501,7 +501,6 @@
     },
     "0.9|20": {
       "alignment": 0.0530086956199375,
-      "credited_share": 0.013651386354174419,
       "gap_closed": -0.06809579387755356,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -512,6 +511,7 @@
       },
       "mean": -0.7287218353908091,
       "n": 8,
+      "nominal_credit_ratio": 0.013651386354174419,
       "passes": false,
       "per_seed": {
         "1": -0.650477537021653,
@@ -527,7 +527,6 @@
     },
     "0.9|5": {
       "alignment": 0.21429351558093912,
-      "credited_share": 0.1260225499883686,
       "gap_closed": 0.7100322404272663,
       "halfway_threshold": -0.4131130610143905,
       "knobs": {
@@ -538,6 +537,7 @@
       },
       "mean": -0.2964284829992425,
       "n": 8,
+      "nominal_credit_ratio": 0.1260225499883686,
       "passes": true,
       "per_seed": {
         "1": -0.3476231849678883,
