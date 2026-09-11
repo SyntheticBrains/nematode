@@ -87,6 +87,22 @@ Human-written analysis of every experiment series: the objective, the pre-regist
 
 Each logbook follows the same structure: **Objective** (the question), **Hypothesis** (what was expected and why), **Method** (configs, seeds, statistics), **Results**, **Analysis**, **Conclusions** and **Next Steps**, plus **Data References** — the session IDs, config files and artifact paths needed to reproduce it. Phase-level syntheses roll the milestone logbooks into an exit-criteria walkthrough and a gate decision: [021](logbooks/021-phase5-synthesis.md) for Phase 5 and [037](logbooks/037-phase6a-synthesis.md) for Phase 6a.
 
+### Measuring a rule's eligibility horizon
+
+A rule whose eligibility decays cannot be tested for that decay on a one-step task: the positive
+control resets the trace every trial, which is exactly what removes the horizon confound from the
+question "does this rule learn at all", and which makes it blind to the horizon itself. The control
+therefore supports a **delay** between the scored action and the reward — the cue is shown, the
+action taken, `D` steps run against a constant filler observation, and the reward arrives once at
+the end. The bounds depend on the targets and the exploration noise alone, so a delayed arm is
+scored by the same registered pass rule and a delay of zero is the undelayed control.
+
+What a delay imposes is **dilution, not decay**: the credited step is one term among `D + 1` when
+the modulator arrives. That distinction is load-bearing, because a rule that normalises its trace
+divides a pure scalar decay straight out — a delay whose filler added nothing to the trace reads
+identically at every length. The filler must drive the plastic layer while carrying nothing about
+the cue.
+
 ### Reading a panel whose outcome is bimodal
 
 Where a seed reaches either a competent policy or a dead one, the two arms can differ in how
