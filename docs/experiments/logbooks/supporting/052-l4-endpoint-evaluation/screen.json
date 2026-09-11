@@ -59,47 +59,80 @@
       "integrity": {
         "per_seed": {
           "1": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.688,
-            "seen": 0.6881658434867859
+            "recorded_cosine": 0.688,
+            "run_digest": "a2849ab1fc4f434a",
+            "seen_cosine": 0.6881658434867859,
+            "staged_digest": "a2849ab1fc4f434a"
           },
           "2": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.725,
-            "seen": 0.7251425385475159
+            "recorded_cosine": 0.725,
+            "run_digest": "1f8033b911d3628d",
+            "seen_cosine": 0.7251425385475159,
+            "staged_digest": "1f8033b911d3628d"
           },
           "3": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.722,
-            "seen": 0.7224974632263184
+            "recorded_cosine": 0.722,
+            "run_digest": "733008b6abd75b5f",
+            "seen_cosine": 0.7224974632263184,
+            "staged_digest": "733008b6abd75b5f"
           },
           "4": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.678,
-            "seen": 0.677605390548706
+            "recorded_cosine": 0.678,
+            "run_digest": "84b1c726fa089a38",
+            "seen_cosine": 0.677605390548706,
+            "staged_digest": "84b1c726fa089a38"
           },
           "5": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.691,
-            "seen": 0.6908360123634338
+            "recorded_cosine": 0.691,
+            "run_digest": "54d912f6ebeddfcb",
+            "seen_cosine": 0.6908360123634338,
+            "staged_digest": "54d912f6ebeddfcb"
           },
           "6": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.748,
-            "seen": 0.7483609318733215
+            "recorded_cosine": 0.748,
+            "run_digest": "e01730777dcb99e2",
+            "seen_cosine": 0.7483609318733215,
+            "staged_digest": "e01730777dcb99e2"
           },
           "7": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.679,
-            "seen": 0.6788021922111511
+            "recorded_cosine": 0.679,
+            "run_digest": "e39a36b8e37c3b7b",
+            "seen_cosine": 0.6788021922111511,
+            "staged_digest": "e39a36b8e37c3b7b"
           },
           "8": {
+            "cosine_ok": true,
+            "digest_ok": true,
             "ok": true,
-            "recorded": 0.649,
-            "seen": 0.6494351625442505
+            "recorded_cosine": 0.649,
+            "run_digest": "0d72b758dd548f80",
+            "seen_cosine": 0.6494351625442505,
+            "staged_digest": "0d72b758dd548f80"
           }
         },
         "source_arm": "node_perturbation",
+        "staged": "campaigns/l4-perturbation-clone/endpoints/nodeperturbation_wt_seed{seed}.pt",
         "tolerance": 0.01,
         "verdict_void": false,
         "void_seeds": []

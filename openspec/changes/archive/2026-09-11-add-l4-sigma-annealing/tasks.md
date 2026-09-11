@@ -58,7 +58,8 @@ without rebuilding them; no campaign was launched and no assay result exists.
   metric are untouched.
 - [~] 4.3 (built, not run) The harness bins both arms' curves per 250 episodes with σ(e) stated per bin, so the
   learning arm is read against the frozen control bin by bin rather than against a single endpoint.
-- [ ] 4.4 Run both arms. **Not run**: the positive-control gate failed.
+- [x] 4.4 Run both arms. **Not run**: the positive-control gate failed, which the registered
+  sequence says stops here. Closed as registered, not deferred.
 
 ## 5. Documentation
 

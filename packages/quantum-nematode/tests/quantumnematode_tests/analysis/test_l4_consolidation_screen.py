@@ -154,6 +154,8 @@ class TestTheEndpointArm:
 
 
 class TestTheEndpointIntegrityCheck:
+    """Two checks: the weights ARE the staged tensor, and their cosine is the recorded one."""
+
     def _cosines(self, **over: float | None) -> dict[str, float | None]:
         out: dict[str, float | None] = {
             str(s): v for s, v in cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"].items()
@@ -161,53 +163,116 @@ class TestTheEndpointIntegrityCheck:
         out.update(over)
         return out
 
-    def test_reproducing_the_recorded_cosines_is_not_void(self) -> None:
-        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines())
+    def _patched(self, monkeypatch: pytest.MonkeyPatch, *, digests_match: bool) -> None:
+        """Stand in for the two checkpoints, so no campaign artefacts are needed."""
+        calls = {"n": 0}
+
+        def fake(path: Path) -> str:
+            calls["n"] += 1
+            # The staged file is read first for each seed, then the run's.
+            return "same" if digests_match or calls["n"] % 2 == 1 else "different"
+
+        monkeypatch.setattr(cs, "_weight_digest", fake)
+        monkeypatch.setattr(
+            cs,
+            "_experiment_json",
+            lambda *_args, **_kwargs: {"exports_path": "exports/x"},
+        )
+
+    def _logs(self) -> dict[int, Path]:
+        return dict.fromkeys(cs.SEEDS, Path("unused.log"))
+
+    def _run(self, monkeypatch: pytest.MonkeyPatch, **over: float | None) -> dict:
+        self._patched(monkeypatch, digests_match=True)
+        monkeypatch.setattr(Path, "read_text", lambda _self, **_kw: "")
+        return cs.endpoint_integrity(
+            "endpoint_nodeperturbation",
+            self._cosines(**over),
+            self._logs(),
+        )
+
+    def test_matching_digests_and_cosines_are_not_void(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        out = self._run(monkeypatch)
         assert out["void_seeds"] == []
         assert out["verdict_void"] is False
         assert out["source_arm"] == "node_perturbation"
 
-    def test_a_cosine_of_one_voids_the_verdict(self) -> None:
-        # The failure this exists for: the clone loaded instead of the endpoint. Its weights are
-        # unchanged from the clone, so the cosine is 1.0 and the run would score as a policy
-        # that held perfectly.
-        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines(**{"3": 1.0}))
+    def test_a_cosine_of_one_voids_the_verdict(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The clone loaded instead of the endpoint: unchanged from the clone, so the cosine is
+        # 1.0 and the run would otherwise score as a policy that held perfectly.
+        out = self._run(monkeypatch, **{"3": 1.0})
         assert out["void_seeds"] == [3]
         assert out["verdict_void"] is True
 
-    def test_a_missing_cosine_voids_that_seed(self) -> None:
-        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines(**{"5": None}))
+    def test_a_missing_cosine_voids_that_seed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        out = self._run(monkeypatch, **{"5": None})
         assert out["void_seeds"] == [5]
-        assert out["verdict_void"] is True
 
-    def test_a_departure_inside_the_tolerance_is_allowed(self) -> None:
+    def test_a_departure_inside_the_tolerance_is_allowed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         recorded = cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"][2]
-        out = cs.endpoint_integrity(
-            "endpoint_nodeperturbation",
-            self._cosines(**{"2": recorded + cs.COSINE_TOLERANCE / 2}),
-        )
+        out = self._run(monkeypatch, **{"2": recorded + cs.COSINE_TOLERANCE / 2})
         assert out["void_seeds"] == []
 
-    def test_a_departure_outside_the_tolerance_is_not(self) -> None:
+    def test_a_departure_outside_the_tolerance_is_not(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         recorded = cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"][2]
+        out = self._run(monkeypatch, **{"2": recorded + cs.COSINE_TOLERANCE * 2})
+        assert out["void_seeds"] == [2]
+
+    def test_a_digest_mismatch_voids_every_seed_even_when_cosines_match(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Different weights can share a cosine to the clone; the digest is what makes this an
+        # identity check rather than an inference from a summary statistic.
+        self._patched(monkeypatch, digests_match=False)
+        monkeypatch.setattr(Path, "read_text", lambda _self, **_kw: "")
         out = cs.endpoint_integrity(
             "endpoint_nodeperturbation",
-            self._cosines(**{"2": recorded + cs.COSINE_TOLERANCE * 2}),
+            self._cosines(),
+            self._logs(),
         )
-        assert out["void_seeds"] == [2]
+        assert out["void_seeds"] == list(cs.SEEDS)
+        assert out["verdict_void"] is True
+        assert out["per_seed"]["1"]["cosine_ok"] is True
+        assert out["per_seed"]["1"]["digest_ok"] is False
+
+    def test_an_unreadable_digest_is_not_a_pass(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(cs, "_weight_digest", lambda _path: None)
+        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines(), None)
+        assert out["verdict_void"] is True
 
 
 class TestAVoidEndpointCannotBeScored:
     """A void integrity check must remove the verdict, not sit beside one."""
 
     def _result(self, *, void: bool) -> dict:
-        cosines = {
-            str(seed): (1.0 if (void and seed == 3) else value)
-            for seed, value in cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"].items()
-        }
-        # A panel that would otherwise pass outright, so a failure to suppress is visible.
+        # A panel that would otherwise pass outright, so a failure to suppress is visible. The
+        # integrity block is built here rather than computed, so this tests the suppression and
+        # not the check that produces it.
         result = cs.assess(dict.fromkeys(cs.SEEDS, 100.0))
-        integrity = cs.endpoint_integrity("endpoint_nodeperturbation", cosines)
+        integrity = {
+            "source_arm": "node_perturbation",
+            "tolerance": cs.COSINE_TOLERANCE,
+            "per_seed": {
+                str(seed): {
+                    "cosine_ok": not (void and seed == 3),
+                    "digest_ok": True,
+                    "ok": not (void and seed == 3),
+                }
+                for seed in cs.SEEDS
+            },
+            "void_seeds": [3] if void else [],
+            "verdict_void": void,
+        }
         result["integrity"] = integrity
         if integrity["verdict_void"]:
             result["holds"] = False
