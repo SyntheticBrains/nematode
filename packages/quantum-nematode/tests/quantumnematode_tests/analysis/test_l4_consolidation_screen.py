@@ -197,6 +197,56 @@ class TestTheEndpointIntegrityCheck:
         assert out["void_seeds"] == [2]
 
 
+class TestAVoidEndpointCannotBeScored:
+    """A void integrity check must remove the verdict, not sit beside one."""
+
+    def _result(self, *, void: bool) -> dict:
+        cosines = {
+            str(seed): (1.0 if (void and seed == 3) else value)
+            for seed, value in cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"].items()
+        }
+        # A panel that would otherwise pass outright, so a failure to suppress is visible.
+        result = cs.assess(dict.fromkeys(cs.SEEDS, 100.0))
+        integrity = cs.endpoint_integrity("endpoint_nodeperturbation", cosines)
+        result["integrity"] = integrity
+        if integrity["verdict_void"]:
+            result["holds"] = False
+            result["improves"] = False
+            result["pass"] = False
+            result["void"] = True
+        return result
+
+    def test_the_panel_would_otherwise_pass(self) -> None:
+        # Guards the test itself: without the void there is a verdict to suppress.
+        clean = self._result(void=False)
+        assert clean["pass"] is True
+        assert clean.get("void") is not True
+
+    def test_a_void_arm_does_not_pass(self) -> None:
+        voided = self._result(void=True)
+        assert voided["void"] is True
+        assert voided["pass"] is False
+        assert voided["holds"] is False
+        assert voided["improves"] is False
+
+    def test_a_void_arm_is_not_listed_as_passed(self) -> None:
+        assert self._result(void=True)["pass"] is False
+
+    def test_a_void_arm_serialises_without_a_pass(self) -> None:
+        import json
+
+        text = json.dumps(cs._jsonable(self._result(void=True)), allow_nan=False)
+        assert json.loads(text)["pass"] is False
+
+    def test_the_printed_line_says_void_and_names_the_seeds(self, capsys) -> None:
+        cs._print_arm("endpoint_nodeperturbation", self._result(void=True))
+        printed = capsys.readouterr().out
+        assert "VOID" in printed
+        assert "[3]" in printed
+        for word in ("holds", "improves", "FAILS"):
+            assert word not in printed
+
+
 class TestTheComparatorIsTheCommittedTable:
     def test_the_frozen_clone_values_are_the_published_ones(self) -> None:
         assert cs.FROZEN_CLONE == {

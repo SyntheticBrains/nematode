@@ -406,7 +406,18 @@ def analyse(
         result["rate_multiplier_mean"] = float(np.mean(used)) if used else float("nan")
         result["trajectory"] = trajectory(panel, arm)
         if arm in ENDPOINT_ARMS:
-            result["integrity"] = endpoint_integrity(arm, cosines)
+            integrity = endpoint_integrity(arm, cosines)
+            result["integrity"] = integrity
+            if integrity["verdict_void"]:
+                # The arm did not evaluate what it claims to. Scoring it would report a run of
+                # some other weights under this arm's name, and a clone loaded in place of an
+                # endpoint reads as a policy that held perfectly -- the failure this check
+                # exists for. No verdict is available, so none is offered: the pass flags are
+                # cleared rather than left for a reader to override with the integrity block.
+                result["holds"] = False
+                result["improves"] = False
+                result["pass"] = False
+                result["void"] = True
             # Descriptive, not a verdict input: what the source arm scored while its own
             # perturbation was running, beside what its endpoint scores without it.
             result["under_perturbation"] = {
@@ -438,6 +449,14 @@ def _print_arm(arm: str, result: dict) -> None:
     """Print one arm's line of the screen."""
     if not result["n"]:
         print(f"  {arm:10} no runs read")
+        return
+    if result.get("void"):
+        voided = result["integrity"]["void_seeds"]
+        print(
+            f"  {arm:10} VOID - seeds {voided} did not load the endpoint "
+            f"(cosine to clone departs from the recorded value by more than "
+            f"{result['integrity']['tolerance']}); no verdict",
+        )
         return
     outcome = "improves" if result["improves"] else ("holds" if result["holds"] else "FAILS")
     print(
