@@ -1,0 +1,384 @@
+{
+  "arms": {
+    "anchor": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "endpoint_nodeperturbation": {
+      "cosine_mean": 0.6976056918501854,
+      "cosine_to_clone": {
+        "1": 0.6881658434867859,
+        "2": 0.7251425385475159,
+        "3": 0.7224974632263184,
+        "4": 0.677605390548706,
+        "5": 0.6908360123634338,
+        "6": 0.7483609318733215,
+        "7": 0.6788021922111511,
+        "8": 0.6494351625442505
+      },
+      "delta": {
+        "1": -30.9,
+        "2": 29.400000000000006,
+        "3": -13.2,
+        "4": -21.3,
+        "5": -37.1,
+        "6": -27.099999999999998,
+        "7": -58.5,
+        "8": 14.3
+      },
+      "holds": false,
+      "improves": false,
+      "integrity": {
+        "per_seed": {
+          "1": {
+            "ok": true,
+            "recorded": 0.688,
+            "seen": 0.6881658434867859
+          },
+          "2": {
+            "ok": true,
+            "recorded": 0.725,
+            "seen": 0.7251425385475159
+          },
+          "3": {
+            "ok": true,
+            "recorded": 0.722,
+            "seen": 0.7224974632263184
+          },
+          "4": {
+            "ok": true,
+            "recorded": 0.678,
+            "seen": 0.677605390548706
+          },
+          "5": {
+            "ok": true,
+            "recorded": 0.691,
+            "seen": 0.6908360123634338
+          },
+          "6": {
+            "ok": true,
+            "recorded": 0.748,
+            "seen": 0.7483609318733215
+          },
+          "7": {
+            "ok": true,
+            "recorded": 0.679,
+            "seen": 0.6788021922111511
+          },
+          "8": {
+            "ok": true,
+            "recorded": 0.649,
+            "seen": 0.6494351625442505
+          }
+        },
+        "source_arm": "node_perturbation",
+        "tolerance": 0.01,
+        "verdict_void": false,
+        "void_seeds": []
+      },
+      "mean": 20.65,
+      "mean_delta": -18.050000000000004,
+      "missing_seeds": [],
+      "n": 8,
+      "pass": false,
+      "per_seed": {
+        "1": 8.4,
+        "2": 73.4,
+        "3": 26.8,
+        "4": 0.0,
+        "5": 10.0,
+        "6": 6.2,
+        "7": 2.8000000000000003,
+        "8": 37.6
+      },
+      "rate_multiplier": {
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0,
+        "8": 1.0
+      },
+      "rate_multiplier_mean": 1.0,
+      "seeds_at_or_above": 2,
+      "seeds_within_hold": 2,
+      "trajectory": {
+        "change": 0.3999999999999986,
+        "final_quarter": 20.65,
+        "first_quarter": 20.25,
+        "n_read": 8
+      },
+      "under_perturbation": {
+        "1": 7.0,
+        "2": 24.6,
+        "3": 12.4,
+        "4": 2.8,
+        "5": 7.2,
+        "6": 3.0,
+        "7": 10.2,
+        "8": 29.0
+      }
+    },
+    "node_perturbation": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "oracle": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "perturbation_annealed": {
+      "binned_trajectory": {
+        "bins": null,
+        "n_read": 0
+      },
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "schedule": {
+        "anneal_episodes": 1000,
+        "final": 0.02,
+        "initial": 0.2
+      },
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "perturbation_annealed_frozen": {
+      "binned_trajectory": {
+        "bins": null,
+        "n_read": 0
+      },
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "schedule": {
+        "anneal_episodes": 1000,
+        "final": 0.02,
+        "initial": 0.2
+      },
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "perturbation_frozen": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    },
+    "rigidity": {
+      "cosine_mean": null,
+      "cosine_to_clone": {},
+      "delta": {},
+      "holds": false,
+      "improves": false,
+      "mean": null,
+      "mean_delta": null,
+      "missing_seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "n": 0,
+      "pass": false,
+      "per_seed": {},
+      "rate_multiplier": {},
+      "rate_multiplier_mean": null,
+      "seeds_at_or_above": 0,
+      "seeds_within_hold": 0,
+      "trajectory": {
+        "change": null,
+        "final_quarter": null,
+        "first_quarter": null,
+        "n_read": 0
+      }
+    }
+  },
+  "comparator": {
+    "arm": "wt_clone_frozen",
+    "mean": 38.7,
+    "per_seed": {
+      "1": 39.3,
+      "2": 44.0,
+      "3": 40.0,
+      "4": 21.3,
+      "5": 47.1,
+      "6": 33.3,
+      "7": 61.3,
+      "8": 23.3
+    },
+    "source": "the warm-start panel's committed per-seed table"
+  },
+  "rule": {
+    "hold_mean_points": 5.0,
+    "hold_seed_points": 10.0,
+    "hold_seeds_of_eight": 6
+  },
+  "screen_not_test": "Reuses seeds already reported; declares no multiple-comparisons family and no verdict. A pass licenses running the registered panel and nothing more."
+}

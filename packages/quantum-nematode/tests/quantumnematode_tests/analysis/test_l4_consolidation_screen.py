@@ -102,6 +102,151 @@ class TestTheBinnedTrajectory:
         assert cs.binned_trajectory({}, "perturbation_annealed")["n_read"] == 0  # type: ignore[arg-type]
 
 
+class TestTheEndpointArm:
+    """An arm that evaluates another arm's endpoint weights with the perturbation off."""
+
+    def _record(self) -> dict:
+        import json
+
+        path = (
+            _root
+            / "docs"
+            / "experiments"
+            / "logbooks"
+            / "supporting"
+            / "050-l4-perturbation-clone-assay"
+            / "screen.json"
+        )
+        return json.loads(path.read_text())["arms"]["node_perturbation"]
+
+    def test_the_committed_cosines_are_the_published_ones(self) -> None:
+        # Transcribed constants are how a wrong number enters a record silently; this pins them
+        # to the file they came from.
+        published = {int(k): round(v, 3) for k, v in self._record()["cosine_to_clone"].items()}
+        assert cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"] == published
+
+    def test_the_committed_under_perturbation_scores_are_the_published_ones(self) -> None:
+        published = {int(k): round(v, 1) for k, v in self._record()["per_seed"].items()}
+        assert cs.ENDPOINT_UNDER_PERTURBATION["endpoint_nodeperturbation"] == published
+
+    def test_the_config_is_the_comparator_plus_the_weights(self) -> None:
+        import yaml
+
+        configs = _root / "configs" / "scenarios" / "foraging_predator_thermal"
+        stem = "connectomeppo_small_continuous2d_combined_klinotaxis_plastic_frozen"
+        comparator = yaml.safe_load((configs / f"{stem}_clone.yml").read_text())
+        endpoint = yaml.safe_load((configs / f"{stem}_endpoint_nodeperturbation.yml").read_text())
+
+        def flat(d: dict, prefix: str = "") -> dict:
+            out: dict = {}
+            for key, value in d.items():
+                path = f"{prefix}.{key}" if prefix else key
+                out.update(flat(value, path) if isinstance(value, dict) else {path: value})
+            return out
+
+        a, b = flat(comparator), flat(endpoint)
+        differing = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+        assert differing == {"brain.config.weights_path"}
+        # No perturbation and no updates: the comparator's own condition.
+        assert b["brain.config.freeze_updates"] is True
+        assert "brain.config.plasticity_node_noise" not in b
+        assert "brain.config.plasticity_eligibility" not in b
+
+
+class TestTheEndpointIntegrityCheck:
+    def _cosines(self, **over: float | None) -> dict[str, float | None]:
+        out: dict[str, float | None] = {
+            str(s): v for s, v in cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"].items()
+        }
+        out.update(over)
+        return out
+
+    def test_reproducing_the_recorded_cosines_is_not_void(self) -> None:
+        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines())
+        assert out["void_seeds"] == []
+        assert out["verdict_void"] is False
+        assert out["source_arm"] == "node_perturbation"
+
+    def test_a_cosine_of_one_voids_the_verdict(self) -> None:
+        # The failure this exists for: the clone loaded instead of the endpoint. Its weights are
+        # unchanged from the clone, so the cosine is 1.0 and the run would score as a policy
+        # that held perfectly.
+        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines(**{"3": 1.0}))
+        assert out["void_seeds"] == [3]
+        assert out["verdict_void"] is True
+
+    def test_a_missing_cosine_voids_that_seed(self) -> None:
+        out = cs.endpoint_integrity("endpoint_nodeperturbation", self._cosines(**{"5": None}))
+        assert out["void_seeds"] == [5]
+        assert out["verdict_void"] is True
+
+    def test_a_departure_inside_the_tolerance_is_allowed(self) -> None:
+        recorded = cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"][2]
+        out = cs.endpoint_integrity(
+            "endpoint_nodeperturbation",
+            self._cosines(**{"2": recorded + cs.COSINE_TOLERANCE / 2}),
+        )
+        assert out["void_seeds"] == []
+
+    def test_a_departure_outside_the_tolerance_is_not(self) -> None:
+        recorded = cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"][2]
+        out = cs.endpoint_integrity(
+            "endpoint_nodeperturbation",
+            self._cosines(**{"2": recorded + cs.COSINE_TOLERANCE * 2}),
+        )
+        assert out["void_seeds"] == [2]
+
+
+class TestAVoidEndpointCannotBeScored:
+    """A void integrity check must remove the verdict, not sit beside one."""
+
+    def _result(self, *, void: bool) -> dict:
+        cosines = {
+            str(seed): (1.0 if (void and seed == 3) else value)
+            for seed, value in cs.ENDPOINT_SOURCE_COSINE["endpoint_nodeperturbation"].items()
+        }
+        # A panel that would otherwise pass outright, so a failure to suppress is visible.
+        result = cs.assess(dict.fromkeys(cs.SEEDS, 100.0))
+        integrity = cs.endpoint_integrity("endpoint_nodeperturbation", cosines)
+        result["integrity"] = integrity
+        if integrity["verdict_void"]:
+            result["holds"] = False
+            result["improves"] = False
+            result["pass"] = False
+            result["void"] = True
+        return result
+
+    def test_the_panel_would_otherwise_pass(self) -> None:
+        # Guards the test itself: without the void there is a verdict to suppress.
+        clean = self._result(void=False)
+        assert clean["pass"] is True
+        assert clean.get("void") is not True
+
+    def test_a_void_arm_does_not_pass(self) -> None:
+        voided = self._result(void=True)
+        assert voided["void"] is True
+        assert voided["pass"] is False
+        assert voided["holds"] is False
+        assert voided["improves"] is False
+
+    def test_a_void_arm_is_not_listed_as_passed(self) -> None:
+        assert self._result(void=True)["pass"] is False
+
+    def test_a_void_arm_serialises_without_a_pass(self) -> None:
+        import json
+
+        text = json.dumps(cs._jsonable(self._result(void=True)), allow_nan=False)
+        assert json.loads(text)["pass"] is False
+
+    def test_the_printed_line_says_void_and_names_the_seeds(self, capsys) -> None:
+        cs._print_arm("endpoint_nodeperturbation", self._result(void=True))
+        printed = capsys.readouterr().out
+        assert "VOID" in printed
+        assert "[3]" in printed
+        for word in ("holds", "improves", "FAILS"):
+            assert word not in printed
+
+
 class TestTheComparatorIsTheCommittedTable:
     def test_the_frozen_clone_values_are_the_published_ones(self) -> None:
         assert cs.FROZEN_CLONE == {
@@ -295,6 +440,9 @@ class TestTheRegistry:
             # path rather than the single number a fixed scale gave.
             "perturbation_annealed",
             "perturbation_annealed_frozen",
+            # Not a mechanism: the node-perturbation arm's endpoint weights run with the
+            # perturbation off, which is what the assay never measured.
+            "endpoint_nodeperturbation",
         )
 
     def test_every_arm_config_exists(self) -> None:
