@@ -184,10 +184,20 @@ Where a panel's outcome is bimodal — a seed reaching a competent policy or a d
 registered contrast SHALL read both the frequency with which an arm reaches competence and the
 level it reaches when it does, because a test of either alone reports no effect when only the other
 moves. The registered family SHALL comprise a paired competent-fraction discordance at the
-committed competence threshold, a paired contrast on the level among competent seeds, and the
-all-seeds paired rank test the committed record was scored with, corrected together.
+committed competence threshold, a per-arm contrast on the level among each arm's own competent
+seeds, and the all-seeds paired rank test the committed record was scored with, corrected together.
 
 The competence threshold SHALL be the committed one and SHALL NOT be re-chosen with the outcome known. The level contrast SHALL compare each arm's mean over its **own** competent seeds, so that a seed competent in one arm only contributes to that arm's level and a frequency difference is not read as a level difference; where either arm has no competent seed the contrast SHALL be reported as undefined rather than as a null result. Every member SHALL be one-sided in the arm-improves direction at the committed significance level, corrected together.
+
+The level contrast's p-value SHALL come from a null in which the two arms' competent seeds are one
+population: the pooled values re-split at the observed sizes. It SHALL be enumerated exactly
+wherever the number of splits is tractable, so that the result depends only on the two multisets
+and not on the order values are supplied in, and the record SHALL carry an indicator of whether a
+given result was enumerated or sampled. Where it is sampled the pool SHALL be put in a canonical
+order first, for the same reason, and the estimate SHALL carry the usual finite-sample correction;
+an enumerated result already counts the observed split and SHALL NOT. Any interval reported beside
+it SHALL come from resampling each arm as observed, which is a statement about where the difference
+lies and not a null.
 
 #### Scenario: A level-only effect is not reported as no effect
 
@@ -350,8 +360,15 @@ measured apart from the exploration noise it learned under. The evaluation SHALL
 registered pass rule and comparator unchanged, and SHALL be reported beside the under-perturbation
 score from the assay as a descriptive annotation.
 
-The outcomes and what each licenses SHALL be recorded before the evaluation runs, and the
-registration that follows SHALL be the one the outcome selects.
+The outcomes and what each licenses SHALL be recorded before the evaluation runs, and the licence
+SHALL be the one the outcome selects. Work the outcome did not license SHALL NOT be authored on
+that evidence.
+
+Sequencing is separate from licensing. A prerequisite may be taken first where it is not one of the
+registered alternatives — where, for instance, the licensed work would be measured with an
+instrument a pending change repairs — and doing so SHALL NOT alter, expire or transfer the licence,
+which stands until the licensed work is done or withdrawn. The reason for the deferral SHALL be
+recorded with the change, and the outstanding work SHALL remain tracked.
 
 #### Scenario: The endpoint is the registered arm's
 
@@ -372,15 +389,24 @@ registration that follows SHALL be the one the outcome selects.
 - **GIVEN** the per-seed cosine between the perturbing arm's endpoint and its clone, as the assay
   recorded it
 - **WHEN** the evaluation's own final weights are compared to the clone
-- **THEN** each seed's cosine SHALL reproduce the recorded value within 0.01, and a seed that does
-  not SHALL be void and SHALL void the verdict, since a cosine near one means the clone was
-  evaluated rather than the endpoint
+- **THEN** each seed's final plastic weights SHALL be identical to the staged endpoint's, compared
+  by a digest of the tensor rather than by a summary of it, **and** its cosine to the clone SHALL
+  reproduce the recorded value within 0.01 as a secondary check; a seed failing **either** SHALL be
+  void and SHALL void the verdict, and a digest that cannot be read SHALL NOT count as a pass
 
 #### Scenario: The rule is the assay's
 
 - **WHEN** the endpoint's scores are assessed
 - **THEN** the pass rule, comparator values, budget and metric SHALL be those registered for the
   clone assay, and the verdict SHALL be one of the assay's own
+
+#### Scenario: A prerequisite may be taken first without moving the licence
+
+- **GIVEN** an evaluation whose verdict licenses one of the registered branches
+- **WHEN** a change that is not one of those branches is authored first, because the licensed work
+  would otherwise be measured with an instrument that change repairs
+- **THEN** the licence SHALL be unchanged and the licensed work SHALL remain open and tracked, and
+  the branch the verdict did not license SHALL still NOT be authored on that evidence
 
 #### Scenario: The outcome selects the next registration
 

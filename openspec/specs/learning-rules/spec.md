@@ -841,9 +841,10 @@ before this requirement still loads.
 #### Scenario: The scale decays to its floor and stays there
 
 - **GIVEN** an initial scale, a smaller final scale and an anneal length `E`
-- **WHEN** episodes are begun in sequence
-- **THEN** the scale SHALL fall monotonically, SHALL equal the final scale at episode `E`, and SHALL
-  remain equal to it in every later episode
+- **WHEN** episodes are begun in sequence, indexed from zero so that the first episode begun is
+  episode `0` and runs at the initial scale
+- **THEN** the scale SHALL fall monotonically, SHALL equal the final scale at episode index `E` —
+  the `E + 1`-th episode begun — and SHALL remain equal to it in every later episode
 
 #### Scenario: A schedule that is only half specified is refused
 

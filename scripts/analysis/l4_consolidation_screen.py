@@ -77,6 +77,14 @@ ANNEALED_ARMS = frozenset({"perturbation_annealed", "perturbation_annealed_froze
 # weights it loaded, so the cosine must reproduce the recorded value; a cosine near 1.00 means
 # the clone was loaded instead of the endpoint, which would read as a policy that held.
 ENDPOINT_ARMS: dict[str, str] = {"endpoint_nodeperturbation": "node_perturbation"}
+# The staged weights each endpoint arm loads, per seed. The run's own final weights must be the
+# same tensor: with updates frozen nothing writes, so this is an identity check rather than an
+# inference from a summary statistic.
+ENDPOINT_STAGED: dict[str, str] = {
+    "endpoint_nodeperturbation": (
+        "campaigns/l4-perturbation-clone/endpoints/nodeperturbation_wt_seed{seed}.pt"
+    ),
+}
 # From the 050 record's `node_perturbation.cosine_to_clone`, committed there before this arm existed.
 ENDPOINT_SOURCE_COSINE: dict[str, dict[int, float]] = {
     "endpoint_nodeperturbation": {
@@ -317,26 +325,63 @@ def binned_trajectory(panel: dict[str, dict[int, SeedRecord]], arm: str) -> dict
     }
 
 
-def endpoint_integrity(arm: str, cosines: dict[str, float | None]) -> dict[str, Any]:
-    """Check an endpoint arm actually loaded the endpoint, not the clone it started from.
+def _weight_digest(path: Path) -> str | None:
+    """Return a digest of the plastic weights a checkpoint carries, or None if it is absent."""
+    import hashlib
 
-    Frozen updates mean the run's final weights are the ones it loaded, so its cosine to the
-    clone must reproduce the value the source arm recorded. A seed that departs is void, and a
-    void seed voids the verdict: the alternative is scoring a run of the clone as if it were a
-    run of what the rule learned, which reads as a policy that held.
+    import torch
+
+    if not path.is_file():
+        return None
+    tensor = torch.load(path, weights_only=True)["topology"]["w_chem"]
+    return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
+
+
+def endpoint_integrity(
+    arm: str,
+    cosines: dict[str, float | None],
+    logs: dict[int, Path] | None = None,
+    experiments: Path = EXPERIMENTS,
+) -> dict[str, Any]:
+    """Check an endpoint arm actually loaded the endpoint, not the clone or another seed's.
+
+    The identity check is a digest: with updates frozen nothing writes, so the run's own final
+    weights must be the staged tensor byte for byte. The cosine to the clone is kept beside it as
+    a sanity check, since it is what the source arm recorded and a cosine near one would mean the
+    clone was evaluated. **Either mismatch voids the seed, and a void seed voids the verdict** --
+    the alternative is scoring a run of some other weights under this arm's name.
     """
     expected = ENDPOINT_SOURCE_COSINE[arm]
+    staged_template = ENDPOINT_STAGED[arm]
     per_seed: dict[str, Any] = {}
     void: list[int] = []
     for seed, recorded in sorted(expected.items()):
         seen = cosines.get(str(seed))
-        ok = seen is not None and abs(seen - recorded) <= COSINE_TOLERANCE
-        per_seed[str(seed)] = {"recorded": recorded, "seen": seen, "ok": ok}
-        if not ok:
+        cosine_ok = seen is not None and abs(seen - recorded) <= COSINE_TOLERANCE
+        staged = _weight_digest(REPO / staged_template.format(seed=seed))
+        run = None
+        if logs and seed in logs:
+            experiment = _experiment_json(logs[seed].read_text(), experiments)
+            exports = experiment.get("exports_path") if experiment else None
+            if exports:
+                run = _weight_digest(REPO / exports / "weights" / "final.pt")
+        # A digest that cannot be read is not a pass: it is an unverified seed.
+        digest_ok = staged is not None and run is not None and staged == run
+        per_seed[str(seed)] = {
+            "recorded_cosine": recorded,
+            "seen_cosine": seen,
+            "cosine_ok": cosine_ok,
+            "staged_digest": staged[:16] if staged else None,
+            "run_digest": run[:16] if run else None,
+            "digest_ok": digest_ok,
+            "ok": cosine_ok and digest_ok,
+        }
+        if not (cosine_ok and digest_ok):
             void.append(seed)
     return {
         "source_arm": ENDPOINT_ARMS[arm],
         "tolerance": COSINE_TOLERANCE,
+        "staged": staged_template,
         "per_seed": per_seed,
         "void_seeds": void,
         "verdict_void": bool(void),
@@ -406,7 +451,7 @@ def analyse(
         result["rate_multiplier_mean"] = float(np.mean(used)) if used else float("nan")
         result["trajectory"] = trajectory(panel, arm)
         if arm in ENDPOINT_ARMS:
-            integrity = endpoint_integrity(arm, cosines)
+            integrity = endpoint_integrity(arm, cosines, logs.get(arm), experiments)
             result["integrity"] = integrity
             if integrity["verdict_void"]:
                 # The arm did not evaluate what it claims to. Scoring it would report a run of
@@ -452,10 +497,16 @@ def _print_arm(arm: str, result: dict) -> None:
         return
     if result.get("void"):
         voided = result["integrity"]["void_seeds"]
+        integrity = result["integrity"]
+        reasons = sorted(
+            {
+                "digest" if not integrity["per_seed"][str(s)]["digest_ok"] else "cosine"
+                for s in voided
+            },
+        )
         print(
-            f"  {arm:10} VOID - seeds {voided} did not load the endpoint "
-            f"(cosine to clone departs from the recorded value by more than "
-            f"{result['integrity']['tolerance']}); no verdict",
+            f"  {arm:10} VOID - seeds {voided} did not load the staged endpoint "
+            f"({' and '.join(reasons)} mismatch); no verdict",
         )
         return
     outcome = "improves" if result["improves"] else ("holds" if result["holds"] else "FAILS")
