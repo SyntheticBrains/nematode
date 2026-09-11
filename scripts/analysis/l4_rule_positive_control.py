@@ -71,6 +71,19 @@ NODE_NOISE_GRID = (0.01, 0.05, 0.2)
 ANNEAL_INITIAL = 0.2
 ANNEAL_FINAL = 0.02
 ANNEAL_FRACTION = 0.5  # of the trial budget
+
+# ── I.3: the settings pinned since A.3 and never examined ───────────────────────────────────
+# Homeostasis and the exploration noise act on a one-step trial, so the undelayed control holds
+# them. The eligibility horizon does not: this control resets the trace every trial, which is
+# what removes the horizon confound from the undelayed question, so it needs a delay to act at
+# all. The delays bracket the ten-step scale `trace_decay 0.9` implies -- 0.9^10 = 0.35,
+# 0.9^20 = 0.12 -- and run past it; the longer decays ask whether a longer horizon recovers it.
+DELAY_GRID = (0, 2, 5, 10, 20)
+TRACE_DECAY_GRID = (0.9, 0.99, 0.999)
+# The panels' own history: std 1.0 capped every plastic arm near its floor, 0.22 rose and
+# collapsed, and a probe selected 0.37. The grid brackets the selected value with the two that
+# failed, so an arm that the pinned noise was holding back is visible either side.
+ACTION_NOISE_GRID = (0.22, NOISE, 0.61, 1.0)
 PERTURBING_ARMS = frozenset({"node_perturbation", "node_perturbation_annealed"})
 ARMS = ("three_factor", "node_perturbation", "node_perturbation_annealed", "hebbian", "analytic")
 
@@ -121,6 +134,59 @@ def annealed_schedule(trials: int) -> NodeNoiseSchedule:
     )
 
 
+def _validate_delay(delay: int) -> None:
+    """Refuse a negative delay, which would run undelayed while reporting itself delayed.
+
+    ``range(delay)`` is empty below zero, so the filler steps would simply not happen and the
+    record would describe a trial that never ran.
+    """
+    if delay < 0:
+        msg = f"delay must be non-negative, got {delay}"
+        raise ValueError(msg)
+
+
+def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the control
+    arm: str,
+    seed: int,
+    task: ContextualAssociation,
+    *,
+    rate: float,
+    node_noise: float,
+    schedule: NodeNoiseSchedule | None,
+    trace_decay: float,
+    homeostasis: bool,
+) -> tuple[MLPTopology, ThreeFactorRule | None]:
+    """Build the topology and the rule one arm runs over."""
+    generator = torch.Generator().manual_seed(seed)
+    perturbing = arm in PERTURBING_ARMS
+    topology = MLPTopology(
+        _actor(task.n_cues, generator),
+        enable_activity_traces=True,
+        trace_decay=trace_decay,
+        plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
+        # The variant's own perturbation, from a dedicated generator; zero for every other arm,
+        # which then draws nothing and runs the forward pass unchanged.
+        node_noise=node_noise if perturbing else 0.0,
+        node_noise_schedule=schedule if perturbing else None,
+        perturbation_seed=seed if perturbing else None,
+    )
+    if arm == "analytic":
+        return topology, None
+    return topology, ThreeFactorRule(
+        topology,
+        plasticity_rate=rate,
+        weight_decay=WEIGHT_DECAY,
+        weight_bound=WEIGHT_BOUND,
+        baseline_rate=BASELINE_RATE,
+        freeze_updates=False,
+        modulated=arm in {"three_factor", *PERTURBING_ARMS},
+        eligibility="node_perturbation" if perturbing else "hebbian",
+        scaling=ScalingOptions(normalise_modulator=True, normalise_trace=True),
+        homeostasis=homeostasis,
+        device=torch.device("cpu"),
+    )
+
+
 def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the control
     arm: str,
     seed: int,
@@ -130,39 +196,26 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     noise: float = NOISE,
     node_noise: float = 0.0,
     schedule: NodeNoiseSchedule | None = None,
+    delay: int = 0,
+    trace_decay: float = TRACE_DECAY,
+    *,
+    homeostasis: bool = True,
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
+    _validate_delay(delay)
     rng = np.random.default_rng(seed)
-    generator = torch.Generator().manual_seed(seed)
     torch.manual_seed(seed)
-    actor = _actor(task.n_cues, generator)
     perturbing = arm in PERTURBING_ARMS
-    topology = MLPTopology(
-        actor,
-        enable_activity_traces=True,
-        trace_decay=TRACE_DECAY,
-        plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
-        # The variant's own perturbation, from a dedicated generator; zero for every other arm,
-        # which then draws nothing and runs the forward pass unchanged.
-        node_noise=node_noise if perturbing else 0.0,
-        node_noise_schedule=schedule if perturbing else None,
-        perturbation_seed=seed if perturbing else None,
+    topology, rule = _build(
+        arm,
+        seed,
+        task,
+        rate=rate,
+        node_noise=node_noise,
+        schedule=schedule,
+        trace_decay=trace_decay,
+        homeostasis=homeostasis,
     )
-    rule = None
-    if arm != "analytic":
-        rule = ThreeFactorRule(
-            topology,
-            plasticity_rate=rate,
-            weight_decay=WEIGHT_DECAY,
-            weight_bound=WEIGHT_BOUND,
-            baseline_rate=BASELINE_RATE,
-            freeze_updates=False,
-            modulated=arm in {"three_factor", *PERTURBING_ARMS},
-            eligibility="node_perturbation" if perturbing else "hebbian",
-            scaling=ScalingOptions(normalise_modulator=True, normalise_trace=True),
-            homeostasis=True,
-            device=torch.device("cpu"),
-        )
 
     rewards: list[float] = []
     modulators: list[float] = []
@@ -194,9 +247,19 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         reward = task.reward(cue, action)
         rewards.append(reward)
 
-        # The analytic gradient of THIS step's loss, for the alignment and for the reference arm.
+        # The analytic gradient of the SCORED step's loss, for the alignment and for the reference
+        # arm. Taken here and held: under a delay the update lands after the filler steps, where
+        # the network's output answers the filler and its loss against the target means nothing.
         loss = (mean - float(task.targets[cue])) ** 2
         gradients = torch.autograd.grad(loss, list(topology.plastic_weights), allow_unused=True)
+
+        # The delay: the reward arrives `delay` steps after the action it scores, so the credited
+        # step's share of the eligibility falls as each filler step adds its own term. Dilution,
+        # not decay -- a rule that normalises its trace divides a scalar decay straight out.
+        if delay:
+            filler = torch.from_numpy(task.filler())
+            for _ in range(delay):
+                topology(filler)
 
         # Both arms are measured on the same accumulation path, so the reference's alignment is
         # an end-to-end check on the sign convention rather than a unit-level assumption: the
@@ -242,6 +305,12 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
         "rate": rate if arm in {"three_factor", *PERTURBING_ARMS} else None,
         "node_noise": node_noise if perturbing else None,
+        # The knobs this run pinned or varied, so a row describes its own settings.
+        "delay": delay,
+        "trace_decay": trace_decay,
+        "homeostasis": homeostasis,
+        "action_noise": noise,
+        "nominal_credit_ratio": task.nominal_credit_ratio(trace_decay, delay),
         "schedule": (
             {
                 "initial": schedule.initial,
