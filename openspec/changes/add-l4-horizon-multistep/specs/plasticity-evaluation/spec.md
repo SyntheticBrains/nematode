@@ -30,6 +30,18 @@ made on the graded reading rather than reported as no difference, since a metric
 both cannot separate them. The competence-dependent contrasts SHALL be reported as undefined where
 no seed reaches competence, and SHALL NOT contribute a result.
 
+A difference on the graded reading SHALL carry a verdict only where it is both statistically
+significant and at least a stated minimum size, fixed before the run. A paired rank test at these
+panel sizes responds to the consistency of the sign rather than the size of the shift, so
+significance alone permits a behaviourally negligible difference to be reported as an effect.
+
+#### Scenario: A significant but negligible shift does not carry the verdict
+
+- **GIVEN** a graded difference that is significant and smaller than the registered minimum
+- **WHEN** the verdict is assigned
+- **THEN** the difference SHALL be reported as observed, SHALL NOT be recorded as the setting
+  transferring, and SHALL NOT license the costlier platform
+
 #### Scenario: A floored primary metric does not decide the comparison
 
 - **GIVEN** two arms whose full-clear rates are both at the floor, with no seed competent

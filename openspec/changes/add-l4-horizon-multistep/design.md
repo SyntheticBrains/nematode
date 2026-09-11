@@ -30,9 +30,17 @@ Every yardstick arm ever run sits at the full-clear floor: the committed 040 val
 with **no seed competent** by the 20% threshold. A metric that is zero for both arms cannot separate
 them, and the competent-fraction and level contrasts are undefined where no seed is competent.
 
-The graded reading — plateau-tail mean foods, out of ten — is the one that can see a difference, and
-this is exactly the case I.2 registered it for: *"an arm whose full-clear rate is at its floor while
-its graded measure exceeds the comparator's"*. This change is its first use.
+The graded reading — plateau-tail mean foods, out of ten — is the only metric with any range left
+here, and this is the case I.2 registered it for: *"an arm whose full-clear rate is at its floor
+while its graded measure exceeds the comparator's"*. This change is its first use.
+
+**It is not a comfortable range, and the registration says so.** `foods` discriminates elsewhere —
+the connectome arms span 1.95 to 9.06 — but the yardstick's committed value is **0.35 of 10**,
+below even a *frozen* connectome's 3.25, over a seed range of 0.06 to 0.67 with a coefficient of
+variation of **0.61**. The yardstick is floor-adjacent on both metrics, not merely on the cliff. So
+the fourth outcome below — every arm at the floor and indistinguishable — is a live possibility
+rather than a formality, and the claim being made for the graded reading is that it is the only
+measure with room to move, not that it is a sensitive one.
 
 ## The comparison
 
@@ -42,7 +50,21 @@ eligibility change with the horizon change. Not against a single frozen baseline
 perturbation's cost to a policy is not constant across horizons — a longer trace changes what the
 rule writes, so each horizon needs its own no-writing control.
 
-One-sided in the improving direction, BH-FDR across the three horizons, at the level I.2 registered.
+One-sided in the improving direction, BH-FDR across the three horizons, at the level I.2
+registered.
+
+**Significance alone does not carry the verdict.** A paired rank test at eight seeds fires on the
+*consistency of the sign*, not the size of the shift: eight seeds all moving one way reaches
+q = 0.012 after correction whether the shift is 0.05 foods or 2.0. On a platform whose arms sit
+between 0.06 and 0.67 foods, that makes a statistically clean but behaviourally meaningless result
+reachable, and nothing about the test would flag it.
+
+So the horizon counts as transferring only if the shift is **both** significant **and at least 0.5
+foods**. That floor is fixed here, before the run, and its two justifications are independent of the
+outcome: it is roughly the gap the I.3 pilot showed between the frozen arm and the learning arm
+(0.90 against 0.11), and it is about 1.5 within-arm standard deviations of the committed yardstick
+table (sd 0.21). A shift smaller than that is reported as observed and explicitly does not license
+a connectome arm.
 
 ## What each outcome means, fixed before the run
 
@@ -67,9 +89,16 @@ One-sided in the improving direction, BH-FDR across the three horizons, at the l
 - I.3's own recovery is partial: at twenty steps of delay even `0.999` stays **below** the
   registered bar (49.8% against 50%). A 2400-step episode is two orders further out.
 - At `trace_decay 0.99` a trace retains 0.37 over a hundred steps and effectively never decays
-  within a 2400-step episode. That does not remove the credit-assignment problem; it trades a trace
-  too short to bridge the delay for one too long to distinguish which action earned the reward. The
-  rule may fail at both ends, and this change measures one end without claiming the other is fine.
+  within a 2400-step episode; at `0.999` it accumulates roughly a thousand steps of history before
+  decaying meaningfully, and the trace is reset only between episodes. That does not remove the
+  credit-assignment problem; it trades a trace too short to bridge the delay for one too long to
+  distinguish which action earned the reward. **The two failures look different and the record
+  should separate them**: a horizon too short leaves the policy near its frozen control, drifting
+  little, because almost nothing is credited; a horizon too long moves the weights substantially in
+  a direction unrelated to reward, so the arm departs from its frozen control while performing no
+  better — or worse. The arms therefore report their distance from the frozen control as well as
+  their score, so "did not learn" and "learned something unrelated" are distinguishable rather than
+  both reading as a null.
 - Logbook 040 located the yardstick's failure elsewhere entirely — a local rule on a dense stack
   collapsing the representation without decorrelation. If that is the binding constraint, the
   horizon cannot fix it at any setting.
