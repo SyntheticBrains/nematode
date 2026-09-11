@@ -1,0 +1,213 @@
+{
+  "alpha": 0.05,
+  "committed_is_reference_only": "Logbook 040 ran the original eligibility; contrasting against it would confound the eligibility change with the horizon change",
+  "committed_yardstick_foods": 0.348,
+  "horizons": {
+    "0.9": {
+      "beats_control": false,
+      "drift": {
+        "mean_relative": 1.285986289381981,
+        "n_read": 8,
+        "per_seed": {
+          "1": 1.2663260698318481,
+          "2": 1.2835404872894287,
+          "3": 1.291387915611267,
+          "4": 1.281748652458191,
+          "5": 1.2736667394638062,
+          "6": 1.2965015172958374,
+          "7": 1.295017957687378,
+          "8": 1.2997009754180908
+        }
+      },
+      "frozen_foods": {
+        "1": 7.24,
+        "2": 0.696,
+        "3": 0.22266666666666668,
+        "4": 0.744,
+        "5": 4.182666666666667,
+        "6": 2.724,
+        "7": 1.8373333333333333,
+        "8": 0.22
+      },
+      "frozen_mean_foods": 2.2333333333333334,
+      "full_clear": {
+        "competent_seeds": {
+          "frozen": [
+            1
+          ],
+          "learning": []
+        },
+        "frozen_mean": 3.3833333333333333,
+        "learning_mean": 1.166666666666667,
+        "level_contrast_available": false,
+        "note": "the learning arm has no seed at or above the committed competence threshold (the frozen arm has [1]), so the level contrast is undefined",
+        "threshold": 20.0
+      },
+      "graded": {
+        "ci80": [
+          -3.056,
+          -0.7288333333333334
+        ],
+        "defined": true,
+        "effect": -1.840666666666667,
+        "n": 8,
+        "p_degrade": 0.0546875,
+        "p_improve": 0.9609375,
+        "positive_seeds": 2,
+        "q_improve": 1.0
+      },
+      "learning_foods": {
+        "1": 0.132,
+        "2": 1.684,
+        "3": 0.484,
+        "4": 0.13466666666666666,
+        "5": 0.356,
+        "6": 0.132,
+        "7": 0.0013333333333333333,
+        "8": 0.21733333333333332
+      },
+      "learning_mean_foods": 0.39266666666666666,
+      "n_pairs": 8,
+      "why": "not significant"
+    },
+    "0.99": {
+      "beats_control": false,
+      "drift": {
+        "mean_relative": 1.3084676265716553,
+        "n_read": 8,
+        "per_seed": {
+          "1": 1.3089808225631714,
+          "2": 1.3092402219772339,
+          "3": 1.3106765747070312,
+          "4": 1.3310540914535522,
+          "5": 1.3181490898132324,
+          "6": 1.2756073474884033,
+          "7": 1.2928974628448486,
+          "8": 1.321135401725769
+        }
+      },
+      "frozen_foods": {
+        "1": 7.24,
+        "2": 0.696,
+        "3": 0.22266666666666668,
+        "4": 0.744,
+        "5": 4.182666666666667,
+        "6": 2.724,
+        "7": 1.8373333333333333,
+        "8": 0.22
+      },
+      "frozen_mean_foods": 2.2333333333333334,
+      "full_clear": {
+        "competent_seeds": {
+          "frozen": [
+            1
+          ],
+          "learning": []
+        },
+        "frozen_mean": 3.3833333333333333,
+        "learning_mean": 0.13333333333333333,
+        "level_contrast_available": false,
+        "note": "the learning arm has no seed at or above the committed competence threshold (the frozen arm has [1]), so the level contrast is undefined",
+        "threshold": 20.0
+      },
+      "graded": {
+        "ci80": [
+          -3.2186166666666667,
+          -1.1019666666666663
+        ],
+        "defined": true,
+        "effect": -2.0856666666666666,
+        "n": 8,
+        "p_degrade": 0.00390625,
+        "p_improve": 1.0,
+        "positive_seeds": 0,
+        "q_improve": 1.0
+      },
+      "learning_foods": {
+        "1": 0.004,
+        "2": 0.009333333333333334,
+        "3": 0.0,
+        "4": 0.04,
+        "5": 0.352,
+        "6": 0.36133333333333334,
+        "7": 0.32133333333333336,
+        "8": 0.09333333333333334
+      },
+      "learning_mean_foods": 0.14766666666666667,
+      "n_pairs": 8,
+      "why": "not significant"
+    },
+    "0.999": {
+      "beats_control": false,
+      "drift": {
+        "mean_relative": 1.2803443670272827,
+        "n_read": 8,
+        "per_seed": {
+          "1": 1.2964617013931274,
+          "2": 1.203444480895996,
+          "3": 1.2981534004211426,
+          "4": 1.248559832572937,
+          "5": 1.2884905338287354,
+          "6": 1.2863986492156982,
+          "7": 1.3311470746994019,
+          "8": 1.2900992631912231
+        }
+      },
+      "frozen_foods": {
+        "1": 7.24,
+        "2": 0.696,
+        "3": 0.22266666666666668,
+        "4": 0.744,
+        "5": 4.182666666666667,
+        "6": 2.724,
+        "7": 1.8373333333333333,
+        "8": 0.22
+      },
+      "frozen_mean_foods": 2.2333333333333334,
+      "full_clear": {
+        "competent_seeds": {
+          "frozen": [
+            1
+          ],
+          "learning": []
+        },
+        "frozen_mean": 3.3833333333333333,
+        "learning_mean": 0.36666666666666664,
+        "level_contrast_available": false,
+        "note": "the learning arm has no seed at or above the committed competence threshold (the frozen arm has [1]), so the level contrast is undefined",
+        "threshold": 20.0
+      },
+      "graded": {
+        "ci80": [
+          -3.2691500000000002,
+          -1.045216666666666
+        ],
+        "defined": true,
+        "effect": -2.089666666666667,
+        "n": 8,
+        "p_degrade": 0.01953125,
+        "p_improve": 0.98828125,
+        "positive_seeds": 1,
+        "q_improve": 1.0
+      },
+      "learning_foods": {
+        "1": 0.0,
+        "2": 1.0413333333333334,
+        "3": 0.08,
+        "4": 0.024,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.004,
+        "8": 0.0
+      },
+      "learning_mean_foods": 0.1436666666666667,
+      "n_pairs": 8,
+      "why": "not significant"
+    }
+  },
+  "min_effect_foods": 0.5,
+  "verdict": {
+    "licenses": "nothing; I.4 records that the horizon was tested on a multi-step task and did not carry off the control",
+    "verdict": "does_not_transfer"
+  }
+}
