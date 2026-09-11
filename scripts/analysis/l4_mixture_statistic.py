@@ -14,11 +14,12 @@ The family has one member per component, plus the test the committed record was 
 * ``L`` -- the difference in mean level among competent seeds, each arm over its OWN competent
   subset. Per arm and not paired: a pair with one arm competent and the other dead would otherwise
   contribute the whole competent value to L, which is a frequency event wearing level's name.
-  Its test is a seeded bootstrap, not Mann-Whitney, for a reason that is combinatorial rather than
-  empirical: with three competent seeds per arm -- an ordinary outcome on an eight-seed panel --
-  the smallest one-sided rank p is 1/20 = 0.05, so after correction across three members the
-  smallest reachable q is 0.15 and ``level_only`` could never fire. The rank test is reported
-  beside the bootstrap as a distribution-free check.
+  Its test is a seeded label permutation: the null is that the two arms' competent seeds come
+  from one level, built by pooling them and re-splitting at the observed sizes. The interval is a
+  separate bootstrap of the arms as observed, which is what an interval is for. Resampling the
+  arms as observed is *not* a null -- those draws are centred on the observed difference, so the
+  share of them below zero asks where the effect is, not how often chance produces one this
+  large. The rank test is reported beside both as a check.
 * ``W`` -- the existing paired one-sided Wilcoxon with an 80% bootstrap CI, retained so a re-read
   stays comparable with the record it re-reads.
 
@@ -30,12 +31,18 @@ What the members can and cannot detect at these panel sizes is a property of the
 result, and is recorded here so it is read with them rather than discovered afterwards:
 
 * ``F`` is an exact binomial on the discordant pairs alone, so it needs **six** pairs all falling
-  one way to reach q <= 0.05 across three members (p = 0.0156). Five reach only q = 0.094. An
-  eight-seed panel can therefore show a real frequency difference that F cannot call, and
-  ``frequency_only`` is effectively a sixteen-seed verdict. This is the registered test and its
-  limit is left as it is; changing it because it is strict would be the move this family exists to
-  prevent.
-* ``L`` needs both arms to have a competent seed, and its precision is set by how many they have.
+  one way to reach q <= 0.05 across three members (p = 0.0156); five reach only q = 0.094. Six is
+  attainable on an eight-seed panel -- an arm competent on six seeds where the other is competent
+  on none -- so ``frequency_only`` is reachable there, but only for a lopsided split: an
+  eight-seed panel can show a real frequency difference F cannot call. This is the registered
+  test and its strictness is left alone; loosening it because it is strict would be the move this
+  family exists to prevent.
+* ``L`` needs both arms to have a competent seed, and its resolution is set by how many. The floor
+  is combinatorial and shared by every distribution-free test here: at three competent seeds a side
+  the pool has only twenty splits, so the smallest reachable p is about 0.06 and the smallest q
+  across three members about 0.19 -- ``level_only`` cannot fire. Four a side reaches q = 0.054,
+  five a side 0.027. That is a limit of these panel sizes rather than of the test, and is left as
+  one: a statistic returning small p-values at three a side is not measuring the null.
 * Neither is a mixture model. Two marginal readings are what a panel of eight or sixteen seeds can
   actually support; fitting component means and a mixing weight is not.
 * A per-seed "some up, some down" split is **not** evidence of a mixed response and is not used as
@@ -146,7 +153,10 @@ def level_contrast(
             "p_degrade": float("nan"),
         }
     a_arr, b_arr = np.array(a_vals, dtype=float), np.array(b_vals, dtype=float)
+    observed = float(a_arr.mean() - b_arr.mean())
     rng = np.random.default_rng(BOOTSTRAP_SEED)
+    # The interval comes from resampling each arm as observed: it describes where the difference
+    # is, which is what an interval is for.
     draws = np.array(
         [
             rng.choice(a_arr, a_arr.size, replace=True).mean()
@@ -154,6 +164,17 @@ def level_contrast(
             for _ in range(BOOTSTRAP_DRAWS)
         ],
     )
+    # The p-value needs a distribution under the NULL, which those draws are not: they are
+    # centred on the observed difference, so reading the share of them below zero asks where the
+    # effect is rather than how often chance produces one this large. The null here is that the
+    # two arms' competent seeds come from one level, so it is built by pooling them and
+    # re-splitting at the observed sizes.
+    pooled = np.concatenate([a_arr, b_arr])
+    permute = np.random.default_rng(BOOTSTRAP_SEED)
+    null = np.empty(BOOTSTRAP_DRAWS)
+    for i in range(BOOTSTRAP_DRAWS):
+        shuffled = permute.permutation(pooled)
+        null[i] = shuffled[: a_arr.size].mean() - shuffled[a_arr.size :].mean()
     return {
         "defined": True,
         "threshold": threshold,
@@ -163,9 +184,9 @@ def level_contrast(
         "b_mean": float(b_arr.mean()),
         "effect": float(a_arr.mean() - b_arr.mean()),
         "ci80": [float(np.quantile(draws, 0.1)), float(np.quantile(draws, 0.9))],
-        # (count + 1) / (draws + 1): the standard bootstrap estimator, never exactly zero.
-        "p_improve": float((int(np.sum(draws <= 0.0)) + 1) / (BOOTSTRAP_DRAWS + 1)),
-        "p_degrade": float((int(np.sum(draws >= 0.0)) + 1) / (BOOTSTRAP_DRAWS + 1)),
+        # (count + 1) / (draws + 1): the standard finite-sample correction, never exactly zero.
+        "p_improve": float((int(np.sum(null >= observed)) + 1) / (BOOTSTRAP_DRAWS + 1)),
+        "p_degrade": float((int(np.sum(null <= observed)) + 1) / (BOOTSTRAP_DRAWS + 1)),
         # Reported beside it, not used: it cannot reach significance at small subset sizes.
         "rank_p_improve": float(
             getattr(mannwhitneyu(a_arr, b_arr, alternative="greater"), "pvalue", 1.0),

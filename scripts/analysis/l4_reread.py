@@ -33,6 +33,9 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 import l4_mixture_statistic as ms  # noqa: E402  # pyright: ignore[reportMissingImports]
+from weight_search_architecture_ranking import (  # noqa: E402
+    bh_fdr,  # pyright: ignore[reportMissingImports]
+)
 
 REPO = _HERE.parent.parent
 SUPPORTING = REPO / "docs" / "experiments" / "logbooks" / "supporting"
@@ -190,6 +193,9 @@ def _graded(
     a_level = {s: v for s, v in a_foods.items() if s in competent_a}
     b_level = {s: v for s, v in b_foods.items() if s in competent_b}
     level = (
+        # The competent subsets are already selected on the primary metric, so the level contrast
+        # must not apply a threshold again -- the committed one is in full-clear percent and these
+        # values are foods. Routing these through the primary reader would do exactly that.
         ms.level_contrast(a_level, b_level, threshold=float("-inf"))
         if a_level and b_level
         else {
@@ -198,11 +204,28 @@ def _graded(
             "effect": float("nan"),
         }
     )
+    members = {"L": level, "W": ms.shift_contrast(a_foods, b_foods)}
+    # Corrected within itself, as a parallel family: the graded reading is not a member of the
+    # primary family and must not borrow its correction.
+    defined = [m for m in ("L", "W") if members[m].get("defined", True)]
+    for direction in ("improve", "degrade"):
+        qs = bh_fdr([members[m][f"p_{direction}"] for m in defined])
+        for member, q in zip(defined, qs, strict=True):
+            members[member][f"q_{direction}"] = float(q)
+        for member in ("L", "W"):
+            if member not in defined:
+                members[member][f"q_{direction}"] = float("nan")
+    directions = {
+        m: ms._direction(members[m], members[m]["q_improve"], members[m]["q_degrade"])
+        for m in ("L", "W")
+    }
     return {
         "available": True,
         "competence_from": "the primary metric at the committed threshold",
-        "L": level,
-        "W": ms.shift_contrast(a_foods, b_foods),
+        "L": members["L"],
+        "W": members["W"],
+        "directions": directions,
+        "alpha": ms.SIG_Q,
     }
 
 
@@ -237,10 +260,15 @@ def _print(rows: list[dict[str, Any]]) -> None:
             f"W {primary['members']['W']['effect']:+6.1f}  -> {primary['verdict']}",
         )
         graded = row["graded"]
-        if graded["available"] and graded["L"].get("defined"):
+        if graded["available"]:
+            level_text = (
+                f"L {graded['L']['effect']:+.2f}{graded['directions']['L']}"
+                if graded["L"].get("defined")
+                else "L n/a"
+            )
             print(
-                f"      graded: L {graded['L']['effect']:+.2f} foods  "
-                f"W {graded['W']['effect']:+.2f} foods",
+                f"      graded: {level_text}  "
+                f"W {graded['W']['effect']:+.2f}{graded['directions']['W']} foods",
             )
 
 

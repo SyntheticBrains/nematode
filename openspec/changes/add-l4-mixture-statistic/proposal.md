@@ -19,9 +19,9 @@ full-clear rate this substrate has produced. Mean 20.6, median 9.2. The register
 not distinguish "degrades policies" from "degrades six, transforms two", and the registered metric
 — a full clear or nothing — could not see any progress short of the cliff.
 
-The machinery is largely already here and already registered. `COMPETENT_THRESHOLD = 20.0` and a
-competent-fraction discordance test were registered as panel 2's **secondary** and used in 042 and
-044\. The graded metric exists in every committed record: `plateau_tail` has always returned mean
+The machinery is largely already here and already registered. `COMPETENT_THRESHOLD = 20.0` is panel 2's committed
+constant, and a competent-fraction discordance test was registered as panel 3's **secondary** (its
+R2) and used in 042 and 044. The graded metric exists in every committed record: `plateau_tail` has always returned mean
 foods beside the full-clear rate, and every committed per-seed CSV carries it. What is missing is a
 registered *primary* family matched to the shape, the upper-mode contrast 042 named but never
 registered, an outcome map with names for bimodal results, and the re-read.
@@ -29,8 +29,7 @@ registered, an outcome map with names for bimodal results, and the re-read.
 ## What Changes
 
 - **A registered contrast family with two components, because the shape has two.** *Frequency*:
-  paired competent-fraction discordance at the committed 20.0 threshold, an exact test on the
-  discordant pairs — promoted from panel 2's secondary to a co-primary. *Level*: the mean among each arm's own competent seeds, compared — the contrast 042 named and did not register. The existing
+  paired competent-fraction discordance at the committed 20.0 threshold, an exact test on the discordant pairs — promoted from panel 3's secondary to a co-primary. *Level*: the mean among each arm's own competent seeds, compared — the contrast 042 named and did not register. The existing
   all-seeds paired Wilcoxon is retained as the third member so every committed table stays
   comparable. BH-FDR across the family.
 - **The graded metric beside the cliff.** Plateau-tail mean foods (0–10), already computed and already committed, read as a registered parallel family rather than a footnote, so learning short of a full clear is visible. Competence is defined once, on the primary metric at the committed threshold; the graded family reads level and shift on foods and does not re-choose a threshold.

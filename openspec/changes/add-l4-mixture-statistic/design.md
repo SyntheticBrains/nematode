@@ -4,7 +4,7 @@
 
 This design is constrained by a rule it is itself an instance of: choose the statistic before the
 data exist. The statistic here is chosen from a description written on **2026-09-07**, in Logbook
-042, four panels and five days before the endpoint evaluation that made acting on it urgent:
+042, four panels and four days before the endpoint evaluation that made acting on it urgent:
 
 > Alignment finds a competent fixed point about as often on either wiring (16 against 11 of 48; R2
 > cannot separate them). When it does, the wild-type's fixed points are better: its best eight
@@ -18,8 +18,7 @@ and, in the same logbook, the test that follows from it:
 > the natural test for what panels 2 and 3 show.
 
 Both components — frequency and level — and the threshold that separates them
-(`COMPETENT_THRESHOLD = 20.0`, committed in `scripts/analysis/l4_panel2.py`) predate 052. The
-competent-fraction test was already *registered*, as panel 2's secondary, and already run. Nothing
+(`COMPETENT_THRESHOLD = 20.0`, committed in `scripts/analysis/l4_panel2.py`) predate 052. The competent-fraction test was already *registered*, as panel 3's secondary R2, and already run. Nothing
 in the family below was selected by looking at 052, and the threshold is not re-tuned here: a
 threshold chosen now, with 052's per-seed values known, would be exactly the move this change
 exists to prevent.
@@ -31,8 +30,8 @@ other no effect. So the registered family has one member for each, plus the exis
 
 | | member | statistic | reads |
 |---|---|---|---|
-| **F** | frequency | paired competent-fraction discordance at 20.0 — exact binomial on the discordant pairs | how *often* an arm lands competent |
-| **L** | level | difference in the mean level among competent seeds, each arm over its **own** competent subset, seeded bootstrap CI, one-sided | how *good* it is when it does |
+| **F** | frequency | paired competent-fraction discordance at 20.0 — exact binomial on the discordant pairs, panel 3's registered R2 generalised | how *often* an arm lands competent |
+| **L** | level | difference in the mean level among competent seeds, each arm over its **own** competent subset; p from a seeded pooled-label permutation, interval from a bootstrap of the arms as observed | how *good* it is when it does |
 | **W** | all-seeds | the existing paired one-sided Wilcoxon + 80% bootstrap CI | the shift, if the outcome is unimodal after all |
 
 Every member is one-sided in the arm-improves direction at α = 0.05, corrected together by BH-FDR

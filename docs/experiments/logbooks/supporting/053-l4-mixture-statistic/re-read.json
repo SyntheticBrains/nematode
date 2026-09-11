@@ -12,6 +12,8 @@
           "effect": null,
           "p_degrade": null,
           "p_improve": null,
+          "q_degrade": null,
+          "q_improve": null,
           "reason": "one arm has no competent seed, so there is no upper mode to compare",
           "threshold": null
         },
@@ -25,10 +27,17 @@
           "n": 8,
           "p_degrade": 0.62890625,
           "p_improve": 0.421875,
-          "positive_seeds": 4
+          "positive_seeds": 4,
+          "q_degrade": 0.62890625,
+          "q_improve": 0.421875
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "panel 1's T1",
       "primary": {
@@ -68,10 +77,10 @@
             ],
             "defined": true,
             "effect": -4.8148148148148096,
-            "p_degrade": 0.26973026973026976,
-            "p_improve": 0.7312687312687313,
-            "q_degrade": 0.8091908091908093,
-            "q_improve": 0.7312687312687313,
+            "p_degrade": 0.5154845154845155,
+            "p_improve": 0.7552447552447552,
+            "q_degrade": 0.9375,
+            "q_improve": 0.7552447552447553,
             "rank_p_degrade": 0.5,
             "rank_p_improve": 0.75,
             "threshold": 20.0
@@ -127,7 +136,9 @@
           "defined": true,
           "effect": 2.8306666666666667,
           "p_degrade": 1.0,
-          "p_improve": 0.000999000999000999,
+          "p_improve": 0.4945054945054945,
+          "q_degrade": 1.0,
+          "q_improve": 0.4945054945054945,
           "rank_p_degrade": 1.0,
           "rank_p_improve": 0.5,
           "threshold": null
@@ -142,20 +153,27 @@
           "n": 8,
           "p_degrade": 0.62890625,
           "p_improve": 0.421875,
-          "positive_seeds": 5
+          "positive_seeds": 5,
+          "q_degrade": 1.0,
+          "q_improve": 0.4945054945054945
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "the Hebbian wiring contrast on panel 1's seeds; not itself a registered test there",
       "primary": {
         "alpha": 0.05,
         "directions": {
           "F": "0",
-          "L": "+",
+          "L": "0",
           "W": "0"
         },
-        "licenses": "better fixed points, not more of them",
+        "licenses": "the contrast is closed on this evidence",
         "members": {
           "F": {
             "a_competent": 4,
@@ -170,7 +188,7 @@
             "only_b": 1,
             "p_degrade": 0.9375,
             "p_improve": 0.3125,
-            "q_degrade": 0.988011988011988,
+            "q_degrade": 0.9375,
             "q_improve": 0.3125,
             "threshold": 20.0
           },
@@ -185,10 +203,10 @@
             ],
             "defined": true,
             "effect": 25.000000000000007,
-            "p_degrade": 0.988011988011988,
-            "p_improve": 0.012987012987012988,
-            "q_degrade": 0.988011988011988,
-            "q_improve": 0.03896103896103896,
+            "p_degrade": 0.9280719280719281,
+            "p_improve": 0.08391608391608392,
+            "q_degrade": 0.9375,
+            "q_improve": 0.2517482517482518,
             "rank_p_degrade": 0.9333333333333333,
             "rank_p_improve": 0.13333333333333333,
             "threshold": 20.0
@@ -204,7 +222,7 @@
             "p_degrade": 0.84375,
             "p_improve": 0.19140625,
             "positive_seeds": 5,
-            "q_degrade": 0.988011988011988,
+            "q_degrade": 0.9375,
             "q_improve": 0.287109375
           }
         },
@@ -222,7 +240,7 @@
           ],
           "is_split": true
         },
-        "verdict": "level_only"
+        "verdict": "no_effect"
       },
       "protocol": "panel",
       "table": "040-l4-panel"
@@ -244,7 +262,9 @@
           "defined": true,
           "effect": 3.2560000000000002,
           "p_degrade": 1.0,
-          "p_improve": 0.000999000999000999,
+          "p_improve": 0.4945054945054945,
+          "q_degrade": 1.0,
+          "q_improve": 0.4945054945054945,
           "rank_p_degrade": 1.0,
           "rank_p_improve": 0.5,
           "threshold": null
@@ -259,10 +279,17 @@
           "n": 16,
           "p_degrade": 0.8387451171875,
           "p_improve": 0.1741943359375,
-          "positive_seeds": 10
+          "positive_seeds": 10,
+          "q_degrade": 1.0,
+          "q_improve": 0.348388671875
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "panel 2's P1, the primary",
       "primary": {
@@ -287,7 +314,7 @@
             "only_b": 4,
             "p_degrade": 0.927001953125,
             "p_improve": 0.19384765625,
-            "q_degrade": 0.958041958041958,
+            "q_degrade": 0.927001953125,
             "q_improve": 0.19384765625,
             "threshold": 20.0
           },
@@ -302,10 +329,10 @@
             ],
             "defined": true,
             "effect": 14.785185185185192,
-            "p_degrade": 0.958041958041958,
-            "p_improve": 0.04295704295704296,
-            "q_degrade": 0.958041958041958,
-            "q_improve": 0.11069442620192105,
+            "p_degrade": 0.9020979020979021,
+            "p_improve": 0.1018981018981019,
+            "q_degrade": 0.927001953125,
+            "q_improve": 0.15284715284715286,
             "rank_p_degrade": 0.8574693887342786,
             "rank_p_improve": 0.17479331295347555,
             "threshold": 20.0
@@ -321,8 +348,8 @@
             "p_degrade": 0.926203715865386,
             "p_improve": 0.07379628413461403,
             "positive_seeds": 10,
-            "q_degrade": 0.958041958041958,
-            "q_improve": 0.11069442620192105
+            "q_degrade": 0.927001953125,
+            "q_improve": 0.15284715284715286
           }
         },
         "n_pairs": 16,
@@ -369,7 +396,9 @@
           "defined": true,
           "effect": 0.1546666666666674,
           "p_degrade": 1.0,
-          "p_improve": 0.000999000999000999,
+          "p_improve": 0.4945054945054945,
+          "q_degrade": 1.0,
+          "q_improve": 0.5100250244140625,
           "rank_p_degrade": 1.0,
           "rank_p_improve": 0.5,
           "threshold": null
@@ -384,20 +413,27 @@
           "n": 16,
           "p_degrade": 0.5100250244140625,
           "p_improve": 0.5100250244140625,
-          "positive_seeds": 7
+          "positive_seeds": 7,
+          "q_degrade": 1.0,
+          "q_improve": 0.5100250244140625
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "panel 2's P2, count-initialised",
       "primary": {
         "alpha": 0.05,
         "directions": {
           "F": "0",
-          "L": "+",
+          "L": "0",
           "W": "0"
         },
-        "licenses": "better fixed points, not more of them",
+        "licenses": "the contrast is closed on this evidence",
         "members": {
           "F": {
             "a_competent": 3,
@@ -412,7 +448,7 @@
             "only_b": 4,
             "p_degrade": 0.34375,
             "p_improve": 0.890625,
-            "q_degrade": 0.9744724408112385,
+            "q_degrade": 0.9630369630369632,
             "q_improve": 0.890625,
             "threshold": 20.0
           },
@@ -427,10 +463,10 @@
             ],
             "defined": true,
             "effect": 22.74666666666667,
-            "p_degrade": 0.996003996003996,
-            "p_improve": 0.004995004995004995,
-            "q_degrade": 0.996003996003996,
-            "q_improve": 0.014985014985014984,
+            "p_degrade": 0.9630369630369631,
+            "p_improve": 0.055944055944055944,
+            "q_degrade": 0.9630369630369632,
+            "q_improve": 0.16783216783216784,
             "rank_p_degrade": 0.9642857142857143,
             "rank_p_improve": 0.07142857142857142,
             "threshold": 20.0
@@ -446,7 +482,7 @@
             "p_degrade": 0.649648293874159,
             "p_improve": 0.350351706125841,
             "positive_seeds": 8,
-            "q_degrade": 0.9744724408112385,
+            "q_degrade": 0.9630369630369632,
             "q_improve": 0.5255275591887615
           }
         },
@@ -467,7 +503,7 @@
           ],
           "is_split": true
         },
-        "verdict": "level_only"
+        "verdict": "no_effect"
       },
       "protocol": "panel",
       "table": "041-l4-panel2"
@@ -488,8 +524,10 @@
           ],
           "defined": true,
           "effect": 1.0704000000000002,
-          "p_degrade": 0.9080919080919081,
-          "p_improve": 0.09290709290709291,
+          "p_degrade": 0.8821178821178821,
+          "p_improve": 0.11988011988011989,
+          "q_degrade": 0.8821178821178821,
+          "q_improve": 0.20042303422471264,
           "rank_p_degrade": 0.8888888888888888,
           "rank_p_improve": 0.15476190476190477,
           "threshold": null
@@ -504,10 +542,17 @@
           "n": 48,
           "p_degrade": 0.802431925273396,
           "p_improve": 0.20042303422471264,
-          "positive_seeds": 25
+          "positive_seeds": 25,
+          "q_degrade": 0.8821178821178821,
+          "q_improve": 0.20042303422471264
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "panel 3's R1",
       "primary": {
@@ -532,7 +577,7 @@
             "only_b": 6,
             "p_degrade": 0.9282684326171875,
             "p_improve": 0.1661529541015625,
-            "q_degrade": 0.973026973026973,
+            "q_degrade": 0.9390609390609391,
             "q_improve": 0.18805832529809616,
             "threshold": 20.0
           },
@@ -547,10 +592,10 @@
             ],
             "defined": true,
             "effect": 12.922727272727258,
-            "p_degrade": 0.973026973026973,
-            "p_improve": 0.027972027972027972,
-            "q_degrade": 0.973026973026973,
-            "q_improve": 0.08391608391608392,
+            "p_degrade": 0.939060939060939,
+            "p_improve": 0.061938061938061936,
+            "q_degrade": 0.9390609390609391,
+            "q_improve": 0.1858141858141858,
             "rank_p_degrade": 0.9126792442311388,
             "rank_p_improve": 0.09542336861113504,
             "threshold": 20.0
@@ -566,7 +611,7 @@
             "p_degrade": 0.8119416747019039,
             "p_improve": 0.18805832529809613,
             "positive_seeds": 24,
-            "q_degrade": 0.973026973026973,
+            "q_degrade": 0.9390609390609391,
             "q_improve": 0.18805832529809616
           }
         },
@@ -622,6 +667,8 @@
           "effect": null,
           "p_degrade": null,
           "p_improve": null,
+          "q_degrade": null,
+          "q_improve": null,
           "reason": "one arm has no competent seed, so there is no upper mode to compare",
           "threshold": null
         },
@@ -635,10 +682,17 @@
           "n": 16,
           "p_degrade": 0.71905517578125,
           "p_improve": 0.2982940673828125,
-          "positive_seeds": 9
+          "positive_seeds": 9,
+          "q_degrade": 0.71905517578125,
+          "q_improve": 0.2982940673828125
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "grounded signs, G2",
       "primary": {
@@ -678,8 +732,8 @@
             ],
             "defined": true,
             "effect": 10.699999999999996,
-            "p_degrade": 0.8421578421578422,
-            "p_improve": 0.15884115884115885,
+            "p_degrade": 0.7712287712287712,
+            "p_improve": 0.25274725274725274,
             "q_degrade": 0.890625,
             "q_improve": 0.34375,
             "rank_p_degrade": 0.8666666666666667,
@@ -734,6 +788,8 @@
           "effect": null,
           "p_degrade": null,
           "p_improve": null,
+          "q_degrade": null,
+          "q_improve": null,
           "reason": "one arm has no competent seed, so there is no upper mode to compare",
           "threshold": null
         },
@@ -747,10 +803,17 @@
           "n": 16,
           "p_degrade": 0.247711181640625,
           "p_improve": 0.76812744140625,
-          "positive_seeds": 7
+          "positive_seeds": 7,
+          "q_degrade": 0.247711181640625,
+          "q_improve": 0.76812744140625
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "Dale's law enforced, G4",
       "primary": {
@@ -775,7 +838,7 @@
             "only_b": 3,
             "p_degrade": 0.5,
             "p_improve": 0.8125,
-            "q_degrade": 0.7342657342657343,
+            "q_degrade": 0.6383616383616384,
             "q_improve": 0.8125,
             "threshold": 20.0
           },
@@ -790,10 +853,10 @@
             ],
             "defined": true,
             "effect": 8.79999999999999,
-            "p_degrade": 0.7342657342657343,
-            "p_improve": 0.26673326673326675,
-            "q_degrade": 0.7342657342657343,
-            "q_improve": 0.8001998001998003,
+            "p_degrade": 0.6383616383616384,
+            "p_improve": 0.3946053946053946,
+            "q_degrade": 0.6383616383616384,
+            "q_improve": 0.8125,
             "rank_p_degrade": 0.6000000000000001,
             "rank_p_improve": 0.6000000000000001,
             "threshold": 20.0
@@ -809,7 +872,7 @@
             "p_degrade": 0.21879171089838256,
             "p_improve": 0.7812082891016174,
             "positive_seeds": 7,
-            "q_degrade": 0.6563751326951477,
+            "q_degrade": 0.6383616383616384,
             "q_improve": 0.8125
           }
         },
@@ -880,9 +943,9 @@
             ],
             "defined": true,
             "effect": -7.0,
-            "p_degrade": 0.12487512487512488,
-            "p_improve": 0.8761238761238761,
-            "q_degrade": 0.12487512487512488,
+            "p_degrade": 0.25374625374625376,
+            "p_improve": 0.7582417582417582,
+            "q_degrade": 0.25374625374625376,
             "q_improve": 1.0,
             "rank_p_degrade": 0.26666666666666666,
             "rank_p_improve": 0.8,
@@ -968,9 +1031,9 @@
             ],
             "defined": true,
             "effect": -1.5,
-            "p_degrade": 0.3966033966033966,
-            "p_improve": 0.6043956043956044,
-            "q_degrade": 0.3966033966033966,
+            "p_degrade": 0.3876123876123876,
+            "p_improve": 0.6133866133866134,
+            "q_degrade": 0.3876123876123876,
             "q_improve": 1.0,
             "rank_p_degrade": 0.4259074259074259,
             "rank_p_improve": 0.6227106227106227,
@@ -1054,10 +1117,10 @@
             ],
             "defined": true,
             "effect": 11.149999999999999,
-            "p_degrade": 0.9820179820179821,
-            "p_improve": 0.01898101898101898,
-            "q_degrade": 0.9820179820179821,
-            "q_improve": 0.056943056943056944,
+            "p_degrade": 0.9000999000999002,
+            "p_improve": 0.1008991008991009,
+            "q_degrade": 0.9000999000999,
+            "q_improve": 0.30269730269730266,
             "rank_p_degrade": 0.9232323232323232,
             "rank_p_improve": 0.10707070707070708,
             "threshold": 20.0
@@ -1109,6 +1172,8 @@
           "effect": null,
           "p_degrade": null,
           "p_improve": null,
+          "q_degrade": null,
+          "q_improve": null,
           "reason": "one arm has no competent seed, so there is no upper mode to compare",
           "threshold": null
         },
@@ -1122,10 +1187,17 @@
           "n": 16,
           "p_degrade": 0.6839141845703125,
           "p_improve": 0.3342742919921875,
-          "positive_seeds": 10
+          "positive_seeds": 10,
+          "q_degrade": 0.6839141845703125,
+          "q_improve": 0.3342742919921875
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "S1",
       "primary": {
@@ -1150,7 +1222,7 @@
             "only_b": 3,
             "p_degrade": 0.65625,
             "p_improve": 0.65625,
-            "q_degrade": 0.9590409590409591,
+            "q_degrade": 0.8351648351648352,
             "q_improve": 0.65625,
             "threshold": 20.0
           },
@@ -1165,10 +1237,10 @@
             ],
             "defined": true,
             "effect": 14.533333333333317,
-            "p_degrade": 0.9590409590409591,
-            "p_improve": 0.04195804195804196,
-            "q_degrade": 0.9590409590409591,
-            "q_improve": 0.1258741258741259,
+            "p_degrade": 0.8351648351648352,
+            "p_improve": 0.17082917082917082,
+            "q_degrade": 0.8351648351648352,
+            "q_improve": 0.5124875124875125,
             "rank_p_degrade": 0.9,
             "rank_p_improve": 0.2,
             "threshold": 20.0
@@ -1184,7 +1256,7 @@
             "p_degrade": 0.5819576774533702,
             "p_improve": 0.41804232254662976,
             "positive_seeds": 8,
-            "q_degrade": 0.9590409590409591,
+            "q_degrade": 0.8351648351648352,
             "q_improve": 0.6270634838199447
           }
         },
@@ -1222,6 +1294,8 @@
           "effect": null,
           "p_degrade": null,
           "p_improve": null,
+          "q_degrade": null,
+          "q_improve": null,
           "reason": "one arm has no competent seed, so there is no upper mode to compare",
           "threshold": null
         },
@@ -1235,10 +1309,17 @@
           "n": 16,
           "p_degrade": 0.4899749755859375,
           "p_improve": 0.530059814453125,
-          "positive_seeds": 8
+          "positive_seeds": 8,
+          "q_degrade": 0.4899749755859375,
+          "q_improve": 0.530059814453125
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "S2",
       "primary": {
@@ -1263,7 +1344,7 @@
             "only_b": 3,
             "p_degrade": 0.65625,
             "p_improve": 0.65625,
-            "q_degrade": 0.9050949050949052,
+            "q_degrade": 0.7652347652347652,
             "q_improve": 0.65625,
             "threshold": 20.0
           },
@@ -1278,10 +1359,10 @@
             ],
             "defined": true,
             "effect": 12.533333333333328,
-            "p_degrade": 0.9050949050949051,
-            "p_improve": 0.0959040959040959,
-            "q_degrade": 0.9050949050949052,
-            "q_improve": 0.28771228771228774,
+            "p_degrade": 0.7652347652347652,
+            "p_improve": 0.24775224775224775,
+            "q_degrade": 0.7652347652347652,
+            "q_improve": 0.65625,
             "rank_p_degrade": 0.9,
             "rank_p_improve": 0.2,
             "threshold": 20.0
@@ -1297,7 +1378,7 @@
             "p_degrade": 0.5125200405841451,
             "p_improve": 0.4874799594158549,
             "positive_seeds": 7,
-            "q_degrade": 0.9050949050949052,
+            "q_degrade": 0.7652347652347652,
             "q_improve": 0.65625
           }
         },
@@ -1335,6 +1416,8 @@
           "effect": null,
           "p_degrade": null,
           "p_improve": null,
+          "q_degrade": null,
+          "q_improve": null,
           "reason": "one arm has no competent seed, so there is no upper mode to compare",
           "threshold": null
         },
@@ -1348,20 +1431,27 @@
           "n": 16,
           "p_degrade": 0.6657257080078125,
           "p_improve": 0.3528594970703125,
-          "positive_seeds": 9
+          "positive_seeds": 9,
+          "q_degrade": 0.6657257080078125,
+          "q_improve": 0.3528594970703125
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "S1",
       "primary": {
         "alpha": 0.05,
         "directions": {
           "F": "0",
-          "L": "-",
+          "L": "0",
           "W": "0"
         },
-        "licenses": "nothing",
+        "licenses": "the contrast is closed on this evidence",
         "members": {
           "F": {
             "a_competent": 1,
@@ -1391,9 +1481,9 @@
             ],
             "defined": true,
             "effect": -17.851851851851855,
-            "p_degrade": 0.000999000999000999,
+            "p_degrade": 0.24175824175824176,
             "p_improve": 1.0,
-            "q_degrade": 0.002997002997002997,
+            "q_degrade": 0.46875,
             "q_improve": 1.0,
             "rank_p_degrade": 0.25,
             "rank_p_improve": 1.0,
@@ -1430,7 +1520,7 @@
           ],
           "is_split": true
         },
-        "verdict": "degrades"
+        "verdict": "no_effect"
       },
       "protocol": "panel",
       "table": "047-l4-structured-instruction"
@@ -1451,8 +1541,10 @@
           ],
           "defined": true,
           "effect": -0.35999999999999943,
-          "p_degrade": 0.000999000999000999,
+          "p_degrade": 0.4945054945054945,
           "p_improve": 1.0,
+          "q_degrade": 0.4945054945054945,
+          "q_improve": 1.0,
           "rank_p_degrade": 0.5,
           "rank_p_improve": 1.0,
           "threshold": null
@@ -1467,10 +1559,17 @@
           "n": 16,
           "p_degrade": 0.0522918701171875,
           "p_improve": 0.953277587890625,
-          "positive_seeds": 5
+          "positive_seeds": 5,
+          "q_degrade": 0.104583740234375,
+          "q_improve": 1.0
         },
+        "alpha": 0.05,
         "available": true,
-        "competence_from": "the primary metric at the committed threshold"
+        "competence_from": "the primary metric at the committed threshold",
+        "directions": {
+          "L": "0",
+          "W": "0"
+        }
       },
       "note": "S2",
       "primary": {
@@ -1495,7 +1594,7 @@
             "only_b": 3,
             "p_degrade": 0.125,
             "p_improve": 1.0,
-            "q_degrade": 0.125,
+            "q_degrade": 0.1875,
             "q_improve": 1.0,
             "threshold": 20.0
           },
@@ -1510,9 +1609,9 @@
             ],
             "defined": true,
             "effect": -8.266666666666666,
-            "p_degrade": 0.061938061938061936,
-            "p_improve": 0.939060939060939,
-            "q_degrade": 0.0929070929070929,
+            "p_degrade": 0.3946053946053946,
+            "p_improve": 0.6923076923076923,
+            "q_degrade": 0.3946053946053946,
             "q_improve": 1.0,
             "rank_p_degrade": 0.4,
             "rank_p_improve": 0.8,
@@ -1563,7 +1662,7 @@
         "alpha": 0.05,
         "directions": {
           "F": "-",
-          "L": "-",
+          "L": "0",
           "W": "-"
         },
         "licenses": "nothing",
@@ -1581,7 +1680,7 @@
             "only_b": 6,
             "p_degrade": 0.015625,
             "p_improve": 1.0,
-            "q_degrade": 0.015625,
+            "q_degrade": 0.0234375,
             "q_improve": 1.0,
             "threshold": 20.0
           },
@@ -1596,9 +1695,9 @@
             ],
             "defined": true,
             "effect": -11.900000000000002,
-            "p_degrade": 0.002997002997002997,
-            "p_improve": 0.998001998001998,
-            "q_degrade": 0.008991008991008992,
+            "p_degrade": 0.11188811188811189,
+            "p_improve": 0.9000999000999002,
+            "q_degrade": 0.11188811188811189,
             "q_improve": 1.0,
             "rank_p_degrade": 0.2,
             "rank_p_improve": 0.8666666666666667,
@@ -1615,7 +1714,7 @@
             "p_degrade": 0.0078125,
             "p_improve": 0.99609375,
             "positive_seeds": 1,
-            "q_degrade": 0.01171875,
+            "q_degrade": 0.0234375,
             "q_improve": 1.0
           }
         },
@@ -1685,10 +1784,10 @@
             ],
             "defined": true,
             "effect": 3.8999999999999986,
-            "p_degrade": 0.8171828171828172,
-            "p_improve": 0.1838161838161838,
-            "q_degrade": 0.8171828171828172,
-            "q_improve": 0.5514485514485514,
+            "p_degrade": 0.5994005994005994,
+            "p_improve": 0.4435564435564436,
+            "q_degrade": 0.5994005994005994,
+            "q_improve": 1.0,
             "rank_p_degrade": 0.6666666666666667,
             "rank_p_improve": 0.4444444444444444,
             "threshold": 20.0
@@ -1774,10 +1873,10 @@
             ],
             "defined": true,
             "effect": 7.233333333333334,
-            "p_degrade": 0.7152847152847153,
-            "p_improve": 0.2857142857142857,
-            "q_degrade": 0.7152847152847152,
-            "q_improve": 0.8571428571428571,
+            "p_degrade": 0.7142857142857143,
+            "p_improve": 0.28771228771228774,
+            "q_degrade": 0.7142857142857143,
+            "q_improve": 0.8631368631368632,
             "rank_p_degrade": 0.6121212121212121,
             "rank_p_improve": 0.4606060606060607,
             "threshold": 20.0
