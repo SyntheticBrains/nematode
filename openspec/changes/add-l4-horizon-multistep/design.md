@@ -88,9 +88,11 @@ a connectome arm.
 
 - I.3's own recovery is partial: at twenty steps of delay even `0.999` stays **below** the
   registered bar (49.8% against 50%). A 2400-step episode is two orders further out.
-- At `trace_decay 0.99` a trace retains 0.37 over a hundred steps and effectively never decays
-  within a 2400-step episode; at `0.999` it accumulates roughly a thousand steps of history before
-  decaying meaningfully, and the trace is reset only between episodes. That does not remove the
+- At `trace_decay 0.99` a trace retains 0.37 over a hundred steps but only 3e-11 over a 2400-step
+  episode, so it does decay away within one — it reaches about a hundred steps back, not the whole
+  episode. Only `0.999` carries across an episode at all, retaining 0.90 over a hundred steps and
+  0.09 over 2400. The two raised arms therefore ask different questions: 0.99 lengthens the reach
+  by an order without spanning the episode, and 0.999 is the one that approaches spanning it. That does not remove the
   credit-assignment problem; it trades a trace too short to bridge the delay for one too long to
   distinguish which action earned the reward. **The two failures look different and the record
   should separate them**: a horizon too short leaves the policy near its frozen control, drifting

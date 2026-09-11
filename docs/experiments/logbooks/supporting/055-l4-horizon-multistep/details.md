@@ -36,6 +36,16 @@ That was the case the design named as "a horizon too long — substantial drift,
 present at **every** setting including the pinned one, which means the horizon is not the variable
 that controls it.
 
+## The full-clear metric, and which arm is competent
+
+Learning **1.17%**, frozen **3.38%**. One seed clears the 20% competence threshold — **seed 1, in
+the frozen arm**, at 25.9% — and no learning arm has one at any horizon. The level contrast needs a
+competent seed in both arms, so it is undefined, and the record says which arm lacks one rather than
+claiming none exists.
+
+That the only competent seed belongs to a policy that never learned is the same finding as the
+graded metric's, in the cliff's units.
+
 ## An internal check that passed
 
 The three frozen controls return **identical** values (2.233 mean, the same eight per-seed numbers).

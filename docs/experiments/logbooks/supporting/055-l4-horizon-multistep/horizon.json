@@ -31,10 +31,17 @@
       },
       "frozen_mean_foods": 2.2333333333333334,
       "full_clear": {
-        "competent_seeds": 1,
+        "competent_seeds": {
+          "frozen": [
+            1
+          ],
+          "learning": []
+        },
         "frozen_mean": 3.3833333333333333,
         "learning_mean": 1.166666666666667,
-        "note": "the competence-dependent contrasts are undefined with no competent seed"
+        "level_contrast_available": false,
+        "note": "the learning arm has no seed at or above the committed competence threshold (the frozen arm has [1]), so the level contrast is undefined",
+        "threshold": 20.0
       },
       "graded": {
         "ci80": [
@@ -91,10 +98,17 @@
       },
       "frozen_mean_foods": 2.2333333333333334,
       "full_clear": {
-        "competent_seeds": 1,
+        "competent_seeds": {
+          "frozen": [
+            1
+          ],
+          "learning": []
+        },
         "frozen_mean": 3.3833333333333333,
         "learning_mean": 0.13333333333333333,
-        "note": "the competence-dependent contrasts are undefined with no competent seed"
+        "level_contrast_available": false,
+        "note": "the learning arm has no seed at or above the committed competence threshold (the frozen arm has [1]), so the level contrast is undefined",
+        "threshold": 20.0
       },
       "graded": {
         "ci80": [
@@ -151,10 +165,17 @@
       },
       "frozen_mean_foods": 2.2333333333333334,
       "full_clear": {
-        "competent_seeds": 1,
+        "competent_seeds": {
+          "frozen": [
+            1
+          ],
+          "learning": []
+        },
         "frozen_mean": 3.3833333333333333,
         "learning_mean": 0.36666666666666664,
-        "note": "the competence-dependent contrasts are undefined with no competent seed"
+        "level_contrast_available": false,
+        "note": "the learning arm has no seed at or above the committed competence threshold (the frozen arm has [1]), so the level contrast is undefined",
+        "threshold": 20.0
       },
       "graded": {
         "ci80": [

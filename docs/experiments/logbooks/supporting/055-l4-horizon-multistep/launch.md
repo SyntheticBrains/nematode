@@ -32,9 +32,10 @@ against ~8 min, and it is registered only if the yardstick moves.
 **Plateau-tail mean foods**, with I.2's family, learning arm against its own frozen control, paired
 by seed, one-sided, BH-FDR across the three horizons.
 
-The full-clear metric cannot serve: every yardstick arm ever run sits at its floor (committed 040
-mean **1.05%**, no seed competent), so the competence-dependent contrasts are undefined and are
-reported as such rather than as nulls. The committed 040 yardstick values are a **descriptive
+The full-clear metric cannot serve: every yardstick arm in the committed 040 table sits at its
+floor (mean **1.05%**, no seed competent there). Where a seed does clear the threshold in this
+campaign, the level contrast still needs one in **both** arms, so the record derives which arm
+lacks one rather than asserting that none exists. The committed 040 yardstick values are a **descriptive
 reference only** — they ran under the original rule.
 
 **Significance is not sufficient.** A paired rank test at eight seeds fires on the consistency of

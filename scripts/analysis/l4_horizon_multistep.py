@@ -84,9 +84,35 @@ def scan(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> dict[str, dict[
             continue
         arm = "frozen" if match.group("frozen") else "learning"
         seed = int(match.group("seed"))
+        if seed in out[horizon][arm]:
+            # Two logs for one cell: whichever was read second would silently replace the first,
+            # and the campaign would score as if one run had happened.
+            msg = (
+                f"duplicate run for {horizon}/{arm} seed {seed}: {log.name} and an earlier log "
+                "both claim this cell"
+            )
+            raise ValueError(msg)
         out[horizon][arm][seed] = record
         out[horizon]["logs"].setdefault(arm, {})[seed] = log
     return out
+
+
+def require_complete(scanned: dict[str, dict[str, Any]]) -> None:
+    """Refuse to score a campaign that is missing any registered cell.
+
+    A dropped or unfinished run would otherwise shrink a horizon's pairing silently, and the
+    registered verdict -- including ``does_not_transfer`` -- would be assigned on partial evidence
+    while looking exactly like a complete result.
+    """
+    missing: list[str] = []
+    for horizon in HORIZONS:
+        for arm in ("learning", "frozen"):
+            absent = [s for s in SEEDS if s not in scanned[horizon][arm]]
+            if absent:
+                missing.append(f"{horizon}/{arm} seeds {absent}")
+    if missing:
+        msg = "campaign is incomplete, so no verdict is available: " + "; ".join(missing)
+        raise ValueError(msg)
 
 
 def _weights(log: Path, experiments: Path = EXPERIMENTS) -> np.ndarray | None:
@@ -131,6 +157,45 @@ def drift(logs: dict[str, dict[int, Path]], experiments: Path = EXPERIMENTS) -> 
     }
 
 
+def _full_clear(
+    learning: dict[int, float],
+    frozen: dict[int, float],
+) -> dict[str, Any]:
+    """Report the primary metric and say, from the data, why the level contrast is unavailable.
+
+    The level contrast needs a competent seed in **both** arms. Which arm lacks one is the
+    informative part and is derived here rather than asserted, so the record cannot claim there is
+    no competent seed while reporting that there is.
+    """
+    competent = {
+        arm: sorted(s for s, v in values.items() if v >= ms.COMPETENT_THRESHOLD)
+        for arm, values in (("learning", learning), ("frozen", frozen))
+    }
+    empty = [arm for arm, seeds in competent.items() if not seeds]
+    if not empty:
+        note = "both arms have a competent seed, so the level contrast is available"
+    elif len(empty) == 2:
+        note = (
+            "neither arm has a seed at or above the committed competence threshold, so the "
+            "level contrast is undefined"
+        )
+    else:
+        note = (
+            f"the {empty[0]} arm has no seed at or above the committed competence threshold "
+            f"(the {'frozen' if empty[0] == 'learning' else 'learning'} arm has "
+            f"{competent['frozen' if empty[0] == 'learning' else 'learning']}), so the level "
+            "contrast is undefined"
+        )
+    return {
+        "threshold": ms.COMPETENT_THRESHOLD,
+        "learning_mean": float(np.mean(list(learning.values()) or [math.nan])),
+        "frozen_mean": float(np.mean(list(frozen.values()) or [math.nan])),
+        "competent_seeds": dict(competent),
+        "level_contrast_available": not empty,
+        "note": note,
+    }
+
+
 def compare(horizon: dict[str, Any], experiments: Path = EXPERIMENTS) -> dict[str, Any]:
     """Score one horizon's learning arm against its own frozen control."""
     learning_foods = {s: r.foods for s, r in horizon["learning"].items()}
@@ -147,16 +212,7 @@ def compare(horizon: dict[str, Any], experiments: Path = EXPERIMENTS) -> dict[st
         "graded": graded,
         # Reported so the floor is visible rather than assumed; the competence-dependent contrasts
         # are undefined here and say so rather than returning a null.
-        "full_clear": {
-            "learning_mean": float(np.mean(list(learning_clear.values()) or [math.nan])),
-            "frozen_mean": float(np.mean(list(frozen_clear.values()) or [math.nan])),
-            "competent_seeds": sum(
-                1
-                for v in list(learning_clear.values()) + list(frozen_clear.values())
-                if v >= ms.COMPETENT_THRESHOLD
-            ),
-            "note": "the competence-dependent contrasts are undefined with no competent seed",
-        },
+        "full_clear": _full_clear(learning_clear, frozen_clear),
         "drift": drift(horizon["logs"], experiments),
     }
 
@@ -249,10 +305,11 @@ def _print(out: dict[str, Any]) -> None:
             f"{'YES' if cell['beats_control'] else 'no'} ({cell['why']})",
         )
     first = next(iter(out["horizons"].values()))
+    clear = first["full_clear"]
     print(
-        f"\n  full-clear metric: learning {first['full_clear']['learning_mean']:.2f}%, "
-        f"competent seeds {first['full_clear']['competent_seeds']} "
-        f"-- {first['full_clear']['note']}",
+        f"\n  full-clear metric: learning {clear['learning_mean']:.2f}%, "
+        f"frozen {clear['frozen_mean']:.2f}%, competent seeds {clear['competent_seeds']}"
+        f"\n    {clear['note']}",
     )
     print(
         f"  committed yardstick reference (original rule): {out['committed_yardstick_foods']:.2f} foods",
@@ -270,6 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     scanned = scan(args.campaign_dir, args.experiments)
+    require_complete(scanned)
     out = analyse(scanned, args.experiments)
     _print(out)
 
