@@ -19,6 +19,18 @@ costs every policy the same, so it sits on both sides); a policy with ``mu(c) = 
 ``-sigma^2``. The gap between them is exactly ``Var[t]``, and it can only be closed by using the
 cue.
 
+The task also supports a **delay** between the scored action and the reward. At delay ``D`` the
+cue is shown, the scored action is taken, ``D`` further steps run against a constant filler
+observation, and the reward arrives once at the end. Nothing about what is scored changes, and
+neither do the bounds -- they depend on the targets and the exploration noise alone -- so a
+delayed arm is directly comparable with an undelayed one and ``D = 0`` is the undelayed control.
+
+The delay exists because the rule's eligibility decays, and a one-step task cannot see that: the
+control resets the trace every trial, which is what removes the horizon confound from the
+undelayed question and what makes it useless for the horizon itself. What a delay imposes is not
+decay but **dilution** -- the credited step's share of the trace falls as later steps add their
+own terms -- and dilution is what survives a rule that normalises its trace.
+
 Pure functions and a dataclass: no environment, no runner, no connectome, no action head. What
 is under test is the rule, its eligibility and its modulator, and everything else that could
 explain a null is removed rather than controlled for.
@@ -64,9 +76,40 @@ class ContextualAssociation:
         out[cue] = 1.0
         return out
 
+    def filler(self) -> np.ndarray:
+        """Return the observation shown between the scored action and a delayed reward.
+
+        Uniform over the cue channels, so it is identical on every trial and says nothing about
+        which cue was shown. Three properties matter and each is load-bearing:
+
+        - **Nonzero.** Where a topology's plastic layer takes the observation as its pre-synaptic
+          input, a zero input adds nothing to the eligibility trace. The trace at reward time
+          would then be a pure scalar multiple of the credited step's, and a rule that normalises
+          its trace by a running RMS divides exactly that out -- the delay would measure nothing
+          at any length.
+        - **Constant.** Anything varying with the cue would leak the association into the steps
+          that follow the scored action.
+        - **The same width as a cue.** A separate "no cue" channel would widen the observation and
+          change the network's initialisation, so a delay of zero would no longer reproduce the
+          undelayed control.
+        """
+        return np.full(self.n_cues, 1.0 / self.n_cues, dtype=np.float32)
+
     def reward(self, cue: int, action: float) -> float:
         """Score an action: ``-(a - t(c))^2``, zero at the target and falling away quadratically."""
         return -float((action - self.targets[cue]) ** 2)
+
+    def credited_share(self, decay: float, delay: int) -> float:
+        """Return the credited step's share of the trace when a delayed reward arrives.
+
+        The scored step contributes ``decay ** delay`` by the time the modulator lands; each
+        intervening step contributes its own term, which is what *dilutes* the credited one. A
+        rule that normalises its trace rescales the whole sum, so the share -- not the magnitude --
+        is what a delay actually changes, and it is what this control measures.
+        """
+        credited = decay**delay
+        intervening = sum(decay**step for step in range(delay))
+        return credited / (credited + intervening)
 
     def cue_blind_floor(self, noise: float) -> float:
         """Return the best expected reward available without using the cue.

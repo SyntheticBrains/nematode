@@ -340,6 +340,106 @@ class TestTheAnnealedArm:
         assert not np.isnan(run["alignment_floor"])
 
 
+class TestTheDelay:
+    """A delay makes the eligibility horizon measurable; without one it is not."""
+
+    def test_zero_delay_is_the_committed_control(self) -> None:
+        # The anchor. An extension that moves the numbers at zero delay has replaced the
+        # instrument rather than extended it.
+        plain = pc.run_arm("node_perturbation", seed=1, task=_TASK, trials=600, node_noise=0.2)
+        delayed = pc.run_arm(
+            "node_perturbation",
+            seed=1,
+            task=_TASK,
+            trials=600,
+            node_noise=0.2,
+            delay=0,
+        )
+        assert delayed["score"] == plain["score"]
+        assert delayed["credited_share"] == 1.0
+
+    def test_the_horizon_is_unmeasurable_without_a_delay(self) -> None:
+        # Why the delay exists: the undelayed control resets the trace every trial, so the decay
+        # has nothing to act across and every setting gives the same answer.
+        scores = {
+            decay: pc.run_arm(
+                "node_perturbation",
+                seed=1,
+                task=_TASK,
+                trials=600,
+                node_noise=0.2,
+                trace_decay=decay,
+            )["score"]
+            for decay in (0.0, 0.9, 0.99)
+        }
+        assert len(set(scores.values())) == 1
+
+    def test_a_delay_makes_it_measurable(self) -> None:
+        scores = {
+            decay: pc.run_arm(
+                "node_perturbation",
+                seed=1,
+                task=_TASK,
+                trials=600,
+                node_noise=0.2,
+                delay=5,
+                trace_decay=decay,
+            )["score"]
+            for decay in (0.0, 0.9, 0.99)
+        }
+        assert len(set(scores.values())) > 1
+
+    def test_the_run_records_the_knobs_it_used(self) -> None:
+        run = pc.run_arm(
+            "node_perturbation",
+            seed=1,
+            task=_TASK,
+            trials=200,
+            node_noise=0.2,
+            delay=5,
+            trace_decay=0.99,
+            homeostasis=False,
+        )
+        assert run["delay"] == 5
+        assert run["trace_decay"] == 0.99
+        assert run["homeostasis"] is False
+        assert run["credited_share"] == pytest.approx(_TASK.credited_share(0.99, 5))
+
+
+class TestTheKnobsReachTheRule:
+    def test_homeostasis_changes_the_outcome(self) -> None:
+        on = pc.run_arm("node_perturbation", seed=1, task=_TASK, trials=600, node_noise=0.2)
+        off = pc.run_arm(
+            "node_perturbation",
+            seed=1,
+            task=_TASK,
+            trials=600,
+            node_noise=0.2,
+            homeostasis=False,
+        )
+        assert on["score"] != off["score"]
+
+    def test_the_exploration_noise_changes_the_outcome(self) -> None:
+        quiet = pc.run_arm(
+            "node_perturbation",
+            seed=1,
+            task=_TASK,
+            trials=600,
+            node_noise=0.2,
+            noise=0.22,
+        )
+        loud = pc.run_arm(
+            "node_perturbation",
+            seed=1,
+            task=_TASK,
+            trials=600,
+            node_noise=0.2,
+            noise=1.0,
+        )
+        assert quiet["score"] != loud["score"]
+        assert quiet["action_noise"] == 0.22
+
+
 class TestTheArmsThemselves:
     def test_the_reference_arm_learns_the_task(self) -> None:
         # The control's validity check, run for real at a short budget.
