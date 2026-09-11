@@ -1,0 +1,9 @@
+arm,seed,success,frozen_clone,delta,cosine,rate_mult
+endpoint_nodeperturbation,1,8.4000,39.3000,-30.9000,0.6881658434867859,1.0
+endpoint_nodeperturbation,2,73.4000,44.0000,29.4000,0.7251425385475159,1.0
+endpoint_nodeperturbation,3,26.8000,40.0000,-13.2000,0.7224974632263184,1.0
+endpoint_nodeperturbation,4,0.0000,21.3000,-21.3000,0.677605390548706,1.0
+endpoint_nodeperturbation,5,10.0000,47.1000,-37.1000,0.6908360123634338,1.0
+endpoint_nodeperturbation,6,6.2000,33.3000,-27.1000,0.7483609318733215,1.0
+endpoint_nodeperturbation,7,2.8000,61.3000,-58.5000,0.6788021922111511,1.0
+endpoint_nodeperturbation,8,37.6000,23.3000,14.3000,0.6494351625442505,1.0
