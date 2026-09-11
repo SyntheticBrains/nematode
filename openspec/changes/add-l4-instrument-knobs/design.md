@@ -40,8 +40,29 @@ Two knobs are measurable where the rule works, and one is not. So:
 
 The task gains a single parameter, the delay `D`. A trial runs: the cue is presented, the scored
 action is taken, then `D` further steps elapse against a neutral observation, and only then does the
-reward arrive. The eligibility for the scored action decays across those steps, so by the time the
-modulator reaches it, it carries roughly `trace_decay ** D` of what it had.
+reward arrive.
+
+**What the delay measures is dilution, not decay, and the distinction decides whether the control
+works at all.** The control runs the recipe's `normalise_trace`, which divides each tensor's trace
+by a running RMS of its own magnitude. If the intervening steps added nothing to the trace, the
+trace at reward time would be exactly `trace_decay ** D` times the credited step's, a scalar on a
+fixed vector — and the normalisation would divide that scalar out. Checked against the rule's own
+running scale: at `D = 20` the raw trace is 0.122 of its `D = 0` value and the normalised trace the
+update uses is **1.000, identical to `D = 0`**. A zero-input delay would report the horizon
+exonerated at every `D`, and the null would be the instrument's.
+
+In a real episode the credited step is not merely decayed; it is **diluted** by the terms every
+later step adds. Normalisation rescales the whole sum and leaves the credited step's *share* of it
+alone, so dilution survives normalisation where decay does not. The intervening steps must
+therefore drive the plastic layer. Under `plastic_layers: hidden` that layer's pre-synaptic input
+is the observation itself, so the neutral observation has to be nonzero.
+
+**The neutral observation is the uniform vector over the cue channels** — every channel at
+`1 / n_cues`, identical on every trial, so it carries nothing about which cue was shown. It keeps
+the observation's dimension, which is what lets `D = 0` stay bit-identical: an extra "no cue"
+channel would change the actor's input width and its initialisation, and the anchor would be lost
+before the delay did anything. The trace at reward is then `decay^D · E₀` plus the filler's
+zero-mean terms, and the credited step's share of it falls with `D` as the real task imposes.
 
 **What is deliberately *not* changed:**
 
@@ -58,21 +79,34 @@ modulator reaches it, it carries roughly `trace_decay ** D` of what it had.
   anchor: an extension that changes the numbers at zero delay has changed the instrument, not
   extended it.
 
-The intervening steps see a neutral observation rather than the cue repeated. Repeating the cue
+The intervening steps see the neutral observation rather than the cue repeated. Repeating the cue
 would let the network act correctly on a fresh trace at the final step, which is not the question;
 the point is that the action being credited is `D` steps in the past.
+
+**Alignment at `D > 0` is measured against the scored step's gradient.** The harness compares each
+update with the analytic gradient of the loss at the step the update happens on. On a delayed trial
+the update lands at step `D`, where the network's output is a response to the neutral observation
+and its "loss" against the target means nothing. The gradient is therefore taken at the scored
+step and held until the reward step, and the update is compared with that.
 
 ## The grids
 
 | arm | grid | baseline |
 |---|---|---|
 | homeostasis | on, off | on |
-| exploration noise | the pinned value and a grid around it | `exp(−1.0)` |
-| horizon | `trace_decay` × `D` | `0.9`, `D = 0` |
+| exploration noise | std ∈ {0.22, 0.37, 0.61, 1.0} | 0.37 (`exp(−1.0)`) |
+| horizon | `trace_decay` ∈ {0.9, 0.99, 0.999} × `D` ∈ {0, 2, 5, 10, 20} | `0.9`, `D = 0` |
 
-The delays bracket the ten-step scale `trace_decay 0.9` implies — a trace at 0.9 retains 0.35 over
-ten steps and 0.12 over twenty — so the grid runs through and past where the setting predicts the
-signal dies. The registered pass rule is the control's own, unchanged, applied per cell.
+The noise grid is the panels' own history: std 1.0 capped every plastic arm near its floor, 0.22
+rose and collapsed, and 0.37 was selected by a probe — the grid brackets the selected value with the
+two that failed. The delays bracket the ten-step scale `trace_decay 0.9` implies — a trace at 0.9
+retains 0.35 over ten steps and 0.12 over twenty — so the grid runs through and past where the
+setting predicts the signal dies, and the two longer decays ask whether a longer horizon recovers
+it. The registered pass rule is the control's own, unchanged, applied per cell.
+
+**Cost.** A trial at delay `D` is `D + 1` forward passes. The committed control runs 72 arms of
+20,000 trials in about ten minutes; the horizon grid is 15 cells × 8 seeds with a mean delay near
+seven, so roughly 1–2 hours in all. The two cheap knobs add 6 cells × 8 seeds at one step each.
 
 ## What the outcomes mean, fixed before the run
 

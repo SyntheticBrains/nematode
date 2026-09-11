@@ -36,6 +36,17 @@ scored by the registered reward. The cue SHALL NOT be visible during the interve
 network SHALL NOT be required to retain it, so that the arm measures credit over time rather than
 memory.
 
+The intervening observation SHALL drive the plastic layer and SHALL carry no information about the
+cue, so that later steps add to the eligibility trace and the credited step's share of it falls
+with the delay. A delay that adds nothing to the trace SHALL NOT be used, since the recipe's trace
+normalisation divides out a pure scalar decay and such a delay would report no horizon effect at
+any length. The intervening observation SHALL keep the observation's dimension, so that a delay of
+zero remains the committed control.
+
+At a positive delay, the update's alignment SHALL be measured against the gradient of the loss at
+the scored step, held until the reward step, and NOT against the loss at the step the update lands
+on.
+
 The closed-form bounds SHALL be unchanged by the delay, since they depend on the targets and the
 action noise alone; the floor, the optimum, the gap and the registered pass rule SHALL therefore
 apply to a delayed arm as they do to the committed one.
@@ -53,6 +64,19 @@ A delay of zero SHALL reproduce the committed one-step control exactly.
 - **GIVEN** any delay
 - **WHEN** the cue-blind floor and the optimum are computed
 - **THEN** they SHALL equal the committed one-step values
+
+#### Scenario: The credited step is diluted, not merely decayed
+
+- **GIVEN** the recipe's trace normalisation
+- **WHEN** a delayed trial reaches its reward step
+- **THEN** the credited step's share of the normalised trace SHALL be smaller than at zero delay,
+  which a delay adding nothing to the trace would fail
+
+#### Scenario: Alignment at a delay is against the scored step
+
+- **GIVEN** a delayed trial
+- **WHEN** the update's alignment is computed
+- **THEN** it SHALL be against the gradient taken at the scored step, not at the reward step
 
 #### Scenario: The delay tests credit rather than memory
 
