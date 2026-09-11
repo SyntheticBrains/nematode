@@ -37,8 +37,13 @@
 
 - [x] 4.1 `CHANGELOG.md`; tracker (as I.1c step 0) and roadmap with the verdict and the
   registration it selects.
-- [ ] 4.2 The next change is authored from the verdict. **Ran 2026-09-11: `fail`** (mean 20.6
+- [x] 4.2 The next change is authored from the verdict. **Ran 2026-09-11: `fail`** (mean 20.6
   against 38.7, 2/8 within hold; integrity clean), so the verdict licenses **the low-σ
   programme, as fixed by review**, and not the assay amendment. Authored as its own change,
   carrying this panel's bimodality — six seeds degraded, two improved, seed 2 to 73.4, the
-  best this substrate has recorded — which I.2's statistic now has a demonstrated case for.
+  best this substrate has recorded — which I.2's statistic now has a demonstrated case for. **Sequencing decision, 2026-09-11**:
+  the licensed low-σ programme was not authored next. I.2 was taken first, because that
+  programme ends in an assay scored by the very statistic I.2 repairs, so running it first
+  would have spent campaign time on a number I.2 would then have to re-read. The licence
+  stands and the work remains open; it is tracked in block I rather than by holding this
+  change open.

@@ -177,3 +177,214 @@ cue-blind floor on a stated number of seeds, with the reference and floor arms d
 
 - **WHEN** the control is launched
 - **THEN** its margin, seed count and budget SHALL already be recorded
+
+### Requirement: A panel's contrast reads both components of its outcome
+
+Where a panel's outcome is bimodal — a seed reaching a competent policy or a dead one — the
+registered contrast SHALL read both the frequency with which an arm reaches competence and the
+level it reaches when it does, because a test of either alone reports no effect when only the other
+moves. The registered family SHALL comprise a paired competent-fraction discordance at the
+committed competence threshold, a paired contrast on the level among competent seeds, and the
+all-seeds paired rank test the committed record was scored with, corrected together.
+
+The competence threshold SHALL be the committed one and SHALL NOT be re-chosen with the outcome known. The level contrast SHALL compare each arm's mean over its **own** competent seeds, so that a seed competent in one arm only contributes to that arm's level and a frequency difference is not read as a level difference; where either arm has no competent seed the contrast SHALL be reported as undefined rather than as a null result. Every member SHALL be one-sided in the arm-improves direction at the committed significance level, corrected together.
+
+#### Scenario: A level-only effect is not reported as no effect
+
+- **GIVEN** two arms reaching competence about equally often, where one arm's competent seeds score
+  higher than the other's
+- **WHEN** the family is computed
+- **THEN** the level contrast SHALL report the difference, and the verdict SHALL NOT be the
+  no-effect branch
+
+#### Scenario: A frequency difference is not read as a level difference
+
+- **GIVEN** two arms whose competent seeds score the same, where one arm reaches competence on
+  more seeds than the other
+- **WHEN** the family is computed
+- **THEN** the frequency contrast SHALL report the difference and the level contrast SHALL NOT,
+  and the verdict SHALL be the frequency-only branch
+
+#### Scenario: A seed competent in one arm counts toward that arm's level
+
+- **GIVEN** a seed competent in one arm and not the other
+- **WHEN** the level contrast is computed
+- **THEN** its value SHALL enter that arm's level and SHALL NOT enter the other's
+
+#### Scenario: An undefined level contrast is not a null
+
+- **GIVEN** a panel in which one arm has no competent seed
+- **WHEN** the family is computed
+- **THEN** the level contrast SHALL be reported as undefined, and SHALL NOT contribute a passing or
+  failing result to the family
+
+### Requirement: A graded metric is read beside the full-clear metric
+
+A panel SHALL be read on a graded measure of task progress in addition to the full-clear rate, so
+that learning short of a full clear is visible. The graded reading SHALL use the level and all-seeds members of the family over the competence the primary metric defines, corrected within itself, SHALL NOT choose a competence threshold of its own, and the full-clear metric SHALL remain the primary one in which registered verdicts are expressed.
+
+#### Scenario: Progress short of a clear is visible
+
+- **GIVEN** an arm whose full-clear rate is at its floor while its graded measure exceeds the
+  comparator's
+- **WHEN** both readings are computed
+- **THEN** the graded reading SHALL report the difference, and the record SHALL carry both
+
+### Requirement: A bimodal outcome has a name that licenses nothing
+
+The outcome map SHALL name every combination of the frequency and level contrasts' directions, and
+SHALL include a branch for a two-directional result: the two contrasts significant against each
+other. That branch SHALL license no follow-on work and SHALL require its own registration to act
+on.
+
+A per-seed spread — some seeds improved and some degraded — SHALL NOT decide that branch, and a
+panel with neither contrast significant SHALL be the no-effect branch whatever its spread. The
+counts MAY be recorded descriptively. The reason is that the null of such a panel is itself
+bimodal, so two arms drawn from one law routinely place a seed high in one and low in the other;
+no threshold on that statistic distinguishes a mixed response from noise at these panel sizes.
+
+#### Scenario: A split outcome is named rather than discovered
+
+- **GIVEN** a panel whose frequency and level contrasts are significant in opposite directions
+- **WHEN** the verdict is assigned
+- **THEN** it SHALL be the split branch, and the record SHALL state that it licenses nothing
+
+#### Scenario: A per-seed spread is not a mixed response
+
+- **GIVEN** a panel with neither contrast significant, some seeds improved and some degraded
+- **WHEN** the verdict is assigned
+- **THEN** it SHALL be the no-effect branch
+
+#### Scenario: Opposed significant contrasts are the split branch, not degradation
+
+- **GIVEN** a panel where fewer seeds reach competence and those that do score higher, both
+  significant
+- **WHEN** the verdict is assigned
+- **THEN** it SHALL be the split branch
+
+#### Scenario: Missing significance alone is not the split branch
+
+- **GIVEN** a panel with neither contrast significant and no seed improved above the comparator
+- **WHEN** the verdict is assigned
+- **THEN** it SHALL be the no-effect branch
+
+### Requirement: The re-read of committed tables cannot change a committed verdict
+
+Committed results SHALL be re-read under the registered family from their committed per-seed
+tables. Each committed verdict SHALL stand as registered, in the units and under the rule it was
+registered with; the re-read SHALL be reported beside it as a second, pre-specified reading and
+SHALL be an input to the ladder re-read alone.
+
+#### Scenario: A disagreement leaves the verdict standing
+
+- **GIVEN** a committed result whose re-read points the other way
+- **WHEN** the re-read is recorded
+- **THEN** both readings SHALL be reported, the committed verdict SHALL be unchanged, and the record
+  SHALL state which is the verdict
+
+#### Scenario: An assay is re-read in its own protocol
+
+- **GIVEN** a committed result whose protocol is an assay against a per-seed comparator rather than
+  a panel against a paired arm
+- **WHEN** it is re-read
+- **THEN** the contrasts SHALL be computed against each seed's own committed comparator, and results
+  SHALL NOT be pooled across protocols
+
+### Requirement: An annealed perturbation clears the control before the assay
+
+A variant that schedules its perturbation scale SHALL clear the rule's positive control under that
+schedule before it is run through the clone assay, and the order SHALL be that one. The control run
+SHALL use the same three validity arms, the same seeds and the same pass rule as the control the
+constant-scale variant cleared, with the schedule compressed to the control's episode budget, and
+SHALL report the update's alignment to the analytic policy gradient separately over the decay
+and over the floor rather than as one mean. The bounds and length SHALL be the registered ones:
+initial 0.2, final 0.02, decay over the first half of the budget.
+
+A failure at the control SHALL stop the sequence, and SHALL be reported as a property of the
+registered schedule rather than resolved by re-tuning its bounds or its length.
+
+#### Scenario: The control gates the assay
+
+- **GIVEN** a variant scheduling its perturbation scale
+- **WHEN** it has not cleared the positive control under that schedule
+- **THEN** its clone-assay result SHALL NOT be reported as evidence about retention
+
+#### Scenario: The alignment is reported across the schedule
+
+- **WHEN** an annealed arm's control run is recorded
+- **THEN** the record SHALL carry the gradient alignment over the decay and over the floor
+  separately, and the score over the floor, so that a schedule which anneals away its own signal —
+  a decay-phase alignment that does not rise and a floor-phase score below the bar — is
+  distinguishable from one whose floor-phase alignment is low only because the estimator is nearly
+  silent there by construction
+
+### Requirement: A scheduled arm's frozen control runs the same schedule
+
+Where the clone assay screens an arm whose perturbation scale follows a schedule, the frozen control
+required of a perturbing variant SHALL run that identical schedule with updates frozen. Its score
+SHALL be read as a trajectory over the schedule rather than as a single endpoint, since a frozen
+arm under a decaying scale recovers as the scale falls. Both arms' curves SHALL be binned in eight
+equal parts of the budget with the scheduled scale stated per bin, and the learning arm SHALL be
+read against the frozen arm bin by bin.
+
+#### Scenario: The control anneals too
+
+- **GIVEN** an annealed screening arm
+- **WHEN** its frozen control is configured
+- **THEN** the control SHALL carry the same initial scale, final scale and anneal length, and SHALL
+  differ from the screening arm only in that updates are frozen
+
+#### Scenario: The comparison is against the trajectory
+
+- **WHEN** an annealed arm's assay result is reported
+- **THEN** it SHALL be reported beside the frozen control's binned trajectory over the same
+  schedule, and a claim that the rule damaged the policy SHALL require the learning arm to fall
+  below the frozen arm in the floor-phase bins rather than below the committed comparator alone
+
+### Requirement: A perturbing rule's endpoint is evaluated with the perturbation off
+
+Where a plastic rule perturbs its units during training, its endpoint weights SHALL be evaluated
+with updates frozen and the perturbation removed, under the clone assay's comparator protocol —
+the comparator's own configuration with only the weights changed — so that what the rule learned is
+measured apart from the exploration noise it learned under. The evaluation SHALL use the assay's
+registered pass rule and comparator unchanged, and SHALL be reported beside the under-perturbation
+score from the assay as a descriptive annotation.
+
+The outcomes and what each licenses SHALL be recorded before the evaluation runs, and the
+registration that follows SHALL be the one the outcome selects.
+
+#### Scenario: The endpoint is the registered arm's
+
+- **GIVEN** a perturbing arm the clone assay has scored
+- **WHEN** its endpoint is staged for evaluation
+- **THEN** the staged weights SHALL be that arm's auto-saved final weights, per seed, with the
+  source of each recorded, and SHALL NOT be re-trained or selected
+
+#### Scenario: The evaluation runs the comparator's condition
+
+- **WHEN** the endpoint is evaluated
+- **THEN** updates SHALL be frozen, the perturbation scale SHALL be zero, and every other key SHALL
+  equal the comparator's, so that the configuration differs from the comparator's in the weights
+  alone
+
+#### Scenario: The loaded weights are verified to be the endpoint
+
+- **GIVEN** the per-seed cosine between the perturbing arm's endpoint and its clone, as the assay
+  recorded it
+- **WHEN** the evaluation's own final weights are compared to the clone
+- **THEN** each seed's cosine SHALL reproduce the recorded value within 0.01, and a seed that does
+  not SHALL be void and SHALL void the verdict, since a cosine near one means the clone was
+  evaluated rather than the endpoint
+
+#### Scenario: The rule is the assay's
+
+- **WHEN** the endpoint's scores are assessed
+- **THEN** the pass rule, comparator values, budget and metric SHALL be those registered for the
+  clone assay, and the verdict SHALL be one of the assay's own
+
+#### Scenario: The outcome selects the next registration
+
+- **GIVEN** the outcomes and their consequences recorded before the run
+- **WHEN** the verdict is known
+- **THEN** the change authored next SHALL be the one that verdict licenses, and the other SHALL NOT
+  be authored on the same evidence
