@@ -30,13 +30,10 @@ registered, an outcome map with names for bimodal results, and the re-read.
 
 - **A registered contrast family with two components, because the shape has two.** *Frequency*:
   paired competent-fraction discordance at the committed 20.0 threshold, an exact test on the
-  discordant pairs — promoted from panel 2's secondary to a co-primary. *Level*: the mean among
-  seeds competent in either arm, paired — the contrast 042 named and did not register. The existing
+  discordant pairs — promoted from panel 2's secondary to a co-primary. *Level*: the mean among each arm's own competent seeds, compared — the contrast 042 named and did not register. The existing
   all-seeds paired Wilcoxon is retained as the third member so every committed table stays
   comparable. BH-FDR across the family.
-- **The graded metric beside the cliff.** Plateau-tail mean foods (0–10), already computed and
-  already committed, read as a registered parallel family rather than a footnote, so learning short
-  of a full clear is visible.
+- **The graded metric beside the cliff.** Plateau-tail mean foods (0–10), already computed and already committed, read as a registered parallel family rather than a footnote, so learning short of a full clear is visible. Competence is defined once, on the primary metric at the committed threshold; the graded family reads level and shift on foods and does not re-choose a threshold.
 - **An outcome map that can name a bimodal result**, including one for "improves some seeds while
   degrading others". That outcome **licenses nothing on its own** and requires its own
   registration; naming it is what stops it being discovered after the fact.
@@ -54,6 +51,5 @@ panel, which stays gated.
 
 ## Impact
 
-- New: a statistics module and its tests, the supporting directory. Edited: `l4_panel.py` and the
-  panel-family scripts to report the new family beside the existing one, `CHANGELOG.md`.
+- New: a statistics module, a standalone re-read script over the committed tables, their tests, the supporting directory. Edited: `CHANGELOG.md`, docs. `l4_panel.py` is **not** edited — the module takes its threshold from `l4_panel2`, which imports `l4_panel`, so the reverse import would be a cycle; a future panel calls the module.
 - No package code, no substrate, no rule changes. Every committed number stays as committed.

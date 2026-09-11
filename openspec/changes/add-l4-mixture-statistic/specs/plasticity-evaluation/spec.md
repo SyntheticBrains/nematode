@@ -9,9 +9,7 @@ moves. The registered family SHALL comprise a paired competent-fraction discorda
 committed competence threshold, a paired contrast on the level among competent seeds, and the
 all-seeds paired rank test the committed record was scored with, corrected together.
 
-The competence threshold SHALL be the committed one and SHALL NOT be re-chosen with the outcome
-known. A pair SHALL enter the level contrast where **either** arm is competent, and where no pair
-qualifies the contrast SHALL be reported as undefined rather than as a null result.
+The competence threshold SHALL be the committed one and SHALL NOT be re-chosen with the outcome known. The level contrast SHALL compare each arm's mean over its **own** competent seeds, so that a seed competent in one arm only contributes to that arm's level and a frequency difference is not read as a level difference; where either arm has no competent seed the contrast SHALL be reported as undefined rather than as a null result. Every member SHALL be one-sided in the arm-improves direction at the committed significance level, corrected together.
 
 #### Scenario: A level-only effect is not reported as no effect
 
@@ -21,15 +19,23 @@ qualifies the contrast SHALL be reported as undefined rather than as a null resu
 - **THEN** the level contrast SHALL report the difference, and the verdict SHALL NOT be the
   no-effect branch
 
-#### Scenario: The level contrast does not condition on both arms succeeding
+#### Scenario: A frequency difference is not read as a level difference
 
-- **GIVEN** a pair in which exactly one arm is competent
+- **GIVEN** two arms whose competent seeds score the same, where one arm reaches competence on
+  more seeds than the other
+- **WHEN** the family is computed
+- **THEN** the frequency contrast SHALL report the difference and the level contrast SHALL NOT,
+  and the verdict SHALL be the frequency-only branch
+
+#### Scenario: A seed competent in one arm counts toward that arm's level
+
+- **GIVEN** a seed competent in one arm and not the other
 - **WHEN** the level contrast is computed
-- **THEN** that pair SHALL be included
+- **THEN** its value SHALL enter that arm's level and SHALL NOT enter the other's
 
 #### Scenario: An undefined level contrast is not a null
 
-- **GIVEN** a panel in which no seed is competent in either arm
+- **GIVEN** a panel in which one arm has no competent seed
 - **WHEN** the family is computed
 - **THEN** the level contrast SHALL be reported as undefined, and SHALL NOT contribute a passing or
   failing result to the family
@@ -37,9 +43,7 @@ qualifies the contrast SHALL be reported as undefined rather than as a null resu
 ### Requirement: A graded metric is read beside the full-clear metric
 
 A panel SHALL be read on a graded measure of task progress in addition to the full-clear rate, so
-that learning short of a full clear is visible. The graded reading SHALL use the same contrast
-family, corrected within itself, and the full-clear metric SHALL remain the primary one in which
-registered verdicts are expressed.
+that learning short of a full clear is visible. The graded reading SHALL use the level and all-seeds members of the family over the competence the primary metric defines, corrected within itself, SHALL NOT choose a competence threshold of its own, and the full-clear metric SHALL remain the primary one in which registered verdicts are expressed.
 
 #### Scenario: Progress short of a clear is visible
 
@@ -50,16 +54,20 @@ registered verdicts are expressed.
 
 ### Requirement: A bimodal outcome has a name that licenses nothing
 
-The outcome map SHALL include a branch for an arm that improves at least one seed above the
-comparator while degrading at least one below it beyond the hold band, with neither contrast
-significant. That branch SHALL license no follow-on work and SHALL require its own registration to
-act on, and SHALL fire only on such a split rather than wherever significance is missed.
+The outcome map SHALL name every combination of the frequency and level contrasts' directions, and SHALL include a branch for a two-directional result: the two contrasts significant against each other, or neither significant with the arm improving at least one seed above the comparator while degrading at least one below it beyond the hold band. That branch SHALL license no follow-on work and SHALL require its own registration to act on, and SHALL fire only on such a result rather than wherever significance is missed.
 
 #### Scenario: A split outcome is named rather than discovered
 
 - **GIVEN** a panel improving some seeds and degrading others, with neither contrast significant
 - **WHEN** the verdict is assigned
 - **THEN** it SHALL be the split branch, and the record SHALL state that it licenses nothing
+
+#### Scenario: Opposed significant contrasts are the split branch, not degradation
+
+- **GIVEN** a panel where fewer seeds reach competence and those that do score higher, both
+  significant
+- **WHEN** the verdict is assigned
+- **THEN** it SHALL be the split branch
 
 #### Scenario: Missing significance alone is not the split branch
 

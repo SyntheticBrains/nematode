@@ -32,16 +32,24 @@ other no effect. So the registered family has one member for each, plus the exis
 | | member | statistic | reads |
 |---|---|---|---|
 | **F** | frequency | paired competent-fraction discordance at 20.0 — exact binomial on the discordant pairs | how *often* an arm lands competent |
-| **L** | level | mean among seeds competent in **either** arm of the pair, paired, one-sided | how *good* it is when it does |
+| **L** | level | difference in the mean level among competent seeds, each arm over its **own** competent subset, seeded bootstrap CI, one-sided | how *good* it is when it does |
 | **W** | all-seeds | the existing paired one-sided Wilcoxon + 80% bootstrap CI | the shift, if the outcome is unimodal after all |
 
-BH-FDR across {F, L, W}. **W is retained deliberately**: it is what every committed table was
-scored with, and dropping it would make the re-read incomparable with the record it re-reads.
+Every member is one-sided in the arm-improves direction at α = 0.05, corrected together by BH-FDR
+across {F, L, W} — the sidedness and level 042's family used (`SIG_Q = 0.05`). F generalises the
+registered `l4_panel3.discordance`, an exact binomial with `alternative="greater"`, rather than
+re-deriving it. **W is retained deliberately**: it is what every committed table was scored with,
+and dropping it would make the re-read incomparable with the record it re-reads.
 
-**L's pairing rule is fixed here**: a pair enters L if *either* arm is competent. Restricting to
-pairs where *both* are competent would condition on the outcome and discard exactly the pairs where
-one arm found a good fixed point and the other did not — which is the effect. With no qualifying
-pair, L is undefined and reported as such, not as a null.
+**L is per arm, not paired, and that is the point.** 042's statement is about the location of each
+arm's upper mode — "the wild-type's fixed points are better" — so L compares the mean of arm A's
+competent seeds with the mean of arm B's competent seeds, each over its own subset. A paired
+version over the union of competent seeds was considered and rejected: a pair in which one arm is
+competent and the other dead would contribute the whole competent value to L, which is a
+*frequency* event (the other arm found no fixed point) wearing level's name, and it would make L
+significant on a panel where only frequency moved. Giving up the seed pairing is inherent to the
+question and is stated here. A seed competent in one arm only contributes to that arm's level. With
+no competent seed in either arm, L is undefined and reported as such, not as a null.
 
 n = 8 or 16 per panel gives a mixture model no usable power; F and L are two marginal readings of a
 mixture, not an attempt to fit one. That limit is stated in the record rather than discovered.
@@ -53,30 +61,41 @@ committed per-seed CSV carries it. The cliff metric — ten of ten or nothing �
 policy that reaches eight foods from one that reaches zero, and on a foraging task that is most of
 the behaviour.
 
-So the graded metric is read as a **parallel family** with the same three members, BH-FDR within
-itself. The full-clear metric stays **primary**, because every committed verdict is in its units
+So the graded metric is read as a **parallel family**, BH-FDR within itself. Competence is defined
+**once**, on the primary metric at the committed 20.0 — a foods threshold chosen now, with 052's
+per-seed values known, would be the post-hoc move this change forbids. F is therefore identical
+across the two metrics and is not duplicated; the graded family is {L, W} on foods, L over the
+same competent subsets the primary family defines. The full-clear metric stays **primary**, because every committed verdict is in its units
 and this change does not restate them. The outcome map names what a disagreement between the two
 families means, so "graded improves, cliff does not" is a registered reading rather than a
 consolation.
 
 ## The outcome map
 
-Ordered; the first matching branch is the verdict.
+Each of F and L is **+** (significant, arm improves), **−** (significant, arm degrades) or **0**
+(not significant), at the corrected level. Every cell is named; the table is the verdict.
 
-| verdict | condition | licenses |
-|---|---|---|
-| `shift` | F and L both significant, same direction | the effect is unambiguous |
-| `level_only` | L significant, F not | 042's finding: better fixed points, not more of them |
-| `frequency_only` | F significant, L not | more competent seeds, no better |
-| `mixed_response` | **neither** significant, and the arm both improves ≥ 1 seed above the comparator and degrades ≥ 1 below it by more than the hold band | **nothing** |
-| `no_effect` | neither significant, no such split | the contrast is closed on this evidence |
-| `degrades` | the reverse direction is significant on F or L | — |
+| F | L | verdict | licenses |
+|---|---|---|---|
+| + | + | `shift` | the effect is unambiguous |
+| − | − | `degrades` | — |
+| + | − | `mixed_response` | **nothing** |
+| − | + | `mixed_response` | **nothing** |
+| 0 | + | `level_only` | 042's finding: better fixed points, not more of them |
+| + | 0 | `frequency_only` | more competent seeds, no better |
+| 0 | − | `degrades` | — |
+| − | 0 | `degrades` | — |
+| 0 | 0 | `mixed_response` if the arm improves ≥ 1 seed above the comparator **and** degrades ≥ 1 below it by more than the hold band; otherwise `no_effect` | nothing / the contrast is closed on this evidence |
+
+L undefined is read as 0 for the table and the record says so.
 
 `mixed_response` is the branch this change exists to create, and it is deliberately **sterile**: it
 licenses no follow-on, gates nothing open, and requires its own registration to act on. A named
 outcome that licenses nothing is an honest description; an unnamed one discovered after the fact is
-a story. It is also not a way to avoid `no_effect` — it fires only on an explicit two-sided split,
-not on any panel that happens to miss significance.
+a story. It fires on an explicit two-directional result — F and L significant against each other,
+or an explicit improve-and-degrade split with neither significant — and not wherever significance
+is merely missed. "Fewer seeds competent, but the competent ones better" is the strongest form of
+it, not a degradation, and is the cell 052 most resembles.
 
 ## The re-read, and its limits
 
@@ -105,6 +124,10 @@ and does not pool across them.
 - **Re-tune the competence threshold.** Rejected, and the reason is the change's own premise — 20.0
   is committed and was applied before 052 existed.
 - **Drop W.** Rejected: it is the only member comparable with the committed record.
+- **Report the family from `l4_panel.py`.** Rejected for this change: `l4_panel2` imports
+  `l4_panel`, and the new module takes its threshold from `l4_panel2`, so an import from
+  `l4_panel` would be a cycle. The re-read is a standalone script over committed tables and
+  `l4_panel.py` is not edited; a future panel registers with the family by calling the module.
 - **Do this after the low-σ programme**, which 052's verdict licenses. Rejected: that programme
   ends in an assay scored by the statistic under repair, so it would spend campaign time to produce
   a number this change would then have to re-read.

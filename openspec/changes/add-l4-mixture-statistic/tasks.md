@@ -4,20 +4,15 @@
 
 - [ ] 1.1 `scripts/analysis/l4_mixture_statistic.py`: the family's three members over paired
   per-seed values — **F** (competent-fraction discordance, exact binomial on discordant pairs at
-  the committed `COMPETENT_THRESHOLD`), **L** (mean among seeds competent in either arm, paired,
-  one-sided), **W** (the existing `paired_seed_wilcoxon_bootstrap`) — with BH-FDR across them.
-  Imports the threshold from `l4_panel2` rather than restating it.
-- [ ] 1.2 The ordered outcome map, `mixed_response` included, returning the first matching branch
-  and what it licenses.
-- [ ] 1.3 Tests: a level-only panel is not `no_effect`; a frequency-only panel is not `level_only`;
-  a pair with exactly one competent arm enters L; an all-incompetent panel reports L undefined
-  rather than null; `mixed_response` fires on a split and **not** on a panel that merely misses
+  the committed `COMPETENT_THRESHOLD`), **L** (each arm's mean over its own competent seeds, seeded bootstrap CI on the difference, one-sided), **W** (the existing `paired_seed_wilcoxon_bootstrap`) — every member one-sided at α 0.05, BH-FDR across them. F generalises `l4_panel3.discordance` from its wt/rn naming rather than re-deriving it; the threshold is imported from `l4_panel2`, not restated. `l4_panel.py` is not edited (it would be an import cycle).
+- [ ] 1.2 The outcome map as the registered direction table over (F, L) ∈ {+, −, 0}², every cell named, `mixed_response` on opposed significant contrasts or an explicit split, returning the branch and what it licenses.
+- [ ] 1.3 Tests: a level-only panel is not `no_effect`; a frequency-only panel is not `level_only` **and L is not significant on it**; opposed significant contrasts are `mixed_response`, not `degrades`;
+  a seed competent in one arm only enters that arm's level; a panel where either arm has no competent seed reports L undefined rather than null; every cell of the direction table is reached by a constructed panel; `mixed_response` fires on a split and **not** on a panel that merely misses
   significance; the map's order is the registered one.
 
 ## 2. The graded metric
 
-- [ ] 2.1 Read plateau-tail mean foods from the committed per-seed tables (`foods`, already in
-  every CSV) and run the same family on it as a parallel, separately corrected reading.
+- [ ] 2.1 Read plateau-tail mean foods from the committed per-seed tables (`foods`, already in every CSV) and run L and W on it as a parallel, separately corrected reading, over the competence the primary metric defines — no foods threshold is chosen.
 - [ ] 2.2 Test: an arm at its full-clear floor with a graded difference is reported by the graded
   family and not lost.
 
@@ -29,8 +24,7 @@
   is a prior sweep. Each is reported in its own protocol's terms, with no pooling across protocols.
 - [ ] 3.3 Every committed verdict is carried beside its re-read, unchanged, with the record stating
   which is the verdict. A disagreement is reported, not resolved.
-- [ ] 3.4 Test: the re-read of a committed table reproduces that table's committed W result, so the
-  re-read is reading the same numbers the record was scored on.
+- [ ] 3.4 Test: the re-read of a committed table reproduces that table's committed W result, and the re-read of 042 reproduces its committed R2 discordance, so the re-read is reading the same numbers the record was scored on and F is the test that was registered.
 
 ## 4. Records and close-out
 
