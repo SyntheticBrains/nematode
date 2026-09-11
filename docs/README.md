@@ -12,6 +12,7 @@ Start with the [project README](../README.md) — it states the research questio
 | [research/quantum-architectures.md](research/quantum-architectures.md) | Specifications and the strategic assessment from the Phase 2 quantum-architecture campaign (closed) |
 | [research/policy-architecture-candidates.md](research/policy-architecture-candidates.md) | Survey of candidate policy architectures for the continuous substrate and the memory axis |
 | [research/associative-memory-probe.md](research/associative-memory-probe.md) | Design note for the chemosensory associative-memory probe ([Logbook 033](experiments/logbooks/033-associative-memory-probe.md)) |
+| [research/phase-protocol.md](research/phase-protocol.md) | How a phase is run: the pattern Phases 5–6 used, where Phase 7 departed from it and why, twelve principles each with the cost of ignoring it |
 
 ## Using the platform
 
