@@ -1,0 +1,1824 @@
+{
+  "contrasts": [
+    {
+      "arm_a": "wt_plastic",
+      "arm_b": "rn_plastic",
+      "contrast": "wiring_plastic",
+      "graded": {
+        "L": {
+          "a_n": 0,
+          "b_n": 0,
+          "defined": false,
+          "effect": null,
+          "p_degrade": null,
+          "p_improve": null,
+          "reason": "one arm has no competent seed, so there is no upper mode to compare",
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -1.100888888888889,
+            1.7749333333333335
+          ],
+          "defined": true,
+          "effect": 0.2927777777777776,
+          "n": 8,
+          "p_degrade": 0.62890625,
+          "p_improve": 0.421875,
+          "positive_seeds": 4
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "panel 1's T1",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 3,
+            "a_fraction": 0.375,
+            "b_competent": 1,
+            "b_fraction": 0.125,
+            "both": 0,
+            "defined": true,
+            "effect": 2.0,
+            "n": 8,
+            "only_a": 3,
+            "only_b": 1,
+            "p_degrade": 0.9375,
+            "p_improve": 0.3125,
+            "q_degrade": 0.9375,
+            "q_improve": 0.556640625,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 42.11851851851852,
+            "a_n": 3,
+            "b_mean": 46.93333333333333,
+            "b_n": 1,
+            "ci80": [
+              -19.170370370370367,
+              9.540740740740745
+            ],
+            "defined": true,
+            "effect": -4.8148148148148096,
+            "p_degrade": 0.26973026973026976,
+            "p_improve": 0.7312687312687313,
+            "q_degrade": 0.8091908091908093,
+            "q_improve": 0.7312687312687313,
+            "rank_p_degrade": 0.5,
+            "rank_p_improve": 0.75,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -5.506666666666668,
+              20.716666666666665
+            ],
+            "defined": true,
+            "effect": 6.627777777777777,
+            "n": 8,
+            "p_degrade": 0.6796875,
+            "p_improve": 0.37109375,
+            "positive_seeds": 4,
+            "q_degrade": 0.9375,
+            "q_improve": 0.556640625
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            1,
+            6
+          ],
+          "improved_seeds": [
+            2,
+            3,
+            5
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "040-l4-panel"
+    },
+    {
+      "arm_a": "wt_hebbian",
+      "arm_b": "rn_hebbian",
+      "contrast": "wiring_hebbian",
+      "graded": {
+        "L": {
+          "a_mean": 8.222666666666667,
+          "a_n": 1,
+          "b_mean": 5.392,
+          "b_n": 1,
+          "ci80": [
+            2.8306666666666667,
+            2.8306666666666667
+          ],
+          "defined": true,
+          "effect": 2.8306666666666667,
+          "p_degrade": 1.0,
+          "p_improve": 0.000999000999000999,
+          "rank_p_degrade": 1.0,
+          "rank_p_improve": 0.5,
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -1.0329166666666667,
+            1.9778333333333336
+          ],
+          "defined": true,
+          "effect": 0.4960000000000002,
+          "n": 8,
+          "p_degrade": 0.62890625,
+          "p_improve": 0.421875,
+          "positive_seeds": 5
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "the Hebbian wiring contrast on panel 1's seeds; not itself a registered test there",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "+",
+          "W": "0"
+        },
+        "licenses": "better fixed points, not more of them",
+        "members": {
+          "F": {
+            "a_competent": 4,
+            "a_fraction": 0.5,
+            "b_competent": 2,
+            "b_fraction": 0.25,
+            "both": 1,
+            "defined": true,
+            "effect": 2.0,
+            "n": 8,
+            "only_a": 3,
+            "only_b": 1,
+            "p_degrade": 0.9375,
+            "p_improve": 0.3125,
+            "q_degrade": 0.988011988011988,
+            "q_improve": 0.3125,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 59.13333333333334,
+            "a_n": 4,
+            "b_mean": 34.13333333333333,
+            "b_n": 2,
+            "ci80": [
+              11.333333333333336,
+              40.666666666666664
+            ],
+            "defined": true,
+            "effect": 25.000000000000007,
+            "p_degrade": 0.988011988011988,
+            "p_improve": 0.012987012987012988,
+            "q_degrade": 0.988011988011988,
+            "q_improve": 0.03896103896103896,
+            "rank_p_degrade": 0.9333333333333333,
+            "rank_p_improve": 0.13333333333333333,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              0.4316666666666662,
+              31.80333333333333
+            ],
+            "defined": true,
+            "effect": 16.48333333333333,
+            "n": 8,
+            "p_degrade": 0.84375,
+            "p_improve": 0.19140625,
+            "positive_seeds": 5,
+            "q_degrade": 0.988011988011988,
+            "q_improve": 0.287109375
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            2
+          ],
+          "improved_seeds": [
+            1,
+            4,
+            7,
+            8
+          ],
+          "is_split": true
+        },
+        "verdict": "level_only"
+      },
+      "protocol": "panel",
+      "table": "040-l4-panel"
+    },
+    {
+      "arm_a": "wt_hebbian",
+      "arm_b": "rn_hebbian",
+      "contrast": "wiring_hebbian",
+      "graded": {
+        "L": {
+          "a_mean": 8.4,
+          "a_n": 1,
+          "b_mean": 5.144,
+          "b_n": 1,
+          "ci80": [
+            3.2560000000000002,
+            3.2560000000000002
+          ],
+          "defined": true,
+          "effect": 3.2560000000000002,
+          "p_degrade": 1.0,
+          "p_improve": 0.000999000999000999,
+          "rank_p_degrade": 1.0,
+          "rank_p_improve": 0.5,
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -0.4788500000000001,
+            1.8705749999999999
+          ],
+          "defined": true,
+          "effect": 0.7211666666666666,
+          "n": 16,
+          "p_degrade": 0.8387451171875,
+          "p_improve": 0.1741943359375,
+          "positive_seeds": 10
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "panel 2's P1, the primary",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 9,
+            "a_fraction": 0.5625,
+            "b_competent": 5,
+            "b_fraction": 0.3125,
+            "both": 1,
+            "defined": true,
+            "effect": 4.0,
+            "n": 16,
+            "only_a": 8,
+            "only_b": 4,
+            "p_degrade": 0.927001953125,
+            "p_improve": 0.19384765625,
+            "q_degrade": 0.958041958041958,
+            "q_improve": 0.19384765625,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 53.18518518518519,
+            "a_n": 9,
+            "b_mean": 38.4,
+            "b_n": 5,
+            "ci80": [
+              4.354370370370368,
+              25.655703703703708
+            ],
+            "defined": true,
+            "effect": 14.785185185185192,
+            "p_degrade": 0.958041958041958,
+            "p_improve": 0.04295704295704296,
+            "q_degrade": 0.958041958041958,
+            "q_improve": 0.11069442620192105,
+            "rank_p_degrade": 0.8574693887342786,
+            "rank_p_improve": 0.17479331295347555,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              2.7416666666666654,
+              25.01
+            ],
+            "defined": true,
+            "effect": 14.091666666666667,
+            "n": 16,
+            "p_degrade": 0.926203715865386,
+            "p_improve": 0.07379628413461403,
+            "positive_seeds": 10,
+            "q_degrade": 0.958041958041958,
+            "q_improve": 0.11069442620192105
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            2,
+            9,
+            12,
+            16
+          ],
+          "improved_seeds": [
+            1,
+            4,
+            7,
+            8,
+            10,
+            11,
+            13,
+            14,
+            15
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "041-l4-panel2"
+    },
+    {
+      "arm_a": "wt_hebbian_count",
+      "arm_b": "rn_hebbian_count",
+      "contrast": "wiring_hebbian_count",
+      "graded": {
+        "L": {
+          "a_mean": 8.482666666666667,
+          "a_n": 1,
+          "b_mean": 8.328,
+          "b_n": 1,
+          "ci80": [
+            0.1546666666666674,
+            0.1546666666666674
+          ],
+          "defined": true,
+          "effect": 0.1546666666666674,
+          "p_degrade": 1.0,
+          "p_improve": 0.000999000999000999,
+          "rank_p_degrade": 1.0,
+          "rank_p_improve": 0.5,
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -0.8754166666666666,
+            1.2932416666666668
+          ],
+          "defined": true,
+          "effect": 0.19641666666666663,
+          "n": 16,
+          "p_degrade": 0.5100250244140625,
+          "p_improve": 0.5100250244140625,
+          "positive_seeds": 7
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "panel 2's P2, count-initialised",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "+",
+          "W": "0"
+        },
+        "licenses": "better fixed points, not more of them",
+        "members": {
+          "F": {
+            "a_competent": 3,
+            "a_fraction": 0.1875,
+            "b_competent": 5,
+            "b_fraction": 0.3125,
+            "both": 1,
+            "defined": true,
+            "effect": -2.0,
+            "n": 16,
+            "only_a": 2,
+            "only_b": 4,
+            "p_degrade": 0.34375,
+            "p_improve": 0.890625,
+            "q_degrade": 0.9744724408112385,
+            "q_improve": 0.890625,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 65.73333333333333,
+            "a_n": 3,
+            "b_mean": 42.986666666666665,
+            "b_n": 5,
+            "ci80": [
+              11.360000000000007,
+              33.59466666666668
+            ],
+            "defined": true,
+            "effect": 22.74666666666667,
+            "p_degrade": 0.996003996003996,
+            "p_improve": 0.004995004995004995,
+            "q_degrade": 0.996003996003996,
+            "q_improve": 0.014985014985014984,
+            "rank_p_degrade": 0.9642857142857143,
+            "rank_p_improve": 0.07142857142857142,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -7.585000000000001,
+              11.844166666666668
+            ],
+            "defined": true,
+            "effect": 2.0166666666666675,
+            "n": 16,
+            "p_degrade": 0.649648293874159,
+            "p_improve": 0.350351706125841,
+            "positive_seeds": 8,
+            "q_degrade": 0.9744724408112385,
+            "q_improve": 0.5255275591887615
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            2,
+            4,
+            10,
+            11
+          ],
+          "improved_seeds": [
+            3,
+            5,
+            12,
+            13
+          ],
+          "is_split": true
+        },
+        "verdict": "level_only"
+      },
+      "protocol": "panel",
+      "table": "041-l4-panel2"
+    },
+    {
+      "arm_a": "wt_hebbian",
+      "arm_b": "rn_hebbian",
+      "contrast": "wiring_hebbian",
+      "graded": {
+        "L": {
+          "a_mean": 7.2904,
+          "a_n": 5,
+          "b_mean": 6.22,
+          "b_n": 5,
+          "ci80": [
+            0.04192000000000074,
+            1.9960800000000012
+          ],
+          "defined": true,
+          "effect": 1.0704000000000002,
+          "p_degrade": 0.9080919080919081,
+          "p_improve": 0.09290709290709291,
+          "rank_p_degrade": 0.8888888888888888,
+          "rank_p_improve": 0.15476190476190477,
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            0.027691666666666635,
+            1.283425
+          ],
+          "defined": true,
+          "effect": 0.6208333333333332,
+          "n": 48,
+          "p_degrade": 0.802431925273396,
+          "p_improve": 0.20042303422471264,
+          "positive_seeds": 25
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "panel 3's R1",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 16,
+            "a_fraction": 0.3333333333333333,
+            "b_competent": 11,
+            "b_fraction": 0.22916666666666666,
+            "both": 5,
+            "defined": true,
+            "effect": 5.0,
+            "n": 48,
+            "only_a": 11,
+            "only_b": 6,
+            "p_degrade": 0.9282684326171875,
+            "p_improve": 0.1661529541015625,
+            "q_degrade": 0.973026973026973,
+            "q_improve": 0.18805832529809616,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 53.64999999999999,
+            "a_n": 16,
+            "b_mean": 40.727272727272734,
+            "b_n": 11,
+            "ci80": [
+              4.878181818181821,
+              22.312727272727262
+            ],
+            "defined": true,
+            "effect": 12.922727272727258,
+            "p_degrade": 0.973026973026973,
+            "p_improve": 0.027972027972027972,
+            "q_degrade": 0.973026973026973,
+            "q_improve": 0.08391608391608392,
+            "rank_p_degrade": 0.9126792442311388,
+            "rank_p_improve": 0.09542336861113504,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              2.3458333333333337,
+              14.234166666666669
+            ],
+            "defined": true,
+            "effect": 8.058333333333332,
+            "n": 48,
+            "p_degrade": 0.8119416747019039,
+            "p_improve": 0.18805832529809613,
+            "positive_seeds": 24,
+            "q_degrade": 0.973026973026973,
+            "q_improve": 0.18805832529809616
+          }
+        },
+        "n_pairs": 48,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            20,
+            21,
+            28,
+            30,
+            32,
+            33,
+            34,
+            40,
+            44,
+            55,
+            63
+          ],
+          "improved_seeds": [
+            17,
+            22,
+            24,
+            26,
+            27,
+            31,
+            42,
+            43,
+            51,
+            56,
+            57,
+            58,
+            59,
+            61,
+            62
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "042-l4-panel3"
+    },
+    {
+      "arm_a": "wt_hebbian_atlas",
+      "arm_b": "rn_hebbian_atlas",
+      "contrast": "wiring_hebbian_atlas",
+      "graded": {
+        "L": {
+          "a_n": 0,
+          "b_n": 0,
+          "defined": false,
+          "effect": null,
+          "p_degrade": null,
+          "p_improve": null,
+          "reason": "one arm has no competent seed, so there is no upper mode to compare",
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -0.3077250000000001,
+            1.2418250000000002
+          ],
+          "defined": true,
+          "effect": 0.48424999999999996,
+          "n": 16,
+          "p_degrade": 0.71905517578125,
+          "p_improve": 0.2982940673828125,
+          "positive_seeds": 9
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "grounded signs, G2",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 4,
+            "a_fraction": 0.25,
+            "b_competent": 2,
+            "b_fraction": 0.125,
+            "both": 0,
+            "defined": true,
+            "effect": 2.0,
+            "n": 16,
+            "only_a": 4,
+            "only_b": 2,
+            "p_degrade": 0.890625,
+            "p_improve": 0.34375,
+            "q_degrade": 0.890625,
+            "q_improve": 0.34375,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 42.099999999999994,
+            "a_n": 4,
+            "b_mean": 31.4,
+            "b_n": 2,
+            "ci80": [
+              -1.8999999999999986,
+              24.50000000000002
+            ],
+            "defined": true,
+            "effect": 10.699999999999996,
+            "p_degrade": 0.8421578421578422,
+            "p_improve": 0.15884115884115885,
+            "q_degrade": 0.890625,
+            "q_improve": 0.34375,
+            "rank_p_degrade": 0.8666666666666667,
+            "rank_p_improve": 0.26666666666666666,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -1.7025000000000001,
+              11.801666666666666
+            ],
+            "defined": true,
+            "effect": 4.866666666666666,
+            "n": 16,
+            "p_degrade": 0.7245381586132965,
+            "p_improve": 0.2754618413867035,
+            "positive_seeds": 8,
+            "q_degrade": 0.890625,
+            "q_improve": 0.34375
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            3,
+            10,
+            15
+          ],
+          "improved_seeds": [
+            2,
+            6,
+            9,
+            16
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "044-l4-atlas-signs"
+    },
+    {
+      "arm_a": "wt_hebbian_dale",
+      "arm_b": "rn_hebbian_dale",
+      "contrast": "wiring_hebbian_dale",
+      "graded": {
+        "L": {
+          "a_n": 0,
+          "b_n": 0,
+          "defined": false,
+          "effect": null,
+          "p_degrade": null,
+          "p_improve": null,
+          "reason": "one arm has no competent seed, so there is no upper mode to compare",
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -1.1722749999999997,
+            0.295275
+          ],
+          "defined": true,
+          "effect": -0.4292499999999999,
+          "n": 16,
+          "p_degrade": 0.247711181640625,
+          "p_improve": 0.76812744140625,
+          "positive_seeds": 7
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "Dale's law enforced, G4",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 2,
+            "a_fraction": 0.125,
+            "b_competent": 3,
+            "b_fraction": 0.1875,
+            "both": 0,
+            "defined": true,
+            "effect": -1.0,
+            "n": 16,
+            "only_a": 2,
+            "only_b": 3,
+            "p_degrade": 0.5,
+            "p_improve": 0.8125,
+            "q_degrade": 0.7342657342657343,
+            "q_improve": 0.8125,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 43.199999999999996,
+            "a_n": 2,
+            "b_mean": 34.400000000000006,
+            "b_n": 3,
+            "ci80": [
+              -8.000000000000004,
+              25.599999999999987
+            ],
+            "defined": true,
+            "effect": 8.79999999999999,
+            "p_degrade": 0.7342657342657343,
+            "p_improve": 0.26673326673326675,
+            "q_degrade": 0.7342657342657343,
+            "q_improve": 0.8001998001998003,
+            "rank_p_degrade": 0.6000000000000001,
+            "rank_p_improve": 0.6000000000000001,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -8.5125,
+              3.5575000000000023
+            ],
+            "defined": true,
+            "effect": -2.474999999999999,
+            "n": 16,
+            "p_degrade": 0.21879171089838256,
+            "p_improve": 0.7812082891016174,
+            "positive_seeds": 7,
+            "q_degrade": 0.6563751326951477,
+            "q_improve": 0.8125
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            2,
+            9,
+            10,
+            11,
+            14
+          ],
+          "improved_seeds": [
+            6,
+            16
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "044-l4-atlas-signs"
+    },
+    {
+      "arm_a": "anchor",
+      "arm_b": "frozen_clone (per-seed comparator)",
+      "contrast": "anchor",
+      "graded": {
+        "available": false,
+        "reason": "the committed table carries no foods column"
+      },
+      "note": "clone assay",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "-",
+          "L": "0",
+          "W": "-"
+        },
+        "licenses": "nothing",
+        "members": {
+          "F": {
+            "a_competent": 2,
+            "a_fraction": 0.25,
+            "b_competent": 8,
+            "b_fraction": 1.0,
+            "both": 2,
+            "defined": true,
+            "effect": -6.0,
+            "n": 8,
+            "only_a": 0,
+            "only_b": 6,
+            "p_degrade": 0.015625,
+            "p_improve": 1.0,
+            "q_degrade": 0.0234375,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 31.700000000000003,
+            "a_n": 2,
+            "b_mean": 38.7,
+            "b_n": 8,
+            "ci80": [
+              -14.978749999999998,
+              0.7250000000000018
+            ],
+            "defined": true,
+            "effect": -7.0,
+            "p_degrade": 0.12487512487512488,
+            "p_improve": 0.8761238761238761,
+            "q_degrade": 0.12487512487512488,
+            "q_improve": 1.0,
+            "rank_p_degrade": 0.26666666666666666,
+            "rank_p_improve": 0.8,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -32.81375,
+              -18.735
+            ],
+            "defined": true,
+            "effect": -25.7,
+            "n": 8,
+            "p_degrade": 0.00390625,
+            "p_improve": 1.0,
+            "positive_seeds": 0,
+            "q_degrade": 0.01171875,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            1,
+            3,
+            4,
+            5,
+            7,
+            8
+          ],
+          "improved_seeds": [],
+          "is_split": false
+        },
+        "verdict": "degrades"
+      },
+      "protocol": "assay",
+      "table": "045-l4-consolidation"
+    },
+    {
+      "arm_a": "rigidity",
+      "arm_b": "frozen_clone (per-seed comparator)",
+      "contrast": "rigidity",
+      "graded": {
+        "available": false,
+        "reason": "the committed table carries no foods column"
+      },
+      "note": "clone assay",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 6,
+            "a_fraction": 0.75,
+            "b_competent": 8,
+            "b_fraction": 1.0,
+            "both": 6,
+            "defined": true,
+            "effect": -2.0,
+            "n": 8,
+            "only_a": 0,
+            "only_b": 2,
+            "p_degrade": 0.25,
+            "p_improve": 1.0,
+            "q_degrade": 0.375,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 37.2,
+            "a_n": 6,
+            "b_mean": 38.7,
+            "b_n": 8,
+            "ci80": [
+              -9.471666666666659,
+              6.625416666666667
+            ],
+            "defined": true,
+            "effect": -1.5,
+            "p_degrade": 0.3966033966033966,
+            "p_improve": 0.6043956043956044,
+            "q_degrade": 0.3966033966033966,
+            "q_improve": 1.0,
+            "rank_p_degrade": 0.4259074259074259,
+            "rank_p_improve": 0.6227106227106227,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -20.826249999999998,
+              1.4374999999999982
+            ],
+            "defined": true,
+            "effect": -9.350000000000001,
+            "n": 8,
+            "p_degrade": 0.15625,
+            "p_improve": 0.875,
+            "positive_seeds": 2,
+            "q_degrade": 0.375,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            5,
+            7
+          ],
+          "improved_seeds": [
+            4
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "assay",
+      "table": "045-l4-consolidation"
+    },
+    {
+      "arm_a": "oracle",
+      "arm_b": "frozen_clone (per-seed comparator)",
+      "contrast": "oracle",
+      "graded": {
+        "available": false,
+        "reason": "the committed table carries no foods column"
+      },
+      "note": "clone assay",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 4,
+            "a_fraction": 0.5,
+            "b_competent": 8,
+            "b_fraction": 1.0,
+            "both": 4,
+            "defined": true,
+            "effect": -4.0,
+            "n": 8,
+            "only_a": 0,
+            "only_b": 4,
+            "p_degrade": 0.0625,
+            "p_improve": 1.0,
+            "q_degrade": 0.1875,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 49.85,
+            "a_n": 4,
+            "b_mean": 38.7,
+            "b_n": 8,
+            "ci80": [
+              4.1350000000000025,
+              18.140000000000004
+            ],
+            "defined": true,
+            "effect": 11.149999999999999,
+            "p_degrade": 0.9820179820179821,
+            "p_improve": 0.01898101898101898,
+            "q_degrade": 0.9820179820179821,
+            "q_improve": 0.056943056943056944,
+            "rank_p_degrade": 0.9232323232323232,
+            "rank_p_improve": 0.10707070707070708,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -22.351249999999997,
+              3.000000000000003
+            ],
+            "defined": true,
+            "effect": -9.825,
+            "n": 8,
+            "p_degrade": 0.2734375,
+            "p_improve": 0.76953125,
+            "positive_seeds": 3,
+            "q_degrade": 0.41015625,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            3,
+            5,
+            7,
+            8
+          ],
+          "improved_seeds": [
+            4,
+            6
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "assay",
+      "table": "045-l4-consolidation"
+    },
+    {
+      "arm_a": "wt_antihebb",
+      "arm_b": "rn_antihebb",
+      "contrast": "wiring_antihebb",
+      "graded": {
+        "L": {
+          "a_n": 0,
+          "b_n": 0,
+          "defined": false,
+          "effect": null,
+          "p_degrade": null,
+          "p_improve": null,
+          "reason": "one arm has no competent seed, so there is no upper mode to compare",
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -0.5540250000000001,
+            1.0704
+          ],
+          "defined": true,
+          "effect": 0.27525,
+          "n": 16,
+          "p_degrade": 0.6839141845703125,
+          "p_improve": 0.3342742919921875,
+          "positive_seeds": 10
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "S1",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 3,
+            "a_fraction": 0.1875,
+            "b_competent": 3,
+            "b_fraction": 0.1875,
+            "both": 0,
+            "defined": true,
+            "effect": 0.0,
+            "n": 16,
+            "only_a": 3,
+            "only_b": 3,
+            "p_degrade": 0.65625,
+            "p_improve": 0.65625,
+            "q_degrade": 0.9590409590409591,
+            "q_improve": 0.65625,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 48.79999999999999,
+            "a_n": 3,
+            "b_mean": 34.26666666666667,
+            "b_n": 3,
+            "ci80": [
+              4.666666666666671,
+              25.599999999999987
+            ],
+            "defined": true,
+            "effect": 14.533333333333317,
+            "p_degrade": 0.9590409590409591,
+            "p_improve": 0.04195804195804196,
+            "q_degrade": 0.9590409590409591,
+            "q_improve": 0.1258741258741259,
+            "rank_p_degrade": 0.9,
+            "rank_p_improve": 0.2,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -5.0525,
+              9.777500000000002
+            ],
+            "defined": true,
+            "effect": 2.575,
+            "n": 16,
+            "p_degrade": 0.5819576774533702,
+            "p_improve": 0.41804232254662976,
+            "positive_seeds": 8,
+            "q_degrade": 0.9590409590409591,
+            "q_improve": 0.6270634838199447
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            3,
+            9,
+            10,
+            15
+          ],
+          "improved_seeds": [
+            1,
+            2,
+            6,
+            16
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "046-l4-decorrelation"
+    },
+    {
+      "arm_a": "wt_oja",
+      "arm_b": "rn_oja",
+      "contrast": "wiring_oja",
+      "graded": {
+        "L": {
+          "a_n": 0,
+          "b_n": 0,
+          "defined": false,
+          "effect": null,
+          "p_degrade": null,
+          "p_improve": null,
+          "reason": "one arm has no competent seed, so there is no upper mode to compare",
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -0.5896750000000002,
+            0.9521500000000002
+          ],
+          "defined": true,
+          "effect": 0.18749999999999994,
+          "n": 16,
+          "p_degrade": 0.4899749755859375,
+          "p_improve": 0.530059814453125,
+          "positive_seeds": 8
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "S2",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 3,
+            "a_fraction": 0.1875,
+            "b_competent": 3,
+            "b_fraction": 0.1875,
+            "both": 0,
+            "defined": true,
+            "effect": 0.0,
+            "n": 16,
+            "only_a": 3,
+            "only_b": 3,
+            "p_degrade": 0.65625,
+            "p_improve": 0.65625,
+            "q_degrade": 0.9050949050949052,
+            "q_improve": 0.65625,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 40.26666666666666,
+            "a_n": 3,
+            "b_mean": 27.73333333333333,
+            "b_n": 3,
+            "ci80": [
+              1.5999999999999979,
+              24.266666666666666
+            ],
+            "defined": true,
+            "effect": 12.533333333333328,
+            "p_degrade": 0.9050949050949051,
+            "p_improve": 0.0959040959040959,
+            "q_degrade": 0.9050949050949052,
+            "q_improve": 0.28771228771228774,
+            "rank_p_degrade": 0.9,
+            "rank_p_improve": 0.2,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -4.525,
+              8.255
+            ],
+            "defined": true,
+            "effect": 2.0249999999999995,
+            "n": 16,
+            "p_degrade": 0.5125200405841451,
+            "p_improve": 0.4874799594158549,
+            "positive_seeds": 7,
+            "q_degrade": 0.9050949050949052,
+            "q_improve": 0.65625
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            3,
+            4,
+            10,
+            15
+          ],
+          "improved_seeds": [
+            1,
+            2,
+            6,
+            16
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "046-l4-decorrelation"
+    },
+    {
+      "arm_a": "wt_pathway",
+      "arm_b": "wt_global",
+      "contrast": "routing_wt",
+      "graded": {
+        "L": {
+          "a_n": 0,
+          "b_n": 0,
+          "defined": false,
+          "effect": null,
+          "p_degrade": null,
+          "p_improve": null,
+          "reason": "one arm has no competent seed, so there is no upper mode to compare",
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -0.7572694444444441,
+            0.7903861111111112
+          ],
+          "defined": true,
+          "effect": 0.042444444444444535,
+          "n": 16,
+          "p_degrade": 0.6657257080078125,
+          "p_improve": 0.3528594970703125,
+          "positive_seeds": 9
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "S1",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "-",
+          "W": "0"
+        },
+        "licenses": "nothing",
+        "members": {
+          "F": {
+            "a_competent": 1,
+            "a_fraction": 0.0625,
+            "b_competent": 3,
+            "b_fraction": 0.1875,
+            "both": 0,
+            "defined": true,
+            "effect": -2.0,
+            "n": 16,
+            "only_a": 1,
+            "only_b": 3,
+            "p_degrade": 0.3125,
+            "p_improve": 0.9375,
+            "q_degrade": 0.46875,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 24.266666666666666,
+            "a_n": 1,
+            "b_mean": 42.11851851851852,
+            "b_n": 3,
+            "ci80": [
+              -32.20740740740741,
+              -3.496296296296297
+            ],
+            "defined": true,
+            "effect": -17.851851851851855,
+            "p_degrade": 0.000999000999000999,
+            "p_improve": 1.0,
+            "q_degrade": 0.002997002997002997,
+            "q_improve": 1.0,
+            "rank_p_degrade": 0.25,
+            "rank_p_improve": 1.0,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -9.736666666666666,
+              2.8291666666666666
+            ],
+            "defined": true,
+            "effect": -3.1805555555555554,
+            "n": 16,
+            "p_degrade": 0.4899749755859375,
+            "p_improve": 0.530059814453125,
+            "positive_seeds": 8,
+            "q_degrade": 0.4899749755859375,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            2,
+            3,
+            5,
+            15
+          ],
+          "improved_seeds": [
+            4,
+            12,
+            14
+          ],
+          "is_split": true
+        },
+        "verdict": "degrades"
+      },
+      "protocol": "panel",
+      "table": "047-l4-structured-instruction"
+    },
+    {
+      "arm_a": "rn_pathway",
+      "arm_b": "rn_global",
+      "contrast": "routing_rn",
+      "graded": {
+        "L": {
+          "a_mean": 6.158666666666667,
+          "a_n": 1,
+          "b_mean": 6.518666666666666,
+          "b_n": 1,
+          "ci80": [
+            -0.35999999999999943,
+            -0.35999999999999943
+          ],
+          "defined": true,
+          "effect": -0.35999999999999943,
+          "p_degrade": 0.000999000999000999,
+          "p_improve": 1.0,
+          "rank_p_degrade": 0.5,
+          "rank_p_improve": 1.0,
+          "threshold": null
+        },
+        "W": {
+          "ci80": [
+            -1.4981333333333333,
+            -0.27318333333333333
+          ],
+          "defined": true,
+          "effect": -0.8775,
+          "n": 16,
+          "p_degrade": 0.0522918701171875,
+          "p_improve": 0.953277587890625,
+          "positive_seeds": 5
+        },
+        "available": true,
+        "competence_from": "the primary metric at the committed threshold"
+      },
+      "note": "S2",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 1,
+            "a_fraction": 0.0625,
+            "b_competent": 4,
+            "b_fraction": 0.25,
+            "both": 1,
+            "defined": true,
+            "effect": -3.0,
+            "n": 16,
+            "only_a": 0,
+            "only_b": 3,
+            "p_degrade": 0.125,
+            "p_improve": 1.0,
+            "q_degrade": 0.125,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 33.06666666666666,
+            "a_n": 1,
+            "b_mean": 41.33333333333333,
+            "b_n": 4,
+            "ci80": [
+              -14.433333333333337,
+              -2.1000000000000014
+            ],
+            "defined": true,
+            "effect": -8.266666666666666,
+            "p_degrade": 0.061938061938061936,
+            "p_improve": 0.939060939060939,
+            "q_degrade": 0.0929070929070929,
+            "q_improve": 1.0,
+            "rank_p_degrade": 0.4,
+            "rank_p_improve": 0.8,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -11.766666666666667,
+              -3.008333333333334
+            ],
+            "defined": true,
+            "effect": -7.300000000000001,
+            "n": 16,
+            "p_degrade": 0.024691979812569625,
+            "p_improve": 0.9753080201874303,
+            "positive_seeds": 6,
+            "q_degrade": 0.07407593943770888,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 16,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            6,
+            8,
+            14,
+            15
+          ],
+          "improved_seeds": [],
+          "is_split": false
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "panel",
+      "table": "047-l4-structured-instruction"
+    },
+    {
+      "arm_a": "node_perturbation",
+      "arm_b": "frozen_clone (per-seed comparator)",
+      "contrast": "node_perturbation",
+      "graded": {
+        "available": false,
+        "reason": "the committed table carries no foods column"
+      },
+      "note": "clone assay",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "-",
+          "L": "-",
+          "W": "-"
+        },
+        "licenses": "nothing",
+        "members": {
+          "F": {
+            "a_competent": 2,
+            "a_fraction": 0.25,
+            "b_competent": 8,
+            "b_fraction": 1.0,
+            "both": 2,
+            "defined": true,
+            "effect": -6.0,
+            "n": 8,
+            "only_a": 0,
+            "only_b": 6,
+            "p_degrade": 0.015625,
+            "p_improve": 1.0,
+            "q_degrade": 0.015625,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 26.8,
+            "a_n": 2,
+            "b_mean": 38.7,
+            "b_n": 8,
+            "ci80": [
+              -18.189999999999994,
+              -6.362499999999997
+            ],
+            "defined": true,
+            "effect": -11.900000000000002,
+            "p_degrade": 0.002997002997002997,
+            "p_improve": 0.998001998001998,
+            "q_degrade": 0.008991008991008992,
+            "q_improve": 1.0,
+            "rank_p_degrade": 0.2,
+            "rank_p_improve": 0.8666666666666667,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -33.655,
+              -19.7875
+            ],
+            "defined": true,
+            "effect": -26.674999999999997,
+            "n": 8,
+            "p_degrade": 0.0078125,
+            "p_improve": 0.99609375,
+            "positive_seeds": 1,
+            "q_degrade": 0.01171875,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "improved_seeds": [],
+          "is_split": false
+        },
+        "verdict": "degrades"
+      },
+      "protocol": "assay",
+      "table": "050-l4-perturbation-clone-assay"
+    },
+    {
+      "arm_a": "perturbation_frozen",
+      "arm_b": "frozen_clone (per-seed comparator)",
+      "contrast": "perturbation_frozen",
+      "graded": {
+        "available": false,
+        "reason": "the committed table carries no foods column"
+      },
+      "note": "its frozen control",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "-",
+          "L": "0",
+          "W": "-"
+        },
+        "licenses": "nothing",
+        "members": {
+          "F": {
+            "a_competent": 1,
+            "a_fraction": 0.125,
+            "b_competent": 8,
+            "b_fraction": 1.0,
+            "both": 1,
+            "defined": true,
+            "effect": -7.0,
+            "n": 8,
+            "only_a": 0,
+            "only_b": 7,
+            "p_degrade": 0.0078125,
+            "p_improve": 1.0,
+            "q_degrade": 0.01171875,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 42.6,
+            "a_n": 1,
+            "b_mean": 38.7,
+            "b_n": 8,
+            "ci80": [
+              -1.3637499999999974,
+              8.899999999999999
+            ],
+            "defined": true,
+            "effect": 3.8999999999999986,
+            "p_degrade": 0.8171828171828172,
+            "p_improve": 0.1838161838161838,
+            "q_degrade": 0.8171828171828172,
+            "q_improve": 0.5514485514485514,
+            "rank_p_degrade": 0.6666666666666667,
+            "rank_p_improve": 0.4444444444444444,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -38.605,
+              -21.418749999999996
+            ],
+            "defined": true,
+            "effect": -29.775,
+            "n": 8,
+            "p_degrade": 0.0078125,
+            "p_improve": 0.99609375,
+            "positive_seeds": 1,
+            "q_degrade": 0.01171875,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            7,
+            8
+          ],
+          "improved_seeds": [],
+          "is_split": false
+        },
+        "verdict": "degrades"
+      },
+      "protocol": "assay",
+      "table": "050-l4-perturbation-clone-assay"
+    },
+    {
+      "arm_a": "endpoint_nodeperturbation",
+      "arm_b": "frozen_clone (per-seed comparator)",
+      "contrast": "endpoint_nodeperturbation",
+      "graded": {
+        "available": false,
+        "reason": "the committed table carries no foods column"
+      },
+      "note": "endpoint, perturbation off",
+      "primary": {
+        "alpha": 0.05,
+        "directions": {
+          "F": "0",
+          "L": "0",
+          "W": "0"
+        },
+        "licenses": "the contrast is closed on this evidence",
+        "members": {
+          "F": {
+            "a_competent": 3,
+            "a_fraction": 0.375,
+            "b_competent": 8,
+            "b_fraction": 1.0,
+            "both": 3,
+            "defined": true,
+            "effect": -5.0,
+            "n": 8,
+            "only_a": 0,
+            "only_b": 5,
+            "p_degrade": 0.03125,
+            "p_improve": 1.0,
+            "q_degrade": 0.09375,
+            "q_improve": 1.0,
+            "threshold": 20.0
+          },
+          "L": {
+            "a_mean": 45.93333333333334,
+            "a_n": 3,
+            "b_mean": 38.7,
+            "b_n": 8,
+            "ci80": [
+              -8.091249999999999,
+              24.25666666666668
+            ],
+            "defined": true,
+            "effect": 7.233333333333334,
+            "p_degrade": 0.7152847152847153,
+            "p_improve": 0.2857142857142857,
+            "q_degrade": 0.7152847152847152,
+            "q_improve": 0.8571428571428571,
+            "rank_p_degrade": 0.6121212121212121,
+            "rank_p_improve": 0.4606060606060607,
+            "threshold": 20.0
+          },
+          "W": {
+            "ci80": [
+              -29.988749999999996,
+              -4.9099999999999975
+            ],
+            "defined": true,
+            "effect": -18.05,
+            "n": 8,
+            "p_degrade": 0.07421875,
+            "p_improve": 0.9453125,
+            "positive_seeds": 2,
+            "q_degrade": 0.111328125,
+            "q_improve": 1.0
+          }
+        },
+        "n_pairs": 8,
+        "split": {
+          "band": 10.0,
+          "degraded_seeds": [
+            1,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "improved_seeds": [
+            2,
+            8
+          ],
+          "is_split": true
+        },
+        "verdict": "no_effect"
+      },
+      "protocol": "assay",
+      "table": "052-l4-endpoint-evaluation"
+    }
+  ],
+  "threshold": 20.0
+}

@@ -54,13 +54,28 @@ that learning short of a full clear is visible. The graded reading SHALL use the
 
 ### Requirement: A bimodal outcome has a name that licenses nothing
 
-The outcome map SHALL name every combination of the frequency and level contrasts' directions, and SHALL include a branch for a two-directional result: the two contrasts significant against each other, or neither significant with the arm improving at least one seed above the comparator while degrading at least one below it beyond the hold band. That branch SHALL license no follow-on work and SHALL require its own registration to act on, and SHALL fire only on such a result rather than wherever significance is missed.
+The outcome map SHALL name every combination of the frequency and level contrasts' directions, and
+SHALL include a branch for a two-directional result: the two contrasts significant against each
+other. That branch SHALL license no follow-on work and SHALL require its own registration to act
+on.
+
+A per-seed spread — some seeds improved and some degraded — SHALL NOT decide that branch, and a
+panel with neither contrast significant SHALL be the no-effect branch whatever its spread. The
+counts MAY be recorded descriptively. The reason is that the null of such a panel is itself
+bimodal, so two arms drawn from one law routinely place a seed high in one and low in the other;
+no threshold on that statistic distinguishes a mixed response from noise at these panel sizes.
 
 #### Scenario: A split outcome is named rather than discovered
 
-- **GIVEN** a panel improving some seeds and degrading others, with neither contrast significant
+- **GIVEN** a panel whose frequency and level contrasts are significant in opposite directions
 - **WHEN** the verdict is assigned
 - **THEN** it SHALL be the split branch, and the record SHALL state that it licenses nothing
+
+#### Scenario: A per-seed spread is not a mixed response
+
+- **GIVEN** a panel with neither contrast significant, some seeds improved and some degraded
+- **WHEN** the verdict is assigned
+- **THEN** it SHALL be the no-effect branch
 
 #### Scenario: Opposed significant contrasts are the split branch, not degradation
 

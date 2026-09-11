@@ -87,6 +87,18 @@ Human-written analysis of every experiment series: the objective, the pre-regist
 
 Each logbook follows the same structure: **Objective** (the question), **Hypothesis** (what was expected and why), **Method** (configs, seeds, statistics), **Results**, **Analysis**, **Conclusions** and **Next Steps**, plus **Data References** — the session IDs, config files and artifact paths needed to reproduce it. Phase-level syntheses roll the milestone logbooks into an exit-criteria walkthrough and a gate decision: [021](logbooks/021-phase5-synthesis.md) for Phase 5 and [037](logbooks/037-phase6a-synthesis.md) for Phase 6a.
 
+### Reading a panel whose outcome is bimodal
+
+Where a seed reaches either a competent policy or a dead one, the two arms can differ in how
+**often** they reach one or in how **good** it is when they do, and a test of either alone reports
+no effect when only the other moves. Such a panel is read with a family carrying one member per
+component — competent-fraction discordance at the committed threshold, and the level among each
+arm's own competent seeds — beside the all-seeds paired test, corrected together, with a graded
+measure of progress read beside the full-clear rate. `scripts/analysis/l4_mixture_statistic.py`
+fixes the family and the outcome map; `scripts/analysis/l4_reread.py` applies it to the committed
+tables. The statistic is chosen before the data exist, which is the rule
+[042](logbooks/042-l4-panel3.md) stated and this implements.
+
 ### Reading a substrate result against the rule's positive control
 
 A registered result about a *substrate* — a wiring contrast, a rewired null, a prior sweep — is only
