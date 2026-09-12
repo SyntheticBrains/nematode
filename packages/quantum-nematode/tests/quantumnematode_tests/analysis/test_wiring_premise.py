@@ -65,12 +65,15 @@ CONFIG_PAIRS = [
 # Each differs from its committed base by `target_foods_to_collect` plus its own arm key(s).
 T20_KEY = "environment.foraging.target_foods_to_collect"
 BUDGET_KEYS = {"max_steps", "satiety.satiety_gain_per_food"}
-HARD_GRID = (150, 250, 350)
-# The V.3 arms: the hard food-only cell across the declared calibration grid. Each differs from the
-# committed `_t20` base by the budget keys plus its own arm key.
+# The budget the V.3 calibration froze. The declared grid was {150, 250, 350}, run on disjoint pilot
+# seeds: 150 and 250 censored the primary metric (no arm reached a 30% full-clear rate) and their
+# configs are removed so no unregistered budget can be run; their records stay under the logbook's
+# `pilot/`. 350 is the only grid point inside the band.
+HARD_STEPS = 350
+# The V.3 arms at the frozen budget. Each differs from the committed `_t20` base by the budget keys
+# plus its own arm key.
 CONFIG_PAIRS_HARD = [
-    (f"_hard{steps}{suffix}", steps, keys)
-    for steps in HARD_GRID
+    (f"_hard{HARD_STEPS}{suffix}", HARD_STEPS, keys)
     for suffix, keys in (
         ("", {}),
         ("_rewired_null", {"brain.config.wiring": "rewired_degree_preserving"}),

@@ -107,3 +107,37 @@ for S in 150 250 350; do
     -- --theme headless
 done
 ```
+
+______________________________________________________________________
+
+## Calibration outcome, 2026-09-13 — the band is one grid step wide, and 350 is in it
+
+48 runs on disjoint seeds 101–104, all succeeded. Records under `pilot/`.
+
+| `max_steps` | wt / rn full clear | wt / rn foods | crossed 30% | inside the band? |
+|---|---|---|---|---|
+| **150** | 0.00% / 0.00% | 7.79 / 7.51 | **0% / 0%** | **no** — nothing full-clears; metric fully censored |
+| **250** | 10.67% / 6.13% | 15.14 / 14.64 | **0% / 0%** | **no** — learning happens, no arm reaches the threshold |
+| **350** | **77.40% / 69.23%** | 19.33 / 19.00 | **100% / 100%** | **yes** |
+
+**`max_steps: 350` is frozen for the campaign.** It is the only point in the grid inside the band, and
+the band is one grid step wide in each direction — at 250 the primary metric is censored for every
+seed and would have read as a clean null; the original design's inherited `max_steps: 500` would have
+saturated. Both edges the review insisted on were load-bearing.
+
+The learning gates are strongly positive at 350 (wild +77.4, null +69.0, both 4/4 seeds) and the
+untrained prior is indistinguishable (−0.17), so the cell is a platform. The `NO-LEARNING` verdicts
+printed at every budget are the n = 4 power artefact — with four seeds the paired rank floor is 1/16
+and the gates read q = 0.125 — exactly as V.1's pilot behaved at n = 4; at 32 seeds they pass
+trivially.
+
+**The direction at 350, for disclosure**: the efficiency primary reads 856 episodes against 1185, a
++27.7% gain, on 2 of 4 seeds at q = 0.438. Above the registered 20% minimum in size and unresolvable
+at this n, which is what 32 registered seeds are for. **This number was seen before the campaign ran**
+and is recorded here so the campaign is read as the confirmation test it is.
+
+**Cost, measured**: the 350 pilot's 16 runs took 866 s wall on 16 workers, so the 128-run campaign is
+scheduled at roughly two hours.
+
+The unused grid points' configs are removed, as the registration requires, so no unregistered budget
+can be run by accident; their pilot records stay committed under `pilot/`.

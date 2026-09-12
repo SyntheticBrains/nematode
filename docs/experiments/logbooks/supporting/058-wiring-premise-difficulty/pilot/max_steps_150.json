@@ -1,0 +1,410 @@
+{
+  "family": [
+    {
+      "test": "V1",
+      "cell": "klinotaxis",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "primary",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V2",
+      "cell": "klinotaxis",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V3",
+      "cell": "klinotaxis",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V4",
+      "cell": "klinotaxis",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V5",
+      "cell": "thermal",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "secondary",
+      "metric": "foods",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V6",
+      "cell": "thermal",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "foods",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V7",
+      "cell": "thermal",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "foods",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V8",
+      "cell": "thermal",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "foods",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V9",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "primary",
+      "metric": "success",
+      "n_common": 4,
+      "complete": true,
+      "mean_delta": 0.0,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0,
+      "wilcoxon_p": 1.0,
+      "positive_seeds": 0,
+      "bh_q": 1.0
+    },
+    {
+      "test": "V10",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "success",
+      "n_common": 4,
+      "complete": true,
+      "mean_delta": 0.0,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0,
+      "wilcoxon_p": 1.0,
+      "positive_seeds": 0,
+      "bh_q": 1.0
+    },
+    {
+      "test": "V11",
+      "cell": "hard_food",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "success",
+      "n_common": 4,
+      "complete": true,
+      "mean_delta": 0.0,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0,
+      "wilcoxon_p": 1.0,
+      "positive_seeds": 0,
+      "bh_q": 1.0
+    },
+    {
+      "test": "V12",
+      "cell": "hard_food",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "success",
+      "n_common": 4,
+      "complete": true,
+      "mean_delta": 0.0,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0,
+      "wilcoxon_p": 1.0,
+      "positive_seeds": 0,
+      "bh_q": 1.0
+    }
+  ],
+  "per_arm": {
+    "klinotaxis": {},
+    "thermal": {},
+    "hard_food": {
+      "wt_ppo": {
+        "n": 4,
+        "full_clear_mean": 0.0,
+        "foods_mean": 7.793666666666667,
+        "per_seed": {
+          "101": [
+            0.0,
+            7.726666666666667
+          ],
+          "102": [
+            0.0,
+            8.268
+          ],
+          "103": [
+            0.0,
+            7.817333333333333
+          ],
+          "104": [
+            0.0,
+            7.362666666666667
+          ]
+        },
+        "reference_only": false
+      },
+      "rn_ppo": {
+        "n": 4,
+        "full_clear_mean": 0.0,
+        "foods_mean": 7.509666666666666,
+        "per_seed": {
+          "101": [
+            0.0,
+            7.697333333333333
+          ],
+          "102": [
+            0.0,
+            7.493333333333333
+          ],
+          "103": [
+            0.0,
+            7.522666666666667
+          ],
+          "104": [
+            0.0,
+            7.325333333333333
+          ]
+        },
+        "reference_only": false
+      },
+      "wt_frozen": {
+        "n": 4,
+        "full_clear_mean": 0.0,
+        "foods_mean": 2.6203333333333334,
+        "per_seed": {
+          "101": [
+            0.0,
+            1.14
+          ],
+          "102": [
+            0.0,
+            3.6853333333333333
+          ],
+          "103": [
+            0.0,
+            3.9186666666666667
+          ],
+          "104": [
+            0.0,
+            1.7373333333333334
+          ]
+        },
+        "reference_only": false
+      },
+      "rn_frozen": {
+        "n": 4,
+        "full_clear_mean": 0.0,
+        "foods_mean": 2.199,
+        "per_seed": {
+          "101": [
+            0.0,
+            1.5253333333333334
+          ],
+          "102": [
+            0.0,
+            1.468
+          ],
+          "103": [
+            0.0,
+            4.689333333333333
+          ],
+          "104": [
+            0.0,
+            1.1133333333333333
+          ]
+        },
+        "reference_only": false
+      }
+    }
+  },
+  "verdicts": {
+    "klinotaxis": {
+      "verdict": "insufficient_seeds",
+      "missing_arms": [
+        "wt_ppo",
+        "rn_ppo",
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "n_common": 0
+    },
+    "thermal": {
+      "verdict": "insufficient_seeds",
+      "missing_arms": [
+        "wt_ppo",
+        "rn_ppo",
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "n_common": 0
+    },
+    "hard_food": {
+      "verdict": "no_learning",
+      "gate_test": "V10",
+      "gate_delta": 0.0,
+      "gate_q": 1.0,
+      "note": "the wild type does not beat its own frozen floor; this is a finding about the platform and licenses nothing about the wiring"
+    }
+  },
+  "efficiency": {
+    "hard_food": {
+      "verdict": "degree_statistics",
+      "horizon_episodes": 3000,
+      "rolling_window": 200,
+      "n_paired_seeds": 4,
+      "metrics": {
+        "auc_success": {
+          "higher_is_better": true,
+          "wild_mean": 0.0,
+          "rewired_mean": 0.0,
+          "wild_minus_rewired_oriented": 0.0,
+          "wild_better_seeds": 0,
+          "mean_delta": 0.0,
+          "wilcoxon_p": 1.0,
+          "ci_lo": 0.0,
+          "ci_hi": 0.0,
+          "n": 4,
+          "per_seed_deltas": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bh_fdr_q": 1.0
+        },
+        "auc_foods": {
+          "higher_is_better": true,
+          "wild_mean": 7.084833333333334,
+          "rewired_mean": 6.843416666666666,
+          "wild_minus_rewired_oriented": 0.24141666666666706,
+          "wild_better_seeds": 3,
+          "mean_delta": 0.24141666666666706,
+          "wilcoxon_p": 0.1875,
+          "ci_lo": -0.01166666666666627,
+          "ci_hi": 0.4945000000000004,
+          "n": 4,
+          "per_seed_deltas": [
+            -0.28433333333333266,
+            0.7280000000000006,
+            0.1120000000000001,
+            0.41000000000000014
+          ],
+          "bh_fdr_q": 0.625
+        },
+        "episodes_to_30pct_success": {
+          "higher_is_better": false,
+          "wild_mean": 3000.0,
+          "rewired_mean": 3000.0,
+          "wild_minus_rewired_oriented": 0.0,
+          "wild_better_seeds": 0,
+          "mean_delta": 0.0,
+          "wilcoxon_p": 1.0,
+          "ci_lo": 0.0,
+          "ci_hi": 0.0,
+          "n": 4,
+          "per_seed_deltas": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bh_fdr_q": 1.0
+        },
+        "episodes_to_90pct_foods_plateau": {
+          "higher_is_better": false,
+          "wild_mean": 499.75,
+          "rewired_mean": 588.0,
+          "wild_minus_rewired_oriented": 88.25,
+          "wild_better_seeds": 2,
+          "mean_delta": 88.25,
+          "wilcoxon_p": 0.3125,
+          "ci_lo": 6.5,
+          "ci_hi": 170.0,
+          "n": 4,
+          "per_seed_deltas": [
+            -71.0,
+            234.0,
+            -66.0,
+            256.0
+          ],
+          "bh_fdr_q": 0.625
+        }
+      },
+      "per_seed": {
+        "wild_type": {
+          "101": {
+            "auc_success": 0.0,
+            "auc_foods": 6.569333333333334,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 768.0
+          },
+          "102": {
+            "auc_success": 0.0,
+            "auc_foods": 7.613,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 583.0
+          },
+          "103": {
+            "auc_success": 0.0,
+            "auc_foods": 7.361666666666666,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 290.0
+          },
+          "104": {
+            "auc_success": 0.0,
+            "auc_foods": 6.795333333333334,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 358.0
+          }
+        },
+        "rewired_null": {
+          "101": {
+            "auc_success": 0.0,
+            "auc_foods": 6.853666666666666,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 697.0
+          },
+          "102": {
+            "auc_success": 0.0,
+            "auc_foods": 6.885,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 817.0
+          },
+          "103": {
+            "auc_success": 0.0,
+            "auc_foods": 7.249666666666666,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 224.0
+          },
+          "104": {
+            "auc_success": 0.0,
+            "auc_foods": 6.3853333333333335,
+            "episodes_to_30pct_success": 3000.0,
+            "episodes_to_90pct_foods_plateau": 614.0
+          }
+        }
+      },
+      "episodes_to_competence_gain": 0.0,
+      "min_gain": 0.2,
+      "meets_min_effect": false
+    }
+  }
+}
