@@ -9,9 +9,12 @@ possibilities. Where a result's premise was never established — where the effe
 been demonstrated by any method, including one known to work — it SHALL be classified as
 uninformative about both rather than attributed to the instrument.
 
-The classification SHALL be applied in a stated order, and the order SHALL place a failed premise
-before a failed instrument, since repairing an instrument would not have changed a null whose
-premise never held.
+The re-read SHALL first classify each result by the kind of question it asked, since the premise
+of a wiring contrast (that learning finds an advantage) and the premise of a retention assay (that a
+policy can be held) are different claims established by different evidence, and a result that
+involved no learning at all has neither. A result with no learning SHALL survive as a finding about
+the substrate. Within a kind, the order SHALL place a failed premise before a failed instrument,
+since repairing an instrument would not have changed a null whose premise never held.
 
 #### Scenario: A result whose premise no method supports is not blamed on the instrument
 
@@ -20,6 +23,18 @@ premise never held.
 - **WHEN** a null on that contrast under a different method is re-read
 - **THEN** it SHALL be classified as uninformative about both the question and the instrument, and
   the record SHALL state that a working instrument would not have changed it
+
+#### Scenario: A no-learning result survives regardless of the instrument
+
+- **GIVEN** a registered result that compared frozen substrates with no rule running
+- **WHEN** it is re-read after the rule is found not to learn
+- **THEN** it SHALL be classified as a finding about the substrate, unchanged
+
+#### Scenario: A retention assay whose premise was met is not filed as a premise failure
+
+- **GIVEN** a retention assay on a substrate shown to hold a competent policy under frozen weights
+- **WHEN** it is re-read
+- **THEN** its premise SHALL be recorded as met, and its null SHALL be attributed to the rule
 
 #### Scenario: The classification order is stated and applied
 

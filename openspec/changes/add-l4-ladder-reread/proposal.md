@@ -15,8 +15,9 @@ degree-preserving rewired null, against a frozen clone that holds **73.7%**.
 
 So the task is solvable, the substrate holds a competent policy, and **in the one regime where
 learning demonstrably works the rewired null beats the wild type by 12.6 points on 0 of 8 seeds**.
-Logbook 029 reached the same place independently, ranking the connectome fifth of six and
-indistinguishable from its rewired null.
+Logbook 029 converges from a different regime, ranking the connectome fifth of six and
+indistinguishable from its rewired null — a different finding from "null ahead", agreeing on the
+point that matters: no wild-type advantage.
 
 That changes what the seven results are evidence about. They were read as asking whether a local
 rule could find a wild-type advantage. No optimiser has found one — including the one that solves
@@ -26,7 +27,8 @@ matters for B.8.
 
 ## What Changes
 
-- **One record**, Logbook 056, stating for each of 040–047 whether it survives as a finding about
+- **One record**, Logbook 056, stating for each of 040–047 — I.4 was registered for 040–046, and
+  047 postdates it — whether it survives as a finding about
   the wiring, about the instrument, or about neither — with the committed verdict carried unchanged
   beside each re-read, as I.2's re-read requires.
 - **The three-way split is the contribution.** "Instrument" and "wiring" are not exhaustive: a

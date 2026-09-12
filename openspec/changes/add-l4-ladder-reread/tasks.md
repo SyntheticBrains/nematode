@@ -2,10 +2,12 @@
 
 ## 1. The re-read
 
-- [ ] 1.1 Classify each of 040–047 by the registered order — premise, then instrument, then wiring —
-  with the committed verdict carried unchanged beside each.
-- [ ] 1.2 The premise test against a working optimiser: 043's PPO arms on the same substrate, task
-  and seeds, and Logbook 029's independent ranking.
+- [ ] 1.1 Classify each of 040–047 **by result type first** — no-learning results survive as
+  substrate findings; wiring contrasts under learning are tested on the premise that learning finds
+  an advantage; clone assays on the premise that a policy can be held — then premise before
+  instrument within a type, with the committed verdict carried unchanged beside each.
+- [ ] 1.2 The two premise tests: for wiring contrasts, 043's low-noise PPO arms and Logbook 029's
+  ranking (converging from different regimes, cited as such); for clone assays, 043's W1.
 - [ ] 1.3 The correction on 043's W6 recorded with what it changes and what no longer follows from
   it.
 
