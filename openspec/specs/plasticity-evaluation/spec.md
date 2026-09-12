@@ -414,3 +414,235 @@ recorded with the change, and the outstanding work SHALL remain tracked.
 - **WHEN** the verdict is known
 - **THEN** the change authored next SHALL be the one that verdict licenses, and the other SHALL NOT
   be authored on the same evidence
+
+### Requirement: A pinned setting is examined where the rule is known to learn
+
+A setting pinned into a registered recipe SHALL be examined on a platform where the rule under test
+has been shown to learn, with the pinned value as the baseline arm and the registered pass rule
+unchanged. Where the rule does not learn on a platform, that platform SHALL NOT be used to examine a
+setting, since an arm that does not learn cannot show a setting holding it back.
+
+Where a setting cannot act on the available platform, the examination SHALL NOT be recorded as a
+null result. The platform SHALL be extended so the setting can act, or the setting SHALL be recorded
+as unexamined with the reason.
+
+#### Scenario: A platform that does not learn is not used
+
+- **GIVEN** a platform on which the rule under test does not exceed its own frozen control
+- **WHEN** a pinned setting is to be examined
+- **THEN** that platform SHALL NOT be used, and the reason SHALL be recorded
+
+#### Scenario: A setting that cannot act is not reported as having no effect
+
+- **GIVEN** a control whose protocol prevents a setting from changing any outcome
+- **WHEN** that setting is varied
+- **THEN** the result SHALL NOT be recorded as the setting having no effect, and the record SHALL
+  state that the setting was unmeasurable on that control
+
+### Requirement: The control may delay the reward to make the eligibility horizon measurable
+
+The positive control SHALL support a delay between the scored action and the reward, so that a rule
+whose eligibility decays over time can be tested on its ability to credit an action taken earlier.
+At a delay of `D`, the trial SHALL present the cue, take the scored action, run `D` further steps
+against a neutral observation, and deliver the reward once at the end.
+
+The delay SHALL NOT change what is scored: one action per trial, taken while the cue is visible,
+scored by the registered reward. The cue SHALL NOT be visible during the intervening steps, and the
+network SHALL NOT be required to retain it, so that the arm measures credit over time rather than
+memory.
+
+The intervening observation SHALL drive the plastic layer and SHALL carry no information about the
+cue, so that later steps add to the eligibility trace and the credited step's share of it falls
+with the delay. A delay that adds nothing to the trace SHALL NOT be used, since the recipe's trace
+normalisation divides out a pure scalar decay and such a delay would report no horizon effect at
+any length. The intervening observation SHALL keep the observation's dimension, so that a delay of
+zero remains the committed control.
+
+At a positive delay, the update's alignment SHALL be measured against the gradient of the loss at
+the scored step, held until the reward step, and NOT against the loss at the step the update lands
+on.
+
+The closed-form bounds SHALL be unchanged by the delay, since they depend on the targets and the
+action noise alone; the floor, the optimum, the gap and the registered pass rule SHALL therefore
+apply to a delayed arm as they do to the committed one.
+
+A delay of zero SHALL reproduce the committed one-step control exactly.
+
+#### Scenario: Zero delay is the committed control
+
+- **GIVEN** the control at a delay of zero
+- **WHEN** an arm is run at a registered seed
+- **THEN** its score SHALL equal the committed one-step arm's at that seed
+
+#### Scenario: The bounds do not move with the delay
+
+- **GIVEN** any delay
+- **WHEN** the cue-blind floor and the optimum are computed
+- **THEN** they SHALL equal the committed one-step values
+
+#### Scenario: The credited step is diluted, not merely decayed
+
+- **GIVEN** the recipe's trace normalisation
+- **WHEN** a delayed trial reaches its reward step
+- **THEN** the credited step's share of the normalised trace SHALL be smaller than at zero delay,
+  which a delay adding nothing to the trace would fail
+
+#### Scenario: Alignment at a delay is against the scored step
+
+- **GIVEN** a delayed trial
+- **WHEN** the update's alignment is computed
+- **THEN** it SHALL be against the gradient taken at the scored step, not at the reward step
+
+#### Scenario: The delay tests credit rather than memory
+
+- **GIVEN** a delayed trial
+- **WHEN** the intervening steps are run
+- **THEN** the observation SHALL carry no information about the cue, and the action scored SHALL be
+  the one taken while the cue was visible
+
+#### Scenario: The horizon is examined across the scale the setting implies
+
+- **WHEN** the eligibility horizon is examined
+- **THEN** the delays SHALL reach beyond the number of steps over which the pinned decay retains a
+  substantial fraction of the trace, so that a horizon-limited rule is seen to fail within the grid
+
+### Requirement: A setting found limiting on a control is tested where it was found to matter
+
+Where a control establishes that a pinned setting limits the rule, that finding SHALL be tested on
+a task of the kind whose failure motivated it before it is carried into a synthesis as an
+explanation. The test SHALL run on the cheapest platform that poses the question, and a platform
+whose runs are orders more costly SHALL NOT be used until the cheaper one has shown the setting
+moves anything.
+
+Where every existing result ran at the setting's default, the default SHALL be one of the arms, so
+that the comparison includes the condition the record was made under.
+
+#### Scenario: The cheap platform goes first
+
+- **GIVEN** two platforms that pose the question, differing by orders of magnitude in cost per run
+- **WHEN** the setting is tested
+- **THEN** the cheaper platform SHALL be run first, and the costlier one SHALL be registered only if
+  the cheaper one shows the setting moves the outcome
+
+#### Scenario: The pinned value is an arm
+
+- **WHEN** a setting whose default every committed result used is examined
+- **THEN** that default SHALL be one of the arms
+
+### Requirement: An arm at the metric's floor is scored on the graded reading
+
+Where the primary metric is at its floor for both arms of a comparison, the comparison SHALL be
+made on the graded reading rather than reported as no difference, since a metric that is zero for
+both cannot separate them. The competence-dependent contrasts SHALL be reported as undefined where
+no seed reaches competence, and SHALL NOT contribute a result.
+
+A difference on the graded reading SHALL carry a verdict only where it is both statistically
+significant and at least a stated minimum size, fixed before the run. A paired rank test at these
+panel sizes responds to the consistency of the sign rather than the size of the shift, so
+significance alone permits a behaviourally negligible difference to be reported as an effect.
+
+#### Scenario: A significant but negligible shift does not carry the verdict
+
+- **GIVEN** a graded difference that is significant and smaller than the registered minimum
+- **WHEN** the verdict is assigned
+- **THEN** the difference SHALL be reported as observed, SHALL NOT be recorded as the setting
+  transferring, and SHALL NOT license the costlier platform
+
+#### Scenario: A floored primary metric does not decide the comparison
+
+- **GIVEN** two arms whose full-clear rates are both at the floor, with no seed competent
+- **WHEN** the comparison is made
+- **THEN** it SHALL be made on the graded reading, and the competence-dependent contrasts SHALL be
+  reported as undefined
+
+### Requirement: A perturbing arm is compared with a control at its own setting
+
+Where a rule's setting is varied and the rule perturbs the policy it runs, each setting SHALL have
+its own frozen control at that same setting, and the learning arm SHALL be compared with it. A
+single control at one setting SHALL NOT serve every arm, since what the perturbation costs a policy
+need not be constant across the setting being varied.
+
+#### Scenario: Each setting carries its own control
+
+- **GIVEN** a grid over a rule setting, with a perturbing learning arm
+- **WHEN** the arms are registered
+- **THEN** each cell SHALL have a frozen control at that cell's setting, and the learning arm SHALL
+  be scored against it rather than against a control from another cell
+
+#### Scenario: A committed table from another rule is not the comparator
+
+- **GIVEN** committed values for the same platform recorded under a different learning rule
+- **WHEN** the comparison is made
+- **THEN** those values MAY be reported as a descriptive reference and SHALL NOT be the comparator
+
+### Requirement: A re-read establishes what a body of results is evidence about
+
+Where a body of registered results is re-read after the instrument that produced them has been
+tested, the re-read SHALL classify each result by what would have had to be true for its null to be
+informative, and SHALL NOT assume that "about the question" and "about the instrument" exhaust the
+possibilities. Where a result's premise was never established — where the effect it sought has not
+been demonstrated by any method, including one known to work — it SHALL be classified as
+uninformative about both rather than attributed to the instrument.
+
+The re-read SHALL first classify each result by the kind of question it asked, since the premise
+of a wiring contrast (that learning finds an advantage) and the premise of a retention assay (that a
+policy can be held) are different claims established by different evidence, and a result that
+involved no learning at all has neither. A result with no learning SHALL survive as a finding about
+the substrate. Within a kind, the order SHALL place a failed premise before a failed instrument,
+since repairing an instrument would not have changed a null whose premise never held.
+
+#### Scenario: A result whose premise no method supports is not blamed on the instrument
+
+- **GIVEN** a contrast on which a method known to solve the task shows no effect in the sought
+  direction
+- **WHEN** a null on that contrast under a different method is re-read
+- **THEN** it SHALL be classified as uninformative about both the question and the instrument, and
+  the record SHALL state that a working instrument would not have changed it
+
+#### Scenario: A no-learning result survives regardless of the instrument
+
+- **GIVEN** a registered result that compared frozen substrates with no rule running
+- **WHEN** it is re-read after the rule is found not to learn
+- **THEN** it SHALL be classified as a finding about the substrate, unchanged
+
+#### Scenario: A result measured under a different rule is not classified by the tested rule's premise
+
+- **GIVEN** a registered contrast measured under a rule other than the one the positive control
+  tested, and evidence that this other rule reaches competent behaviour on the task
+- **WHEN** it is re-read
+- **THEN** it SHALL be classified on its own rule's premise, which is met, and SHALL NOT be
+  evaluated under the tested rule's premise or attributed to the tested rule's failure
+
+#### Scenario: A retention assay whose premise was met is not filed as a premise failure
+
+- **GIVEN** a retention assay on a substrate shown to hold a competent policy under frozen weights
+- **WHEN** it is re-read
+- **THEN** its premise SHALL be recorded as met, and its null SHALL be attributed to the rule
+
+#### Scenario: The classification order is stated and applied
+
+- **WHEN** a result satisfies both the failed-premise and failed-instrument conditions
+- **THEN** it SHALL be classified by the premise, and the record SHALL state the order used
+
+### Requirement: A re-read carries its committed verdicts and its own corrections
+
+Each committed verdict SHALL be carried unchanged beside its re-read, in the units and under the
+rule it was registered with. A re-read SHALL NOT convert a negative result into a positive one, and
+SHALL NOT license work that the results themselves do not license.
+
+Where the re-read corrects an earlier reading made during the programme, the correction SHALL be
+recorded with what it changes, rather than the earlier reading being silently dropped.
+
+#### Scenario: A committed verdict survives its re-read
+
+- **GIVEN** a committed verdict whose re-read classifies it differently
+- **WHEN** the record is written
+- **THEN** both SHALL appear, the committed verdict SHALL be unchanged, and the record SHALL state
+  which is the verdict
+
+#### Scenario: A superseded reading is corrected rather than dropped
+
+- **GIVEN** a reading made earlier in the programme that the re-read finds unsupported
+- **WHEN** the record is written
+- **THEN** it SHALL state the earlier reading, what the evidence actually shows, and what followed
+  from the earlier reading that no longer holds
