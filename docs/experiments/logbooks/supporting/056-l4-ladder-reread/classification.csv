@@ -1,0 +1,33 @@
+logbook,test,contrast,committed,committed_result,rule_running,kind,reread
+040,T1,wt_plastic − rn_plastic,+6.6 (q 0.50),fail,three-factor,wiring contrast,premise
+040,T2,wt_plastic − wt_frozen,+9.6 (q 0.50),fail,three-factor,floor,instrument
+040,T3,wt_plastic − wt_hebbian,−12.4 (q 0.73),fail,three-factor,floor,instrument
+040,T4,wt gain − rn gain,+6.2 (q 0.50),fail,three-factor,wiring contrast,premise
+040,band,mlp_plastic plateau tail,1.1%,at chance,three-factor,yardstick,instrument
+041,P1,wt_hebbian − rn_hebbian (degree init),+14.1 (q 0.28),fail,reward-free Hebbian,wiring contrast,substrate
+041,P2,wt_hebbian − rn_hebbian (count init),+2.0 (q 0.47),fail,reward-free Hebbian,wiring contrast,substrate
+041,P3,wt_hebbian_count − wt_hebbian,−15.6 (q 0.92),reverse,reward-free Hebbian,initialisation,substrate
+041,P4,wt_frozen − rn_frozen (64 seeds),+3.3 (q 0.28),fail,none,prior,substrate
+042,R1,wt_hebbian − rn_hebbian (seeds 17–64),+8.1 (q 0.19),fail,reward-free Hebbian,wiring contrast,substrate
+042,R2,competent-fraction discordance,11 / 6 (q 0.19),fail,reward-free Hebbian,wiring contrast,substrate
+043,W1,wt_clone_frozen − random wt_frozen,+31.0 (q .023),pass,none,retention premise,substrate
+043,W2,wt_clone_frozen − rn_clone_frozen,−4.0 (q .996),reverse,none,representability,substrate
+043,W3,wt_clone_plastic − rn_clone_plastic,−7.2 (q .996),fail,three-factor,wiring contrast,premise
+043,W4,wt_clone_plastic − wt_clone_frozen,−25.7 (q .996),reverse,three-factor,retention assay,instrument
+043,W5,wt_clone_plastic − wt_clone_hebbian,−25.7 (q .996),reverse,three-factor,retention assay,instrument
+043,W6,wt_fullclone_ppo − wt_ppo,−34.1 (q .996),reverse,PPO,optimiser warm start,neither
+044,G1,grounded wt frozen − random wt frozen,+0.77 (q 0.260),fail,none,prior,substrate
+044,G2,grounded wt − rn Hebbian,+4.87 (q 0.551),fail,reward-free Hebbian,wiring contrast,substrate
+044,G3,the same under Dale's law,−2.47 (q 0.986),fail,reward-free Hebbian,wiring contrast,substrate
+044,G4,enforced − unenforced wt Hebbian,−4.75 (q 0.986),reverse,reward-free Hebbian,sign enforcement,substrate
+045,anchor,elastic anchor − frozen clone,13.0 vs 38.7,fail,three-factor,retention assay,instrument
+045,rigidity,per-synapse protection − frozen clone,29.4 vs 38.7,fail (one clause),three-factor,retention assay,instrument
+045,oracle,episode-success gate − frozen clone,28.9 vs 38.7,fail,three-factor,retention assay,instrument
+046,D1,wt anti-Hebbian − wt grounded Hebbian,−0.90 (q .487),fail,reward-free Hebbian,rule variant,substrate
+046,D2,wt Oja − wt grounded Hebbian,−2.60 (q .487),fail,reward-free Hebbian,rule variant,substrate
+046,D3,wt − rn under anti-Hebbian,+2.58 (q .487),fail,reward-free Hebbian,wiring contrast,substrate
+046,D4,wt − rn under Oja,+2.02 (q .487),fail,reward-free Hebbian,wiring contrast,substrate
+047,S1,wt routed − wt global,−3.18 (q 0.975),fail,three-factor,routing,instrument
+047,S2,rn routed − rn global,−7.30 (q 0.975),fail,three-factor,routing,instrument
+047,S3,wt − rn under routing,+0.87 (q 0.975),fail,three-factor,wiring contrast,premise
+047,S4,wt − rn under the global scalar,−3.24 (q 0.975),fail,three-factor,wiring contrast,premise
