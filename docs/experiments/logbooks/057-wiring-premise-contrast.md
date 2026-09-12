@@ -174,16 +174,21 @@ wild-better 6–7/16). Its prior is also indistinguishable (−0.07, q = 0.847).
 
 ## Next Steps
 
-Neither is run here; both are registered as the follow-ups this result earns.
-
-- [ ] **Why the seeds differ.** Each seed's rewiring is deterministic given `rewire_seed`, so the 64
-  rewired graphs can be regenerated offline and tested for a graph property that predicts that
-  seed's time-to-competence — path length from AFDL/AFDR to the motor readout being the obvious
-  candidate. No compute. Exploratory, and anything it finds needs its own registered test.
+- [x] **Why the seeds differ** — run 2026-09-12 as a probe
+  ([record](supporting/057-wiring-premise-contrast/probe-v2.md)): **nothing predicts, and the reason
+  closes a hypothesis.** All four registered properties fail, three because they barely vary across
+  degree-preserving rewirings. Every one of the 39 motor-readout neurons is reachable from AFD within
+  the substrate's four settling hops in **every** graph, the wild type included, so the settling-depth
+  hypothesis is false. And the wild type's shortest AFD → motor path is **3 hops against every
+  rewiring's 1–2**, with a *longer* characteristic path length (3.086 against 2.576–2.598): **the
+  rewirings are better connected by these measures and learn slower**, so the advantage is not a
+  shortcut. The seed-to-seed heterogeneity is unexplained by gross connectivity.
 - [ ] **Pathway or difficulty?** The two cells differ in difficulty, not only in modality. A
   food-only cell made hard by some route other than temperature separates "the evolved AFD
   pathway helps" from "the wiring helps once the task stops saturating". The second is the
-  broader claim and the one worth registering against.
+  broader claim and the one worth registering against. The probe sharpens it: whatever the pathway
+  contributes is **not** hop count, so what is left is which neurons sit on the route, how degrees
+  pair across edges, and the motif structure a degree-preserving swap destroys.
 - [ ] B.8 inherits this: a phase with a positive, bounded, replicated result.
 
 ## Data References
