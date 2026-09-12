@@ -64,6 +64,26 @@ CONFIG_PAIRS = [
 # The harder variants -- the registered saturation remedy, and the arms the campaign actually ran.
 # Each differs from its committed base by `target_foods_to_collect` plus its own arm key(s).
 T20_KEY = "environment.foraging.target_foods_to_collect"
+BUDGET_KEYS = {"max_steps", "satiety.satiety_gain_per_food"}
+HARD_GRID = (150, 250, 350)
+# The V.3 arms: the hard food-only cell across the declared calibration grid. Each differs from the
+# committed `_t20` base by the budget keys plus its own arm key.
+CONFIG_PAIRS_HARD = [
+    (f"_hard{steps}{suffix}", steps, keys)
+    for steps in HARD_GRID
+    for suffix, keys in (
+        ("", {}),
+        ("_rewired_null", {"brain.config.wiring": "rewired_degree_preserving"}),
+        ("_frozen", {"brain.config.freeze_updates": True}),
+        (
+            "_rewired_null_frozen",
+            {
+                "brain.config.wiring": "rewired_degree_preserving",
+                "brain.config.freeze_updates": True,
+            },
+        ),
+    )
+]
 CONFIG_PAIRS_T20 = [
     (base, f"{suffix}_t20", keys)
     for base in (
@@ -142,6 +162,86 @@ def test_t20_variant_differs_by_the_target_and_its_arm_keys(base, suffix, expect
     assert "brain.config.rewire_seed" not in variant
     for key, value in expected.items():
         assert variant[key] == value
+
+
+@pytest.mark.parametrize(("suffix", "steps", "expected"), CONFIG_PAIRS_HARD)
+def test_hard_cell_arm_differs_by_the_budget_and_its_arm_keys(suffix, steps, expected):
+    """Each V.3 arm differs from the committed `_t20` base by the budget keys plus its own key(s).
+
+    The budget is the manipulation, so a stray key here would confound the very comparison the
+    change exists to make.
+    """
+    base_name = "foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_t20"
+    variant_name = base_name.replace("_t20", f"{suffix}")
+    base_cfg = _flat(yaml.safe_load((CONFIG_DIR / f"{base_name}.yml").read_text()))
+    variant = _flat(yaml.safe_load((CONFIG_DIR / f"{variant_name}.yml").read_text()))
+    sentinel = object()
+    differing = {
+        key
+        for key in set(base_cfg) | set(variant)
+        if base_cfg.get(key, sentinel) != variant.get(key, sentinel)
+    }
+    assert differing == set(expected) | BUDGET_KEYS
+    assert variant["max_steps"] == steps
+    assert variant["satiety.satiety_gain_per_food"] == 0.2
+    assert variant[T20_KEY] == 20  # the target is inherited, not part of the manipulation
+    assert "brain.config.rewire_seed" not in variant
+    for key, value in expected.items():
+        assert variant[key] == value
+
+
+def test_the_hard_cell_is_registered_in_the_family_and_decides_its_own_campaign():
+    """The V.3 cell carries four family rows, and its efficiency contrast is its own primary."""
+    rows = [row for row in wp.FAMILY if row[1] == "hard_food"]
+    assert [row[0] for row in rows] == ["V9", "V10", "V11", "V12"]
+    assert [row[4] for row in rows] == ["primary", "gate", "gate_null", "prior"]
+    assert "hard_food" in wp.PRIMARY_CELLS
+    assert "klinotaxis" not in wp.PRIMARY_CELLS  # it saturates; it never decides a verdict
+    assert wp.SCORED["hard_food"] == "success"
+    assert wp.MIN_EFFECT["hard_food"] == 5.0
+
+
+def test_the_family_correction_is_per_campaign():
+    """A manifest carrying one cell corrects across its four tests; two cells across eight.
+
+    Pinned with synthetic data rather than a committed manifest: `campaigns/*` is gitignored, so the
+    committed manifests' log paths do not exist on a clean checkout.
+    """
+    one_cell = _cells(60.0, 35.0, 10.0, 10.0, cell="hard_food")
+    rows = [row for row in wp.contrasts(one_cell) if "bh_q" in row]
+    assert {row["cell"] for row in rows} == {"hard_food"}
+    assert len(rows) == 4
+
+    two_cells = dict(one_cell)
+    two_cells.update(_cells(60.0, 35.0, 10.0, 10.0, cell="thermal"))
+    rows_two = [row for row in wp.contrasts(two_cells) if "bh_q" in row]
+    assert {row["cell"] for row in rows_two} == {"hard_food", "thermal"}
+    assert len(rows_two) == 8
+
+    # The same contrast is corrected less strictly when it is alone in its family.
+    solo = next(r for r in rows if r["test"] == "V9")
+    paired = next(r for r in rows_two if r["test"] == "V9")
+    assert solo["bh_q"] <= paired["bh_q"]
+
+
+def test_crossing_rate_counts_only_seeds_that_reached_the_threshold():
+    """A seed censored at the horizon does not count as having crossed."""
+    report = {
+        "horizon_episodes": 3000,
+        "per_seed": {
+            "wild_type": {
+                "1": {"episodes_to_30pct_success": 300.0},
+                "2": {"episodes_to_30pct_success": 3000.0},
+            },
+            "rewired_null": {
+                "1": {"episodes_to_30pct_success": 500.0},
+                "2": {"episodes_to_30pct_success": 900.0},
+            },
+        },
+    }
+    assert wp.crossing_rate(report, "wild_type") == pytest.approx(0.5)
+    assert wp.crossing_rate(report, "rewired_null") == pytest.approx(1.0)
+    assert pytest.approx(0.8) == wp.CROSSING_FLOOR
 
 
 def _out_file(directory: Path, name: str, clears: int, total: int, foods: int = 10) -> Path:
@@ -249,12 +349,14 @@ def test_thermal_cell_is_scored_on_foods():
 
 
 def test_family_is_corrected_together():
-    """All eight tests carry a corrected q, computed over the whole family before any is read."""
+    """Each test in the manifest carries a q computed over that family before any is read."""
     cells = _cells(60.0, 35.0, 10.0, 10.0)
     cells.update(_cells(40.0, 40.0, 10.0, 10.0, cell="thermal"))
     rows = wp.contrasts(cells)
-    assert len(rows) == len(wp.FAMILY) == 8
-    assert all("bh_q" in row for row in rows)
+    assert len(rows) == len(wp.FAMILY) == 12  # three cells x four tests
+    scored = [row for row in rows if "bh_q" in row]
+    assert len(scored) == 8  # the two cells in this manifest; the third is incomplete
+    assert {row["cell"] for row in scored} == {"klinotaxis", "thermal"}
 
 
 def test_reference_arm_is_never_read_by_a_test():
@@ -427,6 +529,9 @@ def test_efficiency_contrast_applies_the_minimum_effect_rule(tmp_path):
     }
 
 
-def test_primary_cell_is_the_thermal_cell_after_the_amendment():
-    """The amendment moved the primary to the cell the pilot showed is not saturated."""
-    assert wp.PRIMARY_CELL == "thermal"
+def test_primary_cells_are_those_the_pilots_showed_are_not_saturated():
+    """057's amendment made the thermal cell a primary; V.3 adds the hard food-only cell.
+
+    The klinotaxis cell is never one: both wirings clear 100% of it.
+    """
+    assert frozenset({"thermal", "hard_food"}) == wp.PRIMARY_CELLS

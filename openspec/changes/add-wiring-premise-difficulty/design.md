@@ -24,7 +24,9 @@ which picking 500 from another cell would have skipped.
 `episodes_to_30pct_success` — episodes to first cross a 30% rolling full-clear rate — and the harness
 returns the horizon for an arm that never crosses. So the cell must be **hard enough that both PPO
 arms stay clear of the ceiling** and **easy enough that both cross 30%**; outside that band the metric
-is censored at 3000 for every seed and discriminates nothing while looking like a null. The pilot
+is censored at 3000 for every seed and discriminates nothing while looking like a null. The lower edge
+is registered as **80% of seeds crossing in each arm** — 0.8 rather than 1.0 because one non-crossing
+seed is not censoring, and 057's committed thermal panel itself sits at 98% and 100%. The pilot
 reports the ceiling distance *and* the crossing rate per arm, and the chosen budget is the one inside
 the band. If no grid point is inside it, the campaign does not launch and the change is amended.
 

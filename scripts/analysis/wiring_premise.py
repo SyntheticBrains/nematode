@@ -50,19 +50,19 @@ from weight_search_architecture_ranking import bh_fdr, paired_seed_wilcoxon_boot
 
 REPO = Path(__file__).resolve().parents[2]
 
-CELLS = ("klinotaxis", "thermal")
+CELLS = ("klinotaxis", "thermal", "hard_food")
 TESTED_ARMS = ("wt_ppo", "rn_ppo", "wt_frozen", "rn_frozen")
 REFERENCE_ARMS = ("mlp_ppo",)  # descriptive only - no test may read these
 ARMS = (*TESTED_ARMS, *REFERENCE_ARMS)
 
 # Scored metric per cell, fixed from the configs before any data existed. The thermal cell's
 # `satiety_gain_per_food: 0.2` makes collect-10 not its task, so it is scored on the graded metric.
-SCORED: dict[str, str] = {"klinotaxis": "success", "thermal": "foods"}
+SCORED: dict[str, str] = {"klinotaxis": "success", "thermal": "foods", "hard_food": "success"}
 
 # Registered minimum effect on each cell's scored metric, beside significance: at n = 16 a paired
 # rank test fires on the consistency of the sign rather than the size of the shift. The foods
 # figure is the one I.3b registered for a foods-scored contrast.
-MIN_EFFECT: dict[str, float] = {"klinotaxis": 5.0, "thermal": 0.5}
+MIN_EFFECT: dict[str, float] = {"klinotaxis": 5.0, "thermal": 0.5, "hard_food": 5.0}
 
 # Ceiling: both PPO arms at or above this full-clear mean means the cell cannot discriminate on the
 # peak axis. Measured on full clears for both cells - it is the cell's exhaustion, not the scored
@@ -77,13 +77,23 @@ SATURATION_SUCCESS = 90.0
 # axis, read through the committed `connectome_structure_efficiency` harness - 034's own follow-up,
 # its four-metric BH-FDR family and its verdict rule unchanged. The learning gates stay on the peak
 # axis, where "did this arm learn at all" is what they ask.
-PRIMARY_CELL = "thermal"
+# Cells whose *efficiency* contrast decides their own campaign's verdict. The klinotaxis cell is
+# never one: it saturates, and 057's pilot showed both wirings clearing 100%. This set feeds a
+# printed label only - no committed number depends on it.
+PRIMARY_CELLS = frozenset({"thermal", "hard_food"})
 EFFICIENCY_ARMS = {"wt_ppo": efficiency._WILD, "rn_ppo": efficiency._REWIRED}
 
 # Minimum effect on the efficiency primary, registered with the amendment and before the registered
 # seeds ran: a significant contrast that shortens time-to-competence by less than this is named and
 # licenses nothing. The pilot's direction, at an unresolvable n = 4, was about 48%.
 MIN_EFFICIENCY_GAIN = 0.20
+
+# The lower edge of the band the primary metric needs. `episodes_to_30pct_success` returns the horizon
+# for a seed that never crosses the threshold, so a cell too hard to reach it censors the metric and
+# reads exactly like a null. Below this fraction of seeds crossing, in either arm, the contrast is
+# recorded as materially censored. Set at 0.8 rather than 1.0 because a single non-crossing seed is
+# not censoring: 057's committed thermal panel sits at 98% and 100%.
+CROSSING_FLOOR = 0.8
 
 # 034's thresholds, carried so the two harnesses agree.
 MIN_PAIRED_SEEDS = 2
@@ -100,6 +110,11 @@ FAMILY: tuple[tuple[str, str, str, str, str], ...] = (
     ("V6", "thermal", "wt_ppo", "wt_frozen", "gate"),
     ("V7", "thermal", "rn_ppo", "rn_frozen", "gate_null"),
     ("V8", "thermal", "wt_frozen", "rn_frozen", "prior"),
+    # V.3: the hard food-only cell - difficulty raised by the episode budget, no temperature.
+    ("V9", "hard_food", "wt_ppo", "rn_ppo", "primary"),
+    ("V10", "hard_food", "wt_ppo", "wt_frozen", "gate"),
+    ("V11", "hard_food", "rn_ppo", "rn_frozen", "gate_null"),
+    ("V12", "hard_food", "wt_frozen", "rn_frozen", "prior"),
 )
 
 _CONTRAST_ROLES = ("primary", "secondary")
@@ -310,8 +325,21 @@ def apply_min_effect(report: dict[str, Any]) -> dict[str, Any]:
     return report
 
 
+def crossing_rate(report: dict[str, Any], arm: str) -> float:
+    """Fraction of seeds whose arm actually crossed the 30% threshold the primary metric needs.
+
+    `episodes_to_30pct_success` returns the horizon for a seed that never crosses, so a cell too hard
+    to reach the threshold censors the metric at the horizon for every seed and reads exactly like a
+    null. The rate is reported so that case is visible rather than inferred.
+    """
+    horizon = report["horizon_episodes"]
+    per_seed = report["per_seed"][arm]
+    crossed = sum(1 for m in per_seed.values() if m["episodes_to_30pct_success"] < horizon)
+    return crossed / len(per_seed) if per_seed else float("nan")
+
+
 def _print_efficiency(cell: str, report: dict[str, Any]) -> None:
-    """Print one cell's efficiency table and its verdict."""
+    """Print one cell's efficiency table, its crossing rates and its verdict."""
     print(f"\n  EFFICIENCY axis (034's harness, n={report['n_paired_seeds']} paired):")
     for name, entry in report["metrics"].items():
         print(
@@ -319,11 +347,16 @@ def _print_efficiency(cell: str, report: dict[str, Any]) -> None:
             f"d={entry['wild_minus_rewired_oriented']:+8.2f}  q={entry['bh_fdr_q']:.3f}  "
             f"wild-better {entry['wild_better_seeds']}/{report['n_paired_seeds']}",
         )
-    tag = " (PRIMARY)" if cell == PRIMARY_CELL else ""
+    tag = " (PRIMARY)" if cell in PRIMARY_CELLS else ""
     print(
         f"    time-to-competence gain {report['episodes_to_competence_gain']:+.1%} against a "
         f"registered minimum of {report['min_gain']:+.0%}",
     )
+    wild_rate = crossing_rate(report, efficiency._WILD)
+    rewired_rate = crossing_rate(report, efficiency._REWIRED)
+    censored = min(wild_rate, rewired_rate) < CROSSING_FLOOR
+    flag = f"  <-- below the {CROSSING_FLOOR:.0%} floor: materially censored" if censored else ""
+    print(f"    crossed the 30% threshold: wild {wild_rate:.0%}, rewired {rewired_rate:.0%}{flag}")
     print(f"  VERDICT ({cell}, efficiency{tag}): {report['verdict'].upper().replace('_', '-')}")
 
 
@@ -335,7 +368,7 @@ def analyse(
     """Print and record the per-arm table, the registered family and the verdict per cell.
 
     With ``manifest``, the efficiency axis is scored beside the peak axis through the committed
-    034 harness; the primary verdict is that axis on :data:`PRIMARY_CELL`.
+    034 harness; the primary verdict is that axis on each cell in :data:`PRIMARY_CELLS`.
     """
     rows = contrasts(cells)
     out["family"] = rows
