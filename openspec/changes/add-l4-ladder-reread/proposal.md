@@ -15,9 +15,9 @@ degree-preserving rewired null, against a frozen clone that holds **73.7%**.
 
 So the task is solvable, the substrate holds a competent policy, and **in the one regime where
 learning demonstrably works the rewired null beats the wild type by 12.6 points on 0 of 8 seeds**.
-Logbook 029 converges from a different regime, ranking the connectome fifth of six and
-indistinguishable from its rewired null — a different finding from "null ahead", agreeing on the
-point that matters: no wild-type advantage.
+Logbook 034 ran that contrast under PPO in Phase 6a and found the wirings
+indistinguishable (−3.28, q = 0.770, eight paired seeds, nominally the null higher) — a different
+finding from "null ahead", agreeing on the point that matters: no wild-type advantage.
 
 That changes what the seven results are evidence about. They were read as asking whether a local
 rule could find a wild-type advantage. No optimiser has found one — including the one that solves
@@ -36,9 +36,9 @@ matters for B.8.
   PPO numbers create and which the registered I.4 wording did not anticipate.
 - **A correction on the record.** An earlier reading of 043's W6 — that PPO also destroys competent
   policies, so the constraint might not be the rule — over-read it. W6 shows *warm-starting* hurts
-  PPO (34.5 against 68.5 from scratch), not that the task destroys policies. In the same warm-start
-  regime the local rule reaches 13.0 against PPO's 34.5, so the attribution to the rule is cleaner,
-  not muddier.
+  PPO (34.5 against 68.5 from scratch), not that the task destroys policies: PPO solves the task from
+  random weights, where the rule reaches 17.8 and sits below its own unmodulated floor. The
+  attribution to the rule is cleaner, not muddier.
 - **What each conclusion licenses for B.8**, stated so the shipment decision inherits a reading
   rather than a pile of verdicts.
 
