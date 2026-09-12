@@ -9,7 +9,7 @@ architecture rankings place the connectome competitive on foraging and behind on
 the least worm-like of the three demands. This ran the same contrast under PPO on cells matched to
 behaviours the animal performs. On a **foraging cell under lethal thermal pressure**, the wild-type
 wiring reaches competence **~35% sooner** than its degree-preserving rewired null — 396 episodes
-against 614, pooled over **64 paired seeds**, all four efficiency metrics significant (q = 0.000 to
+against 613, pooled over **64 paired seeds**, all four efficiency metrics significant (q = 0.000 to
 0.001, 43–48 of 64 seeds). The controls that make it mean something both hold: **both wirings learn**
 (gates 64/64, q = 0.000) and **the untrained prior is indistinguishable** (−0.17, q = 0.735), so the
 advantage is created by learning rather than inherited from the graph. Two things bound the claim.
@@ -148,7 +148,9 @@ wild-better 6–7/16). Its prior is also indistinguishable (−0.07, q = 0.847).
    panel 1 drew high, and the two independent panels agree. Panel 2's failure to replicate was
    underpower at the true effect size, not a contradiction — its 80% intervals were entirely above
    zero and each contained panel 1's estimate, and a Mann-Whitney between the two panels' per-seed
-   deltas gives **p = 0.318**. The panels are one population.
+   deltas gives **p = 0.318** — no between-panel difference is detected. That is a failure to detect
+   a difference, not evidence that none exists; at these sample sizes the test would not resolve a
+   moderate one either.
 4. **Why the paired test and the interval disagreed at n = 16.** The effect is heterogeneous: large
    on most seeds, slightly negative on a few. A paired rank test reads only signs, so it needs
    consistency; the bootstrap interval reads magnitude. At 16 seeds the sign count was the binding
@@ -194,4 +196,4 @@ Neither is run here; both are registered as the follow-ups this result earns.
 - Harness: `scripts/analysis/wiring_premise.py`, reusing `t7_continuous_ranking.plateau_tail`,
   `weight_search_architecture_ranking.{paired_seed_wilcoxon_bootstrap,bh_fdr}` and
   `connectome_structure_efficiency.analyse`.
-- 320 runs in total (52 pilot, 128 panel 1, 64 panel 2, 128 panel 3); all succeeded.
+- 372 runs in total (52 pilot, 128 panel 1, 64 panel 2, 128 panel 3); all succeeded.

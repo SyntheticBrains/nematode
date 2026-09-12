@@ -61,6 +61,30 @@ CONFIG_PAIRS = [
 ]
 
 
+# The harder variants -- the registered saturation remedy, and the arms the campaign actually ran.
+# Each differs from its committed base by `target_foods_to_collect` plus its own arm key(s).
+T20_KEY = "environment.foraging.target_foods_to_collect"
+CONFIG_PAIRS_T20 = [
+    (base, f"{suffix}_t20", keys)
+    for base in (
+        "foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis",
+        "thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis",
+    )
+    for suffix, keys in (
+        ("", {}),
+        ("_rewired_null", {"brain.config.wiring": "rewired_degree_preserving"}),
+        ("_frozen", {"brain.config.freeze_updates": True}),
+        (
+            "_rewired_null_frozen",
+            {
+                "brain.config.wiring": "rewired_degree_preserving",
+                "brain.config.freeze_updates": True,
+            },
+        ),
+    )
+]
+
+
 def _flat(mapping: dict, prefix: str = "") -> dict:
     flat = {}
     for key, value in mapping.items():
@@ -96,6 +120,28 @@ def test_variant_leaves_rewire_seed_unset(base, suffix, _expected):
     """`rewire_seed` stays unset so the rewiring RNG derives from the run seed and arms pair."""
     variant = _flat(yaml.safe_load((CONFIG_DIR / f"{base}{suffix}.yml").read_text()))
     assert "brain.config.rewire_seed" not in variant
+
+
+@pytest.mark.parametrize(("base", "suffix", "expected"), CONFIG_PAIRS_T20)
+def test_t20_variant_differs_by_the_target_and_its_arm_keys(base, suffix, expected):
+    """Each harder-variant arm differs from its base by the target plus its own key(s).
+
+    These are the arms the registered campaign ran, so a stray key here would change what the
+    published result measured.
+    """
+    base_cfg = _flat(yaml.safe_load((CONFIG_DIR / f"{base}.yml").read_text()))
+    variant = _flat(yaml.safe_load((CONFIG_DIR / f"{base}{suffix}.yml").read_text()))
+    sentinel = object()
+    differing = {
+        key
+        for key in set(base_cfg) | set(variant)
+        if base_cfg.get(key, sentinel) != variant.get(key, sentinel)
+    }
+    assert differing == set(expected) | {T20_KEY}
+    assert variant[T20_KEY] == 20
+    assert "brain.config.rewire_seed" not in variant
+    for key, value in expected.items():
+        assert variant[key] == value
 
 
 def _out_file(directory: Path, name: str, clears: int, total: int, foods: int = 10) -> Path:
@@ -328,22 +374,57 @@ def test_efficiency_gain_is_measured_against_the_registered_minimum(tmp_path):
     assert report["min_gain"] == wp.MIN_EFFICIENCY_GAIN
 
 
-def test_a_significant_efficiency_result_under_the_minimum_is_downgraded(tmp_path):
-    """`specific_wiring_efficiency` under the registered minimum becomes `below_min_effect`."""
+def _efficiency_report(verdict: str, wild: float, rewired: float) -> dict:
+    """Build a minimal report of the shape `apply_min_effect` consumes."""
+    return {
+        "verdict": verdict,
+        "metrics": {
+            "episodes_to_30pct_success": {
+                "wild_mean": wild,
+                "rewired_mean": rewired,
+                "wild_minus_rewired_oriented": rewired - wild,
+            },
+        },
+    }
+
+
+def test_a_significant_efficiency_result_under_the_minimum_is_downgraded():
+    """`specific_wiring_efficiency` under the registered minimum becomes `below_min_effect`.
+
+    Exercises the production branch itself, so the rule cannot pass here while the harness applies
+    a different one.
+    """
+    # 5% faster: significant by the harness's own rule, under the registered minimum.
+    small = wp.apply_min_effect(_efficiency_report("specific_wiring_efficiency", 95.0, 100.0))
+    assert small["episodes_to_competence_gain"] == pytest.approx(0.05)
+    assert not small["meets_min_effect"]
+    assert small["verdict"] == "below_min_effect"
+
+    # 40% faster: over the minimum, so the verdict stands.
+    large = wp.apply_min_effect(_efficiency_report("specific_wiring_efficiency", 60.0, 100.0))
+    assert large["meets_min_effect"]
+    assert large["verdict"] == "specific_wiring_efficiency"
+
+    # A non-significant verdict is never promoted by clearing the minimum.
+    null = wp.apply_min_effect(_efficiency_report("degree_statistics", 60.0, 100.0))
+    assert null["meets_min_effect"]
+    assert null["verdict"] == "degree_statistics"
+
+
+def test_efficiency_contrast_applies_the_minimum_effect_rule(tmp_path):
+    """The contrast path reports the gain and the minimum through the same helper."""
     manifest = _efficiency_manifest(tmp_path, wild_cross=40, rewired_cross=200)
     report = wp.efficiency_contrast(manifest, "thermal", tmp_path)
     assert report is not None
-    report_verdict = report["verdict"]
-
-    # Force the harness's own verdict positive with a gain below the minimum, and re-apply the rule.
-    forced = dict(report, verdict="specific_wiring_efficiency", episodes_to_competence_gain=0.05)
-    downgraded = (
-        "below_min_effect"
-        if forced["episodes_to_competence_gain"] < wp.MIN_EFFICIENCY_GAIN
-        else forced["verdict"]
+    assert report["min_gain"] == wp.MIN_EFFICIENCY_GAIN
+    assert report["meets_min_effect"] == (
+        report["episodes_to_competence_gain"] >= wp.MIN_EFFICIENCY_GAIN
     )
-    assert downgraded == "below_min_effect"
-    assert report_verdict in {"degree_statistics", "specific_wiring_efficiency", "below_min_effect"}
+    assert report["verdict"] in {
+        "degree_statistics",
+        "specific_wiring_efficiency",
+        "below_min_effect",
+    }
 
 
 def test_primary_cell_is_the_thermal_cell_after_the_amendment():

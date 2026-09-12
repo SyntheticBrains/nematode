@@ -8,16 +8,16 @@ pilot ran.
 Does the wild-type wiring beat its degree-preserving rewired null, under an optimiser known to learn
 on this substrate, on a cell matched to a behaviour the animal actually performs?
 
-Every wiring contrast in this project — [034](../034-connectome-structure-controls.md), and every
+Every wiring contrast in this project — [034](../../034-connectome-structure-controls.md), and every
 panel in Phase 7 — has run on the integrated C3 cell: food chemotaxis **plus predator evasion plus
 thermotaxis**, 2400 steps an episode. 034 recorded the limitation in its own words: "**Single task**
 (the continuous integrated-C3 cell); the result is for this multi-objective
 foraging/predator/thermotaxis demand, not a universal statement." Both architecture rankings
-([025](../025-weight-search-architecture-ranking.md),
-[029](../029-continuous-architecture-ranking.md)) place the connectome **competitive on foraging and
+([025](../../025-weight-search-architecture-ranking.md),
+[029](../../029-continuous-architecture-ranking.md)) place the connectome **competitive on foraging and
 behind on predator evasion** — the least worm-like of the three demands. Nothing has separated them.
 
-[Logbook 056](../056-l4-ladder-reread.md) found five registered contrasts uninformative about both
+[Logbook 056](../../056-l4-ladder-reread.md) found five registered contrasts uninformative about both
 the wiring and the instrument, because this premise has no demonstration behind it. This tests it
 where it has the best chance of holding.
 
@@ -222,7 +222,7 @@ Registered here **before it runs**, and before Logbook 057 is written.
 This is the phase's first positive result; it rests on an axis amended after pilot data; and this
 project has a committed instance of exactly this effect class not holding — the Hebbian wiring
 contrast measured +16.2, then +11.9, then +8.1 across fresh looks, which is why
-[panel 3](../042-l4-panel3.md) exists. Fresh seeds are the cheapest answer to both objections.
+[panel 3](../../042-l4-panel3.md) exists. Fresh seeds are the cheapest answer to both objections.
 
 **No protocol changes**: the same four thermal arms, the same harness, the same four-metric family,
 the same registered minimum of 20% off time-to-competence. Seeds 17–32, disjoint from both the pilot
@@ -288,7 +288,7 @@ Registered **before it runs**. Protocol unchanged: the same four thermal arms, t
 same four-metric family, the same registered minimum of 20% off time-to-competence. Seeds 33–64 are
 disjoint from the pilot (101–104), panel 1 (1–16) and panel 2 (17–32).
 
-**Why 32 more rather than 16**: 64 seeds is the sample size [042](../042-l4-panel3.md) used to close
+**Why 32 more rather than 16**: 64 seeds is the sample size [042](../../042-l4-panel3.md) used to close
 the Hebbian wiring question, and at a true sign-consistency around the pooled 22/32 a paired rank
 test has real power there where it has none at 16. This either confirms the effect or exposes it as
 marginal; both settle it.

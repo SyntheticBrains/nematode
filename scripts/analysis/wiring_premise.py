@@ -289,7 +289,16 @@ def efficiency_contrast(manifest: Path, cell: str, tmp_dir: Path) -> dict[str, A
     cell_manifest.write_text("\n".join(lines) + "\n")
     report = efficiency.analyse(cell_manifest)
 
-    # The registered minimum effect, applied to the most direct reading of "learns faster".
+    return apply_min_effect(report)
+
+
+def apply_min_effect(report: dict[str, Any]) -> dict[str, Any]:
+    """Apply the registered minimum effect to an efficiency report, in place.
+
+    The gain is the shortening of time-to-competence as a fraction of the null's own time - the most
+    direct reading of "learns faster". A verdict that is significant but under the registered
+    minimum becomes ``below_min_effect``, which names the result and licenses nothing on its own.
+    """
     speed = report["metrics"]["episodes_to_30pct_success"]
     rewired_mean = speed["rewired_mean"]
     gain = speed["wild_minus_rewired_oriented"] / rewired_mean if rewired_mean > 0 else 0.0

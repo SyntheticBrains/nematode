@@ -41,6 +41,17 @@ hours of compute.
 
 ## What Changes
 
+> **Amended 2026-09-12, after the pilot and before any registered seed was spent.** The bullets below
+> are the protocol as first registered; the pilot fired the registered saturation clause and the
+> remedy did not clear it, so the **primary became the efficiency axis on the
+> thermal-plus-foraging cell at `target_foods_to_collect: 20`**, read through the committed
+> four-metric family of `connectome_structure_efficiency.py`, with the **peak axis retained only for
+> the learning gates** and the **klinotaxis cell retained as a secondary**. The amendment, the pilot
+> numbers that forced it and the four counts on which it is defensible are in
+> [`design.md`](design.md); the tasks below reflect what ran. The capability specification is
+> unchanged by the amendment — it governs how a wiring contrast is run and gated, not which axis
+> scores it.
+
 - **A primary wiring contrast under PPO** on the C1 klinotaxis foraging cell (`max_steps: 800`),
   wild type against its degree-preserving rewired null, 16 paired seeds, 3000 episodes, scored on
   the committed final-quarter plateau tail — the metric and the statistics 034 used, through the
