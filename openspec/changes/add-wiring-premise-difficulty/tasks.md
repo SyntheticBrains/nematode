@@ -35,21 +35,21 @@
 
 ## 4. Campaign (registered seeds 1–32)
 
-- [ ] 4.1 Launch record committed first; no branch switches while it runs.
-- [ ] 4.2 128 runs: four arms × 32 seeds at 3000 episodes, at the frozen budget.
-- [ ] 4.3 Per-seed CSV, the family table, both axes and the verdict under
+- [x] 4.1 Launch record committed first; no branch switches while it runs.
+- [x] 4.2 128 runs: four arms × 32 seeds at 3000 episodes, at the frozen budget.
+- [x] 4.3 Per-seed CSV, the family table, both axes and the verdict under
   `supporting/058-wiring-premise-difficulty/`.
 
 ## 5. The record
 
-- [ ] 5.1 Logbook 058: which of the cells' differences actually bind (two, not three — starvation
+- [x] 5.1 Logbook 058: which of the cells' differences actually bind (two, not three — starvation
   ends 0.6% of thermal episodes), the calibration and the grid it chose from, what this arm isolates
   and what it cannot, the gates before the contrast, the verdict, and what it licenses.
-- [ ] 5.2 The experiments index row.
-- [ ] 5.3 State what the result does to 057's claim — generalise it, or leave it narrow — and what
+- [x] 5.2 The experiments index row.
+- [x] 5.3 State what the result does to 057's claim — generalise it, or leave it narrow — and what
   remains unseparated either way.
 
 ## 6. Close-out
 
-- [ ] 6.1 `CHANGELOG.md`; tracker (V.3) and the roadmap if the reading changes.
-- [ ] 6.2 Confirm no committed verdict was changed.
+- [x] 6.1 `CHANGELOG.md`; tracker (V.3) and the roadmap if the reading changes.
+- [x] 6.2 Confirm no committed verdict was changed.
