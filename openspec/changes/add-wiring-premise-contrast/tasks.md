@@ -27,27 +27,34 @@
 - [x] 2.4 Tests: the verdict order including `no_learning` and `saturated` ahead of the primary; the
   minimum-effect clause; a pinned reproduction of the family from a fixture table.
 
-## 3. Pilot (disjoint seeds 101–108)
+## 3. Pilot (disjoint seeds 101–104)
 
-- [ ] 3.1 `launch.md` committed before the pilot runs.
-- [ ] 3.2 Convergence of the connectome on C1 at the inherited recipe, reported per pilot seed
+- [x] 3.1 `launch.md` committed before the pilot runs.
+- [x] 3.2 Convergence of the connectome on C1 at the inherited recipe, reported per pilot seed
   either way, and the config 035's connectome companion ran recorded beside it.
-- [ ] 3.3 Measured per-run wall time on these exact configs, and the campaign schedule derived from
+- [x] 3.3 Measured per-run wall time on these exact configs, and the campaign schedule derived from
   it rather than scaled from a lighter run.
-- [ ] 3.4 Distance from the saturation threshold, with the registered remedy taken if it is met.
+- [x] 3.4 Distance from the saturation threshold, with the registered remedy taken if it is met.
+- [x] 3.5 The remedy applied once as registered, and its outcome recorded: it did not unsaturate
+  either cell, which is what the dated amendment in the design responds to.
+- [x] 3.6 The harder-variant arms (`target_foods_to_collect: 20`), each differing from its committed
+  base by that key plus its own arm key, with `rewire_seed` unset and both properties tested.
+- [x] 3.7 The efficiency axis wired in through the committed 034 harness, with the registered
+  minimum effect on time-to-competence, and tested.
 
 ## 4. Campaign (registered seeds 1–16)
 
 - [ ] 4.1 Launch record committed first; no branch switches while it runs.
-- [ ] 4.2 160 runs at 3000 episodes: four connectome arms × two cells × 16 seeds, plus the MLP
-  reference.
+- [ ] 4.2 128 runs at 3000 episodes: four connectome arms × two cells × 16 seeds at the remedy's
+  `target_foods_to_collect: 20`, plus the MLP reference.
 - [ ] 4.3 Per-seed CSV, the family table, and the verdict per cell under
   `supporting/057-wiring-premise-contrast/`.
 
 ## 5. The record
 
-- [ ] 5.1 Logbook 057, following the template: the gates before the contrasts, both verdicts, what
-  each licenses, and the committed C3 results carried beside them unchanged.
+- [ ] 5.1 Logbook 057, following the template: the saturation the pilot found and the amendment it
+  forced, the gates before the contrasts, both axes, both verdicts, what each licenses, and the
+  committed C3 results carried beside them unchanged.
 - [ ] 5.2 The experiments index row.
 - [ ] 5.3 What this means for 7b's gate and for the shipment decision, stated rather than implied.
 

@@ -169,3 +169,49 @@ Stated before the data exist:
 - It does not re-run C3. That cell's verdicts are committed and this change cannot alter them.
 - It does not tune the recipe to make the arms separate. The recipe is inherited from the committed
   configs; where it fails, the pilot says so and the campaign waits.
+
+## Amendment, 2026-09-12: the peak axis is saturated; the primary moves to efficiency
+
+The pilot ran on disjoint seeds 101–104 and the registered saturation clause fired. On the
+klinotaxis cell **both PPO arms cleared 100.00% on every seed** — a contrast of exactly 0.00 — with
+frozen random weights already at 57.60%. The registered remedy (`target_foods_to_collect` 10 → 20,
+recipe untouched) was applied once, as registered, and **did not unsaturate either cell**: both
+wirings still clear 100.00% on klinotaxis, and the thermal cell reads 19.80 against 19.69 foods of
+20\. The peak axis cannot answer this question on cells the animal is wired for, because PPO solves
+them.
+
+Re-reading the *same* pilot runs on the committed efficiency harness
+(`scripts/analysis/connectome_structure_efficiency.py` — 034's own follow-up, four metrics under
+BH-FDR) separates the two cells:
+
+| cell | episodes to 30% success (wild / rewired) | wild-better seeds | q at n = 4 |
+|---|---|---|---|
+| klinotaxis | 43 / 39 | 2/4 | 0.812 |
+| **thermal** | **301 / 580** | 2/4 | 0.417 |
+
+The klinotaxis cell is learned by both wirings inside forty episodes of three thousand: it is flat
+on both axes and nothing can be measured on it. The thermal cell is not saturated on the efficiency
+axis and carries the only directional signal in the phase.
+
+**So, amended before any registered seed was spent:**
+
+1. **The primary is the efficiency axis**, read through the committed 034 harness with its four
+   metrics, its BH-FDR family and its verdict rule unchanged. The **learning gates stay on the peak
+   axis**, where "did this arm learn at all" is what they ask.
+2. **The thermal cell becomes the primary cell**; klinotaxis stays registered as a secondary and is
+   expected to read `degree_statistics` on both axes — a clean statement that at a difficulty where
+   both wirings are perfect, neither axis separates them.
+3. **A minimum effect is registered for the new primary**: the wild type must shorten
+   time-to-competence by **at least 20%** as well as reaching significance. A significant result
+   under that is `below_min_effect` and licenses nothing. The pilot's direction was +48.1%.
+4. **Both cells run at `target_foods_to_collect: 20`**, the remedy's variant, since that is what the
+   pilot characterised.
+
+**What this amendment is and is not.** Changing the scored axis after seeing data is the thing a
+registration exists to prevent. It is legitimate here on three conditions, all met: the pilot ran on
+**disjoint seeds** and its registered job was to fix the protocol before registered seeds were
+spent; the new axis is **not invented for this result** but is 034's own committed follow-up
+harness, applied unchanged; and the campaign is therefore an honest **confirmation test of a
+pilot-generated hypothesis**, recorded as such, with its minimum effect fixed in advance. The
+per-seed consistency in the pilot is weak — 2/4 and 3/4 — which is the shape the Hebbian contrast
+had before it shrank from +16.2 to +8.1 across fresh looks. A null at n = 16 is the expected result.

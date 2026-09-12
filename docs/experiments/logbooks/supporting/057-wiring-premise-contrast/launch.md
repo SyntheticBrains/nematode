@@ -114,3 +114,64 @@ uv run python scripts/run_campaign.py \
   --seeds 101-104 --runs 3000 --output-dir campaigns/wiring-premise-pilot \
   -- --theme headless
 ```
+
+______________________________________________________________________
+
+## Pilot outcome, 2026-09-12 — and the amendment it forced
+
+20 runs on seeds 101–104, then 32 more at the remedy's setting. All 52 succeeded.
+
+**The three pilot questions, answered.**
+
+1. **The connectome converges on C1 at the inherited recipe** on every pilot seed — the check the
+   committed config header flagged as open (Stage 2 step 2a) is answered, positively.
+2. **Cost, measured on these exact configs**: mean 637 s a run at 3000 episodes, 20 runs in 980 s
+   wall on 16 workers; the remedy's 32 runs in 2074 s. The 128-run campaign is scheduled from those
+   figures, not from Logbook 026's 28.67 s / 200 episodes on the pre-refactor cell.
+3. **Both cells are over the ceiling, and the registered remedy did not fix it.**
+
+| arm | committed target 10 | remedy, target 20 |
+|---|---|---|
+| klinotaxis `wt_ppo` | **100.00%** | **100.00%** |
+| klinotaxis `rn_ppo` | **100.00%** | **100.00%** |
+| klinotaxis `wt_frozen` | 57.60% | 25.10% |
+| thermal `wt_ppo` | 96.33% | 97.40% (19.80 foods of 20) |
+| thermal `rn_ppo` | — | 96.33% (19.69 foods of 20) |
+
+The klinotaxis contrast is **exactly 0.00 on 4/4 seeds** at both settings. Had this run on registered
+seeds it would have produced a meaningless null that looked like a result. The remedy was applied
+once, as registered, and the recipe was not touched.
+
+**Two things the pilot corrected in the registration**, both recorded rather than quietly applied:
+
+- The thermal cell was registered as scored on mean foods because its survival-dominant satiety
+  would put full clears near the floor. **It does not** — 96–97% full clear. The cell is saturated,
+  not floored, and that reasoning was wrong.
+- The peak axis cannot answer this question on either cell. Re-reading the same runs on the
+  committed efficiency harness (034's own follow-up) leaves klinotaxis flat — both wirings reach 30%
+  success inside ~40 episodes of 3000 — and shows the thermal cell's only directional signal:
+  **301 episodes to competence against the null's 580, a 48.1% gain**, at q = 0.417 and 2/4 seeds,
+  which n = 4 cannot resolve either way.
+
+The amendment in the change's design moves the primary to the **efficiency axis on the thermal
+cell**, keeps the gates on the peak axis, keeps klinotaxis as a secondary, and registers a
+**minimum 20% reduction in time-to-competence** beside significance. The campaign is therefore a
+confirmation test of a pilot-generated hypothesis, and is recorded as one.
+
+**The prior, restated after the pilot.** The per-seed consistency behind that 48.1% is 2/4 and 3/4 —
+the shape the Hebbian wiring contrast had before it shrank from +16.2 to +8.1 across fresh looks. A
+null at n = 16 remains the expected result.
+
+## Reproduce (campaign)
+
+```bash
+C1=configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis
+TH=configs/scenarios/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis
+uv run python scripts/run_campaign.py \
+  --config ${C1}_t20.yml --config ${C1}_rewired_null_t20.yml \
+  --config ${C1}_frozen_t20.yml --config ${C1}_rewired_null_frozen_t20.yml \
+  --config ${TH}_t20.yml --config ${TH}_rewired_null_t20.yml \
+  --config ${TH}_frozen_t20.yml --config ${TH}_rewired_null_frozen_t20.yml \
+  --seeds 1-16 --runs 3000 --output-dir campaigns/wiring-premise \
+  -- --theme headless
+```

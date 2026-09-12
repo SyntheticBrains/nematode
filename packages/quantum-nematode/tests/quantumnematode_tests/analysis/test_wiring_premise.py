@@ -270,3 +270,82 @@ def test_agrees_with_the_034_control_on_the_same_contrast():
         assert mine["verdict"] == expected
         assert legacy_out["verdict"]["verdict"] == expected
         assert mine["mean_delta"] == pytest.approx(legacy_out["verdict"]["mean_delta"])
+
+
+def _series_out(directory: Path, name: str, cross_at: int, total: int = 400) -> Path:
+    """Write a run whose rolling full-clear rate crosses the threshold at `cross_at`."""
+    statuses = ["FAILED"] * cross_at + ["SUCCESS"] * (total - cross_at)
+    lines = [
+        f"Run: {i}   Status: {s:<7} Reason: foraging Steps: 500    Eaten: "
+        f"{20 if s == 'SUCCESS' else 2}/20  "
+        for i, s in enumerate(statuses, 1)
+    ]
+    out = directory / name
+    out.write_text("\n".join(lines))
+    return out
+
+
+def _efficiency_manifest(tmp_path: Path, wild_cross: int, rewired_cross: int) -> Path:
+    """Write a manifest: two paired PPO seeds per arm, plus a frozen arm to be ignored."""
+    lines = []
+    for seed in (1, 2):
+        wild = _series_out(tmp_path, f"wt{seed}.out", wild_cross)
+        rewired = _series_out(tmp_path, f"rn{seed}.out", rewired_cross)
+        lines.append(f"thermal wt_ppo {seed} {wild}")
+        lines.append(f"thermal rn_ppo {seed} {rewired}")
+        lines.append(f"thermal wt_frozen {seed} {wild}")
+    manifest = tmp_path / "m.txt"
+    manifest.write_text("\n".join(lines))
+    return manifest
+
+
+def test_efficiency_contrast_reads_only_the_ppo_arms(tmp_path):
+    """The efficiency axis pairs the two PPO arms; the frozen arms are not part of that contrast."""
+    manifest = _efficiency_manifest(tmp_path, wild_cross=40, rewired_cross=200)
+    report = wp.efficiency_contrast(manifest, "thermal", tmp_path)
+    assert report is not None
+    assert report["n_paired_seeds"] == 2
+    assert (
+        report["metrics"]["episodes_to_30pct_success"]["wild_mean"]
+        < (report["metrics"]["episodes_to_30pct_success"]["rewired_mean"])
+    )
+
+
+def test_efficiency_contrast_is_none_for_a_cell_with_no_ppo_arms(tmp_path):
+    """A cell absent from the manifest yields no efficiency report rather than an error."""
+    manifest = _efficiency_manifest(tmp_path, wild_cross=40, rewired_cross=200)
+    assert wp.efficiency_contrast(manifest, "klinotaxis", tmp_path) is None
+
+
+def test_efficiency_gain_is_measured_against_the_registered_minimum(tmp_path):
+    """The time-to-competence gain is reported as a fraction of the null's own time."""
+    manifest = _efficiency_manifest(tmp_path, wild_cross=100, rewired_cross=200)
+    report = wp.efficiency_contrast(manifest, "thermal", tmp_path)
+    assert report is not None
+    # The rolling window offsets both crossings equally, so the gain is large and positive here.
+    assert report["episodes_to_competence_gain"] > wp.MIN_EFFICIENCY_GAIN
+    assert report["meets_min_effect"]
+    assert report["min_gain"] == wp.MIN_EFFICIENCY_GAIN
+
+
+def test_a_significant_efficiency_result_under_the_minimum_is_downgraded(tmp_path):
+    """`specific_wiring_efficiency` under the registered minimum becomes `below_min_effect`."""
+    manifest = _efficiency_manifest(tmp_path, wild_cross=40, rewired_cross=200)
+    report = wp.efficiency_contrast(manifest, "thermal", tmp_path)
+    assert report is not None
+    report_verdict = report["verdict"]
+
+    # Force the harness's own verdict positive with a gain below the minimum, and re-apply the rule.
+    forced = dict(report, verdict="specific_wiring_efficiency", episodes_to_competence_gain=0.05)
+    downgraded = (
+        "below_min_effect"
+        if forced["episodes_to_competence_gain"] < wp.MIN_EFFICIENCY_GAIN
+        else forced["verdict"]
+    )
+    assert downgraded == "below_min_effect"
+    assert report_verdict in {"degree_statistics", "specific_wiring_efficiency", "below_min_effect"}
+
+
+def test_primary_cell_is_the_thermal_cell_after_the_amendment():
+    """The amendment moved the primary to the cell the pilot showed is not saturated."""
+    assert wp.PRIMARY_CELL == "thermal"

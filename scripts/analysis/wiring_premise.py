@@ -42,9 +42,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-
 # Reuse the committed metric + statistics layers verbatim - the same ones the 034 control calls.
+import connectome_structure_efficiency as efficiency
+import numpy as np
 from t7_continuous_ranking import plateau_tail
 from weight_search_architecture_ranking import bh_fdr, paired_seed_wilcoxon_bootstrap
 
@@ -64,9 +64,26 @@ SCORED: dict[str, str] = {"klinotaxis": "success", "thermal": "foods"}
 # figure is the one I.3b registered for a foods-scored contrast.
 MIN_EFFECT: dict[str, float] = {"klinotaxis": 5.0, "thermal": 0.5}
 
-# Ceiling: both PPO arms at or above this full-clear mean means the cell cannot discriminate.
-# Measured on full clears for both cells - it is the cell's exhaustion, not the scored metric's.
+# Ceiling: both PPO arms at or above this full-clear mean means the cell cannot discriminate on the
+# peak axis. Measured on full clears for both cells - it is the cell's exhaustion, not the scored
+# metric's.
 SATURATION_SUCCESS = 90.0
+
+# Amendment 2026-09-12 (recorded in the change's design and in the launch record). The registered
+# saturation remedy was applied once, on disjoint pilot seeds, and did not unsaturate either cell:
+# both wirings reach 100.00% full clear on the klinotaxis cell at `target_foods_to_collect: 20`,
+# a contrast of exactly zero, and 19.80 against 19.69 foods of 20 on the thermal cell. The peak axis
+# therefore cannot answer the question on these cells, and the primary moves to the **efficiency**
+# axis, read through the committed `connectome_structure_efficiency` harness - 034's own follow-up,
+# its four-metric BH-FDR family and its verdict rule unchanged. The learning gates stay on the peak
+# axis, where "did this arm learn at all" is what they ask.
+PRIMARY_CELL = "thermal"
+EFFICIENCY_ARMS = {"wt_ppo": efficiency._WILD, "rn_ppo": efficiency._REWIRED}
+
+# Minimum effect on the efficiency primary, registered with the amendment and before the registered
+# seeds ran: a significant contrast that shortens time-to-competence by less than this is named and
+# licenses nothing. The pilot's direction, at an unresolvable n = 4, was about 48%.
+MIN_EFFICIENCY_GAIN = 0.20
 
 # 034's thresholds, carried so the two harnesses agree.
 MIN_PAIRED_SEEDS = 2
@@ -253,8 +270,64 @@ def verdict(
     }
 
 
-def analyse(cells: dict[str, dict[str, dict[int, tuple[float, float]]]], out: dict) -> None:
-    """Print and record the per-arm table, the registered family and the verdict per cell."""
+def efficiency_contrast(manifest: Path, cell: str, tmp_dir: Path) -> dict[str, Any] | None:
+    """Score one cell's wild-vs-rewired contrast on the committed efficiency harness.
+
+    Writes the two PPO arms of ``cell`` out as that harness's own ``<arm> <seed> <out>`` manifest
+    and calls it unchanged, so the four metrics, the BH-FDR family and the verdict rule are 034's.
+    Returns ``None`` when the cell has no paired PPO arms in the manifest.
+    """
+    lines = []
+    for raw in manifest.read_text().splitlines():
+        parts = raw.strip().split()
+        if len(parts) == 4 and parts[0] == cell and parts[1] in EFFICIENCY_ARMS:
+            lines.append(f"{EFFICIENCY_ARMS[parts[1]]} {parts[2]} {parts[3]}")
+    if not lines:
+        return None
+
+    cell_manifest = tmp_dir / f"_efficiency_{cell}.txt"
+    cell_manifest.write_text("\n".join(lines) + "\n")
+    report = efficiency.analyse(cell_manifest)
+
+    # The registered minimum effect, applied to the most direct reading of "learns faster".
+    speed = report["metrics"]["episodes_to_30pct_success"]
+    rewired_mean = speed["rewired_mean"]
+    gain = speed["wild_minus_rewired_oriented"] / rewired_mean if rewired_mean > 0 else 0.0
+    report["episodes_to_competence_gain"] = gain
+    report["min_gain"] = MIN_EFFICIENCY_GAIN
+    report["meets_min_effect"] = gain >= MIN_EFFICIENCY_GAIN
+    if report["verdict"] == "specific_wiring_efficiency" and not report["meets_min_effect"]:
+        report["verdict"] = "below_min_effect"
+    return report
+
+
+def _print_efficiency(cell: str, report: dict[str, Any]) -> None:
+    """Print one cell's efficiency table and its verdict."""
+    print(f"\n  EFFICIENCY axis (034's harness, n={report['n_paired_seeds']} paired):")
+    for name, entry in report["metrics"].items():
+        print(
+            f"    {name:34} wild {entry['wild_mean']:8.2f}  rewired {entry['rewired_mean']:8.2f}  "
+            f"d={entry['wild_minus_rewired_oriented']:+8.2f}  q={entry['bh_fdr_q']:.3f}  "
+            f"wild-better {entry['wild_better_seeds']}/{report['n_paired_seeds']}",
+        )
+    tag = " (PRIMARY)" if cell == PRIMARY_CELL else ""
+    print(
+        f"    time-to-competence gain {report['episodes_to_competence_gain']:+.1%} against a "
+        f"registered minimum of {report['min_gain']:+.0%}",
+    )
+    print(f"  VERDICT ({cell}, efficiency{tag}): {report['verdict'].upper().replace('_', '-')}")
+
+
+def analyse(
+    cells: dict[str, dict[str, dict[int, tuple[float, float]]]],
+    out: dict,
+    manifest: Path | None = None,
+) -> None:
+    """Print and record the per-arm table, the registered family and the verdict per cell.
+
+    With ``manifest``, the efficiency axis is scored beside the peak axis through the committed
+    034 harness; the primary verdict is that axis on :data:`PRIMARY_CELL`.
+    """
     rows = contrasts(cells)
     out["family"] = rows
     out["per_arm"] = {}
@@ -310,6 +383,12 @@ def analyse(cells: dict[str, dict[str, dict[int, tuple[float, float]]]], out: di
                 " the one-sided signed-rank floor exceeds 0.05 and significance is unreachable.",
             )
 
+        if manifest is not None:
+            report = efficiency_contrast(manifest, cell, manifest.parent)
+            if report is not None:
+                out.setdefault("efficiency", {})[cell] = report
+                _print_efficiency(cell, report)
+
 
 def main() -> None:
     """Load the manifest, compute, print and write the wiring-premise analysis."""
@@ -320,7 +399,7 @@ def main() -> None:
 
     cells = load(args.manifest)
     out: dict = {}
-    analyse(cells, out)
+    analyse(cells, out, args.manifest)
     if args.out:
         args.out.write_text(json.dumps(out, indent=2, default=str))
         print(f"\nwrote {args.out}")
