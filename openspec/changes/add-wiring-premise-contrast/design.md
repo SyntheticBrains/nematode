@@ -43,8 +43,7 @@ its gate (V6) may well be where it stops, which would itself be a finding 7b nee
 Per cell, 16 paired seeds (1–16), **3000 episodes** (the budget 043's PPO arms reached 68.5 and 81.2
 in), `wiring` the only key that differs within a wiring pair and `freeze_updates` the only key that
 differs within a learning pair. `rewire_seed` is left unset so the brain derives it from the run
-seed and the pairing holds per seed. Budgets: C1 klinotaxis `max_steps: 800`; thermal `max_steps:
-500`.
+seed and the pairing holds per seed. Budgets: C1 klinotaxis `max_steps: 800`; thermal `max_steps: 500`.
 
 | arm | wiring | PPO | role |
 |---|---|---|---|
