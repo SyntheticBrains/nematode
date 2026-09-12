@@ -21,7 +21,7 @@
   primary, the saturation clause and its named remedy, the registered minimum effect, the verdict
   order for the primary cell with the thermal cell as an annotation, and a completeness flag per
   test. Fixed in code before the campaign runs.
-- [ ] 2.2 I.2's mixture family read as the registered secondary through
+- [x] 2.2 I.2's mixture family read as the registered secondary through
   `scripts/analysis/l4_mixture_statistic.py`, not reimplemented.
 - [x] 2.3 The MLP reference arm carried as a descriptive row that no test can read.
 - [x] 2.4 Tests: the verdict order including `no_learning` and `saturated` ahead of the primary; the
@@ -44,21 +44,21 @@
 
 ## 4. Campaign (registered seeds 1–16)
 
-- [ ] 4.1 Launch record committed first; no branch switches while it runs.
-- [ ] 4.2 128 runs at 3000 episodes: four connectome arms × two cells × 16 seeds at the remedy's
+- [x] 4.1 Launch record committed first; no branch switches while it runs.
+- [x] 4.2 128 runs at 3000 episodes: four connectome arms × two cells × 16 seeds at the remedy's
   `target_foods_to_collect: 20`, plus the MLP reference.
-- [ ] 4.3 Per-seed CSV, the family table, and the verdict per cell under
+- [x] 4.3 Per-seed CSV, the family table, and the verdict per cell under
   `supporting/057-wiring-premise-contrast/`.
 
 ## 5. The record
 
-- [ ] 5.1 Logbook 057, following the template: the saturation the pilot found and the amendment it
+- [x] 5.1 Logbook 057, following the template: the saturation the pilot found and the amendment it
   forced, the gates before the contrasts, both axes, both verdicts, what each licenses, and the
   committed C3 results carried beside them unchanged.
-- [ ] 5.2 The experiments index row.
-- [ ] 5.3 What this means for 7b's gate and for the shipment decision, stated rather than implied.
+- [x] 5.2 The experiments index row.
+- [x] 5.3 What this means for 7b's gate and for the shipment decision, stated rather than implied.
 
 ## 6. Close-out
 
-- [ ] 6.1 `CHANGELOG.md`; tracker (new block V) and roadmap.
-- [ ] 6.2 Confirm no committed verdict was changed.
+- [x] 6.1 `CHANGELOG.md`; tracker (new block V) and roadmap.
+- [x] 6.2 Confirm no committed verdict was changed.
