@@ -2,18 +2,18 @@
 
 ## 1. Configs
 
-- [ ] 1.1 The klinotaxis pair: a rewired-null variant of
+- [x] 1.1 The klinotaxis pair: a rewired-null variant of
   `configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis.yml`
   differing by `wiring: rewired_degree_preserving` alone, and a frozen-weights variant of each
   wiring differing by `freeze_updates: true` alone.
-- [ ] 1.2 The thermal pair, the same way, from the committed thermal cell config.
-- [ ] 1.3 A test that each new config differs from its base by exactly the intended key, so a pair
+- [x] 1.2 The thermal pair, the same way, from the committed thermal cell config.
+- [x] 1.3 A test that each new config differs from its base by exactly the intended key, so a pair
   cannot silently diverge on anything else, and that no config sets `rewire_seed`, so the null's
   rewiring is derived from the run seed and the pairing holds per seed.
 
 ## 2. Harness
 
-- [ ] 2.1 `scripts/analysis/wiring_premise.py`, **extending
+- [x] 2.1 `scripts/analysis/wiring_premise.py`, **extending
   `scripts/analysis/connectome_structure_controls.py`** and importing its metric and statistics
   layers (`t7_continuous_ranking.plateau_tail`,
   `weight_search_architecture_ranking.paired_seed_wilcoxon_bootstrap`, `bh_fdr`) rather than
@@ -23,8 +23,8 @@
   test. Fixed in code before the campaign runs.
 - [ ] 2.2 I.2's mixture family read as the registered secondary through
   `scripts/analysis/l4_mixture_statistic.py`, not reimplemented.
-- [ ] 2.3 The MLP reference arm carried as a descriptive row that no test can read.
-- [ ] 2.4 Tests: the verdict order including `no_learning` and `saturated` ahead of the primary; the
+- [x] 2.3 The MLP reference arm carried as a descriptive row that no test can read.
+- [x] 2.4 Tests: the verdict order including `no_learning` and `saturated` ahead of the primary; the
   minimum-effect clause; a pinned reproduction of the family from a fixture table.
 
 ## 3. Pilot (disjoint seeds 101–108)

@@ -79,15 +79,26 @@ something learned; principle 6 of the phase protocol exists because the degree-p
 built on a premise nobody tested. If a cell's V2 fails, that cell's contrast is not interpretable
 and its verdict is `no_learning` — a finding about the platform, recorded as such.
 
-**The metric** is plateau-tail full-clear success (%) over the **final quarter** of the run —
-`t7_continuous_ranking.plateau_tail`, the committed metric of 029, 034 and every panel in the phase —
-with I.2's graded mean-foods carried beside it from the same tail. **I.2's mixture
+**The metric** comes from `t7_continuous_ranking.plateau_tail` — the final-quarter window that is
+the committed metric of 029, 034 and every panel in the phase — which returns full-clear success (%)
+and mean foods from the same tail. Both are reported for every arm.
+
+**The scored quantity differs by cell, and this was fixed from the configs before any data existed.**
+The klinotaxis cell is scored on **full-clear success**, as 034 and the panels were. The thermal cell
+is scored on **mean foods**, because its committed recipe sets `satiety_gain_per_food: 0.2` — its own
+header calls it "a lethal-zone-avoidance/survival task rather than a collect-10 budget" — so
+full clears there are structurally near the floor and a contrast on them would read zero against
+zero. Its registered minimum effect is **0.5 foods**, the figure I.3b registered for a foods-scored
+contrast. If the pilot finds the thermal cell at the floor on *both* metrics, it is not a platform
+for this question and is reported as such rather than scored on a third metric chosen after the
+fact. **I.2's mixture
 family** — competent-fraction discordance at the committed 20.0 threshold and the level among each
 arm's own competent seeds, under the pooled-label permutation null — is registered as the secondary
 reading of each primary, applied through `scripts/analysis/l4_mixture_statistic.py` rather than
 reimplemented. A bimodal outcome is what the phase has met every time it looked.
 
-**A minimum effect is registered beside significance**: **+5.0 percentage points** on the primary.
+**A minimum effect is registered beside significance**: **+5.0 percentage points** on the primary,
+and **+0.5 foods** on the thermal cell's foods-scored contrast.
 At n = 16 a paired rank test fires on the consistency of the sign rather than the size of the
 shift, and the phase has one committed example of a significant-looking contrast shrinking on every
 fresh look (+16.2 → +11.9 → +8.1). A significant primary below +5.0 is recorded as significant and
@@ -127,9 +138,10 @@ record stays comparable; the thermal cell receives the same ordered reading as a
 1. `insufficient_seeds` — any arm incomplete.
 2. `no_learning` — the cell's gate (V2) fails: the wild type does not beat its own frozen floor.
 3. `saturated` — both PPO arms at or above the ceiling threshold.
-4. Otherwise from the primary alone: `specific_wiring` (positive, at or above the minimum effect),
-   `rewired_beats_wild_type` (significant in reverse), `degree_statistics` (neither, intervals
-   informative), `inconclusive` (neither, underpowered).
+4. Otherwise from the primary alone: `specific_wiring` (significant and at or above the minimum
+   effect), `below_min_effect` (significant and under it — named, and licenses nothing on its own),
+   `rewired_beats_wildtype` (the interval entirely below zero), `degree_statistics` (the interval
+   spans zero), `inconclusive` (neither).
 
 The annotations (V3, V4, the mixture family, the MLP reference) never change a verdict.
 

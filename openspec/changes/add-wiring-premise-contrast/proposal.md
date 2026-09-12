@@ -74,7 +74,8 @@ is scoped to the cross-architecture ranking it was written for).
 
 ## Impact
 
-- New: four connectome configs (two rewired-null, two frozen-control), the campaign harness
+- New: six connectome configs (two rewired-null, four frozen-control — each wiring needs its own
+  floor), the campaign harness
   extending `scripts/analysis/connectome_structure_controls.py`, the records under
   `supporting/057-wiring-premise-contrast/`, Logbook 057.
 - Edited: the experiments index, `CHANGELOG.md`, tracker (new block V), roadmap.
