@@ -95,6 +95,42 @@
       "wilcoxon_p": 0.5911628506146371,
       "positive_seeds": 16,
       "bh_q": 0.5911628506146371
+    },
+    {
+      "test": "V9",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "primary",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V10",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V11",
+      "cell": "hard_food",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V12",
+      "cell": "hard_food",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
     }
   ],
   "per_arm": {
@@ -644,7 +680,8 @@
         },
         "reference_only": false
       }
-    }
+    },
+    "hard_food": {}
   },
   "verdicts": {
     "klinotaxis": {
@@ -655,13 +692,30 @@
         "wt_frozen",
         "rn_frozen"
       ],
-      "n_common": 0
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     },
     "thermal": {
-      "verdict": "saturated",
+      "verdict": "specific_wiring_efficiency",
       "wt_full_clear": 96.27916666666667,
       "rn_full_clear": 93.10833333333333,
-      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe"
+      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe",
+      "axis": "efficiency",
+      "peak_verdict": "saturated",
+      "efficiency_verdict": "specific_wiring_efficiency"
+    },
+    "hard_food": {
+      "verdict": "insufficient_seeds",
+      "missing_arms": [
+        "wt_ppo",
+        "rn_ppo",
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     }
   },
   "efficiency": {
