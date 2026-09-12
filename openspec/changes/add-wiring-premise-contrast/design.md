@@ -30,13 +30,21 @@ Three things make the C1 klinotaxis foraging cell the right first rung, and they
    after vectorisation. That is the arithmetic principle 2 of the phase protocol asks for, and the
    pilot measures it again on the exact configs rather than scaling it.
 
-The thermal cell runs beside it because 7b's MUST names *both* behaviours. A decision about whether
-7b is worth building cannot rest on one of its two measurements.
+The thermal cell runs beside it because 7b's MUST names *both* behaviours, and it runs as a
+**secondary** because it is not the same kind of cell. `thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis.yml`
+is foraging *plus* thermotaxis under a survival-dominant satiety (0.2 per food), `max_steps: 500`;
+036's real-worm thermotaxis validation ran on the MLP only, on a thermotaxis-seeking cell that has
+no connectome config; and the connectome has never been shown to learn this cell. Its contrast
+annotates the 7b reading — a decision about 7b should not rest on one of its two measurements — and
+its gate (V6) may well be where it stops, which would itself be a finding 7b needs.
 
 ## Arms
 
-Per cell, 16 paired seeds (1–16), `wiring` the only key that differs within a wiring pair and
-`freeze_updates` the only key that differs within a learning pair:
+Per cell, 16 paired seeds (1–16), **3000 episodes** (the budget 043's PPO arms reached 68.5 and 81.2
+in), `wiring` the only key that differs within a wiring pair and `freeze_updates` the only key that
+differs within a learning pair. `rewire_seed` is left unset so the brain derives it from the run
+seed and the pairing holds per seed. Budgets: C1 klinotaxis `max_steps: 800`; thermal `max_steps:
+500`.
 
 | arm | wiring | PPO | role |
 |---|---|---|---|
@@ -49,18 +57,22 @@ Per cell, 16 paired seeds (1–16), `wiring` the only key that differs within a 
 ## The registered family
 
 Eight tests, both cells corrected together under BH-FDR at α = 0.05, each one-sided, paired,
-reported with an 80% bootstrap CI and the count of positive seeds — the bar panels 1–3 and 034 used,
-so the result is commensurable with the committed record.
+reported with an 80% bootstrap CI and the count of positive seeds — the bar panels 1–3 and 034 used.
+**Through the same code**: `scripts/analysis/connectome_structure_controls.py` already implements
+this exact contrast — `t7_continuous_ranking.plateau_tail` for the metric,
+`weight_search_architecture_ranking.paired_seed_wilcoxon_bootstrap` and `bh_fdr` for the
+statistics, and the `specific_wiring` / `degree_statistics` vocabulary — and the harness extends it
+rather than reimplementing it, so commensurability with 034 holds by construction.
 
 | test | contrast | role |
 |---|---|---|
-| **V1** | klinotaxis: `wt_ppo − rn_ppo` | **primary** |
+| **V1** | klinotaxis: `wt_ppo − rn_ppo` | **primary — the only test that decides the verdict** |
 | V2 | klinotaxis: `wt_ppo − wt_frozen` | gate — did the wild type learn on this cell |
 | V3 | klinotaxis: `rn_ppo − rn_frozen` | gate — did the null learn on this cell |
 | V4 | klinotaxis: `wt_frozen − rn_frozen` | the untrained prior, annotation |
-| **V5** | thermal: `wt_ppo − rn_ppo` | **co-primary** |
-| V6 | thermal: `wt_ppo − wt_frozen` | gate |
-| V7 | thermal: `rn_ppo − rn_frozen` | gate |
+| V5 | thermal: `wt_ppo − rn_ppo` | secondary — annotates the 7b reading |
+| V6 | thermal: `wt_ppo − wt_frozen` | gate for V5 |
+| V7 | thermal: `rn_ppo − rn_frozen` | gate for V5 |
 | V8 | thermal: `wt_frozen − rn_frozen` | prior, annotation |
 
 **The gates are read first and they can stop the cell.** A contrast against a null presupposes that
@@ -68,8 +80,9 @@ something learned; principle 6 of the phase protocol exists because the degree-p
 built on a premise nobody tested. If a cell's V2 fails, that cell's contrast is not interpretable
 and its verdict is `no_learning` — a finding about the platform, recorded as such.
 
-**The metric** is plateau-tail full-clear success (%), the committed metric across every panel in
-the phase, with I.2's graded mean-foods carried beside it from the same CSVs. **I.2's mixture
+**The metric** is plateau-tail full-clear success (%) over the **final quarter** of the run —
+`t7_continuous_ranking.plateau_tail`, the committed metric of 029, 034 and every panel in the phase —
+with I.2's graded mean-foods carried beside it from the same tail. **I.2's mixture
 family** — competent-fraction discordance at the committed 20.0 threshold and the level among each
 arm's own competent seeds, under the pooled-label permutation null — is registered as the secondary
 reading of each primary, applied through `scripts/analysis/l4_mixture_statistic.py` rather than
@@ -85,9 +98,9 @@ below the registered minimum, and licenses nothing on its own.
 
 An easier cell can put both arms against the ceiling, where no contrast can resolve and a null means
 nothing. Registered before the pilot: **if both PPO arms' plateau-tail full-clear mean is ≥ 90%, the
-cell is `saturated`** and its contrast is not read. The named remedy is to re-run that cell at the
-committed harder variant — more foods to collect, or the C2 predator-free thermal-plus-foraging
-cell — and never to adjust the recipe until the arms separate, which would be fitting the platform
+cell is `saturated`** and its contrast is not read. The named remedy is **one change on the same
+cell**: `target_foods_to_collect` 10 → 20 at the committed `foods_on_grid: 5` and `max_steps: 800`,
+run once. The recipe is never adjusted until the arms separate, which would be fitting the platform
 to the hypothesis.
 
 The pilot measures this on disjoint seeds before any registered seed is spent.
@@ -97,19 +110,20 @@ The pilot measures this on disjoint seeds before any registered seed is spent.
 Registered seeds stay untouched until the protocol is fixed. The pilot answers three questions and
 changes nothing else:
 
-1. **Does the connectome converge on C1 at the inherited recipe?** The committed config's own header
-   says the entropy/lr recipe is "subject to the connectome's own per-seed/entropy C1 check", and
-   that check is not in the record. If it does not converge, the pilot reports it and the campaign
-   does not launch — the recipe is settled first, on pilot seeds, and the change is amended under a
-   dated note.
+1. **Does the connectome converge on C1 at the inherited recipe, seed by seed?** The committed
+   config's own header says the entropy/lr recipe is "subject to the connectome's own
+   per-seed/entropy C1 check", and that check is not in the record. The pilot reports convergence per
+   pilot seed. If it does not converge, the campaign does not launch — the recipe is settled first,
+   on pilot seeds, and the change is amended under a dated note. The launch record also states which
+   config 035's connectome companion ran, since the base here is the `fick_adaptive` variant.
 2. **What does a run cost on these exact cells?** Measured, not scaled from a lighter config. The
    phase has one committed instance of a cost estimate scaled from a lighter pilot missing by 78%.
 3. **Where does the cell sit relative to the saturation threshold?**
 
 ## Verdicts
 
-Assigned per cell, in order, in the vocabulary the panels already use so the record stays
-comparable:
+Assigned for the primary cell, in order, in the vocabulary 034 and the panels already use so the
+record stays comparable; the thermal cell receives the same ordered reading as an annotation:
 
 1. `insufficient_seeds` — any arm incomplete.
 2. `no_learning` — the cell's gate (V2) fails: the wild type does not beat its own frozen floor.
@@ -124,14 +138,15 @@ The annotations (V3, V4, the mixture family, the MLP reference) never change a v
 
 Stated before the data exist:
 
-- **`specific_wiring` on either cell** — the wiring hypothesis is alive on a behaviour the animal
+- **`specific_wiring` on the primary** — the wiring hypothesis is alive on a behaviour the animal
   performs. The phase's headline changes, 7b's gate is re-openable on that behaviour, and the
   instrument ladder that follows gets a cell on which a working rule would have something to find.
   It does **not** retroactively reopen any committed C3 verdict; those stand in their own units.
-- **`degree_statistics` / `rewired_beats_wild_type` / `inconclusive` on both cells** — the premise
-  fails where it was most likely to hold. 7b's central measurement has no within-species signal to
-  find, the shipment decision inherits that, and further rule work is characterisation of the
-  instrument rather than a route to the phase's MUST.
+- **`degree_statistics` / `rewired_beats_wild_type` / `inconclusive` on the primary** — the premise
+  fails where it was most likely to hold. The thermal annotation then says whether 7b's second
+  behaviour offers anything the first did not; where it does not, 7b's central measurement has no
+  within-species signal to find, the shipment decision inherits that, and further rule work is
+  characterisation of the instrument rather than a route to the phase's MUST.
 - **`no_learning`** — a finding about the platform, not about the wiring. It licenses fixing the
   platform, and nothing about the connectome.
 - **`saturated`** — the named remedy, once, and no reading of the contrast.

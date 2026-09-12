@@ -23,10 +23,14 @@ The wiring contrast has only ever been measured with that component in the mix.
 
 So the premise has never been tested where it has the best chance of holding: on a **single
 behaviour the animal actually performs**, which this repository has already validated against the
-real worm at the strategy level ([035](../../../docs/experiments/logbooks/035-realworm-chemotaxis-validation.md)
-reproduces both klinokinesis and the klinotaxis weathervane;
-[036](../../../docs/experiments/logbooks/036-realworm-thermotaxis-validation.md) reproduces the
-thermotaxis weathervane), under an optimiser known to learn on this substrate.
+real worm at the strategy level on both the MLP and the connectome
+([035](../../../docs/experiments/logbooks/035-realworm-chemotaxis-validation.md) reproduces
+klinokinesis and the klinotaxis weathervane), under an optimiser known to learn on this substrate.
+The thermotaxis weathervane is also reproduced
+([036](../../../docs/experiments/logbooks/036-realworm-thermotaxis-validation.md)), but on the MLP
+only, on a pure thermotaxis-seeking cell the connectome has no config for; the connectome's thermal
+cell is a two-behaviour survival cell, foraging plus thermotaxis, and the connectome has never been
+shown to learn it. That asymmetry is why the two cells carry different weight below.
 
 **This also gates 7b.** Shipment 7b's MUST is a comparative cross-connectome sweep on exactly these
 two behaviours — klinotaxis and thermotaxis — with PPO as secondary context. If the wiring contrast
@@ -37,15 +41,20 @@ hours of compute.
 
 ## What Changes
 
-- **Two wiring contrasts under PPO**, one per behaviour, on the single-behaviour cells: the C1
-  klinotaxis foraging cell (`max_steps: 800`) and the thermal cell, wild type against its
-  degree-preserving rewired null, 16 paired seeds each.
+- **A primary wiring contrast under PPO** on the C1 klinotaxis foraging cell (`max_steps: 800`),
+  wild type against its degree-preserving rewired null, 16 paired seeds, 3000 episodes, scored on
+  the committed final-quarter plateau tail — the metric and the statistics 034 used, through the
+  same code.
+- **A secondary contrast on the thermal-plus-foraging survival cell** (`max_steps: 500`), the same
+  way, registered because 7b's MUST names thermotaxis as its second behaviour. It annotates the
+  7b reading and never decides the verdict: the connectome has not been validated on it, so
+  `no_learning` there is a live outcome.
 - **A learning gate per cell, run and reported before its contrast is read.** A contrast against a
   null presupposes that the arm learns; on this substrate that has to be shown per cell, not
   assumed. Both wirings are gated against their own frozen-weights floor on the same seeds.
 - **A saturation clause, registered in advance.** An easier cell can put both arms on the ceiling,
-  where no contrast can resolve. The threshold and the named remedy are fixed before the pilot runs,
-  not improvised after it.
+  where no contrast can resolve. The threshold and the named remedy — `target_foods_to_collect`
+  10 → 20 on the same cell, one change — are fixed before the pilot runs, not improvised after it.
 - **A pilot on disjoint seeds** that measures per-run wall time on these exact cells and checks that
   the inherited C1 recipe converges on the connectome — a check the committed config header flags as
   still open — before any registered seed is spent.
@@ -60,11 +69,13 @@ Out of scope: any plasticity rule (this runs PPO only), the instrument ladder th
 ## Capabilities
 
 **Modified**: `architecture-comparison-protocol` (a wiring contrast is run on a cell matched to the
-behaviour under claim, and gated on that cell showing learning).
+behaviour under claim, and gated on that cell showing learning; the curriculum's smoke-only clause
+is scoped to the cross-architecture ranking it was written for).
 
 ## Impact
 
-- New: four connectome configs (two rewired-null, two frozen-control), the campaign harness, the
-  records under `supporting/057-wiring-premise-contrast/`, Logbook 057.
+- New: four connectome configs (two rewired-null, two frozen-control), the campaign harness
+  extending `scripts/analysis/connectome_structure_controls.py`, the records under
+  `supporting/057-wiring-premise-contrast/`, Logbook 057.
 - Edited: the experiments index, `CHANGELOG.md`, tracker (new block V), roadmap.
 - Compute: 160 registered runs plus a pilot, on cells measured at roughly a tenth of C3's cost.

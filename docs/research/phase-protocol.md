@@ -45,9 +45,12 @@ down.
    The estimate would have cost an hour. Measuring it cost a day and confirmed it.*
 
 3. **Establish that the task is solvable with the strongest available method.** Know what "learned"
-   looks like before asking a constrained method to produce it. *Even PPO takes a 73.7% clone down
-   to 34.5% on this task (Logbook 043, W6). The phase spent ten items looking for that cause in the
-   rule.*
+   looks like before asking a constrained method to produce it. *The phase learned that PPO solves
+   this task from random weights — 68.5% on the wild type, 81.2% on the rewired null — at its tenth
+   item (Logbook 043), after seven panels had asked a local rule to do it. That number also bounds
+   the rule: from random weights it reaches 17.8% and sits below its own unmodulated floor. An
+   earlier reading of the same table, that PPO also destroys competent policies, was withdrawn in
+   Logbook 056 — warm-starting hurts PPO, which is a fact about warm-starting, not about the task.*
 
 ### Instruments before substrates
 

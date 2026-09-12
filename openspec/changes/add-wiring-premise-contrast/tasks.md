@@ -8,14 +8,19 @@
   wiring differing by `freeze_updates: true` alone.
 - [ ] 1.2 The thermal pair, the same way, from the committed thermal cell config.
 - [ ] 1.3 A test that each new config differs from its base by exactly the intended key, so a pair
-  cannot silently diverge on anything else.
+  cannot silently diverge on anything else, and that no config sets `rewire_seed`, so the null's
+  rewiring is derived from the run seed and the pairing holds per seed.
 
 ## 2. Harness
 
-- [ ] 2.1 `scripts/analysis/wiring_premise.py`: the eight-test family, both cells corrected
-  together, one-sided paired Wilcoxon with 80% bootstrap CIs, the gates read before the primaries,
-  the saturation clause, the registered minimum effect, the verdict order, and a completeness flag
-  per test. Fixed in code before the campaign runs.
+- [ ] 2.1 `scripts/analysis/wiring_premise.py`, **extending
+  `scripts/analysis/connectome_structure_controls.py`** and importing its metric and statistics
+  layers (`t7_continuous_ranking.plateau_tail`,
+  `weight_search_architecture_ranking.paired_seed_wilcoxon_bootstrap`, `bh_fdr`) rather than
+  reimplementing them: the eight-test family corrected together, the gates read before the
+  primary, the saturation clause and its named remedy, the registered minimum effect, the verdict
+  order for the primary cell with the thermal cell as an annotation, and a completeness flag per
+  test. Fixed in code before the campaign runs.
 - [ ] 2.2 I.2's mixture family read as the registered secondary through
   `scripts/analysis/l4_mixture_statistic.py`, not reimplemented.
 - [ ] 2.3 The MLP reference arm carried as a descriptive row that no test can read.
@@ -25,7 +30,8 @@
 ## 3. Pilot (disjoint seeds 101–108)
 
 - [ ] 3.1 `launch.md` committed before the pilot runs.
-- [ ] 3.2 Convergence of the connectome on C1 at the inherited recipe, reported either way.
+- [ ] 3.2 Convergence of the connectome on C1 at the inherited recipe, reported per pilot seed
+  either way, and the config 035's connectome companion ran recorded beside it.
 - [ ] 3.3 Measured per-run wall time on these exact configs, and the campaign schedule derived from
   it rather than scaled from a lighter run.
 - [ ] 3.4 Distance from the saturation threshold, with the registered remedy taken if it is met.
@@ -33,7 +39,8 @@
 ## 4. Campaign (registered seeds 1–16)
 
 - [ ] 4.1 Launch record committed first; no branch switches while it runs.
-- [ ] 4.2 160 runs: four connectome arms × two cells × 16 seeds, plus the MLP reference.
+- [ ] 4.2 160 runs at 3000 episodes: four connectome arms × two cells × 16 seeds, plus the MLP
+  reference.
 - [ ] 4.3 Per-seed CSV, the family table, and the verdict per cell under
   `supporting/057-wiring-premise-contrast/`.
 
