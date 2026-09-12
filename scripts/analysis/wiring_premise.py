@@ -410,7 +410,9 @@ def main() -> None:
     out: dict = {}
     analyse(cells, out, args.manifest)
     if args.out:
-        args.out.write_text(json.dumps(out, indent=2, default=str))
+        # Trailing newline so a regenerated record does not fail the end-of-file hook,
+        # matching `connectome_structure_efficiency`.
+        args.out.write_text(json.dumps(out, indent=2, default=str) + "\n")
         print(f"\nwrote {args.out}")
 
 
