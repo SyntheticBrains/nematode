@@ -18,17 +18,22 @@ Three things follow, and none of them is about the instrument:
    reward or its 2400-step episodes prevents learning.
 2. **The substrate holds a competent policy.** A frozen clone sits at 73.7%. The 302-neuron
    recurrent graph with a fixed anatomical readout is not too weak to express one.
-3. **The wild-type wiring is not advantaged.** The rewired null beats it by 12.6 points, on 0 of 8
-   seeds positive. Logbook 029 found the same independently — fifth of six, indistinguishable from
-   its null.
+3. **The wild-type wiring is not advantaged.** Under low-noise PPO the rewired null beats it by
+   12.6 points, on 0 of 8 seeds positive. Logbook 029 converges from a different regime — fifth of
+   six architectures, *indistinguishable* from its null. The two findings differ (null ahead
+   against no difference) and agree on what matters: neither shows a wild-type advantage.
 
 ## A correction carried on the record
 
 An earlier reading of W6 held that PPO also destroys competent policies, so the binding constraint
 might not be the rule at all. That over-read it. W6 compares warm-started PPO (34.5) with PPO from
-scratch (68.5): **warm-starting hurts PPO**, most plausibly a stale value function and rollout
-buffer meeting a policy they were not fitted to. It is not evidence that the task destroys policies,
-because the same table shows PPO solving the task from scratch and a frozen clone holding one.
+scratch (68.5). Warm-started PPO *did* degrade the 73.7% clone, by 39 points — most plausibly a
+stale value function and rollout buffer meeting a policy they were not fitted to. What the table
+also shows is that PPO does not need the clone: from scratch it reaches 68.5, and a frozen clone
+holds 73.7. So **both optimisers degrade a warm-started clone, the local rule by far more** — 61
+points against 39 — and PPO solves the task without one. That is not evidence that the task destroys
+policies in general; it is evidence that warm-starting is harmful under PPO here and that the rule
+is worse still.
 
 In the same warm-start regime the local rule reaches 13.0 against PPO's 34.5. The attribution to the
 rule is therefore **cleaner** than that reading suggested, and the recommendation that followed from
@@ -51,15 +56,26 @@ overstate what repairing the rule could ever have delivered.
 
 ## How each result is classified
 
-By what would have had to be true for its null to be informative:
+**By result type first**, because "premise" means something different for each kind of result,
+and a single test applied across kinds files them wrongly in both directions:
 
-- if a working optimiser shows no wild-type advantage on the same contrast, the result is **premise**;
-- else if the rule under it had not cleared a positive control at the time, the result is
-  **instrument**;
-- else it is **wiring**.
+- **No-learning results** — frozen priors and sign-grounding sweeps, such as 044's G1 (grounded
+  wild-type frozen against the committed prior). No optimiser and no rule were involved, so neither
+  the premise test nor the instrument test applies. These are **substrate findings and survive as
+  they stand**, whatever block I found about the rule.
+- **Wiring contrasts under learning** — wild type against the rewired null with a rule running
+  (040–042, 044's G2 and G4, 047's S1 and S2). Their premise is that *learning finds a wild-type
+  advantage*. No optimiser has established it: PPO from scratch puts the null ahead by 12.6 on 0 of
+  8, and Logbook 029 found the two indistinguishable. → **premise**.
+- **Clone assays** — does a mechanism hold a competent policy (043, 045, 046). Their premise is
+  that *a competent policy can be held*, and 043's W1 established it: the frozen clone beats a
+  random frozen substrate by +31.0 on 8 of 8. The premise held; the rule destroyed what frozen
+  weights kept. → **instrument**.
 
-Applied in that order, since a result can satisfy both of the first two and the premise failure is
-the more fundamental — a repaired instrument would not have changed the answer.
+Within a type, a result that also ran under the unrepaired rule carries the instrument note beside
+its classification, but the type decides. Applying the optimiser test across all three would have
+filed the clone assays as premise failures — because PPO shows the null ahead — when their own
+premise was met, and would have reached the no-learning results only by elimination.
 
 ## What the re-read may not do
 
