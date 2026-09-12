@@ -30,6 +30,14 @@ since repairing an instrument would not have changed a null whose premise never 
 - **WHEN** it is re-read after the rule is found not to learn
 - **THEN** it SHALL be classified as a finding about the substrate, unchanged
 
+#### Scenario: A result measured under a different rule is not classified by the tested rule's premise
+
+- **GIVEN** a registered contrast measured under a rule other than the one the positive control
+  tested, and evidence that this other rule reaches competent behaviour on the task
+- **WHEN** it is re-read
+- **THEN** it SHALL be classified on its own rule's premise, which is met, and SHALL NOT be
+  evaluated under the tested rule's premise or attributed to the tested rule's failure
+
 #### Scenario: A retention assay whose premise was met is not filed as a premise failure
 
 - **GIVEN** a retention assay on a substrate shown to hold a competent policy under frozen weights

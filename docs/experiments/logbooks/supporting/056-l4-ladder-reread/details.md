@@ -78,9 +78,17 @@ put the null ahead by 12.6 on 0 of 8. The two differ (indistinguishable against 
 agree on the point that matters. Logbook 029's fifth-of-six ranking is the context that motivated
 034, not a wiring contrast itself.
 
-A null on these five contrasts was therefore the expected outcome under any instrument, and
-repairing the rule would not have changed them. Filing them as instrument casualties would claim
-that a working rule might have found the advantage, which no evidence supports.
+**Neither PPO regime tested found a confirmed wild-type advantage** — 034's registered contrast is
+indistinguishable, 043's puts the null ahead — so the premise these five contrasts rest on has no
+demonstration behind it. They are therefore classified as **uninformative about both** the wiring
+question and the instrument, and a working instrument would not have changed that classification:
+the contrast would still be one whose sought effect no tested method has shown. Filing them as
+instrument casualties would claim instead that a working rule might have found the advantage, which
+no evidence supports.
+
+This is a statement about what the nulls are evidence *for*, and it is bounded in both directions.
+PPO is one optimiser family in two regimes, not every instrument; and the reward-free Hebbian
+signal of §2 is a separate question, still unresolved, which nothing here closes.
 
 ### 4. The three-factor rule, floors / retention / rule variants (10 contrasts) — instrument
 

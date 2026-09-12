@@ -16,9 +16,9 @@ they survive as such, sharpened rather than voided: 043's `rule_destroys_clone` 
 premise its own W1 established (+31.0 on 8/8). **Five are about neither**, because their premise
 was never established by any optimiser — Logbook 034 ran that contrast under PPO in Phase 6a and
 found the wirings indistinguishable (−3.28, q = 0.770), and in 043's low-noise PPO arms the
-degree-preserving rewired null beats the wild type by **12.6 points on 0 of 8 seeds** — so "learning
-finds a wild-type advantage" has no demonstration to rest on and a working rule would not have
-changed those cells.
+degree-preserving rewired null beats the wild type by **12.6 points on 0 of 8 seeds**. Neither
+tested regime found a confirmed wild-type advantage, so those five nulls are **uninformative about
+both** the wiring and the instrument — a classification a working rule would not have changed.
 One contrast, W6, is about PPO and carries a correction issued here: an earlier reading of it
 during the programme is withdrawn on the record. The change registered an expectation that *most*
 of the record would land in the premise category; it does not, and the reason is the fourth kind
@@ -156,8 +156,11 @@ choosing a rule family, is **withdrawn here** rather than left standing.
    q = 0.770** over eight paired seeds, with no advantage in learning efficiency either (all
    q ≥ 0.36). Logbook 043's low-noise PPO arms, on Phase 7's own seeds, put the null **ahead by 12.6
    points on 0 of 8**. The two differ — indistinguishable against null-ahead — and agree on the point
-   that matters. Repairing the rule would not have changed those five cells, and reporting them as
-   instrument casualties would overstate what a repair could ever have delivered.
+   that matters: neither regime found a confirmed wild-type advantage. So the five nulls are
+   uninformative about both the wiring and the instrument, a classification repairing the rule would
+   not have changed, and reporting them as instrument casualties would overstate what a repair could
+   ever have delivered. PPO is two tested regimes rather than every instrument, and §3's reward-free
+   Hebbian signal is a separate question this does not close.
 3. **The one wiring signal the phase produced is untouched by block I.** The reward-free Hebbian
    contrast — +16.5 descriptive on 040's floors, +14.1 registered on 041's sixteen seeds, +8.1 on
    042's forty-eight fresh ones, +9.6 pooled over 64 — never ran under the modulated rule. It is
