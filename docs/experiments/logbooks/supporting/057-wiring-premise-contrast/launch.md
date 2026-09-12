@@ -175,3 +175,73 @@ uv run python scripts/run_campaign.py \
   --seeds 1-16 --runs 3000 --output-dir campaigns/wiring-premise \
   -- --theme headless
 ```
+
+______________________________________________________________________
+
+## Registered panel outcome, 2026-09-12 — and the replication it triggers
+
+128/128 runs succeeded, seeds 1–16, 3000 episodes, 8026 s wall.
+
+**The primary is positive.** Thermal cell, efficiency axis, `SPECIFIC-WIRING-EFFICIENCY`:
+
+| metric | wild | rewired | delta | q | wild-better |
+|---|---|---|---|---|---|
+| `auc_success` | 0.80 | 0.67 | **+0.14** | 0.001 | 14/16 |
+| `auc_foods` | 18.37 | 17.15 | **+1.21** | 0.009 | 14/16 |
+| `episodes_to_30pct_success` | **305.5** | **570.3** | +264.8 | 0.009 | 12/16 |
+| `episodes_to_90pct_foods_plateau` | 426.1 | 734.4 | +308.4 | 0.014 | 12/16 |
+
+Time-to-competence gain **+46.4%** against the registered minimum of +20%. Both learning gates pass
+at q = 0.000 on 16/16 (V6 +17.31, V7 +16.68), and the untrained prior is indistinguishable
+(V8 −0.50, q = 0.912, 7/16) — so the advantage is **created by learning rather than inherited from
+the graph**, which is the control that makes the result mean anything.
+
+The secondary cell reads as the pilot predicted: peak `SATURATED` (100.00% on both wirings, contrast
+exactly 0.00 on 0/16), efficiency `DEGREE-STATISTICS` with all four metrics nominally negative
+(−25.7% on time-to-competence, wild-better 6–7/16). Same axis, same harness, same seeds — so the
+efficiency axis is not a positive-generating instrument.
+
+**Checks run beyond the registration.** BH across all eight efficiency metrics jointly rather than
+four per cell: q = 0.0017 / 0.0175 / 0.0175 / 0.0290, all surviving. Per-seed, the effect is not
+outlier-driven — the four losing seeds are narrow (257/214, 743/316, 502/451, 350/286) while several
+wins are large (292/1721, 166/968, 210/878); the wild type's times cluster at 46–743 where the null's
+reach 1721. **Lower variance in time-to-competence is much of the effect.**
+
+**What this is not.** The peak axis is saturated, so this is a *learning-speed* claim and not a
+performance one: both wirings finish in the same place. It is PPO, not a local rule, so 7b's gate as
+literally written is still unmet — what is now supported is the premise behind it. And the thermal
+cell enables the thermotaxis projection onto AFDL/AFDR, which rewiring scrambles along with
+everything else, so the effect may be specific to the evolved sensory→motor pathway rather than the
+wiring at large — a sharper claim than the one registered, and one that needs an arm rewiring only
+non-sensory edges before it can be asserted.
+
+## The replication, seeds 17–32
+
+Registered here **before it runs**, and before Logbook 057 is written.
+
+This is the phase's first positive result; it rests on an axis amended after pilot data; and this
+project has a committed instance of exactly this effect class not holding — the Hebbian wiring
+contrast measured +16.2, then +11.9, then +8.1 across fresh looks, which is why
+[panel 3](../042-l4-panel3.md) exists. Fresh seeds are the cheapest answer to both objections.
+
+**No protocol changes**: the same four thermal arms, the same harness, the same four-metric family,
+the same registered minimum of 20% off time-to-competence. Seeds 17–32, disjoint from both the pilot
+(101–104) and the registered panel (1–16).
+
+**Outcomes, fixed before the run:**
+
+- **Replicates at or above the registered minimum.** The claim is carried by two independent panels
+  and the record reports the pooled estimate beside both.
+- **Same direction, below the minimum.** Reported as a real but smaller effect, with the shrinkage
+  named and panel 3's precedent cited. It licenses the follow-up, not the claim.
+- **Does not replicate.** The registered panel is reported as not holding on fresh seeds, and the
+  first positive is withdrawn on the record rather than defended.
+
+```bash
+TH=configs/scenarios/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis
+uv run python scripts/run_campaign.py \
+  --config ${TH}_t20.yml --config ${TH}_rewired_null_t20.yml \
+  --config ${TH}_frozen_t20.yml --config ${TH}_rewired_null_frozen_t20.yml \
+  --seeds 17-32 --runs 3000 --output-dir campaigns/wiring-premise-replication \
+  -- --theme headless
+```
