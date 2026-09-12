@@ -244,7 +244,9 @@
         "wt_frozen",
         "rn_frozen"
       ],
-      "n_common": 0
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     },
     "thermal": {
       "verdict": "insufficient_seeds",
@@ -254,14 +256,19 @@
         "wt_frozen",
         "rn_frozen"
       ],
-      "n_common": 0
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     },
     "hard_food": {
-      "verdict": "no_learning",
+      "verdict": "degree_statistics",
       "gate_test": "V10",
       "gate_delta": 10.666666666666668,
       "gate_q": 0.125,
-      "note": "the wild type does not beat its own frozen floor; this is a finding about the platform and licenses nothing about the wiring"
+      "note": "the wild type does not beat its own frozen floor; this is a finding about the platform and licenses nothing about the wiring",
+      "axis": "efficiency",
+      "peak_verdict": "no_learning",
+      "efficiency_verdict": "degree_statistics"
     }
   },
   "efficiency": {

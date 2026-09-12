@@ -692,7 +692,9 @@
         "wt_frozen",
         "rn_frozen"
       ],
-      "n_common": 0
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     },
     "thermal": {
       "verdict": "insufficient_seeds",
@@ -702,10 +704,12 @@
         "wt_frozen",
         "rn_frozen"
       ],
-      "n_common": 0
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     },
     "hard_food": {
-      "verdict": "below_min_effect",
+      "verdict": "specific_wiring_efficiency",
       "n_common": 32,
       "underpowered": false,
       "metric": "success",
@@ -714,7 +718,10 @@
       "ci_hi": 5.779583333333336,
       "bh_q": 0.001441645878866446,
       "min_effect": 5.0,
-      "meets_min_effect": false
+      "meets_min_effect": false,
+      "axis": "efficiency",
+      "peak_verdict": "below_min_effect",
+      "efficiency_verdict": "specific_wiring_efficiency"
     }
   },
   "efficiency": {

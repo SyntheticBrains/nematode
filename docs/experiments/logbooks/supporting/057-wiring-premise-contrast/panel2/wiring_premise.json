@@ -95,6 +95,42 @@
       "wilcoxon_p": 0.2982940673828125,
       "positive_seeds": 9,
       "bh_q": 0.2982940673828125
+    },
+    {
+      "test": "V9",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "primary",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V10",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V11",
+      "cell": "hard_food",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V12",
+      "cell": "hard_food",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
     }
   ],
   "per_arm": {
@@ -388,7 +424,8 @@
         },
         "reference_only": false
       }
-    }
+    },
+    "hard_food": {}
   },
   "verdicts": {
     "klinotaxis": {
@@ -399,13 +436,30 @@
         "wt_frozen",
         "rn_frozen"
       ],
-      "n_common": 0
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     },
     "thermal": {
-      "verdict": "saturated",
+      "verdict": "degree_statistics",
       "wt_full_clear": 96.275,
       "rn_full_clear": 92.15,
-      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe"
+      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe",
+      "axis": "efficiency",
+      "peak_verdict": "saturated",
+      "efficiency_verdict": "degree_statistics"
+    },
+    "hard_food": {
+      "verdict": "insufficient_seeds",
+      "missing_arms": [
+        "wt_ppo",
+        "rn_ppo",
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     }
   },
   "efficiency": {

@@ -227,6 +227,47 @@ def test_the_family_correction_is_per_campaign():
     assert solo["bh_q"] <= paired["bh_q"]
 
 
+def test_the_deciding_verdict_is_serialised_for_a_primary_cell():
+    """A primary cell's record carries the efficiency verdict, with the peak one beside it.
+
+    This is the case the V.3 campaign actually produced: the hard food-only cell reads
+    `below_min_effect` on the peak axis and `specific_wiring_efficiency` on the efficiency axis, and
+    a consumer reading the record's verdict must get the one that decides the campaign.
+    """
+    entry = {"verdict": "below_min_effect", "axis": "peak", "peak_verdict": "below_min_effect"}
+    wp.record_deciding_verdict(entry, "hard_food", {"verdict": "specific_wiring_efficiency"})
+    assert entry["verdict"] == "specific_wiring_efficiency"
+    assert entry["axis"] == "efficiency"
+    assert entry["peak_verdict"] == "below_min_effect"
+    assert entry["efficiency_verdict"] == "specific_wiring_efficiency"
+
+
+def test_a_non_primary_cell_keeps_its_peak_verdict_as_the_deciding_one():
+    """The klinotaxis cell is not a primary, so its peak verdict stands and both are recorded."""
+    entry = {"verdict": "saturated", "axis": "peak", "peak_verdict": "saturated"}
+    wp.record_deciding_verdict(entry, "klinotaxis", {"verdict": "degree_statistics"})
+    assert entry["verdict"] == "saturated"
+    assert entry["axis"] == "peak"
+    assert entry["efficiency_verdict"] == "degree_statistics"
+
+
+def test_analyse_serialises_both_verdicts_when_the_axes_disagree(tmp_path):
+    """End to end: the two axes disagree and the record carries both, keyed unambiguously."""
+    cells = _cells(60.0, 58.0, 10.0, 10.0, cell="hard_food")  # significant, under the 5-point bar
+    manifest = _efficiency_manifest(tmp_path, wild_cross=40, rewired_cross=200)
+    manifest.write_text(manifest.read_text().replace("thermal ", "hard_food "))
+
+    out: dict = {}
+    wp.analyse(cells, out, manifest)
+    entry = out["verdicts"]["hard_food"]
+    assert entry["peak_verdict"] == "below_min_effect"
+    assert entry["axis"] == "efficiency"
+    assert (
+        entry["verdict"] == entry["efficiency_verdict"] == out["efficiency"]["hard_food"]["verdict"]
+    )
+    assert entry["verdict"] != entry["peak_verdict"]
+
+
 def test_crossing_rate_counts_only_seeds_that_reached_the_threshold():
     """A seed censored at the horizon does not count as having crossed."""
     report = {

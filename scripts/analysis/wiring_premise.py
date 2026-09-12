@@ -360,6 +360,19 @@ def _print_efficiency(cell: str, report: dict[str, Any]) -> None:
     print(f"  VERDICT ({cell}, efficiency{tag}): {report['verdict'].upper().replace('_', '-')}")
 
 
+def record_deciding_verdict(entry: dict[str, Any], cell: str, report: dict[str, Any]) -> None:
+    """Set the cell's deciding verdict in place, keeping the peak one beside it.
+
+    For a cell in :data:`PRIMARY_CELLS` the efficiency axis decides its campaign, so that is what
+    ``entry["verdict"]`` must carry - otherwise a consumer reading the record gets the peak verdict
+    and the wrong answer. The peak verdict is always available under ``peak_verdict``.
+    """
+    entry["efficiency_verdict"] = report["verdict"]
+    if cell in PRIMARY_CELLS:
+        entry["verdict"] = report["verdict"]
+        entry["axis"] = "efficiency"
+
+
 def analyse(
     cells: dict[str, dict[str, dict[int, tuple[float, float]]]],
     out: dict,
@@ -411,7 +424,11 @@ def analyse(
             )
 
         result = verdict(cells, rows, cell)
-        out["verdicts"][cell] = result
+        # The peak verdict, recorded for every cell. For a cell in PRIMARY_CELLS the efficiency axis
+        # decides its campaign, so the deciding verdict is overwritten below once that axis is
+        # scored; a consumer reading out["verdicts"][cell]["verdict"] always gets the deciding one,
+        # and the peak verdict stays available beside it.
+        out["verdicts"][cell] = {**result, "axis": "peak", "peak_verdict": result["verdict"]}
         print("-" * 78)
         print(f"  VERDICT ({cell}): {result['verdict'].upper().replace('_', '-')}")
         if result["verdict"] == "below_min_effect":
@@ -430,6 +447,7 @@ def analyse(
             if report is not None:
                 out.setdefault("efficiency", {})[cell] = report
                 _print_efficiency(cell, report)
+                record_deciding_verdict(out["verdicts"][cell], cell, report)
 
 
 def main() -> None:

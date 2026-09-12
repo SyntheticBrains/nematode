@@ -119,6 +119,42 @@
       "wilcoxon_p": 0.798126220703125,
       "positive_seeds": 7,
       "bh_q": 0.9121442522321429
+    },
+    {
+      "test": "V9",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "primary",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V10",
+      "cell": "hard_food",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V11",
+      "cell": "hard_food",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V12",
+      "cell": "hard_food",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
     }
   ],
   "per_arm": {
@@ -701,20 +737,39 @@
         },
         "reference_only": false
       }
-    }
+    },
+    "hard_food": {}
   },
   "verdicts": {
     "klinotaxis": {
       "verdict": "saturated",
       "wt_full_clear": 100.0,
       "rn_full_clear": 100.0,
-      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe"
+      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe",
+      "axis": "peak",
+      "peak_verdict": "saturated",
+      "efficiency_verdict": "degree_statistics"
     },
     "thermal": {
-      "verdict": "saturated",
+      "verdict": "specific_wiring_efficiency",
       "wt_full_clear": 96.28333333333333,
       "rn_full_clear": 94.06666666666666,
-      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe"
+      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe",
+      "axis": "efficiency",
+      "peak_verdict": "saturated",
+      "efficiency_verdict": "specific_wiring_efficiency"
+    },
+    "hard_food": {
+      "verdict": "insufficient_seeds",
+      "missing_arms": [
+        "wt_ppo",
+        "rn_ppo",
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "n_common": 0,
+      "axis": "peak",
+      "peak_verdict": "insufficient_seeds"
     }
   },
   "efficiency": {
