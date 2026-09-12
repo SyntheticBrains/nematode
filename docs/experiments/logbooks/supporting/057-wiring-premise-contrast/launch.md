@@ -245,3 +245,70 @@ uv run python scripts/run_campaign.py \
   --seeds 17-32 --runs 3000 --output-dir campaigns/wiring-premise-replication \
   -- --theme headless
 ```
+
+______________________________________________________________________
+
+## Replication outcome, 2026-09-12 — directionally consistent, not significant
+
+64/64 runs succeeded, seeds 17–32, protocol unchanged.
+
+| | panel 1 (1–16) | panel 2 (17–32) | pooled (32) |
+|---|---|---|---|
+| `auc_success` | +0.14, q = 0.001, 14/16 | +0.10, q = 0.115, 10/16 | +0.12, q = 0.000, 24/32 |
+| 80% CI | [+0.10, +0.18] | **[+0.04, +0.17]** | [+0.08, +0.15] |
+| `episodes_to_30pct_success` | +264.8, q = 0.009, 12/16 | +187.8, q = 0.302, 10/16 | +226.3, q = 0.015, 22/32 |
+| 80% CI | [+145, +407] | **[+6, +387]** | [+114, +343] |
+| time-to-competence gain | +46.4% | +32.6% | +39.5% |
+
+**The direction replicated on all four metrics; the significance did not.** Panel 2's 80% bootstrap
+intervals are entirely above zero on both headline metrics and each contains panel 1's point
+estimate, so the two panels are statistically consistent and the drop from +46.4% to +32.6% is
+within noise. What fell is seed-level sign consistency, 12–14/16 to 7–10/16, which is what the
+paired rank test reads — hence q = 0.115–0.334 and a committed verdict of `degree_statistics`.
+**The registered replication did not confirm the verdict.**
+
+The pooled 32-seed estimate is significant, and is recorded as **descriptive only**: it is dominated
+by panel 1, and pooling is not a substitute for an independent replication. Logbook 042 treated its
+own pooled estimate the same way.
+
+**A defect in this registration, recorded rather than worked around.** The three replication outcomes
+fixed above conflate effect *size* with *significance*: the actual result — size above the 20%
+minimum, significance absent — fits none of them cleanly. The reading applied is the second
+outcome's spirit: a real but smaller effect, the shrinkage named, licensing the follow-up and not
+the claim.
+
+**The rank test and the interval disagree, and that is the finding's shape.** The effect is
+heterogeneous — large on most seeds, slightly negative on a few. A paired rank test sees only signs;
+the bootstrap interval sees magnitude and excludes zero in both panels. This is the mixture problem
+I.2 was built for, and panel 3 is read with I.2's family beside the registered rank test.
+
+## Panel 3, seeds 33–64
+
+Registered **before it runs**. Protocol unchanged: the same four thermal arms, the same harness, the
+same four-metric family, the same registered minimum of 20% off time-to-competence. Seeds 33–64 are
+disjoint from the pilot (101–104), panel 1 (1–16) and panel 2 (17–32).
+
+**Why 32 more rather than 16**: 64 seeds is the sample size [042](../042-l4-panel3.md) used to close
+the Hebbian wiring question, and at a true sign-consistency around the pooled 22/32 a paired rank
+test has real power there where it has none at 16. This either confirms the effect or exposes it as
+marginal; both settle it.
+
+**Outcomes, fixed before the run** — and this time size and significance are separated:
+
+- **Significant on the primary metric at 64 seeds, gain ≥ 20%.** The effect is carried by the full
+  panel and Logbook 057 reports it as a finding, with panel 2's non-replication reported beside it.
+- **Significant, gain < 20%.** Real and below the registered minimum: reported as such, licensing
+  the mechanism follow-up and not the claim.
+- **Not significant, intervals still clear of zero.** Reported as a heterogeneous effect the
+  registered rank test cannot carry at this sample size, read through I.2's family, and named as
+  unresolved rather than either claimed or withdrawn.
+- **Not significant, intervals spanning zero.** The first positive is withdrawn on the record.
+
+```bash
+TH=configs/scenarios/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis
+uv run python scripts/run_campaign.py \
+  --config ${TH}_t20.yml --config ${TH}_rewired_null_t20.yml \
+  --config ${TH}_frozen_t20.yml --config ${TH}_rewired_null_frozen_t20.yml \
+  --seeds 33-64 --runs 3000 --output-dir campaigns/wiring-premise-panel3 \
+  -- --theme headless
+```

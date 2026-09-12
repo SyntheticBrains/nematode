@@ -1,0 +1,746 @@
+{
+  "family": [
+    {
+      "test": "V1",
+      "cell": "klinotaxis",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "primary",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V2",
+      "cell": "klinotaxis",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V3",
+      "cell": "klinotaxis",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V4",
+      "cell": "klinotaxis",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "success",
+      "n_common": 0,
+      "complete": false
+    },
+    {
+      "test": "V5",
+      "cell": "thermal",
+      "contrast": "wt_ppo - rn_ppo",
+      "role": "secondary",
+      "metric": "foods",
+      "n_common": 16,
+      "complete": true,
+      "mean_delta": 0.2962500000000001,
+      "ci_lo": 0.14958333333333337,
+      "ci_hi": 0.4596250000000007,
+      "wilcoxon_p": 0.0020904541015625,
+      "positive_seeds": 13,
+      "bh_q": 0.0027872721354166665
+    },
+    {
+      "test": "V6",
+      "cell": "thermal",
+      "contrast": "wt_ppo - wt_frozen",
+      "role": "gate",
+      "metric": "foods",
+      "n_common": 16,
+      "complete": true,
+      "mean_delta": 16.987833333333334,
+      "ci_lo": 16.232741666666666,
+      "ci_hi": 17.726758333333333,
+      "wilcoxon_p": 1.52587890625e-05,
+      "positive_seeds": 16,
+      "bh_q": 3.0517578125e-05
+    },
+    {
+      "test": "V7",
+      "cell": "thermal",
+      "contrast": "rn_ppo - rn_frozen",
+      "role": "gate_null",
+      "metric": "foods",
+      "n_common": 16,
+      "complete": true,
+      "mean_delta": 16.895833333333332,
+      "ci_lo": 16.043574999999997,
+      "ci_hi": 17.678275,
+      "wilcoxon_p": 1.52587890625e-05,
+      "positive_seeds": 16,
+      "bh_q": 3.0517578125e-05
+    },
+    {
+      "test": "V8",
+      "cell": "thermal",
+      "contrast": "wt_frozen - rn_frozen",
+      "role": "prior",
+      "metric": "foods",
+      "n_common": 16,
+      "complete": true,
+      "mean_delta": 0.20425000000000004,
+      "ci_lo": -1.0967416666666667,
+      "ci_hi": 1.4399750000000002,
+      "wilcoxon_p": 0.2982940673828125,
+      "positive_seeds": 9,
+      "bh_q": 0.2982940673828125
+    }
+  ],
+  "per_arm": {
+    "klinotaxis": {},
+    "thermal": {
+      "wt_ppo": {
+        "n": 16,
+        "full_clear_mean": 96.275,
+        "foods_mean": 19.719,
+        "per_seed": {
+          "17": [
+            96.8,
+            19.768
+          ],
+          "18": [
+            97.46666666666667,
+            19.825333333333333
+          ],
+          "19": [
+            98.0,
+            19.829333333333334
+          ],
+          "20": [
+            97.86666666666667,
+            19.88533333333333
+          ],
+          "21": [
+            94.53333333333333,
+            19.578666666666667
+          ],
+          "22": [
+            98.26666666666667,
+            19.889333333333333
+          ],
+          "23": [
+            95.19999999999999,
+            19.76
+          ],
+          "24": [
+            98.4,
+            19.909333333333333
+          ],
+          "25": [
+            98.0,
+            19.869333333333334
+          ],
+          "26": [
+            92.80000000000001,
+            19.372
+          ],
+          "27": [
+            96.93333333333334,
+            19.7
+          ],
+          "28": [
+            96.53333333333333,
+            19.721333333333334
+          ],
+          "29": [
+            92.80000000000001,
+            19.398666666666667
+          ],
+          "30": [
+            96.13333333333334,
+            19.666666666666668
+          ],
+          "31": [
+            95.6,
+            19.672
+          ],
+          "32": [
+            95.06666666666666,
+            19.658666666666665
+          ]
+        },
+        "reference_only": false
+      },
+      "rn_ppo": {
+        "n": 16,
+        "full_clear_mean": 92.15,
+        "foods_mean": 19.422749999999997,
+        "per_seed": {
+          "17": [
+            95.33333333333334,
+            19.72
+          ],
+          "18": [
+            96.13333333333334,
+            19.652
+          ],
+          "19": [
+            93.73333333333333,
+            19.552
+          ],
+          "20": [
+            95.33333333333334,
+            19.642666666666667
+          ],
+          "21": [
+            94.66666666666667,
+            19.650666666666666
+          ],
+          "22": [
+            88.66666666666667,
+            19.209333333333333
+          ],
+          "23": [
+            95.86666666666666,
+            19.624
+          ],
+          "24": [
+            92.80000000000001,
+            19.316
+          ],
+          "25": [
+            95.73333333333333,
+            19.601333333333333
+          ],
+          "26": [
+            94.0,
+            19.494666666666667
+          ],
+          "27": [
+            91.46666666666667,
+            19.28933333333333
+          ],
+          "28": [
+            96.39999999999999,
+            19.718666666666667
+          ],
+          "29": [
+            90.26666666666667,
+            19.149333333333335
+          ],
+          "30": [
+            61.199999999999996,
+            17.733333333333334
+          ],
+          "31": [
+            96.39999999999999,
+            19.8
+          ],
+          "32": [
+            96.39999999999999,
+            19.610666666666667
+          ]
+        },
+        "reference_only": false
+      },
+      "wt_frozen": {
+        "n": 16,
+        "full_clear_mean": 0.2,
+        "foods_mean": 2.7311666666666667,
+        "per_seed": {
+          "17": [
+            0.0,
+            2.4133333333333336
+          ],
+          "18": [
+            0.0,
+            2.2893333333333334
+          ],
+          "19": [
+            0.0,
+            0.9253333333333333
+          ],
+          "20": [
+            0.13333333333333333,
+            6.950666666666667
+          ],
+          "21": [
+            0.0,
+            4.488
+          ],
+          "22": [
+            0.9333333333333335,
+            6.645333333333333
+          ],
+          "23": [
+            0.0,
+            3.6893333333333334
+          ],
+          "24": [
+            0.0,
+            0.20933333333333334
+          ],
+          "25": [
+            0.0,
+            1.1293333333333333
+          ],
+          "26": [
+            0.0,
+            2.3746666666666667
+          ],
+          "27": [
+            0.0,
+            0.724
+          ],
+          "28": [
+            2.1333333333333333,
+            7.645333333333333
+          ],
+          "29": [
+            0.0,
+            1.4933333333333334
+          ],
+          "30": [
+            0.0,
+            0.9453333333333334
+          ],
+          "31": [
+            0.0,
+            1.1973333333333334
+          ],
+          "32": [
+            0.0,
+            0.5786666666666667
+          ]
+        },
+        "reference_only": false
+      },
+      "rn_frozen": {
+        "n": 16,
+        "full_clear_mean": 0.4333333333333333,
+        "foods_mean": 2.5269166666666667,
+        "per_seed": {
+          "17": [
+            0.0,
+            1.404
+          ],
+          "18": [
+            0.0,
+            3.076
+          ],
+          "19": [
+            0.0,
+            0.5093333333333333
+          ],
+          "20": [
+            0.0,
+            3.444
+          ],
+          "21": [
+            0.0,
+            2.8546666666666667
+          ],
+          "22": [
+            0.0,
+            0.2866666666666667
+          ],
+          "23": [
+            0.0,
+            1.144
+          ],
+          "24": [
+            6.933333333333333,
+            10.116
+          ],
+          "25": [
+            0.0,
+            2.444
+          ],
+          "26": [
+            0.0,
+            0.48533333333333334
+          ],
+          "27": [
+            0.0,
+            1.22
+          ],
+          "28": [
+            0.0,
+            1.8213333333333332
+          ],
+          "29": [
+            0.0,
+            4.930666666666666
+          ],
+          "30": [
+            0.0,
+            0.564
+          ],
+          "31": [
+            0.0,
+            5.432
+          ],
+          "32": [
+            0.0,
+            0.6986666666666667
+          ]
+        },
+        "reference_only": false
+      }
+    }
+  },
+  "verdicts": {
+    "klinotaxis": {
+      "verdict": "insufficient_seeds",
+      "missing_arms": [
+        "wt_ppo",
+        "rn_ppo",
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "n_common": 0
+    },
+    "thermal": {
+      "verdict": "saturated",
+      "wt_full_clear": 96.275,
+      "rn_full_clear": 92.15,
+      "remedy": "re-run this cell once at target_foods_to_collect 20; do not adjust the recipe"
+    }
+  },
+  "efficiency": {
+    "thermal": {
+      "verdict": "degree_statistics",
+      "horizon_episodes": 3000,
+      "rolling_window": 200,
+      "n_paired_seeds": 16,
+      "metrics": {
+        "auc_success": {
+          "higher_is_better": true,
+          "wild_mean": 0.7625416666666667,
+          "rewired_mean": 0.6620208333333334,
+          "wild_minus_rewired_oriented": 0.10052083333333334,
+          "wild_better_seeds": 10,
+          "mean_delta": 0.10052083333333334,
+          "wilcoxon_p": 0.028839111328125,
+          "ci_lo": 0.039083333333333366,
+          "ci_hi": 0.16552291666666666,
+          "n": 16,
+          "per_seed_deltas": [
+            -0.08933333333333326,
+            0.10133333333333339,
+            -0.03366666666666662,
+            -0.006666666666666599,
+            0.024333333333333318,
+            0.39566666666666667,
+            -0.17566666666666664,
+            0.14200000000000002,
+            0.1293333333333334,
+            0.21933333333333327,
+            0.14633333333333332,
+            0.09533333333333327,
+            0.11099999999999999,
+            0.619,
+            -0.023666666666666614,
+            -0.04633333333333334
+          ],
+          "bh_fdr_q": 0.1153564453125
+        },
+        "auc_foods": {
+          "higher_is_better": true,
+          "wild_mean": 17.854979166666666,
+          "rewired_mean": 16.996541666666666,
+          "wild_minus_rewired_oriented": 0.8584375000000001,
+          "wild_better_seeds": 10,
+          "mean_delta": 0.8584375000000001,
+          "wilcoxon_p": 0.1372222900390625,
+          "ci_lo": 0.0953729166666662,
+          "ci_hi": 1.6845729166666672,
+          "n": 16,
+          "per_seed_deltas": [
+            -0.9230000000000018,
+            0.5620000000000012,
+            -0.988999999999999,
+            -0.33833333333333115,
+            0.10500000000000043,
+            4.900666666666666,
+            -2.108999999999998,
+            0.8233333333333306,
+            1.357333333333333,
+            1.5386666666666677,
+            1.104333333333333,
+            0.5993333333333339,
+            0.9446666666666665,
+            7.744,
+            -0.5853333333333346,
+            -0.9996666666666663
+          ],
+          "bh_fdr_q": 0.274444580078125
+        },
+        "episodes_to_30pct_success": {
+          "higher_is_better": false,
+          "wild_mean": 388.375,
+          "rewired_mean": 576.1875,
+          "wild_minus_rewired_oriented": 187.8125,
+          "wild_better_seeds": 10,
+          "mean_delta": 187.8125,
+          "wilcoxon_p": 0.226656720706493,
+          "ci_lo": 6.2749999999999915,
+          "ci_hi": 387.475,
+          "n": 16,
+          "per_seed_deltas": [
+            -302.0,
+            47.0,
+            -344.0,
+            -137.0,
+            131.0,
+            897.0,
+            402.0,
+            -131.0,
+            225.0,
+            278.0,
+            235.0,
+            106.0,
+            86.0,
+            2049.0,
+            -139.0,
+            -398.0
+          ],
+          "bh_fdr_q": 0.3022089609419907
+        },
+        "episodes_to_90pct_foods_plateau": {
+          "higher_is_better": false,
+          "wild_mean": 614.75,
+          "rewired_mean": 770.5,
+          "wild_minus_rewired_oriented": 155.75,
+          "wild_better_seeds": 7,
+          "mean_delta": 155.75,
+          "wilcoxon_p": 0.3342742919921875,
+          "ci_lo": -49.81250000000004,
+          "ci_hi": 376.84375000000006,
+          "n": 16,
+          "per_seed_deltas": [
+            -453.0,
+            -22.0,
+            -87.0,
+            -116.0,
+            -55.0,
+            1470.0,
+            -920.0,
+            -104.0,
+            208.0,
+            325.0,
+            172.0,
+            236.0,
+            83.0,
+            1909.0,
+            -130.0,
+            -24.0
+          ],
+          "bh_fdr_q": 0.3342742919921875
+        }
+      },
+      "per_seed": {
+        "wild_type": {
+          "17": {
+            "auc_success": 0.686,
+            "auc_foods": 17.141666666666666,
+            "episodes_to_30pct_success": 587.0,
+            "episodes_to_90pct_foods_plateau": 953.0
+          },
+          "18": {
+            "auc_success": 0.809,
+            "auc_foods": 18.663,
+            "episodes_to_30pct_success": 375.0,
+            "episodes_to_90pct_foods_plateau": 484.0
+          },
+          "19": {
+            "auc_success": 0.549,
+            "auc_foods": 14.688,
+            "episodes_to_30pct_success": 1287.0,
+            "episodes_to_90pct_foods_plateau": 1396.0
+          },
+          "20": {
+            "auc_success": 0.79,
+            "auc_foods": 18.408333333333335,
+            "episodes_to_30pct_success": 351.0,
+            "episodes_to_90pct_foods_plateau": 449.0
+          },
+          "21": {
+            "auc_success": 0.6903333333333334,
+            "auc_foods": 17.205666666666666,
+            "episodes_to_30pct_success": 544.0,
+            "episodes_to_90pct_foods_plateau": 888.0
+          },
+          "22": {
+            "auc_success": 0.8336666666666667,
+            "auc_foods": 18.793666666666667,
+            "episodes_to_30pct_success": 262.0,
+            "episodes_to_90pct_foods_plateau": 400.0
+          },
+          "23": {
+            "auc_success": 0.4806666666666667,
+            "auc_foods": 14.448,
+            "episodes_to_30pct_success": 232.0,
+            "episodes_to_90pct_foods_plateau": 1709.0
+          },
+          "24": {
+            "auc_success": 0.8916666666666667,
+            "auc_foods": 19.147,
+            "episodes_to_30pct_success": 163.0,
+            "episodes_to_90pct_foods_plateau": 277.0
+          },
+          "25": {
+            "auc_success": 0.8656666666666667,
+            "auc_foods": 18.985666666666667,
+            "episodes_to_30pct_success": 205.0,
+            "episodes_to_90pct_foods_plateau": 288.0
+          },
+          "26": {
+            "auc_success": 0.7936666666666666,
+            "auc_foods": 18.374666666666666,
+            "episodes_to_30pct_success": 182.0,
+            "episodes_to_90pct_foods_plateau": 270.0
+          },
+          "27": {
+            "auc_success": 0.8966666666666666,
+            "auc_foods": 18.988666666666667,
+            "episodes_to_30pct_success": 126.0,
+            "episodes_to_90pct_foods_plateau": 258.0
+          },
+          "28": {
+            "auc_success": 0.8683333333333333,
+            "auc_foods": 19.081666666666667,
+            "episodes_to_30pct_success": 178.0,
+            "episodes_to_90pct_foods_plateau": 252.0
+          },
+          "29": {
+            "auc_success": 0.782,
+            "auc_foods": 18.165333333333333,
+            "episodes_to_30pct_success": 317.0,
+            "episodes_to_90pct_foods_plateau": 454.0
+          },
+          "30": {
+            "auc_success": 0.8046666666666666,
+            "auc_foods": 18.307666666666666,
+            "episodes_to_30pct_success": 226.0,
+            "episodes_to_90pct_foods_plateau": 381.0
+          },
+          "31": {
+            "auc_success": 0.795,
+            "auc_foods": 18.333666666666666,
+            "episodes_to_30pct_success": 354.0,
+            "episodes_to_90pct_foods_plateau": 408.0
+          },
+          "32": {
+            "auc_success": 0.6643333333333333,
+            "auc_foods": 16.947,
+            "episodes_to_30pct_success": 825.0,
+            "episodes_to_90pct_foods_plateau": 969.0
+          }
+        },
+        "rewired_null": {
+          "17": {
+            "auc_success": 0.7753333333333333,
+            "auc_foods": 18.064666666666668,
+            "episodes_to_30pct_success": 285.0,
+            "episodes_to_90pct_foods_plateau": 500.0
+          },
+          "18": {
+            "auc_success": 0.7076666666666667,
+            "auc_foods": 18.101,
+            "episodes_to_30pct_success": 422.0,
+            "episodes_to_90pct_foods_plateau": 462.0
+          },
+          "19": {
+            "auc_success": 0.5826666666666667,
+            "auc_foods": 15.677,
+            "episodes_to_30pct_success": 943.0,
+            "episodes_to_90pct_foods_plateau": 1309.0
+          },
+          "20": {
+            "auc_success": 0.7966666666666666,
+            "auc_foods": 18.746666666666666,
+            "episodes_to_30pct_success": 214.0,
+            "episodes_to_90pct_foods_plateau": 333.0
+          },
+          "21": {
+            "auc_success": 0.666,
+            "auc_foods": 17.100666666666665,
+            "episodes_to_30pct_success": 675.0,
+            "episodes_to_90pct_foods_plateau": 833.0
+          },
+          "22": {
+            "auc_success": 0.438,
+            "auc_foods": 13.893,
+            "episodes_to_30pct_success": 1159.0,
+            "episodes_to_90pct_foods_plateau": 1870.0
+          },
+          "23": {
+            "auc_success": 0.6563333333333333,
+            "auc_foods": 16.557,
+            "episodes_to_30pct_success": 634.0,
+            "episodes_to_90pct_foods_plateau": 789.0
+          },
+          "24": {
+            "auc_success": 0.7496666666666667,
+            "auc_foods": 18.323666666666668,
+            "episodes_to_30pct_success": 32.0,
+            "episodes_to_90pct_foods_plateau": 173.0
+          },
+          "25": {
+            "auc_success": 0.7363333333333333,
+            "auc_foods": 17.628333333333334,
+            "episodes_to_30pct_success": 430.0,
+            "episodes_to_90pct_foods_plateau": 496.0
+          },
+          "26": {
+            "auc_success": 0.5743333333333334,
+            "auc_foods": 16.836,
+            "episodes_to_30pct_success": 460.0,
+            "episodes_to_90pct_foods_plateau": 595.0
+          },
+          "27": {
+            "auc_success": 0.7503333333333333,
+            "auc_foods": 17.884333333333334,
+            "episodes_to_30pct_success": 361.0,
+            "episodes_to_90pct_foods_plateau": 430.0
+          },
+          "28": {
+            "auc_success": 0.773,
+            "auc_foods": 18.482333333333333,
+            "episodes_to_30pct_success": 284.0,
+            "episodes_to_90pct_foods_plateau": 488.0
+          },
+          "29": {
+            "auc_success": 0.671,
+            "auc_foods": 17.220666666666666,
+            "episodes_to_30pct_success": 403.0,
+            "episodes_to_90pct_foods_plateau": 537.0
+          },
+          "30": {
+            "auc_success": 0.18566666666666667,
+            "auc_foods": 10.563666666666666,
+            "episodes_to_30pct_success": 2275.0,
+            "episodes_to_90pct_foods_plateau": 2290.0
+          },
+          "31": {
+            "auc_success": 0.8186666666666667,
+            "auc_foods": 18.919,
+            "episodes_to_30pct_success": 215.0,
+            "episodes_to_90pct_foods_plateau": 278.0
+          },
+          "32": {
+            "auc_success": 0.7106666666666667,
+            "auc_foods": 17.946666666666665,
+            "episodes_to_30pct_success": 427.0,
+            "episodes_to_90pct_foods_plateau": 945.0
+          }
+        }
+      },
+      "episodes_to_competence_gain": 0.325957262175941,
+      "min_gain": 0.2,
+      "meets_min_effect": true
+    }
+  }
+}
