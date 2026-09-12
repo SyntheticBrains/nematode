@@ -9,15 +9,19 @@ independent panel. It found **nothing** on the food-only cell, where both wiring
 reach competence inside forty episodes of three thousand.
 
 057 read that pair as "pathway or difficulty" and registered the question. **Looking at the two
-configs, that framing is too coarse: they differ in three respects, not one.**
+configs and at how episodes actually end, that framing is too coarse: the cells differ in two
+respects that bind, not one.** Across all 32 seeds of 057's third panel the thermal cell's episodes
+end 69,366 `completed_all_food`, **14,098 `health_depleted` (14.7%)**, 11,927 `max_steps` (12.4%) and
+**609 `starved` (0.6%)**:
 
-| | food-only cell | thermal cell |
-|---|---|---|
-| temperature | absent | lethal zones — 8–11% of episodes end `health_depleted` |
-| `max_steps` | 800 | **500** |
-| `satiety_gain_per_food` | 20.0 | **0.2** — food barely replenishes |
+| | food-only cell | thermal cell | binds? |
+|---|---|---|---|
+| temperature | absent | lethal zones | **yes** — 14.7% of episodes |
+| `max_steps` | 800 | **500** | **yes** — 12.4% |
+| `satiety_gain_per_food` | 20.0 | 0.2 | **no** — starvation ends 0.6% |
 
-So the thermal cell is harder for three reasons, only one of which is temperature. The effect could
+So the thermal cell is harder for **two** reasons, one of which is temperature. The satiety setting is
+carried into the new cell for config-matching, not because it creates pressure. The effect could
 depend on the evolved thermosensory projection, or on nothing more than the task being hard enough
 to discriminate — and [V.2](../../../docs/experiments/logbooks/supporting/057-wiring-premise-contrast/probe-v2.md)
 has already closed the simplest version of the pathway story: the wild type's route from AFD to the
@@ -26,10 +30,12 @@ contributes is not hop count.
 
 ## What Changes
 
-- **One new cell**: the food-only cell carrying the thermal cell's **time and satiety budget** —
-  `max_steps: 500`, `satiety_gain_per_food: 0.2` — and no temperature at all. Same sensing as the
-  cell that saturated; difficulty raised to the thermal cell's level by the two routes that have
-  nothing to do with temperature.
+- **One new cell**: the food-only cell with no temperature, its **episode budget calibrated on the
+  pilot's disjoint seeds** and `satiety_gain_per_food: 0.2` carried for config-matching. The step
+  budget is the only non-temperature route that binds, so it is the manipulation — and it is
+  **calibrated rather than guessed**, because the committed data says the obvious guess fails: on this
+  cell the plateau-tail episodes complete in a **mean of 310 steps (max 647)**, so the thermal cell's
+  `max_steps: 500` would not bind at all.
 - **The same four arms and the same harness**: wild type and rewired null under PPO, each against its
   own frozen-weights floor, scored on the committed efficiency axis with the registered 20%
   minimum on time-to-competence, through `scripts/analysis/wiring_premise.py`.
