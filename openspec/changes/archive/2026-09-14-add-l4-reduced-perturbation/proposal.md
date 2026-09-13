@@ -83,3 +83,35 @@ draws that can from draws that cannot).
   cell**, which carries predator and thermal modules this cell does not — so the resulting ~20–37
   minutes a run at 3000 episodes of up to 350 steps is **conservative**. The pilot calibrates it and the
   campaign is scheduled from the measurement, not from this estimate.
+
+______________________________________________________________________
+
+## Correction, 2026-09-14, after archiving — the causal mask ignored gap junctions
+
+Raised in review of the archive and **quantified**. This record's reachability was computed over the
+**directed chemical graph alone**. The forward pass propagates `chem_mat.T @ h + gap_mat.T @ h`, and the
+arms ran `enable_gap_junctions: true`, so **gap junctions carry influence the hop count did not count**.
+The risk section declared the direction of that error; it now has a size.
+
+| measure | chemical only — what the mask used | chemical + gap — what the forward pass propagates |
+|---|---|---|
+| cumulative units within 0/1/2/3 hops | 39 / 109 / 247 / **277** | 39 / 123 / 272 / **283** |
+| units never reaching at depth 4 | **25** | **19** |
+| causal draws per decision | **672** | **717** |
+
+So the mask withheld **45 draws per decision** — 6.3% of the 717 that can reach the readout — and **6**
+of the 25 units it excluded at every step are in fact reachable through a gap path.
+
+**The claim "removes no causally usable signal" is therefore too strong** and is withdrawn as stated: the
+mask removes no signal usable *over chemical edges*, and withholds 45 draws that a gap path could have
+carried. The `causal` arm should be read as a **slightly over-tight** mask, not an exact one.
+
+**No verdict changes.** `causal` read +0.094 foods at q = 0.723 and `full` read −0.384; a mask sitting
+between them is between two flat arms. The campaign's verdict was `not_reducible` on the grounds that no
+set beat its own frozen control, and a 6.3% loosening of one arm's mask does not bear on that.
+
+**What this does change** is the correct construction for any future arm: a causal mask should derive
+reachability over **chemical + gap**, treating gap junctions as bidirectional as the forward pass does,
+giving 717 draws rather than 672. The live requirement added by this change already obliges a mask to name
+the connection types its distance measure ignores and the direction of the resulting error; this
+correction is what that requirement exists to surface, and it fired on the first record subject to it.

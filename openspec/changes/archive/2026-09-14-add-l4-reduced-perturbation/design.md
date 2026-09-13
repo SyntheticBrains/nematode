@@ -134,8 +134,8 @@ had to reconstruct after the fact.
 
 | verdict | test | what follows |
 |---|---|---|
-| `causal_mask_sufficient` | the `causal` arm beats its own frozen control by both minima | the strongest available result: the failure was **uninformative noise**, not scale, and nothing had to be given up to fix it. R.1b runs at the causal mask with all 3709 synapses adaptable |
-| `dimension_reducible` | some reduced arm (`hop1`, `motor`, `motor_last`) beats its control by both minima, and `causal` does not | the dimension binds on the connectome as it does on the MLP. **R.1b is unblocked at the winning mask**, which becomes its registered dimension, and the record states which synapses that mask gives up |
+| `causal_mask_sufficient` | the `causal` arm beats its own frozen control by both minima **and reaches competence** | the strongest available result: most of the failure was exploration credited against an outcome it could not influence. R.1b runs at the causal mask, whose **277 units and 3538 adaptable synapses** (not 3709 — see the corrections below) are what a positive there would be a result for |
+| `dimension_reducible` | some reduced arm (`hop1`, `motor`, `motor_last`) beats its control by both minima, and `causal` does not | the dimension binds on the connectome as it does on the MLP. **R.1b is unblocked only if the winning mask also reaches competence** — beating a floor is not learning the cell, and block V's contrast is on time to competence, so a mask that clears the minima without reaching competence leaves R.1b blocked (see the corrections below). The record states which synapses that mask gives up |
 | `not_reducible` | no arm beats its own frozen control | the connectome's failure is **not** the perturbation dimension. R.1b stays blocked, R.2 (e-prop) becomes the live path, and R.1's result stays bounded to the MLP |
 
 A partial reading — `motor_last` working where `motor` does not, or the ordering non-monotone — is
@@ -377,3 +377,54 @@ own.
 **The causal mask alone does not rescue anything at σ 0.2**, exactly as the honest prior said it would
 not: a 1.8× reduction in draws where the yardstick needed 16×. Removing 536 provably uninformative draws
 per decision leaves the arm at 2.185 foods against its floor's 2.378.
+
+______________________________________________________________________
+
+## Correction, 2026-09-14, after archiving — the causal mask ignored gap junctions
+
+Raised in review of the archive and **quantified**. This record's reachability was computed over the
+**directed chemical graph alone**. The forward pass propagates `chem_mat.T @ h + gap_mat.T @ h`, and the
+arms ran `enable_gap_junctions: true`, so **gap junctions carry influence the hop count did not count**.
+The risk section declared the direction of that error; it now has a size.
+
+| measure | chemical only — what the mask used | chemical + gap — what the forward pass propagates |
+|---|---|---|
+| cumulative units within 0/1/2/3 hops | 39 / 109 / 247 / **277** | 39 / 123 / 272 / **283** |
+| units never reaching at depth 4 | **25** | **19** |
+| causal draws per decision | **672** | **717** |
+
+So the mask withheld **45 draws per decision** — 6.3% of the 717 that can reach the readout — and **6**
+of the 25 units it excluded at every step are in fact reachable through a gap path.
+
+**The claim "removes no causally usable signal" is therefore too strong** and is withdrawn as stated: the
+mask removes no signal usable *over chemical edges*, and withholds 45 draws that a gap path could have
+carried. The `causal` arm should be read as a **slightly over-tight** mask, not an exact one.
+
+**No verdict changes.** `causal` read +0.094 foods at q = 0.723 and `full` read −0.384; a mask sitting
+between them is between two flat arms. The campaign's verdict was `not_reducible` on the grounds that no
+set beat its own frozen control, and a 6.3% loosening of one arm's mask does not bear on that.
+
+**What this does change** is the correct construction for any future arm: a causal mask should derive
+reachability over **chemical + gap**, treating gap junctions as bidirectional as the forward pass does,
+giving 717 draws rather than 672. The live requirement added by this change already obliges a mask to name
+the connection types its distance measure ignores and the direction of the resulting error; this
+correction is what that requirement exists to surface, and it fired on the first record subject to it.
+
+### Correction, 2026-09-14, after archiving — two verdict-table consequences superseded by this change's own findings
+
+Raised in review of the archive. Both rows were written before the change ran and were superseded by
+corrections recorded later in this same document; the table has now been brought into line with them, and
+both are noted here so the amendment is visible rather than silent.
+
+1. **`causal_mask_sufficient` claimed "all 3709 synapses adaptable".** The implementation showed
+   `causal` excludes the 25 units that can never reach the readout at any step, so it carries **277 units
+   and 3538 adaptable synapses**. The row now says so. What the mask gives up is credit those synapses
+   could not have earned informatively over chemical edges — subject to the gap-junction correction below.
+2. **`dimension_reducible` claimed R.1b is unblocked at the winning mask.** That condition is weaker than
+   its own consequence: block V's contrast is on **time to competence**, which is undefined for an arm
+   that never becomes competent. The gap was surfaced before the campaign and the harness reports the two
+   separately; the row now requires competence too. As it happened `motor` cleared neither, so no
+   consequence turned on this — but the rule is stated for the masks and for any future arm.
+
+Neither amendment changes a verdict: the campaign returned **`not_reducible`**, no arm reached competence,
+and R.1b stayed blocked throughout.

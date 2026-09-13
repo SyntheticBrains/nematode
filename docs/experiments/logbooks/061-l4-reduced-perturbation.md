@@ -231,6 +231,25 @@ synapses' 0.486 — the largest of the three by that measure, which is not the s
 test is seeding the readout from PPO and freezing it there, **not** making it plastic: Logbook 040
 recorded a 96% forager collapsing to zero within three episodes once its readout learned.
 
+### Correction, 2026-09-14 — the causal mask ignored gap junctions
+
+Raised in review after archiving, and quantified. The reachability above was computed over the **directed
+chemical graph alone**, while the forward pass propagates `chem_mat.T @ h + gap_mat.T @ h` and these arms
+ran `enable_gap_junctions: true`. Over **chemical + gap**, treating gap junctions as bidirectional as the
+forward pass does: cumulative units within 0/1/2/3 hops become 39/123/272/**283**, the units that can never
+reach the readout at depth 4 fall from **25 to 19**, and the causally connected draws rise from **672 to
+717**.
+
+So the mask **withheld 45 draws per decision** — 6.3% of the 717 that can reach the readout — and 6 of the
+25 units it excluded at every step are reachable through a gap path. **The claim "removes no causally
+usable signal" is withdrawn as stated**: it removes none usable over chemical edges, and is otherwise
+slightly over-tight. **No verdict changes** — `causal` read +0.094 at q = 0.723 against `full`'s −0.384, so
+a mask between them is between two flat arms, and the verdict rested on no set beating its own frozen
+control. For any future arm the correct construction is the **gap-inclusive** one at 717 draws.
+
+This is also the first time the requirement this change added fired on its own record: a mask restricted by
+causal reach must name the connection types its distance measure ignores and the direction of the error.
+
 ### What this may not be cited as
 
 - **A result about the perturbation dimension in general.** One substrate, one cell, one rule family, at

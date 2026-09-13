@@ -112,3 +112,27 @@
 - [x] 7.1 `CHANGELOG.md`; the tracker (R.1c, and R.1b's block lifted or not); the roadmap only if the
   reading changes.
 - [x] 7.2 Confirm no committed verdict changed, and that `full` reproduces the unmasked stream.
+
+______________________________________________________________________
+
+## Note, 2026-09-14, after archiving — why task 1.6b asserts the norm and not the weights
+
+Raised in review: the evidence should compare each excluded synapse's weight before and after, requiring
+it **unchanged** with the cancellation active and **changed** without it.
+
+**The first half of that assertion would be false, which is why it is not made.** The cancellation is
+radial and not bit-exact: measured at the recipe's own rates with every trace held at zero, the incoming
+norm is conserved exactly while float32 round-off leaves about **1.9e-02** on the largest single weight
+over a run's ~1.05M updates, at a cosine of 1 − 3e-05. A test demanding excluded weights be unchanged
+would fail on arithmetic, not on behaviour. The **norm** is the load-bearing property and is asserted in
+both directions — conserved with homeostasis, lost at 2.0% per 20 000 updates without it.
+
+**The per-weight evidence the finding wants does exist, as a measurement rather than an assertion.** The
+campaign reports drift split by whether a set credits a synapse, and excluded synapses moved
+**0.013–0.016** relative against credited synapses' **1.37–1.38** — on the real substrate, at the real
+scale, across every restricted set. That is the check the bench table was a stand-in for.
+
+**The cancellation-off half cannot be measured at scale**, because the config validator refuses a
+restricted set without homeostasis — deliberately, since such an arm would be a global weight-decay
+experiment reported as a dimension result. Its evidence is therefore the bench measurement above and the
+validator's own test, not a campaign arm.
