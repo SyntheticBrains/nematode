@@ -44,8 +44,11 @@ answers questions this decision does not ask.
   result in which the wild-type wiring beats its rewired null **under a local rule**". That letter is
   **unmet** — blocks V.1 and V.3 used PPO. Its stated rationale — "transferring a wiring-indifferent
   learner between species measures nothing about wiring" — **is now satisfied**, because the wiring is
-  demonstrably not indifferent. The record states both and puts the gate's amendment to ratification
-  rather than reading the letter loosely.
+  demonstrably not indifferent. The record states both. **Ratified 2026-09-13: the gate stands as written**, the
+  forward programme is rule families with block V's result as their positive control, bounded by a
+  stopping rule, and option 1 is the named fallback taken only at the bound. The substrate rungs the
+  B tranche could not conclude reopen conditionally, re-registered fresh, if a rule learns the
+  hard-food cell.
 - **The caveats that travel with the claim**, so the shipment cannot be cited past its evidence:
   speed and not endpoint performance; two cells of one hard-foraging family; and rewirings drawn from
   run seeds 1–64 with V.3 reusing 1–32, which V.4 would close.

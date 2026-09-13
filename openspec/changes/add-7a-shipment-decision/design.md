@@ -103,7 +103,51 @@ it silently:
    (e-prop, the task ladder) rather than comparative connectomics.
 3. **Split C.5** — the pipeline and single-species work proceed; the cross-species contrast waits.
 
-This change records the options and the evidence; it does not choose.
+## Ratified, 2026-09-13
+
+**The gate stands as written. The forward programme is rule families, bounded, with block V's result
+as the positive control the rule must clear, and option 1 named as the fallback with its trigger
+fixed now.**
+
+Why this and not option 1 directly: block V changed what the rule programme *is*. Before it, a rule
+failing to find a wiring advantage was uninterpretable — 056 classified five such contrasts as
+uninformative because the premise had never been demonstrated. Now the premise is demonstrated with
+a size, ~25–35% off time-to-competence on two calibrated cells, and a candidate rule that learns
+those cells can be held to a sharp bar: does it also show the advantage? The search has a target.
+The roadmap's risk table pre-committed this branch's wording — "the e-prop fallback family … the
+documented next levers" — and the task ladder is partly built: the 350-step hard-food cell is a rung
+between the one-step control and C3 that did not exist before V.3.
+
+**The bounded programme:**
+
+1. **R — the scale test.** The repaired node-perturbation rule on the MLP yardstick at widths 4 → 64
+   (8 → 128 perturbed units) on the calibrated hard-food cell. ~80 runs. Tests the 1/N arithmetic
+   (Werfel, Xie & Seung 2005) that was never checked; the yardstick that failed was 128 units against
+   the connectome's 302, never a small-N control. If learning appears at small N and vanishes as N
+   grows, the connectome's failure is explained by theory and the path is a rule whose speed does not
+   scale as 1/N.
+2. **e-prop** — D1's named fallback family. Eligibility from the settling dynamics, a global learning
+   signal, no perturbation noise. Cleared in the protocol's order: the one-step control, then the
+   hard-food cell, then the wiring contrast on it against the registered 20% bar.
+3. **The stopping rule.** If e-prop cannot learn the hard-food cell, the rule programme stops and
+   **option 1 is taken** — after the power arithmetic for a species × wiring interaction on a speed
+   effect of this size is done, and with the biological-plausibility claim explicitly given up.
+
+**The substrate rungs reopen conditionally.** Every B-tranche rung asked its question of an
+instrument that could not learn. If the programme produces a rule that learns the hard-food cell,
+the rungs whose questions were left open by that — **B.5**, **B.1**, **B.4** and **B.4b** — become
+askable and are **re-registered fresh** on the block-V cells with the block-V bar, not re-run under
+their old registrations; **B.3** becomes payable once B.5 can conclude. B.5's gate changes with the
+evidence: not "passes the clone assay" but "learns the hard-food cell and shows the ≥ 20% advantage
+the wiring is known to carry there". Block I's findings are about node perturbation specifically and
+are not revisited. The protocol's ordering holds: instrument, ladder, wiring contrast, *then*
+substrate rungs.
+
+**Allowed in parallel**: C.1, C.2 and C.4, which the tracker already permits after 7a-i and which
+serve either endpoint.
+
+**Not decided, and named as not decided**: option 1 itself, which is correctly taken only after the
+bound is reached; and 7b's registered metric, on which the power calculation depends.
 
 ## What this design does not do
 

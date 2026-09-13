@@ -31,8 +31,16 @@
 
 - [ ] 4.1 The divergence between the gate's letter and its rationale recorded with the evidence for
   each.
-- [ ] 4.2 The three options put to ratification, and the ratified choice recorded — or, if not
-  ratified, the gate left as written and that stated.
+- [ ] 4.2 The ratified choice recorded: the gate stands as written; the forward programme is rule
+  families — the scale test, then e-prop cleared in the protocol's order — bounded by a stopping
+  rule, with block V's ~25–35% as the positive control and option 1 as the named fallback whose
+  trigger is fixed now.
+- [ ] 4.3 The conditional reopening of the substrate rungs recorded: B.5, B.1, B.4 and B.4b
+  re-registered fresh on the block-V cells with the block-V bar if a rule learns the hard-food cell;
+  B.3 payable once B.5 can conclude; block I not revisited; B.5's gate restated from the clone assay
+  to the block-V bar.
+- [ ] 4.4 What is deliberately not decided named as such: option 1 itself, and 7b's registered
+  metric.
 
 ## 5. Close-out
 
