@@ -1,0 +1,1138 @@
+{
+  "protocol": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "s1_widths": [
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "s1_perturbed_units": [
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "s1_depth_control": [
+      64,
+      2
+    ],
+    "s2_widths": [
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "s2_perturbed_units": [
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "node_noise": 0.2,
+    "slope_bar": 0.5,
+    "slope_prediction": 1.0,
+    "min_foods": 1.0,
+    "min_gap_fraction": 0.1,
+    "connectome_units": 302,
+    "connectome_draws_per_decision": 1208
+  },
+  "s1": {
+    "widths": {
+      "8": {
+        "width": 8,
+        "layers": 1,
+        "perturbed_units": 8,
+        "rule": {
+          "n": 8,
+          "mean": -0.19623935494991745,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593269887653,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8903726709160514,
+        "reference_gap_fraction": 0.9986128309679252,
+        "reachability_normalised": 0.891609483980934,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.20987283056535677,
+            "trials_to_criterion": 4749,
+            "trials_to_criterion_sustained": 7426
+          },
+          "2": {
+            "score": -0.20150175273101442,
+            "trials_to_criterion": 3140,
+            "trials_to_criterion_sustained": 4235
+          },
+          "3": {
+            "score": -0.18404740368292102,
+            "trials_to_criterion": 3419,
+            "trials_to_criterion_sustained": 3563
+          },
+          "4": {
+            "score": -0.18731961750742143,
+            "trials_to_criterion": 6075,
+            "trials_to_criterion_sustained": 8129
+          },
+          "5": {
+            "score": -0.18328507589776674,
+            "trials_to_criterion": 3679,
+            "trials_to_criterion_sustained": 4904
+          },
+          "6": {
+            "score": -0.20190310234265535,
+            "trials_to_criterion": 10711,
+            "trials_to_criterion_sustained": 11338
+          },
+          "7": {
+            "score": -0.18882385510174202,
+            "trials_to_criterion": 4457,
+            "trials_to_criterion_sustained": 5487
+          },
+          "8": {
+            "score": -0.21316120177046172,
+            "trials_to_criterion": 2814,
+            "trials_to_criterion_sustained": 3956
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 4068.0
+      },
+      "16": {
+        "width": 16,
+        "layers": 1,
+        "perturbed_units": 16,
+        "rule": {
+          "n": 8,
+          "mean": -0.19797751353381735,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593183223474,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8872439854650317,
+        "reference_gap_fraction": 0.9986128325278804,
+        "reachability_normalised": 0.8884764510977388,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.17751605338977033,
+            "trials_to_criterion": 2800,
+            "trials_to_criterion_sustained": 3636
+          },
+          "2": {
+            "score": -0.2370014581781921,
+            "trials_to_criterion": 2809,
+            "trials_to_criterion_sustained": 4368
+          },
+          "3": {
+            "score": -0.17397032472819837,
+            "trials_to_criterion": 4704,
+            "trials_to_criterion_sustained": 6941
+          },
+          "4": {
+            "score": -0.2058003019391878,
+            "trials_to_criterion": 2426,
+            "trials_to_criterion_sustained": 4579
+          },
+          "5": {
+            "score": -0.18335213321706348,
+            "trials_to_criterion": 1890,
+            "trials_to_criterion_sustained": 4288
+          },
+          "6": {
+            "score": -0.18313776666941411,
+            "trials_to_criterion": 2542,
+            "trials_to_criterion_sustained": 3300
+          },
+          "7": {
+            "score": -0.20102665334026268,
+            "trials_to_criterion": 3376,
+            "trials_to_criterion_sustained": 4395
+          },
+          "8": {
+            "score": -0.22201541680844986,
+            "trials_to_criterion": 1773,
+            "trials_to_criterion_sustained": 2727
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 2671.0
+      },
+      "32": {
+        "width": 32,
+        "layers": 1,
+        "perturbed_units": 32,
+        "rule": {
+          "n": 8,
+          "mean": -0.21236386957688974,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593178639874,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8613485445875013,
+        "reference_gap_fraction": 0.9986128326103851,
+        "reachability_normalised": 0.8625450389375896,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.21130478760699428,
+            "trials_to_criterion": 2849,
+            "trials_to_criterion_sustained": 3832
+          },
+          "2": {
+            "score": -0.2296453296164687,
+            "trials_to_criterion": 1658,
+            "trials_to_criterion_sustained": 4975
+          },
+          "3": {
+            "score": -0.22157811645802522,
+            "trials_to_criterion": 2292,
+            "trials_to_criterion_sustained": 4298
+          },
+          "4": {
+            "score": -0.17507680931744152,
+            "trials_to_criterion": 2330,
+            "trials_to_criterion_sustained": 4006
+          },
+          "5": {
+            "score": -0.2233015465500964,
+            "trials_to_criterion": 3946,
+            "trials_to_criterion_sustained": 6417
+          },
+          "6": {
+            "score": -0.2057200303989264,
+            "trials_to_criterion": 2944,
+            "trials_to_criterion_sustained": 4490
+          },
+          "7": {
+            "score": -0.2174899413634878,
+            "trials_to_criterion": 1921,
+            "trials_to_criterion_sustained": 3344
+          },
+          "8": {
+            "score": -0.2147943953036777,
+            "trials_to_criterion": 4423,
+            "trials_to_criterion_sustained": 5386
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 2589.5
+      },
+      "64": {
+        "width": 64,
+        "layers": 1,
+        "perturbed_units": 64,
+        "rule": {
+          "n": 8,
+          "mean": -0.21321012970935044,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593115634956,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8598252763490721,
+        "reference_gap_fraction": 0.9986128337444735,
+        "reachability_normalised": 0.8610196537581105,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.2021896976742338,
+            "trials_to_criterion": 2411,
+            "trials_to_criterion_sustained": 3631
+          },
+          "2": {
+            "score": -0.22194393778520635,
+            "trials_to_criterion": 1659,
+            "trials_to_criterion_sustained": 4976
+          },
+          "3": {
+            "score": -0.2186311442471465,
+            "trials_to_criterion": 3412,
+            "trials_to_criterion_sustained": 4637
+          },
+          "4": {
+            "score": -0.2139298475564872,
+            "trials_to_criterion": 2418,
+            "trials_to_criterion_sustained": 5124
+          },
+          "5": {
+            "score": -0.19697516439753537,
+            "trials_to_criterion": 1608,
+            "trials_to_criterion_sustained": 3610
+          },
+          "6": {
+            "score": -0.200732792481768,
+            "trials_to_criterion": 5673,
+            "trials_to_criterion_sustained": 7072
+          },
+          "7": {
+            "score": -0.22919832542724702,
+            "trials_to_criterion": 2574,
+            "trials_to_criterion_sustained": 3363
+          },
+          "8": {
+            "score": -0.22208012810517905,
+            "trials_to_criterion": 3889,
+            "trials_to_criterion_sustained": 5589
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 2496.0
+      },
+      "128": {
+        "width": 128,
+        "layers": 1,
+        "perturbed_units": 128,
+        "rule": {
+          "n": 8,
+          "mean": -0.22033528425425272,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593108835903,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8469999981682479,
+        "reference_gap_fraction": 0.9986128338668566,
+        "reachability_normalised": 0.8481765599671603,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.21244397751471808,
+            "trials_to_criterion": 3289,
+            "trials_to_criterion_sustained": 5093
+          },
+          "2": {
+            "score": -0.2288924850559708,
+            "trials_to_criterion": 931,
+            "trials_to_criterion_sustained": 2798
+          },
+          "3": {
+            "score": -0.2131628667873394,
+            "trials_to_criterion": 979,
+            "trials_to_criterion_sustained": 3025
+          },
+          "4": {
+            "score": -0.22141207753368763,
+            "trials_to_criterion": 2377,
+            "trials_to_criterion_sustained": 5035
+          },
+          "5": {
+            "score": -0.22458150512215577,
+            "trials_to_criterion": 3122,
+            "trials_to_criterion_sustained": 5275
+          },
+          "6": {
+            "score": -0.2244849984253396,
+            "trials_to_criterion": 2209,
+            "trials_to_criterion_sustained": 3301
+          },
+          "7": {
+            "score": -0.22632549505990462,
+            "trials_to_criterion": 2579,
+            "trials_to_criterion_sustained": 3341
+          },
+          "8": {
+            "score": -0.2113788685349058,
+            "trials_to_criterion": 2771,
+            "trials_to_criterion_sustained": 2951
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 2478.0
+      }
+    },
+    "fit": {
+      "defined": true,
+      "slope": -0.21640226468749885,
+      "intercept": 12.544116841770355,
+      "ci_low": -0.3310339177316933,
+      "ci_high": -0.0920331186818997,
+      "n_points": 40,
+      "n_seeds": 8,
+      "widths_in_fit": [
+        8,
+        16,
+        32,
+        64,
+        128
+      ],
+      "bootstrap": 2000,
+      "prediction": 1.0,
+      "bar": 0.5,
+      "meets_bar": false
+    },
+    "level_trend": {
+      "defined": true,
+      "widths": [
+        8,
+        16,
+        32,
+        64,
+        128
+      ],
+      "gap_fractions": [
+        0.8903726709160514,
+        0.8872439854650317,
+        0.8613485445875013,
+        0.8598252763490721,
+        0.8469999981682479
+      ],
+      "rho": -0.9999999999999999,
+      "p": 1.4042654220543602e-24,
+      "span": 0.04337267274780354,
+      "descriptive_only": true,
+      "note": "five widths: the level's direction, not a tested exponent"
+    },
+    "depth_control": {
+      "shape": "64x2",
+      "perturbed_units": 128,
+      "cell": {
+        "width": 64,
+        "layers": 2,
+        "perturbed_units": 128,
+        "rule": {
+          "n": 8,
+          "mean": -0.2169878054702209,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593108835903,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8530254599795053,
+        "reference_gap_fraction": 0.9986128338668566,
+        "reachability_normalised": 0.8542103917054582,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.2100526616800145,
+            "trials_to_criterion": 351,
+            "trials_to_criterion_sustained": 1232
+          },
+          "2": {
+            "score": -0.22427354159399068,
+            "trials_to_criterion": 918,
+            "trials_to_criterion_sustained": 1831
+          },
+          "3": {
+            "score": -0.22520027017818084,
+            "trials_to_criterion": 977,
+            "trials_to_criterion_sustained": 2099
+          },
+          "4": {
+            "score": -0.2061464769093781,
+            "trials_to_criterion": 1033,
+            "trials_to_criterion_sustained": 1632
+          },
+          "5": {
+            "score": -0.20590417581090195,
+            "trials_to_criterion": 1347,
+            "trials_to_criterion_sustained": 1620
+          },
+          "6": {
+            "score": -0.21741446194854758,
+            "trials_to_criterion": 940,
+            "trials_to_criterion_sustained": 1284
+          },
+          "7": {
+            "score": -0.21981555898960448,
+            "trials_to_criterion": 623,
+            "trials_to_criterion_sustained": 1376
+          },
+          "8": {
+            "score": -0.2270952966511491,
+            "trials_to_criterion": 1696,
+            "trials_to_criterion_sustained": 2213
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 958.5
+      },
+      "matched_one_layer_gap_fraction": 0.8469999981682479,
+      "passes": true
+    },
+    "baseline_reproduces": true,
+    "baseline_rule_passes": true,
+    "baseline_reference_usable": true,
+    "largest_width_passes": true,
+    "verdict": "opposite_direction",
+    "why": "slope -0.22, CI [-0.33, -0.09] entirely below 0: time-to-criterion FALLS as the dimension grows, opposite to the prediction",
+    "derived_budget": [
+      {
+        "label": "the MLP yardstick (128 units)",
+        "units": 128,
+        "extrapolation": true,
+        "outside_fitted_range": false,
+        "trials": 2090.0199367812834,
+        "is_a_budget_constraint": false,
+        "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
+      },
+      {
+        "label": "the connectome, read as units (302)",
+        "units": 302,
+        "extrapolation": true,
+        "outside_fitted_range": true,
+        "trials": 1735.7066188758233,
+        "is_a_budget_constraint": false,
+        "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
+      },
+      {
+        "label": "the connectome, read as draws per decision (1208)",
+        "units": 1208,
+        "extrapolation": true,
+        "outside_fitted_range": true,
+        "trials": 1285.846638891747,
+        "is_a_budget_constraint": false,
+        "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
+      }
+    ]
+  },
+  "s2": {
+    "widths": {
+      "4": {
+        "n_pairs": 8,
+        "learning_mean_foods": 19.636499999999998,
+        "frozen_mean_foods": 1.6921666666666666,
+        "learning_foods": {
+          "1": 19.794666666666668,
+          "2": 19.704,
+          "3": 19.462666666666667,
+          "4": 19.397333333333332,
+          "5": 19.612,
+          "6": 19.849333333333334,
+          "7": 19.526666666666667,
+          "8": 19.745333333333335
+        },
+        "frozen_foods": {
+          "1": 2.1386666666666665,
+          "2": 0.9346666666666666,
+          "3": 1.7506666666666666,
+          "4": 0.08266666666666667,
+          "5": 1.6226666666666667,
+          "6": 0.7653333333333333,
+          "7": 6.209333333333333,
+          "8": 0.03333333333333333
+        },
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 17.944333333333333,
+          "ci80": [
+            17.084283333333335,
+            18.736783333333335
+          ],
+          "p_improve": 0.00390625,
+          "p_degrade": 1.0,
+          "positive_seeds": 8,
+          "q_improve": 0.006510416666666667
+        },
+        "full_clear": {
+          "threshold": 20.0,
+          "learning_mean": 90.71666666666667,
+          "frozen_mean": 0.0,
+          "competent_seeds": {
+            "learning": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "frozen": []
+          },
+          "level_contrast_available": false,
+          "note": "the frozen arm has no seed at or above the committed competence threshold (the learning arm has [1, 2, 3, 4, 5, 6, 7, 8]), so the level contrast is undefined"
+        },
+        "capability": {
+          "ppo_mean_foods": 19.686666666666667,
+          "frozen_mean_foods": 1.6921666666666666,
+          "ppo_mean_full_clear": 87.56666666666666,
+          "competence_threshold": 20.0,
+          "n_pairs": 8,
+          "underpowered": false,
+          "smallest_reachable_p": 0.00390625,
+          "beats_floor": true,
+          "p_beats_floor": 0.00390625,
+          "competent": true,
+          "passes": true,
+          "why": "passes both parts",
+          "reachable_gap_foods": 17.994500000000002,
+          "comparator_note": "the frozen comparator perturbs and the PPO arm does not; this is a capability floor on the width, not a matched pair"
+        },
+        "drift": {
+          "per_seed": {
+            "1": 0.892881453037262,
+            "2": 0.9522393941879272,
+            "3": 1.0148415565490723,
+            "4": 0.9517383575439453,
+            "5": 1.0006592273712158,
+            "6": 0.8623437881469727,
+            "7": 0.6965498328208923,
+            "8": 0.9176284074783325
+          },
+          "mean_relative": 0.9111102521419525,
+          "n_read": 8,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "available": true
+        },
+        "perturbed_units": 8,
+        "minima": {
+          "effect": 17.944333333333333,
+          "absolute_minimum": 1.0,
+          "relative_minimum": 1.7994500000000002,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "verdict": "beats_control",
+        "beats_control": true,
+        "why": "significant and at or above both minima"
+      },
+      "8": {
+        "n_pairs": 8,
+        "learning_mean_foods": 18.8335,
+        "frozen_mean_foods": 1.308,
+        "learning_foods": {
+          "1": 17.974666666666668,
+          "2": 19.281333333333333,
+          "3": 18.794666666666668,
+          "4": 18.716,
+          "5": 19.153333333333332,
+          "6": 18.904,
+          "7": 18.38533333333333,
+          "8": 19.458666666666666
+        },
+        "frozen_foods": {
+          "1": 4.288,
+          "2": 1.008,
+          "3": 0.23866666666666667,
+          "4": 0.9266666666666666,
+          "5": 0.4706666666666667,
+          "6": 2.0893333333333333,
+          "7": 0.9106666666666666,
+          "8": 0.532
+        },
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 17.5255,
+          "ci80": [
+            16.727016666666668,
+            18.219766666666665
+          ],
+          "p_improve": 0.00390625,
+          "p_degrade": 1.0,
+          "positive_seeds": 8,
+          "q_improve": 0.006510416666666667
+        },
+        "full_clear": {
+          "threshold": 20.0,
+          "learning_mean": 79.21666666666667,
+          "frozen_mean": 0.0,
+          "competent_seeds": {
+            "learning": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "frozen": []
+          },
+          "level_contrast_available": false,
+          "note": "the frozen arm has no seed at or above the committed competence threshold (the learning arm has [1, 2, 3, 4, 5, 6, 7, 8]), so the level contrast is undefined"
+        },
+        "capability": {
+          "ppo_mean_foods": 19.936666666666667,
+          "frozen_mean_foods": 1.308,
+          "ppo_mean_full_clear": 96.8,
+          "competence_threshold": 20.0,
+          "n_pairs": 8,
+          "underpowered": false,
+          "smallest_reachable_p": 0.00390625,
+          "beats_floor": true,
+          "p_beats_floor": 0.00390625,
+          "competent": true,
+          "passes": true,
+          "why": "passes both parts",
+          "reachable_gap_foods": 18.628666666666668,
+          "comparator_note": "the frozen comparator perturbs and the PPO arm does not; this is a capability floor on the width, not a matched pair"
+        },
+        "drift": {
+          "per_seed": {
+            "1": 1.1797125339508057,
+            "2": 0.8902325630187988,
+            "3": 1.0299791097640991,
+            "4": 1.1358776092529297,
+            "5": 1.0121203660964966,
+            "6": 1.0987399816513062,
+            "7": 1.0998733043670654,
+            "8": 1.1463338136672974
+          },
+          "mean_relative": 1.0741086602210999,
+          "n_read": 8,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "available": true
+        },
+        "perturbed_units": 16,
+        "minima": {
+          "effect": 17.5255,
+          "absolute_minimum": 1.0,
+          "relative_minimum": 1.862866666666667,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "verdict": "beats_control",
+        "beats_control": true,
+        "why": "significant and at or above both minima"
+      },
+      "16": {
+        "n_pairs": 8,
+        "learning_mean_foods": 15.720666666666666,
+        "frozen_mean_foods": 3.889666666666667,
+        "learning_foods": {
+          "1": 17.036,
+          "2": 18.048,
+          "3": 16.846666666666668,
+          "4": 13.586666666666666,
+          "5": 18.688,
+          "6": 13.457333333333333,
+          "7": 17.0,
+          "8": 11.102666666666666
+        },
+        "frozen_foods": {
+          "1": 0.25066666666666665,
+          "2": 1.7546666666666666,
+          "3": 1.5226666666666666,
+          "4": 0.9893333333333333,
+          "5": 5.332,
+          "6": 10.478666666666667,
+          "7": 9.756,
+          "8": 1.0333333333333334
+        },
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 11.831,
+          "ci80": [
+            9.859166666666667,
+            13.959183333333334
+          ],
+          "p_improve": 0.00390625,
+          "p_degrade": 1.0,
+          "positive_seeds": 8,
+          "q_improve": 0.006510416666666667
+        },
+        "full_clear": {
+          "threshold": 20.0,
+          "learning_mean": 53.583333333333336,
+          "frozen_mean": 0.016666666666666666,
+          "competent_seeds": {
+            "learning": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "frozen": []
+          },
+          "level_contrast_available": false,
+          "note": "the frozen arm has no seed at or above the committed competence threshold (the learning arm has [1, 2, 3, 4, 5, 6, 7, 8]), so the level contrast is undefined"
+        },
+        "capability": {
+          "ppo_mean_foods": 19.926166666666667,
+          "frozen_mean_foods": 3.889666666666667,
+          "ppo_mean_full_clear": 96.81666666666666,
+          "competence_threshold": 20.0,
+          "n_pairs": 8,
+          "underpowered": false,
+          "smallest_reachable_p": 0.00390625,
+          "beats_floor": true,
+          "p_beats_floor": 0.00390625,
+          "competent": true,
+          "passes": true,
+          "why": "passes both parts",
+          "reachable_gap_foods": 16.0365,
+          "comparator_note": "the frozen comparator perturbs and the PPO arm does not; this is a capability floor on the width, not a matched pair"
+        },
+        "drift": {
+          "per_seed": {
+            "1": 1.2976479530334473,
+            "2": 1.337428092956543,
+            "3": 1.137887716293335,
+            "4": 1.295478105545044,
+            "5": 1.2294844388961792,
+            "6": 1.324419617652893,
+            "7": 1.2712368965148926,
+            "8": 1.2949061393737793
+          },
+          "mean_relative": 1.2735611200332642,
+          "n_read": 8,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "available": true
+        },
+        "perturbed_units": 32,
+        "minima": {
+          "effect": 11.831,
+          "absolute_minimum": 1.0,
+          "relative_minimum": 1.60365,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "verdict": "beats_control",
+        "beats_control": true,
+        "why": "significant and at or above both minima"
+      },
+      "32": {
+        "n_pairs": 8,
+        "learning_mean_foods": 8.337833333333332,
+        "frozen_mean_foods": 3.5363333333333338,
+        "learning_foods": {
+          "1": 11.48,
+          "2": 5.245333333333333,
+          "3": 10.785333333333334,
+          "4": 10.082666666666666,
+          "5": 4.448,
+          "6": 6.053333333333334,
+          "7": 8.169333333333332,
+          "8": 10.438666666666666
+        },
+        "frozen_foods": {
+          "1": 1.0373333333333334,
+          "2": 6.1146666666666665,
+          "3": 1.6093333333333333,
+          "4": 3.0906666666666665,
+          "5": 4.472,
+          "6": 8.788,
+          "7": 3.026666666666667,
+          "8": 0.152
+        },
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 4.8015,
+          "ci80": [
+            2.6462000000000003,
+            6.958083333333334
+          ],
+          "p_improve": 0.0546875,
+          "p_degrade": 0.9609375,
+          "positive_seeds": 5,
+          "q_improve": 0.0546875
+        },
+        "full_clear": {
+          "threshold": 20.0,
+          "learning_mean": 12.933333333333334,
+          "frozen_mean": 0.06666666666666667,
+          "competent_seeds": {
+            "learning": [
+              1,
+              3,
+              4
+            ],
+            "frozen": []
+          },
+          "level_contrast_available": false,
+          "note": "the frozen arm has no seed at or above the committed competence threshold (the learning arm has [1, 3, 4]), so the level contrast is undefined"
+        },
+        "capability": {
+          "ppo_mean_foods": 19.924166666666665,
+          "frozen_mean_foods": 3.5363333333333338,
+          "ppo_mean_full_clear": 96.98333333333333,
+          "competence_threshold": 20.0,
+          "n_pairs": 8,
+          "underpowered": false,
+          "smallest_reachable_p": 0.00390625,
+          "beats_floor": true,
+          "p_beats_floor": 0.00390625,
+          "competent": true,
+          "passes": true,
+          "why": "passes both parts",
+          "reachable_gap_foods": 16.38783333333333,
+          "comparator_note": "the frozen comparator perturbs and the PPO arm does not; this is a capability floor on the width, not a matched pair"
+        },
+        "drift": {
+          "per_seed": {
+            "1": 1.3794982433319092,
+            "2": 1.3614741563796997,
+            "3": 1.4097222089767456,
+            "4": 1.3605519533157349,
+            "5": 1.3559353351593018,
+            "6": 1.3854315280914307,
+            "7": 1.3695611953735352,
+            "8": 1.3931567668914795
+          },
+          "mean_relative": 1.3769164234399796,
+          "n_read": 8,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "available": true
+        },
+        "perturbed_units": 64,
+        "minima": {
+          "effect": 4.8015,
+          "absolute_minimum": 1.0,
+          "relative_minimum": 1.638783333333333,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "verdict": "no_improvement",
+        "beats_control": false,
+        "why": "not significant"
+      },
+      "64": {
+        "n_pairs": 8,
+        "learning_mean_foods": 4.225666666666667,
+        "frozen_mean_foods": 2.002,
+        "learning_foods": {
+          "1": 6.198666666666667,
+          "2": 2.276,
+          "3": 4.132,
+          "4": 4.246666666666667,
+          "5": 6.621333333333333,
+          "6": 2.5813333333333333,
+          "7": 4.126666666666667,
+          "8": 3.6226666666666665
+        },
+        "frozen_foods": {
+          "1": 1.2546666666666666,
+          "2": 4.544,
+          "3": 0.92,
+          "4": 1.6693333333333333,
+          "5": 3.5893333333333333,
+          "6": 0.824,
+          "7": 2.688,
+          "8": 0.5266666666666666
+        },
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 2.2236666666666665,
+          "ci80": [
+            1.2653333333333334,
+            3.1078333333333337
+          ],
+          "p_improve": 0.01953125,
+          "p_degrade": 0.98828125,
+          "positive_seeds": 7,
+          "q_improve": 0.0244140625
+        },
+        "full_clear": {
+          "threshold": 20.0,
+          "learning_mean": 3.0,
+          "frozen_mean": 0.0,
+          "competent_seeds": {
+            "learning": [],
+            "frozen": []
+          },
+          "level_contrast_available": false,
+          "note": "neither arm has a seed at or above the committed competence threshold, so the level contrast is undefined"
+        },
+        "capability": {
+          "ppo_mean_foods": 19.721833333333333,
+          "frozen_mean_foods": 2.002,
+          "ppo_mean_full_clear": 94.63333333333334,
+          "competence_threshold": 20.0,
+          "n_pairs": 8,
+          "underpowered": false,
+          "smallest_reachable_p": 0.00390625,
+          "beats_floor": true,
+          "p_beats_floor": 0.00390625,
+          "competent": true,
+          "passes": true,
+          "why": "passes both parts",
+          "reachable_gap_foods": 17.719833333333334,
+          "comparator_note": "the frozen comparator perturbs and the PPO arm does not; this is a capability floor on the width, not a matched pair"
+        },
+        "drift": {
+          "per_seed": {
+            "1": 1.395878553390503,
+            "2": 1.3864529132843018,
+            "3": 1.3956184387207031,
+            "4": 1.403102993965149,
+            "5": 1.400823950767517,
+            "6": 1.3909568786621094,
+            "7": 1.3867437839508057,
+            "8": 1.3885563611984253
+          },
+          "mean_relative": 1.3935167342424393,
+          "n_read": 8,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "available": true
+        },
+        "perturbed_units": 128,
+        "minima": {
+          "effect": 2.2236666666666665,
+          "absolute_minimum": 1.0,
+          "relative_minimum": 1.7719833333333335,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "verdict": "beats_control",
+        "beats_control": true,
+        "why": "significant and at or above both minima"
+      }
+    },
+    "interpretable": [
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "excluded_uninterpretable": [],
+    "winners": [
+      4,
+      8,
+      16,
+      64
+    ],
+    "trend": {
+      "defined": true,
+      "widths": [
+        4,
+        8,
+        16,
+        32,
+        64
+      ],
+      "rho": -0.9999999999999999,
+      "p": 1.4042654220543602e-24,
+      "predicted_sign": "negative",
+      "in_predicted_direction": true,
+      "descriptive_only": true,
+      "note": "five widths: reported as description, the per-width gates carry the verdict"
+    },
+    "verdict": "rescued"
+  },
+  "combined": {
+    "verdict": "mixed",
+    "why": "S1 reads opposite_direction with the largest width passing and S2 reads rescued; recorded as mixed with both halves stated rather than resolved toward the nearer verdict",
+    "s1_verdict": "opposite_direction",
+    "largest_width_passes": true,
+    "s2_verdict": "rescued"
+  }
+}

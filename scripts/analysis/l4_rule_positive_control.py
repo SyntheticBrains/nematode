@@ -54,6 +54,9 @@ BASELINE_RATE = 0.01
 TRACE_DECAY = 0.9
 NOISE = float(np.exp(-1.0))  # the arms' frozen `initial_log_std: -1.0`
 HIDDEN = 8
+# One hidden layer: the arrangement every committed control value was measured on. The
+# perturbation dimension is HIDDEN * HIDDEN_LAYERS, so the pin is 8 perturbed units.
+HIDDEN_LAYERS = 1
 
 SEEDS = tuple(range(1, 9))
 TRIALS = 20_000
@@ -88,14 +91,37 @@ PERTURBING_ARMS = frozenset({"node_perturbation", "node_perturbation_annealed"})
 ARMS = ("three_factor", "node_perturbation", "node_perturbation_annealed", "hebbian", "analytic")
 
 
-def _actor(n_cues: int, generator: torch.Generator) -> nn.Sequential:
-    """``Linear(K, 8) -> tanh -> Linear(8, 1)``: the panels' arrangement, hidden layer plastic."""
-    first, readout = nn.Linear(n_cues, HIDDEN), nn.Linear(HIDDEN, 1)
+def _actor(
+    n_cues: int,
+    generator: torch.Generator,
+    hidden: int = HIDDEN,
+    layers: int = HIDDEN_LAYERS,
+) -> nn.Sequential:
+    """``Linear(K, H) -> tanh -> ... -> Linear(H, 1)``: the panels' arrangement, hidden plastic.
+
+    Both shape parameters default to the pins, so every value recorded by I.0-I.3b reproduces
+    unchanged. They are parameters because the perturbation dimension is ``hidden * layers`` -- with
+    a frozen readout every hidden unit is perturbed and nothing else is -- and because the yardstick
+    that fails runs the same dimension in a different shape (two layers of 64, not one of 128).
+    """
+    if hidden < 1:
+        msg = f"hidden must be >= 1, got {hidden}"
+        raise ValueError(msg)
+    if layers < 1:
+        msg = f"layers must be >= 1, got {layers}"
+        raise ValueError(msg)
+    built: list[nn.Linear] = [nn.Linear(n_cues, hidden)]
+    built.extend(nn.Linear(hidden, hidden) for _ in range(layers - 1))
+    readout = nn.Linear(hidden, 1)
     with torch.no_grad():
-        for layer in (first, readout):
+        for layer in (*built, readout):
             nn.init.orthogonal_(layer.weight, generator=generator)
             layer.bias.zero_()
-    return nn.Sequential(first, nn.Tanh(), readout)
+    stack: list[nn.Module] = []
+    for layer in built:
+        stack.extend((layer, nn.Tanh()))
+    stack.append(readout)
+    return nn.Sequential(*stack)
 
 
 def _descend(topology: MLPTopology, gradients: tuple[torch.Tensor | None, ...]) -> None:
@@ -155,12 +181,14 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
     schedule: NodeNoiseSchedule | None,
     trace_decay: float,
     homeostasis: bool,
+    hidden: int = HIDDEN,
+    layers: int = HIDDEN_LAYERS,
 ) -> tuple[MLPTopology, ThreeFactorRule | None]:
     """Build the topology and the rule one arm runs over."""
     generator = torch.Generator().manual_seed(seed)
     perturbing = arm in PERTURBING_ARMS
     topology = MLPTopology(
-        _actor(task.n_cues, generator),
+        _actor(task.n_cues, generator, hidden, layers),
         enable_activity_traces=True,
         trace_decay=trace_decay,
         plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
@@ -200,6 +228,8 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     trace_decay: float = TRACE_DECAY,
     *,
     homeostasis: bool = True,
+    hidden: int = HIDDEN,
+    layers: int = HIDDEN_LAYERS,
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
     _validate_delay(delay)
@@ -215,6 +245,8 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         schedule=schedule,
         trace_decay=trace_decay,
         homeostasis=homeostasis,
+        hidden=hidden,
+        layers=layers,
     )
 
     rewards: list[float] = []
@@ -302,6 +334,12 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     return {
         "arm": arm,
         "seed": seed,
+        # The shape, and the perturbation dimension it implies. With a frozen readout every hidden
+        # unit is perturbed and nothing else is, so the dimension is width x depth -- which is why
+        # this control can vary it without varying anything else about how the estimate is formed.
+        "hidden": hidden,
+        "layers": layers,
+        "perturbed_units": hidden * layers,
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
         "rate": rate if arm in {"three_factor", *PERTURBING_ARMS} else None,
         "node_noise": node_noise if perturbing else None,
@@ -328,6 +366,13 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # The arm's score: mean reward over the last 1000 trials, so a run is judged
         # on where it ended rather than on the exploration it did getting there.
         "score": float(np.mean(rewards[-BLOCK * 10 :])) if rewards else float("nan"),
+        # Every trial's reward, in order. The score above is where a run ENDED; a rate needs the
+        # whole curve, and it needs it at PER-TRIAL resolution: a criterion defined as the first
+        # trial whose trailing 100-trial mean crosses a threshold cannot be found from
+        # non-overlapping block means, which can only ever report the end of the block a crossing
+        # fell inside. Deliberately absent from the per-seed CSV and from the control's JSON, both
+        # of which list their fields explicitly, so no committed record changes shape.
+        "rewards": list(rewards),
         "modulator": float(np.mean(modulators)) if modulators else float("nan"),
         "mean_abs_delta": float(np.mean(traces)) if traces else float("nan"),
         "alignment": float(np.mean(alignments)) if alignments else float("nan"),

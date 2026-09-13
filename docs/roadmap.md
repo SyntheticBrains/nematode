@@ -60,7 +60,7 @@ ______________________________________________________________________
 | **4** | — | Multi-Agent Complexity | ✅ COMPLETE | Pheromones, social dynamics, klinotaxis sensing. Temporal collective exploration +14.3%; social feeding +35% food under scarcity. Coordination did not produce genuine multi-agent complexity at the scales tested |
 | **5** | — | Evolution & Adaptation | ✅ COMPLETE (2026-05-23) | M3 Lamarckian inheritance is the headline-positive result. M4 Baldwin / M5 co-evolution / M6.x transgenerational memory closed with substrate-grounded STOP verdicts (architectural diagnoses, not implementation failures) |
 | **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🟡 **6a COMPLETE / 6b pending** (delivered in two shipments — see § Phase 6a/6b split) | First closed-loop learning on the real *C. elegans* connectome with a pluggable architecture interface, and a full architecture ranking across six families on three behaviours (klinotaxis, thermotaxis, predator evasion). **6a — COMPLETE, Gate 3 GO** ([Logbook 037](experiments/logbooks/037-phase6a-synthesis.md); T1–T7 + connectome-structure controls + validation): the platform + the ranking (Logbook 029 — MLP dominant, wild-type connectome 5th of 6 under PPO weight search, a *degree-statistics* result per the 034 rewired-null) + real-worm behavioural validation (035 chemotaxis both strategies; 036 thermotaxis partial). **6b** (T8 NEAT topology search): deferred completion, gated on GPU + env-vectorisation. Phase 6 is marked ✅ COMPLETE only when the 6b synthesis lands |
-| **7** | ~8-12 months from Phase 6**a** close (2026-07-07) | Deepen — plasticity + cross-species transfer | 🟡 IN PROGRESS (7a-i panel resolved 2026-09-06 to the sanity-floor branch, [Logbook 040](experiments/logbooks/040-l4-panel.md); panels 2 and 3 resolved 2026-09-07 `inconclusive`, [Logbook 041](experiments/logbooks/041-l4-panel2.md), [Logbook 042](experiments/logbooks/042-l4-panel3.md) — the Hebbian wiring contrast closed as a registered question; S.2 warm start resolved 2026-09-08 `sanity_floor_fail` + `rule_destroys_clone`, [Logbook 043](experiments/logbooks/043-l4-warm-start.md) — the connectome holds a competent policy, the rule takes it apart; 7a-ii's first fidelity rung resolved 2026-09-09 `degree_statistics`, [Logbook 044](experiments/logbooks/044-l4-atlas-signs.md) — grounded synapse signs leave the prior alone and make Hebbian learning worse, so the substrate's signs were not the limit; three consolidation mechanisms screened 2026-09-09 and none held a cloned competent policy, [Logbook 045](experiments/logbooks/045-l4-consolidation.md) — slowing the update is not consolidating a policy; the decorrelating term ran 2026-09-09 and resolved `no_recovery`, [Logbook 046](experiments/logbooks/046-l4-decorrelation.md) — the atlas grounds too little inhibition to build a brake from; structured instruction resolved 2026-09-10 `no_routing_effect`, [Logbook 047](experiments/logbooks/047-l4-structured-instruction.md); block I then found the rule was not a policy-gradient estimator and repaired it without making it work on any multi-step task, [Logbooks 048](experiments/logbooks/048-l4-rule-positive-control.md)–[056](experiments/logbooks/056-l4-ladder-reread.md); and **block V found the wiring advantage the phase was looking for** — +35.4% off time-to-competence on a foraging cell under thermal pressure and +23.5% with temperature removed, [Logbooks 057](experiments/logbooks/057-wiring-premise-contrast.md) and [058](experiments/logbooks/058-wiring-premise-difficulty.md). **7a complete 2026-09-13 on the SPLIT clause** ([Logbook 059](experiments/logbooks/059-7a-shipment.md)): two citable results — a systematic negative with a diagnosed cause, and a wiring advantage on learning speed — with GO unreachable on its own clause and STOP overstating. **Status 7a complete / 7b pending**; 7b's gate stands as written and the forward programme is rule families, bounded) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules, resolved as the 2×2 plastic wild-type vs plastic rewired-null (spiking-STDP is MAY). Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
+| **7** | ~8-12 months from Phase 6**a** close (2026-07-07) | Deepen — plasticity + cross-species transfer | 🟡 IN PROGRESS — **7a complete / 7b pending** (delivered in two shipments; the resolved history is in § Phase 7 progress record) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules, resolved as the 2×2 plastic wild-type vs plastic rewired-null (spiking-STDP is MAY). Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
 
 ______________________________________________________________________
 
@@ -777,7 +777,234 @@ This is the discipline that keeps the negative-result and any structure-function
 
 **Reframed after Logbooks 040–043 and the clone-destruction diagnostic (2026-09-08).** Four registered panels and one probe gave a single answer from every direction: as modelled, the wild-type wiring carries almost nothing — inert under gradient learning ([034](experiments/logbooks/034-connectome-structure-controls.md)), inert or destroyed under the minimal local rule from random weights ([040](experiments/logbooks/040-l4-panel.md)–[042](experiments/logbooks/042-l4-panel3.md)) and from a cloned competent policy ([043](experiments/logbooks/043-l4-warm-start.md)), with reward-free Hebbian alignment on the real wiring the one repeated, descriptive, wiring-specific signal. The probe ([supporting/043-l4-warm-start/destruction-diagnostic.md](experiments/logbooks/supporting/043-l4-warm-start/destruction-diagnostic.md)) found the mechanism: the minimal rule is a biased, near-constant-speed drift on the norm sphere that passes through good policies and never consolidates, whatever the rate. Two consequences are now the frame for the rest of Phase 7 and for the phase after it. **(i) The substrate fidelity ladder is the programme.** The wiring as modelled is a sparse graph with random synapse signs, no receptor classes, no neuromodulation, rate units without intrinsic dynamics, fixed gap junctions, and a two-number readout in place of a body — close to a degree distribution, which is what 034 measured. Each restored piece of the wiring's biology is a registered rung of the same question, "does the wiring start to matter once this is real?": transmitter identities and receptor classes (7a-ii's atlas, a substrate deliverable in its own right with its own test), routed neuromodulation, gap-junction and intrinsic dynamics, and a body via interoperation. **The first rung ran 2026-09-09** ([Logbook 044](experiments/logbooks/044-l4-atlas-signs.md)) and answered negatively in the informative direction: grounding 3,176 of 3,709 synapse signs in the Wang 2024 atlas leaves the untrained prior unchanged and makes reward-free Hebbian learning substantially worse, because a purely potentiating rule on the animal's 80%-excitatory network has no inhibitory brake. The substrate's arbitrary signs were not what limited the rule, so the ladder continues but the rule work is where the next result has to come from. Organism-level fidelity (biophysical neurons, muscle, development) is interoperation with OpenWorm, not a build — see § Future Directions. **(ii) Consolidation before instruction.** The rule's failure is the absence of a mechanism that slows or stops updating once a policy is good, not a credit-assignment sign error; structured, pathway-specific instruction (B.4b) is still required but is not sufficient. 7a-ii's rule work starts with consolidation, and every rule variant clears the one-hour clone assay (load a competent policy, run the rule, does it hold or improve it) before a registered panel is re-run. **(iii) 7b's comparative runs are gated** on a rung turning positive: transferring a wiring-indifferent learner between species measures nothing about wiring; the pipeline items (scaffold, truncation, *P. pacificus* ingest, homology table) proceed regardless.
 
-**Reframed again after Logbooks 044–046 (2026-09-09), and updated 2026-09-10 once the structured-instruction test and the rule's positive control had run: the instrument before the substrate.** Two rule-level interventions followed the ladder's first rung — consolidation (three mechanisms, [045](experiments/logbooks/045-l4-consolidation.md)) and decorrelation (two terms, [046](experiments/logbooks/046-l4-decorrelation.md)) — and neither moved the wild-type connectome off its floors; a third, the routed third factor (B.4b), completed 2026-09-10 as registered and resolved `no_routing_effect` ([Logbook 047](experiments/logbooks/047-l4-structured-instruction.md)), which under a one-sided family means **no confirmed benefit** and in fact came with observed degradation — routing made both arms worse and removed their good seeds — and is read against I.0 as a measurement of what a non-learning rule does under two routing regimes. Stepping back from the ladder exposes what every rung has assumed. **The rule has no positive control.** Logbook 040 recorded that the matched-rule MLP yardstick sits at chance and that the rule destroys a 96% policy on a dense feedforward network within three episodes: the three-factor rule as implemented has never learned this task on *any* substrate, including the one where it should be easiest. Every registered result since has asked whether the wiring is legible to that rule while the rule's ability to learn anything here was never demonstrated — and "the wiring is not legible" is indistinguishable from "this rule cannot learn" until it is. There is a specific reason to expect the second reading. The eligibility trace is Hebbian, `pre × post`, with exploration noise applied only at the action output; the three-factor rules that are policy-gradient estimators put the *noise* in the eligibility — the deviation of a unit's activity from its mean, times pre (Williams 1992; node perturbation, Fiete & Seung 2006; the Frémaux & Gerstner 2016 review). With deterministic units and output-only noise, an internal synapse's Hebbian trace carries no information about which way to move to make the sampled action more likely, which predicts exactly what every panel measured: a constant-speed drift toward correlation structure, indifferent to reward, on every substrate. The B.4 recon is the same fact from the reward side — the per-step prediction error is the same size for a competent policy and a dead one. Three setup choices unexamined since A.3 compound it: a ~10-step eligibility horizon (`trace_decay 0.9`) in 2400-step episodes, homeostasis pinning every unit to its construction norm, and a cliff metric (full clear or nothing) that is where the bimodality every panel has failed to test comes from. **Consequences.** *(i)* The fidelity ladder is paused, not abandoned: no further substrate rung runs until the rule has a positive control, because a rung cannot be read against an instrument that has not been shown to work. **That control ran 2026-09-10 and the rule failed it** ([Logbook 048](experiments/logbooks/048-l4-rule-positive-control.md)): on a one-step association whose analytic reference closes 99.9% of the available gap on every seed, the three-factor rule ends *below* the cue-blind floor at every rate over two orders of magnitude, with a live trace, a well-behaved modulator and a gradient alignment of +0.031 mean / +0.009 median — its updates are near-orthogonal to the policy gradient. The instrument is confirmed broken in the way the theory predicted, so the reframing is no longer a hypothesis about the rule but a measurement of it. **The repair works.** An eligibility carrying each unit's own perturbation rather than its activity — I.1, run 2026-09-10 — passes the same control at σ = 0.2, reaching 88% of the floor-to-optimum gap on 8 of 8 seeds with a gradient alignment of +0.263 against the old rule's +0.009, with nothing but the eligibility changed ([records](experiments/logbooks/supporting/049-l4-node-perturbation/details.md)). That is the first mechanism in this sequence that works, and it makes Logbooks 040–047 re-runnable questions rather than closed ones. It cleared the control; the clone assay then **failed** it — though the frozen-perturbation control run beside it shows why that is not a verdict on the rule: perturbation alone takes a competent policy from 38.7 to 8.9, and the learning arm's 12.0 sits above that. The σ that makes this rule learn is the σ that makes a competent policy unrunnable, which is the tension the next mechanism has to resolve. **σ-annealing was that mechanism and it failed** (I.1b, run 2026-09-10, [records](experiments/logbooks/supporting/051-l4-sigma-annealing/details.md)): a geometric decay from 0.2 to 0.02 over half the budget closes 38.1% of the gap where the constant σ = 0.2 arm closes 89.0%, landing on the constant σ = 0.05 arm, because the decay puts σ below 0.05 after 30% of the run — it annealed through the learning phase rather than after it. The registered alignment split shows the estimator was still aimed while the scale was large (+0.176 over the decay against +0.051 at the floor), so this constrains the schedule's length against the task's horizon rather than refuting annealing; the clone assay did not run, as registered. The tension is therefore unresolved: no setting has yet both learned and left a runnable policy. **Evaluating the I.1 endpoints with the perturbation off** (I.1c step 0, 2026-09-11, [records](experiments/logbooks/supporting/052-l4-endpoint-evaluation/details.md)) asked what the rule had actually left behind, since every earlier score was taken while the arm's own perturbation ran. It **fails** the registered rule at a mean of 20.6 against 38.7 — removing the noise is worth +8.6 over the same weights' 12.0 and does not close the shortfall — but the result is **bimodal**: six seeds degraded, two improved, and **seed 2 reached 73.4 from a clone of 44.0, the highest full-clear rate this substrate has produced**, stable across a frozen 2000-episode run. Mean 20.6 against a median of 9.2, with a paired Wilcoxon at p = 0.074. So the rule does not merely fail to hold policies — on a quarter of the panel it transforms them, and nothing measured predicts which. That makes I.2's mixture-aware statistic a demonstrated need rather than an argued one, and it is the first evidence in this phase of the rule *improving* a real policy on the real substrate. **I.2 followed on 2026-09-11** ([records](experiments/logbooks/supporting/053-l4-mixture-statistic/details.md)): a family with one member per component of the mixture — how often an arm reaches competence, and how good it is when it does — beside the test the record was scored with, plus the graded metric every committed panel table already carried. Its re-read of seventeen contrasts **promotes none of them** — fourteen `no_effect`, three `degrades`. The descriptive level differences 042 described are large and consistent on the Hebbian wiring comparison (+25.0, +22.7, +12.9) and not one is significant against a pooled-label null: those contrasts carry two to five competent seeds an arm, below the combinatorial floor at which any distribution-free test can resolve a difference after correction. So the wiring hypothesis stays closed, and the committed record's negative reading survives a statistic matched to the outcome's shape rather than being an artefact of the wrong test. Three criteria were corrected during the build, two of them in review: the registered split criterion, which simulation showed firing on 81–100% of draws from a null where both arms come from one bimodal law and which is now descriptive rather than a verdict; and the level contrast's p-value, which an earlier build took from draws centred on the observed difference and which reported two `level_only` results that a correct null removes. Every committed verdict stands as registered. **I.3 followed on 2026-09-11** ([records](experiments/logbooks/supporting/054-l4-instrument-knobs/details.md)) and is the first positive mechanism the phase has produced. Its registered platform failed — the MLP yardstick under the repaired rule ends below its own frozen control — and the eligibility horizon was unmeasurable on the one-step control, so the control gained a delay between the scored action and the reward, with zero delay bit-identical to the committed arm. At the pinned `trace_decay 0.9` the rule closes 89% of the floor-to-optimum gap undelayed, 44.8% at ten steps of delay, and **−6.8% at twenty — below the cue-blind floor**; at `0.99` that same cell closes 45.3%. One setting, a 52-point swing. Episodes on the real task run 244 to 2400 steps, orders beyond where the pinned decay already fails, so the horizon is the first account that *predicts* the rule's one-step success and multi-step failures instead of restating them. Homeostasis and the exploration noise are near-neutral by comparison. **I.3b then tested that mechanism where it would matter** (2026-09-11, [records](experiments/logbooks/supporting/055-l4-horizon-multistep/details.md)), because every result in the phase had run at the pinned 0.9 on episodes of 244 to 2400 steps and none had varied it. **It does not transfer.** On the MLP yardstick the learning arm is worse than its own frozen control at every horizon — 0.393, 0.148 and 0.144 foods against 2.233 — and *worse as the horizon lengthens*, the opposite of the control's prediction. The registered drift measurement says why: weights move 1.28–1.31 times their own norm at every setting, so this is a rule writing a great deal in a wrong direction rather than one starved of credit, and the horizon barely changes how much. The suspicion is closed, the connectome was deliberately not spent on it at ten hours a run, and Logbook 040's account of the yardstick — a local rule collapsing a dense stack without decorrelation — survives the repaired eligibility and every horizon setting. The panel stays gated, I.2 still gates any statistic read from one, and **no panel arm has been run or authorised under this rule** — the connectome panels already recorded in Logbooks 040–047 ran under the original one. *(ii)* 7a-ii's remaining work is reordered around the instrument — a positive control on a minimal task, an eligibility formulation with the noise inside it cleared on the yardstick, a statistic and a graded metric matched to the outcome's shape, and the three unexamined knobs examined — tracked as block I in the 7a-ii tracker. *(iii)* The 7a shipment decision (B.8) is taken after block I, on evidence about the rule rather than about the substrate. **I.4 closed block I on 2026-09-12 by doing that re-read contrast by contrast, and it does not support the blanket version of this reframing** ([Logbook 056](experiments/logbooks/056-l4-ladder-reread.md)). Of 32 registered contrasts across 040–047, **ten** are instrument findings; **sixteen** are substrate findings the instrument block does not reach — four ran under no rule at all and twelve under the *unmodulated, reward-free Hebbian* rule, which the positive control never tested and which Logbook 040 recorded settling at 78.3%, 64.4% and 67.3% on individual seeds with no reward; **five** are about neither, because the premise they rest on has no demonstration under any optimiser — [034](experiments/logbooks/034-connectome-structure-controls.md) ran the same wiring contrast under PPO weight search and found the wirings indistinguishable (−3.28, q = 0.770, the null nominally higher), and 043's low-noise PPO arms put the null ahead by 12.6 on 0 of 8, so neither tested regime found a confirmed wild-type advantage and those nulls are uninformative about both the wiring and the instrument, a classification a repaired rule would not have changed; and **one**, W6, is about warm-starting PPO and carries a correction: the earlier reading that PPO also destroys competent policies is withdrawn, since the two warm starts are different starts and what is comparable is that PPO reaches 68.5 from random weights where the rule reaches 17.8. No committed verdict changed. The citable claim is therefore narrower and more defensible than either "the wiring does not matter" or "the instrument was broken": on this task and this substrate **no optimiser tested — PPO included — finds an advantage for the wild-type wiring**, and the local three-factor rule additionally fails a positive control that names exactly why. The low-σ programme licensed by 052 is **deferred behind a task the repaired rule can be shown to learn**, not retired. *(iv)* B.3's receptor layer is queued behind block I and paid for only if a rung after it can conclude. *(v)* 7b's gate is unchanged. **(vi) Block V then tested the premise itself, 2026-09-12, and it holds** ([Logbook 057](experiments/logbooks/057-wiring-premise-contrast.md)). Every wiring contrast in this project had run on the integrated C3 cell — food chemotaxis *plus predator evasion plus thermotaxis* — a limitation [034](experiments/logbooks/034-connectome-structure-controls.md) recorded in its own words, with both architecture rankings placing the connectome's deficit in the predator component. Run under PPO on a klinotaxis foraging cell under lethal thermal pressure, **the wild-type wiring reaches competence about 35% sooner than its degree-preserving rewired null** — 396 episodes against 613, pooled over 64 paired seeds, all four efficiency metrics at q ≤ 0.001 — replicated on an independent 32-seed panel after the first panel drew high (+46.4% → +32.6% → +31.8%). Both controls hold at 64 seeds: both wirings learn, and the untrained prior is indistinguishable (−0.17, q = 0.735), so the advantage is **created by learning rather than inherited from the graph**. Two bounds are part of the claim: it is **speed, not performance** — the endpoint saturates and the null is nominally ahead there, which is what 034, 043 and this panel's own food-only cell were measuring — and it is **PPO, not a local rule**, so 7b's gate as written stays unmet while the premise beneath it is now supported. **(vii) V.3 then removed temperature and the advantage survives** ([Logbook 058](experiments/logbooks/058-wiring-premise-difficulty.md)): the two cells 057 compared differ in three respects and only two bind — the thermal cell's episodes end 14.7% `health_depleted`, 12.4% `max_steps` and 0.6% `starved` — so the separable non-temperature factor is the episode budget, and on a hard food-only cell with no temperature and no thermosensory projection the wild type still reaches competence **+23.5% sooner over 32 paired seeds**, three of four efficiency metrics significant, both gates 32/32, prior indistinguishable. **Difficulty is sufficient; the projection is not necessary.** The citable claim for the phase is therefore no longer a pure negative: **the specific wiring is worth roughly a quarter to a third off the time to learn a foraging behaviour the animal performs, and nothing at the endpoint** — demonstrated on two cells of one hard-foraging family (thermal-pressure and time-limited), so whether it extends to task families beyond that one needs further cells and is not claimed — alongside a local rule that fails a positive control for a reason the record names. Two qualifications stand with it: the effect is on learning speed rather than final performance, and every wiring panel so far draws its rewired graphs from run seeds 1–64, so a fresh-rewiring panel (V.4) is what would make one independent in rewiring as well as in task.
+**Reframed again after Logbooks 044–046 (2026-09-09), and updated 2026-09-10 once the
+structured-instruction test and the rule's positive control had run: the instrument before the
+substrate.** Two rule-level interventions followed the ladder's first rung — consolidation (three
+mechanisms, [045](experiments/logbooks/045-l4-consolidation.md)) and decorrelation (two terms,
+[046](experiments/logbooks/046-l4-decorrelation.md)) — and neither moved the wild-type connectome
+off its floors; a third, the routed third factor (B.4b), completed 2026-09-10 as registered and
+resolved `no_routing_effect` ([Logbook 047](experiments/logbooks/047-l4-structured-instruction.md)),
+which under a one-sided family means **no confirmed benefit** and in fact came with observed
+degradation — routing made both arms worse and removed their good seeds — and is read against I.0 as
+a measurement of what a non-learning rule does under two routing regimes. Stepping back from the
+ladder exposes what every rung has assumed. **The rule has no positive control.** Logbook 040
+recorded that the matched-rule MLP yardstick sits at chance and that the rule destroys a 96% policy
+on a dense feedforward network within three episodes: the three-factor rule as implemented has never
+learned this task on *any* substrate, including the one where it should be easiest. Every registered
+result since has asked whether the wiring is legible to that rule while the rule's ability to learn
+anything here was never demonstrated — and "the wiring is not legible" is indistinguishable from
+"this rule cannot learn" until it is. There is a specific reason to expect the second reading. The
+eligibility trace is Hebbian, `pre × post`, with exploration noise applied only at the action
+output; the three-factor rules that are policy-gradient estimators put the *noise* in the
+eligibility — the deviation of a unit's activity from its mean, times pre (Williams 1992; node
+perturbation, Fiete & Seung 2006; the Frémaux & Gerstner 2016 review). With deterministic units and
+output-only noise, an internal synapse's Hebbian trace carries no information about which way to
+move to make the sampled action more likely, which predicts exactly what every panel measured: a
+constant-speed drift toward correlation structure, indifferent to reward, on every substrate. The
+B.4 recon is the same fact from the reward side — the per-step prediction error is the same size for
+a competent policy and a dead one. Three setup choices unexamined since A.3 compound it: a ~10-step
+eligibility horizon (`trace_decay 0.9`) in 2400-step episodes, homeostasis pinning every unit to its
+construction norm, and a cliff metric (full clear or nothing) that is where the bimodality every
+panel has failed to test comes from. **Consequences.** *(i)* The fidelity ladder is paused, not
+abandoned: no further substrate rung runs until the rule has a positive control, because a rung
+cannot be read against an instrument that has not been shown to work. **That control ran 2026-09-10
+and the rule failed it** ([Logbook 048](experiments/logbooks/048-l4-rule-positive-control.md)): on a
+one-step association whose analytic reference closes 99.9% of the available gap on every seed, the
+three-factor rule ends *below* the cue-blind floor at every rate over two orders of magnitude, with
+a live trace, a well-behaved modulator and a gradient alignment of +0.031 mean / +0.009 median — its
+updates are near-orthogonal to the policy gradient. The instrument is confirmed broken in the way
+the theory predicted, so the reframing is no longer a hypothesis about the rule but a measurement of
+it. **The repair works.** An eligibility carrying each unit's own perturbation rather than its
+activity — I.1, run 2026-09-10 — passes the same control at σ = 0.2, reaching 88% of the
+floor-to-optimum gap on 8 of 8 seeds with a gradient alignment of +0.263 against the old rule's
++0.009, with nothing but the eligibility changed
+([records](experiments/logbooks/supporting/049-l4-node-perturbation/details.md)). That is the first
+mechanism in this sequence that works, and it makes Logbooks 040–047 re-runnable questions rather
+than closed ones. It cleared the control; the clone assay then **failed** it — though the
+frozen-perturbation control run beside it shows why that is not a verdict on the rule: perturbation
+alone takes a competent policy from 38.7 to 8.9, and the learning arm's 12.0 sits above that. The σ
+that makes this rule learn is the σ that makes a competent policy unrunnable, which is the tension
+the next mechanism has to resolve. **σ-annealing was that mechanism and it failed** (I.1b, run
+2026-09-10, [records](experiments/logbooks/supporting/051-l4-sigma-annealing/details.md)): a
+geometric decay from 0.2 to 0.02 over half the budget closes 38.1% of the gap where the constant σ =
+0.2 arm closes 89.0%, landing on the constant σ = 0.05 arm, because the decay puts σ below 0.05
+after 30% of the run — it annealed through the learning phase rather than after it. The registered
+alignment split shows the estimator was still aimed while the scale was large (+0.176 over the decay
+against +0.051 at the floor), so this constrains the schedule's length against the task's horizon
+rather than refuting annealing; the clone assay did not run, as registered. The tension is therefore
+unresolved: no setting has yet both learned and left a runnable policy. **Evaluating the I.1
+endpoints with the perturbation off** (I.1c step 0, 2026-09-11,
+[records](experiments/logbooks/supporting/052-l4-endpoint-evaluation/details.md)) asked what the
+rule had actually left behind, since every earlier score was taken while the arm's own perturbation
+ran. It **fails** the registered rule at a mean of 20.6 against 38.7 — removing the noise is worth
++8.6 over the same weights' 12.0 and does not close the shortfall — but the result is **bimodal**:
+six seeds degraded, two improved, and **seed 2 reached 73.4 from a clone of 44.0, the highest
+full-clear rate this substrate has produced**, stable across a frozen 2000-episode run. Mean 20.6
+against a median of 9.2, with a paired Wilcoxon at p = 0.074. So the rule does not merely fail to
+hold policies — on a quarter of the panel it transforms them, and nothing measured predicts which.
+That makes I.2's mixture-aware statistic a demonstrated need rather than an argued one, and it is
+the first evidence in this phase of the rule *improving* a real policy on the real substrate. **I.2
+followed on 2026-09-11**
+([records](experiments/logbooks/supporting/053-l4-mixture-statistic/details.md)): a family with one
+member per component of the mixture — how often an arm reaches competence, and how good it is when
+it does — beside the test the record was scored with, plus the graded metric every committed panel
+table already carried. Its re-read of seventeen contrasts **promotes none of them** — fourteen
+`no_effect`, three `degrades`. The descriptive level differences 042 described are large and
+consistent on the Hebbian wiring comparison (+25.0, +22.7, +12.9) and not one is significant against
+a pooled-label null: those contrasts carry two to five competent seeds an arm, below the
+combinatorial floor at which any distribution-free test can resolve a difference after correction.
+So the wiring hypothesis stays closed, and the committed record's negative reading survives a
+statistic matched to the outcome's shape rather than being an artefact of the wrong test. Three
+criteria were corrected during the build, two of them in review: the registered split criterion,
+which simulation showed firing on 81–100% of draws from a null where both arms come from one bimodal
+law and which is now descriptive rather than a verdict; and the level contrast's p-value, which an
+earlier build took from draws centred on the observed difference and which reported two `level_only`
+results that a correct null removes. Every committed verdict stands as registered. **I.3 followed on
+2026-09-11** ([records](experiments/logbooks/supporting/054-l4-instrument-knobs/details.md)) and is
+the first positive mechanism the phase has produced. Its registered platform failed — the MLP
+yardstick under the repaired rule ends below its own frozen control — and the eligibility horizon
+was unmeasurable on the one-step control, so the control gained a delay between the scored action
+and the reward, with zero delay bit-identical to the committed arm. At the pinned `trace_decay 0.9`
+the rule closes 89% of the floor-to-optimum gap undelayed, 44.8% at ten steps of delay, and **−6.8%
+at twenty — below the cue-blind floor**; at `0.99` that same cell closes 45.3%. One setting, a
+52-point swing. Episodes on the real task run 244 to 2400 steps, orders beyond where the pinned
+decay already fails, so the horizon is the first account that *predicts* the rule's one-step success
+and multi-step failures instead of restating them. Homeostasis and the exploration noise are
+near-neutral by comparison. **I.3b then tested that mechanism where it would matter** (2026-09-11,
+[records](experiments/logbooks/supporting/055-l4-horizon-multistep/details.md)), because every
+result in the phase had run at the pinned 0.9 on episodes of 244 to 2400 steps and none had varied
+it. **It does not transfer.** On the MLP yardstick the learning arm is worse than its own frozen
+control at every horizon — 0.393, 0.148 and 0.144 foods against 2.233 — and *worse as the horizon
+lengthens*, the opposite of the control's prediction. The registered drift measurement says why:
+weights move 1.28–1.31 times their own norm at every setting, so this is a rule writing a great deal
+in a wrong direction rather than one starved of credit, and the horizon barely changes how much. The
+suspicion is closed, the connectome was deliberately not spent on it at ten hours a run, and Logbook
+040's account of the yardstick — a local rule collapsing a dense stack without decorrelation —
+survives the repaired eligibility and every horizon setting. The panel stays gated, I.2 still gates
+any statistic read from one, and **no panel arm has been run or authorised under this rule** — the
+connectome panels already recorded in Logbooks 040–047 ran under the original one. *(ii)* 7a-ii's
+remaining work is reordered around the instrument — a positive control on a minimal task, an
+eligibility formulation with the noise inside it cleared on the yardstick, a statistic and a graded
+metric matched to the outcome's shape, and the three unexamined knobs examined — tracked as block I
+in the 7a-ii tracker. *(iii)* The 7a shipment decision (B.8) is taken after block I, on evidence
+about the rule rather than about the substrate. **I.4 closed block I on 2026-09-12 by doing that
+re-read contrast by contrast, and it does not support the blanket version of this reframing**
+([Logbook 056](experiments/logbooks/056-l4-ladder-reread.md)). Of 32 registered contrasts across
+040–047, **ten** are instrument findings; **sixteen** are substrate findings the instrument block
+does not reach — four ran under no rule at all and twelve under the *unmodulated, reward-free
+Hebbian* rule, which the positive control never tested and which Logbook 040 recorded settling at
+78.3%, 64.4% and 67.3% on individual seeds with no reward; **five** are about neither, because the
+premise they rest on has no demonstration under any optimiser —
+[034](experiments/logbooks/034-connectome-structure-controls.md) ran the same wiring contrast under
+PPO weight search and found the wirings indistinguishable (−3.28, q = 0.770, the null nominally
+higher), and 043's low-noise PPO arms put the null ahead by 12.6 on 0 of 8, so neither tested regime
+found a confirmed wild-type advantage and those nulls are uninformative about both the wiring and
+the instrument, a classification a repaired rule would not have changed; and **one**, W6, is about
+warm-starting PPO and carries a correction: the earlier reading that PPO also destroys competent
+policies is withdrawn, since the two warm starts are different starts and what is comparable is that
+PPO reaches 68.5 from random weights where the rule reaches 17.8. No committed verdict changed. The
+citable claim is therefore narrower and more defensible than either "the wiring does not matter" or
+"the instrument was broken": on this task and this substrate **no optimiser tested — PPO included —
+finds an advantage for the wild-type wiring**, and the local three-factor rule additionally fails a
+positive control that names exactly why. The low-σ programme licensed by 052 is **deferred behind a
+task the repaired rule can be shown to learn**, not retired. *(iv)* B.3's receptor layer is queued
+behind block I and paid for only if a rung after it can conclude. *(v)* 7b's gate is unchanged.
+**(vi) Block V then tested the premise itself, 2026-09-12, and it holds** ([Logbook
+057](experiments/logbooks/057-wiring-premise-contrast.md)). Every wiring contrast in this project
+had run on the integrated C3 cell — food chemotaxis *plus predator evasion plus thermotaxis* — a
+limitation [034](experiments/logbooks/034-connectome-structure-controls.md) recorded in its own
+words, with both architecture rankings placing the connectome's deficit in the predator component.
+Run under PPO on a klinotaxis foraging cell under lethal thermal pressure, **the wild-type wiring
+reaches competence about 35% sooner than its degree-preserving rewired null** — 396 episodes against
+613, pooled over 64 paired seeds, all four efficiency metrics at q ≤ 0.001 — replicated on an
+independent 32-seed panel after the first panel drew high (+46.4% → +32.6% → +31.8%). Both controls
+hold at 64 seeds: both wirings learn, and the untrained prior is indistinguishable (−0.17, q =
+0.735), so the advantage is **created by learning rather than inherited from the graph**. Two bounds
+are part of the claim: it is **speed, not performance** — the endpoint saturates and the null is
+nominally ahead there, which is what 034, 043 and this panel's own food-only cell were measuring —
+and it is **PPO, not a local rule**, so 7b's gate as written stays unmet while the premise beneath
+it is now supported. **(vii) V.3 then removed temperature and the advantage survives** ([Logbook
+058](experiments/logbooks/058-wiring-premise-difficulty.md)): the two cells 057 compared differ in
+three respects and only two bind — the thermal cell's episodes end 14.7% `health_depleted`, 12.4%
+`max_steps` and 0.6% `starved` — so the separable non-temperature factor is the episode budget, and
+on a hard food-only cell with no temperature and no thermosensory projection the wild type still
+reaches competence **+23.5% sooner over 32 paired seeds**, three of four efficiency metrics
+significant, both gates 32/32, prior indistinguishable. **Difficulty is sufficient; the projection
+is not necessary.** The citable claim for the phase is therefore no longer a pure negative: **the
+specific wiring is worth roughly a quarter to a third off the time to learn a foraging behaviour the
+animal performs, and nothing at the endpoint** — demonstrated on two cells of one hard-foraging
+family (thermal-pressure and time-limited), so whether it extends to task families beyond that one
+needs further cells and is not claimed — alongside a local rule that fails a positive control for a
+reason the record names. Two qualifications stand with it: the effect is on learning speed rather
+than final performance, and every wiring panel so far draws its rewired graphs from run seeds 1–64,
+so a fresh-rewiring panel (V.4) is what would make one independent in rewiring as well as in task.
+**(viii) R.1 then found the dimension nobody had varied, 2026-09-13, and the rule works at a low
+one** ([Logbook 060](experiments/logbooks/060-l4-perturbation-scale.md)). The rule's one success and
+every failure differed in the number of perturbed units — **8** on the one-step control it passes,
+**128** on every failing MLP yardstick arm, **302 neurons at each of four settling steps** on the
+connectome — and no experiment had varied it. On the one-step control the dimension costs almost
+nothing: every width 8→128 passes, the yardstick's exact two-layer arrangement passes and reaches
+criterion fastest, and time-to-criterion *falls* as the dimension grows (slope −0.216, CI \[−0.331,
+−0.092\] against a prediction of +1.0). **On the calibrated hard-food cell the same dimension is
+decisive**: at eight perturbed units the rule reaches **19.64 foods of 20 and 90.7% full clear
+against PPO's 19.69 and 87.6%**, from a frozen control at 1.69, and collapses monotonically to
+**3.0% full clear at 128 units** (rho −1.000), with drift from each width's own frozen control
+rising 0.91 → 1.39. So I.3b's 1.28–1.31 drift was an **over-dimensioned estimator's noise rather
+than a signal pointing the wrong way** — the same magnitude of writing is productive at low N and
+destructive at high N — and the binding constraint is an **interaction between dimension and
+horizon** rather than either alone. Dilution of per-unit credit across units and decisions is the
+candidate mechanism; a product law would need a matched factorial sweep, which this is not, since
+the two axes were varied on different platforms. The registered verdict is `mixed` with both halves
+stated, since neither pre-registered row fits. **This changes what is missing.** Consequence (vii)
+closed with "what is missing is a plausible rule that reads it"; there is now a biologically
+plausible local rule that **learns** a block-V cell to PPO's level, and what is missing is the
+**wiring contrast under it**, which has not been run — so **7b's gate still stands as written**, and
+059's condition for re-registering B.5, B.1, B.4 and B.4b on the block-V cells is **met**. What does
+*not* follow is anything about the connectome: at 302 units × 4 settling steps its dimension sits
+far beyond this grid's failing end, so a connectome arm needs a way to reduce the perturbation
+dimension that the substrate does not have, and read plainly the result predicts failure there at
+present. **No committed verdict changed** — 059's negative recorded what had been measured, every
+arm it summarised ran at 128 or 302 units, and any re-read is a new registration.
+
+#### Phase 7 progress record
+
+The running history of Phase 7's resolved work, moved out of the Timeline Overview's status cell
+on 2026-09-13: a table cell cannot hold a line break in GFM, so an append-only history kept there
+grows as one unreviewable line. The cell now carries the status and delegates here, mirroring how
+Phase 6's row delegates to § Phase 6a / 6b split.
+
+7a-i panel resolved 2026-09-06 to the sanity-floor branch, [Logbook
+040](experiments/logbooks/040-l4-panel.md); panels 2 and 3 resolved 2026-09-07 `inconclusive`,
+[Logbook 041](experiments/logbooks/041-l4-panel2.md), [Logbook
+042](experiments/logbooks/042-l4-panel3.md) — the Hebbian wiring contrast closed as a registered
+question; S.2 warm start resolved 2026-09-08 `sanity_floor_fail` + `rule_destroys_clone`, [Logbook
+043](experiments/logbooks/043-l4-warm-start.md) — the connectome holds a competent policy, the rule
+takes it apart; 7a-ii's first fidelity rung resolved 2026-09-09 `degree_statistics`, [Logbook
+044](experiments/logbooks/044-l4-atlas-signs.md) — grounded synapse signs leave the prior alone and
+make Hebbian learning worse, so the substrate's signs were not the limit; three consolidation
+mechanisms screened 2026-09-09 and none held a cloned competent policy, [Logbook
+045](experiments/logbooks/045-l4-consolidation.md) — slowing the update is not consolidating a
+policy; the decorrelating term ran 2026-09-09 and resolved `no_recovery`, [Logbook
+046](experiments/logbooks/046-l4-decorrelation.md) — the atlas grounds too little inhibition to
+build a brake from; structured instruction resolved 2026-09-10 `no_routing_effect`, [Logbook
+047](experiments/logbooks/047-l4-structured-instruction.md); block I then found the rule was not a
+policy-gradient estimator and repaired it without making it work on any multi-step task, [Logbooks
+048](experiments/logbooks/048-l4-rule-positive-control.md)–[056](experiments/logbooks/056-l4-ladder-reread.md);
+and **block V found the wiring advantage the phase was looking for** — +35.4% off time-to-competence
+on a foraging cell under thermal pressure and +23.5% with temperature removed, [Logbooks
+057](experiments/logbooks/057-wiring-premise-contrast.md) and
+[058](experiments/logbooks/058-wiring-premise-difficulty.md). **7a complete 2026-09-13 on the SPLIT
+clause** ([Logbook 059](experiments/logbooks/059-7a-shipment.md)): two citable results — a
+systematic negative with a diagnosed cause, and a wiring advantage on learning speed — with GO
+unreachable on its own clause and STOP overstating. **Status 7a complete / 7b pending**; 7b's gate
+stands as written and the forward programme is rule families, bounded. **R.1, that programme's first
+item, resolved 2026-09-13 `mixed`** ([Logbook
+060](experiments/logbooks/060-l4-perturbation-scale.md)): the rule **solves a multi-step foraging
+cell at eight perturbed units** — 19.64 foods of 20, 90.7% full clear, level with PPO — and
+collapses monotonically to 3.0% at the 128 units every failing arm ran, while on the one-step
+control the same dimension costs almost nothing, so what binds is an interaction between dimension
+and horizon rather than either alone, with a product law more than this design supports. The wiring
+contrast under that rule is not yet run, so the gate still stands
 
 #### Pre-registered design decisions (2026-08-27 pre-start review)
 
@@ -881,9 +1108,49 @@ The L4 validation question — "does modulated plasticity reproduce documented *
 |---|---|---|
 | **L4 implementation overshoots** | Neuromodulator grounding more complex than estimated; receptor-class metadata harder to integrate; modulated rules harder to debug than vanilla | **Phase 7 is pre-structured as 7a / 7b** *(promoted 2026-08-27 from a contingency to the default shape, since the ~6-9-month full-grounding estimate made the old month-6 trigger fire by construction)*: 7a ships L4 on *C. elegans* as the headline deliverable; 7b carries the cross-species transfer + SHOULD/MAY items. The 6a/6b precedent applies — the split may equally be invoked **by success** (7a forms a self-contained citable result) as by overrun. Phase 7 closes whether it lands as one shipment or two. |
 | **Cross-species homology proves ambiguous** | Sensor/motor projection homologs for pacificus can't be defended for one or more behaviours; shared-core matrix leaves a behaviour's circuit under-covered *(re-aimed 2026-08-27: format risk is retired — the data is MIT-licensed CSV; homology and coverage are the real risks)* | Ship the behaviours whose projections are defensible (klinotaxis is the safest — amphid homology is strong), document the gap per behaviour, and report transfer on that subset. The first-in-field claim survives in restricted form. |
-| **L4 plasticity fails to beat its baselines** | The plastic connectome does not beat its own frozen-weights / vanilla-rule sanity floors (D2) after reasonable search on the D1 primary arm (and the MAY spiking arm, if run) | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families"* — and is a strong *robustness* answer to the sharpened hypothesis. Phase 7 closes with the negative result; the e-prop fallback family and FlyGM-style imitation warm start are the documented next levers. **Realised 2026-09-06** ([Logbook 040](experiments/logbooks/040-l4-panel.md)): `sanity_floor_fail` at n = 8; **7a-i closes with the negative result** as this row prescribes — Phase 7 itself continues — and the documented next levers are now ordered — panel 2 (the Hebbian wiring contrast with a prior sweep and an initialisation factor; **run 2026-09-07, `inconclusive`**, [Logbook 041](experiments/logbooks/041-l4-panel2.md): the effect held, the test could not carry a bimodal outcome at n = 16, and count-scaled initialisation hurt; **panel 3**, [Logbook 042](experiments/logbooks/042-l4-panel3.md), replicated at +8.1 on 48 fresh seeds, `inconclusive` again, and closed the question) — **both panels complete**; the imitation warm start (S.2) ran 2026-09-08 ([Logbook 043](experiments/logbooks/043-l4-warm-start.md): the connectome retains a cloned competent policy on either wiring, the rule destroys it, a warm start hurts PPO); 7a-ii's atlas rung ran 2026-09-09 ([Logbook 044](experiments/logbooks/044-l4-atlas-signs.md): grounded signs leave the prior alone and make Hebbian learning worse, so the substrate was not the limit); consolidation was screened 2026-09-09 ([Logbook 045](experiments/logbooks/045-l4-consolidation.md)) and none of its three mechanisms held a cloned competent policy, so the panel stays gated; the anti-Hebbian/decorrelating term ran 2026-09-09 and resolved `no_recovery` ([Logbook 046](experiments/logbooks/046-l4-decorrelation.md)) — the arm redirected every grounded inhibitory synapse there is, 5.8% of the substrate, and moved the outcome by −0.9, so the inhibitory-brake explanation cannot be built at transmitter-only fidelity; structured instruction ran 2026-09-10 and resolved `no_routing_effect`. **This row's branch is now closed (2026-09-13, [Logbook 059](experiments/logbooks/059-7a-shipment.md)).** It prescribed that "the finding itself is publishable" and named the e-prop family and the imitation warm start as the documented next levers. Both held: 7a ships on the SPLIT clause with the negative *and* a positive the row did not anticipate — the wild-type wiring is worth **+35.4%** and **+23.5%** off time-to-competence across two cells under PPO, so the phrase "requires further substrate work or different rule families" is now sharper than the row could state it: **the wiring is legible to learning, and what is missing is a plausible rule that reads it.** The e-prop lever is taken as a bounded programme with two stopping conditions fixed in advance, after which 7b proceeds under PPO with the biological-plausibility claim given up. |
+| **L4 plasticity fails to beat its baselines** | The plastic connectome does not beat its own frozen-weights / vanilla-rule sanity floors (D2) after reasonable search on the D1 primary arm (and the MAY spiking arm, if run) | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families"* — and is a strong *robustness* answer to the sharpened hypothesis. Phase 7 closes with the negative result; the e-prop fallback family and FlyGM-style imitation warm start are the documented next levers. **Branch closed 2026-09-13** — the realised history is in § The L4 baseline-failure branch. |
 | **Substrate-vs-rule confound** | Platform changes (D5 key removal, D7 state-dependent `std`) land mid-comparison, making L2-vs-L4 deltas uninterpretable — the Phase 6 grid-vs-continuous non-commensurability lesson | Land all substrate changes **before** the L4 panel, validate, then freeze. Any comparison spanning a substrate change is reported as qualitative, per the 2026-06-14 reframing precedent. |
 | **Partial D2 outcome** | The rule clears the frozen/vanilla sanity floors, but the 2×2 primary contrast is null (or the matched-rule ranking test fails) | This is the pre-registered **robustness branch**, not a failure and not the sanity-floor row above: confirm ensemble-invariance (bar (a)) and read it against the warm-start arm, then **close with the negative result** — the degree-statistics verdict replicated across learning regimes, a citable finding. One pre-registered sensitivity pass (rule hyperparameters) is permitted before closure; no open-ended reruns. Rule-family pivots (e-prop fallback, spiking MAY arm) are *new* pre-registered runs, never rescues of this one. Distinct from STOP, which requires substrate-level infeasibility. |
+
+#### The L4 baseline-failure branch
+
+What actually happened along the *L4 plasticity fails to beat its baselines* row above, moved out
+of its mitigation cell on 2026-09-13 for the same reason: the row's third column had stopped being
+a mitigation and become an append-only record, and a GFM table cell cannot be wrapped.
+
+**Realised 2026-09-06** ([Logbook 040](experiments/logbooks/040-l4-panel.md)): `sanity_floor_fail`
+at n = 8; **7a-i closes with the negative result** as this row prescribes — Phase 7 itself continues
+— and the documented next levers are now ordered — panel 2 (the Hebbian wiring contrast with a prior
+sweep and an initialisation factor; **run 2026-09-07, `inconclusive`**, [Logbook
+041](experiments/logbooks/041-l4-panel2.md): the effect held, the test could not carry a bimodal
+outcome at n = 16, and count-scaled initialisation hurt; **panel 3**, [Logbook
+042](experiments/logbooks/042-l4-panel3.md), replicated at +8.1 on 48 fresh seeds, `inconclusive`
+again, and closed the question) — **both panels complete**; the imitation warm start (S.2) ran
+2026-09-08 ([Logbook 043](experiments/logbooks/043-l4-warm-start.md): the connectome retains a
+cloned competent policy on either wiring, the rule destroys it, a warm start hurts PPO); 7a-ii's
+atlas rung ran 2026-09-09 ([Logbook 044](experiments/logbooks/044-l4-atlas-signs.md): grounded signs
+leave the prior alone and make Hebbian learning worse, so the substrate was not the limit);
+consolidation was screened 2026-09-09 ([Logbook 045](experiments/logbooks/045-l4-consolidation.md))
+and none of its three mechanisms held a cloned competent policy, so the panel stays gated; the
+anti-Hebbian/decorrelating term ran 2026-09-09 and resolved `no_recovery` ([Logbook
+046](experiments/logbooks/046-l4-decorrelation.md)) — the arm redirected every grounded inhibitory
+synapse there is, 5.8% of the substrate, and moved the outcome by −0.9, so the inhibitory-brake
+explanation cannot be built at transmitter-only fidelity; structured instruction ran 2026-09-10 and
+resolved `no_routing_effect`. **This row's branch is now closed (2026-09-13, [Logbook
+059](experiments/logbooks/059-7a-shipment.md)).** It prescribed that "the finding itself is
+publishable" and named the e-prop family and the imitation warm start as the documented next levers.
+Both held: 7a ships on the SPLIT clause with the negative *and* a positive the row did not
+anticipate — the wild-type wiring is worth **+35.4%** and **+23.5%** off time-to-competence across
+two cells under PPO, so the phrase "requires further substrate work or different rule families" is
+now sharper than the row could state it: **the wiring is legible to learning, and what is missing is
+a plausible rule that reads it.** The e-prop lever is taken as a bounded programme with two stopping
+conditions fixed in advance, after which 7b proceeds under PPO with the biological-plausibility
+claim given up. **Sharpened again 2026-09-13** ([Logbook
+060](experiments/logbooks/060-l4-perturbation-scale.md)): "different rule families" turns out to
+understate it — the *same* rule family works at a perturbation dimension nobody had tried, reaching
+PPO's level on a block-V cell at eight perturbed units, so what this row anticipated as a
+rule-family problem is at least partly a **scale** one. e-prop is not retired and remains the
+fallback; the live question is the wiring contrast under a rule now known to learn.
 
 #### Where Phase 7 is first-in-field (novelty map)
 
