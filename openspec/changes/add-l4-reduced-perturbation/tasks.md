@@ -91,24 +91,24 @@
 
 ## 5. Campaign
 
-- [ ] 5.1 Launch record committed first; no branch switches while it runs.
-- [ ] 5.2 80 runs: ten arms × eight seeds at 3000 episodes, with `--track-experiment` so drift has
+- [x] 5.1 Launch record committed first; no branch switches while it runs.
+- [x] 5.2 80 runs: ten arms × eight seeds at 3000 episodes, with `--track-experiment` so drift has
   weights to read.
-- [ ] 5.3 Per-seed CSV, the per-arm table with its dimension columns, and the verdict under
+- [x] 5.3 Per-seed CSV, the per-arm table with its dimension columns, and the verdict under
   `supporting/061-l4-reduced-perturbation/`.
 
 ## 6. The record
 
-- [ ] 6.1 Logbook 061: the causal-reach table as a substrate measurement that stands whatever the arms
+- [x] 6.1 Logbook 061: the causal-reach table as a substrate measurement that stands whatever the arms
   do; the per-arm results with units, adaptable synapses and draws per decision beside each; the drift
   column; the verdict against the three registered outcomes.
-- [ ] 6.2 The experiments index row.
-- [ ] 6.3 State plainly whether **R.1b is unblocked and at which mask**, and what that mask gives up.
-- [ ] 6.4 State what the result may not be cited as — in particular that a win at a reduced mask is a
+- [x] 6.2 The experiments index row.
+- [x] 6.3 State plainly whether **R.1b is unblocked and at which mask**, and what that mask gives up.
+- [x] 6.4 State what the result may not be cited as — in particular that a win at a reduced mask is a
   win for a restricted learner, and that nothing here transfers to the 2400-step C3 cell.
 
 ## 7. Close-out
 
-- [ ] 7.1 `CHANGELOG.md`; the tracker (R.1c, and R.1b's block lifted or not); the roadmap only if the
+- [x] 7.1 `CHANGELOG.md`; the tracker (R.1c, and R.1b's block lifted or not); the roadmap only if the
   reading changes.
-- [ ] 7.2 Confirm no committed verdict changed, and that `full` reproduces the unmasked stream.
+- [x] 7.2 Confirm no committed verdict changed, and that `full` reproduces the unmasked stream.

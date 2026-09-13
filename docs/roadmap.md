@@ -964,7 +964,28 @@ plausible local rule that **learns** a block-V cell to PPO's level, and what is 
 far beyond this grid's failing end, so a connectome arm needs a way to reduce the perturbation
 dimension that the substrate does not have, and read plainly the result predicts failure there at
 present. **No committed verdict changed** — 059's negative recorded what had been measured, every
-arm it summarised ran at 128 or 302 units, and any re-read is a new registration.
+arm it summarised ran at 128 or 302 units, and any re-read is a new registration. **(ix) R.1c then
+built the mechanism, and the dimension turned out not to be the connectome's
+problem, 2026-09-14** ([Logbook 061](experiments/logbooks/061-l4-reduced-perturbation.md)). The
+per-unit perturbation is now restrictable to a declared set, and recon found the readout mean-pools
+**only the 39 motor neurons**, so at settling step `s` a unit can reach the action only from within
+`depth − s` hops — leaving **672 of 1208 draws per decision causally connected and 536 (44.4%)
+credited against an outcome they cannot influence**. Masking exactly those, and restricting to 109
+and then 39 units, **does not make the rule learn**: no set beats its own frozen control by the
+registered minima and none reaches competence, with full clear never exceeding 0.08% against PPO's
+19.31 foods on the same cell. The durable result is a mechanism — **credited synapses drift
+1.37–1.38× their own norm at every set from 302 units down to 39**, matching the MLP's 1.28–1.31
+across a 31-fold change in draws per decision, while excluded synapses drift 0.013–0.016 — so the
+rule is **not starved of signal at any dimension**; it writes a great deal in a direction that does
+not help. With σ and the action noise also calibrated on this substrate for the first time and both
+null, **three independent axes leave the learning arm at 2.4–4.4 foods of 20**, which is a
+structural limit rather than a hyperparameter one. **R.1b's blocker changed shape rather than
+lifting**: the mechanism exists, so what blocks the wiring contrast is no longer a missing
+capability but a rule that does not reach competence on this substrate, and **7b's gate is
+untouched**. The one structural asymmetry now *measured* rather than guessed is that the rule may
+write the chemical synapses alone, leaving the motor readout frozen while it is **PPO's largest
+single adaptation** — 0.783 relative in 300 episodes against the sensory projection's 0.177 —
+registered as R.1d.
 
 #### Phase 7 progress record
 

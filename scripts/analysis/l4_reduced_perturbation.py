@@ -34,9 +34,12 @@ import math
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import torch
 
 _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
@@ -160,22 +163,111 @@ def minima(effect: float, frozen_mean: float) -> dict[str, Any]:
     }
 
 
+def _chemical_weights(log: Path, experiments: Path = EXPERIMENTS) -> torch.Tensor | None:
+    """Read the run's final chemical synapse matrix, or None where no export is on disk.
+
+    Deliberately NOT the horizon harness's reader: that one takes ``state["policy"]`` and flattens
+    every tensor under it, which is the MLP checkpoint's layout. A connectome checkpoint keeps its
+    tensors under ``state["topology"]`` and has no ``policy`` key at all, so that reader finds
+    nothing and reports drift unavailable for every run -- a silent empty column rather than a wrong
+    one, but useless either way.
+    """
+    import torch
+    from l4_panel import _experiment_json
+
+    experiment = _experiment_json(log.read_text(), experiments)
+    exports = experiment.get("exports_path") if experiment else None
+    if not exports:
+        return None
+    final = ps.hm.REPO / exports / "weights" / "final.pt"
+    if not final.is_file():
+        return None
+    state = torch.load(final, weights_only=True)
+    topology = state.get("topology")
+    if not isinstance(topology, dict):
+        return None
+    return topology.get("w_chem")
+
+
+def _perturbed_units(name: str) -> torch.Tensor:
+    """Return which units the declared set ever perturbs, as a boolean over the neurons."""
+    import torch
+    from quantumnematode.brain.arch.connectome_ppo import (
+        ConnectomeTopology,
+    )
+    from quantumnematode.connectome.loader import (
+        load_cook_2019_hermaphrodite,
+    )
+
+    topology = ConnectomeTopology(
+        load_cook_2019_hermaphrodite(),
+        enable_gap_junctions=True,
+        forward_pass_depth=4,
+        node_noise=0.1,
+        perturbation_set=name,  # pyright: ignore[reportArgumentType]
+        n_food_features=3,
+        enforce_strict_mask=True,
+        enable_predator_projection=False,
+        enable_thermotaxis_projection=False,
+        device=torch.device("cpu"),
+        rng=np.random.default_rng(0),
+        continuous=True,
+        enable_activity_traces=True,
+        trace_decay=0.9,
+    )
+    return topology._perturbation_mask.any(dim=0)
+
+
 def split_drift(
+    name: str,
     logs: dict[str, dict[int, Path]],
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
 ) -> dict[str, Any]:
-    """Drift from this set's own frozen control, reported for the whole weight tensor.
+    """Drift from this set's own frozen control, split by whether a synapse is credited.
 
-    The excluded/credited split needs the mask, which lives on a built brain rather than in the log,
-    so it is reported by the record's own measurement step; what this supplies is the total, per set,
-    with the seed set a parameter -- R.1's defect was inheriting it from a module constant and
-    reading nothing on disjoint seeds.
+    ``E[i, j] = h_prev[i] * perturbation[j]``, so a synapse onto an unperturbed unit never receives
+    eligibility and the rule's unconditional weight decay is the ONLY update it gets -- cancelled
+    radially by the homeostatic rescale. The bench measurement says that leaves jitter at a conserved
+    norm; splitting the drift checks it here, on the real substrate at the real scale, which is the
+    whole reason it was registered.
+
+    The seed set is a parameter: inheriting it from a module constant is what made R.1's drift read
+    nothing on a pilot's disjoint seeds.
     """
-    return ps.drift(logs, seeds, experiments)
+    perturbed = _perturbed_units(name)
+    credited: list[float] = []
+    excluded: list[float] = []
+    for seed in seeds:
+        learning = logs.get("learning", {}).get(seed)
+        frozen = logs.get("frozen", {}).get(seed)
+        if learning is None or frozen is None:
+            continue
+        a = _chemical_weights(learning, experiments)
+        b = _chemical_weights(frozen, experiments)
+        if a is None or b is None or a.shape != b.shape:
+            continue
+        for label, columns, sink in (
+            ("credited", perturbed, credited),
+            ("excluded", ~perturbed, excluded),
+        ):
+            del label
+            if not bool(columns.any()):
+                continue
+            delta = (a[:, columns] - b[:, columns]).float()
+            base = b[:, columns].float().norm()
+            sink.append(float(delta.norm() / (base or 1.0)))
+    return {
+        "credited_mean_relative": float(np.mean(credited)) if credited else float("nan"),
+        "excluded_mean_relative": float(np.mean(excluded)) if excluded else float("nan"),
+        "n_read": len(credited),
+        "available": bool(credited),
+        "seeds_expected": list(seeds),
+    }
 
 
 def compare(
+    name: str,
     data: dict[str, Any],
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
@@ -200,7 +292,7 @@ def compare(
         "competence_threshold": COMPETENCE_THRESHOLD,
         "graded": graded,
         "minima": minima(graded.get("effect", float("nan")), frozen_mean),
-        "drift": split_drift(data["logs"], seeds, experiments),
+        "drift": split_drift(name, data["logs"], seeds, experiments),
     }
 
 
@@ -210,7 +302,7 @@ def analyse(
     experiments: Path = EXPERIMENTS,
 ) -> dict[str, Any]:
     """Compare every declared set, correct across them and apply the registered rule."""
-    cells = {name: compare(scanned[name], seeds, experiments) for name in ARMS}
+    cells = {name: compare(name, scanned[name], seeds, experiments) for name in ARMS}
     defined = [n for n in ARMS if cells[n]["graded"].get("defined")]
     qs = ms.bh_fdr([cells[n]["graded"]["p_improve"] for n in defined])
     for name, q in zip(defined, qs, strict=True):
@@ -319,7 +411,7 @@ def _print(result: dict[str, Any]) -> None:
     print("\nR.1c — the connectome's perturbation dimension")
     print(
         "  set        | units | synapses | draws | learning | frozen | shift |     q "
-        "| clear % | drift | verdict",
+        "| clear % | drift-cr | drift-ex | verdict",
     )
     for name in ARMS:
         cell = result["sets"][name]
@@ -330,7 +422,8 @@ def _print(result: dict[str, Any]) -> None:
             f"{dim['draws']:>5} | {cell['learning_mean_foods']:>8.3f} | "
             f"{cell['frozen_mean_foods']:>6.3f} | {cell['graded'].get('effect', float('nan')):>+5.2f} "
             f"| {q:5.3f} | {cell['learning_mean_full_clear']:>7.2f} | "
-            f"{cell['drift']['mean_relative']:>5.2f} | {cell['verdict']}",
+            f"{cell['drift']['credited_mean_relative']:>5.2f} | "
+            f"{cell['drift']['excluded_mean_relative']:>5.2f} | {cell['verdict']}",
         )
         print(f"        {cell['why']}")
     trend = result["trend"]
