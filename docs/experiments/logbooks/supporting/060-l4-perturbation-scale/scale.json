@@ -24,6 +24,10 @@
       64,
       128
     ],
+    "s1_depth_control": [
+      64,
+      2
+    ],
     "s2_widths": [
       4,
       8,
@@ -50,6 +54,7 @@
     "widths": {
       "8": {
         "width": 8,
+        "layers": 1,
         "perturbed_units": 8,
         "rule": {
           "n": 8,
@@ -119,6 +124,7 @@
       },
       "16": {
         "width": 16,
+        "layers": 1,
         "perturbed_units": 16,
         "rule": {
           "n": 8,
@@ -188,6 +194,7 @@
       },
       "32": {
         "width": 32,
+        "layers": 1,
         "perturbed_units": 32,
         "rule": {
           "n": 8,
@@ -257,6 +264,7 @@
       },
       "64": {
         "width": 64,
+        "layers": 1,
         "perturbed_units": 64,
         "rule": {
           "n": 8,
@@ -326,6 +334,7 @@
       },
       "128": {
         "width": 128,
+        "layers": 1,
         "perturbed_units": 128,
         "rule": {
           "n": 8,
@@ -414,10 +423,108 @@
       "bar": 0.5,
       "meets_bar": false
     },
+    "level_trend": {
+      "defined": true,
+      "widths": [
+        8,
+        16,
+        32,
+        64,
+        128
+      ],
+      "gap_fractions": [
+        0.8903726709160514,
+        0.8872439854650317,
+        0.8613485445875013,
+        0.8598252763490721,
+        0.8469999981682479
+      ],
+      "rho": -0.9999999999999999,
+      "p": 1.4042654220543602e-24,
+      "span": 0.04337267274780354,
+      "descriptive_only": true,
+      "note": "five widths: the level's direction, not a tested exponent"
+    },
+    "depth_control": {
+      "shape": "64x2",
+      "perturbed_units": 128,
+      "cell": {
+        "width": 64,
+        "layers": 2,
+        "perturbed_units": 128,
+        "rule": {
+          "n": 8,
+          "mean": -0.2169878054702209,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "reference": {
+          "n": 8,
+          "mean": -0.13610593108835903,
+          "seeds_above_floor": 8,
+          "halfway_threshold": -0.4131130610143905,
+          "passes": true
+        },
+        "rule_gap_fraction": 0.8530254599795053,
+        "reference_gap_fraction": 0.9986128338668566,
+        "reachability_normalised": 0.8542103917054582,
+        "void": false,
+        "void_reason": null,
+        "per_seed": {
+          "1": {
+            "score": -0.2100526616800145,
+            "trials_to_criterion": 1200,
+            "trials_to_criterion_sustained": 1300
+          },
+          "2": {
+            "score": -0.22427354159399068,
+            "trials_to_criterion": 1100,
+            "trials_to_criterion_sustained": 1800
+          },
+          "3": {
+            "score": -0.22520027017818084,
+            "trials_to_criterion": 1000,
+            "trials_to_criterion_sustained": 2200
+          },
+          "4": {
+            "score": -0.2061464769093781,
+            "trials_to_criterion": 1400,
+            "trials_to_criterion_sustained": 1700
+          },
+          "5": {
+            "score": -0.20590417581090195,
+            "trials_to_criterion": 1600,
+            "trials_to_criterion_sustained": 1700
+          },
+          "6": {
+            "score": -0.21741446194854758,
+            "trials_to_criterion": 1300,
+            "trials_to_criterion_sustained": 1400
+          },
+          "7": {
+            "score": -0.21981555898960448,
+            "trials_to_criterion": 700,
+            "trials_to_criterion_sustained": 1400
+          },
+          "8": {
+            "score": -0.2270952966511491,
+            "trials_to_criterion": 1700,
+            "trials_to_criterion_sustained": 1800
+          }
+        },
+        "crossed": 8,
+        "censored": 0,
+        "censoring_rate": 0.0,
+        "median_trials_to_criterion": 1250.0
+      },
+      "matched_one_layer_gap_fraction": 0.8469999981682479,
+      "passes": true
+    },
     "baseline_reproduces": true,
     "largest_width_passes": true,
-    "verdict": "below_bar",
-    "why": "slope -0.15 excludes 0 but is below the 0.5 bar",
+    "verdict": "opposite_direction",
+    "why": "slope -0.15, CI [-0.24, -0.06] entirely below 0: time-to-criterion FALLS as the dimension grows, opposite to the prediction",
     "derived_budget": [
       {
         "label": "the MLP yardstick (128 units)",
@@ -425,7 +532,8 @@
         "extrapolation": true,
         "outside_fitted_range": false,
         "trials": 2944.424471806047,
-        "note": "EXTRAPOLATION from a five-point fit; not a measurement of this platform"
+        "is_a_budget_constraint": false,
+        "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
       },
       {
         "label": "the connectome, read as units (302)",
@@ -433,7 +541,8 @@
         "extrapolation": true,
         "outside_fitted_range": true,
         "trials": 2590.184742315717,
-        "note": "EXTRAPOLATION from a five-point fit; not a measurement of this platform"
+        "is_a_budget_constraint": false,
+        "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
       },
       {
         "label": "the connectome, read as draws per decision (1208)",
@@ -441,7 +550,8 @@
         "extrapolation": true,
         "outside_fitted_range": true,
         "trials": 2105.8395331006977,
-        "note": "EXTRAPOLATION from a five-point fit; not a measurement of this platform"
+        "is_a_budget_constraint": false,
+        "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
       }
     ]
   },
@@ -449,7 +559,7 @@
   "combined": {
     "verdict": "s1_only",
     "why": "S1 ran and S2 did not, which the registration allows: S1 does not depend on S2 and is not weakened by its absence",
-    "s1_verdict": "below_bar",
+    "s1_verdict": "opposite_direction",
     "largest_width_passes": true
   }
 }
