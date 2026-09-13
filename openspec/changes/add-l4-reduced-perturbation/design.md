@@ -231,3 +231,52 @@ cost, and `not_reducible` is recorded from 24 runs instead of 104.
 underperforms the MLP at matched dimension: R.1 reached 18.83 foods at 16 units, 15.72 at 32 and 8.34 at
 64, while this substrate's 39-unit arm reaches **2.99**. Perturbation dimension does not transfer across
 substrates — registered as a caveat, now a number.
+
+### Calibration outcome, 2026-09-13 — σ 0.1, and a correction to this amendment's own reasoning
+
+16/16 runs, 3000 episodes each. The σ 0.2 point is the pilot's eight `motor` runs.
+
+| σ | learning foods | frozen foods | gap | seeds favouring | frozen as % of 3.82 | full clear |
+|---|---|---|---|---|---|---|
+| 0.05 | 4.321 | 1.732 | +2.589 | 4/4 | 45.3% | 0.17% |
+| **0.1** | **4.361** | 1.731 | **+2.630** | 4/4 | 45.3% | 0.03% |
+| 0.2 | 2.989 | 1.883 | +1.106 | 4/4 | 49.3% | 0.00% |
+
+**The registered rule selects σ 0.1** — it maximises the learning arm's plateau-tail foods, 4.361 — and
+**the stop clause does not fire**: 4.361 is above the 3.82 prior, so the campaign proceeds. σ 0.2 was
+indeed too large for this substrate: dropping it lifts the learning arm by **46%** and the gap from
++1.106 to +2.630.
+
+**But this amendment's stated reason for running the calibration was wrong, and that is recorded rather
+than quietly dropped.** It said σ 0.2 "takes the frozen prior from 3.82 foods to 1.9 — it halves it". The
+frozen arm sits at **1.73 at σ 0.05 too**, and at 45–49% of 3.82 at *every* σ, so the perturbation scale
+is **not** what costs the difference. The likely cause is the **action-noise setting**: these arms pin
+`initial_log_std: -1.0` as part of I.1's plastic recipe — an action std of **0.368** — while 058's frozen
+arm takes the default **1.0**. A wider action distribution collects more food by accident on this cell.
+
+So the calibration was **worth running and its result stands**, but for a different reason than the one
+registered: not that σ 0.2 damages the prior, but that it costs the *learning* arm 46% of its level.
+
+**The relative minimum's reference is restated accordingly.** The registered 1.55 foods is 10% of
+19.31 − 3.82, and that 3.82 comes from an arm at a different action noise. Against these arms' own frozen
+level the gap is 19.31 − 1.73 = **17.58**, so the minimum is **1.76 foods**. The campaign is held to the
+**more demanding** figure; +2.630 clears both, so nothing about the reading turns on the choice. No fully
+matched PPO reference exists at `initial_log_std: -1.0` on this cell, and none is run — the comparator
+that decides every arm is its own frozen control, not either reference.
+
+### A gap in this change's own registration, surfaced before the campaign
+
+`dimension_reducible` is defined as "some reduced arm beats its control by both minima", and its stated
+consequence is "**R.1b is unblocked at the winning mask**". At σ 0.1 the `motor` arm would satisfy that
+definition: +2.630 foods clears both minima and 4/4 seeds favour it, which at eight seeds reaches
+p = 0.004.
+
+**It would not deliver what R.1b needs.** R.1b is block V's contrast on **time to competence**, and this
+arm reaches **4.36 of 20 foods at 0.03% full clear** — it never becomes competent, so a time to
+competence is undefined for it. The verdict's condition is therefore **weaker than its consequence**:
+beating a frozen control by the registered minima is not learning the cell, and only the latter makes the
+wiring contrast measurable.
+
+This is recorded now, before the campaign, rather than discovered after it. The campaign's reading will
+state the two separately: whether a mask **beats its floor** by the registered bar, and whether any mask
+**reaches competence**, which is what R.1b's gate actually requires.
