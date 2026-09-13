@@ -23,6 +23,15 @@ Three sources:
 * ``rotated`` -- a random direction at the same Frobenius norm as that seed's ``ppo`` readout. This is
   the arm that makes a positive result interpretable: without it, "PPO found a good readout" cannot be
   told from "the anatomical prior is bad and almost anything beats it".
+* ``anatomical_scaled`` -- the anatomical direction at the ``ppo`` readout's norm. Added once the
+  prepared files showed what PPO actually converges to: a readout **5.2 times** the anatomical norm and
+  **near-orthogonal** to it (cosine -0.18). The readout multiplies the motor-class means into the action
+  mean while the action noise is fixed, so a 5x readout is a large change in commitment-versus-
+  exploration that has nothing to do with reading the motor classes better. Without this arm, "the
+  direction matters" and "the scale matters" are not separable.
+
+Together the four make a two-factor design: anatomical direction at either norm, and the PPO norm in
+either the anatomical, a random, or PPO's own direction.
 """
 
 from __future__ import annotations
@@ -49,7 +58,7 @@ _ANALYSIS = Path(__file__).resolve().parent / "analysis"
 if str(_ANALYSIS) not in sys.path:
     sys.path.insert(0, str(_ANALYSIS))
 
-SOURCES = ("anatomical", "ppo", "rotated")
+SOURCES = ("anatomical", "anatomical_scaled", "ppo", "rotated")
 READOUT_KEY = "readout"
 # Everything else must come through untouched; asserted per file before it is written.
 PROTECTED = ("w_chem", "food_gains", "log_std", "m_chem", "g_gap", "chem_sign")
@@ -111,6 +120,18 @@ def _replacement_readout(
     """Select the readout this source substitutes."""
     if source == "anatomical":
         return original.clone()
+    if source == "anatomical_scaled":
+        if harvest_dir is None:
+            msg = (
+                "source 'anatomical_scaled' needs --harvest-dir: it matches the ppo readout's norm"
+            )
+            raise ValueError(msg)
+        reference = _harvest_readout(harvest_dir, seed)
+        norm = float(original.norm())
+        if norm == 0.0:  # pragma: no cover - the anatomical readout is unit-normed per row
+            msg = "the arm's own readout has zero norm"
+            raise ValueError(msg)
+        return original * (float(reference.norm()) / norm)
     if source in ("ppo", "rotated"):
         if harvest_dir is None:
             msg = f"source {source!r} needs --harvest-dir"

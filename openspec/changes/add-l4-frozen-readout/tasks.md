@@ -5,6 +5,9 @@
 - [ ] 1.1 `scripts/prepare_readout_checkpoints.py`: per seed, write a checkpoint carrying a substituted
   `readout` and **every other tensor at that seed's own fresh initialisation**, built by constructing the
   baseline arm's brain at that seed and swapping one tensor.
+- [ ] 1.2b **`anatomical_scaled`** *(amendment, 2026-09-14)*: the anatomical direction at the `ppo`
+  readout's norm, added once the prepared files showed PPO's readout is 5.5× the anatomical norm and
+  near-orthogonal to it. Without it, scale and direction are not separable.
 - [ ] 1.2 Two sources: `ppo`, harvested from that seed's PPO run on this cell, and `rotated`, a random
   direction at the **same Frobenius norm** as that seed's PPO readout, drawn from a seeded generator so
   the arm reproduces.
@@ -66,7 +69,7 @@
 
 - [ ] 5.1 8 PPO harvest runs at seeds 1–8 at `initial_log_std: -1.0`, with `--track-experiment`. These
   supply both the readouts and the matched PPO reference.
-- [ ] 5.2 32 arm runs: two readouts × (learning, frozen) × 8 seeds at 3000 episodes, with
+- [ ] 5.2 48 arm runs: **three** readouts × (learning, frozen) × 8 seeds at 3000 episodes, with
   `--track-experiment` so drift has weights to read.
 - [ ] 5.3 Per-seed CSV, the per-readout table and the verdict under `supporting/062-l4-frozen-readout/`.
 

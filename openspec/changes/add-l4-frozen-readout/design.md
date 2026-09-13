@@ -161,3 +161,56 @@ as the hard part.
 - **A harvested readout is a moving target**: PPO's readout after 3000 episodes differs from its readout
   after 300. The harvest is taken at the end of a full run, stated, and a partially-trained variant is
   named as the follow-up rather than run here.
+
+______________________________________________________________________
+
+## Amendment, 2026-09-14 — a fourth arm, because PPO replaces the anatomical prior rather than refining it
+
+Registered **after preparing the checkpoints and before running any arm**, on what the prepared files
+showed. The harvest passed its stop clause comfortably — PPO reaches **18.945 foods of 20 and 66.48% full
+clear** at these eight seeds and at the arm's own action scale, tight across seeds (18.76–19.06) — so
+there are good readouts to harvest, and **18.945** is the matched reference the minima are computed
+against (058's 19.31 came from 32 seeds at an action std of 1.0).
+
+**What the readouts look like was not anticipated.** PPO does not refine the anatomical prior; it
+replaces it:
+
+| | Frobenius norm | cosine to anatomical |
+|---|---|---|
+| `anatomical` — the committed default | **1.414** (two unit rows) | +1.000 |
+| `ppo` — harvested | **7.820** | **−0.178** |
+
+**5.5× the norm and near-orthogonal, slightly negative.** A representative harvested readout is
+`[[2.22, 2.81, −0.84, −3.20], [3.01, −0.57, 4.65, 0.05]]`.
+
+**That breaks the three-arm design's interpretability.** The readout multiplies the motor-class means
+into the action mean while the action noise is **fixed** at std 0.368, so a 5.5× readout is a large shift
+in commitment versus exploration — a behavioural change that has nothing to do with reading the motor
+classes better. As registered, `anatomical` differed from both `ppo` and `rotated` in **norm and
+direction at once**, so a positive result could not tell "the direction matters" from "the scale matters".
+
+**Added**: `anatomical_scaled` — the anatomical **direction** at the `ppo` readout's **norm**. The four
+arms are now a two-factor design:
+
+| arm | norm | cosine to anatomical | varies |
+|---|---|---|---|
+| `anatomical` | 1.414 | +1.000 | — the committed baseline |
+| `anatomical_scaled` | 7.820 | +1.000 | **scale only** |
+| `rotated` | 7.820 | −0.028 | direction, at PPO's scale |
+| `ppo` | 7.820 | −0.178 | direction, at PPO's scale |
+
+Scale is isolated by rows 1→2; direction is isolated among rows 2, 3 and 4 at a fixed norm.
+
+**The campaign grows from 32 to 48 runs** — three substituted readouts × (learning, frozen) × 8 seeds —
+about 1h 30m. The `anatomical` pair remains R.1c's committed arms, licensed by the load-path equivalence
+test, which passed: all 16 topology tensors bit-identical, the rule's baseline and homeostatic norm
+targets identical.
+
+**What each ordering would now mean**, fixed before the run:
+
+| ordering | reading |
+|---|---|
+| `anatomical_scaled` ≈ `ppo` > `anatomical` | the **scale** is what mattered; this is about commitment versus exploration, not about reading the motor classes, and the follow-up is the action-noise/readout-scale interaction rather than a better-grounded readout |
+| `ppo` > `anatomical_scaled` ≈ `rotated` | the **direction** matters and PPO found a good one; the follow-up is a better-grounded readout |
+| `rotated` ≈ `ppo` > `anatomical_scaled` | any change of direction helps at this scale; the anatomical direction is actively bad |
+| all four alike | the readout is **not** the handicap; R.2 becomes the live path |
