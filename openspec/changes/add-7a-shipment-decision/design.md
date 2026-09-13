@@ -11,9 +11,10 @@
 > **STOP if**: Both L4 implementation and the cross-species transfer are infeasible at the substrate
 > level — at which point the diagnosis itself is the Phase 7 deliverable.
 
-Each is tested below against the record. **The verdict is ratified before the logbook is written**;
-this document fixes how it is reached and what each branch would license, so the decision is not made
-by whichever branch gets written up first.
+Each is tested below against the record. **Both decisions are ratified (2026-09-13): the 7a verdict
+is SPLIT, and the 7b gate stands as written with the forward programme below.** This document fixes
+how each was reached and what it licenses, so neither is decided by whichever branch gets written up
+first, and the implementation writes them up rather than reaching them.
 
 ## GO — unreachable, on its own clause
 
@@ -65,9 +66,11 @@ SPLIT asks whether 7a forms a self-contained citable result before 7b work start
 The second is what makes this a shipment rather than a closure: Phase 7 was asked whether the wiring
 is load-bearing, and on the axis and cells where the question is measurable, it is.
 
-**Recommendation: SPLIT**, with 7a shipped as those two results and 7b's status decided separately
-below. Review is invited to challenge it — the case for STOP is that the *headline* MUST (a local rule
-reading the wiring) is unmet, and a reader could hold that 7a without it is not a shipment.
+**Ratified: SPLIT**, with 7a shipped as those two results and 7b's status decided separately below.
+The case against it is recorded rather than dismissed: the *headline* MUST — a local rule reading the
+wiring — is unmet, and a reader could hold that 7a without it is not a shipment. It is taken anyway
+because the clause SPLIT actually tests is whether 7a forms a self-contained citable result, and two
+results that each stand on their own evidence satisfy it.
 
 ## What ships, and what it may not be cited as
 
@@ -112,7 +115,7 @@ fixed now.**
 Why this and not option 1 directly: block V changed what the rule programme *is*. Before it, a rule
 failing to find a wiring advantage was uninterpretable — 056 classified five such contrasts as
 uninformative because the premise had never been demonstrated. Now the premise is demonstrated with
-a size, ~25–35% off time-to-competence on two calibrated cells, and a candidate rule that learns
+a size — **+35.4%** on the thermal cell over 64 seeds and **+23.5%** on the hard-food cell over 32 — and a candidate rule that learns
 those cells can be held to a sharp bar: does it also show the advantage? The search has a target.
 The roadmap's risk table pre-committed this branch's wording — "the e-prop fallback family … the
 documented next levers" — and the task ladder is partly built: the 350-step hard-food cell is a rung
@@ -129,19 +132,39 @@ between the one-step control and C3 that did not exist before V.3.
 2. **e-prop** — D1's named fallback family. Eligibility from the settling dynamics, a global learning
    signal, no perturbation noise. Cleared in the protocol's order: the one-step control, then the
    hard-food cell, then the wiring contrast on it against the registered 20% bar.
-3. **The stopping rule.** If e-prop cannot learn the hard-food cell, the rule programme stops and
-   **option 1 is taken** — after the power arithmetic for a species × wiring interaction on a speed
-   effect of this size is done, and with the biological-plausibility claim explicitly given up.
+3. **The stopping rule, with a bar rather than a judgement.** e-prop **fails** if it does not beat its
+   own frozen-weights floor on the hard-food cell by the registered paired test — `wt_ppo − wt_frozen`
+   one-sided at 16 seeds under BH-FDR, the gate V.1 and V.3 both used and both cleared 32/32 at
+   q = 0.000. On that failure the rule programme **stops** and **option 1 is taken**: after the power
+   arithmetic for a species × wiring interaction on a speed effect of this size, and with the
+   biological-plausibility claim explicitly given up. "Cannot learn" is not left to be decided once
+   the data exist.
 
 **The substrate rungs reopen conditionally.** Every B-tranche rung asked its question of an
 instrument that could not learn. If the programme produces a rule that learns the hard-food cell,
 the rungs whose questions were left open by that — **B.5**, **B.1**, **B.4** and **B.4b** — become
 askable and are **re-registered fresh** on the block-V cells with the block-V bar, not re-run under
-their old registrations; **B.3** becomes payable once B.5 can conclude. B.5's gate changes with the
-evidence: not "passes the clone assay" but "learns the hard-food cell and shows the ≥ 20% advantage
-the wiring is known to carry there". Block I's findings are about node perturbation specifically and
+their old registrations; **B.3** becomes payable once B.5 can conclude. B.5's gate should change with
+the evidence — from "passes the clone assay" to "learns the hard-food cell and shows the ≥ 20%
+advantage the wiring is known to carry there" — but **that restatement is recorded as a dated note on
+B.5, not applied to it**: its registered gate stays visible and is replaced only when B.5 is itself
+re-registered, the pattern 043's load-defect amendment and 057's axis amendment both used. Block I's findings are about node perturbation specifically and
 are not revisited. The protocol's ordering holds: instrument, ladder, wiring contrast, *then*
 substrate rungs.
+
+**The arithmetic, because the whole case for this over option 1 is that it is cheaper.** Campaign
+costs are measured, not estimated: the yardstick runs at ~19 min a run (048 runs in 71 min wall on 16
+workers, Logbook 055's campaign), so the scale test's ~80 runs is about **two hours**; the hard-food
+cell measured **128 runs in 6,690 s**, so each 32-seed four-arm campaign is about **two hours**; the
+connectome on the C3 cell is ~10 h a run and is deliberately not in this programme.
+
+**e-prop's implementation cost is an estimate and is the programme's real risk.** It needs a
+per-synapse eligibility derived from the settling dynamics rather than from correlation or injected
+noise — a new rule class, not a variant of an existing one. Estimated at **1–2 active weeks** against
+the repo's observed ~2–3× calendar multiplier, against 7b's **8–12 active weeks**. That estimate is
+unvalidated, so it carries its own bound: **if e-prop's implementation passes 3 active weeks, that is
+itself the stopping condition** and option 1 is taken without waiting for it to run. The cost argument
+is therefore falsifiable rather than asserted.
 
 **Allowed in parallel**: C.1, C.2 and C.4, which the tracker already permits after 7a-i and which
 serve either endpoint.

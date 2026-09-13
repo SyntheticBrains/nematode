@@ -33,9 +33,10 @@ answers questions this decision does not ask.
   and measured: the persistent trace substrate, the rate-based rule, the receptor-class metadata and
   the atlas grounding, the structured instruction, the diffusible layer that was not built — each with
   its verdict and the record that carries it.
-- **The shipment verdict**, named against the roadmap's own GO / SPLIT / STOP text, with **why the
-  other two branches were not available** rather than only why one was chosen. The verdict is
-  ratified before the logbook is written; this change registers how it is reached, not what it is.
+- **The shipment verdict: SPLIT**, ratified 2026-09-13 and named against the roadmap's own
+  GO / SPLIT / STOP text, with **why the other two branches were not available** rather than only why
+  one was chosen. Both decisions this change records — the 7a verdict and the 7b direction — are
+  ratified; the implementation writes them up rather than reaching them.
 - **An honest status for every gate-blocked item.** B.5 recorded as closed-unmet with the four
   mechanisms that failed its gate named; B.3 as closed-unpaid with its dependency stated; B.2, B.6 and
   B.7 as deferred with reasons. The tracker currently reads as though 7a-ii has five outstanding items

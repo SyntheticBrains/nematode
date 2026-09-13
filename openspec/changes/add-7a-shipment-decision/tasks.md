@@ -4,8 +4,8 @@
 
 - [ ] 1.1 Walk each of GO, SPLIT and STOP against the record, and state for each **why it was or was
   not available** — not only which was chosen.
-- [ ] 1.2 The verdict ratified before the logbook is written, and recorded with the clause it is taken
-  under.
+- [ ] 1.2 The ratified verdict — **SPLIT** — recorded with the clause it is taken under and with the
+  case against it stated rather than dropped.
 - [ ] 1.3 What ships, and what the shipment may **not** be cited as, both explicit.
 
 ## 2. The 7a-ii synthesis
@@ -33,12 +33,14 @@
   each.
 - [ ] 4.2 The ratified choice recorded: the gate stands as written; the forward programme is rule
   families — the scale test, then e-prop cleared in the protocol's order — bounded by a stopping
-  rule, with block V's ~25–35% as the positive control and option 1 as the named fallback whose
-  trigger is fixed now.
+  rule, with block V's +35.4% and +23.5% as the positive control the rule must clear, and option 1 as
+  the named fallback whose two triggers are fixed now: e-prop failing its own frozen floor by the
+  registered gate, or its implementation passing 3 active weeks.
 - [ ] 4.3 The conditional reopening of the substrate rungs recorded: B.5, B.1, B.4 and B.4b
   re-registered fresh on the block-V cells with the block-V bar if a rule learns the hard-food cell;
-  B.3 payable once B.5 can conclude; block I not revisited; B.5's gate restated from the clone assay
-  to the block-V bar.
+  B.3 payable once B.5 can conclude; block I not revisited. B.5's gate restatement goes in as a
+  **dated note on B.5**, leaving its registered gate visible, and is applied only when B.5 is
+  re-registered.
 - [ ] 4.4 What is deliberately not decided named as such: option 1 itself, and 7b's registered
   metric.
 
