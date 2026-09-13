@@ -19,20 +19,36 @@ action. The action comes from a mean-pool over the **39 VB/DB/VA/DA motor neuron
 1, so the **25** units at four hops or more can never contribute at any step: 1 at four hops, 7 at five,
 7 at six, 3 at seven or more, and 7 unreachable in the directed chemical graph. 277 + 25 = 302.
 
-**A masked synapse only stays put because homeostasis cancels an unconditional decay, and that has to
-be stated.** The rule applies `− rate · weight_decay · weight` to **every** plastic weight, trace or no
-trace, so a masked unit's incoming weights do shrink on every update. What restores them is the
-homeostatic rescale, which returns each unit's incoming norm to its construction target *exactly*: decay
-is purely radial and the rescale is purely radial, so they cancel and the net change is zero to
-floating-point precision.
+**A masked synapse stays put only because homeostasis cancels an unconditional decay, and the
+cancellation is close but not exact.** The rule applies `− rate · weight_decay · weight` to **every**
+plastic weight, trace or no trace, so a masked unit's incoming weights shrink on every update. The
+homeostatic rescale returns each unit's incoming norm to its construction target, and both operations
+are purely radial, so they cancel — measured on the recipe's own values (rate 1e-3, decay 1e-3) with
+every trace held at zero:
 
-That cancellation is **conditional on `plasticity_homeostasis: true`**, which I.1's passing recipe has
-and every arm here therefore carries. With it off, a `motor` arm would shrink the 3,386 uncredited
-synapses toward roughly a third of their initial magnitude across a run — 1e-6 a update over ~1.05M
-updates — and would be a covert global-decay experiment reported as a dimension result. So masked arms
-are **only supported with homeostasis on**, the configs pin it, and the test asserts both halves: no
-movement with homeostasis on, and movement with it off, so the dependency is measured rather than
+| updates | incoming-norm change | largest single weight's excursion | 1 − cosine of the weight vector |
+|---|---|---|---|
+| 1 000 | 0.0000% | 1.8e-05 | 0 |
+| 10 000 | 0.0000% | 1.9e-04 | 6e-08 |
+| 100 000 | 0.0000% | 1.9e-03 | 2.6e-06 |
+
+So the norm is held **exactly** and the direction to a cosine of **1 − 3e-05** extrapolated across a
+full run's ~1.05M updates. What remains is float32 round-off, accumulating linearly in the largest
+single-weight excursion — about 1.9e-02 over a run, roughly 9% of these weights' rms — while leaving
+the vector the unit actually computes with unchanged. That is jitter, not decay and not learning.
+
+**Without homeostasis it is decay.** The same bench run loses **2.0% of the norm per 20 000 updates**,
+which compounds to a collapse over a run: a `motor` arm would shrink its 3,386 uncredited synapses and
+be a covert global weight-decay experiment reported as a dimension result. So masked arms are **only
+supported with homeostasis on**; a config validator refuses the combination, and the test asserts both
+directions — norm conserved with it, norm lost without it — so the dependency is measured rather than
 assumed.
+
+**And it is measured in the campaign, not only on the bench.** Drift is reported separately for
+**excluded** and **credited** synapses per arm, so the claim that excluded weights only jitter is
+checked on the real substrate at the real scale rather than argued from this table. Note the residual is
+a property of the rule that **every** plastic result already carries; what a restricted set changes is
+that it becomes the *only* update those synapses receive.
 
 Two distinct things follow, and the design keeps them apart:
 
@@ -50,14 +66,28 @@ MLP sweep and to the PPO reference already on the record.
 | arm | perturbed set | units | adaptable synapses | draws/decision |
 |---|---|---|---|---|
 | `full` | every unit, every step — **today's behaviour** | 302 | 3709 | 1208 |
-| `causal` | per-step reach mask | 302 | 3709 | **672** |
+| `causal` | per-step reach mask | 277 | 3538 | **672** |
 | `hop1` | within 1 hop of the readout pool | 109 | 1476 | 436 |
 | `motor` | the readout pool itself | 39 | 323 | 156 |
 | `motor_last` | the readout pool, **last settling step only** | 39 | 323 | **39** |
 
+Realised causally-connected draws, measured from the built masks: `full` 672 of 1208, `causal` 672
+of 672, `hop1` **366 of 436** — a hop-1 unit cannot reach the pool from the last step — `motor` 156
+of 156, `motor_last` 39 of 39.
+
 Each carries **its own frozen control** at the same σ and the **same mask**, freezing only the update —
 R.1's lesson, so the perturbation's cost to the policy is matched across each pair and the contrast
 measures the update alone. Eight seeds, 3000 episodes. **Ten arms, 80 runs.**
+
+**Correction, 2026-09-13, before any arm ran.** The table above first gave `causal` as 302 units and
+3709 adaptable synapses, on the reasoning that it removes only draws that cannot matter. The
+implementation shows that is wrong in one respect: the **25** units at four hops or more are never
+perturbed at *any* step, so their **171** incoming synapses are never credited either. `causal` is
+therefore 277 units and 3538 synapses, coinciding with the units of a "within 3 hops" set.
+
+What it gives up is credit those synapses could never have earned informatively — their units cannot
+influence the action from any settling step — so the claim "no signal lost" still holds, while the
+claim "every synapse stays adaptable" does not. Both are now stated.
 
 `hop2` (247 units, 988 draws) is deliberately omitted: it is within 1.2× of `full` on the axis under
 test and would spend 16 runs to interpolate a curve the other arms already bracket.

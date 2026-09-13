@@ -47,7 +47,7 @@ always noise. 277 + 25 = 302.
   | mask | units | adaptable synapses | draws/decision |
   |---|---|---|---|
   | none — today | 302 | 3709 | 1208 |
-  | causal per-step reach | 302 | 3709 | 672 |
+  | causal per-step reach | 277 | 3538 | 672 |
   | ≤ 2 hops | 247 | 3242 | 988 |
   | ≤ 1 hop | 109 | 1476 | 436 |
   | **motor pool only** | **39** | **323** | **156** |

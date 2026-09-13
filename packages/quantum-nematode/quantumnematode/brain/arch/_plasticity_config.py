@@ -42,6 +42,23 @@ ThirdFactorRouting = Literal["global", "pathway"]
 # correlation.
 EligibilityMode = Literal["hebbian", "node_perturbation"]
 
+# Which units the per-unit perturbation is drawn for. "full" perturbs every unit at every
+# settling step, which is what every recorded result ran. The others restrict the set, and a
+# unit outside it draws nothing: because the eligibility is pre (x) perturbation, every synapse
+# ONTO an unperturbed unit keeps a zero trace and is never credited.
+#
+# "causal" is not a restriction of what can learn but of what can be credited without having
+# been able to matter. A readout that reads a subset of units at a finite settling depth leaves
+# a perturbation injected at step s able to reach it only from within depth-minus-s hops; the
+# rest write eligibility against an outcome they could not influence. Masking exactly those
+# removes variance and no signal.
+#
+# The remaining names restrict by graph distance to the readout, so the perturbed set shrinks
+# while every unit in it can still affect behaviour -- which an arbitrary subset would not
+# guarantee on a substrate whose units differ widely in their influence on the output.
+PerturbationSet = Literal["full", "causal", "hop1", "motor", "motor_last"]
+RESTRICTED_PERTURBATION_SETS = frozenset({"causal", "hop1", "motor", "motor_last"})
+
 # Rules that read the eligibility trace, and so require it to be enabled.
 PLASTIC_RULES = frozenset({"three_factor", "hebbian"})
 # Plastic rules that apply no neuromodulatory factor — the ablation floors.
@@ -154,6 +171,10 @@ class PlasticityConfigMixin(BaseModel):
     # counterfactual the network never took -- so an arm using it is a new arm.
     plasticity_eligibility: EligibilityMode = "hebbian"
     plasticity_node_noise: float = Field(default=0.0, ge=0.0)
+    # "full" is the default so every recorded plastic result reproduces unchanged. A restricted
+    # set needs a substrate that can derive one from its own wiring and readout, so the dense
+    # yardstick refuses anything else -- the same division of labour as third_factor="pathway".
+    plasticity_perturbation_set: PerturbationSet = "full"
 
     # The perturbation scale may decay over episodes rather than stay fixed. It has two
     # incompatible jobs: as a probe it must be large enough to move behaviour, or the
@@ -259,6 +280,30 @@ class PlasticityConfigMixin(BaseModel):
                 "plasticity_node_noise: with no perturbation the eligibility is identically "
                 "zero, and the arm would look like a rule that learns nothing rather than one "
                 "given nothing to learn from."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_perturbation_set(self) -> PlasticityConfigMixin:
+        """Refuse a restricted perturbation set that would silently become a decay manipulation.
+
+        The rule's weight decay is unconditional -- it writes every plastic weight whether or not
+        that weight has a trace -- so the synapses a restricted set excludes still shrink on every
+        update. What restores them is the homeostatic rescale, which returns each unit's incoming
+        norm to its construction target exactly; decay is purely radial and the rescale is purely
+        radial, so they cancel. Without homeostasis they do not, and the excluded synapses decay
+        across the run: the arm would be a global weight-decay experiment reported as a result
+        about the perturbation dimension.
+        """
+        if self.plasticity_perturbation_set in RESTRICTED_PERTURBATION_SETS and (
+            not self.plasticity_homeostasis
+        ):
+            msg = (
+                f"plasticity_perturbation_set={self.plasticity_perturbation_set!r} requires "
+                "plasticity_homeostasis=True: the weight decay is unconditional, so without the "
+                "homeostatic rescale to cancel it the synapses this set excludes decay across the "
+                "run and the arm measures decay rather than the perturbation dimension."
             )
             raise ValueError(msg)
         return self

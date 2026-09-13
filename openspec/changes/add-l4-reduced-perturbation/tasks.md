@@ -25,10 +25,13 @@
   that can never contribute); the causal mask's draw count is **672** at depth 4; a `forward_pass_depth`
   other than 4 changes the mask; a declaration that does not match the derived set raises; and the
   MLP raises on any set but `full`.
-- [ ] 1.6b The homeostasis dependency, **measured in both directions**: a masked unit's incoming
-  synapses do not move across an episode with `plasticity_homeostasis: true`, and **do** move with it
-  false. The second half is what makes the first a finding rather than an assumption, and it pins why
-  the validator in 1.2b exists.
+- [ ] 1.6b The homeostasis dependency, **measured in both directions**: with
+  `plasticity_homeostasis: true` a unit's incoming norm is conserved exactly under decay alone, and
+  with it false the norm is lost. The second half is what makes the first a finding rather than an
+  assumption, and it pins why the validator in 1.2b exists. The cancellation is radial and not
+  bit-exact — float32 round-off leaves a linear single-weight excursion at a conserved norm and a
+  cosine of 1 − 3e-05 over a run — so the assertion is on the **norm**, which is the load-bearing
+  property, with the residual measured rather than asserted away.
 
 ## 2. The cell and the arms
 
@@ -48,7 +51,9 @@
   per arm where that arm's own frozen mean differs, with both reported and a downgrade naming which
   minimum failed.
 - [ ] 3.3 Per-arm drift from its own frozen control, with the seed set a parameter (R.1's defect) and
-  unavailable reported as unavailable rather than zero.
+  unavailable reported as unavailable rather than zero. Reported **separately for excluded and credited
+  synapses**, so the bench claim that excluded weights only jitter is checked on the real substrate at
+  the real scale.
 - [ ] 3.4 The completeness guard: no verdict from a campaign missing any registered cell.
 - [ ] 3.5 The three registered verdicts plus a partial reading that states the ordering.
 - [ ] 3.6 Tests for 3.1–3.5, including a fixture where `motor_last` wins and `motor` does not.

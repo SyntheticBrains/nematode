@@ -24,7 +24,7 @@ in a single chemical-synapse hop.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import numpy as np
 import torch
@@ -36,6 +36,7 @@ from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._plasticity_config import (
     UNMODULATED_RULES,
+    PerturbationSet,
     PlasticityConfigMixin,
 )
 from quantumnematode.brain.arch._policy import (
@@ -336,6 +337,24 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
         raise ValueError(msg)
 
 
+class PerturbationDimension(TypedDict):
+    """What a declared perturbation set costs, recorded with every run.
+
+    A dimension claim whose numbers have to be reconstructed afterwards is what the preceding
+    width sweep had to do, so these travel with the result rather than being derivable from it.
+    """
+
+    perturbation_set: str
+    units: int
+    adaptable_synapses: int
+    draws_per_decision: int
+    settling_depth: int
+    # How many of those draws can reach the readout before settling ends. Below
+    # ``draws_per_decision``, the difference is exploration credited against an outcome it could
+    # not influence.
+    causally_connected_draws: int
+
+
 class ConnectomeTopology(nn.Module):
     """Forward-pass network whose connectivity is the Cook 2019 connectome.
 
@@ -372,6 +391,9 @@ class ConnectomeTopology(nn.Module):
     _predator_lateral_alm_indices: torch.Tensor
     # Thermotaxis projection (allocated only when ``enable_thermotaxis_projection``).
     _thermotaxis_neuron_indices: torch.Tensor
+    # Declared at class level like the other buffers so attribute access is typed as a
+    # tensor rather than falling through Module.__getattr__ to Tensor | Module.
+    _perturbation_mask: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -382,6 +404,7 @@ class ConnectomeTopology(nn.Module):
         node_noise: float = 0.0,
         node_noise_schedule: NodeNoiseSchedule | None = None,
         perturbation_seed: int | None = None,
+        perturbation_set: PerturbationSet = "full",
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
@@ -419,6 +442,7 @@ class ConnectomeTopology(nn.Module):
         # integer, not a buffer: it never enters the state dict, so a checkpoint written before
         # schedules existed still loads.
         self._node_noise_schedule = node_noise_schedule
+        self.perturbation_set = perturbation_set
         self._schedule_steps_begun = 0
         self._perturbation_generator = torch.Generator()
         if perturbation_seed is not None:
@@ -633,6 +657,16 @@ class ConnectomeTopology(nn.Module):
         self._motor_class_slices: list[tuple[int, int]] = [
             (boundaries[k], boundaries[k + 1]) for k in range(_N_ACTIONS)
         ]
+        # ── Which units the perturbation is drawn for ──────────────
+        # Shape (depth, n_neurons): one row per settling step, so a set may depend on the step.
+        # Built here because it needs both the motor pool above and the chemical mask, and
+        # registered as a transient buffer -- derived from the wiring, never learned, so a
+        # checkpoint written before it existed still loads.
+        self.register_buffer(
+            "_perturbation_mask",
+            self._build_perturbation_mask(perturbation_set, flat, device),
+        )
+
         # Readout maps the 4 motor classes → action outputs: 4 discrete logits,
         # or the 2-D continuous Gaussian mean.
         readout_out_dim = CONTINUOUS_ACTION_DIM if continuous else _N_ACTIONS
@@ -868,6 +902,96 @@ class ConnectomeTopology(nn.Module):
     def plastic_fan_in_axes(self) -> list[int]:
         """The chemical matrix is ``[pre, post]``: a neuron's incoming synapses are a column."""
         return [0]
+
+    def _readout_hop_distances(self, motor_indices: list[int]) -> torch.Tensor:
+        """Hops from each unit to the nearest readout neuron, over directed chemical edges.
+
+        The forward pass propagates ``chem_mat.T @ h``, so influence travels pre -> post along
+        the chemical mask. This walks that relation backwards from the readout pool, giving each
+        unit the number of settling steps its perturbation needs before it can reach the action.
+
+        Gap junctions are deliberately excluded: they are frozen and bidirectional, and the
+        weights they couple are not the ones a perturbation credits. Excluding them makes the
+        distance an OVER-estimate, so a mask built from it may withhold a draw that could have
+        mattered through a gap path -- the direction the record has to state.
+        """
+        unreachable = self.n_neurons + 1
+        distance = torch.full((self.n_neurons,), unreachable, dtype=torch.long)
+        distance[motor_indices] = 0
+        # Rows are pre, columns post; a pre with an edge into any unit at distance d is at d + 1.
+        edges = self.m_chem.to(torch.bool).cpu()
+        for step in range(1, self.n_neurons):
+            reached = distance == step - 1
+            if not bool(reached.any()):
+                break
+            incoming = edges[:, reached].any(dim=1)
+            newly = incoming & (distance > step)
+            if not bool(newly.any()):
+                continue
+            distance[newly] = step
+        return distance
+
+    def _build_perturbation_mask(
+        self,
+        perturbation_set: PerturbationSet,
+        motor_indices: list[int],
+        device: torch.device,
+    ) -> torch.Tensor:
+        """One boolean row per settling step: which units this set draws a perturbation for.
+
+        ``full`` is every unit at every step, which is what every recorded result ran, and is
+        built without touching the graph so it cannot depend on it.
+        """
+        depth = self.forward_pass_depth
+        if perturbation_set == "full":
+            return torch.ones((depth, self.n_neurons), dtype=torch.bool, device=device)
+
+        distance = self._readout_hop_distances(motor_indices)
+        mask = torch.zeros((depth, self.n_neurons), dtype=torch.bool)
+        for step in range(depth):
+            # A perturbation injected at this step has ``depth - 1 - step`` further steps to
+            # travel, so it reaches the readout only from within that many hops.
+            budget = depth - 1 - step
+            if perturbation_set == "causal":
+                mask[step] = distance <= budget
+            elif perturbation_set == "hop1":
+                mask[step] = distance <= 1
+            elif perturbation_set == "motor":
+                mask[step] = distance == 0
+            elif perturbation_set == "motor_last":
+                mask[step] = (distance == 0) if step == depth - 1 else False
+            else:  # pragma: no cover - the Literal is exhaustive
+                msg = f"unknown perturbation set {perturbation_set!r}"
+                raise ValueError(msg)
+        return mask.to(device)
+
+    def perturbation_dimension(self) -> PerturbationDimension:
+        """Report the declared set and what it costs: units, adaptable synapses, draws per decision.
+
+        Recorded with every run, because a dimension claim whose numbers have to be
+        reconstructed afterwards is what R.1 had to do.
+        """
+        mask = self._perturbation_mask
+        ever = mask.any(dim=0)
+        adaptable = int(self.m_chem.to(torch.bool)[:, ever].sum().item())
+        return PerturbationDimension(
+            perturbation_set=self.perturbation_set,
+            units=int(ever.sum().item()),
+            adaptable_synapses=adaptable,
+            draws_per_decision=int(mask.sum().item()),
+            settling_depth=self.forward_pass_depth,
+            causally_connected_draws=int((mask & self._causal_reference_mask()).sum().item()),
+        )
+
+    def _causal_reference_mask(self) -> torch.Tensor:
+        """Build the per-step reach mask, for reporting how much of a set can reach the action."""
+        motor = self._motor_flat_indices.cpu().tolist()
+        distance = self._readout_hop_distances(motor)
+        depth = self.forward_pass_depth
+        reference = torch.zeros((depth, self.n_neurons), dtype=torch.bool)
+        for step in range(depth):
+            reference[step] = distance <= depth - 1 - step
+        return reference.to(self._perturbation_mask.device)
 
     @property
     def plastic_perturbations(self) -> list[torch.Tensor]:
@@ -1139,7 +1263,7 @@ class ConnectomeTopology(nn.Module):
         # One scale for the whole episode's settling steps: the schedule is indexed by
         # episode, so every step within one draws at the same magnitude.
         scale = self.current_node_noise
-        for _ in range(self.forward_pass_depth):
+        for settling_step in range(self.forward_pass_depth):
             preact = chem_mat.T @ h + gap_mat.T @ h
             if self.node_noise > 0.0:
                 # Into the PRE-activation, at EVERY settling step. Perturbing only the settled
@@ -1155,6 +1279,13 @@ class ConnectomeTopology(nn.Module):
                         )
                         * scale
                     )
+                    # The declared set, per step. Drawn first and then masked rather than drawn
+                    # only for the selected units, so the random stream does not depend on the
+                    # set: two sets at one seed differ by which draws are USED, which is what
+                    # makes them comparable. A unit masked to zero contributes nothing to the
+                    # forward pass and -- since the eligibility is pre (x) perturbation -- leaves
+                    # every synapse onto it with a zero trace.
+                    step_noise = step_noise * self._perturbation_mask[settling_step]
                 perturbation = step_noise if perturbation is None else perturbation + step_noise
                 preact = preact + step_noise
             h = torch.tanh(preact)
@@ -1461,6 +1592,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             node_noise=config.plasticity_node_noise,
             node_noise_schedule=config.node_noise_schedule(),
             perturbation_seed=self.seed,
+            perturbation_set=config.plasticity_perturbation_set,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,
@@ -2127,6 +2259,9 @@ class ConnectomePPOBrain(ClassicalBrain):
         "chem_pathway",
         # Per-step perturbation state, drawn fresh and cleared per episode.
         "node_perturbation",
+        # Derived at construction from the wiring and the readout pool, not learned: a brain
+        # rebuilds it, and persisting it would refuse every checkpoint written before it existed.
+        "_perturbation_mask",
     )
 
     def _load_topology_state(self, topology_state: dict[str, Any]) -> None:

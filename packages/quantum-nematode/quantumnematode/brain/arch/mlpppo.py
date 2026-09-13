@@ -393,6 +393,17 @@ class MLPPPOBrain(ClassicalBrain):
                 ThreeFactorRule,
             )
 
+            if config.plasticity_perturbation_set != "full":
+                # Same division of labour as the pathway guard below: a restricted set is derived
+                # from a substrate's own wiring and readout, and a dense stack has neither a graph
+                # to measure hop distance over nor a readout that reads a subset of its units. A
+                # silently-ignored set here would report a restricted arm that ran unrestricted.
+                msg = (
+                    f"plasticity_perturbation_set={config.plasticity_perturbation_set!r} is not "
+                    "available on this substrate: the set is derived from graph distance to the "
+                    "readout, and a dense layer has no wiring to measure it over."
+                )
+                raise ValueError(msg)
             if config.third_factor == "pathway":
                 # Guarded by a config validator too, and repeated here because a config built
                 # by `model_copy` skips validators: this substrate has no transmitter
