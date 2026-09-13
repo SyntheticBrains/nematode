@@ -68,6 +68,16 @@
 - [ ] 4.4 If `full` learns, or the frozen floor is at the ceiling, the campaign does not launch and the
   change is amended under a dated note.
 
+## 4b. σ calibration on this substrate *(amendment, 2026-09-13)*
+
+- [ ] 4b.1 The `motor` arm at σ ∈ {0.05, 0.1}, learning and frozen, seeds 101–104 — 16 runs. σ 0.2 is
+  the pilot's eight `motor` runs and is not re-run.
+- [ ] 4b.2 Four configs, each differing from the σ 0.2 arm by `plasticity_node_noise` alone.
+- [ ] 4b.3 Apply the registered rule: the σ maximising the learning arm's plateau-tail mean foods, with
+  the gap and the frozen arm's retention of the unperturbed 3.82-food prior reported at every point.
+- [ ] 4b.4 Apply the stop clause: if no σ lifts the learning arm above **3.82 foods**, record
+  `not_reducible` from the pilot and calibration rather than launching the campaign.
+
 ## 5. Campaign
 
 - [ ] 5.1 Launch record committed first; no branch switches while it runs.

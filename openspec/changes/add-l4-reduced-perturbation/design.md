@@ -195,3 +195,39 @@ one. That is the risk the `hop1` arm exists to bracket, at 1476 synapses.
   is **conservative in the wrong direction** — it may mask a draw that could have mattered through a gap
   path. The arm is registered with that stated, and the gap-inclusive variant is named as the follow-up
   rather than silently folded in.
+
+______________________________________________________________________
+
+## Amendment, 2026-09-13 — calibrate σ on this substrate before the campaign
+
+The pilot passed both registered gates: the platform has room (frozen 1.9 of 20 foods against PPO's
+19.31) and `full` has not learned (2.55 of 20, **0.00% full clear**, all 3000 episodes FAILED). The
+direction is as predicted — `motor` +1.11 foods on 4/4 seeds against `full` +0.61 on 4/4 — but at 7% of
+the 15.49-foods reachable gap it is **below the registered 1.55-foods minimum**, so the campaign as
+registered would most likely record `not_reducible`.
+
+**It also surfaced an uncalibrated knob that may matter more than the mask.** These frozen controls
+perturb; 058's did not. σ 0.2 takes the frozen prior from **3.82 foods to 1.9 — it halves it** before any
+learning happens. σ 0.2 was selected on the **one-step control** and carried to the MLP; **no connectome
+arm has ever had it calibrated**, and this is the tension 052 named: the σ that makes the rule learn is
+the σ that makes a competent policy unrunnable.
+
+**Added, before the campaign**: the `motor` arm at **σ ∈ {0.05, 0.1}**, learning and frozen, on the
+pilot's disjoint seeds 101–104 — **16 runs**, about 30 minutes. σ 0.2 is not re-run; the pilot's eight
+`motor` runs are that point of the grid.
+
+**The decision rule, fixed before these run.** The campaign takes the σ that **maximises the learning
+arm's plateau-tail mean foods**, with the learning-minus-frozen gap and the frozen arm's retention of the
+unperturbed 3.82-food prior reported beside every point. Ties go to the **larger** σ, which carries more
+signal. The absolute level is primary rather than the gap, because the question is whether the rule
+**learns the cell** — not whether it beats a floor its own noise damaged.
+
+**And it can stop the campaign.** If no σ lifts the learning arm above the **unperturbed frozen prior of
+3.82 foods**, then at 39 perturbed units — inside the band where the MLP reached 15.7 to 18.8 foods — this
+substrate is not learning this cell at any tested scale. That answers the campaign's question at pilot
+cost, and `not_reducible` is recorded from 24 runs instead of 104.
+
+**A measurement the pilot already delivers, independent of what follows.** The connectome badly
+underperforms the MLP at matched dimension: R.1 reached 18.83 foods at 16 units, 15.72 at 32 and 8.34 at
+64, while this substrate's 39-unit arm reaches **2.99**. Perturbation dimension does not transfer across
+substrates — registered as a caveat, now a number.
