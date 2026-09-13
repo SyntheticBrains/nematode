@@ -126,11 +126,19 @@ jobs:
         run: |
           uv sync --extra cpu --extra pixel --extra torch --dev
 
+      # `least_duration` is greedy longest-processing-time: it sorts by name, then assigns the
+      # longest-running test to whichever shard is currently lightest. The default
+      # `duration_based_chunks` instead cuts the collection order into contiguous blocks, so its
+      # balance depends on where the heavy tests happen to sit in that order and one test can
+      # overshoot a block. On the current suite the two score 1.00x and 1.05x, and `least_duration`
+      # is additionally independent of collection order, which is what keeps the shards' views of
+      # the split identical.
       - name: Run tests
         run: |
           uv run pytest -m "not nightly" \
             --splits 5 --group ${{ matrix.group }} \
             --durations-path .test_durations \
+            --splitting-algorithm least_duration \
             -n logical \
             --cov --cov-branch --cov-report=xml \
             --tb=short --color=yes

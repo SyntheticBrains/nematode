@@ -100,13 +100,13 @@ uv run pytest -m nightly -k "foraging_small" -v              # one nightly confi
 
 Nightly benchmark ranges live in [`e2e_benchmarks.json`](packages/quantum-nematode/tests/quantumnematode_tests/e2e_benchmarks.json) and are derived from the logbooks; if you change a config or training parameter you may need to update them, with the logbook evidence for the new range.
 
-**CI sharding.** The `Tests` workflow splits the suite into five `pytest-split` shards balanced by the committed `.test_durations` file. Tests missing from that file still run, so it only needs regenerating when one shard is visibly slower than the others:
+**CI sharding.** The `Tests` workflow splits the suite into five `pytest-split` shards, balanced by the committed `.test_durations` file and assigned with the `least_duration` algorithm. A test missing from that file still runs, but it is **not** unestimated — `pytest-split` budgets it at the mean of the recorded durations, so a stale file silently misbalances the shards and its own balance report cannot show it. The `test durations freshness` pre-commit hook fails above 10% unmeasured; regenerate with:
 
 ```bash
-uv run pytest -m "not nightly" -p no:randomly --store-durations --durations-path .test_durations
+uv run pytest -m "not nightly" --store-durations --clean-durations --durations-path .test_durations
 ```
 
-Locally the suite is unsharded and `-n logical` uses every logical core.
+`--clean-durations` drops entries for tests that no longer exist, and `pytest-split` writes the file without a trailing newline, so run `pre-commit` afterwards or Code Quality will fail on `fix end of files`. Locally the suite is unsharded and `-n logical` uses every logical core.
 
 ## Repository layout
 
