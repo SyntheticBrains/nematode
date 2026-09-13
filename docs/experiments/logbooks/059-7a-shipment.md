@@ -143,15 +143,26 @@ interpretation.
    units) on the calibrated hard-food cell — the 1/N arithmetic (Werfel, Xie & Seung 2005) that was
    never checked, and the yardstick that failed was 128 units against the connectome's 302, never a
    small-N control. ~80 runs, about **two hours**.
+
 2. **e-prop**, D1's named fallback: eligibility from the settling dynamics, a global learning signal,
    no perturbation noise. Cleared in the protocol's order — the one-step control, the hard-food cell,
    then the wiring contrast against the registered 20% bar.
-3. **Two stopping conditions, both fixed before the work starts.** e-prop **fails** if it does not beat
-   its own frozen floor on the hard-food cell by the registered one-sided paired test at 16 seeds under
-   BH-FDR — the gate V.1 and V.3 both cleared 32/32 at q = 0.000. And if its **implementation passes 3
-   active weeks**, that is itself the bound. On either, the programme stops and 7b proceeds under PPO,
-   after the power arithmetic for a species × wiring interaction and with the biological-plausibility
-   claim explicitly given up.
+
+3. **Acceptance and stopping, with bars rather than judgements — and three outcomes, not two.**
+
+   | outcome | test | what follows |
+   |---|---|---|
+   | **does not learn** | fails `wt_ppo − wt_frozen` on the hard-food cell, one-sided paired at 16 seeds under BH-FDR — the gate V.1 and V.3 both cleared 32/32 at q = 0.000 | the programme **stops**, 7b proceeds under PPO after the power arithmetic, biological-plausibility claim given up |
+   | **learns, misses the wiring bar** | clears the floor; its `wt_ppo − rn_ppo` efficiency contrast does not reach significance **and** ≥ 20% off time-to-competence | a **result, not a failure** — a plausible rule that learns the cell but does not read the wiring where PPO does. Written up; **7b stays gated**, since the gate asks for a rule that beats the null; option 1 becomes the live question rather than an automatic consequence |
+   | **learns and reads the wiring** | clears both | 7b's gate **opens by its letter**; the biological claim is available; the substrate rungs reopen |
+
+   The ≥ 20% minimum is the registered bar V.1 and V.3 were both held to; **+35.4%** and **+23.5%** are
+   what PPO achieved on those cells and are the reference, not the requirement. Separately, if e-prop's
+   **implementation passes 3 active weeks** that is itself a stopping condition, since the whole case
+   for this programme over running 7b under PPO is that it is cheaper.
+
+   The middle outcome is **distinct from B.5's re-registration gate**, which asks the same two
+   questions before a substrate rung is paid for: a rule in the middle outcome does not open B.5.
 
 **Why this rather than 7b under PPO now**: block V gave the rule programme a positive control it never
 had. Before it, a rule failing to find a wiring advantage was uninterpretable. Now the premise is
@@ -170,8 +181,11 @@ and are not revisited.
 
 ## Conclusions
 
-- **SPLIT-shipment**, taken under the roadmap's clause. Phase 7 sits at **7a shipped / 7b pending** and
-  is **not** COMPLETE.
+- **SPLIT-shipment**, taken under the roadmap's clause. Phase 7 sits at **7a complete / 7b pending**
+  and is **not** COMPLETE. The registered marker is "7a complete", mirroring Phase 6's
+  "6a COMPLETE / 6b pending"; it means **the shipment landed**, not that every MUST did. The one that
+  did not is the headline: no biologically plausible local rule reads the wiring, and the diffusible
+  layer that GO named was never built.
 - **Two citable results**: a systematic negative with a diagnosed cause, and a wiring advantage on
   learning speed demonstrated across two cells with its controls.
 - **GO unreachable, STOP overstating** — both recorded with why, not by elimination.

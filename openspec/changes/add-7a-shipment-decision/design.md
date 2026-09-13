@@ -66,7 +66,7 @@ SPLIT asks whether 7a forms a self-contained citable result before 7b work start
 The second is what makes this a shipment rather than a closure: Phase 7 was asked whether the wiring
 is load-bearing, and on the axis and cells where the question is measurable, it is.
 
-**Ratified: SPLIT**, with 7a shipped as those two results and 7b's status decided separately below.
+**Ratified: SPLIT**, with 7a complete as those two results and 7b's status decided separately below.
 The case against it is recorded rather than dismissed: the *headline* MUST — a local rule reading the
 wiring — is unmet, and a reader could hold that 7a without it is not a shipment. It is taken anyway
 because the clause SPLIT actually tests is whether 7a forms a self-contained citable result, and two
@@ -129,16 +129,29 @@ between the one-step control and C3 that did not exist before V.3.
    the connectome's 302, never a small-N control. If learning appears at small N and vanishes as N
    grows, the connectome's failure is explained by theory and the path is a rule whose speed does not
    scale as 1/N.
+
 2. **e-prop** — D1's named fallback family. Eligibility from the settling dynamics, a global learning
    signal, no perturbation noise. Cleared in the protocol's order: the one-step control, then the
    hard-food cell, then the wiring contrast on it against the registered 20% bar.
-3. **The stopping rule, with a bar rather than a judgement.** e-prop **fails** if it does not beat its
-   own frozen-weights floor on the hard-food cell by the registered paired test — `wt_ppo − wt_frozen`
-   one-sided at 16 seeds under BH-FDR, the gate V.1 and V.3 both used and both cleared 32/32 at
-   q = 0.000. On that failure the rule programme **stops** and **option 1 is taken**: after the power
-   arithmetic for a species × wiring interaction on a speed effect of this size, and with the
-   biological-plausibility claim explicitly given up. "Cannot learn" is not left to be decided once
-   the data exist.
+
+3. **Acceptance and stopping, with bars rather than judgements.** e-prop has to clear **two** things,
+   in order, and there are **three** outcomes — the middle one is easy to leave unregistered and is
+   registered here.
+
+   | outcome | test | what follows |
+   |---|---|---|
+   | **does not learn** | fails `wt_ppo − wt_frozen` on the hard-food cell, one-sided paired at 16 seeds under BH-FDR — the gate V.1 and V.3 both cleared 32/32 at q = 0.000 | the programme **stops** and **option 1 is taken** |
+   | **learns, misses the wiring bar** | clears the floor, but its `wt_ppo − rn_ppo` efficiency contrast does not reach **significance and ≥ 20%** off time-to-competence | a **result, not a failure**: a plausible rule that learns the cell but does not read the wiring, where PPO does (+35.4% and +23.5%). It is written up, and **7b stays gated** because the gate's letter asks for a rule that *beats the null*. Option 1 then becomes the live question rather than an automatic consequence |
+   | **learns and reads the wiring** | clears both | 7b's gate **opens by its letter**, the biological claim is available, and the substrate rungs reopen |
+
+   Block V's own figures are the reference the bar is set against, not the bar itself: the ≥ 20%
+   minimum is the registered one both V.1 and V.3 were held to, and **+35.4%** and **+23.5%** are what
+   PPO achieved on those cells. e-prop is not required to match PPO — only to clear the registered
+   minimum on a cell PPO cleared it on.
+
+   The middle outcome is **distinct from B.5's re-registration gate**, which asks the same two
+   questions of a rule *before* a substrate rung is paid for. A rule in the middle outcome does not
+   open B.5.
 
 **The substrate rungs reopen conditionally.** Every B-tranche rung asked its question of an
 instrument that could not learn. If the programme produces a rule that learns the hard-food cell,

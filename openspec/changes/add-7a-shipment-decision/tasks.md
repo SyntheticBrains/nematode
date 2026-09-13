@@ -33,9 +33,12 @@
   each.
 - [x] 4.2 The ratified choice recorded: the gate stands as written; the forward programme is rule
   families — the scale test, then e-prop cleared in the protocol's order — bounded by a stopping
-  rule, with block V's +35.4% and +23.5% as the positive control the rule must clear, and option 1 as
-  the named fallback whose two triggers are fixed now: e-prop failing its own frozen floor by the
-  registered gate, or its implementation passing 3 active weeks.
+  rule, with block V's ≥ 20% minimum as the bar e-prop must clear (its +35.4% and +23.5% being the
+  reference PPO achieved, not the requirement), **three registered outcomes** — does not learn, learns
+  but misses the wiring bar, learns and reads the wiring — and option 1 as the named fallback whose
+  triggers are fixed now: e-prop failing its own frozen floor by the registered gate, or its
+  implementation passing 3 active weeks. The middle outcome is a result rather than a failure, leaves
+  7b gated, and does not open B.5's re-registration.
 - [x] 4.3 The conditional reopening of the substrate rungs recorded: B.5, B.1, B.4 and B.4b
   re-registered fresh on the block-V cells with the block-V bar if a rule learns the hard-food cell;
   B.3 payable once B.5 can conclude; block I not revisited. B.5's gate restatement goes in as a
