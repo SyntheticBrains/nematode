@@ -368,6 +368,18 @@ class MLPPPOBrain(ClassicalBrain):
         # optimiser exist under a plastic rule too; they are simply never
         # used. The topology wraps the actor by reference (no rebuild, no
         # RNG, no new state-dict keys) and is where the traces live.
+        if config.plasticity_perturbation_set != "full":
+            # Checked before the learning rule is selected, because a restricted set is meaningless
+            # on this substrate under ANY rule: the set is derived from graph distance to a readout
+            # that reads a subset of its units, and a dense stack has neither. Inside the plastic
+            # branch this let a `learning_rule: ppo` config declare a set and run unrestricted,
+            # which would report a restricted arm that was never restricted.
+            msg = (
+                f"plasticity_perturbation_set={config.plasticity_perturbation_set!r} is not "
+                "available on this substrate: the set is derived from graph distance to the "
+                "readout, and a dense layer has no wiring to measure it over."
+            )
+            raise ValueError(msg)
         self.freeze_updates = config.freeze_updates
         self._uses_ppo = config.learning_rule == "ppo"
         self.topology = MLPTopology(

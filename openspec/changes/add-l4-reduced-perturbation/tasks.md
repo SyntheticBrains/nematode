@@ -1,0 +1,114 @@
+# Tasks
+
+## 1. The mechanism
+
+- [x] 1.1 A declarable perturbation set on the connectome topology: the per-step draw is multiplied by a
+  registered unit mask, so a unit outside the set draws nothing and — because the eligibility is
+  `h_prev ⊗ perturbation` — every synapse onto it keeps a zero trace and is never written.
+- [x] 1.2 The config surface: the declared set by name (`full`, `causal`, `hop1`, `motor`,
+  `motor_last`), validated against the loaded connectome, with `full` the default so **every committed
+  plastic connectome result reproduces unchanged**. The plasticity config is shared with the MLP, which
+  has no connectome to derive a set from, so anything but `full` **raises** there — the guard
+  `third_factor: pathway` already uses this pattern in `mlpppo.py`.
+- [x] 1.2b A config validator refusing a restricted set together with `plasticity_homeostasis: false`:
+  the rule's weight decay is unconditional, so without the homeostatic rescale to cancel it the excluded
+  synapses shrink across the run and the mask becomes a decay manipulation.
+- [x] 1.3 The hop-distance derivation from the loaded connectome: distance from each unit to the readout
+  pool over **directed chemical** edges, with the readout pool taken from the same motor-class
+  constants the readout itself uses, so the two cannot drift apart.
+- [x] 1.4 The per-step causal mask: at step `s`, perturb only units within `depth − s` hops. Derived
+  from `forward_pass_depth`, not hard-coded to 4.
+- [x] 1.5 Telemetry: the declared set, unit count, adaptable-synapse count and realised draws per
+  decision, recorded per run, with a **failure** when realised draws do not match the declaration.
+- [x] 1.6 Tests: the default reproduces the unmasked stream bit-for-bit; the hop distances match the
+  recon table (39/109/247/277 cumulative units at 0/1/2/3 hops, and **25** units at four hops or more
+  that can never contribute); the causal mask's draw count is **672** at depth 4; a `forward_pass_depth`
+  other than 4 changes the mask; a declaration that does not match the derived set raises; and the
+  MLP raises on any set but `full`.
+- [x] 1.6b The homeostasis dependency, **measured in both directions**: with
+  `plasticity_homeostasis: true` a unit's incoming norm is conserved exactly under decay alone, and
+  with it false the norm is lost. The second half is what makes the first a finding rather than an
+  assumption, and it pins why the validator in 1.2b exists. The cancellation is radial and not
+  bit-exact — float32 round-off leaves a linear single-weight excursion at a conserved norm and a
+  cosine of 1 − 3e-05 over a run — so the assertion is on the **norm**, which is the load-bearing
+  property, with the residual measured rather than asserted away.
+
+## 2. The cell and the arms
+
+- [x] 2.1 The hard-food connectome cell under the rule — the first plastic connectome config off the
+  2400-step C3 cell — at I.1's passing recipe, and ten configs: five masks × (learning, frozen).
+- [x] 2.2 Each frozen control carries the **same σ and the same mask**, freezing only the update.
+- [x] 2.3 Exact-key test: each config differs from its base by the cell keys, the recipe keys and its own
+  mask and arm keys, and nothing else.
+
+## 3. Harness
+
+- [x] 3.1 `scripts/analysis/l4_reduced_perturbation.py`: scan, plateau-tail mean foods through I.2's
+  graded family, each arm against its own frozen control, paired one-sided, BH-FDR across the five
+  masks.
+- [x] 3.2 Both effect minima together — **1.0 foods** of 20, and **10% of the reachable gap**, which
+  against 058's committed reference (PPO 19.31, frozen 3.82 over 32 seeds) is **1.55 foods**. Recomputed
+  per arm where that arm's own frozen mean differs, with both reported and a downgrade naming which
+  minimum failed.
+- [x] 3.3 Per-arm drift from its own frozen control, with the seed set a parameter (R.1's defect) and
+  unavailable reported as unavailable rather than zero. Reported **separately for excluded and credited
+  synapses**, so the bench claim that excluded weights only jitter is checked on the real substrate at
+  the real scale.
+- [x] 3.4 The completeness guard: no verdict from a campaign missing any registered cell.
+- [x] 3.5 The three registered verdicts plus a partial reading that states the ordering.
+- [x] 3.6 Tests for 3.1–3.5, including a fixture where `motor_last` wins and `motor` does not.
+
+## 4. Pilot (disjoint seeds 101–104)
+
+- [x] 4.1 `launch.md` committed before anything runs.
+- [x] 4.2 `full` and `motor`, learning and frozen, 16 runs: is the frozen floor off the ceiling, does
+  `full` reproduce the known failure, and what does a run actually cost?
+- [x] 4.3 Measured per-run wall time, and the campaign scheduled from it rather than from the proposal's
+  estimate.
+- [x] 4.4 If `full` learns, or the frozen floor is at the ceiling, the campaign does not launch and the
+  change is amended under a dated note.
+
+## 4b. σ calibration on this substrate *(amendment, 2026-09-13)*
+
+- [x] 4b.1 The `motor` arm at σ ∈ {0.05, 0.1}, learning and frozen, seeds 101–104 — 16 runs. σ 0.2 is
+  the pilot's eight `motor` runs and is not re-run.
+- [x] 4b.2 Four configs, each differing from the σ 0.2 arm by `plasticity_node_noise` alone.
+- [x] 4b.3 Apply the registered rule: the σ maximising the learning arm's plateau-tail mean foods, with
+  the gap and the frozen arm's retention of the unperturbed 3.82-food prior reported at every point.
+- [x] 4b.4 Apply the stop clause: if no σ lifts the learning arm above **3.82 foods**, record
+  `not_reducible` from the pilot and calibration rather than launching the campaign.
+
+## 4c. Action-noise calibration *(amendment, 2026-09-13)*
+
+- [x] 4c.1 The `motor` arm at σ 0.1 with `initial_log_std` ∈ {0.0, −0.5}, learning and frozen, seeds
+  101–104 — 16 runs. The −1.0 point is the σ-calibration's σ 0.1 runs and is not re-run.
+- [x] 4c.2 Four configs, each differing from the σ 0.1 arm by `initial_log_std` alone.
+- [x] 4c.3 Apply the registered rule: the setting maximising the learning arm's plateau-tail mean foods,
+  with the gap and the full-clear rate at every point; ties on foods to the higher full-clear, ties on
+  both to the pinned −1.0.
+- [x] 4c.4 State explicitly whether a rise in the learning arm is matched by a rise in the gap. Where it
+  is not, the gain is wandering rather than learning and the record says so.
+
+## 5. Campaign
+
+- [x] 5.1 Launch record committed first; no branch switches while it runs.
+- [x] 5.2 80 runs: ten arms × eight seeds at 3000 episodes, with `--track-experiment` so drift has
+  weights to read.
+- [x] 5.3 Per-seed CSV, the per-arm table with its dimension columns, and the verdict under
+  `supporting/061-l4-reduced-perturbation/`.
+
+## 6. The record
+
+- [x] 6.1 Logbook 061: the causal-reach table as a substrate measurement that stands whatever the arms
+  do; the per-arm results with units, adaptable synapses and draws per decision beside each; the drift
+  column; the verdict against the three registered outcomes.
+- [x] 6.2 The experiments index row.
+- [x] 6.3 State plainly whether **R.1b is unblocked and at which mask**, and what that mask gives up.
+- [x] 6.4 State what the result may not be cited as — in particular that a win at a reduced mask is a
+  win for a restricted learner, and that nothing here transfers to the 2400-step C3 cell.
+
+## 7. Close-out
+
+- [x] 7.1 `CHANGELOG.md`; the tracker (R.1c, and R.1b's block lifted or not); the roadmap only if the
+  reading changes.
+- [x] 7.2 Confirm no committed verdict changed, and that `full` reproduces the unmasked stream.
