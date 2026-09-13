@@ -92,7 +92,10 @@ brain:
     initial_log_std: -1.0
     plasticity_rate: 0.001
     plasticity_eligibility: node_perturbation
-    plasticity_node_noise: 0.2
+    # CALIBRATED on this substrate, 2026-09-13: 0.2 was carried from the one-step control by way
+    # of the MLP and had never been calibrated here. At the motor mask it costs the learning arm
+    # 46% of its level -- 2.989 foods against 4.361 at 0.1 -- so the campaign runs at 0.1.
+    plasticity_node_noise: 0.1
     # The pinned default, written out so the horizon is visible in the file rather than inherited.
     trace_decay: 0.9
     plasticity_perturbation_set: motor_last

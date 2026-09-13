@@ -346,3 +346,34 @@ signature of a **structural** limit rather than a hyperparameter one — which i
 finding predicts and which is why R.1d is registered separately rather than pursued as more tuning.
 
 **The campaign runs at σ 0.1 and `initial_log_std: -1.0`**, the latter unchanged from the recipe.
+
+### Correction, 2026-09-13 — the campaign was launched at the rejected σ and restarted
+
+The ten arm configs were generated **before** the σ calibration and carried `plasticity_node_noise: 0.2`.
+The calibration then chose **0.1**, this record said the campaign would run at 0.1, and the campaign was
+launched with the original configs — **at 0.2, the value the calibration rejected**. Caught at 32 of 80
+runs and stopped rather than left to finish: σ 0.2 costs the learning arm 46% of its level at the `motor`
+mask, so the whole grid would have been measured at an operating point already known to be wrong.
+
+All ten configs now pin **σ 0.1** with the calibration's reason in the file, the exact-key test pins it so
+a config drifting back cannot pass as registered, and the campaign is relaunched.
+
+**The 32 completed runs are kept**, under `campaigns/reduced-perturbation-sigma02-aborted/`. They are the
+σ 0.2 points for `full` and `causal` on the registered seeds 1–8, and they are informative:
+
+| set (σ 0.2, seeds 1–8) | learning foods | frozen foods | shift | seeds favouring | p | full clear |
+|---|---|---|---|---|---|---|
+| `full` | 2.238 | 2.350 | **−0.112** | 4/8 | 0.63 | 0.00% |
+| `causal` | 2.185 | 2.378 | **−0.192** | 3/8 | 0.73 | 0.00% |
+
+Two readings follow, and both stand independently of the relaunch.
+
+**`full` reproduces the known failure on the registered seeds** — the stop clause's letter this time, not
+only its rationale: the learning arm sits *below* its own frozen control. The pilot's +0.61 at 4/4 seeds
+was small-sample noise, and it becomes −0.112 at 4/8 on eight registered seeds. That is the clearest
+available argument for why the registered campaign uses eight seeds and the pilot decides nothing on its
+own.
+
+**The causal mask alone does not rescue anything at σ 0.2**, exactly as the honest prior said it would
+not: a 1.8× reduction in draws where the yardstick needed 16×. Removing 536 provably uninformative draws
+per decision leaves the arm at 2.185 foods against its floor's 2.378.

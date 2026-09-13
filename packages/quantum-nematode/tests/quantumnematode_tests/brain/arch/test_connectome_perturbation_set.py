@@ -254,7 +254,10 @@ _RECIPE = {
     "brain.config.initial_log_std": -1.0,
     "brain.config.plasticity_rate": 0.001,
     "brain.config.plasticity_eligibility": "node_perturbation",
-    "brain.config.plasticity_node_noise": 0.2,
+    # Calibrated on this substrate: 0.2 was carried from the one-step control and costs the
+    # learning arm 46% of its level here. Pinned in the test so a config drifting back to the
+    # uncalibrated value cannot pass as registered.
+    "brain.config.plasticity_node_noise": 0.1,
     "brain.config.trace_decay": 0.9,
 }
 _ARMS = ("full", "causal", "hop1", "motor", "motor_last")
