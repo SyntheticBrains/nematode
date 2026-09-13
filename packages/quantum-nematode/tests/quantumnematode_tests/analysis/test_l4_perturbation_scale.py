@@ -1,0 +1,655 @@
+"""The perturbation-scale sweep's reading, and what it refuses to conclude.
+
+Four failures these pin, each of which would look like a clean result:
+
+* a fit taken over crossing seeds alone, with the non-crossers unreported, turning a censored
+  metric into a positive slope;
+* a width whose capability control failed being scored as a null, which reads as evidence against a
+  mechanism that was never tested there;
+* a derived budget for a platform outside the fitted grid presented as a measurement of it;
+* a mixed reading resolved toward whichever registered verdict is nearer.
+"""
+
+# pyright: reportPrivateUsage=false
+
+from __future__ import annotations
+
+import math
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pytest
+import yaml
+
+_root = Path(__file__).resolve()
+while _root != _root.parent and not (_root / "scripts" / "analysis").is_dir():
+    _root = _root.parent
+sys.path.insert(0, str(_root / "scripts" / "analysis"))
+
+import l4_mixture_statistic as ms  # noqa: E402  # pyright: ignore[reportMissingImports]
+import l4_perturbation_scale as ps  # noqa: E402  # pyright: ignore[reportMissingImports]
+import l4_rule_positive_control as pc  # noqa: E402  # pyright: ignore[reportMissingImports]
+
+CONFIG_DIR = _root / "configs" / "scenarios" / "foraging"
+BASE = "mlpppo_small_continuous2d_fick_adaptive_klinotaxis"
+
+
+@dataclass
+class _Record:
+    """The fields of a scanned run this harness reads."""
+
+    success: float
+    foods: float
+
+
+# ═══════════════════════ trials-to-criterion and censoring ═══════════════════
+
+
+class TestTrialsToCriterion:
+    def test_the_first_crossing_block_sets_the_time(self) -> None:
+        assert ps.trials_to_criterion([0.0, 0.0, 1.0, 1.0], 0.5) == 3 * pc.BLOCK
+
+    def test_a_seed_that_never_crosses_has_no_time(self) -> None:
+        # Not a large number and not the horizon: a censored seed has no criterion time at all, and
+        # substituting the budget would put a fabricated point into the fit.
+        assert ps.trials_to_criterion([0.0, 0.1, 0.2], 0.5) is None
+
+    def test_the_sustained_variant_needs_consecutive_blocks(self) -> None:
+        blocks = [0.0, 1.0, 0.0, 1.0, 1.0]
+        assert ps.trials_to_criterion(blocks, 0.5) == 2 * pc.BLOCK
+        assert ps.trials_to_criterion(blocks, 0.5, sustain=2) == 5 * pc.BLOCK
+
+    def test_a_sustain_below_one_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="sustain must be >= 1"):
+            ps.trials_to_criterion([1.0], 0.5, sustain=0)
+
+
+def _width_cell(
+    units: int,
+    trials: dict[int, int | None],
+    *,
+    void: bool = False,
+) -> dict[str, Any]:
+    return {
+        "perturbed_units": units,
+        "void": void,
+        "per_seed": {
+            str(seed): {"trials_to_criterion": value, "trials_to_criterion_sustained": value}
+            for seed, value in trials.items()
+        },
+    }
+
+
+class TestTheFit:
+    def _exact_inverse_n(self) -> dict[int, dict[str, Any]]:
+        """Build an exact linear-in-N series: 100 trials per unit, identical across seeds."""
+        return {
+            width: _width_cell(width, dict.fromkeys(ps.SEEDS, 100 * width))
+            for width in ps.S1_WIDTHS
+        }
+
+    def test_an_exact_law_recovers_slope_one(self) -> None:
+        fit = ps.fit_1n(self._exact_inverse_n())
+        assert fit["defined"]
+        assert fit["slope"] == pytest.approx(1.0, abs=1e-9)
+        assert fit["meets_bar"]
+
+    def test_the_prediction_and_the_bar_travel_with_the_slope(self) -> None:
+        fit = ps.fit_1n(self._exact_inverse_n())
+        assert fit["prediction"] == 1.0
+        assert fit["bar"] == ps.SLOPE_BAR
+
+    def test_a_flat_series_does_not_meet_the_bar(self) -> None:
+        flat = {width: _width_cell(width, dict.fromkeys(ps.SEEDS, 5000)) for width in ps.S1_WIDTHS}
+        fit = ps.fit_1n(flat)
+        assert fit["slope"] == pytest.approx(0.0, abs=1e-9)
+        assert not fit["meets_bar"]
+
+    def test_censored_seeds_are_excluded_and_counted(self) -> None:
+        widths = self._exact_inverse_n()
+        # Half the seeds never cross at the two largest widths, which is the shape censoring takes:
+        # it bites hardest where the prediction says learning is slowest.
+        for width in (64, 128):
+            for seed in (5, 6, 7, 8):
+                widths[width]["per_seed"][str(seed)]["trials_to_criterion"] = None
+        fit = ps.fit_1n(widths)
+        assert fit["n_points"] == len(ps.S1_WIDTHS) * len(ps.SEEDS) - 8
+        assert fit["defined"]
+
+    def test_a_void_width_contributes_nothing(self) -> None:
+        widths = self._exact_inverse_n()
+        widths[128]["void"] = True
+        fit = ps.fit_1n(widths)
+        assert 128 not in fit["widths_in_fit"]
+
+    def test_crossings_at_one_width_only_leave_the_fit_undefined(self) -> None:
+        # A slope through a single x is not a slope; without this it would be fitted anyway.
+        widths = {
+            width: _width_cell(width, dict.fromkeys(ps.SEEDS, None)) for width in ps.S1_WIDTHS
+        }
+        widths[8] = _width_cell(8, dict.fromkeys(ps.SEEDS, 800))
+        fit = ps.fit_1n(widths)
+        assert not fit["defined"]
+        assert "single width" in fit["reason"]
+
+    def test_the_interval_is_reproducible(self) -> None:
+        first = ps.fit_1n(self._exact_inverse_n())
+        second = ps.fit_1n(self._exact_inverse_n())
+        assert first["ci_low"] == second["ci_low"]
+        assert first["ci_high"] == second["ci_high"]
+
+
+class TestTheDerivedBudget:
+    def test_every_figure_is_labelled_an_extrapolation(self) -> None:
+        fit = ps.fit_1n(
+            {
+                width: _width_cell(width, dict.fromkeys(ps.SEEDS, 100 * width))
+                for width in ps.S1_WIDTHS
+            },
+        )
+        for units, label in ((128, "yardstick"), (302, "connectome")):
+            row = ps.extrapolate(fit, units, label)
+            assert row["extrapolation"] is True
+            assert "not a measurement" in row["note"]
+
+    def test_a_platform_beyond_the_grid_is_flagged_as_outside_it(self) -> None:
+        fit = ps.fit_1n(
+            {
+                width: _width_cell(width, dict.fromkeys(ps.SEEDS, 100 * width))
+                for width in ps.S1_WIDTHS
+            },
+        )
+        assert ps.extrapolate(fit, ps.CONNECTOME_DRAWS, "draws")["outside_fitted_range"]
+        assert not ps.extrapolate(fit, 128, "yardstick")["outside_fitted_range"]
+
+    def test_an_undefined_fit_yields_no_budget(self) -> None:
+        row = ps.extrapolate({"defined": False}, 302, "connectome")
+        assert row["trials"] is None
+        assert row["extrapolation"] is True
+
+    def test_both_readings_of_the_connectomes_dimension_are_reported(self) -> None:
+        # 302 units and 1208 draws differ by the settling depth, and nothing in the record says
+        # which the arithmetic tracks, so a single figure would pick one silently.
+        assert ps.CONNECTOME_DRAWS == ps.CONNECTOME_UNITS * ps.CONNECTOME_SETTLING_STEPS
+
+
+# ═══════════════════════════ S1's width cells ════════════════════════════════
+
+
+def _s1_runs(rule_score: float, reference_score: float) -> list[dict[str, Any]]:
+    """Build a complete S1 run list where every width reads the same, for the clause tested."""
+    runs: list[dict[str, Any]] = []
+    for width in ps.S1_WIDTHS:
+        for seed in ps.SEEDS:
+            for arm, score in (("node_perturbation", rule_score), ("analytic", reference_score)):
+                runs.append(
+                    {
+                        "arm": arm,
+                        "seed": seed,
+                        "hidden": width,
+                        "score": score,
+                        "alignment": 0.0,
+                        "reward_blocks": [score] * 20,
+                    },
+                )
+    return runs
+
+
+class TestReachability:
+    """What a width can reach is a property of the width, so the reference is read per width."""
+
+    def _task(self) -> Any:
+        return pc.ContextualAssociation.default()
+
+    def test_a_failing_reference_voids_its_width(self) -> None:
+        task = self._task()
+        floor = task.cue_blind_floor(pc.NOISE)
+        runs = _s1_runs(rule_score=floor, reference_score=floor)
+        cell = ps.assess_s1_width(runs, 8, task)
+        assert cell["void"]
+        assert "analytic reference" in cell["void_reason"]
+
+    def test_a_void_width_is_not_normalised(self) -> None:
+        # Dividing by a broken reference would manufacture a number out of a failed control.
+        task = self._task()
+        floor = task.cue_blind_floor(pc.NOISE)
+        cell = ps.assess_s1_width(_s1_runs(floor, floor), 8, task)
+        assert cell["reachability_normalised"] is None
+
+    def test_a_passing_reference_normalises_the_rule(self) -> None:
+        task = self._task()
+        optimum = task.optimum(pc.NOISE)
+        floor = task.cue_blind_floor(pc.NOISE)
+        midpoint = floor + 0.5 * (optimum - floor)
+        cell = ps.assess_s1_width(_s1_runs(midpoint, optimum), 8, task)
+        assert not cell["void"]
+        assert cell["reachability_normalised"] == pytest.approx(0.5, abs=1e-6)
+
+    def test_the_censoring_rate_is_reported(self) -> None:
+        task = self._task()
+        floor = task.cue_blind_floor(pc.NOISE)
+        cell = ps.assess_s1_width(_s1_runs(floor, task.optimum(pc.NOISE)), 8, task)
+        assert cell["censored"] == len(ps.SEEDS)
+        assert cell["censoring_rate"] == pytest.approx(1.0)
+
+
+class TestS1Verdicts:
+    def test_a_platform_that_does_not_reproduce_its_pass_is_void(self) -> None:
+        task = pc.ContextualAssociation.default()
+        floor = task.cue_blind_floor(pc.NOISE)
+        s1 = ps.analyse_s1(_s1_runs(floor, task.optimum(pc.NOISE)))
+        assert s1["verdict"] == "void"
+        assert not s1["baseline_reproduces"]
+        assert "drifted" in s1["why"]
+
+    def test_the_largest_widths_pass_is_reported_separately(self) -> None:
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        s1 = ps.analyse_s1(_s1_runs(optimum, optimum))
+        assert s1["baseline_reproduces"]
+        assert s1["largest_width_passes"]
+
+
+# ════════════════════════════ S2's scan and gates ════════════════════════════
+
+
+class TestScanKeepsTheWidthsApart:
+    def _dir(self, tmp_path: Path, names: list[str]) -> Path:
+        logs = tmp_path / "logs"
+        logs.mkdir()
+        for name in names:
+            (logs / name).write_text("")
+        return tmp_path
+
+    def _name(self, arm: str, width: int, seed: int) -> str:
+        suffix = "_frozen" if arm == "frozen" else ""
+        stem = "ppo" if arm == "ppo" else "nodepert"
+        return f"{ps._S2_STEM}_{stem}_w{width:02d}{suffix}-seed{seed}.log"
+
+    def test_a_label_from_another_campaign_is_skipped(self, tmp_path: Path) -> None:
+        out = ps.scan_s2(self._dir(tmp_path, ["something_else-seed1.log"]))
+        assert all(not cell["learning"] for cell in out.values())
+
+    def test_an_unregistered_width_is_skipped(self, tmp_path: Path) -> None:
+        out = ps.scan_s2(self._dir(tmp_path, [self._name("nodepert", 96, 1)]))
+        assert 96 not in out
+
+    def test_a_duplicate_run_is_refused(self, tmp_path: Path, monkeypatch: Any) -> None:
+        # Two logs claiming one cell: the second would otherwise replace the first and the campaign
+        # would score as if one run had happened. `seed1` and `seed01` are distinct filenames that
+        # parse to the same seed, which is how this arises in practice.
+        monkeypatch.setattr(ps, "read_log", lambda *_a, **_k: _Record(0.0, 0.0))
+        root = self._dir(
+            tmp_path,
+            [self._name("nodepert", 8, 1), f"{ps._S2_STEM}_nodepert_w08-seed01.log"],
+        )
+        with pytest.raises(ValueError, match="duplicates an already-read run"):
+            ps.scan_s2(root)
+
+    def test_a_width_written_without_its_padding_is_the_same_cell(self, tmp_path: Path) -> None:
+        # `w8` and `w08` name one width; without this the unpadded form would be silently dropped as
+        # an unregistered width and its runs would vanish from the campaign.
+        out = ps.scan_s2(self._dir(tmp_path, [f"{ps._S2_STEM}_nodepert_w8-seed1.log"]))
+        assert 8 in out
+
+    def test_a_frozen_ppo_arm_is_not_a_registered_cell(self, tmp_path: Path) -> None:
+        name = f"{ps._S2_STEM}_ppo_w08_frozen-seed1.log"
+        out = ps.scan_s2(self._dir(tmp_path, [name]))
+        assert not out[8]["ppo"]
+
+
+def _width_data(
+    learning: float,
+    frozen: float,
+    ppo: float,
+    *,
+    ppo_clear: float = ms.COMPETENT_THRESHOLD + 5.0,
+    spread: float = 0.0,
+) -> dict[str, Any]:
+    """One width's three arms. ``spread`` breaks the ties a rank test needs broken."""
+    return {
+        "learning": {s: _Record(0.0, learning + spread * i) for i, s in enumerate(ps.SEEDS)},
+        "frozen": {s: _Record(0.0, frozen) for s in ps.SEEDS},
+        "ppo": {s: _Record(ppo_clear, ppo) for s in ps.SEEDS},
+        "logs": {},
+    }
+
+
+class TestTheCapabilityGate:
+    def test_both_parts_must_hold(self) -> None:
+        result = ps.capability(_width_data(1.0, 1.0, 9.0))
+        assert result["beats_floor"]
+        assert result["competent"]
+        assert result["passes"]
+
+    def test_a_width_that_cannot_beat_the_floor_fails_and_says_so(self) -> None:
+        result = ps.capability(_width_data(1.0, 9.0, 9.0))
+        assert not result["beats_floor"]
+        assert "beats the do-nothing floor" in result["why"]
+
+    def test_an_incompetent_width_fails_on_the_committed_threshold(self) -> None:
+        result = ps.capability(_width_data(1.0, 1.0, 9.0, ppo_clear=0.0))
+        assert not result["competent"]
+        assert result["competence_threshold"] == ms.COMPETENT_THRESHOLD
+
+    def test_the_comparator_mismatch_is_recorded(self) -> None:
+        # The frozen comparator perturbs and the PPO arm does not, so this is a floor check on the
+        # width rather than a matched pair, and the record must not read as the latter.
+        assert "not a matched pair" in ps.capability(_width_data(1.0, 1.0, 9.0))["comparator_note"]
+
+
+class TestBothEffectMinima:
+    def _cell(self, effect: float, reachable: float) -> dict[str, Any]:
+        return {
+            "graded": {"defined": True, "effect": effect},
+            "capability": {"reachable_gap_foods": reachable},
+        }
+
+    def test_a_shift_below_the_absolute_minimum_fails(self) -> None:
+        result = ps._minima(self._cell(0.4, 20.0))
+        assert not result["passes"]
+        assert f"the {ps.MIN_FOODS} foods minimum" in result["why"]
+
+    def test_a_shift_below_the_reachable_share_fails(self) -> None:
+        # 1.5 foods clears the absolute bar but is under a tenth of a 20-food reachable gap.
+        result = ps._minima(self._cell(1.5, 20.0))
+        assert not result["passes"]
+        assert "reachable-gap" in result["why"]
+
+    def test_both_together_pass(self) -> None:
+        assert ps._minima(self._cell(3.0, 20.0))["passes"]
+
+    def test_an_unreadable_reachable_gap_does_not_pass_by_default(self) -> None:
+        assert not ps._minima(self._cell(5.0, float("nan")))["passes"]
+
+
+class TestS2Verdicts:
+    def _scanned(self, cells: dict[int, dict[str, Any]]) -> dict[int, dict[str, Any]]:
+        return {width: cells[width] for width in ps.S2_WIDTHS}
+
+    def test_an_uninterpretable_width_is_never_a_null(self) -> None:
+        # A width whose control failed has not tested the mechanism, so it cannot count against it.
+        cells = {
+            width: _width_data(1.0, 1.0, 1.0, ppo_clear=0.0, spread=0.1) for width in ps.S2_WIDTHS
+        }
+        out = ps.analyse_s2(self._scanned(cells))
+        assert all(out["widths"][w]["verdict"] == "uninterpretable" for w in ps.S2_WIDTHS)
+        assert out["verdict"] == "void"
+        assert out["excluded_uninterpretable"] == list(ps.S2_WIDTHS)
+
+    def test_an_uninterpretable_width_is_excluded_from_the_trend(self) -> None:
+        cells = {width: _width_data(6.0, 1.0, 12.0, spread=0.1) for width in ps.S2_WIDTHS}
+        cells[4] = _width_data(6.0, 1.0, 1.0, ppo_clear=0.0, spread=0.1)
+        out = ps.analyse_s2(self._scanned(cells))
+        assert 4 not in out["interpretable"]
+        assert 4 not in (out["trend"].get("widths") or [])
+
+    def test_a_significant_shift_below_the_minima_is_not_a_win(self) -> None:
+        cells = {width: _width_data(1.4, 1.0, 12.0, spread=0.01) for width in ps.S2_WIDTHS}
+        out = ps.analyse_s2(self._scanned(cells))
+        assert out["verdict"] == "not_rescued"
+        assert {out["widths"][w]["verdict"] for w in ps.S2_WIDTHS} <= {
+            "below_min_effect",
+            "no_improvement",
+        }
+
+    def test_a_clear_shift_at_every_width_is_a_rescue(self) -> None:
+        cells = {width: _width_data(9.0, 1.0, 12.0, spread=0.1) for width in ps.S2_WIDTHS}
+        out = ps.analyse_s2(self._scanned(cells))
+        assert out["verdict"] == "rescued"
+        assert out["winners"] == list(ps.S2_WIDTHS)
+
+    def test_the_perturbed_unit_count_is_twice_the_width(self) -> None:
+        cells = {width: _width_data(1.0, 1.0, 12.0, spread=0.1) for width in ps.S2_WIDTHS}
+        out = ps.analyse_s2(self._scanned(cells))
+        for width in ps.S2_WIDTHS:
+            assert out["widths"][width]["perturbed_units"] == 2 * width
+
+    def test_a_flat_series_is_reported_as_constant_not_as_a_failed_test(self) -> None:
+        # Spearman on a constant series returns not-a-number, which in a record reads as a failed
+        # test rather than as the flat series it is.
+        cells = {width: _width_data(9.0, 1.0, 12.0) for width in ps.S2_WIDTHS}
+        trend = ps.analyse_s2(self._scanned(cells))["trend"]
+        assert not trend["defined"]
+        assert trend["constant_at"] == pytest.approx(8.0)
+
+    def test_a_varying_series_is_correlated(self) -> None:
+        cells = {
+            width: _width_data(9.0 - 0.5 * index, 1.0, 12.0, spread=0.1)
+            for index, width in enumerate(ps.S2_WIDTHS)
+        }
+        trend = ps.analyse_s2(self._scanned(cells))["trend"]
+        assert trend["defined"]
+        assert trend["in_predicted_direction"]
+
+    def test_the_trend_is_labelled_descriptive(self) -> None:
+        cells = {width: _width_data(9.0, 1.0, 12.0, spread=0.1) for width in ps.S2_WIDTHS}
+        out = ps.analyse_s2(self._scanned(cells))
+        assert out["trend"]["descriptive_only"]
+
+
+class TestAnIncompleteCampaignIsNotScored:
+    def _complete(self) -> dict[int, dict[str, Any]]:
+        return {
+            width: {
+                "learning": dict.fromkeys(ps.SEEDS, object()),
+                "frozen": dict.fromkeys(ps.SEEDS, object()),
+                "ppo": dict.fromkeys(ps.SEEDS, object()),
+                "logs": {},
+            }
+            for width in ps.S2_WIDTHS
+        }
+
+    def test_a_complete_campaign_passes(self) -> None:
+        ps.require_complete_s2(self._complete())
+
+    def test_a_missing_capability_run_refuses_a_verdict(self) -> None:
+        # Without this the width would be called interpretable on an arm that never ran.
+        scanned = self._complete()
+        del scanned[4]["ppo"][3]
+        with pytest.raises(ValueError, match=r"w04/ppo seeds \[3\]"):
+            ps.require_complete_s2(scanned)
+
+    def test_the_registered_campaign_is_a_hundred_and_twenty_runs(self) -> None:
+        assert len(ps.S2_WIDTHS) * 3 * len(ps.SEEDS) == 120
+
+
+# ═════════════════════════ the combined verdict ══════════════════════════════
+
+
+class TestTheCombinedVerdict:
+    def _s1(self, verdict: str, *, largest_passes: bool) -> dict[str, Any]:
+        return {"verdict": verdict, "why": "fixture", "largest_width_passes": largest_passes}
+
+    def test_scale_limited_needs_all_three_halves(self) -> None:
+        out = ps.combine(
+            self._s1("scale_dependent", largest_passes=False),
+            {"verdict": "rescued"},
+        )
+        assert out["verdict"] == "scale_limited"
+
+    def test_a_confirmed_law_without_a_rescue_is_a_second_defect(self) -> None:
+        out = ps.combine(
+            self._s1("scale_dependent", largest_passes=False),
+            {"verdict": "not_rescued"},
+        )
+        assert out["verdict"] == "arithmetic_only"
+        assert "second" in out["why"]
+
+    def test_a_flat_sweep_with_the_largest_width_passing_leaves_the_record_standing(self) -> None:
+        out = ps.combine(self._s1("flat", largest_passes=True), {"verdict": "not_rescued"})
+        assert out["verdict"] == "not_scale_limited"
+        assert "keeps its reading" in out["why"]
+
+    def test_a_mixed_reading_is_recorded_as_mixed(self) -> None:
+        # A rescue with no dependence fits no registered outcome; resolving it toward the nearer
+        # verdict is the move this phase has repeatedly caught itself making.
+        out = ps.combine(self._s1("flat", largest_passes=True), {"verdict": "rescued"})
+        assert out["verdict"] == "mixed"
+        assert "both halves stated" in out["why"]
+
+    def test_a_below_bar_slope_with_a_failing_largest_width_is_mixed(self) -> None:
+        out = ps.combine(
+            self._s1("below_bar", largest_passes=False),
+            {"verdict": "not_rescued"},
+        )
+        assert out["verdict"] == "mixed"
+
+    def test_a_void_sweep_carries_no_combined_verdict(self) -> None:
+        out = ps.combine(self._s1("void", largest_passes=False), {"verdict": "rescued"})
+        assert out["verdict"] == "void"
+
+    def test_s1_alone_is_a_registered_state(self) -> None:
+        out = ps.combine(self._s1("scale_dependent", largest_passes=False), None)
+        assert out["verdict"] == "s1_only"
+        assert "does not depend on S2" in out["why"]
+
+
+# ═══════════════════════════════ the configs ═════════════════════════════════
+
+# The keys every S2 config is allowed to differ from the committed base by, and nothing else.
+_CELL_KEYS = {
+    "max_steps": 350,
+    "satiety.satiety_gain_per_food": 0.2,
+    "environment.foraging.target_foods_to_collect": 20,
+}
+_WIDTH_KEYS = ("brain.config.actor_hidden_dim", "brain.config.critic_hidden_dim")
+_PLASTIC_KEYS = {
+    "brain.config.learning_rule": "three_factor",
+    "brain.config.enable_activity_traces": True,
+    "brain.config.plasticity_normalise_modulator": True,
+    "brain.config.plasticity_normalise_trace": True,
+    "brain.config.plasticity_homeostasis": True,
+    "brain.config.initial_log_std": -1.0,
+    "brain.config.plasticity_rate": 0.001,
+    "brain.config.plasticity_eligibility": "node_perturbation",
+    "brain.config.plasticity_node_noise": 0.2,
+    "brain.config.trace_decay": 0.9,
+    "brain.config.activation": "tanh",
+    "brain.config.plastic_layers": "hidden",
+}
+_PPO_KEYS = {
+    "brain.config.learning_rule": "ppo",
+    "brain.config.initial_log_std": -1.0,
+    "brain.config.activation": "tanh",
+}
+
+
+def _flat(mapping: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in mapping.items():
+        path = f"{prefix}{key}"
+        if isinstance(value, dict):
+            out.update(_flat(value, path + "."))
+        else:
+            out[path] = value
+    return out
+
+
+def _load(name: str) -> dict[str, Any]:
+    return _flat(yaml.safe_load((CONFIG_DIR / f"{name}.yml").read_text()))
+
+
+def _arm_name(arm: str, width: int) -> str:
+    suffix = "_frozen" if arm == "frozen" else ""
+    stem = "ppo" if arm == "ppo" else "nodepert"
+    return f"{BASE}_hard350_{stem}_w{width:02d}{suffix}"
+
+
+class TestTheConfigsDifferByTheRegisteredKeysOnly:
+    """A stray key would be a second manipulation nobody registered."""
+
+    @pytest.mark.parametrize("width", ps.S2_WIDTHS)
+    @pytest.mark.parametrize("arm", ["nodepert", "frozen", "ppo"])
+    def test_only_the_registered_keys_move(self, arm: str, width: int) -> None:
+        base, variant = _load(BASE), _load(_arm_name(arm, width))
+        allowed = dict(_CELL_KEYS)
+        allowed.update(_PPO_KEYS if arm == "ppo" else _PLASTIC_KEYS)
+        if arm == "frozen":
+            allowed["brain.config.freeze_updates"] = True
+        for key in _WIDTH_KEYS:
+            allowed[key] = width
+        assert set(base) - set(variant) == set(), "no base key may be dropped"
+        for key, value in variant.items():
+            if key in base and base[key] == value:
+                continue
+            assert key in allowed, f"{key} moved but is not a registered key"
+            assert value == allowed[key], f"{key} is {value!r}, registered as {allowed[key]!r}"
+
+    @pytest.mark.parametrize("width", ps.S2_WIDTHS)
+    def test_the_frozen_arm_still_perturbs(self, width: int) -> None:
+        # The perturbation's cost must be present in BOTH arms of the pair, so the contrast measures
+        # the update's benefit rather than the net effect of switching perturbation on.
+        frozen = _load(_arm_name("frozen", width))
+        assert frozen["brain.config.plasticity_node_noise"] == 0.2
+        assert frozen["brain.config.freeze_updates"] is True
+
+    @pytest.mark.parametrize("width", ps.S2_WIDTHS)
+    def test_the_capability_arm_shares_the_architecture_it_certifies(self, width: int) -> None:
+        ppo, plastic = _load(_arm_name("ppo", width)), _load(_arm_name("nodepert", width))
+        for key in (
+            "brain.config.activation",
+            "brain.config.actor_hidden_dim",
+            "brain.config.num_hidden_layers",
+            "brain.config.initial_log_std",
+            "brain.config.entropy_coef",
+        ):
+            assert ppo[key] == plastic[key], f"{key} differs between the capability and rule arms"
+
+    @pytest.mark.parametrize("width", ps.S2_WIDTHS)
+    def test_the_capability_arm_carries_no_plasticity_keys(self, width: int) -> None:
+        ppo = _load(_arm_name("ppo", width))
+        assert not [k for k in ppo if "plasticity" in k or k.endswith("plastic_layers")]
+
+    def test_the_grid_spans_the_one_step_sweeps_units(self) -> None:
+        # Two hidden layers with hidden-only plasticity: the perturbed-unit count is twice the
+        # width, so this grid and S1's are the same grid in the dimension under test.
+        assert tuple(ps.S2_HIDDEN_LAYERS * w for w in ps.S2_WIDTHS) == ps.S1_WIDTHS
+
+    @pytest.mark.parametrize("width", ps.S2_WIDTHS)
+    def test_every_arm_runs_two_hidden_layers(self, width: int) -> None:
+        for arm in ("nodepert", "frozen", "ppo"):
+            assert _load(_arm_name(arm, width))["brain.config.num_hidden_layers"] == 2
+
+
+# ═════════════════ the committed control is left where it was ════════════════
+
+
+class TestTheWidthAxisLeavesTheCommittedControlAlone:
+    def test_the_default_width_is_the_pinned_one(self) -> None:
+        assert pc.HIDDEN == 8
+
+    def test_the_default_and_the_explicit_pin_are_the_same_run(self) -> None:
+        # Every value recorded by I.0-I.3b took the default; if threading the width had shifted the
+        # random stream, those records would no longer reproduce.
+        task = pc.ContextualAssociation.default()
+        default = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2)
+        pinned = pc.run_arm(
+            "node_perturbation",
+            1,
+            task,
+            trials=300,
+            node_noise=0.2,
+            hidden=pc.HIDDEN,
+        )
+        assert default["score"] == pinned["score"]
+        assert default["alignment"] == pinned["alignment"]
+
+    def test_a_different_width_is_a_different_run(self) -> None:
+        task = pc.ContextualAssociation.default()
+        narrow = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2, hidden=8)
+        wide = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2, hidden=64)
+        assert narrow["score"] != wide["score"]
+        assert wide["hidden"] == 64
+
+    def test_a_width_below_one_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="hidden must be >= 1"):
+            pc._actor(3, __import__("torch").Generator(), 0)
+
+    def test_the_reward_curve_is_carried_without_changing_the_score(self) -> None:
+        task = pc.ContextualAssociation.default()
+        run = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2)
+        assert len(run["reward_blocks"]) == 300 // pc.BLOCK
+        assert math.isfinite(run["score"])

@@ -88,9 +88,17 @@ PERTURBING_ARMS = frozenset({"node_perturbation", "node_perturbation_annealed"})
 ARMS = ("three_factor", "node_perturbation", "node_perturbation_annealed", "hebbian", "analytic")
 
 
-def _actor(n_cues: int, generator: torch.Generator) -> nn.Sequential:
-    """``Linear(K, 8) -> tanh -> Linear(8, 1)``: the panels' arrangement, hidden layer plastic."""
-    first, readout = nn.Linear(n_cues, HIDDEN), nn.Linear(HIDDEN, 1)
+def _actor(n_cues: int, generator: torch.Generator, hidden: int = HIDDEN) -> nn.Sequential:
+    """``Linear(K, H) -> tanh -> Linear(H, 1)``: the panels' arrangement, hidden layer plastic.
+
+    ``hidden`` defaults to the pinned ``HIDDEN``, so every value recorded by I.0-I.3b reproduces
+    unchanged; it is a parameter because the width is the perturbation dimension and the count of
+    perturbed units on this arrangement is exactly ``hidden``.
+    """
+    if hidden < 1:
+        msg = f"hidden must be >= 1, got {hidden}"
+        raise ValueError(msg)
+    first, readout = nn.Linear(n_cues, hidden), nn.Linear(hidden, 1)
     with torch.no_grad():
         for layer in (first, readout):
             nn.init.orthogonal_(layer.weight, generator=generator)
@@ -155,12 +163,13 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
     schedule: NodeNoiseSchedule | None,
     trace_decay: float,
     homeostasis: bool,
+    hidden: int = HIDDEN,
 ) -> tuple[MLPTopology, ThreeFactorRule | None]:
     """Build the topology and the rule one arm runs over."""
     generator = torch.Generator().manual_seed(seed)
     perturbing = arm in PERTURBING_ARMS
     topology = MLPTopology(
-        _actor(task.n_cues, generator),
+        _actor(task.n_cues, generator, hidden),
         enable_activity_traces=True,
         trace_decay=trace_decay,
         plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
@@ -200,6 +209,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     trace_decay: float = TRACE_DECAY,
     *,
     homeostasis: bool = True,
+    hidden: int = HIDDEN,
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
     _validate_delay(delay)
@@ -215,6 +225,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         schedule=schedule,
         trace_decay=trace_decay,
         homeostasis=homeostasis,
+        hidden=hidden,
     )
 
     rewards: list[float] = []
@@ -302,6 +313,10 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     return {
         "arm": arm,
         "seed": seed,
+        # The perturbation dimension. On this arrangement -- one plastic layer, frozen readout --
+        # the count of perturbed units IS the width, which is why this control can vary it without
+        # varying anything else about how the estimate is formed.
+        "hidden": hidden,
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
         "rate": rate if arm in {"three_factor", *PERTURBING_ARMS} else None,
         "node_noise": node_noise if perturbing else None,
@@ -328,6 +343,14 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # The arm's score: mean reward over the last 1000 trials, so a run is judged
         # on where it ended rather than on the exploration it did getting there.
         "score": float(np.mean(rewards[-BLOCK * 10 :])) if rewards else float("nan"),
+        # Per-block mean reward, in order. The score above is where a run ENDED; a rate needs the
+        # whole curve, and a trailing-block series is the coarsest form that still carries one.
+        # Deliberately absent from the per-seed CSV and from the control's JSON, both of which
+        # list their fields explicitly, so no committed record changes shape.
+        "reward_blocks": [
+            float(np.mean(rewards[start : start + BLOCK]))
+            for start in range(0, len(rewards) - len(rewards) % BLOCK, BLOCK)
+        ],
         "modulator": float(np.mean(modulators)) if modulators else float("nan"),
         "mean_abs_delta": float(np.mean(traces)) if traces else float("nan"),
         "alignment": float(np.mean(alignments)) if alignments else float("nan"),
