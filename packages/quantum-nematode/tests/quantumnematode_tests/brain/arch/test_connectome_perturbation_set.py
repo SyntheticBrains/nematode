@@ -15,6 +15,7 @@ Four failures these pin, each of which would look like a result about the pertur
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -236,3 +237,90 @@ class TestTheHomeostasisDependencyIsMeasured:
                 "without homeostasis the uncredited weights must lose norm, which is the confound "
                 "the validator refuses"
             )
+
+
+# ───────────────────────── the R.1c arms as configured ──────────────────────
+
+_CONFIG_DIR = Path(__file__).resolve().parents[6] / "configs" / "scenarios" / "foraging"
+_BASE = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350"
+_STEM = f"{_BASE}_nodepert"
+# The recipe every arm adds to the committed base, and nothing else.
+_RECIPE = {
+    "brain.config.learning_rule": "three_factor",
+    "brain.config.enable_activity_traces": True,
+    "brain.config.plasticity_normalise_modulator": True,
+    "brain.config.plasticity_normalise_trace": True,
+    "brain.config.plasticity_homeostasis": True,
+    "brain.config.initial_log_std": -1.0,
+    "brain.config.plasticity_rate": 0.001,
+    "brain.config.plasticity_eligibility": "node_perturbation",
+    "brain.config.plasticity_node_noise": 0.2,
+    "brain.config.trace_decay": 0.9,
+}
+_ARMS = ("full", "causal", "hop1", "motor", "motor_last")
+
+
+def _flat(mapping: dict, prefix: str = "") -> dict:
+    out: dict = {}
+    for key, value in mapping.items():
+        path = f"{prefix}{key}"
+        if isinstance(value, dict):
+            out.update(_flat(value, path + "."))
+        else:
+            out[path] = value
+    return out
+
+
+def _load_yaml(name: str) -> dict:
+    import yaml
+
+    return _flat(yaml.safe_load((_CONFIG_DIR / f"{name}.yml").read_text()))
+
+
+class TestTheArmsDifferByTheRegisteredKeysOnly:
+    """A stray key would be a second manipulation nobody registered."""
+
+    @pytest.mark.parametrize("arm", _ARMS)
+    @pytest.mark.parametrize("frozen", [False, True])
+    def test_only_the_recipe_and_the_set_move(self, arm: str, *, frozen: bool) -> None:
+        base = _load_yaml(_BASE)
+        variant = _load_yaml(f"{_STEM}_{arm}{'_frozen' if frozen else ''}")
+        allowed = dict(_RECIPE)
+        allowed["brain.config.plasticity_perturbation_set"] = arm
+        if frozen:
+            allowed["brain.config.freeze_updates"] = True
+        assert set(base) - set(variant) == set(), "no base key may be dropped"
+        for key, value in variant.items():
+            if key in base and base[key] == value:
+                continue
+            assert key in allowed, f"{key} moved but is not a registered key"
+            assert value == allowed[key], f"{key} is {value!r}, registered as {allowed[key]!r}"
+
+    @pytest.mark.parametrize("arm", _ARMS)
+    def test_the_frozen_control_keeps_the_same_mask_and_sigma(self, arm: str) -> None:
+        # The perturbation's cost to the policy must be present in BOTH arms of the pair, so the
+        # contrast measures the update and not the net effect of switching perturbation on.
+        learning = _load_yaml(f"{_STEM}_{arm}")
+        frozen = _load_yaml(f"{_STEM}_{arm}_frozen")
+        assert frozen["brain.config.plasticity_perturbation_set"] == arm
+        assert (
+            frozen["brain.config.plasticity_node_noise"]
+            == learning["brain.config.plasticity_node_noise"]
+        )
+        assert frozen["brain.config.freeze_updates"] is True
+        assert learning["brain.config.freeze_updates"] is False
+
+    @pytest.mark.parametrize("arm", _ARMS)
+    @pytest.mark.parametrize("frozen", [False, True])
+    def test_every_arm_pins_homeostasis(self, arm: str, *, frozen: bool) -> None:
+        # The validator refuses a restricted set without it; pinning it in the file means no arm
+        # depends on a default to stay interpretable.
+        variant = _load_yaml(f"{_STEM}_{arm}{'_frozen' if frozen else ''}")
+        assert variant["brain.config.plasticity_homeostasis"] is True
+
+    def test_the_cell_is_the_committed_hard_food_one(self) -> None:
+        # Block V's cell, so a result here is comparable to the PPO reference already recorded.
+        base = _load_yaml(_BASE)
+        assert base["max_steps"] == 350
+        assert base["environment.foraging.target_foods_to_collect"] == 20
+        assert base["brain.config.forward_pass_depth"] == 4
