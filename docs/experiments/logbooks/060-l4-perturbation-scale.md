@@ -1,7 +1,19 @@
 # 060: The Perturbation Dimension — the Rule Solves a Multi-Step Cell at Eight Units and Fails at 128 (7a-ii R.1 / Phase 7)
 
-**Status**: PENDING — S1 and the S2 pilot are complete; the registered 120-run campaign is running.
-This record is written up to that point and its verdict is not yet assigned.
+**Status**: completed — **`mixed`**, and the mixture is the finding. The three-factor rule under node
+perturbation **solves a multi-step foraging task at eight perturbed units** — 19.64 foods of 20 and
+**90.7% full clear** against PPO's 19.69 and 87.6%, on 8 registered seeds, from a frozen control at
+1.69 foods — and collapses **monotonically** as the dimension grows, to **3.0% full clear at the 128
+units every failing MLP yardstick arm ran** (rho −1.000, drift rising 0.91 → 1.39). On the one-step
+positive control the same dimension costs almost nothing: every width from 8 to 128 passes, the
+yardstick's exact two-layer arrangement passes and reaches criterion *fastest*, and time-to-criterion
+**falls** with the dimension (slope −0.149, CI [−0.239, −0.061], against a prediction of +1.0). So the
+constraint is neither the dimension nor the horizon alone but their **product**: the per-unit credit is
+diluted by the number of perturbed units times the number of decisions the reward is shared over.
+Neither pre-registered row fits, and the registration fixed the treatment in advance — a mixed reading
+is recorded as mixed with both halves stated. **No committed verdict is changed**; [Logbook
+059](059-7a-shipment.md)'s re-registration condition is **met**, and 7b's gate **stands as written**
+because the wiring contrast under a local rule has still not been run.
 
 **Branch**: `feat/l4-perturbation-scale`.
 
@@ -171,3 +183,137 @@ Both are the shape that turns a sample size into a finding:
 - **The capability gate reported `fails` when its test could not fire.** It now returns
   `underpowered` with the smallest reachable p, and a width whose gate is undecided is recorded as
   neither a null nor uninterpretable.
+
+## The campaign: a monotone collapse from 90.7% to 3.0% full clear across the dimension
+
+120 runs, five widths × three arms × seeds 1–8, 3000 episodes, 5022 s wall clock. All 120 succeeded.
+
+| perturbed units | learning foods | learning full clear | frozen foods | PPO foods | PPO clear | shift | q | seeds favouring | drift | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **8** | **19.64** | **90.7%** | 1.69 | 19.69 | 87.6% | **+17.94** | 0.007 | **8/8** | 0.91 | `beats_control` |
+| 16 | 18.83 | 79.2% | 1.31 | 19.94 | 96.8% | +17.53 | 0.007 | 8/8 | 1.07 | `beats_control` |
+| 32 | 15.72 | 53.6% | 3.89 | 19.93 | 96.8% | +11.83 | 0.007 | 8/8 | 1.27 | `beats_control` |
+| 64 | 8.34 | 12.9% | 3.54 | 19.92 | 97.0% | +4.80 | 0.055 | 5/8 | 1.38 | `no_improvement` |
+| **128** | **4.23** | **3.0%** | 2.00 | 19.72 | 94.6% | +2.22 | 0.024 | 7/8 | 1.39 | `beats_control` |
+
+**The rule matches PPO at eight perturbed units.** 19.64 foods of 20 and **90.7% full clear** against
+PPO's 19.69 and 87.6%, from a frozen control at 1.69 foods. The same rule at the yardstick's 128 units
+reaches 4.23 foods and **3.0%**.
+
+**The collapse is monotone across the whole grid** — foods 19.64, 18.83, 15.72, 8.34, 4.23; full clear
+90.7%, 79.2%, 53.6%, 12.9%, 3.0% — a perfect rank correlation of the shift against the dimension
+(**rho −1.000**).
+
+**No width is capacity-limited and none is uninterpretable.** The capability arm reaches 19.69–19.94
+foods and 87.6–97.0% full clear at *every* width, the narrow end included, so the small-N end of the
+grid was never in doubt and the declared one-layer alternative was not needed. Four hidden units per
+layer, below the input dimension, is enough for both optimisers on this cell.
+
+**Drift rises monotonically with the dimension: 0.91, 1.07, 1.27, 1.38, 1.39.** At eight units the rule
+moves about its own weight norm and the resulting policy is *right*; at 128 it moves more and the
+policy is wrong. I.3b measured 1.28–1.31 at 128 units and read it as a signal pointing the wrong way.
+It is better read as **an over-dimensioned estimator's noise**: the same magnitude of writing is
+productive at low N and destructive at high N.
+
+### Two things in this table that are not clean, stated as they are
+
+**The 64-unit cell's label is ragged.** Its shift (+4.80) is more than twice the 128-unit cell's
+(+2.22), yet its q is worse — 0.055 against 0.024 — because only 5 of 8 seeds favour learning there
+against 7 of 8 at 128. A paired rank test responds to the **consistency of the sign, not the size of
+the shift**, which is the property I.3b's protocol warned about in advance. The effect sizes are
+monotone; the verdict labels are not, and the raggedness is the test's, not the data's.
+
+**At 128 units on this cell the rule is slightly above its frozen control**, where on the 2400-step C3
+cell [I.3b](supporting/055-l4-horizon-multistep/details.md) found it **below** (0.393 against 2.233).
+That is consistent rather than contradictory: the per-unit credit is diluted by units **and** steps, so
+128 units is merely useless over 350 steps and actively harmful over 2400.
+
+## Verdict: `mixed`, and that is the accurate label
+
+| half | reading |
+|---|---|
+| **S1** | `opposite_direction` — the rule passes at every width to 128, and time-to-criterion *falls* with the dimension (slope −0.149, CI [−0.239, −0.061]) |
+| **S2** | `rescued` — the rule solves the cell at 8 units and collapses monotonically to 3.0% full clear at 128 |
+
+Neither registered row fits. `scale_limited` required a **positive** S1 slope *and* 128 units failing
+the control; both are false. `not_scale_limited` required a flat S1 *and* no rescue; the second is
+false. The registration anticipated exactly this and fixed the treatment in advance: a mixed reading is
+**recorded as mixed with both halves stated**, not resolved toward whichever verdict is nearer.
+
+Stated as one sentence: **the perturbation dimension does not bind on a one-step task and binds
+decisively on a multi-step one.** That is a better result than either registered row, because it names
+the interaction rather than the axis — the per-unit credit is diluted by the number of perturbed units
+*times* the number of decisions the reward has to be shared over, and only the product matters.
+
+It also explains the two halves of the phase's record in one mechanism, which neither I.3's horizon
+finding nor this dimension finding does alone. They are the same constraint measured along two axes.
+
+## What this licenses, and what it does not
+
+**Licensed.** [Logbook 059](059-7a-shipment.md) fixed a condition in advance: "*If the programme
+produces a rule that learns the hard-food cell, B.5, B.1, B.4 and B.4b become askable and are
+re-registered fresh on the block-V cells with the block-V bar.*" **That condition is met.** The rule
+learns the block-V hard-food cell at 8 perturbed units, level with PPO, on 8 registered seeds.
+
+The obvious next registration is the one 7b's gate actually asks for and which **has not been run**:
+the **wild-type-versus-rewired-null wiring contrast under this rule at a working dimension**, held to
+block V's registered ≥ 20% bar. Until that runs, 7b's gate stands as written — its letter still
+requires a local rule beating the null, and no such contrast exists.
+
+**Not licensed: anything about the connectome.** It perturbs **302 neurons at each of four settling
+steps — 1208 draws per decision**, far beyond the failing end of this grid, where 128 units already
+sits at 3.0% full clear. This result does **not** predict that the connectome works; read plainly it
+predicts the opposite at its present dimension. What it makes worth building is a way to *reduce* the
+connectome's perturbation dimension — perturbing a subset of units rather than all 302 — which the
+substrate does not currently support, since `node_noise` is applied to every pre-activation.
+
+**No committed verdict is changed.** B.8's shipped negative recorded what had been measured, and every
+arm it summarised ran at 128 or 302 perturbed units. What this result shows is that the *scope* was
+narrower than the phrasing implied and the cause was a dimension nobody varied. Any re-read of those
+results is a **new registration**, as this change registered in advance, and not a relabelling.
+
+### What this may not be cited as
+
+- **A result about the connectome**, or about any substrate at a dimension above 32 units.
+- **A result about any other cell.** One cell: food-only klinotaxis, 350 steps, target 20, on the
+  calibrated continuous-2D substrate. The 2400-step C3 cell still fails at 128 units.
+- **A claim that the rule is a good gradient estimator.** Its measured alignment is +0.263 and nothing
+  here changes it; what changes is the reading of what that alignment is sufficient for.
+- **A measurement of the 1/N exponent.** Five widths, eight seeds, and S1 shows the law does not even
+  hold in the predicted direction on a one-step task.
+- **A wiring result.** No rewired null was run under this rule at any dimension.
+
+## Conclusions
+
+- **The rule solves a multi-step foraging task at eight perturbed units, level with PPO** — 19.64 foods
+  of 20, 90.7% full clear, 8/8 seeds, from a frozen floor of 1.69.
+- **Performance collapses monotonically with the perturbation dimension**, to 3.0% full clear at the
+  128 units every failing yardstick arm ran, with drift rising 0.91 → 1.39 as it does.
+- **On the one-step control the dimension costs almost nothing** — every width passes, and
+  time-to-criterion falls rather than rises — so the constraint is the **product** of dimension and
+  horizon, not either alone.
+- **Verdict `mixed`**, with both halves stated, under the clause registered for exactly this outcome.
+- **059's re-registration condition is met**, and the wiring contrast under a working local rule is the
+  next registration. **7b's gate still stands as written.**
+- **No committed verdict changed.**
+
+## Next Steps
+
+- [ ] The wiring contrast — wild type against its degree-preserving rewired null — **under this rule at
+  8 perturbed units**, on the block-V cell, against the registered 20% bar. This is what 7b's gate asks
+  for.
+- [ ] A reduced-perturbation-dimension mechanism for the connectome, without which no connectome arm
+  follows from this result.
+- [ ] Re-registration of B.5, B.1, B.4 and B.4b on the block-V cells at a working dimension, per 059.
+- [ ] R.2 (e-prop) is **not** retired: it remains the named fallback if the wiring contrast fails.
+
+## Data References
+
+- S1, the depth control and S2: [`supporting/060-l4-perturbation-scale/`](supporting/060-l4-perturbation-scale/) —
+  [`launch.md`](supporting/060-l4-perturbation-scale/launch.md) (protocol, the pilot outcome and the
+  dated amendment), [`details.md`](supporting/060-l4-perturbation-scale/details.md),
+  [`scale.json`](supporting/060-l4-perturbation-scale/scale.json),
+  [`s1-per-seed.csv`](supporting/060-l4-perturbation-scale/s1-per-seed.csv),
+  [`s2-per-seed.csv`](supporting/060-l4-perturbation-scale/s2-per-seed.csv).
+- Campaign directories `campaigns/perturbation-scale-pilot/` and `campaigns/perturbation-scale/` are
+  gitignored; every figure above is in the committed records.

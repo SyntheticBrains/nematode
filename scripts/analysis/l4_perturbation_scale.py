@@ -941,6 +941,37 @@ def write_s1_csv(runs: list[dict[str, Any]], path: Path) -> None:
             )
 
 
+def write_s2_csv(s2: dict[str, Any], path: Path) -> None:
+    """One row per width and seed, both arms and the capability arm side by side."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(
+            [
+                "width",
+                "perturbed_units",
+                "seed",
+                "learning_foods",
+                "frozen_foods",
+                "favours_learning",
+            ],
+        )
+        for width in S2_WIDTHS:
+            cell = s2["widths"][width]
+            learning, frozen = cell["learning_foods"], cell["frozen_foods"]
+            for seed in sorted(set(learning) & set(frozen)):
+                writer.writerow(
+                    [
+                        width,
+                        cell["perturbed_units"],
+                        seed,
+                        f"{learning[seed]:.4f}",
+                        f"{frozen[seed]:.4f}",
+                        int(learning[seed] > frozen[seed]),
+                    ],
+                )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run S1, analyse S2, or both, and write the records."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -949,7 +980,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--s2", type=Path, help="analyse an S2 campaign directory")
     parser.add_argument("--experiments", type=Path, default=EXPERIMENTS)
     parser.add_argument("--out", type=Path)
-    parser.add_argument("--csv", type=Path)
+    parser.add_argument("--csv", type=Path, help="S1 per-seed scores")
+    parser.add_argument("--s2-csv", type=Path, help="S2 per-seed foods, both arms")
     args = parser.parse_args(argv)
     if not args.s1 and args.s2 is None:
         print("nothing to do: pass --s1, --s2 <campaign-dir>, or both", file=sys.stderr)
@@ -969,6 +1001,8 @@ def main(argv: list[str] | None = None) -> int:
         require_complete_s2(scanned)
         s2 = analyse_s2(scanned, args.experiments)
         _print_s2(s2)
+        if args.s2_csv:
+            write_s2_csv(s2, args.s2_csv)
 
     combined = combine(s1, s2) if s1 is not None else None
     if combined is not None:

@@ -195,8 +195,6 @@ uv run python scripts/run_campaign.py \
   -- --theme headless --track-experiment
 ```
 
-[wxs]: https://papers.nips.cc/paper_files/paper/2003/hash/f7e9050c92a851b0016442ab604b0488-Abstract.html
-
 ______________________________________________________________________
 
 ## Pilot outcome, 2026-09-13 — the platform has room, and the pilot inverted the registered prior
@@ -239,3 +237,5 @@ that turns a sample size into a finding:
 - the capability gate reported **fails** when its test could not reach the level at that many pairs.
   It now reports `underpowered` with the smallest reachable p, and a width whose gate is undecided is
   neither a null nor uninterpretable.
+
+[wxs]: https://papers.nips.cc/paper_files/paper/2003/hash/f7e9050c92a851b0016442ab604b0488-Abstract.html

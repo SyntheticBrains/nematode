@@ -92,3 +92,67 @@ The committed one-step control was re-run at the default shape before the sweep 
 **77 common leaves, 0 differing, none missing.** The 49 keys present only in the re-run are the
 node-perturbation arms I.1 added after 048 was written. Threading width and depth through the control
 therefore changed nothing that any committed value depends on.
+
+## S2 — the width axis on the hard-food cell
+
+Five widths × three arms × seeds 1–8, 3000 episodes, `--track-experiment` so the drift column has
+weights to read. 120 runs, all succeeded, 5022 s wall clock at 15.5× parallelism. Scored on plateau-tail
+mean foods through I.2's graded family, each width's learning arm against **its own** frozen control,
+one-sided paired, BH-FDR across the five widths.
+
+| width | perturbed units | learning foods | learning clear | frozen foods | PPO foods | PPO clear | shift | p | q | favouring | drift | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 4 | **8** | **19.636** | **90.7%** | 1.692 | 19.687 | 87.6% | **+17.94** | 0.0039 | 0.0065 | **8/8** | 0.91 | `beats_control` |
+| 8 | 16 | 18.834 | 79.2% | 1.308 | 19.937 | 96.8% | +17.53 | 0.0039 | 0.0065 | 8/8 | 1.07 | `beats_control` |
+| 16 | 32 | 15.721 | 53.6% | 3.890 | 19.926 | 96.8% | +11.83 | 0.0039 | 0.0065 | 8/8 | 1.27 | `beats_control` |
+| 32 | 64 | 8.338 | 12.9% | 3.536 | 19.924 | 97.0% | +4.80 | 0.0547 | 0.0547 | 5/8 | 1.38 | `no_improvement` |
+| 64 | **128** | **4.226** | **3.0%** | 2.002 | 19.722 | 94.6% | +2.22 | 0.0195 | 0.0244 | 7/8 | 1.39 | `beats_control` |
+
+Per-seed learning-arm foods, which is where the monotonicity is visible without the means:
+
+| perturbed units | per-seed foods (seeds 1–8) |
+|---|---|
+| 8 | 19.8, 19.7, 19.5, 19.4, 19.6, 19.8, 19.5, 19.7 |
+| 16 | 18.0, 19.3, 18.8, 18.7, 19.2, 18.9, 18.4, 19.5 |
+| 32 | 17.0, 18.0, 16.8, 13.6, 18.7, 13.5, 17.0, 11.1 |
+| 64 | 11.5, 5.2, 10.8, 10.1, 4.4, 6.1, 8.2, 10.4 |
+| 128 | 6.2, 2.3, 4.1, 4.2, 6.6, 2.6, 4.1, 3.6 |
+
+The eight-unit arm's *worst* seed (19.4) beats the 128-unit arm's best (6.6) by three-fold.
+
+### The minima, and where they bound
+
+Both registered minima were enforced together: **1.0 foods** of the cell's 20, and **10% of that
+width's own PPO-minus-frozen gap**. The second is the binding one at every width — 1.80, 1.86, 1.60,
+1.64 and 1.77 foods respectively — and every significant shift clears it comfortably. No width was
+downgraded to `below_min_effect`; the only non-winner is the 64-unit cell, which fails on significance
+rather than on size.
+
+### The 64-unit cell
+
+| seed | learning | frozen | favours |
+|---|---|---|---|
+| 1 | 11.48 | 1.04 | yes |
+| 2 | 5.25 | 6.11 | no |
+| 3 | 10.79 | 1.61 | yes |
+| 4 | 10.08 | 3.09 | yes |
+| 5 | 4.45 | 4.47 | no |
+| 6 | 6.05 | 8.79 | no |
+| 7 | 8.17 | 3.03 | yes |
+| 8 | 10.44 | 0.15 | yes |
+
+Five of eight, so p = 0.0547 — above the level while the shift (+4.80) is twice that of the 128-unit
+cell, whose 7-of-8 gives q = 0.0244. The exact one-sided paired test counts sign agreements, and this is
+what that costs. The three dissenting seeds are the ones whose *frozen* arm happened to start high
+(6.11, 4.47, 8.79 against a width mean of 3.54), not seeds where the learning arm collapsed.
+
+### The capability arm
+
+Passes at **every** width: 19.69–19.94 foods and 87.6–97.0% full clear, against frozen controls at
+1.31–3.89 foods and 0% clear. So no width is `uninterpretable`, the small-N end of the grid is not
+capacity-limited — four hidden units per layer, below the input dimension, suffices for both optimisers
+on this cell — and the **declared one-layer alternative was not needed**.
+
+The comparator caveat stands as registered: the frozen arm perturbs and the PPO arm does not, so this is
+a capability floor on the width rather than a matched pair, and it is not the committed calibrated MLP
+arm for this cell.
