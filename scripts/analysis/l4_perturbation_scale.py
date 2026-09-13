@@ -491,6 +491,42 @@ def scan_s2(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> dict[int, di
     return out
 
 
+def drift(
+    logs: dict[str, dict[int, Path]],
+    seeds: tuple[int, ...] = SEEDS,
+    experiments: Path = EXPERIMENTS,
+) -> dict[str, Any]:
+    """Measure each seed's learning weights against its own frozen control's, within one width.
+
+    I.3b's measurement, with the seed set as a PARAMETER. Its version reads a module constant of
+    seeds 1-8, so on a pilot's disjoint 101-104 it finds no pair and reports nothing read -- which is
+    honest but says "no records" when the truth is "wrong seeds", and the distinction matters when a
+    pilot is what decides whether a campaign launches.
+
+    Compared within a width only: weights at different widths have different shapes. Unavailable
+    rather than zero when a pair cannot be read, since a drift of 0.0 is a claim -- the policy did not
+    move -- and a missing export is not that claim.
+    """
+    per_seed: dict[str, float] = {}
+    for seed in seeds:
+        learning = logs.get("learning", {}).get(seed)
+        frozen = logs.get("frozen", {}).get(seed)
+        if learning is None or frozen is None:
+            continue
+        a, b = hm._weights(learning, experiments), hm._weights(frozen, experiments)
+        if a is None or b is None or a.shape != b.shape:
+            continue
+        per_seed[str(seed)] = float(np.linalg.norm(a - b) / (np.linalg.norm(b) or 1.0))
+    values = list(per_seed.values())
+    return {
+        "per_seed": per_seed,
+        "mean_relative": float(np.mean(values)) if values else float("nan"),
+        "n_read": len(values),
+        "seeds_expected": list(seeds),
+        "available": bool(values),
+    }
+
+
 def require_complete_s2(scanned: dict[int, dict[str, Any]]) -> None:
     """Refuse to score an S2 campaign that is missing any registered cell.
 
@@ -510,6 +546,18 @@ def require_complete_s2(scanned: dict[int, dict[str, Any]]) -> None:
         raise ValueError(msg)
 
 
+def power_floor(n_pairs: int) -> float:
+    """Return the smallest p an exact one-sided paired test can reach at ``n_pairs``.
+
+    All pairs moving one way is one arrangement of two-to-the-n, so the floor is 2**-n. Below about
+    five pairs that floor sits ABOVE the significance level, and every gate built on such a test then
+    fails for arithmetic reasons whatever the data does. Reporting that as "fails" would turn a sample
+    size into a finding -- the shape of error this phase has caught in a censored metric and in an
+    underpowered panel, arriving a third time through the back door of a pilot.
+    """
+    return float("inf") if n_pairs < 1 else 2.0**-n_pairs
+
+
 def capability(width_data: dict[str, Any]) -> dict[str, Any]:
     """Decide whether this width can hold a competent policy at all.
 
@@ -527,6 +575,9 @@ def capability(width_data: dict[str, Any]) -> dict[str, Any]:
     ppo_clear = [r.success for r in width_data["ppo"].values()]
     contrast = ms.shift_contrast(ppo_foods, frozen_foods)
     mean_clear = float(np.mean(ppo_clear)) if ppo_clear else float("nan")
+    n_pairs = len(set(ppo_foods) & set(frozen_foods))
+    floor_p = power_floor(n_pairs)
+    underpowered = floor_p > ms.SIG_Q
     beats_floor = bool(contrast.get("defined") and contrast["p_improve"] <= ms.SIG_Q)
     competent = bool(mean_clear >= ms.COMPETENT_THRESHOLD)
     failed = [
@@ -534,11 +585,43 @@ def capability(width_data: dict[str, Any]) -> dict[str, Any]:
         for name, ok in (("beats the do-nothing floor", beats_floor), ("competent", competent))
         if not ok
     ]
+    if underpowered:
+        # The test cannot reach the level at this many pairs, so its half of the gate is UNDECIDED
+        # rather than failed, and the gate as a whole has no verdict. The competence half still reads.
+        return {
+            "ppo_mean_foods": float(np.mean(list(ppo_foods.values()) or [math.nan])),
+            "frozen_mean_foods": float(np.mean(list(frozen_foods.values()) or [math.nan])),
+            "ppo_mean_full_clear": mean_clear,
+            "competence_threshold": ms.COMPETENT_THRESHOLD,
+            "n_pairs": n_pairs,
+            "underpowered": True,
+            "smallest_reachable_p": floor_p,
+            "beats_floor": None,
+            "p_beats_floor": contrast.get("p_improve"),
+            "competent": competent,
+            "passes": None,
+            "why": (
+                f"undecided: at {n_pairs} pairs the smallest p an exact one-sided test can return is "
+                f"{floor_p:.4f}, above the {ms.SIG_Q} level, so the floor half cannot fire whatever "
+                f"the data does (competence half: {'reached' if competent else 'not reached'})"
+            ),
+            "reachable_gap_foods": float(
+                np.mean(list(ppo_foods.values()) or [math.nan])
+                - np.mean(list(frozen_foods.values()) or [math.nan]),
+            ),
+            "comparator_note": (
+                "the frozen comparator perturbs and the PPO arm does not; this is a capability floor "
+                "on the width, not a matched pair"
+            ),
+        }
     return {
         "ppo_mean_foods": float(np.mean(list(ppo_foods.values()) or [math.nan])),
         "frozen_mean_foods": float(np.mean(list(frozen_foods.values()) or [math.nan])),
         "ppo_mean_full_clear": mean_clear,
         "competence_threshold": ms.COMPETENT_THRESHOLD,
+        "n_pairs": n_pairs,
+        "underpowered": False,
+        "smallest_reachable_p": floor_p,
         "beats_floor": beats_floor,
         "p_beats_floor": contrast.get("p_improve"),
         "competent": competent,
@@ -555,7 +638,11 @@ def capability(width_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def compare_width(width_data: dict[str, Any], experiments: Path = EXPERIMENTS) -> dict[str, Any]:
+def compare_width(
+    width_data: dict[str, Any],
+    experiments: Path = EXPERIMENTS,
+    seeds: tuple[int, ...] = SEEDS,
+) -> dict[str, Any]:
     """Score one width's learning arm against its own frozen control."""
     learning_foods = {s: r.foods for s, r in width_data["learning"].items()}
     frozen_foods = {s: r.foods for s, r in width_data["frozen"].items()}
@@ -574,9 +661,7 @@ def compare_width(width_data: dict[str, Any], experiments: Path = EXPERIMENTS) -
             {s: r.success for s, r in width_data["frozen"].items()},
         ),
         "capability": capability(width_data),
-        # Within a width only: weights at different widths have different shapes. Unavailable rather
-        # than zero when the campaign's experiment records are missing.
-        "drift": hm.drift(width_data["logs"], experiments),
+        "drift": drift(width_data["logs"], seeds, experiments),
     }
 
 
@@ -610,9 +695,10 @@ def _minima(cell: dict[str, Any]) -> dict[str, Any]:
 def analyse_s2(
     scanned: dict[int, dict[str, Any]],
     experiments: Path = EXPERIMENTS,
+    seeds: tuple[int, ...] = SEEDS,
 ) -> dict[str, Any]:
     """Compare every width, correct across them and apply the registered rule."""
-    cells = {w: compare_width(scanned[w], experiments) for w in S2_WIDTHS}
+    cells = {w: compare_width(scanned[w], experiments, seeds) for w in S2_WIDTHS}
     defined = [w for w in S2_WIDTHS if cells[w]["graded"].get("defined")]
     qs = ms.bh_fdr([cells[w]["graded"]["p_improve"] for w in defined])
     for width, q in zip(defined, qs, strict=True):
@@ -624,7 +710,14 @@ def analyse_s2(
         significant = bool(q <= ms.SIG_Q) if not math.isnan(q) else False
         minima = _minima(cell)
         cell["minima"] = minima
-        if not cell["capability"]["passes"]:
+        if cell["capability"]["passes"] is None:
+            # The capability gate has no verdict, so neither does the width: calling it
+            # uninterpretable would assert a failed control, and calling it a null would assert a
+            # tested mechanism. Both are claims the sample size does not support.
+            cell["verdict"] = "capability_undecided"
+            cell["beats_control"] = False
+            cell["why"] = f"capability {cell['capability']['why']}"
+        elif not cell["capability"]["passes"]:
             # Never a null: a width that cannot hold a policy has not tested the mechanism.
             cell["verdict"] = "uninterpretable"
             cell["beats_control"] = False
@@ -641,7 +734,8 @@ def analyse_s2(
             cell["verdict"] = "no_improvement"
             cell["beats_control"] = False
             cell["why"] = "not significant"
-    interpretable = [w for w in S2_WIDTHS if cells[w]["verdict"] != "uninterpretable"]
+    undecided = {"uninterpretable", "capability_undecided"}
+    interpretable = [w for w in S2_WIDTHS if cells[w]["verdict"] not in undecided]
     winners = [w for w in interpretable if cells[w]["beats_control"]]
     return {
         "widths": cells,

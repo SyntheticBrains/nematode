@@ -821,3 +821,89 @@ class TestTheDepthParameterLeavesTheControlAlone:
         actor = pc._actor(3, torch.Generator(), 64, 2)
         linears = [m for m in actor if isinstance(m, nn.Linear)]
         assert [(m.in_features, m.out_features) for m in linears] == [(3, 64), (64, 64), (64, 1)]
+
+
+class TestDriftReadsTheSeedsItWasGiven:
+    """The reused I.3b measurement keyed a module constant; a pilot runs disjoint seeds."""
+
+    def test_the_seed_set_is_a_parameter(self, tmp_path: Path, monkeypatch: Any) -> None:
+        logs = {
+            "learning": {101: tmp_path / "a.log"},
+            "frozen": {101: tmp_path / "b.log"},
+        }
+        monkeypatch.setattr(
+            ps.hm,
+            "_weights",
+            lambda path, *_a, **_k: (
+                __import__("numpy").array([2.0, 0.0])
+                if path.name == "a.log"
+                else __import__("numpy").array([1.0, 0.0])
+            ),
+        )
+        given = ps.drift(logs, (101,))
+        assert given["n_read"] == 1
+        assert given["available"]
+        assert given["mean_relative"] == pytest.approx(1.0)
+
+    def test_the_wrong_seed_set_is_unavailable_and_not_zero(
+        self,
+        tmp_path: Path,
+        monkeypatch: Any,
+    ) -> None:
+        # A drift of 0.0 is a claim -- the policy did not move -- and no matching pair is not that
+        # claim. Under the default seeds a pilot's runs would read as if nothing had been written.
+        logs = {
+            "learning": {101: tmp_path / "a.log"},
+            "frozen": {101: tmp_path / "b.log"},
+        }
+        monkeypatch.setattr(ps.hm, "_weights", lambda *_a, **_k: None)
+        default = ps.drift(logs)
+        assert default["n_read"] == 0
+        assert not default["available"]
+        assert math.isnan(default["mean_relative"])
+        assert default["seeds_expected"] == list(ps.SEEDS)
+
+
+class TestAnUnderpoweredGateHasNoVerdict:
+    """A sample size is not a finding."""
+
+    def test_the_power_floor_is_two_to_the_minus_n(self) -> None:
+        assert ps.power_floor(4) == pytest.approx(0.0625)
+        assert ps.power_floor(8) == pytest.approx(0.00390625)
+
+    def test_no_pairs_has_an_infinite_floor(self) -> None:
+        assert ps.power_floor(0) == float("inf")
+
+    def test_four_pairs_cannot_decide_the_gate(self) -> None:
+        # At four pairs the smallest reachable p is 0.0625, above the 0.05 level, so the floor half
+        # cannot fire however large the effect is.
+        data = _width_data(1.0, 1.0, 19.0, spread=0.1)
+        for arm in ("learning", "frozen", "ppo"):
+            data[arm] = {s: v for s, v in data[arm].items() if s in (1, 2, 3, 4)}
+        result = ps.capability(data)
+        assert result["underpowered"]
+        assert result["passes"] is None
+        assert result["beats_floor"] is None
+        assert "cannot fire" in result["why"]
+
+    def test_the_competence_half_still_reads_when_underpowered(self) -> None:
+        data = _width_data(1.0, 1.0, 19.0, spread=0.1)
+        for arm in ("learning", "frozen", "ppo"):
+            data[arm] = {s: v for s, v in data[arm].items() if s in (1, 2, 3, 4)}
+        assert ps.capability(data)["competent"]
+
+    def test_eight_pairs_is_powered(self) -> None:
+        result = ps.capability(_width_data(1.0, 1.0, 19.0, spread=0.1))
+        assert not result["underpowered"]
+        assert result["passes"] is True
+
+    def test_an_undecided_gate_is_not_a_null_and_not_uninterpretable(self) -> None:
+        cells = {width: _width_data(9.0, 1.0, 19.0, spread=0.1) for width in ps.S2_WIDTHS}
+        for cell in cells.values():
+            for arm in ("learning", "frozen", "ppo"):
+                cell[arm] = {s: v for s, v in cell[arm].items() if s in (1, 2, 3, 4)}
+        out = ps.analyse_s2(cells, seeds=(1, 2, 3, 4))
+        for width in ps.S2_WIDTHS:
+            assert out["widths"][width]["verdict"] == "capability_undecided"
+        assert out["interpretable"] == []
+        assert out["verdict"] == "void"
