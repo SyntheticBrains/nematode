@@ -60,7 +60,7 @@ ______________________________________________________________________
 | **4** | — | Multi-Agent Complexity | ✅ COMPLETE | Pheromones, social dynamics, klinotaxis sensing. Temporal collective exploration +14.3%; social feeding +35% food under scarcity. Coordination did not produce genuine multi-agent complexity at the scales tested |
 | **5** | — | Evolution & Adaptation | ✅ COMPLETE (2026-05-23) | M3 Lamarckian inheritance is the headline-positive result. M4 Baldwin / M5 co-evolution / M6.x transgenerational memory closed with substrate-grounded STOP verdicts (architectural diagnoses, not implementation failures) |
 | **6** | ~6-10 months from Phase 5 close | Connectome substrate + architecture comparison | 🟡 **6a COMPLETE / 6b pending** (delivered in two shipments — see § Phase 6a/6b split) | First closed-loop learning on the real *C. elegans* connectome with a pluggable architecture interface, and a full architecture ranking across six families on three behaviours (klinotaxis, thermotaxis, predator evasion). **6a — COMPLETE, Gate 3 GO** ([Logbook 037](experiments/logbooks/037-phase6a-synthesis.md); T1–T7 + connectome-structure controls + validation): the platform + the ranking (Logbook 029 — MLP dominant, wild-type connectome 5th of 6 under PPO weight search, a *degree-statistics* result per the 034 rewired-null) + real-worm behavioural validation (035 chemotaxis both strategies; 036 thermotaxis partial). **6b** (T8 NEAT topology search): deferred completion, gated on GPU + env-vectorisation. Phase 6 is marked ✅ COMPLETE only when the 6b synthesis lands |
-| **7** | ~8-12 months from Phase 6**a** close (2026-07-07) | Deepen — plasticity + cross-species transfer | 🟡 IN PROGRESS (7a-i panel resolved 2026-09-06 to the sanity-floor branch, [Logbook 040](experiments/logbooks/040-l4-panel.md); panels 2 and 3 resolved 2026-09-07 `inconclusive`, [Logbook 041](experiments/logbooks/041-l4-panel2.md), [Logbook 042](experiments/logbooks/042-l4-panel3.md) — the Hebbian wiring contrast closed as a registered question; S.2 warm start resolved 2026-09-08 `sanity_floor_fail` + `rule_destroys_clone`, [Logbook 043](experiments/logbooks/043-l4-warm-start.md) — the connectome holds a competent policy, the rule takes it apart; 7a-ii's first fidelity rung resolved 2026-09-09 `degree_statistics`, [Logbook 044](experiments/logbooks/044-l4-atlas-signs.md) — grounded synapse signs leave the prior alone and make Hebbian learning worse, so the substrate's signs were not the limit; three consolidation mechanisms screened 2026-09-09 and none held a cloned competent policy, [Logbook 045](experiments/logbooks/045-l4-consolidation.md) — slowing the update is not consolidating a policy; the decorrelating term ran 2026-09-09 and resolved `no_recovery`, [Logbook 046](experiments/logbooks/046-l4-decorrelation.md) — the atlas grounds too little inhibition to build a brake from; structured instruction resolved 2026-09-10 `no_routing_effect`, [Logbook 047](experiments/logbooks/047-l4-structured-instruction.md); block I then found the rule was not a policy-gradient estimator and repaired it without making it work on any multi-step task, [Logbooks 048](experiments/logbooks/048-l4-rule-positive-control.md)–[056](experiments/logbooks/056-l4-ladder-reread.md); and **block V found the wiring advantage the phase was looking for** — +35.4% off time-to-competence on a foraging cell under thermal pressure and +23.5% with temperature removed, [Logbooks 057](experiments/logbooks/057-wiring-premise-contrast.md) and [058](experiments/logbooks/058-wiring-premise-difficulty.md). **7a complete 2026-09-13 on the SPLIT clause** ([Logbook 059](experiments/logbooks/059-7a-shipment.md)): two citable results — a systematic negative with a diagnosed cause, and a wiring advantage on learning speed — with GO unreachable on its own clause and STOP overstating. **Status 7a complete / 7b pending**; 7b's gate stands as written and the forward programme is rule families, bounded. **R.1, that programme's first item, resolved 2026-09-13 `mixed`** ([Logbook 060](experiments/logbooks/060-l4-perturbation-scale.md)): the rule **solves a multi-step foraging cell at eight perturbed units** — 19.64 foods of 20, 90.7% full clear, level with PPO — and collapses monotonically to 3.0% at the 128 units every failing arm ran, while on the one-step control the same dimension costs almost nothing, so what binds is an interaction between dimension and horizon rather than either alone, with a product law more than this design supports. The wiring contrast under that rule is not yet run, so the gate still stands) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules, resolved as the 2×2 plastic wild-type vs plastic rewired-null (spiking-STDP is MAY). Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
+| **7** | ~8-12 months from Phase 6**a** close (2026-07-07) | Deepen — plasticity + cross-species transfer | 🟡 IN PROGRESS — **7a complete / 7b pending** (delivered in two shipments; the resolved history is in § Phase 7 progress record) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules, resolved as the 2×2 plastic wild-type vs plastic rewired-null (spiking-STDP is MAY). Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
 
 ______________________________________________________________________
 
@@ -966,6 +966,46 @@ dimension that the substrate does not have, and read plainly the result predicts
 present. **No committed verdict changed** — 059's negative recorded what had been measured, every
 arm it summarised ran at 128 or 302 units, and any re-read is a new registration.
 
+#### Phase 7 progress record
+
+The running history of Phase 7's resolved work, moved out of the Timeline Overview's status cell
+on 2026-09-13: a table cell cannot hold a line break in GFM, so an append-only history kept there
+grows as one unreviewable line. The cell now carries the status and delegates here, mirroring how
+Phase 6's row delegates to § Phase 6a / 6b split.
+
+7a-i panel resolved 2026-09-06 to the sanity-floor branch, [Logbook
+040](experiments/logbooks/040-l4-panel.md); panels 2 and 3 resolved 2026-09-07 `inconclusive`,
+[Logbook 041](experiments/logbooks/041-l4-panel2.md), [Logbook
+042](experiments/logbooks/042-l4-panel3.md) — the Hebbian wiring contrast closed as a registered
+question; S.2 warm start resolved 2026-09-08 `sanity_floor_fail` + `rule_destroys_clone`, [Logbook
+043](experiments/logbooks/043-l4-warm-start.md) — the connectome holds a competent policy, the rule
+takes it apart; 7a-ii's first fidelity rung resolved 2026-09-09 `degree_statistics`, [Logbook
+044](experiments/logbooks/044-l4-atlas-signs.md) — grounded synapse signs leave the prior alone and
+make Hebbian learning worse, so the substrate's signs were not the limit; three consolidation
+mechanisms screened 2026-09-09 and none held a cloned competent policy, [Logbook
+045](experiments/logbooks/045-l4-consolidation.md) — slowing the update is not consolidating a
+policy; the decorrelating term ran 2026-09-09 and resolved `no_recovery`, [Logbook
+046](experiments/logbooks/046-l4-decorrelation.md) — the atlas grounds too little inhibition to
+build a brake from; structured instruction resolved 2026-09-10 `no_routing_effect`, [Logbook
+047](experiments/logbooks/047-l4-structured-instruction.md); block I then found the rule was not a
+policy-gradient estimator and repaired it without making it work on any multi-step task, [Logbooks
+048](experiments/logbooks/048-l4-rule-positive-control.md)–[056](experiments/logbooks/056-l4-ladder-reread.md);
+and **block V found the wiring advantage the phase was looking for** — +35.4% off time-to-competence
+on a foraging cell under thermal pressure and +23.5% with temperature removed, [Logbooks
+057](experiments/logbooks/057-wiring-premise-contrast.md) and
+[058](experiments/logbooks/058-wiring-premise-difficulty.md). **7a complete 2026-09-13 on the SPLIT
+clause** ([Logbook 059](experiments/logbooks/059-7a-shipment.md)): two citable results — a
+systematic negative with a diagnosed cause, and a wiring advantage on learning speed — with GO
+unreachable on its own clause and STOP overstating. **Status 7a complete / 7b pending**; 7b's gate
+stands as written and the forward programme is rule families, bounded. **R.1, that programme's first
+item, resolved 2026-09-13 `mixed`** ([Logbook
+060](experiments/logbooks/060-l4-perturbation-scale.md)): the rule **solves a multi-step foraging
+cell at eight perturbed units** — 19.64 foods of 20, 90.7% full clear, level with PPO — and
+collapses monotonically to 3.0% at the 128 units every failing arm ran, while on the one-step
+control the same dimension costs almost nothing, so what binds is an interaction between dimension
+and horizon rather than either alone, with a product law more than this design supports. The wiring
+contrast under that rule is not yet run, so the gate still stands
+
 #### Pre-registered design decisions (2026-08-27 pre-start review)
 
 Recorded here so the Phase 7 OpenSpec change inherits explicit resolutions rather than silences. Status: **ratified 2026-08-27**. D1–D8 were ratified at the pre-start review; D2/D3/D7 were then amended and **D9–D13 added the same day** after a three-lens adversarial review of the committed draft (hostile-referee, execution-feasibility, and research-strategy critiques — findings recorded in the pre-start review document). Each decision remains cheap to reverse before implementation starts and expensive after; any further amendment goes through the Phase 7 tracking change with a dated note.
@@ -1068,9 +1108,49 @@ The L4 validation question — "does modulated plasticity reproduce documented *
 |---|---|---|
 | **L4 implementation overshoots** | Neuromodulator grounding more complex than estimated; receptor-class metadata harder to integrate; modulated rules harder to debug than vanilla | **Phase 7 is pre-structured as 7a / 7b** *(promoted 2026-08-27 from a contingency to the default shape, since the ~6-9-month full-grounding estimate made the old month-6 trigger fire by construction)*: 7a ships L4 on *C. elegans* as the headline deliverable; 7b carries the cross-species transfer + SHOULD/MAY items. The 6a/6b precedent applies — the split may equally be invoked **by success** (7a forms a self-contained citable result) as by overrun. Phase 7 closes whether it lands as one shipment or two. |
 | **Cross-species homology proves ambiguous** | Sensor/motor projection homologs for pacificus can't be defended for one or more behaviours; shared-core matrix leaves a behaviour's circuit under-covered *(re-aimed 2026-08-27: format risk is retired — the data is MIT-licensed CSV; homology and coverage are the real risks)* | Ship the behaviours whose projections are defensible (klinotaxis is the safest — amphid homology is strong), document the gap per behaviour, and report transfer on that subset. The first-in-field claim survives in restricted form. |
-| **L4 plasticity fails to beat its baselines** | The plastic connectome does not beat its own frozen-weights / vanilla-rule sanity floors (D2) after reasonable search on the D1 primary arm (and the MAY spiking arm, if run) | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families"* — and is a strong *robustness* answer to the sharpened hypothesis. Phase 7 closes with the negative result; the e-prop fallback family and FlyGM-style imitation warm start are the documented next levers. **Realised 2026-09-06** ([Logbook 040](experiments/logbooks/040-l4-panel.md)): `sanity_floor_fail` at n = 8; **7a-i closes with the negative result** as this row prescribes — Phase 7 itself continues — and the documented next levers are now ordered — panel 2 (the Hebbian wiring contrast with a prior sweep and an initialisation factor; **run 2026-09-07, `inconclusive`**, [Logbook 041](experiments/logbooks/041-l4-panel2.md): the effect held, the test could not carry a bimodal outcome at n = 16, and count-scaled initialisation hurt; **panel 3**, [Logbook 042](experiments/logbooks/042-l4-panel3.md), replicated at +8.1 on 48 fresh seeds, `inconclusive` again, and closed the question) — **both panels complete**; the imitation warm start (S.2) ran 2026-09-08 ([Logbook 043](experiments/logbooks/043-l4-warm-start.md): the connectome retains a cloned competent policy on either wiring, the rule destroys it, a warm start hurts PPO); 7a-ii's atlas rung ran 2026-09-09 ([Logbook 044](experiments/logbooks/044-l4-atlas-signs.md): grounded signs leave the prior alone and make Hebbian learning worse, so the substrate was not the limit); consolidation was screened 2026-09-09 ([Logbook 045](experiments/logbooks/045-l4-consolidation.md)) and none of its three mechanisms held a cloned competent policy, so the panel stays gated; the anti-Hebbian/decorrelating term ran 2026-09-09 and resolved `no_recovery` ([Logbook 046](experiments/logbooks/046-l4-decorrelation.md)) — the arm redirected every grounded inhibitory synapse there is, 5.8% of the substrate, and moved the outcome by −0.9, so the inhibitory-brake explanation cannot be built at transmitter-only fidelity; structured instruction ran 2026-09-10 and resolved `no_routing_effect`. **This row's branch is now closed (2026-09-13, [Logbook 059](experiments/logbooks/059-7a-shipment.md)).** It prescribed that "the finding itself is publishable" and named the e-prop family and the imitation warm start as the documented next levers. Both held: 7a ships on the SPLIT clause with the negative *and* a positive the row did not anticipate — the wild-type wiring is worth **+35.4%** and **+23.5%** off time-to-competence across two cells under PPO, so the phrase "requires further substrate work or different rule families" is now sharper than the row could state it: **the wiring is legible to learning, and what is missing is a plausible rule that reads it.** The e-prop lever is taken as a bounded programme with two stopping conditions fixed in advance, after which 7b proceeds under PPO with the biological-plausibility claim given up. **Sharpened again 2026-09-13** ([Logbook 060](experiments/logbooks/060-l4-perturbation-scale.md)): "different rule families" turns out to understate it — the *same* rule family works at a perturbation dimension nobody had tried, reaching PPO's level on a block-V cell at eight perturbed units, so what this row anticipated as a rule-family problem is at least partly a **scale** one. e-prop is not retired and remains the fallback; the live question is the wiring contrast under a rule now known to learn. |
+| **L4 plasticity fails to beat its baselines** | The plastic connectome does not beat its own frozen-weights / vanilla-rule sanity floors (D2) after reasonable search on the D1 primary arm (and the MAY spiking arm, if run) | The finding itself is publishable — *"biologically-plausible plasticity on the C. elegans connectome requires further substrate work or different rule families"* — and is a strong *robustness* answer to the sharpened hypothesis. Phase 7 closes with the negative result; the e-prop fallback family and FlyGM-style imitation warm start are the documented next levers. **Branch closed 2026-09-13** — the realised history is in § The L4 baseline-failure branch. |
 | **Substrate-vs-rule confound** | Platform changes (D5 key removal, D7 state-dependent `std`) land mid-comparison, making L2-vs-L4 deltas uninterpretable — the Phase 6 grid-vs-continuous non-commensurability lesson | Land all substrate changes **before** the L4 panel, validate, then freeze. Any comparison spanning a substrate change is reported as qualitative, per the 2026-06-14 reframing precedent. |
 | **Partial D2 outcome** | The rule clears the frozen/vanilla sanity floors, but the 2×2 primary contrast is null (or the matched-rule ranking test fails) | This is the pre-registered **robustness branch**, not a failure and not the sanity-floor row above: confirm ensemble-invariance (bar (a)) and read it against the warm-start arm, then **close with the negative result** — the degree-statistics verdict replicated across learning regimes, a citable finding. One pre-registered sensitivity pass (rule hyperparameters) is permitted before closure; no open-ended reruns. Rule-family pivots (e-prop fallback, spiking MAY arm) are *new* pre-registered runs, never rescues of this one. Distinct from STOP, which requires substrate-level infeasibility. |
+
+#### The L4 baseline-failure branch
+
+What actually happened along the *L4 plasticity fails to beat its baselines* row above, moved out
+of its mitigation cell on 2026-09-13 for the same reason: the row's third column had stopped being
+a mitigation and become an append-only record, and a GFM table cell cannot be wrapped.
+
+**Realised 2026-09-06** ([Logbook 040](experiments/logbooks/040-l4-panel.md)): `sanity_floor_fail`
+at n = 8; **7a-i closes with the negative result** as this row prescribes — Phase 7 itself continues
+— and the documented next levers are now ordered — panel 2 (the Hebbian wiring contrast with a prior
+sweep and an initialisation factor; **run 2026-09-07, `inconclusive`**, [Logbook
+041](experiments/logbooks/041-l4-panel2.md): the effect held, the test could not carry a bimodal
+outcome at n = 16, and count-scaled initialisation hurt; **panel 3**, [Logbook
+042](experiments/logbooks/042-l4-panel3.md), replicated at +8.1 on 48 fresh seeds, `inconclusive`
+again, and closed the question) — **both panels complete**; the imitation warm start (S.2) ran
+2026-09-08 ([Logbook 043](experiments/logbooks/043-l4-warm-start.md): the connectome retains a
+cloned competent policy on either wiring, the rule destroys it, a warm start hurts PPO); 7a-ii's
+atlas rung ran 2026-09-09 ([Logbook 044](experiments/logbooks/044-l4-atlas-signs.md): grounded signs
+leave the prior alone and make Hebbian learning worse, so the substrate was not the limit);
+consolidation was screened 2026-09-09 ([Logbook 045](experiments/logbooks/045-l4-consolidation.md))
+and none of its three mechanisms held a cloned competent policy, so the panel stays gated; the
+anti-Hebbian/decorrelating term ran 2026-09-09 and resolved `no_recovery` ([Logbook
+046](experiments/logbooks/046-l4-decorrelation.md)) — the arm redirected every grounded inhibitory
+synapse there is, 5.8% of the substrate, and moved the outcome by −0.9, so the inhibitory-brake
+explanation cannot be built at transmitter-only fidelity; structured instruction ran 2026-09-10 and
+resolved `no_routing_effect`. **This row's branch is now closed (2026-09-13, [Logbook
+059](experiments/logbooks/059-7a-shipment.md)).** It prescribed that "the finding itself is
+publishable" and named the e-prop family and the imitation warm start as the documented next levers.
+Both held: 7a ships on the SPLIT clause with the negative *and* a positive the row did not
+anticipate — the wild-type wiring is worth **+35.4%** and **+23.5%** off time-to-competence across
+two cells under PPO, so the phrase "requires further substrate work or different rule families" is
+now sharper than the row could state it: **the wiring is legible to learning, and what is missing is
+a plausible rule that reads it.** The e-prop lever is taken as a bounded programme with two stopping
+conditions fixed in advance, after which 7b proceeds under PPO with the biological-plausibility
+claim given up. **Sharpened again 2026-09-13** ([Logbook
+060](experiments/logbooks/060-l4-perturbation-scale.md)): "different rule families" turns out to
+understate it — the *same* rule family works at a perturbation dimension nobody had tried, reaching
+PPO's level on a block-V cell at eight perturbed units, so what this row anticipated as a
+rule-family problem is at least partly a **scale** one. e-prop is not retired and remains the
+fallback; the live question is the wiring contrast under a rule now known to learn.
 
 #### Where Phase 7 is first-in-field (novelty map)
 
