@@ -196,3 +196,46 @@ uv run python scripts/run_campaign.py \
 ```
 
 [wxs]: https://papers.nips.cc/paper_files/paper/2003/hash/f7e9050c92a851b0016442ab604b0488-Abstract.html
+
+______________________________________________________________________
+
+## Pilot outcome, 2026-09-13 — the platform has room, and the pilot inverted the registered prior
+
+24 runs on disjoint seeds 101–104, all succeeded, 1048 s wall clock at 16 workers.
+
+| width | perturbed units | PPO foods | PPO clear | frozen foods | learning foods | learning clear | effect | drift |
+|---|---|---|---|---|---|---|---|---|
+| 4 | **8** | 19.76 | 90.4% | 0.68 | **19.63** | **92.8%** | **+18.94** | 0.958 |
+| 64 | **128** | 19.79 | 94.5% | 3.27 | 4.78 | 4.1% | +1.51 | 1.400 |
+
+**The registered purpose is satisfied**: PPO sits at ~19.8 of 20 foods and 90–94% full clear while the
+frozen controls sit at 0.68 and 3.27 foods and 0% clear, so the platform has room at both extremes and
+the **declared remedy is not applied**. The cell and its 350-step budget stand as calibrated.
+
+**The pilot also inverted the honest prior.** At eight perturbed units the rule reaches 19.63 foods
+and 92.8% full clear — level with PPO — from a frozen floor of 0.68. At the yardstick's own 128 units
+it reaches 4.78 against a frozen 3.27 while PPO on that width reaches 19.79. Drift separates the two
+regimes: 0.958 of the weight's own norm where the rule solves the cell, 1.400 where it barely leaves
+its floor, against the 1.28–1.31 I.3b measured at 128 units.
+
+**No significance claim is taken from the pilot and none is available.** At four pairs the smallest p
+an exact one-sided paired test can return is **0.0625**, above the 0.05 level, so the floor half of
+each capability gate cannot fire whatever the data does. Both widths therefore read
+`capability_undecided` rather than failed, and the effect sizes above are **descriptive**. The
+registered campaign runs eight seeds, where that floor is 0.0039.
+
+This does not contradict S1. A one-step task has a single credited decision, so the estimator's
+dimension barely matters there; over 350 steps the per-unit credit is diluted across units **and**
+time. The two sweeps together say the dimension bites only when the horizon does — and the campaign's
+job is now to **locate the breakpoint between 8 and 128 units**, which the registered grid already
+spans.
+
+**Two instrument defects were found by the pilot and fixed before the campaign**, both of the shape
+that turns a sample size into a finding:
+
+- drift took its seed set from I.3b's module constant, so on 101–104 it read no pair at all and
+  reported nothing available — the right answer for the wrong reason, and a silent mismatch for any
+  campaign not on seeds 1–8;
+- the capability gate reported **fails** when its test could not reach the level at that many pairs.
+  It now reports `underpowered` with the smallest reachable p, and a width whose gate is undecided is
+  neither a null nor uninterpretable.
