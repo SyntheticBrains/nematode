@@ -78,6 +78,17 @@
 - [ ] 4b.4 Apply the stop clause: if no σ lifts the learning arm above **3.82 foods**, record
   `not_reducible` from the pilot and calibration rather than launching the campaign.
 
+## 4c. Action-noise calibration *(amendment, 2026-09-13)*
+
+- [ ] 4c.1 The `motor` arm at σ 0.1 with `initial_log_std` ∈ {0.0, −0.5}, learning and frozen, seeds
+  101–104 — 16 runs. The −1.0 point is the σ-calibration's σ 0.1 runs and is not re-run.
+- [ ] 4c.2 Four configs, each differing from the σ 0.1 arm by `initial_log_std` alone.
+- [ ] 4c.3 Apply the registered rule: the setting maximising the learning arm's plateau-tail mean foods,
+  with the gap and the full-clear rate at every point; ties on foods to the higher full-clear, ties on
+  both to the pinned −1.0.
+- [ ] 4c.4 State explicitly whether a rise in the learning arm is matched by a rise in the gap. Where it
+  is not, the gain is wandering rather than learning and the record says so.
+
 ## 5. Campaign
 
 - [ ] 5.1 Launch record committed first; no branch switches while it runs.

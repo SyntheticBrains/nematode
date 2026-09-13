@@ -280,3 +280,41 @@ wiring contrast measurable.
 This is recorded now, before the campaign, rather than discovered after it. The campaign's reading will
 state the two separately: whether a mask **beats its floor** by the registered bar, and whether any mask
 **reaches competence**, which is what R.1b's gate actually requires.
+
+### Amendment, 2026-09-13 — calibrate the action noise too, before the campaign
+
+Inspecting what the rule may write turned up a structural fact worth recording whatever the arms do.
+The connectome's `plastic_weights` is **`w_chem` alone**; `food_gains` and `readout` live in the
+optimiser's parameter list, which is used **only under PPO**. So under the rule **both ends of the
+network are frozen**, and after just 300 PPO episodes on this cell:
+
+| tensor | relative change | cosine to init | writable by the rule |
+|---|---|---|---|
+| `readout` (2×4, motor classes → action) | **0.783** | +0.865 | **no** |
+| `w_chem` (3709 chemical synapses) | 0.486 | +0.899 | yes |
+| `food_gains` (sensory projection) | **0.177** | **+0.985** | no |
+
+**PPO's largest single adaptation is the motor readout, and the rule cannot make it** — while the frozen
+sensory projection costs little, since PPO barely rotates it. The readout starts from an anatomical prior
+(speed as the B-vs-A contrast, turn as D-vs-V, unit-normed) and PPO still moves it 78% in a tenth of a
+run. Relative change across differently-sized tensors is not a clean importance measure — eight readout
+entries against 3709 synapses — so this is a hypothesis, not a conclusion, and it is registered as
+**R.1d** rather than folded into this change, whose question is the perturbation dimension.
+
+**What belongs here is the action noise**, for the same reason σ did: `initial_log_std: -1.0` comes from
+I.1's recipe, an action std of 0.368, and it has never been calibrated on this substrate — while 058's
+frozen arm at the default std **1.0** collects **3.82 foods** against these arms' **1.73**. Running the
+mask comparison at an uncalibrated operating point would hand it a handicap nobody chose.
+
+**Added**: the `motor` arm at σ 0.1 with `initial_log_std ∈ {0.0, −0.5}`, learning and frozen, seeds
+101–104 — **16 runs**. The −1.0 point is the σ-calibration's eight σ 0.1 runs and is not re-run.
+
+**The decision rule, fixed before these run.** As for σ: the setting **maximising the learning arm's
+plateau-tail mean foods**, with the learning-minus-frozen gap and the **full-clear rate** reported at
+every point. Ties on foods go to the higher full-clear rate; ties on both go to the recipe's pinned
+−1.0, so the registered recipe is displaced only when it is actually beaten.
+
+**One reading the record must not make.** A wider action distribution collects more food by wandering, so
+if the learning arm rises and **the gap does not**, the gain is the task being easier to stumble through
+rather than the rule learning better. Where that happens the record says so, and the setting is chosen on
+the absolute level only if the gap survives.
