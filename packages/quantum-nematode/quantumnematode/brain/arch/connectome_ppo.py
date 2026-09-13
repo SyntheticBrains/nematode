@@ -975,7 +975,50 @@ class ConnectomeTopology(nn.Module):
             else:  # pragma: no cover - the Literal is exhaustive
                 msg = f"unknown perturbation set {perturbation_set!r}"
                 raise ValueError(msg)
-        return mask.to(device)
+        realised = mask.to(device)
+        # The counts the record will carry, compared against the relation the declared name means.
+        # The first requirement of this capability is that a run whose realised counts do not match
+        # its declaration fails rather than proceeds, and that is checkable without hard-coding any
+        # number: the relation itself is the declaration.
+        self._assert_mask_realises_declaration(perturbation_set, realised, distance)
+        return realised
+
+    def _assert_mask_realises_declaration(
+        self,
+        perturbation_set: PerturbationSet,
+        mask: torch.Tensor,
+        distance: torch.Tensor,
+    ) -> None:
+        """Refuse a mask whose realised membership, draws or synapses are not the declared set."""
+        depth = self.forward_pass_depth
+        zeros = torch.zeros_like(distance, dtype=torch.bool)
+        expected = {
+            "causal": [distance <= depth - 1 - s for s in range(depth)],
+            "hop1": [distance <= 1 for _ in range(depth)],
+            "motor": [distance == 0 for _ in range(depth)],
+            "motor_last": [(distance == 0) if s == depth - 1 else zeros for s in range(depth)],
+        }.get(perturbation_set)
+        if expected is None:
+            return
+        declared = torch.stack(expected).to(mask.device)
+        if not bool(torch.equal(mask, declared)):
+            edges = self.m_chem.to(torch.bool)
+            got = (
+                int(mask.any(dim=0).sum().item()),
+                int(mask.sum().item()),
+                int(edges[:, mask.any(dim=0)].sum().item()),
+            )
+            want = (
+                int(declared.any(dim=0).sum().item()),
+                int(declared.sum().item()),
+                int(edges[:, declared.any(dim=0)].sum().item()),
+            )
+            msg = (
+                f"perturbation set {perturbation_set!r} does not realise its declaration at "
+                f"forward_pass_depth={depth}: derived (units, draws, adaptable synapses) = {got}, "
+                f"declared {want}."
+            )
+            raise ValueError(msg)
 
     def _validate_derived_set(
         self,

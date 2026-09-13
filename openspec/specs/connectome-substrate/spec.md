@@ -288,8 +288,11 @@ the mask as the set of neurons the amines act on.
 Where a substrate applies per-unit perturbation to form a learning signal, the set of perturbed units
 SHALL be declarable rather than fixed at every unit, and each run SHALL record the declared set, the
 number of units in it, the number of synapses it makes adaptable, and the number of perturbation draws
-per scored decision. The set SHALL be derived from the loaded substrate and checked against the
-declaration's expected size and membership, and a mismatch SHALL fail the run rather than proceed.
+per scored decision. The set SHALL be derived from the loaded substrate and checked against the relation
+its declaration names — its unit membership, its draws per scored decision and its adaptable-synapse
+count — and any discrepancy in any of the three SHALL fail the run before it proceeds or records a
+result. The check SHALL be structural rather than a comparison against fixed numbers, so that it holds
+for any substrate source and any forward-pass depth.
 
 #### Scenario: A declared set is recorded with its consequences
 

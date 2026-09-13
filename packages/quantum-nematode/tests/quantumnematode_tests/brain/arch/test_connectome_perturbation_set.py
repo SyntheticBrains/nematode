@@ -411,3 +411,37 @@ class TestTheGuardsCannotBeBypassed:
         )
         with pytest.raises(ValueError, match=r"not available on this substrate"):
             MLPPPOBrain(config=config, device=DeviceType.CPU)
+
+
+class TestTheMaskIsCheckedAgainstItsDeclaration:
+    """Each declared name means a relation to the readout; the mask must realise exactly it."""
+
+    def test_a_mask_that_is_not_its_declaration_is_refused(self, connectome: Connectome) -> None:
+        # Structural, not a hard-coded count: the relation the name means IS the declaration, so the
+        # check holds for any connectome source and any settling depth.
+        topology = _topology(connectome, "motor")
+        distance = topology._readout_hop_distances(topology._motor_flat_indices.cpu().tolist())
+        wrong = torch.ones((topology.forward_pass_depth, topology.n_neurons), dtype=torch.bool)
+        with pytest.raises(ValueError, match="does not realise its declaration"):
+            topology._assert_mask_realises_declaration("motor", wrong, distance)
+
+    def test_the_refusal_reports_all_three_counts(self, connectome: Connectome) -> None:
+        # Units, draws per decision and adaptable synapses -- the three the record carries.
+        topology = _topology(connectome, "motor")
+        distance = topology._readout_hop_distances(topology._motor_flat_indices.cpu().tolist())
+        wrong = torch.ones((topology.forward_pass_depth, topology.n_neurons), dtype=torch.bool)
+        with pytest.raises(ValueError, match=r"\(units, draws, adaptable synapses\)"):
+            topology._assert_mask_realises_declaration("motor", wrong, distance)
+
+    @pytest.mark.parametrize("name", ["causal", "hop1", "motor", "motor_last"])
+    def test_every_restricted_build_passes_its_own_declaration(
+        self,
+        connectome: Connectome,
+        name: str,
+    ) -> None:
+        # The check runs on every restricted build, so a false positive would break all of them.
+        assert _topology(connectome, name).perturbation_dimension()["draws_per_decision"] > 0
+
+    def test_the_unrestricted_set_is_not_constrained_by_it(self, connectome: Connectome) -> None:
+        # `full` is what every recorded plastic result ran and is built without touching the graph.
+        assert _topology(connectome, "full").perturbation_dimension()["units"] == 302
