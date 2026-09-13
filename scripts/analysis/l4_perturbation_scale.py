@@ -65,12 +65,21 @@ SEEDS = tuple(range(1, 9))
 # On that arrangement -- one plastic layer, frozen readout -- the perturbed-unit count IS the width,
 # so this grid is a grid in the perturbation dimension directly.
 S1_WIDTHS = (8, 16, 32, 64, 128)
+S1_SHAPES = tuple((width, 1) for width in S1_WIDTHS)
+# The yardstick's EXACT arrangement: two plastic layers of 64, so 128 perturbed units in the shape
+# the failing arms ran rather than in one layer. Added as a dated amendment after the width sweep
+# returned a flat dependence and left depth the only difference at a matched unit count.
+S1_DEPTH_CONTROL = (64, 2)
 S1_ARMS = ("node_perturbation", "analytic")
 NODE_NOISE = 0.2  # the scale that passed the control
 # The prediction is a slope of +1 in log-log. The bar for "depends on N in the predicted direction at
 # all" is set well below it, because the claim under test is the existence of the dependence and not
 # its exponent -- and because this platform cannot attribute the exponent to units over weights.
 SLOPE_BAR = 0.5
+# A slope is only nonzero if it clears floating-point noise. An exactly constant series fits a
+# slope of order 1e-16 and, being identical under every resample, a degenerate interval of zero
+# width around it -- which would read as a dependence excluding zero.
+SLOPE_TOLERANCE = 1e-9
 BOOTSTRAP = 2000
 BOOTSTRAP_SEED = 20260913  # fixed so a re-analysis of the same runs returns the same interval
 
@@ -129,17 +138,20 @@ def trials_to_criterion(
 
 
 def run_s1(
-    widths: tuple[int, ...] = S1_WIDTHS,
+    shapes: tuple[tuple[int, int], ...] = S1_SHAPES,
     seeds: tuple[int, ...] = SEEDS,
     trials: int = pc.TRIALS,
 ) -> list[dict[str, Any]]:
-    """Run the rule and the analytic reference at every width, at the control's passing settings."""
+    """Run the rule and the analytic reference at every shape, at the control's passing settings."""
     task = pc.ContextualAssociation.default()
     runs: list[dict[str, Any]] = []
-    for width in widths:
+    for hidden, layers in shapes:
         for seed in seeds:
             for arm in S1_ARMS:
-                print(f"  S1 width {width:>3}  {arm:<18} seed {seed}", flush=True)
+                print(
+                    f"  S1 {hidden:>3}x{layers} ({hidden * layers:>3} units)  {arm:<18} seed {seed}",
+                    flush=True,
+                )
                 runs.append(
                     pc.run_arm(
                         arm,
@@ -147,14 +159,20 @@ def run_s1(
                         task,
                         trials=trials,
                         node_noise=NODE_NOISE if arm in pc.PERTURBING_ARMS else 0.0,
-                        hidden=width,
+                        hidden=hidden,
+                        layers=layers,
                     ),
                 )
     return runs
 
 
-def _scores(runs: list[dict[str, Any]], width: int, arm: str) -> list[float]:
-    return [r["score"] for r in runs if r["hidden"] == width and r["arm"] == arm]
+def _scores(runs: list[dict[str, Any]], shape: tuple[int, int], arm: str) -> list[float]:
+    hidden, layers = shape
+    return [
+        r["score"]
+        for r in runs
+        if r["hidden"] == hidden and r.get("layers", 1) == layers and r["arm"] == arm
+    ]
 
 
 def _gap_fraction(mean: float, floor: float, optimum: float) -> float:
@@ -163,21 +181,22 @@ def _gap_fraction(mean: float, floor: float, optimum: float) -> float:
     return float("nan") if span == 0 else (mean - floor) / span
 
 
-def assess_s1_width(
+def assess_s1_shape(
     runs: list[dict[str, Any]],
-    width: int,
+    shape: tuple[int, int],
     task: pc.ContextualAssociation,
 ) -> dict[str, Any]:
-    """Score one width: the pass rule, the reachability control and the criterion times.
+    """Score one shape: the pass rule, the reachability control and the criterion times.
 
     The floor and the optimum are closed-form properties of the TASK, but what a network with a
     frozen random readout can reach is a property of the WIDTH. The analytic reference measures it.
     A width where the reference itself misses the pass bar is void at that width -- the control's own
     void clause, applied per cell -- and the rule's raw fraction there says nothing.
     """
+    hidden, layers = shape
     floor, optimum = task.cue_blind_floor(pc.NOISE), task.optimum(pc.NOISE)
-    rule_scores = _scores(runs, width, "node_perturbation")
-    reference_scores = _scores(runs, width, "analytic")
+    rule_scores = _scores(runs, shape, "node_perturbation")
+    reference_scores = _scores(runs, shape, "analytic")
     rule = pc.assess(rule_scores, floor, optimum)
     reference = pc.assess(reference_scores, floor, optimum)
     rule_fraction = _gap_fraction(rule["mean"], floor, optimum)
@@ -185,7 +204,11 @@ def assess_s1_width(
     threshold = rule["halfway_threshold"]
     per_seed: dict[str, Any] = {}
     for record in runs:
-        if record["hidden"] != width or record["arm"] != "node_perturbation":
+        if (
+            record["hidden"] != hidden
+            or record.get("layers", 1) != layers
+            or record["arm"] != "node_perturbation"
+        ):
             continue
         per_seed[str(record["seed"])] = {
             "score": record["score"],
@@ -198,8 +221,9 @@ def assess_s1_width(
         }
     crossed = [v["trials_to_criterion"] for v in per_seed.values() if v["trials_to_criterion"]]
     return {
-        "width": width,
-        "perturbed_units": width,
+        "width": hidden,
+        "layers": layers,
+        "perturbed_units": hidden * layers,
         "rule": rule,
         "reference": reference,
         "rule_gap_fraction": rule_fraction,
@@ -283,7 +307,7 @@ def fit_1n(widths: dict[int, dict[str, Any]]) -> dict[str, Any]:
         "bootstrap": len(slopes),
         "prediction": 1.0,
         "bar": SLOPE_BAR,
-        "meets_bar": bool(slope >= SLOPE_BAR and low > 0.0),
+        "meets_bar": bool(slope >= SLOPE_BAR and low > SLOPE_TOLERANCE),
     }
 
 
@@ -300,14 +324,57 @@ def extrapolate(fit: dict[str, Any], units: int, label: str) -> dict[str, Any]:
         "extrapolation": True,
         "outside_fitted_range": units > max(fit["widths_in_fit"]),
         "trials": float(trials),
-        "note": "EXTRAPOLATION from a five-point fit; not a measurement of this platform",
+        # Read off the INTERVAL, not the point estimate: a flat series fits a slope of order 1e-17,
+        # whose sign is floating-point noise. Only an interval excluding zero from above says the
+        # dimension costs trials at all; anything else is not a budget constraint, and reporting it
+        # as one would invert the result -- the dimension would read as costing something when the
+        # fit says it does not.
+        "is_a_budget_constraint": bool(fit["ci_low"] > SLOPE_TOLERANCE),
+        "note": (
+            "EXTRAPOLATION from the fitted grid; not a measurement of this platform"
+            + (
+                ""
+                if fit["ci_low"] > SLOPE_TOLERANCE
+                else " -- and the fitted interval does not exclude zero from above, so this is not "
+                "a budget constraint"
+            )
+        ),
+    }
+
+
+def _level_trend(widths: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """How the LEVEL the rule reaches moves with N, separately from how long it takes.
+
+    Speed and asymptote are different claims, and 1/N is about the first. A dimension that costs a
+    little final performance while costing no time is a real effect and a small one, and pooling the
+    two would report whichever is larger as though it were both.
+    """
+    usable = [w for w in sorted(widths) if not widths[w]["void"]]
+    fractions = [float(widths[w]["rule_gap_fraction"]) for w in usable]
+    if len(usable) < 3 or float(np.ptp(fractions)) == 0.0:
+        return {"defined": False, "reason": "fewer than three usable widths, or a constant level"}
+    from scipy import stats
+
+    result: Any = stats.spearmanr(np.array([float(w) for w in usable]), np.array(fractions))
+    return {
+        "defined": True,
+        "widths": usable,
+        "gap_fractions": fractions,
+        "rho": float(result.statistic),
+        "p": float(result.pvalue),
+        "span": float(max(fractions) - min(fractions)),
+        "descriptive_only": True,
+        "note": "five widths: the level's direction, not a tested exponent",
     }
 
 
 def analyse_s1(runs: list[dict[str, Any]]) -> dict[str, Any]:
-    """Score every width, fit the dependence and apply the registered bands."""
+    """Score every shape, fit the dependence and apply the registered bands."""
     task = pc.ContextualAssociation.default()
-    widths = {w: assess_s1_width(runs, w, task) for w in S1_WIDTHS}
+    widths = {
+        hidden * layers: assess_s1_shape(runs, (hidden, layers), task)
+        for hidden, layers in S1_SHAPES
+    }
     fit = fit_1n(widths)
     smallest, largest = min(S1_WIDTHS), max(S1_WIDTHS)
     # The single sharpest number in the sweep: the rule passes this control at 8 units. Whether it
@@ -323,18 +390,47 @@ def analyse_s1(runs: list[dict[str, Any]]) -> dict[str, Any]:
     elif fit.get("meets_bar"):
         verdict = "scale_dependent"
         reason = f"slope {fit['slope']:+.2f} at or above the {SLOPE_BAR} bar with a CI excluding 0"
-    elif fit.get("defined") and fit["ci_low"] <= 0.0 <= fit["ci_high"]:
+    elif fit.get("defined") and (
+        fit["ci_low"] <= SLOPE_TOLERANCE and fit["ci_high"] >= -SLOPE_TOLERANCE
+    ):
         verdict = "flat"
         reason = f"slope CI [{fit['ci_low']:+.2f}, {fit['ci_high']:+.2f}] contains 0"
+    elif fit.get("defined") and fit["ci_high"] < -SLOPE_TOLERANCE:
+        # Not the same as flat, and not a weak version of the prediction: the dependence exists and
+        # runs the OTHER WAY. Calling this "below the bar" would read as a small positive effect.
+        verdict = "opposite_direction"
+        reason = (
+            f"slope {fit['slope']:+.2f}, CI [{fit['ci_low']:+.2f}, {fit['ci_high']:+.2f}] entirely "
+            "below 0: time-to-criterion FALLS as the dimension grows, opposite to the prediction"
+        )
     elif fit.get("defined"):
         verdict = "below_bar"
         reason = f"slope {fit['slope']:+.2f} excludes 0 but is below the {SLOPE_BAR} bar"
     else:
         verdict = "undefined"
         reason = str(fit.get("reason"))
+    depth = assess_s1_shape(runs, S1_DEPTH_CONTROL, task)
+    matched = widths.get(S1_DEPTH_CONTROL[0] * S1_DEPTH_CONTROL[1])
     return {
         "widths": widths,
         "fit": fit,
+        "level_trend": _level_trend(widths),
+        # The yardstick's exact arrangement at the same unit count as the widest one-layer cell. With
+        # the width sweep flat, depth is the only shape difference left between the platform the rule
+        # passes and the platform it fails, so this is what separates shape from task.
+        "depth_control": (
+            None
+            if depth["rule"]["n"] == 0
+            else {
+                "shape": f"{S1_DEPTH_CONTROL[0]}x{S1_DEPTH_CONTROL[1]}",
+                "perturbed_units": depth["perturbed_units"],
+                "cell": depth,
+                "matched_one_layer_gap_fraction": (
+                    None if matched is None else matched["rule_gap_fraction"]
+                ),
+                "passes": bool(depth["rule"]["passes"]),
+            }
+        ),
         "baseline_reproduces": baseline_reproduces,
         "largest_width_passes": largest_passes,
         "verdict": verdict,
@@ -674,6 +770,21 @@ def _print_s1(s1: dict[str, Any]) -> None:
             f"{cell['crossed']}/{cell['crossed'] + cell['censored']:<5} | "
             f"{cell['median_trials_to_criterion']:>13.0f}",
         )
+    level = s1["level_trend"]
+    if level.get("defined"):
+        print(
+            f"  level: rho {level['rho']:+.3f} p {level['p']:.3f} over a span of "
+            f"{level['span']:.3f} of the gap (descriptive)",
+        )
+    depth = s1.get("depth_control")
+    if depth is not None:
+        matched = depth["matched_one_layer_gap_fraction"]
+        print(
+            f"  depth control {depth['shape']} ({depth['perturbed_units']} units, the yardstick's "
+            f"own shape): gap {depth['cell']['rule_gap_fraction']:.3f} against "
+            f"{'n/a' if matched is None else f'{matched:.3f}'} in one layer — "
+            f"{'passes' if depth['passes'] else 'FAILS'}",
+        )
     fit = s1["fit"]
     if fit.get("defined"):
         print(
@@ -716,13 +827,18 @@ def write_s1_csv(runs: list[dict[str, Any]], path: Path) -> None:
     """One row per width, arm and seed."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["width", "perturbed_units", "arm", "seed", "score", "alignment"])
+        # LF, matching every committed per-seed record; csv's default dialect would write CRLF and
+        # git would normalise it on the way in, leaving the working tree and the commit different.
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(
+            ["width", "layers", "perturbed_units", "arm", "seed", "score", "alignment"],
+        )
         for run in runs:
             writer.writerow(
                 [
                     run["hidden"],
-                    run["hidden"],
+                    run.get("layers", 1),
+                    run["perturbed_units"],
                     run["arm"],
                     run["seed"],
                     f"{run['score']:.6f}",
@@ -748,7 +864,8 @@ def main(argv: list[str] | None = None) -> int:
     s1: dict[str, Any] | None = None
     s2: dict[str, Any] | None = None
     if args.s1:
-        runs = run_s1(trials=args.trials)
+        # The registered grid, then the yardstick's own shape at a matched unit count.
+        runs = run_s1((*S1_SHAPES, S1_DEPTH_CONTROL), trials=args.trials)
         s1 = analyse_s1(runs)
         _print_s1(s1)
         if args.csv:
@@ -773,6 +890,7 @@ def main(argv: list[str] | None = None) -> int:
                             "seeds": list(SEEDS),
                             "s1_widths": list(S1_WIDTHS),
                             "s1_perturbed_units": list(S1_WIDTHS),
+                            "s1_depth_control": list(S1_DEPTH_CONTROL),
                             "s2_widths": list(S2_WIDTHS),
                             "s2_perturbed_units": [S2_HIDDEN_LAYERS * w for w in S2_WIDTHS],
                             "node_noise": NODE_NOISE,

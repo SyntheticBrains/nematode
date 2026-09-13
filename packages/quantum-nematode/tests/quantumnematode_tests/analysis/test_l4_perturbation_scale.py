@@ -178,17 +178,23 @@ class TestTheDerivedBudget:
 # ═══════════════════════════ S1's width cells ════════════════════════════════
 
 
-def _s1_runs(rule_score: float, reference_score: float) -> list[dict[str, Any]]:
-    """Build a complete S1 run list where every width reads the same, for the clause tested."""
+def _s1_runs(
+    rule_score: float,
+    reference_score: float,
+    shapes: tuple[tuple[int, int], ...] = ps.S1_SHAPES,
+) -> list[dict[str, Any]]:
+    """Build a complete S1 run list where every shape reads the same, for the clause tested."""
     runs: list[dict[str, Any]] = []
-    for width in ps.S1_WIDTHS:
+    for hidden, layers in shapes:
         for seed in ps.SEEDS:
             for arm, score in (("node_perturbation", rule_score), ("analytic", reference_score)):
                 runs.append(
                     {
                         "arm": arm,
                         "seed": seed,
-                        "hidden": width,
+                        "hidden": hidden,
+                        "layers": layers,
+                        "perturbed_units": hidden * layers,
                         "score": score,
                         "alignment": 0.0,
                         "reward_blocks": [score] * 20,
@@ -207,7 +213,7 @@ class TestReachability:
         task = self._task()
         floor = task.cue_blind_floor(pc.NOISE)
         runs = _s1_runs(rule_score=floor, reference_score=floor)
-        cell = ps.assess_s1_width(runs, 8, task)
+        cell = ps.assess_s1_shape(runs, (8, 1), task)
         assert cell["void"]
         assert "analytic reference" in cell["void_reason"]
 
@@ -215,7 +221,7 @@ class TestReachability:
         # Dividing by a broken reference would manufacture a number out of a failed control.
         task = self._task()
         floor = task.cue_blind_floor(pc.NOISE)
-        cell = ps.assess_s1_width(_s1_runs(floor, floor), 8, task)
+        cell = ps.assess_s1_shape(_s1_runs(floor, floor), (8, 1), task)
         assert cell["reachability_normalised"] is None
 
     def test_a_passing_reference_normalises_the_rule(self) -> None:
@@ -223,14 +229,14 @@ class TestReachability:
         optimum = task.optimum(pc.NOISE)
         floor = task.cue_blind_floor(pc.NOISE)
         midpoint = floor + 0.5 * (optimum - floor)
-        cell = ps.assess_s1_width(_s1_runs(midpoint, optimum), 8, task)
+        cell = ps.assess_s1_shape(_s1_runs(midpoint, optimum), (8, 1), task)
         assert not cell["void"]
         assert cell["reachability_normalised"] == pytest.approx(0.5, abs=1e-6)
 
     def test_the_censoring_rate_is_reported(self) -> None:
         task = self._task()
         floor = task.cue_blind_floor(pc.NOISE)
-        cell = ps.assess_s1_width(_s1_runs(floor, task.optimum(pc.NOISE)), 8, task)
+        cell = ps.assess_s1_shape(_s1_runs(floor, task.optimum(pc.NOISE)), (8, 1), task)
         assert cell["censored"] == len(ps.SEEDS)
         assert cell["censoring_rate"] == pytest.approx(1.0)
 
@@ -653,3 +659,165 @@ class TestTheWidthAxisLeavesTheCommittedControlAlone:
         run = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2)
         assert len(run["reward_blocks"]) == 300 // pc.BLOCK
         assert math.isfinite(run["score"])
+
+
+class TestTheDepthControl:
+    """The yardstick's own shape at a matched unit count, which separates shape from task."""
+
+    def test_the_shape_is_the_yardsticks(self) -> None:
+        hidden, layers = ps.S1_DEPTH_CONTROL
+        assert (hidden, layers) == (64, 2)
+        assert hidden * layers == ps.YARDSTICK_UNITS
+
+    def test_it_is_scored_separately_from_the_width_grid(self) -> None:
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        runs = _s1_runs(optimum, optimum, (*ps.S1_SHAPES, ps.S1_DEPTH_CONTROL))
+        s1 = ps.analyse_s1(runs)
+        assert s1["depth_control"]["perturbed_units"] == ps.YARDSTICK_UNITS
+        assert s1["depth_control"]["shape"] == "64x2"
+        assert s1["depth_control"]["passes"]
+
+    def test_the_matched_one_layer_cell_is_carried_beside_it(self) -> None:
+        # 128 units in one layer and in two is the comparison; a number without its match would not
+        # separate depth from anything.
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        runs = _s1_runs(optimum, optimum, (*ps.S1_SHAPES, ps.S1_DEPTH_CONTROL))
+        s1 = ps.analyse_s1(runs)
+        assert s1["depth_control"]["matched_one_layer_gap_fraction"] == pytest.approx(1.0, abs=1e-6)
+
+    def test_a_sweep_without_it_reports_none_rather_than_a_fabricated_cell(self) -> None:
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        assert ps.analyse_s1(_s1_runs(optimum, optimum))["depth_control"] is None
+
+    def test_a_shape_is_not_confused_with_a_width_of_the_same_unit_count(self) -> None:
+        # 64x2 and 128x1 are both 128 units; keyed on units alone they would pool into one cell.
+        task = pc.ContextualAssociation.default()
+        optimum, floor = task.optimum(pc.NOISE), task.cue_blind_floor(pc.NOISE)
+        runs = _s1_runs(optimum, optimum, ((128, 1),)) + _s1_runs(floor, optimum, ((64, 2),))
+        one_layer = ps.assess_s1_shape(runs, (128, 1), task)
+        two_layer = ps.assess_s1_shape(runs, (64, 2), task)
+        assert one_layer["rule"]["passes"]
+        assert not two_layer["rule"]["passes"]
+
+
+class TestTheDirectionOfTheDependence:
+    def _widths(self, trials_at: dict[int, int]) -> dict[int, dict[str, Any]]:
+        return {
+            width: _width_cell(width, dict.fromkeys(ps.SEEDS, trials_at[width]))
+            for width in ps.S1_WIDTHS
+        }
+
+    def test_a_negative_slope_is_not_reported_as_below_the_bar(self) -> None:
+        # A CI entirely below zero is a dependence running the OTHER WAY, not a weak version of the
+        # prediction; "below the bar" would read as a small positive effect.
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        runs = _s1_runs(optimum, optimum)
+        # Make the wider cells cross sooner by shortening their curves' rise.
+        for run in runs:
+            if run["arm"] != "node_perturbation":
+                continue
+            lead = {8: 12, 16: 9, 32: 6, 64: 3, 128: 1}[run["hidden"]]
+            run["reward_blocks"] = [optimum - 10.0] * lead + [optimum] * 20
+        s1 = ps.analyse_s1(runs)
+        assert s1["fit"]["ci_high"] < 0
+        assert s1["verdict"] == "opposite_direction"
+        assert "opposite to the prediction" in s1["why"]
+
+    def test_an_extrapolation_from_a_flat_slope_is_not_a_budget(self) -> None:
+        # A flat series fits a slope of order 1e-17, whose sign is floating-point noise, so the
+        # interval and not the point estimate has to decide this.
+        fit = ps.fit_1n(self._widths(dict.fromkeys(ps.S1_WIDTHS, 3000)))
+        row = ps.extrapolate(fit, ps.CONNECTOME_UNITS, "connectome")
+        assert not row["is_a_budget_constraint"]
+        assert "not a budget constraint" in row["note"]
+
+    def test_an_exactly_flat_sweep_reads_as_flat_and_not_as_below_the_bar(self) -> None:
+        # The degenerate interval a constant series produces sits at ~1e-16 with zero width, so
+        # without a tolerance it excludes zero and the sweep would be labelled a dependence.
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        runs = _s1_runs(optimum, optimum)
+        for run in runs:
+            if run["arm"] == "node_perturbation":
+                run["reward_blocks"] = [optimum - 10.0] * 5 + [optimum] * 15
+        s1 = ps.analyse_s1(runs)
+        assert s1["verdict"] == "flat"
+
+    def test_a_positive_slope_is_a_budget(self) -> None:
+        fit = ps.fit_1n({w: _width_cell(w, dict.fromkeys(ps.SEEDS, 100 * w)) for w in ps.S1_WIDTHS})
+        assert ps.extrapolate(fit, ps.CONNECTOME_UNITS, "connectome")["is_a_budget_constraint"]
+
+
+class TestTheLevelIsReportedSeparatelyFromTheSpeed:
+    def test_a_declining_level_is_detected(self) -> None:
+        # Speed and asymptote are different claims, and 1/N is about the first: a dimension costing
+        # a little final performance while costing no time must not be pooled into one number.
+        task = pc.ContextualAssociation.default()
+        floor, optimum = task.cue_blind_floor(pc.NOISE), task.optimum(pc.NOISE)
+        runs = _s1_runs(optimum, optimum)
+        for run in runs:
+            if run["arm"] == "node_perturbation":
+                step = {8: 0.0, 16: 0.1, 32: 0.2, 64: 0.3, 128: 0.4}[run["hidden"]]
+                run["score"] = optimum - step * (optimum - floor)
+        level = ps.analyse_s1(runs)["level_trend"]
+        assert level["defined"]
+        assert level["rho"] == pytest.approx(-1.0)
+        assert level["descriptive_only"]
+
+    def test_a_constant_level_is_not_correlated(self) -> None:
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        level = ps.analyse_s1(_s1_runs(optimum, optimum))["level_trend"]
+        assert not level["defined"]
+        assert "constant level" in level["reason"]
+
+
+class TestTheDepthParameterLeavesTheControlAlone:
+    def test_the_default_depth_is_the_pinned_one(self) -> None:
+        assert pc.HIDDEN_LAYERS == 1
+
+    def test_the_default_and_the_explicit_pins_are_the_same_run(self) -> None:
+        task = pc.ContextualAssociation.default()
+        default = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2)
+        pinned = pc.run_arm(
+            "node_perturbation",
+            1,
+            task,
+            trials=300,
+            node_noise=0.2,
+            hidden=pc.HIDDEN,
+            layers=pc.HIDDEN_LAYERS,
+        )
+        assert default["score"] == pinned["score"]
+        assert default["perturbed_units"] == pc.HIDDEN
+
+    def test_the_dimension_is_width_times_depth(self) -> None:
+        task = pc.ContextualAssociation.default()
+        run = pc.run_arm(
+            "node_perturbation",
+            1,
+            task,
+            trials=300,
+            node_noise=0.2,
+            hidden=64,
+            layers=2,
+        )
+        assert run["perturbed_units"] == 128
+
+    def test_a_depth_below_one_is_refused(self) -> None:
+        import torch
+
+        with pytest.raises(ValueError, match="layers must be >= 1"):
+            pc._actor(3, torch.Generator(), 8, 0)
+
+    def test_the_built_stack_is_the_yardsticks_arrangement(self) -> None:
+        import torch
+        from torch import nn
+
+        actor = pc._actor(3, torch.Generator(), 64, 2)
+        linears = [m for m in actor if isinstance(m, nn.Linear)]
+        assert [(m.in_features, m.out_features) for m in linears] == [(3, 64), (64, 64), (64, 1)]

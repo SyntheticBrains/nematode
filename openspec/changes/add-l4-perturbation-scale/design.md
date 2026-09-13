@@ -195,3 +195,34 @@ materially different sentence to publish.
 - **The grid tops out at 128**, the yardstick's own width, and does not reach the connectome's. That is
   deliberate: 302 units on the MLP would be a different architecture, and the connectome itself is out
   of scope until S1 and S2 both move.
+
+______________________________________________________________________
+
+## Amendment, 2026-09-13 — the depth control, added after S1's width grid returned flat
+
+S1's registered grid ran and **the rule passes the control at every width, 8 through 128**, with
+time-to-criterion showing no growth in N (slope **−0.149**, CI [−0.239, −0.061] — the dependence
+exists and runs the *other way*). The registered sweep therefore closes its own question, and in doing
+so it leaves **exactly one shape difference** between the platform the rule passes and the platform it
+fails: the control at 128 units is **one** plastic layer of 128; the yardstick is **two** of 64.
+
+Perturbed units match at 128. Depth does not. So a matched-unit comparison of the two shapes is the
+cheapest remaining way to separate *shape* from *task*, and the registered sweep cannot make it.
+
+**Added**: one cell, the yardstick's exact arrangement — `hidden 64, layers 2`, hidden-only plasticity,
+**128 perturbed units** — on the same one-step control, same seeds, same 20 000 trials, same σ, scored
+by the same pass rule and reported beside the matched one-layer cell.
+
+**What it can settle.** If it passes, then at a matched unit count *and* a matched architecture the
+estimator learns a one-step task while failing every multi-step one, and the failure localises to
+multi-step credit assignment — which is what I.3's delay result predicted in advance (the pinned
+`trace_decay 0.9` falls below the cue-blind floor by twenty steps of delay, on episodes of 350 to
+2400). If it fails, depth is implicated and the width sweep was asking the wrong question about the
+right platform.
+
+**What it cannot.** The control's task is one-step by construction. A pass says the arrangement is not
+the problem; it says nothing about how the rule behaves over a long episode, which is S2's question
+and 055's finding.
+
+Recorded as an amendment rather than as registered in advance: it was chosen **after** seeing S1's
+slope, and its result is reported with that provenance attached.

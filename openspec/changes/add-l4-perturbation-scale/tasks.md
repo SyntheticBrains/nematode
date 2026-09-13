@@ -22,6 +22,12 @@
 - [ ] 1.6 The derived budget for 128 units and for the connectome's 302 units / 1208 draws per
   decision, emitted with an explicit `extrapolation: true` field and printed with that word — not a
   measurement, and both readings of the connectome's dimension given.
+- [ ] 1.7b **The depth control** *(amendment, 2026-09-13, after S1's grid returned flat)*: one cell at
+  the yardstick's exact arrangement — `hidden 64, layers 2`, **128 perturbed units** — on the same
+  control, reported beside the matched one-layer 128-unit cell. With the width sweep flat, depth is the
+  only shape difference left between the platform the rule passes and the platform it fails. A depth
+  parameter on the control with the pinned `HIDDEN_LAYERS = 1` as its default, so the committed values
+  still reproduce.
 - [ ] 1.7 Tests: the default reproduces the committed control; the censoring count; the void clause at
   a failing reference; the fit on a synthetic exact-1/N series recovering slope 1; the extrapolation
   flag present on every derived figure.

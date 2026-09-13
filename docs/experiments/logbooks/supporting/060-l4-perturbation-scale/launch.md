@@ -146,6 +146,22 @@ the default and compared against
 **77 common leaves, 0 differing, none missing**. The 49 keys present only in the re-run are the
 node-perturbation arms I.1 added after 048 was written.
 
+## Amendment, 2026-09-13 — the depth control
+
+S1's registered grid ran first, as the protocol requires, and **the rule passes at every width, 8
+through 128**, with no growth in time-to-criterion (slope **−0.149**, CI [−0.239, −0.061]). That closes
+the registered question and leaves **one** shape difference between the platform the rule passes and
+the platform it fails: 128 units as **one** layer of 128 here, against **two** of 64 in the yardstick.
+
+**Added**: the yardstick's exact arrangement — `hidden 64, layers 2`, 128 perturbed units — on the same
+control, same seeds, same budget, same pass rule, reported beside the matched one-layer cell. It is the
+cheapest remaining way to separate shape from task, and the registered grid cannot make that
+comparison.
+
+It was chosen **after** seeing S1's slope and is reported with that provenance. A pass means the
+arrangement is not the problem and the failure localises to multi-step credit assignment — what I.3's
+delay result predicted in advance. It says nothing about long episodes, which is S2's question.
+
 ## Disclosure
 
 The S2 pilot runs on seeds **101–104**, disjoint from the registered 1–8. S1 has no pilot: it runs on
