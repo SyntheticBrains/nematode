@@ -17,12 +17,12 @@ threshold; "sustained" requires two consecutive blocks.
 
 | shape | perturbed units | mean | gap fraction | reference | normalised | above floor | passes | median trials | range | sustained | censored |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `8x1` | 8 | −0.1962 | 0.8904 | 0.9986 | 0.8916 | 8/8 | **yes** | 4450 | 3000–11000 | 5450 | 0 |
-| `16x1` | 16 | −0.1980 | 0.8872 | 0.9986 | 0.8885 | 8/8 | **yes** | 3200 | 2800–5500 | 4300 | 0 |
-| `32x1` | 32 | −0.2124 | 0.8613 | 0.9986 | 0.8625 | 8/8 | **yes** | 3400 | 2300–5500 | 3950 | 0 |
-| `64x1` | 64 | −0.2132 | 0.8598 | 0.9986 | 0.8610 | 8/8 | **yes** | 3650 | 1900–6400 | 4650 | 0 |
-| `128x1` | 128 | −0.2203 | 0.8470 | 0.9986 | 0.8482 | 8/8 | **yes** | 2650 | 2300–4400 | 3850 | 0 |
-| **`64x2`** *(amendment — the yardstick's own shape)* | **128** | **−0.2170** | **0.8530** | 0.9986 | 0.8542 | **8/8** | **yes** | **1250** | **700–1700** | 1700 | 0 |
+| `8x1` | 8 | −0.1962 | 0.8904 | 0.9986 | 0.8916 | 8/8 | **yes** | 4068 | 2814–10711 | 5196 | 0 |
+| `16x1` | 16 | −0.1980 | 0.8872 | 0.9986 | 0.8885 | 8/8 | **yes** | 2671 | 1773–4704 | 4328 | 0 |
+| `32x1` | 32 | −0.2124 | 0.8613 | 0.9986 | 0.8625 | 8/8 | **yes** | 2590 | 1658–4423 | 4394 | 0 |
+| `64x1` | 64 | −0.2132 | 0.8598 | 0.9986 | 0.8610 | 8/8 | **yes** | 2496 | 1608–5673 | 4806 | 0 |
+| `128x1` | 128 | −0.2203 | 0.8470 | 0.9986 | 0.8482 | 8/8 | **yes** | 2478 | 931–3289 | 3321 | 0 |
+| **`64x2`** *(amendment — the yardstick's own shape)* | **128** | **−0.2170** | **0.8530** | 0.9986 | 0.8542 | **8/8** | **yes** | **958** | **351–1696** | 1626 | 0 |
 
 ### Four things this table settles
 
@@ -33,10 +33,10 @@ threshold; "sustained" requires two consecutive blocks.
    every shape, so reachability never limits a cell and the normalised column tracks the raw one to
    three decimals. Every seed crosses the criterion at every shape: **0 censored of 48**.
 3. **Time-to-criterion does not grow with the dimension.** OLS of `log2(trials)` on `log2(N)` over the
-   40 per-seed values of the width grid gives a slope of **−0.149**, bootstrap CI over seeds
-   **[−0.239, −0.061]**, against the predicted **+1.0** and the registered bar of +0.5. The interval
+   40 per-seed values of the width grid gives a slope of **−0.216**, bootstrap CI over seeds
+   **[−0.331, −0.092]**, against the predicted **+1.0** and the registered bar of +0.5. The interval
    excludes zero **below**, so the dependence is real and runs opposite to the prediction. The spread
-   narrows with N as well: 3000–11000 trials at 8 units against 2300–4400 at 128.
+   narrows with N as well: 2814–10711 trials at 8 units against 931–3289 at 128.
 4. **The cost that does exist is in the level, and it is small.** The gap fraction declines
    monotonically across the width grid — 0.8904, 0.8872, 0.8613, 0.8598, 0.8470 — a perfect rank
    correlation (**rho −1.000**) spanning **0.043 of the gap across a 16-fold change in N**. Real, and
@@ -52,7 +52,7 @@ At two layers of 64 — `Linear(K, 64) → tanh → Linear(64, 64) → tanh → 
 plasticity, **128 perturbed units, the yardstick's exact arrangement** — the rule reaches **0.853** of
 the gap on 8 of 8 seeds, against **0.847** for the same dimension in one layer. The two shapes are
 indistinguishable in level, and the two-layer arrangement reaches criterion **fastest of every cell in
-the sweep**: a median of **1250 trials** (700–1700) against 2650 at `128x1` and 4450 at `8x1`.
+the sweep**: a median of **958 trials** (351–1696) against 2478 at `128x1` and 4068 at `8x1`.
 
 So depth does not cost this rule anything either. It helps.
 
@@ -60,9 +60,9 @@ So depth does not cost this rule anything either. It helps.
 
 | platform | fitted trials | a budget constraint? |
 |---|---|---|
-| the MLP yardstick (128 units) | 2 944 | **no** |
-| the connectome, read as units (302) | 2 590 | **no** |
-| the connectome, read as draws per decision (1208) | 2 106 | **no** |
+| the MLP yardstick (128 units) | 2 090 | **no** |
+| the connectome, read as units (302) | 1 736 | **no** |
+| the connectome, read as draws per decision (1208) | 1 286 | **no** |
 
 Each carries `extrapolation: true` in the record. Each also carries
 `is_a_budget_constraint: false`, because the flag reads the fitted **interval** rather than the point

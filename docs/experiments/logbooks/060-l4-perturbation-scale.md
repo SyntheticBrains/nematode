@@ -7,9 +7,10 @@ perturbation **solves a multi-step foraging task at eight perturbed units** — 
 units every failing MLP yardstick arm ran** (rho −1.000, drift rising 0.91 → 1.39). On the one-step
 positive control the same dimension costs almost nothing: every width from 8 to 128 passes, the
 yardstick's exact two-layer arrangement passes and reaches criterion *fastest*, and time-to-criterion
-**falls** with the dimension (slope −0.149, CI [−0.239, −0.061], against a prediction of +1.0). So the
-constraint is neither the dimension nor the horizon alone but their **product**: the per-unit credit is
-diluted by the number of perturbed units times the number of decisions the reward is shared over.
+**falls** with the dimension (slope −0.216, CI [−0.331, −0.092], against a prediction of +1.0). So the
+constraint is neither the dimension nor the horizon alone but an **interaction** between them; the
+candidate mechanism is dilution of per-unit credit across units and across decisions, which **this
+design cannot confirm** — the two axes were varied on different platforms, not factorially.
 Neither pre-registered row fits, and the registration fixed the treatment in advance — a mixed reading
 is recorded as mixed with both halves stated. **No committed verdict is changed**; [Logbook
 059](059-7a-shipment.md)'s re-registration condition is **met**, and 7b's gate **stands as written**
@@ -59,11 +60,11 @@ record, 0 differing, none missing.**
 
 | shape | perturbed units | gap fraction | above floor | passes | median trials to criterion | censored |
 |---|---|---|---|---|---|---|
-| `8x1` | 8 | 0.890 | 8/8 | **yes** | 4450 | 0 |
-| `16x1` | 16 | 0.887 | 8/8 | **yes** | 3200 | 0 |
-| `32x1` | 32 | 0.861 | 8/8 | **yes** | 3400 | 0 |
-| `64x1` | 64 | 0.860 | 8/8 | **yes** | 3650 | 0 |
-| `128x1` | 128 | 0.847 | 8/8 | **yes** | 2650 | 0 |
+| `8x1` | 8 | 0.890 | 8/8 | **yes** | 4068 | 0 |
+| `16x1` | 16 | 0.887 | 8/8 | **yes** | 2671 | 0 |
+| `32x1` | 32 | 0.861 | 8/8 | **yes** | 2590 | 0 |
+| `64x1` | 64 | 0.860 | 8/8 | **yes** | 2496 | 0 |
+| `128x1` | 128 | 0.847 | 8/8 | **yes** | 2478 | 0 |
 
 Four readings, in the order they matter:
 
@@ -75,10 +76,10 @@ Four readings, in the order they matter:
    reachability-normalised column tracks the raw one to three decimals. Every seed crosses the
    criterion at every width — **0 censored of 40** — so the fit is over the whole sample rather than
    over its survivors.
-3. **Time-to-criterion does not grow with N.** Slope **−0.149** on `log2(trials)` against `log2(N)`,
-   bootstrap CI over seeds **[−0.239, −0.061]**, against a prediction of **+1.0** and a registered bar
+3. **Time-to-criterion does not grow with N.** Slope **−0.216** on `log2(trials)` against `log2(N)`,
+   bootstrap CI over seeds **[−0.331, −0.092]**, against a prediction of **+1.0** and a registered bar
    of **+0.5**. The interval excludes zero **from below**: the dependence is real and runs *opposite*
-   to the prediction. The spread narrows with N too — 3000–11000 trials at 8 units against 2300–4400
+   to the prediction. The spread narrows with N too — 2814–10711 trials at 8 units against 931–3289
    at 128.
 4. **What 1/N does cost is in the level, and it is small.** The gap fraction declines monotonically
    — 0.890, 0.887, 0.861, 0.860, 0.847 — a perfect rank correlation (**rho −1.000**) spanning
@@ -87,8 +88,8 @@ Four readings, in the order they matter:
 
 Every derived budget is reported with `extrapolation: true` **and** `is_a_budget_constraint: false`,
 because the flag reads the fitted interval rather than the point estimate and this interval does not
-exclude zero from above. A negative slope predicts a *smaller* requirement at larger N: 2 944 trials
-for the yardstick's 128 units, 2 590 for 302, 2 106 for 1208. Those are what the fit says and they are
+exclude zero from above. A negative slope predicts a *smaller* requirement at larger N: 2 090 trials
+for the yardstick's 128 units, 1 736 for 302, 1 286 for 1208. Those are what the fit says and they are
 **not budgets**; reporting them as budgets would invert the result.
 
 ## The depth control: the yardstick's own arrangement passes too
@@ -100,12 +101,12 @@ and reported with that provenance.
 
 | shape | perturbed units | gap fraction | above floor | median trials |
 |---|---|---|---|---|
-| `128x1` | 128 | 0.847 | 8/8 | 2650 |
-| **`64x2`** — the yardstick's exact arrangement | **128** | **0.853** | **8/8** | **1250** |
+| `128x1` | 128 | 0.847 | 8/8 | 2478 |
+| **`64x2`** — the yardstick's exact arrangement | **128** | **0.853** | **8/8** | **958** |
 
 The two shapes are **indistinguishable in level**, and the two-layer arrangement reaches criterion
-**fastest of every cell in the sweep** — a median of 1250 trials (range 700–1700) against 2650 at one
-layer and 4450 at 8 units. Depth does not cost this rule anything. It helps.
+**fastest of every cell in the sweep** — a median of 958 trials (range 351–1696) against 2478 at one
+layer and 4068 at 8 units. Depth does not cost this rule anything. It helps.
 
 So at a **matched perturbation dimension and a matched architecture**, this estimator learns a
 one-step task to 0.853 of the floor-to-optimum gap on 8 of 8 seeds, while the same architecture on a
@@ -232,7 +233,7 @@ That is consistent rather than contradictory: the per-unit credit is diluted by 
 
 | half | reading |
 |---|---|
-| **S1** | `opposite_direction` — the rule passes at every width to 128, and time-to-criterion *falls* with the dimension (slope −0.149, CI [−0.239, −0.061]) |
+| **S1** | `opposite_direction` — the rule passes at every width to 128, and time-to-criterion *falls* with the dimension (slope −0.216, CI [−0.331, −0.092]) |
 | **S2** | `rescued` — the rule solves the cell at 8 units and collapses monotonically to 3.0% full clear at 128 |
 
 Neither registered row fits. `scale_limited` required a **positive** S1 slope *and* 128 units failing
@@ -241,12 +242,20 @@ false. The registration anticipated exactly this and fixed the treatment in adva
 **recorded as mixed with both halves stated**, not resolved toward whichever verdict is nearer.
 
 Stated as one sentence: **the perturbation dimension does not bind on a one-step task and binds
-decisively on a multi-step one.** That is a better result than either registered row, because it names
-the interaction rather than the axis — the per-unit credit is diluted by the number of perturbed units
-*times* the number of decisions the reward has to be shared over, and only the product matters.
+decisively on a multi-step one.** That is a better result than either registered row, because what it
+identifies is an **interaction** between the dimension and the horizon rather than an effect of either
+axis alone.
 
-It also explains the two halves of the phase's record in one mechanism, which neither I.3's horizon
-finding nor this dimension finding does alone. They are the same constraint measured along two axes.
+**The mechanism is a candidate, not a measurement.** Dilution of per-unit credit across units and
+across decisions would produce exactly this pattern, and it is the obvious reading — but a *product*
+law is a stronger claim than the design supports. The two axes were varied on **different platforms**:
+the dimension on the one-step control and on a 350-step cell, the horizon across I.3's delay grid and
+I.3b's 2400-step cell, never factorially at matched settings. A matched sweep — the same widths at two
+or more horizons on one platform — is what would distinguish a product from any other interaction, and
+it has not been run.
+
+With that qualification, the interaction does span the two halves of the phase's record, which neither
+I.3's horizon finding nor this dimension finding does alone.
 
 ## What this licenses, and what it does not
 
@@ -260,12 +269,15 @@ the **wild-type-versus-rewired-null wiring contrast under this rule at a working
 block V's registered ≥ 20% bar. Until that runs, 7b's gate stands as written — its letter still
 requires a local rule beating the null, and no such contrast exists.
 
-**Not licensed: anything about the connectome.** It perturbs **302 neurons at each of four settling
-steps — 1208 draws per decision**, far beyond the failing end of this grid, where 128 units already
-sits at 3.0% full clear. This result does **not** predict that the connectome works; read plainly it
-predicts the opposite at its present dimension. What it makes worth building is a way to *reduce* the
-connectome's perturbation dimension — perturbing a subset of units rather than all 302 — which the
-substrate does not currently support, since `node_noise` is applied to every pre-activation.
+**Not licensed: anything about the connectome, in either direction.** It perturbs **302 neurons at
+each of four settling steps — 1208 draws per decision**, and **this sweep did not test it**: the grid
+tops out at 128 units, on a feedforward MLP, with no settling recurrence. So the result predicts
+neither that the connectome works nor that it fails. What it does is give a **reason to run the
+experiment**: the dimension turned out to matter on a cell where it was never varied, the connectome's
+dimension is an order of magnitude larger than any point measured here, and there is currently no way
+to lower it — `node_noise` is applied to every pre-activation. A reduced-dimension mechanism (R.1c) is
+therefore the prerequisite for any connectome arm, and until one exists the connectome's behaviour at
+a working dimension is simply unknown.
 
 **No committed verdict is changed.** B.8's shipped negative recorded what had been measured, and every
 arm it summarised ran at 128 or 302 perturbed units. What this result shows is that the *scope* was
@@ -274,7 +286,10 @@ results is a **new registration**, as this change registered in advance, and not
 
 ### What this may not be cited as
 
-- **A result about the connectome**, or about any substrate at a dimension above 32 units.
+- **A result about the connectome**, or about any substrate this sweep did not run. The grid
+  covers 8 to 128 perturbed units on both platforms, so 64 and 128 units are **measured here, not
+  excluded** — what is untested is the connectome's own substrate at any dimension, and the MLP
+  above 128.
 - **A result about any other cell.** One cell: food-only klinotaxis, 350 steps, target 20, on the
   calibrated continuous-2D substrate. The 2400-step C3 cell still fails at 128 units.
 - **A claim that the rule is a good gradient estimator.** Its measured alignment is +0.263 and nothing
@@ -290,22 +305,41 @@ results is a **new registration**, as this change registered in advance, and not
 - **Performance collapses monotonically with the perturbation dimension**, to 3.0% full clear at the
   128 units every failing yardstick arm ran, with drift rising 0.91 → 1.39 as it does.
 - **On the one-step control the dimension costs almost nothing** — every width passes, and
-  time-to-criterion falls rather than rises — so the constraint is the **product** of dimension and
-  horizon, not either alone.
+  time-to-criterion falls rather than rises — so what binds is an **interaction** between dimension
+  and horizon rather than either alone. Dilution across units and decisions is the candidate
+  mechanism; a matched factorial sweep, which this design is not, is what a product law would need.
 - **Verdict `mixed`**, with both halves stated, under the clause registered for exactly this outcome.
 - **059's re-registration condition is met**, and the wiring contrast under a working local rule is the
   next registration. **7b's gate still stands as written.**
 - **No committed verdict changed.**
 
-## Next Steps
+## Next Steps, and the order they have to run in
 
-- [ ] The wiring contrast — wild type against its degree-preserving rewired null — **under this rule at
-  8 perturbed units**, on the block-V cell, against the registered 20% bar. This is what 7b's gate asks
-  for.
-- [ ] A reduced-perturbation-dimension mechanism for the connectome, without which no connectome arm
-  follows from this result.
-- [ ] Re-registration of B.5, B.1, B.4 and B.4b on the block-V cells at a working dimension, per 059.
-- [ ] R.2 (e-prop) is **not** retired: it remains the named fallback if the wiring contrast fails.
+R.1 makes the wiring contrast runnable **in principle and not yet in practice**, because two facts
+collide: the contrast needs the **connectome** — rewiring is a connectome operation, and an MLP has no
+wiring to rewire — while the connectome cannot be run below **302 units × 4 settling steps**, an order
+of magnitude past the 128 units at which this sweep measured 3.0% full clear. So the chain is:
+
+1. [ ] **R.1c — a reduced-perturbation-dimension mechanism for the connectome.** `node_noise` is
+   applied to every pre-activation, so there is currently no way to run the connectome at a dimension
+   where this rule learns. **Nothing downstream of it can run.** It is also the control the mechanism
+   claim is qualified pending, since the settling-step multiplier is a third axis this sweep never
+   touched.
+2. [ ] **R.1b — the wiring contrast under this rule**, wild type against its degree-preserving rewired
+   null at a working dimension, on the block-V cell, against the registered 20% bar. **This is what
+   7b's gate asks for**, and it is blocked on R.1c.
+3. [ ] **7b's gate reconsidered** — only after R.1b returns. Reading R.1 as having opened it would skip
+   two unbuilt steps.
+
+Available in parallel, neither needing the connectome:
+
+- [ ] **R.3 — re-registration of B.5, B.1, B.4 and B.4b** on the block-V cells at a working dimension,
+  per 059. Its condition is met now.
+- [ ] **R.2b — a matched dimension × horizon sweep.** This sweep varied the dimension; I.3 and I.3b
+  varied the horizon. The two have **never been crossed at matched settings**, which is exactly why the
+  mechanism above is stated as an interaction rather than a product. Cheap: the MLP cell runs in
+  minutes.
+- [ ] **R.2 (e-prop)** is **not** retired: it remains the named fallback if R.1b fails.
 
 ## Data References
 

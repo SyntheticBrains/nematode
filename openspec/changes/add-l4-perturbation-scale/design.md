@@ -35,6 +35,9 @@ behavioural cell, where width is capacity too.
    new one.
 2. **Trials-to-criterion**, per seed: the first trial at which a trailing 100-trial mean crosses that
    halfway threshold. This is the quantity 1/N makes a claim about; a pass/fail reading discards it.
+   The trailing mean is computed at **every trial**, so the reported time is the trial the crossing
+   happened on. Non-overlapping block means would be a different statistic — they can only report the
+   end of the block a crossing fell inside, quantising every criterion time to the block length.
 3. **The analytic reference at every width.** The floor and the optimum are closed-form properties of
    the *task*, but what a network with a **frozen random readout** can reach is a property of the
    *width*. The analytic arm measures it. A width where the reference itself misses the pass bar is
@@ -145,12 +148,24 @@ and the record says so.
 
 | verdict | S1 | S2 | what follows |
 |---|---|---|---|
-| `scale_limited` | slope ≥ 0.5, CI excluding 0, **and 128 units fails the control's own pass rule** | at least one width beats its frozen control by both minima, trend in the predicted direction | the phase's failures are **located**: a scale property, not a mechanism one. A reduced-perturbation connectome variant becomes the obvious registration, and every panel negative is re-read as under-budgeted rather than refuted. The re-read is a **new registration**, not a re-labelling of committed verdicts |
+| `scale_limited` | slope ≥ 0.5, CI excluding 0, **and 128 units fails the control's own pass rule** | at least one width beats its frozen control by both minima **and** the trend across widths is in the predicted direction — an isolated win against the trend is not a scale story and is recorded as mixed | the phase's failures are **located**: a scale property, not a mechanism one. A reduced-perturbation connectome variant becomes the obvious registration, and every panel negative is re-read as under-budgeted rather than refuted. The re-read is a **new registration**, not a re-labelling of committed verdicts |
 | `arithmetic_only` | slope ≥ 0.5, CI excluding 0 | no width beats its frozen control | the arithmetic is real **and does not rescue the task**. The multi-step failure is then a **second, independent** defect, and I.3b's worsening-direction drift is the standing candidate. Node perturbation closes as a family member; **R.2 (e-prop) proceeds**, carrying a perturbation-dimension note. This is the expected outcome |
 | `not_scale_limited` | CI contains 0 **and** 128 units passes the control | reported, and cannot be read as being about scale | the 1/N arithmetic is not the binding constraint on this implementation. The record's 8-vs-128 confound closes the uninteresting way and **every existing negative keeps its reading** |
 
-Mixed readings — a slope below the bar with 128 failing, or a positive S2 with a flat S1 — are
-recorded as **mixed with both halves stated**, not resolved toward whichever verdict is nearer.
+Mixed readings — a slope below the bar with 128 failing, a positive S2 with a flat S1, or a rescue
+whose trend runs against the prediction — are recorded as **mixed with both halves stated**, not
+resolved toward whichever verdict is nearer.
+
+**Both S2 conditions are evaluated in one place.** The trend requirement in the `scale_limited` row is
+enforced by the combined verdict rather than folded into S2's own `rescued` label, which asks the
+narrower question "did any width beat its control". So an isolated success with the trend running the
+other way produces the same non-`scale_limited` verdict whether it is read from the table, from the
+harness or from the tests.
+
+**An S2 that returns `void` is an absence, not a negative.** Where no width is interpretable — every
+capability gate failed or undecided — S2 has tested nothing and cannot supply the "no width beats its
+frozen control" half of `arithmetic_only`. The registered treatment is the one already fixed for a
+platform-limited S2: **S1 carries the result alone.**
 
 ### Stop clauses — void until found, not results
 

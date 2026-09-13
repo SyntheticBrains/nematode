@@ -114,26 +114,51 @@ _S2_LABEL = re.compile(
 # ═════════════════════════════ S1 ═══════════════════════════════════════════
 
 
+def trailing_means(rewards: list[float], window: int = pc.BLOCK) -> np.ndarray:
+    """Trailing ``window``-trial mean at every trial from the ``window``-th onward.
+
+    Overlapping, one value per trial, because the registered criterion is the first TRIAL whose
+    trailing mean crosses a threshold. Non-overlapping block means can only ever report the end of
+    the block a crossing fell inside, which quantises every criterion time to the block length and
+    is a different statistic from the registered one.
+    """
+    if window < 1:
+        msg = f"window must be >= 1, got {window}"
+        raise ValueError(msg)
+    if len(rewards) < window:
+        return np.empty(0)
+    cumulative = np.concatenate(([0.0], np.cumsum(np.asarray(rewards, dtype=float))))
+    return (cumulative[window:] - cumulative[:-window]) / window
+
+
 def trials_to_criterion(
-    reward_blocks: list[float],
+    rewards: list[float],
     threshold: float,
     sustain: int = 1,
+    window: int = pc.BLOCK,
 ) -> int | None:
-    """Trials until a trailing block mean first reaches ``threshold``, or None if it never does.
+    """Trials until the trailing ``window``-trial mean first reaches ``threshold``, else None.
 
-    ``sustain`` is the number of CONSECUTIVE blocks required. One -- the registered criterion -- is
-    the single trailing 100-trial mean. Two is reported alongside as a robustness column, because a
-    lone noisy block can cross early, and at large N an early spurious crossing would FLATTEN the
-    slope: the bias from the noise runs against the hypothesis, not for it.
+    The returned value is the trial index (1-based) at which the trailing mean first crosses, so a
+    crossing is reported where it happened rather than at the end of a containing block.
+
+    ``sustain`` is the number of CONSECUTIVE trials the trailing mean must hold at or above the
+    threshold. One -- the registered criterion -- is the single trailing mean. ``window`` trials'
+    worth is reported alongside as a robustness column, because a trailing mean can cross on noise
+    and at large N an early spurious crossing would FLATTEN the slope: the bias from the noise runs
+    against the hypothesis, not for it.
     """
     if sustain < 1:
         msg = f"sustain must be >= 1, got {sustain}"
         raise ValueError(msg)
+    means = trailing_means(rewards, window)
     run = 0
-    for index, value in enumerate(reward_blocks):
+    for index, value in enumerate(means):
         run = run + 1 if value >= threshold else 0
         if run >= sustain:
-            return (index + 1) * pc.BLOCK
+            # The trailing mean at position `index` covers trials index+1 .. index+window, so the
+            # crossing trial is index + window; a sustained run is dated from where it began.
+            return index + window - (sustain - 1)
     return None
 
 
@@ -212,11 +237,12 @@ def assess_s1_shape(
             continue
         per_seed[str(record["seed"])] = {
             "score": record["score"],
-            "trials_to_criterion": trials_to_criterion(record["reward_blocks"], threshold),
+            "trials_to_criterion": trials_to_criterion(record["rewards"], threshold),
+            # Held for a full window rather than a single trial: the robustness column.
             "trials_to_criterion_sustained": trials_to_criterion(
-                record["reward_blocks"],
+                record["rewards"],
                 threshold,
-                sustain=2,
+                sustain=pc.BLOCK,
             ),
         }
     crossed = [v["trials_to_criterion"] for v in per_seed.values() if v["trials_to_criterion"]]
@@ -380,12 +406,26 @@ def analyse_s1(runs: list[dict[str, Any]]) -> dict[str, Any]:
     # The single sharpest number in the sweep: the rule passes this control at 8 units. Whether it
     # still passes at the width every failing yardstick arm ran locates the confound or closes it.
     largest_passes = bool(widths[largest]["rule"]["passes"])
-    baseline_reproduces = bool(widths[smallest]["rule"]["passes"])
+    # BOTH registered stop clauses, checked before anything is fitted or assigned. The rule must
+    # reproduce its pass at the smallest width, AND the analytic reference must not be void there:
+    # a failing reference at 8 units voids the whole sweep, not merely its own cell, because every
+    # other width's reachability is read against a platform that platform has not shown it can
+    # reach. Without the second half a broken reference would be scored around rather than caught.
+    baseline_passes = bool(widths[smallest]["rule"]["passes"])
+    baseline_reference_usable = not widths[smallest]["void"]
+    baseline_reproduces = baseline_passes and baseline_reference_usable
     if not baseline_reproduces:
         verdict = "void"
         reason = (
-            f"the rule does not reproduce its pass at {smallest} units, so the platform has drifted "
-            "and nothing in the sweep is interpretable until that is found"
+            (
+                f"the rule does not reproduce its pass at {smallest} units, so the platform has "
+                "drifted and nothing in the sweep is interpretable until that is found"
+            )
+            if not baseline_passes
+            else (
+                f"the analytic reference is void at {smallest} units, so the sweep has no "
+                "established reachability to read any width against"
+            )
         )
     elif fit.get("meets_bar"):
         verdict = "scale_dependent"
@@ -432,6 +472,8 @@ def analyse_s1(runs: list[dict[str, Any]]) -> dict[str, Any]:
             }
         ),
         "baseline_reproduces": baseline_reproduces,
+        "baseline_rule_passes": baseline_passes,
+        "baseline_reference_usable": baseline_reference_usable,
         "largest_width_passes": largest_passes,
         "verdict": verdict,
         "why": reason,
@@ -801,10 +843,30 @@ def combine(s1: dict[str, Any], s2: dict[str, Any] | None) -> dict[str, Any]:
             "s1_verdict": s1["verdict"],
             "largest_width_passes": s1["largest_width_passes"],
         }
+    if s2["verdict"] == "void":
+        # Every width undecided or uninterpretable: S2 tested nothing, so it cannot supply the
+        # "no width rescues the cell" half of arithmetic_only. The registration already fixes what
+        # happens here -- S1 carries the result alone and is not weakened by S2's absence -- and a
+        # platform that failed to run is absence, not a negative.
+        return {
+            "verdict": "s1_only",
+            "why": (
+                "S2 returned void -- no width was interpretable -- so it tested nothing and S1 "
+                "carries the result alone, as the registration allows; a platform-limited sweep is "
+                "an absence of evidence and not evidence of no rescue"
+            ),
+            "s1_verdict": s1["verdict"],
+            "largest_width_passes": s1["largest_width_passes"],
+            "s2_verdict": "void",
+        }
     scale_dependent = s1["verdict"] == "scale_dependent"
     largest_fails = not s1["largest_width_passes"]
     rescued = s2["verdict"] == "rescued"
-    if scale_dependent and largest_fails and rescued:
+    # The design table's row reads "at least one width beats its frozen control by both minima,
+    # TREND IN THE PREDICTED DIRECTION". An isolated win with the trend running the other way is not
+    # a scale story, so the trend is required here rather than left implicit in "rescued".
+    trend_as_predicted = bool(s2["trend"].get("in_predicted_direction"))
+    if scale_dependent and largest_fails and rescued and trend_as_predicted:
         verdict, why = (
             "scale_limited",
             (
@@ -834,8 +896,10 @@ def combine(s1: dict[str, Any], s2: dict[str, Any] | None) -> dict[str, Any]:
             (
                 f"S1 reads {s1['verdict']} with the largest width "
                 f"{'passing' if s1['largest_width_passes'] else 'failing'} and S2 reads "
-                f"{s2['verdict']}; recorded as mixed with both halves stated rather than resolved "
-                "toward the nearer verdict"
+                f"{s2['verdict']}"
+                + ("" if trend_as_predicted else " with its trend NOT in the predicted direction")
+                + "; recorded as mixed with both halves stated rather than resolved toward the "
+                "nearer verdict"
             ),
         )
     return {
@@ -895,6 +959,13 @@ def _print_s1(s1: dict[str, Any]) -> None:
     print(f"  S1 verdict: {s1['verdict']} — {s1['why']}")
 
 
+def _capability_label(*, passes: bool | None) -> str:
+    """Three states, not two: an undecided gate is neither a pass nor a failure."""
+    if passes is None:
+        return "undecided"
+    return "pass" if passes else "FAIL"
+
+
 def _print_s2(s2: dict[str, Any]) -> None:
     print("\nS2 — the rescue, on the hard-food cell")
     print("  units | learning | frozen | shift |     q | drift | capability | verdict")
@@ -905,7 +976,7 @@ def _print_s2(s2: dict[str, Any]) -> None:
             f"  {cell['perturbed_units']:>5} | {cell['learning_mean_foods']:>8.3f} | "
             f"{cell['frozen_mean_foods']:>6.3f} | {cell['graded'].get('effect', float('nan')):>+5.2f} | "
             f"{q:5.3f} | {cell['drift']['mean_relative']:>5.2f} | "
-            f"{'pass' if cell['capability']['passes'] else 'FAIL':>10} | {cell['verdict']}",
+            f"{_capability_label(passes=cell['capability']['passes']):>10} | {cell['verdict']}",
         )
         print(f"        {cell['why']}")
     trend = s2["trend"]

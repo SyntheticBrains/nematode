@@ -78,49 +78,49 @@
         "per_seed": {
           "1": {
             "score": -0.20987283056535677,
-            "trials_to_criterion": 7500,
-            "trials_to_criterion_sustained": 9000
+            "trials_to_criterion": 4749,
+            "trials_to_criterion_sustained": 7426
           },
           "2": {
             "score": -0.20150175273101442,
-            "trials_to_criterion": 3200,
-            "trials_to_criterion_sustained": 4400
+            "trials_to_criterion": 3140,
+            "trials_to_criterion_sustained": 4235
           },
           "3": {
             "score": -0.18404740368292102,
-            "trials_to_criterion": 3600,
-            "trials_to_criterion_sustained": 3700
+            "trials_to_criterion": 3419,
+            "trials_to_criterion_sustained": 3563
           },
           "4": {
             "score": -0.18731961750742143,
-            "trials_to_criterion": 6100,
-            "trials_to_criterion_sustained": 8200
+            "trials_to_criterion": 6075,
+            "trials_to_criterion_sustained": 8129
           },
           "5": {
             "score": -0.18328507589776674,
-            "trials_to_criterion": 3700,
-            "trials_to_criterion_sustained": 5400
+            "trials_to_criterion": 3679,
+            "trials_to_criterion_sustained": 4904
           },
           "6": {
             "score": -0.20190310234265535,
-            "trials_to_criterion": 11000,
-            "trials_to_criterion_sustained": 12600
+            "trials_to_criterion": 10711,
+            "trials_to_criterion_sustained": 11338
           },
           "7": {
             "score": -0.18882385510174202,
-            "trials_to_criterion": 5200,
-            "trials_to_criterion_sustained": 5500
+            "trials_to_criterion": 4457,
+            "trials_to_criterion_sustained": 5487
           },
           "8": {
             "score": -0.21316120177046172,
-            "trials_to_criterion": 3000,
-            "trials_to_criterion_sustained": 3100
+            "trials_to_criterion": 2814,
+            "trials_to_criterion_sustained": 3956
           }
         },
         "crossed": 8,
         "censored": 0,
         "censoring_rate": 0.0,
-        "median_trials_to_criterion": 4450.0
+        "median_trials_to_criterion": 4068.0
       },
       "16": {
         "width": 16,
@@ -149,48 +149,48 @@
           "1": {
             "score": -0.17751605338977033,
             "trials_to_criterion": 2800,
-            "trials_to_criterion_sustained": 3800
+            "trials_to_criterion_sustained": 3636
           },
           "2": {
             "score": -0.2370014581781921,
-            "trials_to_criterion": 3200,
-            "trials_to_criterion_sustained": 4500
+            "trials_to_criterion": 2809,
+            "trials_to_criterion_sustained": 4368
           },
           "3": {
             "score": -0.17397032472819837,
-            "trials_to_criterion": 5500,
-            "trials_to_criterion_sustained": 7100
+            "trials_to_criterion": 4704,
+            "trials_to_criterion_sustained": 6941
           },
           "4": {
             "score": -0.2058003019391878,
-            "trials_to_criterion": 3800,
-            "trials_to_criterion_sustained": 4700
+            "trials_to_criterion": 2426,
+            "trials_to_criterion_sustained": 4579
           },
           "5": {
             "score": -0.18335213321706348,
-            "trials_to_criterion": 3100,
-            "trials_to_criterion_sustained": 4100
+            "trials_to_criterion": 1890,
+            "trials_to_criterion_sustained": 4288
           },
           "6": {
             "score": -0.18313776666941411,
-            "trials_to_criterion": 3200,
+            "trials_to_criterion": 2542,
             "trials_to_criterion_sustained": 3300
           },
           "7": {
             "score": -0.20102665334026268,
-            "trials_to_criterion": 4400,
-            "trials_to_criterion_sustained": 4500
+            "trials_to_criterion": 3376,
+            "trials_to_criterion_sustained": 4395
           },
           "8": {
             "score": -0.22201541680844986,
-            "trials_to_criterion": 2800,
-            "trials_to_criterion_sustained": 3100
+            "trials_to_criterion": 1773,
+            "trials_to_criterion_sustained": 2727
           }
         },
         "crossed": 8,
         "censored": 0,
         "censoring_rate": 0.0,
-        "median_trials_to_criterion": 3200.0
+        "median_trials_to_criterion": 2671.0
       },
       "32": {
         "width": 32,
@@ -218,49 +218,49 @@
         "per_seed": {
           "1": {
             "score": -0.21130478760699428,
-            "trials_to_criterion": 3100,
-            "trials_to_criterion_sustained": 3400
+            "trials_to_criterion": 2849,
+            "trials_to_criterion_sustained": 3832
           },
           "2": {
             "score": -0.2296453296164687,
-            "trials_to_criterion": 3700,
-            "trials_to_criterion_sustained": 3800
+            "trials_to_criterion": 1658,
+            "trials_to_criterion_sustained": 4975
           },
           "3": {
             "score": -0.22157811645802522,
-            "trials_to_criterion": 2300,
-            "trials_to_criterion_sustained": 3700
+            "trials_to_criterion": 2292,
+            "trials_to_criterion_sustained": 4298
           },
           "4": {
             "score": -0.17507680931744152,
-            "trials_to_criterion": 2400,
-            "trials_to_criterion_sustained": 4100
+            "trials_to_criterion": 2330,
+            "trials_to_criterion_sustained": 4006
           },
           "5": {
             "score": -0.2233015465500964,
-            "trials_to_criterion": 5500,
-            "trials_to_criterion_sustained": 6600
+            "trials_to_criterion": 3946,
+            "trials_to_criterion_sustained": 6417
           },
           "6": {
             "score": -0.2057200303989264,
-            "trials_to_criterion": 4500,
-            "trials_to_criterion_sustained": 4900
+            "trials_to_criterion": 2944,
+            "trials_to_criterion_sustained": 4490
           },
           "7": {
             "score": -0.2174899413634878,
-            "trials_to_criterion": 2600,
-            "trials_to_criterion_sustained": 3500
+            "trials_to_criterion": 1921,
+            "trials_to_criterion_sustained": 3344
           },
           "8": {
             "score": -0.2147943953036777,
-            "trials_to_criterion": 4800,
-            "trials_to_criterion_sustained": 4900
+            "trials_to_criterion": 4423,
+            "trials_to_criterion_sustained": 5386
           }
         },
         "crossed": 8,
         "censored": 0,
         "censoring_rate": 0.0,
-        "median_trials_to_criterion": 3400.0
+        "median_trials_to_criterion": 2589.5
       },
       "64": {
         "width": 64,
@@ -288,49 +288,49 @@
         "per_seed": {
           "1": {
             "score": -0.2021896976742338,
-            "trials_to_criterion": 3300,
-            "trials_to_criterion_sustained": 3400
+            "trials_to_criterion": 2411,
+            "trials_to_criterion_sustained": 3631
           },
           "2": {
             "score": -0.22194393778520635,
-            "trials_to_criterion": 3700,
-            "trials_to_criterion_sustained": 3800
+            "trials_to_criterion": 1659,
+            "trials_to_criterion_sustained": 4976
           },
           "3": {
             "score": -0.2186311442471465,
-            "trials_to_criterion": 3600,
-            "trials_to_criterion_sustained": 5500
+            "trials_to_criterion": 3412,
+            "trials_to_criterion_sustained": 4637
           },
           "4": {
             "score": -0.2139298475564872,
-            "trials_to_criterion": 5200,
-            "trials_to_criterion_sustained": 5300
+            "trials_to_criterion": 2418,
+            "trials_to_criterion_sustained": 5124
           },
           "5": {
             "score": -0.19697516439753537,
-            "trials_to_criterion": 1900,
-            "trials_to_criterion_sustained": 4000
+            "trials_to_criterion": 1608,
+            "trials_to_criterion_sustained": 3610
           },
           "6": {
             "score": -0.200732792481768,
-            "trials_to_criterion": 6400,
-            "trials_to_criterion_sustained": 7100
+            "trials_to_criterion": 5673,
+            "trials_to_criterion_sustained": 7072
           },
           "7": {
             "score": -0.22919832542724702,
-            "trials_to_criterion": 2600,
-            "trials_to_criterion_sustained": 3500
+            "trials_to_criterion": 2574,
+            "trials_to_criterion_sustained": 3363
           },
           "8": {
             "score": -0.22208012810517905,
-            "trials_to_criterion": 4900,
-            "trials_to_criterion_sustained": 5700
+            "trials_to_criterion": 3889,
+            "trials_to_criterion_sustained": 5589
           }
         },
         "crossed": 8,
         "censored": 0,
         "censoring_rate": 0.0,
-        "median_trials_to_criterion": 3650.0
+        "median_trials_to_criterion": 2496.0
       },
       "128": {
         "width": 128,
@@ -358,57 +358,57 @@
         "per_seed": {
           "1": {
             "score": -0.21244397751471808,
-            "trials_to_criterion": 3900,
-            "trials_to_criterion_sustained": 4400
+            "trials_to_criterion": 3289,
+            "trials_to_criterion_sustained": 5093
           },
           "2": {
             "score": -0.2288924850559708,
-            "trials_to_criterion": 2700,
-            "trials_to_criterion_sustained": 2800
+            "trials_to_criterion": 931,
+            "trials_to_criterion_sustained": 2798
           },
           "3": {
             "score": -0.2131628667873394,
-            "trials_to_criterion": 2300,
-            "trials_to_criterion_sustained": 3500
+            "trials_to_criterion": 979,
+            "trials_to_criterion_sustained": 3025
           },
           "4": {
             "score": -0.22141207753368763,
-            "trials_to_criterion": 2400,
-            "trials_to_criterion_sustained": 5200
+            "trials_to_criterion": 2377,
+            "trials_to_criterion_sustained": 5035
           },
           "5": {
             "score": -0.22458150512215577,
-            "trials_to_criterion": 4400,
-            "trials_to_criterion_sustained": 5600
+            "trials_to_criterion": 3122,
+            "trials_to_criterion_sustained": 5275
           },
           "6": {
             "score": -0.2244849984253396,
-            "trials_to_criterion": 2300,
-            "trials_to_criterion_sustained": 3700
+            "trials_to_criterion": 2209,
+            "trials_to_criterion_sustained": 3301
           },
           "7": {
             "score": -0.22632549505990462,
-            "trials_to_criterion": 2600,
-            "trials_to_criterion_sustained": 3500
+            "trials_to_criterion": 2579,
+            "trials_to_criterion_sustained": 3341
           },
           "8": {
             "score": -0.2113788685349058,
-            "trials_to_criterion": 2800,
-            "trials_to_criterion_sustained": 4000
+            "trials_to_criterion": 2771,
+            "trials_to_criterion_sustained": 2951
           }
         },
         "crossed": 8,
         "censored": 0,
         "censoring_rate": 0.0,
-        "median_trials_to_criterion": 2650.0
+        "median_trials_to_criterion": 2478.0
       }
     },
     "fit": {
       "defined": true,
-      "slope": -0.14932974724064693,
-      "intercept": 12.569078182402714,
-      "ci_low": -0.23851083402248133,
-      "ci_high": -0.06079322381627728,
+      "slope": -0.21640226468749885,
+      "intercept": 12.544116841770355,
+      "ci_low": -0.3310339177316933,
+      "ci_high": -0.0920331186818997,
       "n_points": 40,
       "n_seeds": 8,
       "widths_in_fit": [
@@ -474,64 +474,66 @@
         "per_seed": {
           "1": {
             "score": -0.2100526616800145,
-            "trials_to_criterion": 1200,
-            "trials_to_criterion_sustained": 1300
+            "trials_to_criterion": 351,
+            "trials_to_criterion_sustained": 1232
           },
           "2": {
             "score": -0.22427354159399068,
-            "trials_to_criterion": 1100,
-            "trials_to_criterion_sustained": 1800
+            "trials_to_criterion": 918,
+            "trials_to_criterion_sustained": 1831
           },
           "3": {
             "score": -0.22520027017818084,
-            "trials_to_criterion": 1000,
-            "trials_to_criterion_sustained": 2200
+            "trials_to_criterion": 977,
+            "trials_to_criterion_sustained": 2099
           },
           "4": {
             "score": -0.2061464769093781,
-            "trials_to_criterion": 1400,
-            "trials_to_criterion_sustained": 1700
+            "trials_to_criterion": 1033,
+            "trials_to_criterion_sustained": 1632
           },
           "5": {
             "score": -0.20590417581090195,
-            "trials_to_criterion": 1600,
-            "trials_to_criterion_sustained": 1700
+            "trials_to_criterion": 1347,
+            "trials_to_criterion_sustained": 1620
           },
           "6": {
             "score": -0.21741446194854758,
-            "trials_to_criterion": 1300,
-            "trials_to_criterion_sustained": 1400
+            "trials_to_criterion": 940,
+            "trials_to_criterion_sustained": 1284
           },
           "7": {
             "score": -0.21981555898960448,
-            "trials_to_criterion": 700,
-            "trials_to_criterion_sustained": 1400
+            "trials_to_criterion": 623,
+            "trials_to_criterion_sustained": 1376
           },
           "8": {
             "score": -0.2270952966511491,
-            "trials_to_criterion": 1700,
-            "trials_to_criterion_sustained": 1800
+            "trials_to_criterion": 1696,
+            "trials_to_criterion_sustained": 2213
           }
         },
         "crossed": 8,
         "censored": 0,
         "censoring_rate": 0.0,
-        "median_trials_to_criterion": 1250.0
+        "median_trials_to_criterion": 958.5
       },
       "matched_one_layer_gap_fraction": 0.8469999981682479,
       "passes": true
     },
     "baseline_reproduces": true,
+    "baseline_rule_passes": true,
+    "baseline_reference_usable": true,
     "largest_width_passes": true,
     "verdict": "opposite_direction",
-    "why": "slope -0.15, CI [-0.24, -0.06] entirely below 0: time-to-criterion FALLS as the dimension grows, opposite to the prediction",
+    "why": "slope -0.22, CI [-0.33, -0.09] entirely below 0: time-to-criterion FALLS as the dimension grows, opposite to the prediction",
     "derived_budget": [
       {
         "label": "the MLP yardstick (128 units)",
         "units": 128,
         "extrapolation": true,
         "outside_fitted_range": false,
-        "trials": 2944.424471806047,
+        "trials": 2090.0199367812834,
         "is_a_budget_constraint": false,
         "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
       },
@@ -540,7 +542,7 @@
         "units": 302,
         "extrapolation": true,
         "outside_fitted_range": true,
-        "trials": 2590.184742315717,
+        "trials": 1735.7066188758233,
         "is_a_budget_constraint": false,
         "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
       },
@@ -549,7 +551,7 @@
         "units": 1208,
         "extrapolation": true,
         "outside_fitted_range": true,
-        "trials": 2105.8395331006977,
+        "trials": 1285.846638891747,
         "is_a_budget_constraint": false,
         "note": "EXTRAPOLATION from the fitted grid; not a measurement of this platform -- and the fitted interval does not exclude zero from above, so this is not a budget constraint"
       }

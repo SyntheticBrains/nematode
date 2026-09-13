@@ -48,22 +48,50 @@ class _Record:
 
 
 class TestTrialsToCriterion:
-    def test_the_first_crossing_block_sets_the_time(self) -> None:
-        assert ps.trials_to_criterion([0.0, 0.0, 1.0, 1.0], 0.5) == 3 * pc.BLOCK
+    """The registered criterion is the first TRIAL whose trailing 100-trial mean crosses."""
+
+    def test_the_crossing_trial_is_reported_not_the_end_of_a_block(self) -> None:
+        # 100 zeros then ones: the trailing 10-trial mean first reaches 0.5 at trial 105, and a
+        # non-overlapping block scheme could only have said 110. The distinction is the finding.
+        rewards = [0.0] * 100 + [1.0] * 100
+        assert ps.trials_to_criterion(rewards, 0.5, window=10) == 105
+
+    def test_the_window_length_is_the_earliest_possible_crossing(self) -> None:
+        # No trailing mean exists before the window is full, so nothing can cross before then.
+        assert ps.trials_to_criterion([1.0] * 50, 0.5, window=10) == 10
 
     def test_a_seed_that_never_crosses_has_no_time(self) -> None:
         # Not a large number and not the horizon: a censored seed has no criterion time at all, and
         # substituting the budget would put a fabricated point into the fit.
-        assert ps.trials_to_criterion([0.0, 0.1, 0.2], 0.5) is None
+        assert ps.trials_to_criterion([0.0] * 500, 0.5, window=10) is None
 
-    def test_the_sustained_variant_needs_consecutive_blocks(self) -> None:
-        blocks = [0.0, 1.0, 0.0, 1.0, 1.0]
-        assert ps.trials_to_criterion(blocks, 0.5) == 2 * pc.BLOCK
-        assert ps.trials_to_criterion(blocks, 0.5, sustain=2) == 5 * pc.BLOCK
+    def test_a_run_shorter_than_the_window_has_no_time(self) -> None:
+        assert ps.trials_to_criterion([1.0] * 5, 0.5, window=10) is None
+
+    def test_the_sustained_variant_ignores_a_crossing_that_does_not_hold(self) -> None:
+        # A five-trial burst crosses at trial 5 and cannot hold; the real run starts at trial 26.
+        rewards = [1.0] * 5 + [0.0] * 20 + [1.0] * 100
+        assert ps.trials_to_criterion(rewards, 0.9, window=5) == 5
+        assert ps.trials_to_criterion(rewards, 0.9, window=5, sustain=5) == 30
+
+    def test_a_crossing_that_holds_dates_to_the_same_trial_either_way(self) -> None:
+        # The sustained variant dates a run from where it BEGAN, so a crossing that holds is not
+        # pushed later by the requirement; only a spurious one is discarded.
+        rewards = [0.0] * 20 + [1.0] * 100
+        assert ps.trials_to_criterion(rewards, 0.9, window=5) == 25
+        assert ps.trials_to_criterion(rewards, 0.9, window=5, sustain=5) == 25
 
     def test_a_sustain_below_one_is_refused(self) -> None:
         with pytest.raises(ValueError, match="sustain must be >= 1"):
-            ps.trials_to_criterion([1.0], 0.5, sustain=0)
+            ps.trials_to_criterion([1.0] * 200, 0.5, sustain=0)
+
+    def test_a_window_below_one_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="window must be >= 1"):
+            ps.trailing_means([1.0, 2.0], window=0)
+
+    def test_the_trailing_mean_is_overlapping_and_one_per_trial(self) -> None:
+        means = ps.trailing_means([0.0, 1.0, 2.0, 3.0], window=2)
+        assert list(means) == pytest.approx([0.5, 1.5, 2.5])
 
 
 def _width_cell(
@@ -197,7 +225,7 @@ def _s1_runs(
                         "perturbed_units": hidden * layers,
                         "score": score,
                         "alignment": 0.0,
-                        "reward_blocks": [score] * 20,
+                        "rewards": [score] * (pc.BLOCK * 4),
                     },
                 )
     return runs
@@ -262,11 +290,15 @@ class TestS1Verdicts:
 
 
 class TestScanKeepsTheWidthsApart:
-    def _dir(self, tmp_path: Path, names: list[str]) -> Path:
+    # A body the plateau-tail parser actually reads, so a dropped log cannot be mistaken for a
+    # filtered one: without this every assertion below would pass on `read_log` returning None.
+    _BODY = "\n".join(f"Run: {i} Status: SUCCESS Eaten: 20/20" for i in range(1, 41)) + "\n"
+
+    def _dir(self, tmp_path: Path, names: list[str], body: str | None = None) -> Path:
         logs = tmp_path / "logs"
         logs.mkdir()
         for name in names:
-            (logs / name).write_text("")
+            (logs / name).write_text(self._BODY if body is None else body)
         return tmp_path
 
     def _name(self, arm: str, width: int, seed: int) -> str:
@@ -274,13 +306,20 @@ class TestScanKeepsTheWidthsApart:
         stem = "ppo" if arm == "ppo" else "nodepert"
         return f"{ps._S2_STEM}_{stem}_w{width:02d}{suffix}-seed{seed}.log"
 
+    def test_the_fixture_body_parses(self, tmp_path: Path) -> None:
+        # The guard on every test in this class: a body that does not parse would make them vacuous.
+        out = ps.scan_s2(self._dir(tmp_path, [self._name("nodepert", 8, 1)]))
+        assert out[8]["learning"][1].foods == pytest.approx(20.0)
+
     def test_a_label_from_another_campaign_is_skipped(self, tmp_path: Path) -> None:
         out = ps.scan_s2(self._dir(tmp_path, ["something_else-seed1.log"]))
         assert all(not cell["learning"] for cell in out.values())
 
     def test_an_unregistered_width_is_skipped(self, tmp_path: Path) -> None:
+        # Both halves: the width is absent from the result AND no registered cell absorbed its run.
         out = ps.scan_s2(self._dir(tmp_path, [self._name("nodepert", 96, 1)]))
         assert 96 not in out
+        assert all(not cell["learning"] for cell in out.values())
 
     def test_a_duplicate_run_is_refused(self, tmp_path: Path, monkeypatch: Any) -> None:
         # Two logs claiming one cell: the second would otherwise replace the first and the campaign
@@ -301,9 +340,16 @@ class TestScanKeepsTheWidthsApart:
         assert 8 in out
 
     def test_a_frozen_ppo_arm_is_not_a_registered_cell(self, tmp_path: Path) -> None:
+        # The body parses, so the skip has to come from the guard rather than from a dropped log.
         name = f"{ps._S2_STEM}_ppo_w08_frozen-seed1.log"
         out = ps.scan_s2(self._dir(tmp_path, [name]))
         assert not out[8]["ppo"]
+        assert not out[8]["learning"]
+        assert not out[8]["frozen"]
+
+    def test_an_unparseable_log_is_dropped_rather_than_scored(self, tmp_path: Path) -> None:
+        out = ps.scan_s2(self._dir(tmp_path, [self._name("nodepert", 8, 1)], body="no run lines\n"))
+        assert not out[8]["learning"]
 
 
 def _width_data(
@@ -469,42 +515,48 @@ class TestTheCombinedVerdict:
     def _s1(self, verdict: str, *, largest_passes: bool) -> dict[str, Any]:
         return {"verdict": verdict, "why": "fixture", "largest_width_passes": largest_passes}
 
+    def _s2(self, verdict: str, *, trend_as_predicted: bool = True) -> dict[str, Any]:
+        return {
+            "verdict": verdict,
+            "trend": {"defined": True, "in_predicted_direction": trend_as_predicted},
+        }
+
     def test_scale_limited_needs_all_three_halves(self) -> None:
         out = ps.combine(
             self._s1("scale_dependent", largest_passes=False),
-            {"verdict": "rescued"},
+            self._s2("rescued"),
         )
         assert out["verdict"] == "scale_limited"
 
     def test_a_confirmed_law_without_a_rescue_is_a_second_defect(self) -> None:
         out = ps.combine(
             self._s1("scale_dependent", largest_passes=False),
-            {"verdict": "not_rescued"},
+            self._s2("not_rescued"),
         )
         assert out["verdict"] == "arithmetic_only"
         assert "second" in out["why"]
 
     def test_a_flat_sweep_with_the_largest_width_passing_leaves_the_record_standing(self) -> None:
-        out = ps.combine(self._s1("flat", largest_passes=True), {"verdict": "not_rescued"})
+        out = ps.combine(self._s1("flat", largest_passes=True), self._s2("not_rescued"))
         assert out["verdict"] == "not_scale_limited"
         assert "keeps its reading" in out["why"]
 
     def test_a_mixed_reading_is_recorded_as_mixed(self) -> None:
         # A rescue with no dependence fits no registered outcome; resolving it toward the nearer
         # verdict is the move this phase has repeatedly caught itself making.
-        out = ps.combine(self._s1("flat", largest_passes=True), {"verdict": "rescued"})
+        out = ps.combine(self._s1("flat", largest_passes=True), self._s2("rescued"))
         assert out["verdict"] == "mixed"
         assert "both halves stated" in out["why"]
 
     def test_a_below_bar_slope_with_a_failing_largest_width_is_mixed(self) -> None:
         out = ps.combine(
             self._s1("below_bar", largest_passes=False),
-            {"verdict": "not_rescued"},
+            self._s2("not_rescued"),
         )
         assert out["verdict"] == "mixed"
 
     def test_a_void_sweep_carries_no_combined_verdict(self) -> None:
-        out = ps.combine(self._s1("void", largest_passes=False), {"verdict": "rescued"})
+        out = ps.combine(self._s1("void", largest_passes=False), self._s2("rescued"))
         assert out["verdict"] == "void"
 
     def test_s1_alone_is_a_registered_state(self) -> None:
@@ -654,10 +706,12 @@ class TestTheWidthAxisLeavesTheCommittedControlAlone:
         with pytest.raises(ValueError, match="hidden must be >= 1"):
             pc._actor(3, __import__("torch").Generator(), 0)
 
-    def test_the_reward_curve_is_carried_without_changing_the_score(self) -> None:
+    def test_every_trials_reward_is_carried_without_changing_the_score(self) -> None:
+        # Per-trial, not per-block: the registered criterion is a trailing mean at every trial, and
+        # block means can only ever report the end of the block a crossing fell inside.
         task = pc.ContextualAssociation.default()
         run = pc.run_arm("node_perturbation", 1, task, trials=300, node_noise=0.2)
-        assert len(run["reward_blocks"]) == 300 // pc.BLOCK
+        assert len(run["rewards"]) == 300
         assert math.isfinite(run["score"])
 
 
@@ -721,7 +775,7 @@ class TestTheDirectionOfTheDependence:
             if run["arm"] != "node_perturbation":
                 continue
             lead = {8: 12, 16: 9, 32: 6, 64: 3, 128: 1}[run["hidden"]]
-            run["reward_blocks"] = [optimum - 10.0] * lead + [optimum] * 20
+            run["rewards"] = [optimum - 10.0] * (lead * pc.BLOCK) + [optimum] * (pc.BLOCK * 20)
         s1 = ps.analyse_s1(runs)
         assert s1["fit"]["ci_high"] < 0
         assert s1["verdict"] == "opposite_direction"
@@ -743,7 +797,7 @@ class TestTheDirectionOfTheDependence:
         runs = _s1_runs(optimum, optimum)
         for run in runs:
             if run["arm"] == "node_perturbation":
-                run["reward_blocks"] = [optimum - 10.0] * 5 + [optimum] * 15
+                run["rewards"] = [optimum - 10.0] * (5 * pc.BLOCK) + [optimum] * (pc.BLOCK * 15)
         s1 = ps.analyse_s1(runs)
         assert s1["verdict"] == "flat"
 
@@ -907,3 +961,109 @@ class TestAnUnderpoweredGateHasNoVerdict:
             assert out["widths"][width]["verdict"] == "capability_undecided"
         assert out["interpretable"] == []
         assert out["verdict"] == "void"
+
+
+class TestTheRegisteredStopClausesGateTheSweep:
+    """A void reference at the smallest width voids the sweep, not merely its own cell."""
+
+    def _runs(self, rule: float, reference_at_8: float, reference_elsewhere: float) -> list[Any]:
+        runs = _s1_runs(rule, reference_elsewhere)
+        for run in runs:
+            if run["arm"] == "analytic" and run["hidden"] == 8:
+                run["score"] = reference_at_8
+                run["rewards"] = [reference_at_8] * (pc.BLOCK * 4)
+        return runs
+
+    def test_a_void_reference_at_the_smallest_width_voids_the_sweep(self) -> None:
+        # Every other width's reachability is read against a platform the reference has not shown it
+        # can reach, so scoring around the broken cell would report a fit nothing underwrites.
+        task = pc.ContextualAssociation.default()
+        floor, optimum = task.cue_blind_floor(pc.NOISE), task.optimum(pc.NOISE)
+        s1 = ps.analyse_s1(self._runs(optimum, floor, optimum))
+        assert s1["verdict"] == "void"
+        assert not s1["baseline_reproduces"]
+        assert s1["baseline_rule_passes"]
+        assert not s1["baseline_reference_usable"]
+        assert "analytic reference is void" in s1["why"]
+
+    def test_the_two_halves_of_the_gate_are_reported_apart(self) -> None:
+        task = pc.ContextualAssociation.default()
+        floor, optimum = task.cue_blind_floor(pc.NOISE), task.optimum(pc.NOISE)
+        s1 = ps.analyse_s1(_s1_runs(floor, optimum))
+        assert not s1["baseline_rule_passes"]
+        assert s1["baseline_reference_usable"]
+        assert "platform has drifted" in s1["why"]
+
+    def test_a_usable_baseline_lets_the_sweep_be_scored(self) -> None:
+        task = pc.ContextualAssociation.default()
+        optimum = task.optimum(pc.NOISE)
+        s1 = ps.analyse_s1(_s1_runs(optimum, optimum))
+        assert s1["baseline_reproduces"]
+        assert s1["verdict"] != "void"
+
+
+class TestAPlatformLimitedS2IsNotANegative:
+    def _s1(self, verdict: str, *, largest_passes: bool) -> dict[str, Any]:
+        return {"verdict": verdict, "why": "fixture", "largest_width_passes": largest_passes}
+
+    def test_a_void_s2_does_not_become_arithmetic_only(self) -> None:
+        # S2 returning void means no width was interpretable, so it cannot supply the "no width
+        # rescues the cell" half of arithmetic_only: that would read an absence as a negative.
+        out = ps.combine(
+            self._s1("scale_dependent", largest_passes=False),
+            {"verdict": "void", "trend": {"defined": False}},
+        )
+        assert out["verdict"] == "s1_only"
+        assert "absence of evidence" in out["why"]
+        assert out["s2_verdict"] == "void"
+
+    def test_a_void_s2_does_not_become_not_scale_limited_either(self) -> None:
+        out = ps.combine(
+            self._s1("flat", largest_passes=True),
+            {"verdict": "void", "trend": {"defined": False}},
+        )
+        assert out["verdict"] == "s1_only"
+
+    def test_a_void_s1_still_dominates(self) -> None:
+        out = ps.combine(
+            self._s1("void", largest_passes=False),
+            {"verdict": "void", "trend": {"defined": False}},
+        )
+        assert out["verdict"] == "void"
+
+
+class TestScaleLimitedRequiresTheTrend:
+    """The design table's row says "trend in the predicted direction"; so does the code."""
+
+    def _s1(self) -> dict[str, Any]:
+        return {"verdict": "scale_dependent", "why": "fixture", "largest_width_passes": False}
+
+    def _s2(self, *, trend_as_predicted: bool) -> dict[str, Any]:
+        return {
+            "verdict": "rescued",
+            "trend": {"defined": True, "in_predicted_direction": trend_as_predicted},
+        }
+
+    def test_a_rescue_with_the_trend_as_predicted_is_scale_limited(self) -> None:
+        assert (
+            ps.combine(self._s1(), self._s2(trend_as_predicted=True))["verdict"] == "scale_limited"
+        )
+
+    def test_an_isolated_win_against_the_trend_is_not_scale_limited(self) -> None:
+        out = ps.combine(self._s1(), self._s2(trend_as_predicted=False))
+        assert out["verdict"] == "mixed"
+        assert "NOT in the predicted direction" in out["why"]
+
+    def test_an_undefined_trend_does_not_satisfy_the_requirement(self) -> None:
+        # A constant series leaves the trend undefined, which is not the same as confirming it.
+        out = ps.combine(self._s1(), {"verdict": "rescued", "trend": {"defined": False}})
+        assert out["verdict"] == "mixed"
+
+
+class TestTheCapabilityLabelHasThreeStates:
+    def test_an_undecided_gate_is_not_printed_as_a_failure(self) -> None:
+        assert ps._capability_label(passes=None) == "undecided"
+
+    def test_a_pass_and_a_failure_keep_their_labels(self) -> None:
+        assert ps._capability_label(passes=True) == "pass"
+        assert ps._capability_label(passes=False) == "FAIL"

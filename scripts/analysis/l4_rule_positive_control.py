@@ -366,14 +366,13 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         # The arm's score: mean reward over the last 1000 trials, so a run is judged
         # on where it ended rather than on the exploration it did getting there.
         "score": float(np.mean(rewards[-BLOCK * 10 :])) if rewards else float("nan"),
-        # Per-block mean reward, in order. The score above is where a run ENDED; a rate needs the
-        # whole curve, and a trailing-block series is the coarsest form that still carries one.
-        # Deliberately absent from the per-seed CSV and from the control's JSON, both of which
-        # list their fields explicitly, so no committed record changes shape.
-        "reward_blocks": [
-            float(np.mean(rewards[start : start + BLOCK]))
-            for start in range(0, len(rewards) - len(rewards) % BLOCK, BLOCK)
-        ],
+        # Every trial's reward, in order. The score above is where a run ENDED; a rate needs the
+        # whole curve, and it needs it at PER-TRIAL resolution: a criterion defined as the first
+        # trial whose trailing 100-trial mean crosses a threshold cannot be found from
+        # non-overlapping block means, which can only ever report the end of the block a crossing
+        # fell inside. Deliberately absent from the per-seed CSV and from the control's JSON, both
+        # of which list their fields explicitly, so no committed record changes shape.
+        "rewards": list(rewards),
         "modulator": float(np.mean(modulators)) if modulators else float("nan"),
         "mean_abs_delta": float(np.mean(traces)) if traces else float("nan"),
         "alignment": float(np.mean(alignments)) if alignments else float("nan"),
