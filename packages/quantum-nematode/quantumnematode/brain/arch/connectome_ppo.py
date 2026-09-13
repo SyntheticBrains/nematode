@@ -947,6 +947,7 @@ class ConnectomeTopology(nn.Module):
             return torch.ones((depth, self.n_neurons), dtype=torch.bool, device=device)
 
         distance = self._readout_hop_distances(motor_indices)
+        self._validate_derived_set(perturbation_set, distance, motor_indices)
         mask = torch.zeros((depth, self.n_neurons), dtype=torch.bool)
         for step in range(depth):
             # A perturbation injected at this step has ``depth - 1 - step`` further steps to
@@ -964,6 +965,41 @@ class ConnectomeTopology(nn.Module):
                 msg = f"unknown perturbation set {perturbation_set!r}"
                 raise ValueError(msg)
         return mask.to(device)
+
+    def _validate_derived_set(
+        self,
+        perturbation_set: PerturbationSet,
+        distance: torch.Tensor,
+        motor_indices: list[int],
+    ) -> None:
+        """Check the set derived from this substrate against what the declaration means.
+
+        A declared set is only worth reporting if the wiring it was derived from actually yields it.
+        The checks are invariants rather than hard-coded counts, so they hold for any connectome
+        source and any settling depth while still refusing a mask that does not mask:
+
+        * the readout pool must be exactly the units at distance zero -- if the hop walk and the
+          readout disagree, one of them has drifted and every mask built here is wrong;
+        * a restricted set must be non-empty, since a mask that selects nothing would silence the
+          eligibility entirely and read as a rule that learns nothing rather than one given nothing.
+        """
+        at_zero = set(torch.nonzero(distance == 0).flatten().tolist())
+        if at_zero != set(motor_indices):
+            msg = (
+                f"perturbation set {perturbation_set!r}: the units at hop distance zero "
+                f"({len(at_zero)}) are not the readout pool ({len(motor_indices)}), so the hop "
+                "walk and the readout have drifted apart and every derived mask is wrong."
+            )
+            raise ValueError(msg)
+        selected = int((distance <= self.forward_pass_depth - 1).sum().item())
+        if selected == 0:
+            msg = (
+                f"perturbation set {perturbation_set!r} selects no unit at "
+                f"forward_pass_depth={self.forward_pass_depth}: the eligibility would be "
+                "identically zero, and the arm would read as a rule that learns nothing rather "
+                "than one given nothing to learn from."
+            )
+            raise ValueError(msg)
 
     def perturbation_dimension(self) -> PerturbationDimension:
         """Report the declared set and what it costs: units, adaptable synapses, draws per decision.

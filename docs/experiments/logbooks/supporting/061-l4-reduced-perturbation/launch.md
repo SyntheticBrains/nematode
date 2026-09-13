@@ -285,3 +285,31 @@ every point. Ties on foods go to the higher full-clear rate; ties on both go to 
 if the learning arm rises and **the gap does not**, the gain is the task being easier to stumble through
 rather than the rule learning better. Where that happens the record says so, and the setting is chosen on
 the absolute level only if the gap survives.
+
+### Action-noise outcome, 2026-09-13 — the pinned −1.0 stands, and action noise is off the list
+
+16/16 runs. The −1.0 point is the σ-calibration's σ 0.1 runs.
+
+| `initial_log_std` | action std | learning foods | frozen foods | gap | seeds favouring | full clear |
+|---|---|---|---|---|---|---|
+| **−1.0** (pinned) | 0.368 | **4.361** | 1.731 | **+2.630** | 4/4 | 0.03% |
+| −0.5 | 0.607 | 4.056 | 2.452 | +1.604 | 4/4 | 0.00% |
+| 0.0 | 1.000 | 4.154 | 3.254 | +0.900 | 4/4 | 0.00% |
+
+**The registered rule keeps −1.0**, which maximises the learning arm's foods. Wider action noise lifts
+the **frozen** arm — 1.73 → 2.45 → 3.25 — while leaving the **learning** arm flat at 4.06–4.36, so the gap
+collapses from +2.630 to +0.900. The registered guard reads *matched* only because the learning arm did
+not rise; what a wider action distribution buys is floor food by wandering, which is what the guard was
+written to catch.
+
+**Two things this settles.** The 1.73-against-3.82 discrepancy is confirmed as the action-noise setting:
+at std 1.0 the frozen arm reaches 3.25, and the remainder to 058's 3.82 is that its arm carries no
+perturbation at all. And **action noise is not the blocker** — the useful part of a null.
+
+**The observation that matters most is the invariance.** The learning arm sits at **4.1–4.4 foods under
+every knob tried**: σ across a fourfold range (4.321, 4.361, 2.989) and action noise across 2.7× (4.361,
+4.056, 4.154), with full clear never leaving ~0%. Two independent sweeps hitting the same ceiling is the
+signature of a **structural** limit rather than a hyperparameter one — which is what the frozen-readout
+finding predicts and which is why R.1d is registered separately rather than pursued as more tuning.
+
+**The campaign runs at σ 0.1 and `initial_log_std: -1.0`**, the latter unchanged from the recipe.

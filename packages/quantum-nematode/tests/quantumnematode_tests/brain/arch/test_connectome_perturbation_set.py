@@ -324,3 +324,30 @@ class TestTheArmsDifferByTheRegisteredKeysOnly:
         assert base["max_steps"] == 350
         assert base["environment.foraging.target_foods_to_collect"] == 20
         assert base["brain.config.forward_pass_depth"] == 4
+
+
+class TestTheDerivedSetIsCheckedAtRuntime:
+    """A declared set is only worth reporting if the wiring actually yields it."""
+
+    def test_a_drifted_readout_pool_is_refused(self, connectome: Connectome) -> None:
+        # If the hop walk and the readout disagree about which units are at distance zero, one of
+        # them has changed and every mask built from the walk is wrong. Invariant, not a count, so
+        # it holds for any connectome source.
+        topology = _topology(connectome, "motor")
+        distance = topology._readout_hop_distances(topology._motor_flat_indices.cpu().tolist())
+        wrong_pool = [0, 1, 2]
+        with pytest.raises(ValueError, match="are not the readout pool"):
+            topology._validate_derived_set("motor", distance, wrong_pool)
+
+    def test_a_set_selecting_nothing_is_refused(self, connectome: Connectome) -> None:
+        # A mask that selects no unit would silence the eligibility entirely, and the arm would read
+        # as a rule that learns nothing rather than one given nothing to learn from.
+        topology = _topology(connectome, "motor")
+        unreachable = torch.full((topology.n_neurons,), topology.n_neurons + 1, dtype=torch.long)
+        with pytest.raises(ValueError, match="selects no unit"):
+            topology._validate_derived_set("motor", unreachable, [])
+
+    def test_the_real_graph_passes_every_set(self, connectome: Connectome) -> None:
+        # The check runs on every restricted build, so a false positive would break all of them.
+        for name in ("causal", "hop1", "motor", "motor_last"):
+            assert _topology(connectome, name).perturbation_dimension()["units"] > 0
