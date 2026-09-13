@@ -79,14 +79,29 @@ Pre-commit runs only the fast tier (`not smoke and not nightly and not slow`). R
 ### CI sharding and `.test_durations`
 
 CI splits the suite across five parallel shards with `pytest-split`, balanced by
-the committed `.test_durations` file. Tests missing from that file still run —
-`pytest-split` places unknown tests without a duration estimate — so it only
-needs regenerating when the balance drifts badly (one shard visibly slower than
-the others), not on every PR that adds a test:
+the committed `.test_durations` file and assigned with the `least_duration`
+algorithm.
+
+A test missing from that file still runs, but it is **not** placed without an
+estimate: `pytest-split` budgets it at the **mean of the recorded durations**. So
+drift is silent and it is not free — on 2026-09-13 a three-week-old file left 25%
+of the suite unmeasured, including one 100.7s test budgeted at 0.096s, and the
+shards' true loads spread 2.36x (135s to 319s) while `pytest-split` reported its
+own split as balanced to 1.03x. It cannot see the problem, because it scores each
+split with the same stale numbers that produced it.
+
+The `test durations freshness` pre-commit hook is the guard: it fails when more
+than 10% of the collected suite has no recorded duration. Regenerate with:
 
 ```bash
-uv run pytest -m "not nightly" -p no:randomly --store-durations --durations-path .test_durations
+uv run pytest -m "not nightly" --store-durations --clean-durations --durations-path .test_durations
 ```
+
+`--clean-durations` drops entries for tests that no longer exist; without it the
+file accumulates them. This takes ~2.5 minutes and matches how CI runs, since
+`-n logical` comes from `addopts`. `pytest-split` writes the file without a
+trailing newline, so run `pre-commit` afterwards — the `fix end of files` hook
+adds it, and CI's Code Quality job fails without it.
 
 Locally the suite is unsharded; `-n logical` in `addopts` uses every logical core.
 

@@ -35,3 +35,13 @@ repos:
         entry: uv run pytest -m "not smoke and not nightly and not slow"
         language: system
         pass_filenames: false
+      # The CI shards are balanced by .test_durations, and a test missing from it is budgeted at the
+      # MEAN of the recorded ones rather than left unestimated. Drift is therefore silent and costly,
+      # and pytest-split's own balance report cannot show it: it scores each split with the same
+      # stale numbers that produced it. This checks how much of the suite the file still describes.
+      - id: test-durations-freshness
+        name: test durations freshness
+        entry: uv run python scripts/check_test_durations.py
+        language: system
+        pass_filenames: false
+        always_run: true
