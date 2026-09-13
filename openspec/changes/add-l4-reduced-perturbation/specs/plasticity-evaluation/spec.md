@@ -20,9 +20,9 @@ every draw contributed exploration.
 
 - **GIVEN** a mask that removes only draws which cannot influence the scored outcome
 - **WHEN** its effect is recorded
-- **THEN** it SHALL be described as removing variance without removing signal
-- **AND** it SHALL NOT be reported as a reduction in the dimension available to the learner, since the
-  units and synapses it can adapt are unchanged
+- **THEN** it SHALL be described as removing no causally usable signal
+- **AND** it SHALL record the units and synapses that can no longer receive credit, since a unit
+  excluded at every step is never credited even though its exclusion costs no usable signal
 
 #### Scenario: A restricted set states what it gives up
 

@@ -5,8 +5,9 @@
 #
 # the readout pool itself, at every settling step.
 #
-# SIGMA CALIBRATION (amendment, 2026-09-13). Differs from connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_nodepert_motor.yml by
-# `plasticity_node_noise: 0.1` alone. sigma 0.2 was selected on the ONE-STEP control and carried to
+# SIGMA CALIBRATION (amendment, 2026-09-13) — sigma 0.1, the SELECTED point, and since the campaign arms were moved to 0.1 this file is now
+# executably identical to its source -- it is kept as the named calibration record, not as a delta.
+# Reproduces the sigma 0.1 arm of the calibration grid whose points were 0.05, 0.1 and 0.2. sigma 0.2 was selected on the ONE-STEP control and carried to
 # the MLP; no connectome arm has ever had it calibrated, and the pilot shows sigma 0.2 taking this
 # substrate's frozen prior from 3.82 foods to 1.9 -- halving it before any learning happens. The
 # campaign runs at whichever sigma maximises the learning arm's plateau-tail mean foods.

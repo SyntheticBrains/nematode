@@ -983,9 +983,10 @@ structural limit rather than a hyperparameter one. **R.1b's blocker changed shap
 lifting**: the mechanism exists, so what blocks the wiring contrast is no longer a missing
 capability but a rule that does not reach competence on this substrate, and **7b's gate is
 untouched**. The one structural asymmetry now *measured* rather than guessed is that the rule may
-write the chemical synapses alone, leaving the motor readout frozen while it is **PPO's largest
-single adaptation** — 0.783 relative in 300 episodes against the sensory projection's 0.177 —
-registered as R.1d.
+write the chemical synapses alone, leaving the motor readout frozen while it shows the **largest relative
+norm change of the measured tensors** — 0.783 in 300 episodes against the sensory projection's 0.177
+and the chemical synapses' 0.486. Relative change across an eight-entry matrix and 3709 synapses is not
+a clean importance measure, so this is registered as a hypothesis: R.1d.
 
 #### Phase 7 progress record
 

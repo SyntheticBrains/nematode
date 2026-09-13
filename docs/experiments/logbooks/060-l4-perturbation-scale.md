@@ -339,7 +339,12 @@ Available in parallel, without a connectome:
   minutes.
 - [ ] **R.2 (e-prop)** is **not** retired: it remains the named fallback if R.1b fails.
 
-Also waiting on R.1c, corrected 2026-09-13 from an earlier note here that called it parallel:
+Also blocked, corrected twice — 2026-09-13 from an earlier note here that called it parallel, and
+2026-09-14 once R.1c resolved. **R.1c is no longer the dependency**: the reduced-dimension mechanism was
+built and returned `not_reducible` ([Logbook 061](061-l4-reduced-perturbation.md)). What is unresolved is
+that **no tested perturbation dimension produces a rule that reaches competence on the connectome**, from
+1208 draws per scored decision down to 39, so the rungs below still have no working connectome rule to be
+re-registered against:
 
 - [ ] **R.3 — re-registration of B.5, B.1, B.4 and B.4b** on the block-V cells at a working dimension,
   per 059. Its *condition* is met and the registrations can be authored now, but **every rung is a

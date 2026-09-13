@@ -272,10 +272,17 @@ def compare(
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
 ) -> dict[str, Any]:
-    """Score one declared set's learning arm against its own frozen control."""
-    learning = {s: r.foods for s, r in data["learning"].items()}
-    frozen = {s: r.foods for s, r in data["frozen"].items()}
-    learning_clear = [r.success for r in data["learning"].values()]
+    """Score one declared set's learning arm against its own frozen control.
+
+    Restricted to the REQUESTED seeds. ``require_complete`` only checks that those seeds are present,
+    so a campaign directory carrying extra runs -- a re-run, a pilot's seeds swept into the same
+    folder -- would otherwise have them folded into the contrast, the means, the competence check and
+    the verdict, none of which the registration asked for. The completeness guard and the drift
+    measurement already key on the requested seeds; this makes the score agree with them.
+    """
+    learning = {s: r.foods for s, r in data["learning"].items() if s in seeds}
+    frozen = {s: r.foods for s, r in data["frozen"].items() if s in seeds}
+    learning_clear = [r.success for s, r in data["learning"].items() if s in seeds]
     frozen_mean = float(np.mean(list(frozen.values()) or [math.nan]))
     graded = ms.shift_contrast(learning, frozen)
     mean_clear = float(np.mean(learning_clear)) if learning_clear else float("nan")

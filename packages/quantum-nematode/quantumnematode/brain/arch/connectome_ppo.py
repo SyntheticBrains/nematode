@@ -35,6 +35,7 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._plasticity_config import (
+    RESTRICTED_PERTURBATION_SETS,
     UNMODULATED_RULES,
     PerturbationSet,
     PlasticityConfigMixin,
@@ -284,6 +285,16 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
     config built by ``model_copy`` skips validators, which is how the campaign runner derives
     its arms -- the defect the sign-grounding work found and fixed once already.
     """
+    if config.plasticity_perturbation_set in RESTRICTED_PERTURBATION_SETS and (
+        not config.plasticity_homeostasis
+    ):
+        msg = (
+            f"plasticity_perturbation_set={config.plasticity_perturbation_set!r} requires "
+            "plasticity_homeostasis=True: the weight decay is unconditional, so without the "
+            "homeostatic rescale to cancel it the synapses this set excludes decay across the run "
+            "and the arm measures decay rather than the perturbation dimension."
+        )
+        raise ValueError(msg)
     if config.enforce_synapse_signs and config.synapse_signs != "atlas":
         msg = (
             "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "

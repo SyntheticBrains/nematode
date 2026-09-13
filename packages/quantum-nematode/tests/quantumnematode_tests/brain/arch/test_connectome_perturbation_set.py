@@ -354,3 +354,60 @@ class TestTheDerivedSetIsCheckedAtRuntime:
         # The check runs on every restricted build, so a false positive would break all of them.
         for name in ("causal", "hop1", "motor", "motor_last"):
             assert _topology(connectome, name).perturbation_dimension()["units"] > 0
+
+
+class TestTheGuardsCannotBeBypassed:
+    """Both guards are repeated where a validator cannot reach, which is how arms are built."""
+
+    def test_a_model_copy_config_is_still_refused(self) -> None:
+        # The campaign runner derives its arms with model_copy, which SKIPS validators -- the defect
+        # the sign-grounding work found once already. So the construction path repeats the check.
+        from quantumnematode.brain.arch.connectome_ppo import (
+            _reject_unsupported_plasticity_modes,
+        )
+
+        config = ConnectomePPOBrainConfig(
+            learning_rule="three_factor",
+            enable_activity_traces=True,
+            plasticity_eligibility="node_perturbation",
+            plasticity_node_noise=0.1,
+            plasticity_perturbation_set="motor",
+            plasticity_homeostasis=True,
+        )
+        bypassed = config.model_copy(update={"plasticity_homeostasis": False})
+        assert bypassed.plasticity_homeostasis is False, "model_copy must skip the validator"
+        with pytest.raises(ValueError, match="requires plasticity_homeostasis=True"):
+            _reject_unsupported_plasticity_modes(bypassed)
+
+    def test_the_unrestricted_set_passes_the_construction_check(self) -> None:
+        from quantumnematode.brain.arch.connectome_ppo import (
+            _reject_unsupported_plasticity_modes,
+        )
+
+        _reject_unsupported_plasticity_modes(
+            ConnectomePPOBrainConfig(
+                learning_rule="three_factor",
+                enable_activity_traces=True,
+                plasticity_eligibility="node_perturbation",
+                plasticity_node_noise=0.1,
+                plasticity_homeostasis=False,
+            ),
+        )
+
+    def test_a_ppo_mlp_declaring_a_restricted_set_is_refused(self) -> None:
+        # The guard used to sit inside the plastic-rule branch, so a learning_rule: ppo config
+        # could declare a set and run unrestricted, reporting a restricted arm that never was.
+        from quantumnematode.brain.arch.dtypes import DeviceType
+        from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
+        from quantumnematode.brain.modules import ModuleName
+
+        config = MLPPPOBrainConfig(
+            learning_rule="ppo",
+            plasticity_perturbation_set="motor",
+            # True so the shared homeostasis validator does not fire first: what this test exercises
+            # is the SUBSTRATE guard, which must reject the set whatever the rule is.
+            plasticity_homeostasis=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
+        with pytest.raises(ValueError, match=r"not available on this substrate"):
+            MLPPPOBrain(config=config, device=DeviceType.CPU)

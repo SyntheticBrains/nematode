@@ -15,8 +15,8 @@ drift 0.013–0.016**. So the rule writes more than its own weight norm on whate
 dimension changes that not at all. Two knobs calibrated on this substrate for the first time — σ and
 the action noise — are both nulls, leaving the learning arm pinned at **4.1–4.4 foods** throughout. The
 invariance across three independent axes is what points at a **structural** limit, and one is measured
-here: PPO's largest single adaptation on this cell is the **motor readout**, which the rule is
-forbidden from touching. That becomes **R.1d**.
+here: the tensor PPO changes most by relative norm on this cell is the **motor readout**, which the rule
+is forbidden from touching. That becomes **R.1d**.
 
 **Branch**: `feat/l4-reduced-perturbation`.
 
@@ -100,7 +100,8 @@ control by way of the MLP.
 | **0.1** | **4.361** | 1.731 | **+2.630** | 0.03% |
 | 0.2 — the carried value | 2.989 | 1.883 | +1.106 | 0.00% |
 
-σ 0.2 was costing the learning arm 46%, so the campaign runs at **0.1**.
+At σ 0.2 the learning arm is **31.5% lower than at σ 0.1** (2.989 against 4.361 — equivalently, σ 0.1
+is 45.9% higher), so the campaign runs at **0.1**.
 
 **Action noise (`initial_log_std`), at σ 0.1:**
 
@@ -117,7 +118,9 @@ because of **action noise**, not perturbation, since at std 1.0 the frozen arm r
 
 ### The invariance is the part that matters
 
-**The learning arm sits at 4.1–4.4 foods under every knob tried** — σ across a fourfold range, action
+**The learning arm sits between 2.4 and 4.4 foods under everything tried** — 4.06–4.36 across the two
+knobs at the `motor` mask, 2.99 at the σ the calibration rejected, and 2.41–3.84 across the campaign's
+five sets — σ across a fourfold range, action
 noise across 2.7× — with full clear never leaving ~0% against PPO's 19.31 foods on the same cell. Two
 independent sweeps hitting one ceiling is the signature of a **structural** limit rather than a
 hyperparameter one.
@@ -134,7 +137,8 @@ network are frozen**. After just 300 PPO episodes on this cell:
 | `w_chem` (3709 chemical synapses) | 0.486 | +0.899 | yes |
 | `food_gains` (sensory projection) | **0.177** | **+0.985** | no |
 
-**PPO's largest single adaptation is the motor readout, and the rule cannot make it.** The frozen sensory
+**Of the three measured tensors the motor readout shows the largest relative norm change, and it is
+the one the rule cannot touch.** The frozen sensory
 projection — the first candidate — costs little, since PPO barely rotates it. The readout starts from an
 anatomical prior (speed as the B-vs-A contrast, turn as D-vs-V, unit-normed) and PPO still moves it 78% in
 a tenth of a run.
@@ -222,7 +226,8 @@ the wiring contrast measurable. **7b's gate is untouched.**
 
 **The live hypothesis is R.1d**, registered separately: under the rule the connectome's
 `plastic_weights` is `w_chem` alone, so `food_gains` and `readout` are frozen — and PPO moves the
-readout **0.783** relative in 300 episodes against the sensory projection's 0.177. The safe form of the
+readout **0.783** relative in 300 episodes against the sensory projection's 0.177 and the chemical
+synapses' 0.486 — the largest of the three by that measure, which is not the same as the most important. The safe form of the
 test is seeding the readout from PPO and freezing it there, **not** making it plastic: Logbook 040
 recorded a 96% forager collapsing to zero within three episodes once its readout learned.
 
