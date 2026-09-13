@@ -131,7 +131,16 @@ and **not yet in practice**, because the two facts collide: the contrast needs t
 no wiring to rewire), while the connectome cannot be run below **302 units × 4 settling steps**, an
 order of magnitude past the 128 units at which R.1 measured 3.0% full clear. **So R.1c gates R.1b**,
 and R.1b gates the letter of 7b's gate. The order is **R.1c → R.1b → (7b's gate reconsidered)**, with
-**R.2** available in parallel and **R.3** available immediately, since neither needs the connectome.
+**R.2** and **R.2b** available in parallel, since neither needs the connectome.
+
+**Correction, 2026-09-13** (this entry first read "R.3 available immediately, since the block-V cells
+are MLP-runnable" — wrong on both counts). **R.3's rungs are connectome rungs**, so R.1c gates their
+*running* too: the block-V cells are `connectomeppo_*` configs; B.1 grounds synapse signs across the
+302-neuron connectome; B.5's gate is the clone assay on a connectome policy; and **B.4b cannot run on
+an MLP at all** — the substrate raises, because routing the modulator through aminergic wiring needs
+neurons with transmitter identities and a dense layer has none. Only B.4 is rule-level enough to be
+arguable, and its assay was the connectome clone. R.3's *re-registration documents* can be authored
+without the connectome; none of the work they register can run without R.1c.
 Nothing in R.1 shortens that chain, and reading R.1 as having opened 7b's gate would skip two
 unbuilt steps.
 
@@ -143,7 +152,7 @@ unbuilt steps.
 
 - [ ] R.2b **A matched dimension × horizon sweep** *(registered by 060, not run)*: R.1 varied the dimension on a one-step control and a 350-step cell; I.3 and I.3b varied the horizon at a single dimension. The two axes have **never** been crossed at matched settings, so the interaction is established while the **product law is not**. The same widths at two or more horizons on one platform is what would distinguish a product from any other interaction, and it is cheap — the MLP cell runs in minutes. Until it runs, every mechanism sentence in 060 stays at "interaction", not "product".
 
-- [ ] R.3 **Re-registration of the substrate rungs** *(condition met 2026-09-13 by R.1, not started; independent of R.1c, since the block-V cells are MLP-runnable)*: 059 fixed the condition "*if the programme produces a rule that learns the hard-food cell, B.5, B.1, B.4 and B.4b become askable and are re-registered fresh on the block-V cells with the block-V bar*". **R.1 meets it.** Each is re-registered fresh rather than re-run under its old registration, B.5's gate moves from the clone assay to the block-V bar, and **B.3 becomes payable once B.5 can conclude**. Block I's findings are about node perturbation specifically and are not revisited.
+- [ ] R.3 **Re-registration of the substrate rungs** *(condition met 2026-09-13 by R.1, not started; the documents can be authored now, but every rung they register is a **connectome** rung and so waits on R.1c — see the correction above)*: 059 fixed the condition "*if the programme produces a rule that learns the hard-food cell, B.5, B.1, B.4 and B.4b become askable and are re-registered fresh on the block-V cells with the block-V bar*". **R.1 meets it.** Each is re-registered fresh rather than re-run under its old registration, B.5's gate moves from the clone assay to the block-V bar, and **B.3 becomes payable once B.5 can conclude**. Block I's findings are about node perturbation specifically and are not revisited.
 
 ## Shipment 7b — Cross-Species Comparative Learning (Head-Circuit Scope)
 

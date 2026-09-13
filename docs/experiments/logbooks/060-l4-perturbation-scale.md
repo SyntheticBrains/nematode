@@ -331,15 +331,22 @@ of magnitude past the 128 units at which this sweep measured 3.0% full clear. So
 3. [ ] **7b's gate reconsidered** — only after R.1b returns. Reading R.1 as having opened it would skip
    two unbuilt steps.
 
-Available in parallel, neither needing the connectome:
+Available in parallel, without a connectome:
 
-- [ ] **R.3 — re-registration of B.5, B.1, B.4 and B.4b** on the block-V cells at a working dimension,
-  per 059. Its condition is met now.
 - [ ] **R.2b — a matched dimension × horizon sweep.** This sweep varied the dimension; I.3 and I.3b
   varied the horizon. The two have **never been crossed at matched settings**, which is exactly why the
   mechanism above is stated as an interaction rather than a product. Cheap: the MLP cell runs in
   minutes.
 - [ ] **R.2 (e-prop)** is **not** retired: it remains the named fallback if R.1b fails.
+
+Also waiting on R.1c, corrected 2026-09-13 from an earlier note here that called it parallel:
+
+- [ ] **R.3 — re-registration of B.5, B.1, B.4 and B.4b** on the block-V cells at a working dimension,
+  per 059. Its *condition* is met and the registrations can be authored now, but **every rung is a
+  connectome rung**: the block-V cells are `connectomeppo_*` configs, B.1 grounds synapse signs across
+  the 302 neurons, B.5's gate is the clone assay on a connectome policy, and **B.4b cannot run on an
+  MLP at all** — the substrate refuses it, since routing the modulator through aminergic wiring needs
+  transmitter identities a dense layer does not have.
 
 ## Data References
 
