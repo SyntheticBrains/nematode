@@ -91,7 +91,8 @@ draw.
   reach it — at **16 seeds**, the count
   [Logbook 059](../../../docs/experiments/logbooks/059-7a-shipment.md) registered for this gate. The
   comparison is against numbers already on the record: node perturbation's **3.751** learning and
-  **3.150** frozen on this exact cell, its `motor` arm's **4.361**, R.1d's best substituted arm at
+  **3.150** frozen on this exact cell — R.1c's `motor` arm, its best, at a shift of **+0.601** on 7 of
+  8 seeds — R.1d's best substituted arm at
   **9.639**, and PPO's matched **18.945**.
 
 - **The registered outcomes are 059's three, unchanged**: does not learn (the programme stops and 7b

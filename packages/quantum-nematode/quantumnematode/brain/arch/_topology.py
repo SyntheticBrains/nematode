@@ -127,6 +127,21 @@ class PlasticTopology(Protocol):
         """
         ...
 
+    def apply_learning_signal(self, score: torch.Tensor) -> None:
+        """Credit the step's eligibility with a per-unit learning signal.
+
+        Called once per environment step, immediately after the action is sampled, with the
+        policy's score function -- the derivative of the action log-probability with respect
+        to the action mean. A dynamics-derived eligibility is unsigned with respect to the
+        outcome, so it is held during the forward and folded into the trace here, where the
+        sign is available. A no-op for every eligibility mode that needs no such signal, so
+        a substrate pays nothing for the seam.
+
+        The call is REQUIRED where the eligibility needs it: crediting a stale signature
+        would read as a rule that learns slowly rather than as a call site that was missed.
+        """
+        ...
+
     def reset_traces(self) -> None:
         """Zero every eligibility trace; a documented no-op when traces are off."""
         ...

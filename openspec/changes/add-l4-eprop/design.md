@@ -38,8 +38,8 @@ d mu_k / d h_j  =  readout[k, class(j)] / |class(j)|      j in the 39-unit pool
 with everything beyond the pool reaching the action **only** through the multi-hop paths e-prop drops.
 So symmetric feedback under this truncation is not "the true direction, broadly applied" — it is a
 learning signal of exactly zero on 263 of 302 units, which makes it the e-prop analogue of R.1c's
-`motor` perturbation set. That set is not a neutral comparator either: it was R.1c's **best** arm
-(+0.601 shift on 7/8 seeds, 4.361 foods).
+`motor` perturbation set. That set is not a neutral comparator either: it was R.1c's **best** arm --
+3.751 learning against 3.150 frozen, a shift of **+0.601** on 7 of 8 seeds.
 
 The campaign therefore crosses the two things the routing varies:
 

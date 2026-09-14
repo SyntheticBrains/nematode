@@ -35,8 +35,11 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._plasticity_config import (
+    READOUT_RESTRICTED_ROUTINGS,
     RESTRICTED_PERTURBATION_SETS,
     UNMODULATED_RULES,
+    EligibilityMode,
+    LearningSignalRouting,
     PerturbationSet,
     PlasticityConfigMixin,
 )
@@ -278,6 +281,45 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _reject_unsupported_eprop(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse an e-prop configuration this build cannot honour.
+
+    Split from the general guard to keep each one readable; called from it, so a config built by
+    ``model_copy`` -- which skips every validator -- is still held to these.
+    """
+    if config.plasticity_eligibility != "eprop":
+        return
+    if config.plasticity_node_noise != 0.0:
+        msg = (
+            "plasticity_eligibility='eprop' requires plasticity_node_noise=0.0: e-prop's "
+            "trace is built from the unperturbed forward dynamics, and a perturbation would "
+            "change the pass the trace describes while contributing nothing to it."
+        )
+        raise ValueError(msg)
+    if config.plasticity_perturbation_set != "full":
+        msg = (
+            "plasticity_eligibility='eprop' does not accept "
+            f"plasticity_perturbation_set={config.plasticity_perturbation_set!r}: there is "
+            "no perturbation to restrict. What the learning signal can reach is set by "
+            "plasticity_learning_signal."
+        )
+        raise ValueError(msg)
+    if config.plasticity_learning_signal is None:
+        msg = (
+            "plasticity_eligibility='eprop' requires plasticity_learning_signal: the routing "
+            "decides which units the learning signal can reach, so it is the arm and must be "
+            "stated rather than inherited from a default."
+        )
+        raise ValueError(msg)
+    if config.action_mode != "continuous":
+        msg = (
+            "plasticity_eligibility='eprop' is implemented for the continuous head only: "
+            "the learning signal is the Gaussian score function, and a categorical head "
+            "needs its own (onehot - probs), which this build does not derive."
+        )
+        raise ValueError(msg)
+
+
 def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> None:
     """Refuse plasticity modes this build cannot honour, before anything is constructed.
 
@@ -317,6 +359,7 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
             "plasticity_node_noise: with no perturbation the eligibility is identically zero."
         )
         raise ValueError(msg)
+    _reject_unsupported_eprop(config)
     final = config.plasticity_node_noise_final
     episodes = config.plasticity_node_noise_anneal_episodes
     if (final is None) != (episodes is None):
@@ -405,6 +448,10 @@ class ConnectomeTopology(nn.Module):
     # Declared at class level like the other buffers so attribute access is typed as a
     # tensor rather than falling through Module.__getattr__ to Tensor | Module.
     _perturbation_mask: torch.Tensor
+    # Allocated only under the e-prop eligibility; declared here so attribute access is typed as
+    # a tensor rather than falling through Module.__getattr__.
+    eprop_trace: torch.Tensor
+    feedback: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -416,6 +463,11 @@ class ConnectomeTopology(nn.Module):
         node_noise_schedule: NodeNoiseSchedule | None = None,
         perturbation_seed: int | None = None,
         perturbation_set: PerturbationSet = "full",
+        eligibility: EligibilityMode = "hebbian",
+        # None is what an unset config carries; required under "eprop" and refused otherwise, so
+        # the arm is never inherited from a default. See PlasticityConfigMixin.
+        learning_signal: LearningSignalRouting | None = None,
+        learning_signal_seed: int | None = None,
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
@@ -454,6 +506,15 @@ class ConnectomeTopology(nn.Module):
         # schedules existed still loads.
         self._node_noise_schedule = node_noise_schedule
         self.perturbation_set = perturbation_set
+        # What the eligibility carries. Under "eprop" nothing is perturbed: the trace is built
+        # from the settling dynamics -- the activation's own derivative times the pre-synaptic
+        # rate, summed over the settling steps -- and is given its sign afterwards by a learning
+        # signal folded in once the action is sampled.
+        self.eligibility = eligibility
+        self.learning_signal = learning_signal
+        self._learning_signal_seed = learning_signal_seed
+        # Whether a forward's eligibility is still waiting for that signal.
+        self._eprop_pending = False
         self._schedule_steps_begun = 0
         self._perturbation_generator = torch.Generator()
         if perturbation_seed is not None:
@@ -868,6 +929,84 @@ class ConnectomeTopology(nn.Module):
                 "prev_activity_valid",
                 torch.zeros((), dtype=torch.bool, device=device),
             )
+            if eligibility == "eprop":
+                # The step's UNSIGNED eligibility, sum_s h_i^(s) * psi_j^(s+1), indexed
+                # [pre i, post j] like the trace it feeds. Held between the forward and the
+                # learning signal that gives it a sign; transient like every other per-step
+                # buffer, so a checkpoint written under another eligibility loads unchanged.
+                self.register_buffer(
+                    "eprop_trace",
+                    torch.zeros(self.n_neurons, self.n_neurons, device=device),
+                )
+                self._build_feedback(learning_signal, learning_signal_seed, device)
+
+    def _build_feedback(
+        self,
+        routing: LearningSignalRouting | None,
+        seed: int | None,
+        device: torch.device,
+    ) -> None:
+        """Build the feedback projection the learning signal arrives through, and persist it.
+
+        ``(n_neurons, action_dim)``. Persisted rather than transient: a reloaded policy that
+        redrew its projection would be learning against a different feedback path than the one
+        it was trained with, and nothing in the run would say so.
+
+        ``symmetric`` takes it from the readout, THROUGH the mean-pool::
+
+            B[j, k] = readout[k, class(j)] / |class(j)|      j in a motor class
+                    = 0                                     otherwise
+
+        The zero is the arm's defining property, not an omission. The readout reads only the
+        pooled motor classes, and e-prop drops the multi-hop paths by which any other unit
+        reaches the action, so under this eligibility a true-gradient signal cannot reach them
+        at all: the arm is restricted to the readout pool. ``random_motor`` is ``random``'s draw
+        masked to exactly those units, which is what makes the two comparable at matched
+        breadth. ``scalar`` needs no projection -- its signal is 1 everywhere -- and registers
+        none.
+        """
+        if routing is None:
+            msg = (
+                "the e-prop eligibility needs a learning-signal routing: the routing decides "
+                "which units the signal can reach at all, so there is no sensible default."
+            )
+            raise ValueError(msg)
+        if routing in ("scalar", "symmetric"):
+            # Neither has a projection to draw. "scalar" has none at all; "symmetric" is a
+            # function of the readout, which is set AFTER the topology is built (the anatomical
+            # contrast overwrites the orthogonal draw) and may be substituted by a loaded
+            # checkpoint, so caching it here would freeze a readout the arm never runs with.
+            # ``learning_signal_projection`` derives it live instead.
+            return
+        action_dim = int(self.readout.shape[0])
+        generator = torch.Generator()
+        if seed is not None:
+            generator.manual_seed(seed)
+        # Drawn on the generator's own device and moved, as the perturbation is: a CPU generator
+        # cannot fill a non-CPU tensor. The full draw happens for both routings so the two differ
+        # by the mask alone at one seed.
+        feedback = torch.randn(
+            (self.n_neurons, action_dim),
+            generator=generator,
+            dtype=self.readout.dtype,
+        ).to(device)
+        if routing == "random_motor":
+            reached = torch.zeros(self.n_neurons, dtype=torch.bool, device=device)
+            reached[self._motor_flat_indices] = True
+            feedback = feedback * reached.unsqueeze(1)
+        if routing in READOUT_RESTRICTED_ROUTINGS:
+            # The property that makes these arms what they are, checked rather than trusted: a
+            # projection that leaked outside the pool would make the arm a broad one under a
+            # restricted name, and nothing in the results would say so.
+            outside = torch.ones(self.n_neurons, dtype=torch.bool, device=device)
+            outside[self._motor_flat_indices] = False
+            if bool(feedback[outside].abs().any()):
+                msg = (
+                    f"learning_signal={routing!r} must reach only the readout pool, but its "
+                    "projection is non-zero outside it."
+                )
+                raise AssertionError(msg)
+        self.register_buffer("feedback", feedback)
 
     def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
         """Project a candidate weight tensor onto the strict-mask manifold.
@@ -1179,11 +1318,97 @@ class ConnectomeTopology(nn.Module):
             self.activity_traces.zero_()
             self.prev_activity.zero_()
             self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
+            if self.eligibility == "eprop":
+                self.eprop_trace.zero_()
+                # An episode boundary is the one place a pending eligibility is legitimately
+                # dropped: the step it belonged to has no further reward coming.
+                self._eprop_pending = False
         # Outside the trace guard: perturbation is a property of the forward pass, not of the
         # trace, so a topology perturbing with traces disabled must still start each episode
         # with the previous one's perturbation cleared.
         if self.node_noise > 0.0:
             self.node_perturbation.zero_()
+
+    def _reject_pending_eligibility(self) -> None:
+        """Refuse a forward whose predecessor's eligibility was never credited.
+
+        Silent otherwise: the stale trace would be folded in against the wrong step's reward and
+        read as a rule that learns slowly rather than as a call site that was missed.
+        """
+        if self._eprop_pending:
+            msg = (
+                "the previous step's e-prop eligibility was never credited: "
+                "apply_learning_signal must be called once per environment step, immediately "
+                "after the action is sampled. Crediting it against this step's reward would "
+                "attribute that reward to the previous step's dynamics."
+            )
+            raise RuntimeError(msg)
+
+    def _store_eprop(self, eprop: torch.Tensor | None) -> None:
+        """Hold the settling's unsigned eligibility until the learning signal arrives."""
+        if eprop is None:
+            return
+        with torch.no_grad():
+            self.eprop_trace.copy_(self.apply_weight_mask(eprop))
+            self._eprop_pending = True
+
+    def learning_signal_projection(self) -> torch.Tensor | None:
+        """Derive the projection the learning signal arrives through: ``(n_neurons, action_dim)``.
+
+        ``None`` under the ``scalar`` routing, which has no projection: its signal is 1 everywhere.
+
+        Under ``symmetric`` this is derived from the readout on every call rather than cached,
+        because the readout is written after the topology is built -- the anatomical contrast
+        overwrites the orthogonal draw -- and can be substituted by a loaded checkpoint. A cached
+        projection would be the transpose of a readout the arm never ran with, which is a silent
+        way to be almost right.
+        """
+        if self.learning_signal == "scalar":
+            return None
+        if self.learning_signal != "symmetric":
+            return self.feedback
+        projection = torch.zeros(
+            (self.n_neurons, int(self.readout.shape[0])),
+            dtype=self.readout.dtype,
+            device=self.readout.device,
+        )
+        with torch.no_grad():
+            for class_index, (start, stop) in enumerate(self._motor_class_slices):
+                members = self._motor_flat_indices[start:stop]
+                # The pool is a MEAN, so a member carries 1 / |class| of its class's influence on
+                # the action -- and a unit in no class carries none, which is the arm.
+                projection[members] = self.readout[:, class_index].detach() / float(stop - start)
+        return projection
+
+    def apply_learning_signal(self, score: torch.Tensor) -> None:
+        """Fold the step's learning signal into the eligibility trace.
+
+        ``score`` is the derivative of the action log-probability with respect to the action
+        mean -- for the continuous head, ``(u - mu) / sigma ** 2`` at the PRE-SQUASH draw. The
+        per-unit signal is ``L = B @ score`` and the trace takes ``eps * L`` along the
+        post-synaptic axis, which for a ``[pre, post]`` trace is axis 1.
+
+        A no-op unless the eligibility is e-prop's, so every other mode pays one attribute read.
+        """
+        if not self.enable_activity_traces or self.eligibility != "eprop":
+            return
+        with torch.no_grad():
+            flat = score.detach().reshape(-1).to(self.eprop_trace.dtype)
+            projection = self.learning_signal_projection()
+            if projection is None:
+                # L_j = 1 everywhere: the ablation. The update's only dependence on the outcome
+                # is then the scalar modulator the rule applies at update time.
+                signal = torch.ones(
+                    self.n_neurons,
+                    dtype=self.eprop_trace.dtype,
+                    device=self.eprop_trace.device,
+                )
+            else:
+                signal = projection.to(self.eprop_trace.dtype) @ flat
+            self.activity_traces.mul_(self.trace_decay).add_(
+                self.apply_weight_mask(self.eprop_trace * signal.unsqueeze(0)),
+            )
+        self._eprop_pending = False
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
         """Per-state ``log_std`` from the settled hidden state.
@@ -1350,6 +1575,12 @@ class ConnectomeTopology(nn.Module):
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
         perturbation = None
+        # e-prop's unsigned eligibility, accumulated across the settling steps. Allocated lazily
+        # rather than held in the buffer as it grows, so a step that raises part-way leaves the
+        # buffer at the last complete step rather than half-written.
+        eprop = None
+        accumulate_eprop = self.enable_activity_traces and self.eligibility == "eprop"
+        self._reject_pending_eligibility()
         # One scale for the whole episode's settling steps: the schedule is indexed by
         # episode, so every step within one draws at the same magnitude.
         scale = self.current_node_noise
@@ -1378,7 +1609,18 @@ class ConnectomeTopology(nn.Module):
                     step_noise = step_noise * self._perturbation_mask[settling_step]
                 perturbation = step_noise if perturbation is None else perturbation + step_noise
                 preact = preact + step_noise
+            if accumulate_eprop:
+                with torch.no_grad():
+                    # psi_j at THIS step against h_i at the step before it: the local part of
+                    # d h_j / d w_ij, which is what e-prop keeps. The paths through other units
+                    # are dropped -- that truncation is the method, and on this substrate it is
+                    # what leaves a unit more than one hop from the readout creditable only
+                    # through a learning signal that does not come from the readout.
+                    psi = 1.0 - torch.tanh(preact.detach()) ** 2
+                    term = torch.outer(h.detach(), psi)
+                    eprop = term if eprop is None else eprop + term
             h = torch.tanh(preact)
+        self._store_eprop(eprop)
         if perturbation is not None:
             with torch.no_grad():
                 # The unit's total perturbation over the settling, which is what its activity
@@ -1402,7 +1644,7 @@ class ConnectomeTopology(nn.Module):
         # also lands here and would update E if traces were enabled; no
         # diagnostic path enables them). The batched (PPO replay) forward
         # never touches E or the previous state.
-        if self.enable_activity_traces:
+        if self.enable_activity_traces and self.eligibility != "eprop":
             with torch.no_grad():
                 if self.prev_activity_valid:
                     # Masking routes through apply_weight_mask — the Protocol's
@@ -1683,6 +1925,9 @@ class ConnectomePPOBrain(ClassicalBrain):
             node_noise_schedule=config.node_noise_schedule(),
             perturbation_seed=self.seed,
             perturbation_set=config.plasticity_perturbation_set,
+            eligibility=config.plasticity_eligibility,
+            learning_signal=config.plasticity_learning_signal,
+            learning_signal_seed=self.seed,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,
@@ -2155,6 +2400,14 @@ class ConnectomePPOBrain(ClassicalBrain):
             mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
         continuous_mean = (mean_vec[0].item(), mean_vec[1].item())
 
+        # e-prop's learning signal, folded in the moment the action exists. The score function
+        # of the tanh-squashed Gaussian with respect to its MEAN is (u - mu) / sigma**2 at the
+        # PRE-SQUASH draw: the squash's log-determinant correction depends on u but not on mu, so
+        # it contributes nothing here. A no-op under every other eligibility.
+        with torch.no_grad():
+            score = (pre_tanh.detach() - mean.detach()) / torch.exp(2.0 * log_std.detach())
+        self.topology.apply_learning_signal(score)
+
         self._pending_state = state
         self._pending_action = pre_tanh.detach().cpu().numpy()
         self._pending_log_prob = log_prob
@@ -2349,6 +2602,11 @@ class ConnectomePPOBrain(ClassicalBrain):
         "chem_pathway",
         # Per-step perturbation state, drawn fresh and cleared per episode.
         "node_perturbation",
+        # The e-prop eligibility awaiting its learning signal: per-step state, like the
+        # perturbation it replaces. The feedback projection is NOT here -- it is drawn once per
+        # run and persisted, since a reloaded policy that redrew it would be learning against a
+        # different feedback path than the one it was trained with.
+        "eprop_trace",
         # Derived at construction from the wiring and the readout pool, not learned: a brain
         # rebuilds it, and persisting it would refuse every checkpoint written before it existed.
         "_perturbation_mask",
