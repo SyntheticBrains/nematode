@@ -127,6 +127,17 @@ class PlasticTopology(Protocol):
         """
         ...
 
+    @property
+    def plastic_homeostasis(self) -> list[bool]:
+        """Per plastic weight, whether the homeostatic incoming-norm rescale applies to it.
+
+        All true for every substrate that has one norm story for every tensor it exposes. A
+        substrate exposing tensors with DIFFERENT stories needs this: the rescale returns each
+        unit's incoming norm to its construction value, so a tensor whose scale is part of what the
+        arm is asking about cannot be under it and be asked about at the same time.
+        """
+        ...
+
     def apply_learning_signal(self, score: torch.Tensor) -> None:
         """Credit the step's eligibility with a per-unit learning signal.
 

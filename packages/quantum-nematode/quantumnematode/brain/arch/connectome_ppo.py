@@ -311,6 +311,16 @@ def _reject_unsupported_eprop(config: ConnectomePPOBrainConfig) -> None:
             "stated rather than inherited from a default."
         )
         raise ValueError(msg)
+    if config.plasticity_plastic_readout and config.freeze_updates:
+        # Not an error in the rule -- a freeze writes nothing either way -- but an arm declaring a
+        # plastic readout AND a freeze reads as a plastic-readout floor, which is not a thing: the
+        # floor is shared, because with no update no tensor moves.
+        msg = (
+            "plasticity_plastic_readout with freeze_updates=true would be reported as a "
+            "plastic-readout floor, and there is no such arm: with no update no tensor moves, so "
+            "one frozen floor serves every arm."
+        )
+        raise ValueError(msg)
     if config.action_mode != "continuous":
         msg = (
             "plasticity_eligibility='eprop' is implemented for the continuous head only: "
@@ -452,6 +462,9 @@ class ConnectomeTopology(nn.Module):
     # a tensor rather than falling through Module.__getattr__.
     eprop_trace: torch.Tensor
     feedback: torch.Tensor
+    readout_trace: torch.Tensor
+    readout_post: torch.Tensor
+    pooled_motor: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -468,6 +481,7 @@ class ConnectomeTopology(nn.Module):
         # the arm is never inherited from a default. See PlasticityConfigMixin.
         learning_signal: LearningSignalRouting | None = None,
         learning_signal_seed: int | None = None,
+        plastic_readout: bool = False,
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
@@ -513,6 +527,12 @@ class ConnectomeTopology(nn.Module):
         self.eligibility = eligibility
         self.learning_signal = learning_signal
         self._learning_signal_seed = learning_signal_seed
+        # Whether the motor readout is plastic too. Its post-synaptic units ARE the action
+        # dimensions, so its learning signal is the identity and its eligibility is its exact
+        # gradient -- no projection, no truncation. Excluded from the homeostatic rescale, because
+        # that returns each unit's incoming norm to construction and the readout's SCALE is part of
+        # what a plastic readout is asked about.
+        self.plastic_readout = plastic_readout
         # Whether a forward's eligibility is still waiting for that signal.
         self._eprop_pending = False
         self._schedule_steps_begun = 0
@@ -939,6 +959,24 @@ class ConnectomeTopology(nn.Module):
                     torch.zeros(self.n_neurons, self.n_neurons, device=device),
                 )
                 self._build_feedback(learning_signal, learning_signal_seed, device)
+                if plastic_readout:
+                    # The readout's eligibility, indexed like the readout itself: [action, class].
+                    # Transient, like every other per-step buffer.
+                    self.register_buffer(
+                        "readout_trace",
+                        torch.zeros_like(self.readout),
+                    )
+                    # The action mean the trace's post-synaptic factor was built from, kept so a
+                    # rule term reading it and the trace agree on the step.
+                    self.register_buffer(
+                        "readout_post",
+                        torch.zeros(self.readout.shape[0], device=device),
+                    )
+                    # The pooled motor-class means, which are the readout's PRE-synaptic factor.
+                    self.register_buffer(
+                        "pooled_motor",
+                        torch.zeros(self.readout.shape[1], device=device),
+                    )
 
     def _build_feedback(
         self,
@@ -1030,28 +1068,60 @@ class ConnectomeTopology(nn.Module):
 
     @property
     def plastic_weights(self) -> list[torch.Tensor]:
-        """The chemical synapse matrix -- the one tensor plasticity may change."""
+        """The tensors plasticity may change: the chemical matrix, and the readout when plastic."""
+        if self.plastic_readout:
+            return [self.w_chem, self.readout]
         return [self.w_chem]
 
     @property
     def eligibility_traces(self) -> list[torch.Tensor]:
-        """The per-synapse trace aligned with ``plastic_weights``.
+        """The traces aligned with ``plastic_weights``.
 
         Only meaningful when traces are enabled; the rule checks the flag
         first and refuses to step without one, so this never reads an
         unallocated buffer in practice.
         """
+        if self.plastic_readout:
+            return [self.activity_traces, self.readout_trace]
         return [self.activity_traces]
 
     @property
     def plastic_masks(self) -> list[torch.Tensor]:
-        """The chemical edge mask aligned with ``plastic_weights``."""
+        """The edge masks aligned with ``plastic_weights``.
+
+        The readout is dense -- every entry maps a motor class to an action dimension -- so its mask
+        is all-true rather than absent, which keeps the rule's mask-dependent telemetry meaning the
+        same thing for both tensors.
+        """
+        if self.plastic_readout:
+            return [self.m_chem, torch.ones_like(self.readout, dtype=torch.bool)]
         return [self.m_chem]
 
     @property
     def plastic_fan_in_axes(self) -> list[int]:
-        """The chemical matrix is ``[pre, post]``: a neuron's incoming synapses are a column."""
+        """Per plastic weight, the axis to reduce over for one unit's incoming weights.
+
+        The chemical matrix is ``[pre, post]``, so a neuron's incoming synapses are a column. The
+        readout is ``[action, class]``: its post-synaptic units are the action dimensions on axis 0,
+        so one unit's incoming weights are a ROW and the fan-in axis is 1.
+        """
+        if self.plastic_readout:
+            return [0, 1]
         return [0]
+
+    @property
+    def plastic_homeostasis(self) -> list[bool]:
+        """Per plastic weight, whether the homeostatic rescale applies.
+
+        The chemical matrix is under it, as every recorded arm has been. The readout is NOT: the
+        rescale returns each unit's incoming norm to its construction value, and the readout's own
+        norm is part of what a plastic readout is asked about -- R.1d measured +4.51 foods from that
+        scale alone with the direction held. Pinning it would leave the arm able to rotate the
+        readout and not to resize it, which is half the question.
+        """
+        if self.plastic_readout:
+            return [True, False]
+        return [True]
 
     def _readout_hop_distances(self, motor_indices: list[int]) -> torch.Tensor:
         """Hops from each unit to the nearest readout neuron, over directed chemical edges.
@@ -1231,13 +1301,16 @@ class ConnectomeTopology(nn.Module):
 
     @property
     def plastic_post_activities(self) -> list[torch.Tensor]:
-        """The activity the trace's post-synaptic factor was built from.
+        """The activity each trace's post-synaptic factor was built from.
 
         ``[pre, post]`` puts the post-synaptic units on axis 1. ``prev_activity``
         holds the state the last trace step took as its post-synaptic factor and
         the next step will take as its pre-synaptic one, so it is that vector
-        exactly -- a view over state the trace update already keeps.
+        exactly -- a view over state the trace update already keeps. The readout's
+        post-synaptic units are the action dimensions, so its vector is the action mean.
         """
+        if self.plastic_readout:
+            return [self.prev_activity, self.readout_post]
         return [self.prev_activity]
 
     def set_anatomical_readout(self) -> None:
@@ -1320,6 +1393,8 @@ class ConnectomeTopology(nn.Module):
             self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
             if self.eligibility == "eprop":
                 self.eprop_trace.zero_()
+                if self.plastic_readout:
+                    self.readout_trace.zero_()
                 # An episode boundary is the one place a pending eligibility is legitimately
                 # dropped: the step it belonged to has no further reward coming.
                 self._eprop_pending = False
@@ -1343,6 +1418,18 @@ class ConnectomeTopology(nn.Module):
                 "attribute that reward to the previous step's dynamics."
             )
             raise RuntimeError(msg)
+
+    def _store_readout_factors(self, pooled: torch.Tensor, mean: torch.Tensor) -> None:
+        """Hold the readout's pre-synaptic factor and the action it produced.
+
+        ``mean`` is the Gaussian mean in continuous mode, which is what the score function is taken
+        with respect to. A no-op unless the readout is plastic.
+        """
+        if not (self.plastic_readout and self.enable_activity_traces):
+            return
+        with torch.no_grad():
+            self.pooled_motor.copy_(pooled.detach())
+            self.readout_post.copy_(mean.detach())
 
     def _store_eprop(self, eprop: torch.Tensor | None) -> None:
         """Hold the settling's unsigned eligibility until the learning signal arrives."""
@@ -1408,6 +1495,13 @@ class ConnectomeTopology(nn.Module):
             self.activity_traces.mul_(self.trace_decay).add_(
                 self.apply_weight_mask(self.eprop_trace * signal.unsqueeze(0)),
             )
+            if self.plastic_readout:
+                # The readout's own eligibility is EXACT, and is the one place in this mechanism
+                # where nothing is approximated: its post-synaptic units are the action dimensions,
+                # so the signal reaching unit k is the score's own k-th component -- the identity --
+                # and d mu_k / d readout[k, c] is the pooled mean of class c. No projection, no
+                # truncation, no dropped paths.
+                self.readout_trace.mul_(self.trace_decay).add_(torch.outer(flat, self.pooled_motor))
         self._eprop_pending = False
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
@@ -1666,6 +1760,7 @@ class ConnectomeTopology(nn.Module):
         motor_acts = self._pool_motor(h)
         # (num_actions,) discrete logits, or (2,) continuous Gaussian mean.
         logits = self.readout @ motor_acts
+        self._store_readout_factors(motor_acts, logits)
         return logits, h
 
     def _inject_predator_batched(
@@ -1928,6 +2023,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             eligibility=config.plasticity_eligibility,
             learning_signal=config.plasticity_learning_signal,
             learning_signal_seed=self.seed,
+            plastic_readout=config.plasticity_plastic_readout,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,
@@ -2607,6 +2703,11 @@ class ConnectomePPOBrain(ClassicalBrain):
         # run and persisted, since a reloaded policy that redrew it would be learning against a
         # different feedback path than the one it was trained with.
         "eprop_trace",
+        # The readout's own eligibility and the two vectors it is built from: per-step state, like
+        # everything else here, and absent unless the readout is plastic.
+        "readout_trace",
+        "readout_post",
+        "pooled_motor",
         # Derived at construction from the wiring and the readout pool, not learned: a brain
         # rebuilds it, and persisting it would refuse every checkpoint written before it existed.
         "_perturbation_mask",

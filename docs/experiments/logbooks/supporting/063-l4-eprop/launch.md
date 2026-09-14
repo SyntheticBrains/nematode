@@ -42,15 +42,55 @@ other 263** — and e-prop drops the multi-hop paths by which any of those 263 r
 makes it the e-prop analogue of R.1c's `motor` perturbation set — **3.751 learning against 3.150
 frozen, a shift of +0.601 on 7 of 8 seeds, R.1c's best arm**. The routing therefore varies two things at once, and the campaign crosses them:
 
-| arm | signal source | units it can reach | what it answers |
-|---|---|---|---|
-| `symmetric` | the readout's transpose | the 39-unit pool — **forced** | does the true direction help, where it can reach |
-| `random_motor` | fixed random `B`, masked to the pool | the same 39 | is it the direction, or is it the pool |
-| `random` | fixed random `B` | all 302 | can a broadcast projection credit the far units usefully |
-| `scalar` | none, `L_j = 1` | all 302 | did the per-unit signal do anything at all |
+| arm | signal source | units it can reach | readout | what it answers |
+|---|---|---|---|---|
+| `symmetric` | the readout's transpose | the 39-unit pool — **forced** | frozen | does the true direction help, where it can reach |
+| `random_motor` | fixed random `B`, masked to the pool | the same 39 | frozen | is it the direction, or is it the pool |
+| `random` | fixed random `B` | all 302 | frozen | can a broadcast projection credit the far units usefully |
+| `scalar` | none, `L_j = 1` | all 302 | frozen | did the per-unit signal do anything at all |
 
 The fourth cell of that 2×2 — **true directions reaching all 302 units — is one the mechanism
 forbids**, and the harness records it as forbidden rather than omitting it.
+
+## The fifth arm, added after stage 1 and before any arm ran
+
+The four above share a **frozen** readout, and stage 1 measured that this is not a neutral choice.
+Feedback alignment works because the forward path to the output comes into alignment with the
+feedback matrix; a frozen readout cannot. Same task, same rule, same projection, 20,000 trials:
+
+| readout | rate 1e-4 | rate 1e-3 | rate 1e-2 | seeds above floor |
+|---|---|---|---|---|
+| **frozen** (`eprop_random`) | −0.8147 | −0.7097 | −0.7031 | 4/8, 6/8, 6/8 — fails at every rate |
+| **plastic** (diagnostic, seeds 101–108) | −0.2726 | **−0.1353** | −0.1391 | 8/8 at every rate |
+
+Floor −0.6909, optimum −0.1353. With the readout plastic the broadcast arm reaches the optimum
+**exactly**. So `random` — the arm the plausibility claim rests on — is structurally unable to work in
+the configuration all four share, and `plastic_readout` is the one arm stage 1 says can.
+
+**The exclusion this change first registered was not supported by the evidence cited for it.** Logbook
+040 measured a plastic readout collapsing under the **Hebbian** rule, where a plastic output layer's
+post-synaptic factor is its own *output*, so its rows self-amplify toward whatever maximises the action
+mean (density 1e17). Under e-prop the factor is its own *error*, and there is no such loop. The
+readout's post-synaptic units **are** the action dimensions, so its learning signal is the identity and
+its eligibility is
+
+```text
+E[k, c] <- decay * E[k, c] + score_k * pooled_c
+```
+
+the **exact gradient** of the action log-probability with respect to the readout — no projection, no
+truncation, no dropped paths. It is the one place in this mechanism where nothing is approximated, and
+it is pinned against autograd by test.
+
+**The readout is excluded from the homeostatic rescale**, which returns each unit's incoming norm to
+construction: its scale is part of what this arm asks about, since R.1d measured **+4.51 foods from
+scale alone** with the direction held. The rule's weight bound still applies at 3.0 per entry, allowing
+a readout norm of 8.49 against the **7.820** R.1d's PPO harvest reached, so it does not bind on the
+scale that mattered.
+
+**Where the readout ends up is reported**, norm and cosine to the anatomical default, against R.1d's
+two measured readouts — anatomical 1.414, PPO 7.820 at cosine −0.178 — so "e-prop rediscovers something
+like PPO's decoding" and "it finds something else" are separable.
 
 `random_motor` is what makes `symmetric` vs `random` readable: without it, a `symmetric` win reads as
 "the true direction helped" and "crediting only the motor pool helped" at once, and R.1c already
@@ -105,7 +145,7 @@ record rather than taking it on trust.
 ## The reading
 
 Plateau-tail mean foods through I.2's graded family, each arm against the shared frozen control,
-paired, one-sided, **BH-FDR across the four**. Both minima: **1.0 foods** of 20, and **10% of the
+paired, one-sided, **BH-FDR across the five**. Both minima: **1.0 foods** of 20, and **10% of the
 reachable gap** against PPO's matched **18.945**, the more demanding binding.
 
 **Reported separately**: whether an arm **beats its floor**, and whether it **reaches competence** (20%
@@ -120,9 +160,10 @@ finding; a different number is a bigger one.
 learning arm's change should concentrate near the pool. `random` is where the prediction is testable —
 it is the only arm whose signal reaches the far units at all. Registered before the run.
 
-**The two matched contrasts**, descriptive and reported in every branch:
+**The three matched contrasts**, descriptive and reported in every branch:
 `symmetric − random_motor` isolates the direction at matched reach; `random − random_motor` isolates
-reach at a matched source.
+reach at a matched source; and `plastic_readout − random` isolates the readout at a matched signal and
+matched reach — the one stage 1 predicts will be the largest.
 
 ## Outcomes — [Logbook 059](../../059-7a-shipment.md)'s three, unchanged
 
@@ -145,17 +186,24 @@ alignment (one `B` per seed at one scale); not evidence the dynamics-derived eli
 perturbation unless `scalar` separates from the floor; and not a result about the true gradient
 direction unless `symmetric` separates from `random_motor`.
 
-## Honest prior
+## Honest prior, revised by stage 1
 
-**`does_not_learn`, with `learns_below_competence` a real possibility.** Two things pull against
-e-prop here. The truncation is worst exactly where this substrate needs it most — 263 of 302 units
-reach the action only through the paths it drops — and R.1d showed the readout scale already binds
-around 4 foods at this operating point. What pulls for it: e-prop removes the 1/N variance that R.1
-measured as decisive, and `random` is the first mechanism in this programme that can credit a far unit
-with a *consistent* direction rather than a fresh draw each step.
+**Before stage 1** this read `does_not_learn`, with `learns_below_competence` a real possibility: the
+truncation is worst exactly where this substrate needs it most — 263 of 302 units reach the action
+only through the paths it drops — and R.1d showed the readout scale already binds around 4 foods at
+this operating point.
 
-If `scalar` is indistinguishable from the floor and `random` is not, that is the cleanest evidence yet
-that the per-unit signal — not the trace — is what the rule has been missing.
+**Stage 1 moved it, and only for one arm.** The four frozen-readout arms are now *expected* to fail,
+`random` for a structural reason that is measured rather than argued. `plastic_readout` is the live
+question, and it is genuinely open: it reached the optimum on a one-step task with one plastic layer
+and a 1-D action, which says the mechanism is sound and says nothing about 350 steps, 302 recurrent
+units and a 2-D action. What pulls for it is that it removes the two limits this programme has
+measured at once — R.1d's readout ceiling and the 1/N perturbation variance R.1 found decisive. What
+pulls against it is the truncation, which is untouched: the far units are still credited only through
+a projection that is not the gradient.
+
+If `scalar` sits at the floor and `plastic_readout` does not, that is the cleanest evidence yet that
+what the rule has been missing is a per-unit signal with somewhere to align.
 
 ## Reproduce
 
@@ -167,15 +215,21 @@ uv run python scripts/analysis/l4_rule_positive_control.py \
   --out docs/experiments/logbooks/supporting/063-l4-eprop/stage1-control.json \
   --csv docs/experiments/logbooks/supporting/063-l4-eprop/stage1-per-seed.csv
 
+# 1b. the alignment diagnostic on DISJOINT seeds: is a frozen readout what stops `random` working
+uv run python scripts/analysis/l4_rule_positive_control.py \
+  --diagnostic-out docs/experiments/logbooks/supporting/063-l4-eprop/stage1-diagnostic.json
+
 # 2. pilot on DISJOINT seeds, plus the rate check
 uv run python scripts/run_campaign.py \
   --config ${P}_random.yml --config ${P}_frozen.yml \
   --seeds 101-104 --runs 3000 --output-dir campaigns/eprop-pilot \
   -- --theme headless --track-experiment
 
-# 3. the arms — 80 runs. `--track-experiment` is REQUIRED for the drift and hop columns.
+# 3. the arms — 96 runs. `--track-experiment` is REQUIRED for the drift and hop columns.
 uv run python scripts/run_campaign.py \
-  $(for R in symmetric random_motor random scalar; do printf -- "--config %s_%s.yml " "$P" "$R"; done) \
+  $(for R in symmetric random_motor random scalar plastic_readout; do
+      printf -- "--config %s_%s.yml " "$P" "$R"
+    done) \
   --config ${P}_frozen.yml \
   --seeds 1-16 --runs 3000 --output-dir campaigns/eprop \
   -- --theme headless --track-experiment

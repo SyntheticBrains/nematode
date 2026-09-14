@@ -71,11 +71,47 @@ _STEM = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_eprop
 
 # The learning arms, in the order the table reads: reach descending, then the ablation.
 ARMS: dict[str, dict[str, Any]] = {
-    "random": {"source": "random projection", "reach": "all 302"},
-    "scalar": {"source": "none (L = 1)", "reach": "all 302"},
-    "symmetric": {"source": "readout transpose", "reach": "the 39-unit pool"},
-    "random_motor": {"source": "random projection", "reach": "the 39-unit pool"},
+    "plastic_readout": {
+        "routing": "random",
+        "source": "random projection",
+        "reach": "all 302",
+        "readout": "plastic",
+    },
+    "random": {
+        "routing": "random",
+        "source": "random projection",
+        "reach": "all 302",
+        "readout": "frozen",
+    },
+    "scalar": {
+        "routing": "scalar",
+        "source": "none (L = 1)",
+        "reach": "all 302",
+        "readout": "frozen",
+    },
+    "symmetric": {
+        "routing": "symmetric",
+        "source": "readout transpose",
+        "reach": "the 39-unit pool",
+        "readout": "frozen",
+    },
+    "random_motor": {
+        "routing": "random_motor",
+        "source": "random projection",
+        "reach": "the 39-unit pool",
+        "readout": "frozen",
+    },
 }
+# Added after stage 1, before any arm ran, and the reason is measured rather than argued: feedback
+# alignment needs the forward path to the output to come into alignment with the feedback matrix, and
+# a FROZEN readout cannot. On the one-step control at 20,000 trials the broadcast arm's best is
+# -0.7031 against a cue-blind floor of -0.6909 with the readout frozen, and reaches the optimum of
+# -0.1353 exactly on every seed with it plastic. So `random` -- the arm the plausibility claim rests
+# on -- is structurally unable to work in the four registered arms' configuration, and this is the
+# one arm that can. It is also the only arm whose readout eligibility is EXACT: the readout's
+# post-synaptic units are the action dimensions, so its signal is the identity and no path is
+# dropped.
+PLASTIC_READOUT_ARM = "plastic_readout"
 # The cell the mechanism forbids, stated rather than left out: under e-prop's truncation a
 # true-gradient signal cannot reach a unit the readout does not read.
 FORBIDDEN_CELL = {
@@ -91,6 +127,9 @@ FORBIDDEN_CELL = {
 MATCHED_CONTRASTS = {
     "direction_at_matched_reach": ("symmetric", "random_motor"),
     "reach_at_matched_source": ("random", "random_motor"),
+    # The third, and the one stage 1 predicts will be the largest: the same projection over the same
+    # 302 units, differing only in whether the readout may learn.
+    "readout_at_matched_signal": ("plastic_readout", "random"),
 }
 
 # Harvested on this exact cell, at these seeds and this action scale, by R.1d.
@@ -101,6 +140,11 @@ PPO_MATCHED_FOODS = 18.945
 NODEPERT_LEARNING_FOODS = 3.751
 NODEPERT_FROZEN_FOODS = 3.150
 NODEPERT_SHIFT_FOODS = 0.601
+# R.1d's two measured readouts, for the plastic arm to be read against: the committed anatomical
+# default, and the PPO harvest that replaced rather than refined it.
+ANATOMICAL_READOUT_NORM = 1.414
+PPO_READOUT_NORM = 7.820
+PPO_READOUT_COSINE = -0.178
 TARGET_FOODS = 20.0
 MIN_FOODS = 1.0
 MIN_GAP_FRACTION = 0.10
@@ -111,7 +155,7 @@ COMPETENCE_THRESHOLD = ms.COMPETENT_THRESHOLD
 DRIFT_REFERENCE = (1.37, 1.42)
 
 _LABEL = re.compile(
-    rf"^{re.escape(_STEM)}_(?P<arm>symmetric|random_motor|random|scalar|frozen)"
+    rf"^{re.escape(_STEM)}_(?P<arm>plastic_readout|symmetric|random_motor|random|scalar|frozen)"
     r"-seed(?P<seed>\d+)\.log$",
 )
 
@@ -246,7 +290,7 @@ def hop_distances() -> torch.Tensor:
 
 
 def split_drift(
-    routing: str,
+    arm: str,
     logs: dict[str, dict[int, Path]],
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
@@ -256,7 +300,7 @@ def split_drift(
     Reuses R.1c's reader, which takes the connectome's ``state["topology"]`` layout rather than the
     MLP's ``state["policy"]`` -- the repair that made its split measurement possible at all.
     """
-    pairs = [(logs.get(routing, {}).get(seed), logs.get("frozen", {}).get(seed)) for seed in seeds]
+    pairs = [(logs.get(arm, {}).get(seed), logs.get("frozen", {}).get(seed)) for seed in seeds]
     usable = [(a, b) for a, b in pairs if a is not None and b is not None]
     if not usable:
         # Nothing on disk to split, so the 302-unit topology this would build to find the reached
@@ -270,7 +314,7 @@ def split_drift(
             "reference_range": list(DRIFT_REFERENCE),
             "seeds_expected": list(seeds),
         }
-    reached = reached_units(routing)
+    reached = reached_units(ARMS[arm]["routing"])
     credited: list[float] = []
     excluded: list[float] = []
     for learning, frozen in usable:
@@ -296,7 +340,7 @@ def split_drift(
 
 
 def change_by_hop(
-    routing: str,
+    arm: str,
     logs: dict[str, dict[int, Path]],
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
@@ -307,7 +351,7 @@ def change_by_hop(
     the multi-hop ones, so a learning arm's change should concentrate near the pool. ``random`` is
     where it is testable -- it is the only arm whose signal reaches the far units at all.
     """
-    pairs = [(logs.get(routing, {}).get(seed), logs.get("frozen", {}).get(seed)) for seed in seeds]
+    pairs = [(logs.get(arm, {}).get(seed), logs.get("frozen", {}).get(seed)) for seed in seeds]
     usable = [(a, b) for a, b in pairs if a is not None and b is not None]
     if not usable:
         return {"mean_abs_change_by_hop": {}, "units_by_hop": {}, "n_read": 0, "available": False}
@@ -339,8 +383,75 @@ def change_by_hop(
     }
 
 
+def readout_change(
+    arm: str,
+    logs: dict[str, dict[int, Path]],
+    seeds: tuple[int, ...] = SEEDS,
+    experiments: Path = EXPERIMENTS,
+) -> dict[str, Any]:
+    """How far the readout moved, for the one arm that may move it.
+
+    Reported against the two readouts already on the record: the anatomical default at norm 1.414,
+    and the PPO harvest R.1d substituted at 7.820 with a cosine of -0.178 to it. Where the arm's
+    readout ends up between those says whether e-prop rediscovers something like PPO's decoding or
+    something else. Empty for every frozen-readout arm, whose readout cannot move.
+    """
+    import torch
+
+    if ARMS[arm]["readout"] != "plastic":
+        return {"available": False, "why": "this arm's readout is frozen"}
+    norms: list[float] = []
+    cosines: list[float] = []
+    for seed in seeds:
+        learning = logs.get(arm, {}).get(seed)
+        frozen = logs.get("frozen", {}).get(seed)
+        if learning is None or frozen is None:
+            continue
+        after = _readout_tensor(learning, experiments)
+        before = _readout_tensor(frozen, experiments)
+        if after is None or before is None or after.shape != before.shape:
+            continue
+        norms.append(float(after.norm()))
+        cosines.append(
+            float(
+                torch.nn.functional.cosine_similarity(
+                    after.reshape(-1).float(),
+                    before.reshape(-1).float(),
+                    dim=0,
+                ),
+            ),
+        )
+    return {
+        "available": bool(norms),
+        "mean_norm": float(np.mean(norms)) if norms else float("nan"),
+        "mean_cosine_to_anatomical": float(np.mean(cosines)) if cosines else float("nan"),
+        "anatomical_norm": ANATOMICAL_READOUT_NORM,
+        "ppo_norm": PPO_READOUT_NORM,
+        "ppo_cosine_to_anatomical": PPO_READOUT_COSINE,
+        "n_read": len(norms),
+    }
+
+
+def _readout_tensor(log: Path, experiments: Path = EXPERIMENTS) -> torch.Tensor | None:
+    """Read the run's final readout, or None where no export is on disk."""
+    import torch
+    from l4_panel import _experiment_json  # pyright: ignore[reportMissingImports]
+
+    experiment = _experiment_json(log.read_text(), experiments)
+    exports = experiment.get("exports_path") if experiment else None
+    if not exports:
+        return None
+    final = rp.ps.hm.REPO / exports / "weights" / "final.pt"
+    if not final.is_file():
+        return None
+    topology = torch.load(final, weights_only=True).get("topology")
+    if not isinstance(topology, dict):
+        return None
+    return topology.get("readout")
+
+
 def compare(
-    routing: str,
+    arm: str,
     scanned: dict[str, Any],
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
@@ -351,15 +462,15 @@ def compare(
     does not fold them into the contrast, the means, the competence check or the verdict.
     """
     runs = scanned["runs"]
-    learning = {s: r.foods for s, r in runs[routing].items() if s in seeds}
+    learning = {s: r.foods for s, r in runs[arm].items() if s in seeds}
     frozen = {s: r.foods for s, r in runs["frozen"].items() if s in seeds}
-    learning_clear = [r.success for s, r in runs[routing].items() if s in seeds]
+    learning_clear = [r.success for s, r in runs[arm].items() if s in seeds]
     frozen_mean = float(np.mean(list(frozen.values()) or [math.nan]))
     graded = ms.shift_contrast(learning, frozen)
     mean_clear = float(np.mean(learning_clear)) if learning_clear else float("nan")
     return {
-        "arm": routing,
-        **ARMS[routing],
+        "arm": arm,
+        **ARMS[arm],
         "n_pairs": len(set(learning) & set(frozen)),
         "learning_mean_foods": float(np.mean(list(learning.values()) or [math.nan])),
         "frozen_mean_foods": frozen_mean,
@@ -372,8 +483,9 @@ def compare(
         "competence_threshold": COMPETENCE_THRESHOLD,
         "graded": graded,
         "minima": minima(graded.get("effect", float("nan")), frozen_mean),
-        "drift": split_drift(routing, scanned["logs"], seeds, experiments),
-        "change_by_hop": change_by_hop(routing, scanned["logs"], seeds, experiments),
+        "drift": split_drift(arm, scanned["logs"], seeds, experiments),
+        "change_by_hop": change_by_hop(arm, scanned["logs"], seeds, experiments),
+        "readout_change": readout_change(arm, scanned["logs"], seeds, experiments),
     }
 
 
@@ -519,18 +631,26 @@ def _print(result: dict[str, Any]) -> None:
     """Print the per-arm table, then what the reading turns on."""
     print("\nR.2 - e-prop on the hard-food cell")
     print(
-        "  arm           | source            | reach     | learning | frozen | shift |     q "
-        "| clear % | drift-cr | verdict",
+        "  arm             | source            | reach     | readout | learning | frozen | shift "
+        "|     q | clear % | drift-cr | verdict",
     )
     for name, cell in result["arms"].items():
         graded = cell["graded"]
         print(
-            f"  {name:13} | {cell['source']:17} | {cell['reach']:9} | "
+            f"  {name:15} | {cell['source']:17} | {cell['reach']:9} | {cell['readout']:7} | "
             f"{cell['learning_mean_foods']:8.3f} | {cell['frozen_mean_foods']:6.3f} | "
             f"{graded.get('effect', float('nan')):+5.2f} | "
             f"{graded.get('q_improve', float('nan')):5.3f} | "
             f"{cell['learning_mean_full_clear']:7.2f} | "
             f"{cell['drift']['credited_mean_relative']:8.2f} | {cell['verdict']}",
+        )
+    plastic = result["arms"][PLASTIC_READOUT_ARM]["readout_change"]
+    if plastic.get("available"):
+        print(
+            f"\n  {PLASTIC_READOUT_ARM} readout: norm {plastic['mean_norm']:.3f} "
+            f"(anatomical {plastic['anatomical_norm']}, PPO {plastic['ppo_norm']}), "
+            f"cosine to anatomical {plastic['mean_cosine_to_anatomical']:+.3f} "
+            f"(PPO's {plastic['ppo_cosine_to_anatomical']:+.3f})",
         )
     print(f"\n  forbidden cell: {FORBIDDEN_CELL['source']} reaching {FORBIDDEN_CELL['reach']}")
     print(f"    {FORBIDDEN_CELL['why']}")

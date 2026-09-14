@@ -473,6 +473,14 @@ class ThreeFactorRule:
                 ]
         self._fan_in_axes: list[int] = []
         self._norm_targets: list[torch.Tensor] = []
+        # Per plastic tensor, whether the rescale applies to it. A substrate exposing tensors with
+        # different norm stories opts one out: the rescale returns each unit's incoming norm to its
+        # construction value, so a tensor whose SCALE is part of what the arm asks about cannot be
+        # under it and be asked about at once. Absent the property every tensor is under it, which
+        # is every recorded arm.
+        self._homeostatic: list[bool] = list(
+            getattr(topology, "plastic_homeostasis", [True] * len(topology.plastic_weights)),
+        )
         if homeostasis:
             self._fan_in_axes = list(topology.plastic_fan_in_axes)
             with torch.no_grad():
@@ -690,7 +698,7 @@ class ThreeFactorRule:
                     # permitted weights; it multiplies by a positive per-unit factor and
                     # cannot reintroduce a forbidden sign, and the clamp still comes last.
                     self._project_signs(index, w)
-                    if self.homeostasis:
+                    if self.homeostasis and self._homeostatic[index]:
                         # Drift is measured after the update and before the
                         # rescale; the clamp comes last so the bound always holds.
                         drifts.append(self._norm_drift(index, w, mask))
@@ -710,6 +718,7 @@ class ThreeFactorRule:
                 drifts = [
                     self._norm_drift(index, w, mask)
                     for index, (w, mask) in enumerate(zip(weights, masks, strict=True))
+                    if self._homeostatic[index]
                 ]
             if self.freeze_updates:
                 # Consolidation state advances under a freeze, like the

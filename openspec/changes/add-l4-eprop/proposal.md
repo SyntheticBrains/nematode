@@ -83,10 +83,39 @@ draw.
   is interpretable. `random` is the arm the plausibility claim rests on, and `scalar` must **not** solve
   a task whose answer only reward reveals through a per-unit signal.
 
+- **A fifth arm, added after stage 1 and before any arm ran: `plastic_readout`.** Stage 1 measured
+  something the four above cannot survive as a set. Feedback alignment works because the forward path
+  to the output comes into alignment with the feedback matrix, and **a frozen readout cannot** — so
+  `random`, the arm the plausibility claim rests on, is structurally unable to work in the
+  configuration all four share. On the one-step control at 20,000 trials, same task, same rule, same
+  projection:
+
+  | readout | rate 1e-4 | rate 1e-3 | rate 1e-2 | seeds above floor |
+  |---|---|---|---|---|
+  | **frozen** | −0.8147 | −0.7097 | −0.7031 | 4/8, 6/8, 6/8 — fails at every rate |
+  | **plastic** | −0.2726 | **−0.1353** | −0.1391 | 8/8 at every rate |
+
+  Floor −0.6909, optimum −0.1353: with the readout plastic it reaches the optimum **exactly**. So the
+  fifth arm is `random` with the readout plastic, and it is the only one stage 1 says can work.
+
+  **The exclusion this change first wrote was not supported by the evidence cited for it.** Logbook
+  040's plastic readout collapsed *under the Hebbian rule*, where a plastic output layer's
+  post-synaptic factor is its own **output**, so its rows self-amplify toward whatever maximises the
+  action mean. Under e-prop the factor is its own **error**: the readout's post-synaptic units are
+  the action dimensions, so its learning signal is the identity and its eligibility is its **exact
+  gradient** — no projection, no truncation, no dropped paths, and no self-amplification loop. Pinned
+  against autograd by test.
+
+  The readout is **excluded from the homeostatic rescale**, which returns each unit's incoming norm
+  to construction: the readout's scale is part of what this arm asks about, since R.1d measured
+  **+4.51 foods from that scale alone** with the direction held. The rule's weight bound still
+  applies at 3.0 per entry, allowing a readout norm of 8.49 against the 7.820 R.1d's PPO harvest
+  reached, so it does not bind on the scale that mattered.
+
 - **Stage 2, the hard-food cell**, at exactly the operating point R.1c and R.1d measured — the
   `hard350` connectome cell with `plasticity_normalise_modulator`, `plasticity_normalise_trace` and
   `plasticity_homeostasis` all on, `plasticity_rate: 0.001`, `trace_decay: 0.9`,
-  `initial_log_std: -1.0`, `forward_pass_depth: 4`, and the **committed anatomical readout**. Four
+  `initial_log_std: -1.0`, `forward_pass_depth: 4`, and the **committed anatomical readout**. Five
   learning arms and **one** shared frozen floor — a frozen arm makes no updates, so no routing can
   reach it — at **16 seeds**, the count
   [Logbook 059](../../../docs/experiments/logbooks/059-7a-shipment.md) registered for this gate. The
@@ -103,8 +132,7 @@ draw.
 Out of scope: **the wiring contrast itself** (059's third stage, on the block-V cells against the
 registered ≥ 20% time-to-competence bar) — it is gated on stage 2 producing a rule that learns the
 cell, which is the gate R.1b is blocked behind, and registering it now would repeat R.1c's mistake of
-stating a consequence its verdict condition could not reach. Also out of scope: making the readout
-plastic; any perturbation set (there is no perturbation); e-prop on the MLP yardstick beyond the
+stating a consequence its verdict condition could not reach. Also out of scope: any perturbation set (there is no perturbation); e-prop on the MLP yardstick beyond the
 one-step control, which the config layer **refuses** rather than silently running; and the readout
 scale R.1d surfaced, which is named as the pre-registered follow-up if stage 2 lands in the 2.4–4.4
 food band rather than a new arm inside it.
@@ -120,10 +148,10 @@ matched on which units it can reach.
 
 - New: the `eprop` eligibility mode and its learning-signal routing; the topology seam that folds the
   signal in after the action is sampled; three stage-1 arms in the positive-control harness;
-  `scripts/analysis/l4_eprop.py`; five configs; records under `supporting/063-l4-eprop/`; Logbook 063.
+  `scripts/analysis/l4_eprop.py`; six configs; records under `supporting/063-l4-eprop/`; Logbook 063.
 - Edited: `EligibilityMode` and its validators, the two topologies' trace updates, the connectome
   brain's action steps, the experiments index, `CHANGELOG.md`, the tracker (R.2), the roadmap only if
   the reading changes.
-- Compute: **80 runs** — four learning arms and one shared frozen floor × 16 seeds at ~1800 s — about
-  **3h 10m** at the measured parallelism, plus a **4-run pilot** on disjoint seeds 101–104 and a rate
+- Compute: **96 runs** — five learning arms and one shared frozen floor × 16 seeds at ~1800 s — about
+  **3h 45m** at the measured parallelism, plus a **4-run pilot** on disjoint seeds 101–104 and a rate
   check on the same seeds. Stage 1 is a script and runs in minutes.

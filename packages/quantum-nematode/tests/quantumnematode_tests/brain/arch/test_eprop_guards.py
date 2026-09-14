@@ -45,6 +45,7 @@ while _root != _root.parent and not (_root / "configs").is_dir():
 _CONFIGS = _root / "configs" / "scenarios" / "foraging"
 _STEM = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_eprop"
 _ROUTINGS = ("symmetric", "random_motor", "random", "scalar")
+_ARMS = (*_ROUTINGS, "plastic_readout")
 
 
 def _config(**overrides: Any) -> ConnectomePPOBrainConfig:
@@ -165,7 +166,7 @@ class TestTheArmsDifferByOneKey:
         assert differing == {"freeze_updates"}
         assert frozen["freeze_updates"] is True
 
-    @pytest.mark.parametrize("routing", [*_ROUTINGS, "frozen"])
+    @pytest.mark.parametrize("routing", [*_ARMS, "frozen"])
     def test_every_arm_pins_the_measured_operating_point(self, routing: str) -> None:
         # R.1c's and R.1d's operating point, written out rather than inherited, so the comparison
         # with node perturbation's 3.751 and 3.150 on this cell is against the same conditions.
@@ -205,7 +206,7 @@ class TestTheRuleRefusesAMismatchedTopology:
 
 
 class TestTheArmsConstruct:
-    @pytest.mark.parametrize("routing", [*_ROUTINGS, "frozen"])
+    @pytest.mark.parametrize("routing", [*_ARMS, "frozen"])
     def test_each_config_builds_a_brain(self, routing: str) -> None:
         simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_{routing}.yml"))
         assert simulation.brain is not None
@@ -214,3 +215,68 @@ class TestTheArmsConstruct:
         config.seed = 1
         brain = ConnectomePPOBrain(config=config, device=DeviceType.CPU)
         assert brain.topology.eligibility == "eprop"
+
+
+class TestThePlasticReadoutArm:
+    """The arm stage 1 says can work, and the three things that would make it something else."""
+
+    def test_it_differs_from_the_broad_arm_in_the_readout_alone(self) -> None:
+        keys = TestTheArmsDifferByOneKey._brain_keys
+        reference = keys(f"{_STEM}_random")
+        arm = keys(f"{_STEM}_plastic_readout")
+        differing = {k for k in set(reference) | set(arm) if reference.get(k) != arm.get(k)}
+        assert differing == {"plasticity_plastic_readout"}
+        assert arm["plasticity_plastic_readout"] is True
+
+    def test_it_needs_the_eprop_eligibility(self) -> None:
+        # Under the Hebbian eligibility a plastic output layer takes its own OUTPUT as the
+        # post-synaptic factor and its rows self-amplify, which Logbook 040 measured.
+        with pytest.raises(ValueError, match="requires plasticity_eligibility='eprop'"):
+            _config(
+                plasticity_eligibility="hebbian",
+                plasticity_learning_signal=None,
+                plasticity_plastic_readout=True,
+            )
+
+    def test_a_frozen_plastic_readout_arm_is_refused(self) -> None:
+        # There is no such arm: with no update no tensor moves, so one frozen floor serves them all.
+        with pytest.raises(ValueError, match="no such arm"):
+            _reject_unsupported_plasticity_modes(
+                _derived(plasticity_plastic_readout=True, freeze_updates=True),
+            )
+
+    def test_the_seam_exposes_the_readout_as_a_second_plastic_tensor(self) -> None:
+        simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_plastic_readout.yml"))
+        assert simulation.brain is not None
+        config = simulation.brain.config
+        assert isinstance(config, ConnectomePPOBrainConfig)
+        config.seed = 1
+        topology = ConnectomePPOBrain(config=config, device=DeviceType.CPU).topology
+        assert [tuple(w.shape) for w in topology.plastic_weights] == [(302, 302), (2, 4)]
+        assert [tuple(x.shape) for x in topology.eligibility_traces] == [(302, 302), (2, 4)]
+        assert [tuple(m.shape) for m in topology.plastic_masks] == [(302, 302), (2, 4)]
+        assert [tuple(v.shape) for v in topology.plastic_post_activities] == [(302,), (2,)]
+        # The readout is [action, class]: its post-synaptic units are the action dimensions on axis
+        # 0, so one unit's incoming weights are a ROW.
+        assert topology.plastic_fan_in_axes == [0, 1]
+
+    def test_the_readout_is_excluded_from_homeostasis(self) -> None:
+        # The rescale returns each unit's incoming norm to construction, and the readout's SCALE is
+        # part of what this arm asks about: R.1d measured +4.51 foods from that scale alone.
+        simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_plastic_readout.yml"))
+        assert simulation.brain is not None
+        config = simulation.brain.config
+        assert isinstance(config, ConnectomePPOBrainConfig)
+        config.seed = 1
+        topology = ConnectomePPOBrain(config=config, device=DeviceType.CPU).topology
+        assert topology.plastic_homeostasis == [True, False]
+
+    def test_the_frozen_readout_arms_expose_one_tensor(self) -> None:
+        simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_random.yml"))
+        assert simulation.brain is not None
+        config = simulation.brain.config
+        assert isinstance(config, ConnectomePPOBrainConfig)
+        config.seed = 1
+        topology = ConnectomePPOBrain(config=config, device=DeviceType.CPU).topology
+        assert len(topology.plastic_weights) == 1
+        assert topology.plastic_homeostasis == [True]

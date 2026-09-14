@@ -66,13 +66,16 @@
 
 ## 3. The arms
 
-- [x] 3.1 Five configs from the committed `hard350` cell: `eprop_{symmetric,random_motor,random,scalar}`
+- [x] 3.1 Six configs from the committed `hard350` cell: `eprop_{symmetric,random_motor,random,scalar}`,
+  `eprop_plastic_readout` (task 8)
   and one shared `eprop_frozen`, at `initial_log_std: -1.0`, `plasticity_node_noise: 0.0`, the committed
   anatomical readout, no perturbation set, and the pinned rule settings written out rather than
   inherited — `plasticity_normalise_modulator`, `plasticity_normalise_trace` and
   `plasticity_homeostasis` on, `plasticity_rate: 0.001`, `trace_decay: 0.9`, `forward_pass_depth: 4`.
-- [x] 3.2 Exact-key test: the four learning configs differ from each other in
-  `plasticity_learning_signal` **alone**, and from the frozen one in `freeze_updates` alone.
+- [x] 3.2 Exact-key test: the four frozen-readout learning configs differ from each other in
+  `plasticity_learning_signal` **alone**, `eprop_plastic_readout` differs from `eprop_random` in
+  `plasticity_plastic_readout` alone, and the frozen config differs from `eprop_random` in
+  `freeze_updates` alone.
 - [x] 3.3 State in the launch record why R.1c's frozen floor is **not** reused: it ran at
   `plasticity_node_noise` 0.1, the perturbation enters the forward pass whether or not updates are
   frozen, so its floor is a noisier policy than this one.
@@ -88,7 +91,7 @@
 ## 4. Harness
 
 - [x] 4.1 `scripts/analysis/l4_eprop.py`, reusing R.1c/R.1d's statistics layer and drift reader. Per-arm
-  contrast against the shared frozen control, paired one-sided, BH-FDR across the **four** learning
+  contrast against the shared frozen control, paired one-sided, BH-FDR across the **five** learning
   arms, 80% bootstrap CIs.
 - [x] 4.2 Both registered minima against each arm: the absolute 1.0-food floor, and 10% of the gap to
   PPO's **matched 18.945**, with the larger binding.
@@ -103,9 +106,11 @@
   [`_readout_hop_distances`](../../../packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py#L917)
   walk. e-prop drops the multi-hop terms, so a learning arm's change should concentrate near the pool,
   and `random` — the only broad arm with a per-unit signal — is where the prediction is testable.
-- [x] 4.6 **The two matched contrasts reported explicitly**, since the verdict does not turn on them but
-  the interpretation does: `symmetric − random_motor` isolates the signal's direction at matched
-  breadth, and `random − random_motor` isolates breadth at a matched signal source.
+- [x] 4.6 **The three matched contrasts reported explicitly**, since the verdict does not turn on them
+  but the interpretation does: `symmetric − random_motor` isolates the signal's direction at matched
+  breadth, `random − random_motor` isolates breadth at a matched signal source, and
+  `plastic_readout − random` isolates the readout at a matched signal and matched breadth — the one
+  stage 1 predicts will be the largest.
 - [x] 4.7 The four registered readings — `does_not_learn`, `learns_below_competence`, `learns_the_cell`,
   `void` — with the consequence of each in the harness, not in prose.
 - [x] 4.8 Tests for 4.1–4.7, including a fixture in each reading, one where `scalar` matches `random`
@@ -128,13 +133,13 @@
 
 ## 6. Campaign
 
-- [ ] 6.1 80 runs: four learning arms and one frozen floor × seeds 1–16 at 3000 episodes, with
+- [ ] 6.1 96 runs: five learning arms and one frozen floor × seeds 1–16 at 3000 episodes, with
   `--track-experiment` so drift and the hop-distance reading have weights to read.
 - [ ] 6.2 Per-seed CSV, the per-arm table and the verdict under `supporting/063-l4-eprop/`.
 
 ## 7. The record
 
-- [ ] 7.1 Logbook 063: the per-arm table, the `scalar` ablation's position and both matched contrasts
+- [ ] 7.1 Logbook 063: the per-arm table, the `scalar` ablation's position and all three matched contrasts
   stated in **every** verdict branch, the drift column against R.1c's and R.1d's, the hop-distance
   reading, and the verdict against 059's three registered outcomes.
 - [ ] 7.2 The experiments index row and `CHANGELOG.md`.
@@ -145,3 +150,37 @@
 - [ ] 7.5 If the reading is `does_not_learn`, 059's first outcome fires: record that the programme stops,
   that 7b proceeds under PPO, and that the plausibility claim is given up — as a decision with its
   arithmetic, not as an omission.
+
+## 8. The plastic-readout arm, added after stage 1 and before any arm ran
+
+Stage 1 measured that a **frozen** readout is what stops a broadcast projection working: feedback
+alignment needs the forward path to the output to come into alignment with the feedback matrix, and a
+frozen readout cannot. Same task, same rule, same projection, 20,000 trials — frozen, the broadcast
+arm's best is **−0.7031** against a cue-blind floor of −0.6909; plastic, it reaches the optimum of
+**−0.1353 exactly** on every seed. So `random`, the arm the plausibility claim rests on, is
+structurally unable to work in the four registered arms' configuration.
+
+**This change's original exclusion of a plastic readout was not supported by the evidence it cited.**
+Logbook 040 measured the collapse under the **Hebbian** rule, where a plastic output layer's
+post-synaptic factor is its own *output* and its rows self-amplify. Under e-prop the factor is its own
+*error*, and there is no such loop.
+
+- [x] 8.1 `plasticity_plastic_readout`, rejected outside `eprop` with 040's mechanism as the reason,
+  and rejected together with `freeze_updates` — that combination would be reported as a
+  plastic-readout floor, and there is no such arm.
+- [x] 8.2 The readout as a **second plastic tensor** on the seam: its own trace, an all-true mask, the
+  fan-in axis its `[action, class]` layout implies, and the action mean as its post-synaptic activity.
+- [x] 8.3 Its eligibility, which is **exact**: `E[k, c] ← decay·E[k, c] + score_k · pooled_c`. The
+  readout's post-synaptic units are the action dimensions, so its learning signal is the identity and
+  no path is dropped. Pinned against autograd end to end, and against the same identity on the MLP.
+- [x] 8.4 **Excluded from the homeostatic rescale**, through a per-tensor flag the topology supplies
+  and the rule honours, so no other substrate changes. The rescale returns each unit's incoming norm
+  to construction and the readout's scale is part of what this arm asks about — R.1d measured +4.51
+  foods from that scale alone. The rule's weight bound still applies at 3.0 per entry, which allows a
+  readout norm of 8.49 against the 7.820 R.1d's PPO harvest reached.
+- [x] 8.5 The harness reports **where the readout ended up** for this arm — norm and cosine to the
+  anatomical default — against R.1d's two measured readouts (anatomical 1.414; PPO 7.820 at cosine
+  −0.178), so "e-prop rediscovers something like PPO's decoding" and "it finds something else" are
+  separable.
+- [x] 8.6 Tests for 8.1–8.5, including that the four frozen-readout arms expose **one** plastic tensor
+  and this one exposes two.

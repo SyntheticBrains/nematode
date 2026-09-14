@@ -206,6 +206,22 @@ class PlasticityConfigMixin(BaseModel):
     # a config round-tripped through ``model_dump`` sets every field, so "explicitly set" says
     # nothing about what was written.
     plasticity_learning_signal: LearningSignalRouting | None = None
+    # Whether the motor readout is plastic too, under "eprop" only. Off by default, which is every
+    # recorded arm.
+    #
+    # The readout's post-synaptic units ARE the action dimensions, so its learning signal is the
+    # identity -- the score's own component per unit -- and its eligibility is therefore its EXACT
+    # gradient, with no projection and no truncation. That is what separates this from the plastic
+    # readout Logbook 040 measured collapsing: under the Hebbian rule a plastic output layer's
+    # post-synaptic factor is its own OUTPUT, so its rows self-amplify toward whatever maximises the
+    # action mean. Under e-prop the factor is its own ERROR, and there is no such loop.
+    #
+    # It matters because a FROZEN readout is what stops a broadcast projection working at all:
+    # feedback alignment needs the forward path to the output to come into alignment with the
+    # feedback matrix, and a frozen readout cannot. Measured on the one-step control at 20,000
+    # trials -- frozen, the broadcast arm's best is -0.7031 against a cue-blind floor of -0.6909;
+    # plastic, it reaches the optimum of -0.1353 exactly on every seed.
+    plasticity_plastic_readout: bool = False
     # "full" is the default so every recorded plastic result reproduces unchanged. A restricted
     # set needs a substrate that can derive one from its own wiring and readout, so the dense
     # yardstick refuses anything else -- the same division of labour as third_factor="pathway".
@@ -331,6 +347,14 @@ class PlasticityConfigMixin(BaseModel):
                 f"plasticity_perturbation_set={self.plasticity_perturbation_set!r}: there is no "
                 "perturbation to restrict. What e-prop's learning signal can reach is set by "
                 "plasticity_learning_signal instead."
+            )
+            raise ValueError(msg)
+        if self.plasticity_plastic_readout and self.plasticity_eligibility != "eprop":
+            msg = (
+                "plasticity_plastic_readout requires plasticity_eligibility='eprop': under the "
+                "Hebbian eligibility a plastic readout takes its own output as the post-synaptic "
+                "factor and its rows self-amplify into saturation, which Logbook 040 measured. "
+                "e-prop gives it its own error instead."
             )
             raise ValueError(msg)
         if self.plasticity_eligibility == "eprop" and self.plasticity_learning_signal is None:

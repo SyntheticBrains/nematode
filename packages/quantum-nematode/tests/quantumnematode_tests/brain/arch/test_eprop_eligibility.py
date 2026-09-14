@@ -381,3 +381,81 @@ class TestAPlasticOutputLayerGetsIdentityFeedback:
         assert gradient is not None
         index = len(topology.layers) - 1
         assert torch.allclose(_buffer(topology, f"trace_{index}"), gradient, atol=1e-5)
+
+
+class TestTheConnectomeReadoutsEligibilityIsExact:
+    """The one place in this mechanism where nothing is approximated."""
+
+    @staticmethod
+    def _plastic_brain() -> ConnectomePPOBrain:
+        simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_plastic_readout.yml"))
+        assert simulation.brain is not None
+        config = simulation.brain.config
+        assert isinstance(config, ConnectomePPOBrainConfig)
+        config.seed = _SEED
+        return ConnectomePPOBrain(config=config, device=DeviceType.CPU)
+
+    def test_the_trace_is_the_outer_product_of_score_and_pooled_means(self) -> None:
+        # d mu_k / d readout[k, c] is the pooled mean of class c, and the signal reaching unit k is
+        # the score's own k-th component -- the identity. No projection, no truncation.
+        brain = self._plastic_brain()
+        topology = brain.topology
+        _logits, hidden = topology.forward_with_hidden(
+            torch.tensor([0.3, -0.2, 0.1]),
+            None,
+            None,
+            None,
+            None,
+        )
+        score = torch.tensor([0.5, -1.0])
+        topology.apply_learning_signal(score)
+        pooled = topology._pool_motor(hidden.detach())
+        assert torch.allclose(topology.readout_trace, torch.outer(score, pooled), atol=1e-6)
+
+    def test_it_matches_autograd_end_to_end(self) -> None:
+        brain = self._plastic_brain()
+        topology = brain.topology
+        _logits, hidden = topology.forward_with_hidden(
+            torch.tensor([0.3, -0.2, 0.1]),
+            None,
+            None,
+            None,
+            None,
+        )
+        score = torch.tensor([0.5, -1.0])
+        topology.apply_learning_signal(score)
+
+        pooled = topology._pool_motor(hidden.detach())
+        readout = topology.readout.detach().clone()
+        readout.requires_grad = True
+        mean = readout @ pooled
+        sigma = float(torch.exp(topology.log_std.detach()[0]))
+        draw = mean.detach() + score * sigma**2
+        (-0.5 * ((draw - mean) / sigma) ** 2).sum().backward()
+        assert readout.grad is not None
+        assert torch.allclose(topology.readout_trace, readout.grad, atol=1e-5)
+
+    def test_a_frozen_readout_arm_keeps_no_readout_trace(self) -> None:
+        assert not hasattr(_brain("random").topology, "readout_trace")
+
+    def test_the_readout_trace_is_not_persisted(self) -> None:
+        # Per-step state, like every other trace here. The connectome excludes those through
+        # ``_TRANSIENT_BUFFERS``, which is what the brain's save path filters on, so a checkpoint
+        # written by a frozen-readout arm loads into this one unchanged.
+        brain = self._plastic_brain()
+        assert "readout_trace" in brain._TRANSIENT_BUFFERS
+        assert "readout_trace" in brain.topology.state_dict()  # allocated, and filtered on save
+
+    def test_an_episode_boundary_clears_it(self) -> None:
+        brain = self._plastic_brain()
+        brain.topology.forward_with_hidden(
+            torch.tensor([0.3, -0.2, 0.1]),
+            None,
+            None,
+            None,
+            None,
+        )
+        brain.topology.apply_learning_signal(torch.tensor([0.5, -1.0]))
+        assert float(brain.topology.readout_trace.abs().sum()) > 0.0
+        brain.topology.reset_traces()
+        assert float(brain.topology.readout_trace.abs().sum()) == 0.0

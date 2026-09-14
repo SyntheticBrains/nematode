@@ -43,12 +43,13 @@ learning signal of exactly zero on 263 of 302 units, which makes it the e-prop a
 
 The campaign therefore crosses the two things the routing varies:
 
-| arm | signal source | credited breadth | what it answers |
-|---|---|---|---|
-| `symmetric` | readout transpose | the 39-unit pool, **forced** | does the true direction help, where it can reach |
-| `random_motor` | fixed random `B`, masked to the pool | the same 39 units | is it the direction, or is it the pool |
-| `random` | fixed random `B` | all 302 | can a broadcast projection credit the far units usefully |
-| `scalar` | none, `L_j = 1` | all 302 | did the per-unit signal do anything at all |
+| arm | signal source | credited breadth | readout | what it answers |
+|---|---|---|---|---|
+| `symmetric` | readout transpose | the 39-unit pool, **forced** | frozen | does the true direction help, where it can reach |
+| `random_motor` | fixed random `B`, masked to the pool | the same 39 units | frozen | is it the direction, or is it the pool |
+| `random` | fixed random `B` | all 302 | frozen | can a broadcast projection credit the far units usefully |
+| `scalar` | none, `L_j = 1` | all 302 | frozen | did the per-unit signal do anything at all |
+| `plastic_readout` | fixed random `B` | all 302 | **plastic** | can a broadcast projection work **at all**, once the path it would align to may move |
 
 The missing fourth cell — true directions reaching all 302 units — is **the cell the mechanism
 forbids**, and stating it is part of the result rather than a gap in the design. `random_motor` exists
@@ -61,6 +62,48 @@ multi-hop ones, so where a learning arm's weight change lands should concentrate
 and `random`, the only arm that can credit the far units, is where the prediction is testable. Reported
 by hop distance using the same walk R.1c committed
 ([`_readout_hop_distances`](../../../packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py#L917)).
+
+## What stage 1 changed, before any arm ran
+
+The four arms above share a frozen readout, and stage 1 measured that this is not a neutral choice.
+Feedback alignment works because the forward path to the output comes into alignment with the
+feedback matrix; a frozen readout cannot, so `random` — the arm the plausibility claim rests on — is
+**structurally unable to work** in the configuration all four share. Same task, same rule, same
+projection, 20,000 trials:
+
+| readout | rate 1e-4 | rate 1e-3 | rate 1e-2 | seeds above floor |
+|---|---|---|---|---|
+| **frozen** (`eprop_random`) | −0.8147 | −0.7097 | −0.7031 | 4/8, 6/8, 6/8 — fails at every rate |
+| **plastic** (diagnostic) | −0.2726 | **−0.1353** | −0.1391 | 8/8 at every rate |
+
+Floor −0.6909, optimum −0.1353. With the readout plastic the broadcast arm reaches the optimum
+**exactly**, on every seed. That is not a marginal difference in degree.
+
+**This change's original exclusion of a plastic readout was not supported by the evidence it cited.**
+Logbook 040 measured a plastic readout collapsing under the **Hebbian** rule, where a plastic output
+layer's post-synaptic factor is its own *output*, so its rows self-amplify toward whatever maximises
+the action mean (density 1e17). Under e-prop the factor is its own *error*, and there is no such
+loop: the readout's post-synaptic units **are** the action dimensions, so its learning signal is the
+identity and its eligibility is
+
+```text
+E[k, c] <- decay * E[k, c] + score_k * pooled_c
+```
+
+which is the **exact gradient** of the action log-probability with respect to the readout — no
+projection, no truncation, no dropped paths. It is the one place in this mechanism where nothing is
+approximated, and it is pinned against autograd by test.
+
+Two consequences carried deliberately:
+
+- **The readout is excluded from the homeostatic rescale.** That rescale returns each unit's incoming
+  norm to its construction value, and the readout's scale is part of what this arm asks about — R.1d
+  measured **+4.51 foods from scale alone** with the direction held. Pinning it would leave the arm
+  able to rotate the readout and not to resize it, which is half the question. The rule honours this
+  through a per-tensor flag the topology supplies, so no other substrate changes.
+- **The rule's weight bound still applies**, at 3.0 per entry. That allows a readout norm of 8.49
+  against the **7.820** R.1d's PPO harvest reached, so it does not bind on the scale that mattered —
+  stated because it is a bound the arm runs under, not because it is expected to matter.
 
 ## The learning signal is the part that is not a drop-in
 
@@ -156,18 +199,21 @@ e-prop clears its floor but lands in that band, the reading is *the readout scal
 credit-assignment rule does*, the follow-up is the readout-scale / action-noise interaction R.1d
 surfaced, and it is **not** grounds for re-running e-prop at a scaled readout inside this change.
 
-| arm | `freeze_updates` | routing | runs |
-|---|---|---|---|
-| `eprop_symmetric` | no | `symmetric` | 16 |
-| `eprop_random_motor` | no | `random_motor` | 16 |
-| `eprop_random` | no | `random` | 16 |
-| `eprop_scalar` | no | `scalar` | 16 |
-| `eprop_frozen` | yes | — | 16 |
+| arm | `freeze_updates` | routing | readout | runs |
+|---|---|---|---|---|
+| `eprop_symmetric` | no | `symmetric` | frozen | 16 |
+| `eprop_random_motor` | no | `random_motor` | frozen | 16 |
+| `eprop_random` | no | `random` | frozen | 16 |
+| `eprop_scalar` | no | `scalar` | frozen | 16 |
+| `eprop_plastic_readout` | no | `random` | **plastic** | 16 |
+| `eprop_frozen` | yes | — | frozen | 16 |
 
-One frozen floor for all four: with updates frozen no weight moves, so the routing cannot reach the
-behaviour. Asserted by an exact-key config test rather than argued — the four learning configs must
-differ from each other in the routing key **alone**, and from the frozen config in `freeze_updates`
-alone.
+One frozen floor for all five: with updates frozen no weight moves, so neither the routing nor a
+plastic readout can reach the behaviour, and a config declaring both a plastic readout and a freeze
+is refused rather than reported as a plastic-readout floor. Asserted by an exact-key config test
+rather than argued — the four frozen-readout configs differ from each other in the routing key
+**alone**, `plastic_readout` differs from `random` in `plasticity_plastic_readout` alone, and the
+frozen config differs from `random` in `freeze_updates` alone.
 
 It is **not** R.1c's frozen floor: that arm ran at `plasticity_node_noise` 0.1, and the perturbation
 enters the forward pass whether or not updates are frozen, so its floor is a *noisier* policy than this
@@ -175,7 +221,7 @@ one. Reusing it would compare against the wrong null, and the 16 runs are spent 
 
 ## The verdict, and what each branch costs
 
-Per arm, against the shared frozen control, paired by seed, one-sided, BH-FDR across the **four**
+Per arm, against the shared frozen control, paired by seed, one-sided, BH-FDR across the **five**
 learning arms, with 80% bootstrap CIs — the statistics layer R.1c and R.1d used, unchanged. Both
 registered minima apply as they did there: the absolute 1.0-food floor and the 10%-of-reachable-gap
 minimum taken against PPO's matched **18.945**, with the larger binding.

@@ -303,6 +303,11 @@ class MLPTopology(nn.Module):
         return [1] * len(self._layers)
 
     @property
+    def plastic_homeostasis(self) -> list[bool]:
+        """Every layer is under the rescale: one dense stack, one norm story."""
+        return [True] * len(self._layers)
+
+    @property
     def plastic_post_activities(self) -> list[torch.Tensor]:
         """One ``(out,)`` activity vector per layer: a ``[out, in]`` weight's post axis is ``0``."""
         return [getattr(self, f"post_activity_{index}") for index in range(len(self._layers))]
