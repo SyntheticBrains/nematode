@@ -88,6 +88,33 @@ scale alone** with the direction held. The rule's weight bound still applies at 
 a readout norm of 8.49 against the **7.820** R.1d's PPO harvest reached, so it does not bind on the
 scale that mattered.
 
+## The control the pilot made necessary
+
+The pilot on **disjoint seeds 101–104**, 12/12 runs clean, at the committed rate:
+
+| arm | readout | learning | frozen | full clear % |
+|---|---|---|---|---|
+| `plastic_readout` | plastic | **15.550** | 1.829 | **49.13%** |
+| `random` | frozen | 3.730 | 1.829 | 0.00% |
+
+`plastic_readout` is the first arm in this programme to reach competence on the connectome, and
+`random` sits inside R.1c's 2.4–4.4 band exactly as stage 1 predicted. The learned readout landed at
+norm **3.991**, cosine **−0.208** to the anatomical default — between anatomical 1.414 and PPO's
+7.820, and close to PPO's direction (−0.178).
+
+**That result must not ship with its alternative explanation untested.** A plastic readout is an
+**8-parameter linear map** over four pooled motor-class means, so "a local rule learns this substrate"
+and "a small linear readout on frozen recurrent features learns this cell" predict the same success.
+`readout_only` freezes `w_chem` and leaves the readout learning, so
+**`plastic_readout − readout_only` is what the substrate's own plasticity contributes.** Nothing on
+the record supplies it: R.1d's frozen arms froze everything. Its credited drift should read ~0, which
+is the check that the withholding happened.
+
+**The pilot's verdict is withheld, not reported.** At four seeds the exact one-sided paired test
+cannot reach the significance gate at all — its smallest reachable p is 2⁻⁴ = 0.0625, which BH across
+the arms pushes above it — so every arm reads `no_improvement` whatever it did. The harness printed
+`does_not_learn — the programme stops` on that evidence before this was caught and fixed.
+
 **Where the readout ends up is reported**, norm and cosine to the anatomical default, against R.1d's
 two measured readouts — anatomical 1.414, PPO 7.820 at cosine −0.178 — so "e-prop rediscovers something
 like PPO's decoding" and "it finds something else" are separable.
@@ -145,7 +172,7 @@ record rather than taking it on trust.
 ## The reading
 
 Plateau-tail mean foods through I.2's graded family, each arm against the shared frozen control,
-paired, one-sided, **BH-FDR across the five**. Both minima: **1.0 foods** of 20, and **10% of the
+paired, one-sided, **BH-FDR across the six**. Both minima: **1.0 foods** of 20, and **10% of the
 reachable gap** against PPO's matched **18.945**, the more demanding binding.
 
 **Reported separately**: whether an arm **beats its floor**, and whether it **reaches competence** (20%
@@ -160,10 +187,11 @@ finding; a different number is a bigger one.
 learning arm's change should concentrate near the pool. `random` is where the prediction is testable —
 it is the only arm whose signal reaches the far units at all. Registered before the run.
 
-**The three matched contrasts**, descriptive and reported in every branch:
+**The four matched contrasts**, descriptive and reported in every branch:
 `symmetric − random_motor` isolates the direction at matched reach; `random − random_motor` isolates
-reach at a matched source; and `plastic_readout − random` isolates the readout at a matched signal and
-matched reach — the one stage 1 predicts will be the largest.
+reach at a matched source; `plastic_readout − random` isolates the readout at a matched signal and
+matched reach; and `plastic_readout − readout_only` isolates the substrate's own plasticity at a
+matched readout — the one a positive result needs to mean what it claims.
 
 ## Outcomes — [Logbook 059](../../059-7a-shipment.md)'s three, unchanged
 
@@ -225,9 +253,9 @@ uv run python scripts/run_campaign.py \
   --seeds 101-104 --runs 3000 --output-dir campaigns/eprop-pilot \
   -- --theme headless --track-experiment
 
-# 3. the arms — 96 runs. `--track-experiment` is REQUIRED for the drift and hop columns.
+# 3. the arms — 112 runs. `--track-experiment` is REQUIRED for the drift and hop columns.
 uv run python scripts/run_campaign.py \
-  $(for R in symmetric random_motor random scalar plastic_readout; do
+  $(for R in symmetric random_motor random scalar plastic_readout readout_only; do
       printf -- "--config %s_%s.yml " "$P" "$R"
     done) \
   --config ${P}_frozen.yml \

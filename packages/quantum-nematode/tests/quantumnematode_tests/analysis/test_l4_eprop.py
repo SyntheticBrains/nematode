@@ -267,3 +267,51 @@ class TestTheReferencesAreTheCommittedOnes:
         low, high = ep.DRIFT_REFERENCE
         assert low <= 1.37
         assert high >= 1.42
+
+
+class TestAPilotIsNotAVerdict:
+    """At four seeds the exact paired test cannot reach the gate, so no arm could have passed."""
+
+    def test_the_verdict_is_withheld(self, tmp_path: Path) -> None:
+        out = ep.analyse(_scanned(), stage_one=_stage_one(tmp_path), registered=False)
+        assert out["verdict"] == "pilot"
+        assert "not a registered verdict" in out["why"]
+
+    def test_the_per_arm_levels_are_still_computed(self, tmp_path: Path) -> None:
+        # The levels ARE the pilot's job; only the reading is withheld.
+        out = ep.analyse(
+            _scanned(plastic_readout=_arm(15.0, clear=49.0)),
+            stage_one=_stage_one(tmp_path),
+            registered=False,
+        )
+        assert out["arms"]["plastic_readout"]["learning_mean_foods"] > 15.0
+        assert out["arms"]["plastic_readout"]["reaches_competence"]
+
+    def test_a_pilot_cannot_announce_that_the_programme_stops(self, tmp_path: Path) -> None:
+        # The harness printed exactly that on four seeds before this was fixed.
+        out = ep.analyse(_scanned(), stage_one=_stage_one(tmp_path), registered=False)
+        assert "programme" not in out["why"]
+        assert out["verdict"] != "does_not_learn"
+
+    def test_a_registered_reading_still_applies_the_rule(self, tmp_path: Path) -> None:
+        out = ep.analyse(_scanned(), stage_one=_stage_one(tmp_path))
+        assert out["verdict"] == "does_not_learn"
+
+
+class TestTheWiringContrastIsReported:
+    def test_it_is_the_plastic_readout_arm_against_its_control(self, tmp_path: Path) -> None:
+        out = ep.analyse(
+            _scanned(plastic_readout=_arm(15.0), readout_only=_arm(9.0)),
+            stage_one=_stage_one(tmp_path),
+        )
+        contrast = out["matched_contrasts"]["wiring_at_matched_readout"]
+        assert contrast["arms"] == ["plastic_readout", "readout_only"]
+        assert contrast["difference_foods"] == pytest.approx(6.0, abs=1e-6)
+
+    def test_the_control_is_the_only_arm_whose_substrate_is_frozen(self) -> None:
+        frozen = [n for n, meta in ep.ARMS.items() if meta["chemical"] == "frozen"]
+        assert frozen == ["readout_only"]
+
+    def test_both_plastic_readout_arms_report_where_the_readout_went(self) -> None:
+        plastic = [n for n, meta in ep.ARMS.items() if meta["readout"] == "plastic"]
+        assert set(plastic) == {"plastic_readout", "readout_only"}

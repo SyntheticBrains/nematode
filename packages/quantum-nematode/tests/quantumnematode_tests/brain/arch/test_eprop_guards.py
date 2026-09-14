@@ -45,7 +45,7 @@ while _root != _root.parent and not (_root / "configs").is_dir():
 _CONFIGS = _root / "configs" / "scenarios" / "foraging"
 _STEM = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_eprop"
 _ROUTINGS = ("symmetric", "random_motor", "random", "scalar")
-_ARMS = (*_ROUTINGS, "plastic_readout")
+_ARMS = (*_ROUTINGS, "plastic_readout", "readout_only")
 
 
 def _config(**overrides: Any) -> ConnectomePPOBrainConfig:
@@ -280,3 +280,57 @@ class TestThePlasticReadoutArm:
         topology = ConnectomePPOBrain(config=config, device=DeviceType.CPU).topology
         assert len(topology.plastic_weights) == 1
         assert topology.plastic_homeostasis == [True]
+
+
+class TestTheReadoutOnlyControl:
+    """What a positive plastic-readout result needs to mean what it claims."""
+
+    @staticmethod
+    def _topology(name: str) -> Any:
+        simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_{name}.yml"))
+        assert simulation.brain is not None
+        config = simulation.brain.config
+        assert isinstance(config, ConnectomePPOBrainConfig)
+        config.seed = 1
+        return ConnectomePPOBrain(config=config, device=DeviceType.CPU).topology
+
+    def test_it_differs_from_the_plastic_readout_arm_in_one_key(self) -> None:
+        keys = TestTheArmsDifferByOneKey._brain_keys
+        reference = keys(f"{_STEM}_plastic_readout")
+        arm = keys(f"{_STEM}_readout_only")
+        differing = {k for k in set(reference) | set(arm) if reference.get(k) != arm.get(k)}
+        assert differing == {"plasticity_plastic_tensors"}
+        assert arm["plasticity_plastic_tensors"] == "readout_only"
+
+    def test_it_withholds_the_chemical_matrix(self) -> None:
+        # The readout is an 8-parameter linear map over four pooled motor-class means, so "a local
+        # rule learns this substrate" and "a small linear readout on frozen recurrent features
+        # learns this cell" predict the same success. This arm is the difference.
+        topology = self._topology("readout_only")
+        assert [tuple(w.shape) for w in topology.plastic_weights] == [(2, 4)]
+        assert [tuple(x.shape) for x in topology.eligibility_traces] == [(2, 4)]
+        assert [tuple(m.shape) for m in topology.plastic_masks] == [(2, 4)]
+        assert [tuple(v.shape) for v in topology.plastic_post_activities] == [(2,)]
+        assert topology.plastic_fan_in_axes == [1]
+        assert topology.plastic_homeostasis == [False]
+
+    def test_the_aligned_lists_stay_the_same_length(self) -> None:
+        # One place decides what is exposed; every aligned list derives from it, so a trace can
+        # never be paired with another tensor's mask.
+        for name in ("plastic_readout", "readout_only", "random"):
+            topology = self._topology(name)
+            lengths = {
+                len(topology.plastic_weights),
+                len(topology.eligibility_traces),
+                len(topology.plastic_masks),
+                len(topology.plastic_fan_in_axes),
+                len(topology.plastic_homeostasis),
+                len(topology.plastic_post_activities),
+            }
+            assert len(lengths) == 1, f"{name} exposes lists of differing lengths: {lengths}"
+
+    def test_withholding_needs_a_plastic_readout(self) -> None:
+        # Without one it would leave nothing plastic at all: a frozen control wearing a learning
+        # arm's name.
+        with pytest.raises(ValueError, match="requires plasticity_plastic_readout"):
+            _config(plasticity_plastic_tensors="readout_only", plasticity_plastic_readout=False)

@@ -50,6 +50,7 @@ The campaign therefore crosses the two things the routing varies:
 | `random` | fixed random `B` | all 302 | frozen | can a broadcast projection credit the far units usefully |
 | `scalar` | none, `L_j = 1` | all 302 | frozen | did the per-unit signal do anything at all |
 | `plastic_readout` | fixed random `B` | all 302 | **plastic** | can a broadcast projection work **at all**, once the path it would align to may move |
+| `readout_only` | fixed random `B` | all 302 | **plastic** | how much of that is the substrate, and how much is an 8-parameter linear readout (`w_chem` frozen) |
 
 The missing fourth cell — true directions reaching all 302 units — is **the cell the mechanism
 forbids**, and stating it is part of the result rather than a gap in the design. `random_motor` exists
@@ -206,9 +207,10 @@ surfaced, and it is **not** grounds for re-running e-prop at a scaled readout in
 | `eprop_random` | no | `random` | frozen | 16 |
 | `eprop_scalar` | no | `scalar` | frozen | 16 |
 | `eprop_plastic_readout` | no | `random` | **plastic** | 16 |
+| `eprop_readout_only` | no | `random` | **plastic**, `w_chem` frozen | 16 |
 | `eprop_frozen` | yes | — | frozen | 16 |
 
-One frozen floor for all five: with updates frozen no weight moves, so neither the routing nor a
+One frozen floor for all six: with updates frozen no weight moves, so neither the routing nor a
 plastic readout can reach the behaviour, and a config declaring both a plastic readout and a freeze
 is refused rather than reported as a plastic-readout floor. Asserted by an exact-key config test
 rather than argued — the four frozen-readout configs differ from each other in the routing key
@@ -221,7 +223,7 @@ one. Reusing it would compare against the wrong null, and the 16 runs are spent 
 
 ## The verdict, and what each branch costs
 
-Per arm, against the shared frozen control, paired by seed, one-sided, BH-FDR across the **five**
+Per arm, against the shared frozen control, paired by seed, one-sided, BH-FDR across the **six**
 learning arms, with 80% bootstrap CIs — the statistics layer R.1c and R.1d used, unchanged. Both
 registered minima apply as they did there: the absolute 1.0-food floor and the 10%-of-reachable-gap
 minimum taken against PPO's matched **18.945**, with the larger binding.
@@ -247,4 +249,7 @@ passes.**
   the floor — otherwise the comparison is confounded with the learning signal.
 - **A result about the true gradient direction**, unless `symmetric` separates from `random_motor`:
   matched on breadth is the only comparison that isolates the direction.
+- **A claim that the substrate learned anything**, unless `plastic_readout` separates from
+  `readout_only`: a plastic readout is an 8-parameter linear map over four pooled means, and on its
+  own it says nothing about the wiring behind it.
 - **A claim about the 2400-step C3 cell or the block-V cells**, neither of which is run here.

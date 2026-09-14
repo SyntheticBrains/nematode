@@ -66,8 +66,8 @@
 
 ## 3. The arms
 
-- [x] 3.1 Six configs from the committed `hard350` cell: `eprop_{symmetric,random_motor,random,scalar}`,
-  `eprop_plastic_readout` (task 8)
+- [x] 3.1 Seven configs from the committed `hard350` cell: `eprop_{symmetric,random_motor,random,scalar}`,
+  `eprop_plastic_readout` and `eprop_readout_only` (task 8)
   and one shared `eprop_frozen`, at `initial_log_std: -1.0`, `plasticity_node_noise: 0.0`, the committed
   anatomical readout, no perturbation set, and the pinned rule settings written out rather than
   inherited — `plasticity_normalise_modulator`, `plasticity_normalise_trace` and
@@ -91,7 +91,7 @@
 ## 4. Harness
 
 - [x] 4.1 `scripts/analysis/l4_eprop.py`, reusing R.1c/R.1d's statistics layer and drift reader. Per-arm
-  contrast against the shared frozen control, paired one-sided, BH-FDR across the **five** learning
+  contrast against the shared frozen control, paired one-sided, BH-FDR across the **six** learning
   arms, 80% bootstrap CIs.
 - [x] 4.2 Both registered minima against each arm: the absolute 1.0-food floor, and 10% of the gap to
   PPO's **matched 18.945**, with the larger binding.
@@ -106,11 +106,12 @@
   [`_readout_hop_distances`](../../../packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py#L917)
   walk. e-prop drops the multi-hop terms, so a learning arm's change should concentrate near the pool,
   and `random` — the only broad arm with a per-unit signal — is where the prediction is testable.
-- [x] 4.6 **The three matched contrasts reported explicitly**, since the verdict does not turn on them
+- [x] 4.6 **The four matched contrasts reported explicitly**, since the verdict does not turn on them
   but the interpretation does: `symmetric − random_motor` isolates the signal's direction at matched
   breadth, `random − random_motor` isolates breadth at a matched signal source, and
   `plastic_readout − random` isolates the readout at a matched signal and matched breadth — the one
-  stage 1 predicts will be the largest.
+  stage 1 predicts will be the largest — and `plastic_readout − readout_only` isolates the
+  substrate's own plasticity at a matched readout.
 - [x] 4.7 The four registered readings — `does_not_learn`, `learns_below_competence`, `learns_the_cell`,
   `void` — with the consequence of each in the harness, not in prose.
 - [x] 4.8 Tests for 4.1–4.7, including a fixture in each reading, one where `scalar` matches `random`
@@ -133,13 +134,13 @@
 
 ## 6. Campaign
 
-- [ ] 6.1 96 runs: five learning arms and one frozen floor × seeds 1–16 at 3000 episodes, with
+- [ ] 6.1 112 runs: six learning arms and one frozen floor × seeds 1–16 at 3000 episodes, with
   `--track-experiment` so drift and the hop-distance reading have weights to read.
 - [ ] 6.2 Per-seed CSV, the per-arm table and the verdict under `supporting/063-l4-eprop/`.
 
 ## 7. The record
 
-- [ ] 7.1 Logbook 063: the per-arm table, the `scalar` ablation's position and all three matched contrasts
+- [ ] 7.1 Logbook 063: the per-arm table, the `scalar` ablation's position and all four matched contrasts
   stated in **every** verdict branch, the drift column against R.1c's and R.1d's, the hop-distance
   reading, and the verdict against 059's three registered outcomes.
 - [ ] 7.2 The experiments index row and `CHANGELOG.md`.
@@ -184,3 +185,27 @@ post-synaptic factor is its own *output* and its rows self-amplify. Under e-prop
   separable.
 - [x] 8.6 Tests for 8.1–8.5, including that the four frozen-readout arms expose **one** plastic tensor
   and this one exposes two.
+
+## 9. The readout-only control, added with the plastic-readout arm
+
+The pilot on disjoint seeds 101–104 is why this exists rather than being a precaution:
+`plastic_readout` reached **15.550 foods of 20 and 49.13% full clear** against a shared frozen floor
+of 1.829, while `random` sat at **3.730** — inside R.1c's 2.4–4.4 band, as stage 1 predicted. That is
+the first arm in this programme to reach competence on the connectome, and it is exactly the result
+that must not ship with its alternative explanation untested: a plastic readout is an 8-parameter
+linear map over four pooled motor-class means.
+
+- [x] 9.1 `plasticity_plastic_tensors: readout_only`, which withholds `w_chem` from the seam, rejected
+  without a plastic readout — it would otherwise leave nothing plastic and read as a frozen control
+  wearing a learning arm's name.
+- [x] 9.2 The topology decides what it exposes in **one** place, and every aligned list derives from
+  it. Five parallel branches over the same two switches is how a trace comes to be paired with
+  another tensor's mask; a test asserts the lists stay the same length for every arm.
+- [x] 9.3 The config differs from `eprop_plastic_readout` in `plasticity_plastic_tensors` alone.
+- [x] 9.4 The harness reports `plastic_readout − readout_only` as a matched contrast and carries a
+  per-arm `chemical` column, so the table says which arms could write the substrate at all.
+- [ ] 9.5 Its credited drift reads ~0, which is the check that the withholding actually happened.
+- [x] 9.6 The pilot's verdict is **withheld**, not printed: at four seeds the exact paired test cannot
+  reach the significance gate — its smallest reachable p is 2⁻⁴ = 0.0625, which BH across the arms
+  pushes above it — so every arm reads `no_improvement` whatever it did. The harness printed
+  `does_not_learn — the programme stops` on that evidence before this was fixed.

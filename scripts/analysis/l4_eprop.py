@@ -76,30 +76,42 @@ ARMS: dict[str, dict[str, Any]] = {
         "source": "random projection",
         "reach": "all 302",
         "readout": "plastic",
+        "chemical": "plastic",
+    },
+    "readout_only": {
+        "routing": "random",
+        "source": "random projection",
+        "reach": "all 302",
+        "readout": "plastic",
+        "chemical": "frozen",
     },
     "random": {
         "routing": "random",
         "source": "random projection",
         "reach": "all 302",
         "readout": "frozen",
+        "chemical": "plastic",
     },
     "scalar": {
         "routing": "scalar",
         "source": "none (L = 1)",
         "reach": "all 302",
         "readout": "frozen",
+        "chemical": "plastic",
     },
     "symmetric": {
         "routing": "symmetric",
         "source": "readout transpose",
         "reach": "the 39-unit pool",
         "readout": "frozen",
+        "chemical": "plastic",
     },
     "random_motor": {
         "routing": "random_motor",
         "source": "random projection",
         "reach": "the 39-unit pool",
         "readout": "frozen",
+        "chemical": "plastic",
     },
 }
 # Added after stage 1, before any arm ran, and the reason is measured rather than argued: feedback
@@ -130,6 +142,12 @@ MATCHED_CONTRASTS = {
     # The third, and the one stage 1 predicts will be the largest: the same projection over the same
     # 302 units, differing only in whether the readout may learn.
     "readout_at_matched_signal": ("plastic_readout", "random"),
+    # The fourth, and the one a positive plastic-readout result needs: the readout learns in both,
+    # and only one of them may also write the substrate. A plastic readout is an 8-parameter linear
+    # map over four pooled motor-class means, so "a local rule learns this substrate" and "a small
+    # linear readout on frozen recurrent features learns this cell" predict the same success --
+    # this difference IS what the substrate's own plasticity contributes.
+    "wiring_at_matched_readout": ("plastic_readout", "readout_only"),
 }
 
 # Harvested on this exact cell, at these seeds and this action scale, by R.1d.
@@ -155,7 +173,8 @@ COMPETENCE_THRESHOLD = ms.COMPETENT_THRESHOLD
 DRIFT_REFERENCE = (1.37, 1.42)
 
 _LABEL = re.compile(
-    rf"^{re.escape(_STEM)}_(?P<arm>plastic_readout|symmetric|random_motor|random|scalar|frozen)"
+    rf"^{re.escape(_STEM)}_(?P<arm>plastic_readout|readout_only|symmetric"
+    r"|random_motor|random|scalar|frozen)"
     r"-seed(?P<seed>\d+)\.log$",
 )
 
@@ -543,8 +562,18 @@ def analyse(
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
     stage_one: Path | None = None,
+    *,
+    registered: bool = True,
 ) -> dict[str, Any]:
-    """Compare every arm, correct across them and apply the registered reading."""
+    """Compare every arm, correct across them and apply the registered reading.
+
+    ``registered=False`` scores a PILOT: the per-arm table is computed as usual and the verdict is
+    withheld. A pilot runs on disjoint seeds and usually on a subset of the arms, and at four seeds
+    the exact one-sided paired test cannot reach the significance gate at all -- the smallest p it
+    can return is 2^-4 = 0.0625, which BH across five arms pushes above it. So every arm reads as
+    `no_improvement` whatever it did, and printing `does_not_learn` from that would be announcing
+    that the programme stops on evidence that could not have said otherwise.
+    """
     cells = {name: compare(name, scanned, seeds, experiments) for name in ARMS}
     defined = [n for n in ARMS if cells[n]["graded"].get("defined")]
     qs = ms.bh_fdr([cells[n]["graded"]["p_improve"] for n in defined])
@@ -572,7 +601,17 @@ def analyse(
     # floor is what says the update did the work.
     learned = [n for n in beat if cells[n]["reaches_competence"]]
     stage = stage_one_reading(stage_one)
-    if stage["reading"] != "valid":
+    if not registered:
+        verdict, why = (
+            "pilot",
+            (
+                f"a pilot on {len(seeds)} seeds, which is not a registered verdict: at this seed "
+                f"count the exact paired test cannot reach the significance gate (its smallest "
+                f"reachable p is 2^-{len(seeds)}), so no arm could have read as beating its floor "
+                "whatever it did. The per-arm levels are the pilot's job; the reading is not"
+            ),
+        )
+    elif stage["reading"] != "valid":
         verdict, why = (
             "void",
             (
@@ -631,13 +670,14 @@ def _print(result: dict[str, Any]) -> None:
     """Print the per-arm table, then what the reading turns on."""
     print("\nR.2 - e-prop on the hard-food cell")
     print(
-        "  arm             | source            | reach     | readout | learning | frozen | shift "
-        "|     q | clear % | drift-cr | verdict",
+        "  arm             | source            | reach     | readout | w_chem  | learning | "
+        "frozen | shift |     q | clear % | drift-cr | verdict",
     )
     for name, cell in result["arms"].items():
         graded = cell["graded"]
         print(
             f"  {name:15} | {cell['source']:17} | {cell['reach']:9} | {cell['readout']:7} | "
+            f"{cell['chemical']:7} | "
             f"{cell['learning_mean_foods']:8.3f} | {cell['frozen_mean_foods']:6.3f} | "
             f"{graded.get('effect', float('nan')):+5.2f} | "
             f"{graded.get('q_improve', float('nan')):5.3f} | "
@@ -717,7 +757,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--allow-incomplete",
         action="store_true",
-        help="score what is present; for a pilot, never for a registered campaign",
+        help=(
+            "score what is present and WITHHOLD the verdict; for a pilot, never for a "
+            "registered campaign"
+        ),
     )
     args = parser.parse_args(argv)
 
@@ -726,7 +769,13 @@ def main(argv: list[str] | None = None) -> int:
     scanned = scan(args.campaign, args.experiments)
     if not args.allow_incomplete:
         require_complete(scanned, seeds)
-    result = analyse(scanned, seeds, args.experiments, args.stage_one)
+    result = analyse(
+        scanned,
+        seeds,
+        args.experiments,
+        args.stage_one,
+        registered=not args.allow_incomplete,
+    )
     result["protocol"] = {
         "seeds": list(seeds),
         "arms": {name: dict(meta) for name, meta in ARMS.items()},

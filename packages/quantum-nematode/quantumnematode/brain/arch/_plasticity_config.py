@@ -66,6 +66,10 @@ EligibilityMode = Literal["hebbian", "node_perturbation", "eprop"]
 # the ablation, and NOT a gradient estimator -- reward-modulated Hebbian with an activation
 # derivative in place of the post-synaptic rate.
 LearningSignalRouting = Literal["symmetric", "random_motor", "random", "scalar"]
+# Which plastic tensors the rule may write. "all" is every tensor the substrate exposes;
+# "readout_only" withholds the substrate's own weights and leaves the readout -- the control a
+# plastic-readout result needs to mean what it claims.
+PlasticTensors = Literal["all", "readout_only"]
 # The routings whose projection is restricted to the units the readout reads.
 READOUT_RESTRICTED_ROUTINGS = frozenset({"symmetric", "random_motor"})
 
@@ -222,6 +226,17 @@ class PlasticityConfigMixin(BaseModel):
     # trials -- frozen, the broadcast arm's best is -0.7031 against a cue-blind floor of -0.6909;
     # plastic, it reaches the optimum of -0.1353 exactly on every seed.
     plasticity_plastic_readout: bool = False
+    # Which of the plastic tensors the rule may actually write. "all" is every recorded arm.
+    #
+    # "readout_only" freezes the chemical matrix and leaves the readout learning, which is the
+    # CONTROL a plastic-readout result needs: the readout is an 8-parameter linear map over four
+    # pooled motor-class means, so "a local rule learns this substrate" and "a small linear readout
+    # on frozen recurrent features learns this cell" predict the same success. The difference
+    # between the two arms is what the substrate's own plasticity contributes.
+    #
+    # It is not a freeze: the arm learns, and its floor is the same shared frozen control. It
+    # requires a plastic readout, since without one it would leave nothing plastic at all.
+    plasticity_plastic_tensors: PlasticTensors = "all"
     # "full" is the default so every recorded plastic result reproduces unchanged. A restricted
     # set needs a substrate that can derive one from its own wiring and readout, so the dense
     # yardstick refuses anything else -- the same division of labour as third_factor="pathway".
@@ -347,6 +362,14 @@ class PlasticityConfigMixin(BaseModel):
                 f"plasticity_perturbation_set={self.plasticity_perturbation_set!r}: there is no "
                 "perturbation to restrict. What e-prop's learning signal can reach is set by "
                 "plasticity_learning_signal instead."
+            )
+            raise ValueError(msg)
+        if self.plasticity_plastic_tensors != "all" and not self.plasticity_plastic_readout:
+            msg = (
+                f"plasticity_plastic_tensors={self.plasticity_plastic_tensors!r} requires "
+                "plasticity_plastic_readout=True: it withholds the substrate's own weights, so "
+                "without a plastic readout nothing would be plastic and the arm would be a frozen "
+                "control wearing a learning arm's name."
             )
             raise ValueError(msg)
         if self.plasticity_plastic_readout and self.plasticity_eligibility != "eprop":

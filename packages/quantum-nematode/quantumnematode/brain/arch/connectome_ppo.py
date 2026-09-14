@@ -42,6 +42,7 @@ from quantumnematode.brain.arch._plasticity_config import (
     LearningSignalRouting,
     PerturbationSet,
     PlasticityConfigMixin,
+    PlasticTensors,
 )
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
@@ -482,6 +483,7 @@ class ConnectomeTopology(nn.Module):
         learning_signal: LearningSignalRouting | None = None,
         learning_signal_seed: int | None = None,
         plastic_readout: bool = False,
+        plastic_tensors: PlasticTensors = "all",
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
@@ -533,6 +535,7 @@ class ConnectomeTopology(nn.Module):
         # that returns each unit's incoming norm to construction and the readout's SCALE is part of
         # what a plastic readout is asked about.
         self.plastic_readout = plastic_readout
+        self.plastic_tensors = plastic_tensors
         # Whether a forward's eligibility is still waiting for that signal.
         self._eprop_pending = False
         self._schedule_steps_begun = 0
@@ -1066,12 +1069,36 @@ class ConnectomeTopology(nn.Module):
     # Each is the live tensor object, not a copy: the rule updates
     # plastic_weights[0] in place and that IS w_chem.
 
+    def _plastic_entries(self) -> list[str]:
+        """Which tensors this topology exposes to the rule, in a fixed order.
+
+        One place decides, and every aligned list below derives from it: five parallel branches over
+        the same two switches is how a trace comes to be paired with another tensor's mask.
+
+        ``chemical`` is the substrate's own weights and is present unless an arm withholds them.
+        ``readout`` is present only when the readout is plastic. ``readout_only`` withholds the
+        chemical matrix, which is the control a plastic-readout result needs: the readout is an
+        8-parameter linear map over four pooled motor-class means, so "a local rule learns this
+        substrate" and "a small linear readout on frozen recurrent features learns this cell"
+        predict the same success, and the difference between the two arms is what the substrate's
+        own plasticity contributes.
+        """
+        # Every list below picks LAZILY from this: the readout's buffers exist only for a
+        # plastic-readout arm and the chemical trace only when traces are on, so a dict literal
+        # naming both would raise on the arms that have neither.
+        entries: list[str] = []
+        if not (self.plastic_readout and self.plastic_tensors == "readout_only"):
+            entries.append("chemical")
+        if self.plastic_readout:
+            entries.append("readout")
+        return entries
+
     @property
     def plastic_weights(self) -> list[torch.Tensor]:
         """The tensors plasticity may change: the chemical matrix, and the readout when plastic."""
-        if self.plastic_readout:
-            return [self.w_chem, self.readout]
-        return [self.w_chem]
+        return [
+            self.w_chem if name == "chemical" else self.readout for name in self._plastic_entries()
+        ]
 
     @property
     def eligibility_traces(self) -> list[torch.Tensor]:
@@ -1081,9 +1108,10 @@ class ConnectomeTopology(nn.Module):
         first and refuses to step without one, so this never reads an
         unallocated buffer in practice.
         """
-        if self.plastic_readout:
-            return [self.activity_traces, self.readout_trace]
-        return [self.activity_traces]
+        return [
+            self.activity_traces if name == "chemical" else self.readout_trace
+            for name in self._plastic_entries()
+        ]
 
     @property
     def plastic_masks(self) -> list[torch.Tensor]:
@@ -1093,9 +1121,10 @@ class ConnectomeTopology(nn.Module):
         is all-true rather than absent, which keeps the rule's mask-dependent telemetry meaning the
         same thing for both tensors.
         """
-        if self.plastic_readout:
-            return [self.m_chem, torch.ones_like(self.readout, dtype=torch.bool)]
-        return [self.m_chem]
+        return [
+            self.m_chem if name == "chemical" else torch.ones_like(self.readout, dtype=torch.bool)
+            for name in self._plastic_entries()
+        ]
 
     @property
     def plastic_fan_in_axes(self) -> list[int]:
@@ -1105,9 +1134,7 @@ class ConnectomeTopology(nn.Module):
         readout is ``[action, class]``: its post-synaptic units are the action dimensions on axis 0,
         so one unit's incoming weights are a ROW and the fan-in axis is 1.
         """
-        if self.plastic_readout:
-            return [0, 1]
-        return [0]
+        return [0 if name == "chemical" else 1 for name in self._plastic_entries()]
 
     @property
     def plastic_homeostasis(self) -> list[bool]:
@@ -1119,9 +1146,7 @@ class ConnectomeTopology(nn.Module):
         scale alone with the direction held. Pinning it would leave the arm able to rotate the
         readout and not to resize it, which is half the question.
         """
-        if self.plastic_readout:
-            return [True, False]
-        return [True]
+        return [name == "chemical" for name in self._plastic_entries()]
 
     def _readout_hop_distances(self, motor_indices: list[int]) -> torch.Tensor:
         """Hops from each unit to the nearest readout neuron, over directed chemical edges.
@@ -1309,9 +1334,10 @@ class ConnectomeTopology(nn.Module):
         exactly -- a view over state the trace update already keeps. The readout's
         post-synaptic units are the action dimensions, so its vector is the action mean.
         """
-        if self.plastic_readout:
-            return [self.prev_activity, self.readout_post]
-        return [self.prev_activity]
+        return [
+            self.prev_activity if name == "chemical" else self.readout_post
+            for name in self._plastic_entries()
+        ]
 
     def set_anatomical_readout(self) -> None:
         """Overwrite the motor readout with the contrast its pools imply.
@@ -2024,6 +2050,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             learning_signal=config.plasticity_learning_signal,
             learning_signal_seed=self.seed,
             plastic_readout=config.plasticity_plastic_readout,
+            plastic_tensors=config.plasticity_plastic_tensors,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,

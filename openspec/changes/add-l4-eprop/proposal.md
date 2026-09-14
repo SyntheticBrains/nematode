@@ -112,10 +112,18 @@ draw.
   applies at 3.0 per entry, allowing a readout norm of 8.49 against the 7.820 R.1d's PPO harvest
   reached, so it does not bind on the scale that mattered.
 
+- **And its control, `readout_only`, added with it.** A plastic readout is an **8-parameter linear
+  map** over four pooled motor-class means, so "a local rule learns this substrate" and "a small
+  linear readout on frozen recurrent features learns this cell" predict the same success. The control
+  freezes `w_chem` and leaves the readout learning, so **`plastic_readout − readout_only` is what the
+  substrate's own plasticity contributes**. Nothing on the record supplies it: R.1d's frozen arms
+  froze everything. Its credited drift should read ~0 by construction, which is the check that the
+  withholding happened.
+
 - **Stage 2, the hard-food cell**, at exactly the operating point R.1c and R.1d measured — the
   `hard350` connectome cell with `plasticity_normalise_modulator`, `plasticity_normalise_trace` and
   `plasticity_homeostasis` all on, `plasticity_rate: 0.001`, `trace_decay: 0.9`,
-  `initial_log_std: -1.0`, `forward_pass_depth: 4`, and the **committed anatomical readout**. Five
+  `initial_log_std: -1.0`, `forward_pass_depth: 4`, and the **committed anatomical readout**. Six
   learning arms and **one** shared frozen floor — a frozen arm makes no updates, so no routing can
   reach it — at **16 seeds**, the count
   [Logbook 059](../../../docs/experiments/logbooks/059-7a-shipment.md) registered for this gate. The
@@ -148,10 +156,10 @@ matched on which units it can reach.
 
 - New: the `eprop` eligibility mode and its learning-signal routing; the topology seam that folds the
   signal in after the action is sampled; three stage-1 arms in the positive-control harness;
-  `scripts/analysis/l4_eprop.py`; six configs; records under `supporting/063-l4-eprop/`; Logbook 063.
+  `scripts/analysis/l4_eprop.py`; seven configs; records under `supporting/063-l4-eprop/`; Logbook 063.
 - Edited: `EligibilityMode` and its validators, the two topologies' trace updates, the connectome
   brain's action steps, the experiments index, `CHANGELOG.md`, the tracker (R.2), the roadmap only if
   the reading changes.
-- Compute: **96 runs** — five learning arms and one shared frozen floor × 16 seeds at ~1800 s — about
-  **3h 45m** at the measured parallelism, plus a **4-run pilot** on disjoint seeds 101–104 and a rate
+- Compute: **112 runs** — six learning arms and one shared frozen floor × 16 seeds at ~1800 s —
+  about **4h 20m** at the measured parallelism, plus a **4-run pilot** on disjoint seeds 101–104 and a rate
   check on the same seeds. Stage 1 is a script and runs in minutes.
