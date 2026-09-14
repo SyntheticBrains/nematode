@@ -1,0 +1,1016 @@
+{
+  "arms": {
+    "plastic_readout": {
+      "arm": "plastic_readout",
+      "change_by_hop": {
+        "available": true,
+        "mean_abs_change_by_hop": {
+          "0": 0.009874461102299392,
+          "1": 0.012865323515143245,
+          "2": 0.012063564849086106,
+          "3": 0.011026005609892309,
+          "4": 0.003224522722121037,
+          "5": 0.0031025478601804934,
+          "6": 0.002033947592281038,
+          "7": 0.005951926315901801,
+          "8": 0.0051548920819186606,
+          "unreachable": 0.005651356448652223
+        },
+        "n_read": 16,
+        "units_by_hop": {
+          "0": 39,
+          "1": 70,
+          "2": 138,
+          "3": 30,
+          "4": 1,
+          "5": 7,
+          "6": 7,
+          "7": 2,
+          "8": 1,
+          "unreachable": 7
+        }
+      },
+      "chemical": "plastic",
+      "competence_threshold": 20.0,
+      "drift": {
+        "available": true,
+        "credited_mean_relative": 1.3118433728814125,
+        "excluded_mean_relative": null,
+        "n_read": 16,
+        "reached_units": 302,
+        "reference_range": [
+          1.37,
+          1.42
+        ],
+        "seeds_expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "frozen_foods": {
+        "1": 11.48,
+        "10": 1.5853333333333333,
+        "11": 2.2906666666666666,
+        "12": 0.6693333333333333,
+        "13": 0.7586666666666667,
+        "14": 1.9013333333333333,
+        "15": 0.6586666666666666,
+        "16": 0.7746666666666666,
+        "2": 0.3413333333333333,
+        "3": 1.9773333333333334,
+        "4": 4.009333333333333,
+        "5": 2.56,
+        "6": 0.6693333333333333,
+        "7": 2.6746666666666665,
+        "8": 3.4506666666666668,
+        "9": 1.84
+      },
+      "frozen_mean_foods": 2.3525833333333335,
+      "graded": {
+        "ci80": [
+          10.200491666666666,
+          12.377175000000001
+        ],
+        "defined": true,
+        "effect": 11.32275,
+        "n": 16,
+        "p_degrade": 1.0,
+        "p_improve": 1.52587890625e-05,
+        "positive_seeds": 16,
+        "q_improve": 3.0517578125e-05
+      },
+      "learning_foods": {
+        "1": 16.056,
+        "10": 8.689333333333334,
+        "11": 13.768,
+        "12": 16.526666666666667,
+        "13": 9.108,
+        "14": 14.214666666666666,
+        "15": 13.390666666666666,
+        "16": 14.744,
+        "2": 12.328,
+        "3": 14.577333333333334,
+        "4": 10.810666666666666,
+        "5": 18.634666666666668,
+        "6": 14.276,
+        "7": 14.704,
+        "8": 9.653333333333334,
+        "9": 17.324
+      },
+      "learning_mean_foods": 13.675333333333333,
+      "learning_mean_full_clear": 40.21666666666667,
+      "minima": {
+        "absolute_minimum": 1.0,
+        "binding_minimum": 1.6592416666666665,
+        "effect": 11.32275,
+        "matched_gap": 16.592416666666665,
+        "matched_minimum": 1.6592416666666665,
+        "passes": true,
+        "why": "at or above both minima"
+      },
+      "n_pairs": 16,
+      "reach": "all 302",
+      "reaches_competence": true,
+      "readout": "plastic",
+      "readout_change": {
+        "anatomical_norm": 1.414,
+        "available": true,
+        "mean_cosine_to_anatomical": 0.10842330171726644,
+        "mean_norm": 4.053991049528122,
+        "n_read": 16,
+        "ppo_cosine_to_anatomical": -0.178,
+        "ppo_norm": 7.82
+      },
+      "routing": "random",
+      "source": "random projection",
+      "verdict": "beats_floor",
+      "why": "significant and at or above both minima"
+    },
+    "random": {
+      "arm": "random",
+      "change_by_hop": {
+        "available": true,
+        "mean_abs_change_by_hop": {
+          "0": 0.010285311844199896,
+          "1": 0.013164001633413136,
+          "2": 0.01235672424081713,
+          "3": 0.011253790056798607,
+          "4": 0.007352446096774656,
+          "5": 0.005941138995694928,
+          "6": 0.004170899439486675,
+          "7": 0.010559927119174972,
+          "8": 0.007893957503256388,
+          "unreachable": 0.006450470013078302
+        },
+        "n_read": 16,
+        "units_by_hop": {
+          "0": 39,
+          "1": 70,
+          "2": 138,
+          "3": 30,
+          "4": 1,
+          "5": 7,
+          "6": 7,
+          "7": 2,
+          "8": 1,
+          "unreachable": 7
+        }
+      },
+      "chemical": "plastic",
+      "competence_threshold": 20.0,
+      "drift": {
+        "available": true,
+        "credited_mean_relative": 1.368628390133381,
+        "excluded_mean_relative": null,
+        "n_read": 16,
+        "reached_units": 302,
+        "reference_range": [
+          1.37,
+          1.42
+        ],
+        "seeds_expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "frozen_foods": {
+        "1": 11.48,
+        "10": 1.5853333333333333,
+        "11": 2.2906666666666666,
+        "12": 0.6693333333333333,
+        "13": 0.7586666666666667,
+        "14": 1.9013333333333333,
+        "15": 0.6586666666666666,
+        "16": 0.7746666666666666,
+        "2": 0.3413333333333333,
+        "3": 1.9773333333333334,
+        "4": 4.009333333333333,
+        "5": 2.56,
+        "6": 0.6693333333333333,
+        "7": 2.6746666666666665,
+        "8": 3.4506666666666668,
+        "9": 1.84
+      },
+      "frozen_mean_foods": 2.3525833333333335,
+      "graded": {
+        "ci80": [
+          -0.6136416666666666,
+          2.0848000000000004
+        ],
+        "defined": true,
+        "effect": 0.6285833333333334,
+        "n": 16,
+        "p_degrade": 0.3342742919921875,
+        "p_improve": 0.6839141845703125,
+        "positive_seeds": 6,
+        "q_improve": 0.6839141845703125
+      },
+      "learning_foods": {
+        "1": 9.473333333333333,
+        "10": 2.068,
+        "11": 0.5253333333333333,
+        "12": 0.30266666666666664,
+        "13": 3.1133333333333333,
+        "14": 0.616,
+        "15": 1.2293333333333334,
+        "16": 5.056,
+        "2": 15.692,
+        "3": 0.268,
+        "4": 4.488,
+        "5": 0.184,
+        "6": 0.36133333333333334,
+        "7": 0.5613333333333334,
+        "8": 2.1066666666666665,
+        "9": 1.6533333333333333
+      },
+      "learning_mean_foods": 2.9811666666666667,
+      "learning_mean_full_clear": 1.5833333333333333,
+      "minima": {
+        "absolute_minimum": 1.0,
+        "binding_minimum": 1.6592416666666665,
+        "effect": 0.6285833333333334,
+        "matched_gap": 16.592416666666665,
+        "matched_minimum": 1.6592416666666665,
+        "passes": false,
+        "why": "below the 1.0 foods minimum and the 10%-of-gap minimum (1.66 foods)"
+      },
+      "n_pairs": 16,
+      "reach": "all 302",
+      "reaches_competence": false,
+      "readout": "frozen",
+      "readout_change": {
+        "available": false,
+        "why": "this arm's readout is frozen"
+      },
+      "routing": "random",
+      "source": "random projection",
+      "verdict": "no_improvement",
+      "why": "not significant"
+    },
+    "random_motor": {
+      "arm": "random_motor",
+      "change_by_hop": {
+        "available": true,
+        "mean_abs_change_by_hop": {
+          "0": 0.010115377022884786,
+          "1": 0.00013136798952473328,
+          "2": 0.00011837354713861714,
+          "3": 0.00010505496402402059,
+          "4": 8.519187258571037e-05,
+          "5": 6.873689301301056e-05,
+          "6": 7.951365364533558e-05,
+          "7": 9.777519107956323e-05,
+          "8": 0.00010868477249914577,
+          "unreachable": 5.6898403954619425e-05
+        },
+        "n_read": 16,
+        "units_by_hop": {
+          "0": 39,
+          "1": 70,
+          "2": 138,
+          "3": 30,
+          "4": 1,
+          "5": 7,
+          "6": 7,
+          "7": 2,
+          "8": 1,
+          "unreachable": 7
+        }
+      },
+      "chemical": "plastic",
+      "competence_threshold": 20.0,
+      "drift": {
+        "available": true,
+        "credited_mean_relative": 1.3881661221385002,
+        "excluded_mean_relative": 0.01572492701234296,
+        "n_read": 16,
+        "reached_units": 39,
+        "reference_range": [
+          1.37,
+          1.42
+        ],
+        "seeds_expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "frozen_foods": {
+        "1": 11.48,
+        "10": 1.5853333333333333,
+        "11": 2.2906666666666666,
+        "12": 0.6693333333333333,
+        "13": 0.7586666666666667,
+        "14": 1.9013333333333333,
+        "15": 0.6586666666666666,
+        "16": 0.7746666666666666,
+        "2": 0.3413333333333333,
+        "3": 1.9773333333333334,
+        "4": 4.009333333333333,
+        "5": 2.56,
+        "6": 0.6693333333333333,
+        "7": 2.6746666666666665,
+        "8": 3.4506666666666668,
+        "9": 1.84
+      },
+      "frozen_mean_foods": 2.3525833333333335,
+      "graded": {
+        "ci80": [
+          -0.2891833333333333,
+          2.179325
+        ],
+        "defined": true,
+        "effect": 0.9325833333333333,
+        "n": 16,
+        "p_degrade": 0.8258056640625,
+        "p_improve": 0.1877288818359375,
+        "positive_seeds": 10,
+        "q_improve": 0.28159332275390625
+      },
+      "learning_foods": {
+        "1": 3.7266666666666666,
+        "10": 2.3093333333333335,
+        "11": 2.018666666666667,
+        "12": 0.7026666666666667,
+        "13": 6.174666666666667,
+        "14": 1.2146666666666666,
+        "15": 0.976,
+        "16": 8.676,
+        "2": 8.818666666666667,
+        "3": 2.2613333333333334,
+        "4": 4.628,
+        "5": 0.344,
+        "6": 0.39066666666666666,
+        "7": 1.184,
+        "8": 7.269333333333333,
+        "9": 1.868
+      },
+      "learning_mean_foods": 3.2851666666666666,
+      "learning_mean_full_clear": 0.03333333333333333,
+      "minima": {
+        "absolute_minimum": 1.0,
+        "binding_minimum": 1.6592416666666665,
+        "effect": 0.9325833333333333,
+        "matched_gap": 16.592416666666665,
+        "matched_minimum": 1.6592416666666665,
+        "passes": false,
+        "why": "below the 1.0 foods minimum and the 10%-of-gap minimum (1.66 foods)"
+      },
+      "n_pairs": 16,
+      "reach": "the 39-unit pool",
+      "reaches_competence": false,
+      "readout": "frozen",
+      "readout_change": {
+        "available": false,
+        "why": "this arm's readout is frozen"
+      },
+      "routing": "random_motor",
+      "source": "random projection",
+      "verdict": "no_improvement",
+      "why": "not significant"
+    },
+    "readout_only": {
+      "arm": "readout_only",
+      "change_by_hop": {
+        "available": true,
+        "mean_abs_change_by_hop": {
+          "0": 0.0,
+          "1": 0.0,
+          "2": 0.0,
+          "3": 0.0,
+          "4": 0.0,
+          "5": 0.0,
+          "6": 0.0,
+          "7": 0.0,
+          "8": 0.0,
+          "unreachable": 0.0
+        },
+        "n_read": 16,
+        "units_by_hop": {
+          "0": 39,
+          "1": 70,
+          "2": 138,
+          "3": 30,
+          "4": 1,
+          "5": 7,
+          "6": 7,
+          "7": 2,
+          "8": 1,
+          "unreachable": 7
+        }
+      },
+      "chemical": "frozen",
+      "competence_threshold": 20.0,
+      "drift": {
+        "available": true,
+        "credited_mean_relative": 0.0,
+        "excluded_mean_relative": null,
+        "n_read": 16,
+        "reached_units": 302,
+        "reference_range": [
+          1.37,
+          1.42
+        ],
+        "seeds_expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "frozen_foods": {
+        "1": 11.48,
+        "10": 1.5853333333333333,
+        "11": 2.2906666666666666,
+        "12": 0.6693333333333333,
+        "13": 0.7586666666666667,
+        "14": 1.9013333333333333,
+        "15": 0.6586666666666666,
+        "16": 0.7746666666666666,
+        "2": 0.3413333333333333,
+        "3": 1.9773333333333334,
+        "4": 4.009333333333333,
+        "5": 2.56,
+        "6": 0.6693333333333333,
+        "7": 2.6746666666666665,
+        "8": 3.4506666666666668,
+        "9": 1.84
+      },
+      "frozen_mean_foods": 2.3525833333333335,
+      "graded": {
+        "ci80": [
+          14.356541666666667,
+          16.066191666666665
+        ],
+        "defined": true,
+        "effect": 15.217416666666667,
+        "n": 16,
+        "p_degrade": 1.0,
+        "p_improve": 1.52587890625e-05,
+        "positive_seeds": 16,
+        "q_improve": 3.0517578125e-05
+      },
+      "learning_foods": {
+        "1": 19.28,
+        "10": 18.58,
+        "11": 19.008,
+        "12": 16.421333333333333,
+        "13": 10.753333333333334,
+        "14": 15.529333333333334,
+        "15": 17.532,
+        "16": 17.909333333333333,
+        "2": 18.809333333333335,
+        "3": 18.809333333333335,
+        "4": 18.521333333333335,
+        "5": 19.494666666666667,
+        "6": 17.708,
+        "7": 16.684,
+        "8": 18.149333333333335,
+        "9": 17.930666666666667
+      },
+      "learning_mean_foods": 17.57,
+      "learning_mean_full_clear": 52.608333333333334,
+      "minima": {
+        "absolute_minimum": 1.0,
+        "binding_minimum": 1.6592416666666665,
+        "effect": 15.217416666666667,
+        "matched_gap": 16.592416666666665,
+        "matched_minimum": 1.6592416666666665,
+        "passes": true,
+        "why": "at or above both minima"
+      },
+      "n_pairs": 16,
+      "reach": "all 302",
+      "reaches_competence": true,
+      "readout": "plastic",
+      "readout_change": {
+        "anatomical_norm": 1.414,
+        "available": true,
+        "mean_cosine_to_anatomical": -0.04030911787413061,
+        "mean_norm": 5.326486185193062,
+        "n_read": 16,
+        "ppo_cosine_to_anatomical": -0.178,
+        "ppo_norm": 7.82
+      },
+      "routing": "random",
+      "source": "random projection",
+      "verdict": "beats_floor",
+      "why": "significant and at or above both minima"
+    },
+    "scalar": {
+      "arm": "scalar",
+      "change_by_hop": {
+        "available": true,
+        "mean_abs_change_by_hop": {
+          "0": 0.010045485978480428,
+          "1": 0.013106766215059906,
+          "2": 0.012210851535201073,
+          "3": 0.010963407810777426,
+          "4": 0.008170100103598088,
+          "5": 0.007019275130005553,
+          "6": 0.0048794393660500646,
+          "7": 0.010588696575723588,
+          "8": 0.011594380426686257,
+          "unreachable": 0.006142518686829135
+        },
+        "n_read": 16,
+        "units_by_hop": {
+          "0": 39,
+          "1": 70,
+          "2": 138,
+          "3": 30,
+          "4": 1,
+          "5": 7,
+          "6": 7,
+          "7": 2,
+          "8": 1,
+          "unreachable": 7
+        }
+      },
+      "chemical": "plastic",
+      "competence_threshold": 20.0,
+      "drift": {
+        "available": true,
+        "credited_mean_relative": 1.3814342468976974,
+        "excluded_mean_relative": null,
+        "n_read": 16,
+        "reached_units": 302,
+        "reference_range": [
+          1.37,
+          1.42
+        ],
+        "seeds_expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "frozen_foods": {
+        "1": 11.48,
+        "10": 1.5853333333333333,
+        "11": 2.2906666666666666,
+        "12": 0.6693333333333333,
+        "13": 0.7586666666666667,
+        "14": 1.9013333333333333,
+        "15": 0.6586666666666666,
+        "16": 0.7746666666666666,
+        "2": 0.3413333333333333,
+        "3": 1.9773333333333334,
+        "4": 4.009333333333333,
+        "5": 2.56,
+        "6": 0.6693333333333333,
+        "7": 2.6746666666666665,
+        "8": 3.4506666666666668,
+        "9": 1.84
+      },
+      "frozen_mean_foods": 2.3525833333333335,
+      "graded": {
+        "ci80": [
+          -1.4362583333333334,
+          0.13385833333333338
+        ],
+        "defined": true,
+        "effect": -0.634,
+        "n": 16,
+        "p_degrade": 0.4899749755859375,
+        "p_improve": 0.530059814453125,
+        "positive_seeds": 8,
+        "q_improve": 0.63607177734375
+      },
+      "learning_foods": {
+        "1": 1.3093333333333332,
+        "10": 1.8386666666666667,
+        "11": 1.752,
+        "12": 1.3693333333333333,
+        "13": 1.3773333333333333,
+        "14": 2.224,
+        "15": 1.5866666666666667,
+        "16": 1.3973333333333333,
+        "2": 1.5826666666666667,
+        "3": 1.7933333333333332,
+        "4": 1.536,
+        "5": 2.2573333333333334,
+        "6": 2.044,
+        "7": 1.712,
+        "8": 2.384,
+        "9": 1.3333333333333333
+      },
+      "learning_mean_foods": 1.7185833333333331,
+      "learning_mean_full_clear": 0.0,
+      "minima": {
+        "absolute_minimum": 1.0,
+        "binding_minimum": 1.6592416666666665,
+        "effect": -0.634,
+        "matched_gap": 16.592416666666665,
+        "matched_minimum": 1.6592416666666665,
+        "passes": false,
+        "why": "below the 1.0 foods minimum and the 10%-of-gap minimum (1.66 foods)"
+      },
+      "n_pairs": 16,
+      "reach": "all 302",
+      "reaches_competence": false,
+      "readout": "frozen",
+      "readout_change": {
+        "available": false,
+        "why": "this arm's readout is frozen"
+      },
+      "routing": "scalar",
+      "source": "none (L = 1)",
+      "verdict": "no_improvement",
+      "why": "not significant"
+    },
+    "symmetric": {
+      "arm": "symmetric",
+      "change_by_hop": {
+        "available": true,
+        "mean_abs_change_by_hop": {
+          "0": 0.010079350729938596,
+          "1": 0.0001305805340052757,
+          "2": 0.0001178174929918896,
+          "3": 0.00010444754389027366,
+          "4": 8.482144451704698e-05,
+          "5": 6.84581004861684e-05,
+          "6": 7.93007727679651e-05,
+          "7": 9.73906126091606e-05,
+          "8": 0.00010824150206190097,
+          "unreachable": 5.664924606207933e-05
+        },
+        "n_read": 16,
+        "units_by_hop": {
+          "0": 39,
+          "1": 70,
+          "2": 138,
+          "3": 30,
+          "4": 1,
+          "5": 7,
+          "6": 7,
+          "7": 2,
+          "8": 1,
+          "unreachable": 7
+        }
+      },
+      "chemical": "plastic",
+      "competence_threshold": 20.0,
+      "drift": {
+        "available": true,
+        "credited_mean_relative": 1.383054569363594,
+        "excluded_mean_relative": 0.015625762287527323,
+        "n_read": 16,
+        "reached_units": 39,
+        "reference_range": [
+          1.37,
+          1.42
+        ],
+        "seeds_expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "frozen_foods": {
+        "1": 11.48,
+        "10": 1.5853333333333333,
+        "11": 2.2906666666666666,
+        "12": 0.6693333333333333,
+        "13": 0.7586666666666667,
+        "14": 1.9013333333333333,
+        "15": 0.6586666666666666,
+        "16": 0.7746666666666666,
+        "2": 0.3413333333333333,
+        "3": 1.9773333333333334,
+        "4": 4.009333333333333,
+        "5": 2.56,
+        "6": 0.6693333333333333,
+        "7": 2.6746666666666665,
+        "8": 3.4506666666666668,
+        "9": 1.84
+      },
+      "frozen_mean_foods": 2.3525833333333335,
+      "graded": {
+        "ci80": [
+          10.116108333333333,
+          11.990883333333334
+        ],
+        "defined": true,
+        "effect": 11.055250000000001,
+        "n": 16,
+        "p_degrade": 1.0,
+        "p_improve": 1.52587890625e-05,
+        "positive_seeds": 16,
+        "q_improve": 3.0517578125e-05
+      },
+      "learning_foods": {
+        "1": 16.162666666666667,
+        "10": 10.848,
+        "11": 14.346666666666666,
+        "12": 15.56,
+        "13": 10.993333333333334,
+        "14": 10.912,
+        "15": 10.16,
+        "16": 14.705333333333334,
+        "2": 15.030666666666667,
+        "3": 12.606666666666667,
+        "4": 14.976,
+        "5": 17.576,
+        "6": 13.866666666666667,
+        "7": 10.042666666666667,
+        "8": 16.374666666666666,
+        "9": 10.364
+      },
+      "learning_mean_foods": 13.407833333333334,
+      "learning_mean_full_clear": 15.391666666666667,
+      "minima": {
+        "absolute_minimum": 1.0,
+        "binding_minimum": 1.6592416666666665,
+        "effect": 11.055250000000001,
+        "matched_gap": 16.592416666666665,
+        "matched_minimum": 1.6592416666666665,
+        "passes": true,
+        "why": "at or above both minima"
+      },
+      "n_pairs": 16,
+      "reach": "the 39-unit pool",
+      "reaches_competence": false,
+      "readout": "frozen",
+      "readout_change": {
+        "available": false,
+        "why": "this arm's readout is frozen"
+      },
+      "routing": "symmetric",
+      "source": "readout transpose",
+      "verdict": "beats_floor",
+      "why": "significant and at or above both minima"
+    }
+  },
+  "beating_floor": [
+    "plastic_readout",
+    "readout_only",
+    "symmetric"
+  ],
+  "forbidden_cell": {
+    "reach": "all 302",
+    "source": "readout transpose",
+    "why": "the readout reads only the pooled motor classes, and e-prop drops the multi-hop paths by which any other unit reaches the action, so a true-gradient signal is identically zero outside the pool"
+  },
+  "learned_the_cell": [
+    "plastic_readout",
+    "readout_only"
+  ],
+  "learned_with_substrate": [],
+  "matched_contrasts": {
+    "direction_at_matched_reach": {
+      "arms": [
+        "symmetric",
+        "random_motor"
+      ],
+      "difference_foods": 10.122666666666667,
+      "paired": {
+        "ci80": [
+          9.115941666666668,
+          11.133575
+        ],
+        "defined": true,
+        "effect": 10.122666666666667,
+        "n": 16,
+        "p_degrade": 1.0,
+        "p_improve": 1.52587890625e-05,
+        "positive_seeds": 16
+      }
+    },
+    "reach_at_matched_source": {
+      "arms": [
+        "random",
+        "random_motor"
+      ],
+      "difference_foods": -0.3039999999999998,
+      "paired": {
+        "ci80": [
+          -1.2196916666666666,
+          0.6524416666666669
+        ],
+        "defined": true,
+        "effect": -0.30400000000000027,
+        "n": 16,
+        "p_degrade": 0.0583343505859375,
+        "p_improve": 0.9477081298828125,
+        "positive_seeds": 3
+      }
+    },
+    "readout_at_matched_signal": {
+      "arms": [
+        "plastic_readout",
+        "random"
+      ],
+      "difference_foods": 10.694166666666666,
+      "paired": {
+        "ci80": [
+          8.925575,
+          12.434125
+        ],
+        "defined": true,
+        "effect": 10.694166666666668,
+        "n": 16,
+        "p_degrade": 0.9999847412109375,
+        "p_improve": 3.0517578125e-05,
+        "positive_seeds": 15
+      }
+    },
+    "wiring_at_matched_readout": {
+      "arms": [
+        "plastic_readout",
+        "readout_only"
+      ],
+      "difference_foods": -3.8946666666666676,
+      "paired": {
+        "ci80": [
+          -4.849891666666666,
+          -2.940466666666667
+        ],
+        "defined": true,
+        "effect": -3.8946666666666667,
+        "n": 16,
+        "p_degrade": 3.0517578125e-05,
+        "p_improve": 0.9999847412109375,
+        "positive_seeds": 1
+      }
+    }
+  },
+  "protocol": {
+    "arms": {
+      "plastic_readout": {
+        "chemical": "plastic",
+        "reach": "all 302",
+        "readout": "plastic",
+        "routing": "random",
+        "source": "random projection"
+      },
+      "random": {
+        "chemical": "plastic",
+        "reach": "all 302",
+        "readout": "frozen",
+        "routing": "random",
+        "source": "random projection"
+      },
+      "random_motor": {
+        "chemical": "plastic",
+        "reach": "the 39-unit pool",
+        "readout": "frozen",
+        "routing": "random_motor",
+        "source": "random projection"
+      },
+      "readout_only": {
+        "chemical": "frozen",
+        "reach": "all 302",
+        "readout": "plastic",
+        "routing": "random",
+        "source": "random projection"
+      },
+      "scalar": {
+        "chemical": "plastic",
+        "reach": "all 302",
+        "readout": "frozen",
+        "routing": "scalar",
+        "source": "none (L = 1)"
+      },
+      "symmetric": {
+        "chemical": "plastic",
+        "reach": "the 39-unit pool",
+        "readout": "frozen",
+        "routing": "symmetric",
+        "source": "readout transpose"
+      }
+    },
+    "competence_threshold": 20.0,
+    "drift_reference": [
+      1.37,
+      1.42
+    ],
+    "min_foods": 1.0,
+    "min_gap_fraction": 0.1,
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  "reaching_competence": [
+    "plastic_readout",
+    "readout_only"
+  ],
+  "references": {
+    "nodepert_frozen_foods": 3.15,
+    "nodepert_learning_foods": 3.751,
+    "nodepert_shift_foods": 0.601,
+    "ppo_matched_foods": 18.945,
+    "target_foods": 20.0
+  },
+  "stage_one": {
+    "available": true,
+    "broadcast_passes": false,
+    "control_outcome": "fail",
+    "path": "docs/experiments/logbooks/supporting/063-l4-eprop/stage1-control.json",
+    "reading": "valid",
+    "void_reason": null
+  },
+  "substrate_contribution_foods": {
+    "plastic_readout": -3.8946666666666676,
+    "random": -14.588833333333334,
+    "random_motor": -14.284833333333333,
+    "scalar": -15.851416666666667,
+    "symmetric": -4.162166666666666
+  },
+  "verdict": "learns_without_the_substrate",
+  "why": "plastic_readout, readout_only beats its own floor and reaches competence, but no arm does so while writing the substrate: the readout-only control, whose chemical matrix is frozen, reaches 17.570 foods. 059's gate is met in LETTER and not in substance -- what learned the cell is an 8-parameter linear readout over four pooled motor-class means, on frozen recurrent features. The substrate rungs B.5, B.1, B.4 and B.4b stay GATED, since each asks its question of a rule that writes the wiring. R.1b becomes runnable in a changed form: wild type against its rewired null as FROZEN FEATURES under the readout-only arm"
+}

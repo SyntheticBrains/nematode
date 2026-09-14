@@ -124,6 +124,8 @@ ARMS: dict[str, dict[str, Any]] = {
 # post-synaptic units are the action dimensions, so its signal is the identity and no path is
 # dropped.
 PLASTIC_READOUT_ARM = "plastic_readout"
+# Its control, and the arm every substrate claim is measured against.
+READOUT_ONLY_ARM = "readout_only"
 # The cell the mechanism forbids, stated rather than left out: under e-prop's truncation a
 # true-gradient signal cannot reach a unit the readout does not read.
 FORBIDDEN_CELL = {
@@ -600,6 +602,20 @@ def analyse(
     # competent without clearing its floor has not been shown to have learned anything, and the
     # floor is what says the update did the work.
     learned = [n for n in beat if cells[n]["reaches_competence"]]
+    # And only an arm that learned the cell WHILE WRITING THE SUBSTRATE, by at least the absolute
+    # minimum over the readout-only control, is a rule that learns the connectome. The distinction
+    # is the whole reason the control exists: a plastic readout is an 8-parameter linear map over
+    # four pooled motor-class means, so an arm can learn this cell with the wiring frozen, and
+    # "the cell was learned" then says nothing about the wiring. Every substrate rung -- B.5, B.1,
+    # B.4, B.4b -- asks its question of a rule that writes the wiring, so each is gated on THIS
+    # list and not on `learned`.
+    control = cells[READOUT_ONLY_ARM]["learning_mean_foods"]
+    learned_with_substrate = [
+        n
+        for n in learned
+        if ARMS[n]["chemical"] == "plastic"
+        and cells[n]["learning_mean_foods"] - control >= MIN_FOODS
+    ]
     stage = stage_one_reading(stage_one)
     if not registered:
         verdict, why = (
@@ -619,13 +635,29 @@ def analyse(
                 f"({stage['reading']}): {stage.get('void_reason') or stage.get('why')}"
             ),
         )
-    elif learned:
+    elif learned_with_substrate:
         verdict, why = (
             "learns_the_cell",
             (
-                f"{', '.join(learned)} beats its own floor and reaches competence: 059's third "
-                "outcome. The wiring contrast becomes runnable and is registered fresh in its own "
-                "change; B.5, B.1, B.4 and B.4b become askable"
+                f"{', '.join(learned_with_substrate)} beats its own floor, reaches competence AND "
+                f"clears the readout-only control by at least {MIN_FOODS} foods: 059's third "
+                "outcome, met by a rule that writes the wiring. The wiring contrast becomes "
+                "runnable and is registered fresh in its own change; B.5, B.1, B.4 and B.4b "
+                "become askable"
+            ),
+        )
+    elif learned:
+        verdict, why = (
+            "learns_without_the_substrate",
+            (
+                f"{', '.join(learned)} beats its own floor and reaches competence, but no arm does "
+                "so while writing the substrate: the readout-only control, whose chemical matrix is "
+                f"frozen, reaches {control:.3f} foods. 059's gate is met in LETTER and not in "
+                "substance -- what learned the cell is an 8-parameter linear readout over four "
+                "pooled motor-class means, on frozen recurrent features. The substrate rungs B.5, "
+                "B.1, B.4 and B.4b stay GATED, since each asks its question of a rule that writes "
+                "the wiring. R.1b becomes runnable in a changed form: wild type against its "
+                "rewired null as FROZEN FEATURES under the readout-only arm"
             ),
         )
     elif beat:
@@ -651,6 +683,12 @@ def analyse(
         "beating_floor": beat,
         "reaching_competence": competent,
         "learned_the_cell": learned,
+        "learned_with_substrate": learned_with_substrate,
+        "substrate_contribution_foods": {
+            n: cells[n]["learning_mean_foods"] - control
+            for n in ARMS
+            if ARMS[n]["chemical"] == "plastic"
+        },
         "forbidden_cell": FORBIDDEN_CELL,
         "matched_contrasts": matched_contrasts(cells, scanned, seeds),
         "stage_one": stage,
@@ -706,6 +744,16 @@ def _print(result: dict[str, Any]) -> None:
     )
     print(f"  arms beating their floor: {result['beating_floor'] or 'none'}")
     print(f"  arms reaching competence: {result['reaching_competence'] or 'none'}")
+    print(
+        "  arms learning the cell WHILE WRITING THE SUBSTRATE: "
+        f"{result['learned_with_substrate'] or 'none'}",
+    )
+    print(
+        "  what the substrate's own plasticity contributes, foods over the readout-only control: "
+        + ", ".join(
+            f"{name} {value:+.3f}" for name, value in result["substrate_contribution_foods"].items()
+        ),
+    )
     print(f"\nVERDICT: {result['verdict']} - {result['why']}")
 
 

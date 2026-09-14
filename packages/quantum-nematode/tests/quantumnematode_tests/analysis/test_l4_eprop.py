@@ -315,3 +315,80 @@ class TestTheWiringContrastIsReported:
     def test_both_plastic_readout_arms_report_where_the_readout_went(self) -> None:
         plastic = [n for n, meta in ep.ARMS.items() if meta["readout"] == "plastic"]
         assert set(plastic) == {"plastic_readout", "readout_only"}
+
+
+class TestLearningTheCellIsNotLearningTheWiring:
+    """Every substrate rung asks its question of a rule that WRITES the wiring."""
+
+    def test_competence_with_a_frozen_substrate_does_not_open_the_rungs(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # A plastic readout is an 8-parameter linear map over four pooled motor-class means, so an
+        # arm can learn this cell with the wiring frozen -- and then "the cell was learned" says
+        # nothing about the wiring.
+        competent = ms.COMPETENT_THRESHOLD + 30.0
+        out = ep.analyse(
+            _scanned(
+                readout_only=_arm(17.5, clear=competent),
+                plastic_readout=_arm(13.5, clear=competent),
+            ),
+            stage_one=_stage_one(tmp_path),
+        )
+        assert out["verdict"] == "learns_without_the_substrate"
+        assert out["learned_with_substrate"] == []
+        assert "stay GATED" in out["why"]
+        assert "met in LETTER and not in substance" in out["why"]
+
+    def test_a_substrate_arm_clearing_the_control_does_open_them(self, tmp_path: Path) -> None:
+        competent = ms.COMPETENT_THRESHOLD + 30.0
+        out = ep.analyse(
+            _scanned(
+                readout_only=_arm(13.5, clear=competent),
+                plastic_readout=_arm(17.5, clear=competent),
+            ),
+            stage_one=_stage_one(tmp_path),
+        )
+        assert out["verdict"] == "learns_the_cell"
+        assert out["learned_with_substrate"] == ["plastic_readout"]
+        assert "become askable" in out["why"]
+
+    def test_the_margin_must_clear_the_absolute_minimum(self, tmp_path: Path) -> None:
+        # Ahead of the control, but by less than the registered 1.0-food floor: not a contribution.
+        competent = ms.COMPETENT_THRESHOLD + 30.0
+        out = ep.analyse(
+            _scanned(
+                readout_only=_arm(17.0, clear=competent),
+                plastic_readout=_arm(17.5, clear=competent),
+            ),
+            stage_one=_stage_one(tmp_path),
+        )
+        assert out["verdict"] == "learns_without_the_substrate"
+
+    def test_the_control_alone_cannot_open_them(self, tmp_path: Path) -> None:
+        # Its own chemical matrix is frozen, so it can never be a substrate learner whatever it
+        # reaches.
+        competent = ms.COMPETENT_THRESHOLD + 30.0
+        out = ep.analyse(
+            _scanned(readout_only=_arm(17.5, clear=competent)),
+            stage_one=_stage_one(tmp_path),
+        )
+        assert out["learned_the_cell"] == ["readout_only"]
+        assert out["learned_with_substrate"] == []
+        assert out["verdict"] == "learns_without_the_substrate"
+
+    def test_the_contribution_is_reported_for_every_substrate_arm(self, tmp_path: Path) -> None:
+        out = ep.analyse(_scanned(), stage_one=_stage_one(tmp_path))
+        reported = set(out["substrate_contribution_foods"])
+        expected = {n for n, meta in ep.ARMS.items() if meta["chemical"] == "plastic"}
+        assert reported == expected
+
+    def test_r1b_is_named_in_its_changed_form(self, tmp_path: Path) -> None:
+        # The contrast does not disappear: wild type against its rewired null as FROZEN FEATURES is
+        # a clean question, and arguably closer to "is the wiring legible".
+        competent = ms.COMPETENT_THRESHOLD + 30.0
+        out = ep.analyse(
+            _scanned(readout_only=_arm(17.5, clear=competent)),
+            stage_one=_stage_one(tmp_path),
+        )
+        assert "FROZEN FEATURES" in out["why"]

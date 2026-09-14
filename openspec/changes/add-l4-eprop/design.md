@@ -232,11 +232,30 @@ minimum taken against PPO's matched **18.945**, with the larger binding.
 |---|---|---|
 | `does_not_learn` | no learning arm beats the floor by the binding minimum | 059's first outcome fires: the programme **stops**, 7b proceeds under PPO after the power arithmetic, the plausibility claim is given up. The rule family has now failed with two independent eligibilities |
 | `learns_below_competence` | a learning arm beats the floor; none reaches the 20% full-clear threshold | a result. **R.1b stays blocked and 7b's gate is untouched**, since block V's contrast is on time to competence. The readout-scale follow-up becomes the live question |
-| `learns_the_cell` | a learning arm reaches competence | 059's stage 3 becomes runnable: the wiring contrast on the block-V cells against the ≥ 20% bar, registered fresh in its own change. **B.5, B.1, B.4 and B.4b become askable** under R.3 |
+| `learns_the_cell` | a learning arm reaches competence **while writing the substrate**, clearing the readout-only control by at least the 1.0-food minimum | 059's stage 3 becomes runnable: the wiring contrast on the block-V cells against the ≥ 20% bar, registered fresh in its own change. **B.5, B.1, B.4 and B.4b become askable** under R.3 |
+| `learns_without_the_substrate` | a learning arm reaches competence, and none does so while writing the substrate | 059's gate is met in **letter and not in substance**. Every substrate rung asks its question of a rule that writes the wiring, so **B.5, B.1, B.4 and B.4b stay gated**. R.1b becomes runnable in a changed form: wild type against its rewired null as **frozen features** under the readout-only arm |
 | `void` | stage 1's `symmetric` arm fails, or its `scalar` arm passes | nothing in stage 2 is interpretable and no connectome run is spent |
 
 The `void` row is why stage 1 is a stop clause and not a task: **no stage-2 run is launched until it
 passes.**
+
+### Why the third outcome needed splitting
+
+*(Added after the campaign, on the control's evidence.)* 059 registered the gate as "a rule that
+learns the hard-food cell", and that phrasing cannot distinguish two very different worlds on this
+substrate. A plastic readout is an **8-parameter linear map** over four pooled motor-class means, so
+an arm can learn this cell with the wiring frozen — and then "the cell was learned" says nothing
+about the wiring, which is the only thing every substrate rung is about.
+
+The split is not a post-hoc convenience: the **control that forces it was registered before any
+`readout_only` run existed**, and its stated purpose was exactly this separation. What was unknown
+in advance was the sign. The condition uses the registered absolute minimum rather than a new
+threshold — the substrate's contribution must clear **1.0 food** over the control to count, the same
+bar every arm's effect is held to.
+
+This is the failure mode R.1c caught in itself, one rung further on: a verdict condition weaker than
+the consequence attached to it. R.1c surfaced its own before the campaign; this one was surfaced by
+the control after it, which is the next best thing and the reason the control was added.
 
 ## What this may not be cited as
 

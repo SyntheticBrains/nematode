@@ -62,7 +62,11 @@
   and is stated in the record either way.
 - [x] 2.5 A cross-check that the existing `three_factor`, `hebbian` and `analytic` arms are **unchanged
   to the committed values** — the harness gained arms, and if the old ones moved, something shared did.
-- [ ] 2.6 **No stage-2 run is launched until 2.2 and 2.3 both hold.** Record which.
+- [x] 2.6 **No stage-2 run is launched until 2.2 and 2.3 both hold.** Both held: `eprop_symmetric`
+  passed at all three rates (−0.1385 at the pinned 1e-3, 8/8 seeds, against an optimum of −0.1353
+  and the analytic reference's −0.1361) and `eprop_scalar` passed at none. The control was valid on
+  its own terms, `analytic` −0.1361 and `hebbian` −0.8753 unchanged to five decimals. Recorded in
+  `supporting/063-l4-eprop/stage1-control.json`; the campaign launched after it.
 
 ## 3. The arms
 
@@ -79,14 +83,14 @@
 - [x] 3.3 State in the launch record why R.1c's frozen floor is **not** reused: it ran at
   `plasticity_node_noise` 0.1, the perturbation enters the forward pass whether or not updates are
   frozen, so its floor is a noisier policy than this one.
-- [ ] 3.4 A **pilot on disjoint seeds 101–104** before any registered seed: the arms run, the
+- [x] 3.4 A **pilot on disjoint seeds 101–104** before any registered seed: the arms run, the
   eligibility is non-zero, `symmetric` writes nothing outside the pool on real runs, and the frozen
   floor sits where a no-learning policy sits on this cell.
-- [ ] 3.5 **A rate check on the same disjoint seeds**: the committed `0.001` and one decade either side,
+- [x] 3.5 **A rate check on the same disjoint seeds**: the committed `0.001` and one decade either side,
   learning arm only. The normalised trace is what makes the rate transferable, and this is what stops a
   `does_not_learn` reading being a rate artefact — the discipline R.1c's σ calibration established after
   a carried-over value cost 31.5% of the arm's level. **The committed rate stands unless it is visibly
-  off**, and any change is recorded with its reason before the campaign.
+  off**, and any change is recorded with its reason before the campaign. **Not run as a separate sweep**: the pilot at the committed rate put `plastic_readout` at 15.550 foods of 20 and 49.13% full clear, which is not a rate that is visibly off, and stage 1 had already swept the rate grid on the same mechanism (the true-gradient arm passing at all three rates, the ablation at none). The eight runs were not spent; recorded as a deviation rather than as a completed sweep.
 
 ## 4. Harness
 
@@ -112,15 +116,16 @@
   `plastic_readout − random` isolates the readout at a matched signal and matched breadth — the one
   stage 1 predicts will be the largest — and `plastic_readout − readout_only` isolates the
   substrate's own plasticity at a matched readout.
-- [x] 4.7 The four registered readings — `does_not_learn`, `learns_below_competence`, `learns_the_cell`,
-  `void` — with the consequence of each in the harness, not in prose.
+- [x] 4.7 The registered readings — `does_not_learn`, `learns_below_competence`, `learns_the_cell`,
+  `void`, and (added on the control's evidence) `learns_without_the_substrate` — with the consequence
+  of each in the harness, not in prose.
 - [x] 4.8 Tests for 4.1–4.7, including a fixture in each reading, one where `scalar` matches `random`
   (which makes the result about the trace, not the signal), and one where `symmetric` and
   `random_motor` match (which makes it about the pool, not the direction).
 
 ## 5. The stop clauses
 
-- [ ] 5.1 Stage 1 passes before stage 2 launches (2.6).
+- [x] 5.1 Stage 1 passes before stage 2 launches (2.6).
 - [x] 5.2 **059's three-active-week implementation bound.** The case for this programme over running 7b
   under PPO is that it is cheaper; if the implementation passes three active weeks, that is itself a
   stopping condition. Record the date work started.
@@ -134,21 +139,22 @@
 
 ## 6. Campaign
 
-- [ ] 6.1 112 runs: six learning arms and one frozen floor × seeds 1–16 at 3000 episodes, with
+- [x] 6.1 112 runs: six learning arms and one frozen floor × seeds 1–16 at 3000 episodes, with
   `--track-experiment` so drift and the hop-distance reading have weights to read.
-- [ ] 6.2 Per-seed CSV, the per-arm table and the verdict under `supporting/063-l4-eprop/`.
+- [x] 6.2 Per-seed CSV, the per-arm table and the verdict under `supporting/063-l4-eprop/`.
 
 ## 7. The record
 
-- [ ] 7.1 Logbook 063: the per-arm table, the `scalar` ablation's position and all four matched contrasts
+- [x] 7.1 Logbook 063: the per-arm table, the `scalar` ablation's position and all four matched contrasts
   stated in **every** verdict branch, the drift column against R.1c's and R.1d's, the hop-distance
   reading, and the verdict against 059's three registered outcomes.
-- [ ] 7.2 The experiments index row and `CHANGELOG.md`.
-- [ ] 7.3 The tracker's R.2 entry, and R.1b's remaining gate restated to whatever this leaves it.
-- [ ] 7.4 State plainly what this may **not** be cited as, per the design's last section — including
+- [x] 7.2 The experiments index row and `CHANGELOG.md`.
+- [x] 7.3 The tracker's R.2 entry, and R.1b's remaining gate restated to whatever this leaves it.
+- [x] 7.4 State plainly what this may **not** be cited as, per the design's last section — including
   that the fourth cell of the routing 2×2, true directions reaching all 302 units, is one the mechanism
   forbids rather than one that was skipped.
-- [ ] 7.5 If the reading is `does_not_learn`, 059's first outcome fires: record that the programme stops,
+- [x] 7.5 **Not applicable**: the reading is `learns_without_the_substrate`, not `does_not_learn`, so
+  059's first outcome did not fire and the programme does not stop. Had it been `does_not_learn`: record that the programme stops,
   that 7b proceeds under PPO, and that the plausibility claim is given up — as a decision with its
   arithmetic, not as an omission.
 
@@ -204,8 +210,22 @@ linear map over four pooled motor-class means.
 - [x] 9.3 The config differs from `eprop_plastic_readout` in `plasticity_plastic_tensors` alone.
 - [x] 9.4 The harness reports `plastic_readout − readout_only` as a matched contrast and carries a
   per-arm `chemical` column, so the table says which arms could write the substrate at all.
-- [ ] 9.5 Its credited drift reads ~0, which is the check that the withholding actually happened.
+- [x] 9.5 Its credited drift reads ~0, which is the check that the withholding actually happened.
 - [x] 9.6 The pilot's verdict is **withheld**, not printed: at four seeds the exact paired test cannot
   reach the significance gate — its smallest reachable p is 2⁻⁴ = 0.0625, which BH across the arms
   pushes above it — so every arm reads `no_improvement` whatever it did. The harness printed
   `does_not_learn — the programme stops` on that evidence before this was fixed.
+
+## 10. The reading the control forced
+
+- [x] 10.1 Split 059's third outcome. `learns_the_cell` now requires a competent arm that **writes
+  the substrate** and clears the readout-only control by the registered 1.0-food minimum;
+  `learns_without_the_substrate` is the reading where the cell is learned and no arm does so while
+  writing the wiring. Every substrate rung — B.5, B.1, B.4, B.4b — is gated on the first and not on
+  "the cell was learned", because each asks its question of a rule that writes the wiring.
+- [x] 10.2 Report what the substrate's plasticity CONTRIBUTES, per arm, as foods over the control, so
+  the sign is in the record rather than inferable from two means.
+- [x] 10.3 Tests for both branches, including an arm ahead of the control by less than the minimum.
+- [x] 10.4 The record states R.1b's changed form: wild type against its rewired null as **frozen
+  features** under the readout-only arm, which is a clean question and arguably closer to "is the
+  wiring legible to a learner" than the original.
