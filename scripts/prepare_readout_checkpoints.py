@@ -64,8 +64,19 @@ READOUT_KEY = "readout"
 PROTECTED = ("w_chem", "food_gains", "log_std", "m_chem", "g_gap", "chem_sign")
 
 
-def _harvest_readout(harvest_dir: Path, seed: int) -> torch.Tensor:
-    """Read the readout from that seed's PPO harvest, resolved through its experiment record."""
+def _harvest_readout(
+    harvest_dir: Path,
+    seed: int,
+    expected_config: Path | None = None,
+) -> torch.Tensor:
+    """Read the readout from that seed's PPO harvest, resolved through its experiment record.
+
+    The seed in the filename is not a sufficient binding: a directory holding runs of some other
+    config would yield a readout from a different experiment, and every downstream check -- topology
+    key present, shape correct -- would pass. So the experiment record's own ``config_file`` is
+    compared against the harvest config this preparation was told to use, and a mismatch is refused
+    before ``exports_path`` is trusted or any checkpoint is opened.
+    """
     from l4_panel import (  # pyright: ignore[reportMissingImports]
         EXPERIMENTS,
         _experiment_json,
@@ -79,7 +90,19 @@ def _harvest_readout(harvest_dir: Path, seed: int) -> torch.Tensor:
         msg = f"{len(logs)} harvest logs for seed {seed} under {harvest_dir}: {[p.name for p in logs]}"
         raise ValueError(msg)
     experiment = _experiment_json(logs[0].read_text(), EXPERIMENTS)
-    exports = experiment.get("exports_path") if experiment else None
+    if experiment is None:
+        msg = f"harvest run for seed {seed} has no experiment record; was it run with --track-experiment?"
+        raise FileNotFoundError(msg)
+    if expected_config is not None:
+        recorded = experiment.get("config_file")
+        if recorded is None or Path(recorded).name != Path(expected_config).name:
+            msg = (
+                f"harvest run for seed {seed} records config {recorded!r}, not the expected "
+                f"{Path(expected_config).name!r}: this directory holds runs of another experiment, and "
+                "its readouts are not this arm's."
+            )
+            raise ValueError(msg)
+    exports = experiment.get("exports_path")
     if not exports:
         msg = (
             f"harvest run for seed {seed} has no exports_path; was it run with --track-experiment?"
@@ -116,6 +139,7 @@ def _replacement_readout(
     original: torch.Tensor,
     seed: int,
     harvest_dir: Path | None,
+    harvest_config: Path | None = None,
 ) -> torch.Tensor:
     """Select the readout this source substitutes."""
     if source == "anatomical":
@@ -126,7 +150,7 @@ def _replacement_readout(
                 "source 'anatomical_scaled' needs --harvest-dir: it matches the ppo readout's norm"
             )
             raise ValueError(msg)
-        reference = _harvest_readout(harvest_dir, seed)
+        reference = _harvest_readout(harvest_dir, seed, harvest_config)
         norm = float(original.norm())
         if norm == 0.0:  # pragma: no cover - the anatomical readout is unit-normed per row
             msg = "the arm's own readout has zero norm"
@@ -136,18 +160,19 @@ def _replacement_readout(
         if harvest_dir is None:
             msg = f"source {source!r} needs --harvest-dir"
             raise ValueError(msg)
-        harvested = _harvest_readout(harvest_dir, seed)
+        harvested = _harvest_readout(harvest_dir, seed, harvest_config)
         return harvested if source == "ppo" else _rotate(harvested, seed)
     msg = f"unknown source {source!r}"  # pragma: no cover - argparse restricts the choices
     raise ValueError(msg)
 
 
-def prepare(
+def prepare(  # noqa: PLR0913 - one parameter per input the preparation is pinned to
     config_path: Path,
     source: str,
     seed: int,
     out_dir: Path,
     harvest_dir: Path | None,
+    harvest_config: Path | None = None,
 ) -> Path:
     """Write one checkpoint, and its provenance sidecar, for one source and one seed."""
     simulation = load_simulation_config(str(config_path))
@@ -164,49 +189,65 @@ def prepare(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"readout_{source}_seed{seed}.pt"
-    save_weights(brain, target)
-    checkpoint = torch.load(target, weights_only=True)
-    topology = checkpoint["topology"]
-    original = topology[READOUT_KEY].detach().clone()
+    # Written beside the target and moved into place only once the substitution, the shape check and
+    # the provenance sidecar have all succeeded. Saving straight to the target would leave an
+    # UNMODIFIED checkpoint there if any later step raised -- a file that looks like a prepared arm,
+    # loads cleanly and carries the anatomical readout, which is the silent failure the sidecar and
+    # the shape check exist to prevent.
+    staged = target.with_suffix(".pt.partial")
+    save_weights(brain, staged)
+    try:
+        checkpoint = torch.load(staged, weights_only=True)
+        topology = checkpoint["topology"]
+        original = topology[READOUT_KEY].detach().clone()
 
-    replacement = _replacement_readout(source, original, seed, harvest_dir)
+        replacement = _replacement_readout(source, original, seed, harvest_dir, harvest_config)
 
-    if replacement.shape != original.shape:
-        msg = f"readout shape {tuple(replacement.shape)} != the arm's {tuple(original.shape)}"
-        raise ValueError(msg)
+        if replacement.shape != original.shape:
+            msg = f"readout shape {tuple(replacement.shape)} != the arm's {tuple(original.shape)}"
+            raise ValueError(msg)
 
-    before = {k: topology[k].detach().clone() for k in PROTECTED if k in topology}
-    topology[READOUT_KEY] = replacement.to(original.dtype)
-    # The whole point of the file: one tensor differs and nothing else does.
-    for key, saved in before.items():
-        if not bool(torch.equal(topology[key], saved)):
-            msg = f"preparation changed {key!r}, which must come through untouched"
-            raise AssertionError(msg)
-    torch.save(checkpoint, target)
+        before = {k: topology[k].detach().clone() for k in PROTECTED if k in topology}
+        topology[READOUT_KEY] = replacement.to(original.dtype)
+        # The whole point of the file: one tensor differs and nothing else does.
+        for key, saved in before.items():
+            if not bool(torch.equal(topology[key], saved)):
+                msg = f"preparation changed {key!r}, which must come through untouched"
+                raise AssertionError(msg)
+        torch.save(checkpoint, staged)
 
-    cosine = float(
-        torch.nn.functional.cosine_similarity(
-            replacement.reshape(-1).float(),
-            original.reshape(-1).float(),
-            dim=0,
-        ),
-    )
-    (out_dir / f"readout_{source}_seed{seed}.json").write_text(
-        json.dumps(
-            {
-                "source": source,
-                "seed": seed,
-                "config": str(config_path),
-                "harvest_dir": str(harvest_dir) if harvest_dir else None,
-                "readout_norm_before": float(original.norm()),
-                "readout_norm_after": float(replacement.norm()),
-                "cosine_to_anatomical": cosine,
-                "protected_tensors": list(before),
-            },
-            indent=2,
+        cosine = float(
+            torch.nn.functional.cosine_similarity(
+                replacement.reshape(-1).float(),
+                original.reshape(-1).float(),
+                dim=0,
+            ),
         )
-        + "\n",
-    )
+        sidecar = out_dir / f"readout_{source}_seed{seed}.json"
+        sidecar.write_text(
+            json.dumps(
+                {
+                    "source": source,
+                    "seed": seed,
+                    "config": str(config_path),
+                    "harvest_dir": str(harvest_dir) if harvest_dir else None,
+                    "readout_norm_before": float(original.norm()),
+                    "readout_norm_after": float(replacement.norm()),
+                    "cosine_to_anatomical": cosine,
+                    "protected_tensors": list(before),
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+
+        # Everything succeeded: publish. os.replace is atomic within a filesystem, so a reader
+        # never sees a half-written checkpoint at the target path.
+        staged.replace(target)
+    finally:
+        # On the success path the staged file has already been moved onto the target, so this removes
+        # nothing; after a failure it removes the staged checkpoint and the target is left untouched.
+        staged.unlink(missing_ok=True)
     return target
 
 
@@ -217,12 +258,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--source", choices=SOURCES, required=True)
     parser.add_argument("--seeds", default="1-8")
     parser.add_argument("--harvest-dir", type=Path, default=None)
+    parser.add_argument(
+        "--harvest-config",
+        type=Path,
+        default=None,
+        help="the config the harvest runs used; each run's experiment record is checked against it",
+    )
     parser.add_argument("--out-dir", type=Path, required=True)
     args = parser.parse_args(argv)
 
     low, _, high = args.seeds.partition("-")
     for seed in range(int(low), int(high or low) + 1):
-        written = prepare(args.config, args.source, seed, args.out_dir, args.harvest_dir)
+        written = prepare(
+            args.config,
+            args.source,
+            seed,
+            args.out_dir,
+            args.harvest_dir,
+            args.harvest_config,
+        )
         print(f"  {args.source:<11} seed {seed}: {written}")
     return 0
 

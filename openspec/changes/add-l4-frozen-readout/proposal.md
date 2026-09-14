@@ -31,14 +31,21 @@ most important, since eight matrix entries and 3709 synapses are not commensurab
   would also bring PPO's `log_std`, changing the action noise the rule runs at, and PPO's `w_chem`,
   which would make the arm a clone assay rather than a readout test.
 
-- **Three readouts at one mask**, held at R.1c's best measured operating point (`motor`, σ 0.1,
+- **Four readouts at one mask**, held at R.1c's best measured operating point (`motor`, σ 0.1,
   `initial_log_std: -1.0`):
 
   | readout | what it is | status |
   |---|---|---|
   | `anatomical` | the committed default — speed as the B-vs-A motor-class contrast, turn as D-vs-V, unit-normed | R.1c's committed pair (learning 3.751, frozen 3.150), **reused only if a load-path equivalence test passes** |
+  | `anatomical_scaled` | the same directions at the **same Frobenius norm** as that seed's PPO readout | new |
   | `ppo` | harvested from a PPO run on this cell at the same seed, **at the arm's own action scale** | new |
   | `rotated` | a random direction at the **same Frobenius norm** as that seed's PPO readout | new |
+
+  `anatomical_scaled` was **added during implementation**, before any arm was scored: the harvested PPO
+  readout came back at norm 7.82 against the anatomical 1.414, so `ppo` and `rotated` both differ from
+  the default in direction *and* in scale, and neither can separate the two. Holding direction fixed at
+  the substituted norm is the only arm that can, and without it a positive `ppo` reading would have been
+  uninterpretable in the same way the `rotated` arm exists to prevent.
 
 - **The `rotated` arm is the discriminator, and it is why this is worth running.** Without it a positive
   `ppo` result cannot distinguish "PPO found a good readout" from "the anatomical prior is bad and almost
@@ -69,9 +76,10 @@ same-magnitude random control so "this component" is separable from "not the def
 
 ## Impact
 
-- New: the preparation script and its tests; six configs; records under
+- New: the preparation script and its tests; seven configs (six arms and the PPO harvest); records under
   `supporting/062-l4-frozen-readout/`; Logbook 062.
 - Edited: the experiments index, `CHANGELOG.md`, the tracker (R.1d), the roadmap only if the reading
   changes.
-- Compute: **40 runs** — 8 PPO harvests at ~950 s and 32 arm runs at ~1800 s — about **1h 15m** at the
-  measured parallelism, plus 16 more only if the load-path equivalence test fails.
+- Compute: **56 runs** — 8 PPO harvests at ~950 s and 48 arm runs at ~1800 s (three substituted readouts
+  × learning and frozen × 8 seeds) — about **1h 50m** at the measured parallelism, plus 16 more only if
+  the load-path equivalence test fails.

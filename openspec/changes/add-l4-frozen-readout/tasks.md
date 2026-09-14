@@ -28,8 +28,8 @@
 
 ## 2. The arms
 
-- [x] 2.1 Five configs from R.1c's committed `motor` pair: `ppo` and `rotated`, each learning and frozen,
-  plus the PPO harvest config — the last pinned to **`initial_log_std: -1.0`**, since the committed
+- [x] 2.1 Seven configs from R.1c's committed `motor` pair: `ppo`, `rotated` and `anatomical_scaled`,
+  each learning and frozen, plus the PPO harvest config — the last pinned to **`initial_log_std: -1.0`**, since the committed
   hard-food PPO config trains at the default std 1.0 and a readout adapted to an action distribution the
   rule does not use would be a second co-adaptation. The `anatomical` pair is R.1c's committed arms
   **subject to task 1.5**, and a sixth and seventh config (anatomical learning and frozen, loaded) are
@@ -44,7 +44,7 @@
 - [x] 3.1 A **sibling module**, `scripts/analysis/l4_frozen_readout.py`, not an extension of R.1c's: that
   harness keys its arms by mask with mask-specific dimension columns, and this change's verdict names
   differ. Reuses its statistics layer and its drift reader. Per-arm contrast against **its own** frozen
-  control, paired one-sided, BH-FDR across the three readouts.
+  control, paired one-sided, BH-FDR across the four readouts.
 - [x] 3.2 Both registered minima, as in R.1c, against each arm's own frozen mean — with the reachable gap
   taken against the **matched** PPO level from the harvest (same 8 seeds, same `initial_log_std`), 058's
   32-seed 19.31 reported beside it, and the more demanding binding.
@@ -56,6 +56,14 @@
 - [x] 3.5 The `rotated` arm's position reported in **every** verdict branch, not only the positive one.
 - [x] 3.6 Tests for 3.1–3.5, including a fixture where `rotated` matches `ppo` and one where `ppo`
   underperforms `rotated`.
+- [x] 3.7 **Review round (PR #369).** Three guards added after the campaign, none of which changes a
+  measured number: the "any change of direction helps" label requires **both** substituted directions
+  above `anatomical_scaled` (one up and one down is reported as `mixed`, which is what this campaign
+  actually measured); locating the handicap requires an arm that beats its floor **and** reaches
+  competence, rather than either alone; the harvest is bound to its own config through the experiment
+  record before `exports_path` is trusted; and a prepared checkpoint is staged beside its target and
+  moved into place only once the substitution, the shape check and the sidecar have all succeeded, so a
+  failure cannot leave an unmodified checkpoint where a substituted arm should be.
 
 ## 4. The stop clauses
 
@@ -69,13 +77,13 @@
 
 - [x] 5.1 8 PPO harvest runs at seeds 1–8 at `initial_log_std: -1.0`, with `--track-experiment`. These
   supply both the readouts and the matched PPO reference.
-- [x] 5.2 48 arm runs: **three** readouts × (learning, frozen) × 8 seeds at 3000 episodes, with
+- [x] 5.2 48 arm runs: the **three substituted** readouts × (learning, frozen) × 8 seeds at 3000 episodes, with
   `--track-experiment` so drift has weights to read.
 - [x] 5.3 Per-seed CSV, the per-readout table and the verdict under `supporting/062-l4-frozen-readout/`.
 
 ## 6. The record
 
-- [x] 6.1 Logbook 062: the three-readout table with the `rotated` arm's position, the drift column, the
+- [x] 6.1 Logbook 062: the four-readout table with the `rotated` arm's position, the drift column, the
   verdict against the three registered outcomes, and the co-adaptation caveat stated as a limit on the
   negative branch.
 - [x] 6.2 The experiments index row.

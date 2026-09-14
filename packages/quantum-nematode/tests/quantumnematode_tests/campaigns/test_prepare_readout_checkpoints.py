@@ -165,6 +165,97 @@ class TestTheRotatedControl:
         assert not torch.equal(prep._rotate(reference, 7), prep._rotate(reference, 8))
 
 
+def _log_for(harvest_dir: Path, seed: int) -> Path:
+    """One harvest log for a seed, which is what resolves to an experiment record."""
+    logs = harvest_dir / "logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    log = logs / f"run-seed{seed}.log"
+    log.write_text("")
+    return log
+
+
+class TestTheHarvestIsBoundToItsConfig:
+    """The seed in a filename binds nothing: another experiment's run passes every later check."""
+
+    @staticmethod
+    def _record(monkeypatch: pytest.MonkeyPatch, experiment: dict[str, object] | None) -> None:
+        import l4_panel  # pyright: ignore[reportMissingImports]
+
+        monkeypatch.setattr(l4_panel, "_experiment_json", lambda *_: experiment)
+
+    def test_a_run_of_another_config_is_refused(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _log_for(tmp_path, _SEED)
+        self._record(
+            monkeypatch,
+            {"config_file": "configs/somewhere/another_experiment.yml", "exports_path": "/nope"},
+        )
+        with pytest.raises(ValueError, match="records config"):
+            prep._harvest_readout(tmp_path, _SEED, Path("harvest.yml"))
+
+    def test_a_run_with_no_experiment_record_is_refused(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _log_for(tmp_path, _SEED)
+        self._record(monkeypatch, None)
+        with pytest.raises(FileNotFoundError, match="no experiment record"):
+            prep._harvest_readout(tmp_path, _SEED, Path("harvest.yml"))
+
+    def test_the_matching_config_passes_the_binding(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # It gets past the identity check and fails on the next one, so the check is not over-eager.
+        _log_for(tmp_path, _SEED)
+        self._record(monkeypatch, {"config_file": "configs/deep/harvest.yml"})
+        with pytest.raises(FileNotFoundError, match="no exports_path"):
+            prep._harvest_readout(tmp_path, _SEED, Path("elsewhere/harvest.yml"))
+
+    def test_no_expected_config_still_requires_a_record(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _log_for(tmp_path, _SEED)
+        self._record(monkeypatch, None)
+        with pytest.raises(FileNotFoundError, match="no experiment record"):
+            prep._harvest_readout(tmp_path, _SEED)
+
+
+class TestAFailedPreparationPublishesNothing:
+    """A checkpoint at the target path is a claim that the readout was substituted."""
+
+    def test_a_failure_leaves_no_checkpoint_at_the_target(self, tmp_path: Path) -> None:
+        # Saving straight to the target would leave the arm's UNMODIFIED readout there: a file that
+        # loads cleanly, carries the anatomical readout and would be run as the `ppo` arm.
+        out = tmp_path / "out"
+        harvest = tmp_path / "harvest"
+        (harvest / "logs").mkdir(parents=True)
+        with pytest.raises(FileNotFoundError):
+            prep.prepare(_CONFIG, "ppo", _SEED, out, harvest)
+        assert not (out / f"readout_ppo_seed{_SEED}.pt").exists()
+
+    def test_a_failure_leaves_no_staged_file_behind(self, tmp_path: Path) -> None:
+        out = tmp_path / "out"
+        harvest = tmp_path / "harvest"
+        (harvest / "logs").mkdir(parents=True)
+        with pytest.raises(FileNotFoundError):
+            prep.prepare(_CONFIG, "ppo", _SEED, out, harvest)
+        assert list(out.glob("*")) == []
+
+    def test_a_success_publishes_the_checkpoint_and_its_sidecar(self, tmp_path: Path) -> None:
+        written = prep.prepare(_CONFIG, "anatomical", _SEED, tmp_path, None)
+        assert written.is_file()
+        assert (tmp_path / f"readout_anatomical_seed{_SEED}.json").is_file()
+        assert list(tmp_path.glob("*.partial")) == []
+
+
 class TestAMissingHarvestFails:
     def test_no_log_for_a_seed_is_an_error(self, tmp_path: Path) -> None:
         # Silence here would produce an unmodified checkpoint reported as a substituted arm.

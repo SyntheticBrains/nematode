@@ -101,10 +101,11 @@ Without `anatomical_scaled` this would have read as `ppo` beating `anatomical` a
 found a better readout" — **the opposite of what the ordering shows**. The arm was added on the strength of
 the prepared checkpoints alone, before any arm ran.
 
-**The registered ordering label does not fit this pattern and is not accepted.** The harness fired "any
-change of direction helps at this scale", on the rule `max(rotated, ppo) − anatomical_scaled ≥ 1`. But
-`ppo` sits *below* `anatomical_scaled`, so "any" is false: a **random** direction helps, and PPO's hurts.
-The pattern is recorded as it is rather than as the branch named it.
+**No registered ordering label fits this pattern, and the harness reports it as `mixed`.** The label
+"any change of direction helps at this scale" requires *both* substituted directions to clear
+`anatomical_scaled`; only `rotated` does, while `ppo` sits **below** it, so "any" is false — a **random**
+direction helps and PPO's hurts, which is a different finding with a different follow-up. The pattern is
+recorded as it is rather than as a branch name.
 
 ### `ppo` is bimodal, which the mean hides
 

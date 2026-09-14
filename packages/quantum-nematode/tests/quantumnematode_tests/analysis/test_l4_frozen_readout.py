@@ -124,6 +124,31 @@ class TestBeatingAFloorIsNotLearningTheCell:
         assert out["substituted_beating_floor"] == []
         assert "R.2 becomes the live path" in out["why"]
 
+    def test_competence_without_beating_the_floor_does_not_locate_the_handicap(self) -> None:
+        # An arm clearing the cell while its own frozen control clears it just as well has not been
+        # shown to have LEARNED anything -- the readout alone would account for it -- so it cannot
+        # locate the handicap.
+        competent = ms.COMPETENT_THRESHOLD + 5.0
+        out = fr.analyse(_scanned(ppo=_arm(3.8, 3.8, clear=competent)))
+        assert out["reaching_competence"] == ["ppo"]
+        assert out["locating_the_handicap"] == []
+        assert out["verdict"] != "readout_is_the_handicap"
+
+    def test_the_baseline_reaching_competence_does_not_locate_the_handicap(self) -> None:
+        # `anatomical` carries the default readout; it becoming competent is a fact about the cell,
+        # not about substituting anything.
+        competent = ms.COMPETENT_THRESHOLD + 5.0
+        out = fr.analyse(_scanned(anatomical=_arm(15.0, 3.2, clear=competent)))
+        assert "anatomical" in out["reaching_competence"]
+        assert out["locating_the_handicap"] == []
+        assert out["verdict"] != "readout_is_the_handicap"
+
+    def test_locating_arms_are_those_that_did_both(self) -> None:
+        competent = ms.COMPETENT_THRESHOLD + 5.0
+        out = fr.analyse(_scanned(rotated=_arm(15.0, 3.2, clear=competent)))
+        assert out["locating_the_handicap"] == ["rotated"]
+        assert out["verdict"] == "readout_is_the_handicap"
+
     def test_the_baseline_beating_its_own_floor_is_not_a_substitution_result(self) -> None:
         # `anatomical` is the comparator; it clearing its own floor says nothing about the readout.
         out = fr.analyse(_scanned(anatomical=_arm(8.0, 3.2)))
@@ -155,6 +180,18 @@ class TestTheOrderingSeparatesScaleFromDirection:
             ),
         )
         assert "actively bad" in out["ordering"]["reading"]
+
+    def test_one_direction_helping_and_the_other_hurting_is_not_any_direction(self) -> None:
+        # "any change of direction helps" needs BOTH substituted directions above the anatomical one
+        # at that norm. One up and one down is a different finding with a different follow-up.
+        out = fr.analyse(
+            _scanned(
+                anatomical_scaled=_arm(8.0, 3.2),
+                rotated=_arm(12.0, 3.2),
+                ppo=_arm(5.0, 3.2),
+            ),
+        )
+        assert out["ordering"]["reading"].startswith("mixed")
 
     def test_four_alike_is_not_the_handicap(self) -> None:
         out = fr.analyse(_scanned())

@@ -328,6 +328,7 @@
       "ppo"
     ],
     "reaching_competence": [],
+    "locating_the_handicap": [],
     "ordering": {
       "levels": {
         "anatomical": 3.751333333333333,
@@ -338,7 +339,7 @@
       "span_foods": 5.887166666666667,
       "scale_gain": 4.514166666666666,
       "direction_gain": -2.142999999999999,
-      "reading": "any change of direction helps at this scale: the anatomical direction is actively bad, and the follow-up is to fix the prior rather than to credit PPO with finding something"
+      "reading": "mixed: the ordering matches no registered pattern and is reported as it is"
     },
     "verdict": "readout_helps_but_not_enough",
     "why": "anatomical_scaled, rotated, ppo beats its own floor by the registered minima without reaching competence: a result, not a rescue. R.1b stays blocked and R.2 stays live",

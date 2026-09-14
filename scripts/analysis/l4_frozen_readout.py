@@ -69,6 +69,10 @@ PPO_MATCHED_FOODS = 18.945
 PPO_REFERENCE_058 = 19.31
 MIN_FOODS = rp.MIN_FOODS
 MIN_GAP_FRACTION = rp.MIN_GAP_FRACTION
+# How far apart two arms' LEVELS must be to count as ordered, and how close to count as alike. A
+# separate constant from MIN_FOODS, which is a minimum effect size for a paired contrast against a
+# frozen control: the two answer different questions, and using one for both conflates them.
+ORDERING_TOLERANCE_FOODS = 1.0
 COMPETENCE_THRESHOLD = ms.COMPETENT_THRESHOLD
 
 _LABEL = re.compile(
@@ -190,16 +194,23 @@ def _ordering(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
     span = max(level.values()) - min(level.values())
     scale_gain = scaled - anatomical
     direction_gain = ppo - scaled
-    if span < MIN_FOODS:
+    tolerance = ORDERING_TOLERANCE_FOODS
+    if span < tolerance:
         reading = "all four alike: the readout is not the handicap"
-    elif scale_gain >= MIN_FOODS and abs(direction_gain) < MIN_FOODS:
+    elif scale_gain >= tolerance and abs(direction_gain) < tolerance:
         reading = (
             "the SCALE is what mattered -- commitment against a fixed action noise, not what is read; "
             "the follow-up is the readout-scale/action-noise interaction, not a better-grounded readout"
         )
-    elif direction_gain >= MIN_FOODS and ppo - rotated >= MIN_FOODS:
+    elif direction_gain >= tolerance and ppo - rotated >= tolerance:
         reading = "PPO's DIRECTION matters and it found a good one; the follow-up is a better-grounded readout"
-    elif max(rotated, ppo) - scaled >= MIN_FOODS:
+    elif (
+        # The registered pattern is `rotated` ~ `ppo` > `anatomical_scaled`: BOTH directions above the
+        # anatomical one at that norm, and alike. `rotated` alone clearing it is not "any change of
+        # direction helps" -- it is one direction helping and another hurting, a different finding,
+        # and it is reported as mixed rather than as this one.
+        min(rotated, ppo) - scaled >= tolerance and abs(rotated - ppo) < tolerance
+    ):
         reading = (
             "any change of direction helps at this scale: the anatomical direction is actively bad, and "
             "the follow-up is to fix the prior rather than to credit PPO with finding something"
@@ -237,12 +248,18 @@ def analyse(
         else:
             cell["verdict"] = "no_improvement"
     beat = [n for n in SUBSTITUTED if cells[n]["verdict"] == "beats_floor"]
+    # Every arm's competence is collected for the record; only a SUBSTITUTED arm that ALSO clears its
+    # own floor can locate the handicap. The baseline reaching competence would be a fact about the
+    # cell rather than about the readout, and an arm competent without clearing its floor has not been
+    # shown to have learned anything -- either would otherwise fire this verdict.
     competent = [n for n in ARMS if cells[n]["reaches_competence"]]
-    if competent:
+    locating = [n for n in beat if cells[n]["reaches_competence"]]
+    if locating:
         verdict, why = (
             "readout_is_the_handicap",
             (
-                f"{', '.join(competent)} reaches competence: the handicap is located. The repair must "
+                f"{', '.join(locating)} beats its own floor and reaches competence: the handicap "
+                "is located. The repair must "
                 "come from a better-grounded readout, not from PPO -- a rule needing a gradient-trained "
                 "tensor is not a plausible local learner"
             ),
@@ -267,6 +284,7 @@ def analyse(
         "readouts": cells,
         "substituted_beating_floor": beat,
         "reaching_competence": competent,
+        "locating_the_handicap": locating,
         "ordering": _ordering(cells),
         "verdict": verdict,
         "why": why,
