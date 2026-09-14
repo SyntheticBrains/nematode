@@ -88,7 +88,48 @@ TRACE_DECAY_GRID = (0.9, 0.99, 0.999)
 # failed, so an arm that the pinned noise was holding back is visible either side.
 ACTION_NOISE_GRID = (0.22, NOISE, 0.61, 1.0)
 PERTURBING_ARMS = frozenset({"node_perturbation", "node_perturbation_annealed"})
-ARMS = ("three_factor", "node_perturbation", "node_perturbation_annealed", "hebbian", "analytic")
+# The e-prop arms, keyed by the learning-signal routing they run. On this task there is one plastic
+# layer, one forward pass and one scalar Gaussian action, so with the readout's transpose as the
+# projection the update IS the REINFORCE gradient of that layer: `eprop_symmetric` MUST pass or the
+# implementation is wrong. `eprop_scalar` removes the per-unit signal entirely and MUST NOT pass --
+# a rule with no per-unit signal solving a cue-to-target association would mean the task is not
+# discriminating. `eprop_random` is the broadcast-alignment arm the plausibility claim rests on and
+# is required of nothing; its result bounds what the connectome campaign could show.
+EPROP_ROUTINGS = {
+    "eprop_symmetric": "symmetric",
+    "eprop_random": "random",
+    "eprop_scalar": "scalar",
+}
+# A DIAGNOSTIC, not an arm, and run on disjoint seeds: `eprop_random` with the readout plastic.
+# Feedback alignment works because the forward path to the output comes to align with B-transpose.
+# Every arm here and every connectome arm holds the readout FROZEN, so that alignment cannot
+# develop -- which would make a broadcast projection structurally unable to work rather than merely
+# unlikely to. This separates the two, and it is the only thing it is read for: the registered arms
+# keep the frozen readout, since a plastic one collapses on its own output under a Hebbian rule.
+EPROP_DIAGNOSTIC = "eprop_random_plastic_readout"
+DIAGNOSTIC_SEEDS = tuple(range(101, 109))
+# Deliberately NOT in EPROP_ROUTINGS: that mapping is what the registered control iterates, so adding
+# the diagnostic to it would make the control run 24 extra runs -- at the registered arms' FROZEN
+# readout, which is not what the diagnostic is -- and file them in the control's own table under the
+# diagnostic's name. It needs a routing for ``_build``, and that is all this second mapping is for.
+_EPROP_ROUTINGS_WITH_DIAGNOSTIC = {**EPROP_ROUTINGS, EPROP_DIAGNOSTIC: "random"}
+EPROP_ARMS = frozenset(_EPROP_ROUTINGS_WITH_DIAGNOSTIC)
+# The arm that must pass, and the arm that must not. Either expectation violated VOIDS the e-prop
+# reading rather than producing a result -- the same logic as the `analytic` and `hebbian` floors.
+EPROP_MUST_LEARN = "eprop_symmetric"
+EPROP_MUST_NOT_LEARN = "eprop_scalar"
+# The registered arms. The diagnostic is deliberately absent: it runs on its own seeds, into its own
+# record, and adding it here would fold it into the control's tables and its pass/void logic.
+ARMS = (
+    "three_factor",
+    "node_perturbation",
+    "node_perturbation_annealed",
+    "eprop_symmetric",
+    "eprop_random",
+    "eprop_scalar",
+    "hebbian",
+    "analytic",
+)
 
 
 def _actor(
@@ -160,15 +201,35 @@ def annealed_schedule(trials: int) -> NodeNoiseSchedule:
     )
 
 
-def _validate_delay(delay: int) -> None:
+def _validate_eprop_delay(arm: str, delay: int) -> None:
+    """Refuse a delayed e-prop arm, which this control cannot credit faithfully.
+
+    Under a delay the filler steps run forwards without sampling an action, and e-prop's trace is
+    given its sign by the score function of the action a step actually took. A filler step would
+    therefore either go uncredited -- leaving its eligibility to be folded in against the next
+    trial's reward -- or be credited with a signal from an action it never took. Both are wrong in
+    ways that would read as a rule behaving differently over a horizon.
+    """
+    if arm in EPROP_ARMS and delay:
+        msg = (
+            f"arm {arm!r} cannot run at delay {delay}: the filler steps take no action, so there "
+            "is no score function to give their eligibility a sign. The delayed question needs a "
+            "filler that acts, which is a change to the task rather than to the arm."
+        )
+        raise ValueError(msg)
+
+
+def _validate_delay(arm: str, delay: int) -> None:
     """Refuse a negative delay, which would run undelayed while reporting itself delayed.
 
     ``range(delay)`` is empty below zero, so the filler steps would simply not happen and the
-    record would describe a trial that never ran.
+    record would describe a trial that never ran. Also refuses a delayed e-prop arm, for the
+    reason ``_validate_eprop_delay`` gives.
     """
     if delay < 0:
         msg = f"delay must be non-negative, got {delay}"
         raise ValueError(msg)
+    _validate_eprop_delay(arm, delay)
 
 
 def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the control
@@ -183,20 +244,30 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
     homeostasis: bool,
     hidden: int = HIDDEN,
     layers: int = HIDDEN_LAYERS,
+    plastic_layers: str = "hidden",
 ) -> tuple[MLPTopology, ThreeFactorRule | None]:
     """Build the topology and the rule one arm runs over."""
     generator = torch.Generator().manual_seed(seed)
     perturbing = arm in PERTURBING_ARMS
+    eprop = arm in EPROP_ARMS
     topology = MLPTopology(
         _actor(task.n_cues, generator, hidden, layers),
         enable_activity_traces=True,
         trace_decay=trace_decay,
-        plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
+        # Frozen readout for every registered arm: a plastic one collapses on its own output under a
+        # Hebbian rule. The diagnostic is the one caller that opens it, to ask whether the frozen
+        # readout is what stops feedback alignment aligning.
+        plastic_layers=plastic_layers,
         # The variant's own perturbation, from a dedicated generator; zero for every other arm,
         # which then draws nothing and runs the forward pass unchanged.
         node_noise=node_noise if perturbing else 0.0,
         node_noise_schedule=schedule if perturbing else None,
         perturbation_seed=seed if perturbing else None,
+        # e-prop draws no perturbation at all: the trace is the activation's own derivative times
+        # the pre-synaptic rate, given its sign by a signal folded in once the action exists.
+        eligibility="eprop" if eprop else "hebbian",
+        learning_signal=_EPROP_ROUTINGS_WITH_DIAGNOSTIC.get(arm, "random"),
+        learning_signal_seed=seed if eprop else None,
     )
     if arm == "analytic":
         return topology, None
@@ -207,11 +278,31 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
         weight_bound=WEIGHT_BOUND,
         baseline_rate=BASELINE_RATE,
         freeze_updates=False,
-        modulated=arm in {"three_factor", *PERTURBING_ARMS},
-        eligibility="node_perturbation" if perturbing else "hebbian",
+        modulated=arm in {"three_factor", *PERTURBING_ARMS, *EPROP_ARMS},
+        eligibility=("node_perturbation" if perturbing else ("eprop" if eprop else "hebbian")),
         scaling=ScalingOptions(normalise_modulator=True, normalise_trace=True),
         homeostasis=homeostasis,
         device=torch.device("cpu"),
+    )
+
+
+def _credit_eprop(
+    topology: MLPTopology,
+    arm: str,
+    action: float,
+    mean: torch.Tensor,
+    noise: float,
+) -> None:
+    """Give this step's e-prop eligibility its sign; a no-op for every other arm.
+
+    The signal is the score function of the action actually taken with respect to the policy's
+    mean, ``(a - mu) / sigma ** 2``. Called before any further forward: the trace belongs to the
+    action just taken, and the topology refuses a second forward with one still pending.
+    """
+    if arm not in EPROP_ARMS:
+        return
+    topology.apply_learning_signal(
+        torch.tensor([(action - mean.item()) / noise**2], dtype=mean.dtype),
     )
 
 
@@ -230,9 +321,10 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     homeostasis: bool = True,
     hidden: int = HIDDEN,
     layers: int = HIDDEN_LAYERS,
+    plastic_layers: str = "hidden",
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
-    _validate_delay(delay)
+    _validate_delay(arm, delay)
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     perturbing = arm in PERTURBING_ARMS
@@ -247,6 +339,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         homeostasis=homeostasis,
         hidden=hidden,
         layers=layers,
+        plastic_layers=plastic_layers,
     )
 
     rewards: list[float] = []
@@ -276,6 +369,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         observation = torch.from_numpy(task.observation(cue))
         mean = topology(observation).squeeze()
         action = float(mean.item() + noise * rng.standard_normal())
+        _credit_eprop(topology, arm, action, mean, noise)
         reward = task.reward(cue, action)
         rewards.append(reward)
 
@@ -340,8 +434,11 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         "hidden": hidden,
         "layers": layers,
         "perturbed_units": hidden * layers,
+        # Which layers the rule may write. Every registered arm holds the readout frozen; the
+        # diagnostic is the one caller that does not, and the row has to say which it was.
+        "plastic_layers": plastic_layers,
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
-        "rate": rate if arm in {"three_factor", *PERTURBING_ARMS} else None,
+        "rate": rate if arm in {"three_factor", *PERTURBING_ARMS, *EPROP_ARMS} else None,
         "node_noise": node_noise if perturbing else None,
         # The knobs this run pinned or varied, so a row describes its own settings.
         "delay": delay,
@@ -446,6 +543,22 @@ def analyse(
         "passes": any(v["passes"] for v in rates.values()),
         "pinned_rate": str(PLASTICITY_RATE),
     }
+    for arm, routing in EPROP_ROUTINGS.items():
+        by_rate = {
+            str(rate): assess(
+                [r["score"] for r in runs if r["arm"] == arm and r["rate"] == rate],
+                floor,
+                optimum,
+            )
+            for rate in RATE_GRID
+        }
+        by_arm[arm] = {
+            "routing": routing,
+            "by_rate": by_rate,
+            # Any rate passing counts, as for every other arm here: the claim under test is
+            # whether the routing learns at all, and a fail must not be a rate artefact.
+            "passes": any(v["passes"] for v in by_rate.values()),
+        }
 
     void_reason = None
     if not by_arm["analytic"]["passes"]:
@@ -462,6 +575,31 @@ def analyse(
     # answer. A variant arm carries its own `passes` flag and is read from there, so that adding
     # an arm can never change what the control says about the rule it was built for.
     outcome = "void" if void_reason else ("pass" if by_arm["three_factor"]["passes"] else "fail")
+    # e-prop's own reading, kept SEPARATE from `outcome` for the same reason: its two required
+    # expectations are about the e-prop implementation and the task's discriminating power under
+    # it, and neither bears on the rule this control was registered for.
+    eprop_void = None
+    if not by_arm[EPROP_MUST_LEARN]["passes"]:
+        eprop_void = (
+            f"{EPROP_MUST_LEARN} did not pass: on one plastic layer, one forward pass and one "
+            "scalar Gaussian action its update IS the REINFORCE gradient of that layer, so the "
+            "implementation is at fault -- the derivative, the score function or the fold-in -- "
+            "and no e-prop arm here or on any other substrate is interpretable"
+        )
+    elif by_arm[EPROP_MUST_NOT_LEARN]["passes"]:
+        eprop_void = (
+            f"{EPROP_MUST_NOT_LEARN} passed: a rule with no per-unit learning signal solved a "
+            "cue-to-target association, so the task does not discriminate the signal from the "
+            "dynamics-derived trace and no e-prop arm here is interpretable"
+        )
+    by_arm["eprop"] = {
+        "reading": "void" if eprop_void else "valid",
+        "void_reason": eprop_void,
+        # Reported in EVERY branch, not only the valid one: the broadcast-alignment arm is the one
+        # the plausibility claim rests on, and its position bounds what the connectome campaign
+        # could show whether or not the control held.
+        "broadcast_passes": by_arm["eprop_random"]["passes"],
+    }
 
     diagnosis = {arm: _diagnose(runs, arm) for arm in ARMS}
     # Per rate as well as pooled: a rule whose alignment depended on the rate would be a
@@ -490,6 +628,11 @@ def analyse(
             "pass_seeds": PASS_SEEDS,
             "pass_fraction_of_gap": PASS_FRACTION,
             "note": "any rate passing counts; the claim under test is that the rule learns at all",
+            # e-prop's two required expectations, recorded so the record states what would have
+            # voided it rather than only whether it was voided.
+            "eprop_must_learn": EPROP_MUST_LEARN,
+            "eprop_must_not_learn": EPROP_MUST_NOT_LEARN,
+            "eprop_routings": dict(EPROP_ROUTINGS),
         },
         "arms": by_arm,
         "diagnosis": diagnosis,
@@ -538,6 +681,21 @@ def _diagnose(
     return out
 
 
+def _print_diagnostic(out: dict[str, Any]) -> None:
+    """Print the diagnostic, with what it is not stated beside what it is."""
+    task = out["task"]
+    print(f"\nDIAGNOSTIC (not an arm): {out['arm']}, seeds {out['seeds'][0]}-{out['seeds'][-1]}")
+    print(f"  {out['question']}")
+    print(f"  floor {task['cue_blind_floor']:.4f}   optimum {task['optimum']:.4f}")
+    for rate, row in out["by_rate"].items():
+        print(
+            f"  rate {rate:>8} mean {row['mean']:+.4f}  {row['seeds_above_floor']}/{row['n']} "
+            f"above floor  -> {'passes' if row['passes'] else 'does not pass'}",
+        )
+    print(f"  reading: {'passes at some rate' if out['passes'] else 'does not pass at any rate'}")
+    print(f"  {out['not_an_arm']}")
+
+
 def _print_control(out: dict[str, Any]) -> None:
     """Print the control, floors first."""
     task = out["task"]
@@ -556,6 +714,25 @@ def _print_control(out: dict[str, Any]) -> None:
             f"  {arm:12} mean {row['mean']:+.4f}  {row['seeds_above_floor']}/{row['n']} above "
             f"floor  alignment {alignment:+.4f}  "
             f"-> {'passes' if row['passes'] else 'does not pass'}",
+        )
+    eprop = out["arms"]["eprop"]
+    print(f"  e-prop reading: {eprop['reading']}")
+    if eprop["void_reason"]:
+        print(f"    {eprop['void_reason']}")
+    for arm in EPROP_ROUTINGS:
+        row = out["arms"][arm]
+        rates = ", ".join(
+            f"{rate} {'pass' if row['by_rate'][rate]['passes'] else 'fail'}"
+            for rate in row["by_rate"]
+        )
+        required = (
+            " (MUST learn)"
+            if arm == EPROP_MUST_LEARN
+            else (" (MUST NOT learn)" if arm == EPROP_MUST_NOT_LEARN else "")
+        )
+        print(
+            f"  {arm:17} [{row['routing']}]{required}  "
+            f"-> {'passes' if row['passes'] else 'does not pass'}   {rates}",
         )
     print("  three_factor by rate:")
     for rate, row in out["arms"]["three_factor"]["by_rate"].items():
@@ -632,12 +809,69 @@ def write_per_seed_csv(runs: list[dict[str, Any]], path: Path) -> None:
             )
 
 
+def run_diagnostic(trials: int) -> dict[str, Any]:
+    """Run the plastic-readout diagnostic on disjoint seeds and score it against the same bars.
+
+    Its question is narrow: is holding the readout FROZEN what stops a broadcast projection working.
+    Feedback alignment needs the forward path to the output to come into alignment with
+    B-transpose, and a frozen readout cannot. If this passes where ``eprop_random`` failed, that
+    arm's failure has a structural cause rather than an unexplained one; if it fails too, the
+    projection is not what the frozen readout was costing.
+
+    Disjoint seeds, its own record, and NOT part of the control's tables or its pass/void logic: it
+    is a diagnostic, and the registered arms keep the frozen readout either way.
+    """
+    task = ContextualAssociation.default()
+    floor, optimum = task.cue_blind_floor(NOISE), task.optimum(NOISE)
+    runs = [
+        run_arm(
+            EPROP_DIAGNOSTIC,
+            seed,
+            task,
+            rate=rate,
+            trials=trials,
+            plastic_layers="all",
+        )
+        for seed in DIAGNOSTIC_SEEDS
+        for rate in RATE_GRID
+    ]
+    by_rate = {
+        str(rate): assess([r["score"] for r in runs if r["rate"] == rate], floor, optimum)
+        for rate in RATE_GRID
+    }
+    return {
+        "arm": EPROP_DIAGNOSTIC,
+        "seeds": list(DIAGNOSTIC_SEEDS),
+        "trials": trials,
+        "plastic_layers": "all",
+        "by_rate": by_rate,
+        "passes": any(v["passes"] for v in by_rate.values()),
+        "task": {"cue_blind_floor": floor, "optimum": optimum},
+        "question": (
+            "is a frozen readout what stops a broadcast projection working: feedback alignment "
+            "needs the forward path to the output to align with B-transpose, and a frozen readout "
+            "cannot"
+        ),
+        "not_an_arm": (
+            "a diagnostic on disjoint seeds. The registered arms hold the readout frozen, since a "
+            "plastic one collapses on its own output under a Hebbian rule, and this changes nothing "
+            "the control says about any of them"
+        ),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the control and write its records."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--trials", type=int, default=TRIALS)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--csv", type=Path)
+    parser.add_argument(
+        "--diagnostic-out",
+        type=Path,
+        default=None,
+        help="run ONLY the plastic-readout diagnostic, on disjoint seeds, and write its record here",
+    )
     args = parser.parse_args(argv)
 
     # The annealed arm decays over the first half of its budget and is scored on the last
@@ -652,6 +886,15 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.diagnostic_out:
+        diagnostic = run_diagnostic(args.trials)
+        _print_diagnostic(diagnostic)
+        args.diagnostic_out.parent.mkdir(parents=True, exist_ok=True)
+        args.diagnostic_out.write_text(
+            json.dumps(_jsonable(diagnostic), indent=2, sort_keys=True, allow_nan=False) + "\n",
+        )
+        return 0
 
     task = ContextualAssociation.default()
     runs: list[dict[str, Any]] = []
@@ -674,6 +917,11 @@ def main(argv: list[str] | None = None) -> int:
             run_arm("node_perturbation", seed, task, trials=args.trials, node_noise=node_noise)
             for node_noise in NODE_NOISE_GRID
         )
+        runs.extend(
+            run_arm(arm, seed, task, rate=rate, trials=args.trials)
+            for arm in EPROP_ROUTINGS
+            for rate in RATE_GRID
+        )
     out = analyse(runs, task, trials=args.trials)
     _print_control(out)
     if args.out:
@@ -687,8 +935,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.csv:
         write_per_seed_csv(runs, args.csv)
     # A `fail` is a valid experimental result and exits zero; a `void` means the control itself
-    # did not hold and needs rebuilding, which is an operational failure.
-    return 1 if out["outcome"] == "void" else 0
+    # did not hold and needs rebuilding, which is an operational failure. e-prop's reading voids
+    # on its own terms -- its required-pass arm failing means the implementation is wrong -- and
+    # is a stop clause on the connectome campaign, so it exits non-zero too.
+    voided = out["outcome"] == "void" or out["arms"]["eprop"]["reading"] == "void"
+    return 1 if voided else 0
 
 
 if __name__ == "__main__":

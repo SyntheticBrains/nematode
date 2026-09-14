@@ -380,6 +380,20 @@ class MLPPPOBrain(ClassicalBrain):
                 "readout, and a dense layer has no wiring to measure it over."
             )
             raise ValueError(msg)
+        if config.plasticity_eligibility == "eprop":
+            # Checked here, above the rule selection, for the same reason as the perturbation set:
+            # a `learning_rule: ppo` config declaring it would otherwise run unrestricted. e-prop
+            # needs its learning signal folded in once per environment step, immediately after the
+            # action is sampled, and this brain has no such call site -- the topology supports the
+            # mode so the rule's positive control can drive it directly, and the refusal here is
+            # what stops a config running with an eligibility that nothing ever credits.
+            msg = (
+                "plasticity_eligibility='eprop' is not available on this brain: its learning "
+                "signal must be folded in once per environment step after the action is sampled, "
+                "and this brain has no call site for it. The topology supports the mode for the "
+                "rule's positive control, which drives it directly."
+            )
+            raise ValueError(msg)
         self.freeze_updates = config.freeze_updates
         self._uses_ppo = config.learning_rule == "ppo"
         self.topology = MLPTopology(

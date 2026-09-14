@@ -35,10 +35,14 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._plasticity_config import (
+    READOUT_RESTRICTED_ROUTINGS,
     RESTRICTED_PERTURBATION_SETS,
     UNMODULATED_RULES,
+    EligibilityMode,
+    LearningSignalRouting,
     PerturbationSet,
     PlasticityConfigMixin,
+    PlasticTensors,
 )
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
@@ -278,6 +282,55 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _reject_unsupported_eprop(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse an e-prop configuration this build cannot honour.
+
+    Split from the general guard to keep each one readable; called from it, so a config built by
+    ``model_copy`` -- which skips every validator -- is still held to these.
+    """
+    if config.plasticity_eligibility != "eprop":
+        return
+    if config.plasticity_node_noise != 0.0:
+        msg = (
+            "plasticity_eligibility='eprop' requires plasticity_node_noise=0.0: e-prop's "
+            "trace is built from the unperturbed forward dynamics, and a perturbation would "
+            "change the pass the trace describes while contributing nothing to it."
+        )
+        raise ValueError(msg)
+    if config.plasticity_perturbation_set != "full":
+        msg = (
+            "plasticity_eligibility='eprop' does not accept "
+            f"plasticity_perturbation_set={config.plasticity_perturbation_set!r}: there is "
+            "no perturbation to restrict. What the learning signal can reach is set by "
+            "plasticity_learning_signal."
+        )
+        raise ValueError(msg)
+    if config.plasticity_learning_signal is None:
+        msg = (
+            "plasticity_eligibility='eprop' requires plasticity_learning_signal: the routing "
+            "decides which units the learning signal can reach, so it is the arm and must be "
+            "stated rather than inherited from a default."
+        )
+        raise ValueError(msg)
+    if config.plasticity_plastic_readout and config.freeze_updates:
+        # Not an error in the rule -- a freeze writes nothing either way -- but an arm declaring a
+        # plastic readout AND a freeze reads as a plastic-readout floor, which is not a thing: the
+        # floor is shared, because with no update no tensor moves.
+        msg = (
+            "plasticity_plastic_readout with freeze_updates=true would be reported as a "
+            "plastic-readout floor, and there is no such arm: with no update no tensor moves, so "
+            "one frozen floor serves every arm."
+        )
+        raise ValueError(msg)
+    if config.action_mode != "continuous":
+        msg = (
+            "plasticity_eligibility='eprop' is implemented for the continuous head only: "
+            "the learning signal is the Gaussian score function, and a categorical head "
+            "needs its own (onehot - probs), which this build does not derive."
+        )
+        raise ValueError(msg)
+
+
 def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> None:
     """Refuse plasticity modes this build cannot honour, before anything is constructed.
 
@@ -317,6 +370,7 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
             "plasticity_node_noise: with no perturbation the eligibility is identically zero."
         )
         raise ValueError(msg)
+    _reject_unsupported_eprop(config)
     final = config.plasticity_node_noise_final
     episodes = config.plasticity_node_noise_anneal_episodes
     if (final is None) != (episodes is None):
@@ -405,6 +459,13 @@ class ConnectomeTopology(nn.Module):
     # Declared at class level like the other buffers so attribute access is typed as a
     # tensor rather than falling through Module.__getattr__ to Tensor | Module.
     _perturbation_mask: torch.Tensor
+    # Allocated only under the e-prop eligibility; declared here so attribute access is typed as
+    # a tensor rather than falling through Module.__getattr__.
+    eprop_trace: torch.Tensor
+    feedback: torch.Tensor
+    readout_trace: torch.Tensor
+    readout_post: torch.Tensor
+    pooled_motor: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -416,6 +477,13 @@ class ConnectomeTopology(nn.Module):
         node_noise_schedule: NodeNoiseSchedule | None = None,
         perturbation_seed: int | None = None,
         perturbation_set: PerturbationSet = "full",
+        eligibility: EligibilityMode = "hebbian",
+        # None is what an unset config carries; required under "eprop" and refused otherwise, so
+        # the arm is never inherited from a default. See PlasticityConfigMixin.
+        learning_signal: LearningSignalRouting | None = None,
+        learning_signal_seed: int | None = None,
+        plastic_readout: bool = False,
+        plastic_tensors: PlasticTensors = "all",
         n_food_features: int,
         enforce_strict_mask: bool,
         enable_predator_projection: bool,
@@ -454,6 +522,22 @@ class ConnectomeTopology(nn.Module):
         # schedules existed still loads.
         self._node_noise_schedule = node_noise_schedule
         self.perturbation_set = perturbation_set
+        # What the eligibility carries. Under "eprop" nothing is perturbed: the trace is built
+        # from the settling dynamics -- the activation's own derivative times the pre-synaptic
+        # rate, summed over the settling steps -- and is given its sign afterwards by a learning
+        # signal folded in once the action is sampled.
+        self.eligibility = eligibility
+        self.learning_signal = learning_signal
+        self._learning_signal_seed = learning_signal_seed
+        # Whether the motor readout is plastic too. Its post-synaptic units ARE the action
+        # dimensions, so its learning signal is the identity and its eligibility is its exact
+        # gradient -- no projection, no truncation. Excluded from the homeostatic rescale, because
+        # that returns each unit's incoming norm to construction and the readout's SCALE is part of
+        # what a plastic readout is asked about.
+        self.plastic_readout = plastic_readout
+        self.plastic_tensors = plastic_tensors
+        # Whether a forward's eligibility is still waiting for that signal.
+        self._eprop_pending = False
         self._schedule_steps_begun = 0
         self._perturbation_generator = torch.Generator()
         if perturbation_seed is not None:
@@ -868,6 +952,102 @@ class ConnectomeTopology(nn.Module):
                 "prev_activity_valid",
                 torch.zeros((), dtype=torch.bool, device=device),
             )
+            if eligibility == "eprop":
+                # The step's UNSIGNED eligibility, sum_s h_i^(s) * psi_j^(s+1), indexed
+                # [pre i, post j] like the trace it feeds. Held between the forward and the
+                # learning signal that gives it a sign; transient like every other per-step
+                # buffer, so a checkpoint written under another eligibility loads unchanged.
+                self.register_buffer(
+                    "eprop_trace",
+                    torch.zeros(self.n_neurons, self.n_neurons, device=device),
+                )
+                self._build_feedback(learning_signal, learning_signal_seed, device)
+                if plastic_readout:
+                    # The readout's eligibility, indexed like the readout itself: [action, class].
+                    # Transient, like every other per-step buffer.
+                    self.register_buffer(
+                        "readout_trace",
+                        torch.zeros_like(self.readout),
+                    )
+                    # The action mean the trace's post-synaptic factor was built from, kept so a
+                    # rule term reading it and the trace agree on the step.
+                    self.register_buffer(
+                        "readout_post",
+                        torch.zeros(self.readout.shape[0], device=device),
+                    )
+                    # The pooled motor-class means, which are the readout's PRE-synaptic factor.
+                    self.register_buffer(
+                        "pooled_motor",
+                        torch.zeros(self.readout.shape[1], device=device),
+                    )
+
+    def _build_feedback(
+        self,
+        routing: LearningSignalRouting | None,
+        seed: int | None,
+        device: torch.device,
+    ) -> None:
+        """Build the feedback projection the learning signal arrives through, and persist it.
+
+        ``(n_neurons, action_dim)``. Persisted rather than transient: a reloaded policy that
+        redrew its projection would be learning against a different feedback path than the one
+        it was trained with, and nothing in the run would say so.
+
+        ``symmetric`` takes it from the readout, THROUGH the mean-pool::
+
+            B[j, k] = readout[k, class(j)] / |class(j)|      j in a motor class
+                    = 0                                     otherwise
+
+        The zero is the arm's defining property, not an omission. The readout reads only the
+        pooled motor classes, and e-prop drops the multi-hop paths by which any other unit
+        reaches the action, so under this eligibility a true-gradient signal cannot reach them
+        at all: the arm is restricted to the readout pool. ``random_motor`` is ``random``'s draw
+        masked to exactly those units, which is what makes the two comparable at matched
+        breadth. ``scalar`` needs no projection -- its signal is 1 everywhere -- and registers
+        none.
+        """
+        if routing is None:
+            msg = (
+                "the e-prop eligibility needs a learning-signal routing: the routing decides "
+                "which units the signal can reach at all, so there is no sensible default."
+            )
+            raise ValueError(msg)
+        if routing in ("scalar", "symmetric"):
+            # Neither has a projection to draw. "scalar" has none at all; "symmetric" is a
+            # function of the readout, which is set AFTER the topology is built (the anatomical
+            # contrast overwrites the orthogonal draw) and may be substituted by a loaded
+            # checkpoint, so caching it here would freeze a readout the arm never runs with.
+            # ``learning_signal_projection`` derives it live instead.
+            return
+        action_dim = int(self.readout.shape[0])
+        generator = torch.Generator()
+        if seed is not None:
+            generator.manual_seed(seed)
+        # Drawn on the generator's own device and moved, as the perturbation is: a CPU generator
+        # cannot fill a non-CPU tensor. The full draw happens for both routings so the two differ
+        # by the mask alone at one seed.
+        feedback = torch.randn(
+            (self.n_neurons, action_dim),
+            generator=generator,
+            dtype=self.readout.dtype,
+        ).to(device)
+        if routing == "random_motor":
+            reached = torch.zeros(self.n_neurons, dtype=torch.bool, device=device)
+            reached[self._motor_flat_indices] = True
+            feedback = feedback * reached.unsqueeze(1)
+        if routing in READOUT_RESTRICTED_ROUTINGS:
+            # The property that makes these arms what they are, checked rather than trusted: a
+            # projection that leaked outside the pool would make the arm a broad one under a
+            # restricted name, and nothing in the results would say so.
+            outside = torch.ones(self.n_neurons, dtype=torch.bool, device=device)
+            outside[self._motor_flat_indices] = False
+            if bool(feedback[outside].abs().any()):
+                msg = (
+                    f"learning_signal={routing!r} must reach only the readout pool, but its "
+                    "projection is non-zero outside it."
+                )
+                raise AssertionError(msg)
+        self.register_buffer("feedback", feedback)
 
     def apply_weight_mask(self, weights: torch.Tensor) -> torch.Tensor:
         """Project a candidate weight tensor onto the strict-mask manifold.
@@ -889,30 +1069,84 @@ class ConnectomeTopology(nn.Module):
     # Each is the live tensor object, not a copy: the rule updates
     # plastic_weights[0] in place and that IS w_chem.
 
+    def _plastic_entries(self) -> list[str]:
+        """Which tensors this topology exposes to the rule, in a fixed order.
+
+        One place decides, and every aligned list below derives from it: five parallel branches over
+        the same two switches is how a trace comes to be paired with another tensor's mask.
+
+        ``chemical`` is the substrate's own weights and is present unless an arm withholds them.
+        ``readout`` is present only when the readout is plastic. ``readout_only`` withholds the
+        chemical matrix, which is the control a plastic-readout result needs: the readout is an
+        8-parameter linear map over four pooled motor-class means, so "a local rule learns this
+        substrate" and "a small linear readout on frozen recurrent features learns this cell"
+        predict the same success, and the difference between the two arms is what the substrate's
+        own plasticity contributes.
+        """
+        # Every list below picks LAZILY from this: the readout's buffers exist only for a
+        # plastic-readout arm and the chemical trace only when traces are on, so a dict literal
+        # naming both would raise on the arms that have neither.
+        entries: list[str] = []
+        if not (self.plastic_readout and self.plastic_tensors == "readout_only"):
+            entries.append("chemical")
+        if self.plastic_readout:
+            entries.append("readout")
+        return entries
+
     @property
     def plastic_weights(self) -> list[torch.Tensor]:
-        """The chemical synapse matrix -- the one tensor plasticity may change."""
-        return [self.w_chem]
+        """The tensors plasticity may change: the chemical matrix, and the readout when plastic."""
+        return [
+            self.w_chem if name == "chemical" else self.readout for name in self._plastic_entries()
+        ]
 
     @property
     def eligibility_traces(self) -> list[torch.Tensor]:
-        """The per-synapse trace aligned with ``plastic_weights``.
+        """The traces aligned with ``plastic_weights``.
 
         Only meaningful when traces are enabled; the rule checks the flag
         first and refuses to step without one, so this never reads an
         unallocated buffer in practice.
         """
-        return [self.activity_traces]
+        return [
+            self.activity_traces if name == "chemical" else self.readout_trace
+            for name in self._plastic_entries()
+        ]
 
     @property
     def plastic_masks(self) -> list[torch.Tensor]:
-        """The chemical edge mask aligned with ``plastic_weights``."""
-        return [self.m_chem]
+        """The edge masks aligned with ``plastic_weights``.
+
+        The readout is dense -- every entry maps a motor class to an action dimension -- so its mask
+        is all-true rather than absent, which keeps the rule's mask-dependent telemetry meaning the
+        same thing for both tensors.
+        """
+        return [
+            self.m_chem if name == "chemical" else torch.ones_like(self.readout, dtype=torch.bool)
+            for name in self._plastic_entries()
+        ]
 
     @property
     def plastic_fan_in_axes(self) -> list[int]:
-        """The chemical matrix is ``[pre, post]``: a neuron's incoming synapses are a column."""
-        return [0]
+        """Per plastic weight, the axis to reduce over for one unit's incoming weights.
+
+        The chemical matrix is ``[pre, post]``, so a neuron's incoming synapses are a column. The
+        readout is ``[action, class]``: its post-synaptic units are the action dimensions on axis 0,
+        so one unit's incoming weights are a ROW and the fan-in axis is 1.
+        """
+        return [0 if name == "chemical" else 1 for name in self._plastic_entries()]
+
+    @property
+    def plastic_homeostasis(self) -> list[bool]:
+        """Per plastic weight, whether the homeostatic rescale applies.
+
+        The chemical matrix is under it, as every recorded arm has been. The readout is NOT: the
+        rescale returns each unit's incoming norm to its construction value, and the readout's own
+        norm is part of what a plastic readout is asked about -- R.1d measured +4.51 foods from that
+        scale alone with the direction held. Pinning it would leave the arm able to rotate the
+        readout and not to resize it, which is half the question.
+        """
+        return [name == "chemical" for name in self._plastic_entries()]
 
     def _readout_hop_distances(self, motor_indices: list[int]) -> torch.Tensor:
         """Hops from each unit to the nearest readout neuron, over directed chemical edges.
@@ -1092,14 +1326,18 @@ class ConnectomeTopology(nn.Module):
 
     @property
     def plastic_post_activities(self) -> list[torch.Tensor]:
-        """The activity the trace's post-synaptic factor was built from.
+        """The activity each trace's post-synaptic factor was built from.
 
         ``[pre, post]`` puts the post-synaptic units on axis 1. ``prev_activity``
         holds the state the last trace step took as its post-synaptic factor and
         the next step will take as its pre-synaptic one, so it is that vector
-        exactly -- a view over state the trace update already keeps.
+        exactly -- a view over state the trace update already keeps. The readout's
+        post-synaptic units are the action dimensions, so its vector is the action mean.
         """
-        return [self.prev_activity]
+        return [
+            self.prev_activity if name == "chemical" else self.readout_post
+            for name in self._plastic_entries()
+        ]
 
     def set_anatomical_readout(self) -> None:
         """Overwrite the motor readout with the contrast its pools imply.
@@ -1179,11 +1417,118 @@ class ConnectomeTopology(nn.Module):
             self.activity_traces.zero_()
             self.prev_activity.zero_()
             self.prev_activity_valid.fill_(False)  # noqa: FBT003 — buffer write, not a flag arg
+            if self.eligibility == "eprop":
+                self.eprop_trace.zero_()
+                if self.plastic_readout:
+                    self.readout_trace.zero_()
+                # An episode boundary is the one place a pending eligibility is legitimately
+                # dropped: the step it belonged to has no further reward coming.
+                self._eprop_pending = False
         # Outside the trace guard: perturbation is a property of the forward pass, not of the
         # trace, so a topology perturbing with traces disabled must still start each episode
         # with the previous one's perturbation cleared.
         if self.node_noise > 0.0:
             self.node_perturbation.zero_()
+
+    def _reject_pending_eligibility(self) -> None:
+        """Refuse a forward whose predecessor's eligibility was never credited.
+
+        Silent otherwise: the stale trace would be folded in against the wrong step's reward and
+        read as a rule that learns slowly rather than as a call site that was missed.
+        """
+        if self._eprop_pending:
+            msg = (
+                "the previous step's e-prop eligibility was never credited: "
+                "apply_learning_signal must be called once per environment step, immediately "
+                "after the action is sampled. Crediting it against this step's reward would "
+                "attribute that reward to the previous step's dynamics."
+            )
+            raise RuntimeError(msg)
+
+    def _store_readout_factors(self, pooled: torch.Tensor, mean: torch.Tensor) -> None:
+        """Hold the readout's pre-synaptic factor and the action it produced.
+
+        ``mean`` is the Gaussian mean in continuous mode, which is what the score function is taken
+        with respect to. A no-op unless the readout is plastic.
+        """
+        if not (self.plastic_readout and self.enable_activity_traces):
+            return
+        with torch.no_grad():
+            self.pooled_motor.copy_(pooled.detach())
+            self.readout_post.copy_(mean.detach())
+
+    def _store_eprop(self, eprop: torch.Tensor | None) -> None:
+        """Hold the settling's unsigned eligibility until the learning signal arrives."""
+        if eprop is None:
+            return
+        with torch.no_grad():
+            self.eprop_trace.copy_(self.apply_weight_mask(eprop))
+            self._eprop_pending = True
+
+    def learning_signal_projection(self) -> torch.Tensor | None:
+        """Derive the projection the learning signal arrives through: ``(n_neurons, action_dim)``.
+
+        ``None`` under the ``scalar`` routing, which has no projection: its signal is 1 everywhere.
+
+        Under ``symmetric`` this is derived from the readout on every call rather than cached,
+        because the readout is written after the topology is built -- the anatomical contrast
+        overwrites the orthogonal draw -- and can be substituted by a loaded checkpoint. A cached
+        projection would be the transpose of a readout the arm never ran with, which is a silent
+        way to be almost right.
+        """
+        if self.learning_signal == "scalar":
+            return None
+        if self.learning_signal != "symmetric":
+            return self.feedback
+        projection = torch.zeros(
+            (self.n_neurons, int(self.readout.shape[0])),
+            dtype=self.readout.dtype,
+            device=self.readout.device,
+        )
+        with torch.no_grad():
+            for class_index, (start, stop) in enumerate(self._motor_class_slices):
+                members = self._motor_flat_indices[start:stop]
+                # The pool is a MEAN, so a member carries 1 / |class| of its class's influence on
+                # the action -- and a unit in no class carries none, which is the arm.
+                projection[members] = self.readout[:, class_index].detach() / float(stop - start)
+        return projection
+
+    def apply_learning_signal(self, score: torch.Tensor) -> None:
+        """Fold the step's learning signal into the eligibility trace.
+
+        ``score`` is the derivative of the action log-probability with respect to the action
+        mean -- for the continuous head, ``(u - mu) / sigma ** 2`` at the PRE-SQUASH draw. The
+        per-unit signal is ``L = B @ score`` and the trace takes ``eps * L`` along the
+        post-synaptic axis, which for a ``[pre, post]`` trace is axis 1.
+
+        A no-op unless the eligibility is e-prop's, so every other mode pays one attribute read.
+        """
+        if not self.enable_activity_traces or self.eligibility != "eprop":
+            return
+        with torch.no_grad():
+            flat = score.detach().reshape(-1).to(self.eprop_trace.dtype)
+            projection = self.learning_signal_projection()
+            if projection is None:
+                # L_j = 1 everywhere: the ablation. The update's only dependence on the outcome
+                # is then the scalar modulator the rule applies at update time.
+                signal = torch.ones(
+                    self.n_neurons,
+                    dtype=self.eprop_trace.dtype,
+                    device=self.eprop_trace.device,
+                )
+            else:
+                signal = projection.to(self.eprop_trace.dtype) @ flat
+            self.activity_traces.mul_(self.trace_decay).add_(
+                self.apply_weight_mask(self.eprop_trace * signal.unsqueeze(0)),
+            )
+            if self.plastic_readout:
+                # The readout's own eligibility is EXACT, and is the one place in this mechanism
+                # where nothing is approximated: its post-synaptic units are the action dimensions,
+                # so the signal reaching unit k is the score's own k-th component -- the identity --
+                # and d mu_k / d readout[k, c] is the pooled mean of class c. No projection, no
+                # truncation, no dropped paths.
+                self.readout_trace.mul_(self.trace_decay).add_(torch.outer(flat, self.pooled_motor))
+        self._eprop_pending = False
 
     def state_dependent_log_std(self, hidden: torch.Tensor) -> torch.Tensor:
         """Per-state ``log_std`` from the settled hidden state.
@@ -1350,6 +1695,12 @@ class ConnectomeTopology(nn.Module):
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
         perturbation = None
+        # e-prop's unsigned eligibility, accumulated across the settling steps. Allocated lazily
+        # rather than held in the buffer as it grows, so a step that raises part-way leaves the
+        # buffer at the last complete step rather than half-written.
+        eprop = None
+        accumulate_eprop = self.enable_activity_traces and self.eligibility == "eprop"
+        self._reject_pending_eligibility()
         # One scale for the whole episode's settling steps: the schedule is indexed by
         # episode, so every step within one draws at the same magnitude.
         scale = self.current_node_noise
@@ -1378,7 +1729,18 @@ class ConnectomeTopology(nn.Module):
                     step_noise = step_noise * self._perturbation_mask[settling_step]
                 perturbation = step_noise if perturbation is None else perturbation + step_noise
                 preact = preact + step_noise
+            if accumulate_eprop:
+                with torch.no_grad():
+                    # psi_j at THIS step against h_i at the step before it: the local part of
+                    # d h_j / d w_ij, which is what e-prop keeps. The paths through other units
+                    # are dropped -- that truncation is the method, and on this substrate it is
+                    # what leaves a unit more than one hop from the readout creditable only
+                    # through a learning signal that does not come from the readout.
+                    psi = 1.0 - torch.tanh(preact.detach()) ** 2
+                    term = torch.outer(h.detach(), psi)
+                    eprop = term if eprop is None else eprop + term
             h = torch.tanh(preact)
+        self._store_eprop(eprop)
         if perturbation is not None:
             with torch.no_grad():
                 # The unit's total perturbation over the settling, which is what its activity
@@ -1402,7 +1764,7 @@ class ConnectomeTopology(nn.Module):
         # also lands here and would update E if traces were enabled; no
         # diagnostic path enables them). The batched (PPO replay) forward
         # never touches E or the previous state.
-        if self.enable_activity_traces:
+        if self.enable_activity_traces and self.eligibility != "eprop":
             with torch.no_grad():
                 if self.prev_activity_valid:
                     # Masking routes through apply_weight_mask — the Protocol's
@@ -1424,6 +1786,7 @@ class ConnectomeTopology(nn.Module):
         motor_acts = self._pool_motor(h)
         # (num_actions,) discrete logits, or (2,) continuous Gaussian mean.
         logits = self.readout @ motor_acts
+        self._store_readout_factors(motor_acts, logits)
         return logits, h
 
     def _inject_predator_batched(
@@ -1683,6 +2046,11 @@ class ConnectomePPOBrain(ClassicalBrain):
             node_noise_schedule=config.node_noise_schedule(),
             perturbation_seed=self.seed,
             perturbation_set=config.plasticity_perturbation_set,
+            eligibility=config.plasticity_eligibility,
+            learning_signal=config.plasticity_learning_signal,
+            learning_signal_seed=self.seed,
+            plastic_readout=config.plasticity_plastic_readout,
+            plastic_tensors=config.plasticity_plastic_tensors,
             n_food_features=self._n_food_features,
             enforce_strict_mask=(config.chemical_mask_mode == "strict"),
             enable_predator_projection=config.enable_predator_projection,
@@ -2155,6 +2523,14 @@ class ConnectomePPOBrain(ClassicalBrain):
             mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
         continuous_mean = (mean_vec[0].item(), mean_vec[1].item())
 
+        # e-prop's learning signal, folded in the moment the action exists. The score function
+        # of the tanh-squashed Gaussian with respect to its MEAN is (u - mu) / sigma**2 at the
+        # PRE-SQUASH draw: the squash's log-determinant correction depends on u but not on mu, so
+        # it contributes nothing here. A no-op under every other eligibility.
+        with torch.no_grad():
+            score = (pre_tanh.detach() - mean.detach()) / torch.exp(2.0 * log_std.detach())
+        self.topology.apply_learning_signal(score)
+
         self._pending_state = state
         self._pending_action = pre_tanh.detach().cpu().numpy()
         self._pending_log_prob = log_prob
@@ -2287,7 +2663,8 @@ class ConnectomePPOBrain(ClassicalBrain):
         ``"training_state"``
             The std mode (so cross-mode loads fail), the learning rule, the wiring,
             the initialisation and the connectome source, recorded for the file's
-            reader; none of them is enforced on load except the std mode.
+            reader; and the plasticity identity -- eligibility, learning-signal
+            routing, and the two readout switches -- which IS enforced on load.
         """
         all_components: dict[str, WeightComponent] = {
             "topology": WeightComponent(
@@ -2308,6 +2685,16 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "weight_init": self.config.weight_init,
                     "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
+                    # The plasticity identity, ENFORCED on load below. Two checkpoints can differ
+                    # in which units their learning signal reaches, or in whether their readout
+                    # learned, while their topology key sets match exactly -- `random` and
+                    # `random_motor` both persist a `feedback` buffer of the same shape, and the
+                    # readout is a parameter either way. Loading across those is silent, and the
+                    # arm then runs with a projection or a readout that contradicts its own config.
+                    "plasticity_eligibility": self.config.plasticity_eligibility,
+                    "plasticity_learning_signal": self.config.plasticity_learning_signal,
+                    "plasticity_plastic_readout": self.config.plasticity_plastic_readout,
+                    "plasticity_plastic_tensors": self.config.plasticity_plastic_tensors,
                 },
             ),
         }
@@ -2349,10 +2736,64 @@ class ConnectomePPOBrain(ClassicalBrain):
         "chem_pathway",
         # Per-step perturbation state, drawn fresh and cleared per episode.
         "node_perturbation",
+        # The e-prop eligibility awaiting its learning signal: per-step state, like the
+        # perturbation it replaces. The feedback projection is NOT here -- it is drawn once per
+        # run and persisted, since a reloaded policy that redrew it would be learning against a
+        # different feedback path than the one it was trained with.
+        "eprop_trace",
+        # The readout's own eligibility and the two vectors it is built from: per-step state, like
+        # everything else here, and absent unless the readout is plastic.
+        "readout_trace",
+        "readout_post",
+        "pooled_motor",
         # Derived at construction from the wiring and the readout pool, not learned: a brain
         # rebuilds it, and persisting it would refuse every checkpoint written before it existed.
         "_perturbation_mask",
     )
+
+    # The plasticity settings a checkpoint must agree with the loading brain on. Each of them
+    # changes what the SAVED tensors mean, while leaving the topology's key set untouched.
+    _PLASTICITY_IDENTITY: tuple[str, ...] = (
+        "plasticity_eligibility",
+        "plasticity_learning_signal",
+        "plasticity_plastic_readout",
+        "plasticity_plastic_tensors",
+    )
+
+    def _reject_plasticity_identity_mismatch(
+        self,
+        components: dict[str, WeightComponent],
+    ) -> None:
+        """Refuse a checkpoint whose plasticity identity differs from this brain's.
+
+        The wiring check above catches weights saved on a different network. This catches weights
+        saved under a different LEARNER on the same network, which the wiring check cannot see:
+        ``random`` and ``random_motor`` both persist a ``feedback`` buffer of the same shape, so
+        their topology key sets match and a cross-routing load succeeds silently -- leaving the arm
+        running with a projection that reaches every unit while its config says 39. A checkpoint
+        whose readout learned is the same hazard in the other direction: the readout is a parameter
+        either way, so loading one into a frozen-readout arm substitutes a trained readout without
+        saying so, which is exactly the manipulation R.1d had to build a separate tool to do
+        deliberately.
+
+        A file SILENT about a setting is not checked on it: every checkpoint written before this
+        existed says nothing, and absence cannot be given a meaning without guessing at the learner
+        that produced it. Those files keep loading exactly as they did.
+        """
+        recorded = components["training_state"].state if "training_state" in components else {}
+        differing = [
+            f"{key}: file {recorded[key]!r} against this brain's {getattr(self.config, key)!r}"
+            for key in self._PLASTICITY_IDENTITY
+            if key in recorded and recorded[key] != getattr(self.config, key)
+        ]
+        if differing:
+            msg = (
+                "Weight file was saved under a different plasticity identity, so its tensors do "
+                f"not mean what this brain reads them as ({'; '.join(differing)}). A connectome "
+                "brain loads only weights saved under the same eligibility, learning-signal "
+                "routing and readout settings."
+            )
+            raise ValueError(msg)
 
     def _load_topology_state(self, topology_state: dict[str, Any]) -> None:
         """Validate a saved topology against this brain, then load it.
@@ -2418,6 +2859,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         the plastic rule returns the rule's running state to its construction values.
         """
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
+        self._reject_plasticity_identity_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)

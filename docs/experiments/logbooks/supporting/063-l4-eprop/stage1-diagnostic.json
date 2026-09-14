@@ -1,0 +1,45 @@
+{
+  "arm": "eprop_random_plastic_readout",
+  "by_rate": {
+    "0.0001": {
+      "halfway_threshold": -0.4131130610143905,
+      "mean": -0.27260907442840876,
+      "n": 8,
+      "passes": true,
+      "seeds_above_floor": 8
+    },
+    "0.001": {
+      "halfway_threshold": -0.4131130610143905,
+      "mean": -0.1353053336360255,
+      "n": 8,
+      "passes": true,
+      "seeds_above_floor": 8
+    },
+    "0.01": {
+      "halfway_threshold": -0.4131130610143905,
+      "mean": -0.13909543566860544,
+      "n": 8,
+      "passes": true,
+      "seeds_above_floor": 8
+    }
+  },
+  "not_an_arm": "a diagnostic on disjoint seeds. The registered arms hold the readout frozen, since a plastic one collapses on its own output under a Hebbian rule, and this changes nothing the control says about any of them",
+  "passes": true,
+  "plastic_layers": "all",
+  "question": "is a frozen readout what stops a broadcast projection working: feedback alignment needs the forward path to the output to align with B-transpose, and a frozen readout cannot",
+  "seeds": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108
+  ],
+  "task": {
+    "cue_blind_floor": -0.6908908387921683,
+    "optimum": -0.1353352832366127
+  },
+  "trials": 20000
+}

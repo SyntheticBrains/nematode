@@ -297,6 +297,30 @@ def _pooled_drift(drifts: list[tuple[float, int]]) -> float:
     return sum(value for value, _ in drifts) / total
 
 
+def _reject_mismatched_eligibility(eligibility: str, topology: PlasticTopology) -> None:
+    """Refuse an eligibility mode the topology's trace was not built under.
+
+    The rule does not build the trace -- the topology does -- so this is a check that the
+    substrate is doing what the mode names, not a switch. A mode selected over a topology that
+    does something else would read a trace of ordinary co-activity while the rule reported
+    itself a gradient estimator.
+    """
+    if eligibility == "node_perturbation" and not topology.plastic_perturbations:
+        msg = (
+            "eligibility='node_perturbation' needs a topology that perturbs its units: "
+            "this one exposes no perturbations, so the trace would carry ordinary "
+            "co-activity while the rule reported itself a gradient estimator."
+        )
+        raise ValueError(msg)
+    if eligibility == "eprop" and getattr(topology, "eligibility", "hebbian") != "eprop":
+        msg = (
+            "eligibility='eprop' needs a topology built under the same mode: this one "
+            "accumulates a co-activity trace, which the rule would consume while reporting "
+            "itself a dynamics-derived estimator."
+        )
+        raise ValueError(msg)
+
+
 class ThreeFactorRule:
     """Reward-modulated Hebbian plasticity on whatever a topology declares plastic.
 
@@ -431,13 +455,7 @@ class ThreeFactorRule:
         # perturbing, not a switch: a mode selected over a topology that cannot perturb would
         # read a trace of ordinary co-activity while reporting itself a gradient estimator.
         self.eligibility = eligibility
-        if eligibility == "node_perturbation" and not topology.plastic_perturbations:
-            msg = (
-                "eligibility='node_perturbation' needs a topology that perturbs its units: "
-                "this one exposes no perturbations, so the trace would carry ordinary "
-                "co-activity while the rule reported itself a gradient estimator."
-            )
-            raise ValueError(msg)
+        _reject_mismatched_eligibility(eligibility, topology)
         if self.decorrelation.mechanism == "anti_hebbian_inhibitory" and not self._synapse_signs:
             msg = (
                 "anti_hebbian_inhibitory needs grounded synapse signs: without them there is "
@@ -455,6 +473,14 @@ class ThreeFactorRule:
                 ]
         self._fan_in_axes: list[int] = []
         self._norm_targets: list[torch.Tensor] = []
+        # Per plastic tensor, whether the rescale applies to it. A substrate exposing tensors with
+        # different norm stories opts one out: the rescale returns each unit's incoming norm to its
+        # construction value, so a tensor whose SCALE is part of what the arm asks about cannot be
+        # under it and be asked about at once. Absent the property every tensor is under it, which
+        # is every recorded arm.
+        self._homeostatic: list[bool] = list(
+            getattr(topology, "plastic_homeostasis", [True] * len(topology.plastic_weights)),
+        )
         if homeostasis:
             self._fan_in_axes = list(topology.plastic_fan_in_axes)
             with torch.no_grad():
@@ -672,7 +698,7 @@ class ThreeFactorRule:
                     # permitted weights; it multiplies by a positive per-unit factor and
                     # cannot reintroduce a forbidden sign, and the clamp still comes last.
                     self._project_signs(index, w)
-                    if self.homeostasis:
+                    if self.homeostasis and self._homeostatic[index]:
                         # Drift is measured after the update and before the
                         # rescale; the clamp comes last so the bound always holds.
                         drifts.append(self._norm_drift(index, w, mask))
@@ -692,6 +718,7 @@ class ThreeFactorRule:
                 drifts = [
                     self._norm_drift(index, w, mask)
                     for index, (w, mask) in enumerate(zip(weights, masks, strict=True))
+                    if self._homeostatic[index]
                 ]
             if self.freeze_updates:
                 # Consolidation state advances under a freeze, like the

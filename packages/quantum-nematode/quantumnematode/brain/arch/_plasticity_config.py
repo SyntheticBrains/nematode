@@ -40,7 +40,38 @@ ThirdFactorRouting = Literal["global", "pathway"]
 # "node_perturbation" is pre x xi, the part of a unit's output it actually varied, which is
 # what makes the update an estimate of the reward gradient rather than reinforced
 # correlation.
-EligibilityMode = Literal["hebbian", "node_perturbation"]
+# "eprop" carries neither: the trace is built from the substrate's own forward dynamics, summing
+# psi_j * h_i over the settling steps, where psi is the post-synaptic unit's activation derivative.
+# That is the local part of d h_j / d w_ij -- the paths through OTHER units are dropped, which is
+# what makes the trace computable forward in time with no backward pass and no stored graph, and
+# what the method is. No perturbation is drawn, so the forward pass is the unperturbed one.
+EligibilityMode = Literal["hebbian", "node_perturbation", "eprop"]
+
+# How the per-unit learning signal reaches each unit under "eprop". The dynamics-derived trace is
+# UNSIGNED with respect to the outcome -- it says how strongly a weight moves its post-synaptic
+# unit, not whether moving it helped -- so something has to supply the sign. Node perturbation used
+# the draw itself; here it is L_j, a projection of the policy's output error:
+#
+#     g_k = (u_k - mu_k) / sigma_k ** 2        u = the PRE-SQUASH Gaussian draw
+#     L_j = sum_k B_jk * g_k                  B fixed for the run
+#
+# "symmetric" takes B from the readout's own transpose. On a substrate whose readout reads a
+# SUBSET of units, that plus the truncation above means the signal is exactly zero everywhere
+# outside that subset -- the arm is restricted to the readout pool, which is a property of the
+# mechanism and not a bug. "random" draws B once per run: no synapse computes it and nothing
+# propagates backwards, which is what makes the signal broadcast rather than transported.
+# "random_motor" is "random" masked to the same units "symmetric" can reach, so the two are
+# comparable at matched breadth; without it a difference between them confounds the signal's
+# direction with which units it reaches. "scalar" removes the per-unit signal entirely (L_j = 1):
+# the ablation, and NOT a gradient estimator -- reward-modulated Hebbian with an activation
+# derivative in place of the post-synaptic rate.
+LearningSignalRouting = Literal["symmetric", "random_motor", "random", "scalar"]
+# Which plastic tensors the rule may write. "all" is every tensor the substrate exposes;
+# "readout_only" withholds the substrate's own weights and leaves the readout -- the control a
+# plastic-readout result needs to mean what it claims.
+PlasticTensors = Literal["all", "readout_only"]
+# The routings whose projection is restricted to the units the readout reads.
+READOUT_RESTRICTED_ROUTINGS = frozenset({"symmetric", "random_motor"})
 
 # Which units the per-unit perturbation is drawn for. "full" perturbs every unit at every
 # settling step, which is what every recorded result ran. The others restrict the set, and a
@@ -171,6 +202,41 @@ class PlasticityConfigMixin(BaseModel):
     # counterfactual the network never took -- so an arm using it is a new arm.
     plasticity_eligibility: EligibilityMode = "hebbian"
     plasticity_node_noise: float = Field(default=0.0, ge=0.0)
+    # How the per-unit learning signal reaches each unit under "eprop"; see the Literal above.
+    # ``None`` means unset, and unset is a distinct state in both directions: under "eprop" it is
+    # REJECTED, because the routing IS the arm and an arm must not come from a default; under any
+    # other eligibility a value is rejected, because a config naming a routing nothing reads
+    # would be read as an arm that had one. A default value could not carry either meaning --
+    # a config round-tripped through ``model_dump`` sets every field, so "explicitly set" says
+    # nothing about what was written.
+    plasticity_learning_signal: LearningSignalRouting | None = None
+    # Whether the motor readout is plastic too, under "eprop" only. Off by default, which is every
+    # recorded arm.
+    #
+    # The readout's post-synaptic units ARE the action dimensions, so its learning signal is the
+    # identity -- the score's own component per unit -- and its eligibility is therefore its EXACT
+    # gradient, with no projection and no truncation. That is what separates this from the plastic
+    # readout Logbook 040 measured collapsing: under the Hebbian rule a plastic output layer's
+    # post-synaptic factor is its own OUTPUT, so its rows self-amplify toward whatever maximises the
+    # action mean. Under e-prop the factor is its own ERROR, and there is no such loop.
+    #
+    # It matters because a FROZEN readout is what stops a broadcast projection working at all:
+    # feedback alignment needs the forward path to the output to come into alignment with the
+    # feedback matrix, and a frozen readout cannot. Measured on the one-step control at 20,000
+    # trials -- frozen, the broadcast arm's best is -0.7031 against a cue-blind floor of -0.6909;
+    # plastic, it reaches the optimum of -0.1353 exactly on every seed.
+    plasticity_plastic_readout: bool = False
+    # Which of the plastic tensors the rule may actually write. "all" is every recorded arm.
+    #
+    # "readout_only" freezes the chemical matrix and leaves the readout learning, which is the
+    # CONTROL a plastic-readout result needs: the readout is an 8-parameter linear map over four
+    # pooled motor-class means, so "a local rule learns this substrate" and "a small linear readout
+    # on frozen recurrent features learns this cell" predict the same success. The difference
+    # between the two arms is what the substrate's own plasticity contributes.
+    #
+    # It is not a freeze: the arm learns, and its floor is the same shared frozen control. It
+    # requires a plastic readout, since without one it would leave nothing plastic at all.
+    plasticity_plastic_tensors: PlasticTensors = "all"
     # "full" is the default so every recorded plastic result reproduces unchanged. A restricted
     # set needs a substrate that can derive one from its own wiring and readout, so the dense
     # yardstick refuses anything else -- the same division of labour as third_factor="pathway".
@@ -280,6 +346,53 @@ class PlasticityConfigMixin(BaseModel):
                 "plasticity_node_noise: with no perturbation the eligibility is identically "
                 "zero, and the arm would look like a rule that learns nothing rather than one "
                 "given nothing to learn from."
+            )
+            raise ValueError(msg)
+        if self.plasticity_eligibility == "eprop" and self.plasticity_node_noise != 0.0:
+            msg = (
+                "plasticity_eligibility='eprop' requires plasticity_node_noise=0.0: e-prop builds "
+                "its trace from the unperturbed forward dynamics, and a perturbation on top of it "
+                "would change the forward pass the trace describes while contributing nothing to "
+                "the trace, giving a result attributable to neither mechanism."
+            )
+            raise ValueError(msg)
+        if self.plasticity_eligibility == "eprop" and self.plasticity_perturbation_set != "full":
+            msg = (
+                "plasticity_eligibility='eprop' does not accept "
+                f"plasticity_perturbation_set={self.plasticity_perturbation_set!r}: there is no "
+                "perturbation to restrict. What e-prop's learning signal can reach is set by "
+                "plasticity_learning_signal instead."
+            )
+            raise ValueError(msg)
+        if self.plasticity_plastic_tensors != "all" and not self.plasticity_plastic_readout:
+            msg = (
+                f"plasticity_plastic_tensors={self.plasticity_plastic_tensors!r} requires "
+                "plasticity_plastic_readout=True: it withholds the substrate's own weights, so "
+                "without a plastic readout nothing would be plastic and the arm would be a frozen "
+                "control wearing a learning arm's name."
+            )
+            raise ValueError(msg)
+        if self.plasticity_plastic_readout and self.plasticity_eligibility != "eprop":
+            msg = (
+                "plasticity_plastic_readout requires plasticity_eligibility='eprop': under the "
+                "Hebbian eligibility a plastic readout takes its own output as the post-synaptic "
+                "factor and its rows self-amplify into saturation, which Logbook 040 measured. "
+                "e-prop gives it its own error instead."
+            )
+            raise ValueError(msg)
+        if self.plasticity_eligibility == "eprop" and self.plasticity_learning_signal is None:
+            msg = (
+                "plasticity_eligibility='eprop' requires plasticity_learning_signal: the routing "
+                "decides which units the learning signal can reach at all, so it is the arm and "
+                "must be stated rather than inherited from a default."
+            )
+            raise ValueError(msg)
+        if self.plasticity_eligibility != "eprop" and self.plasticity_learning_signal is not None:
+            msg = (
+                "plasticity_learning_signal is read only under "
+                "plasticity_eligibility='eprop' (got "
+                f"{self.plasticity_eligibility!r}): a config naming a routing nothing reads would "
+                "be read as an arm that had one."
             )
             raise ValueError(msg)
         return self
