@@ -922,6 +922,9 @@ being violated as voiding the control rather than as a result.
 #### Scenario: A voided control stops the campaign it gates
 
 - **GIVEN** a control that gates a campaign on another substrate
-- **WHEN** the control is voided
-- **THEN** no run of the gated campaign SHALL be launched
+- **WHEN** the gated campaign is about to launch
+- **THEN** both the arm required to pass and the arm required to fail SHALL have been evaluated and
+  their results recorded
+- **AND** where either expectation is not met the control SHALL be recorded as void and no run of the
+  gated campaign SHALL be launched
 - **AND** the record SHALL state which expectation was violated
