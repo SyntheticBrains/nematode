@@ -321,3 +321,63 @@ class TestTheSymmetricProjectionTracksTheReadout:
         assert projection is not None
         expected = topology.readout[:, 1].detach() / float(stop - start)
         assert torch.allclose(projection[member], expected)
+
+
+class TestAPlasticOutputLayerGetsIdentityFeedback:
+    """Its post-synaptic units ARE the action dimensions, so its signal is its own error."""
+
+    @staticmethod
+    def _all_plastic(routing: str) -> MLPTopology:
+        return MLPTopology(
+            _one_step_net(),
+            enable_activity_traces=True,
+            trace_decay=0.0,
+            plastic_layers="all",
+            eligibility="eprop",
+            learning_signal=routing,
+            learning_signal_seed=_SEED,
+        )
+
+    @pytest.mark.parametrize("routing", ["random", "scalar", "symmetric"])
+    def test_the_projection_is_the_identity(self, routing: str) -> None:
+        # Exact for every routing, and not a routing choice: a random projection here would scramble
+        # the one layer whose gradient is exact.
+        topology = self._all_plastic(routing)
+        output_index = len(topology.layers) - 1
+        projection = topology.learning_signal_projection(output_index)
+        assert projection is not None
+        assert torch.equal(projection, torch.eye(2))
+
+    def test_the_hidden_layer_still_takes_its_routing(self) -> None:
+        random = self._all_plastic("random")
+        symmetric = self._all_plastic("symmetric")
+        first = random.learning_signal_projection(0)
+        second = symmetric.learning_signal_projection(0)
+        assert first is not None
+        assert second is not None
+        assert not torch.allclose(first, second)
+
+    def test_the_output_layers_trace_is_its_own_gradient(self) -> None:
+        actor = _one_step_net()
+        topology = MLPTopology(
+            actor,
+            enable_activity_traces=True,
+            trace_decay=0.0,
+            plastic_layers="all",
+            eligibility="eprop",
+            learning_signal="random",
+            learning_signal_seed=_SEED,
+        )
+        features = torch.randn(4)
+        mean = topology(features)
+        draw = mean.detach() + _SIGMA * torch.randn(2)
+        topology.apply_learning_signal((draw - mean.detach()) / _SIGMA**2)
+
+        actor.zero_grad()
+        (-0.5 * ((draw - actor(features)) / _SIGMA) ** 2).sum().backward()
+        output = actor[2]
+        assert isinstance(output, nn.Linear)
+        gradient = output.weight.grad
+        assert gradient is not None
+        index = len(topology.layers) - 1
+        assert torch.allclose(_buffer(topology, f"trace_{index}"), gradient, atol=1e-5)

@@ -100,11 +100,22 @@ EPROP_ROUTINGS = {
     "eprop_random": "random",
     "eprop_scalar": "scalar",
 }
+# A DIAGNOSTIC, not an arm, and run on disjoint seeds: `eprop_random` with the readout plastic.
+# Feedback alignment works because the forward path to the output comes to align with B-transpose.
+# Every arm here and every connectome arm holds the readout FROZEN, so that alignment cannot
+# develop -- which would make a broadcast projection structurally unable to work rather than merely
+# unlikely to. This separates the two, and it is the only thing it is read for: the registered arms
+# keep the frozen readout, since a plastic one collapses on its own output under a Hebbian rule.
+EPROP_DIAGNOSTIC = "eprop_random_plastic_readout"
+DIAGNOSTIC_SEEDS = tuple(range(101, 109))
+EPROP_ROUTINGS[EPROP_DIAGNOSTIC] = "random"
 EPROP_ARMS = frozenset(EPROP_ROUTINGS)
 # The arm that must pass, and the arm that must not. Either expectation violated VOIDS the e-prop
 # reading rather than producing a result -- the same logic as the `analytic` and `hebbian` floors.
 EPROP_MUST_LEARN = "eprop_symmetric"
 EPROP_MUST_NOT_LEARN = "eprop_scalar"
+# The registered arms. The diagnostic is deliberately absent: it runs on its own seeds, into its own
+# record, and adding it here would fold it into the control's tables and its pass/void logic.
 ARMS = (
     "three_factor",
     "node_perturbation",
@@ -229,6 +240,7 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
     homeostasis: bool,
     hidden: int = HIDDEN,
     layers: int = HIDDEN_LAYERS,
+    plastic_layers: str = "hidden",
 ) -> tuple[MLPTopology, ThreeFactorRule | None]:
     """Build the topology and the rule one arm runs over."""
     generator = torch.Generator().manual_seed(seed)
@@ -238,7 +250,10 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
         _actor(task.n_cues, generator, hidden, layers),
         enable_activity_traces=True,
         trace_decay=trace_decay,
-        plastic_layers="hidden",  # frozen readout: a plastic one collapses on its own output
+        # Frozen readout for every registered arm: a plastic one collapses on its own output under a
+        # Hebbian rule. The diagnostic is the one caller that opens it, to ask whether the frozen
+        # readout is what stops feedback alignment aligning.
+        plastic_layers=plastic_layers,
         # The variant's own perturbation, from a dedicated generator; zero for every other arm,
         # which then draws nothing and runs the forward pass unchanged.
         node_noise=node_noise if perturbing else 0.0,
@@ -302,6 +317,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
     homeostasis: bool = True,
     hidden: int = HIDDEN,
     layers: int = HIDDEN_LAYERS,
+    plastic_layers: str = "hidden",
 ) -> dict[str, Any]:
     """Run one arm at one seed and return its score and diagnosis."""
     _validate_delay(arm, delay)
@@ -319,6 +335,7 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         homeostasis=homeostasis,
         hidden=hidden,
         layers=layers,
+        plastic_layers=plastic_layers,
     )
 
     rewards: list[float] = []
@@ -413,6 +430,9 @@ def run_arm(  # noqa: PLR0913 — one parameter per pinned dimension of the cont
         "hidden": hidden,
         "layers": layers,
         "perturbed_units": hidden * layers,
+        # Which layers the rule may write. Every registered arm holds the readout frozen; the
+        # diagnostic is the one caller that does not, and the row has to say which it was.
+        "plastic_layers": plastic_layers,
         # The variant runs at the pinned rate too; recording it keeps the row self-describing.
         "rate": rate if arm in {"three_factor", *PERTURBING_ARMS, *EPROP_ARMS} else None,
         "node_noise": node_noise if perturbing else None,
@@ -657,6 +677,21 @@ def _diagnose(
     return out
 
 
+def _print_diagnostic(out: dict[str, Any]) -> None:
+    """Print the diagnostic, with what it is not stated beside what it is."""
+    task = out["task"]
+    print(f"\nDIAGNOSTIC (not an arm): {out['arm']}, seeds {out['seeds'][0]}-{out['seeds'][-1]}")
+    print(f"  {out['question']}")
+    print(f"  floor {task['cue_blind_floor']:.4f}   optimum {task['optimum']:.4f}")
+    for rate, row in out["by_rate"].items():
+        print(
+            f"  rate {rate:>8} mean {row['mean']:+.4f}  {row['seeds_above_floor']}/{row['n']} "
+            f"above floor  -> {'passes' if row['passes'] else 'does not pass'}",
+        )
+    print(f"  reading: {'passes at some rate' if out['passes'] else 'does not pass at any rate'}")
+    print(f"  {out['not_an_arm']}")
+
+
 def _print_control(out: dict[str, Any]) -> None:
     """Print the control, floors first."""
     task = out["task"]
@@ -770,12 +805,69 @@ def write_per_seed_csv(runs: list[dict[str, Any]], path: Path) -> None:
             )
 
 
+def run_diagnostic(trials: int) -> dict[str, Any]:
+    """Run the plastic-readout diagnostic on disjoint seeds and score it against the same bars.
+
+    Its question is narrow: is holding the readout FROZEN what stops a broadcast projection working.
+    Feedback alignment needs the forward path to the output to come into alignment with
+    B-transpose, and a frozen readout cannot. If this passes where ``eprop_random`` failed, that
+    arm's failure has a structural cause rather than an unexplained one; if it fails too, the
+    projection is not what the frozen readout was costing.
+
+    Disjoint seeds, its own record, and NOT part of the control's tables or its pass/void logic: it
+    is a diagnostic, and the registered arms keep the frozen readout either way.
+    """
+    task = ContextualAssociation.default()
+    floor, optimum = task.cue_blind_floor(NOISE), task.optimum(NOISE)
+    runs = [
+        run_arm(
+            EPROP_DIAGNOSTIC,
+            seed,
+            task,
+            rate=rate,
+            trials=trials,
+            plastic_layers="all",
+        )
+        for seed in DIAGNOSTIC_SEEDS
+        for rate in RATE_GRID
+    ]
+    by_rate = {
+        str(rate): assess([r["score"] for r in runs if r["rate"] == rate], floor, optimum)
+        for rate in RATE_GRID
+    }
+    return {
+        "arm": EPROP_DIAGNOSTIC,
+        "seeds": list(DIAGNOSTIC_SEEDS),
+        "trials": trials,
+        "plastic_layers": "all",
+        "by_rate": by_rate,
+        "passes": any(v["passes"] for v in by_rate.values()),
+        "task": {"cue_blind_floor": floor, "optimum": optimum},
+        "question": (
+            "is a frozen readout what stops a broadcast projection working: feedback alignment "
+            "needs the forward path to the output to align with B-transpose, and a frozen readout "
+            "cannot"
+        ),
+        "not_an_arm": (
+            "a diagnostic on disjoint seeds. The registered arms hold the readout frozen, since a "
+            "plastic one collapses on its own output under a Hebbian rule, and this changes nothing "
+            "the control says about any of them"
+        ),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the control and write its records."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--trials", type=int, default=TRIALS)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--csv", type=Path)
+    parser.add_argument(
+        "--diagnostic-out",
+        type=Path,
+        default=None,
+        help="run ONLY the plastic-readout diagnostic, on disjoint seeds, and write its record here",
+    )
     args = parser.parse_args(argv)
 
     # The annealed arm decays over the first half of its budget and is scored on the last
@@ -790,6 +882,15 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.diagnostic_out:
+        diagnostic = run_diagnostic(args.trials)
+        _print_diagnostic(diagnostic)
+        args.diagnostic_out.parent.mkdir(parents=True, exist_ok=True)
+        args.diagnostic_out.write_text(
+            json.dumps(_jsonable(diagnostic), indent=2, sort_keys=True, allow_nan=False) + "\n",
+        )
+        return 0
 
     task = ContextualAssociation.default()
     runs: list[dict[str, Any]] = []

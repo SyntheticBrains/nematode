@@ -228,6 +228,13 @@ class MLPTopology(nn.Module):
         if seed is not None:
             generator.manual_seed(seed)
         for index, layer in enumerate(self._layers):
+            if layer is self._output_layer:
+                # A plastic OUTPUT layer needs no projection under any routing: its post-synaptic
+                # units are the action dimensions themselves, so the signal reaching unit k is the
+                # score's own k-th component. That is the identity, not a choice, and
+                # ``learning_signal_projection`` returns it. A random projection here would
+                # scramble the one layer whose gradient is exact.
+                continue
             reads_the_output = layer is linears[-2] if len(linears) > 1 else False
             if routing == "symmetric":
                 if not reads_the_output:
@@ -348,7 +355,16 @@ class MLPTopology(nn.Module):
         it is the output layer's transpose, taken live rather than cached: a readout written or
         loaded after construction would leave a cached transpose describing a readout the arm
         never ran with.
+
+        A plastic output layer is the exception: its post-synaptic units are the action dimensions,
+        so its projection is the IDENTITY under every routing -- exact, and not a routing choice.
         """
+        if self._layers[index] is self._output_layer:
+            # Exact for every routing: this layer's units ARE the action dimensions.
+            return torch.eye(
+                self._output_layer.weight.shape[0],
+                dtype=self._output_layer.weight.dtype,
+            )
         if self.learning_signal == "scalar":
             return None
         if self.learning_signal == "symmetric":
