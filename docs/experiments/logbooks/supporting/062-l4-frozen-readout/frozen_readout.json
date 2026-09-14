@@ -1,0 +1,349 @@
+{
+  "protocol": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "mask": "motor",
+    "arms": {
+      "anatomical": {
+        "norm": 1.414,
+        "cosine": 1.0,
+        "baseline": true
+      },
+      "anatomical_scaled": {
+        "norm": 7.82,
+        "cosine": 1.0,
+        "baseline": false
+      },
+      "rotated": {
+        "norm": 7.82,
+        "cosine": -0.028,
+        "baseline": false
+      },
+      "ppo": {
+        "norm": 7.82,
+        "cosine": -0.178,
+        "baseline": false
+      }
+    },
+    "ppo_matched_foods": 18.945,
+    "ppo_reference_058": 19.31,
+    "min_foods": 1.0,
+    "min_gap_fraction": 0.1,
+    "competence_threshold": 20.0
+  },
+  "result": {
+    "readouts": {
+      "anatomical": {
+        "readout": "anatomical",
+        "norm": 1.414,
+        "cosine_to_anatomical": 1.0,
+        "n_pairs": 8,
+        "learning_mean_foods": 3.751333333333333,
+        "frozen_mean_foods": 3.1500000000000004,
+        "learning_foods": {
+          "1": 4.234666666666667,
+          "2": 3.3226666666666667,
+          "3": 2.521333333333333,
+          "4": 3.42,
+          "5": 2.98,
+          "6": 2.2493333333333334,
+          "7": 4.228,
+          "8": 7.054666666666667
+        },
+        "frozen_foods": {
+          "1": 9.978666666666667,
+          "2": 0.43733333333333335,
+          "3": 1.7306666666666666,
+          "4": 2.98,
+          "5": 2.7573333333333334,
+          "6": 0.9226666666666666,
+          "7": 3.038666666666667,
+          "8": 3.3546666666666667
+        },
+        "learning_mean_full_clear": 0.016666666666666666,
+        "reaches_competence": false,
+        "competence_threshold": 20.0,
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 0.6013333333333333,
+          "ci80": [
+            -0.646566666666667,
+            1.7048833333333335
+          ],
+          "p_improve": 0.09765625,
+          "p_degrade": 0.92578125,
+          "positive_seeds": 7,
+          "q_improve": 0.09765625
+        },
+        "minima": {
+          "effect": 0.6013333333333333,
+          "absolute_minimum": 1.0,
+          "matched_minimum": 1.5795000000000001,
+          "minimum_against_058": 1.6159999999999997,
+          "binding_minimum": 1.5795000000000001,
+          "passes": false,
+          "why": "below the binding minimum of 1.58 foods"
+        },
+        "drift": {
+          "credited_mean_relative": 1.3768063485622406,
+          "excluded_mean_relative": 0.01585022814106196,
+          "n_read": 8,
+          "available": true,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "verdict": "no_improvement"
+      },
+      "anatomical_scaled": {
+        "readout": "anatomical_scaled",
+        "norm": 7.82,
+        "cosine_to_anatomical": 1.0,
+        "n_pairs": 8,
+        "learning_mean_foods": 8.2655,
+        "frozen_mean_foods": 4.789166666666667,
+        "learning_foods": {
+          "1": 9.918666666666667,
+          "2": 9.668,
+          "3": 5.8453333333333335,
+          "4": 8.332,
+          "5": 11.202666666666667,
+          "6": 8.234666666666667,
+          "7": 3.034666666666667,
+          "8": 9.888
+        },
+        "frozen_foods": {
+          "1": 11.289333333333333,
+          "2": 0.24,
+          "3": 1.92,
+          "4": 6.36,
+          "5": 6.933333333333334,
+          "6": 0.5706666666666667,
+          "7": 0.532,
+          "8": 10.468
+        },
+        "learning_mean_full_clear": 1.9666666666666666,
+        "reaches_competence": false,
+        "competence_threshold": 20.0,
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 3.4763333333333333,
+          "ci80": [
+            1.954866666666667,
+            5.0337000000000005
+          ],
+          "p_improve": 0.01953125,
+          "p_degrade": 0.98828125,
+          "positive_seeds": 6,
+          "q_improve": 0.026041666666666668
+        },
+        "minima": {
+          "effect": 3.4763333333333333,
+          "absolute_minimum": 1.0,
+          "matched_minimum": 1.4155833333333334,
+          "minimum_against_058": 1.4520833333333334,
+          "binding_minimum": 1.4155833333333334,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "drift": {
+          "credited_mean_relative": 1.3768317848443985,
+          "excluded_mean_relative": 0.015839737374335527,
+          "n_read": 8,
+          "available": true,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "verdict": "beats_floor"
+      },
+      "rotated": {
+        "readout": "rotated",
+        "norm": 7.82,
+        "cosine_to_anatomical": -0.028,
+        "n_pairs": 8,
+        "learning_mean_foods": 9.6385,
+        "frozen_mean_foods": 6.8051666666666675,
+        "learning_foods": {
+          "1": 12.826666666666666,
+          "2": 12.201333333333332,
+          "3": 11.373333333333333,
+          "4": 4.481333333333334,
+          "5": 17.272,
+          "6": 2.8213333333333335,
+          "7": 6.649333333333334,
+          "8": 9.482666666666667
+        },
+        "frozen_foods": {
+          "1": 9.432,
+          "2": 11.56,
+          "3": 8.366666666666667,
+          "4": 2.704,
+          "5": 16.709333333333333,
+          "6": 0.26,
+          "7": 1.308,
+          "8": 4.101333333333334
+        },
+        "learning_mean_full_clear": 5.749999999999999,
+        "reaches_competence": false,
+        "competence_threshold": 20.0,
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 2.833333333333333,
+          "ci80": [
+            2.038216666666666,
+            3.61835
+          ],
+          "p_improve": 0.00390625,
+          "p_degrade": 1.0,
+          "positive_seeds": 8,
+          "q_improve": 0.015625
+        },
+        "minima": {
+          "effect": 2.833333333333333,
+          "absolute_minimum": 1.0,
+          "matched_minimum": 1.2139833333333332,
+          "minimum_against_058": 1.2504833333333332,
+          "binding_minimum": 1.2139833333333332,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "drift": {
+          "credited_mean_relative": 1.391641452908516,
+          "excluded_mean_relative": 0.015826070797629654,
+          "n_read": 8,
+          "available": true,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "verdict": "beats_floor"
+      },
+      "ppo": {
+        "readout": "ppo",
+        "norm": 7.82,
+        "cosine_to_anatomical": -0.178,
+        "n_pairs": 8,
+        "learning_mean_foods": 6.1225000000000005,
+        "frozen_mean_foods": 3.3019999999999996,
+        "learning_foods": {
+          "1": 10.601333333333333,
+          "2": 11.438666666666666,
+          "3": 13.396,
+          "4": 0.332,
+          "5": 8.097333333333333,
+          "6": 0.408,
+          "7": 4.496,
+          "8": 0.21066666666666667
+        },
+        "frozen_foods": {
+          "1": 0.44133333333333336,
+          "2": 8.901333333333334,
+          "3": 12.874666666666666,
+          "4": 0.5813333333333334,
+          "5": 0.8493333333333334,
+          "6": 0.20933333333333334,
+          "7": 2.364,
+          "8": 0.19466666666666665
+        },
+        "learning_mean_full_clear": 0.8833333333333334,
+        "reaches_competence": false,
+        "competence_threshold": 20.0,
+        "graded": {
+          "defined": true,
+          "n": 8,
+          "effect": 2.8205000000000005,
+          "ci80": [
+            1.3338,
+            4.469666666666667
+          ],
+          "p_improve": 0.01953125,
+          "p_degrade": 0.98828125,
+          "positive_seeds": 7,
+          "q_improve": 0.026041666666666668
+        },
+        "minima": {
+          "effect": 2.8205000000000005,
+          "absolute_minimum": 1.0,
+          "matched_minimum": 1.5643000000000002,
+          "minimum_against_058": 1.6008,
+          "binding_minimum": 1.5643000000000002,
+          "passes": true,
+          "why": "at or above both minima"
+        },
+        "drift": {
+          "credited_mean_relative": 1.416825771331787,
+          "excluded_mean_relative": 0.015846869442611933,
+          "n_read": 8,
+          "available": true,
+          "seeds_expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "verdict": "beats_floor"
+      }
+    },
+    "substituted_beating_floor": [
+      "anatomical_scaled",
+      "rotated",
+      "ppo"
+    ],
+    "reaching_competence": [],
+    "locating_the_handicap": [],
+    "ordering": {
+      "levels": {
+        "anatomical": 3.751333333333333,
+        "anatomical_scaled": 8.2655,
+        "rotated": 9.6385,
+        "ppo": 6.1225000000000005
+      },
+      "span_foods": 5.887166666666667,
+      "scale_gain": 4.514166666666666,
+      "direction_gain": -2.142999999999999,
+      "reading": "mixed: the ordering matches no registered pattern and is reported as it is"
+    },
+    "verdict": "readout_helps_but_not_enough",
+    "why": "anatomical_scaled, rotated, ppo beats its own floor by the registered minima without reaching competence: a result, not a rescue. R.1b stays blocked and R.2 stays live",
+    "satisfies_plausibility_deliverable": false,
+    "deliverable_note": "This cannot satisfy D1 whatever it returned: the substituted arms take their readout from a gradient-trained run, so they are not biologically plausible local learners. A positive result locates a handicap and names a follow-up; it is not the plausible learner working."
+  }
+}

@@ -986,7 +986,25 @@ untouched**. The one structural asymmetry now *measured* rather than guessed is 
 write the chemical synapses alone, leaving the motor readout frozen while it shows the **largest relative
 norm change of the measured tensors** — 0.783 in 300 episodes against the sensory projection's 0.177
 and the chemical synapses' 0.486. Relative change across an eight-entry matrix and 3709 synapses is not
-a clean importance measure, so this is registered as a hypothesis: R.1d.
+a clean importance measure, so this is registered as a hypothesis: R.1d. **(x) R.1d then tested the
+readout, 2026-09-14, and it is part of the limit without being
+sufficient** ([Logbook 062](experiments/logbooks/062-l4-frozen-readout.md)). Substituting it more
+than doubles what the rule reaches — **3.751 → 9.639 foods of 20** — and all three substituted arms
+beat their own frozen control (q 0.016–0.026) where the anatomical one does not (q 0.098). But
+**none reaches competence**: best 5.75% full clear against the 20% threshold and PPO's 18.945 foods
+on the same cell, so **R.1b stays blocked and 7b's gate is untouched**. **The scale does the work,
+not the direction** — +4.51 foods from the norm alone against −2.14 from PPO's direction — which
+points at the readout-scale / action-noise interaction rather than at reading the motor classes
+better. A fourth arm added before any arm ran changed the conclusion: PPO's readout is 5.5× the
+anatomical norm at cosine −0.178, so it replaces the prior rather than refining it, and at matched
+norm **random (9.639) beats anatomical (8.265) beats PPO (6.123)** — PPO's own direction is the
+worst of the three, the co-adaptation caveat measured, with `ppo` bimodal across seeds. **The drift
+invariance survives**: 1.38–1.42× across all four readouts against R.1c's 1.37–1.38 across every
+dimension, so it now spans two independent structural axes and is the strongest remaining argument
+that **credit assignment** is what is wrong. All three tensors frozen under the rule are therefore
+accounted for, and **R.2 (e-prop) is the live path**. Neither R.1c nor R.1d could have satisfied
+deliverable 1: a rule taking a tensor from a gradient-trained run is not a plausible local learner,
+which each registered before it ran.
 
 #### Phase 7 progress record
 
