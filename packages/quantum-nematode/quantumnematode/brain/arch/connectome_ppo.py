@@ -2663,7 +2663,8 @@ class ConnectomePPOBrain(ClassicalBrain):
         ``"training_state"``
             The std mode (so cross-mode loads fail), the learning rule, the wiring,
             the initialisation and the connectome source, recorded for the file's
-            reader; none of them is enforced on load except the std mode.
+            reader; and the plasticity identity -- eligibility, learning-signal
+            routing, and the two readout switches -- which IS enforced on load.
         """
         all_components: dict[str, WeightComponent] = {
             "topology": WeightComponent(
@@ -2684,6 +2685,16 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "weight_init": self.config.weight_init,
                     "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
+                    # The plasticity identity, ENFORCED on load below. Two checkpoints can differ
+                    # in which units their learning signal reaches, or in whether their readout
+                    # learned, while their topology key sets match exactly -- `random` and
+                    # `random_motor` both persist a `feedback` buffer of the same shape, and the
+                    # readout is a parameter either way. Loading across those is silent, and the
+                    # arm then runs with a projection or a readout that contradicts its own config.
+                    "plasticity_eligibility": self.config.plasticity_eligibility,
+                    "plasticity_learning_signal": self.config.plasticity_learning_signal,
+                    "plasticity_plastic_readout": self.config.plasticity_plastic_readout,
+                    "plasticity_plastic_tensors": self.config.plasticity_plastic_tensors,
                 },
             ),
         }
@@ -2739,6 +2750,50 @@ class ConnectomePPOBrain(ClassicalBrain):
         # rebuilds it, and persisting it would refuse every checkpoint written before it existed.
         "_perturbation_mask",
     )
+
+    # The plasticity settings a checkpoint must agree with the loading brain on. Each of them
+    # changes what the SAVED tensors mean, while leaving the topology's key set untouched.
+    _PLASTICITY_IDENTITY: tuple[str, ...] = (
+        "plasticity_eligibility",
+        "plasticity_learning_signal",
+        "plasticity_plastic_readout",
+        "plasticity_plastic_tensors",
+    )
+
+    def _reject_plasticity_identity_mismatch(
+        self,
+        components: dict[str, WeightComponent],
+    ) -> None:
+        """Refuse a checkpoint whose plasticity identity differs from this brain's.
+
+        The wiring check above catches weights saved on a different network. This catches weights
+        saved under a different LEARNER on the same network, which the wiring check cannot see:
+        ``random`` and ``random_motor`` both persist a ``feedback`` buffer of the same shape, so
+        their topology key sets match and a cross-routing load succeeds silently -- leaving the arm
+        running with a projection that reaches every unit while its config says 39. A checkpoint
+        whose readout learned is the same hazard in the other direction: the readout is a parameter
+        either way, so loading one into a frozen-readout arm substitutes a trained readout without
+        saying so, which is exactly the manipulation R.1d had to build a separate tool to do
+        deliberately.
+
+        A file SILENT about a setting is not checked on it: every checkpoint written before this
+        existed says nothing, and absence cannot be given a meaning without guessing at the learner
+        that produced it. Those files keep loading exactly as they did.
+        """
+        recorded = components["training_state"].state if "training_state" in components else {}
+        differing = [
+            f"{key}: file {recorded[key]!r} against this brain's {getattr(self.config, key)!r}"
+            for key in self._PLASTICITY_IDENTITY
+            if key in recorded and recorded[key] != getattr(self.config, key)
+        ]
+        if differing:
+            msg = (
+                "Weight file was saved under a different plasticity identity, so its tensors do "
+                f"not mean what this brain reads them as ({'; '.join(differing)}). A connectome "
+                "brain loads only weights saved under the same eligibility, learning-signal "
+                "routing and readout settings."
+            )
+            raise ValueError(msg)
 
     def _load_topology_state(self, topology_state: dict[str, Any]) -> None:
         """Validate a saved topology against this brain, then load it.
@@ -2804,6 +2859,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         the plastic rule returns the rule's running state to its construction values.
         """
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
+        self._reject_plasticity_identity_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)

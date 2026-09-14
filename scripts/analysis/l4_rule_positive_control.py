@@ -108,8 +108,12 @@ EPROP_ROUTINGS = {
 # keep the frozen readout, since a plastic one collapses on its own output under a Hebbian rule.
 EPROP_DIAGNOSTIC = "eprop_random_plastic_readout"
 DIAGNOSTIC_SEEDS = tuple(range(101, 109))
-EPROP_ROUTINGS[EPROP_DIAGNOSTIC] = "random"
-EPROP_ARMS = frozenset(EPROP_ROUTINGS)
+# Deliberately NOT in EPROP_ROUTINGS: that mapping is what the registered control iterates, so adding
+# the diagnostic to it would make the control run 24 extra runs -- at the registered arms' FROZEN
+# readout, which is not what the diagnostic is -- and file them in the control's own table under the
+# diagnostic's name. It needs a routing for ``_build``, and that is all this second mapping is for.
+_EPROP_ROUTINGS_WITH_DIAGNOSTIC = {**EPROP_ROUTINGS, EPROP_DIAGNOSTIC: "random"}
+EPROP_ARMS = frozenset(_EPROP_ROUTINGS_WITH_DIAGNOSTIC)
 # The arm that must pass, and the arm that must not. Either expectation violated VOIDS the e-prop
 # reading rather than producing a result -- the same logic as the `analytic` and `hebbian` floors.
 EPROP_MUST_LEARN = "eprop_symmetric"
@@ -262,7 +266,7 @@ def _build(  # noqa: PLR0913 — one parameter per pinned dimension of the contr
         # e-prop draws no perturbation at all: the trace is the activation's own derivative times
         # the pre-synaptic rate, given its sign by a signal folded in once the action exists.
         eligibility="eprop" if eprop else "hebbian",
-        learning_signal=EPROP_ROUTINGS.get(arm, "random"),
+        learning_signal=_EPROP_ROUTINGS_WITH_DIAGNOSTIC.get(arm, "random"),
         learning_signal_seed=seed if eprop else None,
     )
     if arm == "analytic":

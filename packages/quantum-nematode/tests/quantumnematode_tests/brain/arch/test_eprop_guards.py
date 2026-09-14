@@ -334,3 +334,59 @@ class TestTheReadoutOnlyControl:
         # arm's name.
         with pytest.raises(ValueError, match="requires plasticity_plastic_readout"):
             _config(plasticity_plastic_tensors="readout_only", plasticity_plastic_readout=False)
+
+
+class TestCrossRoutingLoadsAreRefused:
+    """Two checkpoints can differ in what their tensors MEAN while their key sets match exactly."""
+
+    @staticmethod
+    def _brain(name: str) -> ConnectomePPOBrain:
+        simulation = load_simulation_config(str(_CONFIGS / f"{_STEM}_{name}.yml"))
+        assert simulation.brain is not None
+        config = simulation.brain.config
+        assert isinstance(config, ConnectomePPOBrainConfig)
+        config.seed = 1
+        return ConnectomePPOBrain(config=config, device=DeviceType.CPU)
+
+    def test_random_into_random_motor_is_refused(self) -> None:
+        # Both persist a `feedback` buffer of the same shape, so the topology key sets match and
+        # the load would succeed silently -- the arm reaching every unit while its config says 39.
+        saved = self._brain("random").get_weight_components()
+        with pytest.raises(ValueError, match="different plasticity identity"):
+            self._brain("random_motor").load_weight_components(saved)
+
+    def test_a_learned_readout_into_a_frozen_readout_arm_is_refused(self) -> None:
+        # The readout is a parameter either way, so this would substitute a trained readout without
+        # saying so -- the manipulation R.1d had to build a separate tool to do deliberately.
+        saved = self._brain("plastic_readout").get_weight_components()
+        with pytest.raises(ValueError, match="different plasticity identity"):
+            self._brain("random").load_weight_components(saved)
+
+    def test_withholding_the_substrate_is_part_of_the_identity(self) -> None:
+        saved = self._brain("readout_only").get_weight_components()
+        with pytest.raises(ValueError, match="different plasticity identity"):
+            self._brain("plastic_readout").load_weight_components(saved)
+
+    def test_the_same_routing_still_loads(self) -> None:
+        saved = self._brain("random").get_weight_components()
+        self._brain("random").load_weight_components(saved)  # does not raise
+
+    def test_a_file_silent_about_the_identity_still_loads(self) -> None:
+        # Every checkpoint written before this existed says nothing, and absence cannot be given a
+        # meaning without guessing at the learner that produced it. Those files keep loading.
+        saved = self._brain("random").get_weight_components()
+        for key in (
+            "plasticity_eligibility",
+            "plasticity_learning_signal",
+            "plasticity_plastic_readout",
+            "plasticity_plastic_tensors",
+        ):
+            saved["training_state"].state.pop(key)
+        self._brain("random_motor").load_weight_components(saved)  # does not raise
+
+    def test_the_identity_is_persisted(self) -> None:
+        state = self._brain("random_motor").get_weight_components()["training_state"].state
+        assert state["plasticity_eligibility"] == "eprop"
+        assert state["plasticity_learning_signal"] == "random_motor"
+        assert state["plasticity_plastic_readout"] is False
+        assert state["plasticity_plastic_tensors"] == "all"

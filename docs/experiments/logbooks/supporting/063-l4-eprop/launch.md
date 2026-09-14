@@ -135,9 +135,13 @@ and `plasticity_node_noise: 0.0` with no perturbation set.
 e-prop's raw trace magnitude is nothing like `h ⊗ ξ` at σ 0.1. **`plasticity_normalise_trace` is what
 makes the rate transfer**: it divides the Hebbian term by a running RMS of the trace over its edge
 set, so `plasticity_rate` is a root-mean-square step per unit modulator rather than an absolute step.
-A **rate check on the pilot's disjoint seeds** is registered against exactly that — the committed rate
-and one decade either side — with the committed rate standing unless it is visibly off. This is the
+A **rate check on the pilot's disjoint seeds** was registered against exactly that — the committed
+rate and one decade either side — with the committed rate standing unless it is visibly off, the
 discipline R.1c's σ calibration established after a carried-over value cost 31.5% of the arm's level.
+**It was not run as a separate sweep**: the pilot at the committed rate reached 15.550 foods of 20 at
+49.13% full clear, which is not a rate visibly off, and stage 1 had already swept the same grid on the
+same mechanism — the true-gradient arm passing at all three rates and the ablation at none. Recorded
+as a deviation from the registered task, not as a completed one.
 
 **Not R.1d's `anatomical_scaled` readout.** Its norm came from a PPO harvest, so an arm using it
 inherits R.1d's "cannot satisfy the plausibility deliverable" flag — and having a rule that *can*
@@ -193,14 +197,26 @@ reach at a matched source; `plastic_readout − random` isolates the readout at 
 matched reach; and `plastic_readout − readout_only` isolates the substrate's own plasticity at a
 matched readout — the one a positive result needs to mean what it claims.
 
-## Outcomes — [Logbook 059](../../059-7a-shipment.md)'s three, unchanged
+## Outcomes — [Logbook 059](../../059-7a-shipment.md)'s three, with its third split
 
 | verdict | test | what follows |
 |---|---|---|
 | `does_not_learn` | no arm beats its floor by the registered minima | the programme **stops**; 7b proceeds under PPO after the power arithmetic; the plausibility claim is given up. The rule family has now failed with two independent eligibilities |
 | `learns_below_competence` | an arm beats its floor; none reaches 20% full clear | a **result**. R.1b stays blocked and 7b's gate is untouched; the readout-scale follow-up becomes the live question |
-| `learns_the_cell` | an arm beats its floor **and** reaches competence | the wiring contrast becomes runnable, registered fresh in its own change; B.5, B.1, B.4 and B.4b become askable |
+| `learns_the_cell` | an arm beats its floor, reaches competence **and clears the readout-only control by the registered 1.0-food minimum** | the wiring contrast becomes runnable, registered fresh in its own change; B.5, B.1, B.4 and B.4b become askable |
+| `learns_without_the_substrate` | an arm beats its floor and reaches competence; **none does so while writing the substrate** | 059's gate is met in **letter and not in substance**. Every substrate rung asks its question of a rule that writes the wiring, so **B.5, B.1, B.4 and B.4b stay gated**. R.1b becomes runnable in a changed form: wild type against its rewired null as **frozen features** under the readout-only arm |
 | `void` | stage 1's required-pass arm failed, or its required-fail arm passed | nothing here is interpretable and **no connectome run is spent** |
+
+**The split of 059's third outcome is POST HOC, added 2026-09-15 with the campaign's results already
+in hand.** What is not post hoc is the control that forced it: `readout_only` was registered, built and
+its purpose stated — separating "a local rule learns this substrate" from "a small linear readout on
+frozen recurrent features learns this cell" — **before any `readout_only` run existed**, with the sign
+unknown. The condition also uses the registered absolute minimum rather than a new threshold: the
+substrate's contribution must clear **1.0 food** over the control, the same bar every arm's effect is
+held to. The ordering, plainly: the arms ran, `plastic_readout − readout_only` came back at **−3.895
+foods**, and only then was the outcome split. That is the failure mode R.1c caught in itself — a
+verdict condition weaker than the consequence attached to it — surfaced here *after* the campaign
+rather than before it, which is worse, and is the reason the control existed at all.
 
 059's **three-active-week implementation bound** applies: the case for this programme over running 7b
 under PPO is that it is cheaper. **Implementation started 2026-09-14**, so the bound falls on
@@ -247,9 +263,10 @@ uv run python scripts/analysis/l4_rule_positive_control.py \
 uv run python scripts/analysis/l4_rule_positive_control.py \
   --diagnostic-out docs/experiments/logbooks/supporting/063-l4-eprop/stage1-diagnostic.json
 
-# 2. pilot on DISJOINT seeds, plus the rate check
+# 2. pilot on DISJOINT seeds — the 12 runs this record reports. At the committed rate; no separate
+#    rate-check sweep was run (see above).
 uv run python scripts/run_campaign.py \
-  --config ${P}_random.yml --config ${P}_frozen.yml \
+  --config ${P}_plastic_readout.yml --config ${P}_random.yml --config ${P}_frozen.yml \
   --seeds 101-104 --runs 3000 --output-dir campaigns/eprop-pilot \
   -- --theme headless --track-experiment
 

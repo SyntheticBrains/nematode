@@ -132,10 +132,19 @@ draw.
   8 seeds — R.1d's best substituted arm at
   **9.639**, and PPO's matched **18.945**.
 
-- **The registered outcomes are 059's three, unchanged**: does not learn (the programme stops and 7b
-  proceeds under PPO); learns but misses the wiring bar (a result, 7b stays gated); learns and reads
-  the wiring. 059's **three-active-week implementation stopping condition** applies and is carried as a
-  task.
+- **The registered outcomes are 059's three**: does not learn (the programme stops and 7b proceeds
+  under PPO); learns but misses the wiring bar (a result, 7b stays gated); learns and reads the wiring.
+  059's **three-active-week implementation stopping condition** applies and is carried as a task.
+
+  *(Amended 2026-09-15, after the campaign.)* **The third was split.** "A rule that learns the
+  hard-food cell" cannot distinguish two different worlds on this substrate: the readout is an
+  8-parameter linear map, so an arm can learn this cell with the wiring frozen — and the gate then says
+  nothing about the wiring, which is the only thing every substrate rung is about. `learns_the_cell`
+  now additionally requires the arm to **write the substrate** and clear the `readout_only` control by
+  the registered 1.0-food minimum; `learns_without_the_substrate` is the reading where the cell is
+  learned and no arm does so while writing the wiring. The split is **post hoc** — the results were in
+  hand. The control that forced it was not: it was registered before any `readout_only` run existed,
+  for exactly this separation, with the sign unknown.
 
 Out of scope: **the wiring contrast itself** (059's third stage, on the block-V cells against the
 registered ≥ 20% time-to-competence bar) — it is gated on stage 2 producing a rule that learns the
