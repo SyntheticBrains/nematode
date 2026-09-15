@@ -35,8 +35,11 @@ The ratified decision table (`docs/roadmap.md` § Phase 7 § Pre-registered desi
 - **D11** cross-species protocol: comparative cross-connectome learning MUST (under the L4 rule; PPO secondary); weight-transplant transfer SHOULD; dauer first; N=2 sensitivity run; one pre-registered transfer metric per behaviour.
 - **D12** diffusible layer v1: per-modulator global scalars, brain-internal, receptor-class gating; head-truncated arms run internal-state-driven modulation only (deterministic source policy; ghost/external sources rejected).
 - **D13** sequencing: 7a-i / 7a-ii split; 6a preprint SHOULD in the 7a-i window; imitation-warm-start arm SHOULD, early; 6b decoupled.
+- **D14** *(added 2026-09-15)* 7b deferral and the Phase 7 close: the rule programme closed in a state none of its outcomes named (a competent learner whose substrate is frozen); 7b's comparative core moves to the phase after 7 behind the ladder, C.1/C.2/C.4 unscheduled; Phase 7 closes on 7a + the frozen-features R.1b + V.4 + synthesis; plausibility claim restated as "a small local readout reads the wiring's fixed features"; ladder resumes with `readout_only` as instrument, readout width and dynamics pulled forward, the body stays in the phase after 7.
 
 Amending any D-decision requires a dated note in this change (and a matching roadmap edit), before the affected milestone change merges — the same anti-scope-creep discipline as `phase6-tracking` Decision 4.
+
+*Amendment 2026-09-15 (D14, matching roadmap edit in the same PR).* D11's MUST sweep and D12's head-scope source policy are not withdrawn but **deferred with 7b**: both presuppose a learner that writes the wiring to some benefit, and after R.2 no such learner exists. D1's "e-prop fallback" is **resolved** — it ran, and it is the reading that closed the rule programme. D2's success test (i) is re-asked in the frozen-features R.1b under `readout_only`, which is the D10 primary contrast under the one plausible learner that reaches competence.
 
 ### Decision B: Execution-protocol standards (inherited from Phase 6, non-optional)
 
