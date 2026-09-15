@@ -55,7 +55,7 @@ Every Phase 7 panel or sweep milestone conforms to these; they are credibility c
 
 ### Decision C: Shipment semantics mirror 6a/6b
 
-The 7a GO ("7a complete / 7b pending") is a shipment decision, not phase completion — Phase 7 is marked COMPLETE only when the 7b comparative cross-connectome sweep has shipped **and the synthesis publishes** (the single completion predicate, identical in spec.md, tasks.md, and the roadmap Go/No-Go). Splits are invoked on pre-registered criteria (including by success), never on month counts; estimates are tracked in active-work weeks.
+The 7a GO ("7a complete / 7b pending") is a shipment decision, not phase completion. *(Amended 2026-09-15, D14.)* The single completion predicate — identical in spec.md, tasks.md and the roadmap — is now **7a + L.0 (the frozen-features R.1b) + V.4 + the synthesis**; the 7b comparative sweep is **deferred to the phase after 7** and no longer gates completion, with the diffusible layer, the modulated rules and 7b recorded as unmet MUSTs under the SPLIT. What does not change: completion still requires the synthesis to publish, "well underway" still never satisfies it, and splits are still invoked on pre-registered criteria (including by success), never on month counts; estimates are tracked in active-work weeks.
 
 ## Open Questions (resolved in per-milestone changes, not here)
 

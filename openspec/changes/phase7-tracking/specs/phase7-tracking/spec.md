@@ -48,14 +48,21 @@ Every Phase 7 panel or sweep SHALL conform to the inherited execution-protocol s
 
 ### Requirement: Shipment Completion Semantics
 
-A 7a GO decision SHALL record the phase state as "7a complete / 7b pending" and SHALL NOT mark Phase 7 complete. Phase 7 SHALL be marked ✅ COMPLETE only when the 7b comparative cross-connectome sweep has shipped and the synthesis publishes; "well underway" SHALL never satisfy completion. Splits SHALL be invoked on pre-registered criteria (including by success), never on month counts.
+A 7a GO decision SHALL record the phase state as "7a complete / 7b pending" and SHALL NOT mark Phase 7 complete. Phase 7 SHALL be marked ✅ COMPLETE only when every shipment the governing completion predicate names has landed **and the synthesis publishes**; "well underway" SHALL never satisfy completion. Splits SHALL be invoked on pre-registered criteria (including by success), never on month counts. *(Amended 2026-09-15, D14: the predicate is **7a + L.0, the frozen-features R.1b, + V.4 + the synthesis**. The 7b comparative sweep is deferred to the phase after 7 and no longer gates completion; it is recorded as an unmet MUST under the SPLIT alongside the diffusible layer and the modulated rules.)*
 
 #### Scenario: 7a closes while 7b is pending
 
 - **GIVEN** shipments 7a-i and 7a-ii are complete with D2-bar results in hand
 - **WHEN** the 7a shipment decision is recorded
 - **THEN** the roadmap Phase 7 status SHALL read "7a complete / 7b pending" (mirroring the 6a/6b pattern)
-- **AND** Phase 7 SHALL NOT be marked COMPLETE until the 7b sweep and the synthesis land
+- **AND** Phase 7 SHALL NOT be marked COMPLETE until every shipment the completion predicate names, and the synthesis, land
+
+#### Scenario: A shipment is deferred out of the phase
+
+- **GIVEN** a shipment the completion predicate names becomes unrunnable on evidence, and a dated decision defers it to a later phase
+- **WHEN** that decision is recorded
+- **THEN** the completion predicate SHALL be restated in the same PR across the tracker's spec, design and tasks, and the roadmap
+- **AND** the deferred shipment SHALL be recorded as an unmet MUST under the SPLIT rather than dropped
 
 ### Requirement: Scope Exclusions
 
