@@ -78,18 +78,21 @@ midpoint rather than the real 73.4%. The harness computes from the comparator's 
 test pins both endpoints, which is how the discrepancy surfaced. The 32-seed decision is unchanged
 and better supported: the figure it was avoiding is worse than stated, not better.)\*
 
-These are **sign-test** figures. The registered test is a paired rank test under BH-FDR, which uses
-magnitudes and so has somewhat more power; the sign test is quoted because it is the conservative
-floor and needs no assumption about the effect's distribution.
+These are **sign-test planning figures, and not the power of the registered procedure.** That
+procedure is a paired rank test corrected across four metrics under BH-FDR, and the two differ in
+**both** directions: the rank test uses magnitudes where the sign test uses only signs, while the
+family correction costs power a single test does not pay. Computing the registered procedure's power
+would need an explicit alternative and a distributional assumption for the effect, neither of which
+this design has — so these size the seed count and are quoted as that, not as a floor.
 
 ## Outcomes
 
 | verdict | test | what follows |
 |---|---|---|
 | `wiring_is_legible` | wild type beats the null on time-to-competence by ≥ 20%, significant under BH-FDR, both learning gates pass, prior indistinguishable | The first wiring result in this project under a **plausible** learner. Phase 7 closes with three citable results. L.1 asks "how much more" and **L.4/L.5 open** — which part of the wiring carries it |
-| `wiring_is_inert_as_features` | no significant advantage at the registered bar, gates and prior clean | 034's degree-statistics verdict extends to a **second learning regime**: the wiring is endpoint-inert under gradient learning, harmful under local rules that write it, and indistinguishable from a degree-matched shuffle as fixed features. **L.1 is promoted to MUST** — the width question a null raises |
+| `wiring_is_inert_as_features` | no significant advantage at the registered bar, gates and prior clean | 034's degree-statistics verdict extends to a **third learning regime**: the wiring is endpoint-inert under gradient learning, harmful under local rules that write it, and indistinguishable from a degree-matched shuffle as fixed features. **L.1 is promoted to MUST** — the width question a null raises |
 | `below_bar` | a significant advantage under the registered bar | Reported as suggestive with the bar unmet, as V.1 and V.3 would have been. L.1 becomes the follow-up either way |
-| `void` | a learning gate fails, or the untrained prior separates | The contrast is uninterpretable: either the arms did not learn, or the rewiring changed the substrate before learning did |
+| `void` | a learning gate fails, the untrained prior separates, **or the substrate did not stay frozen** (non-zero `w_chem` drift, or drift evidence missing for any scored seed) | The contrast is uninterpretable: the arms did not learn, the rewiring changed the substrate before learning did, or the thing this was supposed to hold fixed moved — in which case it is not a fixed-features contrast at all |
 
 ## What this may not be cited as
 

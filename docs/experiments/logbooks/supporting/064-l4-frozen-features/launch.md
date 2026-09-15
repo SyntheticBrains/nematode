@@ -99,7 +99,9 @@ Three checks travel with the primary and two can void it: the **two learning gat
 against its own floor), the **untrained prior** (measured here — V.1's −0.17 and V.3's −0.01 were
 measured on PPO-configured floors at action std 1.0 where these run at 0.368, and carrying one
 regime's figure into another as established is what this change's own design forbids), and
-**credited drift**, which must read 0.00 on both wirings.
+**credited drift**, which must read 0.00 on both wirings at **every** scored seed and **voids the
+result otherwise** — a substrate that moved is not a fixed substrate, and drift evidence missing for a
+seed is not evidence that it held.
 
 ## The power arithmetic, registered because a null closes the phase
 
@@ -110,16 +112,18 @@ regime's figure into another as established is what this change's own design for
 
 V.3's observed per-seed win rate on this contrast was **21–26 of 32**, so the midpoint is **73.4%**.
 Sixteen pairs would have given **57.3%** power there — missing an effect of the comparator's size more
-often than catching it — which is not an acceptable basis for a null that closes a phase.
+often than catching it — which is not an acceptable basis for a null that closes a phase. These are
+**sign-test planning figures, not the registered procedure's power**: that is a paired rank test under
+BH-FDR across four metrics, which differs in both directions.
 
 ## Outcomes
 
 | verdict | test | what follows |
 |---|---|---|
 | `wiring_is_legible` | wild type faster by ≥ 20%, significant, gates pass, prior clean | The first wiring result under a **plausible** learner. Phase 7 closes with three citable results; **L.4 and L.5 open** |
-| `wiring_is_inert_as_features` | no significant advantage at the bar | 034's degree-statistics verdict extends to a **second learning regime**. **L.1 is promoted to MUST** |
+| `wiring_is_inert_as_features` | no significant advantage at the bar | 034's degree-statistics verdict extends to a **third learning regime**. **L.1 is promoted to MUST** |
 | `below_bar` | significant, under 20% | Suggestive with the bar unmet, as V.1 and V.3 would have been held |
-| `void` | a learning gate fails, or the prior separates | Uninterpretable: the arms did not learn, or the rewiring changed the substrate before learning did |
+| `void` | a learning gate fails, the prior separates, **or the substrate did not stay frozen** | Uninterpretable: the arms did not learn, the rewiring changed the substrate before learning did, or the thing held fixed moved — in which case it is not a fixed-features contrast at all |
 
 ### What this cannot be, whatever it returns
 

@@ -48,7 +48,9 @@ null, both frozen, with the readout learning on top.**
   a one-sided sign test needs **12/16 (75%)** positive to reach p ≤ 0.05, and V.3's observed per-seed
   win rate on this exact contrast was **21–26 of 32, or 65.6–81.3%** — giving 16 seeds **30.7–83.4%**
   power across the comparator's own range, and **57.3%** at its midpoint of 73.4%. Thirty-two
-  pairs give **43.4–97.3%**, and **79.2%** at that midpoint. The registered test is a paired *rank* test under BH-FDR,
+  pairs give **43.4–97.3%**, and **79.2%** at that midpoint. These are **sign-test planning figures,
+  not the registered procedure's power** — that is a paired rank test under BH-FDR across four
+  metrics, which differs in both directions and would need an explicit alternative to compute. The registered test is a paired *rank* test under BH-FDR,
   which uses magnitudes and so has somewhat more power than the sign test; these figures are a
   conservative floor and are stated as such.
 
@@ -81,8 +83,12 @@ beside, before it runs.
 
 ## Impact
 
-- New: two configs (the rewired-null counterparts); `scripts/analysis/l4_frozen_features.py`; records
-  under `supporting/064-l4-frozen-features/`; Logbook 064.
+- New: **four configs** — the two rewired-null counterparts
+  (`..._eprop_readout_only_rewired_null.yml`, `..._eprop_frozen_rewired_null.yml`) and the two
+  rate-check variants the stop clause needs (`..._eprop_readout_only_r1e4.yml`,
+  `..._eprop_readout_only_r1e2.yml`, disjoint seeds only, not registered campaign arms);
+  `scripts/analysis/l4_frozen_features.py`; records under `supporting/064-l4-frozen-features/`;
+  Logbook 064.
 - Edited: the experiments index, `CHANGELOG.md`, the tracker (L.0), the roadmap only if the reading
   changes.
 - Compute: **128 runs** — four arms × 32 seeds at ~1800 s — about **5h** at the measured parallelism,

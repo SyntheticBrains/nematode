@@ -7,6 +7,15 @@ record SHALL state that the substrate enters as **fixed features** and not as so
 adapts, and SHALL state which claim the result bears on. Such a result SHALL NOT be reported as
 satisfying a deliverable whose condition is that the substrate's own weights are plastic.
 
+#### Scenario: The fixed tensors are compared before and after the run
+
+- **GIVEN** a contrast whose premise is that the substrate's own weights do not change
+- **WHEN** the result is scored
+- **THEN** those tensors SHALL be compared against a control in which nothing learned, the drift
+  SHALL be recorded with the result, and the comparison SHALL cover every scored seed
+- **AND** any non-zero drift, or drift evidence missing for any scored seed, SHALL return **void** --
+  a substrate that moved is not a fixed substrate, and "it could not be checked" is not "it held"
+
 #### Scenario: The learner's relationship to the substrate is recorded with the contrast
 
 - **GIVEN** a wiring contrast run under a learner that does not write the substrate's weights

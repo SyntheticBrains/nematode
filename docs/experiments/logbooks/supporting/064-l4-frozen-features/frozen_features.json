@@ -612,8 +612,9 @@
       "n": 32,
       "p_degrade": 0.10844366159290075,
       "p_improve": 0.8950228444300592,
+      "p_two_sided": 0.2168873231858015,
       "positive_seeds": 13,
-      "q_improve": 0.8950228444300592
+      "q_improve": 0.2168873231858015
     },
     "prior_reference": {
       "V.1 thermal": [
@@ -674,7 +675,7 @@
     "k_needed": 22,
     "k_needed_fraction": 0.6875,
     "n_pairs": 32,
-    "note": "sign-test floor; the registered paired rank test has more power",
+    "note": "sign-test planning figures, not the registered procedure's power: that is a paired rank test under BH-FDR across four metrics, which differs in both directions",
     "power_against_comparator": {
       "66%": 0.4338756479426547,
       "73%": 0.7915316448806222,
@@ -721,6 +722,7 @@
   },
   "satisfies_d2_primary": false,
   "substrate_drift": {
+    "drift_evidence_complete": true,
     "rn_learning": {
       "available": true,
       "mean_relative": 0.0,
@@ -734,5 +736,5 @@
     }
   },
   "verdict": "wiring_is_inert_as_features",
-  "why": "no significant advantage at the registered bar: 034's degree-statistics verdict extends to a second learning regime. The wiring is endpoint-inert under gradient learning, harmful under local rules that write it, and indistinguishable from a degree-matched shuffle as fixed features"
+  "why": "no significant advantage at the registered bar: 034's degree-statistics verdict extends to a third learning regime. The wiring is endpoint-inert under gradient learning, harmful under local rules that write it, and indistinguishable from a degree-matched shuffle as fixed features"
 }

@@ -29,6 +29,7 @@ while _root != _root.parent and not (_root / "scripts" / "analysis").is_dir():
 sys.path.insert(0, str(_root / "scripts" / "analysis"))
 
 import l4_frozen_features as ff  # noqa: E402  # pyright: ignore[reportMissingImports]
+import l4_mixture_statistic as ms  # noqa: E402  # pyright: ignore[reportMissingImports]
 
 
 @dataclass
@@ -92,6 +93,7 @@ def _analyse(
         lambda *_a, **_k: {
             "wt_learning": {"mean_relative": 0.0, "n_read": 32, "available": True},
             "rn_learning": {"mean_relative": 0.0, "n_read": 32, "available": True},
+            "drift_evidence_complete": True,
             "substrate_frozen": True,
         },
     )
@@ -159,7 +161,9 @@ class TestTheRegisteredBarIsAFraction:
     def test_no_significant_advantage_reads_inert(self, monkeypatch: pytest.MonkeyPatch) -> None:
         out = _analyse(_scanned(), _efficiency(delta=40.0, q=0.6), monkeypatch)
         assert out["verdict"] == "wiring_is_inert_as_features"
-        assert "second learning regime" in out["why"]
+        # Three regimes now: PPO gradient learning (034), local rules that write the wiring
+        # (063), and a readout learning on frozen features (this).
+        assert "third learning regime" in out["why"]
 
     def test_a_significant_advantage_the_wrong_way_is_not_legible(
         self,
@@ -213,11 +217,16 @@ class TestThePowerArithmetic:
         monkeypatch.setattr(
             ff,
             "drift",
-            lambda *_a, **_k: {"substrate_frozen": True, "wt_learning": {}, "rn_learning": {}},
+            lambda *_a, **_k: {
+                "substrate_frozen": True,
+                "drift_evidence_complete": True,
+                "wt_learning": {},
+                "rn_learning": {},
+            },
         )
         out = _analyse(_scanned(), _efficiency(delta=273.0, q=0.003), monkeypatch)
         assert out["power"]["n_pairs"] == len(ff.SEEDS)
-        assert "sign-test floor" in out["power"]["note"]
+        assert "planning figures" in out["power"]["note"]
 
 
 class TestTheManifest:
@@ -299,7 +308,12 @@ class TestAPilotIsNotAVerdict:
         monkeypatch.setattr(
             ff,
             "drift",
-            lambda *_a, **_k: {"substrate_frozen": True, "wt_learning": {}, "rn_learning": {}},
+            lambda *_a, **_k: {
+                "substrate_frozen": True,
+                "drift_evidence_complete": True,
+                "wt_learning": {},
+                "rn_learning": {},
+            },
         )
         monkeypatch.setattr(ff.eff, "analyse", lambda _m: _efficiency(delta=400.0, q=0.001))
         out = ff.analyse(_scanned(), Path("m.txt"), seeds=(101, 102, 103, 104))
@@ -314,7 +328,12 @@ class TestAPilotIsNotAVerdict:
         monkeypatch.setattr(
             ff,
             "drift",
-            lambda *_a, **_k: {"substrate_frozen": True, "wt_learning": {}, "rn_learning": {}},
+            lambda *_a, **_k: {
+                "substrate_frozen": True,
+                "drift_evidence_complete": True,
+                "wt_learning": {},
+                "rn_learning": {},
+            },
         )
         monkeypatch.setattr(ff.eff, "analyse", lambda _m: _efficiency(delta=400.0, q=0.001))
         out = ff.analyse(_scanned(), Path("m.txt"), seeds=(101, 102, 103, 104))
@@ -331,3 +350,103 @@ class TestAPilotIsNotAVerdict:
 
     def test_the_registered_count_reaches_the_gate(self) -> None:
         assert ff.power(len(ff.SEEDS))["gate_reachable"] is True
+
+
+class TestTheSubstrateMustStayFrozen:
+    """If the substrate moved, this is not a fixed-features contrast at all."""
+
+    @staticmethod
+    def _drift(monkeypatch: pytest.MonkeyPatch, **over: object) -> None:
+        base = {
+            "wt_learning": {"mean_relative": 0.0, "n_read": 32, "available": True},
+            "rn_learning": {"mean_relative": 0.0, "n_read": 32, "available": True},
+            "drift_evidence_complete": True,
+            "substrate_frozen": True,
+        }
+        base.update(over)
+        monkeypatch.setattr(ff, "drift", lambda *_a, **_k: base)
+
+    def test_nonzero_drift_voids_the_contrast(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._drift(monkeypatch, substrate_frozen=False)
+        monkeypatch.setattr(ff.eff, "analyse", lambda _m: _efficiency(delta=400.0, q=0.001))
+        out = ff.analyse(_scanned(), Path("m.txt"))
+        assert out["verdict"] == "void"
+        assert "did not stay frozen" in out["why"]
+
+    def test_incomplete_evidence_voids_and_says_so(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Distinguished from actual drift: "we could not check" is not "it stayed put".
+        self._drift(monkeypatch, substrate_frozen=False, drift_evidence_complete=False)
+        monkeypatch.setattr(ff.eff, "analyse", lambda _m: _efficiency(delta=400.0, q=0.001))
+        out = ff.analyse(_scanned(), Path("m.txt"))
+        assert out["verdict"] == "void"
+        assert "incomplete" in out["why"]
+
+    def test_completeness_needs_every_requested_seed(self) -> None:
+        # With one arm's checkpoints missing, `all()` over a short list would have reported the
+        # substrate frozen on the strength of whatever happened to be on disk.
+        out = ff.drift({"logs": {}}, seeds=(1, 2, 3))
+        assert out["drift_evidence_complete"] is False
+        assert out["substrate_frozen"] is False
+
+
+class TestThePriorIsHeldToTheFamily:
+    """The prior can void the campaign, so its threshold has to be a real corrected q."""
+
+    @staticmethod
+    def _prior_q(wt_frozen: float, rn_frozen: float) -> dict[str, Any]:
+        scanned = _scanned(wt_frozen=_arm(wt_frozen), rn_frozen=_arm(rn_frozen))
+        return ff.gates(scanned)
+
+    @staticmethod
+    def _prior_split(wild_better: int) -> dict[str, Any]:
+        """Build a prior where exactly ``wild_better`` of the 32 seeds favour the wild type.
+
+        ``_arm`` cannot produce a marginal case -- its deltas are perfectly consistent in sign, so
+        the test is either p = 1 or p ~ 0. Mixing the signs is what reaches the band where the raw
+        one-sided minimum and the corrected two-sided q disagree.
+        """
+        n = len(ff.SEEDS)
+        deltas = [1.0] * wild_better + [-1.0] * (n - wild_better)
+        wt = {s: _Record(0.0, 3.0) for s in ff.SEEDS}
+        rn = {s: _Record(0.0, 3.0 - d) for s, d in zip(ff.SEEDS, deltas, strict=True)}
+        return ff.gates(_scanned(wt_frozen=wt, rn_frozen=rn))
+
+    def test_a_two_sided_p_is_recorded_not_a_bare_minimum(self) -> None:
+        # `min(p_improve, p_degrade)` is not a p-value: it doubles the type-I rate. The recorded
+        # two-sided p is 2 * min, capped at 1.
+        checks = self._prior_q(2.3, 2.3)
+        prior = checks["prior"]
+        expected = min(1.0, 2.0 * min(prior["p_improve"], prior["p_degrade"]))
+        assert prior["p_two_sided"] == pytest.approx(expected)
+
+    def test_separation_is_read_off_the_corrected_q(self) -> None:
+        checks = self._prior_q(2.3, 2.3)
+        assert checks["prior_separates"] is (checks["prior"]["q_improve"] <= ms.SIG_Q)
+
+    def test_a_marginal_prior_the_raw_check_would_have_flagged_is_not_flagged(self) -> None:
+        # The fix's effect, on the exact band where it bites: at 21 of 32 the raw one-sided minimum
+        # is 0.0385 and clears the gate, while the corrected two-sided q is 0.0771 and does not.
+        # Under the old `min(...)` check this VOIDED the campaign.
+        checks = self._prior_split(wild_better=21)
+        raw = min(checks["prior"]["p_improve"], checks["prior"]["p_degrade"])
+        assert raw <= ms.SIG_Q, "fixture no longer exercises the case it was built for"
+        assert checks["prior"]["q_improve"] > ms.SIG_Q
+        assert checks["prior_separates"] is False
+
+    def test_a_genuinely_separating_prior_still_separates(self) -> None:
+        # The fix must not blunt the check it corrects: one seed further on, it fires.
+        checks = self._prior_split(wild_better=22)
+        assert checks["prior"]["q_improve"] <= ms.SIG_Q
+        assert checks["prior_separates"] is True
+
+    def test_a_wholly_separated_prior_separates(self) -> None:
+        assert self._prior_q(2.3, 12.0)["prior_separates"] is True
+
+
+class TestThePowerFiguresAreLabelledAsPlanning:
+    def test_the_note_disclaims_the_registered_procedure(self) -> None:
+        # They size the seed count. They are not the power of a paired rank test corrected across
+        # four metrics, which differs in both directions and needs an explicit alternative.
+        note = ff.power(32)["note"]
+        assert "planning" in note
+        assert "BH-FDR" in note

@@ -6,14 +6,14 @@ time-to-competence (q = 0.971 one-sided, block V's own instrument), under the on
 plausible learner on this substrate that reaches competence — `readout_only`, where the chemical
 matrix is **frozen** and only the 2×4 motor readout learns, by its own exact gradient. The contrast is
 fully interpretable and not voided: both wirings learn (**+14.801** and **+14.701** foods over their
-own frozen floors, q = 0.000 each), the untrained prior does **not** separate (−0.975, q = 0.895), and
+own frozen floors, q = 0.000 each), the untrained prior does **not** separate (−0.975, q = 0.217 two-sided), and
 `w_chem` drift reads **0.00** on both sides, so the substrate really was frozen. **The point estimates
 lean the other way** on three of four metrics — the null reaches competence on a median **405**
 episodes against the wild type's **568**, ahead on **22 of 32** seeds — at **q = 0.058 reversed, short
 of the gate and post-hoc in direction**, so it is recorded as a lean and not as a result. The most
 concrete difference is not statistical: **five wild-type seeds never became competent** within 3000
 episodes against **one** for the null. So [034](034-connectome-structure-controls.md)'s
-degree-statistics verdict now extends to a **second learning regime** — the wiring is endpoint-inert
+degree-statistics verdict now extends to a **third learning regime** — the wiring is endpoint-inert
 under gradient learning, actively harmful under local rules that write it
 ([063](063-l4-eprop.md)), and as fixed features indistinguishable from a degree-matched shuffle.
 **No mechanism is available for the lean**, and none is offered: V.2 tested 64 rewirings against four
@@ -76,10 +76,11 @@ was registered before the run.
 |---|---|---|---|
 | `wt_learning − wt_frozen` | **+14.801** foods | 0.000 | the wild type learns this cell |
 | `rn_learning − rn_frozen` | **+14.701** foods | 0.000 | so does the null |
-| `wt_frozen − rn_frozen` | −0.975 foods | 0.895 | **the untrained prior is indistinguishable** |
+| `wt_frozen − rn_frozen` | −0.975 foods | 0.217 | **the untrained prior is indistinguishable** |
 
-`w_chem` drift is **0.00** on both learning arms — the check that this is a fixed-features contrast at
-all. Nothing voids the primary.
+`w_chem` drift is **0.00** on both learning arms at **every** scored seed — the check that this is a
+fixed-features contrast at all, and one that now **voids** the result if it fails, with "drift evidence
+missing" distinguished from "drift measured at zero". Nothing voids the primary.
 
 The prior is reported beside V.1's −0.17 (q = 0.735) and V.3's −0.01 (q = 0.841) as **context only**:
 those floors were PPO-configured at an action std of 1.0 where these run at 0.368.
@@ -113,6 +114,16 @@ often. It is also why the means diverge so much further than the medians (1039.8
 the medians are 568 against 405): five censored values at 3000 pull the wild mean up. The medians are
 therefore the figures to quote, and the means are shown only beside them.
 
+**The direction of the censoring bias is stated rather than corrected.** The committed instrument
+treats a censored value as an exact observation at the horizon — block V's convention, which V.1 and
+V.3 are recorded against. A censored wild-type seed's true time is **≥** 3000, so using 3000
+*understates* how far behind it is: the bias is conservative for the registered one-sided test
+(wild-better) and conservative for the reverse lean as well, so it cannot manufacture either finding.
+Switching to a censor-aware survival estimator was considered and rejected — it would diverge from the
+instrument this campaign exists to be read beside, and changing the estimator after seeing the result
+is the post-hoc move this project's discipline forbids. The per-seed CSV carries a `primary_censored`
+column so a reader can check the affected rows rather than take the means on trust.
+
 ### No mechanism is available, and none is offered
 
 V.2 regenerated all 64 rewirings and scored them on four graph properties fixed before looking, finding
@@ -122,7 +133,7 @@ unexplained rather than attached to a story about spectral radius or path length
 
 ## What this settles, and what it does not
 
-- **034's verdict extends to a second learning regime.** Endpoint-inert under gradient learning
+- **034's verdict extends to a third learning regime.** Endpoint-inert under gradient learning
   ([034](034-connectome-structure-controls.md)), actively harmful under local rules that write it
   ([063](063-l4-eprop.md)), and indistinguishable from a degree-matched shuffle as fixed features.
   Three independent learning regimes, one answer.
@@ -154,7 +165,9 @@ unexplained rather than attached to a story about spectral radius or path length
   needing reconciliation. It was a metric mismatch of my own: I was reading the logs' whole-run
   `Average foods collected per run` while the committed harness uses the **plateau-tail** (final
   quarter) mean. On the harness's metric every seed matches R.2 **exactly** to four decimals, and the
-  two campaigns' seed-1 runs are **byte-identical across all 3000 episodes**. Task 4.3 passes. The
+  two campaigns' runs are **byte-identical across all 3000 episodes on all 16 shared seeds** — 16/16 on
+  both the episode series and the plateau-tail metric, verified after the claim was first made on seed
+  1 alone. Task 4.3 passes. The
   systematic direction I read into it — 15 of 16 lower — is simply what a whole-run mean does against
   a plateau-tail mean on an arm that is still improving.
 - **The registered power table was wrong before the run and was corrected in the change.** It quoted

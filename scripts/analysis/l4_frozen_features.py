@@ -31,8 +31,9 @@ Three checks travel with the primary, as they did in V.1 and V.3, and two of the
 
 The power arithmetic is carried as a field rather than left in the registration, because a null here
 closes the phase: at 16 pairs a one-sided sign test needs 12/16 positive, and the comparator's own
-per-seed win rate was 21-26 of 32, so 16 seeds would have had 63% power at that range's midpoint.
-Thirty-two pairs give 85%.
+per-seed win rate was 21-26 of 32, whose midpoint is 73.4% -- so 16 seeds would have had **57.3%**
+power there against **79.2%** at 32 pairs. Sign-test planning figures, not the registered procedure's
+power; see ``power``.
 """
 
 from __future__ import annotations
@@ -177,16 +178,25 @@ def gates(scanned: dict[str, Any], seeds: tuple[int, ...] = SEEDS) -> dict[str, 
     for label, (a, b, kind) in tests.items():
         contrast = ms.shift_contrast(foods(a), foods(b))
         out[label] = {"arms": [a, b], "kind": kind, **contrast}
-    qs = ms.bh_fdr([out[label]["p_improve"] for label in tests])
+    # The gates are one-sided -- an arm is asked to beat its own floor. The PRIOR is two-sided:
+    # either wiring being ahead before any learning is the same problem. A two-sided p from an exact
+    # one-sided pair is 2 * min(one-sided), capped at 1; the earlier `min(...)` alone was not a
+    # p-value and doubled the type-I rate on the check that can void the campaign.
+    prior_two_sided = min(
+        1.0,
+        2.0 * min(out["prior"]["p_improve"], out["prior"]["p_degrade"]),
+    )
+    out["prior"]["p_two_sided"] = float(prior_two_sided)
+    family = [out["wt_gate"]["p_improve"], out["rn_gate"]["p_improve"], prior_two_sided]
+    qs = ms.bh_fdr(family)
     for label, q in zip(tests, qs, strict=True):
         out[label]["q_improve"] = float(q)
     out["gates_pass"] = bool(
         out["wt_gate"]["q_improve"] <= ms.SIG_Q and out["rn_gate"]["q_improve"] <= ms.SIG_Q,
     )
-    # The prior must NOT separate. Two-sided in spirit: either wiring being ahead before learning is
-    # the same problem, so the smaller of the two one-sided q values is what is checked.
-    prior_q = min(out["prior"]["p_improve"], out["prior"]["p_degrade"])
-    out["prior_separates"] = bool(prior_q <= ms.SIG_Q)
+    # Read off the CORRECTED q of that two-sided p, so the prior is held to the same family as the
+    # gates it sits beside rather than to a raw threshold.
+    out["prior_separates"] = bool(out["prior"]["q_improve"] <= ms.SIG_Q)
     out["prior_reference"] = dict(PRIOR_REFERENCES)
     out["prior_reference_note"] = (
         "measured here, not inherited: V.1's and V.3's priors were measured on PPO-configured floors "
@@ -221,17 +231,25 @@ def drift(
             "n_read": len(values),
             "available": bool(values),
         }
-    read = [v["mean_relative"] for v in out.values() if v["available"]]
-    out["substrate_frozen"] = bool(read) and all(v < 1e-6 for v in read)
+    # Complete evidence, not merely available evidence: with one arm's checkpoints missing, `all()`
+    # over a short list would report the substrate frozen on the strength of whatever happened to be
+    # on disk. Both arms must be read at every requested seed.
+    complete = all(out[name]["n_read"] == len(seeds) for name in ("wt_learning", "rn_learning"))
+    read = [out[name]["mean_relative"] for name in ("wt_learning", "rn_learning")]
+    out["drift_evidence_complete"] = bool(complete)
+    out["substrate_frozen"] = bool(complete and all(v < 1e-6 for v in read))
     return out
 
 
 def power(n_pairs: int) -> dict[str, Any]:
     """Compute the sign-test arithmetic, carried because a null here closes the phase.
 
-    Conservative on purpose: the registered test is a paired rank test, which uses magnitudes and so
-    has more power. The sign test needs no assumption about the effect's distribution, which is what
-    makes it the right floor to quote.
+    These are **planning figures for a sign test**, not the power of the registered procedure. That
+    procedure is a paired rank test corrected across four metrics under BH-FDR, and the two differ in
+    both directions -- the rank test uses magnitudes where the sign test uses only signs, while the
+    correction across a family costs power that a single test does not pay. Computing the registered
+    procedure's power would need an explicit alternative and a distributional assumption for the
+    effect, neither of which this design has. So these size the seed count and are quoted as that.
     """
     from math import comb
 
@@ -270,7 +288,10 @@ def power(n_pairs: int) -> dict[str, Any]:
             for q in (low, (low + high) / 2, high)
         },
         "comparator_win_rate_range": [low, high],
-        "note": "sign-test floor; the registered paired rank test has more power",
+        "note": (
+            "sign-test planning figures, not the registered procedure's power: that is a "
+            "paired rank test under BH-FDR across four metrics, which differs in both directions"
+        ),
     }
 
 
@@ -309,17 +330,26 @@ def analyse(
                 "the arms did. Read the levels and the frozen-substrate check, not the reading"
             ),
         )
-    elif not checks["gates_pass"] or checks["prior_separates"]:
+    elif not checks["gates_pass"] or checks["prior_separates"] or not substrate["substrate_frozen"]:
         why = (
             "a learning gate failed"
             if not checks["gates_pass"]
-            else "the untrained prior separates between wirings"
+            else (
+                "the untrained prior separates between wirings"
+                if checks["prior_separates"]
+                else (
+                    "the frozen-substrate check is incomplete"
+                    if not substrate["drift_evidence_complete"]
+                    else "the substrate did not stay frozen"
+                )
+            )
         )
         verdict, reason = (
             "void",
             (
-                f"{why}, so the contrast is uninterpretable: either the arms did not learn, or the "
-                "rewiring changed the substrate before learning did"
+                f"{why}, so the contrast is uninterpretable: the arms did not learn, or the rewiring "
+                "changed the substrate before learning did, or the substrate this was supposed to "
+                "hold fixed moved -- in which case it is not a fixed-features contrast at all"
             ),
         )
     elif clears_bar:
@@ -346,7 +376,7 @@ def analyse(
             "wiring_is_inert_as_features",
             (
                 "no significant advantage at the registered bar: 034's degree-statistics verdict "
-                "extends to a second learning regime. The wiring is endpoint-inert under gradient "
+                "extends to a third learning regime. The wiring is endpoint-inert under gradient "
                 "learning, harmful under local rules that write it, and indistinguishable from a "
                 "degree-matched shuffle as fixed features"
             ),

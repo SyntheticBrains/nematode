@@ -7,7 +7,12 @@
   stays **unset**, so each seed's rewiring derives from its run seed and the wild-type and rewired arms
   pair — the same discipline V.1 and V.3 ran under.
 - [x] 1.2 Exact-key test: each rewired config differs from its wild-type partner in the `wiring` key
-  **alone**, and the two learning configs from the two floors in `freeze_updates` alone.
+  **alone**. The learning configs differ from their floors in **three** keys — `freeze_updates`,
+  `plasticity_plastic_readout` and `plasticity_plastic_tensors` — and the last two are **required** to
+  differ: a frozen arm may not declare a plastic readout, since with no update no tensor moves and "a
+  plastic-readout floor" is not a thing. A guard written in R.2 refuses that combination, and the test
+  asserts the guard as well as the key set. *(This task originally said "`freeze_updates` alone"; the
+  test caught it.)*
 - [x] 1.3 Confirm the operating point is R.2's, unchanged and written out rather than inherited:
   `plasticity_eligibility: eprop`, `plasticity_learning_signal: random`,
   `plasticity_plastic_readout: true`, `plasticity_plastic_tensors: readout_only`,
@@ -53,10 +58,15 @@
   here would mean the rewiring changed the substrate before any learning, which makes the primary
   uninterpretable — and it is one of the two conditions that fire `void`.
 - [x] 3.4 **Credited drift on `w_chem`, which must read 0.00 for both wirings** — the check that the
-  substrate really was frozen, as it was in R.2's `readout_only` arm.
+  substrate really was frozen, as it was in R.2's `readout_only` arm. It **voids** the contrast
+  otherwise, and requires drift read at **every** scored seed on both arms: with one arm's checkpoints
+  missing, an `all()` over a short list would report the substrate frozen on the strength of whatever
+  happened to be on disk.
 - [x] 3.5 The four registered readings — `wiring_is_legible`, `wiring_is_inert_as_features`,
   `below_bar`, `void` — with the consequence of each in the harness, not in prose. `void` fires on a
-  failed learning gate or a separated prior.
+  failed learning gate, a separated prior, **or a substrate that did not stay frozen** — non-zero
+  `w_chem` drift, or drift evidence missing for any scored seed, the two being distinguished in the
+  message because "it could not be checked" is not "it held".
 - [x] 3.6 The power arithmetic carried as a field in the record, not only in this registration: seed
   count, the k needed at that count, and the power against V.3's observed 66–81% win rate.
 - [x] 3.7 Tests for 3.1–3.6, including a fixture in each reading and one where the prior separates.
@@ -72,6 +82,17 @@
   passed whatever the arms did. **That was a harness defect the pilot caught**: it first printed
   `void — a learning gate failed`, the same shape as the bug R.2's harness had in a more dangerous
   form. Fixed and tested.
+- [x] 4.2a **The primary metric's censoring is recorded with its direction of bias.**
+  `episodes_to_30pct_success` is right-censored at the horizon, which the committed instrument treats
+  as an exact observation — block V's established convention, and the reason the per-seed CSV carries a
+  `primary_censored` column. The bias direction is stated rather than corrected: a censored wild-type
+  seed's true value is **≥** the horizon, so using the horizon **understates** how far behind it is.
+  That is conservative for the registered one-sided test (wild-better) and also conservative for the
+  reverse lean, so it cannot manufacture either finding. Switching to a censor-aware survival
+  estimator was considered and **rejected**: it would diverge from the instrument V.1 and V.3 are
+  recorded against, making this campaign non-comparable with the comparator it exists to be read
+  beside, and changing the estimator after seeing the result is the post-hoc move this project's
+  discipline forbids.
 - [x] 4.2 **The rate check runs** on those disjoint seeds — the committed `0.001` and one decade either
   side, learning arms only. R.2 waived its registered rate check, defensibly, because its pilot was
   plainly not rate-limited; this campaign can return a **null** that closes the phase, and a null from
