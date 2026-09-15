@@ -46,9 +46,9 @@ null, both frozen, with the readout learning on top.**
 - **32 paired seeds, matching V.3's power rather than R.2's count.** This is the load-bearing
   protocol choice and the arithmetic is registered here because a null closes the phase. At 16 pairs
   a one-sided sign test needs **12/16 (75%)** positive to reach p ≤ 0.05, and V.3's observed per-seed
-  win rate on this exact contrast was **21–26 of 32, or 66–81%** — giving 16 seeds only **32–83%**
-  power across the comparator's own range, and **63% at its midpoint**. Thirty-two pairs give
-  **45–97%**, and **85%** at that midpoint. The registered test is a paired *rank* test under BH-FDR,
+  win rate on this exact contrast was **21–26 of 32, or 65.6–81.3%** — giving 16 seeds **30.7–83.4%**
+  power across the comparator's own range, and **57.3%** at its midpoint of 73.4%. Thirty-two
+  pairs give **43.4–97.3%**, and **79.2%** at that midpoint. The registered test is a paired *rank* test under BH-FDR,
   which uses magnitudes and so has somewhat more power than the sign test; these figures are a
   conservative floor and are stated as such.
 

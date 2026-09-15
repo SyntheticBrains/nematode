@@ -62,16 +62,21 @@ Three checks travel with the primary, as they did in V.1 and V.3:
 
 ## The power arithmetic, registered because a null closes the phase
 
-| | k needed for p ≤ 0.05 | power at a 66% win rate | at 75% | at 81% |
+| | k needed for p ≤ 0.05 | at a 65.6% win rate | at 73.4% | at 81.3% |
 |---|---|---|---|---|
-| 16 pairs | 12/16 (75%) | 32% | 63% | 83% |
-| **32 pairs** | 22/32 (69%) | 45% | **85%** | 97% |
+| 16 pairs | 12/16 (75.0%) | 30.7% | **57.3%** | 83.4% |
+| **32 pairs** | 22/32 (68.8%) | 43.4% | **79.2%** | 97.3% |
 
-V.3's observed per-seed win rate on this contrast was **21–26 of 32 (66–81%)**. Sixteen pairs would
-have given 63% power at the midpoint of that range — missing a real effect of the comparator's size
-about **37%** of the time — which is not an acceptable basis for a null that closes a phase and
-stands as "the wiring is inert even as fixed features". Thirty-two pairs match the comparator's own
-power.
+V.3's observed per-seed win rate on this contrast was **21–26 of 32**, so the range is 65.6–81.3% and
+its midpoint is **73.4%**. Sixteen pairs would have given **57.3%** power there — missing a real
+effect of the comparator's size **more often than catching it** — which is not an acceptable basis
+for a null that closes a phase and stands as "the wiring is inert even as fixed features". Thirty-two
+pairs give 79.2%.
+
+*(Corrected before the run.* An earlier draft of this table quoted 63% and 85%, from a rounded 75%
+midpoint rather than the real 73.4%. The harness computes from the comparator's own fractions and a
+test pins both endpoints, which is how the discrepancy surfaced. The 32-seed decision is unchanged
+and better supported: the figure it was avoiding is worse than stated, not better.)\*
 
 These are **sign-test** figures. The registered test is a paired rank test under BH-FDR, which uses
 magnitudes and so has somewhat more power; the sign test is quoted because it is the conservative
