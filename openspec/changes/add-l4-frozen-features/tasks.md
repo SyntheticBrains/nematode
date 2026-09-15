@@ -76,25 +76,35 @@
   side, learning arms only. R.2 waived its registered rate check, defensibly, because its pilot was
   plainly not rate-limited; this campaign can return a **null** that closes the phase, and a null from
   an uncalibrated rate is the failure R.1c's σ calibration found on this substrate. No waiver.
-- [ ] 4.3 Re-score R.2's committed `readout_only` arm through this harness and confirm **17.570** foods
+- [x] 4.3 Re-score R.2's committed `readout_only` arm through this harness and confirm **17.570** foods
   and **52.61%** full clear. A mismatch means the harnesses disagree and nothing here is comparable.
+  **Passes exactly**: every seed matches R.2's committed value to four decimals through the same
+  `read_log`, and the two campaigns' runs are **byte-identical across all 3000 episodes**. This task
+  earned itself — progress updates had reported an unexplained 0.6-food gap three times, which was a
+  metric mismatch of my own (the logs' whole-run mean read against the harness's plateau-tail mean),
+  not a harness disagreement.
 - [x] 4.4 `launch.md` committed before anything runs, carrying the power arithmetic and the honest prior.
 
 ## 5. Campaign
 
-- [ ] 5.1 128 runs: four arms × seeds 1–32 at 3000 episodes, with `--track-experiment` so the drift
+- [x] 5.1 128 runs: four arms × seeds 1–32 at 3000 episodes, with `--track-experiment` so the drift
   check has weights to read.
-- [ ] 5.2 Per-seed CSV, the per-arm table and the verdict under `supporting/064-l4-frozen-features/`.
+- [x] 5.2 Per-seed CSV, the per-arm table and the verdict under `supporting/064-l4-frozen-features/`.
+  The CSV carries a **`primary_censored`** column per row: the primary metric is right-censored at the
+  3000-episode horizon, five wild-type seeds and one null seed sit there, and a reader has to be able
+  to see which rows those are rather than take the means on trust.
 
 ## 6. The record
 
-- [ ] 6.1 Logbook 064: the four-arm table, the two gates and the prior check stated in **every** verdict
+- [x] 6.1 Logbook 064: the four-arm table, the two gates and the prior check stated in **every** verdict
   branch, the drift column, the verdict against the four registered readings, and V.3's +23.5% reported
   beside the result as the same question under another regime — **not** as a quantitative delta.
-- [ ] 6.2 The experiments index row and `CHANGELOG.md`.
-- [ ] 6.3 The tracker's L.0 entry, and L.1's conditional promotion resolved: MUST if this reads null,
+- [x] 6.2 The experiments index row and `CHANGELOG.md`.
+- [x] 6.3 The tracker's L.0 entry, and L.1's conditional promotion resolved: MUST if this reads null,
   SHOULD if positive.
-- [ ] 6.4 State plainly what this may **not** be cited as, per the design's last section — including
+- [x] 6.4 State plainly what this may **not** be cited as, per the design's last section — including
   that it does not satisfy D2's primary and cannot convert the SPLIT into a GO.
-- [ ] 6.5 If the reading is `wiring_is_legible`, record that **L.4 and L.5 open** — their gate is this
-  result reading positive.
+- [x] 6.5 **Not applicable**: the reading is `wiring_is_inert_as_features`, so L.4 and L.5 stay shut and
+  are recorded `closed-unopened` in the tracker — against a null there is nothing for a feature
+  ablation to have changed. They reopen if L.1 finds the pooling was hiding structure. **L.1 is
+  promoted to MUST** instead, by the conditional registered before this ran.

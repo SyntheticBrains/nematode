@@ -38,6 +38,7 @@ Thirty-two pairs give 85%.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import re
@@ -429,6 +430,32 @@ def _print(result: dict[str, Any]) -> None:
     print(f"\n{result['d2_note']}")
 
 
+def write_csv(result: dict[str, Any], path: Path) -> None:
+    """One row per arm and seed, so the table can be recomputed from the record.
+
+    The censored entries matter here: ``episodes_to_30pct_success`` is right-censored at the horizon,
+    and a reader has to be able to see which rows are censored rather than take the means on trust.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    per_seed = result["efficiency"]["per_seed"]
+    horizon = result["efficiency"]["horizon_episodes"]
+    metrics = sorted(next(iter(per_seed[eff._WILD].values())))
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["arm", "seed", *metrics, "primary_censored"])
+        for arm in (eff._WILD, eff._REWIRED):
+            for seed in sorted(per_seed[arm], key=int):
+                row = per_seed[arm][seed]
+                writer.writerow(
+                    [
+                        arm,
+                        seed,
+                        *(f"{row[m]:.6f}" for m in metrics),
+                        int(row[PRIMARY_METRIC] >= horizon),
+                    ],
+                )
+
+
 def _jsonable(value: object) -> object:
     """Replace not-a-number with null, recursively, so the record is strict JSON."""
     if isinstance(value, dict):
@@ -448,6 +475,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--experiments", type=Path, default=EXPERIMENTS)
     parser.add_argument("--manifest", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument("--csv", type=Path, default=None)
     parser.add_argument(
         "--allow-incomplete",
         action="store_true",
@@ -473,6 +501,8 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(
             json.dumps(_jsonable(result), indent=2, sort_keys=True, allow_nan=False) + "\n",
         )
+    if args.csv:
+        write_csv(result, args.csv)
     return 0
 
 

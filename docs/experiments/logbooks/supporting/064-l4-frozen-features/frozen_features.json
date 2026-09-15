@@ -1,0 +1,738 @@
+{
+  "clears_registered_bar": false,
+  "comparator": {
+    "gain_fraction": 0.235,
+    "note": "context, never a quantitative delta: the two run under different learning regimes and the project's commensurability rule forbids treating cross-regime deltas quantitatively",
+    "rewired_episodes": 1165.0,
+    "source": "V.3, the same contrast on this cell under PPO, 32 paired seeds",
+    "wild_episodes": 892.0
+  },
+  "d2_note": "D2's primary requires PLASTIC wild-type to beat PLASTIC rewired-null. This learner leaves the wiring frozen, so no result here can satisfy it or convert Phase 7's SPLIT into a GO.",
+  "efficiency": {
+    "horizon_episodes": 3000,
+    "metrics": {
+      "auc_foods": {
+        "bh_fdr_q": 0.9713401426632711,
+        "ci_hi": -0.04087187499999986,
+        "ci_lo": -1.4062947916666666,
+        "higher_is_better": true,
+        "mean_delta": -0.7686145833333334,
+        "n": 32,
+        "per_seed_deltas": [
+          -0.35300000000000153,
+          -1.221,
+          -0.8049999999999997,
+          -0.5070000000000014,
+          2.8226666666666667,
+          0.021333333333334537,
+          -2.4159999999999986,
+          3.072666666666665,
+          0.1819999999999986,
+          0.27333333333333343,
+          7.179333333333334,
+          -1.0713333333333352,
+          -3.8980000000000015,
+          -4.932666666666668,
+          2.177333333333335,
+          -1.7203333333333326,
+          3.9013333333333353,
+          -2.3323333333333327,
+          -3.926333333333334,
+          -0.7583333333333329,
+          1.5013333333333314,
+          -2.790666666666665,
+          -8.594000000000001,
+          -0.006000000000000227,
+          -2.2010000000000005,
+          -3.639666666666667,
+          -2.596,
+          1.5276666666666685,
+          -0.4326666666666661,
+          0.9429999999999978,
+          -3.3579999999999988,
+          -0.6383333333333319
+        ],
+        "rewired_mean": 17.32076041666667,
+        "wilcoxon_p": 0.9581445583608001,
+        "wild_better_seeds": 11,
+        "wild_mean": 16.552145833333334,
+        "wild_minus_rewired_oriented": -0.7686145833333334
+      },
+      "auc_success": {
+        "bh_fdr_q": 0.9713401426632711,
+        "ci_hi": -0.03214583333333332,
+        "ci_lo": -0.17639375000000002,
+        "higher_is_better": true,
+        "mean_delta": -0.10763541666666665,
+        "n": 32,
+        "per_seed_deltas": [
+          -0.08066666666666666,
+          -0.2676666666666666,
+          -0.14833333333333337,
+          -0.08000000000000002,
+          0.5116666666666667,
+          -0.08599999999999997,
+          -0.30699999999999994,
+          0.1383333333333333,
+          0.019333333333333313,
+          0.10599999999999998,
+          0.5346666666666666,
+          -0.07600000000000001,
+          -0.294,
+          -0.7206666666666667,
+          0.29666666666666663,
+          -0.25599999999999995,
+          0.35600000000000004,
+          -0.3936666666666667,
+          -0.3466666666666667,
+          -0.2743333333333333,
+          0.1903333333333333,
+          -0.5323333333333333,
+          -0.44166666666666665,
+          -0.054333333333333234,
+          -0.328,
+          -0.48833333333333334,
+          -0.5473333333333333,
+          0.3393333333333333,
+          -0.010666666666666602,
+          0.18833333333333335,
+          -0.38466666666666666,
+          -0.006666666666666654
+        ],
+        "rewired_mean": 0.5376145833333333,
+        "wilcoxon_p": 0.966076104901731,
+        "wild_better_seeds": 10,
+        "wild_mean": 0.4299791666666667,
+        "wild_minus_rewired_oriented": -0.10763541666666665
+      },
+      "episodes_to_30pct_success": {
+        "bh_fdr_q": 0.9713401426632711,
+        "ci_hi": -102.86874999999995,
+        "ci_lo": -650.665625,
+        "higher_is_better": false,
+        "mean_delta": -395.0625,
+        "n": 32,
+        "per_seed_deltas": [
+          -200.0,
+          -242.0,
+          -249.0,
+          -128.0,
+          1450.0,
+          -381.0,
+          -761.0,
+          1125.0,
+          185.0,
+          -87.0,
+          2640.0,
+          -1165.0,
+          -2221.0,
+          -2768.0,
+          858.0,
+          -378.0,
+          1091.0,
+          -1366.0,
+          -1136.0,
+          -153.0,
+          533.0,
+          -1463.0,
+          -2324.0,
+          -26.0,
+          -281.0,
+          -2781.0,
+          -963.0,
+          566.0,
+          0.0,
+          192.0,
+          -2108.0,
+          -101.0
+        ],
+        "rewired_mean": 644.71875,
+        "wilcoxon_p": 0.9713401426632711,
+        "wild_better_seeds": 9,
+        "wild_mean": 1039.78125,
+        "wild_minus_rewired_oriented": -395.0625
+      },
+      "episodes_to_90pct_foods_plateau": {
+        "bh_fdr_q": 0.9713401426632711,
+        "ci_hi": 111.83125000000001,
+        "ci_lo": -73.471875,
+        "higher_is_better": false,
+        "mean_delta": 14.375,
+        "n": 32,
+        "per_seed_deltas": [
+          -114.0,
+          -190.0,
+          -183.0,
+          -76.0,
+          350.0,
+          -185.0,
+          -69.0,
+          1520.0,
+          -21.0,
+          -119.0,
+          -117.0,
+          256.0,
+          443.0,
+          -752.0,
+          398.0,
+          -271.0,
+          181.0,
+          -112.0,
+          -1041.0,
+          -96.0,
+          191.0,
+          38.0,
+          -36.0,
+          24.0,
+          291.0,
+          -6.0,
+          28.0,
+          -9.0,
+          14.0,
+          183.0,
+          82.0,
+          -142.0
+        ],
+        "rewired_mean": 497.40625,
+        "wilcoxon_p": 0.5335302487678293,
+        "wild_better_seeds": 14,
+        "wild_mean": 483.03125,
+        "wild_minus_rewired_oriented": 14.375
+      }
+    },
+    "n_paired_seeds": 32,
+    "per_seed": {
+      "rewired_null": {
+        "1": {
+          "auc_foods": 19.279666666666667,
+          "auc_success": 0.8356666666666667,
+          "episodes_to_30pct_success": 109.0,
+          "episodes_to_90pct_foods_plateau": 214.0
+        },
+        "10": {
+          "auc_foods": 17.765333333333334,
+          "auc_success": 0.532,
+          "episodes_to_30pct_success": 270.0,
+          "episodes_to_90pct_foods_plateau": 289.0
+        },
+        "11": {
+          "auc_foods": 11.207333333333333,
+          "auc_success": 0.06533333333333333,
+          "episodes_to_30pct_success": 3000.0,
+          "episodes_to_90pct_foods_plateau": 284.0
+        },
+        "12": {
+          "auc_foods": 17.076333333333334,
+          "auc_success": 0.31433333333333335,
+          "episodes_to_30pct_success": 749.0,
+          "episodes_to_90pct_foods_plateau": 462.0
+        },
+        "13": {
+          "auc_foods": 14.961333333333334,
+          "auc_success": 0.3333333333333333,
+          "episodes_to_30pct_success": 779.0,
+          "episodes_to_90pct_foods_plateau": 692.0
+        },
+        "14": {
+          "auc_foods": 19.160666666666668,
+          "auc_success": 0.8066666666666666,
+          "episodes_to_30pct_success": 232.0,
+          "episodes_to_90pct_foods_plateau": 332.0
+        },
+        "15": {
+          "auc_foods": 14.969333333333333,
+          "auc_success": 0.29733333333333334,
+          "episodes_to_30pct_success": 1083.0,
+          "episodes_to_90pct_foods_plateau": 679.0
+        },
+        "16": {
+          "auc_foods": 18.730333333333334,
+          "auc_success": 0.7423333333333333,
+          "episodes_to_30pct_success": 269.0,
+          "episodes_to_90pct_foods_plateau": 320.0
+        },
+        "17": {
+          "auc_foods": 12.789,
+          "auc_success": 0.178,
+          "episodes_to_30pct_success": 1568.0,
+          "episodes_to_90pct_foods_plateau": 930.0
+        },
+        "18": {
+          "auc_foods": 18.304,
+          "auc_success": 0.5873333333333334,
+          "episodes_to_30pct_success": 392.0,
+          "episodes_to_90pct_foods_plateau": 390.0
+        },
+        "19": {
+          "auc_foods": 18.238333333333333,
+          "auc_success": 0.618,
+          "episodes_to_30pct_success": 250.0,
+          "episodes_to_90pct_foods_plateau": 345.0
+        },
+        "2": {
+          "auc_foods": 19.310666666666666,
+          "auc_success": 0.8276666666666667,
+          "episodes_to_30pct_success": 229.0,
+          "episodes_to_90pct_foods_plateau": 282.0
+        },
+        "20": {
+          "auc_foods": 18.348,
+          "auc_success": 0.7186666666666667,
+          "episodes_to_30pct_success": 401.0,
+          "episodes_to_90pct_foods_plateau": 454.0
+        },
+        "21": {
+          "auc_foods": 15.044,
+          "auc_success": 0.267,
+          "episodes_to_30pct_success": 1124.0,
+          "episodes_to_90pct_foods_plateau": 1007.0
+        },
+        "22": {
+          "auc_foods": 18.746333333333332,
+          "auc_success": 0.749,
+          "episodes_to_30pct_success": 126.0,
+          "episodes_to_90pct_foods_plateau": 259.0
+        },
+        "23": {
+          "auc_foods": 16.529666666666667,
+          "auc_success": 0.45066666666666666,
+          "episodes_to_30pct_success": 676.0,
+          "episodes_to_90pct_foods_plateau": 831.0
+        },
+        "24": {
+          "auc_foods": 19.463,
+          "auc_success": 0.9016666666666666,
+          "episodes_to_30pct_success": 176.0,
+          "episodes_to_90pct_foods_plateau": 248.0
+        },
+        "25": {
+          "auc_foods": 18.762333333333334,
+          "auc_success": 0.78,
+          "episodes_to_30pct_success": 247.0,
+          "episodes_to_90pct_foods_plateau": 292.0
+        },
+        "26": {
+          "auc_foods": 18.581,
+          "auc_success": 0.647,
+          "episodes_to_30pct_success": 219.0,
+          "episodes_to_90pct_foods_plateau": 239.0
+        },
+        "27": {
+          "auc_foods": 19.0,
+          "auc_success": 0.8446666666666667,
+          "episodes_to_30pct_success": 287.0,
+          "episodes_to_90pct_foods_plateau": 337.0
+        },
+        "28": {
+          "auc_foods": 16.601333333333333,
+          "auc_success": 0.289,
+          "episodes_to_30pct_success": 924.0,
+          "episodes_to_90pct_foods_plateau": 374.0
+        },
+        "29": {
+          "auc_foods": 18.282666666666668,
+          "auc_success": 0.6393333333333333,
+          "episodes_to_30pct_success": 361.0,
+          "episodes_to_90pct_foods_plateau": 408.0
+        },
+        "3": {
+          "auc_foods": 18.691333333333333,
+          "auc_success": 0.6456666666666667,
+          "episodes_to_30pct_success": 249.0,
+          "episodes_to_90pct_foods_plateau": 281.0
+        },
+        "30": {
+          "auc_foods": 17.963333333333335,
+          "auc_success": 0.597,
+          "episodes_to_30pct_success": 409.0,
+          "episodes_to_90pct_foods_plateau": 419.0
+        },
+        "31": {
+          "auc_foods": 17.621,
+          "auc_success": 0.48333333333333334,
+          "episodes_to_30pct_success": 892.0,
+          "episodes_to_90pct_foods_plateau": 904.0
+        },
+        "32": {
+          "auc_foods": 17.429333333333332,
+          "auc_success": 0.48633333333333334,
+          "episodes_to_30pct_success": 481.0,
+          "episodes_to_90pct_foods_plateau": 474.0
+        },
+        "4": {
+          "auc_foods": 18.355,
+          "auc_success": 0.5633333333333334,
+          "episodes_to_30pct_success": 302.0,
+          "episodes_to_90pct_foods_plateau": 308.0
+        },
+        "5": {
+          "auc_foods": 16.346333333333334,
+          "auc_success": 0.301,
+          "episodes_to_30pct_success": 1622.0,
+          "episodes_to_90pct_foods_plateau": 584.0
+        },
+        "6": {
+          "auc_foods": 16.77,
+          "auc_success": 0.4503333333333333,
+          "episodes_to_30pct_success": 432.0,
+          "episodes_to_90pct_foods_plateau": 419.0
+        },
+        "7": {
+          "auc_foods": 18.373666666666665,
+          "auc_success": 0.565,
+          "episodes_to_30pct_success": 457.0,
+          "episodes_to_90pct_foods_plateau": 467.0
+        },
+        "8": {
+          "auc_foods": 14.377,
+          "auc_success": 0.31933333333333336,
+          "episodes_to_30pct_success": 1497.0,
+          "episodes_to_90pct_foods_plateau": 1892.0
+        },
+        "9": {
+          "auc_foods": 17.186666666666667,
+          "auc_success": 0.36733333333333335,
+          "episodes_to_30pct_success": 819.0,
+          "episodes_to_90pct_foods_plateau": 501.0
+        }
+      },
+      "wild_type": {
+        "1": {
+          "auc_foods": 18.926666666666666,
+          "auc_success": 0.755,
+          "episodes_to_30pct_success": 309.0,
+          "episodes_to_90pct_foods_plateau": 328.0
+        },
+        "10": {
+          "auc_foods": 18.038666666666668,
+          "auc_success": 0.638,
+          "episodes_to_30pct_success": 357.0,
+          "episodes_to_90pct_foods_plateau": 408.0
+        },
+        "11": {
+          "auc_foods": 18.386666666666667,
+          "auc_success": 0.6,
+          "episodes_to_30pct_success": 360.0,
+          "episodes_to_90pct_foods_plateau": 401.0
+        },
+        "12": {
+          "auc_foods": 16.005,
+          "auc_success": 0.23833333333333334,
+          "episodes_to_30pct_success": 1914.0,
+          "episodes_to_90pct_foods_plateau": 206.0
+        },
+        "13": {
+          "auc_foods": 11.063333333333333,
+          "auc_success": 0.03933333333333333,
+          "episodes_to_30pct_success": 3000.0,
+          "episodes_to_90pct_foods_plateau": 249.0
+        },
+        "14": {
+          "auc_foods": 14.228,
+          "auc_success": 0.086,
+          "episodes_to_30pct_success": 3000.0,
+          "episodes_to_90pct_foods_plateau": 1084.0
+        },
+        "15": {
+          "auc_foods": 17.14666666666667,
+          "auc_success": 0.594,
+          "episodes_to_30pct_success": 225.0,
+          "episodes_to_90pct_foods_plateau": 281.0
+        },
+        "16": {
+          "auc_foods": 17.01,
+          "auc_success": 0.48633333333333334,
+          "episodes_to_30pct_success": 647.0,
+          "episodes_to_90pct_foods_plateau": 591.0
+        },
+        "17": {
+          "auc_foods": 16.690333333333335,
+          "auc_success": 0.534,
+          "episodes_to_30pct_success": 477.0,
+          "episodes_to_90pct_foods_plateau": 749.0
+        },
+        "18": {
+          "auc_foods": 15.971666666666666,
+          "auc_success": 0.19366666666666665,
+          "episodes_to_30pct_success": 1758.0,
+          "episodes_to_90pct_foods_plateau": 502.0
+        },
+        "19": {
+          "auc_foods": 14.312,
+          "auc_success": 0.2713333333333333,
+          "episodes_to_30pct_success": 1386.0,
+          "episodes_to_90pct_foods_plateau": 1386.0
+        },
+        "2": {
+          "auc_foods": 18.089666666666666,
+          "auc_success": 0.56,
+          "episodes_to_30pct_success": 471.0,
+          "episodes_to_90pct_foods_plateau": 472.0
+        },
+        "20": {
+          "auc_foods": 17.589666666666666,
+          "auc_success": 0.44433333333333336,
+          "episodes_to_30pct_success": 554.0,
+          "episodes_to_90pct_foods_plateau": 550.0
+        },
+        "21": {
+          "auc_foods": 16.545333333333332,
+          "auc_success": 0.4573333333333333,
+          "episodes_to_30pct_success": 591.0,
+          "episodes_to_90pct_foods_plateau": 816.0
+        },
+        "22": {
+          "auc_foods": 15.955666666666668,
+          "auc_success": 0.21666666666666667,
+          "episodes_to_30pct_success": 1589.0,
+          "episodes_to_90pct_foods_plateau": 221.0
+        },
+        "23": {
+          "auc_foods": 7.935666666666667,
+          "auc_success": 0.009,
+          "episodes_to_30pct_success": 3000.0,
+          "episodes_to_90pct_foods_plateau": 867.0
+        },
+        "24": {
+          "auc_foods": 19.457,
+          "auc_success": 0.8473333333333334,
+          "episodes_to_30pct_success": 202.0,
+          "episodes_to_90pct_foods_plateau": 224.0
+        },
+        "25": {
+          "auc_foods": 16.561333333333334,
+          "auc_success": 0.452,
+          "episodes_to_30pct_success": 528.0,
+          "episodes_to_90pct_foods_plateau": 1.0
+        },
+        "26": {
+          "auc_foods": 14.941333333333333,
+          "auc_success": 0.15866666666666668,
+          "episodes_to_30pct_success": 3000.0,
+          "episodes_to_90pct_foods_plateau": 245.0
+        },
+        "27": {
+          "auc_foods": 16.404,
+          "auc_success": 0.29733333333333334,
+          "episodes_to_30pct_success": 1250.0,
+          "episodes_to_90pct_foods_plateau": 309.0
+        },
+        "28": {
+          "auc_foods": 18.129,
+          "auc_success": 0.6283333333333333,
+          "episodes_to_30pct_success": 358.0,
+          "episodes_to_90pct_foods_plateau": 383.0
+        },
+        "29": {
+          "auc_foods": 17.85,
+          "auc_success": 0.6286666666666667,
+          "episodes_to_30pct_success": 361.0,
+          "episodes_to_90pct_foods_plateau": 394.0
+        },
+        "3": {
+          "auc_foods": 17.886333333333333,
+          "auc_success": 0.49733333333333335,
+          "episodes_to_30pct_success": 498.0,
+          "episodes_to_90pct_foods_plateau": 464.0
+        },
+        "30": {
+          "auc_foods": 18.906333333333333,
+          "auc_success": 0.7853333333333333,
+          "episodes_to_30pct_success": 217.0,
+          "episodes_to_90pct_foods_plateau": 236.0
+        },
+        "31": {
+          "auc_foods": 14.263,
+          "auc_success": 0.09866666666666667,
+          "episodes_to_30pct_success": 3000.0,
+          "episodes_to_90pct_foods_plateau": 822.0
+        },
+        "32": {
+          "auc_foods": 16.791,
+          "auc_success": 0.4796666666666667,
+          "episodes_to_30pct_success": 582.0,
+          "episodes_to_90pct_foods_plateau": 616.0
+        },
+        "4": {
+          "auc_foods": 17.848,
+          "auc_success": 0.48333333333333334,
+          "episodes_to_30pct_success": 430.0,
+          "episodes_to_90pct_foods_plateau": 384.0
+        },
+        "5": {
+          "auc_foods": 19.169,
+          "auc_success": 0.8126666666666666,
+          "episodes_to_30pct_success": 172.0,
+          "episodes_to_90pct_foods_plateau": 234.0
+        },
+        "6": {
+          "auc_foods": 16.791333333333334,
+          "auc_success": 0.36433333333333334,
+          "episodes_to_30pct_success": 813.0,
+          "episodes_to_90pct_foods_plateau": 604.0
+        },
+        "7": {
+          "auc_foods": 15.957666666666666,
+          "auc_success": 0.258,
+          "episodes_to_30pct_success": 1218.0,
+          "episodes_to_90pct_foods_plateau": 536.0
+        },
+        "8": {
+          "auc_foods": 17.449666666666666,
+          "auc_success": 0.45766666666666667,
+          "episodes_to_30pct_success": 372.0,
+          "episodes_to_90pct_foods_plateau": 372.0
+        },
+        "9": {
+          "auc_foods": 17.368666666666666,
+          "auc_success": 0.38666666666666666,
+          "episodes_to_30pct_success": 634.0,
+          "episodes_to_90pct_foods_plateau": 522.0
+        }
+      }
+    },
+    "rolling_window": 200,
+    "verdict": "degree_statistics"
+  },
+  "gain_fraction": -0.6127671949978188,
+  "gates": {
+    "gates_pass": true,
+    "prior": {
+      "arms": [
+        "wt_frozen",
+        "rn_frozen"
+      ],
+      "ci80": [
+        -1.8688708333333333,
+        -0.04574583333333331
+      ],
+      "defined": true,
+      "effect": -0.9748750000000002,
+      "kind": "prior",
+      "n": 32,
+      "p_degrade": 0.10844366159290075,
+      "p_improve": 0.8950228444300592,
+      "positive_seeds": 13,
+      "q_improve": 0.8950228444300592
+    },
+    "prior_reference": {
+      "V.1 thermal": [
+        -0.17,
+        0.735
+      ],
+      "V.3 hard_food": [
+        -0.01,
+        0.841
+      ]
+    },
+    "prior_reference_note": "measured here, not inherited: V.1's and V.3's priors were measured on PPO-configured floors at an action std of 1.0 where these run at 0.368",
+    "prior_separates": false,
+    "rn_gate": {
+      "arms": [
+        "rn_learning",
+        "rn_frozen"
+      ],
+      "ci80": [
+        14.003925,
+        15.396412499999999
+      ],
+      "defined": true,
+      "effect": 14.700666666666667,
+      "kind": "gate",
+      "n": 32,
+      "p_degrade": 1.0,
+      "p_improve": 2.3283064365386963e-10,
+      "positive_seeds": 32,
+      "q_improve": 3.4924596548080444e-10
+    },
+    "wt_gate": {
+      "arms": [
+        "wt_learning",
+        "wt_frozen"
+      ],
+      "ci80": [
+        14.183379166666668,
+        15.399487500000001
+      ],
+      "defined": true,
+      "effect": 14.800916666666668,
+      "kind": "gate",
+      "n": 32,
+      "p_degrade": 1.0,
+      "p_improve": 2.3283064365386963e-10,
+      "positive_seeds": 32,
+      "q_improve": 3.4924596548080444e-10
+    }
+  },
+  "minimum_gain_fraction": 0.2,
+  "power": {
+    "comparator_win_rate_range": [
+      0.65625,
+      0.8125
+    ],
+    "gate_reachable": true,
+    "k_needed": 22,
+    "k_needed_fraction": 0.6875,
+    "n_pairs": 32,
+    "note": "sign-test floor; the registered paired rank test has more power",
+    "power_against_comparator": {
+      "66%": 0.4338756479426547,
+      "73%": 0.7915316448806222,
+      "81%": 0.9733081908560585
+    }
+  },
+  "primary_metric": "episodes_to_30pct_success",
+  "protocol": {
+    "manifest": "campaigns/frozen-features/efficiency-manifest.txt",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32
+    ]
+  },
+  "satisfies_d2_primary": false,
+  "substrate_drift": {
+    "rn_learning": {
+      "available": true,
+      "mean_relative": 0.0,
+      "n_read": 32
+    },
+    "substrate_frozen": true,
+    "wt_learning": {
+      "available": true,
+      "mean_relative": 0.0,
+      "n_read": 32
+    }
+  },
+  "verdict": "wiring_is_inert_as_features",
+  "why": "no significant advantage at the registered bar: 034's degree-statistics verdict extends to a second learning regime. The wiring is endpoint-inert under gradient learning, harmful under local rules that write it, and indistinguishable from a degree-matched shuffle as fixed features"
+}
