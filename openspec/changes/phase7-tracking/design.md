@@ -23,7 +23,7 @@
 The ratified decision table (`docs/roadmap.md` § Phase 7 § Pre-registered design decisions) is the contract this tracker enforces. One-line index (full text in the roadmap):
 
 - **D1** rule family: rate-based three-factor primary; spiking MAY; e-prop fallback.
-- **D2** success tests: within-regime — (i) plastic wild-type beats plastic rewired-null at q < 0.05; (ii) reaches/exceeds the matched-rule MLP band; PPO-arm tier placement descriptive only. Frozen-weights baseline pinned (Cook-2019 synapse-count-derived init, no learning).
+- **D2** success tests: within-regime — (i) plastic wild-type beats plastic rewired-null at q < 0.05; (ii) reaches/exceeds the matched-rule MLP band; PPO-arm tier placement descriptive only. Frozen-weights baseline pinned as **wild-type topology, the plastic arms' own initialisation, no learning**: the connectome supplies which edges exist and weights along them are drawn `N(0, 1/√(chemical in-degree))` — the EM synapse count never reaches `w_chem` *(this line previously read "Cook-2019 synapse-count-derived init", the wording the roadmap corrected 2026-09-05 under A.4; brought into line 2026-09-15, since L.0's frozen floor is exactly this baseline)*.
 - **D3** cross-species design: matched head-truncation; two homologous behaviours MUST; species-appropriate third behaviour SHOULD; dauer pathfinder first.
 - **D4** learnable gap junctions: YES, bounded SHOULD ablation (C. elegans L4 substrate only).
 - **D5** #254: freeze — remove dead keys, behaviour unchanged.
@@ -35,8 +35,11 @@ The ratified decision table (`docs/roadmap.md` § Phase 7 § Pre-registered desi
 - **D11** cross-species protocol: comparative cross-connectome learning MUST (under the L4 rule; PPO secondary); weight-transplant transfer SHOULD; dauer first; N=2 sensitivity run; one pre-registered transfer metric per behaviour.
 - **D12** diffusible layer v1: per-modulator global scalars, brain-internal, receptor-class gating; head-truncated arms run internal-state-driven modulation only (deterministic source policy; ghost/external sources rejected).
 - **D13** sequencing: 7a-i / 7a-ii split; 6a preprint SHOULD in the 7a-i window; imitation-warm-start arm SHOULD, early; 6b decoupled.
+- **D14** *(added 2026-09-15)* 7b deferral and the Phase 7 close: the rule programme closed in a state none of its outcomes named (a competent learner whose substrate is frozen); 7b's comparative core moves to the phase after 7 behind the ladder, C.1/C.2/C.4 unscheduled (a PPO sweep on time-to-competence would be legitimate per block V, but measures a learning-speed prior under gradient descent, not what 7b was registered to ask); Phase 7 closes on 7a + the frozen-features R.1b + V.4 + synthesis; plausibility claim restated as "a small local readout reads the wiring's fixed features"; ladder resumes with `readout_only` as instrument, L.0 MUST for the close, readout width and dynamics pulled forward, the body stays in the phase after 7.
 
 Amending any D-decision requires a dated note in this change (and a matching roadmap edit), before the affected milestone change merges — the same anti-scope-creep discipline as `phase6-tracking` Decision 4.
+
+*Amendment 2026-09-15 (D14, matching roadmap edit in the same PR).* D11's MUST sweep and D12's head-scope source policy are not withdrawn but **deferred with 7b**: both presuppose a learner that writes the wiring to some benefit, and after R.2 no such learner exists. D1's "e-prop fallback" is **resolved** — it ran, and it is the reading that closed the rule programme. D2's success test (i) is re-asked in the frozen-features R.1b under `readout_only`, which is the D10 primary contrast under the one plausible learner that reaches competence.
 
 ### Decision B: Execution-protocol standards (inherited from Phase 6, non-optional)
 
@@ -52,7 +55,7 @@ Every Phase 7 panel or sweep milestone conforms to these; they are credibility c
 
 ### Decision C: Shipment semantics mirror 6a/6b
 
-The 7a GO ("7a complete / 7b pending") is a shipment decision, not phase completion — Phase 7 is marked COMPLETE only when the 7b comparative cross-connectome sweep has shipped **and the synthesis publishes** (the single completion predicate, identical in spec.md, tasks.md, and the roadmap Go/No-Go). Splits are invoked on pre-registered criteria (including by success), never on month counts; estimates are tracked in active-work weeks.
+The 7a GO ("7a complete / 7b pending") is a shipment decision, not phase completion. *(Amended 2026-09-15, D14.)* The single completion predicate — identical in spec.md, tasks.md and the roadmap — is now **7a + L.0 (the frozen-features R.1b) + V.4 + the synthesis**; the 7b comparative sweep is **deferred to the phase after 7** and no longer gates completion, with the diffusible layer, the modulated rules and 7b recorded as unmet MUSTs under the SPLIT. What does not change: completion still requires the synthesis to publish, "well underway" still never satisfies it, and splits are still invoked on pre-registered criteria (including by success), never on month counts; estimates are tracked in active-work weeks.
 
 ## Open Questions (resolved in per-milestone changes, not here)
 
