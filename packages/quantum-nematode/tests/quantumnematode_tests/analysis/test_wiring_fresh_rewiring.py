@@ -273,6 +273,73 @@ class TestASplitStaysASplit:
         assert out["failing_cells"] == []
 
 
+class TestAnUnreachableVerdictIsWithheld:
+    """The pilot's lesson, pinned: at 4 pairs the harness's own rule cannot return a real verdict.
+
+    The smallest achievable one-sided exact p at ``n`` pairs is ``2**-n``, so at 4 it is 0.0625 and
+    nothing clears q = 0.05. On V.4's own pilot that made the harness return `no_learning` on gates
+    of **+14.95 and +77.37 full-clear points at 4/4**, and `degree_statistics` on efficiency gains
+    of **+48.1% and +27.7%** -- both ABOVE the registered 20% minimum. Reading either would be
+    reading the seed count. This is the second time this class of defect has appeared in the
+    programme, which is why it is a test and not a note.
+    """
+
+    @staticmethod
+    def _analysed(n_seeds: int, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+        def fake(_cells: object, out: dict, _manifest: object = None) -> None:
+            out["verdicts"] = {
+                c: {"verdict": "degree_statistics", "axis": "efficiency"} for c in fr.CELLS
+            }
+
+        monkeypatch.setattr(wp, "load", lambda _m: {})
+        monkeypatch.setattr(wp, "analyse", fake)
+        return fr.analyse(Path("unused.txt"), seeds=tuple(range(101, 101 + n_seeds)))
+
+    def test_four_pairs_cannot_reach_the_significance_level(self) -> None:
+        assert fr._power(4)["gate_reachable"] is False
+        assert fr._power(4)["k_needed"] is None
+
+    def test_the_registered_panel_can(self) -> None:
+        assert fr._power(32)["gate_reachable"] is True
+        assert fr._power(32)["k_needed"] == 22
+
+    def test_a_four_seed_panel_assigns_no_branch_at_all(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        out = self._analysed(4, monkeypatch)
+        assert out["verdicts_reachable"] is False
+        for cell, b in out["branches"].items():
+            assert b["prose_branch"] is None, cell
+            assert b["verdict_reachable"] is False, cell
+            assert "WITHHELD" in b["why"], cell
+
+    def test_it_never_becomes_a_replication_failure_on_the_seed_count(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # `degree_statistics` at both cells, which at 32 seeds WOULD withdraw V.1 and V.3.
+        out = self._analysed(4, monkeypatch)
+        assert out["failing_cells"] == []
+        assert out["split"] is False
+
+    def test_the_same_verdict_at_thirty_two_seeds_does_read(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        out = self._analysed(32, monkeypatch)
+        assert out["verdicts_reachable"] is True
+        assert sorted(out["failing_cells"]) == sorted(fr.CELLS)
+        for b in out["branches"].values():
+            assert b["prose_branch"] == "does not replicate"
+
+    def test_the_harness_name_is_still_reported_when_withheld(self) -> None:
+        # Withholding the branch must not hide what the harness returned -- that is the audit trail.
+        out = fr.branch("thermal", {"verdict": "degree_statistics"}, None, verdict_reachable=False)
+        assert out["harness_verdict"] == "degree_statistics"
+        assert out["is_replication_failure"] is False
+
+
 class TestTheManifestAndCompleteness:
     @staticmethod
     def _logs(tmp_path: Path, seeds: tuple[int, ...], stems: list[str]) -> Path:

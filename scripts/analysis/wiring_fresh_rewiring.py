@@ -164,11 +164,23 @@ def require_complete(manifest: Path, seeds: tuple[int, ...] = SEEDS) -> None:
         raise ValueError(msg)
 
 
-def branch(cell: str, entry: dict[str, Any], report: dict[str, Any] | None) -> dict[str, Any]:
+def branch(
+    cell: str,
+    entry: dict[str, Any],
+    report: dict[str, Any] | None,
+    *,
+    verdict_reachable: bool = True,
+) -> dict[str, Any]:
     """Map one cell's harness verdict onto V.1's registered prose branch.
 
     Read per cell and never pooled: a split is evidence about the scope of block V's generalisation,
     which it only remains if each cell is reported on its own.
+
+    With ``verdict_reachable=False`` -- too few pairs for the smallest achievable exact p to reach
+    the significance level -- **no branch is assigned at all**. At n pairs that p is 2**-n, so at 4
+    pairs it is 0.0625 and nothing can clear q = 0.05: the harness then returns `no_learning` on
+    gates of +14.95 and +77.37 full-clear points at 4/4, and `degree_statistics` on efficiency gains
+    ABOVE the registered minimum. Reading either as a result would be reading the seed count.
     """
     name = entry.get("verdict")
     # The harness computes this for a printed flag and does not put it in the report, so it is
@@ -186,6 +198,7 @@ def branch(cell: str, entry: dict[str, Any], report: dict[str, Any] | None) -> d
     out: dict[str, Any] = {
         "cell": cell,
         "harness_verdict": name,
+        "verdict_reachable": verdict_reachable,
         "axis": entry.get("axis", "peak"),
         "peak_verdict": entry.get("peak_verdict"),
         "crossing_rates": rates,
@@ -194,6 +207,14 @@ def branch(cell: str, entry: dict[str, Any], report: dict[str, Any] | None) -> d
         "comparator": COMPARATORS[cell],
         "prior_seeds": list(PRIOR_SEEDS[cell]),
     }
+    if not verdict_reachable:
+        out["prose_branch"] = None
+        out["is_replication_failure"] = False
+        out["why"] = (
+            "WITHHELD: too few pairs for any verdict. The harness's name above is what its rule "
+            "returns at this seed count and is not a reading of the wiring"
+        )
+        return out
     if name in PROSE_BRANCH:
         out["prose_branch"] = PROSE_BRANCH[name]
         out["is_replication_failure"] = name == "degree_statistics"
@@ -228,11 +249,14 @@ def analyse(manifest: Path, seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
     cells = wp.load(manifest)
     harness: dict[str, Any] = {}
     wp.analyse(cells, harness, manifest)
+    # Read BEFORE the branches, because it can withhold all of them.
+    power = _power(len(seeds))
     branches = {
         cell: branch(
             cell,
             harness["verdicts"].get(cell, {}),
             harness.get("efficiency", {}).get(cell),
+            verdict_reachable=power["gate_reachable"],
         )
         for cell in CELLS
     }
@@ -260,7 +284,8 @@ def analyse(manifest: Path, seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
         )
         if split
         else None,
-        "power": _power(len(seeds)),
+        "verdicts_reachable": power["gate_reachable"],
+        "power": power,
         "harness": harness,
     }
 
@@ -299,6 +324,14 @@ def _print(result: dict[str, Any]) -> None:
     print(f"V.4 - fresh rewirings, seeds {result['seeds'][0]}-{result['seeds'][-1]}")
     print("=" * 78)
     print(f"  fresh in: {result['fresh_in']}")
+    if not result["verdicts_reachable"]:
+        n = result["power"]["n_pairs"]
+        print(
+            f"\n  !! NO VERDICT IS REACHABLE AT {n} PAIRS: the smallest achievable one-sided exact\n"
+            f"     p is 2**-{n} = {2.0**-n:.4f} > q = {wp.SIG_Q}, so every gate and every contrast\n"
+            "     fails on the seed count alone. The harness verdicts below are ITS RULE AT THIS n,\n"
+            "     not readings of the wiring. Branches withheld.",
+        )
     for cell, b in result["branches"].items():
         comp = b["comparator"]
         print(f"\n  {cell}:")

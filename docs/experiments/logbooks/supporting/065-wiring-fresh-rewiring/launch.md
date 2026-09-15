@@ -208,3 +208,58 @@ uv run python scripts/analysis/wiring_fresh_rewiring.py \
   --campaign campaigns/wiring-fresh-rewiring \
   --out docs/experiments/logbooks/supporting/065-wiring-fresh-rewiring/fresh_rewiring.json
 ```
+
+______________________________________________________________________
+
+## Pilot outcome, 2026-09-16 — the plumbing is sound, and no verdict is readable
+
+32 runs on disjoint seeds 101–104, all succeeded (29 minutes wall, 14.5× parallel). The registered
+branches, comparators, power arithmetic and prior above were **committed at `9a43dbf8` before these
+runs existed**, so nothing below has moved them.
+
+### The three checks the stop clause asks for
+
+**1. Both cells run.** Every arm returned n = 4.
+
+| cell | arm | full clear | foods |
+|---|---|---|---|
+| thermal | `wt_ppo` | 97.40% | 19.80 |
+| thermal | `rn_ppo` | 96.33% | 19.69 |
+| thermal | `wt_frozen` | 0.43% | 4.85 |
+| thermal | `rn_frozen` | 1.83% | 3.46 |
+| hard_food | `wt_ppo` | 77.40% | 19.33 |
+| hard_food | `rn_ppo` | 69.23% | 19.00 |
+| hard_food | `wt_frozen` | 0.03% | 5.81 |
+| hard_food | `rn_frozen` | 0.20% | 4.65 |
+
+**2. Each rewired arm differs from its wild-type partner.** thermal 19.80 against 19.69 foods (+0.11,
+4/4 seeds) and 300.75 against 579.75 episodes to competence; hard_food 77.40% against 69.23% full clear
+(+8.17, 3/4) and 856.50 against 1184.75 episodes. The pairs are distinct runs of distinct graphs, which
+is what this check is for — a mis-keyed config pair would have shown as near-identical arms.
+
+**3. The frozen floors sit where a no-learning policy sits.** 0.43% / 1.83% full clear on thermal and
+0.03% / 0.20% on hard_food, against their PPO partners' +14.95 / +16.23 foods and +77.37 / +69.03
+points, all 4/4 seeds.
+
+One registered detail confirmed at fresh seeds: **the thermal cell's peak axis is still saturated** —
+both PPO arms at 96–97% full clear, above the harness's 90% ceiling. That is the registered reason the
+efficiency axis is primary on that cell, and it holds outside the seeds it was decided on.
+
+### What the pilot cannot say, and a driver defect it exposed
+
+At n pairs the smallest achievable one-sided exact p is `2**-n`. At **4 pairs that is 0.0625**, above
+q = 0.05, so **no gate and no contrast can clear the significance level on the seed count alone**. The
+committed harness duly returned `no_learning` on both cells — on gates of **+14.95 and +77.37 at 4/4** —
+and `degree_statistics` on the efficiency axis despite gains **above** the registered 20% minimum.
+
+The first draft of `wiring_fresh_rewiring.py` printed that `degree_statistics` through its branch map as
+**"does not replicate", for both cells**. On a 4-seed pilot, that is a verdict read off the seed count,
+and had it been taken at face value it would have withdrawn V.1 and V.3. The driver now consults its own
+power arithmetic **before** assigning any branch and withholds all of them when the significance level is
+unreachable, printing the floor instead; the harness's raw verdict is still reported as the audit trail.
+Tests pin all of it. This is the **second** time this defect class has appeared in the programme — L.0's
+harness printed a void verdict on its own 4-seed pilot — which is why it is now a test rather than a note.
+
+**So the pilot's +48.1% (thermal) and +27.7% (hard_food) are not evidence and are not read.** They are
+recorded because the runs happened. The registered prior stands as committed: replication expected on
+both cells, the thermal cell the likelier to land under the bar.

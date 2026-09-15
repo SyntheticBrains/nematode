@@ -50,7 +50,7 @@
 
 ## 3. The stop clauses
 
-- [ ] 3.1 A **pilot on disjoint seeds** before any registered seed: both cells run, the rewired arms
+- [x] 3.1 A **pilot on disjoint seeds** before any registered seed: both cells run, the rewired arms
   differ from their wild-type partners, and the frozen floors sit where a no-learning policy sits.
   Seeds 101–104, as every pilot in this programme has used — and **disjoint from 65–96**.
 - [x] 3.2 Re-score V.3's committed panel through **`wiring_premise.py`** — the harness that produced
