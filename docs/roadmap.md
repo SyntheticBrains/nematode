@@ -943,8 +943,9 @@ so a fresh-rewiring panel (V.4) is what would make one independent in rewiring a
 prior panels, 256 of 256 runs, no new configs and both committed harnesses unmodified: **+55.3%** off
 time-to-competence on the thermal cell (309.22 against 691.50 episodes, 24/32) against V.1's +35.4%,
 and **+40.1%** on the hard food-only cell (827.75 against 1380.88, 28/32) against V.3's +23.5% — all
-four efficiency metrics at q = 0.000 on both cells, nothing censored, both gates 32/32 and both
-untrained priors null. **The shared-nulls caveat closes**: the two positives no longer rest on the
+four efficiency metrics at q = 0.000 on both cells, nothing censored, both gates 32/32, and neither
+untrained prior detecting a pre-update difference between the wirings (a failure to detect at 32
+pairs, not a demonstration that none exists). **The shared-nulls caveat closes**: the two positives no longer rest on the
 same 32 shuffles, and the estimates came in above their comparators rather than shrinking toward the
 bar. **The second qualification does not close and is not weakened**: `rewire_seed` stays unset, as
 V.1 and V.3 ran it, so a fresh seed moves the rewiring, the task draw and the initial weights

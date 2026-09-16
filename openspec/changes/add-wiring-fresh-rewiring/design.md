@@ -82,6 +82,34 @@ from "a foraging cell under thermal pressure" to "a foraging cell hard enough to
 is therefore evidence about the **scope** of that generalisation, and reporting it as one is the honest
 reading. What a split must not do is get resolved toward whichever cell supports the original.
 
+## Amendment 2026-09-16, after the panel ran — three verdicts the registration missed
+
+Recorded as an amendment rather than folded into the table above, because branches written after
+seeing a replication's result are not a registration and relabelling them as one is the failure this
+section warns about.
+
+The table above was written from the harness's peak-axis vocabulary. Deriving that vocabulary from the
+harness **source** instead — which the guarding test now does — shows it can emit three names the
+driver had no reading for, and one of them is what this panel returned.
+
+| harness verdict | status | reading, and when it was fixed |
+|---|---|---|
+| `specific_wiring_efficiency` | **alias, not a new branch** | The efficiency axis's name for the same reading the table registers as `specific_wiring` → **replicates**, and the efficiency axis was registered as the primary on both cells before the run. The *branch* was preregistered; only the **key** was wrong, and the driver reported the panel's own result as "unrecognised" until it was fixed on 2026-09-16. Disclosed as a post-run code change. |
+| `rewired_beats_wildtype` | **registered post-run (2026-09-16)** | Significant in the **reverse** direction — the degree-matched shuffle is faster than the wild type. It **contradicts** the wiring advantage and is a replication failure *stronger* than `degree_statistics`: the original is withdrawn and the reverse direction reported as what the panel found. **It did not occur.** |
+| `inconclusive` | **registered post-run (2026-09-16)** | Not significant, and the interval does not bracket zero either — the panel does not **place** the effect. Uninterpretable, and not a replication failure, since failing to place an effect is not placing it at zero. **It did not occur.** |
+
+Neither post-run registration can have shaped this panel's reading, because neither verdict was
+returned on either cell: both returned `specific_wiring_efficiency`. That is why they are disclosed
+here rather than left implicit — a reader checking whether the branch set was fixed in advance should
+find the answer, not have to reconstruct it.
+
+**A second amendment of the same date**, from the same review: a contrast the harness flags
+**materially censored** now clears the replication-failure flag rather than only adding a note. The
+paragraph above registered censoring as *not evidence against the original result*; the driver was
+applying that to non-failures only, so a censored `degree_statistics` would have withdrawn a committed
+positive on a measurement the harness itself flags as untrustworthy. Nothing on this panel is censored
+— crossing rates are 100% in all four arms — so no reported number changes.
+
 ## What the campaign inherits, and where its power sits
 
 | panel | cell | committed result | prior seeds | fresh seeds |

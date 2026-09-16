@@ -32,7 +32,7 @@
   `degree_statistics` → does not replicate — the last carrying that the first positive is **withdrawn
   on the record rather than defended**. A parallel vocabulary is how two records come to disagree about
   the same run, so the mapping is stated and the harness's names are what the record reports.
-- [x] 2.3a **The harness's other three verdicts are registered readings too**, because they are live:
+- [x] 2.3a *(**amended 2026-09-16, after the panel ran** — deriving the harness's vocabulary from its source rather than by hand showed three further names: `specific_wiring_efficiency` (an **alias** of `specific_wiring` under the efficiency axis, which was registered as the primary before the run — the branch was preregistered, the driver's key was not), and `rewired_beats_wildtype` and `inconclusive`, both **registered post-run** and **neither of which occurred**. Recorded as a dated amendment in the design and the launch record rather than folded into the tables, because a branch written after the result is not a preregistered branch. Also amended: a materially censored contrast now **clears** the replication-failure flag rather than only adding a note, which is what this task registered.)* **The harness's other three verdicts are registered readings too**, because they are live:
   `saturated` (the cell cannot answer on this axis — what the klinotaxis cell returned in V.1's pilot,
   and **not** a replication failure), `no_learning` (a gate failed, the contrast is uninterpretable),
   and `insufficient_seeds`. Separately, a contrast the harness flags **materially censored** below its

@@ -8,8 +8,9 @@ four efficiency metrics. Seeds **65–96** are fresh to both prior panels, so th
 **no result in this project has used** — and both point estimates come in **above** their comparators
 ([V.1](057-wiring-premise-contrast.md)'s +35.4% over 64 seeds and
 [V.3](058-wiring-premise-difficulty.md)'s +23.5% over 32) rather than shrinking toward the bar. Both
-learning gates fire 32/32 and both untrained priors are null (+0.640, q = 0.164; +0.192, q = 0.327), so
-neither contrast is confounded at initialisation; **no seed is censored** on either cell. **What this
+learning gates fire 32/32 and **no pre-update difference between the wirings was detected** on either
+cell (+0.640, q = 0.164; +0.192, q = 0.327 — a failure to detect at 32 pairs, not a demonstration that
+none exists); **no seed is censored** on either cell. **What this
 does not do is separate the rewiring from the initialisation**: `rewire_seed` stays unset, as V.1 and
 V.3 ran it, so a fresh seed moves the graph, the task draw and the initial weights together. That
 stricter question remains open and unregistered.
@@ -97,9 +98,12 @@ both cells. Per-seed values: [`per-seed-primary.csv`](supporting/065-wiring-fres
 | V12 | hard_food | `wt_frozen − rn_frozen` | **prior** | +0.192 | 0.327 |
 
 Both cells' learning gates fire at 32/32 seeds, so both arms plainly learned and the contrast is
-interpretable. **Both untrained priors are null**, which matters more here than usual: it is the check
-that the two wirings are not already separated before a single update, and a fresh-seed panel varies
-initialisation along with the graph.
+interpretable. **Neither untrained prior detects a pre-update difference between the wirings**, which
+matters more here than usual, because a fresh-seed panel varies initialisation along with the graph. It
+is worth being exact about what that buys: a non-significant prior at 32 pairs is a **failure to
+detect** a pre-update difference, not evidence that none exists, and the panel was powered for the
+contrast rather than for this check. It removes the crudest confound; it does not make the contrast
+unconfounded.
 
 **The thermal peak axis returned `saturated`** — 96.14% and 94.14% full clear, above the harness's 90%
 ceiling. That is the registered, documented reason the efficiency axis is primary on that cell, and it
@@ -118,8 +122,9 @@ minimum.
    fresh seed moves the graph, the task draw **and** the initial weights together. What is excluded is
    that the committed figures rode on a particular set of shuffles; what is **not** excluded is that
    initialisation contributes. Isolating the graph needs `rewire_seed` pinned across seeds, which is a
-   different experiment that neither V.1, V.3 nor this change registered. **The null priors at both
-   cells are the only evidence here bearing on it, and they are a pre-update check, not a decomposition.**
+   different experiment that neither V.1, V.3 nor this change registered. **The priors at both cells are
+   the only evidence here bearing on it: they detect no pre-update difference, which is a check rather
+   than a decomposition, and at 32 pairs a failure to detect rather than a demonstration of absence.**
 3. **The phase now holds one positive and one systematic negative, and they are about different things.**
    The wiring buys **learning speed under PPO** — a learner the animal cannot host. It buys nothing as an
    endpoint (034), nothing under rules that write it (R.1c, R.2), and nothing as fixed features (L.0).

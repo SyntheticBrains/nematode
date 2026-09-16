@@ -2626,16 +2626,30 @@
   },
   "pooled_reading_withheld": false,
   "power": {
-    "gate_reachable": true,
-    "k_needed": 22,
-    "n_pairs": 32,
-    "note": "sign-test planning figures, not the registered procedure's power: that is a paired rank test under BH-FDR, which differs in both directions",
-    "power_against_comparator": {
-      "66%": 0.4338756479426547,
-      "73%": 0.7915316448806222,
-      "81%": 0.9733081908560585
+    "hard_food": {
+      "gate_reachable": true,
+      "k_needed": 22,
+      "n_pairs": 32,
+      "note": "sign-test planning figures, not the registered procedure's power: that is a paired rank test under BH-FDR, which differs in both directions",
+      "power_against_comparator": {
+        "66%": 0.4338756479426547,
+        "73%": 0.7915316448806222,
+        "81%": 0.9733081908560585
+      }
+    },
+    "thermal": {
+      "gate_reachable": true,
+      "k_needed": 22,
+      "n_pairs": 32,
+      "note": "sign-test planning figures, not the registered procedure's power: that is a paired rank test under BH-FDR, which differs in both directions",
+      "power_against_comparator": {
+        "66%": 0.4338756479426547,
+        "73%": 0.7915316448806222,
+        "81%": 0.9733081908560585
+      }
     }
   },
+  "registered_pairs": 32,
   "replicating_cells": [
     "thermal",
     "hard_food"

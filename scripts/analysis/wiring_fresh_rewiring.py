@@ -251,7 +251,14 @@ def branch(
         out["prose_branch"] = None
         out["is_replication_failure"] = False
         out["why"] = NOT_A_FAILURE.get(str(name), f"unrecognised harness verdict {name!r}")
-    if censored and not out["is_replication_failure"]:
+    if censored:
+        # Registered in advance (tasks.md 2.3a): a contrast the harness flags materially censored is
+        # NOT evidence against the original result. That has to clear the failure flag as well as add
+        # a note -- a censored `degree_statistics` otherwise withdraws a committed positive on a
+        # measurement the harness itself says is not trustworthy here. The raw harness verdict stays
+        # in `harness_verdict` for the audit trail.
+        out["censoring_cleared_failure"] = out["is_replication_failure"]
+        out["is_replication_failure"] = False
         out["why"] += (
             "; and the contrast is materially censored below the harness's crossing floor, which is "
             "not evidence against the original result either"
@@ -264,14 +271,17 @@ def analyse(manifest: Path, seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
     cells = wp.load(manifest)
     harness: dict[str, Any] = {}
     wp.analyse(cells, harness, manifest)
-    # Read BEFORE the branches, because it can withhold all of them.
-    power = _power(len(seeds))
+    # Read BEFORE the branches, because it can withhold them. Per cell, from the pairs that cell
+    # actually RETAINED rather than from the registered seed count: the harness drops runs it cannot
+    # parse, and under `--allow-incomplete` a cell can be scored on fewer pairs than were requested.
+    # Reading reachability off `len(seeds)` would then claim a gate the cell could not reach.
+    power = {cell: _power(_paired_seeds(harness, cell, seeds)) for cell in CELLS}
     branches = {
         cell: branch(
             cell,
             harness["verdicts"].get(cell, {}),
             harness.get("efficiency", {}).get(cell),
-            verdict_reachable=power["gate_reachable"],
+            verdict_reachable=power[cell]["gate_reachable"],
         )
         for cell in CELLS
     }
@@ -299,10 +309,27 @@ def analyse(manifest: Path, seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
         )
         if split
         else None,
-        "verdicts_reachable": power["gate_reachable"],
+        "verdicts_reachable": all(p["gate_reachable"] for p in power.values()),
         "power": power,
+        "registered_pairs": len(seeds),
         "harness": harness,
     }
+
+
+def _paired_seeds(harness: dict[str, Any], cell: str, seeds: tuple[int, ...]) -> int:
+    """How many paired seeds this cell was actually scored on.
+
+    The efficiency axis is the registered primary on both cells, so its `n_paired_seeds` is the count
+    that decides; the peak axis's `n_common` stands in when the efficiency axis did not run. Falls
+    back to the registered count only when the harness reported neither.
+    """
+    report = harness.get("efficiency", {}).get(cell)
+    if report and report.get("n_paired_seeds"):
+        return int(report["n_paired_seeds"])
+    entry = harness.get("verdicts", {}).get(cell, {})
+    if entry.get("n_common"):
+        return int(entry["n_common"])
+    return len(seeds)
 
 
 def _power(n_pairs: int) -> dict[str, Any]:
@@ -374,7 +401,7 @@ def _print(result: dict[str, Any]) -> None:
     print("=" * 78)
     print(f"  fresh in: {result['fresh_in']}")
     if not result["verdicts_reachable"]:
-        n = result["power"]["n_pairs"]
+        n = min(p["n_pairs"] for p in result["power"].values())
         print(
             f"\n  !! NO VERDICT IS REACHABLE AT {n} PAIRS: the smallest achievable one-sided exact\n"
             f"     p is 2**-{n} = {2.0**-n:.4f} > q = {wp.SIG_Q}, so every gate and every contrast\n"

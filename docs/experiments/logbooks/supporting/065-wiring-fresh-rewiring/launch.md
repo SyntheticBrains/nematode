@@ -263,3 +263,28 @@ harness printed a void verdict on its own 4-seed pilot — which is why it is no
 **So the pilot's +48.1% (thermal) and +27.7% (hard_food) are not evidence and are not read.** They are
 recorded because the runs happened. The registered prior stands as committed: replication expected on
 both cells, the thermal cell the likelier to land under the bar.
+
+______________________________________________________________________
+
+## Amendment 2026-09-16, after the panel ran — three verdicts this record missed
+
+The branch table above was written from the harness's **peak-axis** vocabulary. Deriving the vocabulary
+from the harness **source** instead shows it can emit three names the driver had no reading for. They
+are recorded here rather than inserted into the table above, because a branch written after seeing the
+result is not a preregistered branch and presenting it as one would misrepresent this record.
+
+| harness verdict | status | reading |
+|---|---|---|
+| `specific_wiring_efficiency` | **alias of `specific_wiring`, not a new branch** | The efficiency axis's name for the reading registered above as **replicates**. The efficiency axis was registered as the primary on both cells *before* the run, so the branch was preregistered and only the driver's **key** was wrong — it reported this panel's own result as "unrecognised" until fixed on 2026-09-16. A post-run code change, disclosed as one. |
+| `rewired_beats_wildtype` | **registered post-run (2026-09-16)** | Significant in the **reverse** direction: the degree-matched shuffle is faster than the wild type. **Contradicts** the wiring advantage — a failure stronger than `degree_statistics`, withdrawing the original and reporting the reverse direction as the finding. **Did not occur.** |
+| `inconclusive` | **registered post-run (2026-09-16)** | Not significant, and the interval does not bracket zero — the panel does not **place** the effect. Uninterpretable, and not a replication failure: failing to place an effect is not placing it at zero. **Did not occur.** |
+
+Neither post-run registration can have shaped this panel's reading: both cells returned
+`specific_wiring_efficiency`.
+
+**Also amended the same day, from the same review**: a **materially censored** contrast now clears the
+replication-failure flag rather than only adding a note, which is what the branch section above
+registered ("not evidence against the original result") but the driver applied to non-failures only.
+Nothing here is censored — 100% crossing in all four arms — so no number changes. And each cell's
+verdict reachability is now read from the pairs **that cell retained** rather than from the requested
+seed count, so a cell scored on fewer pairs cannot be credited with a gate it could not reach.

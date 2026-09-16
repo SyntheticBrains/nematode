@@ -95,6 +95,27 @@ class TestTheRewiringIsCoupledToTheRunSeed:
         ), f"{name} is not the degree-preserving null"
 
 
+def _git(args: list[str]) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(  # noqa: S603 — fixed argv, no shell
+        ["git", *args],  # noqa: S607
+        cwd=_root,
+        check=False,
+        capture_output=True,
+    )
+
+
+def _require_revision(rev: str) -> None:
+    """Skip rather than fail when `rev` is not in this clone.
+
+    CI checks out at depth 1, so neither the panel commits nor `origin/main` resolve there and
+    `git diff` exits 128. Treating that as "the file changed" is wrong in the most misleading
+    direction: it reports the instrument as modified when the check simply could not run. The guard
+    is enforced wherever history is available, which is every full clone.
+    """
+    if _git(["cat-file", "-e", f"{rev}^{{commit}}"]).returncode != 0:
+        pytest.skip(f"{rev} is not in this clone (shallow checkout); the guard cannot run here")
+
+
 class TestTheCommittedHarnessesAreUnmodified:
     """The replication's central property, asserted rather than trusted."""
 
@@ -108,16 +129,13 @@ class TestTheCommittedHarnessesAreUnmodified:
         commit: str,
         names: list[str],
     ) -> None:
+        _require_revision(commit)
         for name in names:
             path = next(_root.glob(f"configs/scenarios/*/{name}"), None)
             assert path is not None, f"{name} not found"
             rel = path.relative_to(_root)
-            diff = subprocess.run(  # noqa: S603 — fixed argv, no shell
-                ["git", "diff", "--quiet", commit, "--", str(rel)],  # noqa: S607
-                cwd=_root,
-                check=False,
-                capture_output=True,
-            )
+            diff = _git(["diff", "--quiet", commit, "--", str(rel)])
+            assert diff.returncode in (0, 1), f"git could not compare {name}: {diff.stderr!r}"
             assert diff.returncode == 0, (
                 f"{name} changed since {commit}; this would measure something else"
             )
@@ -126,12 +144,9 @@ class TestTheCommittedHarnessesAreUnmodified:
     def test_the_scoring_modules_are_untouched_by_this_change(self, module: str) -> None:
         # Both must be byte-identical to main. A replication that edits its own instrument cannot
         # distinguish a changed reading from a changed world.
-        diff = subprocess.run(  # noqa: S603 — fixed argv, no shell
-            ["git", "diff", "--quiet", "origin/main", "--", f"scripts/analysis/{module}"],  # noqa: S607
-            cwd=_root,
-            check=False,
-            capture_output=True,
-        )
+        _require_revision("origin/main")
+        diff = _git(["diff", "--quiet", "origin/main", "--", f"scripts/analysis/{module}"])
+        assert diff.returncode in (0, 1), f"git could not compare {module}: {diff.stderr!r}"
         assert diff.returncode == 0, f"{module} differs from main; the instrument must not change"
 
     def test_the_driver_reuses_the_harness_constants(self) -> None:
@@ -283,6 +298,115 @@ class TestNotEveryNonPositiveIsAFailure:
         }
         out = fr.branch("thermal", {"verdict": "saturated"}, report)
         assert "not evidence against the original result" in out["why"]
+
+
+class TestACensoredContrastIsNotEvidenceAgainstTheOriginal:
+    """Registered in advance (tasks.md 2.3a), and it has to clear the flag, not just add a note.
+
+    A `degree_statistics` that is ALSO materially censored was still being recorded as a replication
+    failure -- withdrawing a committed positive on a measurement the harness itself flags as
+    untrustworthy on this panel. Nothing on this panel is censored (100% crossing in all four arms),
+    so no reported number changes; the defect is in what the driver would have done.
+    """
+
+    @staticmethod
+    def _censored_report() -> dict[str, Any]:
+        # Every seed at the horizon on the wild-type side: crossing rate 0%, far below the floor.
+        return {
+            "horizon_episodes": 3000,
+            "per_seed": {
+                wp.efficiency._WILD: {
+                    str(s): {"episodes_to_30pct_success": 3000} for s in range(32)
+                },
+                wp.efficiency._REWIRED: {
+                    str(s): {"episodes_to_30pct_success": 500} for s in range(32)
+                },
+            },
+        }
+
+    def test_the_fixture_really_is_censored(self) -> None:
+        out = fr.branch("hard_food", {"verdict": "degree_statistics"}, self._censored_report())
+        assert out["materially_censored"] is True
+
+    def test_a_censored_failure_stops_being_a_failure(self) -> None:
+        out = fr.branch("hard_food", {"verdict": "degree_statistics"}, self._censored_report())
+        assert out["is_replication_failure"] is False
+        assert out["censoring_cleared_failure"] is True
+        assert "not evidence against the original result" in out["why"]
+
+    def test_the_raw_harness_verdict_survives_for_the_audit_trail(self) -> None:
+        out = fr.branch("hard_food", {"verdict": "degree_statistics"}, self._censored_report())
+        assert out["harness_verdict"] == "degree_statistics"
+        assert out["prose_branch"] == "does not replicate"
+
+    def test_an_uncensored_failure_is_still_a_failure(self) -> None:
+        report = {
+            "horizon_episodes": 3000,
+            "per_seed": {
+                arm: {str(s): {"episodes_to_30pct_success": 500} for s in range(32)}
+                for arm in (wp.efficiency._WILD, wp.efficiency._REWIRED)
+            },
+        }
+        out = fr.branch("hard_food", {"verdict": "degree_statistics"}, report)
+        assert out["materially_censored"] is False
+        assert out["is_replication_failure"] is True
+
+
+class TestReachabilityIsReadPerCell:
+    """From the pairs a cell RETAINED, not from the seed count that was requested.
+
+    The harness drops runs it cannot parse, and `--allow-incomplete` scores what is present. Reading
+    reachability off `len(seeds)` claims a gate the cell could not reach.
+    """
+
+    @staticmethod
+    def _analysed(n_by_cell: dict[str, int], monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+        def fake(_cells: object, out: dict, _manifest: object = None) -> None:
+            out["verdicts"] = {
+                c: {"verdict": "degree_statistics", "axis": "efficiency"} for c in fr.CELLS
+            }
+            out["efficiency"] = {
+                c: {
+                    "n_paired_seeds": n,
+                    "horizon_episodes": 3000,
+                    "per_seed": {
+                        arm: {str(i): {"episodes_to_30pct_success": 500} for i in range(n)}
+                        for arm in (wp.efficiency._WILD, wp.efficiency._REWIRED)
+                    },
+                }
+                for c, n in n_by_cell.items()
+            }
+
+        monkeypatch.setattr(wp, "load", lambda _m: {})
+        monkeypatch.setattr(wp, "analyse", fake)
+        return fr.analyse(Path("unused.txt"), seeds=tuple(range(65, 97)))
+
+    def test_a_cell_scored_on_four_pairs_withholds_its_branch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 32 seeds requested; this cell retained 4, where no verdict is reachable.
+        out = self._analysed({"thermal": 4, "hard_food": 32}, monkeypatch)
+        assert out["registered_pairs"] == 32
+        assert out["branches"]["thermal"]["verdict_reachable"] is False
+        assert out["branches"]["thermal"]["prose_branch"] is None
+        assert out["failing_cells"] == ["hard_food"]
+
+    def test_the_other_cell_still_reads(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        out = self._analysed({"thermal": 4, "hard_food": 32}, monkeypatch)
+        assert out["branches"]["hard_food"]["verdict_reachable"] is True
+        assert out["branches"]["hard_food"]["prose_branch"] == "does not replicate"
+
+    def test_power_is_reported_per_cell(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        out = self._analysed({"thermal": 4, "hard_food": 32}, monkeypatch)
+        assert out["power"]["thermal"]["n_pairs"] == 4
+        assert out["power"]["hard_food"]["n_pairs"] == 32
+        assert out["power"]["hard_food"]["k_needed"] == 22
+
+    def test_a_full_panel_reads_on_both(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        out = self._analysed({"thermal": 32, "hard_food": 32}, monkeypatch)
+        assert out["verdicts_reachable"] is True
+        assert sorted(out["failing_cells"]) == sorted(fr.CELLS)
 
 
 class TestASplitStaysASplit:
