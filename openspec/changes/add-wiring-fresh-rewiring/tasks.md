@@ -63,21 +63,21 @@
 
 ## 4. Campaign
 
-- [ ] 4.1 256 runs: two cells × four arms × seeds **65–96** at 3000 episodes, with `--track-experiment`.
-- [ ] 4.2 Per-seed CSV, the per-cell tables and the branch under `supporting/065-wiring-fresh-rewiring/`.
+- [x] 4.1 256 runs: two cells × four arms × seeds **65–96** at 3000 episodes, with `--track-experiment`.
+- [x] 4.2 Per-seed CSV, the per-cell tables and the branch under `supporting/065-wiring-fresh-rewiring/`.
 
 ## 5. The record
 
-- [ ] 5.1 Logbook 065: both cells' tables, the gates and priors in **every** branch, the branch per
+- [x] 5.1 Logbook 065: both cells' tables, the gates and priors in **every** branch, the branch per
   cell, and the coupling stated — that fresh seeds vary rewiring *and* initialisation together, and
   what that does and does not separate.
-- [ ] 5.2 The experiments index row and `CHANGELOG.md`.
-- [ ] 5.3 The tracker's V.4 entry.
-- [ ] 5.4 **If it does not replicate on either cell**: V.1, V.3, the 7a shipment record
+- [x] 5.2 The experiments index row and `CHANGELOG.md`.
+- [x] 5.3 The tracker's V.4 entry.
+- [x] 5.4 *(**does not apply** — it replicated on both cells, so no correction pass was needed; recorded as such in Logbook 065.)* **If it does not replicate on either cell**: V.1, V.3, the 7a shipment record
   ([059](../../../docs/experiments/logbooks/059-7a-shipment.md)) and the roadmap each rest on the
   figure, and each is corrected in the same PR. The first positive is withdrawn on the record rather
   than defended, and the phase's citable results are restated — which after L.0 would leave the
   systematic negative as the only one.
-- [ ] 5.5 **If it replicates**: the caveat closes, and the record states that block V's positive is now
+- [x] 5.5 **If it replicates**: the caveat closes, and the record states that block V's positive is now
   independent in rewiring — while remaining explicit that rewiring and initialisation still vary
   together, so the stricter question is open and unregistered.

@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -143,23 +144,74 @@ class TestTheCommittedHarnessesAreUnmodified:
         assert not hasattr(fr, "SIG_Q")
 
 
+def _harness_verdicts() -> set[str]:
+    """Every verdict name the two committed harnesses can emit, read from their SOURCE.
+
+    Derived rather than listed. The first version of this test wrote the vocabulary out by hand and
+    missed three names -- `specific_wiring_efficiency` (which the registered panel then returned on
+    both cells), `rewired_beats_wildtype` and `inconclusive` -- so the driver fell through to
+    "unrecognised harness verdict" on its own result. A hand-copied vocabulary IS the fork it is
+    meant to prevent.
+    """
+    assigned = re.compile(r'(?:"verdict"\]?\s*[:=]|\bname\s*=)[^\n]*')
+    literal = re.compile(r'"([a-z][a-z_]*)"')
+    # Keys and axis labels that appear on the same lines but are not verdicts.
+    not_verdicts = {
+        "verdict",
+        "peak",
+        "efficiency",
+        "axis",
+        "peak_verdict",
+        "name",
+        "meets_min_effect",
+    }
+    names: set[str] = set()
+    for module in ("wiring_premise.py", "connectome_structure_efficiency.py"):
+        src = (_root / "scripts" / "analysis" / module).read_text()
+        for segment in assigned.findall(src):
+            names |= {t for t in literal.findall(segment) if t not in not_verdicts}
+    return names
+
+
 class TestTheVocabularyDoesNotFork:
     def test_every_prose_branch_maps_a_real_harness_verdict(self) -> None:
-        for name in fr.PROSE_BRANCH:
-            assert name in {"specific_wiring", "below_min_effect", "degree_statistics"}
+        # No branch may exist for a name the harness cannot emit.
+        assert set(fr.PROSE_BRANCH) <= _harness_verdicts()
 
     def test_the_harness_verdicts_are_all_accounted_for(self) -> None:
         # Anything the harness can return has either a prose branch or an explicit not-a-failure
-        # reading; an unhandled verdict would fall through to "unrecognised".
-        emitted = {
-            "specific_wiring",
-            "below_min_effect",
-            "degree_statistics",
-            "saturated",
-            "no_learning",
-            "insufficient_seeds",
-        }
-        assert emitted == set(fr.PROSE_BRANCH) | set(fr.NOT_A_FAILURE)
+        # reading; an unhandled verdict falls through to "unrecognised" and reads as nothing.
+        handled = set(fr.PROSE_BRANCH) | set(fr.NOT_A_FAILURE)
+        unhandled = _harness_verdicts() - handled
+        assert not unhandled, (
+            f"harness can emit these with no registered reading: {sorted(unhandled)}"
+        )
+
+    def test_the_efficiency_axis_positive_is_mapped(self) -> None:
+        # The registered primary axis on both cells emits `specific_wiring_efficiency`, not
+        # `specific_wiring`. Missing it read the project's replication as "unrecognised".
+        assert fr.PROSE_BRANCH["specific_wiring_efficiency"] == "replicates"
+        assert fr.PROSE_BRANCH["specific_wiring"] == "replicates"
+        out = fr.branch(
+            "thermal",
+            {"verdict": "specific_wiring_efficiency", "axis": "efficiency"},
+            None,
+        )
+        assert out["prose_branch"] == "replicates"
+        assert out["is_replication_failure"] is False
+        assert "caveat closes" in out["why"]
+
+    def test_the_reverse_direction_is_a_failure_and_says_so(self) -> None:
+        # `rewired_beats_wildtype` is significant the OTHER way: stronger than a non-replication.
+        out = fr.branch("thermal", {"verdict": "rewired_beats_wildtype"}, None)
+        assert out["is_replication_failure"] is True
+        assert "WITHDRAWN" in out["why"]
+        assert "reverse direction" in out["why"]
+
+    def test_inconclusive_does_not_place_the_effect_at_zero(self) -> None:
+        out = fr.branch("thermal", {"verdict": "inconclusive"}, None)
+        assert out["is_replication_failure"] is False
+        assert "not the same as placing it at zero" in out["why"]
 
     @pytest.mark.parametrize(
         ("verdict", "prose", "failure"),

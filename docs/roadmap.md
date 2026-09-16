@@ -938,6 +938,20 @@ needs further cells and is not claimed — alongside a local rule that fails a p
 reason the record names. Two qualifications stand with it: the effect is on learning speed rather
 than final performance, and every wiring panel so far draws its rewired graphs from run seeds 1–64,
 so a fresh-rewiring panel (V.4) is what would make one independent in rewiring as well as in task.
+**V.4 then ran that panel 2026-09-16 and the advantage replicates on both cells**
+([Logbook 065](experiments/logbooks/065-wiring-fresh-rewiring.md)). Seeds **65–96**, fresh to both
+prior panels, 256 of 256 runs, no new configs and both committed harnesses unmodified: **+55.3%** off
+time-to-competence on the thermal cell (309.22 against 691.50 episodes, 24/32) against V.1's +35.4%,
+and **+40.1%** on the hard food-only cell (827.75 against 1380.88, 28/32) against V.3's +23.5% — all
+four efficiency metrics at q = 0.000 on both cells, nothing censored, both gates 32/32 and both
+untrained priors null. **The shared-nulls caveat closes**: the two positives no longer rest on the
+same 32 shuffles, and the estimates came in above their comparators rather than shrinking toward the
+bar. **The second qualification does not close and is not weakened**: `rewire_seed` stays unset, as
+V.1 and V.3 ran it, so a fresh seed moves the rewiring, the task draw and the initial weights
+together. What is excluded is that the committed figures rode on a particular set of shuffles; that
+initialisation contributes is **not** excluded, and isolating the graph needs `rewire_seed` pinned
+across seeds — an experiment nothing has registered. And no mechanism is available for any of it:
+V.2 scored 64 rewirings on four graph properties fixed in advance and none predicts learning time.
 **(viii) R.1 then found the dimension nobody had varied, 2026-09-13, and the rule works at a low
 one** ([Logbook 060](experiments/logbooks/060-l4-perturbation-scale.md)). The rule's one success and
 every failure differed in the number of perturbed units — **8** on the one-step control it passes,

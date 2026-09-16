@@ -32,6 +32,7 @@ result.**
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -68,10 +69,15 @@ CELLS = ("thermal", "hard_food")
 
 # V.1's prose branches, mapped onto the harness's verdict names. The prose is what 057 registered and
 # what a reader of it will look for; the names are what the record reports.
+# `specific_wiring_efficiency` is the SAME reading as `specific_wiring` under the name the efficiency
+# axis emits it by, and the efficiency axis is the registered primary on both cells here. Keyed by both
+# names because both axes are scored and a cell can land on either.
 PROSE_BRANCH = {
     "specific_wiring": "replicates",
+    "specific_wiring_efficiency": "replicates",
     "below_min_effect": "same direction, below the minimum",
     "degree_statistics": "does not replicate",
+    "rewired_beats_wildtype": "contradicted -- the null is significantly better",
 }
 # Verdicts that are NOT a failure to replicate, and are reported as themselves.
 NOT_A_FAILURE = {
@@ -81,6 +87,10 @@ NOT_A_FAILURE = {
     ),
     "no_learning": "a learning gate failed, so the contrast is uninterpretable",
     "insufficient_seeds": "too few paired seeds survived to score the panel",
+    "inconclusive": (
+        "not significant, and the interval does not bracket zero either -- the panel does not "
+        "place the effect, which is not the same as placing it at zero"
+    ),
 }
 
 # The committed comparators, carried so a near-miss is read against the original's own variability.
@@ -217,7 +227,7 @@ def branch(
         return out
     if name in PROSE_BRANCH:
         out["prose_branch"] = PROSE_BRANCH[name]
-        out["is_replication_failure"] = name == "degree_statistics"
+        out["is_replication_failure"] = name in {"degree_statistics", "rewired_beats_wildtype"}
         out["why"] = {
             "replicates": (
                 "the advantage holds at the registered minimum on rewirings never used before: the "
@@ -230,6 +240,11 @@ def branch(
             "does not replicate": (
                 "the advantage does not hold on fresh rewirings. The registered panel is reported as "
                 "not holding and the first positive is WITHDRAWN on the record rather than defended"
+            ),
+            "contradicted -- the null is significantly better": (
+                "the degree-matched shuffle is significantly FASTER than the wild type on fresh "
+                "rewirings. This is stronger than a non-replication: the original is WITHDRAWN and "
+                "the reverse direction is reported as what the panel found"
             ),
         }[out["prose_branch"]]
     else:
@@ -318,6 +333,40 @@ def _power(n_pairs: int) -> dict[str, Any]:
     }
 
 
+def write_csv(result: dict[str, Any], path: Path) -> None:
+    """One row per cell, arm and seed, so every table in the record can be recomputed from it.
+
+    The censoring column is not decoration: ``episodes_to_30pct_success`` is right-censored at the
+    horizon, and a reader has to be able to see which rows sit at the cap rather than take a mean on
+    trust. On this panel none do, which is a fact worth being able to check.
+    """
+    efficiency = result["harness"].get("efficiency", {})
+    if not efficiency:
+        return
+    metrics = sorted(
+        next(iter(next(iter(efficiency.values()))["per_seed"][wp.efficiency._WILD].values())),
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["cell", "arm", "seed", *metrics, "primary_censored"])
+        for cell, report in efficiency.items():
+            horizon = report["horizon_episodes"]
+            for arm in (wp.efficiency._WILD, wp.efficiency._REWIRED):
+                rows = report["per_seed"][arm]
+                for seed in sorted(rows, key=int):
+                    row = rows[seed]
+                    writer.writerow(
+                        [
+                            cell,
+                            arm,
+                            seed,
+                            *(f"{row[m]:.6f}" for m in metrics),
+                            int(row["episodes_to_30pct_success"] >= horizon),
+                        ],
+                    )
+
+
 def _print(result: dict[str, Any]) -> None:
     """Print each cell's branch beside the comparator it is replicating."""
     print("\n" + "=" * 78)
@@ -363,6 +412,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seeds", type=str, default="65-96")
     parser.add_argument("--manifest", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument("--csv", type=Path, default=None, help="one row per cell, arm and seed")
     parser.add_argument(
         "--allow-incomplete",
         action="store_true",
@@ -385,6 +435,9 @@ def main(argv: list[str] | None = None) -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(result, indent=2, sort_keys=True, default=str) + "\n")
         print(f"\nwrote {args.out}")
+    if args.csv:
+        write_csv(result, args.csv)
+        print(f"wrote {args.csv}")
     return 0
 
 
