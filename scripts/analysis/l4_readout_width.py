@@ -61,7 +61,7 @@ from weight_search_architecture_ranking import (  # noqa: E402  # pyright: ignor
     paired_seed_wilcoxon_bootstrap,
 )
 
-SEEDS = tuple(range(1, 33))
+SEEDS = tuple(range(1, 97))
 _STEM = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_eprop"
 
 WIDTHS = ("pooled", "wide")
@@ -357,31 +357,48 @@ def gates(scanned: dict[str, Any], seeds: tuple[int, ...] = SEEDS) -> dict[str, 
     return out
 
 
-# The pre-campaign bound on what this panel can resolve, registered before it ran. Derived from
-# L.0's own per-seed spread on the primary at its 32 seeds: sd(wt - rn) = 0.3173, so an interaction
-# whose two halves were INDEPENDENT would carry sd 0.3173 * sqrt(2) = 0.4487, se 0.0793 at n = 32,
-# and 80% power at 5% two-sided would need a shift of ~0.222 auc_success.
+# What this panel can resolve, registered before it ran and sized from a pilot rather than assumed.
 #
-# That is roughly TWICE L.0's entire observed wiring main effect (-0.1076), so on the independence
-# assumption this panel could only have seen an interaction far larger than the effect it is asking
-# about. The assumption is deliberately conservative and is expected to be pessimistic: the two
+# The MINIMUM INTERESTING interaction is not arbitrary. L.0 found the rewired null AHEAD by 0.1076
+# on this metric. For widening to mean the pool was hiding wiring structure -- the `pooling_hid_
+# structure` reading, which reopens L.4 and L.5 -- the interaction has to flip that sign, so it must
+# exceed ~0.108. An interaction smaller than that does not change L.0's verdict and does not reopen
+# anything, so it is the size this panel is built to see.
+#
+# The first registration bounded the interaction's spread by assuming the two widths' wiring
+# differences were INDEPENDENT (sd = sd(D) * sqrt(2)), and expected that to be pessimistic: the two
 # widths at a seed share the task draws, the RNG stream and the initial policy, so their wiring
-# differences should be positively correlated, and sd(interaction) = sd(D) * sqrt(2 * (1 - rho)).
-# At rho = 0.8 the detectable shift falls to ~0.099, below L.0's effect.
+# differences ought to be correlated, and sd = sd(D) * sqrt(2 * (1 - rho)).
 #
-# Which is why the REALISED figure is computed from the panel's own deltas rather than assumed, and
-# the correlation is reported beside it so a reader can see which regime the panel landed in.
+# **The pilot says otherwise.** At seeds 101-104 the measured correlation was rho = +0.02 and the
+# realised interaction sd was 0.3770, against the independence bound of 0.4487 -- learning amplifies
+# the divergence enough to wash out the shared start. Four points make that a noisy estimate, but it
+# is the only evidence and it points at independence rather than away from it.
+#
+# So the panel is 96 seeds, not the 32 first registered: 2.80 * 0.3770 / sqrt(96) = 0.1077, which
+# MATCHES the 0.1076 sign-flip threshold rather than clearing it -- the two agree to 0.2%, so the
+# panel sits at 80% power for exactly the effect that would change the verdict and below it for
+# anything smaller. At 32 seeds the same spread resolves only 0.187, which would have found a large
+# interaction while leaving the one that matters undetectable.
 REGISTERED_SENSITIVITY = {
-    "source": "L.0's per-seed auc_success spread at 32 seeds",
-    "single_contrast_sd": 0.3173,
+    "n_registered": 96,
+    "minimum_interesting_interaction": 0.1076,
+    "minimum_interesting_rationale": (
+        "L.0 found the rewired null ahead by 0.1076 on auc_success. An interaction must exceed that "
+        "to flip the sign and mean the pool was hiding wiring structure; a smaller one changes "
+        "nothing and reopens nothing"
+    ),
+    "pilot_measured_rho": 0.02,
+    "pilot_realised_interaction_sd": 0.3770,
     "independence_bound_sd": 0.4487,
-    "independence_bound_detectable_at_80": 0.2221,
-    "l0_observed_wiring_effect": -0.1076,
+    "detectable_at_80_at_n96": 0.1077,
+    "sits_at_threshold_not_below": True,
+    "detectable_at_80_at_n32": 0.1866,
     "note": (
-        "a CONSERVATIVE pre-campaign bound assuming the two widths' wiring differences are "
-        "independent. They share seed, task draws and initial policy, so positive correlation is "
-        "expected and the realised sensitivity should be better. Reported so a null states what it "
-        "did and did not exclude"
+        "sized from the pilot's realised spread rather than an assumption. The first registration "
+        "expected positive correlation between the widths and would have been over-optimistic; the "
+        "pilot measured rho = +0.02 at four seeds, close to independent. Reported so a null states "
+        "what it did and did not exclude"
     ),
 }
 
@@ -526,13 +543,14 @@ def _print(result: dict[str, Any]) -> None:
     for arm in LEARNING_ARMS:
         gate = result["gates"][f"{arm}_gate"]
         print(
-            f"    {arm:18s} vs its floor  d={gate['mean_delta']:+8.3f} foods  q={gate['q']:.3f}",
+            f"    {arm:18s} vs its floor  d={gate.get('effect', float('nan')):+8.3f} foods  "
+            f"q={gate['q']:.3f}",
         )
     for width in WIDTHS:
         prior = result["gates"][f"prior_{width}"]
         print(
-            f"    prior ({width:6s})     wt - rn       d={prior['mean_delta']:+8.3f} foods  "
-            f"q={prior['q']:.3f}",
+            f"    prior ({width:6s})     wt - rn       "
+            f"d={prior.get('effect', float('nan')):+8.3f} foods  q={prior['q']:.3f}",
         )
     print(f"    gates pass: {result['gates']['gates_pass']}")
     print(f"    {result['gates']['prior_note']}")

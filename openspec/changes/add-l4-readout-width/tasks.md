@@ -45,7 +45,7 @@
   programme has had.
 - [x] 2.2 The pooled learning arms and the pooled floors are L.0's committed configs, **unchanged**,
   asserted byte-identical to **`b9a5d8f2`**, the commit L.0 ran at.
-- [x] 2.3 **Eight arms** × seeds **1–32** — L.0's seeds, because the width-4 cell is L.0's result and
+- [x] 2.3 **Eight arms** × seeds **1–96** *(amended 2026-09-16 after the pilot: 32 first registered, resized below)* — L.0's seeds, because the width-4 cell is L.0's result and
   a paired 2×2 needs the same seeds in every cell. **Four floors, not two**: the widths are the same
   policy but not the same run (1.3), so each learning arm is gated against a floor at its own width.
 
@@ -82,26 +82,32 @@
 
 ## 4. The stop clauses
 
-- [ ] 4.1 A **pilot on disjoint seeds 101–104** before any registered seed: all eight arms run, the
+- [x] 4.1 A **pilot on disjoint seeds 101–104** before any registered seed: all eight arms run, the
   wide arms differ from their pooled partners after training and **not before** (beyond the ~1e-8
   rounding of 1.3), and all four floors sit where a no-learning policy sits. No verdict is read at
   four pairs — the driver withholds it, per V.4.
-- [ ] 4.2 **Byte-identity check against L.0.** Re-run `wt_pooled` and `rn_pooled` at two of L.0's seeds
+- [x] 4.2 **Byte-identity check against L.0.** Re-run `wt_pooled` and `rn_pooled` at two of L.0's seeds
   and confirm the logs match L.0's committed runs **exactly**. This is what licenses calling the
   pooled arms the same cell L.0 measured; a mismatch means the `readout_width` key changed the pooled
   path and the 2×2 is not paired.
-- [ ] 4.3 Re-score L.0's committed `readout_only` arms through **L.0's own harness** and confirm its
+- [x] 4.3 Re-score L.0's committed `readout_only` arms through **L.0's own harness** and confirm its
   published figures, so the instrument still reproduces the record one cell of this 2×2 comes from.
-- [x] 4.4 **The interaction's detectable effect, computed and registered before the campaign runs**,
-  from L.0's own observed per-seed spread on `auc_success` — because a difference of differences
-  carries about √2 the standard error of a single contrast, and this panel is therefore less sensitive
-  to its primary than L.0 was to its own. Carried as a field in the record, labelled for what it is.
-- [ ] 4.5 `launch.md` committed before anything runs, carrying the 2×2, the readings, the metric
+- [x] 4.4 **The interaction's detectable effect, computed and registered before the campaign runs.**
+  *(Amended 2026-09-16, after the pilot and before any registered seed.)* The minimum interaction
+  worth detecting is the **sign-flip threshold**: L.0 found the null ahead by **0.1076** on
+  `auc_success`, so an interaction must exceed that to mean the pool hid wiring structure. The
+  original task assumed the interaction carries √2 the standard error of a single contrast — true
+  only if the two widths' wiring differences are **independent**, which this change expected to be
+  pessimistic since the widths share a seed's task draws, RNG stream and initial policy. **The pilot
+  measured `rho = +0.02`**, realised sd 0.3770 against the 0.4487 independence bound: learning washes
+  out the shared start. So the panel is **96 seeds, not 32** — resolving 0.1077, which *matches*
+  rather than clears the threshold. Carried as a field, labelled for what it is.
+- [x] 4.5 `launch.md` committed before anything runs, carrying the 2×2, the readings, the metric
   choice with its reason, the sensitivity arithmetic and the honest prior.
 
 ## 5. Campaign
 
-- [ ] 5.1 256 runs: eight arms × seeds 1–32 at 3000 episodes, with `--track-experiment`.
+- [ ] 5.1 768 runs: eight arms × seeds **1–96** at 3000 episodes, with `--track-experiment`.
 - [ ] 5.2 Per-seed CSV with all four cells, the tables and the reading under
   `supporting/066-l4-readout-width/`.
 

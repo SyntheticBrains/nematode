@@ -31,7 +31,7 @@ sys.path.insert(0, str(_root / "scripts" / "analysis"))
 import connectome_structure_efficiency as eff  # noqa: E402  # pyright: ignore[reportMissingImports]
 import l4_readout_width as rw  # noqa: E402  # pyright: ignore[reportMissingImports]
 
-_SEEDS = tuple(range(1, 33))
+_SEEDS = tuple(range(1, 97))
 
 
 def _cells(wt_pooled: float, rn_pooled: float, wt_wide: float, rn_wide: float, jitter: float = 0.0):
@@ -146,7 +146,7 @@ class TestTheGatesAreReadFirst:
 
     def test_a_failed_gate_returns_no_learning_whatever_the_interaction_says(self) -> None:
         loud = rw.contrasts(_cells(0.40, 0.40, 0.90, 0.40), _SEEDS)
-        out = rw.reading(self._gates(pass_gates=False), loud, n_common=32)
+        out = rw.reading(self._gates(pass_gates=False), loud, n_common=96)
         assert out["reading"] == "no_learning"
         assert out["reopens_l4_l5"] is False
 
@@ -162,7 +162,7 @@ class TestTheReadings:
         return rw.reading(
             {"gates_pass": True},
             rw.contrasts(cells, _SEEDS),
-            n_common=32,
+            n_common=len(_SEEDS),
         )
 
     def test_a_clear_wild_type_gain_reopens_l4_and_l5(self) -> None:
@@ -230,23 +230,37 @@ class TestTheMetricChoice:
 
 
 class TestTheSensitivity:
-    def test_the_registered_bound_is_carried_and_labelled_conservative(self) -> None:
+    def test_the_panel_is_sized_to_the_sign_flip_threshold(self) -> None:
+        # Not an arbitrary target: L.0 found the null ahead by 0.1076, so an interaction must exceed
+        # that to flip the sign and mean the pool hid wiring structure. A smaller one
+        # changes no verdict and reopens nothing.
         registered = rw.REGISTERED_SENSITIVITY
-        assert registered["independence_bound_detectable_at_80"] == pytest.approx(0.2221)
-        assert "CONSERVATIVE" in registered["note"]
-        # The bound is larger than L.0's whole wiring effect, which is why it must be stated.
-        assert registered["independence_bound_detectable_at_80"] > abs(
-            registered["l0_observed_wiring_effect"],
+        assert registered["n_registered"] == 96
+        # 0.1077 against 0.1076: the panel SITS AT the threshold rather than clearing it, so it is
+        # at 80% power for exactly the sign-flipping effect and below that for anything smaller.
+        assert registered["detectable_at_80_at_n96"] == pytest.approx(
+            registered["minimum_interesting_interaction"],
+            rel=0.01,
         )
+        assert registered["sits_at_threshold_not_below"] is True
+        assert registered["detectable_at_80_at_n32"] > registered["minimum_interesting_interaction"]
+
+    def test_the_sizing_came_from_the_pilot_not_an_assumption(self) -> None:
+        # The first registration assumed the widths' wiring differences would correlate. The pilot
+        # measured rho = +0.02, close to independent, which is why the panel grew from 32 to 96.
+        registered = rw.REGISTERED_SENSITIVITY
+        assert registered["pilot_measured_rho"] == pytest.approx(0.02)
+        assert registered["pilot_realised_interaction_sd"] == pytest.approx(0.3770)
+        assert "pilot" in registered["note"]
 
     def test_the_realised_figure_comes_from_the_panels_own_deltas(self) -> None:
         cells = _cells(0.40, 0.40, 0.70, 0.50, 0.01)
         result = rw.contrasts(cells, _SEEDS)
         out = rw.sensitivity(result["interaction"]["per_seed_deltas"], result["n_common"], cells)
         assert out["available"] is True
-        assert out["n_pairs"] == 32
+        assert out["n_pairs"] == len(_SEEDS)
         assert out["detectable_at_80_percent"] > 0.0
-        assert out["registered"]["independence_bound_detectable_at_80"] == pytest.approx(0.2221)
+        assert out["registered"]["detectable_at_80_at_n96"] == pytest.approx(0.1077)
 
     def test_the_width_correlation_is_reported_beside_it(self) -> None:
         # The registered bound assumed zero; the realised figure depends on it, so it is reported
@@ -260,12 +274,12 @@ class TestTheSensitivity:
     def test_a_panel_too_small_for_a_spread_says_so(self) -> None:
         out = rw.sensitivity([], 0)
         assert out["available"] is False
-        assert out["registered"]["independence_bound_detectable_at_80"] == pytest.approx(0.2221)
+        assert out["registered"]["n_registered"] == 96
 
 
 class TestCompleteness:
     def test_an_incomplete_panel_refuses_a_reading(self) -> None:
-        scanned = {"runs": {name: dict.fromkeys(range(1, 30), object()) for name in rw.ARMS}}
+        scanned = {"runs": {name: dict.fromkeys(range(1, 90), object()) for name in rw.ARMS}}
         with pytest.raises(ValueError, match="incomplete"):
             rw.require_complete(scanned, _SEEDS)
 

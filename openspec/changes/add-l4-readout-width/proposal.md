@@ -37,21 +37,21 @@ with no interaction says more parameters help, wiring-blind — which closes L.1
 verdict standing with the width objection retired rather than outstanding.
 
 - **A full 2×2 in one campaign**: width {pooled, per-neuron} × wiring {wild type, rewired null},
-  plus a frozen floor for **each of the four cells**, on the `hard350` cell at seeds 1–32 — L.0's
-  cell, learner and seeds.
+  plus a frozen floor for **each of the four cells**, on the `hard350` cell at seeds **1–96** —
+  L.0's cell and learner, over a panel the pilot sized (below).
 
   | arm | wiring | readout | learner | runs |
   |---|---|---|---|---|
-  | `wt_pooled` | wild type | `(2, 4)`, 8 params | readout learns, `w_chem` frozen | 32 |
-  | `rn_pooled` | rewired null | `(2, 4)` | the same | 32 |
-  | `wt_wide` | wild type | `(2, 39)`, 78 params | the same | 32 |
-  | `rn_wide` | rewired null | `(2, 39)` | the same | 32 |
-  | `wt_pooled_frozen` | wild type | `(2, 4)` | nothing learns | 32 |
-  | `rn_pooled_frozen` | rewired null | `(2, 4)` | nothing learns | 32 |
-  | `wt_wide_frozen` | wild type | `(2, 39)` | nothing learns | 32 |
-  | `rn_wide_frozen` | rewired null | `(2, 39)` | nothing learns | 32 |
+  | `wt_pooled` | wild type | `(2, 4)`, 8 params | readout learns, `w_chem` frozen | 96 |
+  | `rn_pooled` | rewired null | `(2, 4)` | the same | 96 |
+  | `wt_wide` | wild type | `(2, 39)`, 78 params | the same | 96 |
+  | `rn_wide` | rewired null | `(2, 39)` | the same | 96 |
+  | `wt_pooled_frozen` | wild type | `(2, 4)` | nothing learns | 96 |
+  | `rn_pooled_frozen` | rewired null | `(2, 4)` | nothing learns | 96 |
+  | `wt_wide_frozen` | wild type | `(2, 39)` | nothing learns | 96 |
+  | `rn_wide_frozen` | rewired null | `(2, 39)` | nothing learns | 96 |
 
-  **256 runs.** Each learning arm is gated against a floor **at its own width**. An earlier draft of
+  **768 runs.** Each learning arm is gated against a floor **at its own width**. An earlier draft of
   this proposal ran two floors instead of four, reasoning that the two widths compute the same
   function at initialisation so a frozen arm cannot depend on width. That is true in exact arithmetic
   and **false in floating point**: measured on the real class sizes the two paths differ by 7.45e-9
@@ -74,6 +74,20 @@ verdict standing with the width objection retired rather than outstanding.
 
   What is left as the only difference between the widths is **the space the learner can move in**,
   which is the manipulation.
+
+- **96 seeds, sized by the pilot rather than assumed.** The minimum interaction worth detecting is
+  not arbitrary: L.0 found the rewired null **ahead by 0.1076** on `auc_success`, so an interaction
+  must **exceed that to flip the sign** and mean the pool was hiding wiring structure. Anything
+  smaller changes no verdict and reopens nothing. The first registration bounded the interaction's
+  spread by assuming the two widths' wiring differences were independent, and expected that to be
+  pessimistic — the widths share a seed's task draws, RNG stream and initial policy. **The pilot
+  measured `rho = +0.02`** at seeds 101–104, with a realised interaction sd of 0.3770 against the
+  independence bound of 0.4487: learning amplifies the divergence enough to wash out the shared
+  start. Four points make that noisy, but it is the only evidence and it points at independence. At
+  that spread, 96 seeds resolves **0.1077** — which **matches** the 0.1076 threshold rather than
+  clearing it, so the panel sits at 80% power for exactly the sign-flipping effect. At the 32 seeds
+  first registered it would have resolved only 0.187, finding a large interaction while missing the
+  one that matters.
 
 - **The primary metric is `auc_success`, not `episodes_to_30pct_success`**, and this is a departure
   from block V's instrument that is registered with its reason. L.0 met **asymmetric censoring** on
