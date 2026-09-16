@@ -51,33 +51,33 @@
 
 ## 3. Harness
 
-- [ ] 3.1 `scripts/analysis/l4_readout_width.py`, the R.1c/R.1d/R.2/L.0 sibling pattern, reusing the
+- [x] 3.1 `scripts/analysis/l4_readout_width.py`, the R.1c/R.1d/R.2/L.0 sibling pattern, reusing the
   committed metric and statistics layers verbatim (`t7_continuous_ranking.plateau_tail`,
   `weight_search_architecture_ranking.paired_seed_wilcoxon_bootstrap`, `bh_fdr`).
   **`auc_success` and the censoring counts come from `connectome_structure_efficiency.analyse`,
   called once per width** with this change's wild and rewired arms mapped onto its own two — which
   yields per-seed values for all four cells with that module unmodified. **Do not re-derive AUC
   here**; that duplication is what V.4's review caught in its first draft.
-- [ ] 3.2 **L.0's harness and block V's two harnesses are READ-ONLY, and a test asserts it.** L.0's
+- [x] 3.2 **L.0's harness and block V's two harnesses are READ-ONLY, and a test asserts it.** L.0's
   width-4 numbers are a cell of this 2×2; editing the instrument that produced them would let "the
   instrument changed" compete with the interaction.
-- [ ] 3.3 **The interaction is the primary**: per seed, `(wt_wide − wt_pooled) − (rn_wide − rn_pooled)`
+- [x] 3.3 **The interaction is the primary**: per seed, `(wt_wide − wt_pooled) − (rn_wide − rn_pooled)`
   on `auc_success`, then the committed paired test. Reported as the primary and named as such.
-- [ ] 3.4 Both **main effects** reported beside it and never in place of it — a width main effect is
+- [x] 3.4 Both **main effects** reported beside it and never in place of it — a width main effect is
   not evidence about the wiring, and the record must not let it read as one.
-- [ ] 3.5 **Four learning gates**, each learning arm against its **own** frozen floor, read **before**
+- [x] 3.5 **Four learning gates**, each learning arm against its **own** frozen floor, read **before**
   the interaction. An interaction between arms that did not learn is uninterpretable.
-- [ ] 3.6 **The untrained prior**, wild-type frozen against rewired frozen, measured here rather than
+- [x] 3.6 **The untrained prior**, wild-type frozen against rewired frozen, measured here rather than
   inherited — and reported as *no pre-update difference detected* rather than as absence, per the
   spec requirement V.4 added.
-- [ ] 3.7 **`auc_success` is the primary and the reason is carried in the record**, with
+- [x] 3.7 **`auc_success` is the primary and the reason is carried in the record**, with
   `episodes_to_30pct_success` reported beside it and **its censoring counted per cell of the 2×2**. A
   cell whose censoring rate differs materially from the others voids the censored metric's reading,
   not the primary's.
-- [ ] 3.8 The five registered readings — `pooling_was_not_the_limit`, `pooling_hid_structure`,
+- [x] 3.8 The five registered readings — `pooling_was_not_the_limit`, `pooling_hid_structure`,
   `width_favours_the_shuffle`, `no_learning`, `insufficient_seeds` — derived from the harness's own
   outputs, with the vocabulary **derived from source rather than hand-copied** (the V.4 lesson).
-- [ ] 3.9 Tests for 3.1–3.8, including a fixture in each reading, one where a gate fails, and one
+- [x] 3.9 Tests for 3.1–3.8, including a fixture in each reading, one where a gate fails, and one
   where the two metrics disagree.
 
 ## 4. The stop clauses
@@ -92,7 +92,7 @@
   path and the 2×2 is not paired.
 - [ ] 4.3 Re-score L.0's committed `readout_only` arms through **L.0's own harness** and confirm its
   published figures, so the instrument still reproduces the record one cell of this 2×2 comes from.
-- [ ] 4.4 **The interaction's detectable effect, computed and registered before the campaign runs**,
+- [x] 4.4 **The interaction's detectable effect, computed and registered before the campaign runs**,
   from L.0's own observed per-seed spread on `auc_success` — because a difference of differences
   carries about √2 the standard error of a single contrast, and this panel is therefore less sensitive
   to its primary than L.0 was to its own. Carried as a field in the record, labelled for what it is.
