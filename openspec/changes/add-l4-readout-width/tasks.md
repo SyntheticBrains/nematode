@@ -2,15 +2,15 @@
 
 ## 1. The readout width
 
-- [ ] 1.1 A `readout_width: pooled | per_neuron` field on **`ConnectomePPOBrainConfig`**, defaulting
+- [x] 1.1 A `readout_width: pooled | per_neuron` field on **`ConnectomePPOBrainConfig`**, defaulting
   to `pooled`, plumbed to the topology constructor and passed at the brain's construction site beside
   `enable_gap_junctions` and `synapse_signs`. **No `config_loader` or `dtypes` edit**: config classes
   come from the brain plugin registry and their fields populate generically, which is why neither
   `wiring` nor `perturbation_set` appears in `config_loader`.
-- [ ] 1.2 **`pooled` must be byte-identical to today.** No extra RNG draw, no reordered draw, no
+- [x] 1.2 **`pooled` must be byte-identical to today.** No extra RNG draw, no reordered draw, no
   changed buffer set. Asserted by test on the parameter shapes and the initial action mean, and
   **verified against data** in 4.2.
-- [ ] 1.3 **`per_neuron` is initialised by EXPANDING the pooled draw**, not by drawing afresh:
+- [x] 1.3 **`per_neuron` is initialised by EXPANDING the pooled draw**, not by drawing afresh:
   `W[k, i] = readout[k, class(i)] / |class(i)|`, the classes being unequal (VB 11, DB 7, VA 12, DA 9;
   39 total), so the divisor is per class and not one constant. The `(2, 4)` orthogonal draw still
   happens at the same point with the same shape, so the RNG stream is untouched. A test asserts the
@@ -18,19 +18,19 @@
   tolerance** — they are equal in exact arithmetic and differ by ~7.45e-9 in float32, because a slice
   `mean()` and a dot product with pre-divided weights round differently. This is the property the
   whole comparison rests on, and it is a statement about the **policy**, not about the runs.
-- [ ] 1.4 `set_anatomical_readout` expands the same way, so the contrast it writes is the same map at
+- [x] 1.4 `set_anatomical_readout` expands the same way, so the contrast it writes is the same map at
   both widths. A test asserts it, including that the expanded rows still carry the dorsal/ventral and
   forward/backward contrasts with the per-class `1/|class|` scaling.
-- [ ] 1.5 The readout's **eligibility** (`pooled_motor` → the 39 raw motor activities) and the
+- [x] 1.5 The readout's **eligibility** (`pooled_motor` → the 39 raw motor activities) and the
   **symmetric** learning-signal projection both follow the width. `random` routing is unaffected —
   it is what L.0 and R.2 run — but the symmetric branch must not silently keep a `(n, 4)` shape.
-- [ ] 1.6 **`_N_ACTIONS` currently doubles as the motor-class count and must not be read as the
+- [x] 1.6 **`_N_ACTIONS` currently doubles as the motor-class count and must not be read as the
   readout's input width.** The readout is built as `(readout_out_dim, _N_ACTIONS)` where the second
   dimension is the number of motor **classes**, and `_motor_class_slices` is built with
   `range(_N_ACTIONS)` — both are 4 by coincidence. Where the class count is meant, use
   `len(_MOTOR_CLASSES)`; where the readout's input width is meant, use the width the key selects. A
   test asserts the discrete-action path (whose readout is `(4, 4)`) is unaffected.
-- [ ] 1.7 Checkpoint identity: a `training_state` written at one width must not load at the other, and
+- [x] 1.7 Checkpoint identity: a `training_state` written at one width must not load at the other, and
   the task is to **establish which mechanism refuses it** rather than to add a key. The readout is a
   parameter whose shape changes with the width, so the existing shape check is expected to reject the
   load already; `_PLASTICITY_IDENTITY` holds keys whose semantics are *same shapes, different
@@ -38,14 +38,14 @@
 
 ## 2. The arms
 
-- [ ] 2.1 **Four** new configs, each differing from its committed L.0 partner in the `readout_width`
+- [x] 2.1 **Four** new configs, each differing from its committed L.0 partner in the `readout_width`
   key **alone** — the two learning arms
   (`..._hard350_eprop_readout_only_wide{,_rewired_null}.yml`) and the two wide floors
   (`..._hard350_eprop_frozen_wide{,_rewired_null}.yml`). Exact-key test, as every arm in this
   programme has had.
-- [ ] 2.2 The pooled learning arms and the pooled floors are L.0's committed configs, **unchanged**,
+- [x] 2.2 The pooled learning arms and the pooled floors are L.0's committed configs, **unchanged**,
   asserted byte-identical to **`b9a5d8f2`**, the commit L.0 ran at.
-- [ ] 2.3 **Eight arms** × seeds **1–32** — L.0's seeds, because the width-4 cell is L.0's result and
+- [x] 2.3 **Eight arms** × seeds **1–32** — L.0's seeds, because the width-4 cell is L.0's result and
   a paired 2×2 needs the same seeds in every cell. **Four floors, not two**: the widths are the same
   policy but not the same run (1.3), so each learning arm is gated against a floor at its own width.
 

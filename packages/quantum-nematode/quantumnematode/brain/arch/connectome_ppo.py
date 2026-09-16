@@ -145,6 +145,16 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
+
+# How the motor readout reads the pool. "pooled" is the 2x4 map over four motor-class MEANS that
+# every arm before L.1 ran -- 8 parameters, each of the 39 motor neurons carrying 1/|class| of its
+# class's influence. "per_neuron" gives each motor neuron its own weight (2x39, 78 parameters), so
+# the learner can read WHICH neuron fires rather than only which class.
+#
+# The per-neuron readout is initialised by EXPANDING the pooled draw rather than drawn afresh, so
+# the two widths consume identical randomness and start from the same policy; see
+# `_expand_over_motor_pool`. Default "pooled" is byte-identical to the pre-option brain.
+ReadoutWidth = Literal["pooled", "per_neuron"]
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -205,6 +215,12 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # not on the shared plasticity mixin because a dense MLP has no synapse signs to enforce.
     enforce_synapse_signs: bool = False
     enable_gap_junctions: bool = True
+    # Motor-readout width. "pooled" maps the four motor-class means to the action (8 parameters);
+    # "per_neuron" gives each of the 39 motor neurons its own weight (78). The per-neuron map is
+    # initialised by expanding the pooled draw, so the RNG stream and the initial policy are the
+    # same at both widths and the only difference is the space the learner can move in.
+    # Default "pooled" is byte-identical to the pre-option brain.
+    readout_width: ReadoutWidth = "pooled"
     chemical_mask_mode: Literal["strict", "soft_prior"] = "strict"
     # Sensing mode controls what env-side fields the sensor projection
     # consumes. ``oracle`` reads ``[food_gradient_strength, food_gradient_direction]``
@@ -497,6 +513,7 @@ class ConnectomeTopology(nn.Module):
         initial_log_std: float = 0.0,
         weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled",
         synapse_signs: Literal["random", "atlas"] = "random",
+        readout_width: ReadoutWidth = "pooled",
     ) -> None:
         super().__init__()
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
@@ -762,16 +779,31 @@ class ConnectomeTopology(nn.Module):
             self._build_perturbation_mask(perturbation_set, flat, device),
         )
 
-        # Readout maps the 4 motor classes → action outputs: 4 discrete logits,
-        # or the 2-D continuous Gaussian mean.
+        # Readout maps the motor pool → action outputs: 4 discrete logits, or the 2-D continuous
+        # Gaussian mean. The INPUT dimension is the number of motor classes under ``pooled`` and the
+        # number of motor neurons under ``per_neuron``; ``len(_MOTOR_CLASSES)`` rather than
+        # ``_N_ACTIONS`` because the two are equal only by coincidence -- four classes, four
+        # discrete actions -- and reading the action count here would silently break at any other
+        # width.
+        self.readout_width: ReadoutWidth = readout_width
         readout_out_dim = CONTINUOUS_ACTION_DIM if continuous else _N_ACTIONS
-        self.readout = nn.Parameter(torch.zeros(readout_out_dim, _N_ACTIONS, device=device))
+        self.readout = nn.Parameter(
+            torch.zeros(readout_out_dim, len(_MOTOR_CLASSES), device=device),
+        )
         # Stronger orthogonal init so the initial policy isn't a constant
         # uniform across actions. ``gain=1.0`` is the standard PPO-actor
         # initial-gain choice; the small ``0.01`` PPO stable-policy trick
         # produces a degenerate-uniform initial policy here because the
         # whole upstream pipeline is small (one 302-vec → 4-vec readout).
+        #
+        # The draw happens at the POOLED shape whatever the width, so the two widths consume
+        # identical randomness and every downstream stream is untouched -- which is what keeps a
+        # pooled arm byte-identical to the runs made before this option existed.
         nn.init.orthogonal_(self.readout, gain=1.0)
+        if readout_width == "per_neuron":
+            with torch.no_grad():
+                expanded = self._expand_over_motor_pool(self.readout)
+            self.readout = nn.Parameter(expanded)
         # Continuous std: state-independent free parameter (default) or an
         # RNG-free zero-Parameter head off the pooled motor 4-vec (mirroring the
         # readout's input). Both branches consume zero RNG draws, so every other
@@ -1339,6 +1371,28 @@ class ConnectomeTopology(nn.Module):
             for name in self._plastic_entries()
         ]
 
+    def _expand_over_motor_pool(self, pooled: torch.Tensor) -> torch.Tensor:
+        """Expand a ``(out, n_classes)`` readout into the ``(out, n_motor)`` map computing the same.
+
+        The pool is a MEAN, so ``mu_k = sum_c pooled[k, c] * (1 / |c|) * sum_{i in c} h_i``. Giving
+        neuron ``i`` the weight ``pooled[k, class(i)] / |class(i)|`` reproduces that exactly, which
+        is what lets a per-neuron arm start from the same policy as its pooled partner instead of a
+        fresh draw -- otherwise "width" would be confounded with "a different initial policy".
+
+        **Equal in exact arithmetic, not bit-for-bit.** A slice ``mean()`` and a dot product with
+        pre-divided weights round differently, and the classes are unequal (11, 7, 12, 9), so the
+        divisors are not powers of two. The two paths agree on the action mean to ~1e-8 in float32,
+        which is a statement about the computed policy and NOT about the runs: the action is sampled
+        around that mean, so two arms that differ there diverge within an episode. That is why a
+        frozen arm is run at each width rather than shared between them.
+        """
+        rows = [
+            pooled[:, class_index : class_index + 1].expand(pooled.shape[0], stop - start)
+            / float(stop - start)
+            for class_index, (start, stop) in enumerate(self._motor_class_slices)
+        ]
+        return torch.cat(rows, dim=1).contiguous()
+
     def set_anatomical_readout(self) -> None:
         """Overwrite the motor readout with the contrast its pools imply.
 
@@ -1379,8 +1433,20 @@ class ConnectomeTopology(nn.Module):
             # Unit-norm each contrast; for four classes split two-two this
             # is a division by two, but computing it keeps the property
             # true if the class set ever changes.
-            self.readout[_SPEED_ACTION_INDEX].copy_(forward / forward.norm())
-            self.readout[_TURN_ACTION_INDEX].copy_(dorsal / dorsal.norm())
+            contrast = torch.zeros(
+                (self.readout.shape[0], len(_MOTOR_CLASSES)),
+                dtype=self.readout.dtype,
+                device=self.readout.device,
+            )
+            contrast[_SPEED_ACTION_INDEX] = forward / forward.norm()
+            contrast[_TURN_ACTION_INDEX] = dorsal / dorsal.norm()
+            # Under ``per_neuron`` the same contrast is written through the pool expansion, so the
+            # map is the one the pooled arm runs and a frozen arm's POLICY does not depend on the
+            # width. It is still run at each width: see `_expand_over_motor_pool` on why the
+            # equality is analytic rather than bitwise.
+            if self.readout_width == "per_neuron":
+                contrast = self._expand_over_motor_pool(contrast)
+            self.readout.copy_(contrast)
 
     @property
     def current_node_noise(self) -> float:
@@ -1486,6 +1552,11 @@ class ConnectomeTopology(nn.Module):
             device=self.readout.device,
         )
         with torch.no_grad():
+            if self.readout_width == "per_neuron":
+                # Each motor neuron already has its own column, so its influence on the action IS
+                # that column -- no 1 / |class| share, because there is no pool to share.
+                projection[self._motor_flat_indices] = self.readout.detach().t()
+                return projection
             for class_index, (start, stop) in enumerate(self._motor_class_slices):
                 members = self._motor_flat_indices[start:stop]
                 # The pool is a MEAN, so a member carries 1 / |class| of its class's influence on
@@ -1544,15 +1615,21 @@ class ConnectomeTopology(nn.Module):
         return self.log_std_head(self._pool_motor(hidden))
 
     def _pool_motor(self, h: torch.Tensor) -> torch.Tensor:
-        """Mean-pool ``h`` over the four motor classes → ``(4,)`` or ``(B, 4)``.
+        """Reduce ``h`` to the readout's input: the four class means, or the 39 motor activities.
 
         Pools over the LAST dim, so it handles both a single ``(302,)`` hidden
         state and a batched ``(B, 302)`` one. Uses the Python-int class slices
         cached at construction, so there is no per-call ``.item()`` CPU sync.
         Numerically identical to the prior per-class mean.
+
+        Under ``per_neuron`` there is nothing to pool: the readout has a weight per motor neuron, so
+        its pre-synaptic factor is the selected activities themselves, in the same flat class order
+        the expansion uses.
         """
         last_dim = h.dim() - 1
         flat_acts = h.index_select(last_dim, self._motor_flat_indices)
+        if self.readout_width == "per_neuron":
+            return flat_acts
         means = [
             flat_acts[..., start:end].mean(dim=last_dim) for start, end in self._motor_class_slices
         ]
@@ -2064,6 +2141,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             initial_log_std=config.initial_log_std,
             weight_init=config.weight_init,
             synapse_signs=config.synapse_signs,
+            readout_width=config.readout_width,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
