@@ -55,7 +55,13 @@ down.
 ### Instruments before substrates
 
 4. **Positive control first.** The method learns a minimal task with closed-form bounds before it
-   touches the real substrate. *Ran twelfth. Cost seven panels.*
+   touches the real substrate. *Ran twelfth. Cost seven panels.* The same discipline applies to a
+   **metric**: a statistic that is meant to exclude a mechanism has to be run first on a known
+   instance of that mechanism. *External precedent, 2026-09-13: a fly connectome analysis
+   (`pwang724/fly-circuit-exploration`) excluded activity-based memory with a recurrence metric,
+   then found the metric gave the same answer on the EPG ring attractor — a measured
+   persistent-activity network — and withdrew the exclusion in its own audit. The public claim
+   went out the next day with the exclusion still in it.*
 
 5. **A task ladder from the control to the real task**, the method cleared at each rung before the
    next. Easy to hard: foraging, then foraging with predators, then with thermotaxis. Never jump
