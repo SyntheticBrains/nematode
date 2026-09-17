@@ -62,8 +62,8 @@ def _cells(  # noqa: PLR0913 -- a fixture with six knobs, all named at the call 
     means = {
         f"wt_{ablation}": wt_abl,
         f"rn_{ablation}": rn_abl,
-        "wt_baseline": wt_base,
-        "rn_baseline": rn_base,
+        f"wt_baseline_{ablation}": wt_base,
+        f"rn_baseline_{ablation}": rn_base,
     }
     offs = {k: i + 1 for i, k in enumerate(means)}
     return {k: {s: v + jitter * ((s * offs[k]) % 7 - 3) for s in _SEEDS} for k, v in means.items()}
@@ -124,6 +124,46 @@ class TestTheArms:
 
     def test_an_l1_wide_log_is_not_an_ablation_arm(self) -> None:
         assert fa._LABEL.match(f"{fa._STEM}_readout_only_wide-seed3.log") is None
+
+    @pytest.mark.parametrize(
+        ("name", "arm"),
+        [
+            ("..._readout_only_wide_atlas_r1e4-seed3.log", "wt_atlas"),
+            ("..._readout_only_wide_atlas_r1e4_rewired_null-seed3.log", "rn_atlas"),
+        ],
+    )
+    def test_a_rate_tagged_atlas_arm_resolves_to_the_same_cell(self, name: str, arm: str) -> None:
+        # Outcome B: the atlas learning arms run at 0.0001 under a rate tag -- same cell.
+        m = fa._LABEL.match(name.replace("...", fa._STEM))
+        assert m is not None
+        assert m.group("rate") == "_r1e4"
+        wiring = "rn" if m.group("rewired") else "wt"
+        assert f"{wiring}_{m.group('abl')}" == arm
+
+    def test_the_rate_matched_wide_label_and_nothing_else(self) -> None:
+        stem = fa._STEM
+        assert fa._WIDE_RATE_LABEL.match(f"{stem}_readout_only_wide_r1e4-seed3.log")
+        assert fa._WIDE_RATE_LABEL.match(f"{stem}_readout_only_wide_r1e4_rewired_null-seed3.log")
+        assert fa._WIDE_RATE_LABEL.match(f"{stem}_readout_only_wide-seed3.log") is None
+        assert fa._WIDE_RATE_LABEL.match(f"{stem}_frozen_wide_r1e4-seed3.log") is None
+
+    def test_merge_baseline_takes_learning_from_the_rate_run_and_floors_from_l1(self) -> None:
+        main = {
+            "runs": {
+                k: {1: f"main_{k}"}
+                for k in ("wt_wide", "rn_wide", "wt_wide_frozen", "rn_wide_frozen")
+            },
+            "logs": {
+                k: {1: Path(f"main_{k}")}
+                for k in ("wt_wide", "rn_wide", "wt_wide_frozen", "rn_wide_frozen")
+            },
+        }
+        learning = {"runs": {"wt_wide": {1: "rate_wt"}, "rn_wide": {1: "rate_rn"}}, "logs": {}}
+        merged = fa.merge_baseline(main, learning)
+        assert merged["runs"]["wt_wide"] == {1: "rate_wt"}
+        assert merged["runs"]["rn_wide"] == {1: "rate_rn"}
+        assert merged["runs"]["wt_wide_frozen"] == {1: "main_wt_wide_frozen"}
+        assert merged["runs"]["rn_wide_frozen"] == {1: "main_rn_wide_frozen"}
 
 
 class TestTheMinimumIsAgainstTheRightEffect:

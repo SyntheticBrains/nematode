@@ -81,7 +81,7 @@
   reading at four pairs.
 - [x] 5.2 *(passed, see 2.1.)* The byte-identity check (2.1) **passes or the baseline is re-run** —
   settled before any registered seed.
-- [ ] 5.4 *(**added 2026-09-18 after the pilot, before the campaign**)* **The atlas rate check**, with
+- [x] 5.4 *(**ran 2026-09-18 — outcome B**: 0.0001 learns cleanly on both wirings, +15.0/+16.1 over floor with no seed below, against +2.2/+2.8 at 0.001 and a full collapse at 0.01; see the launch record.)* *(added 2026-09-18 after the pilot, before the campaign)* **The atlas rate check**, with
   its three-outcome decision rule registered in `launch.md` and the design **before** the 16 runs:
   both atlas learning arms at 0.0001 and 0.01 on seeds 101–104, each config one key from its atlas
   parent. Outcome A or C: campaign as registered. Outcome B: atlas learning arms at the clean rate
@@ -93,8 +93,10 @@
 
 ## 6. Campaign
 
-- [ ] 6.1 768 runs: eight arms × seeds 1–96 at 3000 episodes, `--track-experiment --no-detailed-export --no-file-log`. Measured disk cost recorded in `launch.md` **before** launch.
-- [ ] 6.2 Per-seed CSV with all six cells, the tables and both readings under
+- [ ] 6.1 *(**reshaped by the rate check, outcome B**)* **960 runs: ten arms × seeds 1–96** at 3000
+  episodes — the atlas learning arms at **0.0001**, their floors, the four nogap arms, and the two wide
+  learning arms at 0.0001 as L.4's rate-matched baseline — with `--track-experiment --no-detailed-export --no-file-log`. Measured disk cost recorded in `launch.md` **before** launch.
+- [ ] 6.2 Per-seed CSV with all cells, the tables and both readings under
   `supporting/067-l4-feature-ablations/`.
 
 ## 7. The record

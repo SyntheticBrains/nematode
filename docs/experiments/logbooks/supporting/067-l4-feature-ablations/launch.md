@@ -147,6 +147,40 @@ No other setting is touched under any outcome. The check is calibration on disjo
 means and counts at four pairs, as V.3's `max_steps` calibration was; it decides how the campaign is
 run and never what it reads.
 
+### Rate-check outcome, 2026-09-18 — **B fired**
+
+16 runs, all succeeded. Gain over own floor (foods), seeds 101–104, against the wide arms' gains at
+the same seeds (+13.66 wt, +7.81 rn):
+
+| wiring | rate | mean gain | seeds below floor | per-seed |
+|---|---|---|---|---|
+| wt | 0.0001 | **+15.02** | **0** | +9.44, +16.58, +16.47, +17.59 |
+| wt | 0.001 | +2.24 | 2 | −2.52, −1.54, +6.73, +6.30 |
+| wt | 0.01 | −1.61 | 4 | −2.62, −1.54, −0.38, −1.90 |
+| rn | 0.0001 | **+16.05** | **0** | +11.66, +19.15, +17.47, +15.93 |
+| rn | 0.001 | +2.81 | 2 | −6.16, −0.66, +11.19, +6.88 |
+| rn | 0.01 | −0.64 | 3 | −6.16, −0.66, +6.73, −2.48 |
+
+0.0001 is better than 0.001 on both wirings and **learns cleanly on both** — no seed below floor,
+means above the wide arms' rather than merely half of them. 0.01 collapses everything. The atlas
+collapse was a **rate mismatch**, and the mechanistic candidate — grounded inputs pushing the readout's
+presynaptic activities toward saturation — was the right one. The honest prior above (A or C) was
+wrong, and is left standing as written.
+
+**Consequence, per the registered rule.** L.4's learning arms run at **0.0001**
+(`..._readout_only_wide_atlas_r1e4{,_rewired_null}.yml`); two wide learning arms at 0.0001
+(`..._readout_only_wide_r1e4{,_rewired_null}.yml`, one key from L.1's wide parents) are added as the
+**rate-matched baseline**, +192 runs; the atlas floors and L.1's wide floors are reused, the rate
+being inert under `freeze_updates`. L.5 is unchanged at 0.001 against L.1's baseline. The campaign is
+**ten arms, 960 runs**. The harness takes a per-ablation baseline so L.4's interaction compares
+learners at one rate. The rate check is the pilot for the swapped atlas arms — disjoint seeds, cleanly
+learning, differing from their parents; the two new wide arms get their own 8-run pilot on the same
+seeds before any registered seed.
+
+**Not read at four seeds, and recorded so it cannot be read later as if it had been**: the atlas null
+at 0.0001 gained as much as the atlas wild type. Whether the wide null does the same at 0.0001 is what
+the rate-matched baseline exists to measure.
+
 ## The honest prior
 
 **L.5: `survives_without_it`.** Gap junctions are symmetric and degree-scaled — the part of the wiring

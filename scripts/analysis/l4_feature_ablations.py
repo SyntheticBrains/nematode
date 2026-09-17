@@ -68,9 +68,15 @@ for _ab in ABLATIONS:
         ARMS[f"{_w}_{_ab}_frozen"] = {"wiring": _w, "ablation": _ab, "learns": False}
 LEARNING_ARMS = tuple(n for n, m in ARMS.items() if m["learns"])
 
+# An optional rate tag: after the rate check (outcome B) the atlas LEARNING arms run at 0.0001 and
+# are named `..._wide_atlas_r1e4{,_rewired_null}`. The tag is recorded, not part of the arm name.
 _LABEL = re.compile(
     rf"^{re.escape(_STEM)}_(?P<arm>readout_only|frozen)_wide_(?P<abl>atlas|nogap)"
-    r"(?P<rewired>_rewired_null)?-seed(?P<seed>\d+)\.log$",
+    r"(?P<rate>_r1e[24])?(?P<rewired>_rewired_null)?-seed(?P<seed>\d+)\.log$",
+)
+# L.4's rate-matched baseline: L.1's wide LEARNING arms re-run at 0.0001, one key from their parents.
+_WIDE_RATE_LABEL = re.compile(
+    rf"^{re.escape(_STEM)}_readout_only_wide_r1e4(?P<rewired>_rewired_null)?-seed(?P<seed>\d+)\.log$",
 )
 
 PRIMARY_METRIC = rw.PRIMARY_METRIC
@@ -154,6 +160,51 @@ def scan(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> dict[str, Any]:
     return {"runs": runs, "logs": logs}
 
 
+def scan_rate_matched_wide(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> dict[str, Any]:
+    """Read the rate-matched wide LEARNING arms, keyed as L.1's scanner keys them (`wt_wide`, `rn_wide`)."""
+    log_dir = campaign_dir / "logs" if (campaign_dir / "logs").is_dir() else campaign_dir
+    runs: dict[str, dict[int, Any]] = {"wt_wide": {}, "rn_wide": {}}
+    logs: dict[str, dict[int, Path]] = {}
+    for log in sorted(log_dir.glob("*.log")):
+        match = _WIDE_RATE_LABEL.match(log.name)
+        if match is None:
+            print(f"  WARN: skipping log with an unrecognised label: {log.name}")
+            continue
+        name = "rn_wide" if match.group("rewired") else "wt_wide"
+        record = read_log(log, experiments)
+        if record is None:
+            print(f"  WARN: no parseable run lines in {log.name} - dropped")
+            continue
+        seed = int(match.group("seed"))
+        if seed in runs[name]:
+            msg = f"two logs for arm {name} seed {seed}: {log.name} duplicates a read run"
+            raise ValueError(msg)
+        runs[name][seed] = record
+        logs.setdefault(name, {})[seed] = log
+    return {"runs": runs, "logs": logs}
+
+
+def merge_baseline(main: dict[str, Any], learning: dict[str, Any]) -> dict[str, Any]:
+    """L.4's baseline under outcome B: learning arms from the rate-matched run, floors from L.1.
+
+    The floors are reused because the rate is inert under ``freeze_updates``; the learning arms are
+    not, because an interaction must compare learners at ONE rate.
+    """
+    runs = {
+        "wt_wide": learning["runs"]["wt_wide"],
+        "rn_wide": learning["runs"]["rn_wide"],
+        "wt_wide_frozen": main["runs"]["wt_wide_frozen"],
+        "rn_wide_frozen": main["runs"]["rn_wide_frozen"],
+    }
+    logs = {
+        "wt_wide": learning["logs"].get("wt_wide", {}),
+        "rn_wide": learning["logs"].get("rn_wide", {}),
+        "wt_wide_frozen": main["logs"].get("wt_wide_frozen", {}),
+        "rn_wide_frozen": main["logs"].get("rn_wide_frozen", {}),
+    }
+    return {"runs": runs, "logs": logs}
+
+
 def require_complete(scanned: dict[str, Any], seeds: tuple[int, ...] = SEEDS) -> None:
     """Refuse to score a panel missing any registered cell."""
     runs = scanned["runs"]
@@ -169,16 +220,17 @@ def require_complete(scanned: dict[str, Any], seeds: tuple[int, ...] = SEEDS) ->
 
 def common_seeds(
     scanned: dict[str, Any],
-    baseline: dict[str, Any],
+    baselines: dict[str, dict[str, Any]],
     seeds: tuple[int, ...] = SEEDS,
 ) -> tuple[int, ...]:
-    """Return the seeds present in every ablation cell AND every baseline cell."""
+    """Return the seeds present in every ablation cell AND every cell of every baseline."""
     return tuple(
         s
         for s in seeds
         if all(s in scanned["runs"][n] for n in ARMS)
         and all(
-            s in baseline["runs"][n]
+            s in b["runs"][n]
+            for b in baselines.values()
             for n in ("wt_wide", "rn_wide", "wt_wide_frozen", "rn_wide_frozen")
         )
     )
@@ -207,21 +259,27 @@ def write_manifest(
 
 def efficiency(
     scanned: dict[str, Any],
-    baseline: dict[str, Any],
+    baselines: dict[str, dict[str, Any]],
     tmp_dir: Path,
     seeds: tuple[int, ...] = SEEDS,
 ) -> dict[str, Any]:
-    """Score each ablation AND the baseline through the committed efficiency harness, unmodified.
+    """Score each ablation AND its baseline through the committed efficiency harness, unmodified.
 
     The baseline half of every interaction is scored through the same call as the ablated half, from
-    L.1's campaign logs rather than L.1's JSON, so both halves pass through one code path.
+    campaign logs rather than JSON, so both halves pass through one code path. One baseline report
+    per ablation: under outcome B, L.4's is rate-matched at 0.0001 and L.5's is L.1's at 0.001.
     """
     reports: dict[str, Any] = {}
     for ablation in ABLATIONS:
         manifest = write_manifest(scanned, ablation, tmp_dir / f"_efficiency_{ablation}.txt", seeds)
         reports[ablation] = eff.analyse(manifest)
-    manifest = rw.write_manifest(baseline, "wide", tmp_dir / "_efficiency_baseline.txt", seeds)
-    reports[BASELINE] = eff.analyse(manifest)
+        manifest = rw.write_manifest(
+            baselines[ablation],
+            "wide",
+            tmp_dir / f"_efficiency_{BASELINE}_{ablation}.txt",
+            seeds,
+        )
+        reports[f"{BASELINE}_{ablation}"] = eff.analyse(manifest)
     return reports
 
 
@@ -231,10 +289,18 @@ def contrasts(
     seeds: tuple[int, ...] = SEEDS,
 ) -> dict[str, Any]:
     """Return one ablation's interaction and both wiring effects, per seed, on the metric given."""
-    keys = (f"wt_{ablation}", f"rn_{ablation}", f"wt_{BASELINE}", f"rn_{BASELINE}")
+    keys = (
+        f"wt_{ablation}",
+        f"rn_{ablation}",
+        f"wt_{BASELINE}_{ablation}",
+        f"rn_{BASELINE}_{ablation}",
+    )
     common = [s for s in seeds if all(s in cells[k] for k in keys)]
     ablated = [cells[f"wt_{ablation}"][s] - cells[f"rn_{ablation}"][s] for s in common]
-    base = [cells[f"wt_{BASELINE}"][s] - cells[f"rn_{BASELINE}"][s] for s in common]
+    base = [
+        cells[f"wt_{BASELINE}_{ablation}"][s] - cells[f"rn_{BASELINE}_{ablation}"][s]
+        for s in common
+    ]
     interaction = [a - b for a, b in zip(ablated, base, strict=True)]
     return {
         "ablation": ablation,
@@ -455,21 +521,38 @@ def analyse(
     baseline_dir: Path,
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
+    baseline_atlas_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Score both ablations: gates first, then each interaction, one BH family, read per ablation."""
+    """Score both ablations: gates first, then each interaction, one BH family, read per ablation.
+
+    ``baseline_atlas_dir`` holds L.4's rate-matched wide LEARNING arms (outcome B); its floors are
+    L.1's from ``baseline_dir``. Without it, both ablations read against L.1's baseline.
+    """
     scanned = scan(campaign_dir, experiments)
-    baseline = rw.scan(baseline_dir, experiments)
-    seeds = common_seeds(scanned, baseline, seeds)
-    reports = efficiency(scanned, baseline, campaign_dir, seeds)
+    main = rw.scan(baseline_dir, experiments)
+    baselines: dict[str, dict[str, Any]] = dict.fromkeys(ABLATIONS, main)
+    sources = dict.fromkeys(ABLATIONS, str(baseline_dir))
+    if baseline_atlas_dir is not None:
+        baselines["atlas"] = merge_baseline(
+            main,
+            scan_rate_matched_wide(baseline_atlas_dir, experiments),
+        )
+        sources["atlas"] = (
+            f"learning arms {baseline_atlas_dir} (rate-matched, 0.0001); floors {baseline_dir}"
+        )
+    seeds = common_seeds(scanned, baselines, seeds)
+    reports = efficiency(scanned, baselines, campaign_dir, seeds)
     primary_cells = rw.cell_values(reports, PRIMARY_METRIC)
     censored_cells = rw.cell_values(reports, CENSORED_METRIC)
-    censored_hib = bool(reports[BASELINE]["metrics"][CENSORED_METRIC]["higher_is_better"])
+    censored_hib = bool(
+        reports[f"{BASELINE}_{ABLATIONS[0]}"]["metrics"][CENSORED_METRIC]["higher_is_better"],
+    )
     per: dict[str, dict[str, Any]] = {}
     for ab in ABLATIONS:
         per[ab] = {
             "contrasts": contrasts(primary_cells, ab, seeds),
             "censored_axis": contrasts(censored_cells, ab, seeds),
-            "gates": gates(scanned, baseline, ab, seeds),
+            "gates": gates(scanned, baselines[ab], ab, seeds),
         }
     family = adjust_family(per)
     for ab in ABLATIONS:
@@ -492,8 +575,12 @@ def analyse(
         "censored_metric_higher_is_better": censored_hib,
         "metric_note": METRIC_NOTE,
         "baseline": {
-            "source": str(baseline_dir),
-            "note": "L.1's committed wide arms, reused under the byte-identity check recorded in launch.md",
+            "sources": sources,
+            "note": (
+                "L.1's committed wide arms, reused under the byte-identity check recorded in "
+                "launch.md; under outcome B, L.4's learning half is the rate-matched re-run at "
+                "0.0001 with L.1's floors"
+            ),
         },
         "family": family,
         "censoring": rw.censoring(reports),
@@ -536,7 +623,8 @@ def _print(result: dict[str, Any]) -> None:
         m = c["cell_means"]
         print(
             f"    cells: wt_{ab} {m.get(f'wt_{ab}', float('nan')):.4f}  rn_{ab} {m.get(f'rn_{ab}', float('nan')):.4f}"
-            f"  | baseline wt {m.get('wt_baseline', float('nan')):.4f}  rn {m.get('rn_baseline', float('nan')):.4f}",
+            f"  | baseline wt {m.get(f'wt_{BASELINE}_{ab}', float('nan')):.4f}"
+            f"  rn {m.get(f'rn_{BASELINE}_{ab}', float('nan')):.4f}",
         )
         i = c["interaction"]
         print(
@@ -591,6 +679,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--campaign", type=Path, required=True)
     parser.add_argument("--baseline", type=Path, default=Path("campaigns/readout-width"))
+    parser.add_argument(
+        "--baseline-atlas",
+        type=Path,
+        default=None,
+        help="L.4's rate-matched wide learning arms (outcome B); floors still come from --baseline",
+    )
     parser.add_argument("--seeds", type=str, default=f"{SEEDS[0]}-{SEEDS[-1]}")
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--csv", type=Path, default=None)
@@ -604,7 +698,7 @@ def main(argv: list[str] | None = None) -> int:
     seeds = tuple(range(int(low), int(high or low) + 1))
     if not args.allow_incomplete:
         require_complete(scan(args.campaign), seeds)
-    result = analyse(args.campaign, args.baseline, seeds)
+    result = analyse(args.campaign, args.baseline, seeds, baseline_atlas_dir=args.baseline_atlas)
     _print(result)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
