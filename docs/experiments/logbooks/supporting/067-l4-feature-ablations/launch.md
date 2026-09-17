@@ -116,6 +116,37 @@ reading and never rescues one; and it applies to atlas only, since the nogap arm
 +16.3) exceeded the baseline's. The nogap pattern — both wirings gaining, the null more — is **not
 read** at four seeds.
 
+## Amendment 2026-09-18 (second) — a registered rate check for the atlas arms, before the campaign
+
+The pilot's atlas collapse has a mechanistic candidate: grounding makes the pool's inputs 275 E / 36 I,
+so the 39 presynaptic activities the readout learns from sit nearer tanh saturation, and the readout's
+own exact gradient `E[k,i] = score_k · h_i` becomes large and uninformative — the signature of a
+learning rate that is too high for the substrate, and a plausible source of the bimodality (two seeds
+destroying their policy, two learning). That is the one knob with both a reason and a precedent:
+[L.0](../../064-l4-frozen-features.md) ran the committed rate against one decade either side on
+disjoint seeds before its campaign. Nothing else is swept — a wider grid with no stopping rule, read
+over seeds with bimodal outcomes, is how an effect gets manufactured.
+
+**The check.** Both atlas learning arms at `plasticity_rate` **0.0001** and **0.01** on seeds 101–104
+(0.001 is the pilot). Four configs, each differing from its atlas parent in `plasticity_rate` alone,
+asserted by exact-key test. 16 runs. Read on **gain over own floor** (foods) per seed — the same
+quantity the gains diagnostic reads — and on the count of seeds that finish **below** their own floor.
+
+**The decision rule, fixed before the runs.** A decade is *better* than 0.001 if its mean gain over
+floor is higher **on both wirings** and no more seeds sit below floor on either. A decade *learns
+cleanly* if **no seed** sits below floor on either wiring **and** its mean gain reaches at least
+**half** of the wide arms' gain at the same seeds (+13.7 wt, +7.8 rn).
+
+| outcome | action |
+|---|---|
+| **A** — no decade is better than 0.001 | run the campaign **as registered**; the atlas collapse is a property of the substrate at this learner's operating point, and the gains diagnostic carries the reading |
+| **B** — a decade learns cleanly on both wirings | run the atlas **learning** arms at that rate, and add the two wide **learning** arms at that rate (**+192 runs**, ~960 total) as a **rate-matched baseline**, so L.4's interaction compares learners at one rate. The floors are unaffected (nothing learns, so the rate is inert) and are reused. A registered two-key departure for L.4's learning arms, with this reason; L.5 is unchanged at 0.001 against L.1's baseline |
+| **C** — a decade is better but does not learn cleanly | run **as registered**; the collapse is intrinsic to the substrate under this learner, and a `carries` reading on L.4 is expected to come back *carries or unlearnable* — which is then the finding |
+
+No other setting is touched under any outcome. The check is calibration on disjoint seeds, read on
+means and counts at four pairs, as V.3's `max_steps` calibration was; it decides how the campaign is
+run and never what it reads.
+
 ## The honest prior
 
 **L.5: `survives_without_it`.** Gap junctions are symmetric and degree-scaled — the part of the wiring

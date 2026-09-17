@@ -81,6 +81,12 @@
   reading at four pairs.
 - [x] 5.2 *(passed, see 2.1.)* The byte-identity check (2.1) **passes or the baseline is re-run** —
   settled before any registered seed.
+- [ ] 5.4 *(**added 2026-09-18 after the pilot, before the campaign**)* **The atlas rate check**, with
+  its three-outcome decision rule registered in `launch.md` and the design **before** the 16 runs:
+  both atlas learning arms at 0.0001 and 0.01 on seeds 101–104, each config one key from its atlas
+  parent. Outcome A or C: campaign as registered. Outcome B: atlas learning arms at the clean rate
+  plus a rate-matched wide baseline (+192 runs), floors reused. The harness accepts a per-ablation
+  baseline directory for that case.
 - [x] 5.3 `launch.md` before anything runs: the two interactions, the readings with the minimum effect,
   the baseline decision and its evidence, the sensitivity arithmetic, the probe's registered test,
   the L.4 diagnostic, and the honest prior as the design states it.
