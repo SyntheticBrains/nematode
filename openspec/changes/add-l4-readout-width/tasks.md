@@ -107,19 +107,19 @@
 
 ## 5. Campaign
 
-- [ ] 5.1 768 runs: eight arms × seeds **1–96** at 3000 episodes, with `--track-experiment`.
-- [ ] 5.2 Per-seed CSV with all four cells, the tables and the reading under
+- [x] 5.1 768 runs: eight arms × seeds **1–96** at 3000 episodes, with `--track-experiment`.
+- [x] 5.2 Per-seed CSV with all four cells, the tables and the reading under
   `supporting/066-l4-readout-width/`.
 
 ## 6. The record
 
-- [ ] 6.1 Logbook 066: the 2×2, the interaction with both main effects, the gates and the prior, both
+- [x] 6.1 Logbook 066: the 2×2, the interaction with both main effects, the gates and the prior, both
   metrics with censoring counted, and the sensitivity statement in **every** reading.
-- [ ] 6.2 The experiments index row and `CHANGELOG.md`.
-- [ ] 6.3 The tracker's L.1 entry, and the L.4/L.5 gates resolved either way — **reopened** on
+- [x] 6.2 The experiments index row and `CHANGELOG.md`.
+- [x] 6.3 The tracker's L.1 entry, and the L.4/L.5 gates resolved either way — **reopened** on
   `pooling_hid_structure`, left `closed-unopened` otherwise, with the reason recorded.
-- [ ] 6.4 **If the interaction is null**: L.0's verdict stands and the width objection is recorded as
+- [x] 6.4 *(**does not apply** — the interaction is positive at q = 0.000, so the width objection is answered rather than retired at a sensitivity; recorded as such in Logbook 066.)* **If the interaction is null**: L.0's verdict stands and the width objection is recorded as
   **retired**, with the panel's sensitivity stated so "retired" is not read as "excluded at any size".
-- [ ] 6.5 **If the interaction is positive**: L.4 and L.5 reopen, and the record states plainly that
+- [x] 6.5 **If the interaction is positive**: L.4 and L.5 reopen, and the record states plainly that
   the result says the pool hid *something* and not *what* — V.2 found no graph property predicting
   learning time.

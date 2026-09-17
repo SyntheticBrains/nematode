@@ -501,8 +501,18 @@ def analyse(
     censored = contrasts(censored_cells, seeds)
     gate_result = gates(scanned, seeds)
     verdict = reading(gate_result, primary, n_common=primary["n_common"])
+    # ORIENT before comparing. `auc_success` is higher-is-better and
+    # `episodes_to_30pct_success` is lower-is-better, so agreement between them is OPPOSITE raw
+    # signs. Comparing the raw signs reports a disagreement whenever the two actually agree, which
+    # would put a caveat in the record that the data does not support.
+    censored_orientation = (
+        1.0 if reports["pooled"]["metrics"][CENSORED_METRIC]["higher_is_better"] else -1.0
+    )
     agree = (
-        primary["interaction"]["mean_delta"] * censored["interaction"]["mean_delta"] >= 0.0
+        primary["interaction"]["mean_delta"]
+        * censored["interaction"]["mean_delta"]
+        * censored_orientation
+        >= 0.0
         if primary["n_common"]
         else True
     )
@@ -516,6 +526,7 @@ def analyse(
         "censored_axis": censored,
         "censoring": censoring(reports),
         "metrics_agree_in_direction": bool(agree),
+        "censored_metric_higher_is_better": bool(censored_orientation > 0),
         "metric_disagreement_note": None
         if agree
         else (

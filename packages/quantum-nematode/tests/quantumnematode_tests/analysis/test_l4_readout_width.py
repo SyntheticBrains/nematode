@@ -204,6 +204,16 @@ class TestTheMetricChoice:
         assert "censoring" in rw.METRIC_NOTE
         assert "per cell" in rw.METRIC_NOTE.lower()
 
+    def test_agreement_accounts_for_metric_orientation(self) -> None:
+        """The two metrics point opposite ways, so agreement is OPPOSITE raw signs.
+
+        `auc_success` is higher-is-better; `episodes_to_30pct_success` is lower-is-better. A naive
+        sign comparison reports a disagreement exactly when the two agree -- which on the real panel
+        would have put a caveat in the record that the data does not support.
+        """
+        assert eff._METRICS[rw.PRIMARY_METRIC] is True
+        assert eff._METRICS[rw.CENSORED_METRIC] is False
+
     def test_censoring_is_counted_per_cell_and_not_pooled(self) -> None:
         reports = {
             "pooled": {
