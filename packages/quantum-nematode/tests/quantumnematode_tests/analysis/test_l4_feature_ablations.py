@@ -77,6 +77,7 @@ def _entry(  # noqa: PLR0913 -- a fixture with six knobs, all named at the call 
     *,
     gates: bool = True,
     fires: bool = False,
+    gains_fire: bool = False,
 ) -> dict[str, Any]:
     return {
         "contrasts": {
@@ -90,7 +91,11 @@ def _entry(  # noqa: PLR0913 -- a fixture with six knobs, all named at the call 
             },
             "ablated_wiring_effect": {"mean_delta": abl_delta, "q": abl_q, "p_two_sided": abl_q},
         },
-        "gates": {"gates_pass": gates, "floors_diagnostic": {"fires": fires}},
+        "gates": {
+            "gates_pass": gates,
+            "floors_diagnostic": {"fires": fires},
+            "gains_diagnostic": {"fires": gains_fire},
+        },
     }
 
 
@@ -175,6 +180,24 @@ class TestTheReadings:
             == "inconclusive_at_this_sensitivity"
         )
 
+    def test_the_gains_diagnostic_qualifies_a_carries_on_atlas(self) -> None:
+        # Registered after the pilot: atlas arms gained +2.2/+2.8 foods over their floors against
+        # the wide arms' +13.7/+7.8, bimodally, while the floors themselves did not move. A negative
+        # interaction there is the wild type having more to lose, not the feature carrying it.
+        out = fa.reading("atlas", _entry(0.001, -0.15, 0.5, 0.03, gains_fire=True))
+        assert out["reading"] == "carries_the_effect"
+        assert out["qualified_carries_or_unlearnable"] is True
+        assert out["qualified_carries_or_saturates"] is False
+
+    def test_the_gains_diagnostic_does_not_qualify_nogap(self) -> None:
+        out = fa.reading("nogap", _entry(0.001, -0.15, 0.5, 0.03, gains_fire=True))
+        assert out["qualified_carries_or_unlearnable"] is False
+
+    def test_the_gains_diagnostic_never_rescues(self) -> None:
+        out = fa.reading("atlas", _entry(0.6, -0.02, 0.4, 0.03, gains_fire=True))
+        assert out["reading"] == "inconclusive_at_this_sensitivity"
+        assert out["qualified_carries_or_unlearnable"] is False
+
     def test_gates_come_first(self) -> None:
         assert (
             fa.reading("atlas", _entry(0.001, -0.15, 0.5, 0.03, gates=False))["reading"]
@@ -231,6 +254,7 @@ class TestOneFamilyReadPerAblation:
                     "rn_gate": {"p_improve": 1e-6},
                     "prior": {"p_two_sided": 0.4},
                     "floors_diagnostic": {"fires": False},
+                    "gains_diagnostic": {"fires": False},
                 },
             }
 

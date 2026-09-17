@@ -303,6 +303,45 @@ def gates(
             "carries reading on atlas is qualified carries-or-saturates. It qualifies, never rescues"
         ),
     }
+    # The GAINS diagnostic, registered after the pilot (2026-09-18) and before the campaign. The
+    # floors diagnostic compares floors and was quiet on the pilot -- but the atlas arms' gains OVER
+    # those floors were +2.2 and +2.8 foods against the wide arms' +13.7 and +7.8 at the same seeds,
+    # bimodally (two seeds below their own floor, two learning). An ablation that removes
+    # learnability from BOTH wirings produces a negative interaction because the wild type had more
+    # to lose, and reads `carries` for the wrong reason. So: each ablated arm's gain over its floor
+    # against the wide arm's gain over its floor, paired per seed, per wiring. Both significantly
+    # smaller: a carries on atlas is qualified carries-or-unlearnable. It qualifies, never rescues.
+    gains: dict[str, Any] = {}
+    for w in WIRINGS:
+        abl_gain = {
+            s: runs[f"{w}_{ablation}"][s].foods - runs[f"{w}_{ablation}_frozen"][s].foods
+            for s in seeds
+            if s in runs[f"{w}_{ablation}"] and s in runs[f"{w}_{ablation}_frozen"]
+        }
+        wide_gain = {
+            s: brs[f"{w}_wide"][s].foods - brs[f"{w}_wide_frozen"][s].foods
+            for s in seeds
+            if s in brs[f"{w}_wide"] and s in brs[f"{w}_wide_frozen"]
+        }
+        c = ms.shift_contrast(abl_gain, wide_gain)
+        gains[w] = {**c, "p_two_sided": min(1.0, 2.0 * min(c["p_improve"], c["p_degrade"]))}
+    qs = ms.bh_fdr([gains[w]["p_two_sided"] for w in WIRINGS])
+    for w, q in zip(WIRINGS, qs, strict=True):
+        gains[w]["q"] = float(q)
+    out["gains_diagnostic"] = {
+        **gains,
+        "fires": bool(
+            all(gains[w]["q"] <= ms.SIG_Q and gains[w].get("effect", 0.0) < 0.0 for w in WIRINGS),
+        ),
+        "registered_for": "atlas",
+        "registered_on": "2026-09-18, after the pilot and before the campaign",
+        "note": (
+            "each ablated arm's gain over its floor against the wide arm's gain over its floor, "
+            "paired per seed, per wiring, two-sided, outside the family. Both significantly smaller: "
+            "the ablation removed learnability from both wirings, and a carries reading on atlas is "
+            "qualified carries-or-unlearnable. It qualifies, never rescues"
+        ),
+    }
     return out
 
 
@@ -348,6 +387,7 @@ def reading(ablation: str, entry: dict[str, Any]) -> dict[str, Any]:
     q = float(inter.get("q", inter["p_two_sided"]))
     sig = q <= ms.SIG_Q
     qualified = False
+    unlearnable = False
     if n < MIN_SEEDS:
         name = "insufficient_seeds"
     elif not entry["gates"]["gates_pass"]:
@@ -355,6 +395,9 @@ def reading(ablation: str, entry: dict[str, Any]) -> dict[str, Any]:
     elif sig and delta < 0.0 and abs(delta) >= MIN_CARRY:
         name = "carries_the_effect"
         qualified = ablation == "atlas" and bool(entry["gates"]["floors_diagnostic"]["fires"])
+        unlearnable = ablation == "atlas" and bool(
+            entry["gates"].get("gains_diagnostic", {}).get("fires", False),
+        )
     elif sig and delta > 0.0:
         name = "amplifies"
     elif sig:
@@ -371,6 +414,7 @@ def reading(ablation: str, entry: dict[str, Any]) -> dict[str, Any]:
         "reading": name,
         "why": READINGS[name],
         "qualified_carries_or_saturates": qualified,
+        "qualified_carries_or_unlearnable": unlearnable,
         "interaction_delta": delta,
         "interaction_ci": [float(inter["ci_lo"]), float(inter["ci_hi"])],
         "interaction_q": q,
@@ -476,6 +520,13 @@ def _print(result: dict[str, Any]) -> None:
         print(
             f"    prior       d={g['prior'].get('effect', float('nan')):+8.3f} foods  q={g['prior']['q']:.3f}",
         )
+        gd = g.get("gains_diagnostic")
+        if gd:
+            print(
+                f"    gains diag  wt d={gd['wt'].get('effect', float('nan')):+7.3f} q={gd['wt']['q']:.3f}"
+                f"  rn d={gd['rn'].get('effect', float('nan')):+7.3f} q={gd['rn']['q']:.3f}"
+                f"  -> {'FIRES' if gd['fires'] else 'quiet'}",
+            )
         d = g["floors_diagnostic"]
         print(
             f"    floors diag wt d={d['wt'].get('effect', float('nan')):+7.3f} q={d['wt']['q']:.3f}"
@@ -497,8 +548,11 @@ def _print(result: dict[str, Any]) -> None:
         print(f"    metrics agree in direction: {e['metrics_agree_in_direction']}")
         print(
             f"    READING: {r['reading'].upper().replace('_', '-')}"
+            + ("  (qualified: carries OR saturates)" if r["qualified_carries_or_saturates"] else "")
             + (
-                "  (qualified: carries OR saturates)" if r["qualified_carries_or_saturates"] else ""
+                "  (qualified: carries OR unlearnable)"
+                if r["qualified_carries_or_unlearnable"]
+                else ""
             ),
         )
         print(f"      {r['why']}")

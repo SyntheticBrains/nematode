@@ -38,6 +38,12 @@
   actually remove; a significant interaction below the minimum reads `inconclusive_at_this_sensitivity`
   with the shrinkage named, never `carries_the_effect`. `survives_without_it` carries the interaction's
   size and CI, because a non-significant interaction is a failure to detect.
+- [x] 3.3b *(**added 2026-09-18 after the pilot, before the campaign**)* **The L.4 gains diagnostic**:
+  each atlas arm's gain over its floor against the wide arm's gain over its floor, paired per seed,
+  per wiring, two-sided, outside the family. Both significantly smaller: a `carries_the_effect` on
+  L.4 reads *carries or unlearnable*. Motivated by the pilot — atlas gains +2.2/+2.8 against wide
+  +13.7/+7.8, bimodal, floors quiet — and registered before any registered seed ran. Qualifies,
+  never rescues.
 - [x] 3.3a **The L.4 floors diagnostic**: the two atlas frozen floors against the two wide frozen floors
   on plateau-tail foods, two-sided, outside the family. If it fires at q ≤ 0.05, a `carries_the_effect`
   on L.4 is reported as *carries or saturates*. It qualifies; it never rescues.
@@ -67,7 +73,10 @@
 
 ## 5. The stop clauses
 
-- [ ] 5.1 **Pilot on seeds 101–104** with the output controls: all eight arms run, each ablated arm
+- [x] 5.1 *(**passed 2026-09-18**: 32/32; every ablated arm differs from its wide parent after
+  training — atlas 0.10/0.13 and nogap 0.71/0.73 against the wide 0.49/0.29 on `auc_success`; all four
+  new floors at 1.8–4.1 foods where a no-learning policy sits; both readings correctly withheld at four
+  pairs. The pilot also motivated the gains diagnostic, 3.3b.)* **Pilot on seeds 101–104** with the output controls: all eight arms run, each ablated arm
   differs from its wide parent after training, the floors sit where a no-learning policy sits. No
   reading at four pairs.
 - [x] 5.2 *(passed, see 2.1.)* The byte-identity check (2.1) **passes or the baseline is re-run** —

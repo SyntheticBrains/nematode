@@ -25,10 +25,12 @@ carrying the effect.
 
 #### Scenario: A removal that moves the frozen substrate is qualified
 
-- **GIVEN** an ablation whose frozen floors differ from the baseline's frozen floors
+- **GIVEN** an ablation whose frozen floors differ from the baseline's frozen floors, or whose
+  learning arms' gains over those floors are smaller than the baseline's on every level of the
+  structure contrast
 - **WHEN** the ablation reads as carrying the effect
-- **THEN** the reading SHALL state that the substrate's operating point moved and SHALL be reported
-  as carrying-or-saturating rather than as carrying
+- **THEN** the reading SHALL state that the substrate's operating point or learnability moved and
+  SHALL be reported as carrying-or-saturating, or carrying-or-unlearnable, rather than as carrying
 - **AND** the floor comparison SHALL be registered before the campaign runs
 
 #### Scenario: Ablations are read separately

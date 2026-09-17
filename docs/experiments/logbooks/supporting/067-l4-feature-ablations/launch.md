@@ -93,6 +93,29 @@ weights fit seed-specific noise the four class means averaged out.
 - **A positive licenses a follow-up that manipulates within-class correlation directly. It is not a
   mechanism claim.**
 
+## Amendment 2026-09-18, after the pilot and before the campaign — the gains diagnostic
+
+The pilot (32 runs, seeds 101–104, all succeeded) passed its three stop-clause checks and exposed a
+hole in the registration. The atlas learning arms gained **+2.2 and +2.8 foods** over their own
+floors against the wide arms' **+13.7 and +7.8** at the same seeds — and **bimodally**: at seeds
+101–102 both atlas arms finished *below* their own floors (−2.5, −1.5, −6.2, −0.7 foods) while at
+103–104 they learned (+6.3 to +11.2), with both atlas arms censored on 2 of 4 seeds. The registered
+floors diagnostic was **quiet** (q > 0.5): the frozen operating point did not move. What moved was
+learnability on top of it, for **both** wirings.
+
+That is a reading the rules as written get wrong. If it holds at 96 seeds the gates will likely pass,
+the ablated wiring effect will sit near zero, the interaction near −0.2, and the harness will read
+`carries_the_effect` — when what happened is that grounding the signs made the substrate nearly
+unlearnable for wild type and shuffle alike, and the wild type simply had more to lose.
+
+**The gains diagnostic**, registered now: each atlas arm's gain over its floor against the wide arm's
+gain over its floor, paired per seed, per wiring, two-sided, BH over the pair, outside the family. If
+**both** are significantly smaller, a `carries_the_effect` on L.4 is reported as **carries or
+unlearnable**. It is the floors diagnostic's logic applied to gains rather than floors; it qualifies a
+reading and never rescues one; and it applies to atlas only, since the nogap arms' gains (+17.1 and
++16.3) exceeded the baseline's. The nogap pattern — both wirings gaining, the null more — is **not
+read** at four seeds.
+
 ## The honest prior
 
 **L.5: `survives_without_it`.** Gap junctions are symmetric and degree-scaled — the part of the wiring

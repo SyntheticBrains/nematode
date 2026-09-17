@@ -93,7 +93,7 @@ ablation *removed* wiring effect; near zero means it survived; positive means it
 
 | reading | when |
 |---|---|
-| `carries_the_effect` | interaction significantly **negative** and abs(Δ) ≥ 0.123: the ablated feature is the majority carrier. On L.4, qualified *carries or saturates* if the floors diagnostic fires |
+| `carries_the_effect` | interaction significantly **negative** and abs(Δ) ≥ 0.123: the ablated feature is the majority carrier. On L.4, qualified *carries or saturates* if the floors diagnostic fires, and *carries or unlearnable* if the gains diagnostic fires *(the latter added 2026-09-18 after the pilot; see the design)* |
 | `survives_without_it` | no significant interaction — **a failure to detect**, its size and CI carried — **and** the wiring effect under ablation is itself significant and positive: the effect is still there without that feature |
 | `amplifies` | interaction significantly **positive**: removing the feature *helped* the wild type more. Reported, not explained |
 | `inconclusive_at_this_sensitivity` | no significant interaction and the ablated wiring effect is not significant either: the panel cannot place the feature's contribution |
