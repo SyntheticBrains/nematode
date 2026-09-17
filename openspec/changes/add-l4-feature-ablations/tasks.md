@@ -2,15 +2,15 @@
 
 ## 1. The arms
 
-- [ ] 1.1 Eight configs, each differing from its committed L.1 wide parent in **one key** —
+- [x] 1.1 Eight configs, each differing from its committed L.1 wide parent in **one key** —
   `synapse_signs: atlas` for the four L.4 arms, `enable_gap_junctions: false` for the four L.5 arms.
   Exact-key test by loading both and diffing the resolved config, as L.1 did.
-- [ ] 1.2 Assert by test that `synapse_signs: atlas` at the per-neuron width leaves every magnitude
+- [x] 1.2 Assert by test that `synapse_signs: atlas` at the per-neuron width leaves every magnitude
   bitwise identical and changes signs only, and that `enable_gap_junctions: false` leaves **every
   parameter** bitwise identical — so each ablation is the forward pass and nothing else.
-- [ ] 1.3 The pool numbers as tested facts, not prose: 199 gap junctions touching the pool, 47 within
+- [x] 1.3 The pool numbers as tested facts, not prose: 199 gap junctions touching the pool, 47 within
   it, all 39 pool neurons with at least one; 323 chemical inputs, 311 grounded, 275 E / 36 I.
-- [ ] 1.4 Confirm no package code changes are needed. Both flags exist; both build at width 39.
+- [x] 1.4 Confirm no package code changes are needed. Both flags exist; both build at width 39.
 
 ## 2. The baseline
 
@@ -20,49 +20,49 @@
   each under `--no-detailed-export --no-file-log` and compare to L.1's committed logs on every field
   `read_log` parses. Identical: L.1's 384 wide-arm runs are the baseline, and the record says so with
   the evidence. **Any** field differing: re-run the baseline in full (+384 runs) and reuse nothing.
-- [ ] 2.2 The baseline's four arms are read from `campaigns/readout-width` through the same
+- [x] 2.2 The baseline's four arms are read from `campaigns/readout-width` through the same
   `connectome_structure_efficiency` call as the ablated arms, not from L.1's JSON, so both halves of
   every interaction pass through the same code path.
 
 ## 3. Harness
 
-- [ ] 3.1 `scripts/analysis/l4_feature_ablations.py`, the L.1 sibling pattern: manifest builder per
+- [x] 3.1 `scripts/analysis/l4_feature_ablations.py`, the L.1 sibling pattern: manifest builder per
   (ablation, wiring) pair, `connectome_structure_efficiency.analyse` called **once per pair** and
   unmodified, per-seed interaction, both cells' wiring effects, gates read first. **Imports** L.1's
   `_two_sided`, `censoring`, reachability, orientation and family-adjustment helpers from
   `l4_readout_width.py` rather than copying them.
-- [ ] 3.2 **Read-only, asserted**: `l4_readout_width.py`, `connectome_structure_efficiency.py`,
+- [x] 3.2 **Read-only, asserted**: `l4_readout_width.py`, `connectome_structure_efficiency.py`,
   `wiring_premise.py`, with V.4's shallow-clone skip guard.
-- [ ] 3.3 **The minimum effect as a decision rule**: `carries_the_effect` requires significance **and**
+- [x] 3.3 **The minimum effect as a decision rule**: `carries_the_effect` requires significance **and**
   `abs(Δ) ≥ 0.123` — two-thirds of the wide wiring effect +0.1852, the quantity an ablation can
   actually remove; a significant interaction below the minimum reads `inconclusive_at_this_sensitivity`
   with the shrinkage named, never `carries_the_effect`. `survives_without_it` carries the interaction's
   size and CI, because a non-significant interaction is a failure to detect.
-- [ ] 3.3a **The L.4 floors diagnostic**: the two atlas frozen floors against the two wide frozen floors
+- [x] 3.3a **The L.4 floors diagnostic**: the two atlas frozen floors against the two wide frozen floors
   on plateau-tail foods, two-sided, outside the family. If it fires at q ≤ 0.05, a `carries_the_effect`
   on L.4 is reported as *carries or saturates*. It qualifies; it never rescues.
-- [ ] 3.4 **One BH-FDR family across all ten tests**, `q` attached to every record beside its raw `p`,
+- [x] 3.4 **One BH-FDR family across all ten tests**, `q` attached to every record beside its raw `p`,
   the reading comparing the interaction's **q**.
-- [ ] 3.5 The guards L.1's reviews added, carried: metric orientation before comparing directions;
+- [x] 3.5 The guards L.1's reviews added, carried: metric orientation before comparing directions;
   reachability from each ablation's retained pairs, branches withheld at an unreachable n; the seed
   intersection under `--allow-incomplete`; `--seeds` derived from `SEEDS`; verdict vocabulary derived
   from source.
-- [ ] 3.6 `auc_success` primary, `episodes_to_30pct_success` beside it with censoring per cell, the
+- [x] 3.6 `auc_success` primary, `episodes_to_30pct_success` beside it with censoring per cell, the
   reason carried — L.1's registration, inherited.
-- [ ] 3.7 **Per ablation, never pooled**: a split is the informative outcome and is reported as one.
-- [ ] 3.8 Tests for 3.1–3.7: a fixture per reading, one significant-below-minimum case, one split, one
+- [x] 3.7 **Per ablation, never pooled**: a split is the informative outcome and is reported as one.
+- [x] 3.8 Tests for 3.1–3.7: a fixture per reading, one significant-below-minimum case, one split, one
   orientation case through `analyse()`, and one where the L.4 diagnostic fires and the reading is
   qualified.
 
 ## 4. The structural probe
 
-- [ ] 4.1 `scripts/analysis/l4_structural_probe.py`: build the 96 rewirings from their seeds (and the
+- [x] 4.1 `scripts/analysis/l4_structural_probe.py`: build the 96 rewirings from their seeds (and the
   wild type), compute mean within-class presynaptic Jaccard from `m_chem`, join to L.1's committed
   `per-seed.csv` on seed, and run the **registered** test — Spearman ρ against `rn_wide − rn_pooled`,
   one-sided positive, minimum ρ ≥ 0.3. Nothing about the correlation is computed before this file and
   its test exist.
-- [ ] 4.2 The descriptive companion: the wild type's Jaccard against the 96 rewirings' distribution.
-- [ ] 4.3 Tests: the statistic on a hand-built mask with a known Jaccard; the join refuses a seed
+- [x] 4.2 The descriptive companion: the wild type's Jaccard against the 96 rewirings' distribution.
+- [x] 4.3 Tests: the statistic on a hand-built mask with a known Jaccard; the join refuses a seed
   missing from either side; the minimum is applied.
 
 ## 5. The stop clauses
@@ -72,7 +72,7 @@
   reading at four pairs.
 - [x] 5.2 *(passed, see 2.1.)* The byte-identity check (2.1) **passes or the baseline is re-run** —
   settled before any registered seed.
-- [ ] 5.3 `launch.md` before anything runs: the two interactions, the readings with the minimum effect,
+- [x] 5.3 `launch.md` before anything runs: the two interactions, the readings with the minimum effect,
   the baseline decision and its evidence, the sensitivity arithmetic, the probe's registered test,
   the L.4 diagnostic, and the honest prior as the design states it.
 
