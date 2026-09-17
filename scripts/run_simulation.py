@@ -215,6 +215,22 @@ def parse_arguments() -> argparse.Namespace:
         help="Save experiment metadata for reproducibility and comparison.",
     )
     parser.add_argument(
+        "--no-detailed-export",
+        action="store_true",
+        help=(
+            "Skip the step-level exports/<session>/session/data/detailed/ CSVs (~380 MB per "
+            "3000-episode run, read by no analysis script). Everything else is still written."
+        ),
+    )
+    parser.add_argument(
+        "--no-file-log",
+        action="store_true",
+        help=(
+            "Do not write logs/simulation_<session>.log (~250 MB per 3000-episode run). "
+            "Console output is unaffected: the file is the verbose stream's only sink."
+        ),
+    )
+    parser.add_argument(
         "--validate-chemotaxis",
         action="store_true",
         help="Display chemotaxis validation against C. elegans literature data.",
@@ -263,7 +279,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Generate unique session ID and configure file logging early
     # so all logger.info() calls below are captured in the log file
     session_id = generate_session_id()
-    configure_file_logging(session_id)
+    if not args.no_file_log:
+        configure_file_logging(session_id)
 
     # Configure logging level
     log_level = args.log_level.upper()
@@ -656,7 +673,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     sim_results_csv_file, sim_results_csv_writer = create_simulation_results_csv_writer(
         data_dir / "simulation_results.csv",
     )
-    detailed_tracking_writer = IncrementalDetailedTrackingWriter(data_dir)
+    detailed_tracking_writer = IncrementalDetailedTrackingWriter(
+        data_dir,
+        enabled=not args.no_detailed_export,
+    )
 
     # Pre-computed chemotaxis metrics (populated per-episode when --track-experiment is set)
     track_experiment = args.track_experiment

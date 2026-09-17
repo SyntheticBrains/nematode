@@ -133,13 +133,15 @@ A paired-seed protocol is a set of independent runs, so it can use the whole mac
 uv run ./scripts/run_campaign.py \
     --config configs/scenarios/foraging_predator_thermal/mlpppo_small_continuous2d_combined_klinotaxis.yml \
     --config configs/scenarios/foraging_predator_thermal/cfcppo_small_continuous2d_combined_klinotaxis.yml \
-    --seeds 1-8 --runs 3000 -- --track-experiment
+    --seeds 1-8 --runs 3000 -- --track-experiment --no-detailed-export --no-file-log
 
 # Preview the plan without running anything
 uv run ./scripts/run_campaign.py --config <cfg> --seeds 1-4 --dry-run
 ```
 
 Seeds accept ranges, lists, or a mixture (`1-8`, `1,3,5`, `1-4,9`). Everything after a bare `--` is passed to every run unchanged. Per-run logs land in `campaigns/<timestamp>/logs/`, and simulation artefacts go to their usual `exports/<session-id>/` directories — session IDs carry a random suffix, so concurrent runs never collide. A failing run does not abort the campaign; it is named in the summary and the command exits non-zero.
+
+**Disk.** A 3000-episode run writes ~630 MB that no analysis script reads — ~380 MB of step-level CSVs under `exports/<session>/session/data/detailed/` and ~250 MB to `logs/simulation_<session>.log` — against a few MB for everything that is read (the per-run summary CSVs, `weights/final.pt`, the tracked-experiment record, and the campaign log itself). A 768-run campaign wrote ~530 GB of it and filled the volume at run 337, invisibly: the campaign directory was 161 MB. Pass `--no-detailed-export --no-file-log` after the `--` for any campaign of size unless a harness needs the step-level data. Console output is unaffected — the file log is the verbose stream's only sink, and the campaign log is captured stdout.
 
 **Results are unaffected.** Each run is a separate process invoking `run_simulation.py` with exactly the command line you would type by hand, so a campaign changes only *when* runs happen. Timing telemetry is the one exception: a run inside a wide campaign takes longer in wall-clock than the same run alone, because runs share memory bandwidth.
 
