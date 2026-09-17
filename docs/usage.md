@@ -133,13 +133,15 @@ A paired-seed protocol is a set of independent runs, so it can use the whole mac
 uv run ./scripts/run_campaign.py \
     --config configs/scenarios/foraging_predator_thermal/mlpppo_small_continuous2d_combined_klinotaxis.yml \
     --config configs/scenarios/foraging_predator_thermal/cfcppo_small_continuous2d_combined_klinotaxis.yml \
-    --seeds 1-8 --runs 3000 -- --track-experiment
+    --seeds 1-8 --runs 3000 -- --track-experiment --no-detailed-export --no-file-log
 
 # Preview the plan without running anything
 uv run ./scripts/run_campaign.py --config <cfg> --seeds 1-4 --dry-run
 ```
 
 Seeds accept ranges, lists, or a mixture (`1-8`, `1,3,5`, `1-4,9`). Everything after a bare `--` is passed to every run unchanged. Per-run logs land in `campaigns/<timestamp>/logs/`, and simulation artefacts go to their usual `exports/<session-id>/` directories — session IDs carry a random suffix, so concurrent runs never collide. A failing run does not abort the campaign; it is named in the summary and the command exits non-zero.
+
+**Disk.** Measured on L.1's `hard350` arms at 3000 episodes, a run writes **~0.65–0.7 GB outside the campaign directory**: ~440 MB under `exports/<session>/` (of which ~380–415 MB is the step-level `session/data/detailed/`, larger on learning arms than frozen ones) and ~256 MB to `logs/simulation_<session>.log`. **The two flags remove ~640 MB of that** — the `detailed/` CSVs and the file log — and leave the ~20–55 MB an analysis actually reads: the per-run summary CSVs, `weights/final.pt`, the tracked-experiment record, and the campaign log itself. At that rate a 768-run campaign needs **~500 GB**; L.1's filled the volume at run 337, invisibly, because the campaign directory was 161 MB. Pass `--no-detailed-export --no-file-log` after the `--` for any campaign of size unless a harness needs the step-level data. Console output is unaffected — the file log is the verbose stream's only sink, and the campaign log is captured stdout.
 
 **Results are unaffected.** Each run is a separate process invoking `run_simulation.py` with exactly the command line you would type by hand, so a campaign changes only *when* runs happen. Timing telemetry is the one exception: a run inside a wide campaign takes longer in wall-clock than the same run alone, because runs share memory bandwidth.
 

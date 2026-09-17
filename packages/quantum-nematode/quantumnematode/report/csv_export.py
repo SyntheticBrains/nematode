@@ -718,14 +718,26 @@ class IncrementalDetailedTrackingWriter:
 
     Opens one CSV file per brain history key on the first write_run() call,
     then appends rows for each subsequent episode. Call close() when done.
+
+    ``enabled=False`` makes the writer a no-op: nothing is opened and no
+    ``detailed/`` directory is created. The step-level CSVs are the single largest
+    thing a run writes -- roughly 380 MB per 3000-episode run against a few MB for
+    everything else -- and no analysis script reads them, so a campaign that does
+    not need them should be able to say so rather than pay for them in disk.
     """
 
-    def __init__(self, data_dir: Path, file_prefix: str = "") -> None:
+    def __init__(self, data_dir: Path, file_prefix: str = "", *, enabled: bool = True) -> None:
         self._data_dir = data_dir
         self._file_prefix = file_prefix
+        self._enabled = enabled
         self._files: dict[str, Any] = {}  # key -> file handle
         self._writers: dict[str, csv.DictWriter] = {}  # key -> csv writer
         self._initialized = False
+
+    @property
+    def enabled(self) -> bool:
+        """Whether this writer writes anything at all."""
+        return self._enabled
 
     def write_run(self, run: int, brain_history: BrainHistoryData) -> None:
         """Write step-by-step data for one run.
@@ -737,6 +749,8 @@ class IncrementalDetailedTrackingWriter:
         brain_history : BrainHistoryData
             Full brain history data for this run.
         """
+        if not self._enabled:
+            return
         if not self._initialized:
             (self._data_dir / "detailed").mkdir(parents=True, exist_ok=True)
             self._initialized = True

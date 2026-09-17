@@ -326,7 +326,12 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     """Parse the campaign runner's own arguments."""
     parser = argparse.ArgumentParser(
         description="Run configs x seeds concurrently as isolated simulation subprocesses.",
-        epilog="Arguments after a bare '--' are passed to every run unchanged.",
+        epilog=(
+            "Arguments after a bare '--' are passed to every run unchanged. For a campaign of any "
+            "size, pass '-- --no-detailed-export --no-file-log' unless a harness needs the "
+            "step-level CSVs: each 3000-episode run otherwise writes ~630 MB of output no analysis "
+            "reads, and 768 runs filled a volume."
+        ),
     )
     parser.add_argument(
         "--config",
