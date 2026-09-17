@@ -177,6 +177,12 @@ learners at one rate. The rate check is the pilot for the swapped atlas arms —
 learning, differing from their parents; the two new wide arms get their own 8-run pilot on the same
 seeds before any registered seed.
 
+**The rate-matched wide arms' own pilot, 2026-09-18 — pass.** 8/8 on seeds 101–104: gain over L.1's
+pilot floors **+17.32 wt** (+18.33, +16.32, +17.27, +17.36) and **+14.99 rn** (+13.75, +17.33, +15.38,
++13.52), every seed above floor, both arms distinct from the 0.001 wide arms (+13.66 / +7.81). Also
+not read at four seeds: the wide **null** improved at 0.0001 as well, from +7.8 to +15.0 — the reason
+the rate-matched baseline exists, and a number the campaign will measure at 96.
+
 **Not read at four seeds, and recorded so it cannot be read later as if it had been**: the atlas null
 at 0.0001 gained as much as the atlas wild type. Whether the wide null does the same at 0.0001 is what
 the rate-matched baseline exists to measure.
