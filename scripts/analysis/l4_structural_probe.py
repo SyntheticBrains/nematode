@@ -125,9 +125,10 @@ def test_probe(jaccard: dict[int, float], drop: dict[int, float]) -> dict[str, A
         raise ValueError(msg)
     x = [jaccard[s] for s in common]
     y = [drop[s] for s in common]
+    # scipy's result is loosely typed; index and coerce through numpy so the check is explicit.
     res = spearmanr(x, y)
-    rho = float(res.statistic)
-    p_two = float(res.pvalue)
+    rho = float(np.asarray(res[0]))
+    p_two = float(np.asarray(res[1]))
     p_one = p_two / 2.0 if rho > 0 else 1.0 - p_two / 2.0
     significant = p_one <= SIG
     if significant and rho >= MIN_RHO:
