@@ -153,8 +153,12 @@ sign-flip threshold the panel was built to resolve.
 
 ## Integrity — a disk-full crash, and what was checked because of it
 
-The campaign filled the volume and died at run 337. Each run writes ~966 MB **outside** the campaign
-directory (382 MB of `session/data/detailed`, 256 MB of verbose log), so 768 runs needed ~530 GB — a
+The campaign filled the volume and died at run 337. Each run writes **~0.65–0.7 GB outside** the
+campaign directory — ~440 MB of exports, of which ~380–415 MB is `session/data/detailed` (larger on
+learning arms than frozen ones), plus ~256 MB of verbose log — so 768 runs needed ~500 GB. *(Corrected
+2026-09-18: this was first recorded as "~966 MB per run, ~530 GB", a figure obtained by dividing the
+whole `exports/` and `logs/` on the volume at the crash by L.1's 337 runs; that charged other
+campaigns' output then on disk to L.1.)* A
 cost registered nowhere and not measured before launch. The campaign directory itself is 161 MB, which
 is why it was invisible until it was not.
 
