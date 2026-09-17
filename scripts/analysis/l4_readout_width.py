@@ -459,6 +459,44 @@ def sensitivity(
     return out
 
 
+# The nine registered tests, in the order the record reports them.
+_FAMILY_CONTRASTS = ("interaction", "width_main_effect", "wiring_main_effect")
+
+
+def adjust_family(primary: dict[str, Any], gate_result: dict[str, Any]) -> dict[str, Any]:
+    """Correct all nine registered tests under one BH-FDR family, in place.
+
+    The gates and priors already carry a ``q`` from being corrected among themselves; that partial
+    correction is replaced here so every test in the registration is held to the same family. Each
+    record keeps its raw p beside the adjusted q, so a reader can see both.
+    """
+    labels = [
+        *_FAMILY_CONTRASTS,
+        *(f"{a}_gate" for a in LEARNING_ARMS),
+        *(f"prior_{w}" for w in WIDTHS),
+    ]
+    ps = (
+        [float(primary[c]["p_two_sided"]) for c in _FAMILY_CONTRASTS]
+        + [float(gate_result[f"{a}_gate"]["p_improve"]) for a in LEARNING_ARMS]
+        + [float(gate_result[f"prior_{w}"]["p_two_sided"]) for w in WIDTHS]
+    )
+    qs = [float(q) for q in ms.bh_fdr(ps)]
+    for label, q in zip(labels, qs, strict=True):
+        target = primary[label] if label in _FAMILY_CONTRASTS else gate_result[label]
+        target["q"] = q
+    gate_result["gates_pass"] = bool(
+        all(gate_result[f"{a}_gate"]["q"] <= ms.SIG_Q for a in LEARNING_ARMS),
+    )
+    gate_result["prior_separates"] = bool(
+        any(gate_result[f"prior_{w}"]["q"] <= ms.SIG_Q for w in WIDTHS),
+    )
+    gate_result["family_note"] = (
+        "all nine registered tests corrected under ONE BH-FDR family: the interaction, both main "
+        "effects, four learning gates and two priors"
+    )
+    return {"labels": labels, "raw_p": ps, "q": qs}
+
+
 def reading(
     gate_result: dict[str, Any],
     contrast_result: dict[str, Any],
@@ -473,18 +511,48 @@ def reading(
         name = "no_learning"
     else:
         interaction = contrast_result["interaction"]
-        if interaction["p_two_sided"] > ms.SIG_Q:
+        # The BH-adjusted q, not the raw p: the interaction sits in a nine-test family.
+        if interaction.get("q", interaction["p_two_sided"]) > ms.SIG_Q:
             name = "pooling_was_not_the_limit"
         elif interaction["mean_delta"] > 0.0:
             name = "pooling_hid_structure"
         else:
             name = "width_favours_the_shuffle"
+    interaction = contrast_result["interaction"]
+    threshold = float(REGISTERED_SENSITIVITY["minimum_interesting_interaction"])
+    clears = abs(float(interaction["mean_delta"])) >= threshold
     return {
         "reading": name,
         "why": READINGS[name],
         "reopens_l4_l5": name == "pooling_hid_structure",
         "gates_read_first": True,
+        # REPORTED, not a gate on the verdict. L.1 registered 0.1076 as the panel's SENSITIVITY
+        # target -- the interaction size that would flip L.0's sign -- and not as a minimum effect
+        # beside significance the way block V registers `MIN_EFFICIENCY_GAIN`. Turning it into a
+        # decision threshold after seeing the result would be changing the registered rule, so it is
+        # carried as a field with the gap named. Registering a minimum effect beside significance is
+        # phase-protocol principle 10, and L.1 not having one as a DECISION rule is a design gap to
+        # carry forward, not to retro-fit here.
+        "clears_registered_sensitivity_threshold": bool(clears),
+        "registered_sensitivity_threshold": threshold,
+        "threshold_note": (
+            "reported, not applied: this was registered as the panel's sensitivity target, not as a "
+            "minimum effect gating the verdict. A minimum-effect decision rule was not registered "
+            "for L.1 -- a design gap, recorded rather than retro-fitted"
+        ),
     }
+
+
+def common_seeds(scanned: dict[str, Any], seeds: tuple[int, ...] = SEEDS) -> tuple[int, ...]:
+    """Return the seeds present in ALL eight cells.
+
+    A partial campaign is only scoreable on seeds every cell has: the interaction is a difference of
+    differences, so a seed missing from one cell contributes nothing and cannot be part-counted. Used
+    for the `--allow-incomplete` path; a registered panel goes through `require_complete` instead and
+    this returns the full set unchanged.
+    """
+    runs = scanned["runs"]
+    return tuple(s for s in seeds if all(s in runs[name] for name in ARMS))
 
 
 def analyse(
@@ -494,12 +562,19 @@ def analyse(
 ) -> dict[str, Any]:
     """Score the 2x2: gates first, then the interaction, with both metrics and the sensitivity."""
     scanned = scan(campaign_dir, experiments)
+    seeds = common_seeds(scanned, seeds)
     reports = efficiency(scanned, campaign_dir, seeds)
     primary_cells = cell_values(reports, PRIMARY_METRIC)
     censored_cells = cell_values(reports, CENSORED_METRIC)
     primary = contrasts(primary_cells, seeds)
     censored = contrasts(censored_cells, seeds)
     gate_result = gates(scanned, seeds)
+    # ONE BH-FDR family across all nine registered tests, as the proposal registered: the
+    # interaction, both main effects, the four learning gates and the two width-specific priors.
+    # An earlier draft corrected the gates and priors among themselves and left the interaction and
+    # main effects on RAW p, which is not the registered procedure and understates the correction
+    # the primary is held to.
+    adjust_family(primary, gate_result)
     verdict = reading(gate_result, primary, n_common=primary["n_common"])
     # ORIENT before comparing. `auc_success` is higher-is-better and
     # `episodes_to_30pct_success` is lower-is-better, so agreement between them is OPPOSITE raw
@@ -518,6 +593,7 @@ def analyse(
     )
     return {
         "seeds": list(seeds),
+        "n_seeds_scored": len(seeds),
         "primary_metric": PRIMARY_METRIC,
         "censored_metric": CENSORED_METRIC,
         "metric_note": METRIC_NOTE,
@@ -579,15 +655,18 @@ def _print(result: dict[str, Any]) -> None:
     print("\n  INTERACTION (primary) - does widening help the WILD TYPE more?")
     print(
         f"    d={inter['mean_delta']:+.4f}  CI[{inter['ci_lo']:+.4f},{inter['ci_hi']:+.4f}]  "
-        f"p(two-sided)={inter['p_two_sided']:.3f}  wild-gains-more {inter['positive_seeds']}"
+        f"q={inter.get('q', float('nan')):.3f}  wild-gains-more {inter['positive_seeds']}"
         f"/{result['primary']['n_common']}",
     )
     for name in ("width_main_effect", "wiring_main_effect"):
         effect = result["primary"][name]
         print(
-            f"    {name:20s} d={effect['mean_delta']:+.4f}  p={effect['p_two_sided']:.3f}"
+            f"    {name:20s} d={effect['mean_delta']:+.4f}  "
+            f"CI[{effect['ci_lo']:+.4f},{effect['ci_hi']:+.4f}]  "
+            f"q={effect.get('q', float('nan')):.3f}"
             "   [secondary - not evidence about the wiring on its own]",
         )
+    print(f"    {result['gates']['family_note']}")
 
     censored = result["censored_axis"]["interaction"]
     print(f"\n  {result['censored_metric']} (reported beside, not primary):")
@@ -657,7 +736,9 @@ def main(argv: list[str] | None = None) -> int:
     """Score the 2x2 and report the interaction, both main effects and the sensitivity."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--campaign", type=Path, required=True)
-    parser.add_argument("--seeds", type=str, default="1-32")
+    # Derived from SEEDS so the default cannot drift from the registered panel, as it did when the
+    # panel moved from 32 seeds to 96 and this default stayed behind.
+    parser.add_argument("--seeds", type=str, default=f"{SEEDS[0]}-{SEEDS[-1]}")
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--csv", type=Path, default=None)
     parser.add_argument(

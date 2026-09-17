@@ -78,9 +78,9 @@ brain:
     # updates are frozen, so its floor is a noisier policy than this one.
     freeze_updates: true
 
-    # The three-factor rule under the node-perturbation eligibility that passed the rule's positive
-    # control, at the scale that passed it. Every setting is the one block I validated; the
-    # perturbation set is the only thing this campaign varies.
+    # The e-prop floor at the per-neuron readout width: nothing learns here. `freeze_updates: true`
+    # holds every tensor, `plasticity_eligibility: eprop` and `plasticity_node_noise: 0.0` match the
+    # learning arms this floor gates, and the readout width is the only thing L.1 varies.
     learning_rule: three_factor
     enable_activity_traces: true
     plasticity_normalise_modulator: true

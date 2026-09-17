@@ -37,7 +37,9 @@
 #
 # The CONTROL for the plastic-readout arm: the readout learns, the chemical matrix does not.
 #
-# A plastic readout is an 8-parameter linear map over four pooled motor-class means. "A local rule
+# A plastic readout is here a 78-parameter linear map with one weight per motor neuron (2 x 39),
+# the per-neuron width L.1 introduces; the pooled arm's is the 8-parameter map over four motor-class
+# means. "A local rule
 # learns this substrate" and "a small linear readout on frozen recurrent features learns this cell"
 # predict the same success, so without this arm a positive plastic-readout result cannot be told from
 # the second. `plastic_readout - readout_only` is what the substrate's OWN plasticity contributes.
@@ -57,7 +59,8 @@
 #
 # The readout's own eligibility is the one place in this mechanism where nothing is approximated.
 # Its post-synaptic units ARE the action dimensions, so the signal reaching unit k is the score's
-# own k-th component -- the identity -- and `d mu_k / d readout[k, c]` is the pooled mean of class c.
+# own k-th component -- the identity -- and `d mu_k / d readout[k, i]` is the raw activity of motor
+# neuron i, since this width has no pool to average over.
 # No projection, no truncation, no dropped paths.
 #
 # This is NOT the plastic readout Logbook 040 measured collapsing. There, under the Hebbian

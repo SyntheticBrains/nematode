@@ -204,15 +204,88 @@ class TestTheMetricChoice:
         assert "censoring" in rw.METRIC_NOTE
         assert "per cell" in rw.METRIC_NOTE.lower()
 
-    def test_agreement_accounts_for_metric_orientation(self) -> None:
-        """The two metrics point opposite ways, so agreement is OPPOSITE raw signs.
-
-        `auc_success` is higher-is-better; `episodes_to_30pct_success` is lower-is-better. A naive
-        sign comparison reports a disagreement exactly when the two agree -- which on the real panel
-        would have put a caveat in the record that the data does not support.
-        """
+    def test_the_two_metrics_point_opposite_ways(self) -> None:
         assert eff._METRICS[rw.PRIMARY_METRIC] is True
         assert eff._METRICS[rw.CENSORED_METRIC] is False
+
+    @staticmethod
+    def _analysed(
+        censored_wt_wide: float,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> dict[str, Any]:
+        """Run `analyse` end to end with a controllable censored-metric interaction.
+
+        The primary is held at a POSITIVE interaction (the wild type gains from widening) while the
+        censored metric's `wt_wide` cell moves, which is what flips its interaction's raw sign.
+        """
+        primary = _cells(0.40, 0.40, 0.70, 0.50)
+        censored = _cells(1000.0, 1000.0, censored_wt_wide, 900.0)
+        seeds = [str(s) for s in _SEEDS]
+
+        def fake(_cells_in: object, out: dict, _manifest: object = None) -> None:
+            out["verdicts"] = {}
+            out["efficiency"] = {}
+            for width in rw.WIDTHS:
+                out["efficiency"][width] = {
+                    "horizon_episodes": 3000,
+                    "n_paired_seeds": len(_SEEDS),
+                    "metrics": {
+                        rw.PRIMARY_METRIC: {"higher_is_better": True},
+                        rw.CENSORED_METRIC: {"higher_is_better": False},
+                    },
+                    "per_seed": {
+                        arm: {
+                            s: {
+                                rw.PRIMARY_METRIC: primary[f"{w}_{width}"][int(s)],
+                                rw.CENSORED_METRIC: censored[f"{w}_{width}"][int(s)],
+                            }
+                            for s in seeds
+                        }
+                        for w, arm in (("wt", eff._WILD), ("rn", eff._REWIRED))
+                    },
+                }
+
+        monkeypatch.setattr(rw, "scan", lambda *_a, **_k: {"runs": {}, "logs": {}})
+        monkeypatch.setattr(rw, "common_seeds", lambda *_a, **_k: _SEEDS)
+        monkeypatch.setattr(
+            rw,
+            "efficiency",
+            lambda *_a, **_k: (fake(None, (d := {})) or d)["efficiency"],
+        )
+        monkeypatch.setattr(
+            rw,
+            "gates",
+            lambda *_a, **_k: {
+                "gates_pass": True,
+                **{f"{a}_gate": {"p_improve": 0.001, "effect": 5.0} for a in rw.LEARNING_ARMS},
+                **{f"prior_{w}": {"p_two_sided": 0.5, "effect": 0.0} for w in rw.WIDTHS},
+            },
+        )
+        return rw.analyse(Path("unused"))
+
+    def test_opposite_raw_signs_agree_once_oriented(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Primary interaction positive; censored `wt_wide` drops far, so its interaction is
+        # negative -- and negative on a lower-is-better metric means the SAME thing.
+        out = self._analysed(200.0, monkeypatch)
+        assert out["primary"]["interaction"]["mean_delta"] > 0
+        assert out["censored_axis"]["interaction"]["mean_delta"] < 0
+        assert out["metrics_agree_in_direction"] is True
+        assert out["metric_disagreement_note"] is None
+
+    def test_equal_raw_signs_disagree_once_oriented(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Censored `wt_wide` rises, so its interaction is positive -- on a lower-is-better metric
+        # that means the wild type got WORSE, opposing the primary.
+        out = self._analysed(1400.0, monkeypatch)
+        assert out["primary"]["interaction"]["mean_delta"] > 0
+        assert out["censored_axis"]["interaction"]["mean_delta"] > 0
+        assert out["metrics_agree_in_direction"] is False
+        assert "disagree" in out["metric_disagreement_note"]
 
     def test_censoring_is_counted_per_cell_and_not_pooled(self) -> None:
         reports = {

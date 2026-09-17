@@ -55,14 +55,14 @@ _WIDE_PARAMS = 78
 _POLICY_TOL = 1e-6
 
 
-def _brain(width: str, **overrides: object) -> ConnectomePPOBrain:
+def _brain(width: str, seed: int = _SEED, **overrides: object) -> ConnectomePPOBrain:
     config = load_simulation_config(str(_ARM)).brain
     assert config is not None
     assert isinstance(config.config, ConnectomePPOBrainConfig)
     updated = config.config.model_copy(
-        update={"seed": _SEED, "readout_width": width, **overrides},
+        update={"seed": seed, "readout_width": width, **overrides},
     )
-    torch.manual_seed(_SEED)  # the readout's orthogonal draw uses torch's global RNG
+    torch.manual_seed(seed)  # the readout's orthogonal draw uses torch's global RNG
     return ConnectomePPOBrain(config=updated, device=DeviceType.CPU)
 
 
@@ -295,13 +295,33 @@ class TestACheckpointDoesNotCrossWidths:
 
     def test_a_pooled_checkpoint_is_refused_by_a_wide_brain(self) -> None:
         components = _brain("pooled").get_weight_components()
-        with pytest.raises(RuntimeError, match=r"size mismatch for readout"):
+        with pytest.raises(ValueError, match=r"do not match this brain's shapes"):
             _brain("per_neuron").load_weight_components(components)
 
     def test_and_the_other_way_round(self) -> None:
         components = _brain("per_neuron").get_weight_components()
-        with pytest.raises(RuntimeError, match=r"size mismatch for readout"):
+        with pytest.raises(ValueError, match=r"do not match this brain's shapes"):
             _brain("pooled").load_weight_components(components)
+
+    @pytest.mark.parametrize(("src", "dst"), [("pooled", "per_neuron"), ("per_neuron", "pooled")])
+    def test_a_rejected_load_mutates_nothing(self, src: str, dst: str) -> None:
+        """The rejection must be clean, not partial.
+
+        `load_state_dict` skips a mismatched tensor and raises at the END -- after copying every
+        tensor that DID match. So a rejected cross-width load used to leave the brain holding the
+        file's `w_chem` beside its own readout: a mixed state no config describes, and one nothing
+        downstream could detect. The shapes are now checked before anything is written.
+        """
+        # A different seed so the source's tensors genuinely differ from the destination's.
+        components = _brain(src, seed=101).get_weight_components()
+        brain = _brain(dst)
+        before = {n: t.detach().clone() for n, t in brain.topology.named_parameters()}
+        with pytest.raises(ValueError, match=r"Nothing was loaded"):
+            brain.load_weight_components(components)
+        for name, tensor in brain.topology.named_parameters():
+            assert torch.equal(tensor.detach(), before[name]), (
+                f"{name} was mutated by a refused load"
+            )
 
     def test_the_same_width_still_loads(self) -> None:
         # The guard must refuse the width change and nothing else.

@@ -816,7 +816,17 @@ class ConnectomeTopology(nn.Module):
                 torch.full((CONTINUOUS_ACTION_DIM,), initial_log_std, device=device),
             )
         if self.state_dependent_std:
-            self.log_std_head = StateDependentLogStdHead(_N_ACTIONS, device=device)
+            # Sized to what `_pool_motor` RETURNS, which is the readout's input width: the motor
+            # classes under `pooled` and the motor neurons under `per_neuron`. `_N_ACTIONS` was read
+            # here before, and it is the action count -- equal to the class count only by
+            # coincidence, so a per-neuron arm fed 39 features into a 4-input layer.
+            # `len(_MOTOR_CLASSES)` is byte-identical to the old value under `pooled`.
+            log_std_inputs = (
+                int(self._motor_flat_indices.numel())
+                if readout_width == "per_neuron"
+                else len(_MOTOR_CLASSES)
+            )
+            self.log_std_head = StateDependentLogStdHead(log_std_inputs, device=device)
 
         # ── Predator-sensor projection (opt-in) ─────────────────────────
         # Three learnable gain matrices route the corrected two-channel
@@ -2919,6 +2929,25 @@ class ConnectomePPOBrain(ClassicalBrain):
             msg = (
                 f"Weight file's topology component does not match this brain: "
                 f"missing {sorted(missing)}, unexpected {sorted(unexpected)}."
+            )
+            raise ValueError(msg)
+        # Check every shape BEFORE loading. `load_state_dict` skips a mismatched tensor and raises
+        # at the end, but it has already copied the ones that DID match -- so a rejected load left
+        # the brain holding the file's `w_chem` beside its own readout, a mixed state no config
+        # describes and nothing downstream could detect. Refusing first keeps the rejection clean.
+        mismatched = {
+            name: (tuple(value.shape), tuple(current[name].shape))
+            for name, value in persisted.items()
+            if name in current and tuple(value.shape) != tuple(current[name].shape)
+        }
+        if mismatched:
+            detail = ", ".join(
+                f"{name} file{file_shape} vs brain{mine}"
+                for name, (file_shape, mine) in sorted(mismatched.items())
+            )
+            msg = (
+                f"Weight file's topology tensors do not match this brain's shapes: {detail}. "
+                "Nothing was loaded."
             )
             raise ValueError(msg)
         self.topology.load_state_dict(persisted, strict=False)

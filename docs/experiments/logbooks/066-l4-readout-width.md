@@ -9,14 +9,14 @@ helps the wild type **and hurts the degree-preserving null**. At the pooled widt
 (0.5106 against 0.4140) — [L.0](064-l4-frozen-features.md)'s result, reproduced on 96 seeds. At the
 per-neuron width the **wild type is ahead** (0.5437 against 0.3585). The sign flips.
 
-**The confound this design exists to exclude is measurably absent.** The width main effect is
-**−0.0112, q = 0.591** — essentially zero. More parameters bought nothing on their own; the capacity
-paid off only when it was reading wild-type wiring. So "78 parameters learn faster than 8" does not
-explain this, which is the whole reason L.1 was registered as a crossed 2×2 rather than a comparison
-against L.0's committed numbers.
+**No width main effect was detected**: **−0.0112, q = 0.591, CI [−0.0374, +0.0126]**. That is a
+failure to detect, not a demonstration of absence — but the interval bounds any capacity effect well
+below the **+0.2818** interaction, so a capacity-only explanation is not supported by this data. That
+is the whole reason L.1 was registered as a crossed 2×2 rather than a comparison against L.0's
+committed numbers.
 
 All four learning gates fire at q = 0.000 and **neither prior detects a pre-update difference between
-the wirings** (−0.509, q = 0.411 at both widths). **L.4 and L.5 reopen**, as their gates registered.
+the wirings** (−0.509, q = 0.462 at both widths). **L.4 and L.5 reopen**, as their gates registered.
 
 **One thing this does not establish**: *why the wide null got worse*. Nothing in the registered design
 predicts it, and no mechanism is offered here.
@@ -80,8 +80,8 @@ The protocol is [`supporting/066-l4-readout-width/launch.md`](supporting/066-l4-
 | gate | `rn_pooled` | **+14.684** | 0.000 | 96/96 |
 | gate | `wt_wide` | **+10.814** | 0.000 | 88/96 |
 | gate | `rn_wide` | **+6.828** | 0.000 | 74/96 |
-| prior | `wt_pooled_frozen − rn_pooled_frozen` | −0.509 | 0.411 | — |
-| prior | `wt_wide_frozen − rn_wide_frozen` | −0.509 | 0.411 | — |
+| prior | `wt_pooled_frozen − rn_pooled_frozen` | −0.509 | 0.462 | — |
+| prior | `wt_wide_frozen − rn_wide_frozen` | −0.509 | 0.462 | — |
 
 All four arms plainly learned, so the interaction is interpretable. **Neither prior detects a
 pre-update difference between the wirings** — identical at both widths, as expected, since the floors
@@ -96,15 +96,20 @@ but it is the check that the wirings are not separated before a single update.
 | **rewired null** | 0.5106 | 0.3585 | **−0.152** |
 | wiring effect at this width | **−0.0966** (null ahead) | **+0.1852** (wild ahead) | |
 
+All nine registered tests — the interaction, both main effects, the four gates and the two priors —
+are corrected under **one BH-FDR family**, as the change registered. Raw p is kept beside each q in
+the JSON.
+
 | contrast | Δ | CI | q | seeds |
 |---|---|---|---|---|
 | **interaction (primary)** | **+0.2818** | [+0.2281, +0.3340] | **0.000** | **74/96** |
 | width main effect | −0.0112 | [−0.0374, +0.0126] | 0.591 | 44/96 |
-| wiring main effect | +0.0443 | [+0.0122, +0.0743] | 0.058 | 55/96 |
+| wiring main effect | +0.0443 | [+0.0122, +0.0743] | 0.088 | 55/96 |
 
 **Read the columns.** At the pooled width the null is ahead — L.0's finding, now on 96 seeds instead of
-32\. At the per-neuron width the wild type is ahead. **The width main effect is nil**, so the extra
-parameters did nothing on average; they paid off only on wild-type wiring, and cost on the shuffle.
+32\. At the per-neuron width the wild type is ahead. **No width main effect was detected**, with the
+interval bounding it far below the interaction, so the extra parameters are not supported as doing the
+work on their own; what the data shows is a gain on wild-type wiring and a cost on the shuffle.
 
 ### `episodes_to_30pct_success`, reported beside it — and why it is not the primary
 
@@ -168,6 +173,30 @@ What was done, and what it licenses:
   before and 50–96 after: Mann-Whitney **p = 0.53**, against **p = 0.38** for a same-launch arm split
   at the same index. No detectable difference, on an arm that is one of the four interaction cells.
 
+**Four further defects found in review, after the reading and before the merge.** None changes the
+verdict; two were latent bugs that could have bitten a later arm, and all are recorded because the
+panel's credibility rests on the instrument.
+
+- **A cross-width checkpoint load mutated the brain before refusing it.** `load_state_dict` skips a
+  mismatched tensor and raises at the *end*, having already copied the ones that matched — so a
+  rejected load left the brain holding the file's `w_chem` beside its own readout, a mixed state no
+  config describes. Shapes are now checked before anything is written; a test snapshots every
+  parameter, attempts a rejected load, and asserts nothing moved.
+- **The state-dependent log-std head was sized to the action count, not the readout width.** Under
+  `per_neuron` it would have received 39 features into a 4-input layer. Latent here — no L.1 arm uses
+  a state-dependent std — but it is the same `_N_ACTIONS` double-duty defect fixed elsewhere in this
+  change and missed at this site.
+- **The nine registered tests were not all in one BH-FDR family.** The gates and priors were
+  corrected among themselves while the interaction and both main effects sat on raw p — not the
+  procedure the change registered. Corrected across all nine: the interaction stays at q = 0.000, the
+  priors move to 0.462, and the **wiring main effect moves from raw p = 0.058 to q = 0.088**, which
+  changes no claim since it was already reported as secondary.
+- **Stale comments in the four new configs**, inherited from their L.0 parents: the wide learning arms
+  described an "8-parameter map over four pooled motor-class means" and a gradient taken with respect
+  to a class mean, and the wide floors described a node-perturbation eligibility this campaign does
+  not use. Documentation only; the resolved configs still differ from their parents in the
+  `readout_width` key alone, verified by loading both.
+
 **A harness defect found while reading, and fixed.** The agreement check compared the two metrics' raw
 signs, but `auc_success` is higher-is-better and `episodes_to_30pct_success` is lower-is-better, so
 agreement means **opposite** raw signs. It reported a direction disagreement that does not exist, and
@@ -179,9 +208,11 @@ comparing, with a test pinning both orientations.
 1. **The four-class pool was hiding wiring-specific structure.** The wild-type connectome's features
    are legible to a learner that can read individual motor neurons, and are not legible through a
    four-class mean. L.0's null was a fact about the readout as much as about the wiring.
-2. **It is not a capacity effect.** The width main effect is nil (q = 0.591). This is the claim the
-   crossed design was built to license and the reason a comparison against L.0's committed numbers
-   could not have licensed it.
+2. **A capacity-only explanation is not supported.** No width main effect was detected (−0.0112,
+   q = 0.591, CI [−0.0374, +0.0126]) — a failure to detect rather than a demonstration of absence,
+   with the interval bounding any such effect far below the +0.2818 interaction. This is the claim
+   the crossed design was built to license and the reason a comparison against L.0's committed
+   numbers could not have licensed it.
 3. **It does not say the pool is biologically wrong.** The four-class map is a stand-in for the
    neuromuscular system at either width; 39 weights is not more biological than 8, it is less.
 4. **It is not an endpoint claim and not a read-across to block V.** Everything under `readout_only` is

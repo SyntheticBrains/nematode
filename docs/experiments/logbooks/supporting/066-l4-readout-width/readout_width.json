@@ -508,6 +508,7 @@
       "rate": 0.020833333333333332
     }
   },
+  "clears_registered_sensitivity_threshold": true,
   "efficiency": {
     "pooled": {
       "horizon_episodes": 3000,
@@ -3731,6 +3732,7 @@
     }
   },
   "gates": {
+    "family_note": "all nine registered tests corrected under ONE BH-FDR family: the interaction, both main effects, four learning gates and two priors",
     "gates_pass": true,
     "prior_note": "a non-significant prior is a FAILURE TO DETECT a pre-update difference between the wirings at this seed count, not a demonstration that none exists",
     "prior_pooled": {
@@ -3750,7 +3752,7 @@
       "p_improve": 0.7945241317674147,
       "p_two_sided": 0.4109517364651707,
       "positive_seeds": 46,
-      "q": 0.4109517364651707
+      "q": 0.462320703523317
     },
     "prior_separates": false,
     "prior_wide": {
@@ -3770,7 +3772,7 @@
       "p_improve": 0.7945241317674147,
       "p_two_sided": 0.4109517364651707,
       "positive_seeds": 46,
-      "q": 0.4109517364651707
+      "q": 0.462320703523317
     },
     "rn_pooled_gate": {
       "arms": [
@@ -3788,7 +3790,7 @@
       "p_degrade": 1.0,
       "p_improve": 8.90646948611028e-18,
       "positive_seeds": 96,
-      "q": 2.6719408458330838e-17
+      "q": 4.007911268749626e-17
     },
     "rn_wide_gate": {
       "arms": [
@@ -3806,7 +3808,7 @@
       "p_degrade": 0.9999999999975819,
       "p_improve": 2.4181194814206118e-12,
       "positive_seeds": 74,
-      "q": 3.6271792221309174e-12
+      "q": 5.4407688331963766e-12
     },
     "wt_pooled_gate": {
       "arms": [
@@ -3824,7 +3826,7 @@
       "p_degrade": 1.0,
       "p_improve": 8.90646948611028e-18,
       "positive_seeds": 96,
-      "q": 2.6719408458330838e-17
+      "q": 4.007911268749626e-17
     },
     "wt_wide_gate": {
       "arms": [
@@ -3842,7 +3844,7 @@
       "p_degrade": 1.0,
       "p_improve": 3.8591246477396723e-17,
       "positive_seeds": 88,
-      "q": 7.718249295479345e-17
+      "q": 1.1577373943219017e-16
     }
   },
   "gates_read_first": true,
@@ -3857,6 +3859,7 @@
   "metric_disagreement_note": null,
   "metric_note": "auc_success is the primary because the interaction is a difference of differences and L.0 met ASYMMETRIC censoring on this cell -- five wild-type seeds of 32 never competent against one for the null. Widening the readout is expected to reduce censoring, so a right-censored primary would move for a reason unrelated to the wiring. episodes_to_30pct_success is reported beside it with its censoring counted PER CELL, and a disagreement between them is reported",
   "metrics_agree_in_direction": true,
+  "n_seeds_scored": 96,
   "primary": {
     "cell_means": {
       "rn_pooled": 0.5106284722222223,
@@ -3971,6 +3974,7 @@
         0.7526666666666668
       ],
       "positive_seeds": 74,
+      "q": 5.4459297735623925e-08,
       "role": "primary",
       "wilcoxon_p": 1.512758270433998e-08
     },
@@ -4184,6 +4188,7 @@
         0.07900000000000007
       ],
       "positive_seeds": 44,
+      "q": 0.591140427172185,
       "role": "secondary",
       "wilcoxon_p": 0.7044297864139075
     },
@@ -4294,12 +4299,14 @@
         -0.061999999999999944
       ],
       "positive_seeds": 55,
+      "q": 0.08755017010038708,
       "role": "secondary",
       "wilcoxon_p": 0.029183390033462365
     }
   },
   "primary_metric": "auc_success",
   "reading": "pooling_hid_structure",
+  "registered_sensitivity_threshold": 0.1076,
   "reopens_l4_l5": true,
   "seeds": [
     1,
@@ -4422,5 +4429,6 @@
     "standard_error": 0.04245596519864394,
     "width_difference_correlation": 0.08330034862713216
   },
+  "threshold_note": "reported, not applied: this was registered as the panel's sensitivity target, not as a minimum effect gating the verdict. A minimum-effect decision rule was not registered for L.1 -- a design gap, recorded rather than retro-fitted",
   "why": "widening the readout helps the WILD TYPE more than the shuffle: the four-class pool was hiding wiring-specific structure, and L.4 and L.5 reopen as their gates registered"
 }
