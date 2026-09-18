@@ -93,20 +93,20 @@
 
 ## 6. Campaign
 
-- [ ] 6.1 *(**reshaped by the rate check, outcome B**)* **960 runs: ten arms × seeds 1–96** at 3000
+- [x] 6.1 *(**ran 2026-09-18/19: 960/960 succeeded in 78,661 s, all parseable; no run-affecting commit since launch; campaign directory 469 MB**)* *(**reshaped by the rate check, outcome B**)* **960 runs: ten arms × seeds 1–96** at 3000
   episodes — the atlas learning arms at **0.0001**, their floors, the four nogap arms, and the two wide
   learning arms at 0.0001 as L.4's rate-matched baseline — with `--track-experiment --no-detailed-export --no-file-log`. Measured disk cost recorded in `launch.md` **before** launch.
-- [ ] 6.2 Per-seed CSV with all cells, the tables and both readings under
+- [x] 6.2 *(written 2026-09-19)* Per-seed CSV with all cells, the tables and both readings under
   `supporting/067-l4-feature-ablations/`.
 
 ## 7. The record
 
-- [ ] 7.1 Logbook 067: both ablations' tables, each reading with its minimum-effect status, the
+- [x] 7.1 *(2026-09-19)* Logbook 067: both ablations' tables, each reading with its minimum-effect status, the
   baseline decision, the probe's result, and every "may not be cited as".
-- [ ] 7.2 The experiments index row and `CHANGELOG.md`.
-- [ ] 7.3 The tracker's L.4 and L.5 entries, and the ladder paragraph in the roadmap.
-- [ ] 7.4 **If either ablation reads `carries_the_effect`**: the phase's positive is restated as
+- [x] 7.2 *(2026-09-19)* The experiments index row and `CHANGELOG.md`.
+- [x] 7.3 *(2026-09-19; L.1's tracker entry and Logbook 066 also carry a dated note on the rate dependence)* The tracker's L.4 and L.5 entries, and the ladder paragraph in the roadmap.
+- [x] 7.4 *(**applies — both read `carries_the_effect`**; restated in Logbook 067 § Consequences and the roadmap ladder paragraph: the positive lives in the electrical synapses' interaction with the learner's operating point, and rung (3) dynamics — gap-junction coupling — is named, behind a registered rate × wiring calibration at the per-neuron width)* **If either ablation reads `carries_the_effect`**: the phase's positive is restated as
   living in the named feature, and the phase-after-7 rung that manipulates that feature directly is
   named.
-- [ ] 7.5 **If both read `survives_without_it`**: the effect lives in the directed chemical graph's
+- [x] 7.5 *(**does not apply** — neither read `survives_without_it`; closed as not exercised)* **If both read `survives_without_it`**: the effect lives in the directed chemical graph's
   connectivity, and the placed-plasticity rung is the one that follows.
