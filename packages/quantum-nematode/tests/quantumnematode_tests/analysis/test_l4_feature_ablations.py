@@ -147,6 +147,47 @@ class TestTheArms:
         assert fa._WIDE_RATE_LABEL.match(f"{stem}_readout_only_wide-seed3.log") is None
         assert fa._WIDE_RATE_LABEL.match(f"{stem}_frozen_wide_r1e4-seed3.log") is None
 
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "..._readout_only_wide_atlas-seed3.log",  # pre-amendment atlas learning run at 0.001
+            "..._readout_only_wide_atlas_r1e2-seed3.log",  # a rate-check log
+            "..._readout_only_wide_atlas_r1e2_rewired_null-seed3.log",
+            "..._frozen_wide_atlas_r1e4-seed3.log",  # a tag on a floor
+            "..._readout_only_wide_nogap_r1e4_rewired_null-seed3.log",  # a tag on a nogap arm
+        ],
+    )
+    def test_scan_refuses_a_log_whose_rate_tag_does_not_fit_its_arm(
+        self,
+        tmp_path: Path,
+        name: str,
+    ) -> None:
+        (tmp_path / name.replace("...", fa._STEM)).write_text("")
+        with pytest.raises(ValueError, match="rate tag"):
+            fa.scan(tmp_path)
+
+    def test_scan_accepts_the_registered_tags(self, tmp_path: Path) -> None:
+        # Correctly tagged files pass the tag check; an empty log is then dropped as unparseable.
+        for name in (
+            "_readout_only_wide_atlas_r1e4-seed3.log",
+            "_readout_only_wide_atlas_r1e4_rewired_null-seed3.log",
+            "_frozen_wide_atlas-seed3.log",
+            "_readout_only_wide_nogap-seed3.log",
+        ):
+            (tmp_path / f"{fa._STEM}{name}").write_text("")
+        scanned = fa.scan(tmp_path)
+        assert all(runs == {} for runs in scanned["runs"].values())
+
+    def test_strict_mode_refuses_a_baseline_missing_a_seed(self) -> None:
+        seeds = (1, 2, 3)
+        scanned = {"runs": {n: dict.fromkeys(seeds, "r") for n in fa.ARMS}}
+        full = {"runs": {n: dict.fromkeys(seeds, "r") for n in fa.BASELINE_CELLS}}
+        short = {"runs": {n: dict.fromkeys((1, 2), "r") for n in fa.BASELINE_CELLS}}
+        fa.require_common_complete(scanned, {"atlas": full, "nogap": full}, seeds)
+        with pytest.raises(ValueError, match="atlas baseline wt_wide seeds \\[3\\]"):
+            fa.require_common_complete(scanned, {"atlas": short, "nogap": full}, seeds)
+        assert fa.common_seeds(scanned, {"atlas": short, "nogap": full}, seeds) == (1, 2)
+
     def test_merge_baseline_takes_learning_from_the_rate_run_and_floors_from_l1(self) -> None:
         main = {
             "runs": {

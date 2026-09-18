@@ -61,10 +61,20 @@ ablation *removed* wiring effect; near zero means it survived; positive means it
   **768 runs**, the size L.1 was — and ~15 GB rather than ~530 GB, because they run with the output
   controls L.1's crash produced.
 
+  *(**Amended 2026-09-18, outcome B of the registered rate check** — see the design's second
+  amendment. The atlas **learning** arms run at `plasticity_rate` 0.0001 as
+  `..._readout_only_wide_atlas_r1e4{,_rewired_null}`, one key from their atlas parents; two wide
+  learning arms at 0.0001, `..._readout_only_wide_r1e4{,_rewired_null}`, one key from L.1's wide
+  parents, join as **L.4's rate-matched baseline** (+192 runs), with the atlas floors and L.1's wide
+  floors reused because the rate is inert under `freeze_updates`. L.5 is unchanged at 0.001 against
+  L.1's baseline. **Ten arms, 960 runs.**)*
+
 - **The baseline is L.1's committed wide arms, not a re-run — conditional on a byte-identity check.**
   L.1's 384 wide-arm runs (`wt_wide`, `rn_wide`, their floors) are the un-ablated cells. Reusing
   them is licensed only if a re-run of one seed per arm under the new output controls reproduces
   L.1's logs field for field; if it does not, the baseline is re-run (+384) and nothing is reused.
+  *(Amended 2026-09-18: under outcome B this is L.5's baseline in full and L.4's **floors**; L.4's
+  learning half is the rate-matched re-run above, so its interaction compares learners at one rate.)*
 
 - **A minimum effect as a decision rule, registered beside significance** — the design gap L.1
   recorded. The quantity an ablation can remove is the **wide wiring effect, +0.1852** — not L.1's

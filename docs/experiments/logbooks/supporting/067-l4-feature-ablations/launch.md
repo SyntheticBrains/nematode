@@ -223,13 +223,32 @@ uv run python scripts/run_campaign.py \
   --config ${P}_frozen_wide_nogap.yml --config ${P}_frozen_wide_nogap_rewired_null.yml \
   --seeds 101-104 --runs 3000 --output-dir campaigns/feature-ablations-pilot -- $FLAGS
 
-# 2. the registered panel -- 768 runs on seeds 1-96
-uv run python scripts/run_campaign.py <the same eight configs> \
+# 1b. the registered atlas rate check (second amendment) -- 16 runs, disjoint seeds; outcome B fired
+uv run python scripts/run_campaign.py \
+  --config ${P}_readout_only_wide_atlas_r1e4.yml --config ${P}_readout_only_wide_atlas_r1e4_rewired_null.yml \
+  --config ${P}_readout_only_wide_atlas_r1e2.yml --config ${P}_readout_only_wide_atlas_r1e2_rewired_null.yml \
+  --seeds 101-104 --runs 3000 --output-dir campaigns/feature-ablations-rate -- $FLAGS
+
+# 1c. the rate-matched wide arms' own pilot -- 8 runs, disjoint seeds
+uv run python scripts/run_campaign.py \
+  --config ${P}_readout_only_wide_r1e4.yml --config ${P}_readout_only_wide_r1e4_rewired_null.yml \
+  --seeds 101-104 --runs 3000 --output-dir campaigns/feature-ablations-wide-rate-pilot -- $FLAGS
+
+# 2. the registered panel as run under outcome B -- ten arms, 960 runs on seeds 1-96
+#    (the pre-amendment registration was the eight configs of step 1: the atlas learning arms at
+#    0.001 and no rate-matched baseline)
+uv run python scripts/run_campaign.py \
+  --config ${P}_readout_only_wide_atlas_r1e4.yml --config ${P}_readout_only_wide_atlas_r1e4_rewired_null.yml \
+  --config ${P}_frozen_wide_atlas.yml --config ${P}_frozen_wide_atlas_rewired_null.yml \
+  --config ${P}_readout_only_wide_nogap.yml --config ${P}_readout_only_wide_nogap_rewired_null.yml \
+  --config ${P}_frozen_wide_nogap.yml --config ${P}_frozen_wide_nogap_rewired_null.yml \
+  --config ${P}_readout_only_wide_r1e4.yml --config ${P}_readout_only_wide_r1e4_rewired_null.yml \
   --seeds 1-96 --runs 3000 --output-dir campaigns/feature-ablations -- $FLAGS
 
-# 3. score both ablations against L.1's committed baseline
+# 3. score: L.5 against L.1's committed baseline; L.4 against the rate-matched wide learning arms
+#    (found in the campaign directory) with L.1's floors
 uv run python scripts/analysis/l4_feature_ablations.py --campaign campaigns/feature-ablations \
-  --baseline campaigns/readout-width \
+  --baseline campaigns/readout-width --baseline-atlas campaigns/feature-ablations \
   --out docs/experiments/logbooks/supporting/067-l4-feature-ablations/feature_ablations.json \
   --csv docs/experiments/logbooks/supporting/067-l4-feature-ablations/per-seed.csv
 

@@ -59,6 +59,7 @@ _STEM = rw._STEM
 ABLATIONS = ("atlas", "nogap")
 WIRINGS = ("wt", "rn")
 BASELINE = "baseline"
+BASELINE_CELLS = ("wt_wide", "rn_wide", "wt_wide_frozen", "rn_wide_frozen")
 
 # The eight new arms. The baseline's four come from L.1's campaign through L.1's own scanner.
 ARMS: dict[str, dict[str, Any]] = {}
@@ -68,8 +69,11 @@ for _ab in ABLATIONS:
         ARMS[f"{_w}_{_ab}_frozen"] = {"wiring": _w, "ablation": _ab, "learns": False}
 LEARNING_ARMS = tuple(n for n, m in ARMS.items() if m["learns"])
 
-# An optional rate tag: after the rate check (outcome B) the atlas LEARNING arms run at 0.0001 and
-# are named `..._wide_atlas_r1e4{,_rewired_null}`. The tag is recorded, not part of the arm name.
+# The rate tag: after the rate check (outcome B) the atlas LEARNING arms run at 0.0001 and are named
+# `..._wide_atlas_r1e4{,_rewired_null}`. The tag is not part of the arm name, but `scan` holds every
+# log to it: atlas learning logs must carry `_r1e4`, and no other arm may carry any tag, so a
+# rate-check log or a pre-amendment atlas run cannot be counted as a registered cell.
+_ATLAS_LEARNING_RATE_TAG = "_r1e4"
 _LABEL = re.compile(
     rf"^{re.escape(_STEM)}_(?P<arm>readout_only|frozen)_wide_(?P<abl>atlas|nogap)"
     r"(?P<rate>_r1e[24])?(?P<rewired>_rewired_null)?-seed(?P<seed>\d+)\.log$",
@@ -147,6 +151,15 @@ def scan(campaign_dir: Path, experiments: Path = EXPERIMENTS) -> dict[str, Any]:
         wiring = "rn" if match.group("rewired") else "wt"
         suffix = "" if match.group("arm") == "readout_only" else "_frozen"
         name = f"{wiring}_{match.group('abl')}{suffix}"
+        expected_tag = (
+            _ATLAS_LEARNING_RATE_TAG if (match.group("abl") == "atlas" and not suffix) else None
+        )
+        if match.group("rate") != expected_tag:
+            msg = (
+                f"{log.name}: arm {name} must carry rate tag {expected_tag!r} and carries "
+                f"{match.group('rate')!r}; this log is not a registered cell"
+            )
+            raise ValueError(msg)
         record = read_log(log, experiments)
         if record is None:
             print(f"  WARN: no parseable run lines in {log.name} - dropped")
@@ -218,6 +231,30 @@ def require_complete(scanned: dict[str, Any], seeds: tuple[int, ...] = SEEDS) ->
         raise ValueError(msg)
 
 
+def require_common_complete(
+    scanned: dict[str, Any],
+    baselines: dict[str, dict[str, Any]],
+    seeds: tuple[int, ...] = SEEDS,
+) -> None:
+    """Refuse to score a registered panel whose baseline cells lack any registered seed.
+
+    ``require_complete`` covers the eight ablation arms; this covers every cell of every baseline, so
+    strict mode cannot silently shrink to the seed intersection.
+    """
+    missing: list[str] = []
+    for ab, b in baselines.items():
+        for n in BASELINE_CELLS:
+            gone = [s for s in seeds if s not in b["runs"].get(n, {})]
+            if gone:
+                missing.append(f"{ab} baseline {n} seeds {gone}")
+    common = common_seeds(scanned, baselines, seeds)
+    if missing or tuple(common) != tuple(seeds):
+        msg = "panel is incomplete, so no reading is available: " + "; ".join(
+            missing or [f"common seeds {list(common)} != registered {list(seeds)}"],
+        )
+        raise ValueError(msg)
+
+
 def common_seeds(
     scanned: dict[str, Any],
     baselines: dict[str, dict[str, Any]],
@@ -228,11 +265,7 @@ def common_seeds(
         s
         for s in seeds
         if all(s in scanned["runs"][n] for n in ARMS)
-        and all(
-            s in b["runs"][n]
-            for b in baselines.values()
-            for n in ("wt_wide", "rn_wide", "wt_wide_frozen", "rn_wide_frozen")
-        )
+        and all(s in b["runs"][n] for b in baselines.values() for n in BASELINE_CELLS)
     )
 
 
@@ -516,17 +549,20 @@ def _power(effect: float, se: float) -> float:
     return 0.5 * (1.0 + erf(z / sqrt(2.0)))
 
 
-def analyse(
+def analyse(  # noqa: PLR0913 - two baseline directories and a strict flag are distinct inputs
     campaign_dir: Path,
     baseline_dir: Path,
     seeds: tuple[int, ...] = SEEDS,
     experiments: Path = EXPERIMENTS,
     baseline_atlas_dir: Path | None = None,
+    *,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """Score both ablations: gates first, then each interaction, one BH family, read per ablation.
 
     ``baseline_atlas_dir`` holds L.4's rate-matched wide LEARNING arms (outcome B); its floors are
-    L.1's from ``baseline_dir``. Without it, both ablations read against L.1's baseline.
+    L.1's from ``baseline_dir``. Without it, both ablations read against L.1's baseline. ``strict``
+    refuses any panel whose scored seeds are not exactly ``seeds``, baselines included.
     """
     scanned = scan(campaign_dir, experiments)
     main = rw.scan(baseline_dir, experiments)
@@ -540,6 +576,8 @@ def analyse(
         sources["atlas"] = (
             f"learning arms {baseline_atlas_dir} (rate-matched, 0.0001); floors {baseline_dir}"
         )
+    if strict:
+        require_common_complete(scanned, baselines, seeds)
     seeds = common_seeds(scanned, baselines, seeds)
     reports = efficiency(scanned, baselines, campaign_dir, seeds)
     primary_cells = rw.cell_values(reports, PRIMARY_METRIC)
@@ -698,7 +736,13 @@ def main(argv: list[str] | None = None) -> int:
     seeds = tuple(range(int(low), int(high or low) + 1))
     if not args.allow_incomplete:
         require_complete(scan(args.campaign), seeds)
-    result = analyse(args.campaign, args.baseline, seeds, baseline_atlas_dir=args.baseline_atlas)
+    result = analyse(
+        args.campaign,
+        args.baseline,
+        seeds,
+        baseline_atlas_dir=args.baseline_atlas,
+        strict=not args.allow_incomplete,
+    )
     _print(result)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

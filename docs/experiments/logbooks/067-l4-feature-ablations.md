@@ -30,8 +30,10 @@ the wild-type wiring under a plausible learner" holds at the rate it ran at and 
 below it. This is a descriptive, unregistered contrast between two campaigns — reported with its size
 because it conditions everything above, and not as a result of its own.
 
-**The structural probe on L.1's puzzle is null** (ρ = +0.032, p = 0.378), and it could not have been
-otherwise: the predictor has no variance across the units it was tested over.
+**The structural probe on L.1's puzzle is null** (ρ = +0.032, p = 0.378): among the 96 rewirings,
+within-class input correlation does not predict how much the per-neuron readout hurt. The rewirings
+span 0.014–0.027 on that statistic against 0.154 for the wild type, so the null is a null over a
+spread an order of magnitude narrower than the contrast the hypothesis was drawn from.
 
 **Branch**: `feat/l4-feature-ablations`.
 
@@ -247,14 +249,17 @@ within-class presynaptic Jaccard and its `rn_wide − rn_pooled` from L.1, one-s
 | rewired Jaccard, 96 seeds | mean **0.020**, range 0.014–0.027 |
 
 The descriptive companion holds: the wild type's within-class input correlation exceeds every one of
-the 96 rewirings, by 6×. But the registered test ran **across rewirings**, and across rewirings the
-predictor barely varies — a range of 0.013 on a statistic whose wild-type value is 0.154. A
-correlation cannot be resolved against a predictor that is constant over the units it is computed on.
-The feasibility check looked at the wild type against three rewirings (a between-population contrast)
-and never at the spread within the population the test would run over. **The probe was infeasible as
-registered, and that was knowable before it was registered.** It is not evidence against the
-hypothesis; it is evidence that this test cannot reach it. A test that could would manipulate
-within-class correlation directly rather than wait for a null model to vary it.
+the 96 rewirings, by 6×. The registered test ran **across rewirings**, where the statistic takes 96
+distinct values with a standard deviation of 0.003 (coefficient of variation 0.17) — a real spread,
+and a rank correlation is well defined on it. What the null says is that, **within that spread**,
+more within-class correlation did not go with a smaller loss from widening. What it does not reach is
+the contrast the hypothesis was drawn from: the wild type sits 0.13 above the highest rewiring, an
+order of magnitude beyond the range the test could see. The feasibility look compared the wild type
+against three rewirings and never asked how the predictor spreads across the population the test
+would run over; had it, the test would have been registered as the narrower question it is. **Not
+evidence against the hypothesis; a null on the part of it this test reaches.** A test that reaches
+the rest would manipulate within-class correlation directly rather than wait for a null model to
+vary it.
 
 ## Integrity
 
@@ -296,8 +301,9 @@ within-class correlation directly rather than wait for a null model to vary it.
 4. **Neither ablation reads `survives_without_it`**, so the effect does **not** live in the directed
    chemical graph's connectivity alone — the reading 7.5 would have needed for the placed-plasticity
    rung to follow directly.
-5. **The probe is null and was infeasible.** Nothing here explains why the wide null got worse at
-   0.001; the rate result supplies a candidate and no test.
+5. **The probe is null over the range a rewired population offers**, which does not reach the
+   wild-type contrast that motivated it. Nothing here explains why the wide null got worse at 0.001;
+   the rate result supplies a candidate and no test.
 6. **Not a mechanism, not an endpoint claim, not a read-across to block V, and no committed verdict
    changes.** L.1's `pooling_hid_structure` stands as read; what changes is the set of things it may be
    cited as. D2's primary remains unmet: `w_chem` is frozen throughout.
@@ -316,8 +322,9 @@ measured at, and the one rate it was pinned at is the worse operating point for 
 
 **Two lessons for the [phase protocol](../../research/phase-protocol.md)**, recorded there with dates:
 a pinned setting carried to a new width is a hypothesis again (principle 7 — the rate came from R.2 at
-8 parameters and was never swept at 78); and the feasibility arithmetic for a correlation must check
-that the predictor varies across the units the test runs over (principle 2).
+8 parameters and was never swept at 78); and the feasibility arithmetic for a correlation must compare
+the predictor's spread across the units the test runs over with the contrast that motivated the
+hypothesis, so the test is registered as the question it can answer (principle 2).
 
 **The synthesis (Z.1) carries** L.4 and L.5 as done, and carries the rate dependence as a condition on
 L.1 rather than a new rung within Phase 7's closing scope.
