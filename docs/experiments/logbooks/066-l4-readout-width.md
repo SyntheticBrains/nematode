@@ -233,6 +233,14 @@ comparing, with a test pinning both orientations.
 before L.0 ran: they were `closed-unopened` because against a null there is nothing for a feature
 ablation to have changed. There now is.
 
+*(Added 2026-09-19.)* **The wide wiring effect is rate-dependent.** L.4's rate-matched baseline
+([Logbook 067](067-l4-feature-ablations.md)) re-ran `wt_wide` and `rn_wide` at `plasticity_rate`
+0.0001 on the same 96 seeds: the wiring effect there is **−0.0977, null ahead**, against +0.1852
+here. Both wirings learn better at the lower rate — the null by +0.44, the wild type by +0.16 — so
+the verdict above stands as read **at 0.001** and may not be cited without that rate. The open
+puzzle above gains a candidate, that 0.001 is too high for a 78-parameter readout on the rewired
+graph, which nothing has tested.
+
 ## Artefacts
 
 - [`supporting/066-l4-readout-width/launch.md`](supporting/066-l4-readout-width/launch.md) — the protocol, the pilot, the sensitivity arithmetic

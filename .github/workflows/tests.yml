@@ -92,6 +92,11 @@ jobs:
         with:
           lfs: false
 
+      # The read-only instrument guards diff committed analysis scripts against origin/main; the
+      # default depth-1 checkout has no such ref and the guards would skip silently.
+      - name: Fetch origin/main for the read-only instrument guards
+        run: git fetch --no-tags --depth=1 origin +main:refs/remotes/origin/main
+
       - name: Generate LFS cache key
         run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-assets-id
         env:

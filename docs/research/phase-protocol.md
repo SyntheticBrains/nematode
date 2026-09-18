@@ -42,7 +42,12 @@ down.
    horizon, and write the estimate down. *Node perturbation's learning speed scales as roughly 1/N
    in the number of perturbed units (Werfel, Xie & Seung 2005). At 302 units, four draws per step
    and 2400-step episodes the substrate was near a worst case; nothing in the design considered it.
-   The estimate would have cost an hour. Measuring it cost a day and confirmed it.*
+   The estimate would have cost an hour. Measuring it cost a day and confirmed it.* *(Added
+   2026-09-19.) For a correlation, the arithmetic compares the predictor's spread across the units
+   the test runs over with the contrast that motivated the hypothesis. L.4/L.5's structural probe
+   was motivated by the wild type sitting at 0.154 against rewirings at 0.01–0.04, and registered
+   across 96 rewirings whose whole spread is 0.014–0.027 — a valid test of a narrower question
+   than the one it was meant to license, [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).*
 
 3. **Establish that the task is solvable with the strongest available method.** Know what "learned"
    looks like before asking a constrained method to produce it. *The phase learned that PPO solves
@@ -77,7 +82,11 @@ down.
 
 7. **Sweep before pin.** A setting pinned on two pilot seeds is a hypothesis, not a recipe; every
    pinned value gets a registered sensitivity check on the cheapest platform where the method works.
-   *`trace_decay 0.9` sat under every result for two months. No panel config set it.*
+   *`trace_decay 0.9` sat under every result for two months. No panel config set it.* *(Added
+   2026-09-19.) A setting pinned at one width is a hypothesis again at another. `plasticity_rate`
+   0.001 was pinned by R.2 on an 8-parameter readout and inherited by L.1's 78-parameter one without
+   a sweep; L.4's rate check found the per-neuron wiring effect reverses one decade below it, which
+   conditions L.1's positive on its rate, [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).*
 
 8. **Pilots on disjoint seeds.** Registered seeds stay untouched until the protocol is fixed. *Held
    throughout Phase 7, and it is why the pilots could inform registrations without contaminating
