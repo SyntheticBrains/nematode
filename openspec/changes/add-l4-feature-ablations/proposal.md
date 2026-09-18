@@ -49,7 +49,8 @@ effect of interest is `(wt_ablated − rn_ablated) − (wt_wide − rn_wide)` pe
 ablation *removed* wiring effect; near zero means it survived; positive means it grew.
 
 - **Eight new arms** on `hard350` at seeds **1–96**, each differing from its committed L.1 wide
-  parent in **one key**:
+  parent in **one key** — *the registration as written 2026-09-17, **superseded 2026-09-18** by the
+  outcome-B amendment below; kept for the record*:
 
   | arm | parent | key | learner |
   |---|---|---|---|
@@ -58,16 +59,27 @@ ablation *removed* wiring effect; near zero means it survived; positive means it
   | `wt_nogap` / `rn_nogap` | `wt_wide` / `rn_wide` | `enable_gap_junctions: false` | readout learns |
   | `wt_nogap_frozen` / `rn_nogap_frozen` | the wide floors | `enable_gap_junctions: false` | nothing learns |
 
-  **768 runs**, the size L.1 was — and ~15 GB rather than ~530 GB, because they run with the output
-  controls L.1's crash produced.
+  **768 runs** *(pre-amendment)*, the size L.1 was — and ~15 GB rather than ~530 GB, because they
+  run with the output controls L.1's crash produced.
 
-  *(**Amended 2026-09-18, outcome B of the registered rate check** — see the design's second
+  \*(**Amended 2026-09-18, outcome B of the registered rate check** — see the design's second
   amendment. The atlas **learning** arms run at `plasticity_rate` 0.0001 as
   `..._readout_only_wide_atlas_r1e4{,_rewired_null}`, one key from their atlas parents; two wide
   learning arms at 0.0001, `..._readout_only_wide_r1e4{,_rewired_null}`, one key from L.1's wide
   parents, join as **L.4's rate-matched baseline** (+192 runs), with the atlas floors and L.1's wide
   floors reused because the rate is inert under `freeze_updates`. L.5 is unchanged at 0.001 against
-  L.1's baseline. **Ten arms, 960 runs.**)*
+  L.1's baseline. **Ten arms, 960 runs.** The campaign as run:
+
+  | arm | parent | key(s) | learner |
+  |---|---|---|---|
+  | `wt_atlas` / `rn_atlas` (`..._atlas_r1e4{,_rewired_null}`) | `wt_atlas` / `rn_atlas` above | `plasticity_rate: 0.0001` (on top of `synapse_signs: atlas`) | readout learns, `w_chem` frozen |
+  | `wt_atlas_frozen` / `rn_atlas_frozen` | the wide floors | `synapse_signs: atlas` | nothing learns |
+  | `wt_nogap` / `rn_nogap` | `wt_wide` / `rn_wide` | `enable_gap_junctions: false` | readout learns |
+  | `wt_nogap_frozen` / `rn_nogap_frozen` | the wide floors | `enable_gap_junctions: false` | nothing learns |
+  | `wt_wide` / `rn_wide` at 0.0001 (`..._wide_r1e4{,_rewired_null}`) — **L.4's rate-matched baseline** | `wt_wide` / `rn_wide` | `plasticity_rate: 0.0001` | readout learns |
+
+  The four rate-check configs (`..._atlas_r1e4`, `..._atlas_r1e2`, each with its rewired null) ran
+  on disjoint seeds 101–104 only; the two at 0.0001 became the campaign's atlas learning arms.)\*
 
 - **The baseline is L.1's committed wide arms, not a re-run — conditional on a byte-identity check.**
   L.1's 384 wide-arm runs (`wt_wide`, `rn_wide`, their floors) are the un-ablated cells. Reusing
@@ -115,7 +127,9 @@ informative outcome.
 ## Impact
 
 - Affected specs: `plasticity-evaluation`
-- Affected code: `configs/scenarios/foraging/` (eight arms), `scripts/analysis/l4_feature_ablations.py`
-  (new), `scripts/analysis/l4_structural_probe.py` (new, the puzzle probe)
+- Affected code: `configs/scenarios/foraging/` (fourteen configs: the eight ablation arms as
+  registered, the four rate-check configs, and the two rate-matched wide arms — ten of them the
+  campaign as run), `scripts/analysis/l4_feature_ablations.py` (new, with `--baseline-atlas` for the
+  rate-matched half), `scripts/analysis/l4_structural_probe.py` (new, the puzzle probe)
 - **No package code changes**: both flags exist and both build at the per-neuron width, verified.
 - **`l4_readout_width.py`, `connectome_structure_efficiency.py`, `wiring_premise.py` are READ-ONLY.**
