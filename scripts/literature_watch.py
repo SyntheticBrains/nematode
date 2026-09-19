@@ -119,6 +119,19 @@ class Sweep:
     until: date
 
 
+@dataclass
+class Fetched:
+    """What one source returned, and any note about what it could not return.
+
+    A source that stops paging early still hands back what it has. The note travels with it so the
+    digest can say the sweep was partial — a shortfall that only reached stderr would leave a
+    complete-looking digest built on an incomplete sweep.
+    """
+
+    candidates: list[Candidate]
+    partials: list[str] = field(default_factory=list)
+
+
 class SourceError(RuntimeError):
     """A source could not be fetched; the run continues without it."""
 
@@ -144,15 +157,20 @@ def _http_bytes(url: str) -> bytes:
     raise SourceError(msg)
 
 
-def _partial(label: str, page: int, exc: Exception, kept: int) -> None:
-    """Report a page that could not be fetched, keeping the pages already collected.
+def _partial(label: str, page: int, exc: Exception, kept: int) -> str:
+    """Note a page that could not be fetched, keeping the pages already collected.
 
     An unattended weekly job that drops a whole source because its ninth page timed out has
-    thrown away eight good pages. Whatever arrived is worth more than the shortfall costs.
+    thrown away eight good pages. Whatever arrived is worth more than the shortfall costs — but
+    the reader has to be told, so the note is returned as well as logged.
     """
     print(
         f"warning: {label} stopped at page {page} ({exc}); keeping {kept} records already fetched",
         file=sys.stderr,
+    )
+    return (
+        f"The {label} sweep stopped at page {page} ({exc}); "
+        f"the {kept} records it had already fetched are included, later ones are not."
     )
 
 
@@ -167,11 +185,11 @@ def _invert_abstract(inverted: dict[str, list[int]] | None) -> str:
     return " ".join(word for _, word in positions)
 
 
-def fetch_openalex(config: dict[str, Any], until: date) -> list[Candidate]:
+def fetch_openalex(config: dict[str, Any], until: date) -> Fetched:
     """Fetch new work citing any of the seed papers."""
     seeds: list[dict[str, str]] = config.get("seeds", [])
     if not seeds:
-        return []
+        return Fetched([])
     labels = {seed["id"]: seed.get("label", seed["id"]) for seed in seeds}
     since = until - timedelta(days=int(config.get("lookback_days", 21)))
 
@@ -190,26 +208,29 @@ def fetch_openalex(config: dict[str, Any], until: date) -> list[Candidate]:
         params["mailto"] = mailto
 
     found: list[Candidate] = []
+    partials: list[str] = []
     cursor = "*"
     for page_number in range(MAX_PAGES):
+        # A rejected filter and a torn response both surface here, and both are worth the same
+        # treatment as a timeout: keep the pages already in hand rather than losing the source.
         try:
             page = _http_json(
                 "https://api.openalex.org/works?"
                 + urllib.parse.urlencode({**params, "cursor": cursor}),
             )
+            if "results" not in page:
+                msg = f"OpenAlex returned no results block: {str(page)[:200]}"
+                raise SourceError(msg)  # noqa: TRY301 — handled as a partial page just below
         except SourceError as exc:
             if not found:
                 raise
-            _partial("citation chaining", page_number, exc, len(found))
+            partials.append(_partial("citation chaining", page_number, exc, len(found)))
             break
-        if "results" not in page:
-            msg = f"OpenAlex returned no results block: {str(page)[:200]}"
-            raise SourceError(msg)
         found.extend(_openalex_candidate(work, labels) for work in page["results"])
         cursor = page.get("meta", {}).get("next_cursor")
         if not cursor or not page["results"]:
             break
-    return found
+    return Fetched(found, partials)
 
 
 def _openalex_candidate(work: dict[str, Any], labels: dict[str, str]) -> Candidate:
@@ -238,11 +259,11 @@ def _openalex_candidate(work: dict[str, Any], labels: dict[str, str]) -> Candida
     )
 
 
-def fetch_arxiv(config: dict[str, Any], until: date) -> list[Candidate]:
+def fetch_arxiv(config: dict[str, Any], until: date) -> Fetched:
     """Fetch arXiv submissions in the configured categories and window."""
     categories: list[str] = config.get("categories", [])
     if not categories:
-        return []
+        return Fetched([])
     since = until - timedelta(days=int(config.get("lookback_days", 8)))
     category_clause = " OR ".join(f"cat:{category}" for category in categories)
     query = (
@@ -251,6 +272,7 @@ def fetch_arxiv(config: dict[str, Any], until: date) -> list[Candidate]:
     )
 
     found: list[Candidate] = []
+    partials: list[str] = []
     for page in range(MAX_PAGES):
         url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode(
             {
@@ -261,19 +283,21 @@ def fetch_arxiv(config: dict[str, Any], until: date) -> list[Candidate]:
                 "sortOrder": "descending",
             },
         )
+        # A truncated feed is a malformed document rather than a failed request, so the parse
+        # belongs inside the same guard as the fetch — otherwise it discards the earlier pages.
         try:
             feed = _http_bytes(url).decode("utf-8")
-        except SourceError as exc:
+            entries = ET.fromstring(feed).findall("atom:entry", ARXIV_NS)  # noqa: S314 — arXiv's own Atom feed over https
+        except (SourceError, ET.ParseError) as exc:
             if not found:
                 raise
-            _partial("arXiv", page, exc, len(found))
+            partials.append(_partial("arXiv", page, exc, len(found)))
             break
-        entries = ET.fromstring(feed).findall("atom:entry", ARXIV_NS)  # noqa: S314 — arXiv's own Atom feed over https
         found.extend(_arxiv_candidate(entry) for entry in entries)
         if len(entries) < ARXIV_PAGE:
             break
         time.sleep(ARXIV_DELAY)
-    return found
+    return Fetched(found, partials)
 
 
 def _arxiv_candidate(entry: ET.Element) -> Candidate:
@@ -299,34 +323,40 @@ def _arxiv_candidate(entry: ET.Element) -> Candidate:
     )
 
 
-def fetch_biorxiv(config: dict[str, Any], until: date) -> list[Candidate]:
+def fetch_biorxiv(config: dict[str, Any], until: date) -> Fetched:
     """Fetch preprints posted to the configured servers and collections in the window."""
     servers: list[str] = config.get("servers", [])
     categories: list[str] = config.get("categories", [])
     if not servers or not categories:
-        return []
+        return Fetched([])
     since = until - timedelta(days=int(config.get("lookback_days", 8)))
 
     # Thirty records a page over several collections is a lot of requests, and the API starts
     # timing out under sustained paging — so each collection is allowed to fail on its own.
     found: list[Candidate] = []
+    partials: list[str] = []
     failed = 0
     collections = [(server, category) for server in servers for category in categories]
     for server, category in collections:
         try:
-            found.extend(_biorxiv_collection(server, category, since, until))
+            collected = _biorxiv_collection(server, category, since, until)
         except SourceError as exc:
             failed += 1
+            partials.append(f"The bioRxiv {category} collection failed ({exc}).")
             print(f"warning: bioRxiv {category} failed: {exc}", file=sys.stderr)
+            continue
+        found.extend(collected.candidates)
+        partials.extend(collected.partials)
     if failed == len(collections):
         msg = f"every bioRxiv collection failed ({failed})"
         raise SourceError(msg)
-    return found
+    return Fetched(found, partials)
 
 
-def _biorxiv_collection(server: str, category: str, since: date, until: date) -> list[Candidate]:
+def _biorxiv_collection(server: str, category: str, since: date, until: date) -> Fetched:
     """Page through one server's subject collection for the window."""
     found: list[Candidate] = []
+    partials: list[str] = []
     for page in range(MAX_PAGES):
         url = (
             f"https://api.biorxiv.org/details/{server}/"
@@ -338,13 +368,13 @@ def _biorxiv_collection(server: str, category: str, since: date, until: date) ->
         except SourceError as exc:
             if not found:
                 raise
-            _partial(f"bioRxiv {category}", page, exc, len(found))
+            partials.append(_partial(f"bioRxiv {category}", page, exc, len(found)))
             break
         found.extend(_biorxiv_candidate(item, server) for item in collection)
         if len(collection) < BIORXIV_PAGE:
             break
         time.sleep(BIORXIV_DELAY)
-    return found
+    return Fetched(found, partials)
 
 
 def _biorxiv_candidate(item: dict[str, Any], server: str) -> Candidate:
@@ -575,6 +605,9 @@ def gather(config: dict[str, Any], until: date) -> tuple[list[Candidate], list[s
     found: list[Candidate] = []
     failures: list[str] = []
     attempted = 0
+    # Counted separately from `failures`, which now also carries partial-sweep notes: a run where
+    # every source returned something incomplete has not lost a single source.
+    failed = 0
     earliest = until
     for label, fetcher, source_config in fetchers:
         if not source_config.get("enabled", False):
@@ -584,12 +617,16 @@ def gather(config: dict[str, Any], until: date) -> tuple[list[Candidate], list[s
         try:
             got = fetcher(source_config, until)
         except (SourceError, ET.ParseError, json.JSONDecodeError, KeyError) as exc:
+            failed += 1
             failures.append(f"The {label} source failed ({exc}); this digest is missing it.")
             print(f"warning: {label} failed: {exc}", file=sys.stderr)
             continue
-        print(f"{label}: {len(got)} records", file=sys.stderr)
-        found.extend(got)
-    if attempted and len(failures) == attempted:
+        print(f"{label}: {len(got.candidates)} records", file=sys.stderr)
+        found.extend(got.candidates)
+        # A source that returned something but not everything is reported too, so a shortfall
+        # never reaches the reader as a digest that looks complete.
+        failures.extend(got.partials)
+    if attempted and failed == attempted:
         msg = "every configured source failed"
         raise SourceError(msg)
     return found, failures, earliest

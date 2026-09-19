@@ -1593,8 +1593,8 @@ consequence list rather than a wish list. The ladder below is the programme thes
    as free-standing scope.
 6. **Methodology consolidation, and one rename.** `plasticity-evaluation` holds **42 requirements**,
    most of them single-use rules this phase paid for; they fold into the
-   [phase protocol](research/phase-protocol.md) so a rung designer reads twelve principles rather than
-   thirty-three rules. And the committed *byte-identity* requirement is renamed to **parsed-field
+   [phase protocol](research/phase-protocol.md) so a rung designer reads a handful of principles
+   rather than thirty-three rules. And the committed *byte-identity* requirement is renamed to **parsed-field
    identity**, which is what it actually checks — one seed per arm, every field the analysis reads.
    *(**The rename landed 2026-09-19**, pulled ahead of the consolidation; the consolidation itself stays
    here, to be done with Phase 8's needs in view rather than blind.)*

@@ -183,7 +183,10 @@ class TestPartialPaging:
             lw.date(2026, 9, 11),
             lw.date(2026, 9, 19),
         )
-        assert len(got) == 30
+        assert len(got.candidates) == 30
+        # And the shortfall is carried, not merely logged.
+        assert len(got.partials) == 1
+        assert "stopped at page 1" in got.partials[0]
 
     def test_a_first_page_failure_is_still_a_source_failure(self, monkeypatch):
         self._pages(monkeypatch, [lw.SourceError("read timed out")])
@@ -200,14 +203,15 @@ class TestPartialPaging:
             if category == "neuroscience":
                 msg = "read timed out"
                 raise lw.SourceError(msg)
-            return [_candidate("10.1101/ok")]
+            return lw.Fetched([_candidate("10.1101/ok")])
 
         monkeypatch.setattr(lw, "_biorxiv_collection", one_bad)
         got = lw.fetch_biorxiv(
             {"servers": ["biorxiv"], "categories": ["neuroscience", "systems biology"]},
             lw.date(2026, 9, 19),
         )
-        assert [item.uid for item in got] == ["10.1101/ok"]
+        assert [item.uid for item in got.candidates] == ["10.1101/ok"]
+        assert "neuroscience collection failed" in got.partials[0]
 
     def test_every_collection_failing_fails_the_source(self, monkeypatch):
         def all_bad(server, category, since, until):
@@ -220,6 +224,76 @@ class TestPartialPaging:
                 {"servers": ["biorxiv"], "categories": ["neuroscience", "systems biology"]},
                 lw.date(2026, 9, 19),
             )
+
+
+class TestPartialsReachTheReader:
+    """A shortfall that only reached stderr would leave a complete-looking digest."""
+
+    def test_openalex_treats_a_malformed_response_as_a_partial_page(self, monkeypatch):
+        # Not a transport failure: the request succeeded and the body was wrong. Losing the
+        # pages already fetched over it is the same waste as losing them to a timeout.
+        pages = iter(
+            [
+                {"results": [{"id": "https://openalex.org/W1"}], "meta": {"next_cursor": "c2"}},
+                {"error": "Plan upgrade required"},
+            ],
+        )
+        monkeypatch.setattr(lw, "_http_json", lambda url: next(pages))
+
+        got = lw.fetch_openalex({"seeds": [{"id": "W9"}]}, lw.date(2026, 9, 21))
+        assert [item.uid for item in got.candidates] == ["W1"]
+        assert "no results block" in got.partials[0]
+
+    def test_arxiv_treats_a_truncated_feed_as_a_partial_page(self, monkeypatch):
+        full = (
+            '<feed xmlns="http://www.w3.org/2005/Atom">'
+            + "".join(
+                f"<entry><id>http://arxiv.org/abs/{i}</id><title>T</title></entry>"
+                for i in range(lw.ARXIV_PAGE)
+            )
+            + "</feed>"
+        )
+        feeds = iter([full.encode(), b"<feed><entry>truncated"])
+        monkeypatch.setattr(lw, "_http_bytes", lambda url: next(feeds))
+        monkeypatch.setattr(lw.time, "sleep", lambda _seconds: None)
+
+        got = lw.fetch_arxiv({"categories": ["q-bio.NC"]}, lw.date(2026, 9, 21))
+        assert len(got.candidates) == lw.ARXIV_PAGE
+        assert got.partials
+
+    def test_a_partial_sweep_is_declared_in_the_digest(self, monkeypatch):
+        monkeypatch.setattr(
+            lw,
+            "fetch_openalex",
+            lambda config, until: lw.Fetched([_candidate("10.1/a")], ["The arXiv sweep stopped."]),
+        )
+        config = {"openalex": {"enabled": True, "lookback_days": 21}}
+
+        found, failures, _earliest = lw.gather(config, lw.date(2026, 9, 21))
+        assert [item.uid for item in found] == ["10.1/a"]
+        assert failures == ["The arXiv sweep stopped."]
+        assert "**Partial sweep.**" in lw.render(
+            "body",
+            [],
+            {},
+            failures,
+            (lw.date(2026, 8, 31), lw.date(2026, 9, 21)),
+        )
+
+    def test_partials_alone_are_not_a_total_failure(self, monkeypatch):
+        # `failures` now carries partial notes too, so counting it would call a run where every
+        # source returned something incomplete a run where every source died.
+        monkeypatch.setattr(
+            lw,
+            "fetch_openalex",
+            lambda config, until: lw.Fetched([_candidate("10.1/a")], ["stopped early"]),
+        )
+        found, failures, _earliest = lw.gather(
+            {"openalex": {"enabled": True, "lookback_days": 21}},
+            lw.date(2026, 9, 21),
+        )
+        assert found
+        assert failures == ["stopped early"]
 
 
 class TestGather:
@@ -237,7 +311,11 @@ class TestGather:
             raise lw.SourceError(msg)
 
         monkeypatch.setattr(lw, "fetch_openalex", boom)
-        monkeypatch.setattr(lw, "fetch_arxiv", lambda config, until: [_candidate("10.1/a")])
+        monkeypatch.setattr(
+            lw,
+            "fetch_arxiv",
+            lambda config, until: lw.Fetched([_candidate("10.1/a")]),
+        )
 
         found, failures, earliest = lw.gather(self.CONFIG, lw.date(2026, 9, 21))
         assert [item.uid for item in found] == ["10.1/a"]
@@ -261,10 +339,10 @@ class TestGather:
         monkeypatch.setattr(
             lw,
             "fetch_biorxiv",
-            lambda config, until: called.append("biorxiv") or [],
+            lambda config, until: called.append("biorxiv") or lw.Fetched([]),
         )
-        monkeypatch.setattr(lw, "fetch_openalex", lambda config, until: [])
-        monkeypatch.setattr(lw, "fetch_arxiv", lambda config, until: [])
+        monkeypatch.setattr(lw, "fetch_openalex", lambda config, until: lw.Fetched([]))
+        monkeypatch.setattr(lw, "fetch_arxiv", lambda config, until: lw.Fetched([]))
         lw.gather(self.CONFIG, lw.date(2026, 9, 21))
         assert called == []
 

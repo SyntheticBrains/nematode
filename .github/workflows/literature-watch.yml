@@ -57,15 +57,25 @@ jobs:
             | tr ' ' '\n' | sed '/^$/d' | sort -u > seen.txt || true
           echo "carrying $(wc -l < seen.txt) previously reported ids"
 
+      # Dispatch inputs reach the shell as quoted environment variables, never as `${{ }}`
+      # interpolated into the command: `until` is free text, and interpolation would run it.
       - name: Build the digest
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENALEX_MAILTO: ${{ secrets.OPENALEX_MAILTO }}
+          UNTIL: ${{ inputs.until }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          uv run --no-project --with anthropic python scripts/literature_watch.py \
-            --seen-file seen.txt \
-            ${{ inputs.until && format('--until {0}', inputs.until) || '' }} \
-            ${{ inputs.dry_run && '--dry-run' || '--out digest.md' }}
+          args=(--seen-file seen.txt)
+          if [ -n "$UNTIL" ]; then
+            args+=(--until "$UNTIL")
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          else
+            args+=(--out digest.md)
+          fi
+          uv run --no-project --with anthropic python scripts/literature_watch.py "${args[@]}"
 
       - name: Open the issue
         if: ${{ !inputs.dry_run }}
