@@ -13,7 +13,8 @@
 
 ## 2. The reused cells
 
-- [ ] 2.1 **Identity check before any reuse**: at seed 1, re-run the four floors, L.1's two pooled
+- [x] 2.1 *(**passed 2026-09-19**, 8/8 identical on all nine fields; see 4.2 and the launch record.)*
+  **Identity check before any reuse**: at seed 1, re-run the four floors, L.1's two pooled
   learning arms and the two wide 0.0001 arms under the current path (`--no-detailed-export --no-file-log`) and compare to their committed logs on every field `read_log` parses. Identical: the
   cells are reused and the record says on what evidence. Any field differing: that arm's cell is
   re-run for seeds 1–96 and nothing of it is reused.
@@ -59,7 +60,8 @@
   **Pilot on seeds 101–104**, eight runs, under the output controls: both pooled 0.0001 arms
   learn above L.1's pilot pooled floors and differ from the 0.001 pooled pilot arms; the wild-type arm
   is compared to L.0's rate-check run on the same seeds. No reading at four pairs.
-- [ ] 4.2 The identity check (2.1) passes or the affected cell is re-run — settled before any
+- [x] 4.2 *(**passed 2026-09-19**: 8/8; every reused arm identical to its committed log on all nine
+  parsed fields at seed 1, so nothing is re-run. See the launch record.)* The identity check (2.1) passes or the affected cell is re-run — settled before any
   registered seed.
 - [x] 4.3 `launch.md` before anything runs: the 2×2 at 0.0001 with its three sources, the readings with
   the minimum, the sensitivity table, the identity evidence, what the reading conditions and what it

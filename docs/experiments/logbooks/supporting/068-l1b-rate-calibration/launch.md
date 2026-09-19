@@ -151,6 +151,34 @@ width the null's gain over floor matched the wild type's (+12.68 against +12.66)
 found the pooled null *ahead* on `auc_success`. Whether that holds at 96 seeds is what the campaign
 measures.
 
+## The identity check, 2026-09-19 — pass
+
+8/8 runs succeeded in 2227 s. Each reused arm's seed-1 run, re-run under the current path
+(`--no-detailed-export --no-file-log` on today's tree), against its committed log on **every one of
+the nine fields `read_log` parses** — `success`, `foods`, `episodes`, `converged`, `onset`,
+`evasion_rate`, `temp_comfort`, `curve`, `peak_action_density`:
+
+| reused arm | committed in | plateau-tail foods | result |
+|---|---|---|---|
+| `wt_pooled_frozen` | `campaigns/readout-width` (L.1) | 11.480 | identical, 9/9 fields |
+| `rn_pooled_frozen` | `campaigns/readout-width` | 6.427 | identical, 9/9 |
+| `wt_wide_frozen` | `campaigns/readout-width` | 11.480 | identical, 9/9 |
+| `rn_wide_frozen` | `campaigns/readout-width` | 6.417 | identical, 9/9 |
+| `wt_pooled` @ 0.001 | `campaigns/readout-width` | 19.280 | identical, 9/9 |
+| `rn_pooled` @ 0.001 | `campaigns/readout-width` | 19.604 | identical, 9/9 |
+| `wt_wide` @ 0.0001 | `campaigns/feature-ablations` (L.4) | 19.607 | identical, 9/9 |
+| `rn_wide` @ 0.0001 | `campaigns/feature-ablations` (L.4) | 19.421 | identical, 9/9 |
+
+**No field differs on any arm, so every reused cell is licensed and nothing is re-run.** The
+`peak_action_density` gap the pilot met does not arise here: all eight committed runs still hold their
+exports and their `session/data/tracking_actions.csv`, checked before the comparison rather than
+discovered in it. The two floors at seed 1 agreeing to three decimals across widths is L.1's committed
+property — the widths are the same policy at initialisation and differ by ~1e-8 — and is not new
+evidence.
+
+Clause 2 is settled: L.1's four floors and two pooled learning arms, and L.4's two wide 0.0001 arms,
+are the panel's reused cells on this evidence.
+
 ## What the reading conditions, and what it does not decide
 
 L.1's verdict stands as read at 0.001. Each reading adds a dated condition beside it in the tracker,
