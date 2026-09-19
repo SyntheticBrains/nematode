@@ -1144,11 +1144,14 @@ carrying the effect.
 - **THEN** each SHALL be read on its own, and a difference between them SHALL be reported as the
   finding rather than averaged into one reading
 
-### Requirement: A committed baseline is reused only under a byte-identity check
+### Requirement: A committed baseline is reused only under a parsed-field identity check
 
 Where a campaign reuses committed runs from an earlier campaign as one cell of a contrast, the record
 SHALL establish that a run produced now reproduces a committed run on every field the analysis reads,
-and SHALL re-run the baseline in full where any field differs.
+and SHALL re-run the baseline in full where any field differs. *(Renamed 2026-09-19 from "a
+byte-identity check": the check compares every **parsed field**, at one seed per reused arm, which is
+not byte equality of logs, exports, weights or configuration. The obligation is unchanged; the name now
+says what it verifies.)*
 
 #### Scenario: Reuse is licensed by a re-run, not by argument
 
@@ -1160,7 +1163,7 @@ and SHALL re-run the baseline in full where any field differs.
 
 #### Scenario: There is no partial reuse
 
-- **GIVEN** a byte-identity check in which any field differs for any reused arm
+- **GIVEN** a parsed-field identity check in which any field differs for any reused arm
 - **WHEN** the campaign is planned
 - **THEN** the whole baseline SHALL be re-run under the new path
 - **AND** no committed run SHALL be mixed with re-run ones in the same contrast

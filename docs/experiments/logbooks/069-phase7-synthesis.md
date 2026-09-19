@@ -199,6 +199,13 @@ git. Stated plainly:
 compared against L.0's rate-check run because that run's export had been deleted — recorded at the
 time as uncompared rather than counted as matching.
 
+*(Added 2026-09-19, after this record's first draft.)* **The surviving raw artefacts are now retained
+outside the repository.** The maintainer has archived the campaign logs and the remaining exports
+privately; they are **not public artefacts** and form no part of this repository's reproducibility
+surface. They exist so a re-derivation from raw stays possible for the campaigns whose exports
+survived. What is listed as *gone* above is unchanged: the pre-readout-width exports and V.3's
+tracked-experiment records were already deleted before the backup was taken.
+
 ## What Phase 8 opens on
 
 In dependency order, each item naming what it inherits:
@@ -219,7 +226,8 @@ In dependency order, each item naming what it inherits:
 6. **Methodology consolidation** — 42 requirements in `plasticity-evaluation`, most of them
    single-use rules from this phase, folded into the phase protocol so a rung designer reads twelve
    principles rather than 33 rules; and the byte-identity requirement renamed to parsed-field
-   identity, which is what it checks.
+   identity, which is what it checks. *(The rename landed early, 2026-09-19, ahead of the
+   consolidation it was listed beside.)*
 7. **The publication decision**, deferred to after this close by S.1's cancellation. The package is
    real: a replicated wiring advantage under gradient descent, a rule-programme negative with a
    diagnosed cause, and an operating-point finding about legibility. A referee reads Dhiman, so item 1

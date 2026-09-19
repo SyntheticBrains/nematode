@@ -1596,6 +1596,8 @@ consequence list rather than a wish list. The ladder below is the programme thes
    [phase protocol](research/phase-protocol.md) so a rung designer reads twelve principles rather than
    thirty-three rules. And the committed *byte-identity* requirement is renamed to **parsed-field
    identity**, which is what it actually checks — one seed per arm, every field the analysis reads.
+   *(**The rename landed 2026-09-19**, pulled ahead of the consolidation; the consolidation itself stays
+   here, to be done with Phase 8's needs in view rather than blind.)*
 7. **The publication decision**, deferred to after the close when S.1 was cancelled. The package is
    real: a replicated wiring advantage under gradient descent, a rule-programme negative with a
    diagnosed cause, and an operating-point finding about legibility. A referee reads Dhiman, so item 1
