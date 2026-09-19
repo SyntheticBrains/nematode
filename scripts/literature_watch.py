@@ -48,7 +48,10 @@ import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from anthropic import Anthropic
 
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG = REPO / "docs" / "research" / "literature-watch" / "seeds.toml"
@@ -449,8 +452,12 @@ not add a preamble, a conclusion, or a summary section — entries only.
 --- END BRIEF ---"""
 
 
-def _client() -> Any:  # noqa: ANN401 — the SDK client type is not imported at module scope
-    """Build an Anthropic client, importing the SDK only when a run actually calls the API."""
+def _client() -> Anthropic:
+    """Build an Anthropic client, importing the SDK only when a run actually calls the API.
+
+    The import is deferred so that `--dry-run` and the unit tests work without the SDK installed;
+    the annotation is resolved only by the type checker, which does have it.
+    """
     import anthropic
 
     return anthropic.Anthropic()

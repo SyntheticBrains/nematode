@@ -4,8 +4,9 @@ Hand-maintained. This file is the entire definition of "relevant" for the weekly
 scoring model sees this text and nothing else about the project. Keep it to roughly this length:
 it is read once per batch, and detail that does not change a score is detail that costs money.
 
-**Review it at every phase-plan review.** A brief describing a phase that closed six months ago
-scores against questions nobody is asking any more, and the digest will look fine while doing it.
+**Review it at each phase close** — principle 13 of the [phase protocol](../phase-protocol.md).
+A brief describing a phase that closed six months ago scores against questions nobody is asking any
+more, and the digest will look fine while doing it.
 
 Last reviewed: 2026-09-20 (Phase 8 opening).
 

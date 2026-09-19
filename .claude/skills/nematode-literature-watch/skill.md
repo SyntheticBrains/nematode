@@ -85,7 +85,8 @@ ______________________________________________________________________
 ## Workflow B — re-aim the watch
 
 The brief and the seed list are the only things deciding what the watch finds, and neither can
-notice it has gone stale. This is the maintenance pass; it belongs with each phase-plan review.
+notice it has gone stale. This is the maintenance pass, and it is principle 13 of the
+[phase protocol](../../../docs/research/phase-protocol.md) — run it at each phase close.
 
 **1. Read what the project is actually asking now.**
 

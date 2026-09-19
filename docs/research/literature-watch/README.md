@@ -51,9 +51,9 @@ address there moves OpenAlex requests into a faster pool, and it is kept in a se
 
 Two things, both judgement calls, neither of which the machinery can do for itself.
 
-**The brief** ([`context.md`](context.md)) defines relevance. Review it at every phase-plan review:
-a brief describing questions that closed six months ago will keep producing a confident-looking
-digest about the wrong things.
+**The brief** ([`context.md`](context.md)) defines relevance. Review it at each phase close —
+principle 13 of the [phase protocol](../phase-protocol.md): a brief describing questions that closed
+six months ago will keep producing a confident-looking digest about the wrong things.
 
 **The seed list** ([`seeds.toml`](seeds.toml)) defines the high-precision channel. Add a paper when
 it becomes one this work builds on. A seed set that stops matching the frontier is how a watch like
