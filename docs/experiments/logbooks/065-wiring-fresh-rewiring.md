@@ -166,6 +166,18 @@ failed on both cells — **does not apply**: it replicated on both. Task 5.5 app
 above and in the roadmap: the caveat closes, block V's positive is independent in rewiring, and the
 record stays explicit that rewiring and initialisation still vary together.
 
+*(Promoted 2026-09-19 at the Phase 7 close, [Logbook 069](069-phase7-synthesis.md): this is no longer
+an open caveat but a **standing condition**.)* Two things changed its weight. After
+[L.1b](068-l1b-rate-calibration.md) found L.1's interaction reversing with the learning rate, block V
+is the phase's strongest citable result, so the confound sits under the headline rather than beside
+it. And [Dhiman 2026](https://arxiv.org/abs/2604.04033) reports the fly connectome's apparent
+advantage **dissolving under shared initialisation plus a degree-preserving null** — the same control,
+on the same kind of claim, in another organism. So the condition is now carried **in the same sentence
+as the claim** at every citation site, the effect size is not to be quoted without it, and the control
+is **Phase 8's first act**. It needs its own design decision first: "the same initialisation" has no
+single meaning once the mask changes, since the init scale is `1/sqrt(chemical in-degree)` and a
+degree-preserving rewiring preserves the degree sequence but not which neuron holds which degree.
+
 ## Artefacts
 
 - [`supporting/065-wiring-fresh-rewiring/launch.md`](supporting/065-wiring-fresh-rewiring/launch.md) — the protocol, both instrument checks, the pilot
