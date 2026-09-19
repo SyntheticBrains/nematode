@@ -132,7 +132,16 @@ down.
 ### Closing
 
 12. **Re-read before shipping.** State which results are about the question and which are about the
-    instrument, in one record, before the shipment decision. *Phase 7's I.4.*
+    instrument, in one record, before the shipment decision. *Phase 7's I.4.* *(Extended 2026-09-19 at
+    the Phase 7 close.)* **And when the phase closes, assign every criterion one status from a fixed
+    vocabulary** — met, unmet-with-reason, deferred-with-destination, superseded-by-result,
+    unreachable-with-reason — leaving none unmarked. **Deferred and superseded are not
+    interchangeable**: a deferred criterion is still a question with a destination, a superseded one is
+    not a question any more, and *unreachable* is the honest word where nothing in the phase could have
+    made the criterion attemptable. The softer word for the harder case is how a close reads as tidier
+    than it is. *Phase 7's own synthesis drafted the learnable-gap-junction criterion as superseded;
+    review found one of its two recorded destinations untouched, and the status became deferred,
+    [Logbook 069](../experiments/logbooks/069-phase7-synthesis.md).*
 
 ## What this is not
 
