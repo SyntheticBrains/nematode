@@ -6,7 +6,7 @@ Start with the [project README](../README.md) — it states the research questio
 
 | Document | What it is |
 |---|---|
-| [roadmap.md](roadmap.md) | The research programme: vision, phase history with exit criteria and decision gates, research questions, the Phase 7 plan, relationship to OpenWorm and other projects |
+| [roadmap.md](roadmap.md) | The research programme: vision, phase history with exit criteria and decision gates, research questions, the Phase 8 plan, relationship to OpenWorm and other projects |
 | [experiments/README.md](experiments/README.md) | Index of every numbered experiment logbook — the evidence base behind each claim. Phase syntheses: [021](experiments/logbooks/021-phase5-synthesis.md) (Phase 5), [037](experiments/logbooks/037-phase6a-synthesis.md) (Phase 6a) |
 | [nematode_biology.md](nematode_biology.md) | *C. elegans* sensory systems, navigation strategies, predators, learning, social behaviour and evolution, with references — the biology each simulation channel is modelled on |
 | [research/quantum-architectures.md](research/quantum-architectures.md) | Specifications and the strategic assessment from the Phase 2 quantum-architecture campaign (closed) |

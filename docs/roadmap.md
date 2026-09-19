@@ -2,9 +2,9 @@
 
 **Vision**: Determine the most efficient brain architecture for nematode-like embodied tasks, using the *Caenorhabditis elegans* connectome as the focal comparison point against unconstrained and evolved alternatives. The platform brings learning, evolution, and a curated subset of biologically-faithful sensing into one closed sensory-motor loop, so that architecture comparisons answer scientific questions rather than rank benchmarks.
 
-**Version**: 4.2
+**Version**: 4.3
 
-**Last Updated**: 2026-08-27
+**Last Updated**: 2026-09-20
 
 **Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
@@ -32,6 +32,7 @@ ______________________________________________________________________
     - [Phase 5: Evolution & Adaptation](#phase-5-evolution--adaptation)
     - [Phase 6: Connectome Substrate & Architecture Comparison](#phase-6-connectome-substrate--architecture-comparison)
     - [Phase 7: Deepen — Plasticity & Cross-Species Transfer](#phase-7-deepen--plasticity--cross-species-transfer)
+    - [Phase 8: Ground, then Embody — Measured Substrate & Body](#phase-8-ground-then-embody--measured-substrate--body)
 05. [Architecture-Comparison Protocol](#architecture-comparison-protocol)
 06. [Complexity Dashboard](#complexity-dashboard)
 07. [Biological Fidelity](#biological-fidelity)
@@ -61,6 +62,7 @@ ______________________________________________________________________
 | **5** | — | Evolution & Adaptation | ✅ COMPLETE (2026-05-23) | M3 Lamarckian inheritance is the headline-positive result. M4 Baldwin / M5 co-evolution / M6.x transgenerational memory closed with substrate-grounded STOP verdicts (architectural diagnoses, not implementation failures) |
 | **6** | — | Connectome substrate + architecture comparison | 🟡 **6a COMPLETE / 6b deferred unscheduled** *(2026-09-19: `phase6b-tracking` closed off with every item marked deferred-with-destination; the L3 exit criterion stays unmet)* (delivered in two shipments — see § Phase 6a/6b split) | First closed-loop learning on the real *C. elegans* connectome with a pluggable architecture interface, and a full architecture ranking across six families on three behaviours (klinotaxis, thermotaxis, predator evasion). **6a — COMPLETE, Gate 3 GO** ([Logbook 037](experiments/logbooks/037-phase6a-synthesis.md); T1–T7 + connectome-structure controls + validation): the platform + the ranking (Logbook 029 — MLP dominant, wild-type connectome 5th of 6 under PPO weight search, a *degree-statistics* result per the 034 rewired-null) + real-worm behavioural validation (035 chemotaxis both strategies; 036 thermotaxis partial). **6b** (T8 NEAT topology search): deferred completion, gated on GPU + env-vectorisation. Phase 6 is marked ✅ COMPLETE only when the 6b synthesis lands |
 | **7** | — | Deepen — plasticity + cross-species transfer | ✅ **COMPLETE (SPLIT, 2026-09-19)** — see [Logbook 069](experiments/logbooks/069-phase7-synthesis.md) and § Phase 7's resolved work. **7a shipped, 7b deferred to the phase after 7 (D14, 2026-09-15)**; the D10 primary is unmet and was unmeetable in the closing scope, since every learner that reaches competence leaves `w_chem` frozen (the resolved history is in § Phase 7 progress record) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules, resolved as the 2×2 plastic wild-type vs plastic rewired-null (spiking-STDP is MAY). Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
+| **8** | — | Ground, then embody — measured substrate + body | 🔵 **PLANNED (v4.3, 2026-09-20)** — pre-start review ratified (D15–D20); `phase8-tracking` authored at start; pre-structured as two shipments (D20) | **8a**: the init-vs-rewiring control on block V (D15), the operating-point robustness surface (D16), measured synaptic signs and strengths on the Cook edges (Creamer–Leifer–Pillow; D17), the dynamics rung with plastic gap junctions. **8b**: a step–time calibration, reversal and proprioception, the anatomical motor-to-muscle readout into a 2D body (D18/D19), patchy lawns + internal state, body-level validation, the six-family ranking re-run through the body. Cross-species, multi-agent, evolution, 3D and whole-organism fidelity are out of scope — see § Phase 8 |
 
 ______________________________________________________________________
 
@@ -95,7 +97,7 @@ ______________________________________________________________________
 
 ## Current State
 
-Phases 0-5 and Phase 6a are complete (Phase 6b — NEAT topology search — is pending). The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6.
+Phases 0–5, Phase 6a and Phase 7 are complete (Phase 6b — NEAT topology search — is deferred unscheduled; Phase 8 is planned, v4.3). The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6; the persistent-trace substrate, the three-factor and e-prop rule seams, the per-neuron motor readout, the degree-preserving rewiring control and the parallel campaign runner are the work of Phase 7.
 
 ### Phase 0 — Foundation & Baselines
 
@@ -152,6 +154,14 @@ Three Phase 5 themes — Baldwin effect, co-evolution arms races, transgeneratio
 - **M6 / M6.9+ / M6.13 Transgenerational Memory** — STOP across three pilot rounds. The `TransgenerationalInheritance` framework + `TransgenerationalMemory` dataclass + LSTMPPO `tei_prior` actor-logit hook ship as functional infrastructure, but no K value or substrate variant produced a positive memory effect. Diagnosis: **the bias-network logit-prior is the wrong abstraction for the wet-lab single-circuit excitability shift** documented in Kaletsky 2025 and the 2025 mammalian-TEI literature. This is a *substrate* finding — different from a hyperparameter or training failure — and points at Phase 6's connectome-substrate work as the natural next step. Pure-TEI K=0 was substrate-inert (cross-arm delta −49pp); substrate-on-top-of-Lamarckian at K=1000 showed zero acceleration; at K=200 showed −9.33pp active interference under fair-F0. See [Logbook 018](experiments/logbooks/018-transgenerational-memory.md), [Logbook 019](experiments/logbooks/019-transgenerational-memory-redesign.md), and [Logbook 020](experiments/logbooks/020-tei-prior-on-lamarckian.md).
 
 Two reusable methodology contributions ship unscooped: the **lag-matrix cross-pairing instrument** and the **cell-grid fair-test methodology**, both from [Logbook 017](experiments/logbooks/017-coevolution-arms-race.md). Independent corroboration of the M5 diagnosis arrived from outside the project during Phase 5 close-out.
+
+### Phase 6a — Connectome Substrate & Architecture Comparison
+
+Phase 6a closed 2026-07-07 with a Gate 3 GO ([Logbook 037](experiments/logbooks/037-phase6a-synthesis.md)): the Cook 2019 connectome imported and validated (L0), the plugin registry (L1), and the six-family ranking on the continuous substrate — `MLP 89.0 ≫ {CfC 75.8 ~ Transformer 74.0} > LSTM 60.1 > connectome 52.2 ≫ GA 15.0` ([Logbook 029](experiments/logbooks/029-continuous-architecture-ranking.md)) — with the degree-preserving rewired null showing that standing to be a degree-statistics property ([Logbook 034](experiments/logbooks/034-connectome-structure-controls.md)), and real-worm validation of both chemotaxis strategies ([Logbook 035](experiments/logbooks/035-realworm-chemotaxis-validation.md)). Phase 6b (NEAT) is deferred unscheduled, so the L3 criterion stays unmet.
+
+### Phase 7 — Deepen: Plasticity
+
+Phase 7 closed 2026-09-19 as **SPLIT** ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)): the registered 2×2 (rule × wiring) could not be answered because no biologically plausible rule that *writes* the connectome learns the substrate to any benefit — a diagnosed negative (the three-factor rule failed its positive control; node perturbation is near its theoretical worst case at 302 units; e-prop reaches competence only with the chemical matrix frozen, [Logbook 063](experiments/logbooks/063-l4-eprop.md)). What shipped instead is three citable results: **under PPO the wild-type wiring reaches competence 23–55% sooner than its degree-preserving rewired null** on two cells and fresh rewirings (block V, [057](experiments/logbooks/057-wiring-premise-contrast.md)/[058](experiments/logbooks/058-wiring-premise-difficulty.md)/[065](experiments/logbooks/065-wiring-fresh-rewiring.md)) — carrying the standing condition that rewiring and initialisation vary together; the wiring is **not** legible as fixed features through a four-class readout, rate-robustly ([064](experiments/logbooks/064-l4-frozen-features.md)); and widening the readout to one weight per motor neuron makes it legible **at one learning rate only** ([066](experiments/logbooks/066-l4-readout-width.md)/[068](experiments/logbooks/068-l1b-rate-calibration.md)). 7b (cross-species) was deferred (D14). The phase paid for the twelve-principle [phase protocol](research/phase-protocol.md).
 
 ### Known Gaps Carried into Phase 6+
 
@@ -1245,6 +1255,157 @@ Verified against the 2026-08 literature scan; "nearest precedent" is the closest
 
 ______________________________________________________________________
 
+### Phase 8: Ground, then Embody — Measured Substrate & Body
+
+**Goal**: Make the connectome substrate real enough that the wiring question can be asked at the level the animal answers it — measured synaptic weights on the Cook edges, intrinsic and gap-junction dynamics, the anatomical motor-to-muscle map, and a two-dimensional body — and re-ask the same registered question at each rung: *does the wild-type wiring start to matter once this is real?* Every rung runs against the degree-preserving rewired null with the MLP as yardstick, under the two learners Phase 7 showed work on this substrate (PPO, and the small local readout on frozen features), and each new component gets its own positive control before any connectome arm runs.
+
+*(Added 2026-09-20 from the Phase 8 pre-start review, which ratified decisions **D15–D20** below. The review's evidence trail — the literature scan and the repository checks behind each decision — is a gitignored working document; what is load-bearing is recorded here.)*
+
+**Scope decision, stated first.** The review was asked whether Phase 8 should aim at biological fidelity "as full as possible" — a whole-organism *C. elegans*. It should not, and the reason is this roadmap's own v4 decision (§ Scoping Changes from v3: "simulating all *C. elegans* behaviours is the OpenWorm-15-year-trap"), which the evidence since then strengthens: BAAIWorm, the best-resourced whole-organism worm model, covers 136 neurons and one behaviour on a CUDA cluster (Zhao et al., *Nat. Comput. Sci.* 2024); single-neuron biophysics exists for six of 118 neuron classes (Nicoletti et al., *PLOS One* 2024); no group has a validated whole-organism model; and the 2026 fly demonstrations (Eon Systems, 2026-03-07; Jin et al., arXiv:2602.17997) show that running a connectome through a body *without learning or controls* is now an announcement rather than a result. **A landmark is available, and it is a narrower one**: the first *C. elegans* model in which a learner operates on the real wiring *with measured synaptic weights*, through the real motor-to-muscle map, into a body, against a degree-preserving null under an initialisation control, with the wiring effect's operating-point sensitivity reported and kinematics validated on lab data. Every clause of that sentence is missing from every other worm model and every clause is a rung this project can build. The framing is therefore **ground, then embody** — fidelity chosen by what makes the wiring question answerable, not fidelity for its own sake — and whole-organism fidelity (302 biophysical neurons, muscle electrophysiology, development, the life cycle, a 3D habitat) is stated as *not attempted*, which is what keeps the achievable claim credible.
+
+**Not in Phase 8** (each kept in § Future Directions with its reason): cross-species work (7b's *P. pacificus* comparison, the dauer pathfinder, weight transplant — not interpretable until a readout that does not carry the learning exists, which is this phase's C.1); the male–hermaphrodite wiring contrast (data confirmed on disk, § Future Directions); multi-agent, pheromones, red-queen and ecological co-evolution; evolution in every form (6b NEAT stays deferred unscheduled — a body makes the env-vectorisation decision harder, not easier — Lamarckian and transgenerational work stays closed); structural plasticity across development; the neuropeptide layer as a rule substrate; spiking-STDP and neuromorphic deployment; 3D environments, the Sibernetic body and ion-channel neurons; and the uniform substrate-writing rule programme, closed with a diagnosed cause in [Logbook 063](experiments/logbooks/063-l4-eprop.md). The plasticity programme is **re-aimed, not re-opened**: three narrower rule questions survive, each behind a substrate rung — placed plasticity (ladder rung 6, MAY) once measured weights exist to place it on; plastic gap junctions under PPO (D4's surviving destination) inside the dynamics rung; and node-level adaptation (L.2) as the biologically faithful mechanism for what the worm literature actually documents (context-dependent olfactory plasticity through a lateralised *sensory* pathway, Pandey et al. *PNAS* 2026; starvation re-encoding thermosensory neurons, bioRxiv 2025.07.17.665269; the AFD set-point trap already recorded under Phase 7's validation targets; and the one well-characterised synaptic learning mechanism in the olfactory circuit weakening *gap junctions* — NMDAR-modulated RMG/AIB coupling, *Nat. Commun.* 2020).
+
+**What the 2026-09-20 literature scan changed.** Five items move the plan; the rest constrain it.
+
+- **A measured weight prior exists for this substrate.** Creamer, Leifer & Pillow (bioRxiv 2024.09.22.614271; latest version PubMed-indexed 2025-09-26, **still a preprint**) fit a linear dynamical system whose weights are non-zero only on connectome edges to optogenetic whole-brain recordings from 110 animals over 156 head neurons; it captures single-neuron perturbation responses at 92% of the data's own reproducibility, a fully-connected model does no better, a *shuffled* connectome abolishes the prediction, and **the fitted signs and magnitudes are released as a supplementary resource** with MIT-licensed fitting code. This roadmap cited the paper only as an argument that reweighting the fixed topology is the right lever (Phase 7 § evidence base). Every Phase 6–7 wiring contrast drew chemical weights — magnitudes and signs — at random; the atlas-sign arm ([Logbook 044](experiments/logbooks/044-l4-atlas-signs.md)) grounded 5.8% of synapses as inhibitory. A rung that replaces the random draw with measured signs and strengths was never on the ladder and is the highest-fidelity-per-effort item available (B.1). The Randi et al. 2023 signal-propagation atlas (*Nature* 623:406 — sign, strength and direction for 23,433 head pairs) is the raw measurement behind it. Caveats carried with the rung: preprint status (it never stands alone, as for the dopamine-forgetting preprint); head-only coverage, which grounds the sensory-to-command-interneuron path and the whole klinotaxis circuit but leaves the command-to-motor and motor layers random; a linear fit at calcium-imaging timescale whose units reach the tanh rate model only through a scale that is itself a pin; and Currier et al. 2025 on infrequent strong synapses.
+- **An independent negative on this wiring as a reservoir, two weeks old.** Churchland, de Palma Aristides, Garcia-Ojalvo, Ritz, Anderson & Soriano (arXiv:2609.07355, 2026-09-07): *C. elegans* as an echo-state reservoir does **not** outperform shuffle controls and shows a performance–robustness trade-off — higher baseline performance with greater sensitivity to spectral radius, input scaling, leak and bias. That is [Logbook 068](experiments/logbooks/068-l1b-rate-calibration.md)'s finding — whether the wiring shows depends on the learner's operating point — reached on generic tasks by another group. Consequence: the calibration rung (A.2) is run and reported as a **sensitivity surface**, not a new pin, and it is publication-critical rather than housekeeping, because any reservoir-style claim from this project will be read against that paper. Guragain, Kakalis & Godino-Llorente (arXiv:2606.09902, June 2026) point the other way on weights — biological weight values beat random initialisation on the same topology in connectome reservoirs, weak evidence but the direction B.1 tests.
+- **A candidate mechanism for block V, with a training-free test.** Therianos (arXiv:2606.17745, June 2026), a frozen rate operator with synapse counts as weights on the complete larval fly connectome: degree and weight statistics govern the gross dynamical signature, while *exact* wiring governs **input routing** (activity confined to a fifth of the core against two thirds under degree-and-weight-matched rewiring) and which neurons drive the dominant modes. V.2 scored four graph properties and none predicted learning time; it did not try routing confinement or mode drivers. A.3 registers them as predictors on the rewirings block V already generated.
+- **Dhiman 2026, re-read for its method.** The degree-preserving null is built by directed double-edge swaps preserving in- and out-degree with self-loops held fixed; the shared initialisation is "a shared random seed so that parameter initialization is aligned across graph types as closely as possible" — not further specified; three optimisation seeds, five rewirings. The critique is right in kind and thin in evidence. A.1 answers it with two *stated* definitions of shared initialisation at n ≥ 16 paired seeds — the stronger form of the same control.
+- **A validation target for the dynamics rung.** Morrison & Young (*PLOS Comput. Biol.*, Dec 2025): fifteen premotor neurons with gap-junction weights from the connectome and synaptic weights regressed on calcium imaging reproduce forward/reverse switching and dwell-time statistics — "gap junctions synchronise, synaptic dynamics switch". Registered for B.2 as a *behavioural* target (forward and reverse bout durations), which requires reversals to exist in the environment (C.0).
+- **Constraints.** The fly "connectome through a body" space is crowded (Eon; Jin et al.), and for the worm Chung & Kim (bioRxiv 2025.07.21.665845; *Sci. Rep.* 2026) already drive a 2D rod-chain body from connectome weights optimised proportionally to synapse counts, while Kim, Florman, Santos, Alkema & Shlizerman (arXiv:2504.18073) couple connectome, dynamics, muscle, force and proprioception — **no worm work combines a body with closed-loop learning and a wiring control**, which is this phase's first-in-field cell. Wang-Chen & Ramdya's review of neuromechanical models (arXiv:2601.08056, 2026) names actuator gains left as free parameters as the field's standing confound (D18). Al-Asmar & Pérez-Escudero (*Proc. R. Soc. B* 293:20251924, Feb 2026) review foraging from the wild (rotting fruit and compost, 3D, patchy, boom-and-bust) to the lab (2D agar) and find the two bodies of work *not yet connected even experimentally* — so a computational natural habitat has nothing to validate against, and the environment fidelity that pays is what lab assays measure: patchy lawns with edges and depletion, food quality, and the roaming/dwelling states serotonin and PDF gate (D.1). Witvliet et al. 2021's 40–50% between-individual connection variability is why a wild-type-versus-wild-type control is a MAY: the repository already vendors Witvliet dataset 8 beside Cook 2019.
+
+**Repository facts the review established** (each closes a "not checked" note elsewhere in this document): the vendored Cook 2019 workbook holds the `male chemical` and `male gap jn` sheets **and** the body-wall muscle columns (`dBWML*`, `vm*`) that `connectome/loader.py` currently drops — so the motor-neuron-to-muscle matrix a muscle readout needs is already on disk; the continuous environment has **no reversal** (forward speed is clamped to `[0, max_step_mm]`) and **no proprioceptive channel**, so today the VA/DA and VB/DB motor classes pooled into the readout carry no distinct meaning and escape is turning without reversing; and the per-step cap is **one body length**, which at the validated 0.2 mm/s crawl makes a full-speed step at least 5 s of worm time against a ~1.6 s undulation period — no model-step-to-biological-time calibration exists, and every body estimate depends on one (C.0).
+
+**Aspirational timeline**: **≈ 19–27 active-work weeks** against Phase 7's planned 7–11, at the observed 2–3× calendar multiplier — block A ≈ 3–4, block B ≈ 6–8, block C ≈ 8–12, block D ≈ 2–3 (coupled with B.3). That size is why the phase is **pre-structured as two shipments** (D20) rather than holding a split in reserve: **8a = A + B.1 + B.2** (a citable package on its own — the init control, the robustness surface, measured weights, dynamics) and **8b = C + D + B.3** (the embodied package). Split by success, as 6a/6b and 7a/7b were.
+
+**How to orient**: the living sub-task checklist will live in `openspec/changes/phase8-tracking/tasks.md`, authored when Phase 8 starts (the house pattern: `phase5-tracking`, `phase6-tracking`, `phase7-tracking`). This roadmap section remains the authoritative plan; D-decision amendments are dated in both places. The [phase protocol](research/phase-protocol.md)'s twelve principles apply to every rung, and A.4 folds Phase 7's single-use rules into it before the first Phase 8 registration.
+
+#### Phase 8 shipment tracker
+
+| Block | Scope | Shipment | Class | Status |
+|---|---|---|---|---|
+| **A** | Close Phase 7's exposed result: A.1 init-vs-rewiring control (D15); A.2 calibration-and-robustness surface (D16); A.3 frozen-operator structural predictors; A.4 methodology consolidation; A.5 the publication decision | 8a | A.1/A.2/A.4 MUST; A.3/A.5 SHOULD | ⬜ not started |
+| **B.1** | Measured synaptic signs and strengths on the Cook edges — vendored data sub-deliverable with provenance and licence; the wiring × weight-prior 2×3 (D17) under the reading learner and PPO | 8a | MUST | ⬜ |
+| **B.2** | Dynamics rung — across-step leaky-integrator state with intrinsic time constants; gap junctions as ohmic coupling in that dynamics; a PPO arm with plastic gap junctions (D4's destination); bout-duration validation target | 8a | SHOULD | ⬜ |
+| **8a synthesis** | Every 8a criterion assigned one of the five statuses; the 8b gate (D20) | 8a | MUST | ⬜ |
+| **C.0** | Body prerequisites — step–time calibration; signed speed (reversal); a proprioceptive channel; **D19 decided and recorded** | 8b | MUST | ⬜ |
+| **C.1** | Anatomical motor-to-muscle readout (Cook 2019 NMJ matrix, learnable gains only) into a curvature-kinematic body; MLP positive control; the wiring contrast re-run through it with its own baselines | 8b | MUST | ⬜ |
+| **C.2** | 2D rod-chain body (ElegansBot-class, 8–12 rods) under a registered cost budget and D18; its optional second half — the connectome's motor circuit generating the wave — behind B.2 | 8b | SHOULD (second half MAY) | ⬜ |
+| **C.3** | Body-level validation — eigenworm posture spectrum, undulation frequency and amplitude, omega-turn geometry, Logbook 035/036 curves from *emergent* kinematics | 8b | SHOULD | ⬜ |
+| **C.4** | The six-family architecture ranking re-run through the frozen body substrate, with new baselines | 8b | SHOULD | ⬜ |
+| **C.5** | Renderer: segmented body from curvature or rod state in `pixel_continuous`; headless unchanged | 8b | SHOULD | ⬜ |
+| **B.3 + D.1** | Internal metabolic state and the modulator field, with patchy bacterial lawns (edges, depletion, quality) and a roaming/dwelling readout | 8b | SHOULD | ⬜ |
+| **8b synthesis** | Phase 8 close: every criterion assigned a status | 8b | MUST | ⬜ |
+
+#### Pre-registered design decisions (2026-09-20 pre-start review)
+
+Status: **ratified 2026-09-20**. Each remains cheap to reverse before implementation starts and expensive after; any amendment goes through the Phase 8 tracking change with a dated note.
+
+| # | Decision | Resolution |
+|---|---|---|
+| **D15** | **What "the same initialisation" means once the mask changes** — the init scale is `1/sqrt(chemical in-degree)`, and a degree-preserving rewiring preserves the degree *sequence* but not which neuron holds which degree, so no single definition is "the same". Dhiman 2026's control is a shared seed, unspecified further. | **Two definitions, both run as arms.** (i) *Dense-draw-then-mask*: one dense 302×302 draw per seed, masked by each graph, then scaled per graph by `1/sqrt(in-degree)` — every edge present in both graphs carries the identical raw value. (ii) *Degree-rank sharing*: each neuron's fan-in vector is generated by its rank in the in-degree sequence (ties broken by neuron index), entries assigned in pre-synaptic-index order — wild type and null share fan-in draws neuron-for-neuron up to the degree permutation. n ≥ 16 paired seeds on both block-V cells, `rewire_seed` fixed per pair. Registered outcome: the +35.4/+23.5/+55.3/+40.1 learning-speed effects survive shared initialisation (a wiring result) or dissolve (an initialisation result); both are citable, and either is a stronger control than the critique's own. |
+| **D16** | **Operating-point discipline** — [Logbook 068](experiments/logbooks/068-l1b-rate-calibration.md) showed one inherited pin setting the *sign* of a registered primary, and Churchland et al. 2026 report the same sensitivity externally. | **No Phase 8 contrast runs at an unswept pin.** A.2 sweeps `plasticity_rate`, readout width, `forward_pass_depth`, `initial_log_std` and `trace_decay` on the reading learner — one-factor-at-a-time around the current point first, a full crossing only for pins that move the wiring effect's sign — and reports the wiring effect as a sensitivity surface. Every later rung runs at a swept point and cites it. |
+| **D17** | **The measured-weight rung's design** — a measured prior exists only for 156 head neurons; a rewired null has no measured weights of its own; and the value distribution must be separable from its placement. | **A 2×3, wiring × weight prior, on the reading learner and again under PPO**: {wild type, rewired null} × {random draw, measured, *measured-shuffled*}. The measured-shuffled arm permutes the measured values among the wild type's own edges and is what makes a positive interpretable. The null's measured arm inherits values by edge rank in the D15(ii) scheme, stated rather than inherited from the implementation. Pilot-scale arms: sign-only versus sign-plus-magnitude, and a sweep of the scale mapping LDS units onto the rate model (a pin). Coverage reported at head scope and full scope separately (command-to-motor and motor layers stay random). **Under PPO a measured prior is an initialisation, so that arm runs under D15's protocol** or it re-creates the confound A.1 exists to remove — hence B.1 runs after A.1 and A.2. Data lands as a vendored sub-deliverable with provenance and a licence check, the house standard. |
+| **D18** | **Muscle gain is not a learner** — Wang-Chen & Ramdya name actuator gains left as free parameters as the neuromechanical field's standing confound; a gain tuned per arm would make the wiring contrast a contrast of gains. | **Calibrated once on the MLP positive control and frozen across arms**, with a registered sensitivity check (principle 7), never a per-arm free parameter. The learnable part of the muscle readout is the gain *vector* over muscle groups, identical in size across arms, so the trainable-parameter count cannot differ by wiring (the L.1 lesson). |
+| **D19** | **Who generates the rhythm** — the current step is ≥ 5 s of worm time against a ~1.6 s undulation; a brain stepped at that rate cannot produce an undulation, a memoryless brain cannot produce one at any step size without a time-varying input, and the connectome brain has no across-step state until B.2. Bringing the step to ~0.2 s so the brain *could* produce it multiplies steps per unit worm time by ~25 on a substrate whose panels already need 16-way parallelism to fit in a day. | **Default: the body carries the rhythm.** A proprioceptive wave generator at body level (a local propagation rule on the biology that wave propagation is proprioceptive — Wen et al. 2012); the brain sets segmental muscle *drive* through the neuromuscular map, and thereby speed, direction and turning, at roughly today's step. **The alternative — the connectome's motor circuit produces the wave itself — is C.2's optional second half**, not C.1's question: it needs B.2 (across-step dynamics), the proprioceptive channel as sensory input, and the shorter step, and it is registered against the rewired null like every other rung. Decided and recorded before C.1 registers. |
+| **D20** | **Shipment shape** — at 19–27 active weeks the phase is two to three times Phase 7's planned size, and its second half depends on decisions (C.0, D19) whose cost is unknown until 8a's substrate is fixed. | **Pre-structured as 8a / 8b, split by success.** 8a = A + B.1 + B.2 and its synthesis; 8b = C + D + B.3 and the phase synthesis. **8b does not start until 8a's synthesis has assigned every 8a criterion a status** from the five-word vocabulary. Phase 8 is marked COMPLETE only when the 8b synthesis lands; "8a complete / 8b pending" is the honest intermediate state, as 6a/6b and 7a/7b were. |
+
+#### Required deliverables (MUST)
+
+**Shipment 8a.**
+
+1. **A.1 — the init-vs-rewiring control** (D15). The control Phase 7 named as its first act ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)): both definitions of shared initialisation, n ≥ 16 paired seeds, on the thermal and hard food-only block-V cells, through the committed block-V harnesses. The learning-speed result is restated with its status in the same sentence as the claim, whichever way it reads.
+2. **A.2 — the calibration-and-robustness surface** (D16), on the reading learner (`readout_only`, the first plausible learner shown to reach competence on this substrate, [Logbook 063](experiments/logbooks/063-l4-eprop.md)). Reported as the wiring effect's sensitivity across the operating region; fixes the point every later rung cites.
+3. **A.4 — methodology consolidation.** The 42 `plasticity-evaluation` requirements, most single-use rules Phase 7 paid for, folded into the [phase protocol](research/phase-protocol.md) so a rung designer reads twelve principles rather than thirty-three rules. Done before the first Phase 8 registration, with Phase 8's needs in view.
+4. **B.1 — measured synaptic signs and strengths** (D17). The Creamer–Leifer–Pillow fitted weights, with the Randi 2023 atlas as the raw source, vendored under `data/connectome/` with provenance and licence, the way the transmitter atlas landed; then the 2×3. Payoff either way: a positive is the first "the animal's weights make its wiring legible" result; a null extends [Logbook 034](experiments/logbooks/034-connectome-structure-controls.md)'s degree-statistics verdict to measured weights, and both are performance claims under the Phase 7 claim discipline.
+5. **The 8a synthesis**, with every 8a criterion assigned one of the five statuses, and the D20 gate written as a go/no-go decision in that logbook.
+
+**Shipment 8b.**
+
+6. **C.0 — body prerequisites.** (a) *Step–time calibration*: what one environment step is in seconds, fixed from the validated crawl speed (0.2 mm/s), the undulation period (~1.6 s) and the arena scale already in the environment, recorded before any body cost estimate or kinematic target is registered. (b) *Signed speed*: reversal as a first-class action, so VA/DA and VB/DB mean different things, escape can be reversal-plus-turn, and bout statistics exist to validate against. (c) *A proprioceptive channel*: posture or stretch fed back as sensory input. (d) **D19 decided and recorded.**
+7. **C.1 — the anatomical motor-to-muscle readout into a kinematic body.** Replace the learned 2×39 motor readout with the Cook 2019 motor-neuron-to-body-wall-muscle matrix (on disk, currently dropped by the loader), pooled into four quadrants × N segments, with learnable gains only (D18). Muscle drive → segmental curvature; displacement per step from the change of posture between steps by resistive-force theory, no ODE. Speed and turning now *emerge from motor output* at roughly today's cost. **Positive control first**: MLP-PPO must forage through it before any connectome arm runs (principle 4). Then the wiring contrast, with its own floors and baselines on the new substrate — body-substrate results are a **new reference frame**, never a controlled delta against [Logbook 029](experiments/logbooks/029-continuous-architecture-ranking.md) or block V (the grid-versus-continuous lesson, 2026-06-14).
+8. **The Phase 8 synthesis**, every criterion assigned a status.
+
+#### Recommended deliverables (SHOULD)
+
+- **A.3 — frozen-operator structural predictors** (from Therianos 2026): routing confinement and mode-driver metrics on Cook 2019 synapse-count weights versus every rewired null block V generated, registered as predictors of time-to-competence. No training; about a week.
+- **A.5 — the publication decision**, taken after A.1 reads out (deferred from Phase 7's S.1 cancellation). The package is the replicated wiring advantage under gradient descent *with* its initialisation control, the rule-programme negative with a diagnosed cause, and the operating-point finding with its sensitivity surface. Not a gate for anything after it.
+- **B.2 — the dynamics rung** (069 item 3 + L.2). Per-neuron leaky-integrator state across environment steps with intrinsic time constants; gap junctions as ohmic coupling inside that dynamics rather than a fixed symmetric matrix; a PPO arm with plastic gap junctions (D4's surviving destination, now with the *Nat. Commun.* 2020 precedent). Positive control per protocol: the dynamical substrate must first learn the cell under PPO at least as well as the settling substrate. Validation target, once C.0 supplies reversals: forward/reverse bout-duration statistics per Morrison & Young, pre-registered as a behavioural sign/shape-level claim. This rung is also the precondition for the connectome ever generating its own rhythm (C.2's second half).
+- **C.2 — the rod-chain body.** An ElegansBot-class 2D chain (Chung, Chang & Kim, *eLife* 2024: 25 rods, anisotropic Stokes drag, torsional-spring muscles, crawling/swimming/omega/delta turns validated, ~1:1 real time on one core, Python/Numba, CC-BY) reduced to 8–12 rods in `Continuous2DEnvironment`, driven by C.1's muscle drive. Gated by the MLP positive control and by a **cost budget registered in advance**: a 16-seed panel must fit in roughly a day at 16 workers ([Logbook 039](experiments/logbooks/039-runtime-acceleration-audit.md)'s measured ceiling), or the rung stops at C.1. Its optional second half is D19's alternative.
+- **C.3 — body-level validation**: the eigenworm posture spectrum (Stephens et al. 2008), undulation frequency and amplitude, omega-turn geometry, and the [035](experiments/logbooks/035-realworm-chemotaxis-validation.md)/[036](experiments/logbooks/036-realworm-thermotaxis-validation.md) klinokinesis and weathervane curves re-derived from *emergent* kinematics. Swimming versus crawling gait under liquid drag is a free further target if C.2 ships.
+- **C.4 — the architecture ranking through the body.** The North Star's deliverable: the six MUST families of [Logbook 029](experiments/logbooks/029-continuous-architecture-ranking.md) re-run on the frozen body substrate, with new baselines, per the § Architecture-Comparison Protocol rule that the sweep re-runs when the substrate plausibly changes the comparison.
+- **C.5 — rendering.** The `pixel_continuous` renderer draws the segmented body from curvature or rod state (head, tail, reversals and omega turns visible) with an optional posture overlay; headless unchanged. Modest, and only once C.1 exists.
+- **B.3 + D.1 — internal state, the modulator field, and patchy lawns.** A minimal metabolic state (satiety already crosses the brain boundary; the missing pieces are the internal-state sensory module and the concentration field, per the 2026-08-27 sizing), serotonin/PDF gating of roaming versus dwelling as its first behavioural consequence, and lawn geometry with edges, per-patch depletion (the `source_depletion_enabled` mechanism exists, config-gated), and food quality. Validation: Flavell-lab roaming/dwelling fractions and Al-Asmar & Pérez-Escudero's patch-leaving framing. **The 2D agar plate is kept** (D.2): no 3D, no soil, no fluid coupling — all validation data is 2D. **The same three behaviours** (klinotaxis, thermotaxis, predator evasion) remain the comparison set; roaming/dwelling enters as an observable, not a fourth ranked behaviour.
+
+#### Optional deliverables (MAY)
+
+- **Placed plasticity** on the klinotaxis circuit (AWC → AIY → AIZ → RIA/RIB → SMB/SMD), on the B.1 substrate, against a degree-stratified random subset of the same size, with the three confounds § Future Directions already specifies (same-site definition under rewiring; per-wiring stratification; identical trainable-synapse count).
+- **A wild-type-versus-wild-type control**: Cook 2019 against Witvliet dataset 8 (adult, nerve-ring scope, already vendored) — real between-individual variation in place of a shuffle.
+- **C.2's second half** (D19's alternative): the connectome's motor circuit plus proprioception generating the wave, against the rewired null.
+- **Swimming/crawling gait transition** as a body validation target.
+- **Reproducibility artefacts current** to the Phase 8 platform state, with an artefact-retention rule registered at phase start (which per-campaign artefacts are committed — the parsed per-seed CSVs — and which are archived off-repo), so 8a's step-level exports are not lost the way [Logbook 069](experiments/logbooks/069-phase7-synthesis.md) records the pre-readout-width ones were.
+
+#### Biological validation targets (Phase 8)
+
+Every target below is a **behavioural** claim under the Phase 7 claim discipline unless stated; none needs named-neuron grounding to be measured, and none is offered as a dynamics claim.
+
+- **Kinematics** (C.3, unlocked only by a body): crawling speed ~0.2 mm/s and undulation period ~1.6 s (Chung & Kim 2025/2026 as the modelled reference; Stephens et al. 2008 for the eigenworm spectrum); omega-turn geometry; the 035/036 klinokinesis and weathervane curves from emergent rather than kinematic motion.
+- **Forward/reverse bout durations** (B.2, needs C.0's reversal): Morrison & Young 2025's dwell-time statistics, sign/shape-level.
+- **Roaming/dwelling fractions on and off food** (B.3 + D.1): Flavell-lab serotonin/PDF phenomenology.
+- **Wiring-effect robustness** (A.2): not a biological target but the phase's methodological one — the sensitivity surface Churchland et al. 2026 make a referee expectation.
+- ⚠️ **Still the trap**: thermotaxis set-point plasticity is receptor-level and intrinsic to AFD; B.2's intrinsic dynamics are the *only* place it could be modelled, as node-level adaptation, and it is not pre-registered as a synaptic-rule target.
+
+#### Phase 8 exit criteria
+
+**Required (MUST) — 8a:**
+
+- ⬜ **A.1** run under both D15 definitions, n ≥ 16 paired seeds, both block-V cells; the learning-speed result restated with its status.
+- ⬜ **A.2** sensitivity surface over the five pins on the reading learner; every later contrast at a swept point (D16).
+- ⬜ **A.4** methodology consolidation landed before the first 8a registration.
+- ⬜ **B.1** data vendored with provenance and licence; the wiring × weight-prior 2×3 under the reading learner and PPO, head scope and full scope reported separately.
+- ⬜ **8a synthesis** with every 8a criterion assigned one of the five statuses and the D20 gate decision written.
+
+**Required (MUST) — 8b:**
+
+- ⬜ **C.0** step–time calibration recorded; signed speed; proprioceptive channel; D19 decided and recorded before C.1 registers.
+- ⬜ **C.1** anatomical NMJ readout into the kinematic body; MLP positive control passed; the wiring contrast re-run through it with its own baselines.
+- ⬜ **Phase 8 synthesis** with every criterion assigned a status.
+
+**Recommended (SHOULD):** A.3; A.5; B.2 with the plastic-gap-junction arm and the bout-duration target; C.2 under its cost budget; C.3; C.4; C.5; B.3 + D.1.
+
+**Optional (MAY):** placed plasticity; the wild-type-versus-wild-type control; C.2's second half; the gait transition; reproducibility artefacts with the retention rule.
+
+#### Risk-mitigation: failure modes and pivots
+
+| Failure mode | Trigger | Pivot |
+|---|---|---|
+| **Block V dissolves under shared initialisation** | A.1 reads no wiring effect under either D15 definition | This is a result, not a failure: the learning-speed claim is restated as an initialisation effect and the phase's citable package becomes the control itself plus the operating-point finding. B.1 still runs — measured weights are a different question from random-weight legibility — and the body rung is unaffected. |
+| **The measured prior does not reach the rate model** | B.1's scale sweep finds no setting at which the measured-weight wild type learns at all, or the LDS units cannot be mapped defensibly | Fall back to **sign-only** grounding (the pilot arm), which needs no scale; report magnitude grounding as unreachable-with-reason. |
+| **The body is too slow** | C.2's registered cost budget (a 16-seed panel in ~a day at 16 workers) is exceeded after the reduced chain, coarser integrator and Numba/JAX have been tried | **Stop at C.1** — the kinematic body already makes behaviour emerge from motor output — and record C.2 as deferred-with-destination behind the env-vectorisation decision (D6), which a body makes more valuable, not less. |
+| **No brain locomotes through the body** | The MLP positive control fails to forage through C.1 after the proprioceptive channel and D19's body-level generator are in place | The rung stops and the diagnosis is the deliverable (the phase-protocol lesson: a new component on a validated platform needs its own control). Nothing about the wiring is claimed from a substrate no learner can drive. |
+| **Substrate-vs-rung confound** | A platform change (C.0's reversal, proprioception, or the step change) lands mid-comparison | Land every C.0 change **before** C.1 registers, validate, freeze; report anything spanning a substrate change as qualitative. The same rule that D5/D7 enforced in Phase 7. |
+| **8a overshoots** | Block A and B.1 exceed ~12 active weeks | D20 already splits the phase; 8a ships on A.1 + A.2 + B.1 alone, with B.2 carried to 8b as SHOULD. No month-count trigger — the split fires on the 8a synthesis. |
+
+#### Where Phase 8 is first-in-field (novelty map)
+
+Verified against the 2026-09-20 literature scan; nearest precedents are cited as convergent, per § Claim discipline.
+
+| Phase 8 claim | Nearest precedent (2026-09) | Payoff if positive |
+|---|---|---|
+| **A learner on the real *C. elegans* wiring with measured synaptic weights, against a degree-preserving null** (B.1) | Creamer, Leifer & Pillow fit the weights (preprint, no task, no learning); Guragain et al. 2026 show biological weights beat random on connectome reservoirs (generic tasks, weak controls). **Measured weights + closed-loop task + rewired null is empty.** | "The animal's weights make its wiring legible" — the first structure-function result on this substrate that does not depend on a random draw; a null hardens the degree-statistics verdict to measured weights. |
+| **The wiring effect's operating-point sensitivity surface** (A.2) | Churchland et al. 2026 report the sensitivity on generic reservoir tasks; no closed-loop behavioural version exists. | The result a referee now expects; and the first statement of *where* in operating space a connectome shows and where it does not. |
+| **Closed-loop learning through the anatomical motor-to-muscle map into a body, with a wiring control** (C.1/C.2) | Chung & Kim 2025/2026 (connectome weights → ElegansBot, no learning, no null); Kim–Shlizerman 2025 (integrated, no learning); BAAIWorm (no learning); Eon and Jin et al. (fly). **The body + learning + wiring-control cell is empty for any organism.** | Behaviour emerging from motor output rather than a two-number readout, with the wiring's contribution measured against its null — the phase's headline if it lands. |
+| **The init-vs-rewiring control with a stated definition at n ≥ 16** (A.1) | Dhiman 2026 (three seeds, five rewirings, shared seed unspecified). | Either a wiring result that survives the one published critique aimed at this design, or a clean retraction that makes the rest of the package trustworthy. |
+
+#### Go/No-Go Decision
+
+- **GO (8a shipment) if**: A.1, A.2 and B.1 resolve with statuses assigned and the 8a synthesis writes the D20 gate as GO — meaning the substrate 8b will embody has a known initialisation story, a known operating point, and a measured-weight verdict.
+- **SPLIT-shipment if**: 8a forms a self-contained citable result before block C starts, **or** block A + B.1 overshoot — either way the pre-structured 8a / 8b shape applies. This is the default expectation (D20), not a contingency.
+- **PIVOT-scope if**: the body cost budget fails (stop at C.1) or no learner drives the body (the diagnosis is the deliverable) — execute the relevant risk row and record the pivot in the tracking change.
+- **STOP if**: A.1 dissolves block V **and** B.1 is null at every scale **and** C.1's positive control fails — at which point the phase's deliverable is the statement that on this substrate, under every instrument tried, the wild-type wiring is not distinguishable from its degree statistics, with the controls that make that statement citable. Not expected, and not a reason to withhold any of the three results individually.
+
+______________________________________________________________________
+
 ## Architecture-Comparison Protocol
 
 Phase 2's 300-session quantum architecture campaign — covering 15 quantum and hybrid variants against matched-capacity classical baselines — established that grid-world complexity is below the threshold for quantum advantage on every variant tested. Quantum is therefore *one architecture family among many* in the project's comparison sweep, not a separate goal or a separate phase.
@@ -1268,13 +1429,13 @@ ______________________________________________________________________
 
 A snapshot of where the platform sits across five complexity dimensions, tracked across phases. Each dimension matters because the architecture comparison's interpretation depends on it (high-dimensional + non-Markovian observations test different architectural assumptions than low-dimensional Markovian ones), not because any one dimension is a quantum-advantage gate.
 
-| Dimension | Phase 0-2 | Phase 3 | Phase 4 | Phase 5 | Phase 6 target | Phase 7 target |
-|---|---|---|---|---|---|---|
-| **Input dimensionality** | 2-9D | ~15-20D | similar | similar | > 50D (continuous + sensory-physics) | similar; cross-species sensors |
-| **Partial observability** | Viewport only | STAM temporal memory | Multi-agent fog-of-war | Generational uncertainty | Realistic sensing range + connectome | Adds modulator-state observability |
-| **Multi-agent** | 1 | 1 | 5-10 | Single-agent populations | 1 (multi-agent deferred) | 1 (cross-species, not multi-agent) |
-| **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Cross-generational | Full non-Markovian + plasticity-shaped | STDP-modulated long-horizon |
-| **Classical ceiling on hardest task** | 94-98% (PPO foraging) | 94% (Mode A L500) | partially measured | n/a | TBD on continuous + connectome | TBD with plasticity |
+| Dimension | Phase 0-2 | Phase 3 | Phase 4 | Phase 5 | Phase 6 target | Phase 7 target | Phase 8 target |
+|---|---|---|---|---|---|---|---|
+| **Input dimensionality** | 2-9D | ~15-20D | similar | similar | > 50D (continuous + sensory-physics) | similar; cross-species sensors | + proprioceptive posture channel (N segments); + internal-state channel |
+| **Partial observability** | Viewport only | STAM temporal memory | Multi-agent fog-of-war | Generational uncertainty | Realistic sensing range + connectome | Adds modulator-state observability | Body state observable only through proprioception; modulator state internal |
+| **Multi-agent** | 1 | 1 | 5-10 | Single-agent populations | 1 (multi-agent deferred) | 1 (cross-species, not multi-agent) | 1 |
+| **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Cross-generational | Full non-Markovian + plasticity-shaped | STDP-modulated long-horizon | Across-step intrinsic dynamics; undulation-scale steps (≤ 0.2 s) only if D19's alternative runs |
+| **Classical ceiling on hardest task** | 94-98% (PPO foraging) | 94% (Mode A L500) | partially measured | n/a | TBD on continuous + connectome | TBD with plasticity | TBD through the body — a new reference frame, not a delta against Logbook 029 |
 
 Update protocol: after each phase's results are in, this dashboard records *measured* values for that phase's columns and pencils-in targets for the next. The dashboard documents the substrate's complexity profile, not a quantum-advantage threshold; quantum architectures appear in the architecture-family sweep regardless of where the substrate sits on any one row.
 
@@ -1286,13 +1447,13 @@ ______________________________________________________________________
 
 Where the platform sits across five fidelity dimensions, by phase. This view answers "what does the substrate actually look like today, and what is each forward phase deepening?" — the question the optimal-primary framing makes load-bearing.
 
-| Dimension | Phase 0-4 | Phase 5 | Phase 6 target | Phase 7 target | Future |
-|---|---|---|---|---|---|
-| **Connectome topology** | None (MLP/LSTM/etc.) | None | 302-neuron Cook 2019 (vendored SI parsing) | + transmitter identities and receptor classes on the Cook 2019 wiring (7a-ii atlas, a substrate deliverable) + *P. pacificus* head circuit (Cook 2025) + dauer (Yim 2024, SHOULD) | + briggsae (gated on data) |
-| **Sensory transduction** | Spatial gradient lookups | + klinotaxis head-sweep | Rung 2 **static** Fick-shaped gradients + adaptive/biphasic sensor *(dynamic PDE descoped 2026-06-04)* | unchanged | + multi-species receptors; dynamic-diffusion PDE |
-| **Plasticity rules** | PPO / DQN / Reinforce | + Lamarckian inheritance, hyperparameter evolution | L2 PPO + L3 NEAT topology search | + L4 three-factor rules (rate-based primary + spiking-STDP arm) | + alt rule families (e-prop, imitation warm start) |
-| **Body mechanics** | Discrete 4-action grid | Discrete | Continuous 2D + spatial scales; OpenWorm Sibernetic interop if needed | + state-dependent action `std` (D7) | Native undulation / omega turns / pirouettes; 3D |
-| **Environment** | Grid; static gradients | + multi-agent, pheromones | Rung 2 static Fick-shaped gradients; corrected ASH/ADL contact nociception | + neuromodulator concentration field; internal-state observability | Bacterial lawns; energy/metabolic state; population dynamics |
+| Dimension | Phase 0-4 | Phase 5 | Phase 6 target | Phase 7 target | Phase 8 target | Future |
+|---|---|---|---|---|---|---|
+| **Connectome topology** | None (MLP/LSTM/etc.) | None | 302-neuron Cook 2019 (vendored SI parsing) | + transmitter identities and receptor classes on the Cook 2019 wiring (7a-ii atlas, a substrate deliverable) + *P. pacificus* head circuit (Cook 2025) + dauer (Yim 2024, SHOULD) | + measured synaptic signs and strengths on the head edges (Creamer–Leifer–Pillow; Randi 2023 atlas), reported at head and full scope (B.1); the init-vs-rewiring control (A.1) | + briggsae (gated on data); male–hermaphrodite contrast (data on disk) |
+| **Sensory transduction** | Spatial gradient lookups | + klinotaxis head-sweep | Rung 2 **static** Fick-shaped gradients + adaptive/biphasic sensor *(dynamic PDE descoped 2026-06-04)* | unchanged | + proprioception (posture/stretch feedback, C.0); + internal metabolic state (B.3) | + multi-species receptors; dynamic-diffusion PDE |
+| **Plasticity rules** | PPO / DQN / Reinforce | + Lamarckian inheritance, hyperparameter evolution | L2 PPO + L3 NEAT topology search | + L4 three-factor rules (rate-based primary + spiking-STDP arm) | PPO and the frozen-feature readout as *instruments*; plastic gap junctions under PPO (B.2); node-level adaptation via intrinsic dynamics; placed plasticity MAY | + structural plasticity; placed plasticity beyond the klinotaxis circuit |
+| **Body mechanics** | Discrete 4-action grid | Discrete | Continuous 2D + spatial scales; OpenWorm Sibernetic interop if needed | + state-dependent action `std` (D7) | Reversal; anatomical motor-to-muscle readout (Cook 2019 NMJ) → curvature-kinematic body (C.1); 2D rod chain SHOULD (C.2); step–time calibration | 3D; fluid-coupled (Sibernetic-class) body; biophysical muscle |
+| **Environment** | Grid; static gradients | + multi-agent, pheromones | Rung 2 static Fick-shaped gradients; corrected ASH/ADL contact nociception | + neuromodulator concentration field; internal-state observability | Patchy bacterial lawns with edges, depletion and quality; roaming/dwelling gated by serotonin/PDF from internal state (D.1 + B.3); 2D plate kept | 3D habitat; full ATP/metabolic model; population dynamics |
 
 ### Trajectory ladder
 
@@ -1306,9 +1467,10 @@ The platform progresses through six levels of progressive realism, each building
 | **4** | 5 ✅ | Evolved hyperparameters, Lamarckian inheritance, methodology for co-evolution and transgenerational memory |
 | **5** | 6 | Connectome-grounded learning + evolution + continuous 2D physics + corrected nociception + Rung 2 chemical gradients + chemosensory adaptation kinetics |
 | **5+** | 7 | + Biologically-plausible plasticity (STDP, neuromodulator-modulated) + cross-species transfer (*P. pacificus*) |
-| **6** | Future | 3D substrate (soil mechanics, fluid dynamics), native body mechanics, energy/metabolic model, population dynamics, life-cycle simulation, briggsae and other species |
+| **5++** | 8 | + measured synaptic weights, intrinsic and gap-junction dynamics, the anatomical neuromuscular readout into a 2D body with reversal and proprioception, patchy lawns and a minimal internal state — *ground, then embody* |
+| **6** | Future | 3D substrate (soil mechanics, fluid dynamics), fluid-coupled body, biophysical neurons and muscle, full energy/metabolic model, population dynamics, life-cycle simulation, briggsae and other species |
 
-Level 5 + Level 5+ together represent the project's target state. Level 6 is aspirational — see Future Directions for the technology selection and gated dependencies.
+Levels 5, 5+ and 5++ together represent the project's target state. Level 6 is aspirational — see Future Directions for the technology selection and gated dependencies.
 
 ______________________________________________________________________
 
@@ -1368,7 +1530,8 @@ Throughout all phases, biological validation against published *C. elegans* data
 - **Phase 4** ✅: social-feeding and pheromone behaviours validated against aggregation literature.
 - **Phase 5** ✅: evolved-behaviour dynamics framed against natural *C. elegans* adaptation literature; M5 architecture-asymmetry diagnosis independently corroborated by external work (Resendez Prado, arXiv 2604.03565).
 - **Phase 6**: locomotion + chemotaxis behaviour quantitatively compared to real worm data as a phase exit criterion. ≥ 1 of: chemotaxis indices (Bargmann lab + others), escape latencies (mechanosensation literature), whole-brain Ca²⁺ correlation matrices (Kavli / Janelia open data). The corrected ASH/ADL nociception is the natural validation pair for escape latencies.
-- **Phase 7**: deepen biological validation with the L4 plasticity layer against the refreshed target list (dopamine-gated forgetting; learning-altered navigation-strategy weighting; escape-circuit lesion robustness — see [Phase 7 § Biological validation targets](#phase-7-deepen--plasticity--cross-species-transfer)) and with the cross-species head-circuit transfer. External lab partnership is optional (MAY); internal validation against published data is sufficient for the phase to close.
+- **Phase 7**: deepen biological validation with the L4 plasticity layer against the refreshed target list (dopamine-gated forgetting; learning-altered navigation-strategy weighting; escape-circuit lesion robustness — see [Phase 7 § Biological validation targets](#phase-7-deepen--plasticity--cross-species-transfer)) and with the cross-species head-circuit transfer. External lab partnership is optional (MAY); internal validation against published data is sufficient for the phase to close. *(Assessed at the close: the plastic-wiring targets were unreachable-with-reason, [Logbook 069](experiments/logbooks/069-phase7-synthesis.md).)*
+- **Phase 8**: behavioural targets only, each unlocked by a rung — kinematics from a body (crawl speed, undulation period, eigenworm spectrum, omega-turn geometry; the 035/036 curves from emergent motion), forward/reverse bout durations (Morrison & Young 2025) once reversal exists, roaming/dwelling fractions once internal state exists, and the wiring effect's sensitivity surface as the methodological target a referee now expects (Churchland et al. 2026). See [Phase 8 § Biological validation targets](#phase-8-ground-then-embody--measured-substrate--body).
 
 ______________________________________________________________________
 
@@ -1390,6 +1553,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 
 - **Phase 6**: ≥ 1 model output quantitatively validated against published real-worm data (chemotaxis indices, escape latencies, or Ca²⁺ correlation) as a phase exit criterion.
 - **Phase 7**: deepens — L4 plasticity behaviour compared to documented *C. elegans* learning dynamics; cross-species behaviour compared between *C. elegans* and *P. pacificus*.
+- **Phase 8**: measured synaptic weights on the substrate (B.1); kinematics validated from emergent motion once a body exists (C.3); bout durations and roaming/dwelling as behavioural targets (B.2, B.3 + D.1).
 
 ### 2. Architecture Comparison
 
@@ -1406,6 +1570,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 
 - **Phase 6**: L2 weight-search results across the MUST architecture-family set on all three behaviours, at the Phase 5 statistical bar. L3 NEAT topology-search results comparing wild-type connectome to NEAT-evolved on ≥ 1 behaviour.
 - **Phase 7**: L4 plasticity results for the connectome against its frozen-weights / vanilla-rule / L2-PPO baselines plus a pre-registered comparison set (D2 bar); cross-species transfer measured at matched head-circuit scope.
+- **Phase 8**: every wiring contrast under an initialisation control (D15) at a swept operating point (D16); the six-family ranking re-run through the body with its own baselines (C.4, SHOULD).
 
 ### 3. Substrate Coverage
 
@@ -1421,6 +1586,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 
 - **Phase 6**: three behaviours × MUST architectures × continuous 2D + Rung 2 + corrected ASH/ADL nociception.
 - **Phase 7**: same three behaviours (third behaviour species-appropriate) × L4 + pre-registered comparison arms × *C. elegans* (full + head-truncated baseline) and *P. pacificus* head circuit (+ dauer as SHOULD).
+- **Phase 8**: the same three behaviours on *C. elegans* only, through a substrate with measured weights, reversal, proprioception, the anatomical NMJ readout and a 2D body; patchy lawns with internal state; no second species.
 
 ### 4. Sample efficiency and convergence
 
@@ -1436,6 +1602,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 
 - **Phase 6**: report convergence statistics per architecture family on all three behaviours; identify whether the connectome family shows characteristic sample-efficiency differences from unconstrained alternatives.
 - **Phase 7**: compare L4 plasticity sample efficiency against L2 PPO on the same connectome substrate.
+- **Phase 8**: time-to-competence remains the primary wiring metric (block V's instrument), now under D15's initialisation control and reported across D16's operating surface.
 
 ### 5. Robustness
 
@@ -1451,6 +1618,7 @@ The project tracks success across five dimensions. Each dimension has metrics an
 
 - **Phase 6**: connectome architecture demonstrates graceful degradation under circuit ablation comparable to documented biological lesion studies (qualitative match acceptable; quantitative match is a stretch).
 - **Phase 7**: with L4 plasticity, test whether ablation-then-relearning approximates documented *C. elegans* recovery dynamics.
+- **Phase 8**: robustness of the wiring effect itself — its sensitivity to the learner's operating point (A.2) and to the weight prior (B.1's measured-shuffled arm) — rather than sensor-dropout robustness, which is unchanged.
 
 ______________________________________________________________________
 
@@ -1489,6 +1657,14 @@ Phase 7 closes cleanly and external visibility follows.
 
 *(Assessed at the Phase 7 close, 2026-09-19, [Logbook 069](experiments/logbooks/069-phase7-synthesis.md).)* **Phase 7 reached target success and did not reach stretch success, and the stretch level's first clause is the one that failed for a reason worth stating.** Minimum viable and target were already met at the Phase 6a close. Of the stretch clauses: **L4 plasticity is operational but not to a D2-bar result** — the rate-based three-factor rule was built and ran against its frozen-weights and vanilla-rule baselines, and the 2×2's primary is unmet because no rule that writes the wiring learns the substrate to any benefit, which is a result rather than an incompletion; **the spiking-STDP arm was never built**; **cross-species transfer did not ship**, deferred with 7b under D14; **no MAY item landed**, the preprint having been cancelled in favour of a stronger combined package after the close; and **reproducibility artefacts are current with a stated limit** on what survives outside git. What Phase 7 adds beyond target success is three citable results — a replicated wiring advantage under gradient descent, a rule-programme negative with a diagnosed cause, and an operating-point finding about when the wiring is legible to a reading learner — none of which the success levels as written anticipated, because they were written expecting the plastic 2×2 to be the deliverable.
 
+### Phase 8 success levels
+
+*(Added 2026-09-20. Written around rungs and controls rather than a single flagship result, because the levels above were written expecting the plastic 2×2 to be the deliverable, [Logbook 069](experiments/logbooks/069-phase7-synthesis.md).)*
+
+- **Minimum viable**: A.1 resolves under both D15 definitions and the block-V learning-speed result is restated with its status; A.2's sensitivity surface exists; B.1's data is vendored and its 2×3 resolves. A citable 8a package whichever way each reads.
+- **Target**: 8a ships and 8b reaches C.1 — behaviour emerging from the anatomical motor-to-muscle map through a kinematic body, with an MLP positive control passed and the wiring contrast re-run on the new substrate; B.2 lands with the plastic-gap-junction arm.
+- **Stretch**: C.2's rod-chain body under its cost budget with C.3 kinematic validation; C.4's ranking through the body; B.3 + D.1's roaming/dwelling on patchy lawns; the publication decision taken and a preprint out.
+
 Publication, external collaboration, and community-launch metrics are not codified as success-level requirements — the project pursues them when evidence and context justify, not on a phase-locked schedule.
 
 ______________________________________________________________________
@@ -1505,6 +1681,8 @@ OpenWorm has the connectome data and the body physics this project does not rebu
 
 The Leeds physics group (Boyle, Bryden, Cohen) is complementary in the same way — best-in-class undulatory locomotion modelling, no learning or evolution. The platform interoperates with this body of work; it does not compete with it.
 
+*(Updated 2026-09-20.)* OpenWorm is maintained, slowly: c302 v0.12.0 (2026-03-31, on the latest `cect`) and a Sibernetic CI workflow (2026-05-28), both by Gleeson. **The body decision changed at the Phase 8 review**: the first native body is a *2D* model (ElegansBot-class rod chain, § Worm body and whole-organism models), not Sibernetic interop, because Sibernetic's 3D SPH fluid coupling runs far above real time and thousands of RL episodes per seed do not fit through it on this project's compute ([Logbook 039](experiments/logbooks/039-runtime-acceleration-audit.md)). Sibernetic and c302 remain the interop reference and the fidelity ceiling; the c302/NeuroML export path is unchanged.
+
 ### Izquierdo & Beer (klinotaxis arc, Indiana)
 
 **Focus**: evolved minimal circuits for klinotaxis; ensemble-of-models integrating connectome data; information-flow analysis through evolved circuits.
@@ -1513,6 +1691,18 @@ The Leeds physics group (Boyle, Bryden, Cohen) is complementary in the same way 
 
 Their evolved minimal circuits are not the real connectome — they are abstract neural networks that behave like worms. The platform's L3 NEAT topology search produces directly comparable "what would evolution find?" results; placing the wild-type connectome (Phase 6 L0) and NEAT-evolved topologies (L3) in the same comparison sweep is the methodological extension. Their information-flow analysis tooling is a natural future-direction interop target.
 
+### Worm body and whole-organism models
+
+*(Added 2026-09-20.)* **Focus**: bodies and whole-organism simulations of *C. elegans* into which a connectome model can be dropped.
+
+**Relationship**: **body reference and fidelity ceiling** for Phase 8's block C; cited as convergent, not competing.
+
+- **ElegansBot** (Chung, Chang & Kim, *eLife* 2024; CC-BY; PyPI `ElegansBot`, GitHub `taegonchung/elegansbot`) — a 25-rod 2D chain with anisotropic Stokes drag and torsional-spring muscles that reproduces crawling, swimming, omega and delta turns from joint-angle inputs at ~1:1 real time on one core, validated at 0.208 mm/s. The reference for C.2's reduced (8–12 rod) chain. The same group then optimised connectome weights *proportionally to synapse counts* to drive it through forward and backward crawling and reproduce SMD ablation (Chung & Kim, bioRxiv 2025.07.21.665845; *Sci. Rep.* 2026) — connectome-to-body without learning or a wiring control.
+- **Kim, Florman, Santos, Alkema & Shlizerman** (arXiv:2504.18073, 2025) — a modular connectome + dynamics + muscle calcium + force + proprioception framework reproducing forward/backward locomotion, avoidance and turns. The precedent for proprioceptive feedback as a sensory channel (C.0).
+- **BAAIWorm / MetaWorm** (Zhao et al., *Nat. Comput. Sci.* 2024; Apache 2.0) — 136 multi-compartment neurons, 96 muscles, a 3D soft body; C++/CUDA + NEURON on an RTX 3090. Not runnable on this project's hardware and not needed for the wiring question; the fidelity ceiling to cite.
+- **Wang-Chen & Ramdya** (arXiv:2601.08056, 2026) — the review of neuromechanical models whose named open problems (unrealistic controller connectivity, missing sensory organs and muscle models, environment complexity, actuator gains as free parameters) are the confounds D18 and C.0 register.
+- **Eon Systems** (2026-03-07; FlyWire + predicted transmitters + a MuJoCo body, no learning, no validation metrics reported) and **Jin et al.** (arXiv:2602.17997) are the fly precedents. Together with the worm work above they fill the "connectome through a body" cell in every organism *without* closed-loop learning and a wiring control — which is the cell Phase 8's C.1/C.2 occupy.
+
 ### Connectome-constrained learning lineage (fly)
 
 **Focus**: connectome-constrained + task-optimised networks, closed-loop connectome-as-policy RL, and rewired-null controls — all in *Drosophila*.
@@ -1520,6 +1710,8 @@ Their evolved minimal circuits are not the real connectome — they are abstract
 **Relationship**: **method-category precedent + closest living pre-emption — cite as convergent, not competing**.
 
 This fast-moving 2024-2026 lineage bounds what the project may claim, and the project should cite it as convergent evidence rather than get scooped by it. Lappalainen et al. 2024 (*Nature*, `flyvis`) established connectome-constrained + task-optimised modelling as a paradigm (supervised, perceptual). A **whole-brain connectomic graph model (Jin et al., arXiv:2602.17997, 2026)** trains the adult *Drosophila* whole-brain connectome as a graph-structured policy for whole-body locomotion via deep reinforcement learning, reporting better sample efficiency than baselines — the closest precedent to closed-loop RL on a real connectome, in a different organism. **Dhiman 2026 (arXiv:2604.04033)** applied a degree-preserving configuration-model (rewired-null) control to a behaving `flyvis` connectome — the fly precedent that the project's own degree-preserving rewired-null control (Tranche 8 / `add-connectome-structure-controls`) converges with — and *(noted 2026-09-16)* found the connectome's apparent advantage **dissolves under shared initialisation and that null**; see block V's record for how that reads against this project's surviving learning-speed effect. **Watch item *(added 2026-09-16)*: Wang & Christie, `pwang724/fly-circuit-exploration`** — a MaleCNS v1.0 connectome-plus-literature analysis (2026-09-10, audited 2026-09-13) proposing that the fly's home vector is stored in **synaptic weights** at hΔB → hΔH/hΔI, with a velocity-gated dopamine write (FB5H, FB4M) and an octopamine reset at food (OA-VPM3), plus hand-built rate simulations showing the mechanism is *sufficient* (closed-loop return 1.1 vs 6.8 units without memory). Not peer-reviewed, no new experiments, and **no rewired or shuffled-kernel control anywhere in it**, so "the connectome supports this" is untested against "any column-structured kernel supports this". **Cite with its audit**: the public post claims storage in weights "*not* neural activations", but the authors' own audit — published the day before the post — **withdrew that exclusion**, because the recurrence metric used to rule out activity storage returned the same low loop gain on the known EPG ring attractor, a measured persistent-activity network ("cannot tell an integrator from a relay"). Two of the four named types are also already recorded (hΔG a leaky integrator, Janke 2025; hΔA a 7–10 s working memory, Avritzer 2026), both leaking over seconds, which a synaptic store should not. So the finding is *synaptic storage is consistent with the wiring*, and this record must not cite it as a fast-weights result. Its value here is as a **mechanism template** for the placed-plasticity rung (§ substrate fidelity ladder, rung 6) and as external precedent for the phase protocol's positive-control discipline: a headline withdrawn because a positive control failed the metric. Revisit if a preprint appears with a shuffled-kernel control or the cAMP-versus-calcium imaging the authors name as the distinguishing experiment. The project's defensible contribution is the *C. elegans* + closed-loop-learning + neuromodulated-plasticity + controlled-comparison combination, dated and hedged; see [Phase 7 § Claim discipline](#phase-7-deepen--plasticity--cross-species-transfer) for how the Beiran & Litwin-Kumar 2025 degeneracy bound constrains structure-function claims against this lineage.
+
+*(Added 2026-09-20 at the Phase 8 review.)* Three further items bracket the lineage. **Churchland, de Palma Aristides, Garcia-Ojalvo, Ritz, Anderson & Soriano** (arXiv:2609.07355, 2026-09-07) find the *C. elegans* connectome as an echo-state reservoir does **not** beat shuffle controls and trades performance for hyperparameter robustness — [Logbook 068](experiments/logbooks/068-l1b-rate-calibration.md)'s operating-point finding from another group, and the reason Phase 8's A.2 is a sensitivity surface. **Therianos** (arXiv:2606.17745, June 2026), a frozen rate operator on the complete larval fly connectome: degree and weight statistics set the gross dynamics, exact wiring sets *input routing* and mode drivers — Phase 8's A.3 registers those metrics as predictors of block V's learning-speed effect. **Guragain, Kakalis & Godino-Llorente** (arXiv:2606.09902, June 2026): biological weight values beat random initialisation on the same connectome topology in reservoirs, weak but in the direction B.1 tests. And **Creamer, Leifer & Pillow** (bioRxiv 2024.09.22.614271, preprint) is promoted from a caution in Phase 7's evidence base to a **substrate source**: its fitted signs and magnitudes on the Cook edges are B.1's data.
 
 ### Cook et al. — *P. pacificus* head connectome (Science, 2025)
 
@@ -1566,6 +1758,8 @@ ______________________________________________________________________
 *(Added 2026-09-19 at the Phase 7 close, [Logbook 069](experiments/logbooks/069-phase7-synthesis.md).)*
 Phase 7's inheritance, in dependency order. Each item names what it inherits, so this is an
 consequence list rather than a wish list. The ladder below is the programme these feed into.
+
+*(2026-09-20: absorbed into [§ Phase 8](#phase-8-ground-then-embody--measured-substrate--body) — item 1 → A.1 (D15), 2 → A.2 (D16), 3 → B.2, 4 → the placed-plasticity MAY, 5 → B.2, 6 → A.4, 7 → A.5. Kept here as the dependency record.)*
 
 1. **The init-vs-rewiring control — first.** Block V's +35.4% / +23.5% / +55.3% / +40.1% are the
    phase's strongest citable result, and `rewire_seed` is unset in every one of those panels, so each
@@ -1624,8 +1818,9 @@ Beyond Phase 6 and Phase 7, the following research directions are scoped as futu
   degree-preserving rewired null. Cook et al. 2019 published **both** *C. elegans* sexes, and the
   loader names `cook_2019_hermaphrodite` specifically, so the same experiment is available on our
   own organism with *real* variation in place of a shuffle. It is only meaningful once a rule is
-  shown to learn, so it sits behind block I, and whether the male wiring is in the repository's data
-  has not been checked.
+  shown to learn, so it sits behind block I. *(Checked 2026-09-20: the male wiring **is** in the
+  repository's data — the vendored Cook 2019 workbook carries the `male chemical` and `male gap jn`
+  sheets. Excluded from Phase 8 by scope; a within-species contrast for a later phase.)*
 - ***C. briggsae* transfer**. Phase 7 covers *P. pacificus*; *C. briggsae* lacks a high-quality published connectome as of project planning (chromosome-level genomes only). Becomes a scoped phase once reference connectome data appears.
 - **Witvliet developmental connectomes**. The *C. elegans* developmental connectome series (Witvliet et al. 2021) supports a within-species temporal-transfer study: does the platform's L0+L2 setup reproduce documented developmental shifts in behaviour? Optional follow-on to Phase 7.
 - **Comparative connectomics community**. Engagement with the broader 2024-2026 connectomics wave — data interop first, scoped partnerships if specific questions emerge.
@@ -1648,6 +1843,8 @@ Beyond Phase 6 and Phase 7, the following research directions are scoped as futu
 
 3D belongs to organisms whose behavioural repertoire is fundamentally 3D (Drosophila flight, fish swimming, mouse navigation), not to *C. elegans* on agar.
 
+*(Updated 2026-09-20.)* **The 2D body moved into Phase 8** (C.1 kinematic, C.2 rod chain — § Phase 8, D19), with ElegansBot as the reference model rather than Sibernetic; **3D, fluid coupling and the Sibernetic body stay here**, and the technology-selection notes above are unchanged for whenever a 3D need appears.
+
 ### Energy / metabolic model
 
 The current platform has no energy/metabolic model — satiety is abstract rather than ATP-based. Phase 6 and Phase 7's three behaviours (klinotaxis, thermotaxis, predator evasion) don't depend on internal energy state at the timescales the platform operates on, so this is not on the critical path. But several aspirational behaviours **do** require an energy / metabolic state representation:
@@ -1657,6 +1854,8 @@ The current platform has no energy/metabolic model — satiety is abstract rathe
 - **Long-timescale foraging**. Resource-depletion + replenishment dynamics on bacterial-lawn substrates.
 
 The "all *C. elegans* behaviours" aspiration is implicitly gated on this gap being filled. Energy/metabolic implementation is itself substantial (~3-6 months software-only) and would warrant a scoped phase if pursued.
+
+*(Updated 2026-09-20.)* The **minimal** metabolic state — an internal-state sensory module and the modulator concentration field, gating roaming versus dwelling — is Phase 8's B.3 (SHOULD, coupled with patchy lawns, D.1). The full ATP model, dauer transitions and long-timescale foraging stay here.
 
 ### Applied directions
 
@@ -1709,6 +1908,16 @@ ______________________________________________________________________
 6. **L4 plasticity infrastructure** — persistent pre/post activity traces on `ConnectomeTopology` (cross-step state does not currently exist); rate-based three-factor rules first, spiking-STDP arm second (D1); diffusible-signal concentration field (serotonin, dopamine); receptor-class metadata from the Wang 2024 neurotransmitter atlas + bulk-integrated CeNGEN profiles; modulated three-factor rules. New package (D8: `learning_rules/` working name — `quantumnematode/plasticity/` is the quantum-plasticity *eval* protocol, not learning rules). Substantial new code.
 7. **Cross-species head-circuit integration** — Cook et al. 2025 CSV loader + species-keyed neuron-classification table + species-keyed validation pathways + species-keyed sensor/motor projection map (the current projections are hard-coded *C. elegans* named-neuron tuples in `connectome_ppo.py`); head-truncated Cook 2019 baseline; dauer (Yim 2024) loader as SHOULD.
 8. **Pre-L4 platform items (D5/D7) — ✅ closed 2026-09-05** ([Logbook 038](experiments/logbooks/038-state-dependent-std-gate.md)): the #254 dead keys were already removed during Phase 6 (verified, no code); the state-dependent action `std` shipped byte-identical-when-off as per-brain std heads (**no `_policy.py` changes** — the shared helpers were already shape-generic, correcting this item's earlier phrasing); the D7 klinokinesis gate **failed** after the pre-registered entropy-only pass, so per Amendment A the substrate froze **mode-off**, the post-D7 re-baseline was **descoped** (Logbook 029 remains the reference frame), and the mechanism ships dormant; load-time validation of the new keys is automatic via the pydantic fields.
+
+### Active for Phase 8
+
+09. **Loader: keep the muscle cells** — `connectome/loader.py` drops the body-wall muscle columns (`dBWML*`, `vm*`) the vendored Cook 2019 workbook carries; C.1 needs the motor-neuron-to-muscle matrix as a first-class tensor with its own smoke tests.
+10. **Signed speed** — reversal as a first-class continuous action (speed is clamped to `[0, max_step_mm]` today), byte-identical-when-off, landed and frozen before C.1 registers.
+11. **Proprioceptive sensory channel** — posture/stretch feedback into the sensory projection; the connectome-side target neurons stated with a biological argument.
+12. **Step–time calibration** — one recorded constant relating an environment step to worm seconds, cited by every kinematic target and cost estimate.
+13. **Measured-weight ingest** — Creamer–Leifer–Pillow supplement (licence check first) and the Randi 2023 atlas, vendored under `data/connectome/` with provenance; a unit-scale pin registered for sweep.
+14. **Methodology consolidation** — the 42 `plasticity-evaluation` requirements folded into the phase protocol (A.4).
+15. **Artefact-retention rule** — which per-campaign artefacts are committed and which archived off-repo, registered at phase start.
 
 ### Lower priority (address as needed)
 
@@ -1770,4 +1979,4 @@ Key principles guiding execution:
 4. **Demote rather than delete.** Quantum demoted to one architecture family. NematodeBench demoted from public-launch deliverable to internal tooling. Optionality preserved; commitments matched to evidence. *Corollary added 2026-07-25:* demotion is a holding position, not a terminal state. Where a demoted component then accrues no use across a full phase, deletion follows — and is recorded as a reversal with its evidence, rather than left to bit-rot in place. NematodeBench is the first component to complete that arc.
 5. **One programme, two contributions.** The platform claim and the scientific claim are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer.
 
-By Phase 7 close, the project will have shipped a connectome-grounded architecture-comparison platform with biologically-plausible plasticity and cross-species transfer, alongside per-milestone logbooks documenting both positive results and substrate-grounded diagnoses. Whether the connectome ranks as dominant or merely competitive against evolved alternatives, the platform contribution stands and the architecture-comparison question is answered — with the evidence chain documented at the per-milestone level rather than asserted in the roadmap.
+By the Phase 7 close the project had shipped the connectome-grounded architecture-comparison platform, a diagnosed negative on biologically plausible plasticity that writes the wiring, and a replicated wiring advantage on learning speed under gradient descent — with cross-species transfer deferred and the plastic 2×2 unmeetable within the closing scope ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)). **Phase 8 grounds, then embodies**: the initialisation control the strongest result still needs, the operating-point surface a referee now expects, measured synaptic weights on the real edges, dynamics, and the anatomical motor-to-muscle map into a two-dimensional body — each a registered rung of the same question, each with its own positive control, and none of it a whole-organism emulation. Whether the connectome's wiring turns out to matter once its weights and its body are real, or turns out to be its degree statistics all the way down, the platform contribution stands and the evidence chain is documented at the per-milestone level rather than asserted in the roadmap.
