@@ -17,9 +17,10 @@ hold one decade below the rate it ran at.
 
 That rate was inherited, not chosen for the width. R.2 pinned 0.001 on the 8-parameter readout and
 waived its registered check; [L.0](../../../docs/experiments/logbooks/064-l4-frozen-features.md) ran
-the check at the pooled width on the wild type alone and found 0.001 the optimum there (17.41 foods
-against 12.08 at 0.0001, seeds 101–104); L.1 carried it to a 78-parameter readout and to the null
-without a sweep. Protocol principle 7 — a setting pinned at one width is a hypothesis at another —
+the check at the pooled width on the wild type alone and found 0.001 the optimum there (seeds
+101–104: 18.085 foods against 14.488 at 0.0001 on the plateau-tail mean every contrast here reads;
+L.0's own table published the whole-run mean, 17.417 against 12.086, and the ordering is the same on
+either); L.1 carried it to a 78-parameter readout and to the null without a sweep. Protocol principle 7 — a setting pinned at one width is a hypothesis at another —
 has already been paid for once in this programme.
 
 What is **not** known is the thing the synthesis has to say: whether L.1's **registered primary, the

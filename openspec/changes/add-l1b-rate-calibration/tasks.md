@@ -52,7 +52,11 @@
 
 ## 4. The stop clauses
 
-- [ ] 4.1 **Pilot on seeds 101–104**, eight runs, under the output controls: both pooled 0.0001 arms
+- [x] 4.1 *(**passed 2026-09-19**: 8/8; both arms learn, +12.659 and +12.684 foods over their own
+  floors with no seed below floor; both differ from their 0.001 partners on all four seeds; the
+  wild-type arm reproduces L.0's rate-check runs exactly on all eight log- and record-derived fields,
+  `peak_action_density` being uncomparable because L.0's export was deleted. See the launch record.)*
+  **Pilot on seeds 101–104**, eight runs, under the output controls: both pooled 0.0001 arms
   learn above L.1's pilot pooled floors and differ from the 0.001 pooled pilot arms; the wild-type arm
   is compared to L.0's rate-check run on the same seeds. No reading at four pairs.
 - [ ] 4.2 The identity check (2.1) passes or the affected cell is re-run — settled before any

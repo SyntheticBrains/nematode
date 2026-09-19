@@ -13,8 +13,26 @@ wiring effect **−0.0977, null ahead**. L.1's sign-flip form does not hold one 
 
 The rate was inherited: R.2 pinned it on the 8-parameter readout and waived its check;
 [L.0](../../064-l4-frozen-features.md) checked it at the pooled width on the wild type alone and
-found 0.001 the optimum there (17.41 foods against 12.08 at 0.0001, seeds 101–104); L.1 carried it
-to a 78-parameter readout and to the null without a sweep.
+found 0.001 the optimum there (seeds 101–104); L.1 carried it to a 78-parameter readout and to the
+null without a sweep.
+
+*(Corrected 2026-09-19, before the campaign, while reading the pilot.)* **L.0's rate-check table
+reports the whole-run mean foods; every contrast in this programme reads the plateau-tail mean.**
+This record first cited L.0's figures — 17.41 at 0.001 against 12.08 at 0.0001 and 12.81 at 0.01 —
+without naming the statistic, which invites reading them against a harness number they are not
+commensurable with. Both, on the same runs:
+
+| rate | whole-run mean (L.0's table) | plateau-tail mean (the harness metric) |
+|---|---|---|
+| 0.0001 | 12.086 | **14.488** |
+| **0.001 (committed)** | **17.417** | **18.085** |
+| 0.01 | 12.810 | 12.842 |
+
+L.0's ordering and its "tight across seeds" reading hold on either statistic — 0.001 leads at the
+pooled width and its spread is 1.05 foods against 6.47 at 0.0001 and 10.52 at 0.01 — so nothing in
+L.0 changes. What changes is the margin this record may cite: **0.001 leads 0.0001 by 3.60 foods on
+the harness metric, not 5.33**. The 0.001 figures come from `campaigns/readout-width-pilot`, L.1's
+pilot of the same config and seeds, which reproduces L.0's published whole-run 17.41 exactly.
 
 > *At 0.0001, does widening the readout still help the wild type more than the shuffle — or was
 > L.1's interaction a property of 0.001?*
@@ -91,10 +109,47 @@ measurement); 192 runs need **~3.4 GB**, the 16 check/pilot runs ~0.3 GB.
 1. **Pilot on seeds 101–104**, eight runs, under the controls: both pooled 0.0001 arms learn above
    L.1's pilot pooled floors (`campaigns/readout-width-pilot`), and each differs from the 0.001
    pooled pilot arm of the same wiring. The wild-type arm is compared to L.0's rate-check run of the
-   same config on the same seeds (12.08 foods, `campaigns/frozen-features-rate`), which is one more
-   identity point across the flag change. No reading at four pairs.
+   same config on the same seeds (`campaigns/frozen-features-rate`; 14.488 plateau-tail mean foods,
+   the figure the harness reads), which is one more identity point across the flag change and the
+   header rewrite. No reading at four pairs.
 2. The identity check passes, or the affected cell is re-run.
 3. This record committed before anything runs.
+
+## The pilot, 2026-09-19 — pass
+
+8/8 runs succeeded in 1721 s. Plateau-tail mean foods, against L.1's pilot floors and its 0.001
+pooled arms at the same seeds:
+
+| wiring | seed | @0.0001 | its floor | gain | @0.001 |
+|---|---|---|---|---|---|
+| wt | 101 | 15.217 | 1.089 | **+14.128** | 18.697 |
+| wt | 102 | 10.107 | 2.571 | **+7.536** | 17.647 |
+| wt | 103 | 16.580 | 2.072 | **+14.508** | 18.075 |
+| wt | 104 | 16.049 | 1.584 | **+14.465** | 17.921 |
+| rn | 101 | 17.169 | 6.149 | **+11.020** | 19.505 |
+| rn | 102 | 14.072 | 1.864 | **+12.208** | 15.767 |
+| rn | 103 | 17.648 | 2.609 | **+15.039** | 19.425 |
+| rn | 104 | 18.321 | 5.852 | **+12.469** | 19.484 |
+
+All three registered conditions hold. **Both arms learn**: mean gain over floor **+12.659** (wild
+type) and **+12.684** (null), no seed below its floor. **Both differ from their 0.001 partners**, on
+every one of the four seeds and in the direction L.0's pooled-width check predicted — the lower rate
+is *worse* at the pooled width, by 2.3 (wild type) and 2.1 (null) foods. **The wild-type arm
+reproduces L.0's rate-check runs exactly**: identical on all eight fields `read_log` derives from the
+log and the experiment record, across both the output-control flags and the config header rewrite.
+
+**One field could not be compared, and it is named rather than counted as a pass.**
+`peak_action_density` reads `session/data/tracking_actions.csv` from a run's export, and **L.0's
+2026-09-15 exports have since been deleted**, so it is `None` on the committed side and a number on
+the new side for all four seeds. The difference is a property of the deleted export, not of the runs,
+and the field enters no contrast in this harness. This does **not** touch the registered identity
+check of clause 2: all eight of its committed runs still have their exports and their
+`tracking_actions.csv`, so that check compares all nine fields with nothing missing.
+
+**Not read at four seeds, and recorded so it cannot be read later as if it had been**: at the pooled
+width the null's gain over floor matched the wild type's (+12.68 against +12.66), where at 0.001 L.1
+found the pooled null *ahead* on `auc_success`. Whether that holds at 96 seeds is what the campaign
+measures.
 
 ## What the reading conditions, and what it does not decide
 

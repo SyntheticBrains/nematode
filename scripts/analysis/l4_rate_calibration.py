@@ -91,7 +91,14 @@ REGISTERED = {
         "rate"
     ),
     "wide_wiring_effect_at_1e-4_committed": -0.0977,
-    "l0_pooled_rate_check_wild_type_foods": {"1e-4": 12.08, "1e-3": 17.41, "1e-2": 12.81},
+    # L.0's pooled-width rate check on the wild type, seeds 101-104. Its published table reports the
+    # WHOLE-RUN mean foods; every contrast here reads the plateau-tail mean, so both are carried and
+    # named. The ordering is the same on either statistic: 0.001 leads at the pooled width.
+    "l0_pooled_rate_check_wild_type": {
+        "metric": "mean foods, seeds 101-104",
+        "whole_run_mean_as_published": {"1e-4": 12.086, "1e-3": 17.417, "1e-2": 12.810},
+        "plateau_tail_mean_the_harness_metric": {"1e-4": 14.488, "1e-3": 18.085, "1e-2": 12.842},
+    },
     "n_registered": len(SEEDS),
     "power_at_minimum": "~98% at pooled-cell sd 0.22 (se 0.0346); ~87% at sd 0.30 (se 0.0454)",
     "sign_flip_known_absent": (

@@ -30,8 +30,11 @@ wiring-specific structure at both rates, while the wild type leads the null at n
 ## Why 0.0001 and not a sweep
 
 Two decades either side of 0.001 have been looked at on this substrate. At the pooled width, L.0's
-check on the wild type found 0.001 the optimum (17.41 foods against 12.08 at 0.0001 and 12.81 at
-0.01, seeds 101–104, tight at 0.001 only). At the per-neuron width, L.4's atlas check found 0.001 too
+check on the wild type found 0.001 the optimum (seeds 101–104, tight at 0.001 only). *(Corrected
+2026-09-19, before the campaign: L.0's published figures are **whole-run** mean foods — 17.417,
+12.086, 12.810 — while every contrast here reads the **plateau-tail** mean, which on the same runs
+is 18.085, 14.488 and 12.842. The ordering and the spread reading are unchanged; the citable margin
+at the pooled width is 3.60 foods, not 5.33.)* At the per-neuron width, L.4's atlas check found 0.001 too
 high for the grounded arms and 0.0001 clean, and the rate-matched baseline found 0.0001 better for
 both wide wirings by a wide margin. So the rate already interacts with the width in the one wiring
 that has been measured at both, and 0.0001 is the one alternative rate at which the wide cells exist
@@ -86,8 +89,8 @@ re-runs that arm's cell in full for all 96 seeds; there is no partial reuse.
 1. **Pilot on seeds 101–104**, eight runs: both pooled 0.0001 arms, before any registered seed. Each
    learns above L.1's pilot pooled floors (`campaigns/readout-width-pilot`), and each differs from
    the 0.001 pooled pilot arm of the same wiring. L.0's rate-check ran the wild-type arm on these seeds
-   under the old flags and read 12.08 foods; the pilot reproduces that arm under the controls, which is
-   one more identity point. No reading at four pairs.
+   under the old flags; the pilot reproduces that arm under the controls, which is one more identity
+   point. No reading at four pairs.
 2. The identity check above passes, or the affected cell is re-run.
 3. `launch.md` committed before anything runs.
 
