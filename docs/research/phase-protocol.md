@@ -143,6 +143,16 @@ down.
     review found one of its two recorded destinations untouched, and the status became deferred,
     [Logbook 069](../experiments/logbooks/069-phase7-synthesis.md).*
 
+13. **Re-aim what watches the field.** *(Added 2026-09-20.)* A close changes which questions are
+    open, so anything pointed at the old ones is now pointed at nothing. The standing case is the
+    literature watch: [`context.md`](literature-watch/context.md) is the entire definition of
+    relevance for its scoring pass, and [`seeds.toml`](literature-watch/seeds.toml) decides whose
+    citations are worth following. Both are hand-maintained, and the close is when they are re-read
+    against the phase that is opening. *Neither can report that it has gone stale. A brief naming
+    questions that closed two phases ago still returns a confident, well-formed digest — about the
+    wrong things — and the failure is invisible precisely because the output looks exactly as it
+    did when it was right.*
+
 ## What this is not
 
 It is not a promise that following it produces a positive result. It produces a **decisive** one:

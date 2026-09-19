@@ -70,6 +70,10 @@ dev = [
     "pytest-xdist>=3.8.0",
     # Splits the suite across CI shards using .test_durations for balance.
     "pytest-split>=0.11.0",
+    # The literature watch calls the Messages API. It is not needed to run the simulator, and
+    # the weekly workflow installs it into an ephemeral environment — it is here so that pyright
+    # type-checks the API calls in scripts/literature_watch.py against the real SDK.
+    "anthropic>=1.7.0",
     # pytest-xdist needs psutil to resolve `-n logical`; without it it silently
     # falls back to physical cores, which halves worker count on CI runners.
     # It arrives transitively today (ipykernel, qiskit-aer) — pin it directly so

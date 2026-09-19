@@ -1,0 +1,90 @@
+name: Literature Watch
+
+on:
+  schedule:
+    # Monday 08:00 UTC, after the weekend's preprint postings have been indexed.
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      until:
+        description: 'Window end (YYYY-MM-DD). Defaults to today.'
+        required: false
+        type: string
+      dry_run:
+        description: 'Fetch and list candidates only — no model calls, no issue.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: Weekly digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          lfs: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      # State lives in the issues themselves rather than in a committed file or a cache: the
+      # digest embeds the ids it reported, so the previous weeks' issues ARE the seen-list. No
+      # commits back to the repository, nothing to evict, and the state is visible to a human.
+      - name: Collect previously reported ids
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --repo "$GITHUB_REPOSITORY" --label literature-watch --state all \
+            --limit 60 --json body --jq '.[].body' \
+            | grep -o '<!-- literature-watch-reported:[^>]*-->' \
+            | sed -e 's/<!-- literature-watch-reported://' -e 's/-->//' \
+            | tr ' ' '\n' | sed '/^$/d' | sort -u > seen.txt || true
+          echo "carrying $(wc -l < seen.txt) previously reported ids"
+
+      # Dispatch inputs reach the shell as quoted environment variables, never as `${{ }}`
+      # interpolated into the command: `until` is free text, and interpolation would run it.
+      - name: Build the digest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENALEX_MAILTO: ${{ secrets.OPENALEX_MAILTO }}
+          UNTIL: ${{ inputs.until }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(--seen-file seen.txt)
+          if [ -n "$UNTIL" ]; then
+            args+=(--until "$UNTIL")
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          else
+            args+=(--out digest.md)
+          fi
+          uv run --no-project --with anthropic python scripts/literature_watch.py "${args[@]}"
+
+      - name: Open the issue
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create literature-watch --repo "$GITHUB_REPOSITORY" \
+            --color 0E8A16 --description "Weekly automated research digest" 2>/dev/null || true
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "$(head -n1 digest.md | sed 's/^# //')" \
+            --label literature-watch \
+            --body-file digest.md

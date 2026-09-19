@@ -1,0 +1,89 @@
+# Literature watch — sources and seeds.
+#
+# Read by scripts/literature_watch.py. TOML rather than YAML so the weekly job needs nothing but
+# the standard library plus the Anthropic SDK; `tomllib` ships with Python 3.13.
+#
+# What to maintain here: the seed set. Everything else is stable. Review it whenever the phase plan
+# is reviewed — a seed list that stops matching the frontier is how a watch like this quietly stops
+# finding anything, and nothing in the machinery can notice that happening.
+
+[scoring]
+# Cheap pass over every candidate, then a capable pass over the survivors. A few hundred abstracts
+# a week costs single-digit cents at these sizes.
+triage_model = "claude-haiku-4-5"
+digest_model = "claude-opus-5"
+batch_size = 40
+# 0 unrelated, 1 adjacent, 2 relevant, 3 bears on an open question. See the prompt in the script.
+keep_threshold = 2
+max_digest_items = 8
+max_candidates = 600
+context_files = ["context.md"]
+
+# --- Citation chaining -------------------------------------------------------------------------
+# New work citing any of these. The highest-precision channel by a wide margin: a keyword search
+# for "C. elegans" is mostly molecular biology, whereas the papers citing these are, almost by
+# construction, about circuits, connectomes, or learning in them.
+#
+# The lookback is three weeks against a weekly run, because OpenAlex indexes a DOI some days to
+# weeks after publication and the free filters are publication-date filters. Repeats are suppressed
+# by the caller's seen-list, so a wide window costs a little triage and misses nothing.
+[openalex]
+enabled = true
+lookback_days = 21
+# Optional: set OPENALEX_MAILTO in the environment for the faster request pool. Deliberately not a
+# tracked value — this is a public repository.
+
+[[openalex.seeds]]
+id = "W2954731284"
+label = "Cook et al. 2019, whole-animal connectomes of both C. elegans sexes"
+
+[[openalex.seeds]]
+id = "W3192789395"
+label = "Witvliet et al. 2021, connectomes across development"
+
+[[openalex.seeds]]
+id = "W4388126567"
+label = "Randi et al. 2023, neural signal propagation atlas"
+
+[[openalex.seeds]]
+id = "W4392198362"
+label = "Yim et al. 2024, dauer comparative connectomics"
+
+[[openalex.seeds]]
+id = "W4360860763"
+label = "Yim et al. 2024 (preprint), mind of a dauer"
+
+[[openalex.seeds]]
+id = "W4412794960"
+label = "Cook et al. 2025, C. elegans / P. pacificus comparative connectomics"
+
+[[openalex.seeds]]
+id = "W4399693885"
+label = "Cook et al. 2025 (preprint), comparative connectomics of two nematode species"
+
+[[openalex.seeds]]
+id = "W4411991201"
+label = "Perks et al. 2026, cerebellum-like circuit for sensory prediction"
+
+[[openalex.seeds]]
+id = "W2034131443"
+label = "Izquierdo & Beer 2013, connecting a connectome to behaviour"
+
+[[openalex.seeds]]
+id = "W2782973718"
+label = "Gerstner et al. 2018, eligibility traces and three-factor rules"
+
+# --- Preprint sweeps ---------------------------------------------------------------------------
+# Lower precision, and the reason the triage pass exists. These catch work before it is citable and
+# therefore before citation chaining can see it at all.
+
+[arxiv]
+enabled = true
+lookback_days = 8
+categories = ["q-bio.NC", "cs.NE"]
+
+[biorxiv]
+enabled = true
+lookback_days = 8
+servers = ["biorxiv"]
+categories = ["neuroscience", "systems biology", "animal behavior and cognition"]
