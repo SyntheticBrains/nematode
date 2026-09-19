@@ -46,9 +46,11 @@ results have a diagnosed cause rather than an unexplained one.
   the limitations, including the unswept pins and the wide readout's missing control.
 - **The six SHOULD lines settled**, each in the roadmap and the tracker: the preprint line corrected
   to cancelled; the three 7b lines marked deferred with D14 named; **D4's learnable-gap-junction
-  ablation closed by supersession** — R.2 closed the class of rules that write the wiring and L.5 has
-  now tested gap junctions as fixed features, so the local-rule route is closed and the question is
-  narrowed to the PPO arm B.6's own status already names; and
+  ablation recorded deferred-with-destination, narrowed** — R.2 closed the class of rules that write
+  the wiring and L.5 has now tested gap junctions as fixed features, so the **local-rule destination is
+  closed**, while **the PPO arm on the block-V cells that B.6's own status names stays live and
+  unattempted**; it is therefore an unresolved narrowed question, inherited by Phase 8's dynamics rung,
+  and *not* superseded; and
   **co-primary biological validation recorded unreachable with its reason** — it needed a rule that
   writes the wiring to a benefit in order to make a sign-level prediction, and no such rule exists.
 - **Block V's confound becomes a standing condition**, carried at every citation site (Logbook 065,

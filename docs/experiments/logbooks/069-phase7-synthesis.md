@@ -100,7 +100,7 @@ not a null result on the hypothesis; it is the absence of an instrument that cou
 | Biological-validation collaboration; ≥ 1 prediction tested against lab data | **unreachable-with-reason**, for the co-primary's reason |
 | Journal submissions in flight | **deferred-with-destination**: the post-close publication decision |
 | Spiking-STDP arm; neuromorphic deployment | **deferred-with-destination**: Future Directions, unscheduled |
-| Reproducibility artefacts current | **met with a stated limit** — see § Reproducibility |
+| Reproducibility artefacts current | **met** — with a limit stated in § Reproducibility: every headline figure is re-derivable from the committed per-seed CSVs, while the pre-readout-width exports and V.3's tracked-experiment records are gone |
 
 ## The terminal reading of the pre-registered 2×2
 

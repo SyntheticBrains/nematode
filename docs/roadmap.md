@@ -1172,7 +1172,7 @@ The L4 validation question — "does modulated plasticity reproduce documented *
 - ⭐ **UNREACHABLE-WITH-REASON** (not a gate) — Biological-validation collaboration completed; ≥ 1 model prediction tested against published or partner-lab worm data. *(For the co-primary's reason: there is no plastic-wiring prediction to test.)*
 - ⭐ **DEFERRED-WITH-DESTINATION** (not a gate): the post-close publication decision — Journal submissions in flight (the 6a preprint itself is SHOULD, per D13).
 - ⭐ **DEFERRED-WITH-DESTINATION** (not a gate): Future Directions, unscheduled — Spiking-STDP arm results; neuromorphic deployment demonstrated.
-- ⭐ **MET WITH A STATED LIMIT** (not a gate) — Reproducibility artefacts current. *(Every headline figure from Logbook 040 onward is re-derivable from the committed per-seed CSVs in git; re-derivation from raw needs the local campaign logs; the step-level exports before the readout-width era and V.3's tracked-experiment records are **gone**. See [Logbook 069](experiments/logbooks/069-phase7-synthesis.md) § Reproducibility.)*
+- ⭐ **MET** (not a gate) — Reproducibility artefacts current, with a limit stated rather than a status invented. *(Every headline figure from Logbook 040 onward is re-derivable from the committed per-seed CSVs in git; re-derivation from raw needs the local campaign logs; the step-level exports before the readout-width era and V.3's tracked-experiment records are **gone**. See [Logbook 069](experiments/logbooks/069-phase7-synthesis.md) § Reproducibility.)*
 
 #### Risk-mitigation: failure modes and pivots
 
