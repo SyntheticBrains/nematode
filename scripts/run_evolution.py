@@ -155,7 +155,16 @@ def parse_arguments() -> argparse.Namespace:
         "--resume",
         type=str,
         default=None,
-        help="Path to a checkpoint.pkl file to resume from.",
+        help=(
+            "Path to a checkpoint.pkl file to resume from. Requires "
+            "--allow-unsafe-resume, because loading a pickle executes arbitrary code "
+            "from the file."
+        ),
+    )
+    parser.add_argument(
+        "--allow-unsafe-resume",
+        action="store_true",
+        help="Required to use --resume. Checkpoints are Python pickles, so loading one executes arbitrary code from that file: pass this only for a checkpoint this machine wrote, never for one received from elsewhere.",
     )
     parser.add_argument(
         "--output-dir",
@@ -447,6 +456,23 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI e
         return 1
 
     resume_path = Path(args.resume) if args.resume else None
+    if resume_path is not None and not args.allow_unsafe_resume:
+        # A checkpoint is a pickle, so loading one runs whatever the file says to run.
+        # The risk is the FILE's provenance, not the flag's, so the gate is explicit
+        # opt-in per invocation rather than a warning the caller can read past.
+        #
+        # Printed rather than logged: this runs before `configure_file_logging()` installs
+        # any handler, so `logger.error` here would reach a NullHandler and the user would
+        # get a bare exit 1. (Under pytest the package configures a stream handler at
+        # import, which is why a logged message looks fine in tests and vanishes in
+        # production -- the tests strip PYTEST_CURRENT_TEST to exercise this path.)
+        print(
+            f"Refusing to resume: {resume_path} is a Python pickle, and loading it "
+            "executes arbitrary code from that file. Pass --allow-unsafe-resume to "
+            "proceed, and only for a checkpoint this machine wrote.",
+            file=sys.stderr,
+        )
+        return 1
     resolved = _resolve_output_dir(args.output_dir, resume_path)
     if resolved is None:
         return 1

@@ -469,7 +469,9 @@ class EvolutionLoop:
             (mid-run inheritance changes are not supported).
         """
         with path.open("rb") as handle:
-            payload = pickle.load(handle)  # noqa: S301 - trusted local file
+            # S301: the file is trusted only because the caller passed
+            # `--allow-unsafe-resume`, which the driver requires before it reaches here.
+            payload = pickle.load(handle)  # noqa: S301
 
         version = payload.get("checkpoint_version")
         if version != CHECKPOINT_VERSION:
