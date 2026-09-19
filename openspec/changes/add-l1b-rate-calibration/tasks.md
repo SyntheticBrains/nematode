@@ -18,7 +18,7 @@
   learning arms and the two wide 0.0001 arms under the current path (`--no-detailed-export --no-file-log`) and compare to their committed logs on every field `read_log` parses. Identical: the
   cells are reused and the record says on what evidence. Any field differing: that arm's cell is
   re-run for seeds 1–96 and nothing of it is reused.
-- [ ] 2.2 Every reused cell is read from its campaign directory through the same
+- [x] 2.2 *(held: `analyse` scans all three campaign directories and calls `connectome_structure_efficiency.analyse` once per (rate, width) pair, so L.1's cell means, interaction and censoring counts are recomputed rather than quoted — and come back exactly.)* Every reused cell is read from its campaign directory through the same
   `connectome_structure_efficiency` call as the new arms — never from a committed JSON.
 
 ## 3. Harness
@@ -69,26 +69,26 @@
 
 ## 5. Campaign
 
-- [ ] 5.1 192 runs: two arms × seeds 1–96 at 3000 episodes, `--track-experiment --no-detailed-export --no-file-log`; disk (~17.6 MB per run, ~3.4 GB) recorded in `launch.md`
+- [x] 5.1 *(**ran 2026-09-19: 192/192 succeeded in 22,652 s, all parseable; no run-affecting commit since the launch commit `8bcad837`; ~3.3 GB**)* 192 runs: two arms × seeds 1–96 at 3000 episodes, `--track-experiment --no-detailed-export --no-file-log`; disk (~17.6 MB per run, ~3.4 GB) recorded in `launch.md`
   before launch.
-- [ ] 5.2 Per-seed CSV with all four 0.0001 cells and L.1's four 0.001 cells, the tables and the
+- [x] 5.2 *(written 2026-09-19)* Per-seed CSV with all four 0.0001 cells and L.1's four 0.001 cells, the tables and the
   reading under `supporting/068-l1b-rate-calibration/`.
 
 ## 6. The record
 
-- [ ] 6.1 Logbook 068: the 2×2 at 0.0001 beside L.1's at 0.001, the interaction with its
+- [x] 6.1 *(2026-09-19)* Logbook 068: the 2×2 at 0.0001 beside L.1's at 0.001, the interaction with its
   minimum-effect status, the three-way, the gates, both metrics with censoring, the identity evidence,
   and every "may not be cited as".
-- [ ] 6.2 The experiments index row and `CHANGELOG.md`.
-- [ ] 6.3 The tracker: an L.1b entry, the dated condition on L.1's entry, and Z.1's dependency line
+- [x] 6.2 *(2026-09-19)* The experiments index row and `CHANGELOG.md`.
+- [x] 6.3 *(2026-09-19)* The tracker: an L.1b entry, the dated condition on L.1's entry, and Z.1's dependency line
   noting L.1b ran first; the same condition as a dated note in Logbook 066 and in the roadmap's
   ladder paragraph. L.1's verdict is not rewritten.
-- [ ] 6.4 **If `survives`**: the synthesis carries the interaction as the phase's positive and the
+- [x] 6.4 *(**does not apply** — the interaction at 0.0001 is significantly negative, not positive; the reading is `width_favours_the_shuffle_at_this_rate`)* **If `survives`**: the synthesis carries the interaction as the phase's positive and the
   sign flip as a 0.001 result.
-- [ ] 6.5 **If `rate_specific`**: the synthesis carries L.1 as a positive at one pinned rate that a
+- [x] 6.5 *(**applies in substance and is carried**: the interaction does not survive, so the synthesis carries L.1 as a positive at one pinned rate in the same sentence as the claim. The reading assigned is the reverse-direction one, whose own direction is reported and not credited)* **If `rate_specific`**: the synthesis carries L.1 as a positive at one pinned rate that a
   decade lower does not reproduce, in the same sentence as the claim.
-- [ ] 6.6 **If `width_favours_the_shuffle_at_this_rate`**: reported as the reverse direction, not
+- [x] 6.6 *(**applies** — reported as the reverse direction and not explained, and not credited: 23% of the registered minimum, primary axis alone, secondary voided by censoring, and the registration's missing minimum on this branch named as a defect in its own rules)* **If `width_favours_the_shuffle_at_this_rate`**: reported as the reverse direction, not
   explained; the synthesis says the interaction's sign depends on the rate.
-- [ ] 6.7 The phase-protocol note under principle 7 gains the pooled-width fact: L.0 did sweep the rate
+- [x] 6.7 *(2026-09-19; principle 7 gains that the inherited pin **set the sign** of the registered primary, and principle 10 gains that a minimum must be registered for both directions of a two-sided reading)* The phase-protocol note under principle 7 gains the pooled-width fact: L.0 did sweep the rate
   on the wild type at the pooled width and 0.001 won there, so what was unswept is the per-neuron
   width and the null at either width.

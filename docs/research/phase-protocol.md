@@ -95,7 +95,13 @@ down.
    2026-09-19.) A setting pinned at one width is a hypothesis again at another. `plasticity_rate`
    0.001 was pinned by R.2 on an 8-parameter readout and inherited by L.1's 78-parameter one without
    a sweep; L.4's rate check found the per-neuron wiring effect reverses one decade below it, which
-   conditions L.1's positive on its rate, [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).*
+   conditions L.1's positive on its rate, [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).
+   **L.1b then measured what the inherited pin cost**: at the calibrated rate the registered primary's
+   sign **reverses** (interaction −0.0657 against +0.2818, three-way +0.3475 at q = 0.000 on 81 of 96
+   seeds), and the effect the pin hid is larger than the effect it was pinned for — a width main effect
+   of +0.6178 on 96 of 96 seeds where the original panel detected none. An inherited setting does not
+   merely cost performance; it can set the sign of the result,
+   [Logbook 068](../experiments/logbooks/068-l1b-rate-calibration.md).*
 
 8. **Pilots on disjoint seeds.** Registered seeds stay untouched until the protocol is fixed. *Held
    throughout Phase 7, and it is why the pilots could inform registrations without contaminating
@@ -111,7 +117,12 @@ down.
 10. **Register a minimum effect beside significance**, and name the outcome that means stop. *A
     paired rank test at eight seeds fires on the consistency of the sign, whether the shift is
     0.05 or 2.0 of ten. On a floor-adjacent platform that is a route to reporting nothing as
-    something.*
+    something.* *(Added 2026-09-19.) **Register it for both directions of a two-sided reading.** L.1b
+    required half of the original effect to credit the positive direction and set no minimum on the
+    reverse one, so the reverse reading fired at 23% of that minimum — a size the guarded direction
+    would have refused. The asymmetry was named in the record rather than exploited, and the symmetric
+    reading stated beside it,
+    [Logbook 068](../experiments/logbooks/068-l1b-rate-calibration.md).*
 
 11. **A mechanism must predict, not describe.** A proposed explanation earns its place by a test
     that could have refuted it. *The horizon was a description of the one-step-success /
