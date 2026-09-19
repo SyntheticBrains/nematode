@@ -34,7 +34,8 @@
 #   uv run python scripts/run_coevolution.py \
 #       --config configs/evolution/coevolution_full.yml \
 #       --seed 44 \
-#       --resume "$(ls -dt evolution_results/m5_coevolution_full/seed-44/*/ | head -1)"
+#       --resume "$(ls -dt evolution_results/m5_coevolution_full/seed-44/*/ | head -1)" \
+#       --allow-unsafe-resume
 
 set -euo pipefail
 

@@ -246,6 +246,10 @@ def test_run_evolution_smoke_mlpppo_resume(tmp_path: Path) -> None:
             str(output_root),
             "--resume",
             str(checkpoint),
+            # This test wrote the checkpoint it is resuming, so it is trusted by
+            # construction -- which is the case the opt-in exists to distinguish from a
+            # file of unknown provenance.
+            "--allow-unsafe-resume",
         ],
         check=False,
         cwd=str(tmp_path),

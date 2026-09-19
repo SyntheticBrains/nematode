@@ -1301,7 +1301,7 @@ class CoevolutionLoop:
             )
             raise FileNotFoundError(msg)
         with rng_path.open("rb") as fh:
-            rng_payload = pickle.load(fh)  # noqa: S301 — trusted local file
+            rng_payload = pickle.load(fh)  # noqa: S301 — trusted only via the driver's --allow-unsafe-resume gate
         canonical_k_block_index = rng_payload.get("k_block_index")
         if canonical_k_block_index is None:
             msg = (
@@ -1321,7 +1321,7 @@ class CoevolutionLoop:
                 )
                 raise FileNotFoundError(msg)
             with ckpt_path.open("rb") as fh:
-                payload = pickle.load(fh)  # noqa: S301 — trusted local file
+                payload = pickle.load(fh)  # noqa: S301 — trusted only via the driver's --allow-unsafe-resume gate
             version = payload.get("checkpoint_version")
             if version != CHECKPOINT_VERSION:
                 msg = (

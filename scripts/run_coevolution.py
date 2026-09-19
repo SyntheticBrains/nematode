@@ -24,7 +24,7 @@ Examples
     uv run python scripts/run_coevolution.py \
         --config configs/evolution/coevolution_pilot_arm_a.yml \
         --seed 42 \
-        --resume evolution_results/m5_coevolution_pilot/arm_a/<session>
+        --resume evolution_results/m5_coevolution_pilot/arm_a/<session> --allow-unsafe-resume
 
 Output layout (per run, mirrors the CoevolutionLoop checkpoint format):
 
@@ -93,10 +93,16 @@ def parse_arguments() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--allow-unsafe-resume",
+        action="store_true",
+        help="Required to use --resume. Checkpoints are Python pickles, so loading one executes arbitrary code from that file: pass this only for a checkpoint this machine wrote, never for one received from elsewhere.",
+    )
+    parser.add_argument(
         "--resume",
         type=str,
         default=None,
         help=(
+            "Requires --allow-unsafe-resume (the checkpoint files are pickles). "
             "Path to an existing session directory to resume from "
             "(the dir containing prey/, predator/, coevolution_state.json, "
             "coevolution_rng.pkl, champion_history.json). "
@@ -195,6 +201,17 @@ def main() -> int:  # noqa: PLR0911 — sequential CLI entrypoint with distinct 
     seed: int = args.seed if args.seed is not None else (sim_config.seed or 0)
     rng = np.random.default_rng(seed)
 
+    if args.resume and not args.allow_unsafe_resume:
+        # Five files, two of them pickles; loading either runs code from the file.
+        # Printed rather than logged, for the reason given in run_evolution.py's gate:
+        # no log handler is installed this early in the entry point.
+        print(
+            f"Refusing to resume: the checkpoint files under {args.resume} are Python "
+            "pickles, and loading them executes arbitrary code from those files. Pass "
+            "--allow-unsafe-resume to proceed, and only for a session this machine wrote.",
+            file=sys.stderr,
+        )
+        return 1
     resolved = _resolve_session_dir(args.output_dir, args.resume)
     if resolved is None:
         return 1
@@ -246,7 +263,7 @@ def main() -> int:  # noqa: PLR0911 — sequential CLI entrypoint with distinct 
     except KeyboardInterrupt:
         logger.warning(
             "Run interrupted by user. The most recent K-block checkpoint "
-            "(if any) is at %s — re-run with --resume %s to continue.",
+            "(if any) is at %s — re-run with --resume %s --allow-unsafe-resume to continue.",
             session_dir,
             session_dir,
         )
