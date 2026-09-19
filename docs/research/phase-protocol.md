@@ -80,9 +80,11 @@ down.
    *(Added 2026-09-19.) The same principle applies when a calibration moves the operating point:
    re-establish the effect at the new point before ablating it, and never inside the same campaign.
    L.4's registered rate check moved the atlas arms to 0.0001, and the ablation ran against a
-   rate-matched baseline nobody had measured, bundled into the same 960 runs. The pilot had already
-   shown the null gaining twice as much as the wild type at that rate; 192 runs would have read the
-   baseline first and shown there was no wild-type effect at 0.0001 for the signs to carry,
+   rate-matched baseline nobody had measured, bundled into the same 960 runs. The wide arms' own
+   pilot at 0.0001 (seeds 101–104) had already shown the null's gain over floor nearly doubling,
+   +7.8 to +15.0 foods, against the wild type's +13.7 to +17.3, and the launch record deferred
+   reading it to the campaign; 192 runs would have read the baseline first and shown there was no
+   wild-type effect at 0.0001 for the signs to carry,
    [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).*
 
 ### Parameters
