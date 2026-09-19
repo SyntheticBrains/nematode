@@ -87,7 +87,7 @@
   sign flip as a 0.001 result.
 - [x] 6.5 *(**applies in substance and is carried**: the interaction does not survive, so the synthesis carries L.1 as a positive at one pinned rate in the same sentence as the claim. The reading assigned is the reverse-direction one, whose own direction is reported and not credited)* **If `rate_specific`**: the synthesis carries L.1 as a positive at one pinned rate that a
   decade lower does not reproduce, in the same sentence as the claim.
-- [x] 6.6 *(**applies** — reported as the reverse direction and not explained, and not credited: 23% of the registered minimum, primary axis alone, secondary voided by censoring, and the registration's missing minimum on this branch named as a defect in its own rules)* **If `width_favours_the_shuffle_at_this_rate`**: reported as the reverse direction, not
+- [x] 6.6 *(**applies** — reported as the reverse direction and not explained, and not credited: 47% of the registered minimum and 23% of L.1's effect, primary axis alone, secondary voided by censoring, and the registration's missing minimum on this branch named as a defect in its own rules)* **If `width_favours_the_shuffle_at_this_rate`**: reported as the reverse direction, not
   explained; the synthesis says the interaction's sign depends on the rate.
 - [x] 6.7 *(2026-09-19; principle 7 gains that the inherited pin **set the sign** of the registered primary, and principle 10 gains that a minimum must be registered for both directions of a two-sided reading)* The phase-protocol note under principle 7 gains the pooled-width fact: L.0 did sweep the rate
   on the wild type at the pooled width and 0.001 won there, so what was unswept is the per-neuron

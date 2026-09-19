@@ -62,7 +62,8 @@ can change what the synthesis says about its own headline costs 192 runs.
   the design from the cells' realised spreads: ~98% power at the minimum if the pooled cells spread as
   they did at 0.001, ~87% if they spread wider.
 
-- **The wide cells at 0.0001 are reused under the byte-identity requirement**, and so are L.1's
+- **The wide cells at 0.0001 are reused under the committed baseline-reuse requirement**, which is
+  parsed-field identity at one seed per arm rather than byte equality of artefacts, and so are L.1's
   floors and learning arms — one seed per reused arm re-run under the current path before any
   registered seed, eight runs, compared on every parsed field. Any field differing re-runs that arm's
   cell in full.

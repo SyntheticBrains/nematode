@@ -139,7 +139,7 @@ not explained.
 **The magnitude against the registered minimum.** `pool_effect_survives_the_rate` required a positive
 interaction **and** `abs(Δ) ≥ 0.141` — half of L.1's +0.2818 — on the reasoning that a claim which
 has lost more than half its size to a one-decade rate change is a claim about the rate. The observed
-interaction is **−0.0657: 23% of L.1's, and negative.** The registration put **no minimum on the
+interaction is **−0.0657: 47% of that minimum, 23% of L.1's +0.2818, and negative.** The registration put **no minimum on the
 reverse branch**, so the reading fires at a size that would not have been credited in the positive
 direction. That asymmetry is a **defect in my own registered rules**, recorded here as L.1's missing
 minimum was recorded rather than retro-fitted. Applying the minimum symmetrically, this panel reads
@@ -187,7 +187,7 @@ have been the natural place to look.
 The realised spread is half what was assumed, because the pooled cells at 0.0001 vary far less than
 they do at 0.001. So the panel could have detected an interaction as small as 0.050, and the 0.141 it
 was sized for at **full power**. A null here would have been a strong null; what it found instead is
-a reversal three times smaller than the minimum.
+a reversal **less than half the minimum** — 47% of the 0.141, and 23% of L.1's +0.2818.
 
 ## Integrity
 
@@ -196,7 +196,10 @@ a reversal three times smaller than the minimum.
   driver or `configs/` since the launch commit `8bcad837`; a clean tree at launch and at scoring.
 - **Every reused cell was identity-checked** at seed 1 on all nine parsed fields, with the committed
   exports confirmed present first. L.1's cell means, interaction and censoring counts come back
-  exactly.
+  exactly. **What that establishes, precisely**: the current execution path reproduces the committed
+  run on every quantity any analysis in this programme reads, at the seed checked. It is
+  **parsed-field identity, not byte equality** of logs, exports, weights or configuration, and it
+  does not extend to the 95 seeds per arm left unchecked.
 - **A mis-cited statistic was corrected before the campaign, not after.** This change's artefacts had
   quoted L.0's rate-check figures (17.41 / 12.08 / 12.81 foods) without naming the statistic; those
   are **whole-run** means, while every contrast in this programme reads the **plateau-tail** mean,
@@ -219,9 +222,9 @@ a reversal three times smaller than the minimum.
 3. **At 0.0001 the wild type leads at neither width**, and the dominant effect is capacity:
    +0.6178 on 96 of 96 seeds, where L.1 detected no width main effect. **How much readout capacity
    matters is set by the learning rate**, which no rung in this programme had measured.
-4. **The reverse direction at 0.0001 is not credited.** It fires the registered reading, at 23% of
-   the registered minimum, on the primary axis alone, with the secondary voided by censoring and an
-   unregistered graded axis finding nothing. **May not be cited as** the shuffle being favoured by
+4. **The reverse direction at 0.0001 is not credited.** It fires the registered reading at a
+   magnitude of 0.0657 — **47% of the 0.141 minimum** and **23% of L.1's +0.2818** — on the primary
+   axis alone, with the secondary voided by censoring and an unregistered graded axis finding nothing. **May not be cited as** the shuffle being favoured by
    width, nor as evidence about the wiring at 0.0001 in either direction.
 5. **Not a mechanism, not an endpoint claim, not a read-across to block V, and not a choice of
    rate.** Both wirings learn better at 0.0001 at the wide width and worse at the pooled width, so

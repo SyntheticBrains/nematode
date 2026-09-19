@@ -119,7 +119,7 @@ down.
     0.05 or 2.0 of ten. On a floor-adjacent platform that is a route to reporting nothing as
     something.* *(Added 2026-09-19.) **Register it for both directions of a two-sided reading.** L.1b
     required half of the original effect to credit the positive direction and set no minimum on the
-    reverse one, so the reverse reading fired at 23% of that minimum — a size the guarded direction
+    reverse one, so the reverse reading fired at 47% of that minimum — a size the guarded direction
     would have refused. The asymmetry was named in the record rather than exploited, and the symmetric
     reading stated beside it,
     [Logbook 068](../experiments/logbooks/068-l1b-rate-calibration.md).*

@@ -248,7 +248,7 @@ cells were all that was missing — over the same 96 seeds: **the interaction th
 than this effect, and **the sign reverses**. At 0.0001 the dominant effect is capacity — width main
 effect **+0.6178 on 96/96 seeds**, where this panel detected none — so how much readout width matters
 is itself set by the rate, and the wild type leads at **neither** width there. L.1b's reverse
-direction is **not credited** (23% of its registered minimum, primary axis only, secondary voided by
+direction is **not credited** (47% of its registered minimum and 23% of this panel's effect, primary axis only, secondary voided by
 censoring). **The verdict above is unchanged and is a verdict at `plasticity_rate` 0.001**; the "sign
 flips" reading belongs to width × wiring × rate.
 

@@ -13,9 +13,17 @@ condition beside the committed verdict rather than as a rewrite of it.
 - **GIVEN** a committed positive whose primary was a crossed interaction
 - **WHEN** it is re-read at the calibrated setting
 - **THEN** the primary SHALL be the same interaction at that setting, with the cells already measured
-  there reused under the byte-identity requirement and only the missing cells run
+  there reused only under the committed baseline-reuse requirement — one seed per reused arm re-run on
+  the current path and compared on **every field the analysis parses** — and only the missing cells run
+- **AND** the record SHALL state what that check establishes and what it does not: it establishes that
+  the current path reproduces the committed run on every quantity any analysis in the programme reads,
+  at the seed checked; it is **parsed-field identity, not byte equality** of logs, exports, weights or
+  configuration, and it does not extend to the seeds left unchecked
+- **AND** where a parsed field cannot be compared because the committed side no longer holds the
+  artefact it derives from, that field SHALL be named as uncompared rather than counted as matching
 - **AND** a minimum effect SHALL be registered as a fraction of the committed effect, with the
-  reading that a significant result below it receives named before the runs
+  reading that a significant result below it receives named before the runs, **and registered for
+  both directions** where the reading is two-sided
 
 #### Scenario: A headline form that is already known not to hold is stated before the runs
 
