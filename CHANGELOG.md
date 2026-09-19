@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Added
+
+- **Weekly literature watch** — a scheduled workflow that sweeps for new work bearing on this project and opens a digest issue. Three sources in descending order of precision: new work citing a curated seed set (OpenAlex), then the arXiv and bioRxiv windows. A cheap model scores every candidate against a hand-maintained brief and a capable model writes the entries, so a few hundred abstracts a week reduce to a handful worth reading. See [docs/research/literature-watch/](docs/research/literature-watch/README.md); it needs an `ANTHROPIC_API_KEY` repository secret to run.
+
 ## [0.6.0] - 2026-09-19
 
 The Phase 7 release. Phase 7 asked whether the wild-type *C. elegans* connectome becomes load-bearing under a biologically plausible learning rule, and **closed as a SPLIT**: no rule in that family writes this connectome to any benefit, so the pre-registered question has no interpretable answer here. What the phase established instead is that the wiring is **learning-speed-relevant under gradient descent**, and **legible to a small local readout only at a particular readout width and learning rate**. Thirty logbooks, 040 through 069, carry the evidence.
