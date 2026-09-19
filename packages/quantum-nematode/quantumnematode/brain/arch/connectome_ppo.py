@@ -2068,7 +2068,23 @@ class ConnectomeTopology(nn.Module):
     families=("classical",),
 )
 class ConnectomePPOBrain(ClassicalBrain):
-    """PPO brain trained over the Cook 2019 *C. elegans* connectome topology."""
+    """Brain over the Cook 2019 *C. elegans* connectome; PPO is one of its update regimes.
+
+    **The name is historical and narrower than the class.** ``learning_rule`` selects
+    among four update regimes: PPO, a reward-modulated three-factor plasticity rule,
+    e-prop, and a readout-only exact-gradient rule that leaves the chemical matrix
+    frozen. The name records only the first.
+
+    **It is kept deliberately, not by neglect.** One class hosting every regime is what
+    lets a panel's arms differ in exactly one resolved config key; two brain classes
+    could not guarantee that, because every divergence in sensing, buffering, episode
+    lifecycle or tensor initialisation would ride along with the regime under test.
+    Renaming the registered ``connectomeppo`` identifier would also touch every scenario
+    config, and those config **filenames** appear verbatim in the reproduce blocks of
+    dozens of committed pre-registration records, which are not rewritten. An accurate
+    name is not worth breaking the tie between those records and the code that produced
+    them.
+    """
 
     def __init__(
         self,
