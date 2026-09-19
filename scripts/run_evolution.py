@@ -17,7 +17,7 @@ Examples
     # Resume an interrupted run
     uv run python scripts/run_evolution.py \
         --config configs/evolution/mlpppo_foraging_small.yml \
-        --resume evolution_results/<session>/checkpoint.pkl
+        --resume evolution_results/<session>/checkpoint.pkl --allow-unsafe-resume
 
 Timing
 ------

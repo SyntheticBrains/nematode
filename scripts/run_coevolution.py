@@ -24,7 +24,7 @@ Examples
     uv run python scripts/run_coevolution.py \
         --config configs/evolution/coevolution_pilot_arm_a.yml \
         --seed 42 \
-        --resume evolution_results/m5_coevolution_pilot/arm_a/<session>
+        --resume evolution_results/m5_coevolution_pilot/arm_a/<session> --allow-unsafe-resume
 
 Output layout (per run, mirrors the CoevolutionLoop checkpoint format):
 
@@ -263,7 +263,7 @@ def main() -> int:  # noqa: PLR0911 — sequential CLI entrypoint with distinct 
     except KeyboardInterrupt:
         logger.warning(
             "Run interrupted by user. The most recent K-block checkpoint "
-            "(if any) is at %s — re-run with --resume %s to continue.",
+            "(if any) is at %s — re-run with --resume %s --allow-unsafe-resume to continue.",
             session_dir,
             session_dir,
         )

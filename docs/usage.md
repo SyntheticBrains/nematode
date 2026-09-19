@@ -100,7 +100,8 @@ uv run python scripts/run_evolution.py --config configs/evolution/<config>.yml [
 | `--seed N` | Master seed (per-evaluation seeds are derived from it) |
 | `--sigma X` | CMA-ES initial step size |
 | `--early-stop-on-saturation N` | Stop if the best fitness has not improved for N consecutive generations (default: run the full budget) |
-| `--resume PATH` | Resume from a `checkpoint.pkl` |
+| `--resume PATH` | Resume from a `checkpoint.pkl`. Requires `--allow-unsafe-resume` |
+| `--allow-unsafe-resume` | Required by `--resume`. A checkpoint is a Python pickle, so loading one executes arbitrary code from that file — pass this only for a checkpoint this machine wrote |
 | `--output-dir DIR` | Where to write the session (default `evolution_results/`) |
 
 Three kinds of evolution config exist:
@@ -118,11 +119,11 @@ uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_
 # Hyperparameter evolution with TPE, Lamarckian warm-starts between generations
 uv run python scripts/run_evolution.py --config configs/evolution/hyperparam_mlpppo_pilot.yml --algorithm tpe --inheritance lamarckian --parallel 4
 
-# Resume
-uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --resume evolution_results/<session-id>/checkpoint.pkl
+# Resume (the flag is required: a checkpoint is a pickle, so loading one runs code from it)
+uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --resume evolution_results/<session-id>/checkpoint.pkl --allow-unsafe-resume
 ```
 
-**Predator–prey co-evolution** runs through `scripts/run_coevolution.py --config configs/evolution/coevolution_*.yml [--seed N] [--output-dir DIR] [--resume PATH]` (`CoevolutionLoop`; warm-start prey bundles under `configs/evolution/coevolution_warmstart_prey/`). The Red Queen question it was built for closed with a STOP verdict ([Logbook 017](experiments/logbooks/017-coevolution-arms-race.md)); the lag-matrix and cell-grid instruments remain available.
+**Predator–prey co-evolution** runs through `scripts/run_coevolution.py --config configs/evolution/coevolution_*.yml [--seed N] [--output-dir DIR] [--resume PATH --allow-unsafe-resume]` (`CoevolutionLoop`; warm-start prey bundles under `configs/evolution/coevolution_warmstart_prey/`). The Red Queen question it was built for closed with a STOP verdict ([Logbook 017](experiments/logbooks/017-coevolution-arms-race.md)); the lag-matrix and cell-grid instruments remain available.
 
 ## Running campaigns in parallel
 
