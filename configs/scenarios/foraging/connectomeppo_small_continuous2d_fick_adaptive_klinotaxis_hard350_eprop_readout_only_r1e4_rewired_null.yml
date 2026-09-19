@@ -1,13 +1,30 @@
-# L.1b: the pooled readout at `plasticity_rate: 0.0001`, wild-type wiring -- the registered arm that
-# completes the width x wiring 2x2 at the rate-matched operating point.
+# L.1b: the pooled readout at `plasticity_rate: 0.0001`, degree-preserving rewired null -- the
+# registered arm that completes the width x wiring 2x2 at the rate-matched operating point.
 #
-# IDENTICAL to connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_eprop_readout_only.yml except `plasticity_rate: 0.0001` -- asserted by an exact-key test.
+# IDENTICAL to connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_eprop_readout_only_rewired_null.yml except `plasticity_rate: 0.0001` -- asserted by an exact-key test.
 #
-# First written for L.0's rate check on disjoint seeds, where the committed 0.001 beat this rate by
-# 4.6 foods on the wild type at the pooled width. Promoted to a registered arm because the wide arms
-# at 0.0001 (L.4's rate-matched baseline) showed the per-neuron wiring effect reversing at this rate,
-# and L.1's interaction cannot be re-read at one rate without the pooled cells at that rate. The
-# floors are L.1's: the rate is inert under `freeze_updates`.
+# The wide arms at 0.0001 (L.4's rate-matched baseline) showed the per-neuron wiring effect
+# reversing at this rate; L.1's interaction cannot be re-read at one rate without the pooled cells
+# at that rate. The floors are L.1's: the rate is inert under `freeze_updates`.
+#
+# Inherited from the L.0 null it is one key from:
+#
+#
+# The 2x2's primary contrast under the one plausible learner that reaches competence. Under
+# `readout_only` the chemical matrix is FROZEN and only the 2x4 motor readout learns, by its own exact
+# gradient -- so the connectome enters as a fixed feature map and rewiring changes that map and nothing
+# else. `rewire_degree_preserving` preserves the neuron set and ordering and per-post fan-in, so the
+# strict mask's shape, the weight-init scale 1/sqrt(chemical in-degree), the gap-junction normalisation
+# and the motor pool are all preserved; what differs is which pre-synaptic neuron reaches which
+# post-synaptic neuron.
+#
+# The feedback projection B is MATCHED across wirings at a seed by construction: it is drawn from a
+# torch.Generator seeded with the run seed, the rewiring draws from a separate numpy generator, and
+# rewiring preserves n_neurons. A test asserts it -- the alternative, each wiring exploring through a
+# different random projection, would confound the wiring with the feedback path invisibly.
+#
+# `rewire_seed` is deliberately unset, so the rewiring RNG derives from the run seed and each seed's
+# wild-type and rewired arms pair -- the same discipline V.1 and V.3 ran under.
 #
 # The CONTROL for the plastic-readout arm: the readout learns, the chemical matrix does not.
 #
@@ -82,6 +99,7 @@ brain:
     chemical_mask_mode: strict
     sensing_mode: klinotaxis  # 3-feature head-sweep input
     forward_pass_depth: 4
+    wiring: rewired_degree_preserving  # degree-preserving rewired-null control
     freeze_updates: false
 
     # The three-factor rule under the node-perturbation eligibility that passed the rule's positive

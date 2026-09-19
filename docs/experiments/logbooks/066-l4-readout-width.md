@@ -241,6 +241,17 @@ the verdict above stands as read **at 0.001** and may not be cited without that 
 puzzle above gains a candidate, that 0.001 is too high for a 78-parameter readout on the rewired
 graph, which nothing has tested.
 
+*(Extended 2026-09-19.)* **The interaction itself does not survive the rate.** L.1b
+([Logbook 068](068-l1b-rate-calibration.md)) completed this 2×2 at 0.0001 — the two pooled learning
+cells were all that was missing — over the same 96 seeds: **the interaction there is −0.0657**
+(q = 0.000) against **+0.2818** here, a **three-way of +0.3475** (q = 0.000, 81/96) that is larger
+than this effect, and **the sign reverses**. At 0.0001 the dominant effect is capacity — width main
+effect **+0.6178 on 96/96 seeds**, where this panel detected none — so how much readout width matters
+is itself set by the rate, and the wild type leads at **neither** width there. L.1b's reverse
+direction is **not credited** (47% of its registered minimum and 23% of this panel's effect, primary axis only, secondary voided by
+censoring). **The verdict above is unchanged and is a verdict at `plasticity_rate` 0.001**; the "sign
+flips" reading belongs to width × wiring × rate.
+
 ## Artefacts
 
 - [`supporting/066-l4-readout-width/launch.md`](supporting/066-l4-readout-width/launch.md) — the protocol, the pilot, the sensitivity arithmetic
