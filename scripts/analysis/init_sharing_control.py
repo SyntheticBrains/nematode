@@ -66,6 +66,7 @@ _THERMAL = "connectomeppo_small_continuous2d_thermal_klinotaxis"
 _HARD = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350"
 _SUFFIX_BY_MODE = {"edge_order": "", "dense_mask": "_densemask", "per_neuron_fanin": "_fanin"}
 
+
 # Config stem -> (cell, arm, mode), stated explicitly rather than derived by pattern. The thermal
 # arms carry `_t20` AFTER the arm part and the draw-mode suffix after that, so a regex over suffixes
 # is easy to get subtly wrong, and a mis-keyed arm silently drops one side of a paired test.
@@ -209,8 +210,7 @@ def interaction(
 def censoring_rates(report: dict[str, Any]) -> dict[str, float]:
     """Per-arm crossing rate, through the instrument's own function rather than reimplemented."""
     return {
-        arm: wp.crossing_rate(report, arm)
-        for arm in (wp.efficiency._WILD, wp.efficiency._REWIRED)
+        arm: wp.crossing_rate(report, arm) for arm in (wp.efficiency._WILD, wp.efficiency._REWIRED)
     }
 
 
