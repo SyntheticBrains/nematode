@@ -39,19 +39,19 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   initialisation factor", and `docs/architectures.md`'s `connectomeppo` row names `weight_draw`
   where it already names `weight_init`.
 
-- [ ] 4. **Configs** — 16 new YAMLs, one key off their parent, across four arms
+- [x] 4. **Configs** — done: 16 new YAMLs, each verified through the real loader to differ from its parent in **exactly** `weight_draw` and to leave `rewire_seed` unset. The eight committed block-V configs serve `edge_order` unchanged. The YAML-compatibility suite picked them up automatically, 408 → 424. — 16 new YAMLs, one key off their parent, across four arms
   (`wt_ppo`, `rn_ppo`, `wt_frozen`, `rn_frozen`) × two new modes × two cells (thermal `_t20`,
   `hard350`). The eight committed block-V configs serve the `edge_order` level **unchanged**, which
   keeps the `_PANEL_COMMITS` identity `test_wiring_fresh_rewiring.py` pins. `rewire_seed` stays unset
   in every rewired arm, with a comment recording that it therefore equals the run seed.
 
-- [ ] 5. **The driver** — new `scripts/analysis/init_sharing_control.py` in the
+- [x] 5. **The driver** — done: `scripts/analysis/init_sharing_control.py`. Builds one manifest per draw mode, drives the **unmodified** instrument, and reads the interaction off its per-seed block paired by seed. Metric orientation comes from the instrument's own `_METRICS` table rather than a second copy, so "positive means the wild type is better" means here what it means in every committed block-V record. The censoring rule is a function fixed in advance, not a judgement at reading time. — new `scripts/analysis/init_sharing_control.py` in the
   `wiring_fresh_rewiring.py` mould: stem → (cell, arm, mode) mapping, manifest building, calls to the
   **unmodified** `wiring_premise.py` and `connectome_structure_efficiency.py` per mode, the
   interaction computed from their per-seed output, branch reporting, and a refusal to score an
   incomplete panel without an explicit flag.
 
-- [ ] 6. **Driver test** — new
+- [x] 6. **Driver test** — done, 46 tests: the stem mapping is the full 2×4×3 cross product with no duplicate targets, the baseline level uses the committed configs unchanged, both seed bands are unburnt and disjoint, all 16 new configs declare their mode and leave `rewire_seed` unset, the censoring rule moves the primary in both directions, a partial panel and an unknown stem both raise, and both instrument files are byte-identical to `main`. — new
   `packages/quantum-nematode/tests/quantumnematode_tests/analysis/test_init_sharing_control.py`,
   asserting the stem mapping, the seed freshness (129–144 disjoint from 1–96 and 101–108), the
   incomplete-panel refusal, that **`rewire_seed` stays unset in all sixteen new rewired configs**

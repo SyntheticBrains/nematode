@@ -69,9 +69,7 @@ def _mask(brain: ConnectomePPOBrain) -> torch.Tensor:
 def _others(brain: ConnectomePPOBrain) -> dict[str, torch.Tensor]:
     """Every topology parameter the draw mode does not claim to touch."""
     return {
-        name: param.detach()
-        for name, param in brain.topology.named_parameters()
-        if name != _DRAWN
+        name: param.detach() for name, param in brain.topology.named_parameters() if name != _DRAWN
     }
 
 
