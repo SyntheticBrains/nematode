@@ -1,0 +1,219 @@
+# Tasks: Phase 8 (Ground, then Embody — Measured Substrate & Body) Shipment Tracker
+
+This is the living checklist for Phase 8. The plan is authoritative in `docs/roadmap.md`
+§ Phase 8 (v4.3, PR #395): the scope decision against whole-organism fidelity, the rungs, design
+decisions D15–D20, exit criteria, risk table and novelty map. Phase 8 ships in two cuts —
+**8a** (block A + B.1 + B.2 + synthesis) and **8b** (block C + D + B.3 + synthesis) — split by
+success (D20). Every Phase 8 milestone PR updates this checklist as part of its diff.
+
+**Status legend**: `[ ]` not started, `[x]` closed — done, or (for unexercised SHOULD/MAY scope)
+dropped/deferred with a dated note and one of the five statuses, so `openspec archive` is never
+blocked by an honestly-unexercised item.
+
+**Preconditions (both hold):**
+
+1. ✅ **Phase 7 closed** — SPLIT, every criterion assigned a status
+   ([Logbook 069](../../../docs/experiments/logbooks/069-phase7-synthesis.md), 2026-09-19).
+2. ✅ **Plan finalised** — roadmap v4.3 with D15–D20 ratified, D15's premise corrected at review
+   (PR #395, merged 2026-09-20).
+
+> **Not in Phase 8.** Cross-species (7b: pacificus, dauer, transplant — the phase after 8, behind
+> C.1). Male–hermaphrodite contrast (data on disk; Future Directions). Multi-agent, pheromones,
+> red queen, ecological co-evolution. Evolution in every form (6b NEAT in `phase6b-tracking`,
+> deferred unscheduled). Structural plasticity across development. Neuropeptide layer as a rule
+> substrate. Spiking-STDP, neuromorphic. 3D, Sibernetic, ion-channel neurons. The uniform
+> substrate-writing rule programme (closed, Logbook 063).
+
+<!-- -->
+
+> **Execution-protocol standards (Decision B in design.md) apply to every rung, panel and sweep
+> below** — paired seeds with BH-FDR within-pass; uniform budget with a convergence audit;
+> metric audit on a new regime; byte-identical-when-off; load-time validation; **a positive
+> control per new component before any connectome arm**; **sweep before pin** (D16); re-baseline
+> at a moved operating point in its own campaign; a registered minimum effect in both
+> directions; **body-substrate results are a new reference frame**; artefact retention
+> registered at phase start.
+
+<!-- -->
+
+> **Execution**: paired-seed arms launch through `scripts/run_campaign.py`; each run is
+> byte-for-byte the single-run entry point, so only wall-clock moves. The machine is 18 cores
+> with 16-way parallelism as the measured ceiling ([Logbook 039](../../../docs/experiments/logbooks/039-runtime-acceleration-audit.md));
+> the GPU was rejected on measurement and is not assumed anywhere below.
+
+<!-- -->
+
+> **Coarse-grained by design.** These sub-tasks are the load-bearing shape; per-milestone OpenSpec
+> changes elaborate them (first: A.4's consolidation change, then the A.1 control change).
+
+## Shipment 8a — Ground
+
+**OpenSpec changes**: placeholders; created per milestone
+**Status**: ⬜ not started
+**Roadmap layer**: substrate (init control, operating point, measured weights, dynamics)
+**Approx effort**: ≈ 9–12 active weeks (A ≈ 3–4, B.1 ≈ 3–4, B.2 ≈ 3–4)
+**Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8a), D15/D16/D17
+
+### Block A — close Phase 7's exposed result
+
+- [ ] **A.0 Artefact-retention rule** (registered at phase start, per design.md B.13): which
+  per-campaign artefacts are committed under `supporting/` (parsed per-seed CSVs) and which are
+  archived off-repo; recorded once here and cited by every campaign below.
+- [ ] **A.4 Methodology consolidation** (own change; *before the first 8a registration*): the 42
+  `plasticity-evaluation` requirements folded into the [phase protocol](../../../docs/research/phase-protocol.md)
+  so a rung designer reads its principles rather than thirty-three single-use rules; the spec
+  reduced to what still binds. (Numbered A.4 in the roadmap; runs first.)
+- [ ] **A.1 The init-vs-rewiring control** (D15; own change): both definitions of shared
+  initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
+  byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,
+  `rewire_seed` fixed per pair, through the committed block-V harnesses. Registered outcome: the
+  +35.4/+23.5/+55.3/+40.1 learning-speed effects survive (wiring result) or dissolve
+  (initialisation result); a shrunken effect is reported as shrunken, against a registered
+  minimum in both directions. The learning-speed result is restated with its status wherever
+  it is cited.
+- [ ] **A.2 The calibration-and-robustness surface** (D16; own change): `plasticity_rate`,
+  readout width, `forward_pass_depth`, `initial_log_std`, `trace_decay` on `readout_only`,
+  one-factor-at-a-time around the current point first, a full crossing only for pins that move
+  the wiring effect's sign; reported as a sensitivity surface, not a new pin. Fixes the point
+  every later rung cites. Churchland et al. 2026 (arXiv:2609.07355) is the external reason to
+  report it this way.
+- [ ] **A.3 Frozen-operator structural predictors** (SHOULD; probe or small change): routing
+  confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
+  synapse-count weights against every rewired null block V generated, registered as predictors
+  of time-to-competence. No training.
+- [ ] **A.5 The publication decision** (SHOULD; taken after A.1 reads out): the package is block V
+  with its initialisation control, the rule-programme negative with a diagnosed cause, and the
+  operating-point finding with its surface. Not a gate for anything after it.
+
+### B.1 — measured synaptic signs and strengths (D17)
+
+- [ ] **B.1a Data sub-deliverable** (own change): the Creamer–Leifer–Pillow fitted weights (bioRxiv
+  2024.09.22.614271, preprint — never stands alone) and the Randi 2023 atlas as raw source,
+  vendored under `data/connectome/` with `PROVENANCE.md` and a **licence check before
+  vendoring**; a `weight_prior` key (`random` | `measured` | `measured_shuffled`),
+  byte-identical-when-off; head-scope coverage (156 neurons) stated, with the command-to-motor
+  and motor layers left on the random draw.
+- [ ] **B.1b Pilot-scale arms**: sign-only vs sign-plus-magnitude; the LDS-to-rate-model unit
+  scale swept (a pin); disjoint pilot seeds.
+- [ ] **B.1c The 2×3** (own change): wiring {wild type, rewired null} × prior {random, measured,
+  measured-shuffled}, on `readout_only` at A.2's swept point and again under PPO **under D15's
+  shared-init protocol**; head scope and full scope reported separately. Payoff either way. **Risk
+  registered** (roadmap § Required deliverables 4, from Lee 2026): atlas grounding produced no
+  functional sensory-to-command step in an atlas-fitted c302; if measured weights leave the
+  klinotaxis pathway unlearnable here, the rung closes *unmet-with-reason* with the pathway named.
+
+### B.2 — the dynamics rung (SHOULD)
+
+- [ ] **B.2a Across-step state** (own change): per-neuron leaky-integrator state with intrinsic
+  time constants (a global τ swept first); gap junctions as ohmic coupling inside that dynamics;
+  byte-identical-when-off; **MLP-PPO and PPO-on-connectome positive controls** — the dynamical
+  substrate learns the cell at least as well as the settling substrate before any contrast.
+- [ ] **B.2b Plastic gap junctions under PPO** (D4's surviving destination): the electrical
+  synapses learnable on the block-V cells, against the null, with the *Nat. Commun.* 2020
+  olfactory-learning precedent as the biological motivation. External convergence to cite, not
+  lean on: Lee 2026's gap-junction-only shuffle collapses chemotaxis where the chemical-only
+  shuffle barely moves it, in a different model with different controls.
+- [ ] **B.2c Validation target** (once C.0's reversal exists; may carry to 8b): forward/reverse
+  bout-duration statistics per Morrison & Young 2025, registered as a behavioural
+  sign/shape-level claim.
+
+### 8a synthesis
+
+- [ ] **S8a** The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
+  D20 gate written as a go/no-go decision; the roadmap Phase 8 row set to "8a complete / 8b
+  pending" on GO; `phase8-tracking` status headers updated.
+
+## Shipment 8b — Embody
+
+**OpenSpec changes**: placeholders; created per milestone
+**Status**: ⬜ not started — **does not start until S8a has assigned every 8a criterion a status (D20)**
+**Roadmap layer**: body (C), environment (D), internal state (B.3)
+**Approx effort**: ≈ 10–15 active weeks (C ≈ 8–12, D + B.3 ≈ 2–3)
+**Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18/D19/D20
+**Dependencies**: S8a GO; B.2 for C.2's second half
+
+### C.0 — body prerequisites (MUST; each lands, validates and freezes before C.1 registers)
+
+- [ ] **C.0a Step–time calibration**: one recorded constant relating an environment step to worm
+  seconds, from the validated 0.2 mm/s crawl, the ~1.6 s undulation period and the arena scale;
+  cited by every kinematic target and cost estimate below. (The current cap is one body length
+  per step, ≥ 5 s of worm time at full speed.)
+- [ ] **C.0b Signed speed**: reversal as a first-class continuous action (speed is clamped to
+  `[0, max_step_mm]` today), byte-identical-when-off, so VA/DA and VB/DB mean different things
+  and escape can be reversal-plus-turn.
+- [ ] **C.0c Proprioceptive channel**: posture or stretch fed back as sensory input, with the
+  target neurons stated with a biological argument (the predator-projection precedent).
+- [ ] **C.0d D19 decided and recorded** — the body-level proprioceptive wave generator's form and
+  parameters, calibrated once on the MLP positive control (design.md open question).
+
+### C.1 — the anatomical motor-to-muscle readout into a kinematic body (MUST)
+
+- [ ] **C.1a Loader keeps the muscle cells**: the Cook 2019 body-wall muscle columns (`dBWML*`,
+  `vm*`) that `connectome/loader.py` drops become a first-class motor-neuron-to-muscle tensor
+  with smoke tests and a `PROVENANCE.md` note.
+- [ ] **C.1b Muscle readout**: the NMJ matrix pooled into four quadrants × N segments, learnable
+  *gains* only (D18: a gain vector identical in size across arms, calibrated once on the MLP
+  control and frozen, sensitivity-checked).
+- [ ] **C.1c Kinematic body**: muscle drive → segmental curvature; displacement per step from the
+  change of posture between steps by resistive-force theory (no ODE), with D19's body-level
+  generator supplying the wave. Renderer hook for C.5.
+- [ ] **C.1d Positive control**: MLP-PPO forages through C.1 on the target cell. **Blocks every
+  connectome arm below it.**
+- [ ] **C.1e The wiring contrast through the body**: wild type vs rewired null under PPO and under
+  `readout_only`, with **floors and baselines re-established on this substrate** — a new
+  reference frame, never a delta against 029 or block V.
+
+### C.2 — the rod-chain body (SHOULD)
+
+- [ ] **C.2a Cost budget registered** before the rung: "a 16-seed panel in roughly a day at 16
+  workers" pinned to a wall-clock number from a pilot configured the way the campaign will be.
+- [ ] **C.2b The chain**: an ElegansBot-class 2D rod chain (Chung, Chang & Kim, eLife 2024; 8–12
+  rods, anisotropic drag, torsional-spring muscles) in `Continuous2DEnvironment`, driven by
+  C.1's muscle drive; MLP positive control; if the budget fails after the reduced chain, coarser
+  integrator and Numba/JAX have been tried, **stop at C.1** and record *deferred-with-destination*
+  (behind D6).
+- [ ] **C.2c Second half** (MAY; needs B.2 and a shorter step): remove the body-level generator
+  and ask whether the connectome's motor circuit plus proprioception produces the wave, against
+  the rewired null.
+
+### C.3 — body-level validation (SHOULD)
+
+- [ ] **C.3** Eigenworm posture spectrum (Stephens et al. 2008), undulation frequency and
+  amplitude, omega-turn geometry, and the Logbook 035/036 klinokinesis and weathervane curves
+  re-derived from *emergent* kinematics; swimming vs crawling gait if C.2 ships (MAY).
+
+### C.4 — the architecture ranking through the body (SHOULD)
+
+- [ ] **C.4** The six MUST families of Logbook 029 re-run on the frozen body substrate with new
+  baselines, per the architecture-comparison protocol's re-run rule. First SHOULD to drop if 8b
+  overloads.
+
+### C.5 — rendering (SHOULD)
+
+- [ ] **C.5** `pixel_continuous` draws the segmented body from curvature or rod state (head,
+  tail, reversals and omega turns visible) with an optional posture overlay; headless unchanged.
+
+### B.3 + D.1 — internal state, the modulator field, patchy lawns (SHOULD, coupled)
+
+- [ ] **B.3** Internal-state sensory module and the modulator concentration field (Phase 7's
+  B.2/B.3, deferred): satiety already crosses the brain boundary; serotonin/PDF gating of roaming
+  vs dwelling as the first behavioural consequence.
+- [ ] **D.1** Patchy bacterial lawns: geometry with edges, per-patch depletion (the
+  `source_depletion_enabled` mechanism, config-gated), food quality; the roaming/dwelling
+  readout B.3 gates; validation against Flavell-lab roaming/dwelling fractions. The 2D agar plate
+  is kept (D.2); the three behaviours stay the comparison set (D.3).
+
+### MAY (not gates)
+
+- [ ] **M.1 Placed plasticity** on the klinotaxis circuit, on the B.1 substrate, against a
+  degree-stratified random subset of the same size, with the three confounds specified.
+- [ ] **M.2 Wild-type-vs-wild-type control**: Cook 2019 against Witvliet dataset 8 (adult,
+  nerve-ring scope, already vendored).
+- [ ] **M.3 Swimming/crawling gait transition** as a body validation target (with C.2).
+- [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
+
+### Phase 8 synthesis
+
+- [ ] **S8b** The Phase 8 synthesis logbook: every criterion assigned one of the five statuses;
+  the roadmap Phase 8 row set to ✅ COMPLETE only then; the literature watch re-aimed (protocol
+  principle 13); this change archived alongside the synthesis change.
