@@ -70,14 +70,22 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   (initialisation result); a shrunken effect is reported as shrunken, against a registered
   minimum in both directions. The learning-speed result is restated with its status wherever
   it is cited.
-- [ ] **A.2 The calibration-and-robustness surface** (D16; own change): `plasticity_rate`,
-  readout width, `forward_pass_depth`, `initial_log_std`, `trace_decay` on the reading learner (`readout_only`, the `PlasticTensors`
-  literal in `brain/arch/_plasticity_config.py`, which freezes the chemical matrix and leaves the
-  readout learning),
-  one-factor-at-a-time around the current point first, a full crossing only for pins that move
-  the wiring effect's sign; reported as a sensitivity surface, not a new pin. Fixes the point
-  every later rung cites. Churchland et al. 2026 (arXiv:2609.07355) is the external reason to
-  report it this way.
+- [ ] **A.2 The calibration-and-robustness surface** (D16 as amended 2026-09-20; own change).
+  **Two halves, because a pin swept on one learner is not swept for another.**
+  *(a) The reading learner* — `readout_only`, the `PlasticTensors` literal in
+  `brain/arch/_plasticity_config.py` that freezes the chemical matrix and leaves the readout
+  learning — across all five pins: `plasticity_rate`, readout width, `forward_pass_depth`,
+  `initial_log_std`, `trace_decay`.
+  *(b) PPO* — across the **three shared** pins only (readout width, `forward_pass_depth`,
+  `initial_log_std`; the other two are the plasticity rule's), at a **reduced grid**, because
+  PPO runs are the expensive ones and because the phase's most exposed claim is a PPO result
+  whose depth and log-std [Logbook 069](../../../docs/experiments/logbooks/069-phase7-synthesis.md)
+  lists as never varied.
+  Both halves one-factor-at-a-time around the current point first, a full crossing only for pins
+  that move the wiring effect's sign; reported as a sensitivity surface, not a new pin. Fixes the
+  point every later rung cites, per learner. If (b) moves the sign, **A.1 is re-read at the new
+  point** — a registered outcome, not a surprise. Churchland et al. 2026 (arXiv:2609.07355) is
+  the external reason to report it this way.
 - [ ] **A.3 Frozen-operator structural predictors** (SHOULD; probe or small change): routing
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
@@ -113,8 +121,11 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **B.2a Across-step state** (own change): per-neuron leaky-integrator state with intrinsic
   time constants (a global τ swept first); gap junctions as ohmic coupling inside that dynamics;
-  byte-identical-when-off; **MLP-PPO and PPO-on-connectome positive controls** — the dynamical
-  substrate learns the cell at least as well as the settling substrate before any contrast.
+  byte-identical-when-off. **Positive controls, in this order**: first MLP-PPO on the target cell
+  (the spec's blocking control for any new component), then — once that passes — PPO on the
+  dynamical connectome against PPO on the settling connectome, which must learn the cell at least
+  as well before any wiring contrast runs. The second is itself a connectome arm, so it comes
+  after the first rather than beside it.
 - [ ] **B.2b Plastic gap junctions under PPO** (D4's surviving destination): the electrical
   synapses learnable on the block-V cells, against the null, with the *Nat. Commun.* 2020
   olfactory-learning precedent as the biological motivation. External convergence to cite, not

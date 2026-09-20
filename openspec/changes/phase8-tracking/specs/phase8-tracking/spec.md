@@ -38,13 +38,21 @@ Each new substrate component — the dynamical substrate (B.2), the anatomical m
 
 ### Requirement: Operating-Point Discipline
 
-No Phase 8 wiring contrast SHALL run at a pin that has not been swept on the learner it uses (D16). The A.2 sensitivity surface SHALL be recorded before B.1 registers, and every later rung SHALL cite the swept point it runs at. A setting inherited from a previous rung SHALL be treated as a hypothesis at the new one and re-checked when the substrate or the readout changes.
+No Phase 8 wiring contrast SHALL run at a pin unswept for the learner it uses, across the pins that learner actually has (D16). `plasticity_rate` and `trace_decay` belong to the reading learner's rule; readout width, `forward_pass_depth` and `initial_log_std` are substrate and policy settings **shared by both learners**. The A.2 sensitivity surface SHALL therefore cover the reading learner across all five pins **and PPO across the three shared pins** at a reduced grid, and SHALL be recorded before B.1 registers. Every later rung SHALL cite the swept point it runs at, for each learner it runs.
+
+A.1 is the one exception, because it re-runs the committed block-V operating point by design: it SHALL carry its pins as a standing condition in the same sentence as its claim, and SHALL be re-read at A.2's point if A.2 moves the sign of the wiring effect. A setting inherited from a previous rung SHALL be treated as a hypothesis at the new one and re-checked when the substrate, the readout, or the learner changes.
 
 #### Scenario: Contrast registered at an inherited pin
 
-- **GIVEN** a milestone change registers a wiring contrast at a value of `plasticity_rate`, readout width, `forward_pass_depth`, `initial_log_std` or `trace_decay` that A.2 did not sweep for that learner and substrate
+- **GIVEN** a milestone change registers a wiring contrast at a value of a pin that A.2 did not sweep for that learner and substrate
 - **WHEN** the change is reviewed
-- **THEN** the registration SHALL be blocked until the pin is swept or the A.2 surface is extended to cover it
+- **THEN** the registration SHALL be blocked until the pin is swept for that learner or the A.2 surface is extended to cover it
+
+#### Scenario: A PPO contrast is registered against a reading-learner-only sweep
+
+- **GIVEN** B.1's or B.2's PPO arm is registered citing A.2's reading-learner surface for readout width, `forward_pass_depth` or `initial_log_std`
+- **WHEN** the change is reviewed and A.2's PPO half has not covered those pins
+- **THEN** the PPO arm SHALL be blocked until it does, since a pin swept on one learner is not swept for another
 
 ### Requirement: Body-Substrate Results Are a New Reference Frame
 
