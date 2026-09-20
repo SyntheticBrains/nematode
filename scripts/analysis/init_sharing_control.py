@@ -326,7 +326,9 @@ def write_csv(result: dict[str, Any], path: Path) -> Path:
                     )
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        # Explicit LF: csv defaults to CRLF, which git normalises on commit but which would
+        # otherwise make every regeneration look like a change against the committed file.
+        writer = csv.DictWriter(fh, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     return path
