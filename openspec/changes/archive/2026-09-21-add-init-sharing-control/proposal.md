@@ -27,7 +27,7 @@ Wiring {wild type, rewired null} × draw {`edge_order`, `dense_mask`, `per_neuro
 
 ### 3. Scope, decided deliberately
 
-A.1 answers the **pairing** question only. The across-seed coupling — the null's graph and weights both deriving from the run seed — is a different experiment, which [Logbook 065](../../../docs/experiments/logbooks/065-wiring-fresh-rewiring.md) already calls one, and it is recorded as a follow-up rather than mixed in. `rewire_seed` stays unset and is documented as equal to the run seed, which preserves V.4's fresh-rewiring property.
+A.1 answers the **pairing** question only. The across-seed coupling — the null's graph and weights both deriving from the run seed — is a different experiment, which Logbook 065 (`docs/experiments/logbooks/065-wiring-fresh-rewiring.md`) already calls one, and it is recorded as a follow-up rather than mixed in. `rewire_seed` stays unset and is documented as equal to the run seed, which preserves V.4's fresh-rewiring property.
 
 The `edge_order` baseline is **re-run fresh** rather than reused from V.4: the reuse rule forbids partial reuse and requires a parsed-field identity check, and PR #397 bumped five dependencies since those runs. Running all three levels on one seed set in one campaign makes the interaction a within-campaign contrast rather than a comparison across campaigns and dependency versions.
 

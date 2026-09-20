@@ -64,7 +64,7 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   run, the learning gates fire, and the wall-clock estimate holds. It is **not** the spread source —
   see task 8.
 
-- [x] 8. **Register the protocol** — done 2026-09-20, before any panel seed ran: [`supporting/070-init-sharing-control/launch.md`](../../../docs/experiments/logbooks/supporting/070-init-sharing-control/launch.md). Carries the metric rule with its 0.10 censoring tolerance, the power table at ρ = 0 from V.4's committed spread, the two-thirds minimum **in both directions**, the separate-cells rule, the non-reproduction branch, and A.0's retention line. — before the panel, and this is the task the campaign's
+- [x] 8. **Register the protocol** — done 2026-09-20, before any panel seed ran: `supporting/070-init-sharing-control/launch.md` (`docs/experiments/logbooks/supporting/070-init-sharing-control/launch.md`). Carries the metric rule with its 0.10 censoring tolerance, the power table at ρ = 0 from V.4's committed spread, the two-thirds minimum **in both directions**, the separate-cells rule, the non-reproduction branch, and A.0's retention line. — before the panel, and this is the task the campaign's
   credibility rests on:
 
   - **The primary metric, chosen for the contrast it must support.** `episodes_to_30pct_success` is
@@ -96,7 +96,7 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   status into `docs/roadmap.md`, the Phase 8 tracker and the logbook, in the same sentence as the
   claim. Whatever the outcome, the standing condition is either discharged or restated, not dropped.
 
-- [x] 12. **Logbook** — done: [070](../../../docs/experiments/logbooks/070-init-sharing-control.md), indexed, with the per-seed CSV and harness JSON committed under `supporting/` per A.0 and the raw logs archived off-repo. — the next numbered record, with per-seed CSVs under `supporting/` per A.0.
+- [x] 12. **Logbook** — done: 070 (`docs/experiments/logbooks/070-init-sharing-control.md`), indexed, with the per-seed CSV and harness JSON committed under `supporting/` per A.0 and the raw logs archived off-repo. — the next numbered record, with per-seed CSVs under `supporting/` per A.0.
 
 ## Not in this change
 
