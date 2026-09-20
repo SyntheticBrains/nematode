@@ -155,6 +155,20 @@ _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
 # the two widths consume identical randomness and start from the same policy; see
 # `_expand_over_motor_pool`. Default "pooled" is byte-identical to the pre-option brain.
 ReadoutWidth = Literal["pooled", "per_neuron"]
+# How the chemical weights are drawn, which decides what two wirings hold in common at the same
+# seed. The scale rule (``weight_init``) is orthogonal: this setting chooses the draw's STRUCTURE.
+# - "edge_order" walks the (pre, post)-sorted edge list drawing one value per edge. Two graphs with
+#   the same edge count consume the same standard-normal stream, so the nth VALUE matches, but the
+#   nth EDGE does not -- the value-to-edge pairing differs, and so does the per-edge scale sequence.
+# - "dense_mask" draws one dense n x n matrix and reads each edge's own cell, so every edge present
+#   in BOTH graphs carries the identical value.
+# - "per_neuron_fanin" draws each post-synaptic neuron's fan-in together and assigns it to that
+#   neuron's incoming edges in pre-synaptic-index order. A degree-preserving rewiring keeps every
+#   neuron's in-degree, so each neuron receives the identical MULTISET of incoming weights in both
+#   graphs and only the pairing to pre-synaptic partners differs.
+# Neither sharing definition is uniquely "the same initialisation" once the edge set changes, which
+# is why both exist rather than one.
+WeightDraw = Literal["edge_order", "dense_mask", "per_neuron_fanin"]
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -200,6 +214,9 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # gap junctions already carry their counts through the fan-in normalisation.
     # Default degree_scaled is byte-identical to the pre-option brain.
     weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled"
+    # Structure of the chemical-weight draw; see WeightDraw above for what each mode shares between
+    # two wirings at one seed. Default "edge_order" is bit-identical to the pre-option brain.
+    weight_draw: WeightDraw = "edge_order"
     # Chemical-synapse signs. "random" keeps the sign each weight drew, so half the network is
     # inhibitory by construction. "atlas" replaces it with the sign the pre-synaptic neuron's
     # released transmitter implies (acetylcholine and glutamate excitatory, GABA inhibitory),
@@ -274,6 +291,15 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         rule review withdrew it when signs carried no biology. It becomes meaningful only
         once the signs come from the transmitter atlas.
         """
+        if self.weight_draw != "edge_order" and self.weight_init != "degree_scaled":
+            msg = (
+                f"weight_draw={self.weight_draw!r} with weight_init={self.weight_init!r} is not "
+                "defined: the sharing modes scale each drawn value by the post-synaptic neuron's "
+                "1/sqrt(in-degree), and a count-scaled draw scales by the synapse counts instead. "
+                "The two are orthogonal in principle and the pairing is untested and unused; state "
+                "which one the arm means rather than inheriting a default."
+            )
+            raise ValueError(msg)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
                 "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
@@ -512,6 +538,7 @@ class ConnectomeTopology(nn.Module):
         trace_decay: float = 0.9,
         initial_log_std: float = 0.0,
         weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled",
+        weight_draw: WeightDraw = "edge_order",
         synapse_signs: Literal["random", "atlas"] = "random",
         readout_width: ReadoutWidth = "pooled",
     ) -> None:
@@ -613,6 +640,35 @@ class ConnectomeTopology(nn.Module):
             if synapse_signs == "atlas"
             else {}
         )
+        # Draw structure. "edge_order" consumes one value per edge as the loop walks the
+        # (pre, post)-sorted list. The two sharing modes pre-draw instead, so that what two wirings
+        # hold in common at one seed is a property of the draw rather than of the edge order: a
+        # dense matrix indexed by (pre, post), or one block per post-synaptic neuron assigned in
+        # pre-synaptic-index order. ``rng`` feeds nothing but this block, so a mode that consumes a
+        # different number of values leaves every other stream where it was -- asserted by test,
+        # because that is an argument about code and arguments about code are how this goes wrong.
+        self.weight_draw = weight_draw
+        dense_z: np.ndarray | None = None
+        fanin_value: dict[tuple[int, int], float] | None = None
+        if weight_draw == "dense_mask":
+            dense_z = rng.normal(loc=0.0, scale=1.0, size=(self.n_neurons, self.n_neurons))
+        elif weight_draw == "per_neuron_fanin":
+            incoming: dict[int, list[int]] = {}
+            for syn in connectome.chemical_synapses:
+                incoming.setdefault(self._idx[syn.post], []).append(self._idx[syn.pre])
+            # One block per post-synaptic neuron, in ascending index order, paired to that neuron's
+            # incoming edges sorted by pre-synaptic index. A degree-preserving rewiring keeps every
+            # labelled neuron's in-degree, so the blocks are the same size in both wirings and each
+            # neuron receives the same multiset -- only which partner holds which value moves.
+            fanin_value = {}
+            for post_j in range(self.n_neurons):
+                pre_list = incoming.get(post_j)
+                if not pre_list:
+                    continue
+                block = rng.normal(loc=0.0, scale=1.0, size=len(pre_list))
+                for pre_i, z in zip(sorted(pre_list), block, strict=True):
+                    fanin_value[pre_i, post_j] = float(z)
+
         m_chem_np = np.zeros((self.n_neurons, self.n_neurons), dtype=bool)
         w_chem_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.float32)
         sign_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.int8)
@@ -620,7 +676,11 @@ class ConnectomeTopology(nn.Module):
             pre_i = self._idx[syn.pre]
             post_j = self._idx[syn.post]
             m_chem_np[pre_i, post_j] = True
-            if weight_init == "count_scaled":
+            if dense_z is not None:
+                drawn = float(dense_z[pre_i, post_j]) * float(chem_scale[post_j])
+            elif fanin_value is not None:
+                drawn = fanin_value[pre_i, post_j] * float(chem_scale[post_j])
+            elif weight_init == "count_scaled":
                 factor = float(syn.weight) / float(count_norm[post_j])
                 drawn = rng.normal(loc=0.0, scale=1.0) * factor
             else:
@@ -2166,6 +2226,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             trace_decay=config.trace_decay,
             initial_log_std=config.initial_log_std,
             weight_init=config.weight_init,
+            weight_draw=config.weight_draw,
             synapse_signs=config.synapse_signs,
             readout_width=config.readout_width,
         ).to(self.device)

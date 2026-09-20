@@ -59,9 +59,25 @@ blocked by an honestly-unexercised item.
 **Execution order**: A.0 → **A.4** → A.1 → A.2, with A.3 and A.5 opportunistic. The list below
 keeps the roadmap's numbering; A.4 runs first because it lands before the first 8a registration.
 
-- [ ] **A.0 Artefact-retention rule** (registered at phase start, per design.md B.13): which
-  per-campaign artefacts are committed under `supporting/` (parsed per-seed CSVs) and which are
-  archived off-repo; recorded once here and cited by every campaign below.
+- [x] **A.0 Artefact-retention rule** — **registered 2026-09-20**, before the phase's first
+  campaign, per design.md B.13. Logbook 069 records what the absence of this rule cost: the
+  step-level exports for every campaign before the readout-width era are **gone**, and during L.1b a
+  metric could not be compared against L.0's run because that run's export had been deleted, which
+  was recorded as uncompared rather than counted as matching. The rule, cited by every campaign
+  below:
+  - **Committed to git**, under `docs/experiments/logbooks/supporting/<logbook>/`: the **parsed
+    per-seed CSV** carrying every field the analysis reads, the analysis JSON the logbook's figures
+    are derived from, and the launch record. A headline figure that cannot be re-derived from these
+    alone does not ship.
+  - **Archived off-repo**: raw campaign logs and step-level exports. They are the maintainer's
+    private archive, not a public artefact, and form no part of the reproducibility surface —
+    stated plainly rather than implied, as Logbook 069 states it.
+  - **Deleted deliberately, never incidentally**: a campaign directory is removed only after its
+    per-seed CSV is committed. Where a field cannot be compared because its source is gone, it is
+    named as **uncompared** rather than counted as matching — the parsed-field identity rule's own
+    wording.
+  - **Registered before the campaign**, not after: a campaign that starts without its retention
+    line recorded is blocked, per the `phase8-tracking` requirement.
 - [ ] **A.1 The init-vs-rewiring control** (D15; own change): both definitions of shared
   initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
   byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,

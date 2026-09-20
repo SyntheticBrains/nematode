@@ -9,12 +9,12 @@ come from V.4's committed per-seed spread, not from four pilot seeds. Task 8 reg
 including the rule that picks the primary metric — and only then does the panel launch. **No panel
 seed is touched before task 8**, and the pilot uses its own band so it cannot contaminate one.
 
-- [ ] 1. **A.0 — the artefact-retention rule**, recorded in `openspec/changes/phase8-tracking/tasks.md`
+- [x] 1. **A.0 — the artefact-retention rule** — done 2026-09-20, recorded in the Phase 8 tracker with the cost Logbook 069 records for its absence., recorded in `openspec/changes/phase8-tracking/tasks.md`
   before the first Phase 8 campaign: parsed per-seed CSVs committed under
   `docs/experiments/logbooks/supporting/`, raw campaign logs and step-level exports archived
   off-repo. Cited by every campaign that follows.
 
-- [ ] 2. **The two draw modes** — `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py`.
+- [x] 2. **The two draw modes** — done: `WeightDraw` alias, the `weight_draw` field, a model validator refusing the `count_scaled` pairing, the constructor parameter, and the branch. The sharing modes pre-draw (a dense matrix, or one block per post-synaptic neuron paired in pre-synaptic-index order) so what two wirings share is a property of the draw rather than of the edge order. — `packages/quantum-nematode/quantumnematode/brain/arch/connectome_ppo.py`.
   A `weight_draw: Literal["edge_order", "dense_mask", "per_neuron_fanin"] = "edge_order"` field beside
   `weight_init`, threaded to `ConnectomeTopology.__init__` as `readout_width` is, and branched at the
   draw loop. `edge_order` is untouched. `dense_mask` draws one dense matrix and takes each edge's own
@@ -23,7 +23,7 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   `weight_draw != edge_order` with `weight_init: count_scaled` at load, per the
   `plasticity_plastic_readout` + `freeze_updates` precedent.
 
-- [ ] 3. **Brain tests** — new
+- [x] 3. **Brain tests** — done, 19 tests. Both sharing properties asserted against constructed brains; bitwise identity on both axes over **every** topology parameter except `w_chem`, so a tensor added later is covered without anyone remembering. One test asserts the default path does *not* share the common edges, which is what makes the control worth running. 1,907 brain/arch tests pass. — new
   `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_connectome_weight_draw.py`,
   modelled on `test_connectome_count_init.py` and `test_connectome_readout_width.py`'s
   `TestTheRngStreamIsUntouched`. It asserts: the default is **bit-identical** to the pre-option brain;
@@ -34,7 +34,7 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   naming only one leaves the other free to move unnoticed. The sharing property is **asserted, not
   argued**; that is the requirement this change adds.
 
-- [ ] 3b. **Docs for the new key** — `configs/README.md`'s variant list gains `densemask` and
+- [x] 3b. **Docs for the new key** — done: the configs README variant list and the architectures catalogue row. — `configs/README.md`'s variant list gains `densemask` and
   `fanin` beside the `countinit` precedent it already documents as "the second panel's
   initialisation factor", and `docs/architectures.md`'s `connectomeppo` row names `weight_draw`
   where it already names `weight_init`.
