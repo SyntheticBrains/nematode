@@ -9,7 +9,7 @@ Where a contrast's credibility rests on two arms starting from the same initiali
 - **GIVEN** an initialisation-sharing mode whose purpose is to make two arms comparable
 - **WHEN** the mode is added
 - **THEN** a test SHALL construct both arms at one seed and assert the shared quantity directly — the identical value on every element present in both, or the identical multiset per unit, as the mode claims
-- **AND** the test SHALL assert that every parameter the mode does not claim to change is bitwise identical across the arms
+- **AND** the test SHALL assert bitwise identity on **both axes the mode could disturb**: across the two arms at one mode, and across modes for one arm on every parameter the mode does not claim to change. Naming only one axis leaves the other free to move unnoticed
 
 #### Scenario: A construction argument is not evidence of sharing
 

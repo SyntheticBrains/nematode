@@ -4,8 +4,10 @@ Phase 8 task **A.1** (with **A.0** riding along). The plan is authoritative in `
 § Phase 8 **D15**; the design decisions taken before anything ran are in this change's `design.md`.
 
 **Registration discipline**: tasks 1–6 land and the protocol is registered **before any panel run**.
-Task 7's pilot informs the minimum effect and the power arithmetic; task 8 registers them; only then
-does the panel launch. No panel seed is touched before task 8.
+Task 7's pilot confirms the modes run and the cost estimate holds; the minimum effect and the power
+come from V.4's committed per-seed spread, not from four pilot seeds. Task 8 registers all of it —
+including the rule that picks the primary metric — and only then does the panel launch. **No panel
+seed is touched before task 8**, and the pilot uses its own band so it cannot contaminate one.
 
 - [ ] 1. **A.0 — the artefact-retention rule**, recorded in `openspec/changes/phase8-tracking/tasks.md`
   before the first Phase 8 campaign: parsed per-seed CSVs committed under
@@ -26,9 +28,16 @@ does the panel launch. No panel seed is touched before task 8.
   modelled on `test_connectome_count_init.py` and `test_connectome_readout_width.py`'s
   `TestTheRngStreamIsUntouched`. It asserts: the default is **bit-identical** to the pre-option brain;
   under `dense_mask`, every edge present in both graphs carries an identical value at one seed; under
-  `per_neuron_fanin`, every neuron's incoming multiset matches across wirings; in all three modes the
-  readout, food gains, critic and gap junctions are untouched; and the `count_scaled` combination
-  raises. The sharing property is **asserted, not argued** — that is the requirement this change adds.
+  `per_neuron_fanin`, every neuron's incoming multiset matches across wirings; and the `count_scaled`
+  combination raises. Bitwise identity is asserted on **both axes** — across the two wirings at one
+  mode, and across modes for one wiring on the readout, food gains, critic and gap junctions — since
+  naming only one leaves the other free to move unnoticed. The sharing property is **asserted, not
+  argued**; that is the requirement this change adds.
+
+- [ ] 3b. **Docs for the new key** — `configs/README.md`'s variant list gains `densemask` and
+  `fanin` beside the `countinit` precedent it already documents as "the second panel's
+  initialisation factor", and `docs/architectures.md`'s `connectomeppo` row names `weight_draw`
+  where it already names `weight_init`.
 
 - [ ] 4. **Configs** — 16 new YAMLs, one key off their parent, across four arms
   (`wt_ppo`, `rn_ppo`, `wt_frozen`, `rn_frozen`) × two new modes × two cells (thermal `_t20`,
@@ -45,17 +54,37 @@ does the panel launch. No panel seed is touched before task 8.
 - [ ] 6. **Driver test** — new
   `packages/quantum-nematode/tests/quantumnematode_tests/analysis/test_init_sharing_control.py`,
   asserting the stem mapping, the seed freshness (129–144 disjoint from 1–96 and 101–108), the
-  incomplete-panel refusal, and that both instrument files are **byte-identical to `main`**.
+  incomplete-panel refusal, that **`rewire_seed` stays unset in all sixteen new rewired configs**
+  (as `test_wiring_premise.py` and `test_wiring_fresh_rewiring.py` already assert for the committed
+  eight), and that both instrument files are **byte-identical to `main`**.
 
-- [ ] 7. **Pilot** — seeds **105–108**, one cell, all three modes, configured the way the campaign
-  will be (not lighter), per the cheapest-platform-first principle's cost clause. Confirms the modes
-  run, the learning gates fire, and yields the observed per-seed spread.
+- [ ] 7. **Pilot** — seeds **105–108**, the **thermal `_t20`** cell (V.1's cell: the larger effect
+  and the fuller committed spread), all three modes, configured the way the campaign will be, not
+  lighter, per the cheapest-platform-first principle's cost clause. Its job is to confirm the modes
+  run, the learning gates fire, and the wall-clock estimate holds. It is **not** the spread source —
+  see task 8.
 
-- [ ] 8. **Register the protocol** — before the panel: the minimum effect on the interaction as a
-  fraction of the **within-campaign** baseline wiring effect, **registered in both directions**; the
-  power to detect it from the pilot's spread; the detectable effect size and comparator stated in
-  advance because a null here carries a registered consequence; and the rule that the two cells are
-  read **separately**, a split reported as a split.
+- [ ] 8. **Register the protocol** — before the panel, and this is the task the campaign's
+  credibility rests on:
+
+  - **The primary metric, chosen for the contrast it must support.** `episodes_to_30pct_success` is
+    **right-censored** at the horizon, and the interaction is a **difference of differences** across
+    four cells. The governing requirement forbids a censored metric as the primary for that shape
+    unless censoring is known equal across the cells. So: censoring is counted **per cell, never
+    pooled**; if the rates differ, the uncensored **`auc_success`** is the interaction's primary and
+    `episodes_to_30pct_success` is reported beside it; if they match, the reverse. The rule and its
+    trigger are fixed here, before any rate is known.
+  - **The minimum effect**, as a fraction of the **within-campaign** baseline wiring effect, and
+    **registered in both directions** — a reduction that would count as the effect dissolving, and a
+    reverse effect that would count as anything at all.
+  - **The power**, computed from V.4's committed per-seed spread
+    (`supporting/065-wiring-fresh-rewiring/per-seed-primary.csv`, 128 rows across both cells) — the
+    frozen prior-committed source the requirement asks for. Four pilot seeds cannot estimate a
+    spread; they confirm the machinery. The exact sign-test floor is carried as `wiring_fresh_rewiring._power` does.
+  - **The comparator and detectable effect size**, stated in advance because a null here carries a
+    registered consequence.
+  - **The two cells read separately**, a split reported as a split and never pooled toward whichever
+    cell supports the original claim.
 
 - [ ] 9. **The panel** — 2 cells × 4 arms × 3 modes × 16 seeds (**129–144**) = **384 runs** through
   `scripts/run_campaign.py`, 16 workers, detailed export off per the runner's warning. ≈ 5–6 h.

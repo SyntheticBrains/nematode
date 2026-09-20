@@ -38,6 +38,14 @@ V.4's committed per-seed data for seeds 65–96 carries all four metrics and cou
 
 Re-running all three levels on one fresh seed set costs roughly two extra hours and buys a within-campaign contrast with uniform provenance. Taken.
 
+**This runs a baseline in the same campaign as the manipulation, which principle 6's 2026-09-19 note warns against, so the difference has to be stated rather than assumed.** What that note forbids is reading an ablation against a baseline the same campaign is establishing at a *moved operating point* — L.4's error, where the rate check moved the arms and the ablation assumed the new baseline. Here the operating point does not move: `edge_order` is the committed block-V configuration, unchanged, and its wiring effect has been measured four times across V.1, V.3 and V.4. The in-campaign arm therefore **replicates a known baseline** rather than establishing an unknown one, and the crossed interaction is the registered form for this design. If the `edge_order` arm fails to reproduce block V's effect on fresh seeds, that is itself the finding and the interaction is not read — a branch task 8 registers.
+
+### Decision D2: The primary metric is chosen after the censoring rates are known, by a rule fixed before they are
+
+`episodes_to_30pct_success` is right-censored at the horizon, and the interaction is a difference of differences across four cells. The moved metric requirement forbids exactly that pairing unless censoring is equal across the cells, and it was written for L1b, where a 0.604 censoring spread voided a registered secondary. A draw mode that slows the null would censor more of its seeds and corrupt the interaction silently.
+
+So the *rule* is registered in advance and the *choice* follows the data: censoring counted per cell, never pooled; rates differing means the uncensored `auc_success` is the primary with the censored metric beside it; rates matching means the reverse. Both readings are reported either way, which is what the requirement asks of a departure.
+
 ### Decision E: The instrument is not modified
 
 `wiring_premise.py` hard-codes its cells, arms, family and minimum effects as tuples. Adding a third factor level by editing them would forfeit the property V.4's replication rests on — that the same analysis scored the original and the replication unmodified.
@@ -54,7 +62,7 @@ Only one is added. A.4 has just finished redistributing 38 rules that accumulate
 
 ## Open Questions (resolved during implementation)
 
-- **Minimum effect on the interaction.** Registered as a fraction of the **baseline wiring effect measured in this campaign**, not of Block V's published figure — the ablation-minimum requirement asks for a fraction of the established effect, and the within-campaign baseline is the one the interaction is actually formed against. The fraction and its power come from the pilot's observed spread, registered in both directions before the panel runs.
+- **Minimum effect on the interaction.** Registered as a fraction of the **baseline wiring effect measured in this campaign**, not of Block V's published figure — the ablation-minimum requirement asks for a fraction of the established effect, and the within-campaign baseline is the one the interaction is actually formed against. Registered in both directions before the panel runs. **Its power comes from V.4's committed per-seed spread**, 128 rows across both cells, which is the frozen prior-committed source the requirement names; four pilot seeds confirm the machinery and cannot estimate a spread.
 - **Whether both new modes need both cells.** The plan runs both on both. If the pilot shows a mode is unrunnable on a cell, that is recorded as a limitation of that mode rather than resolved by dropping the cell.
 - **Whether `dense_mask`'s larger draw needs a seed-offset guard.** `self.rng` feeds nothing but this loop, so consuming more values disturbs nothing downstream; the test asserting the periphery is untouched is what establishes it rather than the argument.
 
