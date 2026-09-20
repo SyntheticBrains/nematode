@@ -459,6 +459,11 @@ learning faster is a fact about the parameter set.
 - **WHEN** the interaction is not significant
 - **THEN** the record SHALL report it as no interaction detected **at the panel's sensitivity**, with
   that sensitivity computed from observed per-seed spread and registered before the campaign ran
+- **AND** that spread SHALL come from a source frozen before the campaign — a pilot on disjoint seeds,
+  or prior committed data — and SHALL NOT be computed from the campaign's own results, which would
+  make a pre-registered sensitivity a function of the outcome it is meant to bound
+  *(clarified 2026-09-20 at the consolidation's PR review; the requirement was otherwise moved
+  verbatim from `plasticity-evaluation`, and this is the one clause that differs)*
 - **AND** it SHALL NOT be reported as excluding an interaction of unspecified size
 
 ### Requirement: A metric is chosen for the contrast it must support, and a departure is registered with its reason

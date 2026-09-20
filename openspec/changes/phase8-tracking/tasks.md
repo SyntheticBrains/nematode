@@ -99,7 +99,9 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   [phase protocol](../../../docs/research/phase-protocol.md) as clauses under existing principles,
   no new principle and no renumbering, the document at 222 lines against a 250 budget; **8 retire**
   with a reason and a migration each, being specific to the rule programme that closed with a
-  diagnosed cause. A rung designer now reads thirteen principles rather than thirty-eight rules.
+  diagnosed cause. The reading surface is now **thirteen principles plus the eleven requirements
+  that stayed enforceable** in `architecture-comparison-protocol`, rather than thirty-eight rules in
+  a capability whose Purpose never described them.
   The harness audit found nothing orphaned across 27 harness/test pairs. *(The 44 was counted
   2026-09-20; Logbook 069 and the roadmap's inheritance list say 42, which was true at the close —
   archiving the Phase 7 synthesis change merged its own two requirements into this spec.)*
