@@ -8,7 +8,7 @@ it is read once per batch, and detail that does not change a score is detail tha
 A brief describing a phase that closed six months ago scores against questions nobody is asking any
 more, and the digest will look fine while doing it.
 
-Last reviewed: 2026-09-20 (Phase 8 opening).
+Last reviewed: 2026-09-20 — re-aimed at Phase 8 (*ground, then embody*) as ratified in roadmap v4.3.
 
 ## What the project is
 
@@ -25,44 +25,66 @@ in that comparison, not the point of the project.
 
 ## What is open right now
 
-These are the live questions. A paper bearing on one of them is a 3.
+These are the live questions — Phase 8 of the [roadmap](../../roadmap.md), *ground, then embody*. A
+paper bearing on one of them is a 3.
 
-- **Wiring advantage vs. initialisation.** A connectome-constrained network beats degree-preserving
-  rewired nulls in the current results, but the rewiring covaries with initialisation, and a fly
-  connectome result reports exactly that advantage dissolving under shared initialisation plus a
-  degree-preserving null. Anything on connectome-vs-null comparisons, degree-preserving or
-  spectral nulls, wiring-versus-initialisation confounds, or structure-function claims in any
-  connectome is directly on point.
-- **Biologically plausible plasticity that actually learns.** Rate-based three-factor rules on the
-  connectome have not reached competence in this project: every learner that gets there leaves the
-  chemical weights effectively frozen, and the rule programme has no positive control. Work on
-  three-factor or neuromodulated rules, eligibility traces, anti-Hebbian or multi-site plasticity,
-  pathway-specific rather than globally-broadcast third factors, credit assignment solved by
-  wiring, and especially *negative* results or diagnosed failure modes for such rules.
-- **Placed plasticity.** Whether a rule at an anatomically identified site beats the same rule at a
-  degree-matched random subset. Anything locating plasticity to identified synapses or cell types.
+- **Wiring advantage vs. initialisation.** A connectome-constrained network reaches competence
+  sooner than degree-preserving rewired nulls in the current results, but the rewiring covaries
+  with initialisation, and a fly connectome result reports exactly that advantage dissolving under
+  shared initialisation plus a degree-preserving null. Anything on connectome-vs-null comparisons,
+  degree-preserving or spectral nulls, wiring-versus-initialisation confounds, or structure-function
+  claims in any connectome is directly on point. So is anything predicting *which* graphs learn
+  faster from structure alone — input routing, confinement of activity to a core, which cells drive
+  the dominant modes — because no graph property measured here predicts learning time.
+- **Operating point.** Whether a wiring's apparent advantage survives the learner's settings. One
+  inherited learning rate reversed the sign of a registered result here, and a connectome-reservoir
+  study reports the same sensitivity independently. Connectome reservoir computing, hyperparameter
+  robustness or sensitivity surfaces, and any claim that a wiring effect holds — or does not —
+  across an operating region rather than at one pinned setting.
+- **Measured weights on real edges.** This substrate is anatomically constrained in topology and
+  *randomly initialised in weight*; the next rung replaces the draw with a measurement. Fitted
+  synaptic weights or signs on connectome edges, optogenetic and signal-propagation measurements of
+  functional connectivity, neuromuscular junction data, sex-specific wiring, and whole-brain imaging
+  that constrains a model's parameters rather than describing activity.
+- **Embodiment.** There is no body here: motor output is a learned readout over motor-neuron
+  activations, and the next shipment drives the anatomical motor-to-muscle map into a
+  two-dimensional body. Neuromechanical models, rod-chain and viscoelastic body mechanics,
+  resistive-force and drag models, muscle models, proprioceptive feedback, and connectome-driven
+  locomotion. Compute is the binding constraint — a body must survive thousands of training
+  episodes per seed — so reduced-order and fast models are as interesting as accurate ones.
 - **Dynamics beyond a fixed weight matrix.** Gap junctions as a dynamical term rather than a
-  symmetric constant; intrinsic neuronal dynamics; how far a rate model can be pushed before
-  spiking is required.
-- **Cross-connectome transfer.** *C. elegans* to *P. pacificus* head circuits, and the dauer wiring
-  state as a within-species comparison. Comparative connectomics, homology between nematode
-  nervous systems, and wiring-state changes across development or life stage.
-- **Grounding the model in measurement.** Neuromuscular junction data, sex-specific wiring, fitted
-  synaptic weights or signal-propagation measurements, whole-brain imaging that constrains a
-  simulation's parameters rather than merely describing activity.
-- **Embodiment.** Neuromechanical models, body-environment coupling, OpenWorm and c302, and
-  simulation platforms a connectome model could be dropped into.
+  symmetric constant; intrinsic neuronal dynamics; node-level adaptation, which is the biologically
+  faithful form of much *C. elegans* learning and sits in the neuron rather than the synapse; and
+  how far a rate model can be pushed before spiking is required.
+- **Plasticity, narrowed.** The uniform-rule programme closed here with a diagnosed cause: no
+  biologically plausible rule that *writes* the chemical weights learns this substrate to any
+  benefit. What stays live is narrower — plasticity **placed** at an anatomically identified site
+  against a degree-matched random subset of the same size; **plastic electrical synapses**; and
+  *negative* results or diagnosed failure modes for local rules. A three-factor or neuromodulated
+  rule paper with none of those properties is a 2.
+- **Behaviour precise enough to validate a body against.** Locomotion kinematics (undulation
+  frequency and amplitude, crawling and swimming speeds, posture or eigenworm spectra, omega-turn
+  geometry), forward and reverse bout statistics, and roaming/dwelling or patch-leaving on
+  structured bacterial lawns — what a simulated worm with a body and an internal state is checked
+  against.
 
 ## Also worth knowing about
 
 Score 2, not 3: useful without settling anything above.
 
+- **Cross-connectome transfer** — *C. elegans* to *P. pacificus* head circuits, the dauer wiring
+  state, homology between nematode nervous systems, and wiring changes across development or life
+  stage. *Demoted from 3 on 2026-09-20: Phase 8 stays on one species deliberately. Still worth
+  seeing, because the question returns in a later phase and the data landscape moves meanwhile.*
 - New connectome datasets or releases for any organism, and the tooling to use them.
-- Reservoir computing, recurrent and state-space architectures evaluated on *biological* tasks,
-  particularly negative results.
+- Whole-organism or whole-brain simulation efforts in any organism, including ones with neither
+  learning nor controls — they bound what this project can claim as novel.
+- Three-factor, neuromodulated and eligibility-trace rules in general; reservoir computing and
+  recurrent or state-space architectures evaluated on *biological* tasks, particularly negative
+  results.
 - Methods for comparing learned solutions across architectures; representational or dynamical
   similarity measures; statistical protocol for paired-seed model comparison.
-- *C. elegans* behavioural quantification precise enough to validate a simulation against.
+- *C. elegans* behavioural quantification beyond the validation targets named above.
 - Neuromorphic hardware running connectome-scale networks.
 
 ## What is not relevant
