@@ -106,6 +106,22 @@ down.
    anything would help". *At matched norm the readout substitutions ran random 9.639, anatomical
    8.265, PPO's own direction 6.123 — the scale did the work and the direction was worst where it was
    expected to be best, [Logbook 062](../experiments/logbooks/062-l4-frozen-readout.md).*
+   *(Added 2026-09-21.)* **And an arm must be shown to change only what it names — at the point the
+   arms diverge, not only at construction.** A manipulation that shares mutable state with anything
+   else carries a second difference downstream, and the initial parameters do not show it: they are
+   identical, and the runs are not. *A.1's two shared-initialisation modes were built to differ from
+   the baseline in one thing, which edge each drawn value lands on. The `dense_mask` mode drew a
+   dense matrix, 91,204 values against the baseline's 3,709, from a generator the rollout buffer
+   also consumes for its minibatch permutation — so it moved PPO's minibatch order as well as the
+   weights. Two manipulations under one name. The suite asserted bitwise identity of every parameter
+   the mode did not claim to touch, and passed, because the divergence only exists once training
+   starts. It was found in review, after a 768-run panel, and cost a 256-run re-run of the affected
+   arms; the other sixteen arms were provably unaffected and were kept,
+   [Logbook 070](../experiments/logbooks/070-init-sharing-control.md).*
+   **The check that would have caught it**: name the state the arms share, and assert the arms leave
+   it in the same condition — the next value a shared generator will yield, the same optimiser step
+   count, the same buffer contents. Where an arm consumes a shared resource by a different amount,
+   it is not a one-variable manipulation however carefully its parameters were matched.
 
 ### Parameters
 
