@@ -73,6 +73,25 @@ label = "Izquierdo & Beer 2013, connecting a connectome to behaviour"
 id = "W2782973718"
 label = "Gerstner et al. 2018, eligibility traces and three-factor rules"
 
+# Added 2026-09-20 for Phase 8's two new questions — measured weights on real edges, and a body.
+# The seed set had no embodiment anchor at all, and only Randi 2023 for functional measurement.
+
+[[openalex.seeds]]
+id = "W4402740489"
+label = "Creamer, Leifer & Pillow 2024, synaptic weights fitted on connectome edges"
+
+[[openalex.seeds]]
+id = "W2133351202"
+label = "Wen et al. 2012, proprioceptive coupling drives forward locomotion"
+
+[[openalex.seeds]]
+id = "W2075360394"
+label = "Boyle, Berri & Cohen 2012, integrated neuromechanical model of gait"
+
+[[openalex.seeds]]
+id = "W4389938379"
+label = "Chung, Chang & Kim, ElegansBot (eLife 2024) — equation of motion for locomotion"
+
 # --- Preprint sweeps ---------------------------------------------------------------------------
 # Lower precision, and the reason the triage pass exists. These catch work before it is citable and
 # therefore before citation chaining can see it at all.
