@@ -1,0 +1,112 @@
+## ADDED Requirements
+
+### Requirement: Phase 8 Living Shipment Checklist
+
+The repository SHALL maintain a single living checklist file at `openspec/changes/phase8-tracking/tasks.md` covering Phase 8's two shipments (8a: block A, B.1, B.2 and the 8a synthesis; 8b: C.0–C.5, B.3 + D.1 and the phase synthesis) plus the MAY items, at sub-task granularity. Every Phase 8 milestone PR SHALL update this file as part of its diff. This change SHALL remain unarchived until the Phase 8 synthesis publishes, at which point it archives alongside that synthesis change.
+
+#### Scenario: Future session orients to Phase 8
+
+- **GIVEN** a fresh AI session resumes Phase 8 work
+- **WHEN** the agent reads `openspec/changes/phase8-tracking/tasks.md` and `docs/roadmap.md` § Phase 8
+- **THEN** the agent SHALL be able to identify the current shipment, sub-task, and applicable design decisions (D15–D20) without re-deriving the plan or the review corrections
+
+#### Scenario: Milestone PR updates the checklist
+
+- **GIVEN** a Phase 8 milestone PR (e.g. the A.1 control change, a rung change, or the synthesis change) is being prepared
+- **WHEN** the PR is opened
+- **THEN** the PR diff SHALL include updates to `openspec/changes/phase8-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the relevant shipment status header
+
+### Requirement: Design Decisions D15–D20 Are Binding
+
+Phase 8 milestone changes SHALL conform to the ratified design decisions D15–D20 recorded in `docs/roadmap.md` § Phase 8 § Pre-registered design decisions. Amending a D-decision SHALL require a dated note in the `phase8-tracking` change (with a matching roadmap edit) before the affected milestone change merges.
+
+#### Scenario: Milestone change contradicts a D-decision
+
+- **GIVEN** a Phase 8 milestone change proposes work that contradicts a D-decision (e.g. a single unstated definition of shared initialisation against D15, a per-arm muscle gain against D18, the connectome generating the undulation at C.1 against D19, or 8b work before the 8a synthesis against D20)
+- **WHEN** the change is reviewed
+- **THEN** the change SHALL be blocked until either it conforms, or a dated amendment to the relevant D-decision is recorded in `phase8-tracking` and `docs/roadmap.md`
+
+### Requirement: Positive Control Before Any Connectome Arm on a New Component
+
+Each new substrate component — the dynamical substrate (B.2), the anatomical muscle readout and kinematic body (C.1), the rod-chain body (C.2), and any body-level rhythm generator (D19) — SHALL clear an MLP-PPO positive control on the target cell before any connectome arm runs on it. A rung whose positive control fails SHALL close with the diagnosis as its deliverable and SHALL NOT report a wiring result.
+
+#### Scenario: Connectome arm proposed on an uncontrolled component
+
+- **GIVEN** a milestone change proposes a wiring contrast on a component with no recorded MLP-PPO positive control on that cell
+- **WHEN** the change is reviewed
+- **THEN** the contrast SHALL be blocked until the positive control has run and its outcome is recorded in the tracker
+
+### Requirement: Operating-Point Discipline
+
+No Phase 8 wiring contrast SHALL run at a pin unswept for the learner it uses, across the pins that learner actually has (D16). `plasticity_rate` and `trace_decay` belong to the reading learner's rule; readout width, `forward_pass_depth` and `initial_log_std` are substrate and policy settings **shared by both learners**. The A.2 sensitivity surface SHALL therefore cover the reading learner across all five pins **and PPO across the three shared pins** at a reduced grid, and SHALL be recorded before B.1 registers. Every later rung SHALL cite the swept point it runs at, for each learner it runs.
+
+A.1 is the one exception, because it re-runs the committed block-V operating point by design: it SHALL carry its pins as a standing condition in the same sentence as its claim, and SHALL be re-read at A.2's point if A.2 moves the sign of the wiring effect. A setting inherited from a previous rung SHALL be treated as a hypothesis at the new one and re-checked when the substrate, the readout, or the learner changes.
+
+#### Scenario: Contrast registered at an inherited pin
+
+- **GIVEN** a milestone change registers a wiring contrast at a value of a pin that A.2 did not sweep for that learner and substrate
+- **WHEN** the change is reviewed
+- **THEN** the registration SHALL be blocked until the pin is swept for that learner or the A.2 surface is extended to cover it
+
+#### Scenario: A PPO contrast is registered against a reading-learner-only sweep
+
+- **GIVEN** B.1's or B.2's PPO arm is registered citing A.2's reading-learner surface for readout width, `forward_pass_depth` or `initial_log_std`
+- **WHEN** the change is reviewed and A.2's PPO half has not covered those pins
+- **THEN** the PPO arm SHALL be blocked until it does, since a pin swept on one learner is not swept for another
+
+### Requirement: Body-Substrate Results Are a New Reference Frame
+
+Results measured through the C.1 or C.2 body SHALL be reported against floors and baselines re-established on that substrate, and SHALL NOT be reported as controlled deltas against Logbook 029, block V, or any pre-body result.
+
+#### Scenario: Body result compared to a pre-body number
+
+- **GIVEN** a milestone change reports a body-substrate result as a percentage change against a pre-body baseline
+- **WHEN** the change is reviewed
+- **THEN** the comparison SHALL be restated as qualitative, and the rung's own baseline campaign SHALL be cited as the quantitative frame
+
+### Requirement: Substrate Freeze Before the Body Rung
+
+Every C.0 platform change — the step–time calibration, signed speed, and the proprioceptive channel — SHALL land, validate and freeze before C.1 registers, and D19 SHALL be decided and recorded in the same window. Any comparison spanning a subsequent substrate change SHALL be reported as qualitative.
+
+#### Scenario: C.1 proposed before the C.0 freeze
+
+- **GIVEN** a milestone change proposes registering C.1's wiring contrast
+- **WHEN** the change is reviewed and any C.0 item is unlanded, or D19 is unrecorded
+- **THEN** the registration SHALL be blocked until the C.0 tranche is complete and the freeze is declared
+
+### Requirement: Artefact Retention Registered at Phase Start
+
+Before the first Phase 8 campaign runs, the tracker SHALL record which per-campaign artefacts are committed to git (the parsed per-seed CSVs under `docs/experiments/logbooks/supporting/`) and which are archived outside the repository. Every campaign SHALL conform to that rule, and a phase synthesis SHALL state plainly what is re-derivable from git alone and what is not.
+
+#### Scenario: Campaign runs with no retention rule recorded
+
+- **GIVEN** a Phase 8 milestone change proposes launching a campaign
+- **WHEN** the change is reviewed and task A.0 has not recorded the retention rule
+- **THEN** the campaign SHALL be blocked until the rule is recorded, so that step-level exports are not lost the way Logbook 069 § Reproducibility records for the pre-readout-width era
+
+### Requirement: Shipment Completion Semantics
+
+An 8a GO decision SHALL record the phase state as "8a complete / 8b pending" and SHALL NOT mark Phase 8 complete. 8b work SHALL NOT start until the 8a synthesis has assigned every 8a criterion one of the five statuses (met, unmet-with-reason, deferred-with-destination, superseded-by-result, unreachable-with-reason). Phase 8 SHALL be marked ✅ COMPLETE only when the 8b synthesis publishes with every criterion assigned a status; "well underway" SHALL never satisfy completion. Splits and stops SHALL be invoked on pre-registered criteria, never on month counts.
+
+#### Scenario: 8a closes while 8b is pending
+
+- **GIVEN** A.1, A.2, A.4 and B.1 are complete with statuses assigned and the 8a synthesis writes GO
+- **WHEN** the 8a shipment decision is recorded
+- **THEN** the roadmap Phase 8 status SHALL read "8a complete / 8b pending"
+- **AND** Phase 8 SHALL NOT be marked COMPLETE until the 8b synthesis lands
+
+#### Scenario: A rung is deferred out of the phase
+
+- **GIVEN** a rung the completion predicate names becomes unrunnable on evidence (e.g. C.2 exceeds its registered cost budget), and a dated decision defers it
+- **WHEN** that decision is recorded
+- **THEN** the rung SHALL carry the status *deferred-with-destination* with the destination named, in the tracker and the roadmap in the same PR, and SHALL NOT be dropped silently
+
+### Requirement: Scope Exclusions
+
+Phase 8 SHALL NOT include: cross-species work (the *P. pacificus* comparison, the dauer pathfinder, weight transplant); the male–hermaphrodite wiring contrast; multi-agent, pheromone, red-queen or ecological co-evolution work; evolution in any form (6b NEAT stays in `phase6b-tracking`; Lamarckian and transgenerational work stays closed); structural plasticity across development; the neuropeptide layer as a rule substrate; spiking-STDP or neuromorphic deployment; 3D environments, the Sibernetic body or ion-channel neurons; or the uniform substrate-writing rule programme.
+
+#### Scenario: Excluded scope proposed as Phase 8 work
+
+- **GIVEN** a Phase 8 milestone change proposes any excluded item above as Phase 8 scope
+- **WHEN** the change is reviewed
+- **THEN** the addition SHALL be blocked as out of Phase 8 scope; committing to it requires a dated D-decision amendment with its budget impact, recorded in `phase8-tracking` and `docs/roadmap.md`

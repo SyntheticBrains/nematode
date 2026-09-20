@@ -16,7 +16,8 @@ context: |
   comparison, not the organising principle. Focus areas: connectome-constrained
   learning, biologically-faithful sensing, architecture ranking under a
   paired-seed statistical protocol, real-worm behavioural validation, and
-  (Phase 7) biologically-plausible plasticity and cross-species transfer.
+  (Phase 8, C. elegans only) measured synaptic weights on the connectome, intrinsic and
+  gap-junction dynamics, and an anatomical motor-to-muscle readout into a 2D body.
 
   ## Architecture
   - UV workspace: packages/quantum-nematode is the core package

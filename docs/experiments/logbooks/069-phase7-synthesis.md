@@ -214,6 +214,14 @@ In dependency order, each item naming what it inherits:
    aimed at this design. Needs its own design decision first: "the same initialisation" has no single
    meaning once the mask changes, since the init scale is `1/sqrt(chemical in-degree)` and rewiring
    preserves the degree sequence but not which neuron holds which degree.
+   *(**Correction, 2026-09-20**, found at the review of the Phase 8 roadmap PR (#395): the last
+   clause misdescribes the implementation. `rewire_degree_preserving` is a directed double-edge
+   swap, so every neuron keeps its **own** in- and out-degree, and the `1/sqrt(chemical in-degree)`
+   scale is already matched neuron-for-neuron; what varies with the seed is which drawn values land
+   on which edges. The standing condition above is unaffected — `rewire_seed` is unset, so graph and
+   draw still move together — but the control is easier than this item says. The decision it fed is
+   D15 in the [roadmap's § Phase 8](../../roadmap.md#phase-8-ground-then-embody--measured-substrate--body).
+   The sentence is left in place as what was believed at the close.)*
 2. **A calibration rung** over rate, readout width, `forward_pass_depth` and `initial_log_std`, before
    any new contrast. Inherited from L.1b, which showed one pin setting a primary's sign, and from
    [062](062-l4-frozen-readout.md), which already named the log-std question and called it cheap.
