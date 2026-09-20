@@ -36,7 +36,15 @@ down.
 
 1. **Name the question and both answers.** Register what a positive and a negative result look like
    and what each licenses, before any data exists. *Phase 7 did this consistently, and it is why
-   the negatives are citable rather than merely disappointing.*
+   the negatives are citable rather than merely disappointing.* *(Added 2026-09-20.)* **Name every
+   branch, not only the two that matter.** An outcome map that omits the combination nobody expects
+   invites it to be read as whichever neighbour is convenient; the branch where two contrasts point
+   opposite ways licenses no follow-on work and needs its own registration to act on
+   ([Logbook 042](../experiments/logbooks/042-l4-panel3.md)). And where a diagnostic borrows a
+   component from the method the deliverable rules out — a tensor from a gradient-trained run — the
+   record states **before it runs** that it cannot satisfy that deliverable whatever it returns, and
+   names what a positive would license instead
+   ([Logbook 062](../experiments/logbooks/062-l4-frozen-readout.md)).
 
 2. **Do the feasibility arithmetic.** Ask whether theory says the method can work at this scale and
    horizon, and write the estimate down. *Node perturbation's learning speed scales as roughly 1/N
@@ -66,7 +74,14 @@ down.
    (`pwang724/fly-circuit-exploration`) excluded activity-based memory with a recurrence metric,
    then found the metric gave the same answer on the EPG ring attractor — a measured
    persistent-activity network — and withdrew the exclusion in its own audit. The public claim
-   went out the next day with the exclusion still in it.*
+   went out the next day with the exclusion still in it.* *(Added 2026-09-20.)* Two corollaries.
+   **A substrate result is read against the control**: where the control has not run or has not
+   passed, a null is consistent both with the substrate carrying no signal and with the method being
+   unable to show one, and the record says so rather than picking
+   ([Logbook 056](../experiments/logbooks/056-l4-ladder-reread.md)). **A control with a closed-form
+   optimum names the arm that must fail as well as the one that must pass** — either expectation
+   being violated voids the control rather than producing a result
+   ([Logbook 048](../experiments/logbooks/048-l4-rule-positive-control.md)).
 
 5. **A task ladder from the control to the real task**, the method cleared at each rung before the
    next. Easy to hard: foraging, then foraging with predators, then with thermotaxis. Never jump
@@ -86,6 +101,11 @@ down.
    reading it to the campaign; 192 runs would have read the baseline first and shown there was no
    wild-type effect at 0.0001 for the signs to carry,
    [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).*
+   *(Added 2026-09-20.)* A **replacement** needs a control of the same magnitude and arbitrary
+   direction, or "this particular substitute helps" cannot be separated from "the default was bad and
+   anything would help". *At matched norm the readout substitutions ran random 9.639, anatomical
+   8.265, PPO's own direction 6.123 — the scale did the work and the direction was worst where it was
+   expected to be best, [Logbook 062](../experiments/logbooks/062-l4-frozen-readout.md).*
 
 ### Parameters
 
@@ -102,6 +122,11 @@ down.
    of +0.6178 on 96 of 96 seeds where the original panel detected none. An inherited setting does not
    merely cost performance; it can set the sign of the result,
    [Logbook 068](../experiments/logbooks/068-l1b-rate-calibration.md).*
+   *(Added 2026-09-20.)* And the sweep runs **where the method is known to learn**, with the pinned
+   value as the baseline arm. A platform on which the method does not learn cannot show what a setting
+   costs, because every arm reads alike at the floor — which is why an instrument block's own knob
+   sweep had to move platforms before it could measure anything,
+   [Logbook 056](../experiments/logbooks/056-l4-ladder-reread.md).
 
 8. **Pilots on disjoint seeds.** Registered seeds stay untouched until the protocol is fixed. *Held
    throughout Phase 7, and it is why the pilots could inform registrations without contaminating
@@ -114,7 +139,8 @@ down.
     connectome rule worked every time it was applied and saved ten-hour runs twice. The one cost
     estimate scaled from a lighter pilot was off by a factor of ten.*
 
-10. **Register a minimum effect beside significance**, and name the outcome that means stop. *A
+10. **Register a minimum effect beside significance**, name the outcome that means stop, and
+    **match the statistic and the metric to the outcome's shape**. *A
     paired rank test at eight seeds fires on the consistency of the sign, whether the shift is
     0.05 or 2.0 of ten. On a floor-adjacent platform that is a route to reporting nothing as
     something.* *(Added 2026-09-19.) **Register it for both directions of a two-sided reading.** L.1b
@@ -123,11 +149,33 @@ down.
     would have refused. The asymmetry was named in the record rather than exploited, and the symmetric
     reading stated beside it,
     [Logbook 068](../experiments/logbooks/068-l1b-rate-calibration.md).*
+    *(Added 2026-09-20.)* **The shape matters as much as the size.** Where an outcome is bimodal — a
+    seed reaching a competent policy or a dead one — a test of the level reports nothing when only the
+    frequency moves, and a test of the frequency reports nothing when only the level does, so the
+    registered contrast reads **both** components. A **graded** measure of progress is read beside the
+    full-clear rate so that learning short of a clear is visible; and where the primary metric sits at
+    its floor for both arms, the comparison is made on the graded reading rather than reported as no
+    difference, because a metric that is zero for both cannot separate them. *Panels 2 and 3 were
+    bimodal and read with neither component, leaving them unpowered at n = 16 and n = 48
+    ([Logbook 041](../experiments/logbooks/041-l4-panel2.md),
+    [Logbook 042](../experiments/logbooks/042-l4-panel3.md)); a later family with one member per
+    component re-read seventeen contrasts and promoted none, so the committed negatives survived a
+    statistic matched to the shape, [Logbook 056](../experiments/logbooks/056-l4-ladder-reread.md).*
 
 11. **A mechanism must predict, not describe.** A proposed explanation earns its place by a test
     that could have refuted it. *The horizon was a description of the one-step-success /
     multi-step-failure pattern until I.3b tested it on a multi-step task, where it did not
-    transfer.*
+    transfer.* *(Added 2026-09-20.)* Three forms this takes. A setting found limiting **on a control**
+    is tested on a task of the kind whose failure motivated it before a synthesis cites it as the
+    explanation. A mechanism predicting that performance depends on a platform dimension has that
+    dimension **varied where the method demonstrably learns**, before a failure elsewhere is
+    attributed to it or cleared of it — *the rule solved a foraging cell at eight perturbed units and
+    collapsed at 128, so the dimension was real; the connectome sits an order beyond the failing end,
+    [Logbook 060](../experiments/logbooks/060-l4-perturbation-scale.md)*. And a structural statistic
+    proposed to explain an unexplained result is **registered — the statistic, the predicted
+    direction, and a minimum effect — before its correlation with the outcome is computed**, with a
+    positive licensing a hypothesis rather than settling one
+    ([Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md)).
 
 ### Closing
 
@@ -142,6 +190,19 @@ down.
     than it is. *Phase 7's own synthesis drafted the learnable-gap-junction criterion as superseded;
     review found one of its two recorded destinations untouched, and the status became deferred,
     [Logbook 069](../experiments/logbooks/069-phase7-synthesis.md).*
+    *(Added 2026-09-20.)* **What the re-read may and may not do.** It classifies each result by what
+    would have had to be true for its null to be informative, and does not assume that "about the
+    question" and "about the instrument" exhaust the possibilities — *of 32 registered contrasts, ten
+    were instrument findings, sixteen were substrate findings the instrument block does not reach, and
+    five were about neither, because no optimiser tested had ever found the effect their premise
+    assumed, [Logbook 056](../experiments/logbooks/056-l4-ladder-reread.md)*. Every committed verdict
+    is carried unchanged beside its re-read, in the units and under the rule it was registered with; a
+    re-read never converts a negative into a positive, and where it corrects an earlier reading it says
+    so in the same place. **The shipment decision then names the branch it takes and why the others
+    were unavailable** — a branch unreachable because a gate never opened is recorded as unreachable
+    rather than unmet, and a gate whose literal condition and stated rationale come apart is recorded
+    with both rather than resolved by interpretation,
+    [Logbook 059](../experiments/logbooks/059-7a-shipment.md).
 
 13. **Re-aim what watches the field.** *(Added 2026-09-20.)* A close changes which questions are
     open, so anything pointed at the old ones is now pointed at nothing. The standing case is the

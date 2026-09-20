@@ -90,11 +90,20 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
   of time-to-competence. No training.
-- [ ] **A.4 Methodology consolidation** (own change; **runs first**, before the first 8a
-  registration): the **44** `plasticity-evaluation` requirements folded into the
-  [phase protocol](../../../docs/research/phase-protocol.md) so a rung designer reads its
-  principles rather than the single-use rules; the spec reduced to what still binds. *(Counted
-  2026-09-20. Logbook 069 and the roadmap's inheritance list say 42, which was true at the close:
+- [x] **A.4 Methodology consolidation** (`consolidate-plasticity-methodology`, 2026-09-20): the
+  **44** `plasticity-evaluation` requirements redistributed four ways — **7 stay** (the six the
+  spec's own Purpose statement describes, plus the delayed-reward control, which describes live
+  code in `quantumnematode/plasticity/positive_control.py` and had been misfiled as methodology);
+  **11 move** to `architecture-comparison-protocol`, each binding live Phase 8 work and following
+  the home Phase 7 already used for its wiring rules; **18 fold** into the
+  [phase protocol](../../../docs/research/phase-protocol.md) as clauses under existing principles,
+  no new principle and no renumbering, the document at 222 lines against a 250 budget; **8 retire**
+  with a reason and a migration each, being specific to the rule programme that closed with a
+  diagnosed cause. The reading surface is now **thirteen principles plus the eleven requirements
+  that stayed enforceable** in `architecture-comparison-protocol`, rather than thirty-eight rules in
+  a capability whose Purpose never described them.
+  The harness audit found nothing orphaned across 27 harness/test pairs. *(The 44 was counted
+  2026-09-20; Logbook 069 and the roadmap's inheritance list say 42, which was true at the close —
   archiving the Phase 7 synthesis change merged its own two requirements into this spec.)*
 - [ ] **A.5 The publication decision** (SHOULD; taken after A.1 reads out): the package is block V
   with its initialisation control, the rule-programme negative with a diagnosed cause, and the
