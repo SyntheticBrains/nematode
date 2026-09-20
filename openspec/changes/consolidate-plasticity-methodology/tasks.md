@@ -15,21 +15,25 @@ verification splits either side of it.
   receiving spec's Purpose and in `design.md`, not in a delta whose position after archiving is not
   predictable). `openspec validate --strict` passes.
 
-- [ ] 2. **Fold the eighteen into the phase protocol** — `docs/research/phase-protocol.md`. Clauses
+- [x] 2. **Fold the eighteen into the phase protocol** — **done 2026-09-20**: eight clause blocks
+  under principles 1, 4, 6, 7, 10, 11 and 12, the protocol at **222** lines against the 250 budget,
+  thirteen principles and their numbering unchanged. Original scope: — `docs/research/phase-protocol.md`. Clauses
   under principles 1, 4, 6, 7, 10, 11 and 12 per the mapping; principle 10's scope extended to
   matching the statistic and the metric to the outcome's shape. No new principle, **no
   renumbering** (the roadmap, the literature-watch brief and the Phase 8 tracker cite principles by
   number). Each clause carries its logbook citation the way the existing principles do.
 
-- [ ] 3. **Audit the analysis harnesses for orphaned clauses** — **25** modules under
-  `scripts/analysis/` match the `l4_*`, `l1b_*` and `wiring_*` families (of 35 total), with their
-  tests under `packages/quantum-nematode/tests/quantumnematode_tests/analysis/`. These are the
-  implementation of these rules, and their docstrings restate the reasoning by paraphrase. For each
-  removed requirement with a live harness, check whether a specific clause survives only in a test
-  assertion. Where the clause is general, promote it to the protocol; where it is specific to that
-  analysis, leave it and add a comment recording the test as its authority. Named candidates: the
-  feature-ablation minimum stated as a fraction of the established effect, and `survives_without_it`
-  meaning a failure to detect.
+- [x] 3. **Audit the analysis harnesses for orphaned clauses** — **done 2026-09-20, nothing orphaned.**
+  Across **27** harness/test pairs, every normative clause in a test's module docstring also appears
+  in the harness it tests; the only phrase the sweep flagged, "the instruments are read-only",
+  describes the test approach rather than a methodology rule. Both named candidates are stated in the
+  harness source, not only in a test: `l4_feature_ablations.py` carries `MIN_CARRY = 0.123` with its
+  two-thirds rationale in the constant's own comment and in the module docstring, and defines
+  `survives_without_it` as "no significant interaction -- a FAILURE TO DETECT, its size and interval
+  carried". No clause needed promoting and no test needed marking as an authority. *(Original scope:
+  **25** modules under
+  `scripts/analysis/` matching the `l4_*`, `l1b_*` and `wiring_*` families, with their tests under
+  `packages/quantum-nematode/tests/quantumnematode_tests/analysis/`; the sweep covered 27 pairs.)*
 
 - [ ] 4. **Correct the counts** — `docs/roadmap.md` A.4 deliverable (§ Required deliverables 3) and
   technical-debt item 14 describe A.4 in terms of a count this change changes; restate as what
