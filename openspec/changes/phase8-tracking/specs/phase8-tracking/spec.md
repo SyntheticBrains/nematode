@@ -48,13 +48,33 @@ No Phase 8 wiring contrast SHALL run at a pin that has not been swept on the lea
 
 ### Requirement: Body-Substrate Results Are a New Reference Frame
 
-Results measured through the C.1 or C.2 body SHALL be reported against floors and baselines re-established on that substrate, and SHALL NOT be reported as controlled deltas against Logbook 029, block V, or any pre-body result. Every C.0 platform change (step–time calibration, signed speed, the proprioceptive channel) SHALL land, validate and freeze before C.1 registers.
+Results measured through the C.1 or C.2 body SHALL be reported against floors and baselines re-established on that substrate, and SHALL NOT be reported as controlled deltas against Logbook 029, block V, or any pre-body result.
 
 #### Scenario: Body result compared to a pre-body number
 
 - **GIVEN** a milestone change reports a body-substrate result as a percentage change against a pre-body baseline
 - **WHEN** the change is reviewed
 - **THEN** the comparison SHALL be restated as qualitative, and the rung's own baseline campaign SHALL be cited as the quantitative frame
+
+### Requirement: Substrate Freeze Before the Body Rung
+
+Every C.0 platform change — the step–time calibration, signed speed, and the proprioceptive channel — SHALL land, validate and freeze before C.1 registers, and D19 SHALL be decided and recorded in the same window. Any comparison spanning a subsequent substrate change SHALL be reported as qualitative.
+
+#### Scenario: C.1 proposed before the C.0 freeze
+
+- **GIVEN** a milestone change proposes registering C.1's wiring contrast
+- **WHEN** the change is reviewed and any C.0 item is unlanded, or D19 is unrecorded
+- **THEN** the registration SHALL be blocked until the C.0 tranche is complete and the freeze is declared
+
+### Requirement: Artefact Retention Registered at Phase Start
+
+Before the first Phase 8 campaign runs, the tracker SHALL record which per-campaign artefacts are committed to git (the parsed per-seed CSVs under `docs/experiments/logbooks/supporting/`) and which are archived outside the repository. Every campaign SHALL conform to that rule, and a phase synthesis SHALL state plainly what is re-derivable from git alone and what is not.
+
+#### Scenario: Campaign runs with no retention rule recorded
+
+- **GIVEN** a Phase 8 milestone change proposes launching a campaign
+- **WHEN** the change is reviewed and task A.0 has not recorded the retention rule
+- **THEN** the campaign SHALL be blocked until the rule is recorded, so that step-level exports are not lost the way Logbook 069 § Reproducibility records for the pre-readout-width era
 
 ### Requirement: Shipment Completion Semantics
 

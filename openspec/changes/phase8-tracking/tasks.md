@@ -56,13 +56,12 @@ blocked by an honestly-unexercised item.
 
 ### Block A — close Phase 7's exposed result
 
+**Execution order**: A.0 → **A.4** → A.1 → A.2, with A.3 and A.5 opportunistic. The list below
+keeps the roadmap's numbering; A.4 runs first because it lands before the first 8a registration.
+
 - [ ] **A.0 Artefact-retention rule** (registered at phase start, per design.md B.13): which
   per-campaign artefacts are committed under `supporting/` (parsed per-seed CSVs) and which are
   archived off-repo; recorded once here and cited by every campaign below.
-- [ ] **A.4 Methodology consolidation** (own change; *before the first 8a registration*): the 42
-  `plasticity-evaluation` requirements folded into the [phase protocol](../../../docs/research/phase-protocol.md)
-  so a rung designer reads its principles rather than thirty-three single-use rules; the spec
-  reduced to what still binds. (Numbered A.4 in the roadmap; runs first.)
 - [ ] **A.1 The init-vs-rewiring control** (D15; own change): both definitions of shared
   initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
   byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,
@@ -72,7 +71,9 @@ blocked by an honestly-unexercised item.
   minimum in both directions. The learning-speed result is restated with its status wherever
   it is cited.
 - [ ] **A.2 The calibration-and-robustness surface** (D16; own change): `plasticity_rate`,
-  readout width, `forward_pass_depth`, `initial_log_std`, `trace_decay` on `readout_only`,
+  readout width, `forward_pass_depth`, `initial_log_std`, `trace_decay` on the reading learner (`readout_only`, the `PlasticTensors`
+  literal in `brain/arch/_plasticity_config.py`, which freezes the chemical matrix and leaves the
+  readout learning),
   one-factor-at-a-time around the current point first, a full crossing only for pins that move
   the wiring effect's sign; reported as a sensitivity surface, not a new pin. Fixes the point
   every later rung cites. Churchland et al. 2026 (arXiv:2609.07355) is the external reason to
@@ -81,6 +82,12 @@ blocked by an honestly-unexercised item.
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
   of time-to-competence. No training.
+- [ ] **A.4 Methodology consolidation** (own change; **runs first**, before the first 8a
+  registration): the **44** `plasticity-evaluation` requirements folded into the
+  [phase protocol](../../../docs/research/phase-protocol.md) so a rung designer reads its
+  principles rather than the single-use rules; the spec reduced to what still binds. *(Counted
+  2026-09-20. Logbook 069 and the roadmap's inheritance list say 42, which was true at the close:
+  archiving the Phase 7 synthesis change merged its own two requirements into this spec.)*
 - [ ] **A.5 The publication decision** (SHOULD; taken after A.1 reads out): the package is block V
   with its initialisation control, the rule-programme negative with a diagnosed cause, and the
   operating-point finding with its surface. Not a gate for anything after it.
@@ -113,9 +120,13 @@ blocked by an honestly-unexercised item.
   olfactory-learning precedent as the biological motivation. External convergence to cite, not
   lean on: Lee 2026's gap-junction-only shuffle collapses chemotaxis where the chemical-only
   shuffle barely moves it, in a different model with different controls.
-- [ ] **B.2c Validation target** (once C.0's reversal exists; may carry to 8b): forward/reverse
-  bout-duration statistics per Morrison & Young 2025, registered as a behavioural
-  sign/shape-level claim.
+- [ ] **B.2c Validation target — deferred to 8b by construction**: forward/reverse bout-duration
+  statistics per Morrison & Young 2025, registered as a behavioural sign/shape-level claim.
+  Bout durations need reversal, which is **C.0b in 8b**, and D20 forbids 8b work before the 8a
+  synthesis — so this task cannot complete inside 8a and is listed here only because it belongs
+  to B.2. It is scheduled immediately after C.0b and carries B.2's status until then. *(The
+  alternative, pulling signed speed forward into 8a, was rejected: it would drag C.0's substrate
+  freeze into 8a with it.)*
 
 ### 8a synthesis
 

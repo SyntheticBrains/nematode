@@ -1323,7 +1323,7 @@ Status: **ratified 2026-09-20**. Each remains cheap to reverse before implementa
 
 1. **A.1 — the init-vs-rewiring control** (D15). The control Phase 7 named as its first act ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)): both definitions of shared initialisation, n ≥ 16 paired seeds, on the thermal and hard food-only block-V cells, through the committed block-V harnesses. The learning-speed result is restated with its status in the same sentence as the claim, whichever way it reads.
 2. **A.2 — the calibration-and-robustness surface** (D16), on the reading learner (`readout_only`, the first plausible learner shown to reach competence on this substrate, [Logbook 063](experiments/logbooks/063-l4-eprop.md)). Reported as the wiring effect's sensitivity across the operating region; fixes the point every later rung cites.
-3. **A.4 — methodology consolidation.** The 42 `plasticity-evaluation` requirements, most single-use rules Phase 7 paid for, folded into the [phase protocol](research/phase-protocol.md) so a rung designer reads a handful of principles rather than thirty-three rules. Done before the first Phase 8 registration, with Phase 8's needs in view.
+3. **A.4 — methodology consolidation.** The **44** `plasticity-evaluation` requirements (42 at the Phase 7 close; archiving the synthesis change merged its own two into the spec), most single-use rules Phase 7 paid for, folded into the [phase protocol](research/phase-protocol.md) so a rung designer reads a handful of principles rather than thirty-three rules. Done before the first Phase 8 registration, with Phase 8's needs in view.
 4. **B.1 — measured synaptic signs and strengths** (D17). The Creamer–Leifer–Pillow fitted weights, with the Randi 2023 atlas as the raw source, vendored under `data/connectome/` with provenance and licence, the way the transmitter atlas landed; then the 2×3. Payoff either way: a positive is the first "the animal's weights make its wiring legible" result; a null extends [Logbook 034](experiments/logbooks/034-connectome-structure-controls.md)'s degree-statistics verdict to measured weights, and both are performance claims under the Phase 7 claim discipline. **Risk registered 2026-09-20** (Lee, bioRxiv 2026.09.06.749731 — § Worm body and whole-organism models): fitting six *global* conductance scales of c302 to the Randi atlas produced **no functional sensory-to-command step** — direct stimulation of eight sensory neurons stayed at chance — with most inhibitory atlas responses falling between unconnected pairs named as the likely cause. Per-edge fitted weights are a different and richer grounding, but the failure mode is now named: measured weights may leave the klinotaxis pathway unlearnable, and B.1's sign-only pilot and the reading learner's positive control are what would show it, closing the rung *unmet-with-reason* with the pathway named rather than as a null on the wiring.
 5. **The 8a synthesis**, with every 8a criterion assigned one of the five statuses, and the D20 gate written as a go/no-go decision in that logbook.
 
@@ -1406,7 +1406,7 @@ Verified against the 2026-09-20 literature scan; nearest precedents are cited as
 
 #### Go/No-Go Decision
 
-- **GO (8a shipment) if**: A.1, A.2 and B.1 resolve with statuses assigned and the 8a synthesis writes the D20 gate as GO — meaning the substrate 8b will embody has a known initialisation story, a known operating point, and a measured-weight verdict.
+- **GO (8a shipment) if**: A.4 has landed, A.1, A.2 and B.1 resolve with statuses assigned, and the 8a synthesis writes the D20 gate as GO — meaning the substrate 8b will embody has a known initialisation story, a known operating point, and a measured-weight verdict.
 - **SPLIT-shipment if**: 8a forms a self-contained citable result before block C starts, **or** block A + B.1 overshoot — either way the pre-structured 8a / 8b shape applies. This is the default expectation (D20), not a contingency.
 - **PIVOT-scope if**: the body cost budget fails (stop at C.1) or no learner drives the body (the diagnosis is the deliverable) — execute the relevant risk row and record the pivot in the tracking change.
 - **STOP if**: A.1 dissolves block V **and** B.1 is null at every scale **and** C.1's positive control fails — at which point the phase's deliverable is the statement that on this substrate, under every instrument tried, the wild-type wiring is not distinguishable from its degree statistics, with the controls that make that statement citable. Not expected, and not a reason to withhold any of the three results individually.
@@ -1799,7 +1799,7 @@ consequence list rather than a wish list. The ladder below is the programme thes
    degree-stratified random subset of the same size, with its three confounds already specified below.
 5. **L.2, intrinsic dynamics** — Phase 7's carried SHOULD, now with (2) as a precondition rather than
    as free-standing scope.
-6. **Methodology consolidation, and one rename.** `plasticity-evaluation` holds **42 requirements**,
+6. **Methodology consolidation, and one rename.** `plasticity-evaluation` holds **42 requirements** *(44 since this synthesis's own change archived into it; counted 2026-09-20)*,
    most of them single-use rules this phase paid for; they fold into the
    [phase protocol](research/phase-protocol.md) so a rung designer reads a handful of principles
    rather than thirty-three rules. And the committed *byte-identity* requirement is renamed to **parsed-field
@@ -1930,7 +1930,7 @@ ______________________________________________________________________
 11. **Proprioceptive sensory channel** — posture/stretch feedback into the sensory projection; the connectome-side target neurons stated with a biological argument.
 12. **Step–time calibration** — one recorded constant relating an environment step to worm seconds, cited by every kinematic target and cost estimate.
 13. **Measured-weight ingest** — Creamer–Leifer–Pillow supplement (licence check first) and the Randi 2023 atlas, vendored under `data/connectome/` with provenance; a unit-scale pin registered for sweep.
-14. **Methodology consolidation** — the 42 `plasticity-evaluation` requirements folded into the phase protocol (A.4).
+14. **Methodology consolidation** — the 44 `plasticity-evaluation` requirements folded into the phase protocol (A.4).
 15. **Artefact-retention rule** — which per-campaign artefacts are committed and which archived off-repo, registered at phase start.
 
 ### Lower priority (address as needed)
