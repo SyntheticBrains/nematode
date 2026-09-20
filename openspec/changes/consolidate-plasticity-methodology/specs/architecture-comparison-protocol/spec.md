@@ -1,7 +1,5 @@
 ## ADDED Requirements
 
-These eleven requirements are **moved verbatim** from `plasticity-evaluation`, where eighteen Phase 7 milestone changes registered them because it was the nearest plasticity-named capability. They are comparison methodology, they are not specific to a plasticity rule, and each binds live Phase 8 work. The move follows the precedent of `add-wiring-premise-contrast` and `add-wiring-premise-difficulty`, which put the block-V wiring rules here rather than there.
-
 ### Requirement: A wiring contrast under a learner that does not write the wiring states what it is about
 
 Where a structure contrast is run under a learner that leaves the substrate's own weights fixed, the

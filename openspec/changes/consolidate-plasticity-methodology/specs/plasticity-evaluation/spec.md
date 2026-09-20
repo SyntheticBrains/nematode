@@ -157,7 +157,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-**Retired** (8) — each presupposes a learning rule that writes the substrate through injected per-unit perturbation. That programme closed with a diagnosed cause ([Logbook 063](../../../../docs/experiments/logbooks/063-l4-eprop.md)): no rule in the family learns this substrate to any benefit, e-prop reaches competence only with the chemical matrix frozen, and Phase 8 does not re-run it. These rules bound work nobody will run again, and a rung designer reading them would be reading about a closed programme.
+**Retired** (8) — each presupposes a learning rule that writes the substrate through injected per-unit perturbation. That programme closed with a diagnosed cause ([Logbook 063](../../../../../docs/experiments/logbooks/063-l4-eprop.md)): no rule in the family learns this substrate to any benefit, e-prop reaches competence only with the chemical matrix frozen, and Phase 8 does not re-run it. These rules bound work nobody will run again, and a rung designer reading them would be reading about a closed programme.
 
 ### Requirement: An annealed perturbation clears the control before the assay
 

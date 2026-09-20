@@ -18,7 +18,7 @@ Phase 7 registered its *wiring-contrast* rules in `architecture-comparison-proto
 
 A folded rule becomes a clause of one or two sentences under an existing principle, not a restatement. The protocol is a document meant to be read in one sitting; moving 18 requirements into it wholesale would defeat the purpose the fold exists to serve. The full registered text is preserved twice — in git history and in the archived change that added it — and the mapping below makes either findable.
 
-The corollary is that **folding is lossy by design**, and the loss is deliberate. Where a specific clause is load-bearing for a harness that still runs (a registered minimum stated as a fraction, a verdict name meaning a failure to detect), task 4 promotes it to the protocol or records the harness test as its authority.
+The corollary is that **folding is lossy by design**, and the loss is deliberate. Where a specific clause is load-bearing for a harness that still runs (a registered minimum stated as a fraction, a verdict name meaning a failure to detect), the harness audit (task 3) promotes it to the protocol or records the harness test as its authority.
 
 ### Decision D: No new principle, no renumbering
 
@@ -83,11 +83,11 @@ Logbooks 048, 056 and 059–069 each carry an `**OpenSpec change**` line quoting
 
 ## Open Questions (resolved during implementation, not here)
 
-- **Which clauses survive only in a harness test.** Task 4's audit answers this per module; the candidates flagged during planning are the two-thirds-of-the-established-effect minimum in the feature-ablation harness and `survives_without_it` meaning a failure to detect. Where the clause is general it goes to the protocol; where it is specific to one analysis it stays in that analysis's test with a comment saying so.
+- **Which clauses survive only in a harness test.** The harness audit (task 3) answers this per module; the candidates flagged during planning are the two-thirds-of-the-established-effect minimum in the feature-ablation harness and `survives_without_it` meaning a failure to detect. Where the clause is general it goes to the protocol; where it is specific to one analysis it stays in that analysis's test with a comment saying so.
 - **How far principle 10's extension goes.** The three statistic-and-metric rules share a lesson but not a sentence. Whether they compress to one clause or three is a drafting question, settled by whether the protocol still reads in one sitting.
 
 ## Risks
 
-- **Over-compression.** Folding 18 rules into seven principles can lose a clause that a future rung needed. Mitigated by the mapping table, the archived text, and task 4's audit — and bounded by the fact that the eight retired rules are the only ones where recovery would require reading a closed programme's archive.
+- **Over-compression.** Folding 18 rules into seven principles can lose a clause that a future rung needed. Mitigated by the mapping table, the archived text, and the harness audit (task 3) — and bounded by the fact that the eight retired rules are the only ones where recovery would require reading a closed programme's archive.
 - **The protocol becomes the long document instead.** Verification includes a length check: past roughly 250 lines the fold has become relocation and should be tightened.
 - **A future change re-adds methodology to `plasticity-evaluation`.** The spec's Purpose statement is the guard, and Decision A makes it the explicit test. A rule that the Purpose does not describe belongs elsewhere.
