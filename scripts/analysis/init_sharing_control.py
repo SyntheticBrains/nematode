@@ -37,6 +37,7 @@ Both are always reported.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -300,6 +301,37 @@ def score(
     return out
 
 
+def write_csv(result: dict[str, Any], path: Path) -> Path:
+    """Per-seed interactions, the committed artefact A.0 requires.
+
+    One row per (cell, mode, metric, seed), carrying the seed's wiring gap under the baseline draw,
+    its gap under the shared draw, and the difference between them -- which is the per-seed unit the
+    primary test consumes. Every figure in the logbook is re-derivable from this file alone.
+    """
+    rows = []
+    for cell, blk in sorted(result["cells"].items()):
+        primary = blk["metric_choice"]["primary_metric"]
+        for mode, metrics in sorted(blk["interactions"].items()):
+            for metric, r in sorted(metrics.items()):
+                for seed, delta in sorted(r["per_seed"].items(), key=lambda kv: int(kv[0])):
+                    rows.append(
+                        {
+                            "cell": cell,
+                            "mode": mode,
+                            "metric": metric,
+                            "is_primary_metric": int(metric == primary),
+                            "seed": int(seed),
+                            "interaction": f"{delta:.6f}",
+                        },
+                    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
 def main() -> None:
     """CLI: build the manifests, drive the instrument per mode, report the interactions."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -307,11 +339,14 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--pilot", action="store_true", help="score the pilot band, not the panel")
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--csv", type=Path, help="per-seed interactions, the committed artefact")
     args = parser.parse_args()
 
     seeds = PILOT_SEEDS if args.pilot else SEEDS
     cells = PILOT_CELLS if args.pilot else CELLS
     result = score(args.campaign, args.out_dir, seeds, cells)
+    if args.csv:
+        write_csv(result, args.csv)
     text = json.dumps(result, indent=2, sort_keys=True)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

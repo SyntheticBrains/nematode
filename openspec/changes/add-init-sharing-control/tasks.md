@@ -86,17 +86,17 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   - **The two cells read separately**, a split reported as a split and never pooled toward whichever
     cell supports the original claim.
 
-- [ ] 9. **The panel** — 2 cells × 4 arms × 3 modes × **32** seeds (**129–160**) = **768 runs** through
+- [x] 9. **The panel** — **done 2026-09-21: 768/768 succeeded** in 42,310 s (11.75 h) at 16×, 369 MB, zero tracebacks, all 24 configs × 32 seeds present. Original scope: — 2 cells × 4 arms × 3 modes × **32** seeds (**129–160**) = **768 runs** through
   `scripts/run_campaign.py`, 16 workers. ≈ 10–13 h. (Raised from 16 seeds at task 8: at 16 the censored metric could not have detected a total dissolution.)
 
-- [ ] 10. **Score and read** — through the unmodified instrument; assign the registered branch; if the
+- [x] 10. **Score and read** — done: the gate passed, branches assigned by the registered rule, the two cells reported as a split rather than pooled, and the primary left on the censored metric as the censoring rule directed rather than switched to the better-reading uncensored one after the fact. — through the unmodified instrument; assign the registered branch; if the
   effect shrinks rather than dissolving, report it as shrunken against the registered minimum.
 
-- [ ] 11. **Restate the claim wherever it is cited** — Block V's learning-speed result carries its
+- [x] 11. **Restate the claim wherever it is cited** — done: four sites in `docs/roadmap.md` and one in `README.md`, each carrying the discharge and the 35% magnitude finding in the same sentence as the claim. — Block V's learning-speed result carries its
   status into `docs/roadmap.md`, the Phase 8 tracker and the logbook, in the same sentence as the
   claim. Whatever the outcome, the standing condition is either discharged or restated, not dropped.
 
-- [ ] 12. **Logbook** — the next numbered record, with per-seed CSVs under `supporting/` per A.0.
+- [x] 12. **Logbook** — done: [070](../../../docs/experiments/logbooks/070-init-sharing-control.md), indexed, with the per-seed CSV and harness JSON committed under `supporting/` per A.0 and the raw logs archived off-repo. — the next numbered record, with per-seed CSVs under `supporting/` per A.0.
 
 ## Not in this change
 

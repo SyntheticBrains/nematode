@@ -161,7 +161,7 @@ Phase 6a closed 2026-07-07 with a Gate 3 GO ([Logbook 037](experiments/logbooks/
 
 ### Phase 7 — Deepen: Plasticity
 
-Phase 7 closed 2026-09-19 as **SPLIT** ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)): the registered 2×2 (rule × wiring) could not be answered because no biologically plausible rule that *writes* the connectome learns the substrate to any benefit — a diagnosed negative (the three-factor rule failed its positive control; node perturbation is near its theoretical worst case at 302 units; e-prop reaches competence only with the chemical matrix frozen, [Logbook 063](experiments/logbooks/063-l4-eprop.md)). What shipped instead is three citable results: **under PPO the wild-type wiring reaches competence 23–55% sooner than its degree-preserving rewired null** on two cells and fresh rewirings (block V, [057](experiments/logbooks/057-wiring-premise-contrast.md)/[058](experiments/logbooks/058-wiring-premise-difficulty.md)/[065](experiments/logbooks/065-wiring-fresh-rewiring.md)) — carrying the standing condition that rewiring and initialisation vary together; the wiring is **not** legible as fixed features through a four-class readout, rate-robustly ([064](experiments/logbooks/064-l4-frozen-features.md)); and widening the readout to one weight per motor neuron makes it legible **at one learning rate only** ([066](experiments/logbooks/066-l4-readout-width.md)/[068](experiments/logbooks/068-l1b-rate-calibration.md)). 7b (cross-species) was deferred (D14). The phase paid for the [phase protocol](research/phase-protocol.md).
+Phase 7 closed 2026-09-19 as **SPLIT** ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)): the registered 2×2 (rule × wiring) could not be answered because no biologically plausible rule that *writes* the connectome learns the substrate to any benefit — a diagnosed negative (the three-factor rule failed its positive control; node perturbation is near its theoretical worst case at 302 units; e-prop reaches competence only with the chemical matrix frozen, [Logbook 063](experiments/logbooks/063-l4-eprop.md)). What shipped instead is three citable results: **under PPO the wild-type wiring reaches competence 23–55% sooner than its degree-preserving rewired null** on two cells and fresh rewirings (block V, [057](experiments/logbooks/057-wiring-premise-contrast.md)/[058](experiments/logbooks/058-wiring-premise-difficulty.md)/[065](experiments/logbooks/065-wiring-fresh-rewiring.md)) — carrying the standing condition that rewiring and initialisation vary together *(**Restated 2026-09-21**, [Logbook 070](experiments/logbooks/070-init-sharing-control.md): A.1 discharges the pairing half of this condition — under both definitions of a shared initialisation the effect does not dissolve, five of eight readings clearing survival and none reaching dissolution. The across-seed half is untested. And the magnitude is less stable than the direction: on fresh seeds the thermal effect came in at **35%** of its committed size while hard350 came in at 105%.)*; the wiring is **not** legible as fixed features through a four-class readout, rate-robustly ([064](experiments/logbooks/064-l4-frozen-features.md)); and widening the readout to one weight per motor neuron makes it legible **at one learning rate only** ([066](experiments/logbooks/066-l4-readout-width.md)/[068](experiments/logbooks/068-l1b-rate-calibration.md)). 7b (cross-species) was deferred (D14). The phase paid for the [phase protocol](research/phase-protocol.md).
 
 ### Known Gaps Carried into Phase 6+
 
@@ -1072,7 +1072,7 @@ policy-gradient estimator and repaired it without making it work on any multi-st
 048](experiments/logbooks/048-l4-rule-positive-control.md)–[056](experiments/logbooks/056-l4-ladder-reread.md);
 and **block V found the wiring advantage the phase was looking for** — +35.4% off time-to-competence
 on a foraging cell under thermal pressure and +23.5% with temperature removed, **each figure carrying
-the standing condition that rewiring varies with initialisation** *(2026-09-19)*, [Logbooks
+the standing condition that rewiring varies with initialisation** *(2026-09-19; **pairing half discharged 2026-09-21**, [Logbook 070](experiments/logbooks/070-init-sharing-control.md) — the effect does not dissolve under a shared initialisation, and the thermal magnitude replicates at 35% of its committed size)*, [Logbooks
 057](experiments/logbooks/057-wiring-premise-contrast.md) and
 [058](experiments/logbooks/058-wiring-premise-difficulty.md). **7a complete 2026-09-13 on the SPLIT
 clause** ([Logbook 059](experiments/logbooks/059-7a-shipment.md)): two citable results — a
@@ -1223,7 +1223,7 @@ resolved `no_routing_effect`. **This row's branch is now closed (2026-09-13, [Lo
 publishable" and named the e-prop family and the imitation warm start as the documented next levers.
 Both held: 7a ships on the SPLIT clause with the negative *and* a positive the row did not
 anticipate — the wild-type wiring is worth **+35.4%** and **+23.5%** off time-to-competence across
-two cells under PPO *(standing condition, 2026-09-19: rewiring varies with initialisation in every
+two cells under PPO *(standing condition, 2026-09-19, **pairing half discharged 2026-09-21** by [Logbook 070](experiments/logbooks/070-init-sharing-control.md): rewiring varies with initialisation in every
 block V panel, and the control that separates them opens Phase 8 — see § What Phase 8 opens on)*, so the phrase "requires further substrate work or different rule families" is
 now sharper than the row could state it: **the wiring is legible to learning, and what is missing is
 a plausible rule that reads it.** The e-prop lever is taken as a bounded programme with two stopping
@@ -1772,6 +1772,10 @@ consequence list rather than a wish list. The ladder below is the programme thes
 1. **The init-vs-rewiring control — first.** Block V's +35.4% / +23.5% / +55.3% / +40.1% are the
    phase's strongest citable result, and `rewire_seed` is unset in every one of those panels, so each
    seed's rewired graph derives from its run seed and **rewiring varies with initialisation**.
+   *(**Answered 2026-09-21**, [Logbook 070](experiments/logbooks/070-init-sharing-control.md): the
+   pairing half is discharged — the effect survives both definitions of a shared initialisation — and
+   the across-seed half is registered as a follow-up rather than run, because pinning `rewire_seed`
+   across seeds reintroduces the shared-nulls caveat V.4 closed.)*
    [Dhiman 2026](https://arxiv.org/abs/2604.04033) reports the fly connectome's advantage dissolving
    under shared initialisation plus a degree-preserving null — the same control, the same kind of
    claim, another organism. **It needs its own design decision before it can be registered**: "the

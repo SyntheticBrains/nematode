@@ -78,7 +78,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
     wording.
   - **Registered before the campaign**, not after: a campaign that starts without its retention
     line recorded is blocked, per the `phase8-tracking` requirement.
-- [ ] **A.1 The init-vs-rewiring control** (D15; own change): both definitions of shared
+- [x] **A.1 The init-vs-rewiring control** — **done 2026-09-21** ([Logbook 070](../../../docs/experiments/logbooks/070-init-sharing-control.md), 768/768 runs, 32 paired seeds): **no dissolution on any arm**, five of eight readings clearing survival, three inconclusive with a stated cause. The **pairing half** of block V's standing condition is discharged; the across-seed half is registered as a follow-up. Second finding, ranked above the first in the record: block V's **magnitude is not stable across seed sets** — thermal replicated in direction at **35%** of its committed size against hard350's 105% — so with power registered against V.4's magnitude the thermal cell was underpowered against its own observed effect even at 32 seeds. Original scope: (D15; own change): both definitions of shared
   initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
   byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,
   `rewire_seed` fixed per pair, through the committed block-V harnesses. Registered outcome: the
