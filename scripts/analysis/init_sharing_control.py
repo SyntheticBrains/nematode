@@ -51,7 +51,14 @@ import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImport
 # Fresh in rewiring, task and initialisation together: every campaign in the repository has used
 # 1-96, and 101-104 is the programme-wide pilot band. A.1's pilot takes 105-108 so it cannot
 # contaminate the registered set.
-SEEDS = tuple(range(129, 145))
+#
+# 32 seeds, not the 16 D15 sets as its floor. The pilot measured no useful across-mode correlation
+# (-0.66 to +0.34 on four seeds), so the panel's sensitivity is computed at rho = 0 from V.4's
+# committed spread -- and at 16 seeds the minimum detectable interaction on the censored metric is
+# 1.25 and 1.14 times the effect it would have to cancel, which cannot detect even a total
+# dissolution. At 32 it is 0.88 and 0.81, and the uncensored metric reaches 0.65 and 0.42. A control
+# that exists to answer a published critique should not be unable to see the answer.
+SEEDS = tuple(range(129, 161))
 PILOT_SEEDS = tuple(range(105, 109))
 BURNT_SEEDS = frozenset(range(1, 97)) | frozenset(range(101, 105))
 
@@ -90,6 +97,10 @@ def _arms_by_stem() -> dict[str, tuple[str, str, str]]:
 ARM_BY_STEM: dict[str, tuple[str, str, str]] = _arms_by_stem()
 
 CELLS = ("thermal", "hard_food")
+# The pilot runs ONE cell, as registered: it exists to show the modes run and to measure the
+# across-mode correlation, not to score a contrast. The panel runs both. Stating the scope at the
+# call site keeps the completeness check strict for the panel while letting the pilot be what it is.
+PILOT_CELLS = ("thermal",)
 
 # The metric the interaction is read on, decided by the censoring rule below. Both are always
 # reported; this names which one carries the verdict.
@@ -139,7 +150,12 @@ def build_manifest(campaign_dir: Path, path: Path, mode: str, seeds: tuple[int, 
     return path
 
 
-def require_complete(manifest: Path, mode: str, seeds: tuple[int, ...]) -> None:
+def require_complete(
+    manifest: Path,
+    mode: str,
+    seeds: tuple[int, ...],
+    cells: tuple[str, ...] = CELLS,
+) -> None:
     """Refuse to score a panel missing any registered cell.
 
     The harness reports ``missing_arms`` and drops unparseable runs with a warning, which surfaces a
@@ -154,7 +170,7 @@ def require_complete(manifest: Path, mode: str, seeds: tuple[int, ...]) -> None:
         present.setdefault((cell, arm), set()).add(int(seed))
     missing = [
         f"{cell}/{arm} seeds {sorted(set(seeds) - present.get((cell, arm), set()))}"
-        for cell in CELLS
+        for cell in cells
         for arm in wp.TESTED_ARMS
         if set(seeds) - present.get((cell, arm), set())
     ]
@@ -244,22 +260,31 @@ def choose_metric(rates_by_mode: dict[str, dict[str, float]]) -> dict[str, Any]:
     }
 
 
-def score(campaign_dir: Path, out_dir: Path, seeds: tuple[int, ...]) -> dict[str, Any]:
+def score(
+    campaign_dir: Path,
+    out_dir: Path,
+    seeds: tuple[int, ...],
+    cells: tuple[str, ...] = CELLS,
+) -> dict[str, Any]:
     """Drive the unmodified instrument once per draw mode and read the interactions off it."""
     reports: dict[str, dict[str, dict[str, Any]]] = {}
     for mode in MODES:
         manifest = build_manifest(campaign_dir, out_dir / f"manifest-{mode}.txt", mode, seeds)
-        require_complete(manifest, mode, seeds)
+        require_complete(manifest, mode, seeds, cells)
         reports[mode] = {}
-        for cell in CELLS:
-            report = wp.efficiency_contrast(manifest, cell, out_dir / f"tmp-{mode}-{cell}")
+        for cell in cells:
+            # The instrument writes its own per-cell manifest into this directory and expects the
+            # caller to have made it; creating it here keeps the instrument untouched.
+            tmp = out_dir / f"tmp-{mode}-{cell}"
+            tmp.mkdir(parents=True, exist_ok=True)
+            report = wp.efficiency_contrast(manifest, cell, tmp)
             if report is None:
                 msg = f"the instrument returned no efficiency report for {cell} under {mode}"
                 raise ValueError(msg)
             reports[mode][cell] = report
 
     out: dict[str, Any] = {"seeds": list(seeds), "modes": list(MODES), "cells": {}}
-    for cell in CELLS:
+    for cell in cells:
         rates = {mode: censoring_rates(reports[mode][cell]) for mode in MODES}
         choice = choose_metric(rates)
         out["cells"][cell] = {
@@ -285,7 +310,8 @@ def main() -> None:
     args = parser.parse_args()
 
     seeds = PILOT_SEEDS if args.pilot else SEEDS
-    result = score(args.campaign, args.out_dir, seeds)
+    cells = PILOT_CELLS if args.pilot else CELLS
+    result = score(args.campaign, args.out_dir, seeds, cells)
     text = json.dumps(result, indent=2, sort_keys=True)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

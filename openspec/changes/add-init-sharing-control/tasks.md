@@ -58,13 +58,13 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   (as `test_wiring_premise.py` and `test_wiring_fresh_rewiring.py` already assert for the committed
   eight), and that both instrument files are **byte-identical to `main`**.
 
-- [ ] 7. **Pilot** — seeds **105–108**, the **thermal `_t20`** cell (V.1's cell: the larger effect
+- [x] 7. **Pilot** — done 2026-09-20: 48 runs, 48/48 succeeded in 2,769 s at 14.8×, 24 MB. The modes run, the driver scores end to end, and the censoring spread was 0.000 on the thermal cell. It also measured the across-mode correlation the panel's power turns on and **found nothing usable** (−0.66 to +0.34 at n = 4), which is what moved the panel to 32 seeds. Two driver bugs it caught: the completeness check demanded both cells when the pilot is one by design, and the instrument expects its caller to create the temp directory. — seeds **105–108**, the **thermal `_t20`** cell (V.1's cell: the larger effect
   and the fuller committed spread), all three modes, configured the way the campaign will be, not
   lighter, per the cheapest-platform-first principle's cost clause. Its job is to confirm the modes
   run, the learning gates fire, and the wall-clock estimate holds. It is **not** the spread source —
   see task 8.
 
-- [ ] 8. **Register the protocol** — before the panel, and this is the task the campaign's
+- [x] 8. **Register the protocol** — done 2026-09-20, before any panel seed ran: [`supporting/070-init-sharing-control/launch.md`](../../../docs/experiments/logbooks/supporting/070-init-sharing-control/launch.md). Carries the metric rule with its 0.10 censoring tolerance, the power table at ρ = 0 from V.4's committed spread, the two-thirds minimum **in both directions**, the separate-cells rule, the non-reproduction branch, and A.0's retention line. — before the panel, and this is the task the campaign's
   credibility rests on:
 
   - **The primary metric, chosen for the contrast it must support.** `episodes_to_30pct_success` is
@@ -86,8 +86,8 @@ seed is touched before task 8**, and the pilot uses its own band so it cannot co
   - **The two cells read separately**, a split reported as a split and never pooled toward whichever
     cell supports the original claim.
 
-- [ ] 9. **The panel** — 2 cells × 4 arms × 3 modes × 16 seeds (**129–144**) = **384 runs** through
-  `scripts/run_campaign.py`, 16 workers, detailed export off per the runner's warning. ≈ 5–6 h.
+- [ ] 9. **The panel** — 2 cells × 4 arms × 3 modes × **32** seeds (**129–160**) = **768 runs** through
+  `scripts/run_campaign.py`, 16 workers. ≈ 10–13 h. (Raised from 16 seeds at task 8: at 16 the censored metric could not have detected a total dissolution.)
 
 - [ ] 10. **Score and read** — through the unmodified instrument; assign the registered branch; if the
   effect shrinks rather than dissolving, report it as shrunken against the registered minimum.

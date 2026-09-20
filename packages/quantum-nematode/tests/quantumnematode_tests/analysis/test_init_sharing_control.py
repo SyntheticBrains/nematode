@@ -71,7 +71,9 @@ class TestTheSeedsAreFresh:
         assert not set(isc.PILOT_SEEDS) & set(isc.SEEDS)
 
     def test_the_panel_meets_the_registered_seed_count(self) -> None:
-        assert len(isc.SEEDS) >= 16
+        # Raised from D15's floor of 16 after the pilot found no across-mode correlation: at 16 the
+        # censored metric could not have detected a total dissolution of the effect.
+        assert len(isc.SEEDS) == 32
 
 
 class TestTheNewConfigsAreOneKeyDeltas:
