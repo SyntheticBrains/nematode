@@ -67,10 +67,20 @@ def _mask(brain: ConnectomePPOBrain) -> torch.Tensor:
 
 
 def _others(brain: ConnectomePPOBrain) -> dict[str, torch.Tensor]:
-    """Every topology parameter the draw mode does not claim to touch."""
-    return {
-        name: param.detach() for name, param in brain.topology.named_parameters() if name != _DRAWN
+    """Every parameter the draw mode does not claim to touch, topology AND critic.
+
+    The critic is constructed inside the learning rule, outside the topology, so a check confined to
+    ``topology.named_parameters()`` would not see it move.
+    """
+    out = {
+        f"topology.{name}": param.detach()
+        for name, param in brain.topology.named_parameters()
+        if name != _DRAWN
     }
+    critic = getattr(getattr(brain, "rule", None), "critic", None)
+    if critic is not None:
+        out |= {f"critic.{n}": p.detach() for n, p in critic.named_parameters()}
+    return out
 
 
 @pytest.fixture(scope="module")
@@ -203,19 +213,52 @@ class TestTheRngStreamIsUntouched:
         assert torch.equal(_mask(wild["edge_order"]), _mask(wild[mode]))
 
 
+class TestTheSharedGeneratorEndsWhereItStarted:
+    """A draw mode must not move any stream but its own.
+
+    ``rng`` is shared with the rollout buffer, whose minibatch permutation consumes it. A mode
+    taking a different NUMBER of values from it would change PPO's minibatch order as well as the
+    weights -- two manipulations under one name, invisible in the initial parameters because it only
+    shows up during training. Asserted here rather than argued, which is the failure this suite
+    exists to prevent and the one it previously missed.
+    """
+
+    def test_the_buffer_shares_the_brain_generator(self) -> None:
+        # If this stops being true the rest of the class is checking nothing.
+        brain = _brain(_FROZEN)
+        assert brain.buffer.rng is brain.rng
+
+    @pytest.mark.parametrize("mode", _MODES)
+    def test_every_mode_leaves_the_shared_generator_in_the_same_state(self, mode: str) -> None:
+        baseline = _brain(_FROZEN, weight_draw="edge_order")
+        other = _brain(_FROZEN, weight_draw=mode)
+        expected = baseline.rng.permutation(64)
+        actual = other.rng.permutation(64)
+        assert (expected == actual).all(), (
+            f"{mode} left the shared generator in a different state, so it would move PPO's "
+            "minibatch order as well as the chemical weights"
+        )
+
+
 class TestTheUntestedPairingIsRefused:
-    def test_count_scaled_with_a_sharing_mode_raises(self) -> None:
+    def _bad(self) -> ConnectomePPOBrainConfig:
         container = load_simulation_config(str(_FROZEN)).brain
         assert container is not None
         assert isinstance(container.config, ConnectomePPOBrainConfig)
+        return container.config.model_copy(
+            update={"weight_draw": "dense_mask", "weight_init": "count_scaled"},
+        )
+
+    def test_count_scaled_with_a_sharing_mode_raises_on_validation(self) -> None:
         with pytest.raises(ValueError, match="not defined"):
-            container.config.model_copy(
-                update={"weight_draw": "dense_mask", "weight_init": "count_scaled"},
-            ).model_validate(
-                container.config.model_copy(
-                    update={"weight_draw": "dense_mask", "weight_init": "count_scaled"},
-                ).model_dump(),
-            )
+            ConnectomePPOBrainConfig.model_validate(self._bad().model_dump())
+
+    def test_it_also_raises_at_construction(self) -> None:
+        # `model_copy(update=...)` skips validators, so a copied config reaches the brain
+        # unvalidated. Without the construction-time guard it would run dense_mask semantics while
+        # still reporting count_scaled.
+        with pytest.raises(ValueError, match="not defined"):
+            ConnectomePPOBrain(config=self._bad(), device=DeviceType.CPU)
 
     def test_count_scaled_with_the_default_draw_is_allowed(self) -> None:
         container = load_simulation_config(str(_FROZEN)).brain

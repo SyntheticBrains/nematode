@@ -1,8 +1,9 @@
 # 070: The Wiring Advantage Survives a Shared Initialisation (Phase 8 A.1)
 
-**Status**: completed — **no dissolution on any arm**, survival on five of eight readings, three
-inconclusive with a stated cause. Block V's standing condition is **partially discharged**: the
-value-to-edge pairing is not what the advantage rests on. A second finding is ranked above the
+**Status**: completed — **no dissolution detected on any arm**; survival **established on five of
+eight readings**, the other three **unresolved at this panel's sensitivity**. Block V's standing
+condition is **partially discharged**: no evidence that the advantage rests on the value-to-edge
+pairing, on the scopes that resolved. A second finding is ranked above the
 first below — **the thermal cell's effect came in at a third of its committed size**, so block V's
 magnitude is less stable across seed sets than its direction.
 
@@ -113,10 +114,16 @@ test at any affordable size.
 
 ## What this establishes, and what it does not
 
-**Establishes.** The wiring advantage does not depend on the value-to-edge pairing. Under both
-defensible definitions of a shared initialisation, on both cells, no interaction approaches
-significance and none approaches the registered dissolution bar. Dhiman's mechanism — the advantage
-being an initialisation artefact — is **not** what is happening here, on the axis this panel tests.
+**Establishes.** No dissolution was detected anywhere: across both definitions and both cells, no
+interaction approaches significance and none approaches the registered dissolution bar. Survival is
+**established** on five of eight readings — both metrics on hard350 under `dense_mask`, plus
+`auc_success` on hard350 under `per_neuron_fanin` and on thermal under `dense_mask`. On those
+scopes Dhiman's mechanism, the advantage being an initialisation artefact, is **not** what is
+happening.
+
+**Leaves unresolved**, and these are not evidence of survival: thermal under `per_neuron_fanin` on
+both metrics, thermal under `dense_mask` on the primary, and hard350 under `per_neuron_fanin` on the
+primary. Three of eight readings could not place the effect either way.
 
 **Does not establish.** That block V is unconditional. Three of eight readings could not resolve, the
 strongest single cell is hard350, and the across-seed coupling between a null's graph and its weights
@@ -133,8 +140,11 @@ shared-nulls caveat V.4 closed.
   D15 definition"; the effect is there under both.
 - **B.1 proceeds unchanged.** It was never conditional on this outcome — measured weights are a
   different question from random-weight legibility.
-- **A follow-up is registered, not scheduled**: pin `rewire_seed` across seeds to isolate the graph
-  from the weights.
+- **A follow-up is tracked as M.5**, a MAY in the Phase 8 tracker: the across-seed half of the
+  standing condition. Its design is **not** the obvious one — pinning `rewire_seed` to a single
+  constant makes the result about one rewiring and reintroduces the shared-nulls caveat V.4
+  closed. It needs a variance-components shape: several pinned graphs, several weight seeds
+  within each. This panel's magnitude finding is what makes it worth doing.
 
 ## Artefacts
 

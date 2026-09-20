@@ -324,6 +324,23 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _reject_unsupported_weight_draw(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse a draw-mode and scale-rule pairing this build does not define.
+
+    Split from the general guard to keep each one readable; called from it, so a config built by
+    ``model_copy`` -- which skips every validator, and is how the campaign runner derives its arms
+    -- is still held to it. Without this, a copied config would run the sharing mode's
+    degree-scaled semantics while still reporting ``count_scaled``.
+    """
+    if config.weight_draw != "edge_order" and config.weight_init != "degree_scaled":
+        msg = (
+            f"weight_draw={config.weight_draw!r} with weight_init={config.weight_init!r} is not "
+            "defined: the sharing modes scale each drawn value by the post-synaptic neuron's "
+            "1/sqrt(in-degree), and a count-scaled draw scales by the synapse counts instead."
+        )
+        raise ValueError(msg)
+
+
 def _reject_unsupported_eprop(config: ConnectomePPOBrainConfig) -> None:
     """Refuse an e-prop configuration this build cannot honour.
 
@@ -380,6 +397,7 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
     config built by ``model_copy`` skips validators, which is how the campaign runner derives
     its arms -- the defect the sign-grounding work found and fixed once already.
     """
+    _reject_unsupported_weight_draw(config)
     if config.plasticity_perturbation_set in RESTRICTED_PERTURBATION_SETS and (
         not config.plasticity_homeostasis
     ):
@@ -539,6 +557,7 @@ class ConnectomeTopology(nn.Module):
         initial_log_std: float = 0.0,
         weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled",
         weight_draw: WeightDraw = "edge_order",
+        draw_rng: np.random.Generator | None = None,
         synapse_signs: Literal["random", "atlas"] = "random",
         readout_width: ReadoutWidth = "pooled",
     ) -> None:
@@ -648,10 +667,17 @@ class ConnectomeTopology(nn.Module):
         # different number of values leaves every other stream where it was -- asserted by test,
         # because that is an argument about code and arguments about code are how this goes wrong.
         self.weight_draw = weight_draw
+        # The sharing modes draw their structure from a DEDICATED generator, never from ``rng``.
+        # ``rng`` is shared with the rollout buffer, whose minibatch permutation consumes it, so a
+        # mode that took a different NUMBER of values from it would change PPO's minibatch order as
+        # well as the weights -- two manipulations wearing one name. The loop below therefore always
+        # consumes exactly one value per edge from ``rng`` whatever the mode, and a sharing mode
+        # overwrites that value with one of its own. ``edge_order`` is bit-identical to before.
+        draw_source = draw_rng if draw_rng is not None else rng
         dense_z: np.ndarray | None = None
         fanin_value: dict[tuple[int, int], float] | None = None
         if weight_draw == "dense_mask":
-            dense_z = rng.normal(loc=0.0, scale=1.0, size=(self.n_neurons, self.n_neurons))
+            dense_z = draw_source.normal(loc=0.0, scale=1.0, size=(self.n_neurons, self.n_neurons))
         elif weight_draw == "per_neuron_fanin":
             incoming: dict[int, list[int]] = {}
             for syn in connectome.chemical_synapses:
@@ -665,7 +691,7 @@ class ConnectomeTopology(nn.Module):
                 pre_list = incoming.get(post_j)
                 if not pre_list:
                     continue
-                block = rng.normal(loc=0.0, scale=1.0, size=len(pre_list))
+                block = draw_source.normal(loc=0.0, scale=1.0, size=len(pre_list))
                 for pre_i, z in zip(sorted(pre_list), block, strict=True):
                     fanin_value[pre_i, post_j] = float(z)
 
@@ -676,15 +702,17 @@ class ConnectomeTopology(nn.Module):
             pre_i = self._idx[syn.pre]
             post_j = self._idx[syn.post]
             m_chem_np[pre_i, post_j] = True
-            if dense_z is not None:
-                drawn = float(dense_z[pre_i, post_j]) * float(chem_scale[post_j])
-            elif fanin_value is not None:
-                drawn = fanin_value[pre_i, post_j] * float(chem_scale[post_j])
-            elif weight_init == "count_scaled":
+            if weight_init == "count_scaled":
                 factor = float(syn.weight) / float(count_norm[post_j])
                 drawn = rng.normal(loc=0.0, scale=1.0) * factor
             else:
                 drawn = rng.normal(loc=0.0, scale=float(chem_scale[post_j]))
+            # One value per edge has now been taken from ``rng`` whatever the mode, so every stream
+            # downstream of it is where it would have been. A sharing mode replaces the value.
+            if dense_z is not None:
+                drawn = float(dense_z[pre_i, post_j]) * float(chem_scale[post_j])
+            elif fanin_value is not None:
+                drawn = fanin_value[pre_i, post_j] * float(chem_scale[post_j])
             # Sign grounding replaces the drawn sign where the pre-synaptic neuron's released
             # transmitter implies one, keeping the drawn magnitude — so the RNG stream, the
             # per-neuron scale and every magnitude are identical to the random-sign build.
@@ -2227,6 +2255,9 @@ class ConnectomePPOBrain(ClassicalBrain):
             initial_log_std=config.initial_log_std,
             weight_init=config.weight_init,
             weight_draw=config.weight_draw,
+            # Its own generator at the same seed: deterministic, and independent of the stream the
+            # rollout buffer shares, so the draw mode cannot move PPO's minibatch order.
+            draw_rng=get_rng(self.seed),
             synapse_signs=config.synapse_signs,
             readout_width=config.readout_width,
         ).to(self.device)

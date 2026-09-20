@@ -78,7 +78,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
     wording.
   - **Registered before the campaign**, not after: a campaign that starts without its retention
     line recorded is blocked, per the `phase8-tracking` requirement.
-- [x] **A.1 The init-vs-rewiring control** — **done 2026-09-21** ([Logbook 070](../../../docs/experiments/logbooks/070-init-sharing-control.md), 768/768 runs, 32 paired seeds): **no dissolution on any arm**, five of eight readings clearing survival, three inconclusive with a stated cause. The **pairing half** of block V's standing condition is discharged; the across-seed half is registered as a follow-up. Second finding, ranked above the first in the record: block V's **magnitude is not stable across seed sets** — thermal replicated in direction at **35%** of its committed size against hard350's 105% — so with power registered against V.4's magnitude the thermal cell was underpowered against its own observed effect even at 32 seeds. Original scope: (D15; own change): both definitions of shared
+- [x] **A.1 The init-vs-rewiring control** — **done 2026-09-21** ([Logbook 070](../../../docs/experiments/logbooks/070-init-sharing-control.md), 768/768 runs, 32 paired seeds): **no dissolution detected on any arm**, survival **established** on five of eight readings, three **unresolved at the panel's sensitivity and not evidence of survival**. The **pairing half** of block V's standing condition is **partially** discharged; the across-seed half is registered as a follow-up. Second finding, ranked above the first in the record: block V's **magnitude is not stable across seed sets** — thermal replicated in direction at **35%** of its committed size against hard350's 105% — so with power registered against V.4's magnitude the thermal cell was underpowered against its own observed effect even at 32 seeds. Original scope: (D15; own change): both definitions of shared
   initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
   byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,
   `rewire_seed` fixed per pair, through the committed block-V harnesses. Registered outcome: the
@@ -254,9 +254,31 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.1 Placed plasticity** on the klinotaxis circuit, on the B.1 substrate, against a
   degree-stratified random subset of the same size, with the three confounds specified.
+
 - [ ] **M.2 Wild-type-vs-wild-type control**: Cook 2019 against Witvliet dataset 8 (adult,
   nerve-ring scope, already vendored).
+
 - [ ] **M.3 Swimming/crawling gait transition** as a body validation target (with C.2).
+
+- [ ] **M.5 The across-seed half of block V's standing condition** *(added 2026-09-21 after A.1)*.
+  A.1 discharged the **within-seed** half — the two wirings putting the same drawn values on
+  different edges. The other half is untouched: with `rewire_seed` unset, a null's graph **and** its
+  weights both derive from the run seed, so the null arm carries graph-variance the wild-type arm
+  does not, and no panel has separated them.
+  **The obvious design is wrong.** Pinning `rewire_seed` to a single constant holds the graph fixed
+  but makes the result about **one** rewiring, which reintroduces the shared-nulls caveat
+  [V.4](../../../docs/experiments/logbooks/065-wiring-fresh-rewiring.md) closed by moving to fresh
+  rewirings. The right shape is a **variance-components design** — several pinned graphs, several
+  weight seeds within each — which separates graph variance from weight variance instead of trading
+  one confound for the other.
+  **A.1 made this more interesting, not less.** Its second finding is that block V's magnitude moves
+  substantially across seed sets (thermal at 35% of its committed size against hard350's 105%), and
+  one candidate explanation is that some rewirings are simply easier to beat than others. That is
+  exactly the quantity this design would measure.
+  MAY, not SHOULD: A.1 already answered the half that addresses the published critique, so this is
+  about understanding the effect's stability rather than defending it, and Phase 8's committed scope
+  is the substrate and body ladder.
+
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 
 ### Phase 8 synthesis
