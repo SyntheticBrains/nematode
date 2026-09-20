@@ -35,17 +35,17 @@ verification splits either side of it.
   `scripts/analysis/` matching the `l4_*`, `l1b_*` and `wiring_*` families, with their tests under
   `packages/quantum-nematode/tests/quantumnematode_tests/analysis/`; the sweep covered 27 pairs.)*
 
-- [ ] 4. **Correct the counts** — `docs/roadmap.md` A.4 deliverable (§ Required deliverables 3) and
+- [x] 4. **Correct the counts** — done 2026-09-20. — `docs/roadmap.md` A.4 deliverable (§ Required deliverables 3) and
   technical-debt item 14 describe A.4 in terms of a count this change changes; restate as what
   happened. `openspec/changes/phase8-tracking/tasks.md` A.4 likewise. **Leave untouched**: Logbook
   069's "42 requirements" and the roadmap's inheritance-list note, which are historical and already
   carry their own dated explanation.
 
-- [ ] 5. **Tick A.4 in the tracker** — `openspec/changes/phase8-tracking/tasks.md`, with the
+- [x] 5. **Tick A.4 in the tracker** — done 2026-09-20. — `openspec/changes/phase8-tracking/tasks.md`, with the
   outcome recorded the way Phase 7's tracker records a closed task: what the consolidation did, in
   one sentence, with the resulting requirement counts.
 
-- [ ] 6. **Verify, before archiving** —
+- [x] 6. **Verify, before archiving** — done: validate strict clean, every relative link resolves, `pre-commit --all-files` clean, protocol at 222 of 250 lines, and Logbooks 060, 067 and 068 all resolve through the mapping table. —
   `openspec validate consolidate-plasticity-methodology --strict`;
   every relative link in the change resolves (the delta specs sit two directories deeper than
   `proposal.md`, so their paths to `docs/` need five `../` segments, not three);
@@ -54,10 +54,10 @@ verification splits either side of it.
   and should be tightened);
   three logbook provenance lines (060, 067, 068) resolve against the mapping table.
 
-- [ ] 7. **Archive** — `openspec archive consolidate-plasticity-methodology`, which applies both
+- [x] 7. **Archive** — done 2026-09-20: `+ 11, - 37`, landing at 7 and 22 exactly as registered. — `openspec archive consolidate-plasticity-methodology`, which applies both
   deltas to the live specs.
 
-- [ ] 8. **After archiving** — widen `architecture-comparison-protocol`'s Purpose statement, which
+- [x] 8. **After archiving** — done: Purpose widened, counts confirmed at **7** and **22**. — widen `architecture-comparison-protocol`'s Purpose statement, which
   currently names only cross-architecture ranking, to say it also holds the comparison methodology
   that applies whatever is being compared, naming the Phase 7 consolidation as its provenance. Then
   confirm the final counts: `plasticity-evaluation` at **7** requirements and
