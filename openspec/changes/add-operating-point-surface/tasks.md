@@ -14,7 +14,7 @@ and the pilot uses its own band so it cannot contaminate one.
 It is what B.1 and B.2 cite, it is the only half that can force an A.1 re-read, and it is the
 cheaper campaign on which to find a defect in the shared generator or driver.
 
-- [ ] 1. **The config generator** — `scripts/campaigns/generate_operating_point_configs.py`, in the
+- [x] 1. **The config generator** — **done: `scripts/campaigns/generate_operating_point_configs.py`, importing the panel from the analysis driver so the grid has one definition rather than two. A config that already exists is kept, never overwritten.** Original scope: — `scripts/campaigns/generate_operating_point_configs.py`, in the
   mould of `scripts/campaigns/l4_panel_pilot.py:41-54` but across five pins instead of one. It loads
   a committed parent, writes exactly one key under `brain.config`, and emits into
   `configs/scenarios/foraging/` using the established suffix vocabulary: `_wide` (already meaning
@@ -28,7 +28,7 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   load); never emit two configs sharing a stem, since the campaign runner would hash-disambiguate
   the log names and the manifest builder keys on the bare stem.
 
-- [ ] 2. **Configs** — roughly 57 generated, committed YAMLs, plus fifteen committed arms serving
+- [x] 2. **Configs** — **done: 57 generated, 7 off-centre arms kept from the committed tree (`wide` x4, `r1e4` x2, `r1e2` x1) plus the 4 committed centre arms per half. Panel totals 72 stems, 32 PPO and 40 reading, matching the registration.** Original scope: — roughly 57 generated, committed YAMLs, plus fifteen committed arms serving
   their levels unchanged.
   **PPO half, 32 arms**: 8 points (centre + `_wide` + three depths + three log-stds) × 2 wirings ×
   {learning, frozen}. The four committed block-V hard350 arms are the centre, so 28 are new. Nothing
@@ -40,20 +40,20 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   `_wide` and `_r1e4` levels, so 29 are new.
   The generator skips a config that already exists rather than overwriting it.
 
-- [ ] 3. **Config tests** — each file in the panel, **generated or committed**, loads through the
+- [x] 3. **Config tests** — **done: every off-centre arm re-read through the real loader and asserted to differ from its centre in exactly the pin it names, and every rewired arm to differ from its wild type in the wiring alone. 187 tests.** Original scope: — each file in the panel, **generated or committed**, loads through the
   real loader and differs from its centre parent in **exactly** the one key it names. Covering the
   committed arms matters: eleven of them were authored for earlier rungs, and one that turns out to
   carry a second delta is a config to regenerate rather than a fact to work around. Also: no two
   stems collide, and stating a pin's default explicitly is byte-identical to leaving the key absent,
   which is what makes the committed centre the operating point rather than a near miss of it.
 
-- [ ] 3b. **Docs for the new variants** — `configs/README.md`'s variant list, which A.1 extended
+- [x] 3b. **Docs for the new variants** — **done: `configs/README.md`'s variant list. `docs/architectures.md` unchanged, as A.2 adds no config key.** Original scope: — `configs/README.md`'s variant list, which A.1 extended
   with `densemask`/`fanin` and which today names none of the suffixes this panel uses. Add the depth,
   log-std and trace-decay suffixes, and name `wide`, `r1e4`/`r1e2` and `td099`, which are in use in
   committed configs but absent from the list. `docs/architectures.md` needs **no** change: A.2 adds
   no config key, only levels of keys it already documents.
 
-- [ ] 4. **The pin-reach test** — new
+- [x] 4. **The pin-reach test** — **done, 32 tests. The `trace_decay` case is the one worth keeping: the attribute moves on a PPO arm and nothing reads it, so the assertion is written against the trace substrate, which a PPO arm never allocates at all.** Original scope: — new
   `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_connectome_pin_reach.py`,
   discharging this change's added requirement and Decision B.05. It asserts, per pin and per
   learner, that the level changes what the configured learner computes or updates — and asserts the
@@ -65,7 +65,7 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   shape whatever the width, and A.1 proved that exactly this kind of claim must be tested rather
   than read.
 
-- [ ] 5. **The analysis driver** — `scripts/analysis/operating_point_surface.py`, in the
+- [x] 5. **The analysis driver** — **done: `scripts/analysis/operating_point_surface.py`. Each half scores through the instrument built for it, both unmodified, and the gate is per point-class.** Original scope: — `scripts/analysis/operating_point_surface.py`, in the
   `init_sharing_control.py` mould: an explicit `ARM_BY_STEM` built by a loop over pins × levels
   (never a regex — the suffix order is not free), `build_manifest`, the completeness gate, per-level
   scoring, the censoring-driven metric choice, the interaction against the campaign's own centre,
@@ -81,7 +81,7 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   arms by design, so a uniform gate would refuse a correct panel. The gate demands four arms at a
   construction-pin level and two at a learning-only one, and that distinction is itself tested.
 
-- [ ] 6. **Driver tests** — mirroring `test_init_sharing_control.py`, including the
+- [x] 6. **Driver tests** — **done, in the same module as the config tests: stem mapping, seed bands, the per-point-class gate in both directions, and the instrument-immutability check against `origin/main`.** Original scope: — mirroring `test_init_sharing_control.py`, including the
   `git diff --quiet origin/main` assertion that `wiring_premise.py` and
   `connectome_structure_efficiency.py` are untouched, the stem-mapping cross-product, seed
   freshness against the burnt bands (1–96, 101–108, 129–160), and the completeness gate refusing a
