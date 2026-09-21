@@ -7,7 +7,7 @@ pairing, on the scopes that resolved. A second finding is ranked above the
 first below — **the thermal cell's effect came in at a third of its committed size**, so block V's
 magnitude is less stable across seed sets than its direction.
 
-**Date**: 2026-09-21.
+**Date**: 2026-09-21. *(The `dense_mask` arms were re-run the same day after review found a defect in them; see § The defect this panel shipped with, and the re-run. Every figure below is the corrected one.)*
 
 **OpenSpec change**: `add-init-sharing-control` (extends `architecture-comparison-protocol`: a claim
 that two arms share an initialisation is verified by test rather than argued from how the random
@@ -73,14 +73,15 @@ same bar.
 
 | cell | mode | interaction (primary) | 2/3 bar | p | branch |
 |---|---|---|---|---|---|
-| hard350 | `dense_mask` | −190.59 (−32.8%) | −386.96 | 0.915 | **survival** |
+| hard350 | `dense_mask` | −38.91 (−6.7%) | −386.96 | 0.681 | **survival** |
 | hard350 | `per_neuron_fanin` | −188.03 (−32.4%) | −386.96 | 0.884 | inconclusive |
-| thermal | `dense_mask` | +109.75 (+81.5%) | −89.73 | 0.200 | inconclusive |
+| thermal | `dense_mask` | +142.84 (+106.1%) | −89.73 | 0.116 | **survival** |
 | thermal | `per_neuron_fanin` | +37.62 (+28.0%) | −89.73 | 0.327 | inconclusive |
 
-On `auc_success`, reported beside as registered: survival on hard350 under both modes and on thermal
-under `dense_mask`; inconclusive on thermal under `per_neuron_fanin`. **Five of eight readings clear
-survival. None is dissolution, and none is even a significant shrinkage.**
+On `auc_success`, reported beside as registered: survival on hard350 under **both** modes and on
+thermal under `dense_mask`; inconclusive on thermal under `per_neuron_fanin`. **Five of eight
+readings establish survival, three are unresolved, and none is dissolution or even a significant
+shrinkage.**
 
 The point estimates disagree in sign between cells — hard350 leans toward a third of the effect
 removed, thermal toward the effect growing — and neither approaches significance. **Reported as a
@@ -103,27 +104,97 @@ result that no previous record states.
 
 ### Why three readings are inconclusive, and what that is a statement about
 
-Power was registered against **V.4's** effect sizes. The thermal effect arrived at a third of that,
-so the 2/3 bar is small in absolute terms (−89.7) while the interaction's own spread is ~1,049. The
-achieved minimum detectable interaction on thermal is **3.4× its observed effect**.
+**All three are `per_neuron_fanin`**, and they fail to resolve for two different reasons.
 
-**Thermal's inconclusive readings are therefore a statement about the panel, not about the wiring.**
-Resolving them is not a seed-count problem: closing a 3.4× gap needs roughly 800 seeds, against 32
-here. The thermal effect on these seeds is too small relative to its variance for an interaction
-test at any affordable size.
+**Two are thermal, and they are a statement about the panel, not about the wiring.** Power was
+registered against **V.4's** effect sizes; the thermal effect arrived at a third of that, so the 2/3
+bar is small in absolute terms (−89.7) while the interaction's spread is ~1,044. Achieved minimum
+detectable interaction on thermal runs **1.6× to 3.4× the observed effect** depending on metric and
+mode. Resolving that is not a seed-count problem at any affordable size: clearing the registered 2/3
+bar at the observed thermal effect needs roughly **800 seeds**, against 32 here.
+
+**One is hard350's primary, and it is a near miss rather than a power failure.** That reading is
+well powered — the detectable interaction is 0.68× the baseline effect — but the point estimate sits
+a third of the way to the bar and its interval reaches **−395.9** against a bar of **−386.96**. The
+interval fails to exclude dissolution by about nine episodes on a 580-episode effect. It is
+reported as unresolved because the registered rule says so, not because the evidence is balanced.
+
+| cell | mode | metric | detectable interaction ÷ baseline effect |
+|---|---|---|---|
+| hard350 | `dense_mask` | both | 0.50 |
+| hard350 | `per_neuron_fanin` | `auc_success` | 0.52 |
+| hard350 | `per_neuron_fanin` | primary | 0.68 |
+| thermal | `dense_mask` | `auc_success` | 1.42 |
+| thermal | `dense_mask` | primary | 2.52 |
+| thermal | `per_neuron_fanin` | `auc_success` | 1.60 |
+| thermal | `per_neuron_fanin` | primary | 3.41 |
+
+## The defect this panel shipped with, and the re-run
+
+**Found in review, after the 768-run panel had read out.** `ConnectomePPOBrain` passes one generator
+to both the chemical weight initialisation and the rollout buffer, whose `get_minibatches` consumes
+it for the minibatch permutation. `dense_mask` draws a dense 302×302 matrix — **91,204 values against
+the baseline's 3,709** — so it left that generator in a different state and moved **PPO's minibatch
+order as well as the weights**. Two manipulations under one name.
+
+**Every check in place passed.** The suite asserted bitwise identity of every parameter the mode did
+not claim to touch, across both axes, and it was correct: the initial parameters *were* identical.
+The divergence only exists once training starts. This is the failure the requirement this very
+change adds — that a sharing claim be verified by test rather than argued from how the stream is
+consumed — exists to prevent, and it was argued rather than tested.
+
+**The blast radius was measured, not assumed.** Replaying each mode's consumption showed
+`per_neuron_fanin` leaves the shared generator in a state **identical** to the baseline (it draws the
+same 3,709 values, merely grouped), and only `dense_mask` diverges. So eight arms were affected and
+sixteen were not.
+
+**The fix** keeps `edge_order` bit-identical: the loop always takes one value per edge from the
+shared generator whatever the mode, and a sharing mode overwrites it with one from a dedicated
+generator seeded off the run seed. Both sharing modes therefore produce the *same weights as before*;
+only the shared stream's position changes.
+
+**The re-run** covered the eight `dense_mask` arms, 256 runs, 256/256 succeeded. The 512 unaffected
+logs were carried over and their reuse licensed the way the rule requires rather than by the argument
+above: **one seed per reused arm re-run under the fixed code, all sixteen compared field by field
+against the carried-over logs, every episode of every success and foods series identical.**
+
+**What moved.** The four unchanged arms came back **bit-identical**, which is the cleanest available
+confirmation the fix touched only what it claimed. One reading changed branch: thermal under
+`dense_mask` on the primary went from inconclusive to **survival**. And hard350's apparent reduction
+under `dense_mask` shrank from −190.6 to −38.9 — **the contamination had been making the effect look
+more eroded than it is.** The confound worked against block V, not for it.
+
+**A second error, found while checking the first.** The committed version of this logbook reported
+**"five of eight readings clear survival"**. Re-deriving every branch from the committed artefact
+shows the contaminated panel supported **four**, not five: one on the primary (hard350 under
+`dense_mask`) and three on `auc_success`. The tally sentence was an over-count by one; the tables
+beside it were correct, and nobody reading the tables could have reached five. That wrong count was
+propagated to five citation sites before it was caught.
+
+**The correction and the re-run happen to land on the same number, for different reasons.** The
+re-run genuinely moves thermal's primary from unresolved to survival, taking the true count from
+four to five. So the figure now standing at those five sites — five survival, three unresolved — is
+right, but it was not right when it was written. Anyone reconciling the two versions by their
+summary counts alone would conclude the re-run changed nothing, and that is wrong twice over.
+
+The lesson is recorded as a clause of [phase protocol](../../research/phase-protocol.md) principle 6:
+an arm must be shown to change only what it names, **at the point the arms diverge**, not only at
+construction.
 
 ## What this establishes, and what it does not
 
 **Establishes.** No dissolution was detected anywhere: across both definitions and both cells, no
 interaction approaches significance and none approaches the registered dissolution bar. Survival is
-**established** on five of eight readings — both metrics on hard350 under `dense_mask`, plus
-`auc_success` on hard350 under `per_neuron_fanin` and on thermal under `dense_mask`. On those
+**established** on five of eight readings — **both** metrics on hard350 under `dense_mask`, **both**
+on thermal under `dense_mask`, and `auc_success` on hard350 under `per_neuron_fanin`. On those
 scopes Dhiman's mechanism, the advantage being an initialisation artefact, is **not** what is
 happening.
 
 **Leaves unresolved**, and these are not evidence of survival: thermal under `per_neuron_fanin` on
-both metrics, thermal under `dense_mask` on the primary, and hard350 under `per_neuron_fanin` on the
-primary. Three of eight readings could not place the effect either way.
+both metrics, and hard350 under `per_neuron_fanin` on the primary. Three of eight readings could not
+place the effect either way, and **all three are `per_neuron_fanin`** — the definition that shares a
+neuron's multiset rather than each edge's value. Whether that definition is genuinely weaker or
+merely landed on the noisier arms is not something this panel can separate.
 
 **Does not establish.** That block V is unconditional. Three of eight readings could not resolve, the
 strongest single cell is hard350, and the across-seed coupling between a null's graph and its weights
@@ -154,4 +225,6 @@ shared-nulls caveat V.4 closed.
   — 256 rows, the per-seed unit the primary test consumes; every figure above is re-derivable from it
 - [`supporting/070-init-sharing-control/init_sharing_control.json`](supporting/070-init-sharing-control/init_sharing_control.json)
   — the full harness output
-- Raw campaign logs: archived off-repo per A.0. 768 runs, 369 MB.
+- Raw campaign logs: archived off-repo per A.0. The merged panel is 768 runs — 512 from the
+  original campaign and 256 from the `dense_mask` re-run — plus the 16-run identity check that
+  licensed the reuse.
