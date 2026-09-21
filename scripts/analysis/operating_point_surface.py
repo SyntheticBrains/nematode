@@ -373,6 +373,73 @@ def interaction(centre: dict[str, Any], level: dict[str, Any], metric: str) -> d
     }
 
 
+def learning_gates(
+    manifest: Path,
+    half: str,
+    seeds: tuple[int, ...],
+    suffix: str,
+) -> dict[str, Any]:
+    """Record each arm's plateau against its own frozen floor, and whether the level saturates.
+
+    Two separate obligations live here and neither should rest on a reader's arithmetic.
+
+    The **gate**: a wiring contrast is unreadable unless the claim-carrying arm beats its own floor
+    on the same seeds. Recorded per arm rather than asserted, so a level that fails is reported as a
+    gate failure -- itself a sensitivity result about that setting -- instead of being read as a
+    wiring finding.
+
+    **Saturation**: where both learning arms sit above the instrument's own ceiling, time-to-
+    competence compresses and an abolished gap means "two arms tied at the top" rather than "the
+    wiring stopped mattering". The instrument applies this on its peak axis; the efficiency axis
+    decides this cell, so the flag has to be carried explicitly or the distinction is lost.
+    """
+    import t7_continuous_ranking as t7  # pyright: ignore[reportMissingImports]
+
+    rows: dict[tuple[str, str], dict[int, Path]] = {}
+    for raw in manifest.read_text().splitlines():
+        arm, row_suffix, seed, log_path = raw.split()
+        rows.setdefault((arm, row_suffix), {})[int(seed)] = wp.REPO / log_path
+
+    floor_level = suffix if len(arms_at(half, suffix)) == 4 else CENTRE
+    out: dict[str, Any] = {"floor_level": floor_level}
+    plateaus: list[float] = []
+    for wiring in ("wt", "rn"):
+        learn: list[float] = []
+        floor: list[float] = []
+        deltas: list[float] = []
+        beats = 0
+        for seed in seeds:
+            lp = rows.get((f"{wiring}_learn", suffix), {}).get(seed)
+            fp = rows.get((f"{wiring}_frozen", floor_level), {}).get(seed)
+            lv = t7.plateau_tail(lp) if lp else None
+            fv = t7.plateau_tail(fp) if fp else None
+            if lv is None or fv is None:
+                continue
+            learn.append(lv[0])
+            floor.append(fv[0])
+            deltas.append(lv[0] - fv[0])
+            beats += int(lv[0] > fv[0])
+        mean_learn = sum(learn) / len(learn) if learn else float("nan")
+        plateaus.append(mean_learn)
+        # The gate is the instrument's own paired test of learning against its floor, not a
+        # count of seeds. An all-seeds rule is stricter than anything registered, and it would
+        # report an arm that plainly learns as a gate failure on one unlucky seed.
+        test = wp.paired_seed_wilcoxon_bootstrap(deltas) if deltas else None
+        out[wiring] = {
+            "plateau_success": mean_learn,
+            "floor_success": sum(floor) / len(floor) if floor else float("nan"),
+            "beats_floor_seeds": beats,
+            "n_seeds": len(learn),
+            "vs_floor": test,
+        }
+    out["gate_passes"] = all(
+        (out[w]["vs_floor"] or {}).get("ci_lo", 0.0) > 0.0 for w in ("wt", "rn")
+    )
+    out["saturated"] = bool(plateaus) and all(v >= wp.SATURATION_SUCCESS for v in plateaus)
+    out["saturation_bar"] = wp.SATURATION_SUCCESS
+    return out
+
+
 def two_sided(p: float) -> float:
     """Fold the instrument's one-sided p into a two-sided one.
 
@@ -479,6 +546,7 @@ def score(
             "value": value,
             "carries_own_floor": pin in CONSTRUCTION_PINS,
             "metric_choice": choice,
+            "gates": learning_gates(manifest, half, seeds, suffix),
         }
         for metric in (choice["primary_metric"], choice["reported_beside"]):
             entry[metric] = {
@@ -493,7 +561,7 @@ def score(
     # can see at a glance whether any level drove the censored metric out.
     metric_choice = choose_metric(rates)
 
-    centre: dict[str, Any] = {}
+    centre: dict[str, Any] = {"gates": learning_gates(manifest, half, seeds, CENTRE)}
     for metric in (CENSORED_METRIC, UNCENSORED_METRIC):
         centre[metric] = {"wiring_gap": wiring_gap(reports[CENTRE], metric)}
 
