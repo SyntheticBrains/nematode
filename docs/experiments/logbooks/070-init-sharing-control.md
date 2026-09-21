@@ -114,10 +114,12 @@ mode. Resolving that is not a seed-count problem at any affordable size: clearin
 bar at the observed thermal effect needs roughly **800 seeds**, against 32 here.
 
 **One is hard350's primary, and it is a near miss rather than a power failure.** That reading is
-well powered — the detectable interaction is 0.68× the baseline effect — but the point estimate sits
-a third of the way to the bar and its interval reaches **−395.9** against a bar of **−386.96**. The
-interval fails to exclude dissolution by about nine episodes on a 580-episode effect. It is
-reported as unresolved because the registered rule says so, not because the evidence is balanced.
+well powered — the detectable interaction is 0.68× the baseline effect. Its point estimate removes
+**a third of the baseline effect**: −188.03 against a baseline gap of +580.44, or 32.4%. The
+registered bar asks for two thirds removed, which on that baseline is **−386.96**, so the estimate
+itself is nowhere near dissolution — but the interval runs out to **−395.9** and so fails to exclude
+the bar by about **nine episodes** on a 580-episode effect. It is reported as unresolved because the
+registered rule says so, not because the evidence is balanced.
 
 | cell | mode | metric | detectable interaction ÷ baseline effect |
 |---|---|---|---|
