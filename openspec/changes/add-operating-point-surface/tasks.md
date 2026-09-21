@@ -101,12 +101,12 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   re-read; the statement that the crossing pass is a second registration; the A.0 retention line;
   and the cost.
 
-- [ ] 9. **PPO campaign** — 512 runs, seeds 161–176, through `scripts/run_campaign.py` at 16
+- [x] 9. **PPO campaign** — **done 2026-09-22: 512/512 succeeded in 27,836 s (7.7 h) at 16.0x, zero tracebacks.** Original scope: — 512 runs, seeds 161–176, through `scripts/run_campaign.py` at 16
   workers into a gitignored `campaigns/` directory, passing
   `-- --theme headless --track-experiment --no-detailed-export`. Detailed export is off per the
   runner's own warning; `--track-experiment` records the export path every downstream reader needs.
 
-- [ ] 10. **Read the PPO surface** — against the registered branches. Report the interaction at each
+- [x] 10. **Read the PPO surface** — **done: the registered gate passes and the centre replicates block V at 92-95% of A.1's magnitude (+536.4 episodes, +0.0578 auc, both significant). The surface is **not flat**: depth 2 **reverses** the effect (interaction -0.294, q=0.003) and depth 3 **abolishes** it (-702 against a centre gap of +536, q=0.031), while depth 6 and all three log-std levels keep a significant positive gap. Every arm at every level cleared its own frozen floor, so no level is a gate failure. The per-neuron readout reads as abolished (-535, q=0.029) but is **confounded with saturation** — both arms sit at 96.5% and 97.7% plateau full-clear, above the instrument's 90% bar — and is reported as saturated rather than as a wiring finding. BH-FDR across the pin family was registered and missing from the driver; it was implemented before any branch was assigned.** Original scope: — against the registered branches. Report the interaction at each
   level with its sensitivity, the wiring gap's sign, and every gate. A level whose gate fails is
   reported as a gate failure, which is itself a sensitivity result, not worked around.
 
