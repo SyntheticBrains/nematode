@@ -87,12 +87,12 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   freshness against the burnt bands (1–96, 101–108, 129–160), and the completeness gate refusing a
   partial panel.
 
-- [ ] 7. **Pilot** — seeds 109–112, a subset of levels including both extremes of
+- [x] 7. **Pilot** — **done 2026-09-21: 64/64 succeeded in 3,260 s at 15.5x on seeds 109-112, covering the PPO centre plus both depth extremes and the per-neuron readout. It found two things — the completeness gate refused a subset-of-levels pilot, and the metric rule was pooling censoring across the surface when the cells an interaction spans are the centre and one level. Both fixed before registration. Cost: learning 14.9 min, frozen 10.9.** Original scope: — seeds 109–112, a subset of levels including both extremes of
   `forward_pass_depth`, configured the way the campaign will be. It confirms the levels run, the
   learning gates fire, and the cost estimate holds. It does **not** estimate the spread; four seeds
   cannot.
 
-- [ ] 8. **Registration, before any panel seed** —
+- [x] 8. **Registration, before any panel seed** — **done: `docs/experiments/logbooks/supporting/071-operating-point-surface/launch.md`. Sensitivity from A.1's committed hard350 per-seed CSV puts the MDE at 0.71-0.96 of the centre effect at 16 seeds, which resolves a sign move and does not resolve a partial erosion — stated as a scope choice rather than discovered later. `forward_pass_depth: 2` is named in advance as the likely sign move, on the pilot's four seeds.** Original scope: —
   `docs/experiments/logbooks/supporting/071-operating-point-surface/launch.md`, in 070's shape:
   the question; the design; the metric rule fixed before the censoring rates are known; the
   **sensitivity per level, from A.1's committed hard350 per-seed CSV** (prior committed data, frozen
