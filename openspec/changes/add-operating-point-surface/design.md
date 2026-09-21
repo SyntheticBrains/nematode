@@ -12,7 +12,7 @@ maintainer before anything ran.
 
 | pin | declared | default | what a sweep of it can be |
 |---|---|---|---|
-| `readout_width` | `connectome_ppo.py:240` | `"pooled"` | **two levels** — `pooled` \| `per_neuron`. Not a grid |
+| `readout_width` | `connectome_ppo.py:240` | `"pooled"` | **two levels only**, `pooled` or `per_neuron`. Not a grid |
 | `forward_pass_depth` | `connectome_ppo.py:256` | `4` | integer; `>= 1` enforced at **construction**, not load |
 | `initial_log_std` | `_plasticity_config.py:297` | `0.0` | float, unbounded; rejected only against `state_dependent` |
 | `trace_decay` | `_plasticity_config.py:128` | `0.9` | float, `ge=0.0, lt=1.0`; needs `enable_activity_traces` |
@@ -73,9 +73,16 @@ But the five pins divide. `readout_width`, `forward_pass_depth` and `initial_log
 neither can reach it, and the centre's floor is the correct floor for their levels. That is the same
 runs read twice, not a missing control.
 
-This saves 8 arms and 128 runs on the reading half. It is also exactly the kind of claim A.1 taught
-this programme to test rather than argue, so the pin-reach test asserts it directly: at
-`freeze_updates: true`, changing `plasticity_rate` or `trace_decay` leaves the run identical.
+This saves 8 arms and 128 runs on the reading half, and the saving is larger than the run count
+suggests: **a frozen reading arm is the dearer one.** Measured medians on hard350 are 20.0 min for
+`eprop_readout_only` against **33.4 min** for `eprop_frozen`, because an arm that never learns never
+converges, so every episode runs the full step budget. The 128 runs not taken are 4.4 hours. (The
+PPO half runs the other way round — 16.7 min learning against 11.1 min frozen — where the update
+itself is the larger share of the work.)
+
+It is also exactly the kind of claim A.1 taught this programme to test rather than argue, so the
+pin-reach test asserts it directly: at `freeze_updates: true`, changing `plasticity_rate` or
+`trace_decay` leaves the run identical.
 
 ### Decision D2: Committed arms serve their levels unchanged
 
@@ -122,21 +129,62 @@ pre-registration**, whose sensitivity is drawn from the one-factor pass once tha
 at which point it is prior committed data, which the requirement names. Recorded in the launch
 record rather than left for a reviewer to reconstruct.
 
-### Decision H: The instrument is not modified
+### Decision H: The instrument is not modified, and the two halves reach it by different doors
 
 `wiring_premise.py` hard-codes its cells, arms, family and minimum effects. Editing them to admit a
 pin axis would forfeit the replication property V.4 and A.1 both rest on. A new driver,
 `scripts/analysis/operating_point_surface.py`, sits in the mould `init_sharing_control.py`
 established: an explicit stem-to-arm mapping built by a loop rather than a regex, a manifest
-builder, a completeness gate, per-level calls to the unmodified instrument, and a surface reporter.
-Its test asserts both instrument files are byte-identical to `main`.
+builder, a completeness gate, per-level scoring, and a surface reporter. Its test asserts both
+instrument files are byte-identical to `main`.
+
+**The two halves do not take the same route into it, and the reason is in the instrument's own
+constants.** `wiring_premise.EFFICIENCY_ARMS` is `{"wt_ppo": …, "rn_ppo": …}`, and the `FAMILY`,
+`MIN_EFFECT` and verdict apparatus around it is block V's PPO panel. The reading learner's arms are
+`three_factor`, and labelling them `wt_ppo` in a manifest to get them through that door would be a
+mislabel adopted for the convenience of a function signature.
+
+- **PPO half** → `wiring_premise.efficiency_contrast`, which is A.1's path and the one whose
+  replication property the PPO arms are entitled to.
+- **Reading half** → `connectome_structure_efficiency.analyse` **directly**, with that module's own
+  `_WILD` / `_REWIRED` labels. This is not a workaround: it is the path `l4_rate_calibration.py`
+  took for L.1b, the only previous sweep on this learner, and it reaches the same four metrics, the
+  same BH-FDR family and the same verdict rule.
+
+Both instruments stay unmodified on either route.
+
+### Decision H2: The reading half owes drift evidence on every scored seed, or it is void
+
+The reading learner leaves `w_chem` fixed, so the requirement governing a wiring contrast under a
+learner that does not write the wiring applies in full. Its first scenario is not a documentation
+rule: the fixed tensors **SHALL** be compared against a control in which nothing learned, the
+comparison **SHALL** cover every scored seed, and any non-zero drift — **or drift evidence missing
+for any scored seed** — returns **void**.
+
+This is an obligation on the campaign, not only on the write-up, and it is cheap to forfeit by
+accident. The evidence is `<exports_path>/weights/final.pt`, read the way
+`l4_reduced_perturbation._chemical_weights` reads it, compared against the frozen arm at the same
+seed the way `l4_frozen_features.drift` compares it. Two consequences:
+
+1. **`--track-experiment` is not optional on the reading campaign.** Without it no `exports_path` is
+   recorded and the reader returns `None` for every run, which reads as "unavailable" and voids the
+   half. The weights auto-save itself is unconditional (`run_simulation.py:1020`), so
+   `--no-detailed-export` remains safe and the disk cost stays bounded.
+2. **The shared frozen floor is the right comparator here too.** `w_chem` at a given seed is the
+   same draw whatever `plasticity_rate` or `trace_decay` says, and the learning arm never writes it,
+   so the centre's floor is the correct control for the rate and decay levels rather than a
+   substitute for a missing one.
+
+The PPO half owes none of this: PPO writes the chemical weights, so its contrast is not one run
+under a learner that leaves them fixed.
 
 ### Decision I: One new requirement, deliberately
 
-Eight existing requirements govern this campaign and are cited rather than restated: the interaction
+Nine existing requirements govern this campaign and are cited rather than restated: the interaction
 reading; power stated in advance when a null carries a consequence; the per-arm learning gate; the
-metric-departure rule; committed-baseline reuse; the operating-point re-read; standing conditions;
-and A.1's sharing-by-test rule.
+fixed-substrate contrast rule, whose drift clause Decision H2 discharges; the metric-departure rule;
+committed-baseline reuse; the operating-point re-read; standing conditions; and A.1's
+sharing-by-test rule.
 
 The case none reaches: **a pin can be accepted, validated and ignored.** `plasticity_rate` on a PPO
 arm passes its `gt=0.0` bound and is never read. `readout_width` under `mlpppo` is dropped with a

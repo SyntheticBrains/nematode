@@ -51,13 +51,15 @@ Wiring {wild type, rewired null} crossed with each pin level in turn, around the
 | `plasticity_rate` | — (inert) | 1e-4, 1e-2 |
 | `trace_decay` | — (inert) | 0.5, 0.99 |
 | arms | **32** | **40** |
-| runs, 16 seeds | **512**, ≈ 7.4 h | **640**, ≈ 16.6 h |
+| runs, 16 seeds | **512**, ≈ 7.4 h | **640**, ≈ 16.9 h |
 
 **A frozen floor is run wherever a pin changes the untrained prior, and not elsewhere.**
 `readout_width`, `forward_pass_depth` and `initial_log_std` change what the arm is before any
 learning, so each of their levels needs its own floor. `plasticity_rate` and `trace_decay` cannot
 move a frozen arm — it performs no updates — so the centre's floor serves their levels, which is
-the same runs read twice rather than a shortcut. That claim is asserted by test, not argued.
+the same runs read twice rather than a shortcut. That claim is asserted by test, not argued, and it
+saves 4.4 hours: on the reading learner the **frozen** arm is the dearer one, 33.4 min against 20.0,
+because an arm that never learns never converges and every episode runs the full budget.
 
 The **PPO half runs first**: it is what B.1 and B.2 cite, and the only half that can force an A.1
 re-read.
@@ -92,11 +94,27 @@ runner passes one passthrough to every run, so it could not vary a pin across ar
 grid point needs a committed YAML. A generator in the mould of `scripts/campaigns/l4_panel_pilot.py`
 emits them from their committed parents, one key each, and a test asserts the one-key delta.
 
-### 6. The instrument is not touched
+### 6. The instrument is not touched, and each half uses the door built for it
 
 Scoring goes through the **unmodified** `wiring_premise.py` and `connectome_structure_efficiency.py`.
 A new driver builds manifests and reports the surface, in the mould `init_sharing_control.py`
 established.
+
+The two halves enter by different doors, because `wiring_premise`'s arm map is keyed on `wt_ppo` and
+`rn_ppo` and the family around it is block V's PPO panel. The **PPO half** takes that path, which is
+A.1's. The **reading half** calls the efficiency instrument directly with its own wild and rewired
+labels — the path `l4_rate_calibration.py` took for L.1b, the only previous sweep on this learner.
+Routing `three_factor` arms through a PPO-keyed map would mean mislabelling them to suit a function
+signature.
+
+### 7. The reading half owes drift evidence, or it is void
+
+The reading learner leaves the chemical matrix fixed, so the requirement governing a contrast under
+a learner that does not write the wiring applies in full: the fixed tensors are compared against a
+control in which nothing learned, **on every scored seed**, and missing evidence returns **void**
+rather than "it held". That makes `--track-experiment` non-optional on the reading campaign, since
+without it no export path is recorded and the drift reader returns nothing for every run. The
+weights auto-save is unconditional, so suppressing detailed export stays safe.
 
 ## Capabilities
 
@@ -104,9 +122,10 @@ established.
 to reach the learner it is set on.
 
 One, not several. The requirements that already govern this campaign — interaction reading, power in
-advance when a null carries a consequence, the learning gate per arm, metric departure,
-committed-baseline reuse, the operating-point re-read, standing conditions, and A.1's
-sharing-by-test rule — are cited in `design.md` rather than restated. A.4 has just finished
+advance when a null carries a consequence, the learning gate per arm, **the fixed-substrate contrast
+rule and its drift clause**, metric departure, committed-baseline reuse, the operating-point re-read,
+standing conditions, and A.1's sharing-by-test rule — are cited in `design.md` rather than
+restated. A.4 has just finished
 redistributing 38 rules that accumulated one per rung, and the inherited discipline is to add a
 requirement only where no existing one reaches.
 

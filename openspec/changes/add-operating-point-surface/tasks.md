@@ -21,7 +21,9 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   `readout_width: per_neuron` in 18 committed configs), `_d2`/`_d3`/`_d6`,
   `_lsm15`/`_lsm10`/`_lsm05`/`_ls00`/`_lsp05`, `_r1e4`/`_r1e2`, `_td05`/`_td099`. Each file carries
   a header naming the pin under test, its parent, and the single-key delta, per the house
-  convention. Guards: never emit `forward_pass_depth: 0` (refused only at construction, not load);
+  convention. The log-std suffixes are **sign-explicit**, departing from the existing `_ls05`
+  (which means −0.5): this sweep needs +0.5 as well, which the old scheme cannot express. The
+  generator's header says so rather than leaving the reader to infer it. Guards: never emit `forward_pass_depth: 0` (refused only at construction, not load);
   never pair a non-zero `initial_log_std` with `continuous_std_mode: state_dependent` (refused at
   load); never emit two configs sharing a stem, since the campaign runner would hash-disambiguate
   the log names and the manifest builder keys on the bare stem.
@@ -45,6 +47,12 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   stems collide, and stating a pin's default explicitly is byte-identical to leaving the key absent,
   which is what makes the committed centre the operating point rather than a near miss of it.
 
+- [ ] 3b. **Docs for the new variants** — `configs/README.md`'s variant list, which A.1 extended
+  with `densemask`/`fanin` and which today names none of the suffixes this panel uses. Add the depth,
+  log-std and trace-decay suffixes, and name `wide`, `r1e4`/`r1e2` and `td099`, which are in use in
+  committed configs but absent from the list. `docs/architectures.md` needs **no** change: A.2 adds
+  no config key, only levels of keys it already documents.
+
 - [ ] 4. **The pin-reach test** — new
   `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_connectome_pin_reach.py`,
   discharging this change's added requirement and Decision B.05. It asserts, per pin and per
@@ -59,10 +67,19 @@ cheaper campaign on which to find a defect in the shared generator or driver.
 
 - [ ] 5. **The analysis driver** — `scripts/analysis/operating_point_surface.py`, in the
   `init_sharing_control.py` mould: an explicit `ARM_BY_STEM` built by a loop over pins × levels
-  (never a regex — the suffix order is not free), `build_manifest`, `require_complete`, per-level
-  calls to the **unmodified** `wiring_premise.efficiency_contrast`, the censoring-driven metric
-  choice, the interaction against the campaign's own centre, and the surface report. CSV written
-  with `lineterminator="\n"`.
+  (never a regex — the suffix order is not free), `build_manifest`, the completeness gate, per-level
+  scoring, the censoring-driven metric choice, the interaction against the campaign's own centre,
+  and the surface report. CSV written with `lineterminator="\n"`.
+  **Each half scores through the door built for it**, per design Decision H. The PPO half goes
+  through the **unmodified** `wiring_premise.efficiency_contrast`, whose `EFFICIENCY_ARMS` is keyed
+  on `wt_ppo`/`rn_ppo`. The reading half calls **unmodified**
+  `connectome_structure_efficiency.analyse` directly with that module's `_WILD`/`_REWIRED` labels,
+  as `l4_rate_calibration.py:226` does — labelling `three_factor` arms `wt_ppo` to reach the other
+  function would be a mislabel adopted to suit a signature.
+  **The completeness gate is per point-class, not uniform.** A.1's gate iterates all four of
+  `wp.TESTED_ARMS` at every level; here the reading half's rate and decay levels carry no frozen
+  arms by design, so a uniform gate would refuse a correct panel. The gate demands four arms at a
+  construction-pin level and two at a learning-only one, and that distinction is itself tested.
 
 - [ ] 6. **Driver tests** — mirroring `test_init_sharing_control.py`, including the
   `git diff --quiet origin/main` assertion that `wiring_premise.py` and
@@ -85,8 +102,9 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   and the cost.
 
 - [ ] 9. **PPO campaign** — 512 runs, seeds 161–176, through `scripts/run_campaign.py` at 16
-  workers into a gitignored `campaigns/` directory, with detailed export off per the runner's own
-  warning.
+  workers into a gitignored `campaigns/` directory, passing
+  `-- --theme headless --track-experiment --no-detailed-export`. Detailed export is off per the
+  runner's own warning; `--track-experiment` records the export path every downstream reader needs.
 
 - [ ] 10. **Read the PPO surface** — against the registered branches. Report the interaction at each
   level with its sensitivity, the wiring gap's sign, and every gate. A level whose gate fails is
@@ -97,7 +115,19 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   that cites block V or Logbook 070. If it does not, record that plainly with the panel's sensitivity
   beside it.
 
-- [ ] 12. **Reading-learner campaign** — 640 runs, seeds 177–192, after the PPO half has read out.
+- [ ] 12. **Reading-learner campaign** — 640 runs, seeds 177–192, after the PPO half has read out,
+  with the same flags. **`--track-experiment` is not optional here**: without it no export path is
+  recorded, the drift reader returns nothing for every run, and task 12b voids the half. The weights
+  auto-save is unconditional (`run_simulation.py:1020`), so `--no-detailed-export` stays safe.
+
+- [ ] 12b. **Drift evidence for the reading half, before its surface is read** — the reading
+  learner leaves `w_chem` fixed, so the governing requirement compares the fixed tensors against a
+  control in which nothing learned, **on every scored seed**, and returns **void** on any non-zero
+  drift or on evidence missing for any seed. Reuse `l4_frozen_features.drift`'s shape and
+  `l4_reduced_perturbation._chemical_weights`'s reader rather than writing a third. The centre's
+  frozen arm is the correct comparator at the rate and decay levels: `w_chem` at a given seed is the
+  same draw whatever those pins say, and the learning arm never writes it. A void reading is
+  reported as void, not as a null.
 
 - [ ] 13. **Read the reading-learner surface** — separately from the PPO one. `initial_log_std` is
   reported as two different quantities across the halves, not pooled: under PPO it is a trained
