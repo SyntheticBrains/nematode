@@ -208,6 +208,28 @@ class TestTheGateKnowsWhatACompletePanelIs:
         assert set(ops.arms_at("reading", rate_level)) == set(ops.LEARNING_ARMS)
 
 
+class TestTheFrozenSubstrateObligation:
+    """The reading half is void without drift evidence on every scored seed.
+
+    The check itself is validated in the direction where the answer is known: on the PPO pilot,
+    where PPO writes the chemical matrix by design, it reads a relative drift near 1.0 and returns
+    void. That is what makes a 0.00 on the reading half evidence rather than a default.
+    """
+
+    def test_a_construction_level_uses_its_own_floor_and_a_rule_level_uses_the_centre(self) -> None:
+        # `w_chem` at a given seed is the same draw whatever the rate or decay says, and the
+        # learning arm never writes it, so the centre's floor is the correct comparator there.
+        assert len(ops.arms_at("reading", "d2")) == 4
+        rate_level = next(s for p, s, _ in ops._levels("reading") if p == "plasticity_rate")
+        assert len(ops.arms_at("reading", rate_level)) == 2
+
+    def test_the_ppo_half_owes_no_drift_evidence(self) -> None:
+        # PPO writes the chemical weights, so its contrast is not one run under a learner that
+        # leaves them fixed, and demanding the evidence there would be a category error.
+        assert "plasticity_rate" not in ops.PIN_LEVELS["ppo"]
+        assert set(ops.PIN_LEVELS["ppo"]) == set(ops.CONSTRUCTION_PINS)
+
+
 class TestTheInstrumentIsUntouched:
     """Both committed harnesses must be byte-identical to main."""
 
