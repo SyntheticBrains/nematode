@@ -373,6 +373,38 @@ def interaction(centre: dict[str, Any], level: dict[str, Any], metric: str) -> d
     }
 
 
+def two_sided(p: float) -> float:
+    """Fold the instrument's one-sided p into a two-sided one.
+
+    ``paired_seed_wilcoxon_bootstrap`` tests ``a > b``, so a p near 1.0 means a strongly NEGATIVE
+    delta rather than a null one. The registered minimum is stated in both directions -- a level
+    that amplifies the wiring effect is the same finding with the opposite sign -- so the family
+    correction has to see a statistic that treats the two tails alike.
+    """
+    return min(1.0, 2.0 * min(p, 1.0 - p))
+
+
+def apply_family_correction(levels: dict[str, Any]) -> dict[str, Any]:
+    """BH-FDR the interaction tests across the pin family, every test computed before any is read.
+
+    The family is one half's levels. Correcting within it is what the registration commits to, and
+    doing it after the branches were assigned would let the reading choose its own family.
+    """
+    entries: list[tuple[str, str]] = []
+    pvals: list[float] = []
+    for suffix, entry in levels.items():
+        for metric in [
+            k for k in entry if isinstance(entry[k], dict) and "interaction" in entry[k]
+        ]:
+            entries.append((suffix, metric))
+            pvals.append(two_sided(entry[metric]["interaction"]["test"]["wilcoxon_p"]))
+    for (suffix, metric), q, raw in zip(entries, wp.bh_fdr(pvals), pvals, strict=True):
+        test = levels[suffix][metric]["interaction"]["test"]
+        test["two_sided_p"] = raw
+        test["bh_q"] = q
+    return levels
+
+
 def censoring_rates(report: dict[str, Any]) -> dict[str, float]:
     """Per-arm crossing rate, through the instrument's own function rather than reimplemented."""
     return {arm: wp.crossing_rate(report, arm) for arm in (eff._WILD, eff._REWIRED)}
@@ -454,6 +486,8 @@ def score(
                 "wiring_gap": wiring_gap(reports[suffix], metric),
             }
         levels[suffix] = entry
+
+    apply_family_correction(levels)
 
     # Kept beside the per-level choices as a summary of the whole surface's censoring, so a reader
     # can see at a glance whether any level drove the censored metric out.
