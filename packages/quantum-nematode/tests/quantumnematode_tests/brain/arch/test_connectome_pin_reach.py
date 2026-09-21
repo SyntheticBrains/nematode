@@ -37,6 +37,7 @@ from quantumnematode.brain.arch.connectome_ppo import (
     ConnectomePPOBrainConfig,
 )
 from quantumnematode.brain.arch.dtypes import DeviceType
+from quantumnematode.learning_rules.three_factor import ConnectomeThreeFactorRule
 from quantumnematode.utils.config_loader import load_simulation_config
 
 _REPO_ROOT = Path(__file__).resolve().parents[6]
@@ -102,7 +103,11 @@ class TestTheRulePinsReachTheReadingLearnerOnly:
     @pytest.mark.parametrize("rate", [0.0001, 0.01])
     def test_plasticity_rate_reaches_the_reading_learner(self, rate: float) -> None:
         arm = _brain(_READ_ARM, plasticity_rate=rate)
-        assert arm._rule.plasticity_rate == rate
+        rule = arm._rule
+        # The rule the reading learner actually runs, named rather than assumed: the reach claim is
+        # about this object, and a different rule here would make the assertion below vacuous.
+        assert isinstance(rule, ConnectomeThreeFactorRule)
+        assert rule.plasticity_rate == rate
 
     def test_plasticity_rate_cannot_reach_a_ppo_arm(self) -> None:
         # The config accepts it, the bound passes, and the rule that runs has no such quantity.

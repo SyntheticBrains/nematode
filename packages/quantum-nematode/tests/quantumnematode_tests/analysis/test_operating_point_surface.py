@@ -49,7 +49,7 @@ def _config_path(stem: str) -> Path:
 
 
 def _brain_config(stem: str) -> dict[str, Any]:
-    """The brain's configuration block as the loader would see it, comments gone."""
+    """Read the brain's configuration block as the loader would see it, comments gone."""
     data = yaml.safe_load(_config_path(stem).read_text())
     return dict(data["brain"]["config"])
 
@@ -59,7 +59,7 @@ def _levels_with_arms() -> list[tuple[str, str, str, str, Any]]:
     return [
         (half, arm, suffix, pin, value)
         for half in ops.HALVES
-        for pin, suffix, value in ops._levels(half)  # noqa: SLF001
+        for pin, suffix, value in ops._levels(half)
         for arm in ops.arms_at(half, suffix)
     ]
 
@@ -88,7 +88,7 @@ class TestThePanelIsWhatItClaims:
 
     def test_a_construction_level_carries_four_arms_and_a_learning_one_carries_two(self) -> None:
         for half in ops.HALVES:
-            for pin, suffix, _ in ops._levels(half):  # noqa: SLF001
+            for pin, suffix, _ in ops._levels(half):
                 expected = 4 if pin in ops.CONSTRUCTION_PINS else 2
                 assert len(ops.arms_at(half, suffix)) == expected, (half, suffix, pin)
 
@@ -127,8 +127,8 @@ class TestEveryArmIsOneKeyFromItsCentre:
         half: str,
         arm: str,
         suffix: str,
-        pin: str,  # noqa: ARG002
-        value: Any,  # noqa: ARG002
+        pin: str,
+        value: Any,
     ) -> None:
         if not arm.startswith("rn_"):
             pytest.skip("wild-type arm")
@@ -179,7 +179,7 @@ class TestTheGateKnowsWhatACompletePanelIs:
         return path
 
     def _complete_rows(self, half: str, seeds: tuple[int, ...]) -> list[tuple[str, str, int]]:
-        suffixes = [ops.CENTRE, *(s for _, s, _ in ops._levels(half))]  # noqa: SLF001
+        suffixes = [ops.CENTRE, *(s for _, s, _ in ops._levels(half))]
         return [
             (arm, suffix, seed)
             for suffix in suffixes
@@ -204,7 +204,7 @@ class TestTheGateKnowsWhatACompletePanelIs:
     def test_the_gate_does_not_demand_a_floor_a_learning_only_level_never_had(self) -> None:
         # The failure this guards: a uniform four-arm gate would refuse a correct reading panel,
         # because `plasticity_rate` and `trace_decay` cannot move a frozen arm and so have none.
-        rate_level = next(s for p, s, _ in ops._levels("reading") if p == "plasticity_rate")  # noqa: SLF001
+        rate_level = next(s for p, s, _ in ops._levels("reading") if p == "plasticity_rate")
         assert set(ops.arms_at("reading", rate_level)) == set(ops.LEARNING_ARMS)
 
 
@@ -223,13 +223,13 @@ class TestTheInstrumentIsUntouched:
         # The PPO half hands `wiring_premise` the arm names its own map is keyed on; the reading
         # half hands the efficiency module its labels. Relabelling one learner's arms as the
         # other's to reach a function is the mislabel this pairing exists to prevent.
-        assert set(ops._WP_ARM.values()) >= set(ops.wp.EFFICIENCY_ARMS)  # noqa: SLF001
-        assert set(ops._EFF_ARM.values()) == {ops.eff._WILD, ops.eff._REWIRED}  # noqa: SLF001
+        assert set(ops._WP_ARM.values()) >= set(ops.wp.EFFICIENCY_ARMS)
+        assert set(ops._EFF_ARM.values()) == {ops.eff._WILD, ops.eff._REWIRED}
 
     def test_the_driver_reuses_the_harness_constants(self) -> None:
         # Orientation and censoring come from the instrument, never from a second copy here.
-        assert ops.eff._METRICS[ops.CENSORED_METRIC] is False  # noqa: SLF001
-        assert ops.eff._METRICS[ops.UNCENSORED_METRIC] is True  # noqa: SLF001
+        assert ops.eff._METRICS[ops.CENSORED_METRIC] is False
+        assert ops.eff._METRICS[ops.UNCENSORED_METRIC] is True
 
 
 class TestTheCensoringRuleIsFixedInAdvance:
@@ -246,3 +246,23 @@ class TestTheCensoringRuleIsFixedInAdvance:
         assert choice["primary_metric"] == ops.UNCENSORED_METRIC
         assert choice["reported_beside"] == ops.CENSORED_METRIC
         assert choice["censoring_comparable"] is False
+
+    def test_the_choice_is_scoped_to_one_contrast_rather_than_the_whole_surface(self) -> None:
+        # The cells an interaction spans are the centre and that level. Pooling the comparison
+        # across every level would let one badly-censored level void the censored metric where it
+        # is perfectly interpretable — the pilot found exactly that at `forward_pass_depth: 2`,
+        # where the wild type never crosses the threshold and the rewired null always does.
+        rates = {
+            "centre": {"a": 1.0, "b": 1.0},
+            "d2": {"a": 0.0, "b": 1.0},
+            "d6": {"a": 1.0, "b": 1.0},
+        }
+        pooled = ops.choose_metric(rates)
+        assert pooled["primary_metric"] == ops.UNCENSORED_METRIC
+
+        per_level = {
+            level: ops.choose_metric({"centre": rates["centre"], level: rates[level]})
+            for level in ("d2", "d6")
+        }
+        assert per_level["d2"]["primary_metric"] == ops.UNCENSORED_METRIC
+        assert per_level["d6"]["primary_metric"] == ops.CENSORED_METRIC

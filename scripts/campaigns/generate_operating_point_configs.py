@@ -32,6 +32,11 @@ from typing import Any
 
 import yaml
 
+# A pin's value is one of exactly three shapes across the whole panel: a readout-width literal, an
+# integer depth, or a float rate/decay/log-std. Naming that keeps the generator's signatures honest
+# rather than reaching for `Any`.
+PinValue = str | int | float
+
 _ANALYSIS = Path(__file__).resolve().parents[1] / "analysis"
 if str(_ANALYSIS) not in sys.path:
     sys.path.insert(0, str(_ANALYSIS))
@@ -55,7 +60,7 @@ _PIN_NOTE = {
 }
 
 
-def _guard(pin: str, value: Any, config: dict[str, Any]) -> None:
+def _guard(pin: str, value: PinValue, config: dict[str, Any]) -> None:
     """Refuse a level the brain or the loader would refuse, at the point it is written.
 
     Each of these is a real rejection in the codebase rather than a defensive flourish, and two of
@@ -77,7 +82,7 @@ def _guard(pin: str, value: Any, config: dict[str, Any]) -> None:
         raise ValueError(msg)
 
 
-def header(half: str, arm: str, pin: str, value: Any, parent: str) -> str:
+def header(half: str, arm: str, pin: str, value: PinValue, parent: str) -> str:
     """Write the house-convention header: what this arm is, and the single key that makes it so."""
     return (
         f"# Operating-point surface arm ({_HALF_LABEL[half]} half, {arm}) — "
@@ -99,7 +104,7 @@ def header(half: str, arm: str, pin: str, value: Any, parent: str) -> str:
     )
 
 
-def derive(half: str, arm: str, suffix: str, pin: str, value: Any) -> tuple[Path, str]:
+def derive(half: str, arm: str, suffix: str, pin: str, value: PinValue) -> tuple[Path, str]:
     """Build one config's path and text: the parent, plus that one key under ``brain.config``."""
     parent_stem = ops.CENTRE_STEMS[half][arm]
     parent = CONFIG_DIR / f"{parent_stem}.yml"
@@ -108,14 +113,17 @@ def derive(half: str, arm: str, suffix: str, pin: str, value: Any) -> tuple[Path
     _guard(pin, value, brain_config)
     brain_config[pin] = value
     target = CONFIG_DIR / f"{ops.stem_for(half, arm, suffix)}.yml"
-    return target, header(half, arm, pin, value, parent_stem) + yaml.safe_dump(data, sort_keys=False)
+    return target, header(half, arm, pin, value, parent_stem) + yaml.safe_dump(
+        data,
+        sort_keys=False,
+    )
 
 
 def plan() -> list[tuple[Path, str, bool]]:
     """Every file the panel needs, as ``(path, text, already_committed)`` in panel order."""
     out: list[tuple[Path, str, bool]] = []
     for half in ops.HALVES:
-        for pin, suffix, value in ops._levels(half):  # noqa: SLF001
+        for pin, suffix, value in ops._levels(half):
             for arm in ops.arms_at(half, suffix):
                 target, text = derive(half, arm, suffix, pin, value)
                 out.append((target, text, target.exists()))

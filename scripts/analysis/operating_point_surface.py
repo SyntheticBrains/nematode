@@ -62,6 +62,14 @@ import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImport
 # took 105-108 for its pilot and 129-160 for its panel. 109-128 and 161+ are untouched.
 BURNT_SEEDS = frozenset(range(1, 97)) | frozenset(range(101, 109)) | frozenset(range(129, 161))
 PILOT_SEEDS = tuple(range(109, 113))
+# The pilot is a SUBSET of levels by design -- it confirms the arms run, the gates fire and the cost
+# estimate holds, and four seeds cannot estimate a spread whatever it covers. So it takes the centre
+# plus the levels most likely to break: both extremes of a pin never varied on this substrate, and
+# the readout width at which no committed PPO arm exists at all.
+PILOT_LEVELS: dict[str, tuple[str, ...]] = {
+    "ppo": ("centre", "d2", "d6", "wide"),
+    "reading": ("centre", "d2", "d6", "td05"),
+}
 SEEDS_BY_HALF: dict[str, tuple[int, ...]] = {
     "ppo": tuple(range(161, 177)),
     "reading": tuple(range(177, 193)),
@@ -239,20 +247,29 @@ def build_manifest(campaign_dir: Path, path: Path, half: str, seeds: tuple[int, 
     return path
 
 
-def require_complete(manifest: Path, half: str, seeds: tuple[int, ...]) -> None:
+def require_complete(
+    manifest: Path,
+    half: str,
+    seeds: tuple[int, ...],
+    only_levels: tuple[str, ...] | None = None,
+) -> None:
     """Refuse a partial panel.
 
     The instruments only WARN on a gap, and a surface whose consequence is which pins earn a full
     crossing must not be read off whatever finished. The gate is per level, and it knows that a
     learning-only level carries two arms rather than four: demanding four everywhere would refuse a
     correct panel as loudly as it refuses a broken one.
+
+    ``only_levels`` names what the campaign was meant to cover, so a pilot -- a subset of levels by
+    design -- is not refused for being what it is. It defaults to the whole half.
     """
     have: dict[tuple[str, str], set[int]] = {}
     for raw in manifest.read_text().splitlines():
         arm, suffix, seed, _ = raw.split()
         have.setdefault((arm, suffix), set()).add(int(seed))
     missing: list[str] = []
-    for suffix in (CENTRE, *(s for _, s, _ in _levels(half))):
+    wanted = only_levels if only_levels is not None else (CENTRE, *(s for _, s, _ in _levels(half)))
+    for suffix in wanted:
         for arm in arms_at(half, suffix):
             gap = set(seeds) - have.get((arm, suffix), set())
             if gap:
@@ -396,37 +413,54 @@ def score(
     half: str,
     out_dir: Path,
     seeds: tuple[int, ...] | None = None,
+    only_levels: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Read one half's surface: every level's wiring gap, and its interaction with the centre."""
     seeds = seeds if seeds is not None else SEEDS_BY_HALF[half]
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest = build_manifest(campaign_dir, out_dir / f"manifest-{half}.txt", half, seeds)
-    require_complete(manifest, half, seeds)
+    require_complete(manifest, half, seeds, only_levels)
 
-    suffixes = [CENTRE, *(s for _, s, _ in _levels(half))]
+    suffixes = (
+        list(only_levels)
+        if only_levels is not None
+        else [CENTRE, *(s for _, s, _ in _levels(half))]
+    )
     reports = {
         suffix: score_level(manifest, half, suffix, out_dir / f"tmp-{half}-{suffix}")
         for suffix in suffixes
     }
     rates = {suffix: censoring_rates(report) for suffix, report in reports.items()}
-    metric_choice = choose_metric(rates)
 
     levels: dict[str, Any] = {}
     for pin, suffix, value in _levels(half):
+        if suffix not in suffixes:
+            continue
+        # The metric choice is PER LEVEL, because the cells an interaction spans are the centre and
+        # that level -- not the whole surface. Pooling the comparison would let one level whose arms
+        # censor differently void the censored metric everywhere, including at levels where it is
+        # perfectly interpretable, and the requirement's scope is the contrast rather than the
+        # campaign.
+        choice = choose_metric({CENTRE: rates[CENTRE], suffix: rates[suffix]})
         entry: dict[str, Any] = {
             "pin": pin,
             "value": value,
             "carries_own_floor": pin in CONSTRUCTION_PINS,
+            "metric_choice": choice,
         }
-        for metric in (metric_choice["primary_metric"], metric_choice["reported_beside"]):
+        for metric in (choice["primary_metric"], choice["reported_beside"]):
             entry[metric] = {
                 "interaction": interaction(reports[CENTRE], reports[suffix], metric),
                 "wiring_gap": wiring_gap(reports[suffix], metric),
             }
         levels[suffix] = entry
 
+    # Kept beside the per-level choices as a summary of the whole surface's censoring, so a reader
+    # can see at a glance whether any level drove the censored metric out.
+    metric_choice = choose_metric(rates)
+
     centre: dict[str, Any] = {}
-    for metric in (metric_choice["primary_metric"], metric_choice["reported_beside"]):
+    for metric in (CENSORED_METRIC, UNCENSORED_METRIC):
         centre[metric] = {"wiring_gap": wiring_gap(reports[CENTRE], metric)}
 
     return {
@@ -442,7 +476,7 @@ def score(
 
 def write_csv(result: dict[str, Any], path: Path) -> Path:
     """One row per (level, metric, seed): the per-seed unit both tests consume."""
-    primary = result["metric_choice"]["primary_metric"]
+    # The primary is per level now, so the CSV says which metric carried each row's contrast.
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
         # csv defaults to CRLF, which would make every regeneration read as a whole-file diff.
@@ -472,7 +506,7 @@ def write_csv(result: dict[str, Any], path: Path) -> Path:
                             suffix,
                             entry["pin"],
                             metric,
-                            metric == primary,
+                            metric == entry["metric_choice"]["primary_metric"],
                             seed,
                             f"{gaps[seed]:.6f}",
                             f"{inter.get(seed, float('nan')):.6f}",
@@ -500,7 +534,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     seeds = PILOT_SEEDS if args.pilot else SEEDS_BY_HALF[args.half]
-    result = score(args.campaign, args.half, args.out_dir, seeds)
+    only_levels = PILOT_LEVELS[args.half] if args.pilot else None
+    result = score(args.campaign, args.half, args.out_dir, seeds, only_levels)
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
