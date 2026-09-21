@@ -59,10 +59,26 @@ blocked by an honestly-unexercised item.
 **Execution order**: A.0 → **A.4** → A.1 → A.2, with A.3 and A.5 opportunistic. The list below
 keeps the roadmap's numbering; A.4 runs first because it lands before the first 8a registration.
 
-- [ ] **A.0 Artefact-retention rule** (registered at phase start, per design.md B.13): which
-  per-campaign artefacts are committed under `supporting/` (parsed per-seed CSVs) and which are
-  archived off-repo; recorded once here and cited by every campaign below.
-- [ ] **A.1 The init-vs-rewiring control** (D15; own change): both definitions of shared
+- [x] **A.0 Artefact-retention rule** — **registered 2026-09-20**, before the phase's first
+  campaign, per design.md B.13. Logbook 069 records what the absence of this rule cost: the
+  step-level exports for every campaign before the readout-width era are **gone**, and during L.1b a
+  metric could not be compared against L.0's run because that run's export had been deleted, which
+  was recorded as uncompared rather than counted as matching. The rule, cited by every campaign
+  below:
+  - **Committed to git**, under `docs/experiments/logbooks/supporting/<logbook>/`: the **parsed
+    per-seed CSV** carrying every field the analysis reads, the analysis JSON the logbook's figures
+    are derived from, and the launch record. A headline figure that cannot be re-derived from these
+    alone does not ship.
+  - **Archived off-repo**: raw campaign logs and step-level exports. They are the maintainer's
+    private archive, not a public artefact, and form no part of the reproducibility surface —
+    stated plainly rather than implied, as Logbook 069 states it.
+  - **Deleted deliberately, never incidentally**: a campaign directory is removed only after its
+    per-seed CSV is committed. Where a field cannot be compared because its source is gone, it is
+    named as **uncompared** rather than counted as matching — the parsed-field identity rule's own
+    wording.
+  - **Registered before the campaign**, not after: a campaign that starts without its retention
+    line recorded is blocked, per the `phase8-tracking` requirement.
+- [x] **A.1 The init-vs-rewiring control** — **done 2026-09-21** ([Logbook 070](../../../docs/experiments/logbooks/070-init-sharing-control.md), 768/768 runs, 32 paired seeds): **no dissolution detected on any arm**, survival **established** on five of eight readings, three **unresolved at the panel's sensitivity and not evidence of survival**. The **pairing half** of block V's standing condition is **partially** discharged; the across-seed half is registered as a follow-up. *(Two corrections are recorded in the logbook rather than quietly applied: the `dense_mask` arms shared a generator with PPO's minibatch sampler and were **re-run** — the other sixteen arms were shown unaffected and their reuse licensed by a field-by-field identity check — and the first write-up's tally was an **over-count by one**, four survivals rather than five. The re-run independently moves the true count to five, so the figure cited elsewhere is right but was not right when written.)* Second finding, ranked above the first in the record: block V's **magnitude is not stable across seed sets** — thermal replicated in direction at **35%** of its committed size against hard350's 105% — so with power registered against V.4's magnitude the thermal cell was underpowered against its own observed effect even at 32 seeds. Original scope: (D15; own change): both definitions of shared
   initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
   byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,
   `rewire_seed` fixed per pair, through the committed block-V harnesses. Registered outcome: the
@@ -238,9 +254,31 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.1 Placed plasticity** on the klinotaxis circuit, on the B.1 substrate, against a
   degree-stratified random subset of the same size, with the three confounds specified.
+
 - [ ] **M.2 Wild-type-vs-wild-type control**: Cook 2019 against Witvliet dataset 8 (adult,
   nerve-ring scope, already vendored).
+
 - [ ] **M.3 Swimming/crawling gait transition** as a body validation target (with C.2).
+
+- [ ] **M.5 The across-seed half of block V's standing condition** *(added 2026-09-21 after A.1)*.
+  A.1 discharged the **within-seed** half — the two wirings putting the same drawn values on
+  different edges. The other half is untouched: with `rewire_seed` unset, a null's graph **and** its
+  weights both derive from the run seed, so the null arm carries graph-variance the wild-type arm
+  does not, and no panel has separated them.
+  **The obvious design is wrong.** Pinning `rewire_seed` to a single constant holds the graph fixed
+  but makes the result about **one** rewiring, which reintroduces the shared-nulls caveat
+  [V.4](../../../docs/experiments/logbooks/065-wiring-fresh-rewiring.md) closed by moving to fresh
+  rewirings. The right shape is a **variance-components design** — several pinned graphs, several
+  weight seeds within each — which separates graph variance from weight variance instead of trading
+  one confound for the other.
+  **A.1 made this more interesting, not less.** Its second finding is that block V's magnitude moves
+  substantially across seed sets (thermal at 35% of its committed size against hard350's 105%), and
+  one candidate explanation is that some rewirings are simply easier to beat than others. That is
+  exactly the quantity this design would measure.
+  MAY, not SHOULD: A.1 already answered the half that addresses the published critique, so this is
+  about understanding the effect's stability rather than defending it, and Phase 8's committed scope
+  is the substrate and body ladder.
+
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 
 ### Phase 8 synthesis
