@@ -145,12 +145,37 @@ between the halves is reported as a split.
 1. **No level moves the sign.** The committed operating point is not special, every later rung cites
    this surface, and no full crossing runs. Reported with the panel's sensitivity, because an
    underpowered null is not a clean null.
+
 2. **A level moves the sign.** That pin earns a **full crossing**, registered separately (below),
    and thermal runs at that level as a confirmation.
+
 3. **A level moves the sign on the PPO half.** Additionally, **A.1 is re-read at that point** — a
    registered outcome, not a surprise, per the tracker's operating-point requirement. Block V's
    verdict stands as read at its own setting and the condition is added as a dated note at every
    site that cites block V or Logbook 070, in the same sentence as the claim.
+
+   **Amended 2026-09-21, after the pilot and before the panel read out**, because the clause is
+   ambiguous in the case the pilot says is likely, and resolving it afterwards would be a choice
+   made with the answer in hand.
+
+   The tracker says A.1 is re-read "at the new point". That wording presumes A.2 **relocates** the
+   operating point. But this change's Decision F says A.2 declares no winner and may not ablate
+   against the point it establishes, so where the sign moves only at an extreme of a pin, there is
+   no new point — nobody proposes running a later rung at `forward_pass_depth: 2`. The two rules
+   are consistent only under a distinction, and it is drawn here rather than later:
+
+   - **The re-read is owed** when the surface shows the committed point is **unrepresentative of
+     the region a later rung would plausibly run at** — the sign moves at or adjacent to the
+     committed setting, or across enough of the region that the committed point is a special case.
+   - **The re-read is not owed** when the sign moves only at an extreme that no rung would adopt,
+     while the committed point sits on a plateau. That outcome **bounds** block V rather than
+     conditioning it, and the bound is recorded as a standing condition at the citation sites
+     without re-running A.1.
+
+   Either way the surface is reported in full and the bound is stated in the same sentence as the
+   claim. What this amendment fixes is only whether 768 runs of A.1 are re-spent, and the answer
+   now depends on where the sign moves rather than on how the result reads when it arrives.
+
 4. **A level fails its learning gate.** Reported as a gate failure, which is itself a sensitivity
    result about that setting, and not worked around.
 
