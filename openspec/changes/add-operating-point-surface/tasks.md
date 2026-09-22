@@ -110,7 +110,7 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   level with its sensitivity, the wiring gap's sign, and every gate. A level whose gate fails is
   reported as a gate failure, which is itself a sensitivity result, not worked around.
 
-- [ ] 11. **The A.1 branch** — if the PPO half moves the sign at any level, register the A.1 re-read
+- [x] 11. **The A.1 branch** — **done: owed by the dated amendment, since the sign moved at depth 3, adjacent to the committed 4. Run at depth 6 — the only other depth with an effect to dissolve — on 32 seeds after 16 proved under-powered by A.1's own arithmetic. Consistent with A.1: no dissolution, two of four readings surviving. The 16-seed reading of -76% on dense_mask regressed to -18% at 32. Conditions added at every block-V citation site.** Original scope: — if the PPO half moves the sign at any level, register the A.1 re-read
   at that point as the registered outcome it is, and add the condition as a dated note at every site
   that cites block V or Logbook 070. If it does not, record that plainly with the panel's sensitivity
   beside it.
@@ -133,12 +133,12 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   reported as two different quantities across the halves, not pooled: under PPO it is a trained
   parameter's start point, under the rule it is fixed exploration noise for the whole run.
 
-- [ ] 14. **Logbook 071** — `docs/experiments/logbooks/071-operating-point-surface.md` plus its
+- [x] 14. **Logbook 071** — **done: logbook, index row, roadmap A.2 exit criterion and shipment row, all under the A.0 retention rule.** Original scope: — `docs/experiments/logbooks/071-operating-point-surface.md` plus its
   `supporting/` directory, the index row in `docs/experiments/README.md`, and the roadmap's A.2
   status rows and exit-criterion checkbox. The surface is reported as a surface: A.2 declares no
   winner, and which point a later rung runs at is that rung's calibration decision citing this one.
 
-- [ ] 15. **Tracker** — tick A.2 in `openspec/changes/phase8-tracking/tasks.md` with its shipment
+- [x] 15. **Tracker** — **done: A.2 ticked with the dated MLP-scope correction beside it, and the three deferred destinations are at B.1c, A.3 and M.6 with roadmap counterparts.** Original scope: — tick A.2 in `openspec/changes/phase8-tracking/tasks.md` with its shipment
   status, and record the dated correction to the "shared by both learners" wording: the three pins
   are shared across the learners of `ConnectomePPOBrain`, but `readout_width` and
   `forward_pass_depth` are not declared on `MLPPPOBrainConfig` and are dropped there with a warning
