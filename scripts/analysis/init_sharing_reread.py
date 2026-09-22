@@ -14,10 +14,17 @@ question with no content. Depth 6 is the one other setting where the effect exis
 
 **This is A.1's design, not a new one.** Same cell, same four arms, same two definitions of a shared
 initialisation, same interaction as the primary, same censoring rule, same committed instruments. The
-only thing that moves is `forward_pass_depth`, and the seeds are fresh at 193-208 so nothing is
-reused across campaigns. The statistics come from A.1's own module rather than being rewritten here,
-because a re-read that re-implements its own arithmetic cannot distinguish a changed reading from a
-changed world.
+only thing that moves is `forward_pass_depth`, and the seeds are fresh so nothing is reused across
+campaigns. The statistics come from A.1's own module rather than being rewritten here, because a
+re-read that re-implements its own arithmetic cannot distinguish a changed reading from a changed
+world.
+
+**32 seeds, and the first 16 were not enough by A.1's own arithmetic.** The panel was launched at
+193-208 and read out with a minimum detectable interaction of 2.00 and 1.72 times the baseline
+effect on the primary metric -- it could not have detected a total dissolution. A.1's launch record
+had already rejected exactly this, computing 1.25 and 1.14 at 16 seeds and moving to 32 for that
+reason. 209-224 were run into the same campaign directory under an unchanged execution path, so this
+is one 32-seed panel rather than two merged ones.
 """
 
 # pyright: reportPrivateUsage=false
@@ -36,8 +43,13 @@ if str(_HERE) not in sys.path:
 import init_sharing_control as isc  # noqa: E402  # pyright: ignore[reportMissingImports]
 import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImports]
 
+
+class RereadError(ValueError):
+    """The panel on disk is not the panel this re-read scores."""
+
+
 # Fresh: 1-96, 101-108, 129-160 were burnt before A.2, and A.2 took 161-176 and 177-192.
-SEEDS = tuple(range(193, 209))
+SEEDS = tuple(range(193, 225))
 CELL = "hard_food"
 DEPTH = 6
 
@@ -82,18 +94,18 @@ def build_manifest(campaign_dir: Path, path: Path, mode: str, seeds: tuple[int, 
         stem, sep, seed_part = log.stem.rpartition("-seed")
         if not sep:
             msg = f"{log.name} has no -seedN suffix"
-            raise isc.PanelError(msg)
+            raise RereadError(msg)
         entry = ARM_BY_STEM.get(stem)
         if entry is None:
             msg = f"{log.name} names config {stem!r}, which this re-read does not have"
-            raise isc.PanelError(msg)
+            raise RereadError(msg)
         arm, log_mode = entry
         seed = int(seed_part)
         if log_mode != mode or seed not in seeds:
             continue
         if (arm, seed) in seen:
             msg = f"{(arm, seed)} appears twice in {campaign_dir}"
-            raise isc.PanelError(msg)
+            raise RereadError(msg)
         seen.add((arm, seed))
         resolved = log.resolve()
         try:
@@ -118,7 +130,7 @@ def require_complete(manifest: Path, mode: str, seeds: tuple[int, ...]) -> None:
     ]
     if missing:
         msg = f"{mode} panel is incomplete — " + "; ".join(missing)
-        raise isc.PanelError(msg)
+        raise RereadError(msg)
 
 
 def score(campaign_dir: Path, out_dir: Path, seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
@@ -133,7 +145,7 @@ def score(campaign_dir: Path, out_dir: Path, seeds: tuple[int, ...] = SEEDS) -> 
         report = wp.efficiency_contrast(manifest, CELL, tmp)
         if report is None:
             msg = f"{mode} produced no paired contrast"
-            raise isc.PanelError(msg)
+            raise RereadError(msg)
         reports[mode] = report
 
     rates = {mode: isc.censoring_rates(report) for mode, report in reports.items()}
