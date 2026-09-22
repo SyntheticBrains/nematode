@@ -37,7 +37,11 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrain, ConnectomePPOBrainConfig
+from quantumnematode.brain.arch.connectome_ppo import (
+    ConnectomePPOBrain,
+    ConnectomePPOBrainConfig,
+    ConnectomeTopology,
+)
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.utils.config_loader import load_simulation_config
 
@@ -52,11 +56,12 @@ ARM = (
 UNREACHED = -1
 
 
-def _topology(wiring: str, seed: int) -> Any:
+def _topology(wiring: str, seed: int) -> ConnectomeTopology:
     """Construct one arm and hand back its topology, so the graph measured is the graph run."""
     brain_config = load_simulation_config(str(ARM)).brain
-    assert brain_config is not None
-    assert isinstance(brain_config.config, ConnectomePPOBrainConfig)
+    if brain_config is None or not isinstance(brain_config.config, ConnectomePPOBrainConfig):
+        msg = f"{ARM.name} does not carry a connectome brain config"
+        raise TypeError(msg)
     update: dict[str, Any] = {"seed": seed}
     if wiring != "wild_type":
         update["wiring"] = "rewired_degree_preserving"
@@ -67,7 +72,7 @@ def _topology(wiring: str, seed: int) -> Any:
     ).topology
 
 
-def hop_distances(topology: Any) -> dict[int, int]:
+def hop_distances(topology: ConnectomeTopology) -> dict[int, int]:
     """Breadth-first hops from the food sensors to every neuron, over the propagating graph.
 
     Chemical synapses are directed pre to post; gap junctions conduct both ways. Both carry signal
@@ -78,7 +83,7 @@ def hop_distances(topology: Any) -> dict[int, int]:
     gap = (topology.g_gap != 0).bool()
     adjacency = mask | gap | gap.T
 
-    sources = topology._food_neuron_indices.tolist()  # noqa: SLF001
+    sources = topology._food_neuron_indices.tolist()
     distance = dict.fromkeys(sources, 0)
     queue = deque(sources)
     while queue:
@@ -90,10 +95,10 @@ def hop_distances(topology: Any) -> dict[int, int]:
     return distance
 
 
-def motor_reach(topology: Any) -> dict[str, Any]:
+def motor_reach(topology: ConnectomeTopology) -> dict[str, Any]:
     """Hops to each motor neuron, and how many are inside each candidate settling budget."""
     distance = hop_distances(topology)
-    motors = topology._motor_flat_indices.tolist()  # noqa: SLF001
+    motors = topology._motor_flat_indices.tolist()
     hops = [distance.get(m, UNREACHED) for m in motors]
     reached = [h for h in hops if h != UNREACHED]
     return {
@@ -129,7 +134,9 @@ def _print(result: dict[str, Any]) -> None:
     wild = result["wild_type"]
     nulls = result["rewired_nulls"]
     print(f"food sensors -> {wild['n_motor']} motor neurons, over chemical + gap-junction edges\n")
-    print(f"  wild type      min {wild['min_hops']}  median {wild['median_hops']}  max {wild['max_hops']}")
+    print(
+        f"  wild type      min {wild['min_hops']}  median {wild['median_hops']}  max {wild['max_hops']}",
+    )
     med = st.mean([n["median_hops"] for n in nulls])
     print(
         f"  rewired nulls  min {st.mean([n['min_hops'] for n in nulls]):.2f}  "
