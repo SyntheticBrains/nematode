@@ -507,6 +507,78 @@ def choose_metric(rates_by_level: dict[str, dict[str, float]]) -> dict[str, Any]
     }
 
 
+# ── Frozen-substrate drift (the reading half's obligation) ───────────────────────────────────
+# The reading learner leaves ``w_chem`` fixed, so the requirement governing a contrast under a
+# learner that does not write the wiring applies in full: the fixed tensors are compared against a
+# control in which nothing learned, ON EVERY SCORED SEED, and any non-zero drift -- or evidence
+# missing for any seed -- returns VOID rather than "it held".
+#
+# Evidence is ``<exports_path>/weights/final.pt``, which the runner auto-saves unconditionally; what
+# it needs is ``--track-experiment``, without which no export path is recorded and this reads nothing
+# for every run. The comparator at a learning-only level is the CENTRE's frozen arm, which is correct
+# rather than convenient: ``w_chem`` at a given seed is the same draw whatever the rate or the decay
+# says, and the learning arm never writes it.
+_DRIFT_TOLERANCE = 1e-6
+
+
+def substrate_drift(
+    manifest: Path,
+    half: str,
+    seeds: tuple[int, ...],
+    only_levels: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    """Compare each learning arm's chemical matrix against its frozen floor, seed by seed."""
+    import l4_reduced_perturbation as rp  # pyright: ignore[reportMissingImports]
+
+    rows: dict[tuple[str, str], dict[int, Path]] = {}
+    for raw in manifest.read_text().splitlines():
+        arm, suffix, seed, out = raw.split()
+        rows.setdefault((arm, suffix), {})[int(seed)] = wp.REPO / out
+
+    wanted = only_levels if only_levels is not None else (CENTRE, *(s for _, s, _ in _levels(half)))
+    per_level: dict[str, Any] = {}
+    for suffix in wanted:
+        # A construction level has its own floor; a learning-only level uses the centre's, which
+        # is the same draw at that seed because neither rule pin can reach a frozen arm.
+        floor_level = suffix if len(arms_at(half, suffix)) == 4 else CENTRE
+        entry: dict[str, Any] = {"floor_level": floor_level}
+        for wiring in ("wt", "rn"):
+            values: list[float] = []
+            unread: list[int] = []
+            for seed in seeds:
+                learning = rows.get((f"{wiring}_learn", suffix), {}).get(seed)
+                frozen = rows.get((f"{wiring}_frozen", floor_level), {}).get(seed)
+                a = rp._chemical_weights(learning) if learning else None
+                b = rp._chemical_weights(frozen) if frozen else None
+                if a is None or b is None or a.shape != b.shape:
+                    unread.append(seed)
+                    continue
+                base = b.float().norm()
+                values.append(float((a - b).float().norm() / (base or 1.0)))
+            entry[wiring] = {
+                "mean_relative": sum(values) / len(values) if values else float("nan"),
+                "max_relative": max(values) if values else float("nan"),
+                "n_read": len(values),
+                # Complete evidence, not merely available evidence: with some checkpoints missing,
+                # a mean over whatever happened to be on disk would report the substrate frozen on
+                # the strength of the runs that survived.
+                "seeds_unread": unread,
+            }
+        complete = all(not entry[w]["seeds_unread"] for w in ("wt", "rn"))
+        frozen_ok = complete and all(
+            entry[w]["max_relative"] < _DRIFT_TOLERANCE for w in ("wt", "rn")
+        )
+        entry["evidence_complete"] = complete
+        entry["substrate_frozen"] = bool(frozen_ok)
+        per_level[suffix] = entry
+
+    return {
+        "tolerance": _DRIFT_TOLERANCE,
+        "levels": per_level,
+        "void": not all(e["substrate_frozen"] for e in per_level.values()),
+    }
+
+
 def score(
     campaign_dir: Path,
     half: str,
@@ -659,75 +731,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-# ── Frozen-substrate drift (the reading half's obligation) ───────────────────────────────────
-# The reading learner leaves ``w_chem`` fixed, so the requirement governing a contrast under a
-# learner that does not write the wiring applies in full: the fixed tensors are compared against a
-# control in which nothing learned, ON EVERY SCORED SEED, and any non-zero drift -- or evidence
-# missing for any seed -- returns VOID rather than "it held".
-#
-# Evidence is ``<exports_path>/weights/final.pt``, which the runner auto-saves unconditionally; what
-# it needs is ``--track-experiment``, without which no export path is recorded and this reads nothing
-# for every run. The comparator at a learning-only level is the CENTRE's frozen arm, which is correct
-# rather than convenient: ``w_chem`` at a given seed is the same draw whatever the rate or the decay
-# says, and the learning arm never writes it.
-_DRIFT_TOLERANCE = 1e-6
-
-
-def substrate_drift(
-    manifest: Path,
-    half: str,
-    seeds: tuple[int, ...],
-    only_levels: tuple[str, ...] | None = None,
-) -> dict[str, Any]:
-    """Compare each learning arm's chemical matrix against its frozen floor, seed by seed."""
-    import l4_reduced_perturbation as rp  # pyright: ignore[reportMissingImports]
-
-    rows: dict[tuple[str, str], dict[int, Path]] = {}
-    for raw in manifest.read_text().splitlines():
-        arm, suffix, seed, out = raw.split()
-        rows.setdefault((arm, suffix), {})[int(seed)] = wp.REPO / out
-
-    wanted = only_levels if only_levels is not None else (CENTRE, *(s for _, s, _ in _levels(half)))
-    per_level: dict[str, Any] = {}
-    for suffix in wanted:
-        # A construction level has its own floor; a learning-only level uses the centre's, which
-        # is the same draw at that seed because neither rule pin can reach a frozen arm.
-        floor_level = suffix if len(arms_at(half, suffix)) == 4 else CENTRE
-        entry: dict[str, Any] = {"floor_level": floor_level}
-        for wiring in ("wt", "rn"):
-            values: list[float] = []
-            unread: list[int] = []
-            for seed in seeds:
-                learning = rows.get((f"{wiring}_learn", suffix), {}).get(seed)
-                frozen = rows.get((f"{wiring}_frozen", floor_level), {}).get(seed)
-                a = rp._chemical_weights(learning) if learning else None
-                b = rp._chemical_weights(frozen) if frozen else None
-                if a is None or b is None or a.shape != b.shape:
-                    unread.append(seed)
-                    continue
-                base = b.float().norm()
-                values.append(float((a - b).float().norm() / (base or 1.0)))
-            entry[wiring] = {
-                "mean_relative": sum(values) / len(values) if values else float("nan"),
-                "max_relative": max(values) if values else float("nan"),
-                "n_read": len(values),
-                # Complete evidence, not merely available evidence: with some checkpoints missing,
-                # a mean over whatever happened to be on disk would report the substrate frozen on
-                # the strength of the runs that survived.
-                "seeds_unread": unread,
-            }
-        complete = all(not entry[w]["seeds_unread"] for w in ("wt", "rn"))
-        frozen_ok = complete and all(
-            entry[w]["max_relative"] < _DRIFT_TOLERANCE for w in ("wt", "rn")
-        )
-        entry["evidence_complete"] = complete
-        entry["substrate_frozen"] = bool(frozen_ok)
-        per_level[suffix] = entry
-
-    return {
-        "tolerance": _DRIFT_TOLERANCE,
-        "levels": per_level,
-        "void": not all(e["substrate_frozen"] for e in per_level.values()),
-    }

@@ -49,7 +49,10 @@ def survey(campaign: Path, total: int | None) -> dict[str, object]:
     # campaign's workers to this one, which is exactly what it did on first use.
     finished = sum(1 for log in logs.glob("*.log") if log.stat().st_size > 0)
     running = sum(1 for log in logs.glob("*.log") if log.stat().st_size == 0)
-    started = datetime.fromtimestamp(campaign.stat().st_birthtime, tz=UTC)
+    # st_birthtime is macOS-only; st_ctime is the portable stand-in, and for a directory the
+    # runner created and never moves it is the same instant in practice.
+    stat = campaign.stat()
+    started = datetime.fromtimestamp(getattr(stat, "st_birthtime", stat.st_ctime), tz=UTC)
     elapsed = datetime.now(tz=UTC) - started
     # A traceback in a run's log is the failure signature worth surfacing: the runner reports a
     # non-zero exit per run, but that line lives in its stdout, not here.
