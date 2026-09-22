@@ -193,7 +193,7 @@ may not ablate against the point it establishes.
 **Block V's claim, restated with its conditions.** Under gradient descent, at a settling depth of at
 least four hops, with a pooled motor readout, on hard350, the wild-type connectome reaches competence
 sooner than its degree-preserving rewired null, and survives a shared initialisation at depths 4 and
-6. Every clause is load-bearing.
+6\. Every clause is load-bearing.
 
 ## Registered consequences
 

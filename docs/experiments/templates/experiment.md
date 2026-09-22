@@ -1,65 +1,77 @@
-# \[EXPERIMENT_NUMBER\]: [Title]
+# NNN: [A Title That States the Finding, Not the Topic] ([Phase / milestone])
 
-**Status**: `active` | `completed` | `abandoned`
+<!--
+Model on logbooks 070 and 071 for a registered campaign, 069 for a phase synthesis.
+Every figure below must be re-derivable from the committed files listed under Artefacts.
+-->
 
-**Branch**: `feature/...`
+**Status**: `completed` | `active` | `abandoned` — **[the verdict in one clause]**. \[What is
+established, what is unresolved at the panel's sensitivity, and any condition that now attaches to
+an earlier result.\]
 
-**Date Started**: YYYY-MM-DD
+**Date**: YYYY-MM-DD. *\[If anything was re-run or corrected after first publication, say so here and
+point to the corrections section.\]*
 
-**Date Completed**: YYYY-MM-DD (if applicable)
+**OpenSpec change**: `change-name` ([capability it extends, and the requirement it adds, if any]).
+
+**Pre-registration**: [supporting/NNN-slug/launch.md](supporting/NNN-slug/launch.md),
+written before any panel seed ran. [Or: state plainly that none exists.]
 
 ## Objective
 
-What are we trying to achieve? What question are we answering?
-
-## Background
-
-Brief context. Link to previous experiments if this builds on them.
-
-## Hypothesis
-
-What do we expect to happen and why?
+What question this answers, and why it matters now — the decision, earlier result or published claim
+that makes it the next thing to run.
 
 ## Method
 
-### Configuration
-
-```yaml
-# Key config settings
-```
-
-### Code Changes
-
-- File: change description
+Design in brief; the launch record holds the full version. Name the factors, the cell, the arms,
+the seeds, the run count and the wall clock. State the **primary** as registered — an interaction
+where a manipulation is crossed with a structure contrast — and the metric rule, the minimum effect
+in both directions, and the family correction. Name the instruments and whether they ran unmodified.
 
 ## Results
 
-### Summary Table
+### [The registered gate]
 
-| Metric | Baseline | Result | Change |
-|--------|----------|--------|--------|
-| ... | ... | ... | ... |
+Whether the baseline reproduced what it had to before anything else is read.
 
-### Detailed Findings
+### [The primary]
 
-...
+| condition | effect | interval | p or q | reading |
+|---|---|---|---|---|
+| ... | ... | ... | ... | survival / unresolved / ... |
 
-## Analysis
+Read each row against the registered branches. A reading whose interval spans the bar is
+**unresolved at this panel's sensitivity**, not null — give the sensitivity beside it.
 
-What do the results tell us? Why did we see these outcomes?
+### [Anything reported beside the primary]
 
-## Conclusions
+## Corrections made in the open
 
-- Key finding 1
-- Key finding 2
+Every defect found, every mid-course change to the protocol, and what each did to the numbers.
+[Delete this section only if there were none, and say so.]
 
-## Next Steps
+## What this establishes, and what it does not
 
-- [ ] Follow-up experiment idea
-- [ ] Code improvement needed
+**Establishes.** ...
 
-## Data References
+**Leaves unresolved.** ...
 
-- Session IDs: `20251207_123456`, ...
-- Config files: `configs/scenarios/...`
-- Result files: `artifacts/experiments/[session_id]/...`
+**Does not establish.** ...
+
+## Registered consequences
+
+Each with one status: *met*, *unmet-with-reason*, *deferred-with-destination* (name it, in the
+tracker and the roadmap), *superseded-by-result*, or *unreachable-with-reason*.
+
+- ...
+
+## Artefacts
+
+Under [supporting/NNN-slug/](supporting/NNN-slug/):
+
+- `launch.md` — the registration.
+- `per-seed.csv` — [rows; the per-seed unit the primary test consumes].
+- `analysis.json` — [what the headline figures are derived from].
+
+Drivers: `scripts/analysis/...`. Raw campaign logs: archived off-repo.

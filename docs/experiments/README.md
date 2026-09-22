@@ -9,7 +9,7 @@ Human-written analysis of every experiment series: the objective, the pre-regist
 | Auto-tracking | `experiments/<id>/<id>.json` | No | Raw metadata from every `--track-experiment` run (config hash, git state, results) |
 | Evolution results | `evolution_results/` | No | All evolution run outputs |
 | Artifacts | `artifacts/` | Yes (Git LFS) | Curated outputs referenced by logbooks — see [artifacts/README.md](../../artifacts/README.md) |
-| Supporting data | `logbooks/supporting/<NNN>/` | Yes | Per-logbook appendices: a `<title>-details.md` write-up plus per-seed CSVs, analysis JSON, figures and the exact configs |
+| Supporting data | `logbooks/supporting/<NNN>-<slug>/` | Yes | What a logbook's figures are re-derived from: the pre-registration (`launch.md`), the per-seed CSV and the analysis JSON; optionally a `details.md` appendix and figures |
 | **Logbooks** (this) | `logbooks/` | Yes | Human analysis, insights, narrative |
 
 ### Workflow
@@ -22,12 +22,13 @@ Human-written analysis of every experiment series: the objective, the pre-regist
    └── uv run scripts/experiment_query.py list
    └── uv run scripts/experiment_query.py show <id>
 
-3. Preserve notable results
-   └── copy to artifacts/ (git-tracked, LFS) and/or logbooks/supporting/<NNN>/
+3. Preserve what the record rests on
+   └── commit launch.md, the per-seed CSV and the analysis JSON to logbooks/supporting/<NNN>-<slug>/
+   └── archive raw campaign logs off-repo; artifacts/ (LFS) is optional, for large or binary outputs
 
 4. Document findings
    └── write logbooks/NNN-name.md from templates/experiment.md
-   └── add the row to the index below
+   └── add the row to the index below, and update the roadmap, tracker and citation sites
 ```
 
 ## Logbook Index
@@ -147,9 +148,9 @@ contrast on this distinction.
 
 ## Creating a new logbook
 
-1. Copy [`templates/experiment.md`](templates/experiment.md) to `logbooks/NNN-descriptive-name.md` using the next sequential number.
+1. Copy [`templates/experiment.md`](templates/experiment.md) to `logbooks/NNN-descriptive-name.md` using the next sequential number. Model it on [070](logbooks/070-init-sharing-control.md) and [071](logbooks/071-operating-point-surface.md) rather than the early logbooks, which predate pre-registration and the retention rule.
 
-2. Put the appendix (`<title>-details.md`), per-seed data, analysis outputs and the exact configs under `logbooks/supporting/NNN/` (or `artifacts/` for large or binary outputs).
+2. Commit what the figures are re-derived from under `logbooks/supporting/NNN-slug/`: the pre-registration (`launch.md`, written before any panel seed ran), the per-seed CSV and the analysis JSON. A headline figure that cannot be re-derived from those alone does not ship. Raw campaign logs are archived off-repo; `artifacts/` (Git LFS) is available for large or binary outputs.
 
 3. Reference runs by session ID so they can be re-queried:
 
@@ -158,4 +159,4 @@ contrast on this distinction.
    - Query: `uv run scripts/experiment_query.py show 20251209_205950`
    ```
 
-4. Add the row to the index above and, if the result changes a roadmap status, update [`docs/roadmap.md`](../roadmap.md).
+4. Add the row to the index above and, if the result changes a roadmap status, update [`docs/roadmap.md`](../roadmap.md). A deferred consequence names its destination in both the roadmap and the phase tracker. Where the result conditions an earlier one, add a dated note in the same sentence as the earlier claim at every site that cites it.
