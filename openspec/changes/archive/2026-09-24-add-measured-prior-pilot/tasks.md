@@ -87,4 +87,4 @@ decisions taken before implementation are in this change's `design.md`.
     initial-noise settings from a surface measured under `edge_order`;
   - a dated note at roadmap D17 and § B.1;
   - the `docs/architectures.md` row and a CHANGELOG line for the pairing.
-- [ ] 14. **Close-out**: validate, archive and open the PR.
+- [x] 14. **done: validated strict and archived; every new relative link resolves; the PR is opened from this branch.** Original scope: **Close-out**: validate, archive and open the PR.
