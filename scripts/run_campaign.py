@@ -263,6 +263,12 @@ class CampaignExecutor:
                 with self._lock:
                     self._processes.discard(process)
         elapsed = time.perf_counter() - started
+        # A completion marker owned by the runner, written only after the child has exited. The
+        # log cannot say this: stderr is unbuffered, so a warning printed at load time makes a
+        # log non-empty while the run is still going, and anything reading log size as
+        # "finished" miscounts. The marker's name does not end in `.log`, so nothing that globs
+        # run logs picks it up.
+        log_path.with_suffix(".exit").write_text(f"{returncode}\n")
 
         with self._lock:
             self._completed += 1

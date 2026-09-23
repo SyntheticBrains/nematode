@@ -9,6 +9,7 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 ### Added
 
 - **Weekly literature watch** — a scheduled workflow that sweeps for new work bearing on this project and opens a digest issue. Three sources in descending order of precision: new work citing a curated seed set (OpenAlex), then the arXiv and bioRxiv windows. A cheap model scores every candidate against a hand-maintained brief and a capable model writes the entries, so a few hundred abstracts a week reduce to a handful worth reading. See [docs/research/literature-watch/](docs/research/literature-watch/README.md); it needs an `ANTHROPIC_API_KEY` repository secret to run.
+- **Campaign progress reader** — `scripts/campaigns/campaign_progress.py --campaign <dir> [--total N] [--watch]` reports a running campaign's finished, in-flight and pending runs with an ETA, reading the campaign directory rather than the runner's redirected stdout, so it works from any shell. To make that count reliable, `scripts/run_campaign.py` now writes a `<run>.exit` marker holding the return code beside each run's log once the child exits; log size alone miscounts a run that writes to stderr before it finishes.
 
 ## [0.6.0] - 2026-09-19
 

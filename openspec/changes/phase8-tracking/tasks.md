@@ -86,7 +86,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   (initialisation result); a shrunken effect is reported as shrunken, against a registered
   minimum in both directions. The learning-speed result is restated with its status wherever
   it is cited.
-- [ ] **A.2 The calibration-and-robustness surface** (D16 as amended 2026-09-20; own change).
+- [x] **A.2 The calibration-and-robustness surface** — **done 2026-09-23** ([Logbook 071](../../../docs/experiments/logbooks/071-operating-point-surface.md), `add-operating-point-surface`, 1,600 runs). **The committed point sits on an edge, not a plateau.** Under PPO the wiring advantage replicates at the centre (+536 episodes, 92% of A.1's) and is **depth-critical** — present at depths 4 and 6, abolished at 3, reversed at 2 with every arm learning — and robust to initial action noise. Under the reading learner the rewired null is ahead at the same point, reproducing 064/066, and only readout width moves it, by +0.268 against 066's +0.2818. A hop measurement accounts for depth: the wild type has no motor neuron one hop from a food sensor, a rewiring manufactures about nine. The A.1 re-read at depth 6 (32 seeds) is consistent with A.1. **One named gap**: readout width under PPO saturates on hard350 and is unresolved there (see B.1c). Follow-ups recorded at A.3 and M.6. *(**Correction 2026-09-23** to this item's wording below: the three pins are "shared by both learners" only across the learners of `ConnectomePPOBrain`. `readout_width` and `forward_pass_depth` are not declared on `MLPPPOBrainConfig`, and a YAML setting them under `mlpppo` is dropped with a warning rather than an error, so no later rung may read this surface onto an MLP arm.)* Original scope: (D16 as amended 2026-09-20; own change).
   **Two halves, because a pin swept on one learner is not swept for another.**
   *(a) The reading learner* — `readout_only`, the `PlasticTensors` literal in
   `brain/arch/_plasticity_config.py` that freezes the chemical matrix and leaves the readout
@@ -106,6 +106,15 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
   of time-to-competence. No training.
+  **A.2 handed this a concrete candidate** *(added 2026-09-23)*. Logbook 071's hop probe measured
+  sensory-to-motor distance over the graph the simulation propagates through and found the wild type
+  has **no** motor neuron one hop from a food sensor while a degree-preserving rewiring manufactures
+  about nine, so at a settling budget of 2 the wild type reaches 26 of 39 motor neurons and the null
+  reaches essentially all 39. That tracks the depth surface exactly. **It was computed after the
+  fact and registers nothing**, which is what A.3 is for: a statistic, a direction and a minimum
+  named before the correlation, per the structural-predictor requirement. Logbook 069 recorded that
+  no graph property measured there predicted learning time; this one predicts the operating point at
+  which the effect exists, which is a different and testable claim.
 - [x] **A.4 Methodology consolidation** (`consolidate-plasticity-methodology`, 2026-09-20): the
   **44** `plasticity-evaluation` requirements redistributed four ways — **7 stay** (the six the
   spec's own Purpose statement describes, plus the delayed-reward control, which describes live
@@ -141,6 +150,14 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   registered** (roadmap § Required deliverables 4, from Lee 2026): atlas grounding produced no
   functional sensory-to-command step in an atlas-fitted c302; if measured weights leave the
   klinotaxis pathway unlearnable here, the rung closes *unmet-with-reason* with the pathway named.
+  **Readout width is unresolved under PPO, and this arm cites A.2 for it** *(added 2026-09-23)*.
+  A.2's PPO half ran the `per_neuron` level, but both arms saturated — 96.5% and 97.7% plateau
+  full-clear against the instrument's 90% bar — so the wiring gap there reads +1.25 episodes with a
+  tight interval, which is two arms tied at the ceiling rather than a swept reading. The
+  operating-point requirement blocks a PPO contrast registered against a sweep that does not cover
+  its pins, so **B.1's PPO arm either runs at the pooled width and says so in the same sentence as
+  its claim, or buys the width reading on a cell that does not saturate first.** The reading half
+  has no such problem: it resolves width cleanly and finds it the one pin that moves that learner.
 
 ### B.2 — the dynamics rung (SHOULD)
 
@@ -259,6 +276,26 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   nerve-ring scope, already vendored).
 
 - [ ] **M.3 Swimming/crawling gait transition** as a body validation target (with C.2).
+
+- [ ] **M.6 The depth finding's two registered follow-ups** *(added 2026-09-23 after A.2)*.
+  A.2's PPO surface found the wiring effect **depth-critical**: replicated at depths 4 and 6,
+  abolished at 3, reversed at 2 with the rewired null reaching 62% full-clear against the wild
+  type's 10%. Every arm cleared its own frozen floor, so no level is a broken-arm artefact. Two
+  things were registered before that readout and are owed:
+
+  - **Thermal confirmation at depths 2 and 3** — branch 2 of
+    [071's launch record](../../../docs/experiments/logbooks/supporting/071-operating-point-surface/launch.md):
+    thermal runs at levels where hard350 shows the sign move. A.1 measured thermal's detectable
+    effect at 1.6-3.4x its observed one even at 32 seeds, so this confirms a direction rather than
+    resolving a magnitude, and it should be sized for that.
+  - **The full crossing for `forward_pass_depth`** — D16 gives a crossing to any pin that moves the
+    sign, and 071's launch record makes the crossing a second registration drawing its sensitivity
+    from the one-factor pass as prior committed data.
+    **The crossing's priority fell once the mechanism was measured.** 071's hop probe explains the
+    depth surface on its own — the wild type has no motor neuron one hop from a food sensor and a
+    rewiring manufactures about nine — so a depth-by-pin crossing is now less likely to be where the
+    answer is than A.3's registered predictor test. Recorded rather than dropped, because it was
+    registered before the readout and dropping it afterwards is the move the protocol forbids.
 
 - [ ] **M.5 The across-seed half of block V's standing condition** *(added 2026-09-21 after A.1)*.
   A.1 discharged the **within-seed** half — the two wirings putting the same drawn values on

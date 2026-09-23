@@ -7,6 +7,8 @@ pairing, on the scopes that resolved. A second finding is ranked above the
 first below — **the thermal cell's effect came in at a third of its committed size**, so block V's
 magnitude is less stable across seed sets than its direction.
 
+*(**Conditioned 2026-09-23**, [Logbook 071](071-operating-point-surface.md): A.2 found the wiring advantage this control protects is depth-critical — present at settling depths 4 and 6, abolished at 3, reversed at 2 — so this logbook's result holds at the committed depth of 4. Re-read at depth 6 on 32 fresh seeds, the control is consistent: no dissolution, two of four hard350 readings surviving, though that panel cannot rule out a total dissolution because the depth-6 effect is smaller. This record's verdict stands as read at its own setting.)*
+
 **Date**: 2026-09-21. *(The `dense_mask` arms were re-run the same day after review found a defect in them; see § The defect this panel shipped with, and the re-run. Every figure below is the corrected one.)*
 
 **OpenSpec change**: `add-init-sharing-control` (extends `architecture-comparison-protocol`: a claim

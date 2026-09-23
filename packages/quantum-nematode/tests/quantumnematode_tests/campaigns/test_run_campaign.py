@@ -479,6 +479,39 @@ class TestExecution:
 
         assert len(list((output_dir / "logs").glob("*.log"))) == 3
 
+    def test_writes_a_completion_marker_beside_each_log(
+        self,
+        campaign: ModuleType,
+        configs: list[Path],
+        stub_runner: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Log size cannot say a run has finished: stderr is unbuffered, so an early warning makes a
+        # log non-empty mid-run. The marker is written after the child exits and holds its code.
+        record_dir = tmp_path / "records"
+        record_dir.mkdir()
+        monkeypatch.setenv("STUB_RECORD_DIR", str(record_dir))
+        output_dir = tmp_path / "out"
+
+        campaign.main(
+            [
+                "--config",
+                str(configs[0]),
+                "--seeds",
+                "1-3",
+                "--runner",
+                str(stub_runner),
+                "--output-dir",
+                str(output_dir),
+            ],
+        )
+
+        logs = sorted((output_dir / "logs").glob("*.log"))
+        markers = sorted((output_dir / "logs").glob("*.exit"))
+        assert [m.stem for m in markers] == [log.stem for log in logs]
+        assert all(m.read_text().strip() == "0" for m in markers)
+
 
 class TestConcurrencyBound:
     """At most `workers` children run at once."""
