@@ -40,9 +40,12 @@ def _directed_double_edge_swap(
 
     Each accepted swap takes two distinct edges ``(a→b), (c→d)`` to ``(a→d), (c→b)``, rejecting any
     swap that would create a self-loop or a duplicate edge. Out-degree (``a``, ``c``) and in-degree
-    (``b``, ``d``) are conserved by construction. Weights travel with the edge (the multiset is
-    preserved) - they do not affect training (the strict-mask uses presence only), but are kept for
-    provenance and to satisfy the ``weight > 0`` model invariant.
+    (``b``, ``d``) are conserved by construction. Synapse counts travel with the edge, so the
+    graph's global multiset of counts is preserved; an individual neuron's incoming counts are not
+    whenever the two swapped edges carried different counts, because ``d`` receives the count of
+    ``(a→b)`` in place of the count of ``(c→d)``. The strict mask reads only presence, but
+    count-scaled weight initialisation reads the counts, so on a rewired graph each edge inherits
+    the count of the edge it was swapped from.
     """
     edge_set = set(edges)
     n = len(edges)

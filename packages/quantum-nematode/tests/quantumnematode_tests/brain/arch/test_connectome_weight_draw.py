@@ -77,9 +77,11 @@ def _others(brain: ConnectomePPOBrain) -> dict[str, torch.Tensor]:
         for name, param in brain.topology.named_parameters()
         if name != _DRAWN
     }
-    critic = getattr(getattr(brain, "rule", None), "critic", None)
-    if critic is not None:
-        out |= {f"critic.{n}": p.detach() for n, p in critic.named_parameters()}
+    # The brain exposes the critic through a property that raises unless PPO is the learner, and
+    # keeps the rule only when it is -- so the rule's presence is the guard. An earlier version
+    # looked for a `rule` attribute the brain does not have, and so never compared the critic.
+    if brain._ppo_rule is not None:
+        out |= {f"critic.{n}": p.detach() for n, p in brain.critic.named_parameters()}
     return out
 
 
