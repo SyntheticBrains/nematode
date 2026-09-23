@@ -58,12 +58,12 @@ decisions taken before implementation are in this change's `design.md`.
 
 ## Registration and run
 
-- [ ] 8. **Pre-launch checks**:
+- [x] 8. **done: full suite 6,734 passed, 34 skipped, 2 xfailed; hooks pass with everything staged; every level constructs on both wirings (the panel tests), and 8-run `run_simulation.py` smokes of PPO null fan-in at 1.0, PPO wild type at 4.0, and the reading null under `measured_signs` all completed.** Original scope: **Pre-launch checks**:
   - the full suite (`uv run pytest -q -m "not nightly"`);
   - `git add -A`, then `uv run pre-commit run --all-files`, judged by its exit code;
   - smoke: construct one arm per new level on both wirings, then one short `run_simulation.py` run
     each of PPO with fan-in and `measured`, and reading with `measured_signs`.
-- [ ] 9. **The launch record**, `docs/experiments/logbooks/supporting/072-measured-prior-pilot/launch.md`,
+- [x] 9. **done: committed before any seed ran.** Original scope: **The launch record**, `docs/experiments/logbooks/supporting/072-measured-prior-pilot/launch.md`,
   committed **before any seed runs**:
   - the arms, seeds, gate, metric rule, selection rule and branches;
   - the retention line;
