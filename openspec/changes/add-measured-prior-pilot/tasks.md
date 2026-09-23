@@ -5,7 +5,7 @@ decisions taken before implementation are in this change's `design.md`.
 
 ## Code
 
-- [ ] 1. **The fan-in pairing** (`connectome_ppo.py`), per design Decision A:
+- [x] 1. **done: the null's fan-in block is reordered per neuron, wild-type covered positions first, so the existing overwrite places everything the spec names.** Original scope: **The fan-in pairing** (`connectome_ppo.py`), per design Decision A:
 
   - allow `per_neuron_fanin` with a measured prior, at validation and at construction, and keep
     `dense_mask` refused;
@@ -15,10 +15,10 @@ decisions taken before implementation are in this change's `design.md`.
 
   `edge_order` is unchanged. No planning references in package code.
 
-- [ ] 2. **The shuffle's generator** (Decision B): `measured_shuffled` permutes from a generator
+- [x] 2. **done: `default_rng([seed, tag])`.** Original scope: **The shuffle's generator** (Decision B): `measured_shuffled` permutes from a generator
   seeded from the run seed and a fixed tag.
 
-- [ ] 3. **Tests**, extending `test_connectome_weight_prior.py`:
+- [x] 3. **done, 61 tests in the file (27 new). With the reorder disabled, 6 of the 8 fan-in placement and multiset tests fail; the two that pass are the random prior and the edge-order contrast, which the reorder does not touch.** Original scope: **Tests**, extending `test_connectome_weight_prior.py`:
 
   - under the fan-in draw, the wild type's uncovered edges are bit-identical to its random fan-in
     build, and every other parameter is identical;

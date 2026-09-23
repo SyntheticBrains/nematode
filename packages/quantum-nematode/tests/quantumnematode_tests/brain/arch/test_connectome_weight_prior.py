@@ -35,6 +35,11 @@ _WILD = _ARMS / "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard3
 _REWIRED = (
     _ARMS / "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null.yml"
 )
+_FANIN_WILD = _ARMS / "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_fanin.yml"
+_FANIN_REWIRED = (
+    _ARMS
+    / "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null_fanin.yml"
+)
 
 _SEED = 17
 _MEASURED = ("measured", "measured_signs", "measured_shuffled")
@@ -262,7 +267,11 @@ class TestTheSharedGeneratorEndsWhereItStarted:
         assert brain.buffer.rng is brain.rng
 
     @pytest.mark.parametrize("prior", _MEASURED)
-    @pytest.mark.parametrize("path", [_WILD, _REWIRED], ids=["wild", "rewired"])
+    @pytest.mark.parametrize(
+        "path",
+        [_WILD, _REWIRED, _FANIN_WILD, _FANIN_REWIRED],
+        ids=["wild", "rewired", "fanin-wild", "fanin-rewired"],
+    )
     def test_every_prior_leaves_the_shared_generator_in_the_same_state(
         self,
         prior: str,
@@ -311,6 +320,13 @@ class TestRefusals:
         with pytest.raises(ValueError, match=r"never read|not defined|positive"):
             ConnectomePPOBrain(config=bad, device=DeviceType.CPU)
 
+    def test_the_fan_in_draw_is_accepted(self) -> None:
+        """Every measured prior validates, and constructs, under the per-neuron fan-in draw."""
+        for prior in _MEASURED:
+            cfg = self._config(weight_prior=prior, weight_draw="per_neuron_fanin")
+            ConnectomePPOBrainConfig.model_validate(cfg.model_dump())
+            ConnectomePPOBrain(config=cfg, device=DeviceType.CPU)
+
     def test_a_multiplier_is_accepted_where_it_is_read(self) -> None:
         """The measured and shuffled priors read it, so a non-default value validates."""
         for prior in ("measured", "measured_shuffled"):
@@ -326,3 +342,165 @@ def test_the_training_state_records_the_prior() -> None:
     assert state["weight_prior"] == "measured"
     assert state["measured_weight_scale"] == 1.5
     assert state["weight_draw"] == "edge_order"
+
+
+@pytest.fixture(scope="module")
+def wild_fanin() -> dict[str, ConnectomePPOBrain]:
+    """Wild-type brains under the per-neuron fan-in draw, one per prior."""
+    return {p: _brain(_FANIN_WILD, weight_prior=p) for p in ("random", *_MEASURED)}
+
+
+@pytest.fixture(scope="module")
+def rewired_fanin() -> dict[str, ConnectomePPOBrain]:
+    """Rewired-null brains under the per-neuron fan-in draw, one per prior."""
+    return {p: _brain(_FANIN_REWIRED, weight_prior=p) for p in ("random", *_MEASURED)}
+
+
+def _incoming(brain: ConnectomePPOBrain) -> dict[str, list[str]]:
+    """Each post-synaptic neuron's pre-synaptic partners, sorted."""
+    out: dict[str, list[str]] = {}
+    for pre, post in _edges(brain):
+        out.setdefault(post, []).append(pre)
+    return {post: sorted(pres) for post, pres in out.items()}
+
+
+class TestUnderTheFanInDraw:
+    """Covers "Under the fan-in draw every neuron keeps its wild-type multiset"."""
+
+    def test_the_configs_carry_the_fan_in_draw(self) -> None:
+        """If these parents stop using the fan-in draw, the class below checks the wrong mode."""
+        for path in (_FANIN_WILD, _FANIN_REWIRED):
+            assert _brain(path).config.weight_draw == "per_neuron_fanin"
+
+    @pytest.mark.parametrize("prior", _MEASURED)
+    @pytest.mark.parametrize("wiring", ["wild", "rewired"])
+    def test_every_other_parameter_is_identical(
+        self,
+        prior: str,
+        wiring: str,
+        wild_fanin: dict[str, ConnectomePPOBrain],
+        rewired_fanin: dict[str, ConnectomePPOBrain],
+    ) -> None:
+        """A prior moves the chemical weights and no other tensor, critic included."""
+        arms = wild_fanin if wiring == "wild" else rewired_fanin
+        base, other = _others(arms["random"]), _others(arms[prior])
+        assert any(name.startswith("critic.") for name in base)
+        assert base.keys() == other.keys()
+        for name, param in base.items():
+            assert torch.equal(param, other[name]), f"{name} moved under {prior}"
+
+    @pytest.mark.parametrize("prior", _MEASURED)
+    def test_the_wild_types_uncovered_edges_are_its_random_build(
+        self,
+        prior: str,
+        wild_fanin: dict[str, ConnectomePPOBrain],
+        covered: list[tuple[str, str]],
+    ) -> None:
+        """On the wild type the fan-in draw is untouched wherever the table does not reach."""
+        base = wild_fanin["random"]
+        for pre, post in set(_edges(base)) - set(covered):
+            assert _at(wild_fanin[prior], pre, post) == _at(base, pre, post)
+
+    @pytest.mark.parametrize("prior", _MEASURED)
+    def test_the_null_takes_covered_values_first_then_the_uncovered_draws(
+        self,
+        prior: str,
+        wild_fanin: dict[str, ConnectomePPOBrain],
+        rewired_fanin: dict[str, ConnectomePPOBrain],
+        covered: list[tuple[str, str]],
+    ) -> None:
+        """Per neuron: the wild type's covered values, then its uncovered ones, each in its order.
+
+        Exact equality throughout, including the covered values under the sign-only prior: there the
+        null places the wild type's own magnitude, not the draw that happens to land on its edge.
+        """
+        wt, null = wild_fanin[prior], rewired_fanin[prior]
+        wt_in, null_in = _incoming(wt), _incoming(null)
+        covered_set = set(covered)
+        checked = 0
+        for post, wt_pres in wt_in.items():
+            first = [pre for pre in wt_pres if (pre, post) in covered_set]
+            rest = [pre for pre in wt_pres if (pre, post) not in covered_set]
+            want = [_at(wt, pre, post) for pre in (*first, *rest)]
+            got = [_at(null, pre, post) for pre in null_in[post]]
+            if prior == "measured_signs":
+                assert got == want, post
+            else:
+                assert got == pytest.approx(want, rel=1e-6), post
+            checked += bool(first)
+        assert checked > 0
+
+    @pytest.mark.parametrize("prior", ["random", *_MEASURED])
+    def test_every_neuron_keeps_its_wild_type_multiset(
+        self,
+        prior: str,
+        wild_fanin: dict[str, ConnectomePPOBrain],
+        rewired_fanin: dict[str, ConnectomePPOBrain],
+    ) -> None:
+        """The property the fan-in draw exists for, under every prior including the default."""
+        wt, null = wild_fanin[prior], rewired_fanin[prior]
+        wt_in, null_in = _incoming(wt), _incoming(null)
+        assert wt_in.keys() == null_in.keys()
+        for post, wt_pres in wt_in.items():
+            a = sorted(_at(wt, pre, post) for pre in wt_pres)
+            b = sorted(_at(null, pre, post) for pre in null_in[post])
+            assert a == pytest.approx(b, rel=1e-6), post
+
+    def test_under_the_edge_order_draw_the_multiset_is_not_kept(
+        self,
+        wild: dict[str, ConnectomePPOBrain],
+        rewired: dict[str, ConnectomePPOBrain],
+    ) -> None:
+        """The contrast that makes the test above mean something: edge order shares no multiset."""
+        wt, null = wild["measured"], rewired["measured"]
+        wt_in, null_in = _incoming(wt), _incoming(null)
+        differ = sum(
+            sorted(_at(wt, pre, post) for pre in pres)
+            != pytest.approx(sorted(_at(null, pre, post) for pre in null_in[post]), rel=1e-6)
+            for post, pres in wt_in.items()
+        )
+        assert differ > 0
+
+
+class TestTheShuffleHasItsOwnStream:
+    """Covers "The shuffle does not depend on the draw"."""
+
+    def test_the_permutation_is_the_same_under_either_draw(
+        self,
+        wild: dict[str, ConnectomePPOBrain],
+        wild_fanin: dict[str, ConnectomePPOBrain],
+        covered: list[tuple[str, str]],
+    ) -> None:
+        """Covered values under the shuffled prior do not depend on how the rest were drawn."""
+        for pre, post in covered:
+            assert _at(wild["measured_shuffled"], pre, post) == _at(
+                wild_fanin["measured_shuffled"],
+                pre,
+                post,
+            )
+
+    def test_the_shuffle_is_not_drawn_from_the_draw_generators_stream(
+        self,
+        wild: dict[str, ConnectomePPOBrain],
+        covered: list[tuple[str, str]],
+    ) -> None:
+        """A generator at the bare run seed is the draw's stream; the shuffle must not be it.
+
+        Fails if the shuffle is given ``get_rng(seed)``, which is what the draw generator is.
+        """
+        from quantumnematode.brain.arch.connectome_ppo import measured_prior_assignment
+        from quantumnematode.utils.seeding import get_rng
+
+        cook = load_cook_2019_hermaphrodite()
+        on_draw_stream = measured_prior_assignment(
+            "measured_shuffled",
+            1.0,
+            cook,
+            cook,
+            rewired=False,
+            shuffle_rng=get_rng(_SEED),
+        )
+        brain = wild["measured_shuffled"]
+        placed = [_at(brain, pre, post) * np.sqrt(_in_degree(brain, post)) for pre, post in covered]
+        drawn_stream = [on_draw_stream.values[edge] for edge in covered]
+        assert placed != pytest.approx(drawn_stream, rel=1e-5)

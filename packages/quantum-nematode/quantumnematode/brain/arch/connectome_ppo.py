@@ -188,8 +188,13 @@ WeightDraw = Literal["edge_order", "dense_mask", "per_neuron_fanin"]
 # receives the values its wild-type edges carried, placed on its incoming edges in
 # pre-synaptic-index order -- the same rule "per_neuron_fanin" uses for a drawn multiset.
 WeightPrior = Literal["random", "measured", "measured_signs", "measured_shuffled"]
+# Under "per_neuron_fanin" the null's remaining edges receive the wild type's uncovered draws rather
+# than their own, so every neuron carries its wild type's multiset under every prior; under
+# "edge_order" they keep their draw. "dense_mask" shares by edge identity and is refused.
 # The priors that read ``measured_weight_scale``. Under the others it would be accepted and ignored.
 _SCALED_PRIORS: frozenset[str] = frozenset({"measured", "measured_shuffled"})
+# Tag appended to the run seed for the shuffle's generator, so its stream is not the draw's.
+_SHUFFLE_STREAM = 0x5348_5546
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -404,10 +409,12 @@ def _weight_prior_refusal(config: ConnectomePPOBrainConfig) -> str | None:
             "gives one edge two sign sources, the fitted table and the transmitter atlas; the "
             "pairing is not defined"
         )
-    if config.weight_draw != "edge_order":
+    if config.weight_draw == "dense_mask":
         return (
             f"weight_prior={config.weight_prior!r} with weight_draw={config.weight_draw!r} is not "
-            "defined: the prior replaces values on covered edges and the pairing is untested"
+            "defined: the dense draw shares values by edge identity, and a measured prior places "
+            "values on a rewired wiring per post-synaptic neuron, which edge identity does not "
+            "survive"
         )
     if config.weight_init != "degree_scaled":
         return (
@@ -423,11 +430,19 @@ class MeasuredPriorAssignment:
 
     ``values`` maps ``(pre, post)`` to a measured value before its per-neuron scale, or under the
     sign-only prior to the sign alone (+1.0 or -1.0). Edges absent from it keep their draw.
+
+    ``wild_covered_positions`` is set only on a rewired wiring. It maps each post-synaptic neuron
+    to the positions, in the wild type's pre-sorted incoming list, of the edges the prior covers
+    there. A per-neuron fan-in draw needs it: the draw holds the same block of values for a neuron
+    on both wirings, and the wild type keeps the entries at its uncovered positions, so the null
+    must be handed those same entries rather than whichever ones its own first edges happen to
+    leave.
     """
 
     values: Mapping[tuple[str, str], float]
     is_sign: bool
     scale: float
+    wild_covered_positions: Mapping[str, tuple[int, ...]] | None = None
 
 
 def measured_prior_assignment(  # noqa: PLR0913 - the prior, its pin, both graphs, the flag, the rng
@@ -472,8 +487,31 @@ def measured_prior_assignment(  # noqa: PLR0913 - the prior, its pin, both graph
             placed = placed[shuffle_rng.permutation(len(placed))]
     wild_values = dict(zip(covered, (float(v) for v in placed), strict=True))
     is_sign = prior == "measured_signs"
-    values = _place_on_rewired(wild_values, wiring) if rewired else wild_values
-    return MeasuredPriorAssignment(MappingProxyType(values), is_sign, scale)
+    if not rewired:
+        return MeasuredPriorAssignment(MappingProxyType(wild_values), is_sign, scale)
+    return MeasuredPriorAssignment(
+        MappingProxyType(_place_on_rewired(wild_values, wiring)),
+        is_sign,
+        scale,
+        MappingProxyType(_covered_positions(covered, wild_type)),
+    )
+
+
+def _covered_positions(
+    covered: list[tuple[str, str]],
+    wild_type: Connectome,
+) -> dict[str, tuple[int, ...]]:
+    """Each post-synaptic neuron's covered positions in its wild-type pre-sorted incoming list."""
+    incoming: dict[str, list[str]] = {}
+    for syn in wild_type.chemical_synapses:
+        incoming.setdefault(syn.post, []).append(syn.pre)
+    covered_pres: dict[str, set[str]] = {}
+    for pre, post in covered:
+        covered_pres.setdefault(post, set()).add(pre)
+    return {
+        post: tuple(i for i, pre in enumerate(sorted(incoming[post])) if pre in pres)
+        for post, pres in covered_pres.items()
+    }
 
 
 def _place_on_rewired(
@@ -503,6 +541,32 @@ def _place_on_rewired(
         for pre, value in zip(partners, values, strict=False):
             rewired_values[pre, post] = value
     return rewired_values
+
+
+def _wild_type_order(
+    block: np.ndarray,
+    post_j: int,
+    measured_prior: MeasuredPriorAssignment | None,
+    neuron_names: list[str],
+) -> np.ndarray:
+    """Reorder one neuron's fan-in block so a rewired wiring holds its wild type's multiset.
+
+    On a rewired wiring a measured prior fills the neuron's first *k* incoming edges. Laid out in
+    the draw's own order, those edges would discard the block's first *k* entries while the wild
+    type discards the entries at its covered positions, so the two wirings would keep different
+    subsets of one block. Moving the wild type's covered entries to the front and its uncovered
+    entries after them, each in wild-type order, gives the null the wild type's uncovered values on
+    its remaining edges, and under the sign-only prior the wild type's magnitudes on its covered
+    ones. Returns the block unchanged on the wild type and wherever no prior applies.
+    """
+    if measured_prior is None or measured_prior.wild_covered_positions is None:
+        return block
+    positions = measured_prior.wild_covered_positions.get(neuron_names[post_j])
+    if not positions:
+        return block
+    chosen = set(positions)
+    order = [*positions, *(i for i in range(len(block)) if i not in chosen)]
+    return block[order]
 
 
 def _reject_unsupported_weight_prior(config: ConnectomePPOBrainConfig) -> None:
@@ -864,6 +928,7 @@ class ConnectomeTopology(nn.Module):
                 if not pre_list:
                     continue
                 block = draw_source.normal(loc=0.0, scale=1.0, size=len(pre_list))
+                block = _wild_type_order(block, post_j, measured_prior, self.neuron_names)
                 for pre_i, z in zip(sorted(pre_list), block, strict=True):
                     fanin_value[pre_i, post_j] = float(z)
 
@@ -2456,9 +2521,11 @@ class ConnectomePPOBrain(ClassicalBrain):
                     wild_type,
                     connectome,
                     rewired=config.wiring == "rewired_degree_preserving",
-                    # Its own generator at the run seed, like the draw's: the shuffle is then the
-                    # same permutation on either wiring, and never touches the shared stream.
-                    shuffle_rng=get_rng(self.seed),
+                    # Its own stream, keyed on the run seed and a fixed tag: the same permutation
+                    # on either wiring and under either draw, never the shared stream, and never
+                    # the draw generator's bits -- a generator at the bare run seed would be, and
+                    # would tie the shuffle to the fan-in values it sits beside.
+                    shuffle_rng=np.random.default_rng([self.seed, _SHUFFLE_STREAM]),
                 )
             ),
         ).to(self.device)
