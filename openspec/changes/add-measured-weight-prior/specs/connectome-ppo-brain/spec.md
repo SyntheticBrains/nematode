@@ -15,12 +15,21 @@ draw uses and by `measured_weight_scale`. `measured` SHALL place that value on i
 `measured_signs` SHALL keep the draw's magnitude and take the measured sign; `measured_shuffled` SHALL
 permute the values among the wild type's covered edges using the brain's dedicated draw generator.
 
-On a rewired wiring each post-synaptic neuron SHALL receive the multiset of its wild-type incoming
-measured values, assigned to its incoming edges in pre-synaptic-index order and covering as many edges
-as it had covered in the wild type. A non-`random` prior SHALL be refused together with atlas-grounded
-signs, with a non-default weight draw, or with count-scaled initialisation, both when the configuration
-is validated and when the brain is constructed. The run's training state SHALL record the prior and
-the multiplier.
+Every quantity above that names the wild type SHALL be computed from the table and the connectome
+**before** any rewiring is applied, so a rewired brain uses the same wild-type values as the wild-type
+brain at that seed. On a rewired wiring each post-synaptic neuron SHALL receive its wild-type incoming
+values: those values, taken in order of their own wild-type pre-synaptic index, SHALL be placed on the
+neuron's first *k* incoming edges in pre-synaptic-index order, where *k* is its wild-type covered
+count, and its remaining incoming edges SHALL keep their draw. Under `measured` the values placed are
+the normalised measured values; under `measured_shuffled` they are the values the permutation assigned
+to that neuron's wild-type edges; under `measured_signs` only their signs are placed, each on the
+magnitude of the receiving edge's own draw.
+
+`measured_weight_scale` SHALL be refused at any value other than its default unless the prior is
+`measured` or `measured_shuffled`, the only priors that read it. A non-`random` prior SHALL be refused
+together with atlas-grounded signs, with a non-default weight draw, or with count-scaled
+initialisation. Every refusal SHALL apply both when the configuration is validated and when the brain
+is constructed. The run's training state SHALL record the prior and the multiplier.
 
 #### Scenario: The default is bit-identical
 
@@ -40,12 +49,20 @@ the multiplier.
 - **THEN** the generator the rollout buffer shares SHALL yield the same next values after
   construction under every prior
 
-#### Scenario: The rewired null receives each neuron's wild-type multiset
+#### Scenario: The rewired null receives each neuron's wild-type values
 
-- **GIVEN** a rewired wiring under `measured`
+- **GIVEN** a rewired wiring under `measured`, `measured_shuffled` or `measured_signs`
 - **WHEN** a post-synaptic neuron's incoming chemical weights are read
-- **THEN** the measured values among them SHALL be that neuron's wild-type multiset, on its incoming
-  edges in pre-synaptic-index order
+- **THEN** its first *k* incoming edges in pre-synaptic-index order SHALL carry the values (or, under
+  `measured_signs`, the signs) its wild-type edges carried under the same prior at the same seed, in
+  the order of their wild-type pre-synaptic index
+- **AND** its remaining incoming edges SHALL be identical to the `random` build
+
+#### Scenario: A multiplier no prior reads is refused
+
+- **WHEN** `measured_weight_scale` is set away from its default under `random` or `measured_signs`
+- **THEN** validation SHALL raise, and construction from a configuration that skipped validation
+  SHALL raise
 
 #### Scenario: An untested pairing is refused
 

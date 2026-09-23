@@ -3,10 +3,12 @@
 Phase 8 task **B.1a**. The plan is authoritative in `docs/roadmap.md` § Phase 8 **D17**; the decisions
 taken before implementation are in this change's `design.md`. No campaign runs in this change.
 
-- [ ] 1. **Vendor the table** — `data/connectome/creamer_2025_lds_weights.csv`, the upstream
+- [ ] 1. **Vendor the table** — `data/connectome/creamer_lds_2026_model_weights.csv`, the upstream
   `quick_start_examples/model_weights.csv` at commit `bba43302d50a4947804d98b01779856e648237cc`
   byte-for-byte (SHA256 `f452b88461aa90d414fd652e246e11302293d207510b9f4c94bf9a9a8098924c`,
-  41,959 bytes), with `LICENSE-creamer-lds.txt` carrying the MIT notice.
+  41,959 bytes), with `LICENSE-creamer-lds.txt` carrying the MIT notice. Named after its source
+  repository, `Creamer_LDS_2026`, because the preprint (2024), its v3 (2025) and the repository (2026)
+  each carry a different year.
 
 - [ ] 2. **Provenance** — a `PROVENANCE.md` entry in the house shape: description, upstream path and
   commit, size, SHA256, source URL, licence, retrieval date, paper (bioRxiv 2024.09.22.614271 v3,
@@ -16,28 +18,35 @@ taken before implementation are in this change's `design.md`. No campaign runs i
 
 - [ ] 3. **Loader** — `quantumnematode/connectome/measured_weights.py`: read with the SHA256 checked,
   names validated against the canonical classification, a frozen `(pre, post) → weight` table, and a
-  coverage report against a connectome (covered, head scope, gap-junction only, no connection).
+  coverage report against a connectome (covered; head scope with its self-loops apart; gap-junction
+  only, treating gap junctions as undirected; no connection).
 
 - [ ] 4. **Loader tests** — `tests/.../connectome/test_measured_weights.py`: file present and digest
   matches; a changed file refused; every name known; coverage pinned on Cook 2019 — 1,049 covered of
-  3,709, 1,386 at head scope, 635 positive and 414 negative, 265 on a gap junction only, 697 on no
-  connection, none onto the 39 body motor neurons.
+  3,709; 1,386 at head scope, 23 of them self-loops, so 1,363 coverable; 635 positive and 414
+  negative; 265 on a gap junction only; 697 on no connection; none onto the 39 body motor neurons.
 
 - [ ] 5. **The prior on the brain** — `connectome_ppo.py`: `weight_prior` and
   `measured_weight_scale` beside `weight_draw`; RMS-normalised, per-neuron-scaled values in the edge
-  loop after the unchanged `rng.normal` call; the shuffle from the draw generator; the rewired null's
-  per-neuron multiset in pre-synaptic-index order; the three refused pairings in the validator and in
-  `_reject_unsupported_plasticity_modes`; `training_state` records the prior and multiplier and
-  backfills `weight_draw`. No planning references in package code.
+  loop after the unchanged `rng.normal` call; the shuffle from the draw generator. **The wild-type
+  per-neuron values are computed from the unrewired connectome before rewiring** — the brain rewires
+  at `connectome_ppo.py:2217-2222`, before the topology is built — and handed to the topology. On the
+  null, each neuron's wild-type values, in their own wild-type pre-index order, land on its first *k*
+  incoming edges in pre-index order, for all three measured priors. Refusals, in the validator and in
+  `_reject_unsupported_plasticity_modes`: the three untested pairings, and a non-default
+  `measured_weight_scale` under `random` or `measured_signs`. `training_state` records the prior and
+  multiplier and backfills `weight_draw`. No planning references in package code.
 
 - [ ] 6. **Brain tests** — `tests/.../brain/arch/test_connectome_weight_prior.py`, modelled on
   `test_connectome_weight_draw.py`: default bit-identical; only the chemical weights move under each
   prior (reusing that file's helper over every other parameter); uncovered edges equal the random
   build; covered edges carry the normalised value; `measured_signs` keeps the draw's magnitude;
-  `measured_shuffled` has the same multiset in a different placement; the rewired null's per-neuron
-  multisets; the shared generator ends where it started under every prior; the multiplier scales
-  covered edges linearly; every refused pairing refused at validation and at construction. Plus a
-  persistence check that `training_state` carries the new fields.
+  `measured_shuffled` has the same multiset in a different placement; on the rewired null, under each
+  of the three measured priors, every neuron's first *k* edges carry its wild-type values in wild-type
+  pre-index order and the rest equal the random build; a rewired and a wild-type brain at one seed
+  agree on the wild-type values; the shared generator ends where it started under every prior; the
+  multiplier scales covered edges linearly; every refusal refused at validation and at construction.
+  Plus a persistence check that `training_state` carries the new fields.
 
 - [ ] 7. **Docs** — `docs/architectures.md`'s `connectomeppo` row names `weight_prior`; a CHANGELOG
   line; stale docstrings fixed in passing at `connectome/rewiring.py` (says weights "do not affect
@@ -50,4 +59,5 @@ taken before implementation are in this change's `design.md`. No campaign runs i
 
 - [ ] 9. **Close-out** — the full suite via `uv run pytest -m "not nightly"`; `git add -A` then
   `uv run pre-commit run --all-files`, judged by its exit code; a smoke construction under every
-  prior on both wirings, and one short run under `measured`; archive and PR.
+  prior on both wirings, and one short run under `measured` from a **temporary config in the
+  scratchpad** — B.1a commits no configs, and `run_simulation.py` has no override; archive and PR.

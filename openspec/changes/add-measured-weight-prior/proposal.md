@@ -26,8 +26,9 @@ released under **MIT** as `quick_start_examples/model_weights.csv` in
 - The values are coefficients of a **2 Hz linear dynamical system** on calcium signals, fitted on a
   **White 1986 + Witvliet 2020** mask that is the **union of chemical and gap-junction** edges — a
   different connectome from this substrate's Cook 2019, and not typed by connection.
-- Joined to Cook 2019's 3,709 chemical edges, **1,049 are covered**: 28.3% at full scope and 75.7%
-  of the 1,386 edges whose endpoints both lie in the table's neuron set. **None** falls on the 39
+- Joined to Cook 2019's 3,709 chemical edges, **1,049 are covered**: 28.3% at full scope and 77.0%
+  of the 1,363 coverable edges whose endpoints both lie in the table's neuron set (a further 23 there
+  are self-loops, which a table with no diagonal cannot cover). **None** falls on the 39
   body motor neurons, as D17 anticipated. 265 table edges sit on Cook gap junctions only and 697 on
   no Cook connection; both are reported and neither is applied.
 - Creamer et al. is still a **preprint** (bioRxiv 2024.09.22.614271 v3). It never stands alone.
@@ -36,7 +37,7 @@ released under **MIT** as `quick_start_examples/model_weights.csv` in
 
 ### 1. Vendored data
 
-`data/connectome/creamer_2025_lds_weights.csv`, the upstream file byte-for-byte, pinned by SHA256
+`data/connectome/creamer_lds_2026_model_weights.csv`, the upstream file byte-for-byte, pinned by SHA256
 and upstream commit; the MIT notice beside it; a `PROVENANCE.md` entry in the house shape; and a
 "What is NOT vendored" entry recording why Randi, the model pickles and both OSF deposits stay out.
 
@@ -59,8 +60,12 @@ validated against the canonical classification, and a coverage report joins it t
   sign-only arm, built now so B.1b is configs only.
 - **`measured_shuffled`** permutes the measured values among the wild type's own covered edges,
   which is what makes a positive interpretable.
-- **On the rewired null** each post-synaptic neuron receives its wild-type multiset of measured
-  values in pre-synaptic-index order, as A.1's `per_neuron_fanin` assigns a drawn multiset.
+- **On the rewired null** each post-synaptic neuron receives the values its wild-type edges carried
+  under the same prior, in pre-synaptic-index order, as A.1's `per_neuron_fanin` assigns a drawn
+  multiset — defined for all three measured priors, since B.1c's 2×3 needs every one on both wirings.
+  The wild-type values are computed before rewiring, because the brain rewires before it builds.
+- **`measured_weight_scale` is refused where nothing reads it** (`random`, `measured_signs`) — the
+  failure the requirement A.2 added names.
 - Uncovered edges keep the random draw in every mode.
 
 The edge loop still takes exactly one value per edge from the generator the rollout buffer shares,

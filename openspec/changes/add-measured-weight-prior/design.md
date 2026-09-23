@@ -38,14 +38,17 @@ than assumed:
 | | edges |
 |---|---|
 | Cook chemical, full scope | 3,709 |
-| **head scope** — both endpoints in the table's neuron set | 1,386 |
-| **covered** | 1,049 (28.3% full, 75.7% head); 635 positive, 414 negative |
+| **head scope** — both endpoints in the table's neuron set | 1,386, of which 23 are self-loops |
+| head scope the table can cover (no diagonal) | 1,363 |
+| **covered** | 1,049 (28.3% full, 77.0% of coverable head scope); 635 positive, 414 negative |
 | on a Cook gap junction only | 265 — reported, not applied |
 | on no Cook connection | 697 — reported, not applied |
 | onto the 39 body motor neurons | 0 |
 
-The repository has no notion of a head, so head scope is the table's own neuron set. Gap-junction
-entries are not applied because this brain's gap junctions are fixed constants; whether measured
+The repository has no notion of a head, so head scope is the table's own neuron set. Cook 2019 has
+38 self-loops and the table has no diagonal, so the 23 self-loops inside head scope are reported apart
+from the coverable denominator rather than counted as misses. Gap junctions are treated as undirected
+when a table entry is checked against them. Gap-junction entries are not applied because this brain's gap junctions are fixed constants; whether measured
 values belong there is B.2b's question.
 
 ### Decision D: Variance-matched values, with a multiplier as the pin
@@ -71,15 +74,32 @@ B.1b sweeps the multiplier, which is D17's pin.
 suite assert all four modes touch only the chemical weights. The shuffle is global over covered edges,
 as D17 words it, drawn from the brain's dedicated draw generator.
 
-### Decision F: The rewired null receives each neuron's wild-type multiset
+### Decision F: The rewired null receives each neuron's wild-type values, under every prior
 
 A degree-preserving rewiring keeps labelled endpoints, so most of its `(pre, post)` pairs do not exist
 in the wild type and a name-keyed lookup would miss them. D17 resolves this with A.1's second
-definition of shared initialisation: for each post-synaptic neuron, the multiset of its wild-type
-incoming measured values is assigned to its incoming edges on the null **in pre-synaptic-index
-order**, the first *k* edges where *k* is its wild-type covered count, the rest keeping the draw.
-In-degree is preserved, so every neuron receives exactly its wild-type multiset. Because it is keyed by
-post-synaptic neuron it needs nothing from the rewiring beyond the graph it produced.
+definition of shared initialisation, and it has to be defined for all three measured priors, because
+B.1c's 2×3 runs each of them on both wirings.
+
+**Both orders are stated.** For each post-synaptic neuron, its wild-type incoming values are taken in
+order of their own wild-type pre-synaptic index and placed on the null's incoming edges in
+pre-synaptic-index order, the first *k* edges where *k* is its wild-type covered count; the rest keep
+the draw. What is placed depends on the prior:
+
+| prior | placed on the null's first *k* edges |
+|---|---|
+| `measured` | the neuron's wild-type normalised measured values |
+| `measured_shuffled` | the values the global permutation assigned to its wild-type edges |
+| `measured_signs` | the signs of its wild-type measured values, each on the receiving edge's own draw magnitude |
+
+In-degree is preserved, so every neuron receives exactly its wild-type multiset.
+
+**The wild type is computed before rewiring.** The brain rewires its connectome before building the
+topology (`connectome_ppo.py:2217-2222`), so the topology only ever sees the rewired graph. The
+per-neuron wild-type values — including the permutation, which draws from the dedicated draw
+generator exactly as on the wild type — are therefore computed from the table and the **unrewired**
+connectome first, and handed to the topology. A rewired brain and a wild-type brain at one seed use
+identical wild-type values.
 
 ### Decision G: The shared generator yields what it always has
 
@@ -87,6 +107,13 @@ A.1's defect was a mode that took a different number of values from a generator 
 also consumes. The edge loop therefore still takes exactly one `rng.normal` per edge whatever the
 prior, the prior overwrites afterwards, and the shuffle draws only from the dedicated draw generator.
 A test asserts the shared generator ends where it started under every mode.
+
+### Decision G2: A multiplier no prior reads is refused
+
+`measured_weight_scale` is read only by `measured` and `measured_shuffled`. Under `random` and
+`measured_signs` it would be accepted, validated and ignored — an arm that looks swept and is not,
+which is exactly what the requirement A.2 added forbids. A non-default multiplier is refused under
+those two priors, at validation and at construction.
 
 ### Decision H: Refuse the pairings nothing has tested
 
