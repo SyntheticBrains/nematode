@@ -32,7 +32,7 @@ decisions taken before implementation are in this change's `design.md`.
 
 ## Panel
 
-- [ ] 4. **Panel definition and analysis**, in `scripts/analysis/measured_prior_pilot.py`:
+- [x] 4. **done: `scripts/analysis/measured_prior_pilot.py`; the selection is a function of the gate records alone.** Original scope: **Panel definition and analysis**, in `scripts/analysis/measured_prior_pilot.py`:
   - the stems, levels, seeds and arm map, built by a loop and not by a regex;
   - a manifest builder writing A.2's line format (`<arm> <level> <seed> <log path>`, with arms
     named `wt_learn`, `rn_learn`, `wt_frozen`, `rn_frozen`), which `learning_gates` reads, and the
@@ -41,12 +41,12 @@ decisions taken before implementation are in this change's `design.md`.
   - the branch read and the multiplier selection, per Decision E: a level passes on `gate_passes`
     and not `saturated`, and the Lee branch reads the wild type's own test against its floor;
   - a per-seed CSV (`lineterminator="\n"`) and an analysis JSON.
-- [ ] 5. **The gate, shared rather than copied**: `operating_point_surface.learning_gates` takes the
+- [x] 5. **done: `learning_gates` takes `floor_level` and `substrate_drift` takes `floor_levels`, both defaulting to A.2's rule; the gate also records each seed's plateau and floor so the CSV carries them. A.2's 190 tests pass unchanged.** Original scope: **The gate, shared rather than copied**: `operating_point_surface.learning_gates` takes the
   floor level as an argument (Decision F), and A.2's tests still pass.
-- [ ] 6. **The config generator**: `scripts/campaigns/generate_measured_prior_configs.py` writes
+- [x] 6. **done: 48 configs written, none pre-existing.** Original scope: **The config generator**: `scripts/campaigns/generate_measured_prior_configs.py` writes
   the 48 configs from their parents, adding at most two keys, with a house header. Existing files
   are left alone.
-- [ ] 7. **Panel tests** (`tests/.../analysis/test_measured_prior_pilot.py`):
+- [x] 7. **done, 74 tests: configs through the real loader, fresh seeds, every level building distinct weights with a floor built on its learning arm's weights, and the selection's eight cases.** Original scope: **Panel tests** (`tests/.../analysis/test_measured_prior_pilot.py`):
   - every config loads through the real loader and differs from its parent only in the registered
     keys;
   - every level reaches the brain: `weight_prior` and the multiplier change the constructed chemical
