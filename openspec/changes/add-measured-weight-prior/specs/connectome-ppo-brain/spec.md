@@ -1,0 +1,55 @@
+## ADDED Requirements
+
+### Requirement: A measured prior for the chemical weights
+
+The connectome brain configuration SHALL accept `weight_prior` — `random` (default), `measured`,
+`measured_signs` or `measured_shuffled` — and `measured_weight_scale`, a positive multiplier
+defaulting to 1.0. Under `random` construction SHALL be bit-identical to the brain without this
+requirement. Under any other prior the edge loop SHALL take the same draws in the same order from the
+same generator as under `random`, and only chemical edges covered by the measured table SHALL change;
+every uncovered edge SHALL keep its draw, and every other parameter SHALL be unchanged.
+
+A covered edge's measured value SHALL be divided by the root mean square of the measured values over
+the wild type's covered edges, keeping its sign, and multiplied by the per-post-neuron scale the random
+draw uses and by `measured_weight_scale`. `measured` SHALL place that value on its edge;
+`measured_signs` SHALL keep the draw's magnitude and take the measured sign; `measured_shuffled` SHALL
+permute the values among the wild type's covered edges using the brain's dedicated draw generator.
+
+On a rewired wiring each post-synaptic neuron SHALL receive the multiset of its wild-type incoming
+measured values, assigned to its incoming edges in pre-synaptic-index order and covering as many edges
+as it had covered in the wild type. A non-`random` prior SHALL be refused together with atlas-grounded
+signs, with a non-default weight draw, or with count-scaled initialisation, both when the configuration
+is validated and when the brain is constructed. The run's training state SHALL record the prior and
+the multiplier.
+
+#### Scenario: The default is bit-identical
+
+- **WHEN** a connectome brain is built with the default `weight_prior`
+- **THEN** its parameters SHALL be bit-identical to the brain without this requirement at the same seed
+
+#### Scenario: A prior changes covered chemical edges and nothing else
+
+- **GIVEN** two brains from the same configuration and seed, one `random` and one with another prior
+- **WHEN** their parameters are compared
+- **THEN** every parameter other than the chemical weights SHALL be identical
+- **AND** every chemical edge the table does not cover SHALL be identical
+
+#### Scenario: The shared generator is left where it was
+
+- **WHEN** brains are built under each prior at one seed
+- **THEN** the generator the rollout buffer shares SHALL yield the same next values after
+  construction under every prior
+
+#### Scenario: The rewired null receives each neuron's wild-type multiset
+
+- **GIVEN** a rewired wiring under `measured`
+- **WHEN** a post-synaptic neuron's incoming chemical weights are read
+- **THEN** the measured values among them SHALL be that neuron's wild-type multiset, on its incoming
+  edges in pre-synaptic-index order
+
+#### Scenario: An untested pairing is refused
+
+- **WHEN** a non-`random` prior is combined with atlas-grounded signs, a non-default weight draw, or
+  count-scaled initialisation
+- **THEN** validation SHALL raise, and construction from a configuration that skipped validation
+  SHALL raise
