@@ -1,9 +1,9 @@
 """The campaign progress reader: what counts as finished, and when a watch stops.
 
 A run is finished when the runner has written its completion marker, never because its log has
-bytes in it: stderr is unbuffered, so a warning printed at load time makes a log non-empty while the
-run is still going. These tests pin that, the fallback for campaigns that predate markers, and that a
-watch on one campaign does not wait on another campaign's workers.
+bytes in it: stderr is unbuffered, so a warning printed at load time makes a log non-empty while
+the run is still going. These tests pin that, the fallback for campaigns that predate markers,
+and that a watch on one campaign does not wait on another campaign's workers.
 """
 
 from __future__ import annotations
@@ -72,6 +72,7 @@ class TestAWatchStopsOnItsOwnCampaign:
 
 
 def test_a_non_positive_total_is_refused(tmp_path: Path) -> None:
+    """A zero total is an argument error, not a division by zero inside the report."""
     camp = _campaign(tmp_path, {"a-seed1": ("", "0")})
     with pytest.raises(SystemExit) as err:
         cp.main(["--campaign", str(camp), "--total", "0"])

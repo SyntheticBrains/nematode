@@ -40,7 +40,7 @@ def _brain_config(stem: str) -> dict[str, Any]:
 
 
 def test_the_panel_is_a_1s_design_at_one_depth() -> None:
-    # 4 arms x 3 draw modes, every stem a real config.
+    """Twelve stems -- four arms by three draw modes -- and every one a committed config."""
     assert len(rr.ARM_BY_STEM) == 12
     missing = [s for s in rr.ARM_BY_STEM if not (_CONFIGS / f"{s}.yml").is_file()]
     assert not missing, missing
@@ -48,6 +48,7 @@ def test_the_panel_is_a_1s_design_at_one_depth() -> None:
 
 @pytest.mark.parametrize("stem", _NEW, ids=lambda s: s[-36:])
 def test_each_new_arm_differs_from_its_a1_parent_in_depth_alone(stem: str) -> None:
+    """Loaded through the real loader, each new arm moves only `forward_pass_depth`, to 6."""
     parent = stem.removesuffix(f"_d{rr.DEPTH}")
     child, base = _brain_config(stem), _brain_config(parent)
     differing = {k for k in set(child) | set(base) if child.get(k) != base.get(k)}
@@ -56,6 +57,7 @@ def test_each_new_arm_differs_from_its_a1_parent_in_depth_alone(stem: str) -> No
 
 
 def test_the_seeds_are_fresh() -> None:
+    """The 32 re-read seeds overlap no band burnt before them, A.2's pilot and panels included."""
     spent = set(ops.BURNT_SEEDS) | set(ops.PILOT_SEEDS)
     for seeds in ops.SEEDS_BY_HALF.values():
         spent |= set(seeds)
