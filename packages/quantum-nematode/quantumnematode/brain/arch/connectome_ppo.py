@@ -370,17 +370,32 @@ def _reject_unsupported_weight_draw(config: ConnectomePPOBrainConfig) -> None:
         raise ValueError(msg)
 
 
-def _weight_prior_refusal(config: ConnectomePPOBrainConfig) -> str | None:
-    """Say why a weight-prior configuration is refused, or return None if it is not.
+def _weight_scale_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Say why ``measured_weight_scale`` is refused, or return None if it is not.
 
-    One function behind both the validator and the construction guard, so the two cannot drift.
+    The field's own ``gt=0`` bound is repeated here because ``model_copy`` skips it.
     """
+    if config.measured_weight_scale <= 0.0:
+        return (
+            f"measured_weight_scale={config.measured_weight_scale} must be positive: a zero "
+            "multiplier erases the measured values and a negative one flips every fitted sign"
+        )
     if config.weight_prior not in _SCALED_PRIORS and config.measured_weight_scale != 1.0:
         return (
             f"measured_weight_scale={config.measured_weight_scale} under "
             f"weight_prior={config.weight_prior!r} would be accepted and never read: only "
             f"{sorted(_SCALED_PRIORS)} place a measured magnitude"
         )
+    return None
+
+
+def _weight_prior_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Say why a weight-prior configuration is refused, or return None if it is not.
+
+    One function behind both the validator and the construction guard, so the two cannot drift.
+    """
+    if (refusal := _weight_scale_refusal(config)) is not None:
+        return refusal
     if config.weight_prior == "random":
         return None
     if config.synapse_signs != "random":

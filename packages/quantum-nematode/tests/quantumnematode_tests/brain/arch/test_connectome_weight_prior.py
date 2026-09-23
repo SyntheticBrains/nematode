@@ -61,9 +61,11 @@ def _others(brain: ConnectomePPOBrain) -> dict[str, torch.Tensor]:
         for name, param in brain.topology.named_parameters()
         if name != _DRAWN
     }
-    critic = getattr(getattr(brain, "rule", None), "critic", None)
-    if critic is not None:
-        out |= {f"critic.{n}": p.detach() for n, p in critic.named_parameters()}
+    # The brain exposes the critic through a property that raises unless PPO is the learner, and
+    # keeps the rule only when it is -- so the rule's presence is the guard. An earlier version
+    # looked for a `rule` attribute the brain does not have, and so never compared the critic.
+    if brain._ppo_rule is not None:
+        out |= {f"critic.{n}": p.detach() for n, p in brain.critic.named_parameters()}
     return out
 
 
@@ -119,6 +121,8 @@ class TestOnlyTheCoveredChemicalEdgesMove:
         """A prior moves the chemical weights and no other tensor, critic included."""
         arms = wild if wiring == "wild" else rewired
         base, other = _others(arms["random"]), _others(arms[prior])
+        # These are PPO arms, so the critic must be in the comparison rather than silently absent.
+        assert any(name.startswith("critic.") for name in base)
         assert base.keys() == other.keys()
         for name, param in base.items():
             assert torch.equal(param, other[name]), f"{name} moved under {prior}"
@@ -286,15 +290,25 @@ class TestRefusals:
             {"weight_prior": "measured", "synapse_signs": "atlas"},
             {"weight_prior": "measured", "weight_draw": "dense_mask"},
             {"weight_prior": "measured", "weight_init": "count_scaled"},
+            {"weight_prior": "measured", "measured_weight_scale": -1.0},
+            {"weight_prior": "measured", "measured_weight_scale": 0.0},
         ],
-        ids=["scale-under-random", "scale-under-signs", "atlas", "draw", "count-init"],
+        ids=[
+            "scale-under-random",
+            "scale-under-signs",
+            "atlas",
+            "draw",
+            "count-init",
+            "negative-scale",
+            "zero-scale",
+        ],
     )
     def test_refused_at_validation_and_at_construction(self, overrides: dict[str, object]) -> None:
         """Each pairing is refused by the validator, and again when validation was skipped."""
         bad = self._config(**overrides)
-        with pytest.raises(ValueError, match=r"never read|not defined"):
+        with pytest.raises(ValueError, match=r"never read|not defined|greater than 0|positive"):
             ConnectomePPOBrainConfig.model_validate(bad.model_dump())
-        with pytest.raises(ValueError, match=r"never read|not defined"):
+        with pytest.raises(ValueError, match=r"never read|not defined|positive"):
             ConnectomePPOBrain(config=bad, device=DeviceType.CPU)
 
     def test_a_multiplier_is_accepted_where_it_is_read(self) -> None:
