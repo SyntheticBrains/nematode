@@ -5,13 +5,13 @@ implementation are in this change's `design.md`.
 
 ## Panel
 
-- [ ] 1. **The shuffled level in the shared vocabulary, not in the pilot's panel** (Decision H):
+- [x] 1. **done: `VOCABULARY` holds every level `level_keys` reads, `shuffled` included; the pilot's `LEVELS`, `ALL_LEVELS` and stem map are unchanged; `build_manifest` and `require_complete` take another panel's stem map and levels.** Original scope: **The shuffled level in the shared vocabulary, not in the pilot's panel** (Decision H):
   - `measured_prior_pilot` separates its level vocabulary (read by `level_keys` and `stem_for`, and
     gaining `shuffled`) from its own panel (`LEVELS`, `ALL_LEVELS`, the stem map, unchanged);
   - its `build_manifest` and `require_complete` take another panel's levels and stem map, defaulting
     to the pilot's own;
   - B.1b's tests pass unchanged, and a test asserts the pilot's panel does not contain `shuffled`.
-- [ ] 2. **The contrast module**, `scripts/analysis/measured_prior_contrast.py`:
+- [x] 2. **done: `scripts/analysis/measured_prior_contrast.py`; the family spans both learners, so both campaigns are scored in one invocation.** Original scope: **The contrast module**, `scripts/analysis/measured_prior_contrast.py`:
   - the stems, levels (random, measured at 1.0, shuffled at 1.0), seeds and arm map;
   - the gates per level against its own floor;
   - the two interactions per learner on both metrics, with `auc_success` as the registered primary
@@ -22,9 +22,9 @@ implementation are in this change's `design.md`.
   - the drift check;
   - the per-seed CSV (`lineterminator="\n"`) and the analysis JSON, including coverage at head
     scope and full scope from `quantumnematode.connectome.measured_weights.coverage`.
-- [ ] 3. **The shuffled configs**: the generator writes the 8 `_measured_shuffled` arms. Nothing
+- [x] 3. **done: 8 written, 48 kept.** Original scope: **The shuffled configs**: the generator writes the 8 `_measured_shuffled` arms. Nothing
   existing is rewritten.
-- [ ] 4. **Tests** (`tests/.../analysis/test_measured_prior_contrast.py`):
+- [x] 4. **done: 45 tests in `test_measured_prior_contrast.py`; with B.1b's and A.2's, 311 pass.** Original scope: **Tests** (`tests/.../analysis/test_measured_prior_contrast.py`):
   - every new config loads through the real loader and differs from its parent only in
     `weight_prior`;
   - the random and measured levels are the committed B.1b configs;
