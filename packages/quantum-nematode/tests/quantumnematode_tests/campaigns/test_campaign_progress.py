@@ -97,6 +97,19 @@ def test_a_running_campaigns_clock_runs_to_now(tmp_path: Path) -> None:
     assert elapsed.total_seconds() >= 0
 
 
+def test_a_campaign_with_runs_pending_keeps_its_clock_running(tmp_path: Path) -> None:
+    """Nothing in flight but runs still planned: elapsed runs to now, not to the last marker."""
+    camp = _campaign(tmp_path, {"a-seed1": ("", "0")})
+    long_ago = time.time() - 3 * 3600
+    for marker in (camp / "logs").glob("*.exit"):
+        os.utime(marker, (long_ago, long_ago))
+    s = cp.survey(camp, 2)
+    assert s["pending"] == 1
+    elapsed = s["elapsed"]
+    assert isinstance(elapsed, timedelta)
+    assert elapsed.total_seconds() >= 0
+
+
 def test_a_non_positive_total_is_refused(tmp_path: Path) -> None:
     """A zero total is an argument error, not a division by zero inside the report."""
     camp = _campaign(tmp_path, {"a-seed1": ("", "0")})
