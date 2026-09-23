@@ -86,8 +86,13 @@ it sits beside.
 
 The shuffle therefore takes a generator seeded from the run seed and a fixed tag, which gives a
 different stream at every seed and stays deterministic. This changes `measured_shuffled`'s values,
-but no run has used that prior (B.1a registered none), so no committed result moves. A test asserts
-the permutation is unchanged when the draw mode changes.
+but no run has used that prior (B.1a registered none), so no committed result moves. B.1a's test
+for the shuffled prior is updated only if it pins specific values.
+
+**The test must fail without the fix.** Today the shuffle already uses a separate generator object,
+so "the permutation is the same under every draw" holds before and after the change, and a test of
+it alone would pass without the fix. The test therefore asserts that at the same seed, the shuffle
+generator's stream differs from the draw generator's, and keeps the across-draws check beside that.
 
 ### Decision C: Parents and levels
 
@@ -135,22 +140,43 @@ a seed with the contrast it calibrates. A test asserts the bands are fresh and d
 - The **wiring gap** on the metric A.2's censoring rule chooses, with its interval. The gap is
   descriptive only.
 
+**Two gate readings, each with one job.** Both come from `learning_gates`, and each branch below
+names which one it reads.
+
+- **The wild type learns**: the wild-type arm's paired test against its own floor has a lower
+  interval bound above zero (`wt.vs_floor.ci_lo > 0`). This asks whether the substrate can be
+  learned at all, so it concerns the wild type alone.
+- **The level passes**: both learning arms beat their own floors (`gate_passes`), **and** the level
+  is not saturated (`saturated` false). This asks whether a wiring contrast could be read there. A
+  level where the null is broken, or where both arms sit above the instrument's ceiling, cannot
+  carry B.1c's contrast; A.2's saturated per-neuron level showed the second can happen. This is
+  still the learner's own gate, not the contrast: it asks whether each arm learns, never which one
+  learns more.
+
 **The branches, in the order they are read:**
 
 1. **Broken arm.** A learning arm that does not beat its floor is reported as a gate failure at that
    level, never as a wiring reading.
-2. **Pathway unlearnable (Lee).** The random level's wild type passes, and **no** measured level and
-   not `sign` passes. B.1 closes *unmet-with-reason* for that learner, with the pathway named, and
-   B.1c does not run that learner. If the random level itself fails, the pilot is uninformative for
-   that learner, and the record says so rather than reading branch 2.
-3. **Magnitude is the obstacle.** `sign` passes and every `measured` level fails. B.1c runs `measured`
-   at 1.0 anyway, as registered, carrying the pilot's gate failure beside it, with `sign` added as
-   a reported arm.
-4. **Multiplier selection.**
-   - Choose **1.0** if the wild type passes there. That is the point where the covered edges carry
-     the random draw's magnitude, so B.1c compares structure rather than size.
+2. **Pathway unlearnable (Lee).** At the random level the wild type learns. At **every** `measured`
+   level and at `sign`, it does not. B.1 closes *unmet-with-reason* for that learner, with the
+   pathway named, and B.1c does not run that learner. If the wild type fails at the random level
+   itself, the pilot is uninformative for that learner, and the record says so rather than reading
+   branch 2.
+3. **Magnitude is the obstacle.** `sign` passes and no `measured` level passes. No value arm can
+   carry a contrast for that learner: running one where its arms fail their floors is what the gate
+   requirement forbids. So **B.1c's `measured` and `measured_shuffled` arms close
+   *unmet-with-reason* for that learner, with the fitted magnitudes named as the reason.** Whether
+   B.1c runs the sign-only prior as its measured arm is left to B.1c's own change. That arm would
+   need a sign-shuffled control, which does not exist; this pilot records the option and builds
+   nothing for it.
+4. **Multiplier selection**, among the `measured` levels that pass:
+   - Choose **1.0** if it passes. That is the point where the covered edges carry the random draw's
+     magnitude, so B.1c compares structure rather than size.
    - Otherwise choose the passing level nearest 1.0 on the log scale, with ties going to the smaller
      multiplier.
+   - If no `measured` level passes, branch 2 or branch 3 applies. If neither applies (for example,
+     `sign` also fails, or it passes but saturates), no multiplier is chosen, B.1c's value arms for
+     that learner close *unmet-with-reason*, and the record names which gate failed at each level.
    - **The wiring gap never enters the selection.**
 5. **Sign across the multiplier.** This is recorded only where a level's gap interval excludes zero
    on the side opposite to the random level's. At 8 seeds it becomes a **registered condition B.1c
@@ -173,7 +199,10 @@ its behaviour through the refactor.
 - **Eight seeds is thin.** The pilot selects a level and reads branches; it does not estimate
   effects, and the logbook says so where it reports a gap.
 - **PPO moves to a draw A.2 did not sweep.** This is stated beside every PPO figure. The pilot's own
-  `random` level re-reads A.1's committed fan-in point.
+  `random` level re-reads A.1's committed fan-in point. **The condition passes to B.1c.** B.1c's PPO
+  arm takes its depth and initial-noise settings from A.2's surface, which was measured under
+  `edge_order`, so B.1c must say so in the same sentence as its PPO claim, per the standing-condition
+  requirement. The tracker's B.1c entry carries the condition from this change on.
 - **The Lee reading can be mimicked by the multiplier.** A level can fail because its magnitude is
   wrong rather than its structure, which is why branch 2 needs every level and `sign` to fail, not
   one.

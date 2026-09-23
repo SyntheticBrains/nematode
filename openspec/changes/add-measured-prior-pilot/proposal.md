@@ -41,9 +41,12 @@ B.1a vendored the Creamer–Leifer–Pillow fitted weights and added `weight_pri
 - **A rule for choosing a pin**, added to `architecture-comparison-protocol`: the value is chosen on
   the learner's own gate, never on the contrast the value will carry.
 - **Registered before any seed runs:** each level is gated against its own frozen floor, and the
-  multiplier is selected by a rule fixed in advance. The wiring gap is recorded descriptively, and
+  multiplier is selected by a rule fixed in advance. A level passes only if both learning arms beat
+  their floors and it is not saturated, so the chosen point can carry the contrast. The wiring gap is recorded descriptively, and
   the branches (magnitude is the obstacle, the pathway is unlearnable, the sign moves across the
-  multiplier) are named with their consequences for B.1c.
+  multiplier) are named with their consequences for B.1c. In the branches where no `measured` level
+  passes, B.1c's value arms close *unmet-with-reason* for that learner rather than running at a
+  level that failed its gate.
 
 ## Capabilities
 

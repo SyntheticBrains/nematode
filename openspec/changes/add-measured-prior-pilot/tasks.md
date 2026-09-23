@@ -25,7 +25,8 @@ decisions taken before implementation are in this change's `design.md`.
   - on the null, the first *k* edges and the remaining edges are as specified, and each neuron's
     multiset equals the wild type's, under every measured prior;
   - the shared generator is unchanged under both draws;
-  - the permutation is unchanged across draws;
+  - at one seed the shuffle generator's stream differs from the draw generator's, which fails
+    without the fix, and the permutation is unchanged across draws;
   - `dense_mask` is refused at validation and at construction;
   - the existing `edge_order` tests still pass unchanged.
 
@@ -33,9 +34,12 @@ decisions taken before implementation are in this change's `design.md`.
 
 - [ ] 4. **Panel definition and analysis**, in `scripts/analysis/measured_prior_pilot.py`:
   - the stems, levels, seeds and arm map, built by a loop and not by a regex;
-  - a manifest builder, and the completeness check;
+  - a manifest builder writing A.2's line format (`<arm> <level> <seed> <log path>`, with arms
+    named `wt_learn`, `rn_learn`, `wt_frozen`, `rn_frozen`), which `learning_gates` reads, and the
+    completeness check;
   - per level, the learning gates, censoring and metric choice, and the wiring gap;
-  - the branch read and the multiplier selection, per Decision E;
+  - the branch read and the multiplier selection, per Decision E: a level passes on `gate_passes`
+    and not `saturated`, and the Lee branch reads the wild type's own test against its floor;
   - a per-seed CSV (`lineterminator="\n"`) and an analysis JSON.
 - [ ] 5. **The gate, shared rather than copied**: `operating_point_surface.learning_gates` takes the
   floor level as an argument (Decision F), and A.2's tests still pass.
@@ -48,8 +52,8 @@ decisions taken before implementation are in this change's `design.md`.
   - every level reaches the brain: `weight_prior` and the multiplier change the constructed chemical
     weights (the swept-level requirement);
   - the seeds are fresh and disjoint;
-  - the selection rule is checked on synthetic gate outcomes, including the no-pass case and the
-    tie-break;
+  - the selection rule is checked on synthetic gate outcomes: the no-pass case, the tie-break, a
+    level whose null fails its floor, and a saturated level;
   - the gap is never read by the selection.
 
 ## Registration and run
@@ -79,7 +83,8 @@ decisions taken before implementation are in this change's `design.md`.
 - [ ] 13. **Discharge:**
   - the index row;
   - tracker B.1b ticked, and B.1c given the chosen multiplier per learner, the fan-in pairing, and
-    any condition from branch 5;
+    any condition from branch 5, and the condition that B.1c's PPO arm inherits A.2's depth and
+    initial-noise settings from a surface measured under `edge_order`;
   - a dated note at roadmap D17 and § B.1;
   - the `docs/architectures.md` row and a CHANGELOG line for the pairing.
 - [ ] 14. **Close-out**: validate, archive and open the PR.
