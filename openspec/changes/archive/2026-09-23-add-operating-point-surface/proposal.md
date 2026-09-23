@@ -2,7 +2,7 @@
 
 Phase 8's **A.2**, the milestone that fixes the operating point every later rung cites.
 
-[Logbook 068](../../../docs/experiments/logbooks/068-l1b-rate-calibration.md) found **one inherited
+Logbook 068 (`docs/experiments/logbooks/068-l1b-rate-calibration.md`) found **one inherited
 pin setting the sign of a registered primary**: the width-by-wiring interaction ran **+0.2818** at
 `plasticity_rate` 0.001 and **−0.0657** at 0.0001, with a three-way of +0.3475 at q = 0.000 on 81 of
 96 seeds. The effect the pin hid was larger than the effect it was pinned for. Churchland et al.
