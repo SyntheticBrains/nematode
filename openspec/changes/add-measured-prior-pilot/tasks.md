@@ -68,14 +68,14 @@ decisions taken before implementation are in this change's `design.md`.
   - the arms, seeds, gate, metric rule, selection rule and branches;
   - the retention line;
   - the cost estimate.
-- [ ] 10. **The campaign**:
+- [x] 10. **done: 448/448, none failed; PPO 3h09m, reading 6h01m (15.9x busy-to-wall on both). A progress-reader defect found here and fixed: a finished campaign's elapsed ran to the moment of reading, which made PPO read as 8h30m.** Original scope: **The campaign**:
   - `run_campaign.py` over both halves, 448 runs, with the output controls;
   - progress read with `campaign_progress.py`;
   - no branch switches until it completes.
 
 ## Records
 
-- [ ] 11. **Score and commit** the per-seed CSV and the analysis JSON under the logbook's supporting
+- [x] 11. **done: `pilot-{ppo,reading}.json` and `per-seed-{ppo,reading}.csv`, one file per campaign, since each learner ran as its own campaign.** Original scope: **Score and commit** the per-seed CSV and the analysis JSON under the logbook's supporting
   directory.
 - [ ] 12. **Logbook 072**, following the logbook skill: the branch taken per learner, the chosen
   multiplier per learner, the gates, and the descriptive gap. The PPO draw is stated beside every PPO
