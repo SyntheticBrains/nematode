@@ -57,7 +57,7 @@ taken before implementation are in this change's `design.md`. No campaign runs i
   dated correction there and at roadmap § B.1 that Randi is cited rather than vendored, and that the
   released table covers 125 neurons (the fitted model 154), not 156.
 
-- [ ] 9. **Close-out** — the full suite via `uv run pytest -m "not nightly"`; `git add -A` then
+- [x] 9. **Close-out** — **done: full suite 6,583 passed; hooks pass with everything staged, judged by exit code; every prior constructed on both wirings, and 30 training episodes under `measured` on both from scratchpad configs; archived.** Original scope: — the full suite via `uv run pytest -m "not nightly"`; `git add -A` then
   `uv run pre-commit run --all-files`, judged by its exit code; a smoke construction under every
   prior on both wirings, and one short run under `measured` from a **temporary config in the
   scratchpad** — B.1a commits no configs, and `run_simulation.py` has no override; archive and PR.
