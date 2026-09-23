@@ -81,7 +81,8 @@ episode gap with a tight interval is two arms tied at the ceiling. Readout width
 
 The drift obligation is discharged cleanly: `w_chem` drift is **0.00** on every level, every seed,
 both wirings, with complete evidence — so the half is readable rather than void. That zero carries
-weight because the same check reads about **1.0** on the PPO half, where PPO writes the matrix.
+weight because the same check, run on the PPO panel where PPO writes the matrix, reads a relative
+drift of **0.77 to 1.44** at every level and wiring, recorded in `ppo-surface.json`.
 
 At the centre the **rewired null is ahead**: −0.210 `auc_success` [−0.287, −0.136], −706 episodes,
 plateau 57.4% against the wild type's 36.7%. This is not a failed replication of block V, which is a

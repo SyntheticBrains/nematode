@@ -6,10 +6,14 @@ redirected stdout to -- which is easy to lose track of, and gone entirely if the
 redirected. This reads the campaign directory instead, so it works from a fresh shell and needs
 nothing but the path.
 
-**How "finished" is counted, and why it is reliable.** Each run writes one log under ``logs/``, and
-Python buffers stdout when it is not a terminal, so a run's log stays **zero bytes until it
-completes**. A non-empty log is therefore a finished run. This is not a heuristic about content: it
-is a property of the redirect the runner sets up.
+**How "finished" is counted.** The runner writes ``<label>.exit`` beside each run's log once the
+child has exited, holding its return code. A run is finished when that marker exists and failed when
+its code is non-zero. **Log size is not used where markers exist**: stdout is buffered, but stderr is
+not, so a warning printed at load time makes a log non-empty while the run is still going.
+
+Campaigns launched before the runner wrote markers have none. For those the reader falls back to
+"a non-empty log is a finished run" and **says so in its output**, because that signal miscounts any
+run that writes to stderr before it ends.
 
 Usage::
 
@@ -25,6 +29,19 @@ import sys
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+
+def campaign_done(campaign: Path, total: int | None) -> bool:
+    """Whether THIS campaign has finished, whatever else is running on the machine.
+
+    With ``--total`` that is simply every run accounted for. Without it the reader cannot know how
+    many runs remain unstarted, so it waits until this campaign has nothing in flight and no
+    simulation is running anywhere -- conservative, but it never stops early.
+    """
+    s = survey(campaign, total)
+    if total is not None:
+        return int(s["finished"]) >= total  # type: ignore[arg-type]
+    return s["in_flight"] == 0 and not any_runner_alive()
 
 
 def any_runner_alive() -> bool:
@@ -43,12 +60,21 @@ def survey(campaign: Path, total: int | None) -> dict[str, object]:
     logs = campaign / "logs"
     if not logs.is_dir():
         logs = campaign
-    # Scoped to THIS campaign by construction. The runner opens a run's log when it starts the
-    # run and the run writes nothing until it ends, so an empty log is a run in flight and a
-    # non-empty one is a run finished. Counting live processes instead would attribute another
-    # campaign's workers to this one, which is exactly what it did on first use.
-    finished = sum(1 for log in logs.glob("*.log") if log.stat().st_size > 0)
-    running = sum(1 for log in logs.glob("*.log") if log.stat().st_size == 0)
+    # Scoped to THIS campaign by construction: every count reads this campaign's own files, never
+    # the machine's process table, which would attribute another campaign's workers to this one.
+    run_logs = list(logs.glob("*.log"))
+    markers = {marker.stem: marker for marker in logs.glob("*.exit")}
+    if markers:
+        codes = [marker.read_text().strip() for marker in markers.values()]
+        finished = len(markers)
+        failed = sum(1 for code in codes if code != "0")
+        running = sum(1 for log in run_logs if log.stem not in markers)
+        basis = "completion markers"
+    else:
+        finished = sum(1 for log in run_logs if log.stat().st_size > 0)
+        running = len(run_logs) - finished
+        failed = None
+        basis = "log size (no completion markers; a run that writes to stderr early is miscounted)"
     # st_birthtime is macOS-only; st_ctime is the portable stand-in, and for a directory the
     # runner created and never moves it is the same instant in practice.
     stat = campaign.stat()
@@ -60,8 +86,10 @@ def survey(campaign: Path, total: int | None) -> dict[str, object]:
     out: dict[str, object] = {
         "finished": finished,
         "in_flight": running,
+        "failed": failed,
         "elapsed": elapsed,
         "tracebacks": broken,
+        "basis": basis,
     }
     if total is not None:
         out["pending"] = max(0, total - finished - running)
@@ -94,8 +122,11 @@ def report(campaign: Path, total: int | None) -> str:
     if isinstance(eta, timedelta):
         done_at = (datetime.now(tz=UTC) + eta).astimezone()
         tail += f"   eta ~{_fmt(eta)} (about {done_at:%H:%M})"
+    if s["failed"] is not None:
+        tail += f"   failed {s['failed']}"
     tail += f"   tracebacks {s['tracebacks']}"
     lines.append(tail)
+    lines.append(f"  counted from {s['basis']}")
     return "\n".join(lines)
 
 
@@ -114,13 +145,15 @@ def main(argv: list[str] | None = None) -> int:
     if not args.campaign.is_dir():
         print(f"no such campaign directory: {args.campaign}", file=sys.stderr)
         return 2
+    if args.total is not None and args.total <= 0:
+        ap.error("--total must be a positive run count")
 
     while True:
         print(report(args.campaign, args.total), flush=True)
         if not args.watch:
             return 0
-        if not any_runner_alive():
-            print("  runner has exited", flush=True)
+        if campaign_done(args.campaign, args.total):
+            print("  campaign has finished", flush=True)
             return 0
         time.sleep(args.interval)
 

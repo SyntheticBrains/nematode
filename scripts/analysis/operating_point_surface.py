@@ -639,10 +639,13 @@ def score(
 
     # The reading learner leaves `w_chem` fixed, so its surface is unreadable without drift
     # evidence on every scored seed. Run here rather than left to a separate step: an obligation
-    # whose failure mode is VOID should not be possible to forget. The PPO half owes none of it --
-    # PPO writes the chemical matrix by design, and the check reads ~1.0 there, which is what
-    # establishes that a 0.00 on the reading half means something.
-    drift = substrate_drift(manifest, half, seeds, only_levels) if half == "reading" else None
+    # whose failure mode is VOID should not be possible to forget.
+    drift = substrate_drift(manifest, half, seeds, only_levels)
+    # Run on both halves, because the PPO reading is what gives the reading half's zero its
+    # meaning: PPO writes the chemical matrix by design, so the check must read large there or it
+    # is not a check. Only the reading half carries the obligation; on PPO `void` is expected and
+    # voids nothing.
+    drift["obligation_applies"] = half == "reading"
 
     return {
         "half": half,

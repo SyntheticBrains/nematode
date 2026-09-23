@@ -2298,7 +2298,149 @@
     175,
     176
   ],
-  "substrate_drift": null,
+  "substrate_drift": {
+    "levels": {
+      "centre": {
+        "evidence_complete": true,
+        "floor_level": "centre",
+        "rn": {
+          "max_relative": 1.166961669921875,
+          "mean_relative": 1.1111097559332848,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.298346757888794,
+          "mean_relative": 1.182214692234993,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "d2": {
+        "evidence_complete": true,
+        "floor_level": "d2",
+        "rn": {
+          "max_relative": 1.3616732358932495,
+          "mean_relative": 1.0919987000524998,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 0.9146170616149902,
+          "mean_relative": 0.7672323994338512,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "d3": {
+        "evidence_complete": true,
+        "floor_level": "d3",
+        "rn": {
+          "max_relative": 1.65152907371521,
+          "mean_relative": 1.4351582080125809,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.4948558807373047,
+          "mean_relative": 1.3544255793094635,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "d6": {
+        "evidence_complete": true,
+        "floor_level": "d6",
+        "rn": {
+          "max_relative": 1.108580231666565,
+          "mean_relative": 1.0010486170649529,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.1179238557815552,
+          "mean_relative": 1.041552159935236,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "lsm05": {
+        "evidence_complete": true,
+        "floor_level": "lsm05",
+        "rn": {
+          "max_relative": 1.2477891445159912,
+          "mean_relative": 1.132451318204403,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.4281061887741089,
+          "mean_relative": 1.2180915474891663,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "lsm10": {
+        "evidence_complete": true,
+        "floor_level": "lsm10",
+        "rn": {
+          "max_relative": 1.2333343029022217,
+          "mean_relative": 1.136171154677868,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.425260066986084,
+          "mean_relative": 1.2500910013914108,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "lsp05": {
+        "evidence_complete": true,
+        "floor_level": "lsp05",
+        "rn": {
+          "max_relative": 1.1756858825683594,
+          "mean_relative": 1.088694516569376,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.2604641914367676,
+          "mean_relative": 1.1776695549488068,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      },
+      "wide": {
+        "evidence_complete": true,
+        "floor_level": "wide",
+        "rn": {
+          "max_relative": 1.1239845752716064,
+          "mean_relative": 1.0001361928880215,
+          "n_read": 16,
+          "seeds_unread": []
+        },
+        "substrate_frozen": false,
+        "wt": {
+          "max_relative": 1.337462306022644,
+          "mean_relative": 1.1127636283636093,
+          "n_read": 16,
+          "seeds_unread": []
+        }
+      }
+    },
+    "obligation_applies": false,
+    "tolerance": 1e-06,
+    "void": true
+  },
   "verdicts": {
     "centre": "specific_wiring_efficiency",
     "d2": "degree_statistics",

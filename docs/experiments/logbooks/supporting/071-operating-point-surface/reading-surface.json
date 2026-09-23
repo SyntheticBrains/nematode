@@ -3701,6 +3701,7 @@
         }
       }
     },
+    "obligation_applies": true,
     "tolerance": 1e-06,
     "void": false
   },

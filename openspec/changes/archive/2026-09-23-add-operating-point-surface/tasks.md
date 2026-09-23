@@ -120,7 +120,7 @@ cheaper campaign on which to find a defect in the shared generator or driver.
   recorded, the drift reader returns nothing for every run, and task 12b voids the half. The weights
   auto-save is unconditional (`run_simulation.py:1020`), so `--no-detailed-export` stays safe.
 
-- [x] 12b. **Drift evidence for the reading half, before its surface is read** — **done: **0.00 relative drift on every level, every seed, both wirings, evidence complete on all 12 levels**, so the half is readable rather than void. That zero means something because the same check reads ~1.0 on the PPO half, where PPO writes the chemical matrix by design.** Original scope: — the reading
+- [x] 12b. **Drift evidence for the reading half, before its surface is read** — **done: **0.00 relative drift on every level, every seed, both wirings, evidence complete on all 12 levels**, so the half is readable rather than void. That zero means something because the same check reads 0.77 to 1.44 on the PPO panel, where PPO writes the chemical matrix by design.** Original scope: — the reading
   learner leaves `w_chem` fixed, so the governing requirement compares the fixed tensors against a
   control in which nothing learned, **on every scored seed**, and returns **void** on any non-zero
   drift or on evidence missing for any seed. Reuse `l4_frozen_features.drift`'s shape and

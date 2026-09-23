@@ -12,13 +12,14 @@ matters is whether the loaded configuration differs in exactly the key the heade
 
 from __future__ import annotations
 
+import functools
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
+from quantumnematode.utils.config_loader import load_simulation_config
 
 _REPO = Path(__file__).resolve().parents[5]
 _ANALYSIS = _REPO / "scripts" / "analysis"
@@ -48,10 +49,19 @@ def _config_path(stem: str) -> Path:
     return next(iter(_CONFIGS.rglob(f"{stem}.yml")))
 
 
+@functools.cache
 def _brain_config(stem: str) -> dict[str, Any]:
-    """Read the brain's configuration block as the loader would see it, comments gone."""
-    data = yaml.safe_load(_config_path(stem).read_text())
-    return dict(data["brain"]["config"])
+    """Load one arm through the real config loader and return its brain config as a dict.
+
+    Through the loader rather than as raw YAML, so the comparison is of what a run actually gets:
+    defaults filled in, types coerced, and a key the brain does not declare dropped rather than
+    compared. A raw-YAML diff would call a key "set" that the loader silently discards.
+    """
+    brain = load_simulation_config(str(_config_path(stem))).brain
+    if brain is None or brain.config is None:
+        msg = f"{stem} carries no brain config"
+        raise AssertionError(msg)
+    return brain.config.model_dump()
 
 
 def _levels_with_arms() -> list[tuple[str, str, str, str, Any]]:
@@ -211,8 +221,8 @@ class TestTheGateKnowsWhatACompletePanelIs:
 class TestTheFrozenSubstrateObligation:
     """The reading half is void without drift evidence on every scored seed.
 
-    The check itself is validated in the direction where the answer is known: on the PPO pilot,
-    where PPO writes the chemical matrix by design, it reads a relative drift near 1.0 and returns
+    The check itself is validated in the direction where the answer is known: on the PPO panel,
+    where PPO writes the chemical matrix by design, it reads a large relative drift and returns
     void. That is what makes a 0.00 on the reading half evidence rather than a default.
     """
 
