@@ -30,12 +30,11 @@ Cell-class assignment rules:
   (``get_SIM_class()``); the project data model has no "other" class, so
   they are classified as ``"interneuron"`` (the closest fit per WormAtlas).
 
-Neurotransmitter coverage is intentionally sparse: ``None`` for every
-neuron in this initial table. A follow-up curation can attach NTs where
-well-documented (Glutamate for ASE / AWC, GABA for VD/DD, Acetylcholine
-for VA/VB/DA/DB, Serotonin for NSM/HSN, Dopamine for ADE/PDE/CEP, etc.) —
-the project's ``docs/nematode_biology.md`` § Neurotransmitter Systems
-lists the well-known cases.
+The transmitter slot carries each neuron's release identity from the
+CRISPR knock-in neurotransmitter atlas vendored under ``data/connectome/``,
+as committed literal values; ``quantumnematode.connectome.neurotransmitters``
+is the reader that generated them and the one a test re-derives them with.
+A neuron the atlas gives no release identity carries ``None``.
 
 The ``CANONICAL_NAME_ALIASES`` dict normalises cross-dataset naming
 quirks (e.g. ``RIA-L`` → ``RIAL``) so the loader can compare Cook 2019

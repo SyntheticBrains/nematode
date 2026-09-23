@@ -52,10 +52,10 @@ validated against the canonical classification, and a coverage report joins it t
 `random` (default, bit-identical), `measured`, `measured_signs` and `measured_shuffled`, plus
 `measured_weight_scale` (default 1.0), the pin B.1b sweeps.
 
-- **Measured values are variance-matched.** Covered values are divided by their RMS over the wild
-  type's covered edges, sign preserved, then scaled by the same per-neuron `1/sqrt(in-degree)` the
-  random draw uses. At the default multiplier a measured arm has the random arm's magnitude, so
-  B.1c compares structure rather than size.
+- **Measured values are variance-matched.** Covered values sit on the same per-neuron
+  `1/sqrt(in-degree)` the random draw uses, times one constant chosen so that their RMS over the
+  wild type's covered edges equals the draw's expected RMS there. At the default multiplier a
+  measured arm has the random arm's magnitude, so B.1c compares structure rather than size.
 - **`measured_signs`** keeps the random draw's magnitude and takes the measured sign — B.1b's
   sign-only arm, built now so B.1b is configs only.
 - **`measured_shuffled`** permutes the measured values among the wild type's own covered edges,

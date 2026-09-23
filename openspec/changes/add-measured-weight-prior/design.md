@@ -56,10 +56,19 @@ values belong there is B.2b's question.
 The values are dynamics coefficients at 2 Hz on calcium signals, median magnitude about 0.01, in no
 unit this rate model shares. Using them raw would need an arbitrary scale and would start a measured
 arm at a very different overall magnitude from its random comparator, confounding structure with
-size. So covered values are divided by their **RMS** over the wild type's covered edges (sign kept),
-multiplied by the per-post-neuron `1/sqrt(in-degree)` the random draw uses, and by
-`measured_weight_scale`, default 1.0. At the default the measured and random arms share magnitude;
-B.1b sweeps the multiplier, which is D17's pin.
+size. So each covered value is multiplied by the per-post-neuron `1/sqrt(in-degree)` the random draw
+uses, by `measured_weight_scale` (default 1.0), and by **one constant** chosen so that over the wild
+type's covered edges the placed values' RMS equals the draw's *expected* RMS on those same edges. One
+constant keeps the fitted values' relative sizes and every sign; the expectation rather than a
+realised draw keeps it independent of the seed. B.1b sweeps the multiplier, which is D17's pin.
+
+*(**Corrected during implementation, 2026-09-23.**)* As first specified, the values were divided by
+their own RMS and *then* scaled per neuron. Measured on constructed brains, that left the covered
+edges **1.275 times** the draw's expected magnitude — deterministic, not seed noise (1.19-1.37
+realised over eight seeds). The large fitted values sit disproportionately on neurons with few inputs,
+whose `1/sqrt(in-degree)` is large, so normalising the values alone does not normalise the weights.
+The constant now has the per-neuron scale inside it, which is what "the measured arm has the random
+arm's magnitude" was meant to guarantee; a test pins it.
 
 ### Decision E: Four modes, with the sign-only arm built now
 

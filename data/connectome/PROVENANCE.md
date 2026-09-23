@@ -91,6 +91,39 @@ This directory contains *C. elegans* connectome data files used by the
 - **Redistribution rationale**: Same as Cook 2019 above — academic re-use of
   *Nature* SI via the MIT-licensed cect mirror.
 
+### `creamer_lds_2026_model_weights.csv`
+
+- **Description**: fitted synaptic weights from Creamer, Leifer & Pillow's connectome-constrained
+  linear dynamical system — a signed weight for each directed neuron pair the model's mask allows,
+  as `presynaptic cell,postsynaptic cell,weight`. 2,011 off-diagonal entries over 125 neurons (the
+  fitted model holds 154). The values are coefficients of a 2 Hz dynamics matrix fitted to calcium
+  imaging, on a mask that unions chemical and gap-junction edges from White 1986 and Witvliet 2020 —
+  not Cook 2019 and not typed by connection, so a consumer joins it by name and reports coverage.
+  Consumed as a measured prior for the connectome brain's chemical weights.
+- **Original filename in upstream repository**: `quick_start_examples/model_weights.csv`
+- **Upstream commit**: `bba43302d50a4947804d98b01779856e648237cc` (the file last changed at
+  `009c767973688dcc7ea6124c620bb14334695904`)
+- **Size**: 41,959 bytes
+- **SHA256**: `f452b88461aa90d414fd652e246e11302293d207510b9f4c94bf9a9a8098924c`
+- **Line endings**: CRLF, as upstream. Marked `-text` in `.gitattributes` so git stores the bytes
+  unchanged; `text=auto` would otherwise normalise them and break the digest.
+- **Source URL**: <https://github.com/Nondairy-Creamer/Creamer_LDS_2026/blob/bba43302d50a4947804d98b01779856e648237cc/quick_start_examples/model_weights.csv>
+- **Licence**: MIT — the repository's single `LICENSE`, "Copyright (c) 2026 Matthew S. Creamer",
+  reproduced in `LICENSE-creamer-lds.txt` beside the file as the licence requires. The repository
+  has no separate data licence; the file is covered because it ships inside the repository, which
+  is an interpretation of a licence worded for "the Software", and is recorded as such.
+- **Retrieval date**: 2026-09-23
+- **Accompanying paper**:
+  - **Title**: Bridging the gap between the connectome and whole-brain activity in *C. elegans*
+  - **Authors**: Matthew S. Creamer, Andrew M. Leifer, Jonathan W. Pillow
+  - **Status**: **preprint**, bioRxiv 2024.09.22.614271 v3 (PMID 41040343); no journal version
+    found at retrieval
+  - **DOI**: <https://doi.org/10.1101/2024.09.22.614271>
+- **Named for** its source repository, because the preprint (2024), its v3 (2025) and the
+  repository (2026) each carry a different year.
+- **Redistribution rationale**: MIT permits redistribution with the notice retained. Any consumer
+  should cite Creamer et al. and the Randi et al. 2023 atlas the model was fitted to (below).
+
 ## What is NOT vendored
 
 Cook 2019 SI 1 is **not** vendored. Pre-implementation investigation found
@@ -111,6 +144,27 @@ the full attribution chain:
 **cect commit / version pinned at curation time**: v0.3.1 (March 2026)
 **cect licence**: MIT (per its `LICENSE` file)
 
+### The Randi et al. 2023 signal-propagation atlas, and other Creamer artefacts
+
+The raw functional measurement the fitted weights come from — Randi, Sharma, Dvali & Leifer,
+"Neural signal propagation atlas of *Caenorhabditis elegans*", *Nature* 623:406 (2023),
+<https://doi.org/10.1038/s41586-023-06683-4> — is **cited, not vendored**. Checked on 2026-09-23:
+
+- **OSF `e2syt`** (<https://osf.io/e2syt/>), the primary deposit: **no licence stated**. Without one
+  the default is all rights reserved.
+- **`funatlas.h5`** inside the `wormneuroatlas` package (<https://github.com/francescorandi/wormneuroatlas>):
+  **GPL-3.0**. Not vendored into this Apache-2.0 repository.
+- **`leiferlab/worm-functional-connectivity`**: no licence stated.
+
+Also not vendored, from the Creamer repository and deposit:
+
+- **Model pickles** (`models/*.pkl`, ~20 MB each; MIT): unpickling executes code, and the CSV above
+  holds what the connectome brain reads.
+- **OSF `qxhjd`** (<https://osf.io/qxhjd/>), Randi's recordings reformatted for the fitting code:
+  **no licence stated**.
+
+A licence such as CC BY on the two OSF deposits would remove the obstacle to vendoring either.
+
 ## Verification
 
 To verify the vendored files match the upstream mirror after a fresh clone:
@@ -121,4 +175,10 @@ shasum -a 256 data/connectome/cook_2019_si5_connectome_adjacency.xlsx
 
 shasum -a 256 data/connectome/witvliet_2020_dataset8_adult.xlsx
 # expected: fdead89606257c1b26e57069fbe1de14c7696633b75b59b79e74c0bcc3497e62
+
+shasum -a 256 data/connectome/elife-95402-supp2-v1.xlsx
+# expected: 0013e4b5f366b82a6b0ec0d682c3bace4027545c957823841293de93feafc0e2
+
+shasum -a 256 data/connectome/creamer_lds_2026_model_weights.csv
+# expected: f452b88461aa90d414fd652e246e11302293d207510b9f4c94bf9a9a8098924c
 ```

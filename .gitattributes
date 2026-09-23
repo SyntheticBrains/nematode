@@ -12,3 +12,7 @@ configs/**/*.json    filter=lfs diff=lfs merge=lfs -text
 
 # Git LFS — connectome data (Phase 6 L0 connectome substrate)
 data/connectome/**/*.xlsx filter=lfs diff=lfs merge=lfs -text
+
+# Vendored verbatim and pinned by SHA256: the upstream file uses CRLF line endings, which
+# `text=auto` would normalise on commit, and the stored bytes would no longer match their digest.
+data/connectome/creamer_lds_2026_model_weights.csv -text

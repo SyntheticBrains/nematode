@@ -9,9 +9,10 @@ requirement. Under any other prior the edge loop SHALL take the same draws in th
 same generator as under `random`, and only chemical edges covered by the measured table SHALL change;
 every uncovered edge SHALL keep its draw, and every other parameter SHALL be unchanged.
 
-A covered edge's measured value SHALL be divided by the root mean square of the measured values over
-the wild type's covered edges, keeping its sign, and multiplied by the per-post-neuron scale the random
-draw uses and by `measured_weight_scale`. `measured` SHALL place that value on its edge;
+A covered edge's measured value SHALL be multiplied by the per-post-neuron scale the random draw
+uses, by `measured_weight_scale`, and by one constant, the same for every edge and keeping every sign,
+chosen so that at the default multiplier the root mean square of the placed values over the wild
+type's covered edges equals the random draw's expected root mean square on those same edges. `measured` SHALL place that value on its edge;
 `measured_signs` SHALL keep the draw's magnitude and take the measured sign; `measured_shuffled` SHALL
 permute the values among the wild type's covered edges using the brain's dedicated draw generator.
 
@@ -42,6 +43,14 @@ is constructed. The run's training state SHALL record the prior and the multipli
 - **WHEN** their parameters are compared
 - **THEN** every parameter other than the chemical weights SHALL be identical
 - **AND** every chemical edge the table does not cover SHALL be identical
+
+#### Scenario: At the default multiplier the covered edges carry the draw's magnitude
+
+- **WHEN** a brain is built under `measured` at the default multiplier
+- **THEN** the root mean square of its covered chemical weights SHALL equal the random draw's
+  expected root mean square on those edges
+- **AND** each covered weight divided by its per-neuron scale SHALL be its fitted value times one
+  constant common to all of them
 
 #### Scenario: The shared generator is left where it was
 

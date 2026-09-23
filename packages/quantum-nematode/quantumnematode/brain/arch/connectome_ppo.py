@@ -24,11 +24,13 @@ in a single chemical-synapse hop.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import numpy as np
 import torch
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -61,6 +63,7 @@ from quantumnematode.brain.arch._std_head import (
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+from quantumnematode.connectome.measured_weights import coverage, measured_weights
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
 from quantumnematode.env.env import ContactZone
@@ -68,6 +71,8 @@ from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
     from quantumnematode.connectome.model import Connectome
     from quantumnematode.learning_rules.ppo import ConnectomePPORule
@@ -169,6 +174,22 @@ ReadoutWidth = Literal["pooled", "per_neuron"]
 # Neither sharing definition is uniquely "the same initialisation" once the edge set changes, which
 # is why both exist rather than one.
 WeightDraw = Literal["edge_order", "dense_mask", "per_neuron_fanin"]
+# Where the chemical weights' VALUES come from. "random" is the draw above. The measured priors take
+# values from the vendored fitted-model table (see ``quantumnematode.connectome.measured_weights``)
+# on the chemical edges it covers, and leave every other edge on its draw:
+# - "measured" places each covered edge's table value on the same per-neuron 1/sqrt(in-degree)
+#   scale the draw uses, times one constant chosen so that over the wild type's covered edges the
+#   placed values' RMS equals the draw's expected RMS on those same edges. At
+#   ``measured_weight_scale`` 1.0 the covered edges therefore carry the random arm's magnitude.
+# - "measured_signs" keeps the draw's magnitude and takes the table's sign.
+# - "measured_shuffled" is "measured" with the values permuted among the wild type's covered edges:
+#   the same value distribution, placed without regard to which synapse it was fitted on.
+# On a rewired wiring most edges do not exist in the wild type, so each post-synaptic neuron instead
+# receives the values its wild-type edges carried, placed on its incoming edges in
+# pre-synaptic-index order -- the same rule "per_neuron_fanin" uses for a drawn multiset.
+WeightPrior = Literal["random", "measured", "measured_signs", "measured_shuffled"]
+# The priors that read ``measured_weight_scale``. Under the others it would be accepted and ignored.
+_SCALED_PRIORS: frozenset[str] = frozenset({"measured", "measured_shuffled"})
 # Continuous action layout: index 0 is speed, index 1 is turn.
 _SPEED_ACTION_INDEX = 0
 _TURN_ACTION_INDEX = 1
@@ -217,6 +238,12 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # Structure of the chemical-weight draw; see WeightDraw above for what each mode shares between
     # two wirings at one seed. Default "edge_order" is bit-identical to the pre-option brain.
     weight_draw: WeightDraw = "edge_order"
+    # Where the chemical weights' values come from; see WeightPrior above. Default "random" is
+    # bit-identical to the pre-option brain.
+    weight_prior: WeightPrior = "random"
+    # Multiplier on a measured value after it is matched to the draw's magnitude. Read only by the
+    # priors that place measured magnitudes, and refused away from 1.0 under the others.
+    measured_weight_scale: float = Field(default=1.0, gt=0.0)
     # Chemical-synapse signs. "random" keeps the sign each weight drew, so half the network is
     # inhibitory by construction. "atlas" replaces it with the sign the pre-synaptic neuron's
     # released transmitter implies (acetylcholine and glutamate excitatory, GABA inhibitory),
@@ -300,6 +327,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
                 "which one the arm means rather than inheriting a default."
             )
             raise ValueError(msg)
+        if (refusal := _weight_prior_refusal(self)) is not None:
+            raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
                 "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
@@ -339,6 +368,132 @@ def _reject_unsupported_weight_draw(config: ConnectomePPOBrainConfig) -> None:
             "1/sqrt(in-degree), and a count-scaled draw scales by the synapse counts instead."
         )
         raise ValueError(msg)
+
+
+def _weight_prior_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Say why a weight-prior configuration is refused, or return None if it is not.
+
+    One function behind both the validator and the construction guard, so the two cannot drift.
+    """
+    if config.weight_prior not in _SCALED_PRIORS and config.measured_weight_scale != 1.0:
+        return (
+            f"measured_weight_scale={config.measured_weight_scale} under "
+            f"weight_prior={config.weight_prior!r} would be accepted and never read: only "
+            f"{sorted(_SCALED_PRIORS)} place a measured magnitude"
+        )
+    if config.weight_prior == "random":
+        return None
+    if config.synapse_signs != "random":
+        return (
+            f"weight_prior={config.weight_prior!r} with synapse_signs={config.synapse_signs!r} "
+            "gives one edge two sign sources, the fitted table and the transmitter atlas; the "
+            "pairing is not defined"
+        )
+    if config.weight_draw != "edge_order":
+        return (
+            f"weight_prior={config.weight_prior!r} with weight_draw={config.weight_draw!r} is not "
+            "defined: the prior replaces values on covered edges and the pairing is untested"
+        )
+    if config.weight_init != "degree_scaled":
+        return (
+            f"weight_prior={config.weight_prior!r} with weight_init={config.weight_init!r} is not "
+            "defined: a measured value is matched to the degree-scaled draw's magnitude"
+        )
+    return None
+
+
+@dataclass(frozen=True)
+class MeasuredPriorAssignment:
+    """What a measured prior places on one wiring's chemical edges.
+
+    ``values`` maps ``(pre, post)`` to a measured value before its per-neuron scale, or under the
+    sign-only prior to the sign alone (+1.0 or -1.0). Edges absent from it keep their draw.
+    """
+
+    values: Mapping[tuple[str, str], float]
+    is_sign: bool
+    scale: float
+
+
+def measured_prior_assignment(  # noqa: PLR0913 - the prior, its pin, both graphs, the flag, the rng
+    prior: WeightPrior,
+    scale: float,
+    wild_type: Connectome,
+    wiring: Connectome,
+    *,
+    rewired: bool,
+    shuffle_rng: np.random.Generator,
+) -> MeasuredPriorAssignment:
+    """Place a measured prior on a wiring, computing every wild-type quantity from ``wild_type``.
+
+    The wild type is needed even when building a rewired brain: the normalisation, the shuffle and
+    each neuron's values are all defined on the wild type's covered edges, so a rewired and a
+    wild-type brain at one seed must agree on them. On the wild type each covered edge takes its
+    own value. On a rewired wiring each post-synaptic neuron takes its wild-type values, in order of
+    their wild-type pre-synaptic index, onto its first incoming edges in pre-synaptic-index order --
+    as many as it had covered -- and the rest keep their draw. Neurons are indexed in sorted-name
+    order, so pre-synaptic-index order is sorted pre-synaptic name.
+    """
+    if prior == "random":
+        msg = "the random prior places nothing"
+        raise ValueError(msg)
+    table = measured_weights()
+    covered = sorted(coverage(table, wild_type).covered)
+    raw = np.array([table[edge] for edge in covered], dtype=np.float64)
+    if prior == "measured_signs":
+        placed = np.sign(raw)
+    else:
+        # One constant, not a per-edge rescale, so the fitted values keep their relative sizes. It
+        # is chosen with each edge's per-neuron scale inside it: normalising the values alone leaves
+        # the placed weights about 27% larger than the draw's, because the large fitted values sit
+        # disproportionately on neurons with few inputs and so a large 1/sqrt(in-degree). No mean is
+        # subtracted -- every sign is the fitted one, and a shift would move some across zero.
+        in_degree: dict[str, int] = {}
+        for syn in wild_type.chemical_synapses:
+            in_degree[syn.post] = in_degree.get(syn.post, 0) + 1
+        scale_sq = np.array([1.0 / in_degree[post] for _, post in covered], dtype=np.float64)
+        placed = raw * float(np.sqrt(np.mean(scale_sq) / np.mean(raw**2 * scale_sq)))
+        if prior == "measured_shuffled":
+            placed = placed[shuffle_rng.permutation(len(placed))]
+    wild_values = dict(zip(covered, (float(v) for v in placed), strict=True))
+    is_sign = prior == "measured_signs"
+    values = _place_on_rewired(wild_values, wiring) if rewired else wild_values
+    return MeasuredPriorAssignment(MappingProxyType(values), is_sign, scale)
+
+
+def _place_on_rewired(
+    wild_values: dict[tuple[str, str], float],
+    wiring: Connectome,
+) -> dict[tuple[str, str], float]:
+    """Give each post-synaptic neuron its wild-type values on its first rewired incoming edges.
+
+    Values are taken in order of their wild-type pre-synaptic name and placed on the neuron's
+    incoming edges on ``wiring`` in pre-synaptic name order, as many as it had covered.
+    """
+    by_post: dict[str, list[float]] = {}
+    for pre, post in sorted(wild_values, key=lambda edge: (edge[1], edge[0])):
+        by_post.setdefault(post, []).append(wild_values[pre, post])
+    incoming: dict[str, list[str]] = {}
+    for syn in wiring.chemical_synapses:
+        incoming.setdefault(syn.post, []).append(syn.pre)
+    rewired_values: dict[tuple[str, str], float] = {}
+    for post, values in by_post.items():
+        partners = sorted(incoming.get(post, []))
+        if len(partners) < len(values):
+            msg = (
+                f"{post} has {len(partners)} incoming edges on this wiring but {len(values)} "
+                "covered on the wild type; a degree-preserving rewiring cannot produce that"
+            )
+            raise ValueError(msg)
+        for pre, value in zip(partners, values, strict=False):
+            rewired_values[pre, post] = value
+    return rewired_values
+
+
+def _reject_unsupported_weight_prior(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse a weight-prior configuration at construction; ``model_copy`` skips validators."""
+    if (refusal := _weight_prior_refusal(config)) is not None:
+        raise ValueError(refusal)
 
 
 def _reject_unsupported_eprop(config: ConnectomePPOBrainConfig) -> None:
@@ -398,6 +553,7 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
     its arms -- the defect the sign-grounding work found and fixed once already.
     """
     _reject_unsupported_weight_draw(config)
+    _reject_unsupported_weight_prior(config)
     if config.plasticity_perturbation_set in RESTRICTED_PERTURBATION_SETS and (
         not config.plasticity_homeostasis
     ):
@@ -560,6 +716,7 @@ class ConnectomeTopology(nn.Module):
         draw_rng: np.random.Generator | None = None,
         synapse_signs: Literal["random", "atlas"] = "random",
         readout_width: ReadoutWidth = "pooled",
+        measured_prior: MeasuredPriorAssignment | None = None,
     ) -> None:
         super().__init__()
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
@@ -713,6 +870,18 @@ class ConnectomeTopology(nn.Module):
                 drawn = float(dense_z[pre_i, post_j]) * float(chem_scale[post_j])
             elif fanin_value is not None:
                 drawn = fanin_value[pre_i, post_j] * float(chem_scale[post_j])
+            # A measured prior replaces the value on the edges it covers, after the draw above, so
+            # ``rng`` has yielded exactly what it would under the random prior. A sign-only prior
+            # keeps the draw's magnitude; a value prior takes the matched value on the same
+            # per-neuron scale the draw uses.
+            if measured_prior is not None:
+                placed = measured_prior.values.get((syn.pre, syn.post))
+                if placed is not None:
+                    drawn = (
+                        abs(drawn) * placed
+                        if measured_prior.is_sign
+                        else placed * float(chem_scale[post_j]) * measured_prior.scale
+                    )
             # Sign grounding replaces the drawn sign where the pre-synaptic neuron's released
             # transmitter implies one, keeping the drawn magnitude — so the RNG stream, the
             # per-neuron scale and every magnitude are identical to the random-sign build.
@@ -2207,6 +2376,9 @@ class ConnectomePPOBrain(ClassicalBrain):
             msg = f"Unsupported connectome_source: {config.connectome_source!r}"
             raise ValueError(msg)
         connectome = load_cook_2019_hermaphrodite()
+        # Kept before any rewiring: a measured prior is defined on the wild type's edges even when
+        # the brain is built on a null, so a rewired and a wild-type brain agree on it at one seed.
+        wild_type = connectome
 
         # Optional degree-preserving rewired-null control, applied BEFORE topology construction on a
         # DEDICATED RNG (from ``rewire_seed`` or the run seed) so the weight-init RNG (``self.rng``)
@@ -2260,6 +2432,20 @@ class ConnectomePPOBrain(ClassicalBrain):
             draw_rng=get_rng(self.seed),
             synapse_signs=config.synapse_signs,
             readout_width=config.readout_width,
+            measured_prior=(
+                None
+                if config.weight_prior == "random"
+                else measured_prior_assignment(
+                    config.weight_prior,
+                    config.measured_weight_scale,
+                    wild_type,
+                    connectome,
+                    rewired=config.wiring == "rewired_degree_preserving",
+                    # Its own generator at the run seed, like the draw's: the shuffle is then the
+                    # same permutation on either wiring, and never touches the shared stream.
+                    shuffle_rng=get_rng(self.seed),
+                )
+            ),
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -2879,6 +3065,9 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "third_factor": self.config.third_factor,
                     "wiring": self.config.wiring,
                     "weight_init": self.config.weight_init,
+                    "weight_draw": self.config.weight_draw,
+                    "weight_prior": self.config.weight_prior,
+                    "measured_weight_scale": self.config.measured_weight_scale,
                     "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
                     # The plasticity identity, ENFORCED on load below. Two checkpoints can differ

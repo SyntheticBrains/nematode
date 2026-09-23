@@ -136,7 +136,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### B.1 — measured synaptic signs and strengths (D17)
 
-- [ ] **B.1a Data sub-deliverable** (own change): the Creamer–Leifer–Pillow fitted weights (bioRxiv
+- [x] **B.1a Data sub-deliverable** — **done 2026-09-23** (`add-measured-weight-prior`): the fitted table vendored with provenance and its licence notice, a SHA-checked loader with a coverage report, and `weight_prior` (`random` | `measured` | `measured_signs` | `measured_shuffled`) plus the `measured_weight_scale` pin, byte-identical when off, with the rewired null receiving each neuron's wild-type values. B.1b is now configs only. *(**Corrected 2026-09-23** at B.1a's licence check: the Randi 2023 atlas is **cited, not vendored** — its OSF deposit states no licence and its only licensed copy is a GPL-3.0 file, in an Apache-2.0 repository. The Creamer–Leifer–Pillow table is vendored under MIT. It covers **125 neurons** (the fitted model holds 154; 156 is the paper's recording figure), and on Cook 2019 it reaches 1,049 of 3,709 chemical edges — 77.0% of the 1,363 coverable at head scope, none onto the body motor neurons.)* Original scope: (own change): the Creamer–Leifer–Pillow fitted weights (bioRxiv
   2024.09.22.614271, preprint — never stands alone) and the Randi 2023 atlas as raw source,
   vendored under `data/connectome/` with `PROVENANCE.md` and a **licence check before
   vendoring**; a `weight_prior` key (`random` | `measured` | `measured_shuffled`),
