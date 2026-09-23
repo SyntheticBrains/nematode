@@ -30,19 +30,21 @@ frozen floor.
 
 1. **Measured × wiring:** does the measured prior move the wiring gap?
 2. **Placement × wiring (measured against shuffled):** does it matter which synapse carries which
-   fitted value? Without this contrast, a positive could be a fact about the value distribution, not
-   about the wiring.
+   fitted value? Without this contrast, a positive (or a negative) could be a fact about the value
+   distribution, not about the wiring.
 
 **Sensitivity and minimum effect:**
 
-- **Sensitivity:** taken from B.1b's committed per-seed data. The panel detects about 0.7–0.8 of each
-  learner's committed wiring effect.
+- **Sensitivity:** taken from B.1b's committed per-seed data. On `auc_success`, registered as the
+  primary on both learners, the panel detects about 0.75 of each learner's committed wiring effect
+  on the draw it runs. On episodes PPO would need an effect 1.14× that size, too coarse to see even a
+  sign move, which is why that metric is reported beside rather than carrying the verdict.
 - **Minimum:** a registered 2/3 of that effect, in both directions.
 - **Verdicts:** read against a verdict map fixed before launch.
 
-**A protocol requirement.** A measured-weight positive is reported as legibility only when its
-placement-shuffled control does not move the contrast as far. Otherwise it is a value-distribution
-effect.
+**A protocol requirement.** A measured prior is reported as making the wiring legible, or as hiding
+it, only when it also moves the contrast against its placement-shuffled control, by at least the
+minimum and in the same direction. Otherwise it is a value-distribution effect.
 
 ## Capabilities
 

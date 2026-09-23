@@ -5,14 +5,17 @@ implementation are in this change's `design.md`.
 
 ## Panel
 
-- [ ] 1. **The shuffled level in the shared vocabulary** (Decision H):
-  - `measured_prior_pilot` gains the shuffled level's keys and stem rule;
-  - its `build_manifest` and `require_complete` take a level table, defaulting to the pilot's own;
-  - B.1b's tests pass unchanged.
+- [ ] 1. **The shuffled level in the shared vocabulary, not in the pilot's panel** (Decision H):
+  - `measured_prior_pilot` separates its level vocabulary (read by `level_keys` and `stem_for`, and
+    gaining `shuffled`) from its own panel (`LEVELS`, `ALL_LEVELS`, the stem map, unchanged);
+  - its `build_manifest` and `require_complete` take another panel's levels and stem map, defaulting
+    to the pilot's own;
+  - B.1b's tests pass unchanged, and a test asserts the pilot's panel does not contain `shuffled`.
 - [ ] 2. **The contrast module**, `scripts/analysis/measured_prior_contrast.py`:
   - the stems, levels (random, measured at 1.0, shuffled at 1.0), seeds and arm map;
   - the gates per level against its own floor;
-  - the two interactions per learner on both metrics, with the per-contrast metric choice;
+  - the two interactions per learner on both metrics, with `auc_success` as the registered primary
+    on both learners and the censoring rule's own choice recorded beside it;
   - the two families' correction;
   - the state classification (Decision D) and the verdict map (Decision E), with the unreadable and
     Lee cases (Decision F);
@@ -29,8 +32,8 @@ implementation are in this change's `design.md`.
     covered edges;
   - each floor is built from its learning arm's weights;
   - the seeds are fresh and disjoint;
-  - every state and every verdict row is checked on synthetic interactions, including unreadable
-    and Lee;
+  - every state is checked on synthetic interactions, including the three `unresolved` cases;
+  - every verdict row is checked, including both value-distribution directions, unreadable and Lee;
   - the primary family is exactly the four registered interactions.
 
 ## Registration and run
@@ -41,8 +44,9 @@ implementation are in this change's `design.md`.
   - `openspec validate --strict`;
   - 8-episode smoke runs of one shuffled arm per learner.
 - [ ] 6. **The launch record**, `docs/experiments/logbooks/supporting/073-measured-prior-contrast/launch.md`,
-  committed **before any seed runs**: arms, seeds, both interactions, metric rule, sensitivity table,
-  minimum, state classification, verdict map, gates, standing conditions, retention and cost.
+  committed **before any seed runs**: arms, seeds, both interactions, the metric departure and its
+  reason, the sensitivity table with PPO's fan-in reference, the minimum, the state classification,
+  the verdict map, gates, the per-seed shuffle, standing conditions, retention and cost.
 - [ ] 7. **The campaigns**: PPO (seeds 225–256), then reading (257–304), with the output controls,
   and no branch switches until both complete.
 

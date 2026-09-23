@@ -74,9 +74,17 @@ distribution of values on covered edges, and which synapse holds which value. Th
 the distribution and destroys the assignment, so only the second contrast isolates what "the
 animal's weights" means.
 
-**The metric** follows A.2's censoring rule, applied to the cells each interaction spans. On B.1b's
-crossing rates this gives PPO `episodes_to_30pct_success` and the reading learner `auc_success`.
-Both metrics are reported for every interaction.
+**The metric: `auc_success` is the primary on both learners, a departure registered with its
+reason.** A.2's censoring rule would give PPO `episodes_to_30pct_success`, because B.1b's crossing
+rates are all 1.0. That metric cannot carry this panel. On PPO's own draw its detectable effect is
+1.14× the committed wiring effect (Decision C), so the panel could not see even a sign move on it.
+`auc_success` detects 0.75× of the same effect. This is the pattern A.1 recorded under the fan-in
+draw, where `auc_success` established survival and episodes stayed inconclusive.
+
+The choice is made **before launch, from committed data**, and it is **the same metric for every
+interaction of both learners**, so the verdict map never combines states read on different scales.
+`episodes_to_30pct_success` is reported beside every interaction, with the censoring rule's own
+choice recorded next to it, as the metric requirement asks of a departure.
 
 **The family.** The four primary-metric interactions (2 contrasts × 2 learners) are BH-FDR corrected
 together, with the two-sided folded p (`two_sided`). The reported-beside metric's four are corrected
@@ -90,29 +98,34 @@ minimum detectable effect is `2.487 × sd / √n`, as A.2 used.
 
 | learner | metric | sd (8 seeds) | n | MDE | reference effect | MDE ÷ reference |
 |---|---|---|---|---|---|---|
-| PPO | `episodes_to_30pct_success` | 1013.6 | 32 | 445.6 | +580.4 (A.1, hard350) | **0.77** |
-| PPO | `auc_success` | 0.092 | 32 | 0.041 | +0.061 (A.1, hard350) | **0.67** |
-| reading | `auc_success` | 0.444 | 48 | 0.159 | −0.210 (A.2 reading centre) | **0.76** |
+| PPO | `auc_success` (primary) | 0.092 | 32 | 0.041 | +0.055 (A.1, hard350, fan-in) | **0.75** |
+| PPO | `episodes_to_30pct_success` (beside) | 1013.6 | 32 | 445.6 | +392.4 (A.1, hard350, fan-in) | 1.14 |
+| reading | `auc_success` (primary) | 0.444 | 48 | 0.159 | −0.210 (A.2 reading centre) | **0.76** |
+
+**PPO's reference is the effect under its own draw.** A.1 measured hard350 at +580.4 episodes and
++0.061 `auc_success` under `edge_order`, and its committed interaction for `per_neuron_fanin` is
+−188.0 and −0.006. The fan-in effect is therefore +392.4 and +0.055, and that is the effect this
+panel runs on. A first draft used the `edge_order` figures and overstated PPO's sensitivity.
 
 **Stated now, not after the fact:**
 
 - The spreads come from 8 seeds.
 - The placement contrast's spread is assumed equal to the measured contrast's, because the pilot had
   no shuffled arm.
-- The registered minimum (2/3) sits **below** the MDE on two of the three rows. An effect at the
+- The registered minimum (2/3) sits **below** the MDE on both primary rows. An effect at the
   minimum is therefore not reliably detected, and a reading between the two is reported as
   **unresolved**, never as "no move".
 
 ### Decision D: The registered minimum, in both directions
 
-The reference effect is each learner's **committed** wiring effect on hard350: A.1's for PPO and A.2's
-reading centre for the reading learner. It is not the in-campaign random-level gap. PPO's gap under
-the fan-in draw was inconclusive on A.1's primary, and a minimum defined as a fraction of a gap near
-zero would shrink to nothing.
+The reference effect is each learner's **committed** wiring effect on hard350, on the draw it runs:
+A.1's under `per_neuron_fanin` for PPO (+0.055 `auc_success`), and A.2's reading centre under
+`edge_order` for the reading learner (−0.210). It is not the in-campaign random-level gap, which is
+itself a reading of this panel and would let the result size its own bar.
 
-The minimum is **2/3 of |reference|**:
+The minimum is **2/3 of |reference|** on the primary:
 
-- PPO: 387 episodes and 0.041 `auc_success`;
+- PPO: 0.037 `auc_success`;
 - reading: 0.140 `auc_success`.
 
 Each interaction is classified from its mean, its 80% bootstrap interval, and its BH-FDR q, with
@@ -124,7 +137,13 @@ significance at q < 0.05:
 | `move_null` | q < 0.05, interval below zero, mean ≤ −minimum: moves it toward the null |
 | `below` | q < 0.05, interval excludes zero, absolute mean < minimum |
 | `no_move` | interval inside (−minimum, +minimum) and including zero |
-| `unresolved` | anything else: the interval spans the minimum |
+| `unresolved` | anything else |
+
+`unresolved` covers three cases, named so the classifier and its tests cover each:
+
+- the interval spans the minimum;
+- q ≥ 0.05 while the interval excludes zero;
+- q < 0.05 while the interval spans zero, where the Wilcoxon and the bootstrap disagree.
 
 ### Decision E: The verdict map, per learner
 
@@ -133,8 +152,9 @@ Rows are the measured × wiring state. Columns are the placement × wiring state
 | measured × wiring | placement × wiring | verdict |
 |---|---|---|
 | `move_wt` | `move_wt` | **legible**: the animal's weights make the wiring legible |
-| `move_wt` | anything else | **value_distribution**: a distribution effect, not placement; never reported as legibility |
-| `move_null` | any | **hides**: the measured weights hide the wiring, the symmetric finding |
+| `move_wt` | anything else | **value_distribution_wt**: a distribution effect toward the wild type, not placement; never reported as legibility |
+| `move_null` | `move_null` | **hides**: the animal's weights hide the wiring, the symmetric finding |
+| `move_null` | anything else | **value_distribution_null**: a distribution effect toward the null, not placement; never reported as hiding |
 | `no_move` | `no_move` | **null**: extends Logbook 034's degree-statistics verdict to measured weights |
 | `no_move` | `move_wt` or `move_null` | **placement_only**: the shuffle moves the gap and the fitted placement does not. A finding about the shuffle, carried to the synthesis, not legibility |
 | `no_move` | `below` or `unresolved` | **null_placement_unresolved** |
@@ -169,22 +189,38 @@ Rows are the measured × wiring state. Columns are the placement × wiring state
 `scripts/analysis/measured_prior_contrast.py` holds this panel's stems, levels, seeds, interactions,
 classification and verdict map.
 
-- **Imported from B.1b:** `PARENTS`, `stem_for` and the manifest format.
+- **Imported from B.1b:** `PARENTS`, `stem_for`, `level_keys` and the manifest format.
 - **Imported from A.2:** `score_level`, `learning_gates`, `interaction`, `wiring_gap`,
   `censoring_rates`, `choose_metric`, `apply_family_correction`, `two_sided`, `substrate_drift`.
 
-`measured_prior_pilot`'s `build_manifest` and `require_complete` read its own level table. They gain
-the minimum argument needed to take another panel's table, and B.1b's tests pin them through the
-change.
+**The vocabulary is shared; the panels are not.** `measured_prior_pilot` separates the two:
 
-**The generator.** `generate_measured_prior_configs.py` is extended to write the shuffled level
-from the contrast's panel definition. The shuffled level is added to the pilot module's level vocabulary
-and its stem rule, so both panels share one definition of every stem.
+- A table of every level any panel may use, which `level_keys` and `stem_for` read. It gains
+  `shuffled` (`weight_prior: measured_shuffled` at the default multiplier), so both panels spell
+  every stem one way.
+- The pilot's own panel: `LEVELS`, `ALL_LEVELS`, its 56-stem map, and its completeness check. This
+  is unchanged. Adding `shuffled` there would make the committed B.1b campaign read as incomplete if
+  it were ever re-scored.
+
+`build_manifest` and `require_complete` gain the one argument needed to take another panel's levels
+and stem map, defaulting to the pilot's own. B.1b's tests pin the default through the change.
+
+The contrast module declares its own three levels (`random`, `m1`, `shuffled`) and builds its own
+stem map from the shared vocabulary.
+
+**The generator.** `generate_measured_prior_configs.py` is extended to write the contrast's new
+arms from the contrast's panel definition, leaving every existing file alone.
+
+**One property of the shuffled arm, stated.** The permutation is keyed on the run seed, so each
+seed gets a different shuffle. The control therefore averages over permutations rather than resting
+on one that happened to be lucky or unlucky. The launch record says so.
 
 ## Risks / Trade-offs
 
 - **The reading half is still coarse.** Its MDE is 0.76 of its reference even at 48 seeds, so
   unresolved readings there are a likely outcome and are registered as one.
+- **PPO's primary departs from the censoring rule.** Registered before launch with its reason
+  (Decision B). The censoring rule's own choice is reported beside it on every interaction.
 - **The reference effects come from other campaigns.** That is deliberate (Decision D). It does mean
   a learner whose in-campaign random gap differs greatly from its reference is read against a
   minimum sized for a different effect, and the record reports both.
