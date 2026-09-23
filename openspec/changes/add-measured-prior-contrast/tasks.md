@@ -24,7 +24,7 @@ implementation are in this change's `design.md`.
     scope and full scope from `quantumnematode.connectome.measured_weights.coverage`.
 - [x] 3. **done: 8 written, 48 kept.** Original scope: **The shuffled configs**: the generator writes the 8 `_measured_shuffled` arms. Nothing
   existing is rewritten.
-- [x] 4. **done: 45 tests in `test_measured_prior_contrast.py`; with B.1b's and A.2's, 311 pass.** Original scope: **Tests** (`tests/.../analysis/test_measured_prior_contrast.py`):
+- [x] 4. **done: 46 tests in `test_measured_prior_contrast.py`; with B.1b's and A.2's, 311 pass.** Original scope: **Tests** (`tests/.../analysis/test_measured_prior_contrast.py`):
   - every new config loads through the real loader and differs from its parent only in
     `weight_prior`;
   - the random and measured levels are the committed B.1b configs;
@@ -38,12 +38,12 @@ implementation are in this change's `design.md`.
 
 ## Registration and run
 
-- [ ] 5. **Pre-launch checks**:
+- [x] 5. **done: full suite 6,791 passed, 34 skipped, 2 xfailed; hooks pass with everything staged; validated strict; 8-episode smokes of the PPO null and the reading wild type under `measured_shuffled` both completed.** Original scope: **Pre-launch checks**:
   - the full suite (`uv run pytest -q -m "not nightly"`);
   - `git add -A`, then `uv run pre-commit run --all-files`, judged by its exit code;
   - `openspec validate --strict`;
   - 8-episode smoke runs of one shuffled arm per learner.
-- [ ] 6. **The launch record**, `docs/experiments/logbooks/supporting/073-measured-prior-contrast/launch.md`,
+- [x] 6. **done: committed before any seed ran.** Original scope: **The launch record**, `docs/experiments/logbooks/supporting/073-measured-prior-contrast/launch.md`,
   committed **before any seed runs**: arms, seeds, both interactions, the metric departure and its
   reason, the sensitivity table with PPO's fan-in reference, the minimum, the state classification,
   the verdict map, gates, the per-seed shuffle, standing conditions, retention and cost.
