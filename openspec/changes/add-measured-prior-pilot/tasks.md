@@ -77,10 +77,10 @@ decisions taken before implementation are in this change's `design.md`.
 
 - [x] 11. **done: `pilot-{ppo,reading}.json` and `per-seed-{ppo,reading}.csv`, one file per campaign, since each learner ran as its own campaign.** Original scope: **Score and commit** the per-seed CSV and the analysis JSON under the logbook's supporting
   directory.
-- [ ] 12. **Logbook 072**, following the logbook skill: the branch taken per learner, the chosen
+- [x] 12. **done: Logbook 072.** Original scope: **Logbook 072**, following the logbook skill: the branch taken per learner, the chosen
   multiplier per learner, the gates, and the descriptive gap. The PPO draw is stated beside every PPO
   figure.
-- [ ] 13. **Discharge:**
+- [x] 13. **done: index row; tracker B.1b ticked and B.1c given the multiplier, the fan-in pairing and the edge_order-surface condition; dated notes at roadmap D17, § B.1 deliverable 4, the B.1 exit line and the measured-prior risk row; `docs/architectures.md` and CHANGELOG.** Original scope: **Discharge:**
   - the index row;
   - tracker B.1b ticked, and B.1c given the chosen multiplier per learner, the fan-in pairing, and
     any condition from branch 5, and the condition that B.1c's PPO arm inherits A.2's depth and
