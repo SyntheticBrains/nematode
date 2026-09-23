@@ -378,6 +378,7 @@ def learning_gates(
     half: str,
     seeds: tuple[int, ...],
     suffix: str,
+    floor_level: str | None = None,
 ) -> dict[str, Any]:
     """Record each arm's plateau against its own frozen floor, and whether the level saturates.
 
@@ -392,6 +393,10 @@ def learning_gates(
     competence compresses and an abolished gap means "two arms tied at the top" rather than "the
     wiring stopped mattering". The instrument applies this on its peak axis; the efficiency axis
     decides this cell, so the flag has to be carried explicitly or the distinction is lost.
+
+    ``floor_level`` names the level whose frozen arms are the floor. It defaults to this panel's
+    rule -- a construction level's own, a learning-only level's centre -- and another panel whose
+    levels all change the substrate passes each level's own, so the gate is shared, not copied.
     """
     import t7_continuous_ranking as t7  # pyright: ignore[reportMissingImports]
 
@@ -400,13 +405,15 @@ def learning_gates(
         arm, row_suffix, seed, log_path = raw.split()
         rows.setdefault((arm, row_suffix), {})[int(seed)] = wp.REPO / log_path
 
-    floor_level = suffix if len(arms_at(half, suffix)) == 4 else CENTRE
+    if floor_level is None:
+        floor_level = suffix if len(arms_at(half, suffix)) == 4 else CENTRE
     out: dict[str, Any] = {"floor_level": floor_level}
     plateaus: list[float] = []
     for wiring in ("wt", "rn"):
         learn: list[float] = []
         floor: list[float] = []
         deltas: list[float] = []
+        per_seed: dict[int, dict[str, float]] = {}
         beats = 0
         for seed in seeds:
             lp = rows.get((f"{wiring}_learn", suffix), {}).get(seed)
@@ -418,6 +425,7 @@ def learning_gates(
             learn.append(lv[0])
             floor.append(fv[0])
             deltas.append(lv[0] - fv[0])
+            per_seed[seed] = {"learn": lv[0], "floor": fv[0]}
             beats += int(lv[0] > fv[0])
         mean_learn = sum(learn) / len(learn) if learn else float("nan")
         plateaus.append(mean_learn)
@@ -431,6 +439,7 @@ def learning_gates(
             "beats_floor_seeds": beats,
             "n_seeds": len(learn),
             "vs_floor": test,
+            "per_seed": per_seed,
         }
     out["gate_passes"] = all(
         (out[w]["vs_floor"] or {}).get("ci_lo", 0.0) > 0.0 for w in ("wt", "rn")
@@ -526,8 +535,13 @@ def substrate_drift(
     half: str,
     seeds: tuple[int, ...],
     only_levels: tuple[str, ...] | None = None,
+    floor_levels: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Compare each learning arm's chemical matrix against its frozen floor, seed by seed."""
+    """Compare each learning arm's chemical matrix against its frozen floor, seed by seed.
+
+    ``floor_levels`` maps a level to the level whose frozen arms are its floor, for a panel whose
+    rule is not this one's; a level it does not name falls back to this panel's rule.
+    """
     import l4_reduced_perturbation as rp  # pyright: ignore[reportMissingImports]
 
     rows: dict[tuple[str, str], dict[int, Path]] = {}
@@ -540,7 +554,9 @@ def substrate_drift(
     for suffix in wanted:
         # A construction level has its own floor; a learning-only level uses the centre's, which
         # is the same draw at that seed because neither rule pin can reach a frozen arm.
-        floor_level = suffix if len(arms_at(half, suffix)) == 4 else CENTRE
+        floor_level = (floor_levels or {}).get(suffix) or (
+            suffix if len(arms_at(half, suffix)) == 4 else CENTRE
+        )
         entry: dict[str, Any] = {"floor_level": floor_level}
         for wiring in ("wt", "rn"):
             values: list[float] = []

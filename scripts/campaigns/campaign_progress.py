@@ -79,7 +79,15 @@ def survey(campaign: Path, total: int | None) -> dict[str, object]:
     # runner created and never moves it is the same instant in practice.
     stat = campaign.stat()
     started = datetime.fromtimestamp(getattr(stat, "st_birthtime", stat.st_ctime), tz=UTC)
-    elapsed = datetime.now(tz=UTC) - started
+    # A finished campaign's clock stops at its last completion marker. Measured to "now" it keeps
+    # running after the last run exits, and a campaign read hours later reports hours it never took.
+    # Finished means nothing in flight AND, where the total is known, every planned run accounted
+    # for: between one run's exit and the next one's start, or with the runner stopped short, runs
+    # are still pending and the clock and the ETA must keep moving.
+    ended = datetime.now(tz=UTC)
+    if markers and running == 0 and (total is None or finished >= total):
+        ended = datetime.fromtimestamp(max(m.stat().st_mtime for m in markers.values()), tz=UTC)
+    elapsed = ended - started
     # A traceback in a run's log is the failure signature worth surfacing: the runner reports a
     # non-zero exit per run, but that line lives in its stdout, not here.
     broken = sum(1 for log in logs.glob("*.log") if "Traceback" in log.read_text(errors="ignore"))

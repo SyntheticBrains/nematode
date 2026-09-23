@@ -8,7 +8,10 @@ and that a watch on one campaign does not wait on another campaign's workers.
 
 from __future__ import annotations
 
+import os
 import sys
+import time
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -69,6 +72,42 @@ class TestAWatchStopsOnItsOwnCampaign:
     def test_with_a_total_it_does_not_stop_early(self, tmp_path: Path) -> None:
         camp = _campaign(tmp_path, {"a-seed1": ("", "0")})
         assert not cp.campaign_done(camp, 2)
+
+
+def test_a_finished_campaigns_clock_stops_at_its_last_run(tmp_path: Path) -> None:
+    """Read long after the last run exits, elapsed is still the campaign's own duration."""
+    camp = _campaign(tmp_path, {"a-seed1": ("", "0"), "a-seed2": ("", "0")})
+    long_ago = time.time() - 3 * 3600
+    for marker in (camp / "logs").glob("*.exit"):
+        os.utime(marker, (long_ago, long_ago))
+    elapsed = cp.survey(camp, 2)["elapsed"]
+    assert isinstance(elapsed, timedelta)
+    # The directory was made moments ago and the markers are dated before it, so the clock that
+    # stops at the markers reads non-positive; one measured to "now" would read a few milliseconds.
+    assert elapsed.total_seconds() < 0
+
+
+def test_a_running_campaigns_clock_runs_to_now(tmp_path: Path) -> None:
+    """While a run is in flight, elapsed is measured to the moment of reading."""
+    camp = _campaign(tmp_path, {"a-seed1": ("", "0"), "a-seed2": ("started\n", None)})
+    for marker in (camp / "logs").glob("*.exit"):
+        os.utime(marker, (0, 0))
+    elapsed = cp.survey(camp, 2)["elapsed"]
+    assert isinstance(elapsed, timedelta)
+    assert elapsed.total_seconds() >= 0
+
+
+def test_a_campaign_with_runs_pending_keeps_its_clock_running(tmp_path: Path) -> None:
+    """Nothing in flight but runs still planned: elapsed runs to now, not to the last marker."""
+    camp = _campaign(tmp_path, {"a-seed1": ("", "0")})
+    long_ago = time.time() - 3 * 3600
+    for marker in (camp / "logs").glob("*.exit"):
+        os.utime(marker, (long_ago, long_ago))
+    s = cp.survey(camp, 2)
+    assert s["pending"] == 1
+    elapsed = s["elapsed"]
+    assert isinstance(elapsed, timedelta)
+    assert elapsed.total_seconds() >= 0
 
 
 def test_a_non_positive_total_is_refused(tmp_path: Path) -> None:

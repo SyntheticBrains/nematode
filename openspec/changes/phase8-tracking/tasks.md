@@ -142,7 +142,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   vendoring**; a `weight_prior` key (`random` | `measured` | `measured_shuffled`),
   byte-identical-when-off; head-scope coverage (156 neurons) stated, with the command-to-motor
   and motor layers left on the random draw.
-- [ ] **B.1b Pilot-scale arms**: sign-only vs sign-plus-magnitude; the LDS-to-rate-model unit
+- [x] **B.1b Pilot-scale arms** — **met 2026-09-24** ([Logbook 072](../../../docs/experiments/logbooks/072-measured-prior-pilot.md), `add-measured-prior-pilot`, 448 runs). **The pathway is learnable at every scale tried, and both learners take multiplier 1.0.** On hard350, the sign-only prior and the measured prior at 0.25, 0.5, 1, 2 and 4 times the random draw's magnitude each beat their own frozen floor on both wirings, 8 of 8 seeds, under PPO (fan-in draw, seeds 113–120) and under the reading learner (A.2's centre, seeds 121–128); none saturates. The Lee branch did not fire, and the registered rule, which never reads the wiring gap, selected the default. No level's gap crossed zero against the random level's side, so B.1c inherits no condition from the pilot. Under the reading learner small multipliers cost learning without preventing it, and the null's lead there closes at 2 and 4, recorded as descriptive only. Original scope: sign-only vs sign-plus-magnitude; the LDS-to-rate-model unit
   scale swept (a pin); disjoint pilot seeds.
 - [ ] **B.1c The 2×3** (own change): wiring {wild type, rewired null} × prior {random, measured,
   measured-shuffled}, on `readout_only` at A.2's swept point and again under PPO **under D15's
@@ -158,6 +158,15 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   its pins, so **B.1's PPO arm either runs at the pooled width and says so in the same sentence as
   its claim, or buys the width reading on a cell that does not saturate first.** The reading half
   has no such problem: it resolves width cleanly and finds it the one pin that moves that learner.
+  **What B.1b hands this arm** *(added 2026-09-24, [Logbook 072](../../../docs/experiments/logbooks/072-measured-prior-pilot.md))*:
+  - `measured_weight_scale` **1.0** on both learners, chosen on each learner's own gate;
+  - the PPO arm runs under `per_neuron_fanin`, the pairing B.1b defined so every neuron keeps its
+    wild-type multiset on the null. That draw is not the one A.2 swept, so the arm's depth and
+    initial-noise settings come from a surface measured under `edge_order`, and it says so in the
+    same sentence as its PPO claim;
+  - no condition from the pilot's sign-movement rule. The reading learner's gap closing at
+    multipliers 2 and 4 is offered to this change's registration as a candidate sensitivity arm,
+    not carried as a condition.
 
 ### B.2 — the dynamics rung (SHOULD)
 
