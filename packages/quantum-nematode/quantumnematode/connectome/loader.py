@@ -1,15 +1,23 @@
-"""Connectome loader — read vendored *Nature* SI XLSX files into ``Connectome``.
+"""Connectome loader — read vendored SI XLSX files into ``Connectome``.
 
-Two public loaders:
+Public loaders:
 
 - ``load_cook_2019_hermaphrodite()`` — reads Cook et al. 2019 SI 5
   (``data/connectome/cook_2019_si5_connectome_adjacency.xlsx``) and returns
   the full 302-neuron hermaphrodite connectome.
+- ``load_emmons_2024_hermaphrodite()`` — reads the same matrices as released
+  under CC BY 4.0 in Emmons 2024, S1 File
+  (``data/connectome/emmons_2024_s1_connectome_adjacency.xlsx``), with the
+  lab's later corrections, and returns the connectome in the same shape.
+- ``load_emmons_2024_neuromuscular()`` — reads that file's synapses from
+  neurons onto the 95 body wall muscles.
 - ``load_witvliet_2021_adult()`` — reads Witvliet et al. 2021 dataset 8
   (``data/connectome/witvliet_2020_dataset8_adult.xlsx``) and returns the
   adult worm's nerve-ring subset (~150-200 neurons).
 
-The Cook 2019 SI 5 sheet layout (per the file's TITLE AND LEGEND):
+The Cook 2019 SI 5 sheet layout (per the file's TITLE AND LEGEND; the
+Emmons 2024 file shares it, naming its gap-junction sheets
+``hermaphrodite gap jn …`` where SI 5 has ``herm gap jn …``):
 
 - One sheet per (sex x connection-type):
   ``hermaphrodite chemical``, ``herm gap jn symmetric``,
@@ -35,11 +43,13 @@ normalises padded names via the ``_unpad_neuron_name()`` helper.
 The Cook 2019 sheet also contains non-neuron cells in its column headers:
 muscles (``dBWML*``, ``vm*``), glia (``CEPshDL``, ``GLR*``), etc. These
 are filtered out by intersecting with ``NEURON_CLASSIFICATION``; only the
-302 hermaphrodite neurons make it into the returned ``Connectome``.
+302 hermaphrodite neurons make it into the returned ``Connectome``. The
+body wall muscle columns are read separately, by the neuromuscular loader.
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -50,8 +60,10 @@ from quantumnematode.connectome.model import (
     ChemicalSynapse,
     Connectome,
     GapJunction,
+    NeuromuscularJunction,
     Neuron,
 )
+from quantumnematode.connectome.muscles import BODY_WALL_MUSCLES
 from quantumnematode.connectome.neurons import (
     CANONICAL_NAME_ALIASES,
     NEURON_CLASSIFICATION,
@@ -72,7 +84,19 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 _DATA_DIR = _REPO_ROOT / "data" / "connectome"
 
 COOK_2019_HERMAPHRODITE_PATH = _DATA_DIR / "cook_2019_si5_connectome_adjacency.xlsx"
+EMMONS_2024_HERMAPHRODITE_PATH = _DATA_DIR / "emmons_2024_s1_connectome_adjacency.xlsx"
+EMMONS_2024_SHA256 = "e866b43f19ba5c70b773c94efd06aff6d6b2887cd24eed4412da80c06986418d"
 WITVLIET_2021_ADULT_PATH = _DATA_DIR / "witvliet_2020_dataset8_adult.xlsx"
+
+# Hermaphrodite sheet names: chemical, gap junctions (symmetric), gap junctions
+# (asymmetric). The two files lay their sheets out identically and differ only
+# in how they name the gap-junction ones.
+_COOK_2019_SHEETS = ("hermaphrodite chemical", "herm gap jn symmetric", "herm gap jn asymmetric")
+_EMMONS_2024_SHEETS = (
+    "hermaphrodite chemical",
+    "hermaphrodite gap jn symmetric",
+    "hermaphrodite gap jn asymmetric",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -190,33 +214,51 @@ def load_cook_2019_hermaphrodite() -> Connectome:
         )
         raise FileNotFoundError(msg)
 
-    valid = set(NEURON_CLASSIFICATION)
+    return _load_hermaphrodite(
+        COOK_2019_HERMAPHRODITE_PATH,
+        _COOK_2019_SHEETS,
+        source="cook_2019_hermaphrodite",
+        version="Cook et al. 2019 Nature, SI 5 (vendored snapshot)",
+    )
 
-    def _read_sheet(name: str) -> pd.DataFrame:
-        df = pd.read_excel(
-            COOK_2019_HERMAPHRODITE_PATH,
-            engine="openpyxl",
-            sheet_name=name,
-            header=None,
-        )
-        # pd.read_excel can return a dict when sheet_name is a list; with a
-        # single string it always returns a single DataFrame, but pyright
-        # can't narrow that, so assert it here.
-        if not isinstance(df, pd.DataFrame):
-            msg = f"Expected DataFrame from sheet {name!r}, got {type(df).__name__}"
-            raise TypeError(msg)
-        return df
+
+def _read_sheet(path: Path, name: str) -> pd.DataFrame:
+    """Read one sheet of an adjacency-matrix workbook, with no header row."""
+    df = pd.read_excel(path, engine="openpyxl", sheet_name=name, header=None)
+    # pd.read_excel can return a dict when sheet_name is a list; with a
+    # single string it always returns a single DataFrame, but pyright
+    # can't narrow that, so assert it here.
+    if not isinstance(df, pd.DataFrame):
+        msg = f"Expected DataFrame from sheet {name!r}, got {type(df).__name__}"
+        raise TypeError(msg)
+    return df
+
+
+def _load_hermaphrodite(
+    path: Path,
+    sheets: tuple[str, str, str],
+    *,
+    source: str,
+    version: str,
+) -> Connectome:
+    """Build the 302-neuron connectome from a workbook in the Cook 2019 layout.
+
+    ``sheets`` names the chemical sheet, then the symmetric and asymmetric
+    gap-junction sheets.
+    """
+    valid = set(NEURON_CLASSIFICATION)
+    chemical_sheet, gap_symmetric_sheet, gap_asymmetric_sheet = sheets
 
     chem_edges = _parse_cook_2019_adjacency_sheet(
-        _read_sheet("hermaphrodite chemical"),
+        _read_sheet(path, chemical_sheet),
         valid_neurons=valid,
     )
     gj_sym_edges = _parse_cook_2019_adjacency_sheet(
-        _read_sheet("herm gap jn symmetric"),
+        _read_sheet(path, gap_symmetric_sheet),
         valid_neurons=valid,
     )
     gj_asym_edges = _parse_cook_2019_adjacency_sheet(
-        _read_sheet("herm gap jn asymmetric"),
+        _read_sheet(path, gap_asymmetric_sheet),
         valid_neurons=valid,
     )
 
@@ -243,9 +285,148 @@ def load_cook_2019_hermaphrodite() -> Connectome:
         neurons=neurons,
         chemical_synapses=chemical_synapses,
         gap_junctions=gap_junctions,
-        source="cook_2019_hermaphrodite",
-        version="Cook et al. 2019 Nature, SI 5 (vendored snapshot)",
+        source=source,
+        version=version,
     )
+
+
+# ---------------------------------------------------------------------------
+# Emmons 2024 release of the Cook 2019 matrices
+# ---------------------------------------------------------------------------
+
+
+def _check_emmons_2024(path: Path) -> None:
+    """Refuse a missing file, or one whose digest is not the vendored release's."""
+    if not path.is_file():
+        msg = (
+            f"Emmons 2024 S1 File not found at {path}. "
+            "Run `git lfs pull` to fetch the vendored data."
+        )
+        raise FileNotFoundError(msg)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    if digest != EMMONS_2024_SHA256:
+        msg = (
+            f"{path.name} has SHA256 {digest}, not the recorded {EMMONS_2024_SHA256}; it is not "
+            "the vendored release, so its counts cannot be trusted as that release's. If it is a "
+            "Git LFS pointer, run `git lfs pull`."
+        )
+        raise ValueError(msg)
+
+
+def load_emmons_2024_hermaphrodite(path: Path = EMMONS_2024_HERMAPHRODITE_PATH) -> Connectome:
+    """Load the Cook 2019 hermaphrodite connectome as released in Emmons 2024.
+
+    Emmons 2024 (*PLoS Biology* 22:e3002939, S1 File) republishes the Cook
+    2019 adjacency matrices under CC BY 4.0, with two revisions its legend
+    records: corrections from July 2020 that make each gap-junction table agree
+    across its diagonal, and a 2023 addition of gap junctions between BDU and
+    the touch cells ALM and PLM.
+
+    Among the 302 neurons the chemical synapses are identical to the Cook 2019
+    loader's. The gap junctions differ only by the 2023 addition: ALML-BDUL and
+    ALMR-BDUR are new, and BDUL-PLML and BDUR-PLMR are larger. The corrections
+    set each pair whose two directions disagreed to the larger value, which is
+    what the fold over both directions already takes, so they change nothing
+    returned here.
+
+    The output has the same shape and ordering as ``load_cook_2019_hermaphrodite()``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the vendored XLSX file isn't present.
+    ValueError
+        If the file's SHA256 is not the recorded digest, or the loaded data
+        fails Pydantic validation.
+    """
+    _check_emmons_2024(path)
+    return _load_hermaphrodite(
+        path,
+        _EMMONS_2024_SHEETS,
+        source="emmons_2024_hermaphrodite",
+        version=(
+            "Emmons 2024 PLoS Biology, S1 File: Cook et al. 2019, corrected (vendored snapshot)"
+        ),
+    )
+
+
+def _parse_neuromuscular_sheet(
+    df: pd.DataFrame,
+    *,
+    valid_neurons: set[str],
+) -> dict[tuple[str, str], int]:
+    """Walk a chemical sheet and emit ``{(neuron, muscle): weight}`` onto body wall muscle.
+
+    Rows are presynaptic cells and columns postsynaptic ones, as for the
+    neuron-to-neuron edges; this keeps the columns that name a body wall
+    muscle. The sheet must list every body wall muscle exactly once, so a
+    revision that renamed or dropped one fails here rather than yielding fewer
+    muscles.
+    """
+    raw_post = df.iloc[2, 3:].tolist()
+    muscle_set = set(BODY_WALL_MUSCLES)
+    muscle_columns = {
+        j: str(name).strip()
+        for j, name in enumerate(raw_post)
+        if isinstance(name, str) and str(name).strip() in muscle_set
+    }
+    listed = list(muscle_columns.values())
+    missing = sorted(muscle_set - set(listed))
+    repeated = sorted({name for name in listed if listed.count(name) > 1})
+    if missing or repeated:
+        msg = (
+            "Expected each of the 95 body wall muscles exactly once in the sheet's "
+            f"columns; missing {missing}, repeated {repeated}."
+        )
+        raise ValueError(msg)
+
+    pre_neurons: list[str | None] = [
+        _canonicalise(str(n)) if isinstance(n, str) else None for n in df.iloc[3:, 2].tolist()
+    ]
+    data = df.iloc[3:, 3:].to_numpy()
+
+    edges: dict[tuple[str, str], int] = {}
+    for i, pre in enumerate(pre_neurons):
+        if pre is None or pre not in valid_neurons:
+            continue
+        for j, muscle in muscle_columns.items():
+            try:
+                weight = int(data[i, j])
+            except (TypeError, ValueError):
+                continue
+            if weight <= 0:
+                continue
+            edges[(pre, muscle)] = weight
+    return edges
+
+
+def load_emmons_2024_neuromuscular(
+    path: Path = EMMONS_2024_HERMAPHRODITE_PATH,
+) -> list[NeuromuscularJunction]:
+    """Load the synapses from neurons onto the 95 body wall muscles.
+
+    Read from the hermaphrodite chemical sheet of the Emmons 2024 file, whose
+    entries onto muscle are identical to Cook 2019 SI 5's. Every body wall
+    muscle receives at least one synapse. Sorted by ``(pre, muscle)`` for
+    determinism.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the vendored XLSX file isn't present.
+    ValueError
+        If the file's SHA256 is not the recorded digest, or the sheet does not
+        list each body wall muscle exactly once.
+    """
+    _check_emmons_2024(path)
+    edges = _parse_neuromuscular_sheet(
+        _read_sheet(path, _EMMONS_2024_SHEETS[0]),
+        valid_neurons=set(NEURON_CLASSIFICATION),
+    )
+    return [
+        NeuromuscularJunction(pre=pre, muscle=muscle, weight=weight)
+        for (pre, muscle), weight in sorted(edges.items())
+    ]
 
 
 # ---------------------------------------------------------------------------

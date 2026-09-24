@@ -107,6 +107,29 @@ class GapJunction(BaseModel):
         return self
 
 
+class NeuromuscularJunction(BaseModel):
+    """A chemical synapse from a neuron onto a body wall muscle.
+
+    Kept apart from ``Connectome``, whose connections join neurons to neurons.
+
+    Attributes
+    ----------
+    pre
+        Name of the presynaptic neuron.
+    muscle
+        Name of the body wall muscle, as the adjacency matrices write it: the quadrant, then the
+        position from head to tail (``"dBWML1"`` .. ``"vBWMR24"``; see
+        ``quantumnematode.connectome.muscles``).
+    weight
+        EM serial-section count, as for ``ChemicalSynapse``. Must be a positive integer;
+        zero-weight cells are dropped at parse time.
+    """
+
+    pre: str = Field(..., min_length=1)
+    muscle: str = Field(..., min_length=1)
+    weight: int = Field(..., gt=0, description="EM serial-section count.")
+
+
 class Connectome(BaseModel):
     """A complete *C. elegans* connectome — neurons + connections + provenance.
 
