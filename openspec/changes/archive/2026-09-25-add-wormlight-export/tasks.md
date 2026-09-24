@@ -38,6 +38,6 @@ and no experiment's input changes.
 - [x] 8. **Docs** — **done.** Original scope: a CHANGELOG line under *Unreleased*, the exporter in `AGENTS.md`'s commands, and the
   connectome package and loader docstrings updated.
 
-- [ ] 9. **Close-out**: the full suite via `uv run pytest -m "not nightly"`; `git add -A` then
+- [x] 9. **Close-out** — **done: full suite 6,739 passed, 69 skipped (one test first read a Git LFS pointer for an artifact outside `data/**` in a fresh worktree, and passed once the artifact was fetched); hooks pass with everything staged, judged by exit code; two exports from the implementation commit byte-identical; validated; archived.** Original scope: the full suite via `uv run pytest -m "not nightly"`; `git add -A` then
   `uv run pre-commit run --all-files`, judged by its exit code; one export written to the scratchpad and
   re-run to confirm identical bytes; `openspec validate --strict`; archive and PR.
