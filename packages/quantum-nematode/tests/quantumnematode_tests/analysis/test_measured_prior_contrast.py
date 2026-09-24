@@ -165,6 +165,7 @@ class TestTheClassification:
             ((0.02, -0.02, 0.06, 0.5), "unresolved"),
             ((0.02, 0.01, 0.03, 0.2), "unresolved"),
             ((0.02, -0.01, 0.05, 0.01), "unresolved"),
+            ((0.005, -0.01, 0.02, 0.01), "unresolved"),
         ],
         ids=[
             "toward-wild-type",
@@ -175,6 +176,7 @@ class TestTheClassification:
             "spans-the-minimum",
             "interval-excludes-zero-q-not-significant",
             "q-significant-interval-spans-zero",
+            "q-significant-interval-spans-zero-inside-the-minimum",
         ],
     )
     def test_each_state(self, stats: tuple[float, float, float, float], state: str) -> None:
@@ -252,6 +254,27 @@ class TestTheGates:
         out = mc.read_learner("reading", gates, {"measured": self._MOVE, "placement": self._MOVE})
         assert out["states"] == {"measured": "move_wt", "placement": "move_wt"}
         assert out["verdict"] == "legible"
+
+
+_LEGIBLE: dict[str, Any] = {"verdict": "legible", "states": {}}
+
+
+class TestDrift:
+    def test_a_drifted_reading_half_is_void(self) -> None:
+        """The reading learner must never write its matrix; if it did, no verdict stands."""
+        out = mc.honour_drift("reading", _LEGIBLE, {"obligation_applies": True, "void": True})
+        assert out["verdict"] == "void"
+        assert "drifted" in out["why"]
+
+    def test_a_clean_reading_half_keeps_its_verdict(self) -> None:
+        """Zero drift on every seed leaves the read verdict exactly as it was."""
+        drift = {"obligation_applies": True, "void": False}
+        assert mc.honour_drift("reading", _LEGIBLE, drift) == _LEGIBLE
+
+    def test_ppo_drift_voids_nothing(self) -> None:
+        """PPO writes the matrix by design, so its large drift is the check's positive control."""
+        drift = {"obligation_applies": False, "void": True}
+        assert mc.honour_drift("ppo", _LEGIBLE, drift) == _LEGIBLE
 
 
 def test_the_primary_family_is_exactly_the_four_registered_interactions() -> None:

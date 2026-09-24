@@ -120,7 +120,7 @@ def classify(mean: float, ci_lo: float, ci_hi: float, q: float, floor: float) ->
         return "move_null"
     if significant and (ci_lo > 0.0 or ci_hi < 0.0):
         return "below"
-    if -floor < ci_lo <= 0.0 <= ci_hi < floor:
+    if not significant and -floor < ci_lo <= 0.0 <= ci_hi < floor:
         return "no_move"
     return "unresolved"
 
@@ -181,6 +181,22 @@ def read_learner(half: str, gates: dict[str, Any], interactions: dict[str, Any])
         )
     out["verdict"] = verdict(out["states"]["measured"], out["states"]["placement"])
     return out
+
+
+def honour_drift(half: str, reading: dict[str, Any], drift: dict[str, Any]) -> dict[str, Any]:
+    """Void a learner whose fixed substrate moved, whatever its verdict would have been.
+
+    The reading learner reads a chemical matrix it must never write; drift on any scored seed, or
+    missing evidence, voids that half. PPO writes the matrix by design, so its drift voids nothing.
+    """
+    if half == "reading" and drift.get("void"):
+        return {
+            **reading,
+            "verdict": "void",
+            "why": "w_chem drifted from its frozen floor, or its evidence is missing, on at least "
+            "one scored seed",
+        }
+    return reading
 
 
 def correct_family(results: dict[str, dict[str, Any]], metric: str) -> None:
@@ -274,10 +290,10 @@ def score(campaigns: dict[str, Path], out_dir: Path) -> dict[str, Any]:
     for metric in (PRIMARY_METRIC, BESIDE_METRIC):
         correct_family(halves, metric)
     for half, result in halves.items():
-        result["reading"] = read_learner(
+        result["reading"] = honour_drift(
             half,
-            result["gates"],
-            result["interactions"][PRIMARY_METRIC],
+            read_learner(half, result["gates"], result["interactions"][PRIMARY_METRIC]),
+            result["substrate_drift"],
         )
     return {
         "primary_metric": PRIMARY_METRIC,
