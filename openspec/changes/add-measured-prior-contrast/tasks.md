@@ -53,9 +53,9 @@ implementation are in this change's `design.md`.
 ## Records
 
 - [x] 8. **done: `contrast.json` and `per-seed.csv` (80 rows, one per learner and seed).** Original scope: **Score and commit** the per-seed CSVs and analysis JSON.
-- [ ] 9. **Logbook 073**, following the logbook skill, with the verdict per learner, and each
+- [x] 9. **done: Logbook 073.** Original scope: **Logbook 073**, following the logbook skill, with the verdict per learner, and each
   standing condition in the same sentence as its claim.
-- [ ] 10. **Discharge:**
+- [x] 10. **done: index row; tracker B.1c ticked; roadmap B.1 exit line ✅ with its verdict, D17 and the novelty-map row noted. No citation-site change was owed: the registration tied one to `null` (Logbook 034) and to `hides` (block V), and neither verdict was reached.** Original scope: **Discharge:**
   - the index row;
   - tracker B.1c;
   - the roadmap's B.1 exit line, D17 and the novelty-map row;
