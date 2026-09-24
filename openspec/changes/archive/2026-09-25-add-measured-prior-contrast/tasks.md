@@ -60,4 +60,4 @@ implementation are in this change's `design.md`.
   - tracker B.1c;
   - the roadmap's B.1 exit line, D17 and the novelty-map row;
   - citation sites the verdict conditions: Logbook 034 if null, block V if hides.
-- [ ] 11. **Close-out**: validate, archive and open the PR.
+- [x] 11. **done: validated strict and archived; every new relative link resolves; the PR is opened from this branch.** Original scope: **Close-out**: validate, archive and open the PR.
