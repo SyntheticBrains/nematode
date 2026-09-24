@@ -47,12 +47,12 @@ implementation are in this change's `design.md`.
   committed **before any seed runs**: arms, seeds, both interactions, the metric departure and its
   reason, the sensitivity table with PPO's fan-in reference, the minimum, the state classification,
   the verdict map, gates, the per-seed shuffle, standing conditions, retention and cost.
-- [ ] 7. **The campaigns**: PPO (seeds 225–256), then reading (257–304), with the output controls,
+- [x] 7. **done: 960/960, none failed; PPO 5h51m, reading 16h14m.** Original scope: **The campaigns**: PPO (seeds 225–256), then reading (257–304), with the output controls,
   and no branch switches until both complete.
 
 ## Records
 
-- [ ] 8. **Score and commit** the per-seed CSVs and analysis JSON.
+- [x] 8. **done: `contrast.json` and `per-seed.csv` (80 rows, one per learner and seed).** Original scope: **Score and commit** the per-seed CSVs and analysis JSON.
 - [ ] 9. **Logbook 073**, following the logbook skill, with the verdict per learner, and each
   standing condition in the same sentence as its claim.
 - [ ] 10. **Discharge:**
