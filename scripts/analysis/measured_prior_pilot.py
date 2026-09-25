@@ -86,12 +86,22 @@ MULTIPLIER_LEVELS: dict[str, float] = {s: m for s, prior, m in LEVELS if prior =
 # rather than size. Chosen whenever it passes.
 DEFAULT_LEVEL = "m1"
 
+# Every level any panel built on these parents may use, which is what ``level_keys`` and ``stem_for``
+# read. A later panel adds its levels here so that every stem is spelled one way; it does NOT add them
+# to ``LEVELS`` above, which is this pilot's own panel -- a level there would make the committed pilot
+# campaign read as incomplete if it were ever re-scored.
+SHUFFLED_LEVEL = "shuffled"
+VOCABULARY: tuple[tuple[str, str, float], ...] = (
+    *LEVELS,
+    (SHUFFLED_LEVEL, "measured_shuffled", 1.0),
+)
+
 
 def level_keys(suffix: str) -> dict[str, Any]:
     """Return the keys a level adds to its parent's brain config: at most two, often one."""
     if suffix == RANDOM:
         return {}
-    _, prior, multiplier = next(level for level in LEVELS if level[0] == suffix)
+    _, prior, multiplier = next(level for level in VOCABULARY if level[0] == suffix)
     keys: dict[str, Any] = {"weight_prior": prior}
     if multiplier != 1.0:
         keys["measured_weight_scale"] = multiplier
@@ -126,12 +136,20 @@ class PilotError(ValueError):
 
 
 # ── Manifest ─────────────────────────────────────────────────────────────────────────────────
-def build_manifest(campaign_dir: Path, path: Path, half: str, seeds: tuple[int, ...]) -> Path:
+def build_manifest(
+    campaign_dir: Path,
+    path: Path,
+    half: str,
+    seeds: tuple[int, ...],
+    arm_by_stem: dict[str, tuple[str, str, str]] | None = None,
+) -> Path:
     """Write A.2's ``<arm> <level> <seed> <log>`` lines for every run of ``half``.
 
     The line format is the one ``operating_point_surface``'s gate, drift check and scorer read, with
-    the arms named ``wt_learn``, ``rn_learn``, ``wt_frozen`` and ``rn_frozen``.
+    the arms named ``wt_learn``, ``rn_learn``, ``wt_frozen`` and ``rn_frozen``. ``arm_by_stem`` lets
+    another panel on the same parents supply its own stem map; it defaults to this pilot's.
     """
+    arm_by_stem = arm_by_stem if arm_by_stem is not None else ARM_BY_STEM
     logs = campaign_dir / "logs"
     if not logs.is_dir():
         logs = campaign_dir
@@ -142,9 +160,9 @@ def build_manifest(campaign_dir: Path, path: Path, half: str, seeds: tuple[int, 
         if not sep:
             msg = f"{log.name} has no -seedN suffix, so it cannot be placed in the panel"
             raise PilotError(msg)
-        entry = ARM_BY_STEM.get(stem)
+        entry = arm_by_stem.get(stem)
         if entry is None:
-            msg = f"{log.name} names config {stem!r}, which this pilot does not have"
+            msg = f"{log.name} names config {stem!r}, which this panel does not have"
             raise PilotError(msg)
         log_half, arm, suffix = entry
         seed = int(seed_part)
@@ -165,7 +183,12 @@ def build_manifest(campaign_dir: Path, path: Path, half: str, seeds: tuple[int, 
     return path
 
 
-def require_complete(manifest: Path, half: str, seeds: tuple[int, ...]) -> None:
+def require_complete(
+    manifest: Path,
+    half: str,
+    seeds: tuple[int, ...],
+    levels: tuple[str, ...] = ALL_LEVELS,
+) -> None:
     """Refuse a partial panel: all four arms at every level, on every seed."""
     have: dict[tuple[str, str], set[int]] = {}
     for raw in manifest.read_text().splitlines():
@@ -173,12 +196,12 @@ def require_complete(manifest: Path, half: str, seeds: tuple[int, ...]) -> None:
         have.setdefault((arm, suffix), set()).add(int(seed))
     missing = [
         f"{suffix}/{arm}: {sorted(set(seeds) - have.get((arm, suffix), set()))}"
-        for suffix in ALL_LEVELS
+        for suffix in levels
         for arm in ARMS
         if set(seeds) - have.get((arm, suffix), set())
     ]
     if missing:
-        msg = f"{half} pilot is incomplete — " + "; ".join(missing)
+        msg = f"{half} panel is incomplete — " + "; ".join(missing)
         raise PilotError(msg)
 
 
