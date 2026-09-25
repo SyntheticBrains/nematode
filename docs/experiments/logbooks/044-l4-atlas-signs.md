@@ -22,6 +22,8 @@ and a purely potentiating rule on an 80%-excitatory network has no inhibitory br
 
 **Date**: 2026-09-09.
 
+*(**Condition added 2026-09-25**, from the Wormlight review: the atlas signs here are assigned per presynaptic neuron, with glutamate excitatory, so AWC → AIY — the food-sensing entry to the klinotaxis circuit — is signed positive, where physiology finds it inhibitory through glutamate-gated chloride channels (Chalasani et al. 2007). The verdict stands as read for the per-neuron rule; it is not a reading of per-connection signs, which Fenyves et al. 2020 predict from receptor expression. See roadmap § Phase 8, B.3's note.)*
+
 **OpenSpec change**: `add-l4-atlas-signs` (archived; vendored atlas and provenance, the curated
 sign table, `synapse_signs` and `enforce_synapse_signs` on the connectome brain, the registered
 test; extends capabilities `connectome-substrate`, `connectome-ppo-brain`,

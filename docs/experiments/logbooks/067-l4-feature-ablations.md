@@ -39,6 +39,8 @@ spread an order of magnitude narrower than the contrast the hypothesis was drawn
 
 **Date**: 2026-09-19.
 
+*(**Conditions added 2026-09-25**, from the Wormlight review. **L.5:** the rewired null does not only move gap junctions, it moves their strength — each junction's EM count is its weight and travels with the edge, so the wild type's hub coupling (ALA's gap input 232) is spread thin on a null (about 3). "The wild type's gap junctions costing it less than the rewired ones cost the null" may be that redistribution rather than the placement; roadmap A.6 controls it. **L.4:** the atlas signs are per presynaptic neuron and sign AWC → AIY positive, where physiology finds it inhibitory (Chalasani et al. 2007); the reading is of that rule, not of per-connection signs.)*
+
 **OpenSpec change**: `add-l4-feature-ablations` (extends `plasticity-evaluation`: a feature ablation on
 a positive registers a minimum effect as a decision rule; a committed baseline is reused only under a
 byte-identity check; a mechanism probe is registered before its correlation is computed).
