@@ -49,6 +49,9 @@ most exposed claim, block V, has never been read against a null that holds these
   2/3 of each learner's committed wiring effect, with gates and drift first, and read through a
   verdict map.
 
+- **A verdict attributes a gap only where one exists.** `chemical` also needs the wild type's gap
+  against the chemical null to exclude zero; otherwise the verdict is `no_gap_to_attribute`.
+
 - **The interpretation is combined.** A survival means the advantage is in the chemical wiring
   *given the wild type's gap junctions and autapses held in place*. A dissolution means it came at
   least partly from how the current null rewires gap junctions (placement and strength together) or

@@ -11,8 +11,9 @@ PR #405. The decisions taken before implementation are in this change's `design.
 - [ ] 2. **The brain:** add `wiring: "rewired_chemical_only"`, and test `wiring != "wild_type"` at the
   rewiring step and at the measured prior's `rewired=`. No planning references in package code.
 - [ ] 3. **Tests:**
-  - the default null is unchanged edge for edge and count for count at fixed seeds, against pinned
-    counts;
+  - the default null is unchanged edge for edge and count for count at fixed seeds, against a digest
+    of the edge lists **recorded from the current code before task 1 touches it** and committed with
+    the test;
   - the chemical null keeps chemical in- and out-degree exactly, and keeps all 38 autapses with their
     counts;
   - the chemical null keeps its gap junctions identical to the wild type's, so per-neuron gap
@@ -31,17 +32,18 @@ PR #405. The decisions taken before implementation are in this change's `design.
   - the gates per level and the drift check;
   - the interaction per learner on both metrics;
   - the family correction;
-  - `classify`, the verdict map and `honour_drift`;
+  - `classify`, the verdict map with its attribution gate, and `honour_drift`;
   - the per-seed CSV and the analysis JSON.
-- [ ] 5. **The configs:** a generator writes the 4 `_rewired_chemical_null` arms from their
-  full-null parents, changing `wiring` alone.
+- [ ] 5. **The configs:** a generator writes the 4 chemical-null arms from their full-null parents,
+  changing `wiring` alone, with stems taken from the explicit table in Decision B.
 - [ ] 6. **Panel tests:**
   - the configs load through the real loader and differ from their parents in `wiring` alone;
   - the reused arms are the committed configs;
   - each chemical-null frozen floor is built on its learning arm's weights, with `g_gap` equal to the
     wild type's;
   - the seeds are fresh;
-  - every verdict row is checked on synthetic states, including the gates and a void drift;
+  - every verdict row is checked on synthetic states, including the gates, a void drift, and the
+    attribution gate on both learners' signs;
   - the family is exactly the two primary interactions.
 
 ## Registration and run
@@ -58,7 +60,8 @@ PR #405. The decisions taken before implementation are in this change's `design.
   - the interaction, the metric and its reason;
   - the sensitivity from the committed CSVs;
   - the minimum, the verdict map and the gates;
-  - the combined-control reading;
+  - the combined-control reading, the attribution gate, and the two nulls being different random
+    chemical graphs at each seed, with the gap-only null named as the paired follow-up;
   - retention and cost.
 - [ ] 9. **The campaigns:** PPO (seeds 305–336), then the reading learner (seeds 337–384), with the
   output controls, and no branch switches until both finish.
@@ -66,7 +69,8 @@ PR #405. The decisions taken before implementation are in this change's `design.
 ## Records
 
 - [ ] 10. **Score and commit** the per-seed CSV and the analysis JSON; re-scoring reproduces them.
-- [ ] 11. **Logbook 074**, with each learner's verdict read as combined.
+- [ ] 11. **Logbook 074**, with each learner's verdict read as combined, and the hop probe on the
+  chemical null reported as description.
 - [ ] 12. **Discharge:**
   - the index row;
   - tracker A.6 ticked;
