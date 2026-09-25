@@ -27,16 +27,16 @@ PR #405. The decisions taken before implementation are in this change's `design.
 
 ## Panel
 
-- [ ] 4. **The analysis**, `scripts/analysis/null_strength_control.py` (Decisions B–F):
+- [x] 4. **done: `scripts/analysis/null_strength_control.py`; the wild-type runs are written once under each level by this panel's own manifest writer, since B.1b's maps a stem to one level.** Original scope: **The analysis**, `scripts/analysis/null_strength_control.py` (Decisions B–F):
   - the stems, seeds and levels, with the wild-type arms under both levels in the manifest;
   - the gates per level and the drift check;
   - the interaction per learner on both metrics;
   - the family correction;
   - `classify`, the verdict map with its attribution gate, and `honour_drift`;
   - the per-seed CSV and the analysis JSON.
-- [ ] 5. **The configs:** a generator writes the 4 chemical-null arms from their full-null parents,
+- [x] 5. **done: `scripts/campaigns/generate_null_strength_configs.py`, 4 configs.** Original scope: **The configs:** a generator writes the 4 chemical-null arms from their full-null parents,
   changing `wiring` alone, with stems taken from the explicit table in Decision B.
-- [ ] 6. **Panel tests:**
+- [x] 6. **done, 23 tests.** Original scope: **Panel tests:**
   - the configs load through the real loader and differ from their parents in `wiring` alone;
   - the reused arms are the committed configs;
   - each chemical-null frozen floor is built on its learning arm's weights, with `g_gap` equal to the
