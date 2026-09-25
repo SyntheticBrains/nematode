@@ -163,7 +163,9 @@ junctions.
 - **Whether block V's learning-speed advantage survives** against the chemical null: +94 episodes,
   with the interval spanning zero at 32 seeds.
 - **Which of the held properties carries the move**: gap placement, gap strength or autapses. The
-  gap-only null, which pairs exactly with the current null, is the split.
+  gap-only null, which pairs exactly with the current null, separates the gap junctions' joint effect
+  (placement and strength together) from the autapses'; telling placement from strength needs a
+  further control that moves one without the other.
 
 **Does not establish.**
 

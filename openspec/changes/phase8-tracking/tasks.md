@@ -222,7 +222,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### 8a synthesis
 
-- [ ] **S8a** *(2026-09-26: two items land here from 8a's rungs — B.1c's unresolved reading-learner interaction, and A.6's gap-only split, which pairs exactly with the current null and would say whether gap placement, gap strength or autapses carry the move; S8a decides whether either runs before A.5.)* The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
+- [ ] **S8a** *(2026-09-26: two items land here from 8a's rungs — B.1c's unresolved reading-learner interaction, and A.6's gap-only split, which pairs exactly with the current null and holds only its gap junctions — placement and strength together — so it separates the joint gap-junction effect from the autapses', and no more; attributing any part of it to gap placement or to gap strength individually needs a further control that moves one without the other; S8a decides whether either runs before A.5.)* The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
   D20 gate written as a go/no-go decision; the roadmap Phase 8 row set to "8a complete / 8b
   pending" on GO; `phase8-tracking` status headers updated.
 
