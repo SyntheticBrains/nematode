@@ -88,7 +88,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   (initialisation result); a shrunken effect is reported as shrunken, against a registered
   minimum in both directions. The learning-speed result is restated with its status wherever
   it is cited.
-  *(**Standing condition added 2026-09-25**, from the Wormlight review: A.1 shared the chemical weights, but the null still differs from the wild type in **gap-junction strength** and **autapses** — see A.6. Block V's advantage carries that condition until A.6 reads out.)*
+  *(**Standing condition added 2026-09-25**, from the Wormlight review: A.1 shared the chemical weights, but the null still differs from the wild type in **gap-junction strength** and **autapses** — see A.6. Block V's advantage carries that condition until A.6 reads out.)* *(**Resolved into a quantified condition 2026-09-26**, [Logbook 074](../../../docs/experiments/logbooks/074-null-strength-control.md): against a null that also holds the wild type's gap junctions and autapses, block V's PPO advantage on hard350 is **+0.022 `auc_success` [+0.007, +0.036]** (against +0.049 versus the current null) and **+94 episodes [−81, +280]** (against +372) — a chemical-wiring advantage remains on `auc_success`, and the learning-speed form is unresolved at 32 seeds.)*
 
 - [x] **A.2 The calibration-and-robustness surface** — **done 2026-09-23** ([Logbook 071](../../../docs/experiments/logbooks/071-operating-point-surface.md), `add-operating-point-surface`, 1,600 runs). **The committed point sits on an edge, not a plateau.** Under PPO the wiring advantage replicates at the centre (+536 episodes, 92% of A.1's) and is **depth-critical** — present at depths 4 and 6, abolished at 3, reversed at 2 with every arm learning — and robust to initial action noise. Under the reading learner the rewired null is ahead at the same point, reproducing 064/066, and only readout width moves it, by +0.268 against 066's +0.2818. A hop measurement accounts for depth: the wild type has no motor neuron one hop from a food sensor, a rewiring manufactures about nine. The A.1 re-read at depth 6 (32 seeds) is consistent with A.1. **One named gap**: readout width under PPO saturates on hard350 and is unresolved there (see B.1c). Follow-ups recorded at A.3 and M.6. *(**Correction 2026-09-23** to this item's wording below: the three pins are "shared by both learners" only across the learners of `ConnectomePPOBrain`. `readout_width` and `forward_pass_depth` are not declared on `MLPPPOBrainConfig`, and a YAML setting them under `mlpppo` is dropped with a warning rather than an error, so no later rung may read this surface onto an MLP arm.)* Original scope: (D16 as amended 2026-09-20; own change).
   **Two halves, because a pin swept on one learner is not swept for another.**
@@ -141,7 +141,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   with its initialisation control, the rule-programme negative with a diagnosed cause, and the
   operating-point finding with its surface. Not a gate for anything after it.
 
-- [ ] **A.6 The null-strength control** (MUST; own change; *added 2026-09-25* from the Wormlight review). Every wiring contrast
+- [x] **A.6 The null-strength control** — **met 2026-09-26** ([Logbook 074](../../../docs/experiments/logbooks/074-null-strength-control.md), `add-null-strength-control`, 480 runs). **`below_minimum` on both learners, each a significant move toward the null (q = 0.019).** Under PPO the wild type's lead falls from +0.049 to +0.022 `auc_success` [+0.007, +0.036] and from +372 to +94 episodes [−81, +280]; under the reading learner the null's lead grows from −0.064 to −0.163. Neither reaches the 2/3 minimum, so no registered verdict follows, but block V now carries the quantified condition at every citation site. The chemical null learns better than the current null on both learners; A.2's hop mechanism survives in it (8.0 one-hop motor neurons against 9.25), so that mechanism is chemical. The gap-only split — registered to follow a *move*, which `below` is not — is *deferred-with-destination* to S8a. Original scope: (MUST; own change; *added 2026-09-25* from the Wormlight review). Every wiring contrast
   here — Logbook 034, block V, 070–073 — compared the wild type against a degree-preserving null that
   also differs in two things A.1 did not control:
 
@@ -222,7 +222,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### 8a synthesis
 
-- [ ] **S8a** The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
+- [ ] **S8a** *(2026-09-26: two items land here from 8a's rungs — B.1c's unresolved reading-learner interaction, and A.6's gap-only split, which pairs exactly with the current null and holds only its gap junctions — placement and strength together — so it separates the joint gap-junction effect from the autapses', and no more; attributing any part of it to gap placement or to gap strength individually needs a further control that moves one without the other; S8a decides whether either runs before A.5.)* The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
   D20 gate written as a go/no-go decision; the roadmap Phase 8 row set to "8a complete / 8b
   pending" on GO; `phase8-tracking` status headers updated.
 

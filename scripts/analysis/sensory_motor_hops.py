@@ -64,7 +64,7 @@ def _topology(wiring: str, seed: int) -> ConnectomeTopology:
         raise TypeError(msg)
     update: dict[str, Any] = {"seed": seed}
     if wiring != "wild_type":
-        update["wiring"] = "rewired_degree_preserving"
+        update["wiring"] = wiring
     torch.manual_seed(seed)
     return ConnectomePPOBrain(
         config=brain_config.config.model_copy(update=update),
@@ -114,11 +114,22 @@ def motor_reach(topology: ConnectomeTopology) -> dict[str, Any]:
     }
 
 
-def compare(seeds: tuple[int, ...]) -> dict[str, Any]:
-    """Measure the wild type once and a fresh rewired null per seed."""
+DEFAULT_NULL = "rewired_degree_preserving"
+NULLS = (DEFAULT_NULL, "rewired_chemical_only")
+
+
+def compare(seeds: tuple[int, ...], null: str = DEFAULT_NULL) -> dict[str, Any]:
+    """Measure the wild type once and a fresh rewired null per seed.
+
+    ``null`` picks the rewiring. The chemical-only null holds the wild type's gap junctions, which
+    the propagating graph includes, so it shows how much of the reach difference is chemical.
+    """
     wild = motor_reach(_topology("wild_type", seeds[0]))
-    nulls = [motor_reach(_topology("rewired", s)) for s in seeds]
+    nulls = [motor_reach(_topology(null, s)) for s in seeds]
     out: dict[str, Any] = {"wild_type": wild, "rewired_nulls": nulls, "seeds": list(seeds)}
+    if null != DEFAULT_NULL:
+        # Recorded only off the default, so the committed default measurement regenerates as it was.
+        out["null_wiring"] = null
     for depth in (2, 3, 4, 6):
         null_counts = [n["within_depth"][depth] for n in nulls]
         out.setdefault("within_depth_summary", {})[depth] = {
@@ -158,11 +169,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--seeds", default="1-8", help="rewiring seeds, e.g. 1-8")
     ap.add_argument("--out", type=Path, help="write the measurement JSON here")
+    ap.add_argument("--null", choices=NULLS, default=DEFAULT_NULL, help="which rewired null")
     args = ap.parse_args(argv)
 
     lo, _, hi = args.seeds.partition("-")
     seeds = tuple(range(int(lo), int(hi) + 1)) if hi else (int(lo),)
-    result = compare(seeds)
+    result = compare(seeds, args.null)
     _print(result)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
