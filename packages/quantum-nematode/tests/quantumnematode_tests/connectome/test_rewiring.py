@@ -180,3 +180,44 @@ def test_rejects_duplicate_input_edges():
     bad = wild.model_copy(update={"chemical_synapses": [*wild.chemical_synapses, dup]})
     with pytest.raises(ValueError, match="simple connectome"):
         rewire_degree_preserving(bad, np.random.default_rng(0))
+
+
+# ── The committed null is pinned ─────────────────────────────────────────────────────────────
+# SHA256 of the rewired Cook 2019 chemical and gap-junction edge lists (pre>post:count; and
+# a-b:count;, in the loader's sorted order), recorded from the rewiring code before any option was
+# added to it. Every committed wiring result was read against this null, so a change that moves any
+# of these digests moves the control those results rest on.
+_PINNED_NULL: dict[int, tuple[str, str]] = {
+    1: (
+        "7613c7400437dfd277d6ca5f8d7e351a2057fce17cff70044fb2f0d0e7a2b01a",
+        "405dbc1518f63b87aee25768c40a1443c4c0bec37f0b1df97408a5601e8dcb31",
+    ),
+    17: (
+        "6e759aa532882b8465f46cf29a680ccdd1555841ce111ce028bb93e3e7ac2bed",
+        "50f4cf1dc2d610800618141c26fa66ed97a611e77a319c185db9d487f6566592",
+    ),
+    129: (
+        "ba09d879a201707cdd769e84836c8615e729a084279f928553e90a4f4784a8d7",
+        "5db4a330972147da4411e21000084e6e19692625a39c014cac6864baae1e9a46",
+    ),
+}
+
+
+def _digests(c: Connectome) -> tuple[str, str]:
+    import hashlib
+
+    chem = "".join(f"{s.pre}>{s.post}:{s.weight};" for s in c.chemical_synapses)
+    gap = "".join(f"{g.neuron_a}-{g.neuron_b}:{g.weight};" for g in c.gap_junctions)
+    return hashlib.sha256(chem.encode()).hexdigest(), hashlib.sha256(gap.encode()).hexdigest()
+
+
+@pytest.mark.parametrize("seed", sorted(_PINNED_NULL))
+def test_the_committed_null_is_unchanged(seed: int) -> None:
+    """The default rewiring of Cook 2019 matches its pinned edge lists, edge for edge and count."""
+    from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+
+    rewired = rewire_degree_preserving(
+        load_cook_2019_hermaphrodite(),
+        np.random.default_rng(seed),
+    )
+    assert _digests(rewired) == _PINNED_NULL[seed]
