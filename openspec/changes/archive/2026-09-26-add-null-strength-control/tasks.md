@@ -77,4 +77,4 @@ PR #405. The decisions taken before implementation are in this change's `design.
   - block V's standing-condition notes resolved at every citation site — the roadmap's A.1 and
     A.6, the tracker's A.1, and Logbooks 067 and 070;
   - the roadmap's exit line.
-- [ ] 13. **Close-out:** validate, archive, and open the PR.
+- [x] 13. **done: validated strict and archived; re-scoring reproduces the committed JSON and CSV byte for byte; every new link resolves; the PR is opened from this branch.** Original scope: **Close-out:** validate, archive, and open the PR.
