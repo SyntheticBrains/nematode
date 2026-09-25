@@ -48,12 +48,12 @@ PR #405. The decisions taken before implementation are in this change's `design.
 
 ## Registration and run
 
-- [ ] 7. **Pre-launch checks:**
+- [x] 7. **done: full suite 6,887 passed; hooks pass with everything staged; validated strict; 8-episode smokes of the PPO and reading chemical nulls completed.** Original scope: **Pre-launch checks:**
   - the full suite passes;
   - `git add -A`, then `pre-commit --all-files`, judged by its exit code;
   - `openspec validate --strict` passes;
   - 8-episode smokes run one chemical-null arm per learner.
-- [ ] 8. **The launch record**, `docs/experiments/logbooks/supporting/074-null-strength-control/launch.md`,
+- [x] 8. **done: committed before any seed ran.** Original scope: **The launch record**, `docs/experiments/logbooks/supporting/074-null-strength-control/launch.md`,
   committed **before any seed runs**. It covers:
   - the arms and seeds;
   - what each null preserves and does not (the new protocol requirement);
