@@ -5,12 +5,12 @@ PR #405. The decisions taken before implementation are in this change's `design.
 
 ## Code
 
-- [ ] 1. **The rewiring function** (Decision A): add `rewire_gap_junctions` and `preserve_autapses` as
+- [x] 1. **done.** Original scope: **The rewiring function** (Decision A): add `rewire_gap_junctions` and `preserve_autapses` as
   keyword arguments. Under `preserve_autapses`, self-loops leave the directed swap's list and are
   re-added unchanged. The defaults take the same draws in the same order.
-- [ ] 2. **The brain:** add `wiring: "rewired_chemical_only"`, and test `wiring != "wild_type"` at the
+- [x] 2. **done: the two sites were the rewiring step and the measured prior's `rewired=`; `sensory_motor_hops.py` gains `--null`, its default output byte-identical to Logbook 071's committed JSON.** Original scope: **The brain:** add `wiring: "rewired_chemical_only"`, and test `wiring != "wild_type"` at the
   rewiring step and at the measured prior's `rewired=`. No planning references in package code.
-- [ ] 3. **Tests:**
+- [x] 3. **done: the null's digests at seeds 1, 17 and 129 were committed in their own commit before task 1 touched the code, and still match; 25 new tests across `test_rewiring.py` and `test_connectome_chemical_null.py`, plus one showing that holding gap junctions alone reproduces the default null's chemical graph (the paired follow-up's premise).** Original scope: **Tests:**
   - the default null is unchanged edge for edge and count for count at fixed seeds, against a digest
     of the edge lists **recorded from the current code before task 1 touches it** and committed with
     the test;

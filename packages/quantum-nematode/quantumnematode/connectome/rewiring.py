@@ -144,6 +144,9 @@ def rewire_degree_preserving(
     connectome: Connectome,
     rng: np.random.Generator,
     swaps_per_edge: int = _DEFAULT_SWAPS_PER_EDGE,
+    *,
+    rewire_gap_junctions: bool = True,
+    preserve_autapses: bool = False,
 ) -> Connectome:
     """Return a degree-preserving rewired copy of ``connectome``.
 
@@ -151,6 +154,20 @@ def rewire_degree_preserving(
     hence the strict-mask / weight-init scale / gap-junction normalisation are preserved); only the
     chemical and gap-junction edge sets are rewired by independent seeded double-edge-swaps, each
     running ``swaps_per_edge * |E|`` accepted swaps for mixing. Deterministic given ``rng``'s seed.
+
+    Two options narrow what the null changes, so it differs from the input in chemical placement
+    alone:
+
+    * ``rewire_gap_junctions=False`` skips the undirected swap, so gap junctions keep their pairs
+      and counts, and every neuron keeps its total gap-junction strength.
+    * ``preserve_autapses=True`` takes the self-loops out of the directed swap and puts them back
+      unchanged, so every autapse keeps its count. In- and out-degree stay exact, since each
+      autapse contributes one of each to its own neuron.
+
+    At their defaults both options leave the draws, and so the rewired graph, exactly as they were.
+    With ``preserve_autapses`` the directed swap runs on a shorter list and draws differently, so at
+    one seed its chemical graph is a different sample from the default null's; with
+    ``rewire_gap_junctions=False`` alone the chemical graph is identical to the default null's.
     """
     chem_edges = [(s.pre, s.post) for s in connectome.chemical_synapses]
     gap_edges = [(g.neuron_a, g.neuron_b) for g in connectome.gap_junctions]
@@ -166,10 +183,16 @@ def rewire_degree_preserving(
         msg = "rewire_degree_preserving requires a simple connectome (no duplicate/parallel edges)"
         raise ValueError(msg)
     chem_weights = {(s.pre, s.post): s.weight for s in connectome.chemical_synapses}
+    autapses: list[tuple[str, str]] = []
+    if preserve_autapses:
+        autapses = [edge for edge in chem_edges if edge[0] == edge[1]]
+        chem_edges = [edge for edge in chem_edges if edge[0] != edge[1]]
     _directed_double_edge_swap(chem_edges, chem_weights, rng, swaps_per_edge * len(chem_edges))
+    chem_edges += autapses
 
     gap_weights = {(g.neuron_a, g.neuron_b): g.weight for g in connectome.gap_junctions}
-    _undirected_double_edge_swap(gap_edges, gap_weights, rng, swaps_per_edge * len(gap_edges))
+    if rewire_gap_junctions:
+        _undirected_double_edge_swap(gap_edges, gap_weights, rng, swaps_per_edge * len(gap_edges))
 
     chemical_synapses = sorted(
         (ChemicalSynapse(pre=p, post=q, weight=chem_weights[(p, q)]) for p, q in chem_edges),
@@ -183,6 +206,8 @@ def rewire_degree_preserving(
         neurons=connectome.neurons,
         chemical_synapses=chemical_synapses,
         gap_junctions=gap_junctions,
-        source=f"{connectome.source}+rewired_degree_preserving",
+        source=f"{connectome.source}+rewired_degree_preserving"
+        + ("" if rewire_gap_junctions else "[gap_junctions_held]")
+        + ("[autapses_held]" if preserve_autapses else ""),
         version=connectome.version,
     )

@@ -222,12 +222,16 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # degree-preserving edge-swapped null (every neuron's in/out degree preserved, only
     # *which* neurons connect scrambled) before the topology is built — the control that
     # isolates "the specific wiring matters" from "only the degree statistics matter".
+    # That null preserves degree and nothing else: gap-junction counts are coupling weights and
+    # travel with their edges, so each neuron's total gap strength moves, and the swap can remove
+    # autapses. "rewired_chemical_only" swaps the chemical graph alone and holds the gap junctions
+    # (pairs and counts) and the autapses at the input's, so the null differs in chemical placement
+    # only.
     # Default wild_type is byte-identical to the pre-change brain.
-    wiring: Literal["wild_type", "rewired_degree_preserving"] = "wild_type"
-    # Seed for the degree-preserving rewiring draw (used only when
-    # wiring == "rewired_degree_preserving"). None -> derive from the run seed, so each
-    # paired run draws its own null topology from a dedicated RNG while the weight-init
-    # RNG stream is left untouched (matched init vs wild-type for the same seed).
+    wiring: Literal["wild_type", "rewired_degree_preserving", "rewired_chemical_only"] = "wild_type"
+    # Seed for the rewiring draw (used only under a rewired wiring). None -> derive from the run
+    # seed, so each paired run draws its own null topology from a dedicated RNG while the
+    # weight-init RNG stream is left untouched (matched init vs wild-type for the same seed).
     rewire_seed: int | None = None
 
     # Chemical-weight initialisation. "degree_scaled" draws every incoming edge of a
@@ -2466,11 +2470,17 @@ class ConnectomePPOBrain(ClassicalBrain):
         # so the paired wild-type-vs-rewired comparison isolates topology, not an init-RNG offset.
         # Preserves every neuron's in/out degree; only which neurons connect changes, so per-post
         # fan-in (hence the strict-mask scale and gap normalisation) is intact.
-        if config.wiring == "rewired_degree_preserving":
+        if config.wiring != "wild_type":
             rewire_seed = config.rewire_seed if config.rewire_seed is not None else self.seed
-            connectome = rewire_degree_preserving(connectome, np.random.default_rng(rewire_seed))
+            chemical_only = config.wiring == "rewired_chemical_only"
+            connectome = rewire_degree_preserving(
+                connectome,
+                np.random.default_rng(rewire_seed),
+                rewire_gap_junctions=not chemical_only,
+                preserve_autapses=chemical_only,
+            )
             logger.info(
-                f"ConnectomePPOBrain wiring: rewired_degree_preserving (rewire_seed={rewire_seed})",
+                f"ConnectomePPOBrain wiring: {config.wiring} (rewire_seed={rewire_seed})",
             )
 
         # Derive the per-mode food-feature count.
@@ -2520,7 +2530,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     config.measured_weight_scale,
                     wild_type,
                     connectome,
-                    rewired=config.wiring == "rewired_degree_preserving",
+                    rewired=config.wiring != "wild_type",
                     # Its own stream, keyed on the run seed and a fixed tag: the same permutation
                     # on either wiring and under either draw, never the shared stream, and never
                     # the draw generator's bits -- a generator at the bare run seed would be, and

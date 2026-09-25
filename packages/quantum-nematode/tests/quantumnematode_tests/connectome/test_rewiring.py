@@ -221,3 +221,97 @@ def test_the_committed_null_is_unchanged(seed: int) -> None:
         np.random.default_rng(seed),
     )
     assert _digests(rewired) == _PINNED_NULL[seed]
+
+
+# ── The chemical-only null ───────────────────────────────────────────────────────────────────
+# Covers the connectome-ppo-brain requirement "Degree-preserving rewired-null wiring option":
+# rewiring produces a simple graph; the chemical-only null holds gap junctions and autapses at the
+# wild type; the existing null is unchanged (above).
+
+
+@pytest.fixture(scope="module")
+def cook() -> Connectome:
+    """Return the Cook 2019 hermaphrodite connectome."""
+    from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+
+    return load_cook_2019_hermaphrodite()
+
+
+def _chemical_null(c: Connectome, seed: int) -> Connectome:
+    return rewire_degree_preserving(
+        c,
+        np.random.default_rng(seed),
+        rewire_gap_junctions=False,
+        preserve_autapses=True,
+    )
+
+
+def _autapses(c: Connectome) -> dict[str, int]:
+    return {s.pre: s.weight for s in c.chemical_synapses if s.pre == s.post}
+
+
+def _gap_totals(c: Connectome) -> Counter:
+    totals: Counter = Counter()
+    for g in c.gap_junctions:
+        totals[g.neuron_a] += g.weight
+        totals[g.neuron_b] += g.weight
+    return totals
+
+
+@pytest.mark.parametrize("seed", [1, 17, 129])
+class TestTheChemicalOnlyNull:
+    def test_chemical_degree_is_exact(self, cook: Connectome, seed: int) -> None:
+        """Every neuron's chemical in- and out-degree equals the wild type's."""
+        null = _chemical_null(cook, seed)
+        assert _chem_out(null) == _chem_out(cook)
+        assert _chem_in(null) == _chem_in(cook)
+
+    def test_every_autapse_is_kept_with_its_count(self, cook: Connectome, seed: int) -> None:
+        """All 38 self-connections survive, each with its synapse count."""
+        wild = _autapses(cook)
+        assert len(wild) == 38
+        assert _autapses(_chemical_null(cook, seed)) == wild
+
+    def test_gap_junctions_are_the_wild_types(self, cook: Connectome, seed: int) -> None:
+        """Pairs and counts identical, so every neuron keeps its total gap strength."""
+        null = _chemical_null(cook, seed)
+        assert null.gap_junctions == cook.gap_junctions
+        assert _gap_totals(null) == _gap_totals(cook)
+
+    def test_the_chemical_placement_moves(self, cook: Connectome, seed: int) -> None:
+        """Away from the autapses the chemical edges are a different graph."""
+        wild = {(s.pre, s.post) for s in cook.chemical_synapses if s.pre != s.post}
+        null = {
+            (s.pre, s.post) for s in _chemical_null(cook, seed).chemical_synapses if s.pre != s.post
+        }
+        assert len(null) == len(wild)
+        assert len(null & wild) < len(wild) // 2
+
+    def test_no_self_loop_is_created(self, cook: Connectome, seed: int) -> None:
+        """The only self-loops are the wild type's, and no edge appears twice."""
+        null = _chemical_null(cook, seed)
+        edges = [(s.pre, s.post) for s in null.chemical_synapses]
+        assert len(edges) == len(set(edges))
+        assert {pre for pre, post in edges if pre == post} == set(_autapses(cook))
+
+
+@pytest.mark.parametrize("seed", [1, 17])
+def test_the_full_null_still_moves_gap_strength_and_autapses(cook: Connectome, seed: int) -> None:
+    """The contrast that gives the chemical null its point: the default null moves both."""
+    null = rewire_degree_preserving(cook, np.random.default_rng(seed))
+    wild, moved = _gap_totals(cook), _gap_totals(null)
+    changed = sum(1 for n in wild if abs(moved[n] - wild[n]) > 0.5 * wild[n])
+    assert changed > len(wild) // 4
+    assert len(_autapses(null)) < len(_autapses(cook))
+
+
+def test_holding_gap_junctions_alone_keeps_the_default_chemical_graph(cook: Connectome) -> None:
+    """The chemical swap runs first, so skipping only the gap swap reproduces its chemical graph."""
+    full = rewire_degree_preserving(cook, np.random.default_rng(17))
+    gap_held = rewire_degree_preserving(
+        cook,
+        np.random.default_rng(17),
+        rewire_gap_junctions=False,
+    )
+    assert gap_held.chemical_synapses == full.chemical_synapses
+    assert gap_held.gap_junctions == cook.gap_junctions
