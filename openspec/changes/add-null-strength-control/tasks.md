@@ -63,15 +63,15 @@ PR #405. The decisions taken before implementation are in this change's `design.
   - the combined-control reading, the attribution gate, and the two nulls being different random
     chemical graphs at each seed, with the gap-only null named as the paired follow-up;
   - retention and cost.
-- [ ] 9. **The campaigns:** PPO (seeds 305–336), then the reading learner (seeds 337–384), with the
+- [x] 9. **done: 480/480, none failed; PPO 2h59m, reading 8h09m.** Original scope: **The campaigns:** PPO (seeds 305–336), then the reading learner (seeds 337–384), with the
   output controls, and no branch switches until both finish.
 
 ## Records
 
-- [ ] 10. **Score and commit** the per-seed CSV and the analysis JSON; re-scoring reproduces them.
-- [ ] 11. **Logbook 074**, with each learner's verdict read as combined, and the hop probe on the
+- [x] 10. **done: `control.json`, `per-seed.csv` (80 rows) and `sensory-motor-hops-chemical-null.json`.** Original scope: **Score and commit** the per-seed CSV and the analysis JSON; re-scoring reproduces them.
+- [x] 11. **done: Logbook 074.** Original scope: **Logbook 074**, with each learner's verdict read as combined, and the hop probe on the
   chemical null reported as description.
-- [ ] 12. **Discharge:**
+- [x] 12. **done: index row; tracker A.6 ticked and S8a given the gap-only split; the quantified condition at the roadmap's A.1 and A.6, the tracker's A.1, and Logbooks 067 and 070; the roadmap's A.6 exit line.** Original scope: **Discharge:**
   - the index row;
   - tracker A.6 ticked;
   - block V's standing-condition notes resolved at every citation site — the roadmap's A.1 and

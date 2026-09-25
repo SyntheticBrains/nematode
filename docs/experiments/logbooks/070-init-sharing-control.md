@@ -11,6 +11,8 @@ magnitude is less stable across seed sets than its direction.
 
 **Date**: 2026-09-21. *(The `dense_mask` arms were re-run the same day after review found a defect in them; see § The defect this panel shipped with, and the re-run. Every figure below is the corrected one.)*
 
+*(**Condition added 2026-09-26**, [Logbook 074](074-null-strength-control.md): this control shared the chemical weights, but the degree-preserving null also moves gap-junction strength and loses autapses. Against a null that also holds the wild type's gap junctions and autapses, block V's PPO advantage on hard350 is **+0.022 `auc_success` [+0.007, +0.036]** (against +0.049 versus the current null) and **+94 episodes [−81, +280]** (against +372) — a chemical-wiring advantage remains on `auc_success`, and the learning-speed form is unresolved at 32 seeds. The survival verdicts here stand as read against the current null.)*
+
 **OpenSpec change**: `add-init-sharing-control` (extends `architecture-comparison-protocol`: a claim
 that two arms share an initialisation is verified by test rather than argued from how the random
 stream is consumed).
