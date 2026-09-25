@@ -49,14 +49,14 @@ blocked by an honestly-unexercised item.
 ## Shipment 8a — Ground
 
 **OpenSpec changes**: placeholders; created per milestone
-**Status**: ⬜ not started
+**Status**: 🟡 in progress *(2026-09-25: A.0, A.1, A.2, A.4 and B.1 done; A.6 and the 8a synthesis remain, with A.3, A.5 and B.2 as SHOULD)*
 **Roadmap layer**: substrate (init control, operating point, measured weights, dynamics)
 **Approx effort**: ≈ 9–12 active weeks (A ≈ 3–4, B.1 ≈ 3–4, B.2 ≈ 3–4)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8a), D15/D16/D17
 
 ### Block A — close Phase 7's exposed result
 
-**Execution order**: A.0 → **A.4** → A.1 → A.2, with A.3 and A.5 opportunistic. The list below
+**Execution order**: A.0 → **A.4** → A.1 → A.2, with A.3 and A.5 opportunistic. *(2026-09-25: then B.1, done, and **A.6 before the 8a synthesis and before A.5**, since both would cite block V without it.)* The list below
 keeps the roadmap's numbering; A.4 runs first because it lands before the first 8a registration.
 
 - [x] **A.0 Artefact-retention rule** — **registered 2026-09-20**, before the phase's first
@@ -65,6 +65,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   metric could not be compared against L.0's run because that run's export had been deleted, which
   was recorded as uncompared rather than counted as matching. The rule, cited by every campaign
   below:
+
   - **Committed to git**, under `docs/experiments/logbooks/supporting/<logbook>/`: the **parsed
     per-seed CSV** carrying every field the analysis reads, the analysis JSON the logbook's figures
     are derived from, and the launch record. A headline figure that cannot be re-derived from these
@@ -78,6 +79,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
     wording.
   - **Registered before the campaign**, not after: a campaign that starts without its retention
     line recorded is blocked, per the `phase8-tracking` requirement.
+
 - [x] **A.1 The init-vs-rewiring control** — **done 2026-09-21** ([Logbook 070](../../../docs/experiments/logbooks/070-init-sharing-control.md), 768/768 runs, 32 paired seeds): **no dissolution detected on any arm**, survival **established** on five of eight readings, three **unresolved at the panel's sensitivity and not evidence of survival**. The **pairing half** of block V's standing condition is **partially** discharged; the across-seed half is registered as a follow-up. *(Two corrections are recorded in the logbook rather than quietly applied: the `dense_mask` arms shared a generator with PPO's minibatch sampler and were **re-run** — the other sixteen arms were shown unaffected and their reuse licensed by a field-by-field identity check — and the first write-up's tally was an **over-count by one**, four survivals rather than five. The re-run independently moves the true count to five, so the figure cited elsewhere is right but was not right when written.)* Second finding, ranked above the first in the record: block V's **magnitude is not stable across seed sets** — thermal replicated in direction at **35%** of its committed size against hard350's 105% — so with power registered against V.4's magnitude the thermal cell was underpowered against its own observed effect even at 32 seeds. Original scope: (D15; own change): both definitions of shared
   initialisation — (i) dense-draw-then-mask, (ii) per-neuron fan-in sharing — as arms,
   byte-identical-when-off; n ≥ 16 paired seeds on the thermal and hard food-only block-V cells,
@@ -86,6 +88,8 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   (initialisation result); a shrunken effect is reported as shrunken, against a registered
   minimum in both directions. The learning-speed result is restated with its status wherever
   it is cited.
+  *(**Standing condition added 2026-09-25**, from the Wormlight review: A.1 shared the chemical weights, but the null still differs from the wild type in **gap-junction strength** and **autapses** — see A.6. Block V's advantage carries that condition until A.6 reads out.)*
+
 - [x] **A.2 The calibration-and-robustness surface** — **done 2026-09-23** ([Logbook 071](../../../docs/experiments/logbooks/071-operating-point-surface.md), `add-operating-point-surface`, 1,600 runs). **The committed point sits on an edge, not a plateau.** Under PPO the wiring advantage replicates at the centre (+536 episodes, 92% of A.1's) and is **depth-critical** — present at depths 4 and 6, abolished at 3, reversed at 2 with every arm learning — and robust to initial action noise. Under the reading learner the rewired null is ahead at the same point, reproducing 064/066, and only readout width moves it, by +0.268 against 066's +0.2818. A hop measurement accounts for depth: the wild type has no motor neuron one hop from a food sensor, a rewiring manufactures about nine. The A.1 re-read at depth 6 (32 seeds) is consistent with A.1. **One named gap**: readout width under PPO saturates on hard350 and is unresolved there (see B.1c). Follow-ups recorded at A.3 and M.6. *(**Correction 2026-09-23** to this item's wording below: the three pins are "shared by both learners" only across the learners of `ConnectomePPOBrain`. `readout_width` and `forward_pass_depth` are not declared on `MLPPPOBrainConfig`, and a YAML setting them under `mlpppo` is dropped with a warning rather than an error, so no later rung may read this surface onto an MLP arm.)* Original scope: (D16 as amended 2026-09-20; own change).
   **Two halves, because a pin swept on one learner is not swept for another.**
   *(a) The reading learner* — `readout_only`, the `PlasticTensors` literal in
@@ -102,6 +106,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   point every later rung cites, per learner. If (b) moves the sign, **A.1 is re-read at the new
   point** — a registered outcome, not a surprise. Churchland et al. 2026 (arXiv:2609.07355) is
   the external reason to report it this way.
+
 - [ ] **A.3 Frozen-operator structural predictors** (SHOULD; probe or small change): routing
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
@@ -115,6 +120,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   named before the correlation, per the structural-predictor requirement. Logbook 069 recorded that
   no graph property measured there predicted learning time; this one predicts the operating point at
   which the effect exists, which is a different and testable claim.
+
 - [x] **A.4 Methodology consolidation** (`consolidate-plasticity-methodology`, 2026-09-20): the
   **44** `plasticity-evaluation` requirements redistributed four ways — **7 stay** (the six the
   spec's own Purpose statement describes, plus the delayed-reward control, which describes live
@@ -130,9 +136,32 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   The harness audit found nothing orphaned across 27 harness/test pairs. *(The 44 was counted
   2026-09-20; Logbook 069 and the roadmap's inheritance list say 42, which was true at the close —
   archiving the Phase 7 synthesis change merged its own two requirements into this spec.)*
+
 - [ ] **A.5 The publication decision** (SHOULD; taken after A.1 reads out): the package is block V
   with its initialisation control, the rule-programme negative with a diagnosed cause, and the
   operating-point finding with its surface. Not a gate for anything after it.
+
+- [ ] **A.6 The null-strength control** (MUST; own change; *added 2026-09-25* from the Wormlight review). Every wiring contrast
+  here — Logbook 034, block V, 070–073 — compared the wild type against a degree-preserving null that
+  also differs in two things A.1 did not control:
+
+  - **Gap-junction strength.** Each junction's EM count is its coupling weight (degree-normalised only),
+    and the undirected swap carries counts with the edges. The wild type concentrates coupling in hubs —
+    ALA's gap input **232**, against at most 6.3 of chemical input on any neuron; on a null ALA's is
+    about 3, and about half of all neurons' gap totals move by more than 50% (three seeds checked).
+  - **Autapses.** 38 in the wild type; the swap never creates a self-loop but can remove an existing
+    one, so rewiring loses autapses and never regains them — each of the three nulls checked had none.
+    `rewiring.py`'s comment claiming they are preserved is corrected in the same change as this entry.
+
+  Logbook 067's L.5 finding — the wild type's advantage consisted in its gap junctions costing it less
+  than the rewired ones cost the null — is a candidate instance. **Design to settle in its change:** a
+  null rewiring the chemical graph only, with gap junctions and autapses at the wild type (Wormlight's
+  primary null) — a **combined** control, holding the wild type's gap-junction placement, gap-junction
+  strength and autapses together — against the current null, under PPO on hard350 at A.1's size; the
+  reading learner optionally. If block V survives, the advantage is in the chemical wiring **given the
+  wild type's gap junctions and autapses held in place**; if it dissolves, it came at least partly from
+  how the current null rewires gap junctions (placement and strength together) or drops autapses, and
+  the combined control cannot say which — a split follows only if it moves. Runs **before S8a and A.5**.
 
 ### B.1 — measured synaptic signs and strengths (D17)
 
@@ -177,6 +206,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   dynamical connectome against PPO on the settling connectome, which must learn the cell at least
   as well before any wiring contrast runs. The second is itself a connectome arm, so it comes
   after the first rather than beside it.
+  *(2026-09-25, from the Wormlight review: **stiffness.** Gap weights are raw EM counts; with time constants they make the system stiff — Wormlight measured ALA near 0.05 ms under Cook's counts. Register a stable integrator or a rescaling of the counts, and let A.6 decide whether the counts move with a rewiring.)*
 - [ ] **B.2b Plastic gap junctions under PPO** (D4's surviving destination): the electrical
   synapses learnable on the block-V cells, against the null, with the *Nat. Commun.* 2020
   olfactory-learning precedent as the biological motivation. External convergence to cite, not
@@ -211,22 +241,30 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   seconds, from the validated 0.2 mm/s crawl, the ~1.6 s undulation period and the arena scale;
   cited by every kinematic target and cost estimate below. (The current cap is one body length
   per step, ≥ 5 s of worm time at full speed.)
+
 - [ ] **C.0b Signed speed**: reversal as a first-class continuous action (speed is clamped to
   `[0, max_step_mm]` today), byte-identical-when-off, so VA/DA and VB/DB mean different things
   and escape can be reversal-plus-turn.
+
 - [ ] **C.0c Proprioceptive channel**: posture or stretch fed back as sensory input, with the
   target neurons stated with a biological argument (the predator-projection precedent).
+  *(2026-09-25, from the Wormlight review: the targets have a literature answer — B-type motor neurons driven by the bending of the ~200 µm in front of their muscles (Wen et al. 2012's measured direction), SMDD (Yeon et al. 2018), and A-type as a hypothesis (Gao et al. 2018). **Substrate:** consider freezing 8b on the Emmons 2024 CC BY release (loadable since PR #404) at this step; 8a stays on Cook 2019.)*
+
 - [ ] **C.0d D19 decided and recorded** — the body-level proprioceptive wave generator's form and
   parameters, calibrated once on the MLP positive control (design.md open question).
+
+  *(2026-09-25: Wen et al. 2012 describe propagation, not generation, so the body-level generator needs a named source — Ji et al. 2021's head relaxation switch (in SMDD) with Wen's propagation is the natural default; B- and A-type intrinsic oscillators (Fouad et al. 2018; Xu et al. 2018; Gao et al. 2018) are the documented ventral-cord generators. See roadmap D19's note.)*
 
 ### C.1 — the anatomical motor-to-muscle readout into a kinematic body (MUST)
 
 - [ ] **C.1a Loader keeps the muscle cells**: the Cook 2019 body-wall muscle columns (`dBWML*`,
   `vm*`) that `connectome/loader.py` drops become a first-class motor-neuron-to-muscle tensor
   with smoke tests and a `PROVENANCE.md` note.
+  *(**Largely discharged 2026-09-25** by PR #404, which was not a Phase 8 task and so did not tick this: `load_emmons_2024_neuromuscular()` returns the 956 neuron-to-muscle synapses onto the 95 body wall muscles, identical to the 2019 file's, with `connectome.muscles` naming them and a `PROVENANCE.md` entry. What remains is the brain-side motor-neuron-to-muscle tensor.)*
 - [ ] **C.1b Muscle readout**: the NMJ matrix pooled into four quadrants × N segments, learnable
   *gains* only (D18: a gain vector identical in size across arms, calibrated once on the MLP
   control and frozen, sensitivity-checked).
+  *(2026-09-25: the 956 synapses come from **162 cells, sensory neurons and interneurons among them**, so a readout restricted to motor neurons drops some and says so; muscle signs follow its receptors (Richmond & Jorgensen 1999) — acetylcholine excites, GABA inhibits, and 32 of the 162 cells release neither.)*
 - [ ] **C.1c Kinematic body**: muscle drive → segmental curvature; displacement per step from the
   change of posture between steps by resistive-force theory (no ODE), with D19's body-level
   generator supplying the wave. Renderer hook for C.5.
@@ -240,20 +278,25 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **C.2a Cost budget registered** before the rung: "a 16-seed panel in roughly a day at 16
   workers" pinned to a wall-clock number from a pilot configured the way the campaign will be.
+  *(**2026-09-25: C.2 may narrow here.** Its second half is reframed (roadmap C.2's note) into what Wormlight is building — a connectome-driven body whose wiring gates documented oscillators, with rewired nulls tuned alike. Whether C.2 narrows is decided **at this step**, on Wormlight's progress by then: whether it has passed its milestone-0c go/no-go (does the connectome-driven body crawl — its checkpoint 1) and the checkpoints after it. If it has, C.2's second half and much of C.3 are better served there, and 8b keeps C.1. C.1 is unaffected either way.)*
 - [ ] **C.2b The chain**: an ElegansBot-class 2D rod chain (Chung, Chang & Kim, eLife 2024; 8–12
   rods, anisotropic drag, torsional-spring muscles) in `Continuous2DEnvironment`, driven by
   C.1's muscle drive; MLP positive control; if the budget fails after the reduced chain, coarser
   integrator and Numba/JAX have been tried, **stop at C.1** and record *deferred-with-destination*
   (behind D6).
-- [ ] **C.2c Second half** (MAY; needs B.2 and a shorter step): remove the body-level generator
-  and ask whether the connectome's motor circuit plus proprioception produces the wave, against
-  the rewired null.
+- [ ] **C.2c Second half** (MAY; needs B.2 and a shorter step): with the body-level generator
+  replaced by documented class-level oscillators, ask whether the connectome's wiring gates them
+  correctly — AVB driving the B-types, AVA the A-types — against the rewired null. *(Reframed
+  2026-09-25 from "the motor circuit plus proprioception produces the wave", which for a graded
+  network has a known negative; see roadmap D19's note.)*
 
 ### C.3 — body-level validation (SHOULD)
 
 - [ ] **C.3** Eigenworm posture spectrum (Stephens et al. 2008), undulation frequency and
   amplitude, omega-turn geometry, and the Logbook 035/036 klinokinesis and weathervane curves
   re-derived from *emergent* kinematics; swimming vs crawling gait if C.2 ships (MAY).
+
+  *(2026-09-25: adopt Wormlight's thresholds, fixed in advance, where they apply — Fang-Yen et al. 2010 and Ramot et al. 2008 kinematics and a pinned eigenworm basis — so the two projects' body results compare.)*
 
 ### C.4 — the architecture ranking through the body (SHOULD)
 
@@ -271,6 +314,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 - [ ] **B.3** Internal-state sensory module and the modulator concentration field (Phase 7's
   B.2/B.3, deferred): satiety already crosses the brain boundary; serotonin/PDF gating of roaming
   vs dwelling as the first behavioural consequence.
+  *(2026-09-25, from the Wormlight review: the per-neuron transmitter rule signs AWC → AIY positive, where physiology finds it inhibitory (Chalasani et al. 2007); Fenyves et al. 2020 (CC BY) predict signs per connection from receptor expression, clearly for 47.5% of Cook's chemical edges, and are the natural data source for the receptor layer. Logbooks 044 and 067 carry the condition.)*
 - [ ] **D.1** Patchy bacterial lawns: geometry with edges, per-patch depletion (the
   `source_depletion_enabled` mechanism, config-gated), food quality; the roaming/dwelling
   readout B.3 gates; validation against Flavell-lab roaming/dwelling fractions. The 2D agar plate
@@ -280,6 +324,8 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.1 Placed plasticity** on the klinotaxis circuit, on the B.1 substrate, against a
   degree-stratified random subset of the same size, with the three confounds specified.
+
+  *(2026-09-25: "on the B.1 substrate" needs restating now that measured weights left the PPO wiring effect unmoved (Logbook 073); and the circuit begins at AWC → AIY, which needs per-connection signs (B.3's note).)*
 
 - [ ] **M.2 Wild-type-vs-wild-type control**: Cook 2019 against Witvliet dataset 8 (adult,
   nerve-ring scope, already vendored).
@@ -326,6 +372,13 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   is the substrate and body ladder.
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
+
+- [ ] **M.7 The chemotaxis reference file's two misattributions** *(added 2026-09-25, from the Wormlight review)*.
+  `data/chemotaxis/literature_ci_values.json` credits Bargmann et al. 1993 with a **bacteria** assay —
+  it tested volatile odorants — and Pierce-Shimomura et al. 1999 with a **food gradient** — they used
+  ammonium chloride and biotin. `validation/datasets.py` reads the file, and its default source prefers
+  the "bacteria" entry, so the fix changes a code path and needs the papers' own values checked, not
+  only the labels: its own small change, not folded into a docs edit.
 
 ### Phase 8 synthesis
 
