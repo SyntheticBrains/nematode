@@ -149,16 +149,19 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
     and the undirected swap carries counts with the edges. The wild type concentrates coupling in hubs —
     ALA's gap input **232**, against at most 6.3 of chemical input on any neuron; on a null ALA's is
     about 3, and about half of all neurons' gap totals move by more than 50% (three seeds checked).
-  - **Autapses.** 38 in the wild type, **0** on every null: the swap never creates a self-loop, so each
-    autapse is swapped away. `rewiring.py`'s comment claiming they are preserved is corrected in the same
-    change as this entry.
+  - **Autapses.** 38 in the wild type; the swap never creates a self-loop but can remove an existing
+    one, so rewiring loses autapses and never regains them — each of the three nulls checked had none.
+    `rewiring.py`'s comment claiming they are preserved is corrected in the same change as this entry.
 
   Logbook 067's L.5 finding — the wild type's advantage consisted in its gap junctions costing it less
   than the rewired ones cost the null — is a candidate instance. **Design to settle in its change:** a
   null rewiring the chemical graph only, with gap junctions and autapses at the wild type (Wormlight's
-  primary null), against the current null, under PPO on hard350 at A.1's size; the reading learner
-  optionally. If block V survives, the advantage is in the chemical wiring; if it dissolves, it is at
-  least partly gap strength. Runs **before S8a and A.5**.
+  primary null) — a **combined** control, holding the wild type's gap-junction placement, gap-junction
+  strength and autapses together — against the current null, under PPO on hard350 at A.1's size; the
+  reading learner optionally. If block V survives, the advantage is in the chemical wiring **given the
+  wild type's gap junctions and autapses held in place**; if it dissolves, it came at least partly from
+  how the current null rewires gap junctions (placement and strength together) or drops autapses, and
+  the combined control cannot say which — a split follows only if it moves. Runs **before S8a and A.5**.
 
 ### B.1 — measured synaptic signs and strengths (D17)
 
@@ -281,9 +284,11 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   C.1's muscle drive; MLP positive control; if the budget fails after the reduced chain, coarser
   integrator and Numba/JAX have been tried, **stop at C.1** and record *deferred-with-destination*
   (behind D6).
-- [ ] **C.2c Second half** (MAY; needs B.2 and a shorter step): remove the body-level generator
-  and ask whether the connectome's motor circuit plus proprioception produces the wave, against
-  the rewired null.
+- [ ] **C.2c Second half** (MAY; needs B.2 and a shorter step): with the body-level generator
+  replaced by documented class-level oscillators, ask whether the connectome's wiring gates them
+  correctly — AVB driving the B-types, AVA the A-types — against the rewired null. *(Reframed
+  2026-09-25 from "the motor circuit plus proprioception produces the wave", which for a graded
+  network has a known negative; see roadmap D19's note.)*
 
 ### C.3 — body-level validation (SHOULD)
 

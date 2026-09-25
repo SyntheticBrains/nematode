@@ -11,9 +11,10 @@ synapses, undirected for gap junctions - which preserves the degree sequence exa
 construction. A naive random-rewiring null (which destroys the degree sequence) is a weaker,
 uninteresting control; the degree-preserving swap is the standard.
 
-Degree is all it preserves. Autapses do not survive (see ``rewire_degree_preserving``), and synapse
-and gap-junction counts travel with their edges, so a neuron's total incoming count - and, since
-gap-junction counts are coupling weights, its total gap-junction strength - generally changes.
+Degree is all it preserves. Existing autapses can be swapped away and none are created (see
+``rewire_degree_preserving``), and synapse and gap-junction counts travel with their edges, so a
+neuron's total incoming count - and, since gap-junction counts are coupling weights, its total
+gap-junction strength - generally changes.
 
 No graph library is required: the swap is a few lines on the seeded ``numpy`` RNG.
 """
@@ -156,11 +157,11 @@ def rewire_degree_preserving(
     # Guard against PARALLEL edges only (the weight dicts below key on the edge tuple and would
     # silently collapse duplicates). Self-loops (autapses) in the input are accepted: the real Cook
     # connectome contains 38 chemical autapses. They are NOT preserved, though. The swap rejects any
-    # move that would create a self-loop but not one that removes one, so each autapse is swapped
-    # away and none is created, and a rewired Cook connectome has none. In- and out-degree are still
-    # preserved exactly. Gap-junction counts travel with their edges, so each neuron keeps its gap
-    # degree but not its total gap-junction strength. The Cook loader dedups both edge types, so the
-    # parallel-edge guard protects a hand-built/alternate-loader fixture, not a live path.
+    # move that would create a self-loop but not one that removes one, so rewiring can remove
+    # existing autapses and never creates new ones. In- and out-degree are still preserved exactly.
+    # Gap-junction counts travel with their edges, so each neuron keeps its gap degree but not its
+    # total gap-junction strength. The Cook loader dedups both edge types, so the parallel-edge
+    # guard protects a hand-built/alternate-loader fixture, not a live path.
     if len(set(chem_edges)) != len(chem_edges) or len(set(gap_edges)) != len(gap_edges):
         msg = "rewire_degree_preserving requires a simple connectome (no duplicate/parallel edges)"
         raise ValueError(msg)
