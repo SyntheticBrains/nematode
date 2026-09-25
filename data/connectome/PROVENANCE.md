@@ -35,6 +35,47 @@ This directory contains *C. elegans* connectome data files used by the
   SI. Any consumer of our codebase should also cite Cook et al. 2019 when
   publishing derived results.
 
+### `emmons_2024_s1_connectome_adjacency.xlsx`
+
+- **Description**: the Cook et al. 2019 whole-animal adjacency matrices for both sexes, as
+  republished under CC BY 4.0 by Cook et al.'s senior author: the S1 File ("Connectome Adjacency
+  Matrices") of Emmons 2024. The sheets and their layout match the 2019 file above, except that the
+  hermaphrodite gap-junction sheets are named `hermaphrodite gap jn symmetric` and
+  `hermaphrodite gap jn asymmetric` rather than `herm gap jn …`. Cell values are EM serial-section
+  counts; the legend notes that "the data are assembled from multiple animals and include connections
+  added by extrapolation in gaps where no data were available". It records two revisions since 2019:
+  - **Corrections, July 2020**: "The attempt is made here to remove all inconsistencies and errors
+    in the published tables", in particular so that each gap-junction table agrees across its
+    diagonal and with the asymmetric table.
+  - **Addition, 2023**: gap junctions between BDU and the touch cells ALM and PLM, citing Jarrell et
+    al. 2012 (*Science* 337:437) and Zhang et al. 2013 (*PLoS Genetics* 9:e1003618).
+- **Against the 2019 file**, among the 302 neurons:
+  - the chemical matrix is identical: 3,709 connections, 20,965 sections, 38 autapses, and all 956
+    entries onto the 95 body wall muscles (5,515 sections, from 162 neurons);
+  - the gap junctions differ only by the 2023 addition. ALML–BDUL and ALMR–BDUR are new at 23
+    sections each, and BDUL–PLML and BDUR–PLMR rise from 23 to 37, so the loader returns 1,095 pairs
+    and 5,864 sections against 1,093 and 5,790. The 2020 corrections touch three neuron cells whose
+    two directions disagreed in 2019 (PVCR–VA9, 3 against 2; PDB→DD6, 2 with no mirror entry) and set
+    each pair to the larger value, which the loader's fold already took.
+- **Consumed by** `load_emmons_2024_hermaphrodite()`, `load_emmons_2024_neuromuscular()` and
+  `scripts/export_wormlight.py`. Every existing experiment reads the 2019 file above, unchanged.
+- **Original filename at the publisher**: `pbio.3002939.s001.xlsx`
+- **Size**: 4,176,688 bytes (~4.2 MB)
+- **SHA256**: `e866b43f19ba5c70b773c94efd06aff6d6b2887cd24eed4412da80c06986418d`
+- **Source URL**: <https://journals.plos.org/plosbiology/article/file?type=supplementary&id=10.1371/journal.pbio.3002939.s001>
+- **Licence**: CC BY 4.0, the article's licence, which covers its supporting information
+  (<https://creativecommons.org/licenses/by/4.0/>)
+- **Retrieval date**: 2026-09-25
+- **Accompanying paper**:
+  - **Title**: Comprehensive analysis of the *C. elegans* connectome reveals novel circuits and
+    functions of previously unstudied neurons
+  - **Author**: Scott W. Emmons
+  - **Journal**: *PLoS Biology* 22(12): e3002939 (2024), published 2024-12-17
+  - **DOI**: <https://doi.org/10.1371/journal.pbio.3002939> (PMID 39689061, PMCID PMC11651592)
+- **Redistribution rationale**: CC BY 4.0 permits redistribution with attribution. The 2019 file
+  states no licence of its own, so this is the licensed route to the same data, from the same lab.
+  Any consumer should cite both Cook et al. 2019 and Emmons 2024.
+
 ### `elife-95402-supp2-v1.xlsx`
 
 - **Description**: Supplementary File 2 of the *C. elegans* neurotransmitter atlas — a
@@ -172,6 +213,9 @@ To verify the vendored files match the upstream mirror after a fresh clone:
 ```bash
 shasum -a 256 data/connectome/cook_2019_si5_connectome_adjacency.xlsx
 # expected: 559989daa02cd9a76e9266537a6b80bfd47d338cb5d397d11296288629df364a
+
+shasum -a 256 data/connectome/emmons_2024_s1_connectome_adjacency.xlsx
+# expected: e866b43f19ba5c70b773c94efd06aff6d6b2887cd24eed4412da80c06986418d
 
 shasum -a 256 data/connectome/witvliet_2020_dataset8_adult.xlsx
 # expected: fdead89606257c1b26e57069fbe1de14c7696633b75b59b79e74c0bcc3497e62
