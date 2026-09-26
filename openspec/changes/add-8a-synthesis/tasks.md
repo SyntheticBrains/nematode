@@ -4,7 +4,7 @@ Phase 8 task **S8a**. The decisions taken before this change are in `design.md`.
 
 ## Logbook
 
-- [ ] 1. **Logbook 076, the 8a synthesis:**
+- [x] 1. **done: Logbook 076.** Original scope: **Logbook 076, the 8a synthesis:**
 
   - the status walkthrough (Decision A), every 8a criterion and open thread with one status and a
     destination;
@@ -21,23 +21,23 @@ Phase 8 task **S8a**. The decisions taken before this change are in `design.md`.
 
 ## Records
 
-- [ ] 2. **The roadmap:**
+- [x] 2. **done: the Phase 8 row, the Phase 8 shipment table's 8a rows, the 8a exit criterion, the SHOULD line, the overshoot row, D21 with notes at C.1, C.4 and B.2, and the minimum-viable success level.** Original scope: **The roadmap:**
   - the Phase 8 row reads **8a complete / 8b pending**;
   - the 8a synthesis exit criterion is ticked;
   - the SHOULD line and the overshoot row carry their statuses (B.2 carried, with its reason);
   - **D21** is added to the decisions table, covering every 8b wiring contrast (C.1e, C.4, and B.2's
     carried arms), with dated notes at C.1, C.4 and B.2;
   - the Phase 8 minimum-viable success level is marked met.
-- [ ] 3. **The tracker:**
+- [x] 3. **done: 8a COMPLETE and 8b ready to start; S8a ticked; A.3, A.5, B.2a, B.2b, M.5, M.6 and M.7 each given a status note; 8a's OpenSpec changes listed.** Original scope: **The tracker:**
   - 8a status COMPLETE, and 8b ready to start (gate GO);
   - S8a ticked;
   - A.3, A.5, B.2a, B.2b, M.5, M.6 and M.7 each given a status and destination;
   - the open threads listed with their destinations.
-- [ ] 4. **The index row, and `README.md`'s status line.**
+- [x] 4. **done.** Original scope: **The index row, and `README.md`'s status line.**
 
 ## Close-out
 
-- [ ] 5. **Verify:**
+- [x] 5. **done: every figure in 076 cited to 070–075; the logbook, roadmap and tracker agree (8a complete, gate GO, D21); links resolve; hooks pass; validated strict.** Original scope: **Verify:**
   - every figure in Logbook 076 traces to a committed file;
   - every 8a criterion carries exactly one status in the logbook, the roadmap and the tracker, and
     the three agree;
