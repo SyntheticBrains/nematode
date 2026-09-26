@@ -48,8 +48,8 @@ blocked by an honestly-unexercised item.
 
 ## Shipment 8a — Ground
 
-**OpenSpec changes**: placeholders; created per milestone
-**Status**: 🟡 in progress *(2026-09-25: A.0, A.1, A.2, A.4 and B.1 done; A.6 and the 8a synthesis remain, with A.3, A.5 and B.2 as SHOULD)*
+**OpenSpec changes**: `consolidate-plasticity-methodology`, `add-init-sharing-control`, `add-operating-point-surface`, `add-measured-weight-prior`, `add-measured-prior-pilot`, `add-measured-prior-contrast`, `add-null-strength-control`, `add-gap-only-split`, `add-8a-synthesis`
+**Status**: ✅ **COMPLETE 2026-09-26** ([Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)) — every 8a criterion assigned a status; the D20 gate written as **GO**; D21 registered (8b's primary null is the chemical-only null). A.3 and A.5 go to the A.5 step that follows; B.2 is carried to 8b.
 **Roadmap layer**: substrate (init control, operating point, measured weights, dynamics)
 **Approx effort**: ≈ 9–12 active weeks (A ≈ 3–4, B.1 ≈ 3–4, B.2 ≈ 3–4)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8a), D15/D16/D17
@@ -107,7 +107,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   point** — a registered outcome, not a surprise. Churchland et al. 2026 (arXiv:2609.07355) is
   the external reason to report it this way.
 
-- [ ] **A.3 Frozen-operator structural predictors** (SHOULD; probe or small change): routing
+- [ ] **A.3 Frozen-operator structural predictors** *(S8a 2026-09-26: **deferred-with-destination** to the A.5 decision, which says whether the package needs the hop predictor registered; otherwise the 8b window)* (SHOULD; probe or small change): routing
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
   of time-to-competence. No training.
@@ -137,7 +137,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   2026-09-20; Logbook 069 and the roadmap's inheritance list say 42, which was true at the close —
   archiving the Phase 7 synthesis change merged its own two requirements into this spec.)*
 
-- [ ] **A.5 The publication decision** (SHOULD; taken after A.1 reads out): the package is block V
+- [ ] **A.5 The publication decision** *(S8a 2026-09-26: **deferred-with-destination** to its own step, directly after the synthesis; it inherits [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)'s package inventory and the open threads routed to it)* (SHOULD; taken after A.1 reads out): the package is block V
   with its initialisation control, the rule-programme negative with a diagnosed cause, and the
   operating-point finding with its surface. Not a gate for anything after it.
 
@@ -199,7 +199,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### B.2 — the dynamics rung (SHOULD)
 
-- [ ] **B.2a Across-step state** (own change): per-neuron leaky-integrator state with intrinsic
+- [ ] **B.2a Across-step state** *(S8a 2026-09-26: **carried to 8b**, deferred-with-destination — A.6 and Logbook 075 made gap junctions central, and this rung is where they become ohmic coupling; the stiffness warning applies; its wiring arms read against the chemical-only null per D21)* (own change): per-neuron leaky-integrator state with intrinsic
   time constants (a global τ swept first); gap junctions as ohmic coupling inside that dynamics;
   byte-identical-when-off. **Positive controls, in this order**: first MLP-PPO on the target cell
   (the spec's blocking control for any new component), then — once that passes — PPO on the
@@ -207,7 +207,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   as well before any wiring contrast runs. The second is itself a connectome arm, so it comes
   after the first rather than beside it.
   *(2026-09-25, from the Wormlight review: **stiffness.** Gap weights are raw EM counts; with time constants they make the system stiff — Wormlight measured ALA near 0.05 ms under Cook's counts. Register a stable integrator or a rescaling of the counts, and let A.6 decide whether the counts move with a rewiring.)*
-- [ ] **B.2b Plastic gap junctions under PPO** (D4's surviving destination): the electrical
+- [ ] **B.2b Plastic gap junctions under PPO** *(S8a 2026-09-26: **carried to 8b**; now also the natural test of gap placement against gap strength, the thread Logbook 075 left open)* (D4's surviving destination): the electrical
   synapses learnable on the block-V cells, against the null, with the *Nat. Commun.* 2020
   olfactory-learning precedent as the biological motivation. External convergence to cite, not
   lean on: Lee 2026's gap-junction-only shuffle collapses chemotaxis where the chemical-only
@@ -222,14 +222,14 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### 8a synthesis
 
-- [ ] **S8a** *(2026-09-26: two items land here from 8a's rungs — B.1c's unresolved reading-learner interaction, and A.6's gap-only split (**run 2026-09-26, [Logbook 075](../../../docs/experiments/logbooks/075-gap-only-split.md): `gap_junctions` on both learners; what remains for S8a is placement against strength**), which pairs exactly with the current null and holds only its gap junctions — placement and strength together — so it separates the joint gap-junction effect from the autapses', and no more; attributing any part of it to gap placement or to gap strength individually needs a further control that moves one without the other; S8a decides whether either runs before A.5.)* The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
+- [x] **S8a** — **met 2026-09-26** ([Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md), `add-8a-synthesis`): every 8a criterion and open thread given one of the five statuses and a destination; block V restated with every condition in one sentence; the D20 gate **GO**; D21 registered. *(2026-09-26: two items land here from 8a's rungs — B.1c's unresolved reading-learner interaction, and A.6's gap-only split (**run 2026-09-26, [Logbook 075](../../../docs/experiments/logbooks/075-gap-only-split.md): `gap_junctions` on both learners; what remains for S8a is placement against strength**), which pairs exactly with the current null and holds only its gap junctions — placement and strength together — so it separates the joint gap-junction effect from the autapses', and no more; attributing any part of it to gap placement or to gap strength individually needs a further control that moves one without the other; S8a decides whether either runs before A.5.)* The 8a synthesis logbook: every 8a criterion assigned one of the five statuses; the
   D20 gate written as a go/no-go decision; the roadmap Phase 8 row set to "8a complete / 8b
   pending" on GO; `phase8-tracking` status headers updated.
 
 ## Shipment 8b — Embody
 
 **OpenSpec changes**: placeholders; created per milestone
-**Status**: ⬜ not started — **does not start until S8a has assigned every 8a criterion a status (D20)**
+**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21)
 **Roadmap layer**: body (C), environment (D), internal state (B.3)
 **Approx effort**: ≈ 10–15 active weeks (C ≈ 8–12, D + B.3 ≈ 2–3)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18/D19/D20
@@ -332,7 +332,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.3 Swimming/crawling gait transition** as a body validation target (with C.2).
 
-- [ ] **M.6 The depth finding's two registered follow-ups** *(added 2026-09-23 after A.2)*.
+- [ ] **M.6 The depth finding's two registered follow-ups** *(S8a 2026-09-26: deferred-with-destination to S8b)* *(added 2026-09-23 after A.2)*.
   A.2's PPO surface found the wiring effect **depth-critical**: replicated at depths 4 and 6,
   abolished at 3, reversed at 2 with the rewired null reaching 62% full-clear against the wild
   type's 10%. Every arm cleared its own frozen floor, so no level is a broken-arm artefact. Two
@@ -352,7 +352,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
     answer is than A.3's registered predictor test. Recorded rather than dropped, because it was
     registered before the readout and dropping it afterwards is the move the protocol forbids.
 
-- [ ] **M.5 The across-seed half of block V's standing condition** *(added 2026-09-21 after A.1)*.
+- [ ] **M.5 The across-seed half of block V's standing condition** *(S8a 2026-09-26: deferred-with-destination to S8b)* *(added 2026-09-21 after A.1)*.
   A.1 discharged the **within-seed** half — the two wirings putting the same drawn values on
   different edges. The other half is untouched: with `rewire_seed` unset, a null's graph **and** its
   weights both derive from the run seed, so the null arm carries graph-variance the wild-type arm
@@ -373,7 +373,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 
-- [ ] **M.7 The chemotaxis reference file's two misattributions** *(added 2026-09-25, from the Wormlight review)*.
+- [ ] **M.7 The chemotaxis reference file's two misattributions** *(S8a 2026-09-26: deferred-with-destination to its own small change)* *(added 2026-09-25, from the Wormlight review)*.
   `data/chemotaxis/literature_ci_values.json` credits Bargmann et al. 1993 with a **bacteria** assay —
   it tested volatile odorants — and Pierce-Shimomura et al. 1999 with a **food gradient** — they used
   ammonium chloride and biotin. `validation/datasets.py` reads the file, and its default source prefers
