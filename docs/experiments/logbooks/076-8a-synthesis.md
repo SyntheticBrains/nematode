@@ -197,6 +197,8 @@ for B.1c, and 0.84 and 1.11 against 0.97 and 1.03 for the split.
 
 ## What A.5 inherits: a package inventory, not a decision
 
+*(**A.5 decided 2026-09-27: later.** The package waits for a combined 8a + 8b paper. It ships on its own if C.1's MLP positive control fails or C.1e has not read out by 2026-12-31, and the decision reopens at once if the literature watch finds the null-strength point or block V's claim published with comparable controls. Thermal coverage of A.6 and A.3's registered hop predictor run early in 8b. See the tracker's A.5.)*
+
 | claim | its conditions | committed data | what an open thread would add |
 |---|---|---|---|
 | Block V: the wild-type wiring learns faster, with its conditions | the one-sentence form above | 070, 071, 073, 074, 075 per-seed CSVs and JSON | thermal coverage for A.2 and A.6; the ~128-seed learning-speed panel against the chemical-only null |
