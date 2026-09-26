@@ -58,7 +58,7 @@ change's `design.md`.
   - the pessimistic sensitivity;
   - the breakdown;
   - retention and cost.
-- [ ] 8. **The identity check:** 12 runs with A.6's exact command line, compared against A.6's runs
+- [x] 8. **done: all 12 identical — 3,000 `Run:` lines each and the final `w_chem` bit for bit; evidence in `identity-ppo.json` and `identity-reading.json`.** Original scope: **The identity check:** 12 runs with A.6's exact command line, compared against A.6's runs
   on every `Run:` line and on the final `w_chem`, with the evidence committed. The new arms launch only if all 12 are identical.
 - [ ] 9. **The campaigns:** the gap-held arms on PPO (305–336), then on the reading learner
   (337–384), with the output controls and no branch switches.
