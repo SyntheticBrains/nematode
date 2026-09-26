@@ -226,9 +226,16 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # travel with their edges, so each neuron's total gap strength moves, and the swap can remove
     # autapses. "rewired_chemical_only" swaps the chemical graph alone and holds the gap junctions
     # (pairs and counts) and the autapses at the input's, so the null differs in chemical placement
-    # only.
+    # only. "rewired_gap_junctions_held" runs the degree-preserving null's chemical swap
+    # unchanged -- the same chemical graph at the same seed, autapses handled as there -- and skips
+    # only the gap swap, so it differs from that null in its gap junctions alone.
     # Default wild_type is byte-identical to the pre-change brain.
-    wiring: Literal["wild_type", "rewired_degree_preserving", "rewired_chemical_only"] = "wild_type"
+    wiring: Literal[
+        "wild_type",
+        "rewired_degree_preserving",
+        "rewired_chemical_only",
+        "rewired_gap_junctions_held",
+    ] = "wild_type"
     # Seed for the rewiring draw (used only under a rewired wiring). None -> derive from the run
     # seed, so each paired run draws its own null topology from a dedicated RNG while the
     # weight-init RNG stream is left untouched (matched init vs wild-type for the same seed).
@@ -2472,12 +2479,11 @@ class ConnectomePPOBrain(ClassicalBrain):
         # fan-in (hence the strict-mask scale and gap normalisation) is intact.
         if config.wiring != "wild_type":
             rewire_seed = config.rewire_seed if config.rewire_seed is not None else self.seed
-            chemical_only = config.wiring == "rewired_chemical_only"
             connectome = rewire_degree_preserving(
                 connectome,
                 np.random.default_rng(rewire_seed),
-                rewire_gap_junctions=not chemical_only,
-                preserve_autapses=chemical_only,
+                rewire_gap_junctions=config.wiring == "rewired_degree_preserving",
+                preserve_autapses=config.wiring == "rewired_chemical_only",
             )
             logger.info(
                 f"ConnectomePPOBrain wiring: {config.wiring} (rewire_seed={rewire_seed})",

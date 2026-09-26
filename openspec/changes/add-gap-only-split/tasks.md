@@ -5,9 +5,9 @@ change's `design.md`.
 
 ## Code
 
-- [ ] 1. **The wiring value:** add `wiring: "rewired_gap_junctions_held"`, which calls the rewiring
+- [x] 1. **done.** Original scope: **The wiring value:** add `wiring: "rewired_gap_junctions_held"`, which calls the rewiring
   function with both options off. No planning references in package code.
-- [ ] 2. **Tests.** At a fixed seed:
+- [x] 2. **done: 5 tests in `test_connectome_chemical_null.py` — the gap-held null's `m_chem`, autapse diagonal and drawn `w_chem` are the current null's bit for bit, its `g_gap` the wild type's.** Original scope: **Tests.** At a fixed seed:
   - `m_chem` is bit-identical to the current null's;
   - `g_gap` is bit-identical to the wild type's;
   - the autapse diagonal equals the current null's;
