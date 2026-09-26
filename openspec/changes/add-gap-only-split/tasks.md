@@ -66,8 +66,8 @@ change's `design.md`.
 ## Records
 
 - [x] 10. **done: `split.json` and `per-seed.csv` (80 rows); `a6_reproduced` true on both learners — A.6's move re-derived from the reused runs matches its committed per-seed CSV at every seed.** Original scope: **Score and commit** the CSV and the JSON; re-scoring reproduces them.
-- [ ] 11. **Logbook 075**, with the gap junctions' share reported beside A.6's own uncertainty.
-- [ ] 12. **Discharge:**
+- [x] 11. **done: Logbook 075.** Original scope: **Logbook 075**, with the gap junctions' share reported beside A.6's own uncertainty.
+- [x] 12. **done: index row; tracker A.1, A.6 and S8a; the sharpened condition at the roadmap's A.1 and A.6 and Logbooks 067, 070 and 074.** Original scope: **Discharge:**
   - the index row;
   - tracker A.6 and S8a;
   - the split's reading added to Logbook 074, the roadmap's A.6 note and block V's condition.
