@@ -107,7 +107,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   point** — a registered outcome, not a surprise. Churchland et al. 2026 (arXiv:2609.07355) is
   the external reason to report it this way.
 
-- [ ] **A.3 Frozen-operator structural predictors** *(S8a 2026-09-26: **deferred-with-destination** to the A.5 decision, which says whether the package needs the hop predictor registered; otherwise the 8b window)* (SHOULD; probe or small change): routing
+- [ ] **A.3 Frozen-operator structural predictors** *(A.5, 2026-09-26: **scheduled early in 8b**, so the combined paper's 8a half carries a registered predictor rather than a post-hoc one)* *(S8a 2026-09-26: **deferred-with-destination** to the A.5 decision, which says whether the package needs the hop predictor registered; otherwise the 8b window)* (SHOULD; probe or small change): routing
   confinement and mode-driver metrics (Therianos 2026, arXiv:2606.17745) on Cook 2019
   synapse-count weights against every rewired null block V generated, registered as predictors
   of time-to-competence. No training.
@@ -137,7 +137,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   2026-09-20; Logbook 069 and the roadmap's inheritance list say 42, which was true at the close —
   archiving the Phase 7 synthesis change merged its own two requirements into this spec.)*
 
-- [ ] **A.5 The publication decision** *(S8a 2026-09-26: **deferred-with-destination** to its own step, directly after the synthesis; it inherits [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)'s package inventory and the open threads routed to it)* (SHOULD; taken after A.1 reads out): the package is block V
+- [x] **A.5 The publication decision** — **decided 2026-09-26: later** (deferred-with-destination to a combined 8a + 8b paper). Fallback: **the 8a package ships on its own** if (1) C.1d's MLP positive control fails to forage through the body — the "no brain locomotes through the body" failure mode, after which a combined paper has no body half; or (2) C.1e, the wiring contrast through the body, has not read out by **2026-12-31**, the top of 8b's planned 10–15 active weeks; and (3) the decision is **reopened at once** if the literature watch finds published work making the null-strength point, or block V's claim with comparable controls — in which case the null-strength finding can ship alone as a methods note. *(S8a 2026-09-26: **deferred-with-destination** to its own step, directly after the synthesis; it inherits [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)'s package inventory and the open threads routed to it)* (SHOULD; taken after A.1 reads out): the package is block V
   with its initialisation control, the rule-programme negative with a diagnosed cause, and the
   operating-point finding with its surface. Not a gate for anything after it.
 
@@ -234,6 +234,11 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 **Approx effort**: ≈ 10–15 active weeks (C ≈ 8–12, D + B.3 ≈ 2–3)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18/D19/D20
 **Dependencies**: S8a GO; B.2 for C.2's second half
+
+### Carried from 8a, run early in 8b *(added 2026-09-26 at A.5)*
+
+- [ ] **A.6t Thermal coverage of the null-strength control** (SHOULD; own change): A.6 and its gap-only split ran on hard350 alone, so on block V's thermal cell only A.1 has run. Repeat the combined and the exactly paired gap-held contrasts on thermal, under PPO at block V's committed point, sized from the thermal cell's committed spread. Feeds the combined paper's 8a half and A.5's fallback package alike.
+- [ ] **A.3** (above), scheduled here: hop distance registered as a predictor before its correlation is read.
 
 ### C.0 — body prerequisites (MUST; each lands, validates and freezes before C.1 registers)
 
