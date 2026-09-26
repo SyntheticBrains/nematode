@@ -41,14 +41,14 @@ change's `design.md`.
 
 ## Registration and run
 
-- [ ] 6. **Pre-launch checks:**
+- [x] 6. **done: full suite 6,924 passed; hooks pass; validated strict; 8-episode smokes of both gap-held arms completed; drift evidence resolves for all 480 reused runs (192 PPO, 288 reading).** Original scope: **Pre-launch checks:**
   - the full suite passes;
   - `git add -A`, then pre-commit, judged by its exit code;
   - `openspec validate --strict`;
   - 8-episode smokes of the two gap-held arms;
   - drift evidence resolves for all 480 reused A.6 runs (their experiment records and exports on
     disk).
-- [ ] 7. **The launch record**, `docs/experiments/logbooks/supporting/075-gap-only-split/launch.md`,
+- [x] 7. **done: committed before any new seed ran.** Original scope: **The launch record**, `docs/experiments/logbooks/supporting/075-gap-only-split/launch.md`,
   committed before any new seed runs. It covers:
   - what each of the three nulls preserves;
   - the identity check's exact command line and its fields (`Run:` lines and final `w_chem`);
