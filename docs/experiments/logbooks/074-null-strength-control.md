@@ -20,6 +20,8 @@ learning-speed form of the claim is unresolved at this panel's size.
 
 **Date**: 2026-09-25 to 2026-09-26.
 
+*(**Sharpened 2026-09-26**, [Logbook 075](075-gap-only-split.md): Against a null with the wild type's gap junctions (placement and strength), block V's PPO advantage on hard350 is **+0.025 `auc_success` [+0.012, +0.038]** and **+235 episodes to competence [+62, +409]**: about half of its `auc_success` lead over the degree-preserving null (+0.049) came from that null's rewired gap junctions, and a chemical-wiring advantage in learning speed remains.)*
+
 **OpenSpec change**: `add-null-strength-control`. It extends `connectome-ppo-brain` with the
 `rewired_chemical_only` wiring and restates what each null preserves, and it extends
 `architecture-comparison-protocol` with "a null states every structural property it does not

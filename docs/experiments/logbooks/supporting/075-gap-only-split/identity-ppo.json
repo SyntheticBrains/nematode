@@ -1,0 +1,67 @@
+{
+  "all_identical": true,
+  "arms": {
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350": {
+      "committed": "campaigns/a6-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed305.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/a6b-identity-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed305.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen": {
+      "committed": "campaigns/a6-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed305.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/a6b-identity-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed305.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_chemical_null": {
+      "committed": "campaigns/a6-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_chemical_null-seed305.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/a6b-identity-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_chemical_null-seed305.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_chemical_null_frozen": {
+      "committed": "campaigns/a6-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_chemical_null_frozen-seed305.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/a6b-identity-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_chemical_null_frozen-seed305.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null": {
+      "committed": "campaigns/a6-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null-seed305.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/a6b-identity-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null-seed305.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null_frozen": {
+      "committed": "campaigns/a6-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null_frozen-seed305.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/a6b-identity-ppo/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_rewired_null_frozen-seed305.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    }
+  },
+  "half": "ppo",
+  "seed": 305
+}

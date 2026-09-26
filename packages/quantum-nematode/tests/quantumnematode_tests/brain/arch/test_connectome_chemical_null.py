@@ -100,3 +100,57 @@ def test_the_measured_prior_and_the_fan_in_draw_build_on_it(overrides: dict[str,
     """Chemical in-degree is kept, so the per-neuron placements apply unchanged."""
     brain = _brain(wiring="rewired_chemical_only", **overrides)
     assert brain.topology.w_chem.shape[0] == brain.topology.n_neurons
+
+
+# ── The gap-held null ────────────────────────────────────────────────────────────────────────
+# Covers "The gap-held null pairs exactly with the degree-preserving null": at one seed its chemical
+# mask is the degree-preserving null's bit for bit, and its gap buffer the wild type's.
+
+
+@pytest.fixture(scope="module")
+def gap_held() -> ConnectomePPOBrain:
+    """Build the gap-held null at the same seed as ``arms``."""
+    return _brain(wiring="rewired_gap_junctions_held")
+
+
+def test_the_gap_held_null_has_the_current_nulls_chemical_graph(
+    arms: dict[str, ConnectomePPOBrain],
+    gap_held: ConnectomePPOBrain,
+) -> None:
+    """Same chemical mask, same autapses lost, same drawn chemical weights."""
+    full = arms["rewired_degree_preserving"].topology
+    assert torch.equal(gap_held.topology.m_chem, full.m_chem)
+    assert torch.equal(torch.diagonal(gap_held.topology.m_chem), torch.diagonal(full.m_chem))
+    assert torch.equal(gap_held.topology.w_chem, full.w_chem)
+
+
+def test_the_gap_held_null_has_the_wild_types_gap_junctions(
+    arms: dict[str, ConnectomePPOBrain],
+    gap_held: ConnectomePPOBrain,
+) -> None:
+    """Only the gap buffer differs from the current null, and it is the wild type's."""
+    assert torch.equal(gap_held.topology.g_gap, arms["wild_type"].topology.g_gap)
+    assert not torch.equal(
+        gap_held.topology.g_gap,
+        arms["rewired_degree_preserving"].topology.g_gap,
+    )
+
+
+def test_the_existing_wirings_are_unchanged_by_the_new_value(
+    arms: dict[str, ConnectomePPOBrain],
+) -> None:
+    """The chemical-only null still keeps all 38 autapses and the wild type's gap junctions."""
+    chem = arms["rewired_chemical_only"].topology
+    assert int(torch.diagonal(chem.m_chem).sum()) == 38
+    assert torch.equal(chem.g_gap, arms["wild_type"].topology.g_gap)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [{"weight_prior": "measured"}, {"weight_prior": "measured", "weight_draw": "per_neuron_fanin"}],
+    ids=["measured", "measured-fanin"],
+)
+def test_the_measured_prior_builds_on_the_gap_held_null(overrides: dict[str, object]) -> None:
+    """Chemical in-degree is the current null's, so the per-neuron placements apply."""
+    brain = _brain(wiring="rewired_gap_junctions_held", **overrides)
+    assert brain.topology.w_chem.shape[0] == brain.topology.n_neurons
