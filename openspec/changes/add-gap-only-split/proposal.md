@@ -30,7 +30,7 @@ placement and strength, jointly.
     re-run with A.6's exact command line and compared on every `Run:` line and on its final chemical
     matrix, 12 runs.
   - The reused runs' experiment records and exports are kept, and a pre-launch check confirms drift
-    evidence for all 384 of them.
+    evidence for all 480 of them.
   - Any difference means the reused baseline is re-run in full, never mixed.
 - **The reading, registered before launch.** One paired interaction per learner on `auc_success`,
   read against 2/3 of A.6's committed move:

@@ -149,5 +149,5 @@ identity comparator, the breakdown and the verdict map. It reuses:
 - **The reuse depends on more than the campaign directories.** The drift evidence for every reused
   run lives outside them, in `experiments/<id>.json` and `exports/<session>/weights/final.pt`. Those
   are kept too, until the logbook commits. A pre-launch check confirms drift evidence resolves for all
-  384 reused runs, not only the 12 re-run for the identity check; a gap there would void the reading
+  480 reused runs, not only the 12 re-run for the identity check; a gap there would void the reading
   learner's reused arms.

@@ -16,7 +16,7 @@ change's `design.md`.
 
 ## Panel
 
-- [ ] 3. **The analysis**, `scripts/analysis/gap_split.py` (Decisions B, D, F, G):
+- [x] 3. **done: `scripts/analysis/gap_split.py`, with subcommands for the identity check, the reused-evidence check and scoring; scoring also re-derives A.6's move from the reused runs and checks it against A.6's committed per-seed CSV every time (`a6_reproduced`), rather than only in a test CI cannot run.** Original scope: **The analysis**, `scripts/analysis/gap_split.py` (Decisions B, D, F, G):
   - the stem table and levels, extending A.6's with `gap_held`;
   - a manifest drawn from two campaign directories;
   - the identity comparator;
@@ -24,9 +24,9 @@ change's `design.md`.
   - `classify` and the verdict map, and `honour_drift`;
   - the per-seed breakdown;
   - the CSV and the JSON.
-- [ ] 4. **The configs:** the generator writes the 4 gap-held arms from their current-null parents,
+- [x] 4. **done: the generator now writes both panels' arms from their own panel definitions; 4 written, A.6's 4 kept.** Original scope: **The configs:** the generator writes the 4 gap-held arms from their current-null parents,
   changing `wiring` alone.
-- [ ] 5. **Panel tests:**
+- [x] 5. **done, 28 tests.** Original scope: **Panel tests:**
   - the configs differ from their parents in `wiring` alone;
   - each gap-held arm builds on its current-null parent's `m_chem`, with the wild type's `g_gap`;
   - the seeds equal A.6's;
@@ -46,7 +46,7 @@ change's `design.md`.
   - `git add -A`, then pre-commit, judged by its exit code;
   - `openspec validate --strict`;
   - 8-episode smokes of the two gap-held arms;
-  - drift evidence resolves for all 384 reused A.6 runs (their experiment records and exports on
+  - drift evidence resolves for all 480 reused A.6 runs (their experiment records and exports on
     disk).
 - [ ] 7. **The launch record**, `docs/experiments/logbooks/supporting/075-gap-only-split/launch.md`,
   committed before any new seed runs. It covers:
