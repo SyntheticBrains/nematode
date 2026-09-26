@@ -31,9 +31,12 @@ change's `design.md`.
   - each gap-held arm builds on its current-null parent's `m_chem`, with the wild type's `g_gap`;
   - the seeds equal A.6's;
   - the manifest reads both campaigns;
-  - the identity comparator passes identical logs and fails a single changed `Run:` line;
+  - the identity comparator passes identical runs and fails a single changed `Run:` line or a changed
+    final `w_chem`;
   - every verdict row is checked, with the gates and a void drift;
-  - the breakdown's two terms sum to A.6's interaction per seed;
+  - the breakdown's two terms sum to A.6's interaction per seed, and re-scoring the current and
+    chemical-only nulls from `campaigns/a6-*` reproduces A.6's committed per-seed interaction in
+    `074-null-strength-control/per-seed.csv`;
   - the family is the two primaries.
 
 ## Registration and run
@@ -42,25 +45,28 @@ change's `design.md`.
   - the full suite passes;
   - `git add -A`, then pre-commit, judged by its exit code;
   - `openspec validate --strict`;
-  - 8-episode smokes of the two gap-held arms.
+  - 8-episode smokes of the two gap-held arms;
+  - drift evidence resolves for all 384 reused A.6 runs (their experiment records and exports on
+    disk).
 - [ ] 7. **The launch record**, `docs/experiments/logbooks/supporting/075-gap-only-split/launch.md`,
   committed before any new seed runs. It covers:
   - what each of the three nulls preserves;
+  - the identity check's exact command line and its fields (`Run:` lines and final `w_chem`);
   - the pairing;
   - the reuse and the identity check;
   - the interaction, the minimum and the verdicts;
   - the pessimistic sensitivity;
   - the breakdown;
   - retention and cost.
-- [ ] 8. **The identity check:** 12 runs, compared field by field against A.6's logs, with the
-  evidence committed. The new arms launch only if all 12 are identical.
+- [ ] 8. **The identity check:** 12 runs with A.6's exact command line, compared against A.6's runs
+  on every `Run:` line and on the final `w_chem`, with the evidence committed. The new arms launch only if all 12 are identical.
 - [ ] 9. **The campaigns:** the gap-held arms on PPO (305–336), then on the reading learner
   (337–384), with the output controls and no branch switches.
 
 ## Records
 
 - [ ] 10. **Score and commit** the CSV and the JSON; re-scoring reproduces them.
-- [ ] 11. **Logbook 075.**
+- [ ] 11. **Logbook 075**, with the gap junctions' share reported beside A.6's own uncertainty.
 - [ ] 12. **Discharge:**
   - the index row;
   - tracker A.6 and S8a;

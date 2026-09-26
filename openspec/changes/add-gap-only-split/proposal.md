@@ -27,13 +27,17 @@ placement and strength, jointly.
 - **The split, on A.6's seeds and runs.** Only the gap-held arms, learning and frozen, are new: 160
   runs across PPO (seeds 305–336) and the reading learner (337–384).
   - Every reused A.6 arm is licensed by the parsed-field identity check first: one seed per arm,
-    re-run and compared on every `Run:` line, 12 runs.
+    re-run with A.6's exact command line and compared on every `Run:` line and on its final chemical
+    matrix, 12 runs.
+  - The reused runs' experiment records and exports are kept, and a pre-launch check confirms drift
+    evidence for all 384 of them.
   - Any difference means the reused baseline is re-run in full, never mixed.
 - **The reading, registered before launch.** One paired interaction per learner on `auc_success`,
   read against 2/3 of A.6's committed move:
   - `gap_junctions` if holding them reproduces at least that much;
   - `partial` if a significant move falls short of it;
-  - `not_gap_junctions` if no move is detected within it.
+  - `not_gap_junctions` if no move is detected within it — the gap junctions then carry less than 2/3
+    of the move, so at least a third lies elsewhere.
 - **Sensitivity, stated honestly.** A.6's spread, the only committed proxy, puts the minimum
   detectable effect at about A.6's whole move. That proxy is pessimistic, because exact pairing
   removes the chemical-graph sampling noise in it. The achieved figure is reported beside it, never

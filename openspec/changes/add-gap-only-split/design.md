@@ -50,8 +50,13 @@ for one seed per reused arm, re-run on the current path and compared on every pa
 - **Seeds re-run:** the band's first seed, 305 or 337.
 - **Arms:** all six reused arms on each learner, so 12 runs.
 - **Output:** the re-runs go to a separate campaign directory.
-- **Fields compared:** every `Run:` line of each log, status and foods included — the series
-  `plateau_tail` and the efficiency instruments read.
+- **Fields compared:** everything the analysis reads from a run.
+  - Every `Run:` line of each log, status and foods included: the series `plateau_tail` and the
+    efficiency instruments parse.
+  - The run's final chemical matrix, `w_chem` in `weights/final.pt`, found through its experiment
+    record, which is what the drift check reads. It is compared bit for bit on both learners.
+- **Command line:** A.6's exactly — the same configs, `--runs 3000`, and the same output flags,
+  `--track-experiment` included, without which no weights are exported. The launch record quotes it.
 - **On a difference:** the reused baseline is re-run in full and nothing is mixed. The launch waits
   on this check.
 - **Evidence:** the comparison is written to the supporting directory.
@@ -85,7 +90,7 @@ reference, not block V's effect.
 |---|---|---|
 | `move_null` | **gap_junctions** | holding gap junctions alone moves the gap toward the null by at least 2/3 of A.6's move: the gap junctions, placement and strength jointly, carry most of it |
 | `below` | **partial** | a significant move toward the null, short of 2/3 of A.6's |
-| `no_move` | **not_gap_junctions** | no move is detected, and the interval stays inside ±2/3 of A.6's move; what A.6 moved lies mostly with the autapses or with the chemical-graph difference in its chemical-only null, which this panel cannot separate |
+| `no_move` | **not_gap_junctions** | no move is detected, and the interval stays inside ±2/3 of A.6's move: the gap junctions reproduce less than 2/3 of it, so at least a third lies with the autapses or with the chemical-graph difference in A.6's chemical-only null, which this panel cannot separate |
 | `move_wt` | **opposite** | holding gap junctions moves the gap toward the wild type |
 | `unresolved` | **unresolved** | reported with both MDEs |
 
@@ -115,6 +120,10 @@ A.6 move = [gap(gap-held) − gap(current)]  +  [gap(chemical-only) − gap(gap-
                 gap junctions, jointly             autapses + chemical-graph difference
 ```
 
+**The gap junctions' share is reported with A.6's uncertainty beside it.** A.6's move is itself
+uncertain ([−0.041, −0.014] under PPO), so the share of it is never stated as a precise fraction; the
+minimum uses the point estimate as a reference, which is all it needs to be.
+
 The second term cannot be attributed to the autapses. The chemical-only null's chemical graph is a
 different sample from the gap-held null's, so the term mixes the two causes. It is reported as that.
 
@@ -137,4 +146,8 @@ identity comparator, the breakdown and the verdict map. It reuses:
 - **The identity check could fail.** Then the reused baseline is re-run in full, and the cost grows
   to about 13 hours. Nothing in the execution path has changed since A.6 but documentation, so this is
   not expected. It is still checked, not assumed.
-- **The A.6 campaign directories must survive until the logbook commits.**
+- **The reuse depends on more than the campaign directories.** The drift evidence for every reused
+  run lives outside them, in `experiments/<id>.json` and `exports/<session>/weights/final.pt`. Those
+  are kept too, until the logbook commits. A pre-launch check confirms drift evidence resolves for all
+  384 reused runs, not only the 12 re-run for the identity check; a gap there would void the reading
+  learner's reused arms.
