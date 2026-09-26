@@ -446,7 +446,11 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(payload)
     else:
         print(payload)
-    ok = result.get("all_identical", result.get("complete", True))
+    if args.command == "score":
+        # Reuse is only sound if A.6's move comes back from the reused runs on every learner.
+        ok = all(res["a6_reproduced"]["reproduced"] for res in result["halves"].values())
+    else:
+        ok = result["all_identical"] if args.command == "identity" else result["complete"]
     return 0 if ok else 1
 
 

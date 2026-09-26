@@ -248,3 +248,47 @@ def test_the_family_is_the_two_primaries() -> None:
     nsc.correct_family(results, gs.PRIMARY_METRIC)
     qs = sorted(results[h]["interactions"][gs.PRIMARY_METRIC]["test"]["bh_q"] for h in gs.HALVES)
     assert qs == pytest.approx([0.04, 0.4])
+
+
+class TestTheExitStatus:
+    def _score_args(self, tmp_path: Path) -> list[str]:
+        return [
+            "score",
+            *("--a6-ppo", str(tmp_path), "--a6-reading", str(tmp_path)),
+            *("--split-ppo", str(tmp_path), "--split-reading", str(tmp_path)),
+            *("--out-dir", str(tmp_path), "--out", str(tmp_path / "out.json")),
+        ]
+
+    @pytest.mark.parametrize(
+        ("reproduced", "status"),
+        [((True, True), 0), ((True, False), 1)],
+        ids=["both-reproduce", "one-fails"],
+    )
+    def test_score_fails_when_a6_does_not_reproduce(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        reproduced: tuple[bool, bool],
+        status: int,
+    ) -> None:
+        """A learner whose A.6 move does not come back from the reused runs fails the command."""
+        result = {
+            "halves": {
+                half: {"a6_reproduced": {"reproduced": ok}}
+                for half, ok in zip(gs.HALVES, reproduced, strict=True)
+            },
+        }
+        monkeypatch.setattr(gs, "score", lambda *_a, **_k: result)
+        assert gs.main(self._score_args(tmp_path)) == status
+
+    def test_identity_and_evidence_keep_their_own_checks(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The identity check exits on all_identical, the evidence check on complete."""
+        monkeypatch.setattr(gs, "identity_check", lambda *_a: {"all_identical": False})
+        monkeypatch.setattr(gs, "reused_evidence", lambda *_a: {"complete": True})
+        common = ["--half", "ppo", "--a6-campaign", str(tmp_path)]
+        assert gs.main(["identity", *common, "--identity-campaign", str(tmp_path)]) == 1
+        assert gs.main(["evidence", *common]) == 0
