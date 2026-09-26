@@ -23,7 +23,9 @@ state for 8a.
 - **Logbook 076, the 8a synthesis:**
   - an exit-criterion walkthrough that gives every 8a MUST, SHOULD and 8a-relevant MAY one of the five
     statuses;
-  - block V restated with every condition in one sentence;
+  - block V restated with every condition in one sentence, each clause naming the draw it was read
+    under, with the thermal cell's untested rungs stated;
+  - a limitations section;
   - what 8a established, what it did not, and the cause of each negative;
   - a package inventory for A.5, not a decision;
   - a reproducibility statement;
@@ -32,7 +34,8 @@ state for 8a.
   - B.2 is carried to 8b, with its reason;
   - A.5 is a step of its own after the synthesis;
   - **8b's wiring contrasts use the chemical-only null as primary**, with the current null reported
-    beside it. This is registered as roadmap decision **D21**.
+    beside it. This is registered as roadmap decision **D21** and covers every 8b wiring contrast,
+    including B.2's carried arms.
 - **A protocol requirement:** a panel sized from a proxy reports its achieved sensitivity beside the
   registered one and never re-reads a verdict against it. B.1c, A.6 and the split already followed
   this practice without a rule behind it.

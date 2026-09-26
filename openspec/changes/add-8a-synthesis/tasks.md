@@ -8,10 +8,12 @@ Phase 8 task **S8a**. The decisions taken before this change are in `design.md`.
 
   - the status walkthrough (Decision A), every 8a criterion and open thread with one status and a
     destination;
-  - block V in one sentence (Decision B);
+  - block V in one sentence, each clause naming its draw, with the thermal cell's untested rungs
+    stated (Decision B);
   - what 8a established, what it did not, and each negative's cause;
   - the A.5 package inventory;
-  - the reproducibility statement (Decision E);
+  - the limitations (Decision E2) and the reproducibility statement (Decision E);
+  - the phase-wide optional items M.1–M.4 named as assigned at S8b;
   - the D20 gate and D21 (Decision C).
 
   Every figure is cited to the committed logbook, CSV or JSON it comes from; nothing is computed
@@ -23,7 +25,8 @@ Phase 8 task **S8a**. The decisions taken before this change are in `design.md`.
   - the Phase 8 row reads **8a complete / 8b pending**;
   - the 8a synthesis exit criterion is ticked;
   - the SHOULD line and the overshoot row carry their statuses (B.2 carried, with its reason);
-  - **D21** is added to the decisions table, with dated notes at C.1 and C.1e;
+  - **D21** is added to the decisions table, covering every 8b wiring contrast (C.1e, C.4, and B.2's
+    carried arms), with dated notes at C.1, C.4 and B.2;
   - the Phase 8 minimum-viable success level is marked met.
 - [ ] 3. **The tracker:**
   - 8a status COMPLETE, and 8b ready to start (gate GO);

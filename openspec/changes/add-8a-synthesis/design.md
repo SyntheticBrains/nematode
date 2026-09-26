@@ -61,6 +61,7 @@ Every 8a criterion gets exactly one of the five statuses: *met*, *unmet-with-rea
 | M.5 across-seed variance components | deferred-with-destination | the phase synthesis (S8b) |
 | M.6 depth follow-ups | deferred-with-destination | the phase synthesis (S8b); the crossing was deprioritised, recorded rather than dropped |
 | M.7 chemotaxis file | deferred-with-destination | its own small change, any time |
+| M.1 placed plasticity, M.2 wild type against wild type, M.3 gait, M.4 reproducibility artefacts | not assigned here | phase-wide rather than 8a work; each gets its status at the Phase 8 synthesis (S8b), and the logbook says so rather than skipping them |
 
 **Open threads each get a status and a destination:**
 
@@ -73,16 +74,23 @@ Every 8a criterion gets exactly one of the five statuses: *met*, *unmet-with-rea
 
 ### Decision B: Block V in one sentence
 
-Every condition travels together:
+Every condition travels together, with each clause naming the draw it was read under:
 
-> On hard350 under PPO, at a settling depth of 4 or more (reversed at 2, abolished at 3), with the
-> pooled readout and the edge-order draw, the wild-type connectome learns faster than its
-> degree-preserving null; that survives a shared initialisation (A.1) and a measured-weight prior
-> (B.1c); about half of its `auc_success` lead came from the null's rewired gap junctions, and against
-> a null with the wild type's gap junctions it is +0.025 `auc_success` and +235 episodes to competence
-> (Logbook 075); and its magnitude is not stable across seed sets (A.1).
+> On hard350 under PPO, with the pooled readout, at settling depths 4 and 6 (abolished at 3,
+> reversed at 2, nothing above 6 tested; A.2), the wild-type connectome learns faster than its
+> degree-preserving null. Under the edge-order draw, no dissolution was detected under a shared
+> initialisation, with survival established on five of eight readings (A.1). Under the per-neuron
+> fan-in draw, a measured-weight prior leaves it unmoved (B.1c). Under the edge-order draw, about half
+> of its `auc_success` lead came from the null's rewired gap junctions, and against a null with the
+> wild type's gap junctions it is +0.025 `auc_success` and +235 episodes to competence (Logbooks
+> 074–075). Its magnitude is not stable across seed sets (A.1).
 
-Every figure in the sentence is cited to the logbook it comes from.
+**The second cell.** Block V was established on two cells. On **thermal**, only A.1 applies: the
+direction replicated at 35% of the committed size, and the operating point, the measured weights and
+the null-strength question are all untested there. The package inventory lists this as a gap for
+A.5.
+
+Every figure is cited to the logbook it comes from.
 
 ### Decision C: The D20 gate is GO, and D21 is registered
 
@@ -93,8 +101,9 @@ Every figure in the sentence is cited to the logbook it comes from.
 - a measured-weight verdict (B.1),
 - and a null-strength readout (A.6 and its split).
 
-**D21, the 8b primary null.** Every wiring contrast from C.1e on reads against the chemical-only
-null (`rewired_chemical_only`), with the current null reported beside it.
+**D21, the 8b primary null.** Every 8b wiring contrast reads against the chemical-only null
+(`rewired_chemical_only`), with the current null reported beside it. That covers C.1e, C.4, and B.2's
+arms carried into 8b, so none of them defaults to the current null.
 
 - *Why:* the chemical-only null differs from the wild type only in chemical placement. The current
   null also moves gap-junction strength, which Logbook 075 showed carries about half of block V's lead.
@@ -107,6 +116,18 @@ D21 goes into the roadmap's decisions table.
 
 B.1c, A.6 and the split each sized a panel from a proxy, reported the achieved sensitivity beside
 it, and did not re-read a verdict against the achieved figure. That is now one requirement.
+
+### Decision E2: Limitations
+
+The logbook carries a limitations section for what the block V sentence cannot hold:
+
+- **One cell for most rungs.** A.2, B.1c, A.6 and the split ran on hard350 alone.
+- **One substrate,** Cook 2019.
+- **Different draws across rungs.** A.1, A.2, A.6 and the split used edge order; B.1c's PPO arms
+  used the fan-in draw.
+- **Gap placement and strength were never separated.**
+- **The effect's size is unstable across seed sets** (A.1).
+- **A pooled readout under PPO throughout,** with width unresolved there.
 
 ### Decision E: The reproducibility statement
 
