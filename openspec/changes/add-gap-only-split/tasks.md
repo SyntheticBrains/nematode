@@ -60,12 +60,12 @@ change's `design.md`.
   - retention and cost.
 - [x] 8. **done: all 12 identical — 3,000 `Run:` lines each and the final `w_chem` bit for bit; evidence in `identity-ppo.json` and `identity-reading.json`.** Original scope: **The identity check:** 12 runs with A.6's exact command line, compared against A.6's runs
   on every `Run:` line and on the final `w_chem`, with the evidence committed. The new arms launch only if all 12 are identical.
-- [ ] 9. **The campaigns:** the gap-held arms on PPO (305–336), then on the reading learner
+- [x] 9. **done: 160/160, none failed; PPO 58 min, reading 2h52m.** Original scope: **The campaigns:** the gap-held arms on PPO (305–336), then on the reading learner
   (337–384), with the output controls and no branch switches.
 
 ## Records
 
-- [ ] 10. **Score and commit** the CSV and the JSON; re-scoring reproduces them.
+- [x] 10. **done: `split.json` and `per-seed.csv` (80 rows); `a6_reproduced` true on both learners — A.6's move re-derived from the reused runs matches its committed per-seed CSV at every seed.** Original scope: **Score and commit** the CSV and the JSON; re-scoring reproduces them.
 - [ ] 11. **Logbook 075**, with the gap junctions' share reported beside A.6's own uncertainty.
 - [ ] 12. **Discharge:**
   - the index row;
