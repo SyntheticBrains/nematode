@@ -71,4 +71,4 @@ change's `design.md`.
   - the index row;
   - tracker A.6 and S8a;
   - the split's reading added to Logbook 074, the roadmap's A.6 note and block V's condition.
-- [ ] 13. **Close-out:** validate, archive, and open the PR.
+- [x] 13. **done: validated strict and archived; re-scoring reproduces the committed JSON and CSV byte for byte; every new link resolves; the PR is opened from this branch.** Original scope: **Close-out:** validate, archive, and open the PR.
