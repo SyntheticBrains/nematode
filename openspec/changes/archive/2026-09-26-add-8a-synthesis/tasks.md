@@ -44,4 +44,4 @@ Phase 8 task **S8a**. The decisions taken before this change are in `design.md`.
   - every new link resolves;
   - `openspec validate --strict`;
   - `git add -A`, then pre-commit, judged by its exit code.
-- [ ] 6. **Archive and open the PR.**
+- [x] 6. **done: archived; the PR is opened from this branch.** Original scope: **Archive and open the PR.**
