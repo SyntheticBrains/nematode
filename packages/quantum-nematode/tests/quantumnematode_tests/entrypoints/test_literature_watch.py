@@ -451,7 +451,16 @@ class TestShippedConfig:
         config = tomllib.loads(self.CONFIG.read_text(encoding="utf-8"))
         scoring = config["scoring"]
         assert scoring["triage_model"] == "claude-haiku-4-5"
-        assert scoring["digest_model"] == "claude-opus-5"
+        assert scoring["digest_model"] == "claude-opus-5-5"
+
+    def test_keyword_search_names_terms_and_openalex_sources(self):
+        config = tomllib.loads(self.CONFIG.read_text(encoding="utf-8"))
+        search = config["openalex_search"]
+        assert search["enabled"]
+        assert search["terms"]
+        for source in search["sources"]:
+            assert source["id"].startswith("S"), source
+            assert source["id"][1:].isdigit(), source
 
 
 class TestMainWiring:
@@ -484,6 +493,7 @@ class TestMainWiring:
         def fake_digest(selected, brief, config):
             return "### A relevant paper\n\nIt bears on the open question."
 
+        monkeypatch.setattr(lw, "preflight", lambda config: None)
         monkeypatch.setattr(lw, "score", fake_score)
         monkeypatch.setattr(lw, "write_digest", fake_digest)
 
@@ -510,3 +520,226 @@ class TestScoreSchema:
 
     def test_schema_is_serialisable(self):
         json.dumps(lw.SCORE_SCHEMA)
+
+
+_RSS = """<?xml version="1.0"?>
+<rss xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns:dc="http://purl.org/dc/elements/1.1/"
+     version="2.0"><channel><title>q-bio.NC updates</title>
+<item><title>A new connectome paper</title><link>https://arxiv.org/abs/2610.00001</link>
+<description>arXiv:2610.00001v1 Announce Type: new
+Abstract: We rewire the interior only.</description>
+<guid isPermaLink="false">oai:arXiv.org:2610.00001v1</guid>
+<pubDate>Mon, 05 Oct 2026 00:00:00 -0400</pubDate>
+<arxiv:announce_type>new</arxiv:announce_type>
+<dc:creator>A. Author, B. Author</dc:creator></item>
+<item><title>A cross-listed paper</title><link>https://arxiv.org/abs/2610.00002</link>
+<description>arXiv:2610.00002v1 Announce Type: cross
+Abstract: Cross-listed.</description>
+<guid isPermaLink="false">oai:arXiv.org:2610.00002v1</guid>
+<pubDate>Mon, 05 Oct 2026 00:00:00 -0400</pubDate>
+<arxiv:announce_type>cross</arxiv:announce_type>
+<dc:creator>C. Author</dc:creator></item>
+<item><title>An old paper, re-posted</title><link>https://arxiv.org/abs/2401.00003</link>
+<description>arXiv:2401.00003v4 Announce Type: replace
+Abstract: Old.</description>
+<guid isPermaLink="false">oai:arXiv.org:2401.00003v4</guid>
+<pubDate>Mon, 05 Oct 2026 00:00:00 -0400</pubDate>
+<arxiv:announce_type>replace</arxiv:announce_type>
+<dc:creator>D. Author</dc:creator></item>
+</channel></rss>"""
+
+
+class TestArxivRssFallback:
+    """arXiv's query API refuses GitHub Actions runners; the RSS feed stands in, and says so."""
+
+    @staticmethod
+    def _api_refuses(config, until):
+        msg = "HTTP Error 406: Not Acceptable"
+        raise lw.SourceError(msg)
+
+    def test_a_refused_api_falls_back_to_the_feed_with_a_note(self, monkeypatch):
+        monkeypatch.setattr(lw, "_fetch_arxiv_api", self._api_refuses)
+        urls: list[str] = []
+
+        def fake_bytes(url):
+            urls.append(url)
+            return _RSS.encode()
+
+        monkeypatch.setattr(lw, "_http_bytes", fake_bytes)
+
+        got = lw.fetch_arxiv({"categories": ["q-bio.NC", "cs.NE"]}, lw.date(2026, 10, 5))
+        assert urls == ["https://rss.arxiv.org/rss/q-bio.NC+cs.NE"]
+        # New and cross-listed papers are kept; a replacement is old work and is dropped.
+        assert [item.uid for item in got.candidates] == ["2610.00001v1", "2610.00002v1"]
+        assert len(got.partials) == 1
+        assert "406" in got.partials[0]
+        assert "latest announcement day" in got.partials[0]
+
+    def test_the_feed_item_is_shaped_like_an_api_entry(self, monkeypatch):
+        monkeypatch.setattr(lw, "_fetch_arxiv_api", self._api_refuses)
+        monkeypatch.setattr(lw, "_http_bytes", lambda url: _RSS.encode())
+
+        first = lw.fetch_arxiv({"categories": ["q-bio.NC"]}, lw.date(2026, 10, 5)).candidates[0]
+        assert first.source == "arxiv"
+        assert first.title == "A new connectome paper"
+        assert first.abstract == "We rewire the interior only."
+        assert first.authors == "A. Author, B. Author"
+        assert first.published == "2026-10-05"
+        assert first.url == "https://arxiv.org/abs/2610.00001v1"
+
+    def test_the_fallback_can_be_switched_off(self, monkeypatch):
+        monkeypatch.setattr(lw, "_fetch_arxiv_api", self._api_refuses)
+        with pytest.raises(lw.SourceError):
+            lw.fetch_arxiv(
+                {"categories": ["q-bio.NC"], "rss_fallback": False},
+                lw.date(2026, 10, 5),
+            )
+
+    def test_a_failed_feed_fails_the_source(self, monkeypatch):
+        monkeypatch.setattr(lw, "_fetch_arxiv_api", self._api_refuses)
+
+        def feed_fails(url):
+            msg = "feed down"
+            raise lw.SourceError(msg)
+
+        monkeypatch.setattr(lw, "_http_bytes", feed_fails)
+        with pytest.raises(lw.SourceError):
+            lw.fetch_arxiv({"categories": ["q-bio.NC"]}, lw.date(2026, 10, 5))
+
+
+class TestOpenAlexSearch:
+    """The keyword channel reaches papers filed outside the swept categories."""
+
+    def test_the_filter_carries_sources_window_and_terms(self, monkeypatch):
+        urls: list[str] = []
+
+        def fake_json(url):
+            urls.append(url)
+            return {
+                "results": [
+                    {
+                        "id": "https://openalex.org/W1",
+                        "doi": "https://doi.org/10.48550/arxiv.2609.39248",
+                        "title": "Null-model treatment of the sensory-motor boundary",
+                        "publication_date": "2026-09-30",
+                    },
+                ],
+                "meta": {"next_cursor": None},
+            }
+
+        monkeypatch.setattr(lw, "_http_json", fake_json)
+        got = lw.fetch_openalex_search(
+            {
+                "lookback_days": 21,
+                "terms": ["connectome", "elegans"],
+                "sources": [{"id": "S4306400194", "label": "arXiv"}],
+            },
+            lw.date(2026, 10, 5),
+        )
+        query = lw.urllib.parse.unquote_plus(urls[0])
+        assert "primary_location.source.id:S4306400194" in query
+        assert "from_publication_date:2026-09-14" in query
+        assert "to_publication_date:2026-10-05" in query
+        assert "title_and_abstract.search:connectome OR elegans" in query
+        assert [item.uid for item in got.candidates] == ["10.48550/arxiv.2609.39248"]
+        assert got.candidates[0].source == "openalex-search"
+        assert got.candidates[0].cites == []
+
+    def test_no_terms_or_no_sources_fetch_nothing(self, monkeypatch):
+        def never(url):
+            msg = "should not be called"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(lw, "_http_json", never)
+        assert (
+            lw.fetch_openalex_search(
+                {"terms": [], "sources": [{"id": "S1"}]},
+                lw.date(2026, 10, 5),
+            ).candidates
+            == []
+        )
+        assert (
+            lw.fetch_openalex_search(
+                {"terms": ["x"], "sources": []},
+                lw.date(2026, 10, 5),
+            ).candidates
+            == []
+        )
+
+    def test_gather_runs_it_between_citation_chaining_and_arxiv(self, monkeypatch):
+        order: list[str] = []
+
+        def tag(label):
+            def fetch(config, until):
+                order.append(label)
+                return lw.Fetched([])
+
+            return fetch
+
+        monkeypatch.setattr(lw, "fetch_openalex", tag("cites"))
+        monkeypatch.setattr(lw, "fetch_openalex_search", tag("search"))
+        monkeypatch.setattr(lw, "fetch_arxiv", tag("arxiv"))
+        lw.gather(
+            {
+                "openalex": {"enabled": True},
+                "openalex_search": {"enabled": True},
+                "arxiv": {"enabled": True},
+            },
+            lw.date(2026, 10, 5),
+        )
+        assert order == ["cites", "search", "arxiv"]
+
+
+class TestPreflight:
+    """A missing key or a retired model fails in seconds, before the sweep, in one sentence."""
+
+    def test_a_missing_key_stops_main_before_any_fetch(self, monkeypatch, capsys):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+        def never(config, until):
+            msg = "the sweep should not start"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(lw, "gather", never)
+        assert lw.main([]) == 2
+        assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
+
+    def test_dry_run_needs_no_key(self, monkeypatch):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+        monkeypatch.setattr(lw, "gather", lambda config, until: ([], [], until))
+        assert lw.main(["--dry-run"]) == 0
+
+    def test_an_unavailable_model_is_named(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+        class Models:
+            @staticmethod
+            def retrieve(model):
+                if model == "claude-retired":
+                    msg = "not_found_error"
+                    raise RuntimeError(msg)
+
+        class Client:
+            models = Models()
+
+        monkeypatch.setattr(lw, "_client", Client)
+        with pytest.raises(lw.PreflightError, match="digest_model 'claude-retired'"):
+            lw.preflight({"triage_model": "claude-haiku-4-5", "digest_model": "claude-retired"})
+
+    def test_available_models_pass(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        checked: list[str] = []
+
+        class Models:
+            @staticmethod
+            def retrieve(model):
+                checked.append(model)
+
+        class Client:
+            models = Models()
+
+        monkeypatch.setattr(lw, "_client", Client)
+        lw.preflight({})
+        assert checked == [lw.TRIAGE_MODEL, lw.DIGEST_MODEL]

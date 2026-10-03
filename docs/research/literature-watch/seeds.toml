@@ -11,12 +11,14 @@
 # Cheap pass over every candidate, then a capable pass over the survivors. A few hundred abstracts
 # a week costs single-digit cents at these sizes.
 triage_model = "claude-haiku-4-5"
-digest_model = "claude-opus-5"
+digest_model = "claude-opus-5-5"
 batch_size = 40
 # 0 unrelated, 1 adjacent, 2 relevant, 3 bears on an open question. See the prompt in the script.
 keep_threshold = 2
 max_digest_items = 8
-max_candidates = 600
+# Raised from 600 on 2026-10-03: a dry run with the keyword channel added reached 599 after dedupe,
+# and the cap drops the bioRxiv tail first because sources are fetched in precision order.
+max_candidates = 800
 context_files = ["context.md"]
 
 # --- Citation chaining -------------------------------------------------------------------------
@@ -92,6 +94,85 @@ label = "Boyle, Berri & Cohen 2012, integrated neuromechanical model of gait"
 id = "W4389938379"
 label = "Chung, Chang & Kim, ElegansBot (eLife 2024) — equation of motion for locomotion"
 
+# Added 2026-10-03, re-aimed at the 8a close (protocol principle 13). 8a's results made the null
+# model, the gap junctions and the operating point the live questions, and the 8b re-plan added a
+# boundary-preserving null and a learned body; these are the papers that work now cites. Most are
+# weeks old and cited by nothing yet, which is the point: the next paper to cite one is the one
+# this project needs to see.
+
+[[openalex.seeds]]
+id = "W7151394533"
+label = "Dhiman 2026, topological sensitivity in connectome-constrained networks (shared-init null)"
+
+[[openalex.seeds]]
+id = "W7212064461"
+label = "Churchland et al. 2026, hyperparameter robustness in connectome reservoirs"
+
+[[openalex.seeds]]
+id = "W7165062094"
+label = "Therianos 2026, frozen rate operator on the larval fly connectome"
+
+[[openalex.seeds]]
+id = "W7215059097"
+label = "Park 2026, boundary-preserving nulls in an evolutionary connectome comparison"
+
+[[openalex.seeds]]
+id = "W7214625013"
+label = "Reimers et al. 2026, C. elegans connectomes as reservoirs against nulls"
+
+[[openalex.seeds]]
+id = "W7212012996"
+label = "Lee 2026, atlas-fitted connectome in a body with a learned controller"
+
+[[openalex.seeds]]
+id = "W4412934689"
+label = "Chung & Kim 2026, optimised connectome weights for forward and backward locomotion"
+
+[[openalex.seeds]]
+id = "W7213319572"
+label = "Sar et al. 2026, gap junctions and synchronisation in C. elegans"
+
+[[openalex.seeds]]
+id = "W7117489054"
+label = "Morrison & Young 2025, data-driven premotor network reproducing forward/reverse switching"
+
+[[openalex.seeds]]
+id = "W4411629271"
+label = "Zhao et al. 2025, feedback loops in C. elegans rhythmic locomotion"
+
+[[openalex.seeds]]
+id = "W4405498175"
+label = "Emmons et al. 2024, comprehensive analysis of the C. elegans connectome (CC BY release)"
+
+[[openalex.seeds]]
+id = "W3116436954"
+label = "Fenyves et al. 2020, per-connection synaptic sign prediction from expression"
+
+[[openalex.seeds]]
+id = "W2626216136"
+label = "Kunert-Graf et al. 2017, multistability and long transients in the C. elegans network"
+
+[[openalex.seeds]]
+id = "W4405419531"
+label = "Zhao et al. 2024, BAAIWorm integrative brain-body model"
+
+# --- Keyword search ------------------------------------------------------------------------------
+# Preprints whose title or abstract carries a term, on the listed servers, through OpenAlex. Added
+# 2026-10-03 for two reasons found by hand that week. arXiv's query API returns HTTP 406 to GitHub
+# Actions runners, so the arXiv category sweep below can fail outright there. And the papers that
+# mattered most were filed outside the swept categories — a C. elegans reservoir benchmark under
+# cs.LG, a connectome robot controller under cs.RO — where no category sweep would have looked.
+# Over the fortnight it was tested on, these terms returned 18 arXiv records, every one of the
+# three that mattered among them.
+[openalex_search]
+enabled = true
+lookback_days = 21
+terms = ["connectome", "elegans", "nematode", "neuromechanical"]
+
+[[openalex_search.sources]]
+id = "S4306400194"
+label = "arXiv"
+
 # --- Preprint sweeps ---------------------------------------------------------------------------
 # Lower precision, and the reason the triage pass exists. These catch work before it is citable and
 # therefore before citation chaining can see it at all.
@@ -100,6 +181,9 @@ label = "Chung, Chang & Kim, ElegansBot (eLife 2024) — equation of motion for 
 enabled = true
 lookback_days = 8
 categories = ["q-bio.NC", "cs.NE"]
+# When the query API refuses (it answers HTTP 406 to GitHub Actions runners), read the category RSS
+# feed instead. It carries only the latest announcement day, and the digest says so.
+rss_fallback = true
 
 [biorxiv]
 enabled = true

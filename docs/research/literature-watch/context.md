@@ -8,7 +8,8 @@ it is read once per batch, and detail that does not change a score is detail tha
 A brief describing a phase that closed six months ago scores against questions nobody is asking any
 more, and the digest will look fine while doing it.
 
-Last reviewed: 2026-09-20 — re-aimed at Phase 8 (*ground, then embody*) as ratified in roadmap v4.3.
+Last reviewed: 2026-10-03 — re-aimed at the 8a close and the 8b re-plan (roadmap v4.4). Previous
+review 2026-09-20, at Phase 8's start.
 
 ## What the project is
 
@@ -25,48 +26,39 @@ in that comparison, not the point of the project.
 
 ## What is open right now
 
-These are the live questions — Phase 8 of the [roadmap](../../roadmap.md), *ground, then embody*. A
-paper bearing on one of them is a 3.
+These are the live questions — the second half of Phase 8 of the [roadmap](../../roadmap.md),
+*ground, then embody*. A paper bearing on one of them is a 3.
 
-- **Wiring advantage vs. initialisation.** A connectome-constrained network reaches competence
-  sooner than degree-preserving rewired nulls in the current results, but the rewiring covaries
-  with initialisation, and a fly connectome result reports exactly that advantage dissolving under
-  shared initialisation plus a degree-preserving null. Anything on connectome-vs-null comparisons,
-  degree-preserving or spectral nulls, wiring-versus-initialisation confounds, or structure-function
-  claims in any connectome is directly on point. So is anything predicting *which* graphs learn
-  faster from structure alone — input routing, confinement of activity to a core, which cells drive
-  the dominant modes — because no graph property measured here predicts learning time.
-- **Operating point.** Whether a wiring's apparent advantage survives the learner's settings. One
-  inherited learning rate reversed the sign of a registered result here, and a connectome-reservoir
-  study reports the same sensitivity independently. Connectome reservoir computing, hyperparameter
-  robustness or sensitivity surfaces, and any claim that a wiring effect holds — or does not —
-  across an operating region rather than at one pinned setting.
-- **Measured weights on real edges.** This substrate is anatomically constrained in topology and
-  *randomly initialised in weight*; the next rung replaces the draw with a measurement. Fitted
-  synaptic weights or signs on connectome edges, optogenetic and signal-propagation measurements of
-  functional connectivity, neuromuscular junction data, sex-specific wiring, and whole-brain imaging
-  that constrains a model's parameters rather than describing activity.
-- **Embodiment.** There is no body here: motor output is a learned readout over motor-neuron
-  activations, and the next shipment drives the anatomical motor-to-muscle map into a
-  two-dimensional body. Neuromechanical models, rod-chain and viscoelastic body mechanics,
-  resistive-force and drag models, muscle models, proprioceptive feedback, and connectome-driven
-  locomotion. Compute is the binding constraint — a body must survive thousands of training
-  episodes per seed — so reduced-order and fast models are as interesting as accurate ones.
-- **Dynamics beyond a fixed weight matrix.** Gap junctions as a dynamical term rather than a
-  symmetric constant; intrinsic neuronal dynamics; node-level adaptation, which is the biologically
-  faithful form of much *C. elegans* learning and sits in the neuron rather than the synapse; and
-  how far a rate model can be pushed before spiking is required.
-- **Plasticity, narrowed.** The uniform-rule programme closed here with a diagnosed cause: no
-  biologically plausible rule that *writes* the chemical weights learns this substrate to any
-  benefit. What stays live is narrower — plasticity **placed** at an anatomically identified site
-  against a degree-matched random subset of the same size; **plastic electrical synapses**; and
-  *negative* results or diagnosed failure modes for local rules. A three-factor or neuromodulated
-  rule paper with none of those properties is a 2.
+- **What a "wiring advantage" over a null is made of.** A connectome-constrained network here
+  reaches competence sooner than degree-preserving rewired nulls, and the advantage survived a
+  shared-initialisation control — but about half of it came from how the null rewired the *gap
+  junctions*, and the rest depends on the null manufacturing short sensory-to-motor routes the real
+  wiring lacks. Anything on null-model design for connectomes is directly on point: degree-,
+  strength-, sign- or boundary-preserving nulls, what a null fails to preserve, shortcut or
+  path-length artefacts, shared-initialisation controls, and structure-function claims in any
+  connectome that do or do not survive a stronger null. So is anything predicting *which* graphs
+  learn faster from structure alone.
+- **Gap junctions as dynamics.** Electrical synapses here are a fixed symmetric matrix; the next
+  rung gives neurons time constants, couples them ohmically, and makes the gap junctions plastic
+  under gradient learning. Gap-junction function in network models, electrical-synapse plasticity,
+  synchronisation, stiffness and integration of graded networks with strong coupling, and intrinsic
+  or node-level adaptation.
+- **Learning through a body.** The next shipment drives the anatomical motor-to-muscle map into a
+  kinematic two-dimensional body whose rhythm comes from a body-level generator, and asks whether
+  the wiring matters for segmental drive and steering. Connectome-driven or learned locomotion
+  controllers, central pattern generators and proprioceptive rhythm generation, forward/backward
+  switching, resistive-force and reduced-order body models, muscle models and neuromuscular signs,
+  and any connectome-through-a-body work with or without learning or a null — especially with one.
+  Compute is the binding constraint, so fast models are as interesting as accurate ones.
+- **Operating point.** Whether a wiring effect survives the learner's settings. Here it is
+  depth-critical — present at four or more settling hops, reversed at two. Connectome reservoir
+  computing (positive or negative), hyperparameter sensitivity surfaces, and claims that a wiring
+  effect holds across an operating region rather than at one pinned setting.
 - **Behaviour precise enough to validate a body against.** Locomotion kinematics (undulation
-  frequency and amplitude, crawling and swimming speeds, posture or eigenworm spectra, omega-turn
-  geometry), forward and reverse bout statistics, and roaming/dwelling or patch-leaving on
-  structured bacterial lawns — what a simulated worm with a body and an internal state is checked
-  against.
+  frequency and amplitude, wavelength, speed, eigenworm spectra, omega-turn geometry), forward and
+  reverse bout statistics, roaming/dwelling and patch-leaving on structured lawns, and
+  chemotaxis or thermotaxis quantification — including methods for separating taxis from edge or
+  wall effects in tracking data.
 
 ## Also worth knowing about
 
@@ -76,6 +68,12 @@ Score 2, not 3: useful without settling anything above.
   state, homology between nematode nervous systems, and wiring changes across development or life
   stage. *Demoted from 3 on 2026-09-20: Phase 8 stays on one species deliberately. Still worth
   seeing, because the question returns in a later phase and the data landscape moves meanwhile.*
+- **Measured synaptic weights and signs on connectome edges** — fitted weights, functional
+  connectivity atlases, per-connection sign predictions. *Demoted from 3 on 2026-10-03: measured
+  weights did not move the wiring effect here, so the question is answered for now; new data or a
+  per-connection sign resource is still worth seeing.*
+- **Placed plasticity** — a learning rule at an anatomically identified site against a matched
+  random subset — and diagnosed failures of local rules.
 - New connectome datasets or releases for any organism, and the tooling to use them.
 - Whole-organism or whole-brain simulation efforts in any organism, including ones with neither
   learning nor controls — they bound what this project can claim as novel.
