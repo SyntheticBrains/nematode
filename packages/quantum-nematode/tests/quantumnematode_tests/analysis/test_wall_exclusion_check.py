@@ -83,6 +83,18 @@ class TestManifests:
         assert wec.session_of(log) == "20261003_213637_205a3ba8"
 
 
+class TestRegisteredSeeds:
+    def test_a_panel_missing_a_seed_is_refused_before_any_reading(self, tmp_path: Path) -> None:
+        capture = tmp_path / "capture with spaces.json"
+        capture.write_text(json.dumps({"runs": []}))
+        manifest = tmp_path / "manifest-control.txt"
+        manifest.write_text(f"42 {capture}\n")
+        with pytest.raises(wec.CheckError, match="expected"):
+            wec.floor_held(manifest, 1.0)
+        with pytest.raises(wec.CheckError, match="expected"):
+            wec.read_arm(manifest, None)
+
+
 class TestCommittedReadings:
     """The committed comparison says what Logbook 035's dated note says."""
 

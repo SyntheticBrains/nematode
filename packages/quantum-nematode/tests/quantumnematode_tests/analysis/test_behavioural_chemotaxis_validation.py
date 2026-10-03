@@ -174,3 +174,23 @@ def test_the_summary_is_unchanged_when_the_exclusion_is_off(tmp_path, monkeypatc
     monkeypatch.setattr(sys, "argv", argv)
     bcv.main()
     assert "wall_exclusion" not in json.loads(out.read_text())
+
+
+def test_a_manifest_path_may_contain_spaces(tmp_path):
+    """The seed is the first field and everything after it is the capture path."""
+    folder = tmp_path / "a folder"
+    folder.mkdir()
+    capture = folder / "behaviour capture.json"
+    capture.write_text(
+        json.dumps({"runs": [{"run": 0, "seed": 7, "steps": _klinokinesis_steps()}]}),
+    )
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text(f"7 {capture}\n")
+    assert list(bcv.load_manifest(manifest)) == [7]
+
+
+def test_an_empty_count_keeps_the_summary_valid_json():
+    """With no transitions to count, the fraction kept is None rather than NaN."""
+    _kept, report = bcv.exclude_walls({1: [[]]}, arena_mm=20.0, margin_mm=1.0)
+    assert report["fraction_kept"] is None
+    json.dumps(report, allow_nan=False)

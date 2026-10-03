@@ -82,11 +82,12 @@ def load_manifest(manifest: Path) -> dict[int, list[list[BehaviourStep]]]:
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        parts = line.split()
+        # The seed is the first field and the path is the rest, so a path may contain spaces.
+        parts = line.split(maxsplit=1)
         if len(parts) != 2 or not parts[0].lstrip("-").isdigit():  # expected: `<int seed> <file>`
             print(f"  WARN: skipping malformed manifest line: {raw!r}")
             continue
-        seed, capture_path = int(parts[0]), REPO / parts[1]
+        seed, capture_path = int(parts[0]), REPO / parts[1].strip()
         if not capture_path.exists():
             print(f"  WARN seed {seed}: {capture_path} not found - dropped")
             continue
@@ -121,11 +122,12 @@ def exclude_walls(
     seeds: dict[int, list[list[BehaviourStep]]],
     arena_mm: float,
     margin_mm: float,
-) -> tuple[dict[int, list[list[BehaviourStep]]], dict[str, float]]:
+) -> tuple[dict[int, list[list[BehaviourStep]]], dict[str, float | None]]:
     """Replace each run by its stretches away from the walls, and count what was kept.
 
     The counts are transitions — consecutive step pairs — before and after, since that is the unit
-    every bias statistic is computed over.
+    every bias statistic is computed over. With nothing to count, the fraction kept is None, so
+    the summary stays valid JSON.
     """
     before = sum(max(len(run) - 1, 0) for runs in seeds.values() for run in runs)
     kept_seeds = {
@@ -138,11 +140,12 @@ def exclude_walls(
         "margin_mm": margin_mm,
         "transitions_before": before,
         "transitions_kept": after,
-        "fraction_kept": after / before if before else float("nan"),
+        "fraction_kept": after / before if before else None,
     }
+    shown = f"{after / before:.1%}" if before else "n/a"
     print(
         f"wall exclusion: margin {margin_mm} mm in a {arena_mm} mm arena keeps {after} of "
-        f"{before} transitions ({report['fraction_kept']:.1%})",
+        f"{before} transitions ({shown})",
     )
     return kept_seeds, report
 

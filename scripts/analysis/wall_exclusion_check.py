@@ -107,12 +107,18 @@ def build_manifests(campaign: Path, out_dir: Path, exports: Path = REPO / "expor
     return written
 
 
-def read_arm(manifest: Path, margin_mm: float | None) -> dict[str, Any]:
-    """Grade one arm at one setting, exactly as the original analysis did except for the margin."""
+def load_registered(manifest: Path) -> dict[int, list[list[Any]]]:
+    """Load an arm's post-convergence tail, refusing a panel missing any registered seed."""
     seeds = bcv.tail_runs(bcv.load_manifest(manifest), TAIL_RUNS)
     if sorted(seeds) != list(SEEDS):
         msg = f"{manifest.name}: seeds {sorted(seeds)}, expected {list(SEEDS)}"
         raise CheckError(msg)
+    return seeds
+
+
+def read_arm(manifest: Path, margin_mm: float | None) -> dict[str, Any]:
+    """Grade one arm at one setting, exactly as the original analysis did except for the margin."""
+    seeds = load_registered(manifest)
     report = None
     if margin_mm is not None:
         seeds, report = bcv.exclude_walls(seeds, ARENA_MM, margin_mm)
@@ -134,8 +140,8 @@ def floor_held(manifest: Path, margin_mm: float) -> dict[str, Any]:
     from quantumnematode.validation.behavioural_agreement import grade_statistic
     from quantumnematode.validation.datasets import load_bias_signatures
 
+    seeds = load_registered(manifest)
     refs = load_bias_signatures(modality="food")
-    seeds = bcv.tail_runs(bcv.load_manifest(manifest), TAIL_RUNS)
     kept, _ = bcv.exclude_walls(seeds, ARENA_MM, margin_mm)
     slopes: dict[str, list[float]] = {"klinotaxis": [], "klinotaxis_all": []}
     for seed in sorted(seeds):
