@@ -11,11 +11,17 @@ then reads everything it finds against a written brief.
 1. **Citation chaining** — [`seeds.toml`](seeds.toml) lists the papers this project builds on, and
    OpenAlex is asked for new work citing any of them. Almost everything it returns is on-topic; this
    is the channel worth reading first.
-2. **Preprint sweeps** — arXiv (`q-bio.NC`, `cs.NE`) and bioRxiv subject collections for the same
-   window. Low precision, but they see work weeks before it is citable.
-3. **Triage** — Claude Haiku scores every candidate 0–3 against [`context.md`](context.md), the
+2. **Keyword search** — OpenAlex is asked for arXiv preprints whose title or abstract carries a
+   term in `seeds.toml` (`connectome`, `elegans`, …). It reaches work filed outside the swept
+   categories, and it does not depend on arXiv's own API.
+3. **Preprint sweeps** — arXiv (`q-bio.NC`, `cs.NE`) and bioRxiv subject collections for the same
+   window. Low precision, but they see work weeks before it is citable. arXiv's query API answers
+   HTTP 406 to GitHub Actions runners (since late September 2026); when it does, the arXiv source
+   reads the category RSS feed instead, which carries only the latest announcement day, and the
+   digest's *Partial sweep* line says so.
+4. **Triage** — Claude Haiku scores every candidate 0–3 against [`context.md`](context.md), the
    hand-maintained brief. Anything at 2 or above survives.
-4. **Digest** — Claude Opus writes two or three sentences per survivor: what it found, and what it
+5. **Digest** — Claude Opus writes two or three sentences per survivor: what it found, and what it
    would change here. The digest is opened as an issue labelled `literature-watch`.
 
 Roughly 600–900 records a week reach the triage pass, at single-digit cents. The GitHub Actions
@@ -43,7 +49,10 @@ The workflow ([`.github/workflows/literature-watch.yml`](../../../.github/workfl
 runs Mondays at 08:00 UTC and can be dispatched by hand, with a `dry_run` input that lists
 candidates without calling a model or opening an issue.
 
-**Setup:** the repository needs an `ANTHROPIC_API_KEY` secret. `OPENALEX_MAILTO` is optional — an
+**Setup:** the repository needs an `ANTHROPIC_API_KEY` secret (Settings → Secrets and variables →
+Actions, or `gh secret set ANTHROPIC_API_KEY`). A full run checks the key and both model names
+before it fetches anything, so a missing secret or a retired model fails in seconds with one
+sentence rather than after the sweep with an SDK traceback. `OPENALEX_MAILTO` is optional — an
 address there moves OpenAlex requests into a faster pool, and it is kept in a secret rather than in
 `seeds.toml` because this repository is public.
 

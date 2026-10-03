@@ -1,12 +1,17 @@
 """Weekly literature watch: gather new work, score it for relevance, write a digest.
 
-Three sources, in descending order of precision:
+Four sources, in descending order of precision:
 
 1. **Citation chaining** (OpenAlex) — new work citing a curated seed set. Almost everything that
    cites the *C. elegans* connectome papers is on-topic, whereas a keyword search for "C. elegans"
    returns mostly wet-lab molecular biology. This is the channel worth reading first.
-2. **arXiv** — `q-bio.NC` and `cs.NE` submissions in the window.
-3. **bioRxiv** — the configured subject collections in the window.
+2. **Keyword search** (OpenAlex) — preprints on configured servers whose title or abstract carries
+   a configured term. It reaches work filed outside the swept categories (a connectome paper posted
+   under machine learning or robotics) and does not depend on arXiv's own API.
+3. **arXiv** — the configured category submissions in the window. arXiv's query API refuses some
+   cloud hosts outright; when it does, the source falls back to the category RSS feed, which carries
+   only the latest announcement day, and says so in the digest.
+4. **bioRxiv** — the configured subject collections in the window.
 
 The raw sweep is a few hundred abstracts a week, which is too many to read and mostly irrelevant.
 A cheap model scores every candidate against a hand-maintained project brief, and a capable model
@@ -67,6 +72,12 @@ HTTP_RETRIES = 3
 HTTP_BACKOFF = 4.0
 
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom", "os": "http://a9.com/-/spec/opensearch/1.1/"}
+RSS_NS = {
+    "dc": "http://purl.org/dc/elements/1.1/",
+    "arxiv": "http://arxiv.org/schemas/atom",
+}
+# The feed lists every announcement type; replacements are old papers re-posted, not new work.
+RSS_ANNOUNCE_TYPES = frozenset({"new", "cross"})
 # arXiv asks callers to leave three seconds between requests.
 ARXIV_DELAY = 3.0
 ARXIV_PAGE = 100
@@ -78,6 +89,10 @@ BIORXIV_DELAY = 1.0
 MAX_PAGES = 60
 
 ABSTRACT_CHARS = 1200
+
+# Defaults when the config names no model; the shipped config names both.
+TRIAGE_MODEL = "claude-haiku-4-5"
+DIGEST_MODEL = "claude-opus-5-5"
 
 
 @dataclass
@@ -134,6 +149,10 @@ class Fetched:
 
 class SourceError(RuntimeError):
     """A source could not be fetched; the run continues without it."""
+
+
+class PreflightError(RuntimeError):
+    """The model calls cannot succeed, so the run stops before fetching anything."""
 
 
 def _http_json(url: str) -> dict[str, Any]:
@@ -203,11 +222,16 @@ def fetch_openalex(config: dict[str, Any], until: date) -> Fetched:
         "authorships,referenced_works,type",
         "per-page": "200",
     }
+    works, partials = _openalex_pages(params, "citation chaining")
+    return Fetched([_openalex_candidate(work, labels) for work in works], partials)
+
+
+def _openalex_pages(params: dict[str, str], label: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """Page through an OpenAlex works query, returning the works and any partial-sweep note."""
     mailto = os.environ.get(OPENALEX_MAILTO_ENV)
     if mailto:
-        params["mailto"] = mailto
-
-    found: list[Candidate] = []
+        params = {**params, "mailto": mailto}
+    works: list[dict[str, Any]] = []
     partials: list[str] = []
     cursor = "*"
     for page_number in range(MAX_PAGES):
@@ -222,15 +246,15 @@ def fetch_openalex(config: dict[str, Any], until: date) -> Fetched:
                 msg = f"OpenAlex returned no results block: {str(page)[:200]}"
                 raise SourceError(msg)  # noqa: TRY301 — handled as a partial page just below
         except SourceError as exc:
-            if not found:
+            if not works:
                 raise
-            partials.append(_partial("citation chaining", page_number, exc, len(found)))
+            partials.append(_partial(label, page_number, exc, len(works)))
             break
-        found.extend(_openalex_candidate(work, labels) for work in page["results"])
+        works.extend(page["results"])
         cursor = page.get("meta", {}).get("next_cursor")
         if not cursor or not page["results"]:
             break
-    return Fetched(found, partials)
+    return works, partials
 
 
 def _openalex_candidate(work: dict[str, Any], labels: dict[str, str]) -> Candidate:
@@ -259,8 +283,113 @@ def _openalex_candidate(work: dict[str, Any], labels: dict[str, str]) -> Candida
     )
 
 
+def fetch_openalex_search(config: dict[str, Any], until: date) -> Fetched:
+    """Fetch work on the configured sources whose title or abstract carries a configured term."""
+    terms: list[str] = config.get("terms", [])
+    sources: list[dict[str, str]] = config.get("sources", [])
+    if not terms or not sources:
+        return Fetched([])
+    since = until - timedelta(days=int(config.get("lookback_days", 21)))
+    params = {
+        "filter": (
+            f"primary_location.source.id:{'|'.join(source['id'] for source in sources)},"
+            f"from_publication_date:{since.isoformat()},"
+            f"to_publication_date:{until.isoformat()},"
+            f"title_and_abstract.search:{' OR '.join(terms)}"
+        ),
+        "select": "id,doi,title,publication_date,primary_location,abstract_inverted_index,"
+        "authorships,type",
+        "per-page": "200",
+    }
+    works, partials = _openalex_pages(params, "keyword search")
+    found = [_openalex_candidate(work, {}) for work in works]
+    for candidate in found:
+        candidate.source = "openalex-search"
+    return Fetched(found, partials)
+
+
 def fetch_arxiv(config: dict[str, Any], until: date) -> Fetched:
-    """Fetch arXiv submissions in the configured categories and window."""
+    """Fetch arXiv submissions in the configured categories and window.
+
+    The query API is tried first, because it covers the whole window. When it refuses before
+    returning anything, the category RSS feed is read instead: it covers only the latest
+    announcement day, so the result carries a partial-sweep note saying so.
+    """
+    try:
+        return _fetch_arxiv_api(config, until)
+    # A refusal and an unparseable first page (an HTML error page served with a 200) both leave
+    # the API with nothing to give; later pages failing are handled inside as a partial sweep.
+    except (SourceError, ET.ParseError) as exc:
+        if not config.get("rss_fallback", True) or not config.get("categories"):
+            raise
+        print(f"warning: arXiv query API failed ({exc}); reading the RSS feed", file=sys.stderr)
+        found = fetch_arxiv_rss(config, until)
+        note = (
+            f"arXiv's query API refused the request ({exc}); the arXiv source fell back to the "
+            f"category RSS feed, which carries only the latest announcement day, so "
+            f"{len(found)} records stand in for the whole window."
+        )
+        return Fetched(found, [note])
+
+
+def fetch_arxiv_rss(config: dict[str, Any], until: date) -> list[Candidate]:
+    """Read the latest announcement day for the configured categories from arXiv's RSS feed.
+
+    The feed always carries the latest announcement, whatever window was asked for, so items are
+    kept only if their announcement date falls inside the configured lookback ending at ``until``.
+    A run with ``--until`` in the past then gets nothing from the feed rather than this week's
+    papers presented as that week's.
+    """
+    since = until - timedelta(days=int(config.get("lookback_days", 8)))
+    categories: list[str] = config.get("categories", [])
+    url = "https://rss.arxiv.org/rss/" + "+".join(categories)
+    channel = ET.fromstring(_http_bytes(url).decode("utf-8"))  # noqa: S314 — arXiv's own feed over https
+    found: list[Candidate] = []
+    for item in channel.iter("item"):
+        announce = (
+            item.findtext("arxiv:announce_type", default="", namespaces=RSS_NS) or ""
+        ).strip()
+        if announce and announce not in RSS_ANNOUNCE_TYPES:
+            continue
+        candidate = _arxiv_rss_candidate(item)
+        # An undated item cannot be shown to fall inside the window, so it is not kept.
+        if candidate.published and since.isoformat() <= candidate.published <= until.isoformat():
+            found.append(candidate)
+    return found
+
+
+def _arxiv_rss_candidate(item: ET.Element) -> Candidate:
+    """Convert one arXiv RSS item into a candidate shaped like the query API's."""
+
+    def text(tag: str) -> str:
+        return " ".join((item.findtext(tag, default="", namespaces=RSS_NS) or "").split())
+
+    # The description reads "arXiv:<id> Announce Type: <type> Abstract: <text>".
+    description = text("description")
+    abstract = description.split("Abstract:", 1)[1].strip() if "Abstract:" in description else ""
+    guid = text("guid")
+    uid = guid.rsplit(":", 1)[-1] if guid else text("link").rsplit("/", 1)[-1]
+    authors = [name.strip() for name in text("dc:creator").split(",") if name.strip()][:6]
+    published = ""
+    if pub_date := text("pubDate"):
+        try:
+            published = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %z").date().isoformat()
+        except ValueError:
+            published = ""
+    return Candidate(
+        uid=uid,
+        source="arxiv",
+        title=text("title"),
+        abstract=abstract,
+        authors=", ".join(authors),
+        published=published,
+        url=f"https://arxiv.org/abs/{uid}",
+        venue="arXiv preprint",
+    )
+
+
+def _fetch_arxiv_api(config: dict[str, Any], until: date) -> Fetched:
+    """Fetch arXiv submissions in the configured categories and window from the query API."""
     categories: list[str] = config.get("categories", [])
     if not categories:
         return Fetched([])
@@ -392,6 +521,20 @@ def _biorxiv_candidate(item: dict[str, Any], server: str) -> Candidate:
     )
 
 
+# An arXiv paper reaches the sweep under two identifiers: the query API and the RSS feed give its
+# versioned id ("2609.39248v1"), OpenAlex its unversioned DataCite DOI ("10.48550/arxiv.2609.39248").
+_ARXIV_ID = re.compile(r"^(?:10\.48550/arxiv\.)?(\d{4}\.\d{4,5})(?:v\d+)?$")
+
+
+def _identity_keys(uid: str) -> set[str]:
+    """Return every key one identifier answers to, so both arXiv forms of a paper match."""
+    normalised = uid.lower().removeprefix("https://doi.org/")
+    keys = {normalised}
+    if match := _ARXIV_ID.match(normalised):
+        keys.add(f"arxiv:{match.group(1)}")
+    return keys
+
+
 def _title_key(title: str) -> str:
     """Build a loose title key, so a preprint and its published version collapse into one."""
     return re.sub(r"[^a-z0-9]+", "", title.lower())[:80]
@@ -404,18 +547,20 @@ def dedupe(candidates: list[Candidate], seen: set[str]) -> list[Candidate]:
     that week's bioRxiv sweep. The first occurrence wins, and sources are fetched in precision
     order, so the surviving copy carries the citation-chaining metadata when there is any.
     """
-    normalised_seen = {value.lower().removeprefix("https://doi.org/") for value in seen}
+    # Previous digests carry whichever form of an arXiv id was reported then; the next run may meet
+    # the same paper under the other form, so both sides are compared on every key they answer to.
+    normalised_seen = {key for value in seen for key in _identity_keys(value)}
     kept: list[Candidate] = []
     uids: set[str] = set()
     titles: set[str] = set()
     for candidate in candidates:
-        uid = candidate.uid.lower()
+        keys = _identity_keys(candidate.uid) if candidate.uid else set()
         title_key = _title_key(candidate.title)
-        if not uid or uid in uids or uid in normalised_seen:
+        if not keys or keys & uids or keys & normalised_seen:
             continue
         if title_key and title_key in titles:
             continue
-        uids.add(uid)
+        uids |= keys
         if title_key:
             titles.add(title_key)
         kept.append(candidate)
@@ -493,10 +638,33 @@ def _client() -> Anthropic:
     return anthropic.Anthropic()
 
 
+def preflight(config: dict[str, Any]) -> None:
+    """Fail in seconds, before the minutes-long fetch, if the model calls cannot succeed.
+
+    A missing key and a retired model name both used to surface only after every source had been
+    swept, as an SDK traceback. Checking both up front turns either into one plain sentence.
+    """
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+        msg = (
+            "ANTHROPIC_API_KEY is not set, so the scoring pass cannot run. In GitHub Actions it "
+            "comes from the repository secret of the same name; locally, export it or pass "
+            "--dry-run to fetch without scoring."
+        )
+        raise PreflightError(msg)
+    client = _client()
+    for key, default in (("triage_model", TRIAGE_MODEL), ("digest_model", DIGEST_MODEL)):
+        model = config.get(key, default)
+        try:
+            client.models.retrieve(model)
+        except Exception as exc:  # the SDK's error classes vary by version; any failure is fatal
+            msg = f"{key} {model!r} is not available to this key: {exc}"
+            raise PreflightError(msg) from exc
+
+
 def score(candidates: list[Candidate], brief: str, config: dict[str, Any]) -> dict[str, int]:
     """Score every candidate for relevance, returning uid -> score."""
     client = _client()
-    model = config.get("triage_model", "claude-haiku-4-5")
+    model = config.get("triage_model", TRIAGE_MODEL)
     batch_size = int(config.get("batch_size", 40))
     scores: dict[str, int] = {}
 
@@ -530,7 +698,7 @@ def write_digest(selected: list[Candidate], brief: str, config: dict[str, Any]) 
         f"{item.prompt_block(index)}\n    link: {item.url}" for index, item in enumerate(selected)
     )
     response = client.messages.create(
-        model=config.get("digest_model", "claude-opus-5"),
+        model=config.get("digest_model", DIGEST_MODEL),
         max_tokens=16000,
         system=DIGEST_SYSTEM.format(brief=brief),
         messages=[{"role": "user", "content": listing}],
@@ -599,6 +767,7 @@ def gather(config: dict[str, Any], until: date) -> tuple[list[Candidate], list[s
     """Fetch every enabled source, tolerating individual failures."""
     fetchers = (
         ("citation chaining", fetch_openalex, config.get("openalex", {})),
+        ("keyword search", fetch_openalex_search, config.get("openalex_search", {})),
         ("arXiv", fetch_arxiv, config.get("arxiv", {})),
         ("bioRxiv", fetch_biorxiv, config.get("biorxiv", {})),
     )
@@ -700,6 +869,15 @@ def main(argv: list[str] | None = None) -> int:
     seen: set[str] = set()
     if args.seen_file and args.seen_file.is_file():
         seen = set(args.seen_file.read_text(encoding="utf-8").split())
+
+    # Checked before anything slow — the sweep takes minutes — on both the fetch and the
+    # saved-sweep paths, since both end in model calls.
+    if not args.dry_run:
+        try:
+            preflight(config.get("scoring", {}))
+        except PreflightError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
 
     if args.candidates_in:
         sweep = load_candidates(args.candidates_in)
