@@ -32,8 +32,8 @@ These are the live questions — the second half of Phase 8 of the [roadmap](../
 - **What a "wiring advantage" over a null is made of.** A connectome-constrained network here
   reaches competence sooner than degree-preserving rewired nulls, and the advantage survived a
   shared-initialisation control — but about half of it came from how the null rewired the *gap
-  junctions*, and the rest depends on the null manufacturing short sensory-to-motor routes the real
-  wiring lacks. Anything on null-model design for connectomes is directly on point: degree-,
+  junctions*, and whether it shows at all depends on how many hops the network settles for, which
+  tracks the short sensory-to-motor routes a rewired null manufactures and the real wiring lacks. Anything on null-model design for connectomes is directly on point: degree-,
   strength-, sign- or boundary-preserving nulls, what a null fails to preserve, shortcut or
   path-length artefacts, shared-initialisation controls, and structure-function claims in any
   connectome that do or do not survive a stronger null. So is anything predicting *which* graphs
@@ -70,8 +70,9 @@ Score 2, not 3: useful without settling anything above.
   seeing, because the question returns in a later phase and the data landscape moves meanwhile.*
 - **Measured synaptic weights and signs on connectome edges** — fitted weights, functional
   connectivity atlases, per-connection sign predictions. *Demoted from 3 on 2026-10-03: measured
-  weights did not move the wiring effect here, so the question is answered for now; new data or a
-  per-connection sign resource is still worth seeing.*
+  weights did not move the wiring effect under gradient learning here, and the result under the
+  local learner was unresolved, so the rung is closed for this phase; new data or a per-connection
+  sign resource is still worth seeing.*
 - **Placed plasticity** — a learning rule at an anatomically identified site against a matched
   random subset — and diagnosed failures of local rules.
 - New connectome datasets or releases for any organism, and the tooling to use them.

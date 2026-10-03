@@ -222,11 +222,16 @@ def fetch_openalex(config: dict[str, Any], until: date) -> Fetched:
         "authorships,referenced_works,type",
         "per-page": "200",
     }
+    works, partials = _openalex_pages(params, "citation chaining")
+    return Fetched([_openalex_candidate(work, labels) for work in works], partials)
+
+
+def _openalex_pages(params: dict[str, str], label: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """Page through an OpenAlex works query, returning the works and any partial-sweep note."""
     mailto = os.environ.get(OPENALEX_MAILTO_ENV)
     if mailto:
-        params["mailto"] = mailto
-
-    found: list[Candidate] = []
+        params = {**params, "mailto": mailto}
+    works: list[dict[str, Any]] = []
     partials: list[str] = []
     cursor = "*"
     for page_number in range(MAX_PAGES):
@@ -241,15 +246,15 @@ def fetch_openalex(config: dict[str, Any], until: date) -> Fetched:
                 msg = f"OpenAlex returned no results block: {str(page)[:200]}"
                 raise SourceError(msg)  # noqa: TRY301 — handled as a partial page just below
         except SourceError as exc:
-            if not found:
+            if not works:
                 raise
-            partials.append(_partial("citation chaining", page_number, exc, len(found)))
+            partials.append(_partial(label, page_number, exc, len(works)))
             break
-        found.extend(_openalex_candidate(work, labels) for work in page["results"])
+        works.extend(page["results"])
         cursor = page.get("meta", {}).get("next_cursor")
         if not cursor or not page["results"]:
             break
-    return Fetched(found, partials)
+    return works, partials
 
 
 def _openalex_candidate(work: dict[str, Any], labels: dict[str, str]) -> Candidate:
@@ -296,34 +301,10 @@ def fetch_openalex_search(config: dict[str, Any], until: date) -> Fetched:
         "authorships,type",
         "per-page": "200",
     }
-    mailto = os.environ.get(OPENALEX_MAILTO_ENV)
-    if mailto:
-        params["mailto"] = mailto
-
-    found: list[Candidate] = []
-    partials: list[str] = []
-    cursor = "*"
-    for page_number in range(MAX_PAGES):
-        try:
-            page = _http_json(
-                "https://api.openalex.org/works?"
-                + urllib.parse.urlencode({**params, "cursor": cursor}),
-            )
-            if "results" not in page:
-                msg = f"OpenAlex returned no results block: {str(page)[:200]}"
-                raise SourceError(msg)  # noqa: TRY301 — handled as a partial page just below
-        except SourceError as exc:
-            if not found:
-                raise
-            partials.append(_partial("keyword search", page_number, exc, len(found)))
-            break
-        for work in page["results"]:
-            candidate = _openalex_candidate(work, {})
-            candidate.source = "openalex-search"
-            found.append(candidate)
-        cursor = page.get("meta", {}).get("next_cursor")
-        if not cursor or not page["results"]:
-            break
+    works, partials = _openalex_pages(params, "keyword search")
+    found = [_openalex_candidate(work, {}) for work in works]
+    for candidate in found:
+        candidate.source = "openalex-search"
     return Fetched(found, partials)
 
 
@@ -528,6 +509,20 @@ def _biorxiv_candidate(item: dict[str, Any], server: str) -> Candidate:
     )
 
 
+# An arXiv paper reaches the sweep under two identifiers: the query API and the RSS feed give its
+# versioned id ("2609.39248v1"), OpenAlex its unversioned DataCite DOI ("10.48550/arxiv.2609.39248").
+_ARXIV_ID = re.compile(r"^(?:10\.48550/arxiv\.)?(\d{4}\.\d{4,5})(?:v\d+)?$")
+
+
+def _identity_keys(uid: str) -> set[str]:
+    """Return every key one identifier answers to, so both arXiv forms of a paper match."""
+    normalised = uid.lower().removeprefix("https://doi.org/")
+    keys = {normalised}
+    if match := _ARXIV_ID.match(normalised):
+        keys.add(f"arxiv:{match.group(1)}")
+    return keys
+
+
 def _title_key(title: str) -> str:
     """Build a loose title key, so a preprint and its published version collapse into one."""
     return re.sub(r"[^a-z0-9]+", "", title.lower())[:80]
@@ -540,18 +535,20 @@ def dedupe(candidates: list[Candidate], seen: set[str]) -> list[Candidate]:
     that week's bioRxiv sweep. The first occurrence wins, and sources are fetched in precision
     order, so the surviving copy carries the citation-chaining metadata when there is any.
     """
-    normalised_seen = {value.lower().removeprefix("https://doi.org/") for value in seen}
+    # Previous digests carry whichever form of an arXiv id was reported then; the next run may meet
+    # the same paper under the other form, so both sides are compared on every key they answer to.
+    normalised_seen = {key for value in seen for key in _identity_keys(value)}
     kept: list[Candidate] = []
     uids: set[str] = set()
     titles: set[str] = set()
     for candidate in candidates:
-        uid = candidate.uid.lower()
+        keys = _identity_keys(candidate.uid) if candidate.uid else set()
         title_key = _title_key(candidate.title)
-        if not uid or uid in uids or uid in normalised_seen:
+        if not keys or keys & uids or keys & normalised_seen:
             continue
         if title_key and title_key in titles:
             continue
-        uids.add(uid)
+        uids |= keys
         if title_key:
             titles.add(title_key)
         kept.append(candidate)

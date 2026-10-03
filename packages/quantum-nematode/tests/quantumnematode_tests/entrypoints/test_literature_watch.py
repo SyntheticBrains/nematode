@@ -75,6 +75,27 @@ class TestDedupe:
         assert lw.dedupe([_candidate("")], set()) == []
 
 
+class TestArxivIdentityAcrossWeeks:
+    """One arXiv paper reaches the sweep as a versioned id or as a DOI, and is reported once."""
+
+    def test_reported_as_an_arxiv_id_then_met_as_a_doi(self):
+        later = _candidate("10.48550/arxiv.2609.39248", "Retitled in the published record")
+        assert lw.dedupe([later], {"2609.39248v1"}) == []
+
+    def test_reported_as_a_doi_then_met_as_a_new_version(self):
+        later = _candidate("2609.39248v2", "Retitled in v2")
+        assert lw.dedupe([later], {"10.48550/arxiv.2609.39248"}) == []
+
+    def test_both_forms_in_one_run_keep_the_first(self):
+        first = _candidate("10.48550/arxiv.2609.39248", "One title", source="openalex-search")
+        second = _candidate("2609.39248v1", "A different title")
+        assert lw.dedupe([first, second], set()) == [first]
+
+    def test_a_different_paper_is_kept(self):
+        other = _candidate("2609.39249v1", "Another paper")
+        assert lw.dedupe([other], {"10.48550/arxiv.2609.39248"}) == [other]
+
+
 class TestOpenAlexCandidate:
     WORK: ClassVar[dict] = {
         "id": "https://openalex.org/W999",
