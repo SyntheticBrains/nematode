@@ -290,21 +290,30 @@ def _level_lines(manifest: Path, suffix: str) -> list[tuple[str, int, str]]:
     return rows
 
 
-def score_level(manifest: Path, half: str, suffix: str, tmp_dir: Path) -> dict[str, Any]:
+def score_level(
+    manifest: Path,
+    half: str,
+    suffix: str,
+    tmp_dir: Path,
+    cell: str = CELL,
+) -> dict[str, Any]:
     """Score one level's wild-vs-rewired contrast through the instrument built for that half.
 
     The PPO half goes through ``wiring_premise``, whose ``EFFICIENCY_ARMS`` is keyed on the block-V
     arm names; the reading half calls the efficiency module directly with its own labels. Both
     modules are used unmodified, and neither learner's arms are relabelled as the other's.
+
+    ``cell`` names the block-V cell the PPO half is scored as; it defaults to this panel's own, and
+    a panel on another block-V cell passes that cell's name.
     """
     tmp_dir.mkdir(parents=True, exist_ok=True)
     rows = _level_lines(manifest, suffix)
     if half == "ppo":
         cell_manifest = tmp_dir / f"_wp_{suffix}.txt"
         cell_manifest.write_text(
-            "\n".join(f"{CELL} {_WP_ARM[arm]} {seed} {out}" for arm, seed, out in rows) + "\n",
+            "\n".join(f"{cell} {_WP_ARM[arm]} {seed} {out}" for arm, seed, out in rows) + "\n",
         )
-        report = wp.efficiency_contrast(cell_manifest, CELL, tmp_dir)
+        report = wp.efficiency_contrast(cell_manifest, cell, tmp_dir)
     else:
         eff_manifest = tmp_dir / f"_eff_{suffix}.txt"
         eff_manifest.write_text(

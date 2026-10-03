@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Emit the null-strength configs: each full-null arm with a narrower rewiring.
 
-Two panels use them: A.6's chemical-only null (``null_strength_control.py``) and its gap-only split
-(``gap_split.py``). Each panel defines which arms are new and which committed arm each derives from,
+Three panels use them: A.6's chemical-only null (``null_strength_control.py``), its gap-only split
+(``gap_split.py``), and both on block V's thermal cell (``thermal_null_strength.py``). Each panel defines which arms are new and which committed arm each derives from,
 and is imported here. Each new config is its parent with one ``wiring`` value and nothing else; a test
 re-reads every file through the real loader to check that. A config that already exists is left
 alone, never overwritten.
@@ -27,9 +27,11 @@ if str(_ANALYSIS) not in sys.path:
 
 import gap_split as gs  # noqa: E402  # pyright: ignore[reportMissingImports]
 import null_strength_control as nsc  # noqa: E402  # pyright: ignore[reportMissingImports]
+import thermal_null_strength as tns  # noqa: E402  # pyright: ignore[reportMissingImports]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = PROJECT_ROOT / "configs" / "scenarios" / "foraging"
+THERMAL_CONFIG_DIR = PROJECT_ROOT / "configs" / "scenarios" / "thermal_foraging"
 WIRING = "rewired_chemical_only"
 _HALF_LABEL = {"ppo": "PPO", "reading": "reading learner"}
 # (wiring, header title, what the null holds, the test that re-checks the delta) per panel.
@@ -54,9 +56,29 @@ _GAP_HELD = (
     ),
     "test_gap_split.py",
 )
+_THERMAL_CHEMICAL = (
+    _CHEMICAL[0],
+    "Thermal null-strength control arm",
+    "the chemical-only rewired null on block V's thermal cell (Phase 8 A.6t)",
+    _CHEMICAL[3],
+    "test_thermal_null_strength.py",
+)
+_THERMAL_GAP_HELD = (
+    _GAP_HELD[0],
+    "Thermal gap-only split arm",
+    "the gap-held rewired null on block V's thermal cell (Phase 8 A.6t)",
+    _GAP_HELD[3],
+    "test_thermal_null_strength.py",
+)
+_THERMAL_NEW = {
+    wiring: {stem: arm for stem, arm in tns.NEW_ARMS.items() if tns.NEW_WIRING[stem] == wiring}
+    for wiring in (_CHEMICAL[0], _GAP_HELD[0])
+}
 PANELS: tuple[tuple[dict[str, tuple[str, str]], tuple[str, str, str, str, str]], ...] = (
     (nsc.NEW_ARMS, _CHEMICAL),
     (gs.NEW_ARMS, _GAP_HELD),
+    (_THERMAL_NEW[_CHEMICAL[0]], _THERMAL_CHEMICAL),
+    (_THERMAL_NEW[_GAP_HELD[0]], _THERMAL_GAP_HELD),
 )
 
 
@@ -66,7 +88,11 @@ def derive(stem: str) -> tuple[Path, str]:
         (arms, panel) for arms, panel in PANELS if stem in arms
     )
     half, parent = new_arms[stem]
-    data = yaml.safe_load((CONFIG_DIR / f"{parent}.yml").read_text())
+    # A child is written beside its parent, so the thermal arms land in the thermal directory.
+    config_dir = (
+        THERMAL_CONFIG_DIR if (THERMAL_CONFIG_DIR / f"{parent}.yml").is_file() else CONFIG_DIR
+    )
+    data = yaml.safe_load((config_dir / f"{parent}.yml").read_text())
     data["brain"]["config"]["wiring"] = wiring
     header = (
         f"# {title} ({_HALF_LABEL[half]}) — {what}.\n"
@@ -82,7 +108,7 @@ def derive(stem: str) -> tuple[Path, str]:
         f"# the real config loader by {test}.\n"
         f"#\n"
     )
-    return CONFIG_DIR / f"{stem}.yml", header + yaml.safe_dump(data, sort_keys=False)
+    return config_dir / f"{stem}.yml", header + yaml.safe_dump(data, sort_keys=False)
 
 
 def main(argv: list[str] | None = None) -> int:
