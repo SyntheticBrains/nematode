@@ -6,7 +6,8 @@ consumption by brain architectures. Chemical synapses and gap junctions are
 represented as separately-typed connections. The same matrices are also
 available as released under CC BY 4.0 in Emmons 2024, with the lab's later
 corrections, together with the synapses from neurons onto the body wall
-muscles.
+muscles. Each chemical synapse can also be given its own sign, from measured physiology,
+expression-based prediction and the per-neuron transmitter rule.
 """
 
 from quantumnematode.connectome.loader import (
@@ -23,6 +24,7 @@ from quantumnematode.connectome.model import (
     NeuromuscularJunction,
     Neuron,
 )
+from quantumnematode.connectome.signs import ConnectionSign, per_connection_signs
 from quantumnematode.connectome.validate import (
     DivergenceReport,
     ValidationResult,
@@ -34,6 +36,7 @@ from quantumnematode.connectome.validate import (
 __all__: list[str] = [
     "CellClass",
     "ChemicalSynapse",
+    "ConnectionSign",
     "Connectome",
     "DivergenceReport",
     "GapJunction",
@@ -45,6 +48,7 @@ __all__: list[str] = [
     "load_emmons_2024_hermaphrodite",
     "load_emmons_2024_neuromuscular",
     "load_witvliet_2021_adult",
+    "per_connection_signs",
     "validate_known_pathways",
     "validate_neuron_count",
 ]
