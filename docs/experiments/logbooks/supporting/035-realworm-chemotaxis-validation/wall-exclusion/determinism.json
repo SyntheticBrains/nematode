@@ -1,0 +1,28 @@
+{
+  "question": "Do the three seeds that differ from Logbook 035 differ because this re-capture is nondeterministic?",
+  "method": "Each differing seed re-run once more with the same config, seed and flags; capture files compared byte for byte.",
+  "reruns": [
+    {
+      "arm": "mlp",
+      "seed": 47,
+      "first_sha256_prefix": "81a6ca75b87ebbbe",
+      "rerun_sha256_prefix": "81a6ca75b87ebbbe",
+      "identical": true
+    },
+    {
+      "arm": "control",
+      "seed": 42,
+      "first_sha256_prefix": "702ec8947d74c95f",
+      "rerun_sha256_prefix": "702ec8947d74c95f",
+      "identical": true
+    },
+    {
+      "arm": "control",
+      "seed": 45,
+      "first_sha256_prefix": "c2a7a5d67d51d0aa",
+      "rerun_sha256_prefix": "c2a7a5d67d51d0aa",
+      "identical": true
+    }
+  ],
+  "answer": "No. The re-capture is deterministic, so the differences arose between 035's runs (2026-07-06) and this re-capture, or in 035's runs themselves. 21 of the 24 seeds reproduce 035's committed statistics exactly."
+}

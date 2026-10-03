@@ -15,7 +15,12 @@ Usage::
 
     uv run python scripts/analysis/behavioural_chemotaxis_validation.py \
         --manifest <run-dir>/_manifest.txt --out <run-dir>/behavioural_curves.json \
-        [--figure-dir <run-dir>/figures] [--theta-sharp 0.6] [--theta-percentile 85]
+        [--figure-dir <run-dir>/figures] [--theta-sharp 0.6] [--theta-percentile 85] \
+        [--wall-margin-mm 1.0 --arena-mm 20.0]
+
+``--wall-margin-mm`` drops every transition with a step closer than that to an arena edge, where a
+clamped position slides along the wall and can pass for taxis; it needs ``--arena-mm``, the
+config's ``world_size_mm``. Off by default, and the summary is then unchanged.
 
 The manifest is ``<seed> <behaviour_capture.json>`` per line (``#`` comments / blanks skipped).
 """
@@ -31,6 +36,7 @@ from quantumnematode.report.dtypes import BehaviourStep
 from quantumnematode.validation.behavioural_agreement import grade_statistic
 from quantumnematode.validation.behavioural_curves import (
     BiasCurve,
+    away_from_walls,
     curving_rate_vs_bearing,
     kinematics,
     klinokinesis_magnitude_ratio,
@@ -76,11 +82,12 @@ def load_manifest(manifest: Path) -> dict[int, list[list[BehaviourStep]]]:
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        parts = line.split()
+        # The seed is the first field and the path is the rest, so a path may contain spaces.
+        parts = line.split(maxsplit=1)
         if len(parts) != 2 or not parts[0].lstrip("-").isdigit():  # expected: `<int seed> <file>`
             print(f"  WARN: skipping malformed manifest line: {raw!r}")
             continue
-        seed, capture_path = int(parts[0]), REPO / parts[1]
+        seed, capture_path = int(parts[0]), REPO / parts[1].strip()
         if not capture_path.exists():
             print(f"  WARN seed {seed}: {capture_path} not found - dropped")
             continue
@@ -109,6 +116,38 @@ def tail_runs(
     if keep <= 0:
         return {seed: [] for seed in seeds}
     return {seed: runs[-keep:] for seed, runs in seeds.items()}
+
+
+def exclude_walls(
+    seeds: dict[int, list[list[BehaviourStep]]],
+    arena_mm: float,
+    margin_mm: float,
+) -> tuple[dict[int, list[list[BehaviourStep]]], dict[str, float | None]]:
+    """Replace each run by its stretches away from the walls, and count what was kept.
+
+    The counts are transitions — consecutive step pairs — before and after, since that is the unit
+    every bias statistic is computed over. With nothing to count, the fraction kept is None, so
+    the summary stays valid JSON.
+    """
+    before = sum(max(len(run) - 1, 0) for runs in seeds.values() for run in runs)
+    kept_seeds = {
+        seed: [stretch for run in runs for stretch in away_from_walls(run, arena_mm, margin_mm)]
+        for seed, runs in seeds.items()
+    }
+    after = sum(len(run) - 1 for runs in kept_seeds.values() for run in runs)
+    report = {
+        "arena_mm": arena_mm,
+        "margin_mm": margin_mm,
+        "transitions_before": before,
+        "transitions_kept": after,
+        "fraction_kept": after / before if before else None,
+    }
+    shown = f"{after / before:.1%}" if before else "n/a"
+    print(
+        f"wall exclusion: margin {margin_mm} mm in a {arena_mm} mm arena keeps {after} of "
+        f"{before} transitions ({shown})",
+    )
+    return kept_seeds, report
 
 
 def _resolve_theta_sharp(
@@ -328,20 +367,39 @@ def main() -> None:
         help="percentile of |dtheta| used to calibrate theta_sharp when not given",
     )
     ap.add_argument(
+        "--wall-margin-mm",
+        type=float,
+        default=None,
+        help="drop transitions with a step closer than this to an arena edge; needs --arena-mm",
+    )
+    ap.add_argument(
+        "--arena-mm",
+        type=float,
+        default=None,
+        help="the arena's side, the config's world_size_mm; used only with --wall-margin-mm",
+    )
+    ap.add_argument(
         "--modality",
         choices=("food", "thermotaxis"),
         default="food",
         help="which reference set to grade against (the captured drive's modality)",
     )
     args = ap.parse_args()
+    if (args.wall_margin_mm is None) != (args.arena_mm is None):
+        ap.error("--wall-margin-mm and --arena-mm go together")
 
     seeds = load_manifest(args.manifest)
     if not seeds:
         print("No usable seeds - nothing to analyse.")
         return
     seeds = tail_runs(seeds, args.tail_runs)
+    wall_report = None
+    if args.wall_margin_mm is not None:
+        seeds, wall_report = exclude_walls(seeds, args.arena_mm, args.wall_margin_mm)
     theta_sharp = _resolve_theta_sharp(seeds, args.theta_sharp, args.theta_percentile)
     summary = analyse(seeds, theta_sharp, modality=args.modality)
+    if wall_report is not None:
+        summary["wall_exclusion"] = wall_report
 
     if args.figure_dir:
         _write_figures(seeds, theta_sharp, summary, args.figure_dir)

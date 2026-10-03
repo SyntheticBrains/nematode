@@ -10,6 +10,32 @@ dissociation**: klinokinesis persists (in fact *strengthens*) while the weatherv
 87–93%** to a small geometric residual — so the weathervane is a genuine sensor-driven strategy, not a
 foraging-geometry artifact. This is the behaviour-level real-worm validation Gate 3 G3.d requires.
 
+> **Wall-proximity check, 2026-10-04** ([launch record and readings](supporting/035-realworm-chemotaxis-validation/wall-exclusion/launch.md)).
+> The arena clamps the worm's position, so a worm heading into an edge slides along it, and this
+> analysis never excluded wall-proximal steps. The three arms were re-captured on the same seeds and
+> episodes and re-read with every transition near an edge dropped, at a registered 1.0 mm margin (one
+> step) and a 2.0 mm sensitivity margin, which keep 72–77% and 64–69% of transitions.
+>
+> - **The MLP and connectome arms do not move.** Every statistic keeps its verdict at both margins, and
+>   both strategies stay PRESENT_PARTIAL (klinokinesis) and PRESENT (weathervane). The magnitudes barely
+>   change: the MLP's threshold-free weathervane slope goes +0.088 off, +0.083 at 1.0 mm, +0.075 at 2.0 mm.
+> - **The control's residual weathervane shrinks as more wall is excluded.** Its thresholded slope goes
+>   +0.0023 [+0.0003, +0.0043] with nothing excluded, +0.0019 [−0.00001, +0.0038] at 1.0 mm and +0.0009
+>   [−0.0008, +0.0025] at 2.0 mm, and its verdict falls from REPRODUCED to PARTIAL at both margins. The
+>   change at 1.0 mm is marginal: the harness recomputes its creep floor on the data it keeps, and with
+>   each seed's floor held at its unexcluded value the 1.0 mm interval's lower bound is +0.00001 and the
+>   verdict stays REPRODUCED. At 2.0 mm it is PARTIAL either way. Part of the small geometric residual
+>   the specificity control carried was wall-driven, so the double dissociation does not weaken.
+> - **Identity.** With the exclusion off, the connectome arm reproduces this logbook's committed
+>   statistics exactly, and 21 of the 24 seeds do. MLP seed 47 and control seeds 42 and 45 differ. The
+>   re-capture is deterministic (each re-run byte-identical), so those three differ because of something
+>   between July and now, or in the July runs. No verdict in this logbook changes on the re-capture, but
+>   as registered, the comparison above is a statement about the re-capture, not about this logbook's
+>   own captures, which were not kept.
+>
+> Per the registration, a verdict moved at the primary margin, so C.3 and D.1 carry the wall exclusion
+> as a requirement, and report the floor-held reading beside it.
+
 **Branch**: `openspec/add-realworm-chemotaxis-validation`.
 
 **Date**: 2026-07-06.

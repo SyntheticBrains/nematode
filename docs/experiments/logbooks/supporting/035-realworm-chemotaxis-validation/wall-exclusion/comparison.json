@@ -1,0 +1,395 @@
+{
+  "primary": "m1.0",
+  "arms": {
+    "mlp": {
+      "identity_with_committed": {
+        "identical": false,
+        "differences": [
+          "klinokinesis seed 47: 1.3145586294002143 then, 1.1846282318769679 now",
+          "klinokinesis_magnitude seed 47: 1.1045366728941588 then, 1.0647134998768453 now",
+          "klinotaxis seed 47: 0.02718941129793997 then, 0.03002600495980137 now",
+          "klinotaxis_all seed 47: 0.1093772728279294 then, 0.08955751516719627 now"
+        ]
+      },
+      "readings": {
+        "off": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "PARTIAL",
+              "mean": 1.28666509387646,
+              "ci_lo": 1.2473655063140143,
+              "ci_hi": 1.329118683769352,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.0936515134995601,
+              "ci_lo": 1.0825812825948358,
+              "ci_hi": 1.1056691928444748,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.02690876007223518,
+              "ci_lo": 0.0224429997605153,
+              "ci_hi": 0.031141562510220124,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.08831025061359071,
+              "ci_lo": 0.07689175729043812,
+              "ci_hi": 0.09994000998783044,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT_PARTIAL",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 1.0
+        },
+        "m1.0": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "PARTIAL",
+              "mean": 1.3112455812822592,
+              "ci_lo": 1.2742753079494575,
+              "ci_hi": 1.349647838432402,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.102082947227678,
+              "ci_lo": 1.091368175058209,
+              "ci_hi": 1.1130329398641297,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.027134707258584467,
+              "ci_lo": 0.022224027559173756,
+              "ci_hi": 0.0322291155900736,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.0832051002795185,
+              "ci_lo": 0.07124385727520505,
+              "ci_hi": 0.09536998299293035,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT_PARTIAL",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 0.7727036388215626
+        },
+        "m2.0": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "PARTIAL",
+              "mean": 1.3061158980136343,
+              "ci_lo": 1.2722072377876203,
+              "ci_hi": 1.3411009517758345,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.1015170520562003,
+              "ci_lo": 1.092098733079854,
+              "ci_hi": 1.1112071448172791,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.02504369555418938,
+              "ci_lo": 0.020449357225797025,
+              "ci_hi": 0.02976925485754472,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.07531650636724964,
+              "ci_lo": 0.0641076276003479,
+              "ci_hi": 0.08710061558639866,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT_PARTIAL",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 0.6859046659147449
+        }
+      },
+      "moved": {
+        "m1.0": [],
+        "m2.0": []
+      }
+    },
+    "connectome": {
+      "identity_with_committed": {
+        "identical": true,
+        "differences": []
+      },
+      "readings": {
+        "off": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "PARTIAL",
+              "mean": 1.1467685884229089,
+              "ci_lo": 1.1268108059685225,
+              "ci_hi": 1.1665908403050675,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.041366338417391,
+              "ci_lo": 1.0362275833015218,
+              "ci_hi": 1.0463904944136992,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.02703446929183024,
+              "ci_lo": 0.021305756367141247,
+              "ci_hi": 0.03307230532801187,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.06539104895630057,
+              "ci_lo": 0.05267742847424135,
+              "ci_hi": 0.07832415512298439,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT_PARTIAL",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 1.0
+        },
+        "m1.0": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "PARTIAL",
+              "mean": 1.1530943580801292,
+              "ci_lo": 1.1313403937543831,
+              "ci_hi": 1.1742853591951274,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.0437238149020986,
+              "ci_lo": 1.0387302380799794,
+              "ci_hi": 1.0487299650063229,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.030383681343562886,
+              "ci_lo": 0.024644999988500352,
+              "ci_hi": 0.036269801389239145,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.06936367566241991,
+              "ci_lo": 0.05658532806476924,
+              "ci_hi": 0.08238069821394015,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT_PARTIAL",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 0.7236221327332307
+        },
+        "m2.0": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "PARTIAL",
+              "mean": 1.1484174691331086,
+              "ci_lo": 1.1240414816920286,
+              "ci_hi": 1.1726071002442668,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.041631187198115,
+              "ci_lo": 1.0361585957384494,
+              "ci_hi": 1.0470378183727747,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.028403784231984974,
+              "ci_lo": 0.02281839349759957,
+              "ci_hi": 0.03417975209017951,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.06559676398032765,
+              "ci_lo": 0.054006141832397075,
+              "ci_hi": 0.07740797614650875,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT_PARTIAL",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 0.6367306249753247
+        }
+      },
+      "moved": {
+        "m1.0": [],
+        "m2.0": []
+      }
+    },
+    "control": {
+      "identity_with_committed": {
+        "identical": false,
+        "differences": [
+          "klinokinesis seed 42: 1.5879478640747624 then, 1.5109838717575346 now",
+          "klinokinesis seed 45: 1.6671057475934998 then, 1.6959225824560062 now",
+          "klinokinesis_magnitude seed 42: 1.1611839998105555 then, 1.151760761125533 now",
+          "klinokinesis_magnitude seed 45: 1.2017020003043706 then, 1.208308872794778 now",
+          "klinotaxis seed 42: 0.0028276478943059847 then, 0.007043532288679499 now",
+          "klinotaxis seed 45: -0.0060863500062583375 then, -0.006716359221455412 now",
+          "klinotaxis_all seed 42: 0.010517818311609384 then, 0.01380556568299956 now",
+          "klinotaxis_all seed 45: 0.007239733899700891 then, 0.00752627488341033 now"
+        ]
+      },
+      "readings": {
+        "off": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "REPRODUCED",
+              "mean": 1.5583220903831094,
+              "ci_lo": 1.501600734587902,
+              "ci_hi": 1.6129600212889021,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.1689606390590934,
+              "ci_lo": 1.1543089955574637,
+              "ci_hi": 1.1826845693241281,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "REPRODUCED",
+              "mean": 0.002335462528811419,
+              "ci_lo": 0.00030340595429782845,
+              "ci_hi": 0.004265829735065079,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.012316633810589422,
+              "ci_lo": 0.010506576263148108,
+              "ci_hi": 0.014036215984213117,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT",
+            "klinotaxis": "PRESENT"
+          },
+          "fraction_kept": 1.0
+        },
+        "m1.0": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "REPRODUCED",
+              "mean": 1.536698513612349,
+              "ci_lo": 1.486368599696555,
+              "ci_hi": 1.5851838452530018,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.1632135618825168,
+              "ci_lo": 1.150107352616021,
+              "ci_hi": 1.1756338432830589,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "PARTIAL",
+              "mean": 0.0019316384207393213,
+              "ci_lo": -8.510928799959145e-06,
+              "ci_hi": 0.003846431439635507,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.011883566332867449,
+              "ci_lo": 0.01035682135790892,
+              "ci_hi": 0.013384157398099762,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT",
+            "klinotaxis": "PRESENT_PARTIAL"
+          },
+          "fraction_kept": 0.7640392310390938
+        },
+        "m2.0": {
+          "statistics": {
+            "klinokinesis": {
+              "verdict": "REPRODUCED",
+              "mean": 1.512290480488835,
+              "ci_lo": 1.464274794809316,
+              "ci_hi": 1.5586690131158485,
+              "n": 8
+            },
+            "klinokinesis_magnitude": {
+              "verdict": "REPRODUCED",
+              "mean": 1.1554439777286194,
+              "ci_lo": 1.1427189450039472,
+              "ci_hi": 1.167901859959694,
+              "n": 8
+            },
+            "klinotaxis": {
+              "verdict": "PARTIAL",
+              "mean": 0.0008947260475689297,
+              "ci_lo": -0.000819016624005025,
+              "ci_hi": 0.0025354386229068295,
+              "n": 8
+            },
+            "klinotaxis_all": {
+              "verdict": "REPRODUCED",
+              "mean": 0.008254664352633001,
+              "ci_lo": 0.006697119845876694,
+              "ci_hi": 0.00982267470716496,
+              "n": 8
+            }
+          },
+          "strategies": {
+            "klinokinesis": "PRESENT",
+            "klinotaxis": "PRESENT_PARTIAL"
+          },
+          "fraction_kept": 0.6675276208683096
+        }
+      },
+      "moved": {
+        "m1.0": [
+          "klinotaxis: REPRODUCED -> PARTIAL",
+          "klinotaxis (combined): PRESENT -> PRESENT_PARTIAL"
+        ],
+        "m2.0": [
+          "klinotaxis: REPRODUCED -> PARTIAL",
+          "klinotaxis (combined): PRESENT -> PRESENT_PARTIAL"
+        ]
+      }
+    }
+  },
+  "moved_at_primary": true
+}

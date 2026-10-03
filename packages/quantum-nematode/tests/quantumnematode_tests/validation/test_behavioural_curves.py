@@ -227,3 +227,56 @@ def test_suggest_theta_sharp_returns_a_high_percentile():
     worm = _klinokinesis_worm()
     theta = bc.suggest_theta_sharp(worm, percentile=75.0)
     assert 0.05 < theta <= 2.0  # between the gradual (0.05) and sharp (2.0) modes
+
+
+def _at(points: list[tuple[float, float]]) -> list[BehaviourStep]:
+    """Build steps at the given positions, otherwise identical."""
+    return [
+        BehaviourStep(
+            step=i,
+            x=x,
+            y=y,
+            heading_rad=0.0,
+            concentration=0.5,
+            dc_dt=0.0,
+            grad_dir=0.0,
+            grad_strength=1.0,
+        )
+        for i, (x, y) in enumerate(points)
+    ]
+
+
+def test_away_from_walls_keeps_a_run_that_never_nears_an_edge():
+    """A run that stays inside the margin everywhere is kept whole."""
+    steps = _at([(5.0, 5.0), (6.0, 5.0), (7.0, 5.0)])
+    assert bc.away_from_walls(steps, arena_mm=20.0, margin_mm=1.0) == [steps]
+
+
+def test_away_from_walls_splits_at_a_wall_visit_and_never_bridges_it():
+    """A wall visit splits the run, and no transition joins the two sides."""
+    # A worm crosses the arena, slides along x = 0, and comes back: the wall steps go, and no
+    # transition joins the stretch before the visit to the one after it.
+    steps = _at([(5.0, 5.0), (3.0, 5.0), (0.4, 5.0), (0.0, 6.0), (2.0, 6.0), (4.0, 6.0)])
+    stretches = bc.away_from_walls(steps, arena_mm=20.0, margin_mm=1.0)
+    assert [[s.step for s in stretch] for stretch in stretches] == [[0, 1], [4, 5]]
+
+
+def test_away_from_walls_checks_every_edge_and_drops_single_steps():
+    """All four edges count, and a lone kept step carries no transition."""
+    steps = _at([(10.0, 10.0), (19.5, 10.0), (10.0, 10.0), (10.0, 0.5), (10.0, 10.0)])
+    # Every kept step is isolated between edge visits, so no transition survives.
+    assert bc.away_from_walls(steps, arena_mm=20.0, margin_mm=1.0) == []
+
+
+def test_away_from_walls_at_zero_margin_keeps_everything_inside():
+    """A zero margin keeps every step, the edges included."""
+    steps = _at([(0.0, 0.0), (20.0, 20.0), (10.0, 10.0)])
+    assert bc.away_from_walls(steps, arena_mm=20.0, margin_mm=0.0) == [steps]
+
+
+def test_away_from_walls_refuses_a_margin_that_leaves_no_arena():
+    """A margin of half the arena or more leaves nothing to keep, and is refused."""
+    import pytest
+
+    with pytest.raises(ValueError, match="does not fit"):
+        bc.away_from_walls(_at([(10.0, 10.0)]), arena_mm=20.0, margin_mm=10.0)

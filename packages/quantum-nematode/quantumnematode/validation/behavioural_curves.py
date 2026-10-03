@@ -48,6 +48,8 @@ _NEUTRAL_RATIO = 1.0
 # worm dwelling at its comfort target). For a continuously-moving worm the raw median is well above
 # the threshold, so the raw-median floor is used unchanged.
 _MOVING_STRIDE_FRACTION = 0.1
+# A stretch needs two steps to carry one transition.
+_MIN_STRETCH_STEPS = 2
 
 
 def _wrap(theta: float) -> float:
@@ -92,6 +94,38 @@ def kinematics(steps: Sequence[BehaviourStep], theta_sharp: float) -> list[StepK
             ),
         )
     return out
+
+
+def away_from_walls(
+    steps: Sequence[BehaviourStep],
+    arena_mm: float,
+    margin_mm: float,
+) -> list[list[BehaviourStep]]:
+    """Split one run into its stretches that keep at least ``margin_mm`` from every arena edge.
+
+    The arena is the square ``[0, arena_mm]`` on both axes, and a position is clamped to it, so a
+    worm heading into an edge slides along it: its heading, displacement and bearing to the
+    gradient then change for a reason that is not taxis. A transition is kept only if both of its
+    steps lie at least ``margin_mm`` inside every edge. Each returned stretch is a run of
+    consecutive kept steps, so no transition is formed across an excluded gap; stretches of fewer
+    than two steps carry no transition and are dropped.
+    """
+    if margin_mm < 0 or arena_mm <= 2 * margin_mm:
+        msg = f"margin {margin_mm} mm does not fit inside a {arena_mm} mm arena"
+        raise ValueError(msg)
+    upper = arena_mm - margin_mm
+    stretches: list[list[BehaviourStep]] = []
+    current: list[BehaviourStep] = []
+    for step in steps:
+        if margin_mm <= step.x <= upper and margin_mm <= step.y <= upper:
+            current.append(step)
+            continue
+        if len(current) >= _MIN_STRETCH_STEPS:
+            stretches.append(current)
+        current = []
+    if len(current) >= _MIN_STRETCH_STEPS:
+        stretches.append(current)
+    return stretches
 
 
 def rate_vs_binned_covariate(
