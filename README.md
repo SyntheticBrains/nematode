@@ -153,7 +153,7 @@ Two Pygame renderers — `--theme pixel_continuous` for the continuous substrate
 
 Contributions are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the four test tiers, code style and the pull-request process. Good places to start, aligned with the roadmap:
 
-- **Phase 8 substrate and body**: reversal and a proprioceptive channel in the continuous environment; the anatomical motor-to-muscle readout into a kinematic 2D body (a rod-chain body behind a measured cost pilot); ingesting measured synaptic weights on the Cook edges with provenance.
+- **Phase 8 substrate and body**: reversal in the continuous environment; the body generator's curvature-and-phase interface; the anatomical motor-to-muscle readout into a kinematic 2D body (a rod-chain body behind a measured cost pilot); ingesting measured synaptic weights on the Cook edges with provenance.
 - **Environment vectorisation**: the binding constraint on Phase 6b's NEAT topology search.
 - **Validation arms**: a predator/mechanosensation behavioural validation; named-neuron grounding for the connectome brain.
 - **Docs, tutorials and reproductions**: rerun any logbook on your own hardware — a discrepancy is a finding.
