@@ -1,10 +1,10 @@
 # Tasks: Phase 8 (Ground, then Embody — Measured Substrate & Body) Shipment Tracker
 
 This is the living checklist for Phase 8. The plan is authoritative in `docs/roadmap.md`
-§ Phase 8 (v4.3, PR #395): the scope decision against whole-organism fidelity, the rungs, design
-decisions D15–D20, exit criteria, risk table and novelty map. Phase 8 ships in two cuts —
-**8a** (block A + B.1 + B.2 + synthesis) and **8b** (block C + D + B.3 + synthesis) — split by
-success (D20). Every Phase 8 milestone PR updates this checklist as part of its diff.
+§ Phase 8 (v4.3, PR #395; **8b re-planned as v4.4 on 2026-10-03** — D19–D21 amended, D22 added): the scope decision against whole-organism fidelity, the rungs, design
+decisions D15–D22, exit criteria, risk table and novelty map. Phase 8 ships in two cuts —
+**8a** (block A + B.1 + synthesis) and **8b** (the carried controls A.6t, A.3 and B.2, then
+block C + D + B.3 + synthesis) — split by success (D20). Every Phase 8 milestone PR updates this checklist as part of its diff.
 
 **Status legend**: `[ ]` not started, `[x]` closed — done, or (for unexercised SHOULD/MAY scope)
 dropped/deferred with a dated note and one of the five statuses, so `openspec archive` is never
@@ -197,9 +197,9 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
     multipliers 2 and 4 is offered to this change's registration as a candidate sensitivity arm,
     not carried as a condition.
 
-### B.2 — the dynamics rung (SHOULD)
+### B.2 — the dynamics rung (SHOULD in 8a; **MUST in 8b from 2026-10-03** — the live checkboxes are under § Shipment 8b § The carried controls; this block is the design record)
 
-- [ ] **B.2a Across-step state** *(S8a 2026-09-26: **carried to 8b**, deferred-with-destination — A.6 and Logbook 075 made gap junctions central, and this rung is where they become ohmic coupling; the stiffness warning applies; its wiring arms read against the chemical-only null per D21)* (own change): per-neuron leaky-integrator state with intrinsic
+- **B.2a Across-step state** *(S8a 2026-09-26: **carried to 8b**, deferred-with-destination — A.6 and Logbook 075 made gap junctions central, and this rung is where they become ohmic coupling; the stiffness warning applies; its wiring arms read against the chemical-only null per D21)* (own change): per-neuron leaky-integrator state with intrinsic
   time constants (a global τ swept first); gap junctions as ohmic coupling inside that dynamics;
   byte-identical-when-off. **Positive controls, in this order**: first MLP-PPO on the target cell
   (the spec's blocking control for any new component), then — once that passes — PPO on the
@@ -207,12 +207,12 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   as well before any wiring contrast runs. The second is itself a connectome arm, so it comes
   after the first rather than beside it.
   *(2026-09-25, from the Wormlight review: **stiffness.** Gap weights are raw EM counts; with time constants they make the system stiff — Wormlight measured ALA near 0.05 ms under Cook's counts. Register a stable integrator or a rescaling of the counts, and let A.6 decide whether the counts move with a rewiring.)*
-- [ ] **B.2b Plastic gap junctions under PPO** *(S8a 2026-09-26: **carried to 8b**; now also the natural test of gap placement against gap strength, the thread Logbook 075 left open)* (D4's surviving destination): the electrical
+- **B.2b Plastic gap junctions under PPO** *(S8a 2026-09-26: **carried to 8b**; now also the natural test of gap placement against gap strength, the thread Logbook 075 left open)* (D4's surviving destination): the electrical
   synapses learnable on the block-V cells, against the null, with the *Nat. Commun.* 2020
   olfactory-learning precedent as the biological motivation. External convergence to cite, not
   lean on: Lee 2026's gap-junction-only shuffle collapses chemotaxis where the chemical-only
   shuffle barely moves it, in a different model with different controls.
-- [ ] **B.2c Validation target — deferred to 8b by construction**: forward/reverse bout-duration
+- **B.2c Validation target — deferred to 8b by construction**: forward/reverse bout-duration
   statistics per Morrison & Young 2025, registered as a behavioural sign/shape-level claim.
   Bout durations need reversal, which is **C.0b in 8b**, and D20 forbids 8b work before the 8a
   synthesis — so this task cannot complete inside 8a and is listed here only because it belongs
@@ -229,16 +229,25 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 ## Shipment 8b — Embody
 
 **OpenSpec changes**: placeholders; created per milestone
-**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21)
-**Roadmap layer**: body (C), environment (D), internal state (B.3)
-**Approx effort**: ≈ 10–15 active weeks (C ≈ 8–12, D + B.3 ≈ 2–3)
-**Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18/D19/D20
-**Dependencies**: S8a GO; B.2 for C.2's second half
+**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
+**Roadmap layer**: dynamics (B.2), body (C), environment (D), internal state (B.3)
+**Approx effort**: ≈ 13–20 active weeks (housekeeping ≈ 0.5, controls ≈ 4–6 — A.6t and A.3 ≈ 1, B.2 ≈ 3–4 —, C ≈ 6–10 on the kinematic body, D + B.3 ≈ 2–3); ≈ 15–22 if C.2's pilot passes
+**Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18–D22, and § *What the 2026-10-03 re-plan changed*
+**Dependencies**: S8a GO; B.2 for C.2c
 
-### Carried from 8a, run early in 8b *(added 2026-09-26 at A.5)*
+### Housekeeping, before 8b's first campaign *(added 2026-10-03 at the 8b re-plan)*
+
+- [ ] **H.1 Literature watch repaired and re-aimed** (own small change): the weekly run has failed since 2026-09-21 — `ANTHROPIC_API_KEY` resolves empty in the Actions environment and the arXiv export API rejects the request (HTTP 406) — so A.5's reopen trigger has had no watch behind it, and Park 2026, Reimers 2026 and Sar 2026 were found by hand. Set the secret (maintainer), fix the arXiv request, re-aim `context.md` and `seeds.toml` at the 8a close (protocol principle 13 — Creamer, Dhiman, Churchland, Lee, Park, Chung & Kim, Sar, Reimers, Zhao 2025, Morrison & Young and Emmons 2024 as seeds), and dispatch once by hand to confirm.
+- [ ] **H.2 Per-connection sign table vendored** (own small change): the table Wormlight assembled — physiology overrides (51 chemical edges in its export at `1190b3e`, the AWC → AIY correction among them) over Fenyves et al. 2020's expression-predicted signs (1,699 edges), the rest the transmitter rule or unsigned — under `data/connectome/` with provenance and a licence check, loadable beside the per-neuron rule and byte-identical-when-off. Feeds B.3 and M.1; no experiment's input changes.
+- [ ] **H.3 Wall-proximity exclusion in the chemotaxis validation** (own small change): `behavioural_curves.py` excludes creep steps but no wall-proximal window, and the point worm is clamped to the arena edge, so a worm sliding along the wall changes heading-versus-gradient statistics without any taxis — the mechanism Wormlight found passing for weathervaning. Add a registered margin flag (byte-identical-when-off), re-capture on [Logbook 035](../../../docs/experiments/logbooks/035-realworm-chemotaxis-validation.md)'s configs (its raw captures predate A.0 and are not in git), and re-derive the curves with and without the exclusion; 035 gets a dated note stating what moved. Precondition for C.3 and D.1 reusing the method.
+
+### The carried controls, before the body *(added 2026-09-26 at A.5; re-ordered and extended 2026-10-03)*
 
 - [ ] **A.6t Thermal coverage of the null-strength control** (SHOULD; own change): A.6 and its gap-only split ran on hard350 alone, so on block V's thermal cell only A.1 has run. Repeat the combined and the exactly paired gap-held contrasts on thermal, under PPO at block V's committed point, sized from the thermal cell's committed spread. Feeds the combined paper's 8a half and A.5's fallback package alike.
-- [ ] **A.3** (above), scheduled here: hop distance registered as a predictor before its correlation is read.
+- [ ] **A.3 Structural predictors, with the boundary-preserving null** (SHOULD; own change): hop distance registered as a predictor before its correlation is read (above); and *(2026-10-03)* the **boundary-preserving null** added to the family — every edge out of a food or thermal sensory neuron and every edge into a motor neuron held, the interior rewired by the same degree-preserving swap, gap junctions and autapses held as in the chemical-only null — run as one more four-arm level under PPO on hard350 at A.1's size (~3 h), reported beside the chemical-only primary and the current null (D21 as amended; Park, arXiv:2609.39248, is the precedent). Which neurons bound the sensory and motor sides is stated in the change before the null is drawn (design.md open question). Each null's statement of what it does not preserve goes in the change.
+- [ ] **B.2a Across-step state** — moved here from 8a 2026-10-03 (its design record stays under § Shipment 8a § B.2): the dynamical substrate and its two positive controls in order, with the stiffness warning registered. **MUST from 2026-10-03**, as B.2b's gate.
+- [ ] **B.2b Plastic gap junctions under PPO** — **MUST from 2026-10-03** (D20 as amended): the electrical synapses learnable on the block-V cells against the chemical-only null, the current null beside; the direct test of gap placement against gap strength that Logbook 075 left open. Closed *unreachable-with-reason* if B.2a's positive control fails.
+- [ ] **B.2c Bout-duration validation** — SHOULD, behind C.0b's reversal, as recorded under § Shipment 8a § B.2.
 
 ### C.0 — body prerequisites (MUST; each lands, validates and freezes before C.1 registers)
 
@@ -246,19 +255,20 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   seconds, from the validated 0.2 mm/s crawl, the ~1.6 s undulation period and the arena scale;
   cited by every kinematic target and cost estimate below. (The current cap is one body length
   per step, ≥ 5 s of worm time at full speed.)
+  *(D22, 2026-10-03: the default is **about five worm-seconds** — three undulation periods integrated inside the step by D19's generator — so campaign cost and hard350's meaning are unchanged; C.0a records the constant and its derivation rather than choosing it.)*
 
 - [ ] **C.0b Signed speed**: reversal as a first-class continuous action (speed is clamped to
   `[0, max_step_mm]` today), byte-identical-when-off, so VA/DA and VB/DB mean different things
   and escape can be reversal-plus-turn.
 
-- [ ] **C.0c Proprioceptive channel**: posture or stretch fed back as sensory input, with the
+- [ ] **C.0c Proprioceptive channel** — *(**2026-10-03: moved into C.1c**, D22 — MUST scope moved rather than dropped, so this closes when C.1c lands: at a ~5 s step posture feedback to the brain is a slow signal, and what C.1c needs is the generator's curvature-and-phase interface; no brain-side channel lands in C.0, and the target-neuron record below stays with C.1c for the day a channel to the brain is asked for.)* Original scope: posture or stretch fed back as sensory input, with the
   target neurons stated with a biological argument (the predator-projection precedent).
   *(2026-09-25, from the Wormlight review: the targets have a literature answer — B-type motor neurons driven by the bending of the ~200 µm in front of their muscles (Wen et al. 2012's measured direction), SMDD (Yeon et al. 2018), and A-type as a hypothesis (Gao et al. 2018). **Substrate:** consider freezing 8b on the Emmons 2024 CC BY release (loadable since PR #404) at this step; 8a stays on Cook 2019.)*
 
 - [ ] **C.0d D19 decided and recorded** — the body-level proprioceptive wave generator's form and
   parameters, calibrated once on the MLP positive control (design.md open question).
 
-  *(2026-09-25: Wen et al. 2012 describe propagation, not generation, so the body-level generator needs a named source — Ji et al. 2021's head relaxation switch (in SMDD) with Wen's propagation is the natural default; B- and A-type intrinsic oscillators (Fouad et al. 2018; Xu et al. 2018; Gao et al. 2018) are the documented ventral-cord generators. See roadmap D19's note.)*
+  *(2026-09-25: Wen et al. 2012 describe propagation, not generation, so the body-level generator needs a named source — Ji et al. 2021's head relaxation switch (in SMDD) with Wen's propagation is the natural default; B- and A-type intrinsic oscillators (Fouad et al. 2018; Xu et al. 2018; Gao et al. 2018) are the documented ventral-cord generators. See roadmap D19's note.)* *(2026-10-03: the generator also carries the **backward wave** — a mirrored tail-to-head relay — so C.0b's reversal moves the body; and because the rhythm is an outside layer, C.1e's claim is segmental drive and steering, not rhythm — roadmap D19 as amended.)*
 
 ### C.1 — the anatomical motor-to-muscle readout into a kinematic body (MUST)
 
@@ -273,17 +283,22 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 - [ ] **C.1c Kinematic body**: muscle drive → segmental curvature; displacement per step from the
   change of posture between steps by resistive-force theory (no ODE), with D19's body-level
   generator supplying the wave. Renderer hook for C.5.
+  *(2026-10-03, D22: the generator exposes the curvature-and-phase interface that stands in for C.0c and carries the forward and backward waves; muscle handling may take Wormlight's `src/sim/muscles.ts` — 95 muscles, receptor-based signs, relative-to-range drive — as a reference.)*
 - [ ] **C.1d Positive control**: MLP-PPO forages through C.1 on the target cell. **Blocks every
-  connectome arm below it.**
-- [ ] **C.1e The wiring contrast through the body**: wild type vs rewired null under PPO and under
-  `readout_only`, with **floors and baselines re-established on this substrate** — a new
+  connectome arm below it.** *(2026-10-03: read with C.3's adopted instruments — thresholds, band-based frequency, half-step check, wall exclusion — so the positive control is a kinematic pass, not only a foraging one.)*
+- [ ] **C.1e The wiring contrast through the body**: wild type vs the chemical-only null (D21), the
+  current and boundary-preserving nulls beside, under PPO and under `readout_only` — **registered
+  as a contrast of segmental drive and steering through the wiring, not of rhythm generation**
+  (D19 as amended, 2026-10-03) — with **floors and baselines re-established on this substrate** — a new
   reference frame, never a delta against 029 or block V.
 
-### C.2 — the rod-chain body (SHOULD)
+### C.2 — the rod-chain body (SHOULD, gated on C.2a's cost pilot)
 
-- [ ] **C.2a Cost budget registered** before the rung: "a 16-seed panel in roughly a day at 16
+*(**2026-10-03**, D20 as amended: one hard350 run is about a million environment steps of about five worm-seconds each, about 1,450 worm-hours. At Wormlight's measured 1.4 CPU-minutes per worm-hour for its 48-rod Boyle body that is about 34 CPU-hours per run, and at ElegansBot's ~1:1 real time about 1,450, against 16 minutes today and the roughly 12–24 hours per run C.2a's budget allows (a 16-seed panel in a day on 16 workers). A full body is a few-fold over budget at the faster measured rate and about two orders of magnitude over at the slower; a reduced chain may or may not fit. The kinematic C.1 body is 8b's body until C.2a's pilot passes.)*
+
+- [ ] **C.2a Cost pilot** (the gate) before the rung: "a 16-seed panel in roughly a day at 16
   workers" pinned to a wall-clock number from a pilot configured the way the campaign will be.
-  *(**2026-09-25: C.2 may narrow here.** Its second half is reframed (roadmap C.2's note) into what Wormlight is building — a connectome-driven body whose wiring gates documented oscillators, with rewired nulls tuned alike. Whether C.2 narrows is decided **at this step**, on Wormlight's progress by then: whether it has passed its milestone-0c go/no-go (does the connectome-driven body crawl — its checkpoint 1) and the checkpoints after it. If it has, C.2's second half and much of C.3 are better served there, and 8b keeps C.1. C.1 is unaffected either way.)*
+  *(**2026-09-25: C.2 may narrow here.** Its second half is reframed (roadmap C.2's note) into what Wormlight is building — a connectome-driven body whose wiring gates documented oscillators, with rewired nulls tuned alike. Whether C.2 narrows is decided **at this step**, on Wormlight's progress by then: whether it has passed its milestone-0c go/no-go (does the connectome-driven body crawl — its checkpoint 1) and the checkpoints after it. If it has, C.2's second half and much of C.3 are better served there, and 8b keeps C.1. C.1 is unaffected either way.)* *(**2026-10-03**: decided — Wormlight closed at a negative, so nothing of C.2 is better served there; the narrowing rests on cost.)*
 - [ ] **C.2b The chain**: an ElegansBot-class 2D rod chain (Chung, Chang & Kim, eLife 2024; 8–12
   rods, anisotropic drag, torsional-spring muscles) in `Continuous2DEnvironment`, driven by
   C.1's muscle drive; MLP positive control; if the budget fails after the reduced chain, coarser
@@ -293,7 +308,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   replaced by documented class-level oscillators, ask whether the connectome's wiring gates them
   correctly — AVB driving the B-types, AVA the A-types — against the rewired null. *(Reframed
   2026-09-25 from "the motor circuit plus proprioception produces the wave", which for a graded
-  network has a known negative; see roadmap D19's note.)*
+  network has a known negative; see roadmap D19's note.)* *(2026-10-03: Chung & Kim, *Sci. Rep.* 2026, is the published precedent — fitted weights on the motor circuit crawl both ways with no pacemaker, 316 added proprioceptive links, no null — so the question is the RL analogue, a *learned* CPG on the wiring against the chemical-only and boundary-preserving nulls. The natural first item of the phase after 8 if C.2 does not run.)*
 
 ### C.3 — body-level validation (SHOULD)
 
@@ -301,7 +316,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   amplitude, omega-turn geometry, and the Logbook 035/036 klinokinesis and weathervane curves
   re-derived from *emergent* kinematics; swimming vs crawling gait if C.2 ships (MAY).
 
-  *(2026-09-25: adopt Wormlight's thresholds, fixed in advance, where they apply — Fang-Yen et al. 2010 and Ramot et al. 2008 kinematics and a pinned eigenworm basis — so the two projects' body results compare.)*
+  *(2026-09-25: adopt Wormlight's thresholds, fixed in advance, where they apply — Fang-Yen et al. 2010 and Ramot et al. 2008 kinematics and a pinned eigenworm basis — so the two projects' body results compare.)* *(2026-10-03: four instruments adopted — the thresholds with their partial bands, the **band-based frequency measure** (a crossing counts only after the mid-body curvature leaves ±0.31 κL about the bout mean), a **half-step equivalence check**, and the **wall-proximity exclusion** from H.3; any noise added to the body loop is coloured (Ornstein–Uhlenbeck), since Wormlight's results moved with the time step until its noise was.)*
 
 ### C.4 — the architecture ranking through the body (SHOULD)
 
@@ -319,18 +334,18 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 - [ ] **B.3** Internal-state sensory module and the modulator concentration field (Phase 7's
   B.2/B.3, deferred): satiety already crosses the brain boundary; serotonin/PDF gating of roaming
   vs dwelling as the first behavioural consequence.
-  *(2026-09-25, from the Wormlight review: the per-neuron transmitter rule signs AWC → AIY positive, where physiology finds it inhibitory (Chalasani et al. 2007); Fenyves et al. 2020 (CC BY) predict signs per connection from receptor expression, clearly for 47.5% of Cook's chemical edges, and are the natural data source for the receptor layer. Logbooks 044 and 067 carry the condition.)*
+  *(2026-09-25, from the Wormlight review: the per-neuron transmitter rule signs AWC → AIY positive, where physiology finds it inhibitory (Chalasani et al. 2007); Fenyves et al. 2020 (CC BY) predict signs per connection from receptor expression, clearly for 47.5% of Cook's chemical edges, and are the natural data source for the receptor layer. Logbooks 044 and 067 carry the condition.)* *(2026-10-03: the sign table lands at H.2, ahead of this; Ji et al. 2023, *PNAS* 120:e2219341120, describe a proprioceptive loop through dopamine and a neuropeptide — an extrasynaptic target for the modulator field.)*
 - [ ] **D.1** Patchy bacterial lawns: geometry with edges, per-patch depletion (the
   `source_depletion_enabled` mechanism, config-gated), food quality; the roaming/dwelling
   readout B.3 gates; validation against Flavell-lab roaming/dwelling fractions. The 2D agar plate
-  is kept (D.2); the three behaviours stay the comparison set (D.3).
+  is kept (D.2); the three behaviours stay the comparison set (D.3). *(2026-10-03: edged lawns inherit the wall-proximity control from H.3/C.3 — a patch edge is a boundary of the same kind.)*
 
 ### MAY (not gates)
 
 - [ ] **M.1 Placed plasticity** on the klinotaxis circuit, on the B.1 substrate, against a
   degree-stratified random subset of the same size, with the three confounds specified.
 
-  *(2026-09-25: "on the B.1 substrate" needs restating now that measured weights left the PPO wiring effect unmoved (Logbook 073); and the circuit begins at AWC → AIY, which needs per-connection signs (B.3's note).)*
+  *(2026-09-25: "on the B.1 substrate" needs restating now that measured weights left the PPO wiring effect unmoved (Logbook 073); and the circuit begins at AWC → AIY, which needs per-connection signs (B.3's note; H.2 vendors them).)*
 
 - [ ] **M.2 Wild-type-vs-wild-type control**: Cook 2019 against Witvliet dataset 8 (adult,
   nerve-ring scope, already vendored).
