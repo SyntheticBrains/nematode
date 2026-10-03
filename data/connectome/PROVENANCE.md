@@ -185,6 +185,64 @@ the full attribution chain:
 **cect commit / version pinned at curation time**: v0.3.1 (March 2026)
 **cect licence**: MIT (per its `LICENSE` file)
 
+### `fenyves_2020_s1_data.xlsx` and `fenyves_2020_s5_data.xlsx`
+
+- **Description**: the S1 Data and S5 Data files of Fenyves et al. 2020, which predict each chemical
+  connection's polarity from the presynaptic neuron's transmitter and the postsynaptic neuron's
+  receptor-gene expression. Their "5. Sign prediction" sheets list one connection per row: source
+  neuron (column A), its primary transmitter (B), target (D), edge type (F) and predicted polarity (Q:
+  `+`, `-`, `complex` or `no pred`). S1's sheet is built on the WormWiring reconstruction; S5's
+  "5. Sign prediction (Cook)" sheet on Cook et al. 2019. Every prediction cell is a spreadsheet formula,
+  and the loader reads the values the publisher's file was saved with.
+- **Against Cook 2019's 3,709 chemical edges**: S1 predicts for 3,516 and names 122 edges Cook lacks;
+  S5 predicts for 3,237 and names 5; 3,117 are in both, and where both predict a sign they agree.
+- **Consumed by** `quantumnematode.connectome.signs.per_connection_signs()`. No brain reads it unless
+  its configuration asks.
+- **Original filenames at the publisher**: `journal.pcbi.1007974.s003.xlsx` (S1 Data) and
+  `journal.pcbi.1007974.s007.xlsx` (S5 Data)
+- **Sizes**: 983,199 bytes (S1) and 1,654,011 bytes (S5)
+- **SHA256**:
+  - S1: `85959066fd7cbdbc2024d0ebb323b71c4365f4083bc85e555ee973f470697c47`
+  - S5: `35902e0f43842ed25a65b4cc1c95028bcd73db121c6ad4d831ddc5ce5612ec81`
+- **Source URLs**:
+  <https://journals.plos.org/ploscompbiol/article/file?type=supplementary&id=10.1371/journal.pcbi.1007974.s003>
+  and
+  <https://journals.plos.org/ploscompbiol/article/file?type=supplementary&id=10.1371/journal.pcbi.1007974.s007>
+- **Licence**: CC BY 4.0, the article's licence, which covers its supporting information
+  (<https://creativecommons.org/licenses/by/4.0/>)
+- **Retrieval date**: 2026-10-03. The digests equal the ones Wormlight pinned on 2026-09-25.
+- **Accompanying paper**:
+  - **Title**: Synaptic polarity and sign-balance prediction using gene expression data in the
+    *Caenorhabditis elegans* chemical synapse neuronal connectome network
+  - **Authors**: Bánk G. Fenyves, Gábor S. Szilágyi, Zsolt Vassy, Csaba Sőti, Péter Csermely
+  - **Journal**: *PLoS Computational Biology* 16(12): e1007974 (2020)
+  - **DOI**: <https://doi.org/10.1371/journal.pcbi.1007974>
+- **Redistribution rationale**: CC BY 4.0 permits redistribution with attribution. Any consumer of the
+  per-connection signs should cite Fenyves et al. 2020.
+
+### `sign_overrides_physiology.csv`
+
+- **Description**: 51 chemical connections whose sign has been measured, each with a citation key and
+  a quoted line of evidence: `pre,post,sign,citation,evidence`, sign `1` (excitatory) or `-1`
+  (inhibitory). The per-connection signs take these before any prediction. Among them is AWC → AIY,
+  inhibitory through a glutamate-gated chloride channel (Chalasani et al. 2007), which the per-neuron
+  transmitter rule signs excitatory.
+- **Origin**: Wormlight (<https://github.com/chrisjz/wormlight>), `data/sign-overrides.csv`, last
+  changed at commit `057dd23` and copied at `1190b3e`, unchanged. Wormlight is Apache-2.0 and has the
+  same maintainer as this repository, so the table is vendored under this repository's Apache-2.0
+  licence. Its evidence column quotes short passages from the cited papers.
+- **Citation keys**, as `PHYSIOLOGY_CITATIONS` in `quantumnematode.connectome.signs` names them:
+  `chalasani2007` (Chalasani et al. 2007, *Nature* 450:63), `huo2024` (Huo et al. 2024, *PNAS*
+  121:e2410789121), `li2014` (Li et al. 2014, *Cell* 159:751), `lin2024` (Lin et al. 2024, *Nat.
+  Commun.* 15:297), `piggott2011` (Piggott et al. 2011, *Cell* 147:922), `roberts2016` (Roberts et al.
+  2016, *eLife* 5:e12572), `wang2020` (Wang et al. 2020, *eLife* 9:e56942) and `zhang2025` (Zhang et
+  al. 2025, *Nat. Commun.* 16:4405). The module carries each DOI.
+- **Cross-check**: with these overrides and the two Fenyves files, the loader reproduces the chemical
+  signs and their sources in Wormlight's export at `1190b3e` on 3,686 of the 3,709 edges. The other 23
+  are a deliberate difference: their expression prediction rests on a secondary transmitter the atlas
+  does not give the cell, which Wormlight does not check, so this loader signs them by the rule.
+- **Consumed by** `quantumnematode.connectome.signs.per_connection_signs()`.
+
 ### The Randi et al. 2023 signal-propagation atlas, and other Creamer artefacts
 
 The raw functional measurement the fitted weights come from — Randi, Sharma, Dvali & Leifer,
@@ -225,4 +283,10 @@ shasum -a 256 data/connectome/elife-95402-supp2-v1.xlsx
 
 shasum -a 256 data/connectome/creamer_lds_2026_model_weights.csv
 # expected: f452b88461aa90d414fd652e246e11302293d207510b9f4c94bf9a9a8098924c
+
+shasum -a 256 data/connectome/fenyves_2020_s1_data.xlsx
+# expected: 85959066fd7cbdbc2024d0ebb323b71c4365f4083bc85e555ee973f470697c47
+
+shasum -a 256 data/connectome/fenyves_2020_s5_data.xlsx
+# expected: 35902e0f43842ed25a65b4cc1c95028bcd73db121c6ad4d831ddc5ce5612ec81
 ```
