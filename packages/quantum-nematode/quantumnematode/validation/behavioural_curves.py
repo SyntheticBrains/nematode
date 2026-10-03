@@ -48,6 +48,8 @@ _NEUTRAL_RATIO = 1.0
 # worm dwelling at its comfort target). For a continuously-moving worm the raw median is well above
 # the threshold, so the raw-median floor is used unchanged.
 _MOVING_STRIDE_FRACTION = 0.1
+# A stretch needs two steps to carry one transition.
+_MIN_STRETCH_STEPS = 2
 
 
 def _wrap(theta: float) -> float:
@@ -118,10 +120,10 @@ def away_from_walls(
         if margin_mm <= step.x <= upper and margin_mm <= step.y <= upper:
             current.append(step)
             continue
-        if len(current) >= _MIN_SLOPE_POINTS:
+        if len(current) >= _MIN_STRETCH_STEPS:
             stretches.append(current)
         current = []
-    if len(current) >= _MIN_SLOPE_POINTS:
+    if len(current) >= _MIN_STRETCH_STEPS:
         stretches.append(current)
     return stretches
 

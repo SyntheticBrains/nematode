@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from quantumnematode.utils.config_loader import load_simulation_config
 
 _root = Path(__file__).resolve()
 while _root != _root.parent and not (_root / "scripts" / "analysis").is_dir():
@@ -19,6 +20,7 @@ sys.path.insert(0, str(_root / "scripts" / "analysis"))
 
 import wall_exclusion_check as wec  # noqa: E402  # pyright: ignore[reportMissingImports]
 
+CONFIGS = _root / "configs" / "scenarios" / "foraging"
 COMMITTED = _root / "docs/experiments/logbooks/supporting/035-realworm-chemotaxis-validation"
 READINGS = COMMITTED / "wall-exclusion"
 
@@ -97,7 +99,53 @@ class TestCommittedReadings:
             ]
         assert arms["connectome"]["identity_with_committed"]["identical"] is True
 
+    def test_the_floor_held_reading_matches_the_note(self) -> None:
+        held = json.loads((READINGS / "floor-held.json").read_text())
+        # The sensing arms keep every weathervane verdict with the floor held.
+        for arm in ("mlp", "connectome"):
+            for label in ("m1.0", "m2.0"):
+                assert {s["verdict"] for s in held[arm][label].values()} == {"REPRODUCED"}
+        # The control's 1.0 mm change depends on the floor; its 2.0 mm change does not.
+        assert held["control"]["m1.0"]["klinotaxis"]["verdict"] == "REPRODUCED"
+        assert 0 < held["control"]["m1.0"]["klinotaxis"]["ci_lo"] < 1e-4
+        assert held["control"]["m2.0"]["klinotaxis"]["verdict"] == "PARTIAL"
+
     def test_the_comparison_re_derives_from_the_committed_readings(self) -> None:
         assert wec.compare(READINGS, COMMITTED) == json.loads(
             (READINGS / "comparison.json").read_text(),
         )
+
+
+class TestCaptureConfigs:
+    """Each capture config is its parent with the stated keys, and nothing else."""
+
+    @pytest.mark.parametrize(
+        ("stem", "parent", "mode"),
+        [
+            (
+                "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_capture",
+                "mlpppo_small_continuous2d_fick_adaptive_klinotaxis",
+                None,
+            ),
+            (
+                "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_capture",
+                "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis",
+                None,
+            ),
+            (
+                "mlpppo_small_continuous2d_fick_adaptive_derivative_capture",
+                "mlpppo_small_continuous2d_fick_adaptive_klinotaxis",
+                "derivative",
+            ),
+        ],
+    )
+    def test_the_delta_is_only_the_capture(self, stem: str, parent: str, mode: str | None) -> None:
+        child = load_simulation_config(str(CONFIGS / f"{stem}.yml")).model_dump()
+        expected = load_simulation_config(str(CONFIGS / f"{parent}.yml")).model_dump()
+        sensing = expected["environment"]["sensing"]
+        assert sensing["capture_behaviour"] is False
+        sensing["capture_behaviour"] = True
+        if mode is not None:
+            sensing["chemotaxis_mode"] = mode
+        assert child == expected
+        assert stem in wec.ARMS

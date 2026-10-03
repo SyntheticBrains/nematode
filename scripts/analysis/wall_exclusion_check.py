@@ -16,6 +16,9 @@ Subcommands::
     # The three readings per arm, one summary JSON each.
     uv run python scripts/analysis/wall_exclusion_check.py read --out-dir <dir>
 
+    # The two weathervane slopes with each seed's creep floor held at its unexcluded value.
+    uv run python scripts/analysis/wall_exclusion_check.py floor --out-dir <dir>
+
     # Identity against the committed summaries, and the verdicts at each setting.
     uv run python scripts/analysis/wall_exclusion_check.py compare --out-dir <dir> \
         --committed docs/experiments/logbooks/supporting/035-realworm-chemotaxis-validation
@@ -119,6 +122,46 @@ def read_arm(manifest: Path, margin_mm: float | None) -> dict[str, Any]:
     return summary
 
 
+def floor_held(manifest: Path, margin_mm: float) -> dict[str, Any]:
+    """Grade the two weathervane slopes with each seed's creep floor held at its unexcluded value.
+
+    The harness recomputes its curving-rate floor, a fraction of the median stride, on whatever data
+    it is given. Dropping wall steps, which are often short, raises that floor slightly, so part of
+    a change under the exclusion can come from the floor rather than from the dropped transitions.
+    Holding the floor at the value the full data gives separates the two.
+    """
+    from quantumnematode.validation import behavioural_curves as bc
+    from quantumnematode.validation.behavioural_agreement import grade_statistic
+    from quantumnematode.validation.datasets import load_bias_signatures
+
+    refs = load_bias_signatures(modality="food")
+    seeds = bcv.tail_runs(bcv.load_manifest(manifest), TAIL_RUNS)
+    kept, _ = bcv.exclude_walls(seeds, ARENA_MM, margin_mm)
+    slopes: dict[str, list[float]] = {"klinotaxis": [], "klinotaxis_all": []}
+    for seed in sorted(seeds):
+        full = [k for run in seeds[seed] for k in bc.kinematics(run, THETA_SHARP)]
+        kin = [k for run in kept[seed] for k in bc.kinematics(run, THETA_SHARP)]
+        floor = bc.suggest_min_path_len(full, bcv._MIN_PATH_LEN_FRACTION)
+        for key, fn in (
+            ("klinotaxis", bc.weathervane_slope),
+            ("klinotaxis_all", bc.weathervane_slope_all),
+        ):
+            value = fn(kin, min_path_len=floor)
+            if value is not None and math.isfinite(value):
+                slopes[key].append(value)
+    out: dict[str, Any] = {}
+    for key, values in slopes.items():
+        graded = grade_statistic(values, refs[key])
+        out[key] = {
+            "verdict": graded.verdict.value,
+            "mean": graded.mean,
+            "ci_lo": graded.ci_lo,
+            "ci_hi": graded.ci_hi,
+            "n": graded.n,
+        }
+    return out
+
+
 def _same(a: float | None, b: float | None) -> bool:
     if a is None or b is None:
         return a is b
@@ -201,6 +244,8 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--out-dir", type=Path, required=True)
     r = sub.add_parser("read")
     r.add_argument("--out-dir", type=Path, required=True)
+    f = sub.add_parser("floor")
+    f.add_argument("--out-dir", type=Path, required=True)
     c = sub.add_parser("compare")
     c.add_argument("--out-dir", type=Path, required=True)
     c.add_argument("--committed", type=Path, required=True)
@@ -216,6 +261,18 @@ def main(argv: list[str] | None = None) -> int:
                 out = args.out_dir / f"{arm}-{label}.json"
                 out.write_text(json.dumps(summary, indent=2, default=str) + "\n")
                 print(f"wrote {out}")
+    elif args.command == "floor":
+        result = {
+            arm: {
+                label: floor_held(args.out_dir / f"manifest-{arm}.txt", margin)
+                for label, margin in SETTINGS.items()
+                if margin is not None
+            }
+            for arm, _ in ARMS.values()
+        }
+        out = args.out_dir / "floor-held.json"
+        out.write_text(json.dumps(result, indent=2) + "\n")
+        print(json.dumps(result, indent=2))
     else:
         result = compare(args.out_dir, args.committed)
         out = args.out_dir / "comparison.json"
