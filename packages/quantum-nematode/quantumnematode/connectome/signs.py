@@ -12,15 +12,17 @@ sign:
 
 1. **Physiology** — a cited measurement of that connection's effect, from the vendored table of
    overrides.
-2. **Expression** — the polarity Fenyves et al. 2020 predict from the presynaptic transmitter and
-   the postsynaptic receptor genes, used only where the transmitter their prediction rests on is one
-   of the presynaptic cell's release identities in the atlas the rest of the package reads. Their
-   tables come in two files, built on two reconstructions; where both predict a sign they must
-   agree.
+2. **Expression** — the polarity Fenyves et al. 2020 predict from the presynaptic transmitters and
+   the postsynaptic receptor genes, used only where every transmitter their prediction rests on is
+   one of the presynaptic cell's release identities in the atlas the rest of the package reads. They
+   name a primary and sometimes a secondary transmitter per cell; a prediction is set aside if the
+   primary is not a release identity, or if the secondary is not and the primary alone would not
+   give the same polarity. Their tables come in two files, built on two reconstructions; where both
+   predict a sign they must agree.
 3. **Rule** — the per-neuron transmitter rule.
 4. **None** — no fast sign: the presynaptic cell releases nothing the rule signs.
 
-Nothing in the package reads these signs by default; a brain that wants them asks for them.
+Nothing in the package reads these signs yet.
 """
 
 from __future__ import annotations
@@ -52,7 +54,10 @@ PHYSIOLOGY_OVERRIDES_PATH = DATA_DIR / "sign_overrides_physiology.csv"
 # The sheets' layout: two header rows, then one row per connection with the source neuron in column
 # A, its primary transmitter in B, the target in D, the edge type in F and the polarity in Q.
 _FIRST_ROW = 2
-_PRE_COL, _TRANSMITTER_COL, _POST_COL, _TYPE_COL, _POLARITY_COL = 0, 1, 3, 5, 16
+_PRE_COL, _TRANSMITTER_COL, _SECONDARY_COL, _POST_COL, _TYPE_COL, _POLARITY_COL = 0, 1, 2, 3, 5, 16
+# Columns G-L: whether the target expresses an excitatory (+) or inhibitory (-) receptor for each
+# transmitter the source releases, primary or secondary.
+_RECEPTOR_COLS: dict[str, tuple[int, int]] = {"Glu": (6, 7), "ACh": (8, 9), "GABA": (10, 11)}
 _POLARITIES = frozenset({"+", "-", "complex", "no pred"})
 _POLARITY_SIGN: dict[str, Literal[1, -1]] = {"+": 1, "-": -1}
 
@@ -111,6 +116,14 @@ class FenyvesSheet(BaseModel):
     predictions: dict[tuple[str, str], str]
     transmitters: dict[str, str | None]
     ignored_rows: int = Field(..., ge=0, description="Rows naming an edge the connectome lacks.")
+    secondaries: dict[str, str | None] = Field(
+        default_factory=dict,
+        description="Each source neuron's secondary transmitter, column C, or None.",
+    )
+    primary_only: dict[tuple[str, str], str] = Field(
+        default_factory=dict,
+        description="The polarity the receptor columns give for the primary transmitter alone.",
+    )
 
 
 def _unpad(name: object) -> str:
@@ -131,6 +144,21 @@ def _check_digest(path: Path, expected: str) -> None:
             "file. If it is a Git LFS pointer, run `git lfs pull`."
         )
         raise ValueError(msg)
+
+
+def _transmitter(raw: object) -> str | None:
+    return None if raw in (0, None, "") else str(raw)
+
+
+def _primary_only_polarity(row: tuple[object, ...], primary: str | None) -> str:
+    """Return the polarity the sheet's formula gives when only the primary transmitter counts."""
+    if primary not in _RECEPTOR_COLS:
+        return "no pred"
+    plus_col, minus_col = _RECEPTOR_COLS[primary]
+    plus, minus = bool(row[plus_col]), bool(row[minus_col])
+    if plus and minus:
+        return "complex"
+    return "+" if plus else "-" if minus else "no pred"
 
 
 def _sheet_row(row: tuple[object, ...], where: str) -> tuple[str, str, str | None, str] | None:
@@ -155,8 +183,7 @@ def _sheet_row(row: tuple[object, ...], where: str) -> tuple[str, str, str | Non
             "its cached formula values reads as blank"
         )
         raise ValueError(msg)
-    raw = row[_TRANSMITTER_COL]
-    return pre, post, None if raw in (0, None, "") else str(raw), str(polarity)
+    return pre, post, _transmitter(row[_TRANSMITTER_COL]), str(polarity)
 
 
 def read_fenyves_sheet(
@@ -179,6 +206,8 @@ def read_fenyves_sheet(
     )
     predictions: dict[tuple[str, str], str] = {}
     transmitters: dict[str, str | None] = {}
+    secondaries: dict[str, str | None] = {}
+    primary_only: dict[tuple[str, str], str] = {}
     ignored = 0
     for index, row in enumerate(rows):
         if index < _FIRST_ROW:
@@ -192,6 +221,14 @@ def read_fenyves_sheet(
             msg = f"{where}: {pre}'s transmitter changes from {transmitters[pre]} to {transmitter}"
             raise ValueError(msg)
         transmitters[pre] = transmitter
+        secondary = _transmitter(row[_SECONDARY_COL])
+        if pre in secondaries and secondaries[pre] != secondary:
+            msg = (
+                f"{where}: {pre}'s secondary transmitter changes from {secondaries[pre]} "
+                f"to {secondary}"
+            )
+            raise ValueError(msg)
+        secondaries[pre] = secondary
         if (pre, post) not in edges:
             ignored += 1
             continue
@@ -199,10 +236,17 @@ def read_fenyves_sheet(
             msg = f"{where}: {pre}>{post} listed twice"
             raise ValueError(msg)
         predictions[(pre, post)] = polarity
+        primary_only[(pre, post)] = _primary_only_polarity(row, transmitter)
     if not predictions:
         msg = f"{path.name} {sheet!r}: no predictions read"
         raise ValueError(msg)
-    return FenyvesSheet(predictions=predictions, transmitters=transmitters, ignored_rows=ignored)
+    return FenyvesSheet(
+        predictions=predictions,
+        transmitters=transmitters,
+        ignored_rows=ignored,
+        secondaries=secondaries,
+        primary_only=primary_only,
+    )
 
 
 def read_physiology_overrides(
@@ -267,6 +311,34 @@ def _fenyves_transmitter(pre: str, sheets: list[FenyvesSheet]) -> str | None:
     return next(iter(named)) if named else None
 
 
+def _fenyves_secondary(pre: str, sheets: list[FenyvesSheet]) -> str | None:
+    named = {sheet.secondaries[pre] for sheet in sheets if pre in sheet.secondaries}
+    if len(named) > 1:
+        msg = (
+            f"the Fenyves files disagree on {pre}'s secondary transmitter: "
+            f"{sorted(map(str, named))}"
+        )
+        raise ValueError(msg)
+    return next(iter(named)) if named else None
+
+
+def _rests_on_release_identities(edge: tuple[str, str], sheets: list[FenyvesSheet]) -> bool:
+    """Whether every transmitter the edge's prediction rests on is one the cell releases.
+
+    The primary is checked by the caller. A secondary the atlas does not give the cell is harmless
+    only if the primary alone gives the same polarity in every sheet that predicts one.
+    """
+    identities = _release_identities(edge[0])
+    secondary = _fenyves_secondary(edge[0], sheets)
+    if secondary is None or secondary in identities:
+        return True
+    return all(
+        sheet.primary_only[edge] == sheet.predictions[edge]
+        for sheet in sheets
+        if sheet.predictions.get(edge) in _POLARITY_SIGN
+    )
+
+
 def per_connection_signs(
     connectome: Connectome | None = None,
     *,
@@ -291,7 +363,7 @@ def per_connection_signs(
     ------
     ValueError
         If a vendored file's digest is not the recorded one, the two Fenyves files disagree on a
-        connection's sign or a cell's transmitter, or an override names a connection the wiring
+        connection's sign or a cell's transmitters, or an override names a connection the wiring
         does not have or names one twice.
     """
     if connectome is None:
@@ -334,7 +406,11 @@ def per_connection_signs(
             transmitter = _fenyves_transmitter(pre, sheets)
             # A prediction resting on a transmitter the atlas does not give the cell is set aside:
             # it predicts the receptor response to a release the cell does not make.
-            if transmitter is not None and transmitter in _release_identities(pre):
+            if (
+                transmitter is not None
+                and transmitter in _release_identities(pre)
+                and _rests_on_release_identities((pre, post), sheets)
+            ):
                 signed[(pre, post)] = ConnectionSign(
                     pre=pre,
                     post=post,

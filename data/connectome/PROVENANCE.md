@@ -238,7 +238,9 @@ the full attribution chain:
   2016, *eLife* 5:e12572), `wang2020` (Wang et al. 2020, *eLife* 9:e56942) and `zhang2025` (Zhang et
   al. 2025, *Nat. Commun.* 16:4405). The module carries each DOI.
 - **Cross-check**: with these overrides and the two Fenyves files, the loader reproduces the chemical
-  signs and their sources in Wormlight's export at `1190b3e` on all 3,709 edges.
+  signs and their sources in Wormlight's export at `1190b3e` on 3,686 of the 3,709 edges. The other 23
+  are a deliberate difference: their expression prediction rests on a secondary transmitter the atlas
+  does not give the cell, which Wormlight does not check, so this loader signs them by the rule.
 - **Consumed by** `quantumnematode.connectome.signs.per_connection_signs()`.
 
 ### The Randi et al. 2023 signal-propagation atlas, and other Creamer artefacts

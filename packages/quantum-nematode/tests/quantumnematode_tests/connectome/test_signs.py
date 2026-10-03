@@ -31,9 +31,21 @@ if TYPE_CHECKING:
 PROVENANCE = sg.DATA_DIR / "PROVENANCE.md"
 BRAIN_DIR = Path(sg.__file__).resolve().parents[1] / "brain"
 
-# Wormlight's chemical sign table at commit 1190b3e: every "pre>post:sign:source" line, sorted and
-# joined by newlines, hashed. Taken from its public/data/wormlight.v1.json.
-WORMLIGHT_1190B3E_DIGEST = "c598a51be29a35d019750a028ae5dd72a1306ce356b57266cb95acc116f25928"
+# Wormlight's chemical sign table at commit 1190b3e, without the edges below: every
+# "pre>post:sign:source" line, sorted and joined by newlines, hashed. Taken from its
+# public/data/wormlight.v1.json.
+WORMLIGHT_1190B3E_DIGEST = "797f7b41836bde20af53d17042d0291858bbeadaf98fd23a18582dd43cb5984e"
+
+# Where this table deliberately differs from Wormlight's: Wormlight signs these by Fenyves et al.'s
+# prediction, but each prediction rests on a secondary transmitter the atlas does not give the cell,
+# and the primary alone predicts nothing, so here they fall to the per-neuron rule.
+SECONDARY_SET_ASIDE = {
+    ("AIML", "RID"), ("AIML", "SMBVL"), ("AIML", "URXL"), ("AIMR", "ALA"), ("AIMR", "URXR"),
+    ("AVAL", "AVDL"), ("AVAL", "AVDR"), ("AVAL", "LUAL"), ("AVAL", "LUAR"), ("AVAL", "SABVL"),
+    ("AVAR", "AVDL"), ("AVAR", "AVDR"), ("AVAR", "LUAL"), ("AVAR", "LUAR"), ("AVAR", "SABVR"),
+    ("AVBL", "AVDR"), ("AVBR", "AVDL"), ("RIBL", "DVC"), ("RIBL", "RIAL"), ("RIBR", "RIAR"),
+    ("RIBR", "RIH"), ("RIBR", "RMDVR"), ("RIBR", "RMED"),
+}  # fmt: skip
 
 
 @pytest.fixture(scope="module")
@@ -96,17 +108,17 @@ class TestComposition:
     def test_sources_and_signs(self, table) -> None:
         assert Counter(entry.source for entry in table.values()) == {
             "physiology": 51,
-            "expression": 1699,
-            "rule": 1426,
+            "expression": 1676,
+            "rule": 1449,
             "none": 533,
         }
         assert Counter((entry.source, entry.sign) for entry in table.values()) == {
             ("physiology", 1): 19,
             ("physiology", -1): 32,
-            ("expression", 1): 1301,
-            ("expression", -1): 398,
-            ("rule", 1): 1307,
-            ("rule", -1): 119,
+            ("expression", 1): 1291,
+            ("expression", -1): 385,
+            ("rule", 1): 1324,
+            ("rule", -1): 125,
             ("none", 0): 533,
         }
 
@@ -114,7 +126,7 @@ class TestComposition:
         sections: Counter[str] = Counter()
         for synapse in load_cook_2019_hermaphrodite().chemical_synapses:
             sections[table[(synapse.pre, synapse.post)].source] += synapse.weight
-        assert sections == {"physiology": 850, "expression": 11048, "rule": 7012, "none": 2055}
+        assert sections == {"physiology": 850, "expression": 10962, "rule": 7098, "none": 2055}
 
     def test_awc_to_aiy_is_inhibitory_where_the_rule_says_excitatory(self, table) -> None:
         entry = table[("AWCL", "AIYL")]
@@ -127,7 +139,7 @@ class TestComposition:
             for (pre, _post), entry in table.items()
             if sg.sign_for(sg.NEURON_CLASSIFICATION[pre][1]) not in (None, entry.sign)
         )
-        assert opposite == {"physiology": 32, "expression": 321}
+        assert opposite == {"physiology": 32, "expression": 310}
 
     def test_sheet_coverage(self, table) -> None:
         edges = set(table)
@@ -154,10 +166,37 @@ class TestComposition:
 class TestWormlightAgreement:
     """Scenario: The table matches Wormlight's."""
 
-    def test_every_edge_matches_its_sign_and_source(self, table) -> None:
-        rows = sorted(f"{pre}>{post}:{e.sign}:{e.source}" for (pre, post), e in table.items())
+    def test_every_other_edge_matches_its_sign_and_source(self, table) -> None:
+        rows = sorted(
+            f"{pre}>{post}:{e.sign}:{e.source}"
+            for (pre, post), e in table.items()
+            if (pre, post) not in SECONDARY_SET_ASIDE
+        )
         digest = hashlib.sha256("\n".join(rows).encode()).hexdigest()
         assert digest == WORMLIGHT_1190B3E_DIGEST
+
+    def test_the_differing_edges_fall_to_the_rule(self, table) -> None:
+        assert {table[edge].source for edge in SECONDARY_SET_ASIDE} == {"rule"}
+        edges = set(table)
+        sheets = [
+            sg.read_fenyves_sheet(
+                sg.FENYVES_S1_PATH,
+                sg.FENYVES_S1_SHEET,
+                sg.FENYVES_S1_SHA256,
+                edges,
+            ),
+            sg.read_fenyves_sheet(
+                sg.FENYVES_S5_PATH,
+                sg.FENYVES_S5_SHEET,
+                sg.FENYVES_S5_SHA256,
+                edges,
+            ),
+        ]
+        # Wormlight's sign for each is the sheets' prediction; 11 of the 23 change sign here.
+        flipped = [
+            e for e in SECONDARY_SET_ASIDE if sg._expression_sign(e, sheets) != table[e].sign
+        ]
+        assert len(flipped) == 11
 
 
 class TestRefusals:
@@ -255,6 +294,40 @@ class TestPrecedence:
         )
         got = self._run(monkeypatch, tmp_path, sheet, [], edge)
         assert (got[edge].sign, got[edge].source) == (1, "rule")
+
+    def test_a_prediction_resting_on_an_unreleased_secondary_is_set_aside(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        # AWC releases glutamate only. The sheet's minus rests on a secondary GABA, and glutamate
+        # alone predicts nothing, so the prediction describes a release AWC does not make.
+        edge = ("AWCL", "AIYL")
+        sheet = sg.FenyvesSheet(
+            predictions={edge: "-"},
+            transmitters={"AWCL": "Glu"},
+            ignored_rows=0,
+            secondaries={"AWCL": "GABA"},
+            primary_only={edge: "no pred"},
+        )
+        got = self._run(monkeypatch, tmp_path, sheet, [], edge)
+        assert (got[edge].sign, got[edge].source) == (1, "rule")
+
+    def test_an_unreleased_secondary_that_changes_nothing_is_harmless(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        edge = ("AWCL", "AIYL")
+        sheet = sg.FenyvesSheet(
+            predictions={edge: "-"},
+            transmitters={"AWCL": "Glu"},
+            ignored_rows=0,
+            secondaries={"AWCL": "GABA"},
+            primary_only={edge: "-"},
+        )
+        got = self._run(monkeypatch, tmp_path, sheet, [], edge)
+        assert (got[edge].sign, got[edge].source) == (-1, "expression")
 
     def test_complex_and_no_prediction_fall_through(self, monkeypatch, tmp_path) -> None:
         edge = ("AWCL", "AIYL")

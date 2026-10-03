@@ -9,19 +9,27 @@ derivation, and pins that the two agree.
 ### Decision A: Vendor the sources, not the derived table
 
 Wormlight's export carries a sign and a source on every chemical edge, and copying it would be one file.
-But it is a derived artefact from a private repository, so its provenance chain would end at a commit
-nobody else can read. Vendoring the publisher's Fenyves files by digest, plus the physiology table,
+But it is a derived artefact, so its provenance chain would run through another repository's build
+rather than ending at the publisher's bytes. Vendoring the publisher's Fenyves files by digest, plus the physiology table,
 keeps the derivation reproducible from this repository alone, which is the house standard
-(`PROVENANCE.md`). Wormlight's export is used once, as a cross-check: a test compares every edge.
+(`PROVENANCE.md`). Wormlight's export is used once, as a cross-check: a test compares every edge, and
+names the 23 where this table deliberately differs (Decision B).
 
-### Decision B: The precedence is Wormlight's, unchanged
+### Decision B: Wormlight's precedence, with one correction found at review
 
-Physiology, then expression, then rule, then none. The expression step is used only where the transmitter
-Fenyves's prediction rests on is one of the presynaptic cell's release identities in Wang et al. 2024,
-the atlas the package's classification table already carries; otherwise the prediction is set aside
-(40 edges) and the edge falls through to the rule. Where both Fenyves files predict a sign for one edge
-they must agree, and a disagreement is an error rather than a choice. Changing any of this would break the
-comparability the roadmap asks the two projects to keep.
+Physiology, then expression, then rule, then none. The expression step is used only where every
+transmitter Fenyves's prediction rests on is one of the presynaptic cell's release identities in Wang et
+al. 2024, the atlas the package's classification table already carries; otherwise the prediction is set
+aside and the edge falls through to the rule. Where both Fenyves files predict a sign for one edge they
+must agree, and a disagreement is an error rather than a choice.
+
+Fenyves et al. name a primary and sometimes a secondary transmitter per cell, and their polarity counts
+receptor matches for both. Wormlight checks only the primary against the atlas. The branch review found 67
+kept predictions whose secondary is not one of the cell's identities; recomputed from the primary alone,
+44 give the same polarity and 23 give none, so those 23 signs rested entirely on a release the atlas does
+not record. This table sets them aside — the module's own stated rule — so they fall to the per-neuron
+rule, and 11 of them change sign. They include AVA → AVD and AVB → AVD in the command circuit. The
+difference from Wormlight is those 23 edges exactly, and the test names them.
 
 ### Decision C: Read the cached formula values, and refuse a copy without them
 
@@ -51,11 +59,11 @@ Over Cook 2019's 3,709 chemical edges (20,965 sections):
 | source | edges | + | − | sections |
 |---|---|---|---|---|
 | physiology | 51 | 19 | 32 | 850 |
-| expression | 1,699 | 1,301 | 398 | 11,048 |
-| rule | 1,426 | 1,307 | 119 | 7,012 |
+| expression | 1,676 | 1,291 | 385 | 10,962 |
+| rule | 1,449 | 1,324 | 125 | 7,098 |
 | none | 533 | — | — | 2,055 |
 
-353 edges carry a sign opposite to the per-neuron rule's: 32 from physiology and 321 from expression. The
+342 edges carry a sign opposite to the per-neuron rule's: 32 from physiology and 310 from expression. The
 S1 sheet predicts for 3,516 of the edges and names 122 others the wiring lacks; the S5 sheet predicts for
 3,237 and names 5 others; 3,117 edges are in both.
 

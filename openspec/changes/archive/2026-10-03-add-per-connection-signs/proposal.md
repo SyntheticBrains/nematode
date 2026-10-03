@@ -26,13 +26,14 @@ per-neuron rule. Phase 8b's re-plan scheduled vendoring it here as housekeeping 
 ### 2. A loader
 
 `quantumnematode.connectome.signs.per_connection_signs()` signs every chemical edge by the first of four
-steps that gives a sign: physiology; Fenyves's expression prediction, where the transmitter it rests on
+steps that gives a sign: physiology; Fenyves's expression prediction, where every transmitter it rests on
 is one of the cell's release identities in the atlas the package already reads; the per-neuron rule;
 else no fast sign. It refuses a vendored file whose digest differs, a disagreement between the two
 Fenyves files, an override naming an edge the wiring lacks, and an override with an unknown citation.
 
 The vendored inputs are the primary sources, not Wormlight's derived export, so the table is re-derivable
-here. A test pins that the derivation reproduces Wormlight's export at `1190b3e` on every edge.
+here. A test pins that the derivation reproduces Wormlight's export at `1190b3e` on every edge but 23, set
+aside at review because their prediction rests on a transmitter the cell does not release; the test names them.
 
 ## Capabilities
 
