@@ -39,6 +39,8 @@ from quantumnematode.connectome.neurons import NEURON_CLASSIFICATION, NEURON_CO_
 from quantumnematode.connectome.neurotransmitters import sign_for
 
 if TYPE_CHECKING:  # pragma: no cover - import-time typing only
+    from collections.abc import Iterator
+
     from quantumnematode.connectome.model import Connectome
 
 DATA_DIR = Path(__file__).resolve().parents[4] / "data" / "connectome"
@@ -201,9 +203,21 @@ def read_fenyves_sheet(
     import openpyxl
 
     _check_digest(path, expected_sha256)
-    rows = openpyxl.load_workbook(path, read_only=True, data_only=True)[sheet].iter_rows(
-        values_only=True,
-    )
+    # A read-only workbook holds its file open until closed, so it is closed however parsing ends.
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        return _parse_sheet(workbook[sheet].iter_rows(values_only=True), path, sheet, edges)
+    finally:
+        workbook.close()
+
+
+def _parse_sheet(
+    rows: Iterator[tuple[object, ...]],
+    path: Path,
+    sheet: str,
+    edges: set[tuple[str, str]],
+) -> FenyvesSheet:
+    """Parse a sign-prediction sheet's rows, keeping the ones that name one of ``edges``."""
     predictions: dict[tuple[str, str], str] = {}
     transmitters: dict[str, str | None] = {}
     secondaries: dict[str, str | None] = {}

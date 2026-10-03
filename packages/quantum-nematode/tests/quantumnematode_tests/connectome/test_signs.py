@@ -90,6 +90,38 @@ class TestVendoredFiles:
                 set(),
             )
 
+    def test_the_workbook_is_closed_when_parsing_fails(self, monkeypatch) -> None:
+        import openpyxl
+
+        closed: list[bool] = []
+        real_load = openpyxl.load_workbook
+
+        def tracking_load(*args, **kwargs):
+            workbook = real_load(*args, **kwargs)
+            real_close = workbook.close
+
+            def close() -> None:
+                closed.append(True)
+                real_close()
+
+            monkeypatch.setattr(workbook, "close", close)
+            return workbook
+
+        def failing_parse(*args):
+            msg = "parse failed"
+            raise ValueError(msg)
+
+        monkeypatch.setattr(openpyxl, "load_workbook", tracking_load)
+        monkeypatch.setattr(sg, "_parse_sheet", failing_parse)
+        with pytest.raises(ValueError, match="parse failed"):
+            sg.read_fenyves_sheet(
+                sg.FENYVES_S5_PATH,
+                sg.FENYVES_S5_SHEET,
+                sg.FENYVES_S5_SHA256,
+                set(),
+            )
+        assert closed == [True]
+
     def test_the_physiology_table_is_recorded(self) -> None:
         assert sg.PHYSIOLOGY_OVERRIDES_PATH.name in PROVENANCE.read_text(encoding="utf-8")
         overrides = sg.read_physiology_overrides()
