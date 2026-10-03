@@ -317,11 +317,13 @@ def fetch_arxiv(config: dict[str, Any], until: date) -> Fetched:
     """
     try:
         return _fetch_arxiv_api(config, until)
-    except SourceError as exc:
+    # A refusal and an unparseable first page (an HTML error page served with a 200) both leave
+    # the API with nothing to give; later pages failing are handled inside as a partial sweep.
+    except (SourceError, ET.ParseError) as exc:
         if not config.get("rss_fallback", True) or not config.get("categories"):
             raise
         print(f"warning: arXiv query API failed ({exc}); reading the RSS feed", file=sys.stderr)
-        found = fetch_arxiv_rss(config)
+        found = fetch_arxiv_rss(config, until)
         note = (
             f"arXiv's query API refused the request ({exc}); the arXiv source fell back to the "
             f"category RSS feed, which carries only the latest announcement day, so "
@@ -330,8 +332,15 @@ def fetch_arxiv(config: dict[str, Any], until: date) -> Fetched:
         return Fetched(found, [note])
 
 
-def fetch_arxiv_rss(config: dict[str, Any]) -> list[Candidate]:
-    """Read the latest announcement day for the configured categories from arXiv's RSS feed."""
+def fetch_arxiv_rss(config: dict[str, Any], until: date) -> list[Candidate]:
+    """Read the latest announcement day for the configured categories from arXiv's RSS feed.
+
+    The feed always carries the latest announcement, whatever window was asked for, so items are
+    kept only if their announcement date falls inside the configured lookback ending at ``until``.
+    A run with ``--until`` in the past then gets nothing from the feed rather than this week's
+    papers presented as that week's.
+    """
+    since = until - timedelta(days=int(config.get("lookback_days", 8)))
     categories: list[str] = config.get("categories", [])
     url = "https://rss.arxiv.org/rss/" + "+".join(categories)
     channel = ET.fromstring(_http_bytes(url).decode("utf-8"))  # noqa: S314 — arXiv's own feed over https
@@ -342,7 +351,10 @@ def fetch_arxiv_rss(config: dict[str, Any]) -> list[Candidate]:
         ).strip()
         if announce and announce not in RSS_ANNOUNCE_TYPES:
             continue
-        found.append(_arxiv_rss_candidate(item))
+        candidate = _arxiv_rss_candidate(item)
+        # An undated item cannot be shown to fall inside the window, so it is not kept.
+        if candidate.published and since.isoformat() <= candidate.published <= until.isoformat():
+            found.append(candidate)
     return found
 
 

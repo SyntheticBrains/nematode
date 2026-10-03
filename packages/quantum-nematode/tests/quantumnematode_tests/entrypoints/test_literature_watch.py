@@ -608,6 +608,36 @@ class TestArxivRssFallback:
         assert first.published == "2026-10-05"
         assert first.url == "https://arxiv.org/abs/2610.00001v1"
 
+    def test_an_unparseable_first_page_also_falls_back(self, monkeypatch):
+        def html_error_page(config, until):
+            msg = "mismatched tag: line 1, column 20"
+            raise ET.ParseError(msg)
+
+        monkeypatch.setattr(lw, "_fetch_arxiv_api", html_error_page)
+        monkeypatch.setattr(lw, "_http_bytes", lambda url: _RSS.encode())
+
+        got = lw.fetch_arxiv({"categories": ["q-bio.NC"]}, lw.date(2026, 10, 5))
+        assert [item.uid for item in got.candidates] == ["2610.00001v1", "2610.00002v1"]
+        assert got.partials
+
+    def test_feed_items_outside_the_window_are_dropped(self, monkeypatch):
+        # A backfill run for an earlier week must not present this week's feed as that week's.
+        monkeypatch.setattr(lw, "_fetch_arxiv_api", self._api_refuses)
+        monkeypatch.setattr(lw, "_http_bytes", lambda url: _RSS.encode())
+
+        earlier = lw.fetch_arxiv(
+            {"categories": ["q-bio.NC"], "lookback_days": 8},
+            lw.date(2026, 9, 28),
+        )
+        assert earlier.candidates == []
+        assert "0 records stand in" in earlier.partials[0]
+
+        inside = lw.fetch_arxiv(
+            {"categories": ["q-bio.NC"], "lookback_days": 8},
+            lw.date(2026, 10, 13),
+        )
+        assert len(inside.candidates) == 2
+
     def test_the_fallback_can_be_switched_off(self, monkeypatch):
         monkeypatch.setattr(lw, "_fetch_arxiv_api", self._api_refuses)
         with pytest.raises(lw.SourceError):
