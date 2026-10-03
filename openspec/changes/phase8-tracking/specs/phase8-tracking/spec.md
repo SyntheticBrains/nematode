@@ -2,13 +2,13 @@
 
 ### Requirement: Phase 8 Living Shipment Checklist
 
-The repository SHALL maintain a single living checklist file at `openspec/changes/phase8-tracking/tasks.md` covering Phase 8's two shipments (8a: block A, B.1, B.2 and the 8a synthesis; 8b: C.0–C.5, B.3 + D.1 and the phase synthesis) plus the MAY items, at sub-task granularity. Every Phase 8 milestone PR SHALL update this file as part of its diff. This change SHALL remain unarchived until the Phase 8 synthesis publishes, at which point it archives alongside that synthesis change.
+The repository SHALL maintain a single living checklist file at `openspec/changes/phase8-tracking/tasks.md` covering Phase 8's two shipments (8a: block A, B.1 and the 8a synthesis; 8b: the controls carried from 8a — A.6t, A.3 and B.2 — then C.0–C.5, B.3 + D.1 and the phase synthesis) plus the MAY items, at sub-task granularity. Every Phase 8 milestone PR SHALL update this file as part of its diff. This change SHALL remain unarchived until the Phase 8 synthesis publishes, at which point it archives alongside that synthesis change.
 
 #### Scenario: Future session orients to Phase 8
 
 - **GIVEN** a fresh AI session resumes Phase 8 work
 - **WHEN** the agent reads `openspec/changes/phase8-tracking/tasks.md` and `docs/roadmap.md` § Phase 8
-- **THEN** the agent SHALL be able to identify the current shipment, sub-task, and applicable design decisions (D15–D20) without re-deriving the plan or the review corrections
+- **THEN** the agent SHALL be able to identify the current shipment, sub-task, and applicable design decisions (D15–D22) without re-deriving the plan or the review corrections
 
 #### Scenario: Milestone PR updates the checklist
 
@@ -16,9 +16,9 @@ The repository SHALL maintain a single living checklist file at `openspec/change
 - **WHEN** the PR is opened
 - **THEN** the PR diff SHALL include updates to `openspec/changes/phase8-tracking/tasks.md` marking completed sub-tasks as `[x]` and updating the relevant shipment status header
 
-### Requirement: Design Decisions D15–D20 Are Binding
+### Requirement: Design Decisions D15–D22 Are Binding
 
-Phase 8 milestone changes SHALL conform to the ratified design decisions D15–D20 recorded in `docs/roadmap.md` § Phase 8 § Pre-registered design decisions. Amending a D-decision SHALL require a dated note in the `phase8-tracking` change (with a matching roadmap edit) before the affected milestone change merges.
+Phase 8 milestone changes SHALL conform to the ratified design decisions D15–D22 recorded in `docs/roadmap.md` § Phase 8 § Pre-registered design decisions. Amending a D-decision SHALL require a dated note in the `phase8-tracking` change (with a matching roadmap edit) before the affected milestone change merges.
 
 #### Scenario: Milestone change contradicts a D-decision
 
@@ -66,7 +66,7 @@ Results measured through the C.1 or C.2 body SHALL be reported against floors an
 
 ### Requirement: Substrate Freeze Before the Body Rung
 
-Every C.0 platform change — the step–time calibration, signed speed, and the proprioceptive channel — SHALL land, validate and freeze before C.1 registers, and D19 SHALL be decided and recorded in the same window. Any comparison spanning a subsequent substrate change SHALL be reported as qualitative.
+Every C.0 platform change — the step–time calibration and signed speed (the proprioceptive interface lands inside C.1c under D22) — SHALL land, validate and freeze before C.1 registers, and D19 SHALL be decided and recorded in the same window. Any comparison spanning a subsequent substrate change SHALL be reported as qualitative.
 
 #### Scenario: C.1 proposed before the C.0 freeze
 
