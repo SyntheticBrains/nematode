@@ -130,3 +130,47 @@ def test_figures_written(tmp_path):
     bcv._write_figures(seeds, theta, summary, figure_dir)
     assert (figure_dir / "turn_rate_vs_dcdt.png").stat().st_size > 0
     assert (figure_dir / "curving_rate_vs_bearing.png").stat().st_size > 0
+
+
+def test_exclude_walls_counts_transitions_before_and_after():
+    """Each run becomes its stretches away from the walls, and the transitions kept are counted."""
+    from quantumnematode.report.dtypes import BehaviourStep
+
+    def run(points):
+        return [
+            BehaviourStep(
+                step=i,
+                x=x,
+                y=y,
+                heading_rad=0.0,
+                concentration=0.5,
+                dc_dt=0.0,
+                grad_dir=0.0,
+                grad_strength=1.0,
+            )
+            for i, (x, y) in enumerate(points)
+        ]
+
+    inside = run([(5.0, 5.0), (6.0, 5.0), (7.0, 5.0)])  # 2 transitions, all kept
+    visits = run([(5.0, 5.0), (6.0, 5.0), (0.2, 5.0), (6.0, 5.0), (7.0, 5.0)])  # 4, 2 kept
+    kept, report = bcv.exclude_walls({1: [inside], 2: [visits]}, arena_mm=20.0, margin_mm=1.0)
+    assert [len(runs) for runs in kept.values()] == [1, 2]
+    assert report["transitions_before"] == 6
+    assert report["transitions_kept"] == 4
+    assert report["fraction_kept"] == 4 / 6
+    assert (report["arena_mm"], report["margin_mm"]) == (20.0, 1.0)
+
+
+def test_the_summary_is_unchanged_when_the_exclusion_is_off(tmp_path, monkeypatch):
+    """Without a margin the summary carries no wall-exclusion block."""
+    capture = tmp_path / "capture.json"
+    capture.write_text(
+        json.dumps({"runs": [{"run": 0, "seed": 1, "steps": _klinokinesis_steps()}]}),
+    )
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text(f"1 {capture}\n")
+    out = tmp_path / "summary.json"
+    argv = ["x", "--manifest", str(manifest), "--out", str(out), "--theta-sharp", "0.5"]
+    monkeypatch.setattr(sys, "argv", argv)
+    bcv.main()
+    assert "wall_exclusion" not in json.loads(out.read_text())

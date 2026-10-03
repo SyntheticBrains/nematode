@@ -10,6 +10,26 @@ dissociation**: klinokinesis persists (in fact *strengthens*) while the weatherv
 87–93%** to a small geometric residual — so the weathervane is a genuine sensor-driven strategy, not a
 foraging-geometry artifact. This is the behaviour-level real-worm validation Gate 3 G3.d requires.
 
+> **Wall-proximity check, 2026-10-04** ([launch record and readings](supporting/035-realworm-chemotaxis-validation/wall-exclusion/launch.md)).
+> The arena clamps the worm's position, so a worm heading into an edge slides along it, and this
+> analysis never excluded wall-proximal steps. The three arms were re-captured on the same seeds and
+> episodes and re-read with every transition near an edge dropped, at a registered 1.0 mm margin (one
+> step) and a 2.0 mm sensitivity margin, which keep 72–77% and 64–69% of transitions.
+>
+> - **The MLP and connectome arms do not move.** Every statistic keeps its verdict at both margins, and
+>   both strategies stay PRESENT_PARTIAL (klinokinesis) and PRESENT (weathervane). The magnitudes barely
+>   change: the MLP's threshold-free weathervane slope goes +0.088 off, +0.083 at 1.0 mm, +0.075 at 2.0 mm.
+> - **The control's residual weathervane weakens.** Its thresholded slope falls from REPRODUCED (+0.0023
+>   [+0.0003, +0.0043]) to PARTIAL at both margins (+0.0019 [−0.0000, +0.0038] at 1.0 mm), so part of the
+>   small geometric residual the specificity control carried was wall-driven. The double dissociation
+>   is **stronger**, not weaker, once the wall is excluded.
+> - **Identity.** With the exclusion off, the connectome arm reproduces this logbook's committed
+>   statistics exactly, and 21 of the 24 seeds do. MLP seed 47 and control seeds 42 and 45 differ. The
+>   re-capture is deterministic (each re-run byte-identical), so those three differ because of something
+>   between July and now, or in the July runs. No verdict in this logbook changes on the re-capture.
+>
+> Per the registration, a verdict moved, so C.3 and D.1 carry the wall exclusion as a requirement.
+
 **Branch**: `openspec/add-realworm-chemotaxis-validation`.
 
 **Date**: 2026-07-06.
