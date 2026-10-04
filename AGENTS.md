@@ -31,6 +31,26 @@ Quantum Nematode is a closed-loop sensory-motor simulation platform: a simulated
 - **Campaigns: always pass the output controls.** `uv run python scripts/run_campaign.py --config <cfg> [--config ...] --seeds 1-96 --runs 3000 --output-dir campaigns/<name> -- --theme headless --track-experiment --no-detailed-export --no-file-log`. **The two `--no-*` flags are not optional at campaign scale**: without them each run writes ~0.7 GB *outside* the campaign directory (~440 MB of step-level exports plus ~256 MB of verbose log), so a 768-run campaign needs ~500 GB and will fill the volume — which is exactly what happened at run 337 of the L.1 campaign. With them a run writes ~17 MB and everything any analysis reads is still produced: the per-run summary CSVs, `weights/final.pt`, and the tracked-experiment record. The campaign directory itself is small, which is why the cost is invisible until it is not.
 - L4 plasticity panel: run the recipe pilot with `uv run python scripts/campaigns/l4_panel_pilot.py --out campaigns/l4-pilot` (grid configs derived beside the results; add `--only <arm> --rate <r> --runs 6000` to extend one arm as a fresh run), summarise it with `uv run python scripts/analysis/l4_panel.py --pilot --campaign-dir campaigns/l4-pilot --out docs/experiments/logbooks/supporting/040-l4-panel/pilot.json` (prints the selected rate and the budget rule's output), then analyse the panel with `uv run python scripts/analysis/l4_panel.py --campaign-dir <campaign-dir> --out panel.json --csv per-seed.csv --curves curves.csv` (confirmatory mode accepts seeds 1–8 only; the four-test family, the band test and the verdict map are fixed in the script).
 
+## Running Experiments
+
+Read [docs/research/phase-protocol.md](docs/research/phase-protocol.md) before designing any panel; its principles bind every
+registration. The non-negotiables, each learned from a lost run:
+
+- **Workflow**: plan, then an OpenSpec change, then `/nematode-review-spec`, then implement, archive and PR. Never skip the
+  review for a change that launches a campaign over about two hours.
+- **Register before running**: a `launch.md` under `docs/experiments/logbooks/supporting/<NNN>-<slug>/` fixing the arms,
+  metric, registered minimum (from committed data, on the same cell), sizing, verdict map and gates, committed before any
+  scored run. A registered verdict is never re-read under a different rule after the data are seen; anything else is
+  reported beside it as description.
+- **Gate preflight before launch**: `uv run python scripts/campaigns/gate_preflight.py --panel <analysis module> [--half ppo] --logs <dir of runs at the registered point>` evaluates every level's floor and saturation gates on committed runs,
+  or on a pilot, and exits nonzero if any level would be unreadable, sits within 5 points of the bar, or has no evidence.
+  A.6t ran 16 hours into an unreadable panel that one minute of this would have caught
+  ([Logbook 077](docs/experiments/logbooks/077-thermal-null-strength.md)).
+- **Pilots** run on seeds disjoint from the registered band, configured exactly as the campaign; cost is estimated from
+  them. A smoke run that only checks configs execute is not a pilot.
+- **During a campaign** never switch branches: the runner reads configs and package code from the working tree per run.
+- **Retention**: commit the per-seed CSV, analysis JSON and launch record; archive raw logs off-repo.
+
 ## Key Directories
 
 - `packages/quantum-nematode/quantumnematode/` — Main source code
