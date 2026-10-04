@@ -100,9 +100,29 @@ compression a less likely reason for the other two gaps to vanish. **It does not
 the gate was registered, it fired, and reading past it now would be choosing the rule after seeing the
 data.
 
-**A.1 applied no saturation gate on this cell**, and block V's own thermal readings were made on the
-efficiency axis at this same point. So every committed thermal result sits at this saturation too.
-That conditions those results; it does not invalidate them.
+**A.1 applied no saturation gate on this cell.** Its runs at this same point, still on disk, plateau
+at 91.4% (wild type) and 92.3% (current null), so A.1's thermal readings also sit above the bar.
+Block V's own thermal panels used the same configuration and were not checked. That conditions those
+results; it does not invalidate them.
+
+## What went wrong in the registration, and what changed
+
+The registration carried hard350's saturation gate to the thermal cell without evaluating it there.
+The evidence existed at no cost: A.1's runs at this exact point, on disk, plateau at 91–92%. The
+15-episode smoke before launch only checked that configs ran, on a seed inside the registered band, and
+could not have shown a gate. And the change skipped the spec review step that had caught defects in
+earlier panels before launch.
+
+Three things changed with this logbook:
+
+- **`scripts/campaigns/gate_preflight.py`** evaluates a panel's registered gates on existing runs at
+  the registered point and exits nonzero if any level is saturated, fails a floor, sits within five
+  points of the bar, or has no evidence. Run on A.1's logs it reports this panel's `full` level
+  `saturated`; run on A.6's it passes hard350.
+- **The phase protocol** (principles 6 and 8) now requires every registered gate to be evaluated
+  before launch, re-checks carried-over gates, and says a smoke run is not a pilot.
+- **The spec review** gained a campaign-readiness section: gate preflight, carried-over gates, cost
+  from a matched pilot and disjoint pilot seeds, blocking for any campaign over about two hours.
 
 ## What this establishes, and what it does not
 
@@ -117,14 +137,15 @@ That conditions those results; it does not invalidate them.
 
 ## Registered consequences, and the decision this leaves
 
-The registration named no follow-up for an unreadable panel. The options are the maintainer's:
+The registration named no follow-up for an unreadable panel. **The maintainer chose a non-saturating
+thermal panel** (2026-10-05), in its own change:
 
-1. **A non-saturating thermal panel.** Register a thermal point below the 90% bar, for example a
-   higher food target, which is how block V moved this cell off target 10. It needs its own operating
-   point checked first, since block V's thermal claims were made at target 20.
-2. **Record the described result and move on.** Carry "unreadable; described, the thermal lead is not
-   visible against nulls with the wild type's gap junctions" into block V's conditions, and let the
-   combined paper's thermal half say so.
+1. A pilot on disjoint seeds, wild type and current null learning and frozen, at two or three higher
+   food targets, choosing the target by the gates alone and never by the wiring gap.
+2. A registered panel with the split's arms only — wild type, current null, gap-held null — at that
+   target: 128 fresh seeds, 768 runs, with the gate preflight run on the pilot and a spec review
+   before launch. Its minimum is two-thirds of A.1's thermal effect, stated as the nearest committed
+   reference, and the gap against the gap-held null is a registered reading in its own right.
 
 **Block V's thermal condition**, until one of those is done: on the thermal cell, block V's advantage
 over the degree-preserving null is +0.089 `auc_success` at 128 seeds, at a saturated operating point.

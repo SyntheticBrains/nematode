@@ -52,6 +52,17 @@ Review an OpenSpec change to ensure it is ready for implementation.
    - Are performance expectations realistic given prior results?
    - Are comparison baselines identified?
 
+   **Campaign Readiness** (any change that launches a campaign; blocking if missing for one over ~2 h)
+
+   - Has every gate the registration reads been evaluated at the registered point **before launch**?
+     Run `scripts/campaigns/gate_preflight.py --panel <analysis module> --logs <runs at that point>`
+     on committed runs where they exist, otherwise on a pilot. Any `saturated`, `fails_floor`,
+     `near_bar` or `no_evidence` level blocks the launch until resolved.
+   - Was a gate carried over from another cell or learner re-checked on this one?
+   - Is the cost estimated from a pilot configured the way the campaign will be (same episodes, same
+     arm mix), not from a lighter run or another panel's average?
+   - Did every pilot and smoke run use seeds disjoint from the registered band?
+
    **Code Quality Concerns**
 
    - Will the proposed implementation integrate cleanly with existing code?

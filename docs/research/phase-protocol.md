@@ -122,6 +122,13 @@ down.
    it in the same condition — the next value a shared generator will yield, the same optimiser step
    count, the same buffer contents. Where an arm consumes a shared resource by a different amount,
    it is not a one-variable manipulation however carefully its parameters were matched.
+   *(Added 2026-10-05.)* **Every gate a registration reads is evaluated at the registered point
+   before launch** — floors, the saturation bar, anything that can make a level unreadable — on
+   committed runs at that point where they exist, otherwise on a pilot (`gate_preflight.py`). A gate
+   carried from another cell is re-checked on the new one. *A.6t carried hard350's 90% saturation
+   bar to the thermal cell and ran 1,024 runs, about 16 hours, into an unreadable panel: every level
+   plateaued at 94–96%. A.1's runs at the same point, already on disk, sat at 91–92%; one minute
+   reading them would have shown it, [Logbook 077](../experiments/logbooks/077-thermal-null-strength.md).*
 
 ### Parameters
 
@@ -146,7 +153,7 @@ down.
 
 8. **Pilots on disjoint seeds.** Registered seeds stay untouched until the protocol is fixed. *Held
    throughout Phase 7, and it is why the pilots could inform registrations without contaminating
-   them.*
+   them.* A smoke run that only checks configs execute is not a pilot: it cannot show a gate.
 
 ### Running
 
