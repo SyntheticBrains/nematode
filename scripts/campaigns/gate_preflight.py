@@ -5,8 +5,8 @@ A wiring contrast is read only at a level where both learning arms beat their fr
 not both sit at or above the saturation bar. This evaluates exactly those gates, through the same
 function the analyses use, on runs that already exist at the registered point: committed campaigns
 where they cover it, otherwise a short pilot on disjoint seeds configured the way the campaign will
-be. It exits nonzero if any level would be unreadable, has no evidence, or sits within a margin of
-the bar, so a launch can be blocked on it.
+be. It exits nonzero if any level would be unreadable, has no or incomplete evidence, or sits within a
+margin of the bar, so a launch can be blocked on it.
 
 The panel's arms come from an analysis module's ``STEMS`` table, ``level -> arm -> config stem``,
 or ``half -> level -> arm -> stem`` with ``--half``. Every log under each ``--logs`` directory whose
@@ -82,6 +82,14 @@ def preflight(
 ) -> dict[str, Any]:
     """Evaluate each level's floor and saturation gates on the runs found, and say whether to launch."""
     rows = evidence(stems, log_dirs)
+    # One run per arm, level and seed: two logs for the same key (the same stem and seed in two
+    # directories) would leave the gate to read whichever it saw last.
+    seen: dict[tuple[str, str, int], Path] = {}
+    for arm, level, seed, log in rows:
+        prior = seen.setdefault((arm, level, seed), log)
+        if prior != log:
+            msg = f"{arm} {level} seed {seed} has two runs: {prior} and {log}"
+            raise ValueError(msg)
     bar = wp.SATURATION_SUCCESS
     levels: dict[str, Any] = {}
     with tempfile.TemporaryDirectory() as tmp:
@@ -102,7 +110,12 @@ def preflight(
                 continue
             gates = ops.learning_gates(manifest, "ppo", seeds, level, floor_level=level)
             top = max(gates["wt"]["plateau_success"], gates["rn"]["plateau_success"])
-            if not gates["gate_passes"]:
+            # The gate skips a seed whose log yields no plateau (a run still going, or cut short),
+            # so a level is complete only if every selected seed was scored on both wirings.
+            scored = min(gates["wt"]["n_seeds"], gates["rn"]["n_seeds"])
+            if scored < len(seeds):
+                status = "incomplete_evidence"
+            elif not gates["gate_passes"]:
                 status = "fails_floor"
             elif gates["saturated"]:
                 status = "saturated"
@@ -113,6 +126,7 @@ def preflight(
             levels[level] = {
                 "status": status,
                 "n_seeds": len(seeds),
+                "n_scored": scored,
                 "wt_plateau": gates["wt"]["plateau_success"],
                 "rn_plateau": gates["rn"]["plateau_success"],
                 "wt_floor": gates["wt"]["floor_success"],
