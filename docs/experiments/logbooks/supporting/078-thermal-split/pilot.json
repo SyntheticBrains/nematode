@@ -1,0 +1,126 @@
+{
+  "seeds": [
+    1001,
+    1002,
+    1003,
+    1004
+  ],
+  "episodes": 3000,
+  "selection_rule": "# Target selection rule \u2014 fixed 2026-10-05 11:47 AEDT, before the target-35 pilot ran\n\nThe follow-up panel runs at **the lowest pilot target at which every level (full, gap_held) is\nreadable** by scripts/campaigns/gate_preflight.py with its default 5-point margin. Gates only; no\nwiring gap is read. Targets piloted so far: 25 (saturated), 30 (near the bar), 40 (readable).\nAdding 35 on the same seeds (1001-1004): if it is readable it is chosen, otherwise 40.\n",
+  "targets": {
+    "25": {
+      "preflight": {
+        "saturation_bar": 90.0,
+        "margin_points": 5.0,
+        "levels": {
+          "full": {
+            "status": "saturated",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 96.06666666666666,
+            "rn_plateau": 93.46666666666667,
+            "wt_floor": 0.0,
+            "rn_floor": 0.0
+          },
+          "gap_held": {
+            "status": "saturated",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 96.06666666666666,
+            "rn_plateau": 95.03333333333333,
+            "wt_floor": 0.0,
+            "rn_floor": 0.5666666666666667
+          }
+        },
+        "launch": false
+      },
+      "wild_type_auc_success_mean": 0.6819166666666666
+    },
+    "30": {
+      "preflight": {
+        "saturation_bar": 90.0,
+        "margin_points": 5.0,
+        "levels": {
+          "full": {
+            "status": "near_bar",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 89.43333333333334,
+            "rn_plateau": 82.9,
+            "wt_floor": 0.0,
+            "rn_floor": 0.0
+          },
+          "gap_held": {
+            "status": "near_bar",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 89.43333333333334,
+            "rn_plateau": 91.63333333333333,
+            "wt_floor": 0.0,
+            "rn_floor": 0.03333333333333333
+          }
+        },
+        "launch": false
+      },
+      "wild_type_auc_success_mean": 0.52075
+    },
+    "35": {
+      "preflight": {
+        "saturation_bar": 90.0,
+        "margin_points": 5.0,
+        "levels": {
+          "full": {
+            "status": "readable",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 71.46666666666667,
+            "rn_plateau": 63.96666666666667,
+            "wt_floor": 0.0,
+            "rn_floor": 0.0
+          },
+          "gap_held": {
+            "status": "readable",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 71.46666666666667,
+            "rn_plateau": 72.9,
+            "wt_floor": 0.0,
+            "rn_floor": 0.0
+          }
+        },
+        "launch": true
+      },
+      "wild_type_auc_success_mean": 0.31233333333333335
+    },
+    "40": {
+      "preflight": {
+        "saturation_bar": 90.0,
+        "margin_points": 5.0,
+        "levels": {
+          "full": {
+            "status": "readable",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 40.0,
+            "rn_plateau": 25.6,
+            "wt_floor": 0.0,
+            "rn_floor": 0.0
+          },
+          "gap_held": {
+            "status": "readable",
+            "n_seeds": 4,
+            "n_scored": 4,
+            "wt_plateau": 40.0,
+            "rn_plateau": 43.666666666666664,
+            "wt_floor": 0.0,
+            "rn_floor": 0.0
+          }
+        },
+        "launch": true
+      },
+      "wild_type_auc_success_mean": 0.14375
+    }
+  },
+  "wild_type_auc_success_t20_a1_seeds_129_160": 0.7207604166666667,
+  "chosen_target": 35
+}
