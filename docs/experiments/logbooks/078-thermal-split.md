@@ -14,8 +14,9 @@ Beside them: block V's effect at this point is **+0.103** `auc_success` [+0.092,
 episodes to competence**. Against the gap-held null the wild type is **+73 episodes** [+26, +122].
 
 **About 84% of block V's thermal `auc_success` lead over the degree-preserving null came from that null's
-rewired gap junctions. A chemical-wiring lead remains, smaller than the registered minimum.** On hard350
-the same control left about half ([Logbook 075](075-gap-only-split.md)).
+rewired gap junctions. A smaller lead remains, below the registered minimum.** It belongs to the chemical
+wiring and the 38 autapses together, since the gap-held null loses the autapses as the current null
+does. On hard350 the same control left about half ([Logbook 075](075-gap-only-split.md)).
 
 **Date**: 2026-10-06.
 
@@ -94,13 +95,17 @@ The censoring rule found the episode metric comparable (crossing rates 96–99%)
 - **Established**: at target 35 on the thermal cell under PPO, most of block V's lead over the
   degree-preserving null, about 84% of it on `auc_success`, came from that null's rewired gap junctions.
   Holding them moves the gap by more than the registered minimum.
-- **Established, with its condition**: a chemical-wiring lead remains against a null with the wild
-  type's gap junctions, significant on both metrics (+0.016 `auc_success`, +73 episodes) and below the
-  registered minimum on the primary. It may not be cited as a lead of at least the minimum.
+- **Established, with its condition**: a lead remains against a null with the wild type's gap
+  junctions, significant on both metrics (+0.016 `auc_success`, +73 episodes) and below the registered
+  minimum on the primary. It may not be cited as a lead of at least the minimum.
 - **Not established**: anything at target 20, block V's own thermal point. That remains Logbook 077's
   condition: unreadable, and described as no visible lead. Target 35 is a harder operating point, and
   the two are not read as each other.
-- **Not separated**: gap placement against gap strength. The gap-held null holds both.
+- **Not separated**: gap placement against gap strength, since the gap-held null holds both. Nor the
+  chemical wiring against the autapses in the remaining lead: the gap-held null lacks the wild type's
+  38 autapses, and this panel left out the chemical-only null that keeps them. On hard350 that null
+  gave about the same lead as the gap-held one (+0.022 against +0.025), so the autapses barely mattered
+  there; on thermal it is untested.
 
 ## Block V, restated with the thermal half
 
@@ -108,7 +113,8 @@ On hard350, against a null with the wild type's gap junctions, block V is +0.025
 episodes, about half its lead over the degree-preserving null. On the thermal cell at target 35 it is
 +0.016 `auc_success` and +73 episodes, about a sixth: a significant lead below the registered minimum.
 **On both cells the null's rewired gap junctions carry most or half of block V's advantage, and a
-smaller chemical-wiring lead in learning speed remains.**
+smaller lead in learning speed remains** — from the chemical wiring on hard350, and from the chemical
+wiring and the autapses together on thermal, where the two were not separated.
 
 ## Artefacts
 
