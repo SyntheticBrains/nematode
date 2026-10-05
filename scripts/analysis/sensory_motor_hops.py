@@ -115,7 +115,7 @@ def motor_reach(topology: ConnectomeTopology) -> dict[str, Any]:
 
 
 DEFAULT_NULL = "rewired_degree_preserving"
-NULLS = (DEFAULT_NULL, "rewired_chemical_only")
+NULLS = (DEFAULT_NULL, "rewired_chemical_only", "rewired_boundary_held")
 
 
 def compare(seeds: tuple[int, ...], null: str = DEFAULT_NULL) -> dict[str, Any]:

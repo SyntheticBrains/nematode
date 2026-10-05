@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Emit the null-strength configs: each full-null arm with a narrower rewiring.
 
-Three panels use them: A.6's chemical-only null (``null_strength_control.py``), its gap-only split
-(``gap_split.py``), and both on block V's thermal cell (``thermal_null_strength.py``). Each panel defines which arms are new and which committed arm each derives from,
+Four panels use them: A.6's chemical-only null (``null_strength_control.py``), its gap-only split
+(``gap_split.py``), both on block V's thermal cell (``thermal_null_strength.py``), and the
+boundary-preserving null (``boundary_null.py``). Each panel defines which arms are new and which committed arm each derives from,
 and is imported here. Each new config is its parent with one ``wiring`` value and nothing else; a test
 re-reads every file through the real loader to check that. A config that already exists is left
 alone, never overwritten.
@@ -25,6 +26,7 @@ _ANALYSIS = Path(__file__).resolve().parents[1] / "analysis"
 if str(_ANALYSIS) not in sys.path:
     sys.path.insert(0, str(_ANALYSIS))
 
+import boundary_null as bn  # noqa: E402  # pyright: ignore[reportMissingImports]
 import gap_split as gs  # noqa: E402  # pyright: ignore[reportMissingImports]
 import null_strength_control as nsc  # noqa: E402  # pyright: ignore[reportMissingImports]
 import thermal_null_strength as tns  # noqa: E402  # pyright: ignore[reportMissingImports]
@@ -74,11 +76,23 @@ _THERMAL_NEW = {
     wiring: {stem: arm for stem, arm in tns.NEW_ARMS.items() if tns.NEW_WIRING[stem] == wiring}
     for wiring in (_CHEMICAL[0], _GAP_HELD[0])
 }
+_BOUNDARY = (
+    "rewired_boundary_held",
+    "Boundary-preserving null arm",
+    "the boundary-preserving rewired null (Phase 8b A.3)",
+    (
+        "# The chemical graph's interior is rewired by the same degree-preserving swap; every\n"
+        "# chemical edge leaving an injected sensor or entering a readout motor neuron is held, as\n"
+        "# are the gap junctions (pairs and counts) and the autapses, at the wild type's.\n"
+    ),
+    "test_boundary_null.py",
+)
 PANELS: tuple[tuple[dict[str, tuple[str, str]], tuple[str, str, str, str, str]], ...] = (
     (nsc.NEW_ARMS, _CHEMICAL),
     (gs.NEW_ARMS, _GAP_HELD),
     (_THERMAL_NEW[_CHEMICAL[0]], _THERMAL_CHEMICAL),
     (_THERMAL_NEW[_GAP_HELD[0]], _THERMAL_GAP_HELD),
+    (bn.NEW_ARMS, _BOUNDARY),
 )
 
 

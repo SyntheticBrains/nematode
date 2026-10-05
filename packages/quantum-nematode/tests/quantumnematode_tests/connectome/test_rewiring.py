@@ -315,3 +315,82 @@ def test_holding_gap_junctions_alone_keeps_the_default_chemical_graph(cook: Conn
     )
     assert gap_held.chemical_synapses == full.chemical_synapses
     assert gap_held.gap_junctions == cook.gap_junctions
+
+
+# ── The boundary-preserving null ─────────────────────────────────────────────────────────────
+# Covers the connectome-ppo-brain requirement "A boundary-preserving rewired null": every chemical
+# edge out of an injected sensor or into a readout motor neuron is held, the interior is rewired,
+# degrees stay exact, and every one- and two-hop sensor-to-motor route is kept.
+
+
+def _boundary_null(c: Connectome, seed: int) -> tuple[Connectome, frozenset[str], frozenset[str]]:
+    from quantumnematode.brain.arch.connectome_ppo import boundary_neurons
+
+    sensory, motor = boundary_neurons(c)
+    null = rewire_degree_preserving(
+        c,
+        np.random.default_rng(seed),
+        rewire_gap_junctions=False,
+        preserve_autapses=True,
+        hold_boundary=(sensory, motor),
+    )
+    return null, sensory, motor
+
+
+def _routes(c: Connectome, sensory: frozenset[str], motor: frozenset[str]) -> tuple[set, set]:
+    """Chemical one-hop and two-hop routes from a sensory neuron to a motor neuron."""
+    out: dict[str, set[str]] = {}
+    for s in c.chemical_synapses:
+        out.setdefault(s.pre, set()).add(s.post)
+    one = {(a, b) for a in sensory for b in out.get(a, ()) if b in motor}
+    two = {(a, m, b) for a in sensory for m in out.get(a, ()) for b in out.get(m, ()) if b in motor}
+    return one, two
+
+
+@pytest.mark.parametrize("seed", [1, 17, 129])
+class TestTheBoundaryNull:
+    def test_the_boundary_sets_are_the_brains(self, cook: Connectome, seed: int) -> None:
+        _null, sensory, motor = _boundary_null(cook, seed)
+        assert len(sensory) == 17
+        assert len(motor) == 39
+        assert {"AWCL", "AFDR", "ASHL", "PLMR"} <= sensory
+
+    def test_every_boundary_edge_is_held_with_its_count(self, cook: Connectome, seed: int) -> None:
+        null, sensory, motor = _boundary_null(cook, seed)
+        wild = {(s.pre, s.post): s.weight for s in cook.chemical_synapses}
+        got = {(s.pre, s.post): s.weight for s in null.chemical_synapses}
+        held = {e: w for e, w in wild.items() if e[0] in sensory or e[1] in motor}
+        assert all(got.get(e) == w for e, w in held.items())
+        assert {e for e in got if e[0] in sensory or e[1] in motor} == set(held)
+
+    def test_the_interior_moves_and_degrees_are_exact(self, cook: Connectome, seed: int) -> None:
+        null, sensory, motor = _boundary_null(cook, seed)
+        wild = {(s.pre, s.post) for s in cook.chemical_synapses}
+        got = {(s.pre, s.post) for s in null.chemical_synapses}
+        interior = {e for e in wild if e[0] not in sensory and e[1] not in motor}
+        assert len(interior - got) > len(interior) // 2
+        assert Counter(p for p, _ in got) == Counter(p for p, _ in wild)
+        assert Counter(q for _, q in got) == Counter(q for _, q in wild)
+
+    def test_gap_junctions_and_autapses_are_the_wild_types(
+        self,
+        cook: Connectome,
+        seed: int,
+    ) -> None:
+        null, _s, _m = _boundary_null(cook, seed)
+        assert null.gap_junctions == cook.gap_junctions
+        assert _autapses(null) == _autapses(cook)
+
+    def test_one_and_two_hop_routes_are_kept(self, cook: Connectome, seed: int) -> None:
+        null, sensory, motor = _boundary_null(cook, seed)
+        assert _routes(null, sensory, motor) == _routes(cook, sensory, motor)
+
+
+def test_the_chemical_only_null_does_not_keep_the_routes(cook: Connectome) -> None:
+    """The contrast that gives the boundary null its point: the chemical-only null adds routes."""
+    from quantumnematode.brain.arch.connectome_ppo import boundary_neurons
+
+    sensory, motor = boundary_neurons(cook)
+    one_wild, _two = _routes(cook, sensory, motor)
+    one_null, _two_null = _routes(_chemical_null(cook, 17), sensory, motor)
+    assert one_null != one_wild

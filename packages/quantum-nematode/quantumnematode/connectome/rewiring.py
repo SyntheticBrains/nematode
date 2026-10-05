@@ -27,6 +27,8 @@ from quantumnematode.connectome.model import ChemicalSynapse, Connectome, GapJun
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     import numpy as np
 
 _DEFAULT_SWAPS_PER_EDGE = 10
@@ -140,13 +142,14 @@ def _undirected_double_edge_swap(
         )
 
 
-def rewire_degree_preserving(
+def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the null rewires
     connectome: Connectome,
     rng: np.random.Generator,
     swaps_per_edge: int = _DEFAULT_SWAPS_PER_EDGE,
     *,
     rewire_gap_junctions: bool = True,
     preserve_autapses: bool = False,
+    hold_boundary: tuple[Collection[str], Collection[str]] | None = None,
 ) -> Connectome:
     """Return a degree-preserving rewired copy of ``connectome``.
 
@@ -163,8 +166,15 @@ def rewire_degree_preserving(
     * ``preserve_autapses=True`` takes the self-loops out of the directed swap and puts them back
       unchanged, so every autapse keeps its count. In- and out-degree stay exact, since each
       autapse contributes one of each to its own neuron.
+    * ``hold_boundary=(sensory, motor)`` takes out of the directed swap every chemical edge
+      leaving a neuron in ``sensory`` or entering a neuron in ``motor``, and puts them back
+      unchanged. Only the interior -- edges from a non-sensory neuron to a non-motor one -- is
+      rewired. A swap of two interior edges yields interior edges, so it can never recreate a
+      held one, and degrees stay
+      exact. Every chemical route of one or two hops from a sensory neuron to a motor neuron is
+      kept, since its first edge leaves a sensory neuron and its last enters a motor neuron.
 
-    At their defaults both options leave the draws, and so the rewired graph, exactly as they were.
+    At their defaults the options leave the draws, and so the rewired graph, exactly as they were.
     With ``preserve_autapses`` the directed swap runs on a shorter list and draws differently, so at
     one seed its chemical graph is a different sample from the default null's; with
     ``rewire_gap_junctions=False`` alone the chemical graph is identical to the default null's.
@@ -187,8 +197,15 @@ def rewire_degree_preserving(
     if preserve_autapses:
         autapses = [edge for edge in chem_edges if edge[0] == edge[1]]
         chem_edges = [edge for edge in chem_edges if edge[0] != edge[1]]
+    held: list[tuple[str, str]] = []
+    if hold_boundary is not None:
+        sensory, motor = frozenset(hold_boundary[0]), frozenset(hold_boundary[1])
+        held = [edge for edge in chem_edges if edge[0] in sensory or edge[1] in motor]
+        chem_edges = [
+            edge for edge in chem_edges if edge[0] not in sensory and edge[1] not in motor
+        ]
     _directed_double_edge_swap(chem_edges, chem_weights, rng, swaps_per_edge * len(chem_edges))
-    chem_edges += autapses
+    chem_edges += autapses + held
 
     gap_weights = {(g.neuron_a, g.neuron_b): g.weight for g in connectome.gap_junctions}
     if rewire_gap_junctions:
@@ -208,6 +225,7 @@ def rewire_degree_preserving(
         gap_junctions=gap_junctions,
         source=f"{connectome.source}+rewired_degree_preserving"
         + ("" if rewire_gap_junctions else "[gap_junctions_held]")
-        + ("[autapses_held]" if preserve_autapses else ""),
+        + ("[autapses_held]" if preserve_autapses else "")
+        + ("[boundary_held]" if hold_boundary is not None else ""),
         version=connectome.version,
     )
