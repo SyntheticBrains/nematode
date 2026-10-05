@@ -13,7 +13,7 @@ predictor is computed.
   from the band), read with A.6's wild-type and chemical-only runs through the gate preflight; the panel
   dry-run on them.
 - [x] 5. **Registration** — **done: committed; spec review added a base-effect gate, the predictor's interpretation caveat and a CHANGELOG line, before launch and before the predictor was computed.** Original scope: the launch record, then `/nematode-review-spec`.
-- [ ] 6. **Predictor**: computed once, after the registration is committed.
+- [x] 6. **Predictor** — **done: unresolved (rho −0.154, p 0.29, 80% CI [−0.336, +0.042], n 48).** Original scope: computed once, after the registration is committed.
 - [ ] 7. **Campaign**: seeds 641–768, 768 runs.
 - [ ] 8. **Readout**: Logbook 079; tracker A.3; D21's third null in the roadmap.
 - [ ] 9. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by exit
