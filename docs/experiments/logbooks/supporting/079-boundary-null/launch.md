@@ -36,6 +36,12 @@ quantity Logbook 071 measured — and the same seed's **wild-type minus null `au
 | **no_prediction** | p ≥ 0.05, interval inside (−0.3, +0.3) |
 | **unresolved** | anything else |
 
+**What a verdict can say.** The one-hop count is taken over the propagating graph, so it includes the
+current null's rewired gap-junction edges as well as its chemical shortcuts, and Logbooks 075 and 078
+found the null's gap junctions carry about half or more of block V's lead. A **predicts** verdict says
+one-hop sensor-to-motor routes over that graph track the gap; it does not isolate the chemical
+shortcuts. (Added at spec review, before the predictor was computed.)
+
 **Spread and power.** The one-hop count runs 4–14 across these seeds (sd 2.4), looked at before
 registration without the gaps. At n = 48 a true rho of −0.3 is detected about 55% of the time; the test
 is registered at that power, not sized up to it. Reach within two hops saturates (37–39 of 39) and is
@@ -78,6 +84,12 @@ chemical-only null at this point (+0.0215). A.6's own minimum (0.041) exceeds th
 | `no_move` | **interior** if the lead over the boundary null excludes zero above, else **no_gap_to_attribute** | **no_lead** |
 | `below` | **below_minimum** | **lead_below_minimum** |
 | `unresolved` | **unresolved** | **unresolved** |
+
+**Base-effect gate** (added at spec review, before launch; protocol principle 6). The interaction moves
+the wild type's lead over the chemical-only null, so it reads only where that lead exists on this
+panel's own seeds: if the chemical-only gap's 80% interval does not exclude zero above, the
+interaction's verdict is **no_base_effect**, whatever its state. A.6 measured the lead on other seeds,
+and A.1 found block V's magnitude unstable across seed sets. The lead reading is unaffected.
 
 **Sensitivity** from A.6's committed PPO spread (interaction sd 0.061, chemical-gap sd 0.064): at 128
 seeds the detectable effects are 0.0135 and 0.0140, at the minimum. Achieved spread reported beside,

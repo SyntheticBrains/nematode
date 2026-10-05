@@ -76,7 +76,7 @@ def _t(lo: float, hi: float, q: float = 0.01) -> dict[str, float]:
 class TestReading:
     def test_a_saturated_level_stops_the_reading(self) -> None:
         gates = {bn.CHEMICAL: _gates(), bn.BOUNDARY: _gates(saturated=True)}
-        assert bn.read_panel(gates, {}, {})["verdict"] == "unreadable"
+        assert bn.read_panel(gates, {}, {}, _t(0.01, 0.03))["verdict"] == "unreadable"
 
     @pytest.mark.parametrize(
         ("mean", "test", "lead_lo", "verdict"),
@@ -91,14 +91,24 @@ class TestReading:
     def test_the_interaction_map(self, mean, test, lead_lo, verdict) -> None:
         gates = {level: _gates() for level in bn.LEVELS}
         lead = {"gap_mean": 0.02, "test": _t(lead_lo, 0.04)}
-        got = bn.read_panel(gates, {"interaction_mean": mean, "test": test}, lead)
+        got = bn.read_panel(gates, {"interaction_mean": mean, "test": test}, lead, _t(0.01, 0.03))
         assert got["interaction"]["verdict"] == verdict
 
     def test_the_lead_map(self) -> None:
         gates = {level: _gates() for level in bn.LEVELS}
         inter = {"interaction_mean": 0.0, "test": _t(-0.005, 0.005, q=0.9)}
         lead = {"gap_mean": 0.03, "test": _t(0.02, 0.04)}
-        assert bn.read_panel(gates, inter, lead)["lead"]["verdict"] == "lead_remains"
+        assert (
+            bn.read_panel(gates, inter, lead, _t(0.01, 0.03))["lead"]["verdict"] == "lead_remains"
+        )
+
+    def test_no_base_effect_withholds_the_interaction_but_not_the_lead(self) -> None:
+        gates = {level: _gates() for level in bn.LEVELS}
+        inter = {"interaction_mean": -0.03, "test": _t(-0.04, -0.02)}
+        lead = {"gap_mean": 0.03, "test": _t(0.02, 0.04)}
+        got = bn.read_panel(gates, inter, lead, _t(-0.005, 0.03))
+        assert got["interaction"]["verdict"] == "no_base_effect"
+        assert got["lead"]["verdict"] == "lead_remains"
 
 
 class TestManifest:

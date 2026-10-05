@@ -12,7 +12,7 @@ predictor is computed.
 - [x] 4. **Pilot and preflight** — **done: 8/8 pilot runs; both levels readable; dry run clean, no outcome read.** Original scope: the boundary null learning and frozen on seeds 305–308 (A.6's, disjoint
   from the band), read with A.6's wild-type and chemical-only runs through the gate preflight; the panel
   dry-run on them.
-- [ ] 5. **Registration**: the launch record, then `/nematode-review-spec`.
+- [x] 5. **Registration** — **done: committed; spec review added a base-effect gate, the predictor's interpretation caveat and a CHANGELOG line, before launch and before the predictor was computed.** Original scope: the launch record, then `/nematode-review-spec`.
 - [ ] 6. **Predictor**: computed once, after the registration is committed.
 - [ ] 7. **Campaign**: seeds 641–768, 768 runs.
 - [ ] 8. **Readout**: Logbook 079; tracker A.3; D21's third null in the roadmap.

@@ -125,8 +125,14 @@ def read_panel(
     gates: dict[str, Any],
     interaction: dict[str, Any],
     lead: dict[str, Any],
+    base_test: dict[str, Any],
 ) -> dict[str, Any]:
-    """Gates first, then each registered reading's state and verdict."""
+    """Gates first, then each registered reading's state and verdict.
+
+    The interaction moves the wild type's lead over the chemical-only null, so it reads only where
+    that lead exists on this panel's own seeds: ``base_test`` (the chemical-only gap) must exclude
+    zero above, or the interaction's verdict is ``no_base_effect``. The lead is read either way.
+    """
     readable = {level: mp.level_passes(g) for level, g in gates.items()}
     out: dict[str, Any] = {
         "minimum": MINIMUM,
@@ -145,7 +151,9 @@ def read_panel(
         test["bh_q"],
         MINIMUM,
     )
-    if state == "no_move":
+    if float(base_test["ci_lo"]) <= 0.0:
+        verdict = "no_base_effect"
+    elif state == "no_move":
         verdict = "interior" if gap_to_attribute(lead["test"]) else "no_gap_to_attribute"
     else:
         verdict = _INTERACTION_VERDICT[state]
@@ -221,7 +229,12 @@ def score(campaign_dir: Path, out_dir: Path, seeds: tuple[int, ...] = SEEDS) -> 
     drift["obligation_applies"] = False
     reading = mc.honour_drift(
         HALF,
-        read_panel(gates, splits[PRIMARY_METRIC], gaps[PRIMARY_METRIC][BOUNDARY]),
+        read_panel(
+            gates,
+            splits[PRIMARY_METRIC],
+            gaps[PRIMARY_METRIC][BOUNDARY],
+            gaps[PRIMARY_METRIC][CHEMICAL]["test"],
+        ),
         drift,
     )
     return {
