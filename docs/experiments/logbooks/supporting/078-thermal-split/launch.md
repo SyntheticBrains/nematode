@@ -27,7 +27,14 @@ which every level is readable**.
 | 40 | readable | readable | 0.144 |
 
 **Target 35 is chosen.** The pilot showed each arm's plateau to the person choosing, so the rule was fixed
-before 35 ran and leaves no discretion. Every figure is in [pilot.json](pilot.json).
+before 35 ran and leaves no discretion. Every figure is in [pilot.json](pilot.json). The rule file's
+creation time precedes the first target-35 run's log, and the rule was stated to the maintainer in the
+working session before that pilot started.
+
+**The analysis was dry-run on the pilot.** `thermal_split.score` ran end to end on the target-35 pilot
+logs (seeds 1001–1004): manifest, gates (both levels readable), both readings with their family
+correction, and the CSV. No state or verdict was printed, so no wiring result was read before
+registration.
 
 The preflight at target 35, through this panel's own module (`--panel thermal_split`):
 
@@ -69,6 +76,11 @@ choice. BH-FDR across the two readings per metric; states are B.1c's `classify`.
 `auc_success` ratio between the targets (0.312 at 35 on the pilot's 4 seeds ÷ 0.721 at 20 on A.1's 32).
 The ratio uses the wild type alone, so no wiring gap informs the minimum. It is a scaled reference from
 the nearest committed effect, not this point's own effect, which no committed data measures.
+
+**Its sampling error, stated.** The target-35 wild-type `auc_success` rests on the pilot's 4 seeds (0.272,
+0.317, 0.407, 0.253; sd 0.069). Within two standard errors the minimum could have come out between 0.019
+and 0.029. The registered value, 0.0239, is fixed regardless; re-estimating it from this campaign's own
+wild-type runs would take the minimum from the panel's own data.
 
 ## Sensitivity
 
