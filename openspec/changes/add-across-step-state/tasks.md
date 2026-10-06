@@ -1,0 +1,28 @@
+# Tasks: B.2a — across-step state, and its positive controls
+
+Phase 8b carried control B.2a. Registered in
+`docs/experiments/logbooks/supporting/080-across-step-state/launch.md` before any scored run.
+
+- [ ] 1. **The substrate**: `dynamics`, `membrane_tau_steps` and `bptt_chunk_length` with load-time
+  refusals; the semi-implicit leaky step with `M⁻¹` precomputed; the sustained sensor current; the membrane reset at episode start and the per-step detach; the state kept out of checkpoints and
+  `copy()`; a CHANGELOG line. Tests: settling byte-identical (a pinned
+  short run), contraction and boundedness on the raw wild-type gap weights, carry and reset, refusals.
+- [ ] 2. **The replay**: start states in the rollout buffer; the chunk iterator; the sequence forward;
+  the rule's chunked path; the end-of-episode update needing as many chunks as minibatches. Tests: replay equals rollout at unchanged parameters, across an episode
+  boundary and with a partial final chunk; the settling minibatch draws unchanged.
+- [ ] 3. **Configs**: a generator for the dynamical wild type, learning and frozen, at each pilot τ on
+  both cells, each its settling parent with only the three new keys; the MLP-PPO thermal target-35
+  config. Loader tests.
+- [ ] 4. **Analysis**: `across_step_control.py` — the pilot rule, the MLP competence gate, the non-inferiority reading and the per-seed CSV, with cells as levels in the preflight's `STEMS`
+  shape — with tests of every verdict.
+- [ ] 5. **Identity check**: four learning and two frozen settling runs per cell from the bands, re-run
+  on this code, bit for bit against the committed logs.
+- [ ] 6. **Pilot and MLP control**: the τ pilot on seeds 1101–1104 (64 runs) and the thermal MLP on 1201–1208; the hard350 MLP
+  citation checked against Logbook 060's per-seed data;
+  the rule applied; the gate preflight on the chosen τ; cost measured.
+- [ ] 7. **Registration**: the launch record, then `/nematode-review-spec`.
+- [ ] 8. **Campaign**: the dynamical wild type, learning and frozen, at the chosen τ on seeds 641–768
+  (hard350) and 513–640 (thermal target 35).
+- [ ] 9. **Readout**: Logbook 080; tracker B.2a; the roadmap's B.2 entry; what B.2b may run on, per cell.
+- [ ] 10. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
+  exit code; `openspec validate --strict`; archive and PR.
