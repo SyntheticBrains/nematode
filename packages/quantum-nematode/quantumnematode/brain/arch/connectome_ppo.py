@@ -151,6 +151,30 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
 
+
+def boundary_neurons(connectome: Connectome) -> tuple[frozenset[str], frozenset[str]]:
+    """Return ``(sensory, motor)``: the neurons sensation is injected into, and the readout's pool.
+
+    The sensory side is every neuron a projection targets -- food, thermal and predator alike, so
+    the set is the same on every cell. The motor side is every motor-class neuron of the four
+    classes the readout pools, matched as the readout matches them.
+    """
+    sensory = frozenset(
+        _SENSOR_NEURONS_FOOD
+        + _SENSOR_NEURONS_THERMOTAXIS
+        + _SENSOR_NEURONS_PREDATOR_DISTAL
+        + _SENSOR_NEURONS_PREDATOR_ANTERIOR
+        + _SENSOR_NEURONS_PREDATOR_POSTERIOR,
+    )
+    motor = frozenset(
+        name
+        for name, neuron in connectome.neurons.items()
+        if neuron.cell_class == "motor"
+        and any(name.startswith(p) and name[len(p) :].isdigit() for p in _MOTOR_CLASSES)
+    )
+    return sensory, motor
+
+
 # How the motor readout reads the pool. "pooled" is the 2x4 map over four motor-class MEANS that
 # every arm before L.1 ran -- 8 parameters, each of the 39 motor neurons carrying 1/|class| of its
 # class's influence. "per_neuron" gives each motor neuron its own weight (2x39, 78 parameters), so
@@ -229,12 +253,19 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # only. "rewired_gap_junctions_held" runs the degree-preserving null's chemical swap
     # unchanged -- the same chemical graph at the same seed, autapses handled as there -- and skips
     # only the gap swap, so it differs from that null in its gap junctions alone.
+    # "rewired_boundary_held" is the chemical-only null with the boundary held too: every chemical
+    # edge leaving a neuron the brain injects sensation into, or entering a motor neuron its readout
+    # pools, is kept, and only the interior is rewired. A rewiring can otherwise route a sensor
+    # straight onto a motor neuron in one or two hops where the wild type needs more, which
+    # favours the null at a shallow settling depth; this null keeps every such route as the wild
+    # type has it.
     # Default wild_type is byte-identical to the pre-change brain.
     wiring: Literal[
         "wild_type",
         "rewired_degree_preserving",
         "rewired_chemical_only",
         "rewired_gap_junctions_held",
+        "rewired_boundary_held",
     ] = "wild_type"
     # Seed for the rewiring draw (used only under a rewired wiring). None -> derive from the run
     # seed, so each paired run draws its own null topology from a dedicated RNG while the
@@ -2483,7 +2514,13 @@ class ConnectomePPOBrain(ClassicalBrain):
                 connectome,
                 np.random.default_rng(rewire_seed),
                 rewire_gap_junctions=config.wiring == "rewired_degree_preserving",
-                preserve_autapses=config.wiring == "rewired_chemical_only",
+                preserve_autapses=config.wiring
+                in ("rewired_chemical_only", "rewired_boundary_held"),
+                hold_boundary=(
+                    boundary_neurons(connectome)
+                    if config.wiring == "rewired_boundary_held"
+                    else None
+                ),
             )
             logger.info(
                 f"ConnectomePPOBrain wiring: {config.wiring} (rewire_seed={rewire_seed})",

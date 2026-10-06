@@ -1,0 +1,25 @@
+{
+  "saturation_bar": 90.0,
+  "margin_points": 5.0,
+  "levels": {
+    "chemical": {
+      "status": "readable",
+      "n_seeds": 32,
+      "n_scored": 32,
+      "wt_plateau": 76.42083333333333,
+      "rn_plateau": 73.4,
+      "wt_floor": 0.0,
+      "rn_floor": 0.075
+    },
+    "boundary": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 67.56666666666666,
+      "rn_plateau": 76.36666666666667,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    }
+  },
+  "launch": true
+}
