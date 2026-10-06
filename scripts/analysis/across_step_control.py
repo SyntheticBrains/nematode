@@ -20,6 +20,7 @@ Usage::
 
     uv run python scripts/analysis/across_step_control.py --pilot --logs <dir> [--logs <dir>] \
         --out-dir <scratch> --out pilot.json
+    uv run python scripts/analysis/across_step_control.py --mlp --logs <dir> --out mlp.json
     uv run python scripts/analysis/across_step_control.py --identity <rerun campaign> \
         --out identity.json
     uv run python scripts/analysis/across_step_control.py --logs <dir> [--logs <dir>] \
@@ -342,6 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--pilot", action="store_true", help="score the tau pilot and select")
     mode.add_argument("--identity", type=Path, help="compare these settling re-runs with the bands")
+    mode.add_argument("--mlp", action="store_true", help="read each cell's MLP-PPO control")
     ap.add_argument("--logs", type=Path, action="append", default=[], help="a run-log dir")
     ap.add_argument("--out-dir", type=Path, help="scratch directory for manifests")
     ap.add_argument("--out", type=Path, help="write the analysis JSON here instead of stdout")
@@ -350,6 +352,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.identity is not None:
         result = identity(args.identity)
+    elif args.mlp:
+        result = {cell: mlp_gate(args.logs, cell) for cell in CELLS}
     elif args.out_dir is None or not args.logs:
         ap.error("--logs and --out-dir are required for the pilot and the panel")
     elif args.pilot:
@@ -362,7 +366,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(payload)
     else:
         print(payload)
-    if args.csv and not args.pilot and args.identity is None:
+    if args.csv and not (args.pilot or args.mlp) and args.identity is None:
         write_csv(result, args.csv)
     if args.identity is not None:
         return 0 if result["all_identical"] else 1
