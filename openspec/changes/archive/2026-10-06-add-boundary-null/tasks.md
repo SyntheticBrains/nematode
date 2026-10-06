@@ -14,7 +14,7 @@ predictor is computed.
   dry-run on them.
 - [x] 5. **Registration** — **done: committed; spec review added a base-effect gate, the predictor's interpretation caveat and a CHANGELOG line, before launch and before the predictor was computed.** Original scope: the launch record, then `/nematode-review-spec`.
 - [x] 6. **Predictor** — **done: unresolved (rho −0.154, p 0.29, 80% CI [−0.336, +0.042], n 48).** Original scope: computed once, after the registration is committed.
-- [ ] 7. **Campaign**: seeds 641–768, 768 runs.
-- [ ] 8. **Readout**: Logbook 079; tracker A.3; D21's third null in the roadmap.
-- [ ] 9. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by exit
+- [x] 7. **Campaign** — **done: 768/768, 11.8 h.** Original scope: seeds 641–768, 768 runs.
+- [x] 8. **Readout** — **done: Logbook 079; `boundary`, `no_lead`; tracker A.3 met; block V's conditions and D21 updated.** Original scope: Logbook 079; tracker A.3; D21's third null in the roadmap.
+- [x] 9. **Close-out** — **done: full suite 7,094 passed; hooks pass with everything staged, judged by exit code; validated; archived.** Original scope: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by exit
   code; `openspec validate --strict`; archive and PR.
