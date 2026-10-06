@@ -73,6 +73,33 @@ No wiring gap is read, since only the wild type runs. Selecting the best τ on f
 expected performance on those seeds; the registered reading runs on disjoint seeds, so its verdict is
 not biased by the choice.
 
+### Decision C′ (amended 2026-10-07, after the first pilot): the input gain is calibrated first
+
+The first pilot (seeds 1101–1104, 64 runs) found no τ eligible: the leaky wild type plateaued at
+0–1.6% against the settling wild type's 77.3% (hard350) and 69.9% (thermal). The cause, measured on
+untrained brains, is a gain this design did not check: the leaky steady state passes the sensory signal
+to the policy about 400 times more weakly than the settling map does, at every τ. The leak pulls each
+potential toward zero, the chemical weights are scaled for unit fan-in norm, and gap coupling shunts
+toward neighbours, so every hop attenuates. Protocol principle 2's feasibility arithmetic would have
+caught it before the pilot.
+
+The maintainer chose one recalibration. **One new setting, `input_gain`**, a fixed multiplier on the
+sensor current under leaky dynamics, chosen **without training** by `across_step_calibration.py` on
+calibration seeds 2001–2008:
+
+- **Measure.** On each cell, the steady-state sensitivity of the policy mean to the cell's sensory
+  features, relative to the settling wild type's, at input gains 64, 128, 256, 512 and 1,024.
+- **Rule.** Choose the gain whose ratio is closest to 1 on a log scale on the worse cell.
+- **Result.** **512**, with ratios of 0.84 on hard350 and 0.90 on thermal.
+
+The recurrent gain is not raised. The rest state of every one of 64 untrained wild types (seeds
+2001–2064) is stable at the registered unit gain, with the lowest critical gain at 1.09. Raising the
+recurrent gain instead makes activity self-sustained rather than input-driven. The τ pilot is repeated
+at input gain 512 on **fresh seeds 1105–1108**, under the same rule.
+
+**Stopping rule:** if this pilot also leaves no τ eligible, B.2a closes as a failed positive control
+and B.2b closes *unreachable-with-reason*, with both pilots and the calibration as the diagnosis.
+
 ### Decision D: The positive controls and their reading
 
 **Control 1, the cell is solvable by the strongest method** (protocol principle 3). MLP-PPO runs on

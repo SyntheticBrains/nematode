@@ -1,6 +1,6 @@
 # B.2a — across-step state and its positive controls: registration and launch
 
-**Registered 2026-10-06, before any scored run.** **Status 2026-10-07: halted at the pilot under rule step 3; no panel has launched, pending the maintainer's decision.** Change: `add-across-step-state`. The τ rule below was
+**Registered 2026-10-06, before any scored run.** **Amended 2026-10-07: the first pilot left no τ eligible; the maintainer chose one recalibration of the input gain (below), then a repeat pilot on fresh seeds.** Change: `add-across-step-state`. The τ rule below was
 committed with the change (`1cea31df`) before the pilot that applies it ran.
 
 ## The question
@@ -63,7 +63,7 @@ learning and frozen, 64 runs. **The rule, fixed before the pilot ran:**
 
 No wiring gap is read: only the wild type runs.
 
-**Pilot result (2026-10-07, 64/64 runs, [pilot.json](pilot.json)): no τ is eligible, so no panel launches
+**First pilot result (2026-10-07, unit input gain, seeds 1101–1104, 64/64 runs, [first-pilot.json](first-pilot.json)): no τ is eligible, so no panel launches
 (rule step 3).** The dynamical wild type barely learns at any τ:
 
 | τ (steps) | hard350 leaky / settling plateau | status | thermal leaky / settling plateau | status |
@@ -82,6 +82,17 @@ toward neighbours; the settling map has no leak and does not attenuate. Raising 
 not restore it: at four times the gain motor activity becomes large but self-sustained, and
 input sensitivity stays near 10⁻². The design checked stability and replay but not this gain; protocol
 principle 2's feasibility arithmetic would have caught it before the pilot.
+
+**The recalibration (2026-10-07, [calibration.json](calibration.json)).** One new setting, `input_gain`,
+a fixed multiplier on the sensor current under leaky dynamics, chosen without training on calibration
+seeds 2001–2008 as the gain whose steady-state sensitivity ratio to settling is closest to 1 on the worse
+cell. **512** (0.84 hard350, 0.90 thermal; 256 gives 0.44 and 0.56, 1,024 gives 1.27 and 1.22). The
+recurrent gain stays at 1, below the critical gain of all 64 untrained wild types checked (lowest 1.09).
+The τ pilot is repeated at input gain 512 on **seeds 1105–1108** under the same rule. **Stopping rule:**
+if it also leaves no τ eligible, B.2a closes as a failed positive control and B.2b closes
+*unreachable-with-reason*.
+
+**Repeat pilot result:** *to be filled from `pilot.json`.*
 
 ## Control 2 — the panel
 
@@ -130,6 +141,6 @@ all 12 match.** The result is committed here as `identity.json`.
 
 ## Retention (A.0)
 
-Committed: this record, `pilot.json`, `identity.json`, `mlp.json`, the panel's `control.json` and
+Committed: this record, `first-pilot.json`, `calibration.json`, `pilot.json`, `identity.json`, `mlp.json`, the panel's `control.json` and
 `per-seed.csv`. Archived off-repo: the pilot's, the identity check's, the MLP controls' and the
 campaign's raw logs.

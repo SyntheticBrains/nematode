@@ -348,6 +348,14 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # stored starting potentials, with gradients through time inside the chunk. Read only under
     # leaky dynamics, and refused away from its default under settling.
     bptt_chunk_length: int = Field(default=_DEFAULT_BPTT_CHUNK, ge=1)
+    # Multiplier on the sensor current under leaky dynamics. Each hop of the leaky steady state has
+    # a gain below one -- the leak pulls every potential toward zero, the chemical weights are
+    # scaled for unit fan-in norm, and gap coupling shunts toward neighbours -- so at unit input
+    # gain the policy is hundreds of times less sensitive to its input than under settling. Raising
+    # the input gain restores the sensitivity without raising the recurrent gain, which would push
+    # the network past the point where its rest state destabilises. Read only under leaky dynamics,
+    # and refused away from its default under settling.
+    input_gain: float = Field(default=1.0, gt=0.0)
     # Opt-in predator-sensor projection: routes the corrected two-channel
     # predator-sensing biology (distal-chemo onto ASH+ASI; contact-mechano
     # onto ALM/AVM/PLM by ContactZone) into the connectome via three
@@ -643,10 +651,15 @@ def _dynamics_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     their defaults, so an arm states which dynamics it means rather than carrying a dead setting.
     """
     if config.dynamics == "settling":
-        if config.membrane_tau_steps != 1.0 or config.bptt_chunk_length != _DEFAULT_BPTT_CHUNK:
+        if (
+            config.membrane_tau_steps != 1.0
+            or config.bptt_chunk_length != _DEFAULT_BPTT_CHUNK
+            or config.input_gain != 1.0
+        ):
             return (
-                "membrane_tau_steps and bptt_chunk_length are read only under dynamics='leaky'; "
-                "under 'settling' they would be dead settings, so leave them at their defaults."
+                "membrane_tau_steps, bptt_chunk_length and input_gain are read only under "
+                "dynamics='leaky'; under 'settling' they would be dead settings, so leave them at "
+                "their defaults."
             )
         return None
     refusals = (
@@ -920,9 +933,11 @@ class ConnectomeTopology(nn.Module):
         measured_prior: MeasuredPriorAssignment | None = None,
         dynamics: Literal["settling", "leaky"] = "settling",
         membrane_tau_steps: float = 1.0,
+        input_gain: float = 1.0,
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
+        self.input_gain = input_gain
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
         # Gaussian mean (instead of 4 discrete logits) + a learnable log-std. The
         # chemical strict-mask / gap junctions are upstream of the readout and
@@ -2335,7 +2350,7 @@ class ConnectomeTopology(nn.Module):
             thermotaxis_features,
         )
         if self.dynamics == "leaky":
-            return self._forward_leaky(h)
+            return self._forward_leaky(self.input_gain * h)
 
         # K recurrent updates through chemical + gap-junction connectivity.
         # Each neuron's pre-activation = sum_pre(W[pre, post] * h[pre]) = (W.T @ h)[post].
@@ -2598,13 +2613,16 @@ class ConnectomeTopology(nn.Module):
         def flat(x: torch.Tensor | None) -> torch.Tensor | None:
             return None if x is None else x.reshape(chunks * length, *x.shape[2:])
 
-        current = self._sensor_current_batched(
-            food_features.reshape(chunks * length, -1),
-            flat(predator_distal_features),
-            flat(predator_mechano_features),
-            flat(contact_zone_onehot),
-            flat(thermotaxis_features),
-        ).reshape(chunks, length, self.n_neurons)
+        current = (
+            self._sensor_current_batched(
+                food_features.reshape(chunks * length, -1),
+                flat(predator_distal_features),
+                flat(predator_mechano_features),
+                flat(contact_zone_onehot),
+                flat(thermotaxis_features),
+            ).reshape(chunks, length, self.n_neurons)
+            * self.input_gain
+        )
         v = start_states[:, 0]
         rates: list[torch.Tensor] = []
         for step in range(length):
@@ -2817,6 +2835,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             ),
             dynamics=config.dynamics,
             membrane_tau_steps=config.membrane_tau_steps,
+            input_gain=config.input_gain,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this

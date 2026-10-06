@@ -5,8 +5,8 @@
 The brain SHALL offer `dynamics: leaky` beside the default `dynamics: settling`. Under `leaky`, each
 neuron SHALL carry a membrane potential across environment steps, reset to zero at episode start, and
 each step SHALL integrate leak, ohmic gap-junction coupling on the potentials, chemical drive through
-`tanh` and a sustained sensor current over `forward_pass_depth` sub-steps with time constant
-`membrane_tau_steps`, treating leak and gap coupling implicitly. Under `leaky`, PPO SHALL replay
+`tanh` and a sustained sensor current, scaled by `input_gain`, over `forward_pass_depth` sub-steps with
+time constant `membrane_tau_steps`, treating leak and gap coupling implicitly. Under `leaky`, PPO SHALL replay
 experience in contiguous chunks of `bptt_chunk_length` steps from each step's stored starting state.
 Under `settling` every output, buffer and random draw SHALL be identical to the brain before this option
 existed.

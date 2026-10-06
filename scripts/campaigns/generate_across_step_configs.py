@@ -32,6 +32,9 @@ CELLS: dict[str, tuple[str, str, str]] = {
 }
 # The pilot's candidate time constants, in environment steps.
 TAUS: tuple[float, ...] = (0.2, 1.0, 5.0)
+# Input gains a config set is written at: 1 (the first pilot, which found the substrate attenuating
+# the sensory signal) and the gain the calibration chose from untrained brains.
+INPUT_GAINS: tuple[float, ...] = (1.0, 512.0)
 MLP_PARENT = "mlpppo_small_continuous2d_thermal_klinotaxis"
 MLP_STEM = f"{MLP_PARENT}_t35"
 
@@ -41,16 +44,22 @@ def tau_tag(tau: float) -> str:
     return "tau" + f"{tau:g}".replace(".", "p")
 
 
-def leaky_stem(parent: str, tau: float) -> str:
-    """Return the stem of ``parent`` under leaky dynamics at ``tau``."""
-    return f"{parent}_leaky_{tau_tag(tau)}"
+def leaky_stem(parent: str, tau: float, input_gain: float = 1.0) -> str:
+    """Return the stem of ``parent`` under leaky dynamics at ``tau`` and ``input_gain``."""
+    gain = "" if input_gain == 1.0 else f"ig{input_gain:g}_"
+    return f"{parent}_leaky_{gain}{tau_tag(tau)}"
 
 
 def _load(scenario: str, stem: str) -> dict:
     return yaml.safe_load((SCENARIOS / scenario / f"{stem}.yml").read_text())
 
 
-def derive_leaky(scenario: str, parent: str, tau: float) -> tuple[Path, str]:
+def derive_leaky(
+    scenario: str,
+    parent: str,
+    tau: float,
+    input_gain: float = 1.0,
+) -> tuple[Path, str]:
     """Build one dynamical config: its settling parent with the dynamics keys added."""
     data = _load(scenario, parent)
     brain = data["brain"]["config"]
@@ -59,12 +68,16 @@ def derive_leaky(scenario: str, parent: str, tau: float) -> tuple[Path, str]:
         raise ValueError(msg)
     brain["dynamics"] = "leaky"
     brain["membrane_tau_steps"] = tau
+    if input_gain != 1.0:
+        brain["input_gain"] = input_gain
+    gain_line = "" if input_gain == 1.0 else f"#   brain.config.input_gain: {input_gain:g}\n"
     header = (
-        f"# Leaky-dynamics wild type, membrane_tau_steps {tau:g}.\n"
+        f"# Leaky-dynamics wild type, membrane_tau_steps {tau:g}, input_gain {input_gain:g}.\n"
         f"#\n"
         f"# Delta from {parent}.yml, and nothing else changes:\n"
         f"#   brain.config.dynamics: leaky\n"
         f"#   brain.config.membrane_tau_steps: {tau:g}\n"
+        f"{gain_line}"
         f"#\n"
         f"# Each neuron carries a membrane potential across steps; gap junctions couple potentials\n"
         f"# ohmically; the sensors enter as a current held through the step.\n"
@@ -74,7 +87,7 @@ def derive_leaky(scenario: str, parent: str, tau: float) -> tuple[Path, str]:
         f"# re-checked through the real config loader by test_across_step_control.py.\n"
         f"#\n"
     )
-    path = SCENARIOS / scenario / f"{leaky_stem(parent, tau)}.yml"
+    path = SCENARIOS / scenario / f"{leaky_stem(parent, tau, input_gain)}.yml"
     return path, header + yaml.safe_dump(data, sort_keys=False)
 
 
@@ -99,7 +112,8 @@ def derive_mlp() -> tuple[Path, str]:
 def planned() -> list[tuple[Path, str]]:
     """Every config this script writes, in a fixed order."""
     out = [
-        derive_leaky(scenario, parent, tau)
+        derive_leaky(scenario, parent, tau, gain)
+        for gain in INPUT_GAINS
         for scenario, learn, frozen in CELLS.values()
         for parent in (learn, frozen)
         for tau in TAUS

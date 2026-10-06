@@ -42,24 +42,28 @@ def _loaded(scenario: str, stem: str) -> dict[str, Any]:
 class TestConfigs:
     def test_the_generator_and_the_analysis_agree(self) -> None:
         assert gen.TAUS == asc.TAUS
+        assert gen.INPUT_GAINS == (1.0, asc.INPUT_GAIN)
         assert gen.MLP_STEM == asc.MLP_STEM
         for cell, (_scenario, learn, frozen) in gen.CELLS.items():
             assert asc.CELLS[cell]["settling"] == (learn, frozen)
 
+    @pytest.mark.parametrize("gain", [1.0, asc.INPUT_GAIN])
     @pytest.mark.parametrize("tau", asc.TAUS)
     @pytest.mark.parametrize("cell", sorted(asc.CELLS))
-    def test_every_arm_is_a_committed_config(self, cell: str, tau: float) -> None:
-        for stem in asc.stems(tau)[cell].values():
+    def test_every_arm_is_a_committed_config(self, cell: str, tau: float, gain: float) -> None:
+        for stem in asc.stems(tau, gain)[cell].values():
             assert (_SCENARIOS / _DIR[cell] / f"{stem}.yml").is_file(), stem
 
+    @pytest.mark.parametrize("gain", [1.0, asc.INPUT_GAIN])
     @pytest.mark.parametrize("tau", asc.TAUS)
     @pytest.mark.parametrize("cell", sorted(asc.CELLS))
     def test_each_leaky_arm_differs_from_its_parent_in_dynamics_alone(
         self,
         cell: str,
         tau: float,
+        gain: float,
     ) -> None:
-        table = asc.stems(tau)[cell]
+        table = asc.stems(tau, gain)[cell]
         for leaky, settling in (("wt_learn", "rn_learn"), ("wt_frozen", "rn_frozen")):
             child = _loaded(_DIR[cell], table[leaky])
             expected = dict(_loaded(_DIR[cell], table[settling]))
@@ -68,6 +72,7 @@ class TestConfigs:
                 **expected["brain"]["config"],
                 "dynamics": "leaky",
                 "membrane_tau_steps": tau,
+                "input_gain": gain,
             }
             assert child == expected
 
@@ -97,9 +102,12 @@ class TestRegistration:
 
     def test_pilot_and_mlp_seeds_are_disjoint_from_the_bands(self) -> None:
         bands = set(bn.SEEDS) | set(ts.SEEDS)
-        assert not set(asc.PILOT_SEEDS) & bands
-        assert not set(asc.MLP_SEEDS) & bands
-        assert not set(asc.PILOT_SEEDS) & set(asc.MLP_SEEDS)
+        groups = (asc.FIRST_PILOT_SEEDS, asc.PILOT_SEEDS, asc.MLP_SEEDS)
+        for group in groups:
+            assert not set(group) & bands
+        for i, a in enumerate(groups):
+            for b in groups[i + 1 :]:
+                assert not set(a) & set(b)
 
     def test_the_table_fits_the_gate_preflight(self) -> None:
         for arms in asc.STEMS.values():

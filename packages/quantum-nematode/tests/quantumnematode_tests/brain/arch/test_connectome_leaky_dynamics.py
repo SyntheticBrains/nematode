@@ -86,6 +86,7 @@ class TestConfiguration:
         [
             {"membrane_tau_steps": 2.0},
             {"bptt_chunk_length": 8},
+            {"input_gain": 4.0},
         ],
     )
     def test_leaky_pins_are_refused_under_settling(self, overrides: dict[str, object]) -> None:
@@ -203,6 +204,18 @@ class TestCarryAndReset:
         brain.prepare_episode()
         assert torch.equal(brain.topology.membrane, torch.zeros_like(brain.topology.membrane))
 
+    def test_the_input_gain_scales_the_sensor_current(self) -> None:
+        food = torch.tensor([0.5, -0.2])
+        plain = _brain(dynamics="leaky").topology
+        scaled = _brain(dynamics="leaky", input_gain=8.0).topology
+        with torch.no_grad():
+            plain.forward_with_hidden(food)
+            scaled.forward_with_hidden(food)
+            current = plain._sensor_current(food, None, None, None, None)
+            expected = scaled._leaky_substeps(torch.zeros(scaled.n_neurons), 8.0 * current)
+        assert torch.allclose(scaled.membrane, expected)
+        assert not torch.allclose(scaled.membrane, plain.membrane)
+
     def test_the_brain_uses_the_chunked_buffer(self) -> None:
         assert type(_brain(dynamics="leaky").buffer) is ChunkedRolloutBuffer
 
@@ -279,7 +292,7 @@ class TestReplay:
 
     def test_the_sequence_forward_matches_the_rollout_on_hard350(self) -> None:
         """The continuous klinotaxis cell, topology level, a restart mid-chunk."""
-        topo = _hard350(dynamics="leaky").topology
+        topo = _hard350(dynamics="leaky", input_gain=512.0).topology
         gen = torch.Generator().manual_seed(1)
         food = torch.randn(2, 8, topo.n_food_features, generator=gen)
         restart = torch.zeros(2, 8, dtype=torch.bool)

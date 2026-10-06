@@ -60,7 +60,13 @@ DEFAULT_TAU = 1.0
 # About one pilot standard error of the mean paired difference at the proxy spread on four seeds
 # (0.062 / 2 on hard350, 0.10 / 2 on thermal): a smaller lead over tau = 1 is not resolved.
 TIE_BAND = 0.05
-PILOT_SEEDS: tuple[int, ...] = tuple(range(1101, 1105))
+# The first pilot ran at unit input gain on 1101-1104 and found the substrate attenuating the
+# sensory signal about 400-fold; the recalibrated pilot runs on fresh seeds.
+FIRST_PILOT_SEEDS: tuple[int, ...] = tuple(range(1101, 1105))
+PILOT_SEEDS: tuple[int, ...] = tuple(range(1105, 1109))
+# Chosen without training by ``across_step_calibration.py``: the input gain whose steady-state
+# sensitivity of the policy to its input is closest to the settling substrate's on the worse cell.
+INPUT_GAIN = 512.0
 # Set at registration from the pilot's selection; ``score`` refuses to run while it is unset.
 REGISTERED_TAU: float | None = None
 
@@ -118,14 +124,15 @@ def tau_tag(tau: float) -> str:
     return "tau" + f"{tau:g}".replace(".", "p")
 
 
-def stems(tau: float) -> dict[str, dict[str, str]]:
-    """Return ``cell -> arm -> stem`` at one tau, in the gate preflight's shape."""
+def stems(tau: float, input_gain: float = INPUT_GAIN) -> dict[str, dict[str, str]]:
+    """Return ``cell -> arm -> stem`` at one tau and input gain, in the gate preflight's shape."""
+    gain = "" if input_gain == 1.0 else f"ig{input_gain:g}_"
     out: dict[str, dict[str, str]] = {}
     for cell, spec in CELLS.items():
         learn, frozen = spec["settling"]
         out[cell] = {
-            "wt_learn": f"{learn}_leaky_{tau_tag(tau)}",
-            "wt_frozen": f"{frozen}_leaky_{tau_tag(tau)}",
+            "wt_learn": f"{learn}_leaky_{gain}{tau_tag(tau)}",
+            "wt_frozen": f"{frozen}_leaky_{gain}{tau_tag(tau)}",
             "rn_learn": learn,
             "rn_frozen": frozen,
         }
@@ -187,13 +194,18 @@ def _difference(manifest: Path, cell: str, tmp: Path, metric: str) -> dict[str, 
 
 
 # ── The pilot ────────────────────────────────────────────────────────────────────────────────
-def pilot(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
+def pilot(
+    log_dirs: list[Path],
+    out_dir: Path,
+    input_gain: float = INPUT_GAIN,
+    seeds_used: tuple[int, ...] = PILOT_SEEDS,
+) -> dict[str, Any]:
     """Every candidate's preflight and mean paired difference, then the selection."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    seeds = dict.fromkeys(CELLS, PILOT_SEEDS)
+    seeds = dict.fromkeys(CELLS, seeds_used)
     per_tau: dict[float, dict[str, Any]] = {}
     for tau in TAUS:
-        table = stems(tau)
+        table = stems(tau, input_gain)
         preflight = gp.preflight(table, log_dirs)
         status = {cell: entry["status"] for cell, entry in preflight["levels"].items()}
         manifest = build_manifest(table, log_dirs, seeds, out_dir / f"pilot-{tau_tag(tau)}.txt")
@@ -205,7 +217,8 @@ def pilot(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
             difference[cell] = float(gap["gap_mean"])
         per_tau[tau] = {"status": status, "difference": difference, "preflight": preflight}
     return {
-        "seeds": list(PILOT_SEEDS),
+        "seeds": list(seeds_used),
+        "input_gain": input_gain,
         "rule": {"default_tau": DEFAULT_TAU, "tie_band": TIE_BAND},
         "candidates": {tau_tag(tau): entry for tau, entry in per_tau.items()},
         "selection": select(per_tau),
@@ -342,6 +355,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--pilot", action="store_true", help="score the tau pilot and select")
+    mode.add_argument(
+        "--first-pilot",
+        action="store_true",
+        help="re-score the unit-input-gain pilot on its own seeds",
+    )
     mode.add_argument("--identity", type=Path, help="compare these settling re-runs with the bands")
     mode.add_argument("--mlp", action="store_true", help="read each cell's MLP-PPO control")
     ap.add_argument("--logs", type=Path, action="append", default=[], help="a run-log dir")
@@ -358,6 +376,8 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--logs and --out-dir are required for the pilot and the panel")
     elif args.pilot:
         result = pilot(args.logs, args.out_dir)
+    elif args.first_pilot:
+        result = pilot(args.logs, args.out_dir, input_gain=1.0, seeds_used=FIRST_PILOT_SEEDS)
     else:
         result = score(args.logs, args.out_dir)
     payload = json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"
@@ -366,7 +386,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(payload)
     else:
         print(payload)
-    if args.csv and not (args.pilot or args.mlp) and args.identity is None:
+    if args.csv and not (args.pilot or args.first_pilot or args.mlp) and args.identity is None:
         write_csv(result, args.csv)
     if args.identity is not None:
         return 0 if result["all_identical"] else 1
