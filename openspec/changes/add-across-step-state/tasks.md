@@ -15,11 +15,11 @@ Phase 8b carried control B.2a. Registered in
   config. Loader tests.
 - [x] 4. **Analysis**: `across_step_control.py` — the pilot rule, the MLP competence gate, the non-inferiority reading and the per-seed CSV, with cells as levels in the preflight's `STEMS`
   shape — with tests of every verdict.
-- [ ] 5. **Identity check**: four learning and two frozen settling runs per cell from the bands, re-run
+- [x] 5. **Identity check** — **done: 12/12 identical on every Run: line and the final w_chem.** Original scope: four learning and two frozen settling runs per cell from the bands, re-run
   on this code, bit for bit against the committed logs.
 - [x] 5b. **Recalibration** (added 2026-10-07 after the first pilot): `input_gain` and its refusals;
   `across_step_calibration.py` on untrained brains; the input-gain configs; the pilot repeated on 1105–1108.
-- [ ] 6. **Pilot and MLP control**: the τ pilot on seeds 1101–1104 (64 runs) and MLP-PPO on both cells on 1201–1208 (Logbook 060 committed only per-width means, so hard350's
+- [x] 6. **Pilot and MLP control** — **done: first pilot no tau eligible; recalibrated; repeat pilot chose tau 0.2; both MLP controls pass; preflight readable.** Original scope: the τ pilot on seeds 1101–1104 (64 runs) and MLP-PPO on both cells on 1201–1208 (Logbook 060 committed only per-width means, so hard350's
   control is run rather than cited);
   the rule applied; the gate preflight on the chosen τ; cost measured.
 - [x] 7. **Registration** — **done: launch.md committed after the gate preflight; readiness review found the MLP verdict recorded but not applied, fixed before any panel run.** Original scope: the launch record, then `/nematode-review-spec`.

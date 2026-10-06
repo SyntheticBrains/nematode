@@ -1,0 +1,125 @@
+{
+  "all_identical": true,
+  "runs": {
+    "hard350/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed641.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a3-boundary/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed641.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed641.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "hard350/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed642.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a3-boundary/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed642.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed642.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "hard350/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed643.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a3-boundary/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed643.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed643.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "hard350/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed644.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a3-boundary/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed644.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350-seed644.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "hard350/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed641.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a3-boundary/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed641.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed641.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "hard350/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed642.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a3-boundary/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed642.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen-seed642.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "thermal/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35-seed513.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a6t2-thermal-split/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35-seed513.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35-seed513.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "thermal/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35-seed514.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a6t2-thermal-split/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35-seed514.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35-seed514.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "thermal/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed513.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a6t2-thermal-split/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed513.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed513.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "thermal/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed514.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a6t2-thermal-split/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed514.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed514.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "thermal/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed515.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a6t2-thermal-split/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed515.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed515.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    },
+    "thermal/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed516.log": {
+      "committed": "/Users/chriszaharia/projects/personal/nematode/campaigns/a6t2-thermal-split/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed516.log",
+      "first_difference": null,
+      "identical": true,
+      "rerun": "campaigns/b2a-identity/logs/connectomeppo_small_continuous2d_thermal_klinotaxis_t35-seed516.log",
+      "run_lines": 3000,
+      "run_lines_equal": true,
+      "w_chem_equal": true,
+      "w_chem_found": true
+    }
+  }
+}
