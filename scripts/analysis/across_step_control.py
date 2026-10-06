@@ -68,24 +68,26 @@ PILOT_SEEDS: tuple[int, ...] = tuple(range(1105, 1109))
 # sensitivity of the policy to its input is closest to the settling substrate's on the worse cell.
 INPUT_GAIN = 512.0
 # Set at registration from the pilot's selection; ``score`` refuses to run while it is unset.
-REGISTERED_TAU: float | None = None
+REGISTERED_TAU: float | None = 0.2
 
 # ── The cells ────────────────────────────────────────────────────────────────────────────────
 _HARD = "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350"
 _THERMAL = "connectomeppo_small_continuous2d_thermal_klinotaxis"
-# Cell -> how the instrument scores it, its band, its margin, and its settling parents. Each margin
+# Cell -> how the instrument scores it, its band, its margin, and its settling parents. Each band is
+# the first 16 seeds of the committed settling panel on that cell, re-sized from the repeat pilot's
+# deficit (about 19 and 9 times the margins), which 16 seeds read with near certainty. Each margin
 # is the minimum the cell's latest panel registered from committed data: 2/3 of A.6's lead over the
 # chemical-only null on hard350 (Logbook 079), and Logbook 078's minimum on thermal at target 35.
 CELLS: dict[str, dict[str, Any]] = {
     "hard350": {
         "instrument_cell": ops.CELL,
-        "seeds": tuple(range(641, 769)),
+        "seeds": tuple(range(641, 657)),
         "margin": bn.MINIMUM,
         "settling": (_HARD, f"{_HARD}_frozen"),
     },
     "thermal": {
         "instrument_cell": ts.CELL,
-        "seeds": tuple(range(513, 641)),
+        "seeds": tuple(range(513, 529)),
         "margin": ts.MINIMUM,
         "settling": (f"{_THERMAL}_t35", f"{_THERMAL}_frozen_t35"),
     },

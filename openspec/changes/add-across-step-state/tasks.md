@@ -17,7 +17,7 @@ Phase 8b carried control B.2a. Registered in
   shape — with tests of every verdict.
 - [ ] 5. **Identity check**: four learning and two frozen settling runs per cell from the bands, re-run
   on this code, bit for bit against the committed logs.
-- [ ] 5b. **Recalibration** (added 2026-10-07 after the first pilot): `input_gain` and its refusals;
+- [x] 5b. **Recalibration** (added 2026-10-07 after the first pilot): `input_gain` and its refusals;
   `across_step_calibration.py` on untrained brains; the input-gain configs; the pilot repeated on 1105–1108.
 - [ ] 6. **Pilot and MLP control**: the τ pilot on seeds 1101–1104 (64 runs) and MLP-PPO on both cells on 1201–1208 (Logbook 060 committed only per-width means, so hard350's
   control is run rather than cited);

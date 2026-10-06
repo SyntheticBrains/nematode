@@ -108,13 +108,14 @@ better it learns.
 
 ## Control 2 — the panel
 
-Per cell, the dynamical wild type, learning and frozen, at the chosen τ, paired by seed with the
-committed settling wild type:
+Per cell, the dynamical wild type, learning and frozen, at **τ = 0.2 steps and input gain 512**,
+paired by seed with the committed settling wild type. **Re-sized 2026-10-07 to 16 seeds per cell**
+(below), the first 16 of each committed band:
 
 | cell | seeds | settling runs reused from | margin δ | source of δ |
 |---|---|---|---|---|
-| hard350 | 641–768 | `a3-boundary` (Logbook 079) | **0.0143** | 2/3 of A.6's committed lead over the chemical-only null |
-| thermal, target 35 | 513–640 | `a6t2-thermal-split` (Logbook 078) | **0.0239** | Logbook 078's registered minimum on that cell |
+| hard350 | 641–656 | `a3-boundary` (Logbook 079) | **0.0143** | 2/3 of A.6's committed lead over the chemical-only null |
+| thermal, target 35 | 513–528 | `a6t2-thermal-split` (Logbook 078) | **0.0239** | Logbook 078's registered minimum on that cell |
 
 **Reading**, on `auc_success`, `d = dynamical − settling`, paired by seed, 80% bootstrap interval:
 
@@ -128,12 +129,22 @@ Gates first: the dynamical arm must beat its frozen floor (else `unlearnable`); 
 beat its floor and the two must not both reach 90% (else `unreadable`). Episodes to competence are
 reported beside and never read.
 
-**Sizing.** No committed run pairs the two substrates, so the spread is a proxy: the paired
-wild-type-minus-null gap on the same seeds, sd 0.062 on hard350 (Logbook 079) and 0.10 on thermal
-(Logbook 078). Two substrates may decorrelate a seed more than two wirings on one, so the proxy is
-expected to err low. At 128 seeds and a true difference of zero, the chance of reading `non_inferior`
-is about 0.91 on hard350 and 0.92 on thermal at the proxy spread. The achieved spread is reported
-beside, never used to re-read.
+**Sizing, as registered first.** The spread was a proxy, the paired wild-type-minus-null gap: sd
+0.062 on hard350 (Logbook 079) and 0.10 on thermal (Logbook 078), expected to err low. At 128 seeds and
+a true difference of zero, the chance of reading `non_inferior` was about 0.91 and 0.92.
+
+**Re-sized after the repeat pilot (2026-10-07), by the maintainer.** The pilot's deficit at the chosen
+τ, −0.265 and −0.205, is about 19 and 9 times the margins. The protocol allows sizing from a pilot on
+disjoint seeds, and 128 seeds buy sensitivity the decision does not need. At 16 seeds and the proxy
+spread, the 80% interval's half-width is about 0.020 on hard350 and 0.032 on thermal.
+
+- **What 16 seeds can read.** `inferior` needs a mean below about −0.034 on hard350 and −0.056 on
+  thermal, which the pilot's deficit clears many times over. `non_inferior` needs a mean above about
+  +0.006 and +0.008, which is reachable only if the pilot's deficit was an artefact of its four seeds.
+  Anything between reads `unresolved`.
+- **What it cannot read.** It cannot certify non-inferiority for a small true deficit.
+- **The verdict map, margins and gates are unchanged.** The achieved spread is reported beside,
+  never used to re-read.
 
 ## The reuse is licensed first
 
@@ -144,12 +155,60 @@ all 12 match.** The result is committed here as `identity.json`.
 
 ## Before launch
 
-- **Gate preflight** on the chosen τ: *to be filled.*
-- **Cost**, from the pilot's own run times at 16 workers: *to be filled.*
+- **Gate preflight** at τ = 0.2 and input gain 512, on the repeat pilot's runs
+  ([preflight.json](preflight.json)): both cells `readable`, launch cleared. Plateaus: hard350 41.9%
+  leaky against 77.8% settling; thermal 26.9% against 68.2%. Floors at 0.
+
+- **Cost**, from the repeat pilot's own run times at 16 workers:
+
+  | run | minutes |
+  |---|---|
+  | hard350 leaky learning | 37 |
+  | hard350 leaky frozen | 12 |
+  | thermal leaky learning | 45 |
+  | thermal leaky frozen | 6 |
+
+  The 64-run panel takes **about 1.7–2 hours**, plus about 30 minutes for the identity re-runs.
+
+- **Order.** The identity check and both MLP controls run first. The panel launches only once all 12
+  identity runs match, and it is read only with both MLP verdicts recorded.
 
 ## Launch
 
-*Commands to be filled with the chosen τ.*
+```bash
+# 1. Identity re-runs (settling, the committed command line), one invocation per cell and arm
+F=configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350
+T=configs/scenarios/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis
+OPTS="--runs 3000 --output-dir campaigns/b2a-identity -- --theme headless --track-experiment --no-detailed-export --no-file-log"
+uv run python scripts/run_campaign.py --config $F.yml           --seeds 641-644 --workers 4 $OPTS &
+uv run python scripts/run_campaign.py --config ${F}_frozen.yml  --seeds 641-642 --workers 2 $OPTS &
+uv run python scripts/run_campaign.py --config ${T}_t35.yml        --seeds 513-516 --workers 4 $OPTS &
+uv run python scripts/run_campaign.py --config ${T}_frozen_t35.yml --seeds 513-514 --workers 2 $OPTS &
+wait
+uv run python scripts/analysis/across_step_control.py --identity campaigns/b2a-identity --out identity.json
+uv run python scripts/run_campaign.py --config configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64.yml \
+  --config configs/scenarios/thermal_foraging/mlpppo_small_continuous2d_thermal_klinotaxis_t35.yml \
+  --seeds 1201-1208 --runs 3000 --workers 16 --output-dir campaigns/b2a-mlp \
+  -- --theme headless --track-experiment --no-detailed-export --no-file-log
+uv run python scripts/analysis/across_step_control.py --mlp --logs campaigns/b2a-mlp/logs --out mlp.json
+
+# 2. The panel: the dynamical wild type at tau 0.2, input gain 512, learning and frozen
+uv run python scripts/run_campaign.py \
+  --config configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_leaky_ig512_tau0p2.yml \
+  --config configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_frozen_leaky_ig512_tau0p2.yml \
+  --seeds 641-656 --runs 3000 --workers 16 --output-dir campaigns/b2a-panel \
+  -- --theme headless --track-experiment --no-detailed-export --no-file-log
+uv run python scripts/run_campaign.py \
+  --config configs/scenarios/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_t35_leaky_ig512_tau0p2.yml \
+  --config configs/scenarios/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_frozen_t35_leaky_ig512_tau0p2.yml \
+  --seeds 513-528 --runs 3000 --workers 16 --output-dir campaigns/b2a-panel \
+  -- --theme headless --track-experiment --no-detailed-export --no-file-log
+
+# 3. The reading, with the committed settling runs
+uv run python scripts/analysis/across_step_control.py --logs campaigns/b2a-panel/logs \
+  --logs campaigns/a3-boundary/logs --logs campaigns/a6t2-thermal-split/logs \
+  --out-dir build/b2a --out control.json --csv per-seed.csv
+```
 
 ## Retention (A.0)
 

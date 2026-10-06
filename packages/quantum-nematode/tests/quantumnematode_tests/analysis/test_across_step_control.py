@@ -96,9 +96,15 @@ class TestRegistration:
         assert asc.CELLS["hard350"]["margin"] == bn.MINIMUM
         assert asc.CELLS["thermal"]["margin"] == ts.MINIMUM
 
-    def test_the_bands_are_the_committed_settling_runs(self) -> None:
-        assert asc.CELLS["hard350"]["seeds"] == bn.SEEDS
-        assert asc.CELLS["thermal"]["seeds"] == ts.SEEDS
+    def test_the_bands_are_the_first_sixteen_committed_settling_runs(self) -> None:
+        assert asc.CELLS["hard350"]["seeds"] == bn.SEEDS[:16]
+        assert asc.CELLS["thermal"]["seeds"] == ts.SEEDS[:16]
+
+    def test_the_registered_tau_is_the_repeat_pilots_choice(self) -> None:
+        assert asc.REGISTERED_TAU == 0.2
+        assert set(asc.STEMS["hard350"].values()) >= {
+            f"{asc.CELLS['hard350']['settling'][0]}_leaky_ig512_tau0p2",
+        }
 
     def test_pilot_and_mlp_seeds_are_disjoint_from_the_bands(self) -> None:
         bands = set(bn.SEEDS) | set(ts.SEEDS)
@@ -113,9 +119,12 @@ class TestRegistration:
         for arms in asc.STEMS.values():
             assert set(arms) == set(gp.ARMS)
 
-    def test_scoring_refuses_an_unregistered_tau(self, tmp_path: Path) -> None:
-        if asc.REGISTERED_TAU is not None:
-            pytest.skip("the registered tau is set")
+    def test_scoring_refuses_an_unregistered_tau(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(asc, "REGISTERED_TAU", None)
         with pytest.raises(asc.AcrossStepError, match="REGISTERED_TAU"):
             asc.score([tmp_path], tmp_path)
 
