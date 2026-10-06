@@ -110,7 +110,7 @@ and does not move a verdict.
 **On hard350 the leaky substrate nearly reaches the settling plateau but takes far longer to get there**
 (67.7% against 75.7%, 967 episodes later). **On thermal it stays far below** (20.0% against 64.4%).
 
-**Learning falls as τ rises in both pilots.** The substrate learns best when it carries least across
+**Learning falls as τ rises**, on hard350 in both pilots and on thermal in the repeat pilot (the first left thermal at zero throughout). The substrate learns best when it carries least across
 steps, and not at all when it carries most. The panel does not separate why. The across-step state may
 be harder for PPO to credit, even with gradients through 16-step chunks. Or a longer τ may only slow the
 response within a step. τ is confounded with both.
