@@ -288,7 +288,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   connectome arm below it.** *(2026-10-03: read with C.3's adopted instruments — thresholds, band-based frequency, half-step check, wall exclusion — so the positive control is a kinematic pass, not only a foraging one.)*
 - [ ] **C.1e The wiring contrast through the body**: wild type vs the chemical-only null (D21) and,
   as a second registered reading that alone carries any interior-wiring claim, the boundary-preserving
-  null, its boundary redrawn on the cells C.1b's readout pools (D21 as amended 2026-10-06); the current
+  null, its boundary redrawn on the neurons that synapse onto the muscles C.1b's readout pools (D21 as amended 2026-10-06); the current
   null beside; under PPO and under `readout_only` — **registered
   as a contrast of segmental drive and steering through the wiring, not of rhythm generation**
   (D19 as amended, 2026-10-03) — with **floors and baselines re-established on this substrate** — a new
