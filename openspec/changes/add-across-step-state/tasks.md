@@ -3,11 +3,11 @@
 Phase 8b carried control B.2a. Registered in
 `docs/experiments/logbooks/supporting/080-across-step-state/launch.md` before any scored run.
 
-- [ ] 1. **The substrate**: `dynamics`, `membrane_tau_steps` and `bptt_chunk_length` with load-time
+- [x] 1. **The substrate**: `dynamics`, `membrane_tau_steps` and `bptt_chunk_length` with load-time
   refusals; the semi-implicit leaky step with `M⁻¹` precomputed; the sustained sensor current; the membrane reset at episode start and the per-step detach; the state kept out of checkpoints and
   `copy()`; a CHANGELOG line. Tests: settling byte-identical (a pinned
   short run), contraction and boundedness on the raw wild-type gap weights, carry and reset, refusals.
-- [ ] 2. **The replay**: start states in the rollout buffer; the chunk iterator; the sequence forward;
+- [x] 2. **The replay**: start states in the rollout buffer; the chunk iterator; the sequence forward;
   the rule's chunked path; the end-of-episode update needing as many chunks as minibatches. Tests: replay equals rollout at unchanged parameters, across an episode
   boundary and with a partial final chunk; the settling minibatch draws unchanged.
 - [ ] 3. **Configs**: a generator for the dynamical wild type, learning and frozen, at each pilot τ on
