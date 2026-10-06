@@ -23,8 +23,8 @@ Phase 8b carried control B.2a. Registered in
   control is run rather than cited);
   the rule applied; the gate preflight on the chosen τ; cost measured.
 - [x] 7. **Registration** — **done: launch.md committed after the gate preflight; readiness review found the MLP verdict recorded but not applied, fixed before any panel run.** Original scope: the launch record, then `/nematode-review-spec`.
-- [ ] 8. **Campaign**: the dynamical wild type, learning and frozen, at the chosen τ on seeds 641–768
+- [x] 8. **Campaign** — **done: 64/64 on 16 seeds per cell (re-sized by the maintainer from the repeat pilot), about 1 h 45 min.** Original scope: the dynamical wild type, learning and frozen, at the chosen τ on seeds 641–768
   (hard350) and 513–640 (thermal target 35).
-- [ ] 9. **Readout**: Logbook 080; tracker B.2a; the roadmap's B.2 entry; what B.2b may run on, per cell.
-- [ ] 10. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
+- [x] 9. **Readout** — **done: Logbook 080; `inferior` on both cells; tracker B.2a unmet-with-reason, B.2b unreachable-with-reason; roadmap B.2 and the 8b controls row closed; README status.** Original scope: Logbook 080; tracker B.2a; the roadmap's B.2 entry; what B.2b may run on, per cell.
+- [x] 10. **Close-out** — **done: full suite 7,203 passed; hooks pass with everything staged, judged by exit code; validated; archived.** Original scope: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
   exit code; `openspec validate --strict`; archive and PR.
