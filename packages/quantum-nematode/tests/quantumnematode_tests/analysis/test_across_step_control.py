@@ -194,6 +194,21 @@ class TestReading:
         assert asc.read_cell(_gates(saturated=True), _t(0.0, 0.1), self.margin) == "unreadable"
 
 
+class TestIdentity:
+    def test_twelve_reruns_each_with_a_committed_run(self) -> None:
+        runs = asc.identity_runs()
+        assert sum(len(r) for r in runs.values()) == 12
+        for cell, pairs in runs.items():
+            logs = _root / asc.COMMITTED_CAMPAIGNS[cell] / "logs"
+            if not logs.is_dir():
+                pytest.skip("the committed campaign logs are archived off-repo")
+            for stem, seed in pairs:
+                assert (logs / f"{stem}-seed{seed}.log").is_file()
+
+    def test_missing_reruns_are_not_identical(self, tmp_path: Path) -> None:
+        assert asc.identity(tmp_path)["all_identical"] is False
+
+
 class TestMlpGate:
     def test_missing_runs_read_incomplete(self, tmp_path: Path) -> None:
         assert asc.mlp_gate([tmp_path])["verdict"] == "incomplete"

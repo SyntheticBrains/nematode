@@ -20,6 +20,8 @@ Usage::
 
     uv run python scripts/analysis/across_step_control.py --pilot --logs <dir> [--logs <dir>] \
         --out-dir <scratch> --out pilot.json
+    uv run python scripts/analysis/across_step_control.py --identity <rerun campaign> \
+        --out identity.json
     uv run python scripts/analysis/across_step_control.py --logs <dir> [--logs <dir>] \
         --out-dir <scratch> --out control.json --csv per-seed.csv
 """
@@ -40,6 +42,7 @@ for _path in (_HERE, _HERE.parent / "campaigns"):
         sys.path.insert(0, str(_path))
 
 import boundary_null as bn  # noqa: E402  # pyright: ignore[reportMissingImports]
+import gap_split as gs  # noqa: E402  # pyright: ignore[reportMissingImports]
 import gate_preflight as gp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import measured_prior_pilot as mp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import operating_point_surface as ops  # noqa: E402  # pyright: ignore[reportMissingImports]
@@ -86,6 +89,17 @@ MLP_STEM = f"{_THERMAL}_t35".replace("connectomeppo", "mlpppo")
 MLP_SEEDS: tuple[int, ...] = tuple(range(1201, 1209))
 # The episode metric's competence level, in percent success.
 COMPETENCE = 30.0
+
+
+# ── The identity check ───────────────────────────────────────────────────────────────────────
+# The committed settling runs are reused only if re-runs on this code match them bit for bit: the
+# first four learning and two frozen seeds of each cell's band.
+IDENTITY_LEARN = 4
+IDENTITY_FROZEN = 2
+COMMITTED_CAMPAIGNS: dict[str, str] = {
+    "hard350": "campaigns/a3-boundary",
+    "thermal": "campaigns/a6t2-thermal-split",
+}
 
 
 class AcrossStepError(ValueError):
@@ -191,6 +205,38 @@ def pilot(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
     }
 
 
+def identity_runs() -> dict[str, list[tuple[str, int]]]:
+    """Return each cell's ``(stem, seed)`` re-runs for the identity check."""
+    out: dict[str, list[tuple[str, int]]] = {}
+    for cell, spec in CELLS.items():
+        learn, frozen = spec["settling"]
+        seeds = spec["seeds"]
+        out[cell] = [(learn, s) for s in seeds[:IDENTITY_LEARN]] + [
+            (frozen, s) for s in seeds[:IDENTITY_FROZEN]
+        ]
+    return out
+
+
+def identity(identity_dir: Path, repo: Path = wp.REPO) -> dict[str, Any]:
+    """Compare each re-run with its committed settling run on every field the analysis reads."""
+    logs = identity_dir / "logs" if (identity_dir / "logs").is_dir() else identity_dir
+    results: dict[str, Any] = {}
+    for cell, runs in identity_runs().items():
+        committed_logs = repo / COMMITTED_CAMPAIGNS[cell] / "logs"
+        for stem, seed in runs:
+            name = f"{stem}-seed{seed}.log"
+            committed, rerun = committed_logs / name, logs / name
+            if not committed.is_file() or not rerun.is_file():
+                missing = [str(q) for q in (committed, rerun) if not q.is_file()]
+                results[f"{cell}/{name}"] = {"identical": False, "missing": missing}
+                continue
+            results[f"{cell}/{name}"] = gs.compare_runs(committed, rerun)
+    return {
+        "runs": results,
+        "all_identical": bool(results) and all(r["identical"] for r in results.values()),
+    }
+
+
 # ── Control 1 ────────────────────────────────────────────────────────────────────────────────
 def mlp_gate(log_dirs: list[Path]) -> dict[str, Any]:
     """Thermal MLP-PPO: every seed's plateau success at or above the competence level."""
@@ -288,22 +334,33 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--pilot", action="store_true", help="score the tau pilot and select")
-    ap.add_argument("--logs", type=Path, action="append", required=True, help="a run-log dir")
-    ap.add_argument("--out-dir", type=Path, required=True, help="scratch directory for manifests")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--pilot", action="store_true", help="score the tau pilot and select")
+    mode.add_argument("--identity", type=Path, help="compare these settling re-runs with the bands")
+    ap.add_argument("--logs", type=Path, action="append", default=[], help="a run-log dir")
+    ap.add_argument("--out-dir", type=Path, help="scratch directory for manifests")
     ap.add_argument("--out", type=Path, help="write the analysis JSON here instead of stdout")
     ap.add_argument("--csv", type=Path, help="write the per-seed CSV here (panel only)")
     args = ap.parse_args(argv)
 
-    result = pilot(args.logs, args.out_dir) if args.pilot else score(args.logs, args.out_dir)
+    if args.identity is not None:
+        result = identity(args.identity)
+    elif args.out_dir is None or not args.logs:
+        ap.error("--logs and --out-dir are required for the pilot and the panel")
+    elif args.pilot:
+        result = pilot(args.logs, args.out_dir)
+    else:
+        result = score(args.logs, args.out_dir)
     payload = json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(payload)
     else:
         print(payload)
-    if args.csv and not args.pilot:
+    if args.csv and not args.pilot and args.identity is None:
         write_csv(result, args.csv)
+    if args.identity is not None:
+        return 0 if result["all_identical"] else 1
     return 0
 
 
