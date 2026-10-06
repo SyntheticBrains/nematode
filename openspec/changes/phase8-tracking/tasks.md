@@ -229,7 +229,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 ## Shipment 8b — Embody
 
 **OpenSpec changes**: placeholders; created per milestone
-**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21); C.1e also registers the boundary-preserving null, which alone carries any interior-wiring claim (D21 as amended 2026-10-06). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
+**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21); C.1e also registers the boundary-preserving null, which alone carries any interior-wiring claim (D21 as amended 2026-10-06). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body *(**2026-10-07: housekeeping and the carried controls are done** — A.6t, A.3, and B.2 closed without a dynamical substrate, [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md); next is C.0; M.8 is decided at the C.0 freeze)* (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
 **Roadmap layer**: dynamics (B.2), body (C), environment (D), internal state (B.3)
 **Approx effort**: ≈ 13–20 active weeks (housekeeping ≈ 0.5, controls ≈ 4–6 — A.6t and A.3 ≈ 1, B.2 ≈ 3–4 —, C ≈ 6–10 on the kinematic body, D + B.3 ≈ 2–3); ≈ 15–22 if C.2's pilot passes. A.5's 2026-12-31 fallback date is now an intentional early checkpoint inside this estimate, not its top (A.5's 2026-10-03 note)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18–D22, and § *What the 2026-10-03 re-plan changed*
@@ -393,6 +393,27 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   MAY, not SHOULD: A.1 already answered the half that addresses the published critique, so this is
   about understanding the effect's stability rather than defending it, and Phase 8's committed scope
   is the substrate and body ladder.
+
+- [ ] **M.8 Plastic gap junctions on the settling substrate** *(added 2026-10-07 after [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md); optional, a short detour)*.
+  B.2b closed *unreachable-with-reason* because the leaky substrate it was registered on failed its
+  positive control. The question it existed for does not need that substrate: **gap placement against
+  gap strength**. Logbooks 075 and 078 found the null's rewired gap junctions carry about half of block
+  V's lead on hard350 and about 84% on thermal. On the settling map, gap strengths on the existing pairs
+  can be made learnable (symmetric, non-negative), and the wild type read against the chemical-only null
+  with plastic gaps, reusing committed settling runs under an identity check as B.2a did. About 2–4 days
+  with a pilot and a 12–16 h campaign. Taking it reopens B.2b's question as a new registration, not as
+  B.2b.
+  **When to decide: at the C.0 freeze, before C.1 registers.** Every C.0 change is opt-in, so the
+  detour stays runnable throughout, but its value falls after that point:
+
+  - **Machine time.** C.1's campaigns would compete with it for the machine.
+  - **The paper.** Its result belongs to the 8a half of the combined paper, which A.5's 2026-12-31
+    checkpoint may ship on its own.
+  - **The literature watch.** A.5's reopen trigger is the null-strength point appearing in the
+    literature first.
+
+  A campaign run during C.0 development runs from a separate git worktree, since the runner reads code
+  from the working tree.
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 
