@@ -17,8 +17,8 @@ Phase 8b carried control B.2a. Registered in
   shape — with tests of every verdict.
 - [ ] 5. **Identity check**: four learning and two frozen settling runs per cell from the bands, re-run
   on this code, bit for bit against the committed logs.
-- [ ] 6. **Pilot and MLP control**: the τ pilot on seeds 1101–1104 (64 runs) and the thermal MLP on 1201–1208; the hard350 MLP
-  citation checked against Logbook 060's per-seed data;
+- [ ] 6. **Pilot and MLP control**: the τ pilot on seeds 1101–1104 (64 runs) and MLP-PPO on both cells on 1201–1208 (Logbook 060 committed only per-width means, so hard350's
+  control is run rather than cited);
   the rule applied; the gate preflight on the chosen τ; cost measured.
 - [ ] 7. **Registration**: the launch record, then `/nematode-review-spec`.
 - [ ] 8. **Campaign**: the dynamical wild type, learning and frozen, at the chosen τ on seeds 641–768

@@ -210,5 +210,14 @@ class TestIdentity:
 
 
 class TestMlpGate:
-    def test_missing_runs_read_incomplete(self, tmp_path: Path) -> None:
-        assert asc.mlp_gate([tmp_path])["verdict"] == "incomplete"
+    @pytest.mark.parametrize("cell", sorted(asc.CELLS))
+    def test_missing_runs_read_incomplete(self, tmp_path: Path, cell: str) -> None:
+        assert asc.mlp_gate([tmp_path], cell)["verdict"] == "incomplete"
+
+    def test_the_hard350_mlp_runs_the_connectome_cell(self) -> None:
+        mlp = _loaded("foraging", asc.MLP_STEMS["hard350"])
+        cell = _loaded("foraging", asc.CELLS["hard350"]["settling"][0])
+        assert {k: v for k, v in mlp.items() if k != "brain"} == {
+            k: v for k, v in cell.items() if k != "brain"
+        }
+        assert mlp["brain"]["name"] == "mlpppo"

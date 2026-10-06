@@ -75,11 +75,13 @@ not biased by the choice.
 
 ### Decision D: The positive controls and their reading
 
-**Control 1, the cell is solvable by the strongest method** (protocol principle 3). hard350: Logbook
-060's committed MLP-PPO runs reach 87.6–97.0% full clear on seeds 1–8, so it is discharged by citation.
-Thermal at target 35: no MLP result exists; MLP-PPO runs on **seeds 1201–1208** in a config that is the
-connectome target-35 cell's environment with the existing thermal MLP-PPO brain. It passes if every
-seed reaches competence (30% success, the episode metric's threshold) within the 3,000 episodes.
+**Control 1, the cell is solvable by the strongest method** (protocol principle 3). MLP-PPO runs on
+each cell on **seeds 1201–1208** and passes if every seed's plateau success reaches competence (30%,
+the episode metric's threshold) within the 3,000 episodes. hard350 uses the existing width-64 MLP-PPO
+config, whose environment is the connectome cell's exactly; thermal at target 35 uses a config that is
+the connectome cell with the existing thermal MLP-PPO brain. *(Amended before the registration:
+hard350 was to be discharged by citing Logbook 060, but 060 committed only per-width means (87.6–97.0%
+full clear), not per-seed values, so the per-seed gate could not be re-derived from committed data.)*
 
 **Control 2, the new substrate learns the cell at least as well.** Per cell, the paired difference
 `d = auc_success(dynamical) − auc_success(settling)` over 128 seeds, read as non-inferiority against a
@@ -112,7 +114,7 @@ re-read.
 **What each verdict licenses, per cell.** `non_inferior`: B.2b runs on the dynamical substrate on that
 cell, and **first re-reads the wild type's lead over the chemical-only null on it** with static gaps: a passing substrate is a new reference frame, so no base effect carries over from the settling substrate (protocol principle 6). `inferior` or `unlearnable`: B.2b closes *unreachable-with-reason* on that cell, the diagnosis its
 deliverable (D20 as amended). `unresolved`: neither; the maintainer chooses a registered extension on
-fresh seeds or closing. A thermal MLP failure reads **no_positive_control** for that cell and stops
+fresh seeds or closing. An MLP failure on a cell reads **no_positive_control** for that cell and stops
 there.
 
 ### Decision E: The analysis takes the gate preflight's shape

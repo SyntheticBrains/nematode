@@ -2,8 +2,8 @@
 """B.2a's positive controls: whether PPO learns each block-V cell on the leaky substrate.
 
 Two controls, in the roadmap's order. **Control 1**: the cell is solvable by the strongest method.
-hard350's is discharged by Logbook 060's committed MLP-PPO runs; thermal at target 35 runs MLP-PPO
-on seeds 1201-1208 and passes if every seed's plateau success reaches the 30% competence level.
+MLP-PPO runs on each cell on seeds 1201-1208 and passes if every seed's plateau success reaches the
+30% competence level.
 **Control 2**: on each cell, the dynamical wild type against the settling wild type, paired by seed,
 read as non-inferiority on ``auc_success`` against a margin fixed from that cell's committed data.
 
@@ -84,8 +84,14 @@ CELLS: dict[str, dict[str, Any]] = {
     },
 }
 
-# ── Control 1 on thermal ─────────────────────────────────────────────────────────────────────
-MLP_STEM = f"{_THERMAL}_t35".replace("connectomeppo", "mlpppo")
+# ── Control 1 ────────────────────────────────────────────────────────────────────────────────
+# Each cell's MLP-PPO config: the width-64 hard350 capability control (its environment is the
+# connectome cell's exactly), and the thermal target-35 config this change generates.
+MLP_STEMS: dict[str, str] = {
+    "hard350": "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64",
+    "thermal": f"{_THERMAL}_t35".replace("connectomeppo", "mlpppo"),
+}
+MLP_STEM = MLP_STEMS["thermal"]
 MLP_SEEDS: tuple[int, ...] = tuple(range(1201, 1209))
 # The episode metric's competence level, in percent success.
 COMPETENCE = 30.0
@@ -238,11 +244,11 @@ def identity(identity_dir: Path, repo: Path = wp.REPO) -> dict[str, Any]:
 
 
 # ── Control 1 ────────────────────────────────────────────────────────────────────────────────
-def mlp_gate(log_dirs: list[Path]) -> dict[str, Any]:
-    """Thermal MLP-PPO: every seed's plateau success at or above the competence level."""
+def mlp_gate(log_dirs: list[Path], cell: str = "thermal") -> dict[str, Any]:
+    """One cell's MLP-PPO: every seed's plateau success at or above the competence level."""
     plateaus: dict[int, float] = {}
     for log_dir in log_dirs:
-        for log in sorted(log_dir.glob(f"{MLP_STEM}-seed*.log")):
+        for log in sorted(log_dir.glob(f"{MLP_STEMS[cell]}-seed*.log")):
             seed = int(log.stem.rpartition("-seed")[2])
             tail = wp.plateau_tail(log)
             if seed in MLP_SEEDS and tail is not None:
@@ -272,7 +278,7 @@ def read_cell(gates: dict[str, Any], test: dict[str, Any], margin: float) -> str
 
 
 def score(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
-    """Score both cells at the registered tau, and the thermal MLP control."""
+    """Score both cells at the registered tau, and each cell's MLP control."""
     if REGISTERED_TAU is None:
         msg = "REGISTERED_TAU is unset: the pilot chooses it, and the registration records it"
         raise AcrossStepError(msg)
@@ -299,8 +305,7 @@ def score(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
         "primary_metric": PRIMARY_METRIC,
         "beside_metric": BESIDE_METRIC,
         "cells": cells,
-        "mlp_thermal": mlp_gate(log_dirs),
-        "mlp_hard350": "discharged by Logbook 060's committed MLP-PPO runs",
+        "mlp": {cell: mlp_gate(log_dirs, cell) for cell in CELLS},
     }
 
 

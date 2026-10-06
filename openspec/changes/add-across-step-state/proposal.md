@@ -24,8 +24,8 @@ across steps, the replay has to start each step from the state it actually had.
 - **Recurrent replay.** Under `leaky`, the rollout buffer stores each step's starting state, and PPO
   replays contiguous chunks from those states with gradients through time inside each chunk — the
   pattern the LSTM brains use. The settling path, its buffer and its random draws are untouched.
-- **Positive controls, in the roadmap's order.** (1) MLP-PPO on each block-V cell: hard350 is
-  discharged by Logbook 060's committed runs; thermal at target 35 runs 8 seeds. (2) PPO on the
+- **Positive controls, in the roadmap's order.** (1) MLP-PPO on each block-V cell, 8 seeds
+  each, every seed reaching competence. (2) PPO on the
   dynamical wild type against PPO on the settling wild type, paired by seed on 128 seeds per cell,
   read as non-inferiority against a margin fixed from committed data: the dynamical substrate passes
   on a cell if it learns at least as well, within that cell's registered minimum wiring effect.
@@ -46,7 +46,8 @@ dynamics.
   the membrane reset; `brain/arch/_ppo_buffer.py`: optional start states and a chunk iterator;
   `learning_rules/ppo.py`: the chunked replay path
 - `configs/scenarios/foraging/`, `configs/scenarios/thermal_foraging/`: dynamical wild-type configs per
-  τ and cell through a generator; an MLP-PPO thermal target-35 config
+  τ and cell through a generator; an MLP-PPO thermal target-35 config (hard350 reuses the width-64
+  MLP-PPO config)
 - `scripts/analysis/across_step_control.py`: new — the pilot rule, the MLP gate and the
   non-inferiority reading
 - Tests: byte-identical off, stability on the raw counts, rollout-replay equivalence, chunking across
