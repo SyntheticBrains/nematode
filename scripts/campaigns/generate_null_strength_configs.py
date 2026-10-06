@@ -3,8 +3,8 @@
 
 Four panels use them: A.6's chemical-only null (``null_strength_control.py``), its gap-only split
 (``gap_split.py``), both on block V's thermal cell (``thermal_null_strength.py``), and the
-boundary-preserving null (``boundary_null.py``). Each panel defines which arms are new and which committed arm each derives from,
-and is imported here. Each new config is its parent with one ``wiring`` value and nothing else; a test
+boundary-preserving null (``boundary_null.py``). Each panel defines which arms are new and which
+committed arm each derives from, and is imported here. Each new config is its parent with one ``wiring`` value and nothing else; a test
 re-reads every file through the real loader to check that. A config that already exists is left
 alone, never overwritten.
 

@@ -154,3 +154,58 @@ def test_the_measured_prior_builds_on_the_gap_held_null(overrides: dict[str, obj
     """Chemical in-degree is the current null's, so the per-neuron placements apply."""
     brain = _brain(wiring="rewired_gap_junctions_held", **overrides)
     assert brain.topology.w_chem.shape[0] == brain.topology.n_neurons
+
+
+# ── The boundary-preserving null ─────────────────────────────────────────────────────────────
+# Covers "A boundary-preserving rewired null" on the brain: the value reaches the built mask, every
+# row of an injected sensor and every column of a readout motor neuron is the wild type's, the
+# interior moves, and gap junctions, autapses and degrees are the wild type's.
+
+
+@pytest.fixture(scope="module")
+def boundary_held() -> ConnectomePPOBrain:
+    """Build the boundary-preserving null at the same seed as ``arms``."""
+    return _brain(wiring="rewired_boundary_held")
+
+
+def test_the_boundary_value_validates() -> None:
+    """The new wiring value is accepted by the configuration model."""
+    container = load_simulation_config(str(_WILD)).brain
+    assert container is not None
+    assert isinstance(container.config, ConnectomePPOBrainConfig)
+    ConnectomePPOBrainConfig.model_validate(
+        {**container.config.model_dump(), "wiring": "rewired_boundary_held"},
+    )
+
+
+def test_the_boundary_rows_and_columns_are_the_wild_types(
+    arms: dict[str, ConnectomePPOBrain],
+    boundary_held: ConnectomePPOBrain,
+) -> None:
+    """Edges out of every injected sensor and into every readout motor are held; the rest moves."""
+    from quantumnematode.brain.arch.connectome_ppo import boundary_neurons
+    from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+
+    sensory, motor = boundary_neurons(load_cook_2019_hermaphrodite())
+    index = {name: i for i, name in enumerate(boundary_held.topology.neuron_names)}
+    rows = sorted(index[n] for n in sensory)
+    cols = sorted(index[n] for n in motor)
+    wild = arms["wild_type"].topology.m_chem
+    held = boundary_held.topology.m_chem
+    assert torch.equal(held[rows, :], wild[rows, :])
+    assert torch.equal(held[:, cols], wild[:, cols])
+    assert not torch.equal(held, wild)
+    assert not torch.equal(held, arms["rewired_chemical_only"].topology.m_chem)
+
+
+def test_the_boundary_null_keeps_gap_junctions_autapses_and_degrees(
+    arms: dict[str, ConnectomePPOBrain],
+    boundary_held: ConnectomePPOBrain,
+) -> None:
+    """Everything the chemical-only null holds, the boundary null holds too."""
+    wild = arms["wild_type"].topology
+    held = boundary_held.topology
+    assert torch.equal(held.g_gap, wild.g_gap)
+    assert torch.equal(torch.diagonal(held.m_chem), torch.diagonal(wild.m_chem))
+    assert torch.equal(held.m_chem.sum(dim=0), wild.m_chem.sum(dim=0))
+    assert torch.equal(held.m_chem.sum(dim=1), wild.m_chem.sum(dim=1))

@@ -95,8 +95,8 @@ of 128 seeds. That replicates A.6's +0.0215 on fresh seeds, and passes the base-
 chemical-only lead goes.
 
 **Lead → `no_lead`.** Against the boundary null the wild type is at −0.0032 [−0.010, +0.003], inside
-the ±0.0143 band, ahead on 65 of 128 seeds. Beside it, on episodes, the boundary null reaches competence
-108 episodes sooner [−175, −41].
+the ±0.0143 band, ahead on 65 of 128 seeds. Beside it, on episodes, the wild type is −108 \[−175, −41\]:
+the boundary null reaches competence 108 episodes sooner.
 
 ### Achieved sensitivity
 
@@ -109,9 +109,9 @@ Drift reads as PPO's positive control. Censoring is comparable: every arm crosse
 
 ## Analysis
 
-**The shortcuts did not help the chemical-only null at depth 4; the boundary arrangement helped the wild
-type.** The interaction is negative: the null that keeps the wild type's boundary does better than the
-null that rewires it. A.2's depth surface found the null winning at depth 2, where only shortcuts reach
+**At depth 4, rewiring the boundary cost the chemical-only null rather than helping it.** The
+interaction is negative: the null that keeps the wild type's boundary does better than the null that
+rewires it, shortcuts included. A.2's depth surface found the null winning at depth 2, where only shortcuts reach
 the motor layer. At depth 4, where the wild type's routes also arrive, rewiring the boundary costs the
 null. The boundary null holds two things at once — the absence of shortcuts, and which interneurons each
 sensor feeds and each motor neuron hears — and this panel does not separate them.
@@ -126,7 +126,8 @@ that interface.
 
 - **Established**: on hard350 under PPO at depth 4, against a null with the wild type's gap junctions,
   autapses and sensory-motor boundary, the wild type's interior chemical wiring confers no learning-speed
-  advantage detectable at ±0.014 `auc_success`; on episodes the null is faster.
+  advantage detectable at ±0.014 `auc_success`. Described beside it, not registered: on episodes the
+  null is faster.
 - **Established**: the lead the wild type holds over the chemical-only null lies in the boundary edges.
 - **Not established**: which part of the boundary — the absence of shortcuts or the specific
   sensor-to-interneuron and interneuron-to-motor edges.

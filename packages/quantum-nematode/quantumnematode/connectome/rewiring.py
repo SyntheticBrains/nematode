@@ -158,8 +158,7 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
     chemical and gap-junction edge sets are rewired by independent seeded double-edge-swaps, each
     running ``swaps_per_edge * |E|`` accepted swaps for mixing. Deterministic given ``rng``'s seed.
 
-    Two options narrow what the null changes, so it differs from the input in chemical placement
-    alone:
+    Three options narrow what the null changes:
 
     * ``rewire_gap_junctions=False`` skips the undirected swap, so gap junctions keep their pairs
       and counts, and every neuron keeps its total gap-junction strength.
@@ -170,9 +169,9 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
       leaving a neuron in ``sensory`` or entering a neuron in ``motor``, and puts them back
       unchanged. Only the interior -- edges from a non-sensory neuron to a non-motor one -- is
       rewired. A swap of two interior edges yields interior edges, so it can never recreate a
-      held one, and degrees stay
-      exact. Every chemical route of one or two hops from a sensory neuron to a motor neuron is
-      kept, since its first edge leaves a sensory neuron and its last enters a motor neuron.
+      held one, and degrees stay exact. Every chemical route of one or two hops from a sensory
+      neuron to a motor neuron is kept, since its first edge leaves a sensory neuron and its last
+      enters a motor neuron.
 
     At their defaults the options leave the draws, and so the rewired graph, exactly as they were.
     With ``preserve_autapses`` the directed swap runs on a shorter list and draws differently, so at
