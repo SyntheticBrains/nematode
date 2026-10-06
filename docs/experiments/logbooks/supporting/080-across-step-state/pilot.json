@@ -1,0 +1,130 @@
+{
+  "candidates": {
+    "tau0p2": {
+      "difference": {
+        "hard350": -0.26516666666666666,
+        "thermal": -0.20491666666666666
+      },
+      "preflight": {
+        "launch": true,
+        "levels": {
+          "hard350": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 77.76666666666667,
+            "status": "readable",
+            "wt_floor": 0.0,
+            "wt_plateau": 41.93333333333333
+          },
+          "thermal": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 68.2,
+            "status": "readable",
+            "wt_floor": 0.0,
+            "wt_plateau": 26.93333333333333
+          }
+        },
+        "margin_points": 5.0,
+        "saturation_bar": 90.0
+      },
+      "status": {
+        "hard350": "readable",
+        "thermal": "readable"
+      }
+    },
+    "tau1": {
+      "difference": {
+        "hard350": -0.33941666666666664,
+        "thermal": -0.28291666666666665
+      },
+      "preflight": {
+        "launch": false,
+        "levels": {
+          "hard350": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 77.76666666666667,
+            "status": "readable",
+            "wt_floor": 0.0,
+            "wt_plateau": 28.233333333333334
+          },
+          "thermal": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 68.2,
+            "status": "fails_floor",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.16666666666666669
+          }
+        },
+        "margin_points": 5.0,
+        "saturation_bar": 90.0
+      },
+      "status": {
+        "hard350": "readable",
+        "thermal": "fails_floor"
+      }
+    },
+    "tau5": {
+      "difference": {
+        "hard350": -0.43383333333333335,
+        "thermal": -0.2833333333333333
+      },
+      "preflight": {
+        "launch": false,
+        "levels": {
+          "hard350": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 77.76666666666667,
+            "status": "readable",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.1
+          },
+          "thermal": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 68.2,
+            "status": "fails_floor",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.0
+          }
+        },
+        "margin_points": 5.0,
+        "saturation_bar": 90.0
+      },
+      "status": {
+        "hard350": "readable",
+        "thermal": "fails_floor"
+      }
+    }
+  },
+  "input_gain": 512.0,
+  "rule": {
+    "default_tau": 1.0,
+    "tie_band": 0.05
+  },
+  "seeds": [
+    1105,
+    1106,
+    1107,
+    1108
+  ],
+  "selection": {
+    "eligible": [
+      0.2
+    ],
+    "score": {
+      "0.2": -0.26516666666666666
+    },
+    "tau": 0.2,
+    "why": "tau = 1 step is not eligible; the higher score among the eligible"
+  }
+}

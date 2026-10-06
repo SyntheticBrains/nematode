@@ -92,7 +92,19 @@ The τ pilot is repeated at input gain 512 on **seeds 1105–1108** under the sa
 if it also leaves no τ eligible, B.2a closes as a failed positive control and B.2b closes
 *unreachable-with-reason*.
 
-**Repeat pilot result:** *to be filled from `pilot.json`.*
+**Repeat pilot result (2026-10-07, input gain 512, seeds 1105–1108, 64/64 runs, [pilot.json](pilot.json)):
+τ = 0.2 steps is chosen**, the only τ readable on both cells (rule step 2, τ = 1 being ineligible).
+
+| τ (steps) | hard350 leaky / settling plateau | status | thermal leaky / settling plateau | status | mean `auc_success` difference (hard350, thermal) |
+|---|---|---|---|---|---|
+| 0.2 | 41.9% / 77.8% | readable | 26.9% / 68.2% | readable | −0.265, −0.205 |
+| 1 | 28.2% / 77.8% | readable | 0.2% / 68.2% | fails_floor | −0.339, −0.283 |
+| 5 | 0.1% / 77.8% | readable | 0.0% / 68.2% | fails_floor | −0.434, −0.283 |
+
+Described, not a verdict: at τ = 0.2 the per-seed differences are −0.217, −0.069, −0.434 and −0.341
+on hard350 and −0.295, +0.007, −0.277 and −0.255 on thermal; on four seeds both 80% intervals lie
+below −δ. Learning falls monotonically as τ rises: the less the substrate carries across steps, the
+better it learns.
 
 ## Control 2 — the panel
 
