@@ -229,7 +229,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 ## Shipment 8b — Embody
 
 **OpenSpec changes**: placeholders; created per milestone
-**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
+**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21); C.1e also registers the boundary-preserving null, which alone carries any interior-wiring claim (D21 as amended 2026-10-06). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
 **Roadmap layer**: dynamics (B.2), body (C), environment (D), internal state (B.3)
 **Approx effort**: ≈ 13–20 active weeks (housekeeping ≈ 0.5, controls ≈ 4–6 — A.6t and A.3 ≈ 1, B.2 ≈ 3–4 —, C ≈ 6–10 on the kinematic body, D + B.3 ≈ 2–3); ≈ 15–22 if C.2's pilot passes. A.5's 2026-12-31 fallback date is now an intentional early checkpoint inside this estimate, not its top (A.5's 2026-10-03 note)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18–D22, and § *What the 2026-10-03 re-plan changed*
@@ -286,8 +286,10 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   *(2026-10-03, D22: the generator exposes the curvature-and-phase interface that stands in for C.0c and carries the forward and backward waves; muscle handling may take Wormlight's `src/sim/muscles.ts` — 95 muscles, receptor-based signs, relative-to-range drive — as a reference.)*
 - [ ] **C.1d Positive control**: MLP-PPO forages through C.1 on the target cell. **Blocks every
   connectome arm below it.** *(2026-10-03: read with C.3's adopted instruments — thresholds, band-based frequency, half-step check, wall exclusion — so the positive control is a kinematic pass, not only a foraging one.)*
-- [ ] **C.1e The wiring contrast through the body**: wild type vs the chemical-only null (D21), the
-  current and boundary-preserving nulls beside, under PPO and under `readout_only` — **registered
+- [ ] **C.1e The wiring contrast through the body**: wild type vs the chemical-only null (D21) and,
+  as a second registered reading that alone carries any interior-wiring claim, the boundary-preserving
+  null, its boundary redrawn on the neurons that synapse onto the muscles C.1b's readout pools (D21 as amended 2026-10-06); the current
+  null beside; under PPO and under `readout_only` — **registered
   as a contrast of segmental drive and steering through the wiring, not of rhythm generation**
   (D19 as amended, 2026-10-03) — with **floors and baselines re-established on this substrate** — a new
   reference frame, never a delta against 029 or block V.
