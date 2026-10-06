@@ -10,10 +10,10 @@ Phase 8b carried control B.2a. Registered in
 - [x] 2. **The replay**: start states in the rollout buffer; the chunk iterator; the sequence forward;
   the rule's chunked path; the end-of-episode update needing as many chunks as minibatches. Tests: replay equals rollout at unchanged parameters, across an episode
   boundary and with a partial final chunk; the settling minibatch draws unchanged.
-- [ ] 3. **Configs**: a generator for the dynamical wild type, learning and frozen, at each pilot τ on
+- [x] 3. **Configs**: a generator for the dynamical wild type, learning and frozen, at each pilot τ on
   both cells, each its settling parent with only the three new keys; the MLP-PPO thermal target-35
   config. Loader tests.
-- [ ] 4. **Analysis**: `across_step_control.py` — the pilot rule, the MLP competence gate, the non-inferiority reading and the per-seed CSV, with cells as levels in the preflight's `STEMS`
+- [x] 4. **Analysis**: `across_step_control.py` — the pilot rule, the MLP competence gate, the non-inferiority reading and the per-seed CSV, with cells as levels in the preflight's `STEMS`
   shape — with tests of every verdict.
 - [ ] 5. **Identity check**: four learning and two frozen settling runs per cell from the bands, re-run
   on this code, bit for bit against the committed logs.
