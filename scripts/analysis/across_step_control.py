@@ -293,6 +293,11 @@ def read_cell(gates: dict[str, Any], test: dict[str, Any], margin: float) -> str
     return "unresolved"
 
 
+def apply_control(reading: str, mlp: dict[str, Any]) -> str:
+    """Withhold a cell's reading unless its MLP control passed: the cell's solvability comes first."""
+    return reading if mlp["verdict"] == "passes" else "no_positive_control"
+
+
 def score(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
     """Score both cells at the registered tau, and each cell's MLP control."""
     if REGISTERED_TAU is None:
@@ -301,6 +306,7 @@ def score(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     seeds = {cell: spec["seeds"] for cell, spec in CELLS.items()}
     manifest = build_manifest(STEMS, log_dirs, seeds, out_dir / "manifest-across-step.txt")
+    mlp = {cell: mlp_gate(log_dirs, cell) for cell in CELLS}
     cells: dict[str, Any] = {}
     for cell, spec in CELLS.items():
         mp.require_complete(manifest, HALF, spec["seeds"], (cell,))
@@ -314,14 +320,15 @@ def score(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
             "gates": gates,
             "difference": differences,
             "censoring": ops.censoring_rates(report),
-            "verdict": read_cell(gates, differences[PRIMARY_METRIC]["test"], spec["margin"]),
+            "reading": read_cell(gates, differences[PRIMARY_METRIC]["test"], spec["margin"]),
         }
+        cells[cell]["verdict"] = apply_control(cells[cell]["reading"], mlp[cell])
     return {
         "tau": REGISTERED_TAU,
         "primary_metric": PRIMARY_METRIC,
         "beside_metric": BESIDE_METRIC,
         "cells": cells,
-        "mlp": {cell: mlp_gate(log_dirs, cell) for cell in CELLS},
+        "mlp": mlp,
     }
 
 

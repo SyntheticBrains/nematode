@@ -226,6 +226,15 @@ class TestIdentity:
         assert asc.identity(tmp_path)["all_identical"] is False
 
 
+class TestControlOrder:
+    def test_a_failed_mlp_withholds_the_reading(self) -> None:
+        assert asc.apply_control("inferior", {"verdict": "fails"}) == "no_positive_control"
+        assert asc.apply_control("non_inferior", {"verdict": "incomplete"}) == "no_positive_control"
+
+    def test_a_passing_mlp_lets_the_reading_stand(self) -> None:
+        assert asc.apply_control("inferior", {"verdict": "passes"}) == "inferior"
+
+
 class TestMlpGate:
     @pytest.mark.parametrize("cell", sorted(asc.CELLS))
     def test_missing_runs_read_incomplete(self, tmp_path: Path, cell: str) -> None:

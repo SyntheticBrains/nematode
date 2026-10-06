@@ -22,7 +22,7 @@ Phase 8b carried control B.2a. Registered in
 - [ ] 6. **Pilot and MLP control**: the τ pilot on seeds 1101–1104 (64 runs) and MLP-PPO on both cells on 1201–1208 (Logbook 060 committed only per-width means, so hard350's
   control is run rather than cited);
   the rule applied; the gate preflight on the chosen τ; cost measured.
-- [ ] 7. **Registration**: the launch record, then `/nematode-review-spec`.
+- [x] 7. **Registration** — **done: launch.md committed after the gate preflight; readiness review found the MLP verdict recorded but not applied, fixed before any panel run.** Original scope: the launch record, then `/nematode-review-spec`.
 - [ ] 8. **Campaign**: the dynamical wild type, learning and frozen, at the chosen τ on seeds 641–768
   (hard350) and 513–640 (thermal target 35).
 - [ ] 9. **Readout**: Logbook 080; tracker B.2a; the roadmap's B.2 entry; what B.2b may run on, per cell.
