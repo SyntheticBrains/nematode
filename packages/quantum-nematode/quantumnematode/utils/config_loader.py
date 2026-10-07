@@ -2518,6 +2518,10 @@ class CoevolutionConfig(BaseModel):
         return self
 
 
+_BODY_DRIVE_BRAINS = frozenset({"connectomeppo", "mlpppo"})
+"""Brains that emit the 25-number body drive."""
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -2562,6 +2566,8 @@ class SimulationConfig(BaseModel):
         if self.brain is None or self.environment is None:
             return self
         continuous = self.environment.continuous
+        if getattr(self.brain.config, "action_space", "speed_turn") == "body_drive":
+            return self  # the body's direction channel reverses it; checked below
         allows = bool(continuous is not None and continuous.allow_reversal)
         signed = bool(getattr(self.brain.config, "signed_speed", False))
         if allows != signed:
@@ -2569,6 +2575,35 @@ class SimulationConfig(BaseModel):
                 f"environment.continuous.allow_reversal is {allows} but brain.config.signed_speed "
                 f"is {signed}: a continuous brain's speed sign must match whether the environment "
                 "can move the worm backward."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_body_drive_matches_environment(self) -> "SimulationConfig":
+        """Refuse a body-drive brain without a kinematic body, or a kinematic body without one.
+
+        The body reads 25 drive numbers and a point worm reads two, so either mismatch would feed
+        an environment an action it cannot apply. Only the connectome and MLP-PPO brains emit a
+        body drive.
+        """
+        if self.brain is None or self.environment is None:
+            return self
+        continuous = self.environment.continuous
+        kinematic = bool(continuous is not None and continuous.body_model == "kinematic")
+        body_drive = getattr(self.brain.config, "action_space", "speed_turn") == "body_drive"
+        if kinematic != body_drive:
+            msg = (
+                f"environment.continuous.body_model is "
+                f"{continuous.body_model if continuous else 'unset'} but brain.config.action_space "
+                f"is {getattr(self.brain.config, 'action_space', 'speed_turn')}: a kinematic body "
+                "needs a body-drive brain, and a body-drive brain a kinematic body."
+            )
+            raise ValueError(msg)
+        if body_drive and self.brain.name not in _BODY_DRIVE_BRAINS:
+            msg = (
+                f"action_space: body_drive is implemented for {sorted(_BODY_DRIVE_BRAINS)}, not "
+                f"{self.brain.name!r}."
             )
             raise ValueError(msg)
         return self

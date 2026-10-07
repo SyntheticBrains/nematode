@@ -123,6 +123,11 @@ class BrainConfig(BaseModel):
     # negative speed backs the worm up. It must match the environment's allow_reversal, which the
     # simulation configuration checks at load. Meaningless with ``action_mode: discrete``.
     signed_speed: bool = False
+    # What a continuous action means. "speed_turn" (default) is the normalized (speed, turn) a point
+    # worm moves by. "body_drive" is 25 numbers in [-1, 1] for a kinematic body: dorsal drive for
+    # each of 12 segments, ventral drive for each, then a direction channel. It must match the
+    # environment's body model, which the simulation configuration checks at load.
+    action_space: Literal["speed_turn", "body_drive"] = "speed_turn"
 
     @model_validator(mode="after")
     def _validate_signed_speed(self) -> BrainConfig:
@@ -130,6 +135,27 @@ class BrainConfig(BaseModel):
             msg = (
                 "signed_speed: true requires action_mode: continuous (a categorical policy has no "
                 "speed to sign)."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_action_space(self) -> BrainConfig:
+        if self.action_space == "speed_turn":
+            return self
+        if self.action_mode != "continuous":
+            msg = "action_space: body_drive requires action_mode: continuous."
+            raise ValueError(msg)
+        if self.signed_speed:
+            msg = (
+                "signed_speed is not read under action_space: body_drive, whose direction channel "
+                "already reverses the body; leave it at its default."
+            )
+            raise ValueError(msg)
+        if self.continuous_std_mode == "state_dependent":
+            msg = (
+                "action_space: body_drive does not support continuous_std_mode: state_dependent, "
+                "whose head is sized for two outputs."
             )
             raise ValueError(msg)
         return self

@@ -13,6 +13,20 @@ from quantumnematode.logging_config import (
 from quantumnematode.report.dtypes import BrainDataSnapshot, PerformanceMetrics, TrackingData
 
 
+def _action_label(action: ActionData) -> str:
+    """Return a plot label: the discrete action, the (speed, turn) pair, or a body drive's sign.
+
+    A body drive has 25 entries, too many to print beside a point, so it is labelled by its
+    direction channel alone.
+    """
+    if action.action is not None:
+        return action.action.value
+    continuous = action.continuous
+    if continuous is not None and len(continuous) > 2:  # noqa: PLR2004 - (speed, turn) is two
+        return f"drive dir {continuous[-1]:+.2f}"
+    return str(continuous)
+
+
 def plot_success_rate_over_time(  # pragma: no cover
     file_prefix: str,
     runs: list[int],
@@ -284,14 +298,20 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
         # Handle last value is ActionData
         elif isinstance(last_values[0], ActionData):
             probs = [a.probability if isinstance(a, ActionData) else np.nan for a in last_values]
-            actions = [
-                (a.action.value if a.action is not None else str(a.continuous))
-                if isinstance(a, ActionData)
-                else ""
-                for a in last_values
-            ]
+            actions = [_action_label(a) if isinstance(a, ActionData) else "" for a in last_values]
+            # A body drive's probability is a density over 25 dimensions, which reaches values far
+            # too large to place a label beside, so those runs are plotted on a log scale.
+            body_drive = any(label.startswith("drive dir") for label in actions)
+            if body_drive:
+                probs = [float(np.log10(p)) if p and p > 0 else np.nan for p in probs]
             plt.figure(figsize=(10, 6))
-            plt.plot(runs, probs, marker="o", color="orange", label="Probability (last step)")
+            plt.plot(
+                runs,
+                probs,
+                marker="o",
+                color="orange",
+                label="log10 density (last step)" if body_drive else "Probability (last step)",
+            )
             for run, prob, action in zip(runs, probs, actions, strict=False):
                 plt.text(
                     run,
@@ -304,7 +324,7 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
                 )
             plt.title(f"{key} (last step per run){title_postfix}")
             plt.xlabel("Run")
-            plt.ylabel("Probability")
+            plt.ylabel("log10 density" if body_drive else "Probability")
             plt.legend()
             plt.grid()
             plt.savefig(plot_dir / f"{file_prefix}track_{key}_over_runs.png")

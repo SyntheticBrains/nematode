@@ -9,10 +9,10 @@ their own changes.
 - [x] 2. **The body (C.1c)**: `env/body.py` with the generator, the drive modulation and the
   resistive-force step; `body_model` and its dispatch in the environment. Tests: forward and backward
   motion, turning by bias, the head's period, the arena clamp, the point worm unchanged.
-- [ ] 3. **The action space (C.1b)**: `action_space`, the body-drive bounds, the action type and the
+- [x] 3. **The action space (C.1b)**: `action_space`, the body-drive bounds, the action type and the
   runner dispatch; the connectome readout; MLP-PPO's width; the agreement checks and refusals. Tests
   for each.
-- [ ] 4. **A smoke run**: a few episodes of each brain through the body on hard350 (Emmons, reversal on).
+- [x] 4. **A smoke run** — **done: both brains run hard350 through the body (Emmons, reversal on); two report plots fixed for a 25-number action.** Original scope: a few episodes of each brain through the body on hard350 (Emmons, reversal on).
 - [ ] 5. **Close-out**: tracker C.1a–c; CHANGELOG; full suite; `git add -A` then
   `uv run pre-commit run --all-files`, judged by exit code; `openspec validate --strict`; archive and
   PR.
