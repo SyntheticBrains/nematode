@@ -139,3 +139,95 @@ class RolloutBuffer:
                 "returns": returns[mb_indices],
                 "advantages": advantages[mb_indices],
             }
+
+
+class ChunkedRolloutBuffer(RolloutBuffer):
+    """Rollout buffer for a brain whose state persists across environment steps.
+
+    Stores each step's starting state beside the usual experience and serves contiguous chunks
+    instead of shuffled single steps, so a replay can start each chunk from the state the rollout
+    actually had and carry it through time inside the chunk. The starting states are stored
+    detached: gradients never reach back past a chunk's first step.
+    """
+
+    def reset(self) -> None:
+        """Clear all stored experience, starting states included."""
+        super().reset()
+        self.start_states: list[torch.Tensor] = []
+
+    def add(  # noqa: PLR0913
+        self,
+        state: np.ndarray,
+        action: int | np.ndarray,
+        log_prob: torch.Tensor,
+        value: torch.Tensor,
+        reward: float,
+        done: bool,  # noqa: FBT001
+        start_state: torch.Tensor | None = None,
+    ) -> None:
+        """Add one step's experience and the state the step started from."""
+        if start_state is None:
+            msg = "ChunkedRolloutBuffer.add needs the step's start_state"
+            raise ValueError(msg)
+        super().add(state, action, log_prob, value, reward, done)
+        self.start_states.append(start_state.detach())
+
+    def chunk_count(self, chunk_length: int) -> int:
+        """Return how many chunks of ``chunk_length`` the stored steps make, the last partial."""
+        return -(-len(self) // chunk_length)
+
+    def get_chunk_minibatches(
+        self,
+        num_minibatches: int,
+        chunk_length: int,
+        returns: torch.Tensor,
+        advantages: torch.Tensor,
+    ) -> Iterator[dict[str, torch.Tensor]]:
+        """Yield minibatches of whole chunks, each tensor shaped ``(chunks, chunk_length, ...)``.
+
+        Chunks are cut from the buffer in order and shuffled as units with the buffer's generator.
+        A partial final chunk is zero-padded; ``mask`` marks the real steps. ``restart`` marks the
+        steps a replay starts from their stored state: each chunk's first step and every step
+        that begins an episode, which is any step after one whose ``done`` is set.
+        Advantages are normalised over the real steps, as the single-step buffer does.
+        """
+        n = len(self)
+        n_chunks = self.chunk_count(chunk_length)
+        padded = n_chunks * chunk_length
+
+        def pad(x: torch.Tensor) -> torch.Tensor:
+            out = torch.zeros((padded, *x.shape[1:]), dtype=x.dtype, device=self.device)
+            out[:n] = x
+            return out.reshape(n_chunks, chunk_length, *x.shape[1:])
+
+        states = torch.tensor(np.array(self.states), dtype=torch.float32, device=self.device)
+        if self.continuous_actions:
+            actions = torch.tensor(np.array(self.actions), dtype=torch.float32, device=self.device)
+        else:
+            actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
+        old_log_probs = torch.stack(self.log_probs).reshape(n)
+        if n > 1:
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        dones = torch.tensor(self.dones, dtype=torch.bool, device=self.device)
+        restart = torch.zeros(padded, dtype=torch.bool, device=self.device)
+        restart[1:n] = dones[: n - 1]
+        restart = restart.reshape(n_chunks, chunk_length)
+        restart[:, 0] = True
+        mask = torch.zeros(padded, dtype=torch.bool, device=self.device)
+        mask[:n] = True
+
+        tensors = {
+            "states": pad(states),
+            "actions": pad(actions),
+            "old_log_probs": pad(old_log_probs),
+            "returns": pad(returns),
+            "advantages": pad(advantages),
+            "start_states": pad(torch.stack(self.start_states)),
+            "restart": restart,
+            "mask": mask.reshape(n_chunks, chunk_length),
+        }
+        order = torch.tensor(self.rng.permutation(n_chunks), device=self.device)
+        per_minibatch = max(1, n_chunks // num_minibatches)
+        for start in range(0, n_chunks, per_minibatch):
+            picked = order[start : start + per_minibatch]
+            yield {name: tensor[picked] for name, tensor in tensors.items()}

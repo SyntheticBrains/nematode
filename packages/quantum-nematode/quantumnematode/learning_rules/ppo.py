@@ -39,9 +39,9 @@ from quantumnematode.brain.arch._std_head import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
-    from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
+    from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
     from quantumnematode.brain.arch._topology import BrainTopology
     from quantumnematode.brain.arch.connectome_ppo import ConnectomeTopology
 
@@ -69,6 +69,10 @@ class ConnectomePPOBatch:
         ],
     ]
     last_value: torch.Tensor | None
+    # Set when the topology carries state across steps: the buffer is then a
+    # ``ChunkedRolloutBuffer`` and the update replays contiguous chunks of this many steps from
+    # their stored starting states. ``None`` keeps the shuffled single-step replay.
+    chunk_length: int | None = None
 
 
 def _mean(values: list[float]) -> float | None:
@@ -202,22 +206,12 @@ class ConnectomePPORule:
             # Final-epoch semantics for the ceiling monitor: the recorded batch
             # reflects the near-final weights of this update.
             update_log_stds.clear()
-            for minibatch in buffer.get_minibatches(self.num_minibatches, returns, advantages):
+            for raw_minibatch in self._minibatches(ppo_batch, returns, advantages):
                 # Batched forward pass through the topology + critic. The
                 # minibatch's states are unpacked + run in ONE batched
                 # connectome forward (and the post-K hidden states feed the
                 # critic in one call).
-                states = minibatch["states"]
-                food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = ppo_batch.unpack_batched(
-                    states,
-                )
-                new_head_out, hidden = topo.forward_with_hidden_batched(
-                    food_b,
-                    predator_distal_features=distal_b,
-                    predator_mechano_features=mechano_b,
-                    contact_zone_onehot=zone_onehot_b,
-                    thermotaxis_features=thermo_b,
-                )
+                new_head_out, hidden, minibatch = self._replay(topo, ppo_batch, raw_minibatch)
                 new_values = self.critic(hidden).squeeze(-1)
 
                 # Re-score actions under the current policy via the shared module:
@@ -291,6 +285,75 @@ class ConnectomePPORule:
             total_loss=_mean(total_losses),
             grad_norm=_mean(grad_norms),
             extra=extra,
+        )
+
+    def _minibatches(
+        self,
+        ppo_batch: ConnectomePPOBatch,
+        returns: torch.Tensor,
+        advantages: torch.Tensor,
+    ) -> Iterator[dict[str, torch.Tensor]]:
+        """One epoch's minibatches: shuffled single steps, or whole chunks under carried state."""
+        if ppo_batch.chunk_length is None:
+            return ppo_batch.buffer.get_minibatches(self.num_minibatches, returns, advantages)
+        chunked = cast("ChunkedRolloutBuffer", ppo_batch.buffer)
+        return chunked.get_chunk_minibatches(
+            self.num_minibatches,
+            ppo_batch.chunk_length,
+            returns,
+            advantages,
+        )
+
+    def _replay(
+        self,
+        topo: ConnectomeTopology,
+        ppo_batch: ConnectomePPOBatch,
+        minibatch: dict[str, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+        """Re-run a minibatch through the topology: ``(head_out, hidden, per-step minibatch)``.
+
+        Single-step minibatches run in one batched forward from zero. Chunked minibatches run
+        through time from each chunk's stored starting state; their real steps are then flattened
+        out of the padding, so the loss sees one row per step either way.
+        """
+        if ppo_batch.chunk_length is None:
+            food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = ppo_batch.unpack_batched(
+                minibatch["states"],
+            )
+            head_out, hidden = topo.forward_with_hidden_batched(
+                food_b,
+                predator_distal_features=distal_b,
+                predator_mechano_features=mechano_b,
+                contact_zone_onehot=zone_onehot_b,
+                thermotaxis_features=thermo_b,
+            )
+            return head_out, hidden, minibatch
+        states = minibatch["states"]
+        chunks, length = states.shape[:2]
+        unpacked = ppo_batch.unpack_batched(states.reshape(chunks * length, -1))
+
+        def sequence(x: torch.Tensor | None) -> torch.Tensor | None:
+            return None if x is None else x.reshape(chunks, length, -1)
+
+        food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = (sequence(x) for x in unpacked)
+        logits, rates = topo.forward_sequence(
+            cast("torch.Tensor", food_b),
+            distal_b,
+            mechano_b,
+            zone_onehot_b,
+            thermo_b,
+            minibatch["start_states"],
+            minibatch["restart"],
+        )
+        real = minibatch["mask"].reshape(-1)
+        flat = {
+            name: minibatch[name].reshape(chunks * length, *minibatch[name].shape[2:])[real]
+            for name in ("actions", "old_log_probs", "returns", "advantages")
+        }
+        return (
+            logits.reshape(chunks * length, -1)[real],
+            rates.reshape(chunks * length, -1)[real],
+            flat,
         )
 
     def reset_episode(self) -> None:

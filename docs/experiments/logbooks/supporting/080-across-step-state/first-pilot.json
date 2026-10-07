@@ -1,0 +1,125 @@
+{
+  "candidates": {
+    "tau0p2": {
+      "difference": {
+        "hard350": -0.46425,
+        "thermal": -0.2955
+      },
+      "preflight": {
+        "launch": false,
+        "levels": {
+          "hard350": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 77.33333333333334,
+            "status": "readable",
+            "wt_floor": 0.0,
+            "wt_plateau": 1.5999999999999999
+          },
+          "thermal": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 69.86666666666667,
+            "status": "fails_floor",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.0
+          }
+        },
+        "margin_points": 5.0,
+        "saturation_bar": 90.0
+      },
+      "status": {
+        "hard350": "readable",
+        "thermal": "fails_floor"
+      }
+    },
+    "tau1": {
+      "difference": {
+        "hard350": -0.46675,
+        "thermal": -0.2955
+      },
+      "preflight": {
+        "launch": false,
+        "levels": {
+          "hard350": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 77.33333333333334,
+            "status": "readable",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.9333333333333333
+          },
+          "thermal": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 69.86666666666667,
+            "status": "fails_floor",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.0
+          }
+        },
+        "margin_points": 5.0,
+        "saturation_bar": 90.0
+      },
+      "status": {
+        "hard350": "readable",
+        "thermal": "fails_floor"
+      }
+    },
+    "tau5": {
+      "difference": {
+        "hard350": -0.4691666666666667,
+        "thermal": -0.2955
+      },
+      "preflight": {
+        "launch": false,
+        "levels": {
+          "hard350": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 77.33333333333334,
+            "status": "fails_floor",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.0
+          },
+          "thermal": {
+            "n_scored": 4,
+            "n_seeds": 4,
+            "rn_floor": 0.0,
+            "rn_plateau": 69.86666666666667,
+            "status": "fails_floor",
+            "wt_floor": 0.0,
+            "wt_plateau": 0.0
+          }
+        },
+        "margin_points": 5.0,
+        "saturation_bar": 90.0
+      },
+      "status": {
+        "hard350": "fails_floor",
+        "thermal": "fails_floor"
+      }
+    }
+  },
+  "input_gain": 1.0,
+  "rule": {
+    "default_tau": 1.0,
+    "tie_band": 0.05
+  },
+  "seeds": [
+    1101,
+    1102,
+    1103,
+    1104
+  ],
+  "selection": {
+    "eligible": [],
+    "tau": null,
+    "why": "no tau is readable on both cells"
+  }
+}

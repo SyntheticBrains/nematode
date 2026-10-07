@@ -1,0 +1,25 @@
+{
+  "saturation_bar": 90.0,
+  "margin_points": 5.0,
+  "levels": {
+    "hard350": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 41.93333333333333,
+      "rn_plateau": 77.76666666666667,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    },
+    "thermal": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 26.93333333333333,
+      "rn_plateau": 68.2,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    }
+  },
+  "launch": true
+}

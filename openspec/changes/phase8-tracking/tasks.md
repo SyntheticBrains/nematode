@@ -229,11 +229,11 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 ## Shipment 8b — Embody
 
 **OpenSpec changes**: placeholders; created per milestone
-**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21); C.1e also registers the boundary-preserving null, which alone carries any interior-wiring claim (D21 as amended 2026-10-06). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
+**Status**: 🔵 **ready to start** — the D20 gate is GO (2026-09-26, [Logbook 076](../../../docs/experiments/logbooks/076-8a-synthesis.md)); every wiring contrast reads against the chemical-only null, the current null beside it (D21); C.1e also registers the boundary-preserving null, which alone carries any interior-wiring claim (D21 as amended 2026-10-06). **Re-planned 2026-10-03 (roadmap v4.4)**: the order is housekeeping (H.1–H.3) → the carried controls (A.6t; A.3 with the boundary-preserving null; B.2a/B.2b, B.2b now MUST) → the body *(**2026-10-07: housekeeping and the carried controls are done** — A.6t, A.3, and B.2 closed without a dynamical substrate, [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md); next is C.0; M.8 is decided at the C.0 freeze)* (C.0, C.1; C.2 SHOULD, gated on a measured cost pilot; C.0c absorbed into C.1c under D22) → S8b.
 **Roadmap layer**: dynamics (B.2), body (C), environment (D), internal state (B.3)
 **Approx effort**: ≈ 13–20 active weeks (housekeeping ≈ 0.5, controls ≈ 4–6 — A.6t and A.3 ≈ 1, B.2 ≈ 3–4 —, C ≈ 6–10 on the kinematic body, D + B.3 ≈ 2–3); ≈ 15–22 if C.2's pilot passes. A.5's 2026-12-31 fallback date is now an intentional early checkpoint inside this estimate, not its top (A.5's 2026-10-03 note)
 **Roadmap reference**: `docs/roadmap.md` § Phase 8 § Required deliverables (8b), D18–D22, and § *What the 2026-10-03 re-plan changed*
-**Dependencies**: S8a GO; B.2 for C.2c
+**Dependencies**: S8a GO; B.2 for C.2c *(2026-10-07: B.2 closed without a dynamical substrate, [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md), so C.2c has no route through it)*
 
 ### Housekeeping, before 8b's first campaign *(added 2026-10-03 at the 8b re-plan)*
 
@@ -245,9 +245,9 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [x] **A.6t Thermal coverage of the null-strength control** — **met 2026-10-06** ([Logbook 078](../../../docs/experiments/logbooks/078-thermal-split.md), `add-thermal-split`): at a readable thermal point (target 35, chosen by a gate-only pilot under a pre-written rule), **`gap_junctions`** — holding the null's gap junctions moves block V's gap by −0.0865 `auc_success`, about 84% of its +0.103 lead — and the wild type's remaining lead over the gap-held null is **`lead_below_minimum`**: +0.016 `auc_success` [+0.006, +0.027], +73 episodes [+26, +122]. At target 20 the panel stays unreadable. First **run 2026-10-05, [Logbook 077](../../../docs/experiments/logbooks/077-thermal-null-strength.md), registered verdict unreadable; the maintainer then chose the non-saturating follow-up**: every level saturates (94–96% full-clear against the 90% bar, a gate carried over from hard350 without checking this cell). Described, not a verdict: the wild type leads the current null by +0.089 `auc_success` but shows no lead against the chemical-only (+0.010) or gap-held (−0.007) nulls, and is 71 episodes slower than the gap-held null [−130, −12]. **Decided 2026-10-05: a non-saturating thermal panel** — a gate-only pilot on disjoint seeds to choose a food target below the bar, then a split-only panel (wild type, current null, gap-held null; 128 seeds, 768 runs) with the gate preflight and a spec review before launch. Original scope (SHOULD; own change): A.6 and its gap-only split ran on hard350 alone, so on block V's thermal cell only A.1 has run. Repeat the combined and the exactly paired gap-held contrasts on thermal, under PPO at block V's committed point, sized from the thermal cell's committed spread. Feeds the combined paper's 8a half and A.5's fallback package alike.
 - [x] **A.3 Structural predictors, with the boundary-preserving null** — **met 2026-10-06** ([Logbook 079](../../../docs/experiments/logbooks/079-boundary-null.md), `add-boundary-null`): the registered hop predictor reads **`unresolved`** (rho −0.15, p 0.29, 48 seeds); the boundary-preserving null (`rewired_boundary_held`: 17 injected sensors' outputs and 39 readout motors' inputs held, with gap junctions and autapses) removes block V's remaining lead on hard350 — interaction **`boundary`** (−0.027 `auc_success`), lead **`no_lead`** (−0.003 [−0.010, +0.003]; the null 108 episodes faster). Original scope (SHOULD; own change): hop distance registered as a predictor before its correlation is read (above); and *(2026-10-03)* the **boundary-preserving null** added to the family — every edge out of a food or thermal sensory neuron and every edge into a motor neuron held, the interior rewired by the same degree-preserving swap, gap junctions and autapses held as in the chemical-only null — run as one more four-arm level under PPO on hard350 at A.1's size (~3 h), reported beside the chemical-only primary and the current null (D21 as amended; Park, arXiv:2609.39248, is the precedent). Which neurons bound the sensory and motor sides is stated in the change before the null is drawn (design.md open question). Each null's statement of what it does not preserve goes in the change.
-- [ ] **B.2a Across-step state** — moved here from 8a 2026-10-03 (its design record stays under § Shipment 8a § B.2): the dynamical substrate and its two positive controls in order, with the stiffness warning registered. **MUST from 2026-10-03**, as B.2b's gate.
-- [ ] **B.2b Plastic gap junctions under PPO** — **MUST from 2026-10-03** (D20 as amended): the electrical synapses learnable on the block-V cells against the chemical-only null, the current null beside; the direct test of gap placement against gap strength that Logbook 075 left open. Closed *unreachable-with-reason* if B.2a's positive control fails.
-- [ ] **B.2c Bout-duration validation** — SHOULD, behind C.0b's reversal, as recorded under § Shipment 8a § B.2.
+- [x] **B.2a Across-step state** — **unmet-with-reason 2026-10-07** ([Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md), `add-across-step-state`): the positive control fails, **`inferior` on both cells**. At the input gain first registered the leaky substrate attenuated the sensory signal about 400-fold and learned nothing at any τ; after one recalibration (input gain 512, chosen without training) it learns, but on 16 seeds per cell it trails the settling substrate by −0.139 `auc_success` on hard350 (67.7% against 75.7% plateau, 967 episodes later) and −0.216 on thermal (20.0% against 64.4%), far past each margin. Both MLP controls pass; the settling reuse is licensed 12/12. Original scope: moved here from 8a 2026-10-03 (its design record stays under § Shipment 8a § B.2): the dynamical substrate and its two positive controls in order, with the stiffness warning registered. **MUST from 2026-10-03**, as B.2b's gate.
+- [x] **B.2b Plastic gap junctions under PPO** — **unreachable-with-reason 2026-10-07** ([Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md)): B.2a's positive control failed, which D20 as amended makes this rung's closing condition; the diagnosis is its deliverable. Gap placement against gap strength stays open, and can be asked on the settling substrate. Original scope: **MUST from 2026-10-03** (D20 as amended): the electrical synapses learnable on the block-V cells against the chemical-only null, the current null beside; the direct test of gap placement against gap strength that Logbook 075 left open. Closed *unreachable-with-reason* if B.2a's positive control fails.
+- [ ] **B.2c Bout-duration validation** — SHOULD, behind C.0b's reversal, as recorded under § Shipment 8a § B.2. *(2026-10-07: no longer tied to a dynamical substrate, since B.2a failed its positive control; read on whatever substrate the body runs.)*
 
 ### C.0 — body prerequisites (MUST; each lands, validates and freezes before C.1 registers)
 
@@ -393,6 +393,27 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   MAY, not SHOULD: A.1 already answered the half that addresses the published critique, so this is
   about understanding the effect's stability rather than defending it, and Phase 8's committed scope
   is the substrate and body ladder.
+
+- [ ] **M.8 Plastic gap junctions on the settling substrate** *(added 2026-10-07 after [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md); optional, a short detour)*.
+  B.2b closed *unreachable-with-reason* because the leaky substrate it was registered on failed its
+  positive control. The question it existed for does not need that substrate: **gap placement against
+  gap strength**. Logbooks 075 and 078 found the null's rewired gap junctions carry about half of block
+  V's lead on hard350 and about 84% on thermal. On the settling map, gap strengths on the existing pairs
+  can be made learnable (symmetric, non-negative), and the wild type read against the chemical-only null
+  with plastic gaps, reusing committed settling runs under an identity check as B.2a did. About 2–4 days
+  with a pilot and a 12–16 h campaign. Taking it reopens B.2b's question as a new registration, not as
+  B.2b.
+  **When to decide: at the C.0 freeze, before C.1 registers.** Every C.0 change is opt-in, so the
+  detour stays runnable throughout, but its value falls after that point:
+
+  - **Machine time.** C.1's campaigns would compete with it for the machine.
+  - **The paper.** Its result belongs to the 8a half of the combined paper, which A.5's 2026-12-31
+    checkpoint may ship on its own.
+  - **The literature watch.** A.5's reopen trigger is the null-strength point appearing in the
+    literature first.
+
+  A campaign run during C.0 development runs from a separate git worktree, since the runner reads code
+  from the working tree.
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 

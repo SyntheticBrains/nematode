@@ -52,7 +52,7 @@ from quantumnematode.brain.arch._policy import (
     continuous_deterministic_action,
     continuous_sample_tanh_gaussian,
 )
-from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
+from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._std_head import (
     LOG_STD_CLAMPED_MAX_KEY,
@@ -150,6 +150,8 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
 _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
+# Default replay chunk under leaky dynamics: the recurrent PPO brains' truncation length.
+_DEFAULT_BPTT_CHUNK: int = 16
 
 
 def boundary_neurons(connectome: Connectome) -> tuple[frozenset[str], frozenset[str]]:
@@ -328,6 +330,32 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # produces a degenerate output because the food signal cannot reach
     # motor neurons in one chemical-synapse hop.
     forward_pass_depth: int = 4
+    # Across-step dynamics. "settling" starts every environment step from zero and iterates the
+    # chemical + gap-junction map through tanh ``forward_pass_depth`` times, so nothing survives to
+    # the next step. "leaky" gives each neuron a membrane potential that persists across the steps
+    # of an episode: each step takes ``forward_pass_depth`` semi-implicit Euler sub-steps of
+    # tau dv/dt = -v - L v + W^T tanh(v) + I, with I the sensor current held through the step and L
+    # the gap-junction Laplacian, so gap junctions couple potentials ohmically rather than adding
+    # drive. Leak and gap coupling are stepped implicitly, which is stable for any non-negative
+    # symmetric gap weights; the gap row sums reach two orders of magnitude above any chemical
+    # fan-in, which an explicit step could only survive by rescaling them. Default "settling" is
+    # byte-identical to the pre-option brain.
+    dynamics: Literal["settling", "leaky"] = "settling"
+    # Membrane time constant in environment steps, one value for every neuron. Read only under
+    # leaky dynamics, and refused away from its default under settling.
+    membrane_tau_steps: float = Field(default=1.0, gt=0.0)
+    # Length of the contiguous chunks PPO replays under leaky dynamics, each from its first step's
+    # stored starting potentials, with gradients through time inside the chunk. Read only under
+    # leaky dynamics, and refused away from its default under settling.
+    bptt_chunk_length: int = Field(default=_DEFAULT_BPTT_CHUNK, ge=1)
+    # Multiplier on the sensor current under leaky dynamics. Each hop of the leaky steady state has
+    # a gain below one -- the leak pulls every potential toward zero, the chemical weights are
+    # scaled for unit fan-in norm, and gap coupling shunts toward neighbours -- so at unit input
+    # gain the policy is hundreds of times less sensitive to its input than under settling. Raising
+    # the input gain restores the sensitivity without raising the recurrent gain, which would push
+    # the network past the point where its rest state destabilises. Read only under leaky dynamics,
+    # and refused away from its default under settling.
+    input_gain: float = Field(default=1.0, gt=0.0)
     # Opt-in predator-sensor projection: routes the corrected two-channel
     # predator-sensing biology (distal-chemo onto ASH+ASI; contact-mechano
     # onto ALM/AVM/PLM by ContactZone) into the connectome via three
@@ -375,6 +403,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
             )
             raise ValueError(msg)
         if (refusal := _weight_prior_refusal(self)) is not None:
+            raise ValueError(refusal)
+        if (refusal := _dynamics_refusal(self)) is not None:
             raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
@@ -611,6 +641,66 @@ def _wild_type_order(
     return block[order]
 
 
+def _dynamics_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why a dynamics configuration cannot run, or ``None`` when it can.
+
+    Leaky dynamics keeps one potential per neuron across steps and replays PPO from stored
+    starting potentials. The plastic rules, activity traces, e-prop and node perturbation each
+    assume one settled state per step built from zero, so they are refused rather than run on a
+    substrate they do not describe. Under settling the two leaky-only pins are refused away from
+    their defaults, so an arm states which dynamics it means rather than carrying a dead setting.
+    """
+    if config.dynamics == "settling":
+        if (
+            config.membrane_tau_steps != 1.0
+            or config.bptt_chunk_length != _DEFAULT_BPTT_CHUNK
+            or config.input_gain != 1.0
+        ):
+            return (
+                "membrane_tau_steps, bptt_chunk_length and input_gain are read only under "
+                "dynamics='leaky'; under 'settling' they would be dead settings, so leave them at "
+                "their defaults."
+            )
+        return None
+    refusals = (
+        (
+            config.learning_rule != "ppo",
+            (
+                f"dynamics='leaky' requires learning_rule='ppo', got {config.learning_rule!r}: "
+                "the plastic rules credit one settled state per step built from zero."
+            ),
+        ),
+        (
+            config.enable_activity_traces,
+            (
+                "dynamics='leaky' does not support enable_activity_traces: the trace pairs each "
+                "step's settled state with the previous one, which leaky dynamics already carries."
+            ),
+        ),
+        (
+            config.plasticity_eligibility == "eprop",
+            (
+                "dynamics='leaky' does not support plasticity_eligibility='eprop': its trace is "
+                "derived for the settling map."
+            ),
+        ),
+        (
+            config.plasticity_node_noise != 0.0,
+            (
+                "dynamics='leaky' requires plasticity_node_noise=0.0: node perturbation is "
+                "defined on the settling map's pre-activations."
+            ),
+        ),
+    )
+    return next((msg for refused, msg in refusals if refused), None)
+
+
+def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse a dynamics configuration at construction; ``model_copy`` skips validators."""
+    if (refusal := _dynamics_refusal(config)) is not None:
+        raise ValueError(refusal)
+
+
 def _reject_unsupported_weight_prior(config: ConnectomePPOBrainConfig) -> None:
     """Refuse a weight-prior configuration at construction; ``model_copy`` skips validators."""
     if (refusal := _weight_prior_refusal(config)) is not None:
@@ -675,6 +765,7 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
     """
     _reject_unsupported_weight_draw(config)
     _reject_unsupported_weight_prior(config)
+    _reject_unsupported_dynamics(config)
     if config.plasticity_perturbation_set in RESTRICTED_PERTURBATION_SETS and (
         not config.plasticity_homeostasis
     ):
@@ -803,6 +894,8 @@ class ConnectomeTopology(nn.Module):
     readout_trace: torch.Tensor
     readout_post: torch.Tensor
     pooled_motor: torch.Tensor
+    membrane: torch.Tensor
+    implicit_inverse: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -838,8 +931,13 @@ class ConnectomeTopology(nn.Module):
         synapse_signs: Literal["random", "atlas"] = "random",
         readout_width: ReadoutWidth = "pooled",
         measured_prior: MeasuredPriorAssignment | None = None,
+        dynamics: Literal["settling", "leaky"] = "settling",
+        membrane_tau_steps: float = 1.0,
+        input_gain: float = 1.0,
     ) -> None:
         super().__init__()
+        self.dynamics = dynamics
+        self.input_gain = input_gain
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
         # Gaussian mean (instead of 4 discrete logits) + a learnable log-std. The
         # chemical strict-mask / gap junctions are upstream of the readout and
@@ -1080,6 +1178,8 @@ class ConnectomeTopology(nn.Module):
                 "g_gap",
                 torch.zeros(self.n_neurons, self.n_neurons, device=device),
             )
+        if dynamics == "leaky":
+            self._build_leaky(membrane_tau_steps, device)
 
         # ── Sensor projection: food-chemotaxis → sensory neurons ────────
         # Learnable 2x6 gain matrix: 2 food features by 6 sensory neurons.
@@ -1401,6 +1501,111 @@ class ConnectomeTopology(nn.Module):
                         "pooled_motor",
                         torch.zeros(self.readout.shape[1], device=device),
                     )
+
+    def _build_leaky(self, membrane_tau_steps: float, device: torch.device) -> None:
+        """Precompute the implicit operator and allocate the membrane for leaky dynamics.
+
+        One sub-step solves ``M v' = v + alpha (W^T tanh(v) + I)`` with ``M = (1 + alpha) I +
+        alpha L``, where ``L = D - G`` is the gap-junction Laplacian and ``alpha = 1 / (K tau)``.
+        ``L`` is symmetric positive semi-definite for non-negative symmetric ``G``, so every
+        eigenvalue of ``M`` is at least ``1 + alpha`` and ``M^-1`` contracts: the step is stable for
+        any gap weights and any step size. ``G`` is fixed, so ``M^-1`` is computed once, in double
+        precision. Neither tensor is saved with the weights: the inverse is derived from the gap
+        matrix, and the membrane is per-episode state.
+        """
+        if membrane_tau_steps <= 0.0:
+            msg = f"membrane_tau_steps must be positive, got {membrane_tau_steps}"
+            raise ValueError(msg)
+        self.leaky_alpha = 1.0 / (self.forward_pass_depth * membrane_tau_steps)
+        gap = self.g_gap.detach().cpu().to(torch.float64)
+        laplacian = torch.diag(gap.sum(dim=1)) - gap
+        implicit = (1.0 + self.leaky_alpha) * torch.eye(
+            self.n_neurons,
+            dtype=torch.float64,
+        ) + self.leaky_alpha * laplacian
+        self.register_buffer(
+            "implicit_inverse",
+            torch.linalg.inv(implicit).to(dtype=torch.float32, device=device),
+            persistent=False,
+        )
+        self.register_buffer(
+            "membrane",
+            torch.zeros(self.n_neurons, device=device),
+            persistent=False,
+        )
+
+    def reset_membrane(self) -> None:
+        """Return every potential to zero at episode start; a no-op under settling dynamics."""
+        if self.dynamics == "leaky":
+            self.membrane.zero_()
+
+    def _leaky_substeps(self, v: torch.Tensor, current: torch.Tensor) -> torch.Tensor:
+        """Advance potentials ``(N,)`` or ``(B, N)`` through one environment step.
+
+        ``forward_pass_depth`` semi-implicit Euler sub-steps: the chemical drive through ``tanh``
+        and the sensor current explicit, leak and gap coupling implicit through ``M^-1``.
+        ``M^-1`` is symmetric, so right-multiplying applies it to a single vector and a batch
+        alike.
+        """
+        chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
+        alpha = self.leaky_alpha
+        for _ in range(self.forward_pass_depth):
+            v = (v + alpha * (torch.tanh(v) @ chem_mat + current)) @ self.implicit_inverse
+        return v
+
+    def _sensor_current(
+        self,
+        food_features: torch.Tensor,
+        predator_distal_features: torch.Tensor | None,
+        predator_mechano_features: torch.Tensor | None,
+        predator_contact_zone: ContactZone | None,
+        thermotaxis_features: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Inject one step's sensors into a zero ``(N,)`` vector.
+
+        Settling dynamics uses it as the initial state; leaky dynamics holds it as a current.
+        """
+        h = torch.zeros(self.n_neurons, device=food_features.device, dtype=food_features.dtype)
+        food_injection = food_features @ self.food_gains  # shape (6,)
+        h = h.index_add(0, self._food_neuron_indices, food_injection)
+        if self.enable_predator_projection:
+            h = self._inject_predator(
+                h,
+                predator_distal_features,
+                predator_mechano_features,
+                predator_contact_zone,
+            )
+        if self.enable_thermotaxis_projection:
+            h = self._inject_thermotaxis(h, thermotaxis_features)
+        return h
+
+    def _sensor_current_batched(
+        self,
+        food_features: torch.Tensor,
+        predator_distal_features: torch.Tensor | None,
+        predator_mechano_features: torch.Tensor | None,
+        contact_zone_onehot: torch.Tensor | None,
+        thermotaxis_features: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Batched :meth:`_sensor_current`: ``(B, F)`` features to a ``(B, N)`` injection."""
+        h = torch.zeros(
+            food_features.shape[0],
+            self.n_neurons,
+            device=food_features.device,
+            dtype=food_features.dtype,
+        )
+        food_injection = food_features @ self.food_gains  # (B, 6)
+        h = h.index_add(1, self._food_neuron_indices, food_injection)
+        if self.enable_predator_projection:
+            h = self._inject_predator_batched(
+                h,
+                predator_distal_features,
+                predator_mechano_features,
+                contact_zone_onehot,
+            )
+        if self.enable_thermotaxis_projection:
+            h = self._inject_thermotaxis_batched(h, thermotaxis_features)
+        return h
 
     def _build_feedback(
         self,
@@ -2135,23 +2340,17 @@ class ConnectomeTopology(nn.Module):
             )
             raise ValueError(msg)
 
-        # Sensor injection: 2-vec @ (2, 6) → 6-vec onto food sensory neurons.
-        h = torch.zeros(self.n_neurons, device=food_features.device, dtype=food_features.dtype)
-        food_injection = food_features @ self.food_gains  # shape (6,)
-        h = h.index_add(0, self._food_neuron_indices, food_injection)
-
-        # Predator-sensor injection (no-op when projection disabled).
-        if self.enable_predator_projection:
-            h = self._inject_predator(
-                h,
-                predator_distal_features,
-                predator_mechano_features,
-                predator_contact_zone,
-            )
-
-        # Thermotaxis-sensor injection (no-op when projection disabled).
-        if self.enable_thermotaxis_projection:
-            h = self._inject_thermotaxis(h, thermotaxis_features)
+        # Sensor injection onto the sensory neurons: food always, predator and thermotaxis when
+        # their projections are enabled.
+        h = self._sensor_current(
+            food_features,
+            predator_distal_features,
+            predator_mechano_features,
+            predator_contact_zone,
+            thermotaxis_features,
+        )
+        if self.dynamics == "leaky":
+            return self._forward_leaky(self.input_gain * h)
 
         # K recurrent updates through chemical + gap-junction connectivity.
         # Each neuron's pre-activation = sum_pre(W[pre, post] * h[pre]) = (W.T @ h)[post].
@@ -2342,25 +2541,19 @@ class ConnectomeTopology(nn.Module):
             )
             raise ValueError(msg)
 
-        batch = food_features.shape[0]
-        h = torch.zeros(
-            batch,
-            self.n_neurons,
-            device=food_features.device,
-            dtype=food_features.dtype,
-        )
-        food_injection = food_features @ self.food_gains  # (B, 6)
-        h = h.index_add(1, self._food_neuron_indices, food_injection)
-
-        if self.enable_predator_projection:
-            h = self._inject_predator_batched(
-                h,
-                predator_distal_features,
-                predator_mechano_features,
-                contact_zone_onehot,
+        if self.dynamics == "leaky":
+            msg = (
+                "forward_with_hidden_batched starts every sample from zero, which leaky dynamics "
+                "does not; replay it through forward_sequence from the stored starting potentials."
             )
-        if self.enable_thermotaxis_projection:
-            h = self._inject_thermotaxis_batched(h, thermotaxis_features)
+            raise RuntimeError(msg)
+        h = self._sensor_current_batched(
+            food_features,
+            predator_distal_features,
+            predator_mechano_features,
+            contact_zone_onehot,
+            thermotaxis_features,
+        )
 
         # K recurrent updates. Single-sample uses ``chem_mat.T @ h`` for a
         # 302-vec ``h``; for a ``(B, 302)`` batch the equivalent is
@@ -2381,6 +2574,65 @@ class ConnectomeTopology(nn.Module):
         # (B, num_actions) discrete logits, or (B, 2) continuous Gaussian mean.
         logits = motor_acts @ self.readout.T
         return logits, h
+
+    def _forward_leaky(self, current: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """One environment step under leaky dynamics, from the carried membrane.
+
+        The new potentials are written back detached, so the autograd graph never spans more than
+        the step that built it; the rollout's stored starting potentials carry the rest.
+        """
+        v = self._leaky_substeps(self.membrane, current)
+        with torch.no_grad():
+            self.membrane.copy_(v)
+        rates = torch.tanh(v)
+        motor_acts = self._pool_motor(rates)
+        logits = self.readout @ motor_acts
+        self._store_readout_factors(motor_acts, logits)
+        return logits, rates
+
+    def forward_sequence(  # noqa: PLR0913 - the step's five sensor inputs, the starts, the restarts
+        self,
+        food_features: torch.Tensor,
+        predator_distal_features: torch.Tensor | None,
+        predator_mechano_features: torch.Tensor | None,
+        contact_zone_onehot: torch.Tensor | None,
+        thermotaxis_features: torch.Tensor | None,
+        start_states: torch.Tensor,
+        restart: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Replay ``C`` chunks of ``L`` consecutive steps under leaky dynamics.
+
+        Feature tensors are ``(C, L, F)``; ``start_states`` is ``(C, L, N)``, each step's stored
+        starting potentials; ``restart`` is ``(C, L)`` and marks the steps that start from their
+        stored potentials rather than from the previous step's result: every chunk's first step,
+        and every step that begins an episode. Gradients flow through time inside a chunk. Returns
+        ``(logits, rates)`` of shapes ``(C, L, A)`` and ``(C, L, N)``.
+        """
+        chunks, length = food_features.shape[:2]
+
+        def flat(x: torch.Tensor | None) -> torch.Tensor | None:
+            return None if x is None else x.reshape(chunks * length, *x.shape[2:])
+
+        current = (
+            self._sensor_current_batched(
+                food_features.reshape(chunks * length, -1),
+                flat(predator_distal_features),
+                flat(predator_mechano_features),
+                flat(contact_zone_onehot),
+                flat(thermotaxis_features),
+            ).reshape(chunks, length, self.n_neurons)
+            * self.input_gain
+        )
+        v = start_states[:, 0]
+        rates: list[torch.Tensor] = []
+        for step in range(length):
+            v = torch.where(restart[:, step, None], start_states[:, step], v)
+            v = self._leaky_substeps(v, current[:, step])
+            rates.append(torch.tanh(v))
+        hidden = torch.stack(rates, dim=1)
+        motor_acts = self._pool_motor(hidden.reshape(chunks * length, self.n_neurons))
+        logits = (motor_acts @ self.readout.T).reshape(chunks, length, -1)
+        return logits, hidden
 
     def forward(
         self,
@@ -2581,6 +2833,9 @@ class ConnectomePPOBrain(ClassicalBrain):
                     shuffle_rng=np.random.default_rng([self.seed, _SHUFFLE_STREAM]),
                 )
             ),
+            dynamics=config.dynamics,
+            membrane_tau_steps=config.membrane_tau_steps,
+            input_gain=config.input_gain,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -2685,8 +2940,12 @@ class ConnectomePPOBrain(ClassicalBrain):
             # so the RNG stream is untouched) with the anatomical contrast.
             self.topology.set_anatomical_readout()
 
-        # Rollout buffer.
-        self.buffer = RolloutBuffer(
+        # Rollout buffer. Leaky dynamics carries state across steps, so its buffer also keeps each
+        # step's starting potentials and replays contiguous chunks; it draws its chunk order from
+        # the same generator the single-step buffer draws its permutations from.
+        self._leaky = config.dynamics == "leaky"
+        buffer_type = ChunkedRolloutBuffer if self._leaky else RolloutBuffer
+        self.buffer = buffer_type(
             config.rollout_buffer_size,
             self.device,
             rng=self.rng,
@@ -2704,6 +2963,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         self._pending_action: int | np.ndarray | None = None
         self._pending_log_prob: torch.Tensor | None = None
         self._pending_value: torch.Tensor | None = None
+        self._pending_start_state: torch.Tensor | None = None
 
     # ── Brain Protocol surface ──────────────────────────────────────────
 
@@ -2937,6 +3197,10 @@ class ConnectomePPOBrain(ClassicalBrain):
         # forward-pass inputs; disabled projections stay None and the
         # topology runs only the active paths.
         food, distal, mechano, zone, thermo = self._unpack_state(state_t)
+        if self._leaky:
+            # The potentials this step starts from, before the forward overwrites them: the replay
+            # starts a chunk here.
+            self._pending_start_state = self.topology.membrane.clone()
         head_out, hidden = self.topology.forward_with_hidden(
             food,
             predator_distal_features=distal,
@@ -3103,16 +3367,31 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "Did the env call learn() before run_brain()?"
                 )
                 raise RuntimeError(msg)
-            self.buffer.add(
-                state=self._pending_state,
-                action=self._pending_action,
-                log_prob=self._pending_log_prob,
-                value=self._pending_value,
-                reward=reward,
-                done=episode_done,
-            )
+            if self._leaky:
+                cast("ChunkedRolloutBuffer", self.buffer).add(
+                    state=self._pending_state,
+                    action=self._pending_action,
+                    log_prob=self._pending_log_prob,
+                    value=self._pending_value,
+                    reward=reward,
+                    done=episode_done,
+                    start_state=self._pending_start_state,
+                )
+            else:
+                self.buffer.add(
+                    state=self._pending_state,
+                    action=self._pending_action,
+                    log_prob=self._pending_log_prob,
+                    value=self._pending_value,
+                    reward=reward,
+                    done=episode_done,
+                )
 
         min_experience = self.config.num_minibatches
+        if self._leaky:
+            # Replay splits whole chunks across minibatches, so an update needs one chunk per
+            # minibatch; a shorter buffer carries its experience forward, as a short one does here.
+            min_experience = (self.config.num_minibatches - 1) * self.config.bptt_chunk_length + 1
         if self.buffer.is_full() or (episode_done and len(self.buffer) >= min_experience):
             # Lazy import (same cycle-avoidance reason as in __init__); cached in
             # sys.modules after the first call, so this is a dict lookup.
@@ -3124,6 +3403,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     buffer=self.buffer,
                     unpack_batched=self._unpack_state_batched,
                     last_value=self.last_value,
+                    chunk_length=self.config.bptt_chunk_length if self._leaky else None,
                 ),
             )
             # House PPO telemetry convention: record the mean policy loss
@@ -3428,6 +3708,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         ``learn(..., episode_done=True)`` call and resets here.
         """
         self.topology.reset_traces()
+        self.topology.reset_membrane()
         # Separate from the trace reset: the rule's load-time reset also clears the traces,
         # and a load must restart the perturbation schedule rather than advance it.
         self.topology.advance_schedule()
