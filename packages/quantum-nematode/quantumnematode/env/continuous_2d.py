@@ -62,6 +62,11 @@ class Continuous2DParams:
     # "helicopter" spin). Foraging converges robustly at this bound with the C1 entropy/episode
     # tuning; predator evasion is comparable to looser bounds (validated T7 C1).
     max_turn_rad: float = 0.5
+    # Whether a step may carry the worm backward. When true, speed is clamped to
+    # ``[-max_step_mm, max_step_mm]`` and a negative speed moves the worm opposite to its heading,
+    # which does not flip: the heading is the head's direction, so backing up keeps the head where
+    # it was. When false a negative speed is clamped to zero, as it always was.
+    allow_reversal: bool = False
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -185,11 +190,15 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         """Apply a continuous ``(speed, turn)`` action to one agent.
 
         Rotate the heading by ``turn`` (wrapped to ``[-pi, pi]``), advance by
-        ``speed`` (clamped to ``[0, max_step_mm]``) along the new heading, clamp the
-        position to ``[0, world_size_mm]``, and keep the body a single point. The
-        integer ``position`` view is re-synced for inherited grid-coupled readers.
+        ``speed`` along the new heading, clamp the position to ``[0, world_size_mm]``,
+        and keep the body a single point. Speed is clamped to ``[0, max_step_mm]``, or to
+        ``[-max_step_mm, max_step_mm]`` when reversal is allowed, a negative speed moving
+        the worm backward along its unchanged heading. The integer ``position`` view is
+        re-synced for inherited grid-coupled readers.
         """
-        speed = max(0.0, min(float(speed), self.continuous.max_step_mm))
+        limit = self.continuous.max_step_mm
+        floor = -limit if self.continuous.allow_reversal else 0.0
+        speed = max(floor, min(float(speed), limit))
         heading = _wrap_to_pi(agent_state.heading_rad + float(turn))
         agent_state.heading_rad = heading
 
@@ -219,7 +228,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         Parameters
         ----------
         speed : float
-            Forward displacement in mm (clamped to ``[0, max_step_mm]``).
+            Displacement along the heading in mm, clamped to ``[0, max_step_mm]``, or to
+            ``[-max_step_mm, max_step_mm]`` when reversal is allowed.
         turn : float
             Heading change in radians (wrapped to ``[-π, π]``).
         agent_id : str
@@ -244,7 +254,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         Parameters
         ----------
         speed_norm : float
-            Normalized forward speed in ``[0, 1]`` (mapped to ``[0, max_step_mm]``).
+            Normalized speed in ``[0, 1]`` (mapped to ``[0, max_step_mm]``), or in ``[-1, 1]``
+            when reversal is allowed, a negative value moving the worm backward.
         turn_norm : float
             Normalized heading change in ``[-1, 1]`` (mapped to
             ``[-max_turn_rad, +max_turn_rad]`` — the configured max per-step angular velocity).

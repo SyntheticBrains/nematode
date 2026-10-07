@@ -323,6 +323,22 @@ def clamp_continuous_log_std(log_std: torch.Tensor) -> torch.Tensor:
     return torch.clamp(log_std, CONTINUOUS_LOG_STD_MIN, CONTINUOUS_LOG_STD_MAX)
 
 
+def continuous_action_bounds(
+    *,
+    signed_speed: bool,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return ``(low, high)`` for the normalized ``(speed, turn)`` action.
+
+    Speed spans ``[0, 1]``, or ``[-1, 1]`` under signed speed, where a negative value backs the worm
+    up; turn spans ``[-1, 1]`` either way. Every continuous brain takes its bounds from here, so the
+    action space cannot differ between architectures on one environment.
+    """
+    low = torch.tensor([-1.0 if signed_speed else 0.0, -1.0], device=device)
+    high = torch.tensor([1.0, 1.0], device=device)
+    return low, high
+
+
 def _affine_center_half_range(
     action_low: torch.Tensor,
     action_high: torch.Tensor,

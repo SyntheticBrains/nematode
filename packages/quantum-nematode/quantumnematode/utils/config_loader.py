@@ -1051,6 +1051,10 @@ class Continuous2DConfig(BaseModel):
     # Default 0.5 rad (~29 deg/step): biologically realistic (real C. elegans ~15-30 deg/step),
     # well below the previous pi (~180 deg/step "helicopter" spin). Must be > 0.
     max_turn_rad: float = Field(default=0.5, gt=0.0)
+    # Whether a step may carry the worm backward along its heading, up to max_step_mm. Default off
+    # is byte-identical to the environment before the option. A continuous brain must set
+    # signed_speed to match, or loading refuses the pair.
+    allow_reversal: bool = False
 
 
 # Reference windowed-attention span for the bit-memory Transformer-confound guard.
@@ -2534,6 +2538,28 @@ class SimulationConfig(BaseModel):
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")
+    def _validate_signed_speed_matches_environment(self) -> "SimulationConfig":
+        """Refuse a brain and an environment that disagree on whether speed has a sign.
+
+        A signed brain in an environment that clamps speed at zero would stop wherever it meant to
+        reverse, and a reversing environment driven by an unsigned brain offers reversal nothing can
+        use. Either way the run would not be what its configuration says.
+        """
+        if self.brain is None or self.environment is None:
+            return self
+        continuous = self.environment.continuous
+        allows = bool(continuous is not None and continuous.allow_reversal)
+        signed = bool(getattr(self.brain.config, "signed_speed", False))
+        if allows != signed:
+            msg = (
+                f"environment.continuous.allow_reversal is {allows} but brain.config.signed_speed "
+                f"is {signed}: a continuous brain's speed sign must match whether the environment "
+                "can move the worm backward."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def _validate_evolution_coevolution_exclusive(self) -> "SimulationConfig":
         """Reject configs that set both `evolution` and `coevolution`.
 
@@ -3351,6 +3377,7 @@ def create_env_from_config(
                 sweep_amplitude_mm=continuous_config.sweep_amplitude_mm,
                 predator_damage_radius_mm=continuous_config.predator_damage_radius_mm,
                 max_turn_rad=continuous_config.max_turn_rad,
+                allow_reversal=continuous_config.allow_reversal,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,

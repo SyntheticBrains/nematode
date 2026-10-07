@@ -3,14 +3,14 @@
 Phase 8b C.0: the step constant, signed speed, the substrate freeze and D19 recorded, with a gate-only
 validation pilot.
 
-- [ ] 1. **Step constant (C.0a)**: `env/worm_time.py` and its test on both block-V cells.
-- [ ] 2. **Signed speed in the environment (C.0b)**: `allow_reversal`, the signed clamp and move, and
+- [x] 1. **Step constant (C.0a)**: `env/worm_time.py` and its test on both block-V cells.
+- [x] 2. **Signed speed in the environment (C.0b)**: `allow_reversal`, the signed clamp and move, and
   `speed_signed` in behaviour capture under reversal. Tests: off is byte-identical; backward motion;
   sensing and contact zones under reversal; the capture field.
-- [ ] 3. **Signed speed in the brains**: `signed_speed` with its refusal under discrete actions, the
+- [x] 3. **Signed speed in the brains**: `signed_speed` with its refusal under discrete actions, the
   shared bounds helper, the five continuous brains reading it, and the brain–environment agreement
   check at load. Tests for each.
-- [ ] 4. **Emmons 2024 source**: `connectome_source`, the loader branch, and a test that Emmons differs
+- [x] 4. **Emmons 2024 source**: `connectome_source`, the loader branch, and a test that Emmons differs
   from Cook in exactly the four gap pairs.
 - [ ] 5. **D19 recorded (C.0d)**: roadmap D19 marked decided, with the generator's form, parameter
   sources, interface and calibration protocol; tracker C.0d.

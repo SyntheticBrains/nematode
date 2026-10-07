@@ -55,6 +55,7 @@ from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_evaluate_torch,
     categorical_sample_torch,
+    continuous_action_bounds,
     continuous_deterministic_action,
     continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
@@ -264,8 +265,10 @@ class MLPPPOBrain(ClassicalBrain):
         # independent learnable log-std; the environment rescales the normalized
         # action to physical units.
         self.continuous = config.action_mode == "continuous"
-        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
-        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        self._action_low, self._action_high = continuous_action_bounds(
+            signed_speed=config.signed_speed,
+            device=self.device,
+        )
         actor_output_dim = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
 
         # Store config

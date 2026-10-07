@@ -62,6 +62,7 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_logprob_entropy_torch,
+    continuous_action_bounds,
     continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
@@ -455,8 +456,10 @@ class CfCPPOBrain(ClassicalBrain):
         # units). In continuous mode the AutoNCP motor pool + head produce the 2-D
         # Gaussian mean, so the motor count is the continuous action dim.
         self.continuous = config.action_mode == "continuous"
-        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
-        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        self._action_low, self._action_high = continuous_action_bounds(
+            signed_speed=config.signed_speed,
+            device=self.device,
+        )
         motor_count = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
 
         # Validate the AutoNCP minimum-units requirement up front with a clear

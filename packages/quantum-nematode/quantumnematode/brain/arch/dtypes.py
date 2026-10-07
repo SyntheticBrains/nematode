@@ -119,6 +119,20 @@ class BrainConfig(BaseModel):
     # — that combination fails validation below (an invalid pairing must fail
     # loudly, never parse as a silent no-op).
     continuous_std_mode: Literal["state_independent", "state_dependent"] = "state_independent"
+    # Continuous-mode speed sign: false keeps speed in [0, 1]; true widens it to [-1, 1], so a
+    # negative speed backs the worm up. It must match the environment's allow_reversal, which the
+    # simulation configuration checks at load. Meaningless with ``action_mode: discrete``.
+    signed_speed: bool = False
+
+    @model_validator(mode="after")
+    def _validate_signed_speed(self) -> BrainConfig:
+        if self.signed_speed and self.action_mode != "continuous":
+            msg = (
+                "signed_speed: true requires action_mode: continuous (a categorical policy has no "
+                "speed to sign)."
+            )
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _validate_continuous_std_mode(self) -> BrainConfig:
