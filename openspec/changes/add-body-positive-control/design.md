@@ -58,19 +58,32 @@ control validates against, and the trained MLP chooses its own amplitude.
 
 ### Decision B: The reversal threshold
 
-The wave runs tail-to-head only when the direction channel is below **−0.5**, for every arm. An untrained
-policy's direction is centred near zero, so with a sign threshold its wave would flip at random. The
-threshold's untrained per-step reversal probability is `Φ(−artanh(0.5) / σ)`. At the hard350 configs'
-initial policy spreads that is:
+The wave runs tail-to-head only when the direction channel is below **−0.5**, for every arm. Under a
+sign threshold, any policy whose direction sits near zero would flip its wave at random from step to
+step. The threshold makes a reversal a deliberate output.
 
-| arm | initial spread σ | untrained reversal probability per step |
-|---|---|---|
-| MLP | 0.37 | about 0.07 |
-| connectome | 1.0 | about 0.29 |
+If an untrained policy's direction were centred, its per-step reversal probability would be
+`Φ(−artanh(0.5) / σ)`: about 0.07 for the MLP (σ 0.37) and 0.29 for the connectome (σ 1.0). **It is not
+centred.**
 
-That brackets a worm's spontaneous reversal rate of roughly one to a few a minute, 0.1–0.3 per 5-second
-step. That rate is recalled from the literature and is to be verified before the registration cites
-it.
+**Measured, 2026-10-07.** Twelve untrained MLP seeds (1480–1491, outside both registered bands), one
+evaluation episode each, through the body at the hard350 config:
+
+- The direction channel's mean is a per-seed draw from the initial weights, from −0.70 to +0.48.
+- So the untrained reversal probability ranges from **0.02 to 0.82 per step**, median about 0.27.
+- Five of the twelve seeds reverse on more than half their steps.
+
+The MLP keeps its standard initialisation, for three reasons:
+
+- every earlier MLP arm used it, including C.0's signed-speed reversal arm, which learned;
+- the frozen floor is paired by seed, so each seed's starting bias is in its own floor;
+- centring it would make this control a different MLP from the one it stands for.
+
+The pilot reports each seed's untrained and trained reversal fraction, so a gain is never chosen on a
+seed that learned only to stop reversing.
+
+A worm's spontaneous reversal rate is roughly one to a few a minute, 0.1–0.3 per 5-second step. That
+rate is recalled from the literature and is verified before the registration cites it.
 
 ### Decision C: The steering calibration, a rule fixed first
 

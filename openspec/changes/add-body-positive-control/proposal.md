@@ -29,7 +29,7 @@ The maintainer chose four settings before this change was written:
   | peak curvature | 18 at full drive | crawl at A/q ≈ 1 and Ω-shapes at A/q ≈ 2, with qL ≈ 9 (Bilbao et al.) |
 
 - **A reversal threshold.** The wave runs backward only when the direction channel is below −0.5. It is
-  the same for every arm, so an untrained worm mostly crawls forward.
+  the same for every arm, so noise around a forward-leaning direction does not flip the wave.
 
 - **The steering gain is calibrated once.** A pilot of MLP-PPO through the body at four candidate gains
   chooses it under a rule fixed before the pilot runs. It is then frozen, with its neighbours reported

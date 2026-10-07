@@ -80,6 +80,8 @@ class Continuous2DParams:
     # moves the body over the step's worm-seconds; the head is the position and the heading is the
     # direction from the body's midpoint to the head.
     body_model: str = "point"
+    # Sub-steps the kinematic body integrates per environment step; a half-step check doubles it.
+    body_substeps: int = 20
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -111,8 +113,12 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             BodyParams(
                 body_length_mm=self.continuous.body_length_mm,
                 step_seconds=step_worm_seconds(self.continuous.max_step_mm),
+                substeps=self.continuous.body_substeps,
             ),
         )
+        # When a list, every kinematic step appends its drive and its sub-steps' posture; None (the
+        # default) records nothing. Set per episode by an evaluation, never by a training run.
+        self.posture_log: list[dict[str, object]] | None = None
         # The parent's integer coordinate extent = the continuous world size; the
         # caller does not set grid_size for the continuous substrate.
         kwargs.pop("grid_size", None)
@@ -187,7 +193,13 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             )
             body = new_body(x, y, agent_state.heading_rad)
             self.bodies[agent_id] = body
-        self._body.step(body, np.asarray(drive, dtype=float), self.continuous.world_size_mm)
+        drive_array = np.asarray(drive, dtype=float)
+        record: list[tuple[float, np.ndarray, np.ndarray]] | None = (
+            [] if self.posture_log is not None else None
+        )
+        self._body.step(body, drive_array, self.continuous.world_size_mm, record=record)
+        if self.posture_log is not None:
+            self.posture_log.append({"drive": drive_array.copy(), "substeps": record})
         head = (float(body.head[0]), float(body.head[1]))
         agent_state.pos_continuous = head
         agent_state.heading_rad = _wrap_to_pi(self._body.heading(body))

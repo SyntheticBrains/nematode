@@ -4,7 +4,7 @@ Registered in `docs/experiments/logbooks/supporting/083-body-control/launch.md` 
 
 - [x] 1. **Body parameters and the reversal threshold**: the wave normalised to ±1 (the C.1c defect), the
   sourced defaults, the threshold, the posture recorder. Tests.
-- [ ] 2. **Instruments**: `validation/body_kinematics.py` (frequency by band crossing, wavelength,
+- [x] 2. **Instruments**: `validation/body_kinematics.py` (frequency by band crossing, wavelength,
   speed, reversal fraction, wall exclusion) and the evaluation harness, tested on generated postures of
   known frequency and wavelength.
 - [ ] 3. **Configs and analysis**: the calibration and control configs through a generator; the rule,
