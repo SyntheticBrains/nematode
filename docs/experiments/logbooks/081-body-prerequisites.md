@@ -75,9 +75,9 @@ by seed, with the 80% interval of the difference above zero.
 
 Both learners pass, on every seed (connectome 73.5–84.8%, MLP 93.2–99.2%).
 
-Reported beside, not read: both plateaus sit at or above the committed reversal-off runs on the same
-cell. Those are 88.4–99.2% for MLP-PPO ([Logbook 080](080-across-step-state.md)'s control) and
-75.7–77.8% for the connectome on Cook 2019 (Logbooks 079 and 080). The connectome comparison changes
+Reported beside, not read: MLP-PPO's 97.1% falls within its committed reversal-off range on the same
+cell, 88.4–99.2% ([Logbook 080](080-across-step-state.md)'s control). The connectome's 80.2% sits above
+its committed reversal-off plateaus on Cook 2019, 75.7–77.8% (Logbooks 079 and 080). The connectome comparison changes
 reversal and substrate together, so it says only that neither cost learning visibly.
 
 ## What this establishes, and what it does not

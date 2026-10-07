@@ -52,6 +52,7 @@ from quantumnematode.brain.arch._policy import (
     continuous_action_bounds,
     continuous_deterministic_action,
     continuous_sample_tanh_gaussian,
+    raise_on_speed_sign_mismatch,
 )
 from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
@@ -3494,6 +3495,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 name="training_state",
                 state={
                     "continuous_std_mode": self.config.continuous_std_mode,
+                    "signed_speed": self.config.signed_speed,
                     "learning_rule": self.config.learning_rule,
                     "third_factor": self.config.third_factor,
                     "wiring": self.config.wiring,
@@ -3695,6 +3697,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         are present and the PPO rule is live, resets the rollout buffer, and under
         the plastic rule returns the rule's running state to its construction values.
         """
+        raise_on_speed_sign_mismatch(components, signed_speed=self.config.signed_speed)
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
         self._reject_plasticity_identity_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None

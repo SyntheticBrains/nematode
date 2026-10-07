@@ -76,6 +76,37 @@ class TestEveryContinuousBrain:
         assert brain._action_low.tolist() == [0.0, -1.0]
 
 
+@pytest.mark.parametrize("name", ["connectome", "mlp", "lstm", "cfc", "transformer"])
+class TestCheckpoints:
+    """A checkpoint carries its speed sign; loading across signs is refused."""
+
+    def test_the_sign_is_saved(self, name: str) -> None:
+        saved = _brain(name, signed=True).get_weight_components()
+        assert saved["training_state"].state["signed_speed"] is True
+
+    def test_a_matched_checkpoint_loads(self, name: str) -> None:
+        _brain(name, signed=True).load_weight_components(
+            _brain(name, signed=True).get_weight_components(),
+        )
+
+    def test_an_unsigned_checkpoint_is_refused_by_a_signed_brain(self, name: str) -> None:
+        saved = _brain(name, signed=False).get_weight_components()
+        with pytest.raises(ValueError, match="signed_speed: False but this brain runs"):
+            _brain(name, signed=True).load_weight_components(saved)
+
+    def test_a_signed_checkpoint_is_refused_by_an_unsigned_brain(self, name: str) -> None:
+        saved = _brain(name, signed=True).get_weight_components()
+        with pytest.raises(ValueError, match="signed_speed: True but this brain runs"):
+            _brain(name, signed=False).load_weight_components(saved)
+
+    def test_a_checkpoint_from_before_the_setting_reads_as_unsigned(self, name: str) -> None:
+        saved = _brain(name, signed=False).get_weight_components()
+        del saved["training_state"].state["signed_speed"]
+        _brain(name, signed=False).load_weight_components(saved)
+        with pytest.raises(ValueError, match="signed_speed: False"):
+            _brain(name, signed=True).load_weight_components(saved)
+
+
 class TestAgreement:
     def _raw(self) -> dict[str, Any]:
         return yaml.safe_load(_HARD350.read_text())

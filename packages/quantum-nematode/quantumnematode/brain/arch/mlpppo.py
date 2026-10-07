@@ -60,6 +60,7 @@ from quantumnematode.brain.arch._policy import (
     continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
+    raise_on_speed_sign_mismatch,
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
@@ -1061,6 +1062,7 @@ class MLPPPOBrain(ClassicalBrain):
                     # Std-mode marker so cross-mode loads fail even for
                     # component subsets without a std component.
                     "continuous_std_mode": self.config.continuous_std_mode,
+                    "signed_speed": self.config.signed_speed,
                 },
             ),
         }
@@ -1102,6 +1104,7 @@ class MLPPPOBrain(ClassicalBrain):
         """
         # Validate std-mode agreement BEFORE mutating any component, so a
         # caller that catches the error never sees a half-loaded brain.
+        raise_on_speed_sign_mismatch(components, signed_speed=self.config.signed_speed)
         raise_on_std_mode_mismatch(
             components,
             state_dependent=self._state_dependent_std,

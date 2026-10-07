@@ -949,5 +949,7 @@ The default SHALL be byte-identical to the brain before this option existed.
 
 - **WHEN** wild-type brains are built on both sources at one seed
 - **THEN** their chemical masks and chemical weights SHALL be identical
-- **AND** their gap-junction buffers SHALL differ only in the entries of the four gap pairs Emmons 2024
-  adds or strengthens
+- **AND** their gap-junction buffers SHALL differ only in entries incident on the neurons of the four
+  gap pairs Emmons 2024 adds or strengthens, each of the four pairs among them: the buffer is
+  normalised by each neuron's gap degree on the chosen source, so a neuron that gains a junction has
+  its other entries rescaled too

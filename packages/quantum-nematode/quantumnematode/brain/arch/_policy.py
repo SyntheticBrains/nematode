@@ -63,9 +63,13 @@ modules and would invert the dependency / risk an import cycle), following the
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 import torch
 from torch.nn import functional
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 __all__ = [
     "CONTINUOUS_ACTION_DIM",
@@ -337,6 +341,34 @@ def continuous_action_bounds(
     low = torch.tensor([-1.0 if signed_speed else 0.0, -1.0], device=device)
     high = torch.tensor([1.0, 1.0], device=device)
     return low, high
+
+
+def raise_on_speed_sign_mismatch(
+    components: Mapping[str, object],
+    *,
+    signed_speed: bool,
+) -> None:
+    """Refuse weights trained under the other speed sign.
+
+    A policy trained with speed in ``[0, 1]`` and loaded into a brain whose speed spans ``[-1, 1]``
+    keeps its tensors but not their meaning: the same mean now maps to a different speed, centred on
+    standing still rather than half speed. The load succeeds silently, so it is refused here. A file
+    whose training state predates the setting was saved by an unsigned brain, since none could be
+    signed then, and is read as unsigned. A load that carries no training state at all cannot be
+    checked and is let through.
+    """
+    training_state = components.get("training_state")
+    saved_state = getattr(training_state, "state", None)
+    if not isinstance(saved_state, dict):
+        return
+    saved = bool(saved_state.get("signed_speed", False))
+    if saved != signed_speed:
+        msg = (
+            f"Weight file was saved with signed_speed: {saved} but this brain runs signed_speed: "
+            f"{signed_speed}. The speed bound differs between them, so the saved policy would act "
+            "at a different speed than it was trained to."
+        )
+        raise ValueError(msg)
 
 
 def _affine_center_half_range(
