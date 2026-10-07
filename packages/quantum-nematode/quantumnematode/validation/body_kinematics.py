@@ -1,9 +1,9 @@
 """Kinematic instruments for the segmented body: undulation frequency, wavelength, speed, reversals.
 
 Each instrument reads a captured episode, a list of steps that each carry the drive the body
-received and its sub-steps' ``(time, curvature, head)``. Steps whose head lies within a margin of a
-wall are excluded, since a body pressed against an edge is clamped there and its kinematics describe
-the wall, not the crawl.
+received, its sub-steps' ``(time, curvature, head)`` and whether it ran tail-to-head. Steps whose
+head lies within a margin of a wall are excluded, since a body pressed against an edge is clamped
+there and its kinematics describe the wall, not the crawl.
 
 * **Undulation frequency** counts the mid-body curvature's crossings of its own mean, a crossing
   counting only after the curvature has left a band around that mean, so jitter near the mean is not
@@ -13,10 +13,14 @@ the wall, not the crawl.
   that delay, and the wavelength is that speed over the frequency.
 * **Speed** is the head's displacement per step over the step's duration, in body lengths per
   second, from each episode's second step on.
-* **Reversal fraction** is the share of steps whose direction channel reversed the wave.
+* **Reversal fraction** is the share of steps the body ran tail-to-head.
 
-Frequency and wavelength are read on forward-running steps only, each unbroken stretch of them
-measured on its own, so a reversal or an excluded step never joins two pieces of signal.
+Frequency and wavelength are read only on **undulating** steps: forward-running, clear of the walls,
+and with every segment's wave amplitude at least ``AMPLITUDE_FLOOR`` of the peak. A segment whose
+wave the drive silences holds still at its steering offset and crosses its mean only when the drive
+changes between steps, which the crossing delays would read as a wave. Real-worm analyses likewise
+read forward runs. Each unbroken stretch of undulating steps is measured on its own, so no reading
+joins two pieces of signal. The share of steps that qualify is reported beside.
 """
 
 from __future__ import annotations
@@ -26,8 +30,13 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from quantumnematode.env.body import wave_amplitude
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+AMPLITUDE_FLOOR = 0.25
+"""The least wave amplitude, as a share of the peak, every segment needs for a step to undulate."""
 
 BAND_KAPPA_L = 0.31
 """Half-width of the band a curvature must leave before a mean crossing counts, in kappa * L."""
@@ -48,6 +57,7 @@ class Kinematics:
     reversal_fraction: float
     steps_used: int
     steps_near_wall: int
+    steps_undulating: int
 
 
 def _near_wall(head: np.ndarray, world_size_mm: float, margin_mm: float) -> bool:
@@ -108,7 +118,7 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
     freq_counts, freq_time = 0, 0.0
     speeds: list[float] = []
     wave_speeds: list[float] = []
-    reversals, total, near_wall = 0, 0, 0
+    reversals, total, near_wall, undulating = 0, 0, 0, 0
     stretches: list[list[dict[str, Any]]] = []
     for episode in episodes:
         stretch: list[dict[str, Any]] = []
@@ -116,7 +126,9 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
         for step in episode:
             heads = np.array([s[2] for s in step["substeps"]])
             total += 1
-            reversed_wave = float(step["drive"][-1]) < -reversal_threshold
+            drive = np.asarray(step["drive"], dtype=float)
+            # The executed direction where the capture has it; the requested one otherwise.
+            reversed_wave = bool(step.get("reversed", drive[-1] < -reversal_threshold))
             reversals += int(reversed_wave)
             start, previous_head = previous_head, heads[-1]
             if _near_wall(heads[-1], world_size_mm, wall_margin_mm) or (
@@ -130,11 +142,12 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
             if start is not None:
                 displacement = float(np.linalg.norm(heads[-1] - start))
                 speeds.append(displacement / body_length_mm / step_seconds)
-            if reversed_wave:
+            if reversed_wave or wave_amplitude(drive).min() < AMPLITUDE_FLOOR:
                 stretches.append(stretch)
                 stretch = []
             else:
                 stretch.append(step)
+                undulating += 1
         stretches.append(stretch)
     for stretch in stretches:
         if not stretch:
@@ -157,6 +170,7 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
         reversal_fraction=reversals / total if total else 0.0,
         steps_used=total - near_wall,
         steps_near_wall=near_wall,
+        steps_undulating=undulating,
     )
 
 

@@ -88,8 +88,12 @@ def _drive(direction: float = 1.0, bias: float = 0.0, level: float = 0.0) -> np.
     return np.clip(drive, -1.0, 1.0)
 
 
-def _run(drive: np.ndarray, steps: int = 12) -> tuple[np.ndarray, float]:
-    body = KinematicBody()
+def _run(
+    drive: np.ndarray,
+    steps: int = 12,
+    params: BodyParams | None = None,
+) -> tuple[np.ndarray, float]:
+    body = KinematicBody(params)
     state = new_body(10.0, 10.0, 0.0)
     for _ in range(steps):
         body.step(state, drive, 20.0)
@@ -116,10 +120,38 @@ class TestBody:
         assert along > 0.95 * np.linalg.norm(travel)
 
     def test_a_backward_wave_moves_it_the_other_way(self) -> None:
+        # A sustained reversal needs the cap lifted.
+        uncapped = BodyParams(max_reversal_steps=1000)
         forward, _ = _run(_drive(direction=1.0))
-        backward, _ = _run(_drive(direction=-1.0))
+        backward, _ = _run(_drive(direction=-1.0), params=uncapped)
         assert forward @ backward < 0.0
         assert np.linalg.norm(backward) > 1.0
+
+    def test_a_reversal_is_brief_and_followed_by_forward_crawling(self) -> None:
+        """A held reversal request runs one step tail-to-head, then one forward, and so on."""
+        body = KinematicBody()
+        state = new_body(10.0, 10.0, 0.0)
+        executed = []
+        for _ in range(6):
+            body.step(state, _drive(direction=-1.0), 20.0)
+            executed.append(state.last_reversed)
+        assert executed == [True, False, True, False, True, False]
+
+    def test_the_cap_and_the_refractory_are_parameters(self) -> None:
+        """Two-step reversals with a two-step refractory alternate in pairs."""
+        body = KinematicBody(BodyParams(max_reversal_steps=2, reversal_refractory_steps=2))
+        state = new_body(10.0, 10.0, 0.0)
+        executed = []
+        for _ in range(8):
+            body.step(state, _drive(direction=-1.0), 20.0)
+            executed.append(state.last_reversed)
+        assert executed == [True, True, False, False, True, True, False, False]
+
+    def test_a_forward_step_is_never_reversed(self) -> None:
+        body = KinematicBody()
+        state = new_body(10.0, 10.0, 0.0)
+        body.step(state, _drive(direction=1.0), 20.0)
+        assert state.last_reversed is False
 
     def test_a_mildly_negative_direction_still_crawls_forward(self) -> None:
         forward, _ = _run(_drive(direction=1.0))

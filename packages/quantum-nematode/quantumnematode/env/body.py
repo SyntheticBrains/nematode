@@ -38,8 +38,14 @@ class BodyParams:
     2014's. ``peak_curvature`` is reached at full drive, so the neutral drive's half of it is the
     crawl's measured amplitude, about 9 body-lengths^-1, and full drive an omega-shaped posture.
     ``steering_gain`` has no direct measurement and is calibrated once on the MLP positive control,
-    then frozen across every arm. The wave runs tail-to-head only below ``-reversal_threshold`` on
-    the direction channel, so an untrained policy mostly crawls forward.
+    then frozen across every arm.
+
+    The wave runs tail-to-head only below ``-reversal_threshold`` on the direction channel, so noise
+    around a forward-leaning direction does not flip it. A worm's reversals are brief, one to three
+    head swings, before it resumes forward crawling, so a reversal lasts at most
+    ``max_reversal_steps`` steps and is followed by at least ``reversal_refractory_steps`` forward
+    steps before the next. One step is 1.5 head swings, a short reversal; the long reversals that
+    precede an omega turn are not reachable at one step.
     """
 
     body_length_mm: float = 1.0
@@ -52,6 +58,8 @@ class BodyParams:
     steering_gain: float = 1.0
     drag_anisotropy: float = 10.0
     reversal_threshold: float = 0.5
+    max_reversal_steps: int = 1
+    reversal_refractory_steps: int = 1
 
     @property
     def relax_tau(self) -> float:
@@ -78,11 +86,21 @@ class BodyState:
     # switches the bend has a closed form, so the relay reads the past wave exactly at any delay.
     events: list[tuple[float, float, float]] = field(default_factory=lambda: [(0.0, 0.0, 1.0)])
     curvature: np.ndarray = field(default_factory=lambda: np.zeros(N_SEGMENTS))
+    # Consecutive steps just run tail-to-head, and head-to-tail; a new body may reverse at once.
+    reversal_run: int = 0
+    forward_run: int = 1 << 30
+    last_reversed: bool = False
 
 
 def new_body(x: float, y: float, heading: float) -> BodyState:
     """Return a straight body with its head at ``(x, y)`` facing ``heading``."""
     return BodyState(head=np.array([x, y], dtype=float), frame_angle=heading)
+
+
+def wave_amplitude(drive: np.ndarray) -> np.ndarray:
+    """Each segment's share of the peak wave under ``drive``: 0 silences it, 1 is full drive."""
+    dorsal, ventral = drive[..., :N_SEGMENTS], drive[..., N_SEGMENTS : 2 * N_SEGMENTS]
+    return (1.0 + (dorsal + ventral) / 2.0) / 2.0
 
 
 def _segment_angles(curvature: np.ndarray) -> np.ndarray:
@@ -190,9 +208,8 @@ class KinematicBody:
         """Return each segment's curvature, in units of one over the body length."""
         p = self.params
         dorsal, ventral = drive[:N_SEGMENTS], drive[N_SEGMENTS : 2 * N_SEGMENTS]
-        amplitude = (1.0 + (dorsal + ventral) / 2.0) / 2.0
         bias = (dorsal - ventral) / 2.0
-        return p.peak_curvature * amplitude * self._relayed(state, forward=forward) + (
+        return p.peak_curvature * wave_amplitude(drive) * self._relayed(state, forward=forward) + (
             p.steering_gain * bias
         )
 
@@ -213,7 +230,7 @@ class KinematicBody:
             msg = f"drive must have {DRIVE_WIDTH} entries, got {drive.shape}"
             raise ValueError(msg)
         drive = np.clip(drive, -1.0, 1.0)
-        forward = drive[-1] >= -p.reversal_threshold
+        forward = not self._reverses(state, requested=bool(drive[-1] < -p.reversal_threshold))
         ds = p.body_length_mm / N_SEGMENTS
         dt = p.step_seconds / p.substeps
         rho1, _ = _shape(state.curvature, ds)
@@ -238,6 +255,18 @@ class KinematicBody:
             state.curvature = after
             if record is not None:
                 record.append((state.time, after.copy(), state.head.copy()))
+
+    def _reverses(self, state: BodyState, *, requested: bool) -> bool:
+        """Decide whether this step runs tail-to-head, and advance the reversal bookkeeping."""
+        p = self.params
+        if state.reversal_run > 0:
+            reverse = requested and state.reversal_run < p.max_reversal_steps
+        else:
+            reverse = requested and state.forward_run >= p.reversal_refractory_steps
+        state.reversal_run = state.reversal_run + 1 if reverse else 0
+        state.forward_run = 0 if reverse else state.forward_run + 1
+        state.last_reversed = reverse
+        return reverse
 
     def heading(self, state: BodyState) -> float:
         """Return the direction from the body's midpoint to the head, in the world frame."""

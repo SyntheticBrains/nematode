@@ -82,6 +82,26 @@ class TestInstruments:
         assert k.reversal_fraction == pytest.approx(5 / 15)
         assert k.frequency_hz == pytest.approx(0.3, rel=0.1)
 
+    def test_a_silenced_segment_keeps_a_step_out_of_the_wave(self) -> None:
+        """A step whose drive silences a segment's wave is not read for frequency or wavelength."""
+        episode = _travelling_wave(frequency=0.3, wavelength=0.65, n_steps=10)
+        for step in episode:
+            step["drive"][0] = -1.0
+            step["drive"][N_SEGMENTS] = -1.0  # the head segment's amplitude is 0
+        k = _measure([episode])
+        assert k.steps_undulating == 0
+        assert k.frequency_hz is None
+        assert k.wavelength_bl is None
+        assert k.speed_bl_per_s == pytest.approx(0.1)
+
+    def test_the_executed_direction_counts_not_the_request(self) -> None:
+        """A requested reversal the body did not run is a forward step."""
+        episode = _travelling_wave(frequency=0.3, wavelength=0.65, n_steps=10, direction=-1.0)
+        for i, step in enumerate(episode):
+            step["reversed"] = i % 2 == 0
+        k = _measure([episode])
+        assert k.reversal_fraction == pytest.approx(0.5)
+
     def test_steps_near_a_wall_are_excluded(self) -> None:
         episode = _travelling_wave(
             frequency=0.3,

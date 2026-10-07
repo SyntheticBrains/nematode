@@ -12,8 +12,24 @@ threshold, −0.5 by default, the same for every brain.
 
 #### Scenario: A strongly negative direction reverses it
 
-- **WHEN** the direction channel is below −0.5
+- **WHEN** the direction channel is below −0.5 and the previous step ran head-to-tail
 - **THEN** the wave SHALL run tail-to-head
+
+### Requirement: A reversal is brief
+
+A kinematic body's reversal SHALL last at most a fixed number of steps, one by default, and SHALL be
+followed by at least a fixed number of head-to-tail steps, one by default, before the next reversal.
+Each step's executed direction SHALL be recorded on the body.
+
+#### Scenario: A held reversal request alternates
+
+- **WHEN** the direction channel is held below −0.5 at the defaults
+- **THEN** the body SHALL run tail-to-head on alternate steps, starting with the first
+
+#### Scenario: The limits are parameters
+
+- **WHEN** a reversal may last two steps and needs two forward steps after it
+- **THEN** a held request SHALL run two steps tail-to-head, then two head-to-tail, in turn
 
 ### Requirement: Sub-step posture capture
 
@@ -41,7 +57,7 @@ default SHALL apply.
 
 - **WHEN** two environments step the same drives, one capturing
 - **THEN** their agents' positions SHALL be identical and the capturing one SHALL hold one entry per
-  step, with one posture per sub-step
+  step, with one posture per sub-step and the step's executed direction
 
 #### Scenario: The sub-step count is configurable
 

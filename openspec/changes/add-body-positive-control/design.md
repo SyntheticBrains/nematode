@@ -92,6 +92,29 @@ Hill & Bargmann 2005, PNAS 102:3184). The primary figures were not open to check
 five a minute is a per-step fraction of about 0.08 to 0.4. The registration cites it as that order of
 magnitude, and reversal fraction stays descriptive, as Decision E has it.
 
+### Decision B′: A reversal is brief *(added 2026-10-08, after the first pilot)*
+
+**What the first pilot showed.** It ran with reversals uncapped (32 runs, seeds 1501–1504). Each
+trained seed settled on one gait. Trained reversal fractions were near 0 or near 1, never between.
+Seed 1502 started biased toward reversing (0.72 untrained) and at gains 1 and 2 crawled **backward on
+100% of its steps**. At gain 1 it had the lowest plateau, 17%. A worm's reversals are brief, one to three
+head swings, and followed by forward crawling. A body that can crawl backward indefinitely lets a seed's
+starting bias choose a gait no worm uses.
+
+**The cap.** A reversal runs tail-to-head for at most **one step** (5 worm-seconds, 1.5 head swings),
+then the body crawls forward for at least **one step** before it may reverse again. Both limits are
+`BodyParams` fields. A held reversal request therefore alternates, reversed and forward. The body
+records each step's executed direction, which the reversal-fraction instrument reads.
+
+**What it gives up.** At one step only short reversals exist. The long reversals that precede an omega
+turn in a pirouette, three or more head swings, cannot be produced. That is recorded as a kinematic
+condition, to revisit at C.3's behavioural validation, where pirouettes are graded.
+
+**Consequence for the calibration.** The cap changes the body every gain runs through, so the first
+pilot no longer calibrates it. That pilot is kept as evidence ([its readings are committed beside the
+registration](../../../docs/experiments/logbooks/supporting/083-body-control/)) and the pilot re-runs
+under the cap on the same seeds, same configs, same rule.
+
 ### Decision C: The steering calibration, a rule fixed first
 
 **The pilot.** MLP-PPO through the body at **B₀ ∈ {0.5, 1, 2, 4}**, on hard350 with reversal on, 3,000
@@ -144,6 +167,16 @@ exclusion is recorded.
 **Bands** (C.3's adopted thresholds): frequency 0.2–0.45 Hz, wavelength 0.5–0.8 body lengths, speed
 0.12–0.3 body lengths per second. A control that forages but sits outside a band is recorded as a
 kinematic condition on every later body result. It is not a foraging failure.
+
+**Undulating steps only** *(added 2026-10-08, after the first pilot)*. The trained policies switched
+individual segments' waves on and off: at gain 1, seed 1501's head segment ran at a mean amplitude of
+0.06 against about 0.9 at mid-body, and amplitudes spanned 0 to 1 between steps. A silenced segment
+holds still at its steering offset and crosses its mean only when the drive changes between steps. The
+crossing delays read that as a wave, and the pooled wavelength read 0.36 body lengths against the body's
+0.66. Frequency and wavelength are therefore read only on **undulating** steps: forward, wall-clear, and
+with every segment's wave amplitude at least **0.25** of the peak. The share of steps that qualify is
+reported beside. Speed and reversal fraction stay on every wall-clear step. Real-worm analyses likewise
+read the wave on forward runs.
 
 **Half-step check.** The same weights are re-evaluated at 40 sub-steps. Each instrument's mean over the
 control's learning runs must agree within 10% between the two. Reversal fraction must agree within

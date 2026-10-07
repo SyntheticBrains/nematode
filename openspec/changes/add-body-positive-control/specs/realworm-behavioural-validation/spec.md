@@ -10,8 +10,10 @@ The kinematic instruments SHALL read captured episodes of a segmented body. They
 - speed, in body lengths per second;
 - reversal fraction.
 
-Frequency and wavelength SHALL be read on forward-running steps only, each unbroken stretch on its
-own. Steps whose head lies within a margin of a wall SHALL be excluded and counted.
+Frequency and wavelength SHALL be read only on undulating steps: forward-running, and with every
+segment's wave amplitude at least a quarter of the peak. Each unbroken stretch of them SHALL be read on
+its own, and their count SHALL be reported. Reversal fraction SHALL count the steps the body executed
+tail-to-head. Steps whose head lies within a margin of a wall SHALL be excluded and counted.
 
 #### Scenario: A known wave is recovered
 
@@ -22,6 +24,16 @@ own. Steps whose head lies within a margin of a wall SHALL be excluded and count
 
 - **WHEN** the curvature stays inside the band
 - **THEN** no crossing SHALL be counted
+
+#### Scenario: A silenced segment keeps a step out of the wave
+
+- **WHEN** every step's drive silences one segment's wave
+- **THEN** no frequency or wavelength SHALL be reported, and speed SHALL still be
+
+#### Scenario: The executed direction is counted
+
+- **WHEN** a step requested a reversal the body did not run
+- **THEN** it SHALL count as forward
 
 #### Scenario: Wall-proximal steps are excluded
 
