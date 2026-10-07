@@ -93,6 +93,43 @@ reversal and substrate together, so it says only that neither cost learning visi
 - **Not established**: whether reversal changes block V's wiring contrast. No null ran here, and C.1e
   registers its own floors and baselines in a new reference frame.
 
+## Biological fidelity of these choices, and where each is revisited
+
+Recorded at the branch review. Figures marked *recalled* are from memory of the literature and are to
+be checked against their sources where the named later step uses them.
+
+- **Step of 5 worm-seconds.** It rests on a 0.2 mm/s crawl and a 1.6 s undulation. That crawl speed is
+  typical of forward crawling off food; worms on food move slower. Reported crawling periods span
+  roughly 1.5–3 s across assays (*recalled*), so 1.6 s is the fast end, and "three periods per step"
+  may be nearer two. **Adequate now**, since nothing consumes the constant yet. **Revisited at C.1c**,
+  which fixes the period and wavelength from Fang-Yen et al. 2010, and at C.3's kinematic validation.
+- **Symmetric reversal.** Backward crawling speed is broadly comparable to forward, so the bound is
+  reasonable. Real reversals, though, are brief bouts of a few head swings, often followed by an omega
+  turn (the pirouette; Pierce-Shimomura et al. 1999). Nothing here limits how long a reversal lasts, so a
+  learner could back up for many steps, which a worm rarely does. **Adequate now; revisited at C.1d**,
+  where reversal use is first read with C.3's bout instruments. B.2c's bout-duration target is the
+  registered check. A cap or a cost is the remedy if reversal turns out to be used as a second gear.
+- **Heading and sensing under reversal.** The head stays the head, the head-sweep sample stays at the
+  head, and the rate-of-change feature follows the actual displacement. That matches a worm backing up
+  tail-first while its head sensors read what the movement brings. **Faithful.**
+- **Sharp reorientation is still missing.** Turning is capped at 0.5 rad per step and there is no omega
+  turn, so the reversal-then-turn pirouette cannot be fully expressed on the point worm. **Known and
+  planned**: in C.1 turning emerges from body curvature, and C.3 grades omega-turn geometry.
+- **The anatomical readout.** VB/DB drive forward and VA/DA drive backward. Signed speed makes the
+  backward classes meaningful for the first time. **An improvement in fidelity.**
+- **Emmons 2024.** It is the same single-animal reconstruction with the lab's corrections, so fidelity is
+  unchanged or better. Two notes:
+  - **Mechanosensory pairs.** Its four changed gap pairs couple the touch neurons ALM and PLM to BDU. The
+    predator-contact projection injects into ALM and PLM, so a predator cell on Emmons is not directly
+    comparable to one on Cook. The food-only hard350 cell is unaffected.
+  - **Individual variability.** One animal's wiring is the standing limitation. M.2's wild-type-vs-wild-
+    type control (Cook against Witvliet dataset 8) is where it would be measured.
+- **D19, the rhythm from outside the brain.** In the worm, the motor circuit generates the rhythm, with
+  proprioceptive coupling. An outside generator is a deliberate simplification, so the claim is scoped
+  to segmental drive and steering. The route that would test rhythm generation by the wiring, C.2c, ran
+  through B.2 and has none since B.2 closed (Logbook 080). **Acceptable now; the open question is
+  recorded in the tracker**, and would need its own registration later.
+
 ## Artefacts
 
 - [validation.json](supporting/081-body-prerequisites/validation.json): each learner's per-seed
