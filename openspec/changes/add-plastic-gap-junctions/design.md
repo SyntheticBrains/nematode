@@ -62,7 +62,7 @@ pooled readout, depth 4, Cook 2019. **Seeds 513–576 (64)**, the first 64 of Lo
 | `plastic` | learning, plastic gaps; the same frozen floor | learning, plastic gaps; the same frozen floor |
 
 A frozen arm learns nothing, so its gaps never move. One floor per wiring therefore serves both levels.
-There are 192 new runs: the null's fixed learning and frozen arms, and both wirings' plastic learning
+There are 256 new runs (64 seeds × four arms): the null's fixed learning and frozen arms, and both wirings' plastic learning
 arms.
 
 **Three readings, corrected together** (BH-FDR on the primary metric). In each, positive means the

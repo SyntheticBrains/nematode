@@ -29,7 +29,7 @@ depth 4, Cook 2019, settling dynamics. The two wirings:
 1, so each wiring starts from its own strengths and can tune them. A frozen arm learns nothing, so one
 floor per wiring serves both levels.
 
-**Seeds 513–576 (64)**, the first 64 of Logbook 078's band. That makes 192 new runs: the null's fixed
+**Seeds 513–576 (64)**, the first 64 of Logbook 078's band. That makes **256** new runs: the null's fixed
 learning and frozen arms, and both wirings' plastic learning arms.
 
 ## The readings
@@ -97,7 +97,7 @@ this proxy low. The achieved spread is reported beside and never used to re-read
   | wild type, plastic, learning | 21 |
   | null, plastic, learning | 18 |
 
-  The 192 runs take **about 4.5 hours**.
+  The 256 runs take **about 4.5 hours**. *(Corrected 2026-10-07, during the campaign: the registration first said 192, counting three of the four new arms. Four arms × 64 seeds is 256, the campaign launched as registered, and the 4.5-hour cost already summed all four arms.)*
 
 - **Readiness review.** The gates were evaluated at the registered point on this cell. The cost comes
   from a pilot configured as the campaign: the same configs and 3,000 episodes. The pilot seeds are

@@ -15,7 +15,7 @@ Phase 8 optional M.8, run alongside C.1's build. Registered in
   check; cost.
 - [x] 6. **Registration** — **done: launch.md with the readiness review; tracker M.8 and M.7 decisions.** Original scope: the launch record, then `/nematode-review-spec`; the tracker's M.8 and M.7
   decisions.
-- [ ] 7. **Campaign**: from a separate worktree, seeds 513–576, 192 runs.
+- [ ] 7. **Campaign**: from a separate worktree, seeds 513–576, 256 runs (first written as 192, a miscount).
 - [ ] 8. **Readout**: Logbook 082; tracker M.8.
 - [ ] 9. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
   exit code; `openspec validate --strict`; archive and PR.
