@@ -17,5 +17,5 @@ Phase 8 optional M.8, run alongside C.1's build. Registered in
   decisions.
 - [x] 7. **Campaign** — **done 2026-10-08: 256/256 succeeded in 7.1 h (4.5 h estimated).** Original scope: from a separate worktree, seeds 513–576, 256 runs (first written as 192, a miscount).
 - [x] 8. **Readout** — **done: `placement`; Logbook 082; tracker M.8; the plasticity check made to find twins across campaigns, and a `multipliers` reading added.** Original scope: Logbook 082; tracker M.8.
-- [ ] 9. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
+- [x] 9. **Close-out** — **done 2026-10-08: full suite 7317 passed, 34 skipped; hooks; validate; archived.** Original scope: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
   exit code; `openspec validate --strict`; archive and PR.
