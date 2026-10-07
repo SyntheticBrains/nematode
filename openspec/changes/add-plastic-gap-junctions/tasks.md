@@ -11,9 +11,9 @@ Phase 8 optional M.8, run alongside C.1's build. Registered in
 - [x] 3. **Configs**: the thermal t35 arms through a generator, with loader tests.
 - [x] 4. **Analysis**: `plastic_gaps.py` (the identity check, the readings, the verdict map, the
   plasticity check, the per-seed CSV) in the gate preflight's shape, with tests.
-- [ ] 5. **Identity check and pilot**: 6 re-runs; the pilot on 1401–1404; preflight; plasticity
+- [x] 5. **Identity check and pilot** — **done: 6/6 identical (after copying the worktree's records in); pilot gates readable on both levels; plasticity acts on every seed; cost about 4.5 h.** Original scope: 6 re-runs; the pilot on 1401–1404; preflight; plasticity
   check; cost.
-- [ ] 6. **Registration**: the launch record, then `/nematode-review-spec`; the tracker's M.8 and M.7
+- [x] 6. **Registration** — **done: launch.md with the readiness review; tracker M.8 and M.7 decisions.** Original scope: the launch record, then `/nematode-review-spec`; the tracker's M.8 and M.7
   decisions.
 - [ ] 7. **Campaign**: from a separate worktree, seeds 513–576, 192 runs.
 - [ ] 8. **Readout**: Logbook 082; tracker M.8.
