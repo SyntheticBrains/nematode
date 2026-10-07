@@ -47,6 +47,7 @@ from quantumnematode.brain.arch._plasticity_config import (
     PlasticTensors,
 )
 from quantumnematode.brain.arch._policy import (
+    BODY_DRIVE_DIM,
     CONTINUOUS_ACTION_DIM,
     categorical_sample_torch,
     continuous_action_bounds,
@@ -67,10 +68,13 @@ from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.loader import (
     load_cook_2019_hermaphrodite,
     load_emmons_2024_hermaphrodite,
+    load_emmons_2024_neuromuscular,
 )
 from quantumnematode.connectome.measured_weights import coverage, measured_weights
+from quantumnematode.connectome.neuromuscular import neuromuscular_drive_map
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
+from quantumnematode.env.body import N_SEGMENTS as N_BODY_SEGMENTS
 from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
@@ -418,6 +422,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
             raise ValueError(refusal)
         if (refusal := _dynamics_refusal(self)) is not None:
             raise ValueError(refusal)
+        if (refusal := _body_drive_refusal(self)) is not None:
+            raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
                 "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
@@ -653,6 +659,18 @@ def _wild_type_order(
     return block[order]
 
 
+def _body_drive_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the body-drive action cannot run here, or ``None`` when it can."""
+    if config.action_space != "body_drive":
+        return None
+    if config.learning_rule != "ppo":
+        return (
+            f"action_space: body_drive requires learning_rule='ppo', got {config.learning_rule!r}: "
+            "the plastic rules read and write a two-number readout."
+        )
+    return None
+
+
 def _dynamics_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     """Return why a dynamics configuration cannot run, or ``None`` when it can.
 
@@ -662,6 +680,11 @@ def _dynamics_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     substrate they do not describe. Under settling the two leaky-only pins are refused away from
     their defaults, so an arm states which dynamics it means rather than carrying a dead setting.
     """
+    if config.action_space == "body_drive" and config.dynamics == "leaky":
+        return (
+            "action_space: body_drive does not support dynamics='leaky', whose replay reads the "
+            "two-number readout."
+        )
     if config.dynamics == "settling":
         if (
             config.membrane_tau_steps != 1.0
@@ -710,6 +733,8 @@ def _dynamics_refusal(config: ConnectomePPOBrainConfig) -> str | None:
 def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     """Refuse a dynamics configuration at construction; ``model_copy`` skips validators."""
     if (refusal := _dynamics_refusal(config)) is not None:
+        raise ValueError(refusal)
+    if (refusal := _body_drive_refusal(config)) is not None:
         raise ValueError(refusal)
 
 
@@ -908,6 +933,8 @@ class ConnectomeTopology(nn.Module):
     pooled_motor: torch.Tensor
     membrane: torch.Tensor
     implicit_inverse: torch.Tensor
+    nmj_indices: torch.Tensor
+    nmj_map: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -946,9 +973,11 @@ class ConnectomeTopology(nn.Module):
         dynamics: Literal["settling", "leaky"] = "settling",
         membrane_tau_steps: float = 1.0,
         input_gain: float = 1.0,
+        body_drive: bool = False,
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
+        self.body_drive = body_drive
         self.input_gain = input_gain
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
         # Gaussian mean (instead of 4 discrete logits) + a learnable log-std. The
@@ -1304,8 +1333,14 @@ class ConnectomeTopology(nn.Module):
             # torch.full with 0.0 is bit-identical to the zeros this started as;
             # neither branch consumes RNG.
             self.log_std = nn.Parameter(
-                torch.full((CONTINUOUS_ACTION_DIM,), initial_log_std, device=device),
+                torch.full(
+                    (BODY_DRIVE_DIM if body_drive else CONTINUOUS_ACTION_DIM,),
+                    initial_log_std,
+                    device=device,
+                ),
             )
+        if body_drive:
+            self._build_body_readout(device)
         if self.state_dependent_std:
             # Sized to what `_pool_motor` RETURNS, which is the readout's input width: the motor
             # classes under `pooled` and the motor neurons under `per_neuron`. `_N_ACTIONS` was read
@@ -1545,6 +1580,49 @@ class ConnectomeTopology(nn.Module):
             torch.zeros(self.n_neurons, device=device),
             persistent=False,
         )
+
+    def _build_body_readout(self, device: torch.device) -> None:
+        """Register the fixed neuromuscular map and the cells it reads, for the body-drive action.
+
+        The map is anatomy: every cell with a neuromuscular junction, its EM counts signed by what
+        body wall muscle responds to and normalised per quadrant-segment column. It is never
+        learned.
+        """
+        drive_map = neuromuscular_drive_map(load_emmons_2024_neuromuscular(), N_BODY_SEGMENTS)
+        self.register_buffer(
+            "nmj_indices",
+            torch.tensor([self._idx[c] for c in drive_map.cells], dtype=torch.long, device=device),
+        )
+        self.register_buffer(
+            "nmj_map",
+            torch.from_numpy(drive_map.matrix).to(dtype=torch.float32, device=device),
+        )
+
+    def body_drive_mean(self, h: torch.Tensor) -> torch.Tensor:
+        """Map settled rates ``(N,)`` or ``(B, N)`` to the 25-number body drive.
+
+        Dorsal drive per segment is the mean of the two dorsal quadrants' drives, ventral
+        likewise; the direction channel is half the forward-minus-backward motor-class contrast,
+        so every entry lies in ``[-1, 1]``.
+        """
+        drives = h.index_select(-1, self.nmj_indices) @ self.nmj_map
+        quadrants = drives.reshape(*drives.shape[:-1], 4, N_BODY_SEGMENTS)
+        dorsal = (quadrants[..., 0, :] + quadrants[..., 1, :]) / 2.0
+        ventral = (quadrants[..., 2, :] + quadrants[..., 3, :]) / 2.0
+        classes = self._pool_motor_classes(h)
+        forward = classes[..., 0] + classes[..., 1]
+        backward = classes[..., 2] + classes[..., 3]
+        direction = (forward - backward) / 4.0
+        return torch.cat([dorsal, ventral, direction.unsqueeze(-1)], dim=-1)
+
+    def _pool_motor_classes(self, h: torch.Tensor) -> torch.Tensor:
+        """Return the four motor-class mean rates (VB, DB, VA, DA) whatever the readout width."""
+        flat = h.index_select(-1, self._motor_flat_indices)
+        means = [
+            flat[..., self._motor_class_slices[k][0] : self._motor_class_slices[k][1]].mean(dim=-1)
+            for k in range(len(_MOTOR_CLASSES))
+        ]
+        return torch.stack(means, dim=-1)
 
     def reset_membrane(self) -> None:
         """Return every potential to zero at episode start; a no-op under settling dynamics."""
@@ -2459,6 +2537,8 @@ class ConnectomeTopology(nn.Module):
                     self.prev_activity_valid.fill_(True)  # noqa: FBT003 — buffer write
                 self.prev_activity.copy_(h)
 
+        if self.body_drive:
+            return self.body_drive_mean(h), h
         # Motor pooling + readout.
         motor_acts = self._pool_motor(h)
         # (num_actions,) discrete logits, or (2,) continuous Gaussian mean.
@@ -2582,6 +2662,8 @@ class ConnectomeTopology(nn.Module):
             preact = h @ chem_mat + h @ gap_mat
             h = torch.tanh(preact)
 
+        if self.body_drive:
+            return self.body_drive_mean(h), h
         motor_acts = self._pool_motor(h)  # (B, 4)
         # (B, num_actions) discrete logits, or (B, 2) continuous Gaussian mean.
         logits = motor_acts @ self.readout.T
@@ -2681,7 +2763,10 @@ class ConnectomeTopology(nn.Module):
         Foraging-only configs allocate neither, so the optimiser sees
         byte-identical parameter sets to pre-projection builds.
         """
-        params = [self.w_chem, self.food_gains, self.readout]
+        # Under the body drive the anatomical map replaces the readout, which is then not learned.
+        params = [self.w_chem, self.food_gains]
+        if not self.body_drive:
+            params.append(self.readout)
         if self.enable_predator_projection:
             params.extend(
                 [
@@ -2750,6 +2835,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         self._action_low, self._action_high = continuous_action_bounds(
             signed_speed=config.signed_speed,
             device=self.device,
+            action_space=config.action_space,
         )
         self._action_set = action_set if action_set is not None else list(DEFAULT_ACTIONS)
         if len(self._action_set) != _N_ACTIONS:
@@ -2855,6 +2941,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             dynamics=config.dynamics,
             membrane_tau_steps=config.membrane_tau_steps,
             input_gain=config.input_gain,
+            body_drive=config.action_space == "body_drive",
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -3318,10 +3405,10 @@ class ConnectomePPOBrain(ClassicalBrain):
             self._action_low,
             self._action_high,
         )
-        continuous_action = (action_vec[0].item(), action_vec[1].item())
+        continuous_action = tuple(float(v) for v in action_vec.tolist())
         with torch.no_grad():
             mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
-        continuous_mean = (mean_vec[0].item(), mean_vec[1].item())
+        continuous_mean = tuple(float(v) for v in mean_vec.tolist())
 
         # e-prop's learning signal, folded in the moment the action exists. The score function
         # of the tanh-squashed Gaussian with respect to its MEAN is (u - mu) / sigma**2 at the

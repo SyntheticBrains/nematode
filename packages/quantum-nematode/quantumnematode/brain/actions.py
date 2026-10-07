@@ -59,8 +59,8 @@ class ActionData(BaseModel):  # pragma: no cover
     state: str
     action: Action | None = None
     probability: float
-    continuous: tuple[float, float] | None = None
-    continuous_mean: tuple[float, float] | None = None
+    continuous: tuple[float, ...] | None = None
+    continuous_mean: tuple[float, ...] | None = None
 
     @model_validator(mode="after")
     def _exactly_one_action_payload(self) -> "ActionData":

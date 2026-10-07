@@ -1,0 +1,176 @@
+"""The neuromuscular drive map and the kinematic body.
+
+Covers the connectome-ppo-brain requirement "The anatomical neuromuscular readout" (signs follow
+the transmitter) through the drive map, and the continuous-2d-environment requirement "A kinematic
+segmented body" (a forward wave moves the body forward and a backward wave backward; a
+dorsal-ventral bias turns the body; the head's period is the configured period; the body stays in
+the arena; the point worm is unchanged).
+"""
+
+from __future__ import annotations
+
+import math
+
+import numpy as np
+import pytest
+from quantumnematode.connectome.loader import load_emmons_2024_neuromuscular
+from quantumnematode.connectome.muscles import (
+    BODY_WALL_MUSCLES,
+    muscle_position,
+    muscle_segment,
+)
+from quantumnematode.connectome.neuromuscular import muscle_sign, neuromuscular_drive_map
+from quantumnematode.env.body import (
+    DRIVE_WIDTH,
+    N_SEGMENTS,
+    BodyParams,
+    KinematicBody,
+    new_body,
+)
+from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
+from quantumnematode.env.env import DEFAULT_AGENT_ID
+
+# ── Muscles and the drive map ────────────────────────────────────────────────────────────────
+
+
+class TestMuscles:
+    def test_names_parse_to_quadrant_and_position(self) -> None:
+        assert muscle_position("dBWML1") == ("dBWML", 1)
+        assert muscle_position("vBWML23") == ("vBWML", 23)
+        with pytest.raises(ValueError, match="not a body wall muscle"):
+            muscle_position("AVAL")
+        with pytest.raises(ValueError, match="beyond"):
+            muscle_position("vBWML24")
+
+    def test_twelve_segments_pair_the_positions(self) -> None:
+        segments = [muscle_segment(m, N_SEGMENTS) for m in BODY_WALL_MUSCLES]
+        assert set(segments) == set(range(N_SEGMENTS))
+        assert muscle_segment("dBWMR1", N_SEGMENTS) == muscle_segment("dBWMR2", N_SEGMENTS) == 0
+        assert muscle_segment("vBWML23", N_SEGMENTS) == N_SEGMENTS - 1
+
+
+class TestDriveMap:
+    @pytest.fixture(scope="class")
+    def drive_map(self):
+        return neuromuscular_drive_map(load_emmons_2024_neuromuscular(), N_SEGMENTS)
+
+    def test_every_junction_cell_is_a_row(self, drive_map) -> None:
+        assert len(drive_map.cells) == 162
+        assert drive_map.matrix.shape == (162, 4 * N_SEGMENTS)
+
+    def test_signs_follow_the_transmitter(self, drive_map) -> None:
+        for i, cell in enumerate(drive_map.cells):
+            row = drive_map.matrix[i]
+            sign = muscle_sign(cell)
+            if sign > 0:
+                assert (row >= 0).all(), cell
+            elif sign < 0:
+                assert (row <= 0).all(), cell
+            else:
+                assert (row == 0).all(), cell
+
+    def test_the_zero_weight_cells_are_the_32_listed(self, drive_map) -> None:
+        assert len(drive_map.zero_weight_cells) == 32
+        assert all(muscle_sign(c) == 0 for c in drive_map.zero_weight_cells)
+
+    def test_every_column_is_normalised(self, drive_map) -> None:
+        assert np.allclose(np.abs(drive_map.matrix).sum(axis=0), 1.0)
+
+
+# ── The body ─────────────────────────────────────────────────────────────────────────────────
+
+
+def _drive(direction: float = 1.0, bias: float = 0.0, level: float = 0.6) -> np.ndarray:
+    drive = np.zeros(DRIVE_WIDTH)
+    drive[:N_SEGMENTS] = level + bias
+    drive[N_SEGMENTS : 2 * N_SEGMENTS] = level - bias
+    drive[-1] = direction
+    return np.clip(drive, -1.0, 1.0)
+
+
+def _run(drive: np.ndarray, steps: int = 12) -> tuple[np.ndarray, float]:
+    body = KinematicBody()
+    state = new_body(10.0, 10.0, 0.0)
+    for _ in range(steps):
+        body.step(state, drive, 20.0)
+    return state.head - np.array([10.0, 10.0]), body.heading(state)
+
+
+class TestBody:
+    def test_a_forward_wave_moves_the_head_along_its_heading(self) -> None:
+        displacement, heading = _run(_drive(direction=1.0))
+        assert displacement[0] > 1.0
+        assert abs(displacement[1]) < 0.3 * displacement[0]
+        assert abs(heading) < 0.3
+
+    def test_a_backward_wave_moves_it_the_other_way(self) -> None:
+        displacement, _ = _run(_drive(direction=-1.0))
+        assert displacement[0] < -1.0
+
+    def test_a_dorsal_bias_turns_one_way_and_a_ventral_bias_the_other(self) -> None:
+        _, left = _run(_drive(bias=0.4))
+        _, right = _run(_drive(bias=-0.4))
+        assert left > 0.3
+        assert right < -0.3
+
+    def test_more_amplitude_moves_further(self) -> None:
+        slow, _ = _run(_drive(level=-0.5))
+        fast, _ = _run(_drive(level=0.8))
+        assert np.linalg.norm(fast) > np.linalg.norm(slow)
+
+    def test_the_head_switches_at_the_configured_period(self) -> None:
+        params = BodyParams(period_s=3.0)
+        body = KinematicBody(params)
+        state = new_body(10.0, 10.0, 0.0)
+        for _ in range(12):
+            body.step(state, _drive(), 1000.0)
+        flips = [t for t, _bend, _target in state.events[1:]]
+        intervals = np.diff(flips)
+        assert np.allclose(intervals[1:], params.period_s / 2.0, rtol=1e-6)
+
+    def test_the_motion_is_converged_at_the_default_substeps(self) -> None:
+        coarse, _ = _run(_drive())
+        body = KinematicBody(BodyParams(substeps=160))
+        state = new_body(10.0, 10.0, 0.0)
+        for _ in range(12):
+            body.step(state, _drive(), 20.0)
+        fine = state.head - np.array([10.0, 10.0])
+        assert np.linalg.norm(coarse - fine) < 0.03 * np.linalg.norm(fine)
+
+    def test_the_head_stays_in_the_arena(self) -> None:
+        body = KinematicBody()
+        state = new_body(19.8, 10.0, 0.0)
+        for _ in range(20):
+            body.step(state, _drive(level=1.0), 20.0)
+        assert 0.0 <= state.head[0] <= 20.0
+        assert 0.0 <= state.head[1] <= 20.0
+
+    def test_a_drive_of_the_wrong_width_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="25 entries"):
+            KinematicBody().step(new_body(1.0, 1.0, 0.0), np.zeros(2), 20.0)
+
+
+class TestEnvironment:
+    def test_the_point_worm_is_the_default_and_refuses_a_drive(self) -> None:
+        env = Continuous2DEnvironment(continuous=Continuous2DParams(world_size_mm=20.0))
+        assert env.continuous.body_model == "point"
+        with pytest.raises(RuntimeError, match="kinematic"):
+            env.move_agent_body(_drive())
+
+    def test_a_kinematic_step_moves_the_head_and_sets_the_heading(self) -> None:
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(
+                world_size_mm=20.0,
+                allow_reversal=True,
+                body_model="kinematic",
+            ),
+        )
+        agent = env.agents[DEFAULT_AGENT_ID]
+        start = agent.pos_continuous
+        assert start is not None
+        for _ in range(6):
+            env.move_agent_body(_drive())
+        assert agent.pos_continuous != start
+        assert -math.pi <= agent.heading_rad <= math.pi
+        assert agent.pos_continuous is not None
+        assert env.bodies[DEFAULT_AGENT_ID].head.tolist() == list(agent.pos_continuous)

@@ -1055,6 +1055,20 @@ class Continuous2DConfig(BaseModel):
     # is byte-identical to the environment before the option. A continuous brain must set
     # signed_speed to match, or loading refuses the pair.
     allow_reversal: bool = False
+    # How the worm moves: "point" (default, byte-identical) or "kinematic", a 12-segment body driven
+    # by a 25-number drive through a body-level generator and resistive-force theory. A kinematic
+    # body needs allow_reversal, 8b's frozen setting, and a brain with action_space: body_drive.
+    body_model: Literal["point", "kinematic"] = "point"
+
+    @model_validator(mode="after")
+    def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
+        if self.body_model == "kinematic" and not self.allow_reversal:
+            msg = (
+                "continuous.body_model: kinematic requires allow_reversal: true: the body reverses "
+                "through its direction channel, and 8b's substrate is frozen with reversal on."
+            )
+            raise ValueError(msg)
+        return self
 
 
 # Reference windowed-attention span for the bit-memory Transformer-confound guard.
@@ -2504,6 +2518,10 @@ class CoevolutionConfig(BaseModel):
         return self
 
 
+_BODY_DRIVE_BRAINS = frozenset({"connectomeppo", "mlpppo"})
+"""Brains that emit the 25-number body drive."""
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -2548,6 +2566,8 @@ class SimulationConfig(BaseModel):
         if self.brain is None or self.environment is None:
             return self
         continuous = self.environment.continuous
+        if getattr(self.brain.config, "action_space", "speed_turn") == "body_drive":
+            return self  # the body's direction channel reverses it; checked below
         allows = bool(continuous is not None and continuous.allow_reversal)
         signed = bool(getattr(self.brain.config, "signed_speed", False))
         if allows != signed:
@@ -2555,6 +2575,35 @@ class SimulationConfig(BaseModel):
                 f"environment.continuous.allow_reversal is {allows} but brain.config.signed_speed "
                 f"is {signed}: a continuous brain's speed sign must match whether the environment "
                 "can move the worm backward."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_body_drive_matches_environment(self) -> "SimulationConfig":
+        """Refuse a body-drive brain without a kinematic body, or a kinematic body without one.
+
+        The body reads 25 drive numbers and a point worm reads two, so either mismatch would feed
+        an environment an action it cannot apply. Only the connectome and MLP-PPO brains emit a
+        body drive.
+        """
+        if self.brain is None or self.environment is None:
+            return self
+        continuous = self.environment.continuous
+        kinematic = bool(continuous is not None and continuous.body_model == "kinematic")
+        body_drive = getattr(self.brain.config, "action_space", "speed_turn") == "body_drive"
+        if kinematic != body_drive:
+            msg = (
+                f"environment.continuous.body_model is "
+                f"{continuous.body_model if continuous else 'unset'} but brain.config.action_space "
+                f"is {getattr(self.brain.config, 'action_space', 'speed_turn')}: a kinematic body "
+                "needs a body-drive brain, and a body-drive brain a kinematic body."
+            )
+            raise ValueError(msg)
+        if body_drive and self.brain.name not in _BODY_DRIVE_BRAINS:
+            msg = (
+                f"action_space: body_drive is implemented for {sorted(_BODY_DRIVE_BRAINS)}, not "
+                f"{self.brain.name!r}."
             )
             raise ValueError(msg)
         return self
@@ -3378,6 +3427,7 @@ def create_env_from_config(
                 predator_damage_radius_mm=continuous_config.predator_damage_radius_mm,
                 max_turn_rad=continuous_config.max_turn_rad,
                 allow_reversal=continuous_config.allow_reversal,
+                body_model=continuous_config.body_model,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,
