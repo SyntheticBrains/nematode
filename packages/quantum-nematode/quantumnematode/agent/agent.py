@@ -984,6 +984,27 @@ class QuantumNematodeAgent:
 
         return result
 
+    def _capture_signed_speed(
+        self,
+        position: tuple[float, float],
+        heading_rad: float,
+    ) -> float | None:
+        """Return the signed displacement along the heading since the last captured step.
+
+        Recorded only where the environment allows reversal; ``None`` elsewhere, so captures without
+        it are unchanged. A step turns before it moves, so the current heading is the one the last
+        move travelled along. Zero at an episode's first captured step, which follows no move.
+        """
+        continuous = getattr(self.env, "continuous", None)
+        if not getattr(continuous, "allow_reversal", False):
+            return None
+        if not self.behaviour:
+            return 0.0
+        previous = self.behaviour[-1]
+        return (position[0] - previous.x) * math.cos(heading_rad) + (
+            position[1] - previous.y
+        ) * math.sin(heading_rad)
+
     def _behaviour_capture_fields(  # noqa: PLR0913
         self,
         sensing: SensingConfig,
@@ -1256,6 +1277,7 @@ class QuantumNematodeAgent:
                     dc_dt=_ddt,
                     grad_dir=_gdir,
                     grad_strength=_gstr,
+                    speed_signed=self._capture_signed_speed(_bpos, agent_state.heading_rad),
                 ),
             )
 

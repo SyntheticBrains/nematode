@@ -27,12 +27,12 @@ The system SHALL provide a continuous-2D environment in which the **agent positi
 
 ### Requirement: Kinematic continuous movement
 
-The continuous-2D environment SHALL translate a continuous action `(speed, turn)` into a kinematic position update — a heading rotation by the turn angle followed by a forward displacement proportional to speed — bounded by the world extent, replacing the discrete one-cell cardinal-step movement. Continuous-action brains emit a **normalized** action (`speed ∈ [0, 1]`, `turn ∈ [-1, 1]`); the environment SHALL rescale it to physical units — `speed_mm = speed_norm · max_step_mm` and **`turn_rad = turn_norm · max_turn_rad`**, where `max_turn_rad` is a configurable **maximum per-step angular velocity** (the rotational analogue of `max_step_mm`, default `0.5` rad ≈ 29°/step (real C. elegans reorients ~15–30°/step)). The resulting heading SHALL be wrapped to `[−π, π]`. So no single step rotates the heading by more than `max_turn_rad`, and the worm reorients in bounded sharp turns rather than rotating continuously ("helicopter" spinning). The discrete grid environment's cardinal-action movement SHALL remain unchanged and byte-stable.
+The continuous-2D environment SHALL translate a continuous action `(speed, turn)` into a kinematic position update — a heading rotation by the turn angle followed by a forward displacement proportional to speed — bounded by the world extent, replacing the discrete one-cell cardinal-step movement. Continuous-action brains emit a **normalized** action (`speed ∈ [0, 1]`, or `[-1, 1]` when `allow_reversal` is on — see *Signed speed*; `turn ∈ [-1, 1]`); the environment SHALL rescale it to physical units — `speed_mm = speed_norm · max_step_mm` and **`turn_rad = turn_norm · max_turn_rad`**, where `max_turn_rad` is a configurable **maximum per-step angular velocity** (the rotational analogue of `max_step_mm`, default `0.5` rad ≈ 29°/step (real C. elegans reorients ~15–30°/step)). The resulting heading SHALL be wrapped to `[−π, π]`. So no single step rotates the heading by more than `max_turn_rad`, and the worm reorients in bounded sharp turns rather than rotating continuously ("helicopter" spinning). The discrete grid environment's cardinal-action movement SHALL remain unchanged and byte-stable.
 
 #### Scenario: Heading-and-displacement update
 
 - **WHEN** an agent emits a normalized continuous action `(speed_norm, turn_norm)`
-- **THEN** the agent's heading rotates by `turn_norm · max_turn_rad` (the resulting heading wrapped to `[−π, π]`) and the agent advances by `speed_norm · max_step_mm` (clamped to `[0, max_step_mm]`) along the new heading
+- **THEN** the agent's heading rotates by `turn_norm · max_turn_rad` (the resulting heading wrapped to `[−π, π]`) and the agent advances by `speed_norm · max_step_mm` along the new heading, clamped to `[0, max_step_mm]` when `allow_reversal` is off (the default) and to `[-max_step_mm, max_step_mm]` when it is on
 
 #### Scenario: Turn rate is bounded to a realistic maximum
 
@@ -300,3 +300,43 @@ float truth.
 - **WHEN** an agent returns to a previously occupied integer cell on the continuous substrate
 - **THEN** the anti-dithering check (integer-position equality against the path history) still
   fires, independent of the float sensing position used for field queries
+
+### Requirement: Signed speed
+
+The continuous environment SHALL offer `continuous.allow_reversal`, default false. When true, a step's
+speed SHALL be clamped to `[-max_step_mm, max_step_mm]` and the worm SHALL move along its heading by the
+signed speed, the heading unchanged by the sign. When false every motion, sensed feature, capture file
+and random draw SHALL be identical to the environment before this option existed.
+
+#### Scenario: Reversal is off by default
+
+- **WHEN** a configuration does not set `allow_reversal`
+- **THEN** a negative speed SHALL be clamped to zero as before, and every output SHALL be unchanged
+
+#### Scenario: A negative speed moves the worm backward
+
+- **WHEN** reversal is on and a step's speed is negative
+- **THEN** the worm SHALL move opposite to its heading by that distance, and its heading SHALL not flip
+
+#### Scenario: Sensing follows the head and the displacement
+
+- **WHEN** a worm reverses
+- **THEN** its lateral head-sweep sample SHALL be taken across its heading as when moving forward
+- **AND** its rate-of-change feature SHALL reflect the actual displacement
+- **AND** a predator behind its heading SHALL still read as posterior
+
+#### Scenario: Capture records the signed speed only under reversal
+
+- **WHEN** behaviour capture is on and reversal is on
+- **THEN** each captured step SHALL record its signed displacement along the heading
+- **AND** with reversal off the capture file SHALL be byte-identical to before
+
+### Requirement: The step's duration in worm time
+
+The environment SHALL record the duration of a full-speed step in worm-seconds as `max_step_mm` divided
+by the crawl speed, with the crawl speed and the undulation period as named constants beside it.
+
+#### Scenario: Block V's step is five worm-seconds
+
+- **WHEN** the constant is evaluated at `max_step_mm: 1.0`
+- **THEN** it SHALL be 5.0 worm-seconds, about three undulation periods

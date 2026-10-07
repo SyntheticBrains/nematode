@@ -62,9 +62,11 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_logprob_entropy_torch,
+    continuous_action_bounds,
     continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
     ppo_clip_policy_loss,
+    raise_on_speed_sign_mismatch,
 )
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._std_head import (
@@ -455,8 +457,10 @@ class CfCPPOBrain(ClassicalBrain):
         # units). In continuous mode the AutoNCP motor pool + head produce the 2-D
         # Gaussian mean, so the motor count is the continuous action dim.
         self.continuous = config.action_mode == "continuous"
-        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
-        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        self._action_low, self._action_high = continuous_action_bounds(
+            signed_speed=config.signed_speed,
+            device=self.device,
+        )
         motor_count = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
 
         # Validate the AutoNCP minimum-units requirement up front with a clear
@@ -1127,6 +1131,7 @@ class CfCPPOBrain(ClassicalBrain):
                     # Std-mode marker so cross-mode loads fail even for
                     # component subsets without a std component.
                     "continuous_std_mode": self.config.continuous_std_mode,
+                    "signed_speed": self.config.signed_speed,
                 },
             ),
         }
@@ -1158,6 +1163,7 @@ class CfCPPOBrain(ClassicalBrain):
         """Load weight components into this brain."""
         # Validate std-mode agreement BEFORE mutating any component, so a
         # caller that catches the error never sees a half-loaded brain.
+        raise_on_speed_sign_mismatch(components, signed_speed=self.config.signed_speed)
         raise_on_std_mode_mismatch(
             components,
             state_dependent=self._state_dependent_std,

@@ -22,14 +22,14 @@ The system SHALL provide a single shared action-policy module that all PPO-famil
 
 ### Requirement: Tanh-squashed Gaussian continuous policy
 
-The continuous mode SHALL parameterise a diagonal Gaussian over a 2-dimensional action, squash samples through `tanh`, and affine-rescale to the action ranges `speed ∈ [0, max]` (where `max` is the continuous-2D environment's configured `max_step_mm`) and `turn ∈ [−π, π]`, applying the log-det-Jacobian correction to the log-probability.
+The continuous mode SHALL parameterise a diagonal Gaussian over a 2-dimensional action, squash samples through `tanh`, and affine-rescale to the action ranges `speed ∈ [0, max]` — or `[−max, max]` under `signed_speed` (see *Signed speed bounds that agree with the environment*) — (where `max` is the continuous-2D environment's configured `max_step_mm`) and `turn ∈ [−π, π]`, applying the log-det-Jacobian correction to the log-probability.
 
 > Implementation note (2026-06-06, non-normative): the rescale is **split** across the policy and the environment. The brain's policy squashes to a *normalized* action (`speed ∈ [0, 1]`, `turn ∈ [-1, 1]`) and applies the tanh + normalized-affine log-det-Jacobian; `Continuous2DEnvironment.move_agent_normalized` applies the *physical* rescale (`× max_step_mm`, `× π`). This keeps brains env-scale-agnostic and the physical scale where movement semantics live; it is PPO-equivalent because the physical affine is a constant that cancels in the importance ratio. The system-level observable below (the action applied to the env lies in `[0, max] × [−π, π]`) is satisfied at the environment boundary.
 
 #### Scenario: Bounded sampled actions
 
 - **WHEN** a continuous action is sampled and applied to the environment
-- **THEN** `speed` lies within `[0, max_step_mm]` (the configured per-step maximum displacement from the continuous-2D environment configuration) and `turn` lies within `[−π, π]`
+- **THEN** `speed` lies within `[0, max_step_mm]` (the configured per-step maximum displacement from the continuous-2D environment configuration), or within `[−max_step_mm, max_step_mm]` under `signed_speed`, and `turn` lies within `[−π, π]`
 
 #### Scenario: Jacobian-corrected log-probability
 
@@ -75,3 +75,26 @@ SHALL change as a result.
 
 - **WHEN** a discrete-action brain runs one step
 - **THEN** `continuous_mean` SHALL be `None`
+
+### Requirement: Signed speed bounds that agree with the environment
+
+Continuous brains SHALL take their action bounds from one shared helper. Under `signed_speed: true`
+the speed bound SHALL be `[-1, 1]`; otherwise it SHALL be `[0, 1]` as before, with turn `[-1, 1]` either
+way. A simulation configuration whose continuous brain's `signed_speed` differs from the environment's
+`allow_reversal` SHALL be refused at load.
+
+#### Scenario: Every continuous brain reads the shared bounds
+
+- **WHEN** any continuous PPO brain is built with `signed_speed: true`
+- **THEN** its action bounds SHALL be `[-1, -1]` to `[1, 1]`, and with it false they SHALL be unchanged
+
+#### Scenario: A brain and an environment that disagree are refused
+
+- **WHEN** a configuration sets `signed_speed` on the brain and not `allow_reversal` on the environment,
+  or the reverse
+- **THEN** loading SHALL raise, naming both settings
+
+#### Scenario: Signed speed needs continuous actions
+
+- **WHEN** a discrete-action brain sets `signed_speed: true`
+- **THEN** validation SHALL raise

@@ -49,8 +49,10 @@ from quantumnematode.brain.arch._plasticity_config import (
 from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_sample_torch,
+    continuous_action_bounds,
     continuous_deterministic_action,
     continuous_sample_tanh_gaussian,
+    raise_on_speed_sign_mismatch,
 )
 from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
 from quantumnematode.brain.arch._registry import register_brain
@@ -62,7 +64,10 @@ from quantumnematode.brain.arch._std_head import (
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.weights import WeightComponent
-from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+from quantumnematode.connectome.loader import (
+    load_cook_2019_hermaphrodite,
+    load_emmons_2024_hermaphrodite,
+)
 from quantumnematode.connectome.measured_weights import coverage, measured_weights
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
@@ -242,7 +247,14 @@ _N_ACTIONS = 4
 class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     """Configuration for the connectome-constrained PPO brain."""
 
-    connectome_source: Literal["cook_2019_hermaphrodite"] = "cook_2019_hermaphrodite"
+    # The connectome the brain is built on. "emmons_2024_hermaphrodite" is the same reconstruction
+    # as released under CC BY 4.0 with its lab's corrections: identical neurons, chemical synapses
+    # and neuromuscular map, and four gap-junction pairs that differ (two added, two
+    # strengthened). Every wiring, null and measured prior is built on the chosen source. Default
+    # Cook 2019 is byte-identical to the pre-option brain.
+    connectome_source: Literal["cook_2019_hermaphrodite", "emmons_2024_hermaphrodite"] = (
+        "cook_2019_hermaphrodite"
+    )
     # Wiring control. "wild_type" uses the loaded Cook-2019 adjacency as-is;
     # "rewired_degree_preserving" replaces the chemical + gap-junction edge sets with a
     # degree-preserving edge-swapped null (every neuron's in/out degree preserved, only
@@ -2735,8 +2747,10 @@ class ConnectomePPOBrain(ClassicalBrain):
         # Action mode: discrete (categorical) or continuous (tanh-squashed Gaussian
         # over a normalized (speed, turn) vector; the env rescales to physical units).
         self.continuous = config.action_mode == "continuous"
-        self._action_low = torch.tensor([0.0, -1.0], device=self.device)
-        self._action_high = torch.tensor([1.0, 1.0], device=self.device)
+        self._action_low, self._action_high = continuous_action_bounds(
+            signed_speed=config.signed_speed,
+            device=self.device,
+        )
         self._action_set = action_set if action_set is not None else list(DEFAULT_ACTIONS)
         if len(self._action_set) != _N_ACTIONS:
             msg = (
@@ -2745,11 +2759,16 @@ class ConnectomePPOBrain(ClassicalBrain):
             )
             raise ValueError(msg)
 
-        # Load the connectome (currently only Cook 2019 is supported).
-        if config.connectome_source != "cook_2019_hermaphrodite":
+        # Load the connectome. ``model_copy`` skips the Literal's validation, so an unknown source
+        # is refused here as well.
+        loaders = {
+            "cook_2019_hermaphrodite": load_cook_2019_hermaphrodite,
+            "emmons_2024_hermaphrodite": load_emmons_2024_hermaphrodite,
+        }
+        if config.connectome_source not in loaders:
             msg = f"Unsupported connectome_source: {config.connectome_source!r}"
             raise ValueError(msg)
-        connectome = load_cook_2019_hermaphrodite()
+        connectome = loaders[config.connectome_source]()
         # Kept before any rewiring: a measured prior is defined on the wild type's edges even when
         # the brain is built on a null, so a rewired and a wild-type brain agree on it at one seed.
         wild_type = connectome
@@ -3476,6 +3495,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 name="training_state",
                 state={
                     "continuous_std_mode": self.config.continuous_std_mode,
+                    "signed_speed": self.config.signed_speed,
                     "learning_rule": self.config.learning_rule,
                     "third_factor": self.config.third_factor,
                     "wiring": self.config.wiring,
@@ -3677,6 +3697,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         are present and the PPO rule is live, resets the rollout buffer, and under
         the plastic rule returns the rule's running state to its construction values.
         """
+        raise_on_speed_sign_mismatch(components, signed_speed=self.config.signed_speed)
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
         self._reject_plasticity_identity_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None

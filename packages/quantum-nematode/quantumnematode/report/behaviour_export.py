@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from quantumnematode.report.dtypes import SimulationResult
+    from quantumnematode.report.dtypes import BehaviourStep, SimulationResult
 
 BEHAVIOUR_CAPTURE_FILENAME = "behaviour_capture.json"
 
@@ -41,7 +41,7 @@ def write_behaviour_capture(
         {
             "run": r.run,
             "seed": r.seed,
-            "steps": [asdict(step) for step in r.behaviour],
+            "steps": [_record(step) for step in r.behaviour],
         }
         for r in results
         if r.behaviour
@@ -53,3 +53,11 @@ def write_behaviour_capture(
     with output_path.open("w") as f:
         json.dump({"runs": runs}, f)
     return output_path
+
+
+def _record(step: BehaviourStep) -> dict[str, object]:
+    """Return one step's export record, leaving out the signed speed when it was not recorded."""
+    record = asdict(step)
+    if record["speed_signed"] is None:
+        del record["speed_signed"]
+    return record

@@ -40,6 +40,11 @@ class BehaviourStep:
         during a foraging run, so it cannot be recomputed post-hoc).
     grad_strength : float
         Local food-gradient magnitude (weak-gradient steps can be down-weighted / excluded).
+    speed_signed : float | None
+        Recorded only when the environment allows reversal: the displacement since the previous
+        captured step projected on the heading, in mm, negative when the worm backed up; zero at
+        an episode's first captured step, which follows no move. ``None`` otherwise, and then
+        omitted from the export, so captures without reversal are unchanged.
     """
 
     step: int
@@ -50,6 +55,7 @@ class BehaviourStep:
     dc_dt: float
     grad_dir: float
     grad_strength: float
+    speed_signed: float | None = None
 
 
 class TerminationReason(StrEnum):
