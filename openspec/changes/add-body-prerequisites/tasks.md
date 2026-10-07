@@ -12,9 +12,9 @@ validation pilot.
   check at load. Tests for each.
 - [x] 4. **Emmons 2024 source**: `connectome_source`, the loader branch, and a test that Emmons differs
   from Cook in exactly the four gap pairs.
-- [ ] 5. **D19 recorded (C.0d)**: roadmap D19 marked decided, with the generator's form, parameter
+- [x] 5. **D19 recorded (C.0d)**: roadmap D19 marked decided, with the generator's form, parameter
   sources, interface and calibration protocol; tracker C.0d.
-- [ ] 6. **Pilot configs and analysis**: MLP-PPO and the Emmons settling wild type on hard350 with
+- [x] 6. **Pilot configs and analysis**: MLP-PPO and the Emmons settling wild type on hard350 with
   reversal, learning and frozen, through a generator with loader tests;
   `scripts/analysis/body_prerequisites.py` (the floor gate, the beside-measures) with tests.
 - [ ] 7. **Pilot**: seeds 1301–1308, 32 runs; the gate read; the record committed.

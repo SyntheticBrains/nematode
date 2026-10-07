@@ -123,10 +123,10 @@ lies above zero, the same test the panels use.
 - **A learner fails:** the pilot is the diagnosis. Its plateau, floor and how often it reverses go to the
   maintainer before C.1 registers.
 
-**Reported beside, never read:**
-
-- each learner's plateau against its committed reversal-off runs on the same cell;
-- the fraction of steps with negative speed.
+**Reported beside, never read:** each learner's plateau against its committed reversal-off runs on
+the same cell. *(Amended before the pilot ran: the fraction of steps with negative speed was to be
+reported too, but it needs behaviour capture on every step of 3,000-episode runs, about 150 MB a run.
+Reversal use is read where bout statistics are, through the body at C.1d with C.3's instruments.)*
 
 The connectome comparison changes two things at once, reversal and substrate, so it is description only.
 
@@ -136,7 +136,6 @@ learning run and 11 per frozen run at 16 workers, and less for MLP-PPO. That com
 ## Risks
 
 - **Reversal may be used as a second forward gear**, moving backward toward food with the head turned
-  away. The worm's sensing is head-based, so this is self-limiting. The beside-measure of negative-speed
-  steps shows it.
+  away. The worm's sensing is head-based, so this is self-limiting; it is read through the body at C.1d.
 - **A centred initial policy may learn slower.** The pilot reads only whether each learner still learns;
   any slowdown is reported, and C.1 registers its own floors and baselines anyway.
