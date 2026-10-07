@@ -13,6 +13,6 @@ their own changes.
   runner dispatch; the connectome readout; MLP-PPO's width; the agreement checks and refusals. Tests
   for each.
 - [x] 4. **A smoke run** — **done: both brains run hard350 through the body (Emmons, reversal on); two report plots fixed for a 25-number action.** Original scope: a few episodes of each brain through the body on hard350 (Emmons, reversal on).
-- [ ] 5. **Close-out**: tracker C.1a–c; CHANGELOG; full suite; `git add -A` then
+- [x] 5. **Close-out** — **done: tracker C.1a, C.1b, C.1c (and C.0c closed with it); CHANGELOG; full suite 7,309 passed; hooks pass; validated; archived.** Original scope: tracker C.1a–c; CHANGELOG; full suite; `git add -A` then
   `uv run pre-commit run --all-files`, judged by exit code; `openspec validate --strict`; archive and
   PR.
