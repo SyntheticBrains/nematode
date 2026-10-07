@@ -17,7 +17,7 @@ from quantumnematode.agent import QuantumNematodeAgent, RewardConfig, SatietyCon
 from quantumnematode.brain.arch import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
-from quantumnematode.env.env import DEFAULT_AGENT_ID
+from quantumnematode.env.env import DEFAULT_AGENT_ID, ContactZone, PredatorParams, PredatorType
 from quantumnematode.env.worm_time import (
     UNDULATION_PERIOD_S,
     step_worm_seconds,
@@ -96,6 +96,30 @@ class TestReversalOn:
         agent = env.agents[DEFAULT_AGENT_ID]
         assert agent.pos_continuous == pytest.approx(_pos(env))
         assert agent.heading_rad == pytest.approx(0.0)
+
+
+class TestContactZoneUnderReversal:
+    def test_a_predator_behind_stays_posterior_after_backing_up(self) -> None:
+        """The zone is taken against the heading, which reversal does not flip."""
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=30.0, allow_reversal=True),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.PURSUIT,
+                detection_radius=50,
+                damage_radius=5,
+            ),
+            start_pos=(15, 15),
+            seed=7,
+        )
+        state = env.agents[DEFAULT_AGENT_ID]
+        state.pos_continuous = (10.0, 10.0)
+        state.heading_rad = 0.0  # facing +x
+        env.predators[0].pos_continuous = (7.0, 10.0)  # behind
+        env.move_agent_continuous(speed=-1.0, turn=0.0)  # backs toward it
+        assert _pos(env) == pytest.approx((9.0, 10.0))
+        assert env.get_agent_predator_contact_zone_for(DEFAULT_AGENT_ID) == ContactZone.POSTERIOR
 
 
 def _agent(*, reversal: bool) -> QuantumNematodeAgent:

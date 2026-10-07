@@ -40,7 +40,7 @@ used: C.1c's generator consumes it, and a test pins it on both block-V cells' co
 - The rate-of-change feature reads the actual displacement, so backing down a gradient reads as a fall.
 - Contact zones are taken against the heading, so a predator behind a reversing worm is still posterior.
 
-Tests pin all three.
+Tests pin the heading's invariance under reversal, the sensed position following the backward step, and the posterior zone after backing up; the rate-of-change feature rests on the existing position-based finite difference.
 
 **Brains.** The shared continuous-brain config gains `signed_speed: bool = False`, refused under discrete
 actions. `_policy.continuous_action_bounds(signed_speed)` returns `([-1, -1], [1, 1])` or today's
