@@ -10,7 +10,7 @@ Registered in `docs/experiments/logbooks/supporting/083-body-control/launch.md` 
 - [x] 3. **Configs and analysis**: the calibration and control configs through a generator; the rule,
   the gates and the fallback in `body_control.py`. Tests.
 - [ ] 4. **Calibration pilot**: seeds 1501–1504, four gains, learning and frozen (32 runs); the rule applied; the gain frozen; cost
-  measured; the reversal-rate reference verified.
+  measured; the reversal-rate reference verified (done 2026-10-07: an order of magnitude, recorded in design B).
 - [ ] 5. **Registration**: the launch record, then `/nematode-review-spec`.
 - [ ] 6. **Control**: seeds 1505–1512, learning and frozen; the fallback if needed.
 - [ ] 7. **Kinematics**: the instruments on the trained controls; the half-step check.

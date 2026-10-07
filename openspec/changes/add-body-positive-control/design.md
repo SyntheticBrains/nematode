@@ -82,8 +82,15 @@ The MLP keeps its standard initialisation, for three reasons:
 The pilot reports each seed's untrained and trained reversal fraction, so a gain is never chosen on a
 seed that learned only to stop reversing.
 
-A worm's spontaneous reversal rate is roughly one to a few a minute, 0.1–0.3 per 5-second step. That
-rate is recalled from the literature and is verified before the registration cites it.
+**The worm's reversal rate, checked 2026-10-07.** Spontaneous reversal frequency is
+condition-dependent, not a constant. Zhao et al. (2003, J Neurosci 23:5319) find that humidity,
+gravidity and touch all move it. Off food on wet agar it is several per minute, about 5 in secondary
+summaries, and it falls as local search gives way to global search over roughly 15 minutes (Gray,
+Hill & Bargmann 2005, PNAS 102:3184). The primary figures were not open to check the exact values.
+
+"One to a few a minute" is therefore an order of magnitude, not a band. A one-step reversal at one to
+five a minute is a per-step fraction of about 0.08 to 0.4. The registration cites it as that order of
+magnitude, and reversal fraction stays descriptive, as Decision E has it.
 
 ### Decision C: The steering calibration, a rule fixed first
 
