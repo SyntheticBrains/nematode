@@ -15,7 +15,7 @@ Phase 8 optional M.8, run alongside C.1's build. Registered in
   check; cost.
 - [x] 6. **Registration** — **done: launch.md with the readiness review; tracker M.8 and M.7 decisions.** Original scope: the launch record, then `/nematode-review-spec`; the tracker's M.8 and M.7
   decisions.
-- [ ] 7. **Campaign**: from a separate worktree, seeds 513–576, 256 runs (first written as 192, a miscount).
-- [ ] 8. **Readout**: Logbook 082; tracker M.8.
+- [x] 7. **Campaign** — **done 2026-10-08: 256/256 succeeded in 7.1 h (4.5 h estimated).** Original scope: from a separate worktree, seeds 513–576, 256 runs (first written as 192, a miscount).
+- [x] 8. **Readout** — **done: `placement`; Logbook 082; tracker M.8; the plasticity check made to find twins across campaigns, and a `multipliers` reading added.** Original scope: Logbook 082; tracker M.8.
 - [ ] 9. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
   exit code; `openspec validate --strict`; archive and PR.

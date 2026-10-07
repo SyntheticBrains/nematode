@@ -209,6 +209,74 @@ def score(log_dirs: list[Path], out_dir: Path, seeds: tuple[int, ...] = SEEDS) -
     }
 
 
+def _final_topology(log: Path) -> dict[str, Any] | None:
+    """Return a run's final topology tensors, through its tracked-experiment record."""
+    import torch
+    from l4_panel import (  # pyright: ignore[reportMissingImports]
+        EXPERIMENTS,
+        REPO,
+        _experiment_json,
+    )
+
+    experiment = _experiment_json(log.read_text(), EXPERIMENTS)
+    exports = experiment.get("exports_path") if experiment else None
+    final = REPO / exports / "weights" / "final.pt" if exports else None
+    if final is None or not final.is_file():
+        return None
+    topology = torch.load(final, weights_only=True).get("topology")
+    return topology if isinstance(topology, dict) else None
+
+
+def multipliers(log_dirs: list[Path], seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
+    """Describe how far each plastic run's learned gap multipliers moved from 1.
+
+    Per run, over the existing gap pairs: the median absolute log multiplier, the 5th and 95th
+    percentile multipliers, the extremes, and total gap strength relative to the starting strengths.
+    Each is summarised over seeds per wiring.
+    """
+    import numpy as np
+    import torch
+
+    out: dict[str, Any] = {}
+    for wiring, arm in (("wild_type", "wt_learn"), ("gap_only_null", "rn_learn")):
+        rows: list[tuple[float, ...]] = []
+        for seed in seeds:
+            log = _find(log_dirs, f"{STEMS[PLASTIC][arm]}-seed{seed}.log")
+            topology = _final_topology(log) if log is not None else None
+            if topology is None:
+                continue
+            log_multiplier = topology["gap_log_multiplier"]
+            strengths = topology["g_gap"]
+            pairs = strengths > 0
+            multiplier = torch.exp((log_multiplier + log_multiplier.T) / 2)[pairs].double().numpy()
+            start = strengths[pairs].double().numpy()
+            rows.append(
+                (
+                    float(np.median(np.abs(np.log(multiplier)))),
+                    float(np.percentile(multiplier, 5)),
+                    float(np.percentile(multiplier, 95)),
+                    float(multiplier.min()),
+                    float(multiplier.max()),
+                    float((start * multiplier).sum() / start.sum()),
+                ),
+            )
+        table = np.array(rows) if rows else np.zeros((0, 6))
+        out[wiring] = {
+            "n_seeds": len(rows),
+            "median_abs_log_multiplier": float(np.median(table[:, 0])) if rows else None,
+            "p5_multiplier": float(np.median(table[:, 1])) if rows else None,
+            "p95_multiplier": float(np.median(table[:, 2])) if rows else None,
+            "min_multiplier": float(table[:, 3].min()) if rows else None,
+            "max_multiplier": float(table[:, 4].max()) if rows else None,
+            "total_strength_ratio": float(np.median(table[:, 5])) if rows else None,
+            "total_strength_ratio_range": [float(table[:, 5].min()), float(table[:, 5].max())]
+            if rows
+            else None,
+        }
+    out["summary"] = "medians over seeds of per-run statistics over existing gap pairs"
+    return out
+
+
 def write_csv(result: dict[str, Any], path: Path) -> Path:
     """One row per seed: every arm's plateau and floor, both gaps, the interaction."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -261,6 +329,10 @@ def identity(rerun_dir: Path, repo: Path = wp.REPO) -> dict[str, Any]:
     }
 
 
+def _find(log_dirs: list[Path], name: str) -> Path | None:
+    return next((d / name for d in log_dirs if (d / name).is_file()), None)
+
+
 def plasticity(log_dirs: list[Path], seeds: tuple[int, ...] = PILOT_SEEDS) -> dict[str, Any]:
     """Check each plastic-gap learning run differs from its fixed-gap twin at the same seed.
 
@@ -275,13 +347,11 @@ def plasticity(log_dirs: list[Path], seeds: tuple[int, ...] = PILOT_SEEDS) -> di
     for wiring, (fixed, plastic) in pairs.items():
         per_seed: dict[int, bool | None] = {}
         for seed in seeds:
-            found = [
-                (d / f"{fixed}-seed{seed}.log", d / f"{plastic}-seed{seed}.log") for d in log_dirs
-            ]
-            pair = next(((a, b) for a, b in found if a.is_file() and b.is_file()), None)
-            per_seed[seed] = (
-                None if pair is None else gs.run_lines(pair[0]) != gs.run_lines(pair[1])
-            )
+            # The twins may sit in different campaigns (reused fixed-gap runs), so each is found
+            # across every directory on its own.
+            a = _find(log_dirs, f"{fixed}-seed{seed}.log")
+            b = _find(log_dirs, f"{plastic}-seed{seed}.log")
+            per_seed[seed] = None if a is None or b is None else gs.run_lines(a) != gs.run_lines(b)
         out[wiring] = per_seed
     complete = all(v is not None for seeds_ in out.values() for v in seeds_.values())
     acts = complete and all(all(seeds_.values()) for seeds_ in out.values())
@@ -299,11 +369,18 @@ def main(argv: list[str] | None = None) -> int:
     ident.add_argument("--rerun", type=Path, required=True)
     plast = sub.add_parser("plasticity", help="check plastic runs differ from their fixed twins")
     plast.add_argument("--logs", type=Path, action="append", required=True)
+    plast.add_argument(
+        "--panel",
+        action="store_true",
+        help="check the panel's seeds, not the pilot's",
+    )
+    mult = sub.add_parser("multipliers", help="how far the learned gap multipliers moved")
+    mult.add_argument("--logs", type=Path, action="append", required=True)
     sc = sub.add_parser("score", help="score the panel")
     sc.add_argument("--logs", type=Path, action="append", required=True)
     sc.add_argument("--out-dir", type=Path, required=True)
     sc.add_argument("--csv", type=Path)
-    for parser in (ident, plast, sc):
+    for parser in (ident, plast, mult, sc):
         parser.add_argument("--out", type=Path, help="write the JSON here")
     args = ap.parse_args(argv)
 
@@ -311,8 +388,11 @@ def main(argv: list[str] | None = None) -> int:
         result = identity(args.rerun)
         ok = result["all_identical"]
     elif args.command == "plasticity":
-        result = plasticity(args.logs)
+        result = plasticity(args.logs, SEEDS if args.panel else PILOT_SEEDS)
         ok = result["plasticity_acts"]
+    elif args.command == "multipliers":
+        result = multipliers(args.logs)
+        ok = all(result[w]["n_seeds"] == len(SEEDS) for w in ("wild_type", "gap_only_null"))
     else:
         result = score(args.logs, args.out_dir)
         ok = True

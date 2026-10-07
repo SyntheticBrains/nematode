@@ -121,3 +121,19 @@ class TestChecks:
         assert result["complete"] is True
         assert result["plasticity_acts"] is False
         assert all(result["per_seed"]["gap_only_null"].values())
+
+    def test_twins_in_different_campaigns_are_paired(self, tmp_path: Path) -> None:
+        reused, panel = tmp_path / "reused", tmp_path / "panel"
+        reused.mkdir()
+        panel.mkdir()
+        for seed in pg.PILOT_SEEDS:
+            for level, status, where in (
+                (pg.FIXED, "SUCCESS", reused),
+                (pg.PLASTIC, "FAIL", panel),
+            ):
+                for arm in ("wt_learn", "rn_learn"):
+                    path = where / f"{pg.STEMS[level][arm]}-seed{seed}.log"
+                    path.write_text(f"Run: 1 Status: {status}\n")
+        result = pg.plasticity([panel, reused])
+        assert result["complete"] is True
+        assert result["plasticity_acts"] is True
