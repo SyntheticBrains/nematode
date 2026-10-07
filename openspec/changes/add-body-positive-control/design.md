@@ -1,0 +1,127 @@
+## Overview
+
+C.1d asks whether the strongest available learner forages through the body, and whether what it
+produces moves like a worm. Its answer gates C.1e. It freezes the body's last free parameter, the
+steering gain, so that every later arm runs the same body.
+
+## Decisions
+
+### Decision A: The body's parameters
+
+| parameter | value | source |
+|---|---|---|
+| period | 3.33 s | crawling frequency 0.30 ± 0.02 Hz (Fang-Yen et al. 2010, *PNAS* 107:20323, Table 1) |
+| wavelength | 0.65 body lengths | 0.65 ± 0.03 body lengths (Fang-Yen et al. 2010) |
+| drag anisotropy `c_n / c_t` | 10 | 9.4 ± 0.6 on wet agar (Shen et al. 2012, *Biophys J*); 222.0 / 22.1 measured directly (Rabets et al. 2014, *Biophys J*) |
+| peak curvature `A₀` | 18 body-lengths⁻¹ | see below |
+| steering gain `B₀` | calibrated (Decision C) | no direct measurement |
+
+**Peak curvature.** Typical crawling postures have amplitude A/q ≈ 1 at wavevector qL ≈ 9, and
+Ω-shapes have A/q ≈ 2 (Bilbao et al., "Navigation of *C. elegans* in three-dimensional media", arXiv
+1609.03452). The sourced wavelength gives qL = 2π / 0.65 ≈ 9.7, in agreement.
+
+Peak curvature is 18, which spreads the drive across the full posture range:
+
+| drive | amplitude factor | peak κL | posture |
+|---|---|---|---|
+| zero (neutral) | 0.5 | about 9 | the sourced crawl (W-shape) |
+| full | 1 | 18 | Ω-shape |
+| minimum | 0 | 0 | straight |
+
+The brain can therefore damp, keep or exaggerate the crawl, which C.3's omega-turn geometry needs.
+
+**A defect in C.1c, fixed here.** The head switch flips when the bend crosses ±θ (θ = 0.5), so the
+relayed wave spanned ±θ, not the ±1 the amplitude mapping assumes. Every posture was therefore half as
+curved as intended. The relay now divides the wave by θ, so that it spans ±1. Measured on the body at
+the sourced parameters:
+
+| drive | peak κL | speed (body lengths/s) |
+|---|---|---|
+| neutral | 7.9 | 0.109 |
+| full | 15.7 | 0.08 |
+
+The neutral peak is close to the sourced 9; the switch's exponential wave shape accounts for the
+difference. The neutral speed sits just below C.3's speed band. Very large amplitudes are less
+efficient, so speed falls at full drive. The body is not tuned toward the band, which is what this
+control validates against, and the trained MLP chooses its own amplitude.
+
+### Decision B: The reversal threshold
+
+The wave runs tail-to-head only when the direction channel is below **−0.5**, for every arm. An untrained
+policy's direction is centred near zero, so with a sign threshold its wave would flip at random. The
+threshold's untrained per-step reversal probability is `Φ(−artanh(0.5) / σ)`. At the hard350 configs'
+initial policy spreads that is:
+
+| arm | initial spread σ | untrained reversal probability per step |
+|---|---|---|
+| MLP | 0.37 | about 0.07 |
+| connectome | 1.0 | about 0.29 |
+
+That brackets a worm's spontaneous reversal rate of roughly one to a few a minute, 0.1–0.3 per 5-second
+step. That rate is recalled from the literature and is to be verified before the registration cites
+it.
+
+### Decision C: The steering calibration, a rule fixed first
+
+**The pilot.** MLP-PPO through the body at **B₀ ∈ {0.5, 1, 2, 4}**, on hard350 with reversal on, 3,000
+episodes, **seeds 1501–1504**, learning and frozen at each gain, 32 runs. The MLP has no connectome;
+Emmons 2024 applies to the connectome arms that follow.
+
+**The rule.** Choose the B₀ with the highest mean plateau success. Differences under 5 points are ties,
+broken toward the smaller gain, the gentler steering. If no B₀ beats the frozen floor at any seed, the
+pilot is C.1d's diagnosis, and no control runs.
+
+**After it.** The chosen gain is frozen in the body's defaults. Its neighbours' plateaus are reported
+as the sensitivity check (D18). Only MLP-PPO runs, so no wiring result informs the choice.
+
+### Decision D: The positive control
+
+MLP-PPO through the body at the chosen B₀, on hard350 with reversal on, 3,000 episodes, **seeds
+1505–1512**, learning and frozen.
+
+**Passes** if:
+
+- the learning arm beats its frozen floor, paired by seed, with the 80% interval of the plateau
+  difference above zero;
+- every seed's plateau success is at least 30%, the episode metric's competence level.
+
+**The fallback**, fixed before the control runs. If the floor gate passes but competence fails, a
+gate-only pilot on disjoint seeds lengthens the episode, at 500, then 700 and then 1,000 steps. The
+shortest length at which every seed reaches competence is chosen, and the control re-runs there on
+fresh seeds. The cell's meaning moves, which C.1e already treats as a new reference frame.
+
+If the floor gate fails, C.1d fails, and the diagnosis is its deliverable.
+
+### Decision E: The kinematic instruments
+
+Each trained control run's final weights are evaluated for 10 episodes with posture capture. The body
+records each sub-step's curvature and head position, every 0.25 worm-seconds at 20 sub-steps.
+
+- **Undulation frequency.** Half the rate of the mid-body curvature's crossings of its own episode
+  mean. A crossing counts only after the curvature has left a ±0.31 κL band around that mean (C.3's
+  adopted band rule).
+- **Wavelength.** From the phase lag of curvature along the body, in body lengths.
+- **Speed.** The head's net displacement per worm-second, in body lengths per second.
+- **Reversal fraction.** The share of steps run tail-to-head.
+
+**Wall exclusion.** Steps whose head lies within 1 mm of a wall are excluded (H.3's margin), and the
+exclusion is recorded.
+
+**Bands** (C.3's adopted thresholds): frequency 0.2–0.45 Hz, wavelength 0.5–0.8 body lengths, speed
+0.12–0.3 body lengths per second. A control that forages but sits outside a band is recorded as a
+kinematic condition on every later body result. It is not a foraging failure.
+
+**Half-step check.** The same weights are re-evaluated at 40 sub-steps, and every instrument must agree
+within 10%.
+
+**What the instruments can and cannot show.** The frequency and wavelength are largely set by the
+generator's fixed parameters, so reading them mostly confirms the generator and its drive modulation.
+Speed and reversal fraction are emergent. The eigenworm check needs Stephens' basis, which is not
+vendored, and stays with C.3.
+
+## Risks
+
+- **The body is slower than the point worm**, and hard350's 350 steps may be too few. The fallback
+  handles it.
+- **The reversal rate's reference is recalled, not checked.** It is verified before the registration
+  cites it.
