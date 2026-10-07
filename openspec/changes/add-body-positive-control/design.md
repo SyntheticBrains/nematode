@@ -45,6 +45,17 @@ difference. The neutral speed sits just below C.3's speed band. Very large ampli
 efficient, so speed falls at full drive. The body is not tuned toward the band, which is what this
 control validates against, and the trained MLP chooses its own amplitude.
 
+**Two consequences of the larger postures**, measured when the defaults changed:
+
+- **Convergence.** At 20 sub-steps the motion is within about 4% of fully converged at neutral drive,
+  and within about 11% at high amplitude, against the 1% C.1c measured at its smaller placeholder
+  postures. The half-step check (Decision E) reads what this does to the instruments on trained
+  policies.
+- **Heading.** A body started straight settles within about 10 steps into a straight crawl along a
+  stable heading. A step is 1.5 periods, so successive steps sample opposite phases of the head's
+  swing, and the heading the brain senses alternates by about ±0.06 rad from step to step: a wobble,
+  not a drift.
+
 ### Decision B: The reversal threshold
 
 The wave runs tail-to-head only when the direction channel is below **−0.5**, for every arm. An untrained
