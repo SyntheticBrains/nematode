@@ -3,10 +3,10 @@
 Phase 8b C.1, the substrate. C.1d (the MLP positive control) and C.1e (the wiring contrast) follow as
 their own changes.
 
-- [ ] 1. **Muscle anatomy and the drive map (C.1a)**: the name parser, the segment map and the signed,
+- [x] 1. **Muscle anatomy and the drive map (C.1a)**: the name parser, the segment map and the signed,
   column-normalised map, with the zero-weight cells listed. Tests: parsing, segment counts, signs,
   normalisation, the 162 cells.
-- [ ] 2. **The body (C.1c)**: `env/body.py` with the generator, the drive modulation and the
+- [x] 2. **The body (C.1c)**: `env/body.py` with the generator, the drive modulation and the
   resistive-force step; `body_model` and its dispatch in the environment. Tests: forward and backward
   motion, turning by bias, the head's period, the arena clamp, the point worm unchanged.
 - [ ] 3. **The action space (C.1b)**: `action_space`, the body-drive bounds, the action type and the

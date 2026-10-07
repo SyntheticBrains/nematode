@@ -1055,6 +1055,20 @@ class Continuous2DConfig(BaseModel):
     # is byte-identical to the environment before the option. A continuous brain must set
     # signed_speed to match, or loading refuses the pair.
     allow_reversal: bool = False
+    # How the worm moves: "point" (default, byte-identical) or "kinematic", a 12-segment body driven
+    # by a 25-number drive through a body-level generator and resistive-force theory. A kinematic
+    # body needs allow_reversal, 8b's frozen setting, and a brain with action_space: body_drive.
+    body_model: Literal["point", "kinematic"] = "point"
+
+    @model_validator(mode="after")
+    def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
+        if self.body_model == "kinematic" and not self.allow_reversal:
+            msg = (
+                "continuous.body_model: kinematic requires allow_reversal: true: the body reverses "
+                "through its direction channel, and 8b's substrate is frozen with reversal on."
+            )
+            raise ValueError(msg)
+        return self
 
 
 # Reference windowed-attention span for the bit-memory Transformer-confound guard.
@@ -3378,6 +3392,7 @@ def create_env_from_config(
                 predator_damage_radius_mm=continuous_config.predator_damage_radius_mm,
                 max_turn_rad=continuous_config.max_turn_rad,
                 allow_reversal=continuous_config.allow_reversal,
+                body_model=continuous_config.body_model,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,
