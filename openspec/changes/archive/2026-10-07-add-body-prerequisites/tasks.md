@@ -17,8 +17,8 @@ validation pilot.
 - [x] 6. **Pilot configs and analysis**: MLP-PPO and the Emmons settling wild type on hard350 with
   reversal, learning and frozen, through a generator with loader tests;
   `scripts/analysis/body_prerequisites.py` (the floor gate, the beside-measures) with tests.
-- [ ] 7. **Pilot**: seeds 1301–1308, 32 runs; the gate read; the record committed.
-- [ ] 8. **Readout**: Logbook 081; tracker C.0a, C.0b, C.0d and the substrate freeze; roadmap C.0, D19
+- [x] 7. **Pilot** — **done: 32/32 in 27 min; both learners pass (MLP 97.1%, connectome 80.2%, floors 0%).** Original scope: seeds 1301–1308, 32 runs; the gate read; the record committed.
+- [x] 8. **Readout** — **done: Logbook 081; tracker C.0a, C.0b, C.0d; roadmap C.0 and D19; README; CHANGELOG.** Original scope: Logbook 081; tracker C.0a, C.0b, C.0d and the substrate freeze; roadmap C.0, D19
   and D22; CHANGELOG.
-- [ ] 9. **Close-out**: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
+- [x] 9. **Close-out** — **done: full suite 7,253 passed; hooks pass with everything staged, judged by exit code; validated; archived.** Original scope: full suite; `git add -A` then `uv run pre-commit run --all-files`, judged by
   exit code; `openspec validate --strict`; archive and PR.

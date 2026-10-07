@@ -252,13 +252,13 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### C.0 — body prerequisites (MUST; each lands, validates and freezes before C.1 registers)
 
-- [ ] **C.0a Step–time calibration**: one recorded constant relating an environment step to worm
+- [x] **C.0a Step–time calibration** — **met 2026-10-07** ([Logbook 081](../../../docs/experiments/logbooks/081-body-prerequisites.md), `add-body-prerequisites`): `env/worm_time.py` records a full-speed step as `max_step_mm` / 0.2 mm/s, **5.0 worm-seconds** at block V's 1.0 mm, 3.1 undulation periods (0.15–0.3 mm/s would give 3.3–6.7 s). Original scope: one recorded constant relating an environment step to worm
   seconds, from the validated 0.2 mm/s crawl, the ~1.6 s undulation period and the arena scale;
   cited by every kinematic target and cost estimate below. (The current cap is one body length
   per step, ≥ 5 s of worm time at full speed.)
   *(D22, 2026-10-03: the default is **about five worm-seconds** — three undulation periods integrated inside the step by D19's generator — so campaign cost and hard350's meaning are unchanged; C.0a records the constant and its derivation rather than choosing it.)*
 
-- [ ] **C.0b Signed speed**: reversal as a first-class continuous action (speed is clamped to
+- [x] **C.0b Signed speed** — **met 2026-10-07** ([Logbook 081](../../../docs/experiments/logbooks/081-body-prerequisites.md)): `continuous.allow_reversal` and a shared `signed_speed` bound on every continuous brain, refused at load when they disagree, byte-identical when off; validated on hard350 with reversal on, MLP-PPO 97.1% and the Emmons connectome 80.2% plateau against 0% floors. **8b's substrate is frozen on Emmons 2024 with reversal on**; 8a and M.8 stay on Cook 2019. Original scope: reversal as a first-class continuous action (speed is clamped to
   `[0, max_step_mm]` today), byte-identical-when-off, so VA/DA and VB/DB mean different things
   and escape can be reversal-plus-turn.
 
