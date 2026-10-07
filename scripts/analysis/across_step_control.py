@@ -252,7 +252,13 @@ def identity(identity_dir: Path, repo: Path = wp.REPO) -> dict[str, Any]:
                 missing = [str(q) for q in (committed, rerun) if not q.is_file()]
                 results[f"{cell}/{name}"] = {"identical": False, "missing": missing}
                 continue
-            results[f"{cell}/{name}"] = gs.compare_runs(committed, rerun)
+            record = gs.compare_runs(committed, rerun)
+            # The record is committed, so it names the run by its repository path, not this machine's.
+            try:
+                record["committed"] = str(committed.relative_to(repo))
+            except ValueError:
+                record["committed"] = str(committed)
+            results[f"{cell}/{name}"] = record
     return {
         "runs": results,
         "all_identical": bool(results) and all(r["identical"] for r in results.values()),

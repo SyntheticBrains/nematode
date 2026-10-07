@@ -222,6 +222,18 @@ class TestIdentity:
             for stem, seed in pairs:
                 assert (logs / f"{stem}-seed{seed}.log").is_file()
 
+    def test_the_record_names_committed_runs_by_repository_path(self, tmp_path: Path) -> None:
+        stem, seed = asc.identity_runs()["hard350"][0]
+        name = f"{stem}-seed{seed}.log"
+        committed = tmp_path / asc.COMMITTED_CAMPAIGNS["hard350"] / "logs"
+        committed.mkdir(parents=True)
+        (committed / name).write_text("Run: 1 Status: SUCCESS\n")
+        rerun = tmp_path / "rerun"
+        rerun.mkdir()
+        (rerun / name).write_text("Run: 1 Status: SUCCESS\n")
+        record = asc.identity(rerun, repo=tmp_path)["runs"][f"hard350/{name}"]
+        assert record["committed"] == f"{asc.COMMITTED_CAMPAIGNS['hard350']}/logs/{name}"
+
     def test_missing_reruns_are_not_identical(self, tmp_path: Path) -> None:
         assert asc.identity(tmp_path)["all_identical"] is False
 
