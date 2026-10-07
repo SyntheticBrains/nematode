@@ -8,8 +8,8 @@ Phase 8 optional M.8, run alongside C.1's build. Registered in
 - [x] 2. **Plastic gaps**: `plastic_gaps`, the multiplier parameter and its use in both forward paths,
   the refusal under leaky. Tests: symmetry, positivity, no created pairs, a non-zero gradient, off
   byte-identical.
-- [ ] 3. **Configs**: the thermal t35 arms through a generator, with loader tests.
-- [ ] 4. **Analysis**: `plastic_gaps.py` (the identity check, the readings, the verdict map, the
+- [x] 3. **Configs**: the thermal t35 arms through a generator, with loader tests.
+- [x] 4. **Analysis**: `plastic_gaps.py` (the identity check, the readings, the verdict map, the
   plasticity check, the per-seed CSV) in the gate preflight's shape, with tests.
 - [ ] 5. **Identity check and pilot**: 6 re-runs; the pilot on 1401–1404; preflight; plasticity
   check; cost.
