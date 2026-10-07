@@ -1,10 +1,10 @@
-"""Signed speed bounds on every continuous brain, their agreement with the environment, and the
-Emmons 2024 connectome source.
+"""Signed speed bounds on every continuous brain, and the Emmons 2024 connectome source.
 
-Covers the continuous-action-policy requirement "Signed speed bounds that agree with the
-environment" (every continuous brain reads the shared bounds; a disagreeing brain and environment
-are refused; signed speed needs continuous actions) and the connectome-ppo-brain requirement
-"Emmons 2024 as a connectome source" (Emmons differs from Cook in four gap pairs only).
+The bounds must agree with the environment's reversal setting. Covers the
+continuous-action-policy requirement "Signed speed bounds that agree with the environment" (every
+continuous brain reads the shared bounds; a disagreeing brain and environment are refused; signed
+speed needs continuous actions) and the connectome-ppo-brain requirement "Emmons 2024 as a
+connectome source" (Emmons differs from Cook in four gap pairs only).
 """
 
 from __future__ import annotations
@@ -90,7 +90,8 @@ class TestAgreement:
         raw = self._raw()
         raw["brain"]["config"]["signed_speed"] = True
         with pytest.raises(
-            ValueError, match="allow_reversal is False but brain.config.signed_speed"
+            ValueError,
+            match=r"allow_reversal is False but brain\.config\.signed_speed",
         ):
             SimulationConfig.model_validate(raw)
 
@@ -98,7 +99,8 @@ class TestAgreement:
         raw = self._raw()
         raw["environment"]["continuous"]["allow_reversal"] = True
         with pytest.raises(
-            ValueError, match="allow_reversal is True but brain.config.signed_speed"
+            ValueError,
+            match=r"allow_reversal is True but brain\.config\.signed_speed",
         ):
             SimulationConfig.model_validate(raw)
 

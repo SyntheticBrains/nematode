@@ -7,6 +7,7 @@ records the signed speed only under reversal) and "The step's duration in worm t
 
 from __future__ import annotations
 
+import itertools
 import json
 import math
 from pathlib import Path
@@ -127,10 +128,11 @@ class TestCapture:
         agent.run_episode(RewardConfig(), max_steps=40)
         steps = agent.behaviour
         assert steps[0].speed_signed == 0.0
-        for prev, cur in zip(steps, steps[1:], strict=False):
+        for prev, cur in itertools.pairwise(steps):
             expected = (cur.x - prev.x) * math.cos(cur.heading_rad) + (cur.y - prev.y) * math.sin(
                 cur.heading_rad,
             )
+            assert cur.speed_signed is not None
             assert cur.speed_signed == pytest.approx(expected)
             assert abs(cur.speed_signed) <= 1.0 + 1e-9
 
