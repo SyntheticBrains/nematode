@@ -1,8 +1,7 @@
 """The evaluation harness runs trained body-drive weights with posture capture.
 
-Covers the body-kinematics requirement "Kinematic instruments": a trained run's final weights are
-evaluated frozen, with the body's posture captured, at the run's own sub-step count or at a doubled
-one for the half-step check.
+Covers the realworm-behavioural-validation requirement "Evaluating a trained body-drive run" (saved
+weights round-trip; a point-worm configuration is refused).
 """
 
 from __future__ import annotations

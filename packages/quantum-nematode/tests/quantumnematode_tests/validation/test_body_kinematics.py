@@ -1,8 +1,8 @@
 """The kinematic instruments read a body's undulation, wavelength, speed and reversals.
 
-Covers the body-kinematics requirement "Kinematic instruments" (frequency by band crossing,
-wavelength by crossing delays, speed in body lengths per second, reversal fraction, wall
-exclusion) and the environment's posture capture and configurable sub-step count.
+Covers the realworm-behavioural-validation requirement "Kinematic instruments" (a known wave is
+recovered; jitter is not an undulation; wall-proximal steps are excluded) and the
+continuous-2d-environment requirement "Episode posture capture, sub-step count and steering gain".
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from quantumnematode.env.body import DRIVE_WIDTH, N_SEGMENTS
+from quantumnematode.env.body import DRIVE_WIDTH, N_SEGMENTS, BodyParams
 from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
 from quantumnematode.validation.body_kinematics import (
     Kinematics,
@@ -131,6 +131,20 @@ class TestCapture:
         env.posture_log = []
         env.move_agent_body(np.r_[np.zeros(DRIVE_WIDTH - 1), 1.0])
         assert len(env.posture_log[0]["substeps"]) == 40  # type: ignore[arg-type]
+
+    def test_the_steering_gain_override_reaches_the_body(self) -> None:
+        default = self._env()
+        override = Continuous2DEnvironment(
+            continuous=Continuous2DParams(
+                world_size_mm=1000.0,
+                allow_reversal=True,
+                body_model="kinematic",
+                body_steering_gain=2.5,
+            ),
+            seed=0,
+        )
+        assert override._body.params.steering_gain == 2.5
+        assert default._body.params.steering_gain == BodyParams().steering_gain
 
     def test_the_body_crawls_inside_the_bands_it_was_built_for(self) -> None:
         env = self._env()

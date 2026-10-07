@@ -110,9 +110,9 @@ MLP-PPO through the body at the chosen B₀, on hard350 with reversal on, 3,000 
 - every seed's plateau success is at least 30%, the episode metric's competence level.
 
 **The fallback**, fixed before the control runs. If the floor gate passes but competence fails, a
-gate-only pilot on disjoint seeds lengthens the episode, at 500, then 700 and then 1,000 steps. The
-shortest length at which every seed reaches competence is chosen, and the control re-runs there on
-fresh seeds. The cell's meaning moves, which C.1e already treats as a new reference frame.
+gate-only pilot lengthens the episode, at 500, then 700 and then 1,000 steps. It runs the learning arm
+only, on **seeds 1513–1516**. The shortest length at which every seed reaches competence is chosen,
+and the control re-runs there, learning and frozen, on fresh **seeds 1517–1524**. The cell's meaning moves, which C.1e already treats as a new reference frame.
 
 If the floor gate fails, C.1d fails, and the diagnosis is its deliverable.
 
@@ -121,11 +121,14 @@ If the floor gate fails, C.1d fails, and the diagnosis is its deliverable.
 Each trained control run's final weights are evaluated for 10 episodes with posture capture. The body
 records each sub-step's curvature and head position, every 0.25 worm-seconds at 20 sub-steps.
 
-- **Undulation frequency.** Half the rate of the mid-body curvature's crossings of its own episode
-  mean. A crossing counts only after the curvature has left a ±0.31 κL band around that mean (C.3's
+- **Undulation frequency.** Half the rate of the mid-body curvature's crossings of its own mean, over
+  each unbroken stretch of forward-running, wall-clear steps. A crossing counts only after the curvature has left a ±0.31 κL band around that mean (C.3's
   adopted band rule).
-- **Wavelength.** From the phase lag of curvature along the body, in body lengths.
-- **Speed.** The head's net displacement per worm-second, in body lengths per second.
+- **Wavelength.** From the phase lag of curvature along the body, in body lengths. Each segment's
+  delay is read against its neighbour's and summed down the body, since a lag read against the head
+  wraps past a period once the wave needs longer than one to arrive.
+- **Speed.** The head's net displacement per worm-second, in body lengths per second, from each
+  episode's second step on (the first has no recorded starting pose).
 - **Reversal fraction.** The share of steps run tail-to-head.
 
 **Wall exclusion.** Steps whose head lies within 1 mm of a wall are excluded (H.3's margin), and the
@@ -135,8 +138,15 @@ exclusion is recorded.
 0.12–0.3 body lengths per second. A control that forages but sits outside a band is recorded as a
 kinematic condition on every later body result. It is not a foraging failure.
 
-**Half-step check.** The same weights are re-evaluated at 40 sub-steps, and every instrument must agree
-within 10%.
+**Half-step check.** The same weights are re-evaluated at 40 sub-steps. Each instrument's mean over the
+control's learning runs must agree within 10% between the two. Reversal fraction must agree within
+10% or 0.01 absolute, whichever is larger, since a fraction near zero has no stable relative error.
+Means are compared, not single runs: the two sub-step counts drive the policy down different
+trajectories, so single-run readings also differ by sampling.
+
+Before any run, the body alone at full drive moves 9% slower at 40 sub-steps than at 20 (Decision A's
+11% non-convergence at high drive), close to the bar. A control that spends its steps at high drive
+can fail the check on speed. That would be a property of the body's integration, recorded as such.
 
 **What the instruments can and cannot show.** The frequency and wavelength are largely set by the
 generator's fixed parameters, so reading them mostly confirms the generator and its drive modulation.

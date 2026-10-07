@@ -1,7 +1,7 @@
 r"""Run a trained body-drive policy with posture capture and read the kinematic instruments.
 
 The agent is rebuilt the way the simulation entry point builds it, from the run's config at its
-seed, with the run's final weights loaded and learning frozen. Each evaluation episode is seeded
+seed, with the run's final weights loaded (or none, for the untrained policy) and learning frozen. Each evaluation episode is seeded
 away from the training runs' seeds, captures the body's posture at every sub-step, and the
 instruments read the captured episodes together. ``--substeps`` overrides the body's sub-step
 count, which the half-step convergence check uses.
@@ -87,16 +87,20 @@ def build_brain(config_path: Path, seed: int) -> tuple[Brain, SimulationConfig, 
 def evaluate(  # noqa: PLR0913 - a run's identity and the evaluation's settings
     config_path: Path,
     seed: int,
-    weights: Path,
+    weights: Path | None,
     *,
     episodes: int = 10,
     substeps: int | None = None,
     wall_margin_mm: float = 1.0,
 ) -> Kinematics:
-    """Return the instruments' readings for one trained run over ``episodes`` frozen episodes."""
+    """Return the instruments' readings for one run over ``episodes`` frozen episodes.
+
+    ``weights`` of ``None`` reads the seed's untrained policy.
+    """
     brain, config, sensing_config = build_brain(config_path, seed)
     environment_config = configure_environment(config)
-    load_weights(brain, weights)
+    if weights is not None:
+        load_weights(brain, weights)
 
     continuous = environment_config.continuous
     if continuous is None or continuous.body_model != "kinematic":
@@ -163,7 +167,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--weights", type=Path, required=True)
+    parser.add_argument(
+        "--weights",
+        type=Path,
+        default=None,
+        help="omit to read the untrained policy",
+    )
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--substeps", type=int, default=None)
     parser.add_argument("--wall-margin-mm", type=float, default=1.0)

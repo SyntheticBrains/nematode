@@ -82,6 +82,8 @@ class Continuous2DParams:
     body_model: str = "point"
     # Sub-steps the kinematic body integrates per environment step; a half-step check doubles it.
     body_substeps: int = 20
+    # The kinematic body's steering gain; None keeps the body's calibrated default.
+    body_steering_gain: float | None = None
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -109,13 +111,14 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         self.continuous = continuous or Continuous2DParams()
         # Per-agent kinematic bodies, created on each agent's first step of the episode.
         self.bodies: dict[str, BodyState] = {}
-        self._body = KinematicBody(
-            BodyParams(
-                body_length_mm=self.continuous.body_length_mm,
-                step_seconds=step_worm_seconds(self.continuous.max_step_mm),
-                substeps=self.continuous.body_substeps,
-            ),
+        body_params = BodyParams(
+            body_length_mm=self.continuous.body_length_mm,
+            step_seconds=step_worm_seconds(self.continuous.max_step_mm),
+            substeps=self.continuous.body_substeps,
         )
+        if self.continuous.body_steering_gain is not None:
+            body_params = replace(body_params, steering_gain=self.continuous.body_steering_gain)
+        self._body = KinematicBody(body_params)
         # When a list, every kinematic step appends its drive and its sub-steps' posture; None (the
         # default) records nothing. Set per episode by an evaluation, never by a training run.
         self.posture_log: list[dict[str, object]] | None = None
