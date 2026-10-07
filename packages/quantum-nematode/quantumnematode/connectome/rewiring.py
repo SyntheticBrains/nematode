@@ -150,6 +150,7 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
     rewire_gap_junctions: bool = True,
     preserve_autapses: bool = False,
     hold_boundary: tuple[Collection[str], Collection[str]] | None = None,
+    rewire_chemical: bool = True,
 ) -> Connectome:
     """Return a degree-preserving rewired copy of ``connectome``.
 
@@ -158,7 +159,7 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
     chemical and gap-junction edge sets are rewired by independent seeded double-edge-swaps, each
     running ``swaps_per_edge * |E|`` accepted swaps for mixing. Deterministic given ``rng``'s seed.
 
-    Three options narrow what the null changes:
+    Four options narrow what the null changes:
 
     * ``rewire_gap_junctions=False`` skips the undirected swap, so gap junctions keep their pairs
       and counts, and every neuron keeps its total gap-junction strength.
@@ -172,6 +173,10 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
       held one, and degrees stay exact. Every chemical route of one or two hops from a sensory
       neuron to a motor neuron is kept, since its first edge leaves a sensory neuron and its last
       enters a motor neuron.
+
+    * ``rewire_chemical=False`` skips the directed swap, so the chemical graph, autapses included,
+      is the input's exactly; with ``rewire_gap_junctions`` left true the null differs in its gap
+      junctions alone, placement and each neuron's total gap strength together.
 
     At their defaults the options leave the draws, and so the rewired graph, exactly as they were.
     With ``preserve_autapses`` the directed swap runs on a shorter list and draws differently, so at
@@ -203,7 +208,8 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
         chem_edges = [
             edge for edge in chem_edges if edge[0] not in sensory and edge[1] not in motor
         ]
-    _directed_double_edge_swap(chem_edges, chem_weights, rng, swaps_per_edge * len(chem_edges))
+    if rewire_chemical:
+        _directed_double_edge_swap(chem_edges, chem_weights, rng, swaps_per_edge * len(chem_edges))
     chem_edges += autapses + held
 
     gap_weights = {(g.neuron_a, g.neuron_b): g.weight for g in connectome.gap_junctions}
@@ -225,6 +231,7 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
         source=f"{connectome.source}+rewired_degree_preserving"
         + ("" if rewire_gap_junctions else "[gap_junctions_held]")
         + ("[autapses_held]" if preserve_autapses else "")
-        + ("[boundary_held]" if hold_boundary is not None else ""),
+        + ("[boundary_held]" if hold_boundary is not None else "")
+        + ("" if rewire_chemical else "[chemical_held]"),
         version=connectome.version,
     )

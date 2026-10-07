@@ -273,6 +273,9 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # straight onto a motor neuron in one or two hops where the wild type needs more, which
     # favours the null at a shallow settling depth; this null keeps every such route as the wild
     # type has it.
+    # "rewired_gap_junctions_only" holds the chemical graph, autapses included, exactly and rewires
+    # only the gap junctions, their counts travelling with their edges, so it differs from the
+    # wild type in gap placement and each neuron's total gap strength, and nothing else.
     # Default wild_type is byte-identical to the pre-change brain.
     wiring: Literal[
         "wild_type",
@@ -280,6 +283,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         "rewired_chemical_only",
         "rewired_gap_junctions_held",
         "rewired_boundary_held",
+        "rewired_gap_junctions_only",
     ] = "wild_type"
     # Seed for the rewiring draw (used only under a rewired wiring). None -> derive from the run
     # seed, so each paired run draws its own null topology from a dedicated RNG while the
@@ -320,6 +324,11 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # not on the shared plasticity mixin because a dense MLP has no synapse signs to enforce.
     enforce_synapse_signs: bool = False
     enable_gap_junctions: bool = True
+    # Learnable gap-junction strengths: every existing gap pair carries a positive multiplier,
+    # symmetric by construction and starting at 1, that PPO learns with the rest of the brain. No
+    # pair can be created, so each wiring keeps its placement and tunes only its strengths. Off by
+    # default, with no parameter allocated, so the off path is byte-identical.
+    plastic_gaps: bool = False
     # Motor-readout width. "pooled" maps the four motor-class means to the action (8 parameters);
     # "per_neuron" gives each of the 39 motor neurons its own weight (78). The per-neuron map is
     # initialised by expanding the pooled draw, so the RNG stream and the initial policy are the
@@ -417,6 +426,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         if (refusal := _weight_prior_refusal(self)) is not None:
             raise ValueError(refusal)
         if (refusal := _dynamics_refusal(self)) is not None:
+            raise ValueError(refusal)
+        if (refusal := _plastic_gaps_refusal(self)) is not None:
             raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
@@ -707,9 +718,30 @@ def _dynamics_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return next((msg for refused, msg in refusals if refused), None)
 
 
+def _plastic_gaps_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why plastic gap junctions cannot run here, or ``None`` when they can."""
+    if not config.plastic_gaps:
+        return None
+    if config.dynamics == "leaky":
+        return (
+            "plastic_gaps does not support dynamics='leaky': its implicit operator is computed "
+            "once from a fixed gap matrix."
+        )
+    if config.learning_rule != "ppo":
+        return (
+            f"plastic_gaps requires learning_rule='ppo', got {config.learning_rule!r}: the plastic "
+            "rules define no update for gap junctions."
+        )
+    if not config.enable_gap_junctions:
+        return "plastic_gaps requires enable_gap_junctions: there are no gap strengths to learn."
+    return None
+
+
 def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     """Refuse a dynamics configuration at construction; ``model_copy`` skips validators."""
     if (refusal := _dynamics_refusal(config)) is not None:
+        raise ValueError(refusal)
+    if (refusal := _plastic_gaps_refusal(config)) is not None:
         raise ValueError(refusal)
 
 
@@ -946,6 +978,7 @@ class ConnectomeTopology(nn.Module):
         dynamics: Literal["settling", "leaky"] = "settling",
         membrane_tau_steps: float = 1.0,
         input_gain: float = 1.0,
+        plastic_gaps: bool = False,
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
@@ -1192,6 +1225,13 @@ class ConnectomeTopology(nn.Module):
             )
         if dynamics == "leaky":
             self._build_leaky(membrane_tau_steps, device)
+        self.plastic_gaps = plastic_gaps
+        if plastic_gaps:
+            # One log-multiplier per ordered pair; the forward symmetrises it, so the coupling
+            # stays symmetric, and multiplies it into ``g_gap``, so absent pairs stay absent.
+            self.gap_log_multiplier = nn.Parameter(
+                torch.zeros(self.n_neurons, self.n_neurons, device=device),
+            )
 
         # ── Sensor projection: food-chemotaxis → sensory neurons ────────
         # Learnable 2x6 gain matrix: 2 food features by 6 sensory neurons.
@@ -1550,6 +1590,19 @@ class ConnectomeTopology(nn.Module):
         """Return every potential to zero at episode start; a no-op under settling dynamics."""
         if self.dynamics == "leaky":
             self.membrane.zero_()
+
+    def gap_matrix(self) -> torch.Tensor:
+        """Return the gap-junction coupling the forward pass uses.
+
+        Under plastic gaps each existing pair's strength is scaled by ``exp`` of its symmetrised
+        log-multiplier: positive, symmetric, and zero wherever ``g_gap`` is.
+        """
+        if not self.enable_gap_junctions:
+            return torch.zeros_like(self.g_gap)
+        if self.plastic_gaps:
+            log_scale = self.gap_log_multiplier
+            return self.g_gap * torch.exp((log_scale + log_scale.T) / 2.0)
+        return self.g_gap
 
     def _leaky_substeps(self, v: torch.Tensor, current: torch.Tensor) -> torch.Tensor:
         """Advance potentials ``(N,)`` or ``(B, N)`` through one environment step.
@@ -2370,7 +2423,7 @@ class ConnectomeTopology(nn.Module):
         # gradients on ~m_chem are zero; under soft-prior it uses raw
         # ``w_chem`` so the optimiser can grow new edges from zero init.
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
-        gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
+        gap_mat = self.gap_matrix()
         perturbation = None
         # e-prop's unsigned eligibility, accumulated across the settling steps. Allocated lazily
         # rather than held in the buffer as it grows, so a step that raises part-way leaves the
@@ -2577,7 +2630,7 @@ class ConnectomeTopology(nn.Module):
         # such assumption (``h @ chem_mat == chem_mat.T @ h`` for any matrix).
         # If gap junctions ever become directional, transpose ``gap_mat`` here.
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
-        gap_mat = self.g_gap if self.enable_gap_junctions else torch.zeros_like(self.g_gap)
+        gap_mat = self.gap_matrix()
         for _ in range(self.forward_pass_depth):
             preact = h @ chem_mat + h @ gap_mat
             h = torch.tanh(preact)
@@ -2696,6 +2749,9 @@ class ConnectomeTopology(nn.Module):
             params.extend(self.log_std_head.parameters())
         elif self.continuous:
             params.append(self.log_std)
+        # Last, so the parameters before it keep their order with plastic gaps on or off.
+        if self.plastic_gaps:
+            params.append(self.gap_log_multiplier)
         return params
 
 
@@ -2784,7 +2840,8 @@ class ConnectomePPOBrain(ClassicalBrain):
             connectome = rewire_degree_preserving(
                 connectome,
                 np.random.default_rng(rewire_seed),
-                rewire_gap_junctions=config.wiring == "rewired_degree_preserving",
+                rewire_gap_junctions=config.wiring
+                in ("rewired_degree_preserving", "rewired_gap_junctions_only"),
                 preserve_autapses=config.wiring
                 in ("rewired_chemical_only", "rewired_boundary_held"),
                 hold_boundary=(
@@ -2792,6 +2849,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     if config.wiring == "rewired_boundary_held"
                     else None
                 ),
+                rewire_chemical=config.wiring != "rewired_gap_junctions_only",
             )
             logger.info(
                 f"ConnectomePPOBrain wiring: {config.wiring} (rewire_seed={rewire_seed})",
@@ -2855,6 +2913,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             dynamics=config.dynamics,
             membrane_tau_steps=config.membrane_tau_steps,
             input_gain=config.input_gain,
+            plastic_gaps=config.plastic_gaps,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this

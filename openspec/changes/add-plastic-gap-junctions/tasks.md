@@ -3,9 +3,9 @@
 Phase 8 optional M.8, run alongside C.1's build. Registered in
 `docs/experiments/logbooks/supporting/082-plastic-gaps/launch.md` before any scored run.
 
-- [ ] 1. **The gap-only null**: `rewire_chemical` in the rewiring; `rewired_gap_junctions_only` in the
+- [x] 1. **The gap-only null**: `rewire_chemical` in the rewiring; `rewired_gap_junctions_only` in the
   brain. Tests: the chemical graph held exactly, gap degrees held, the pinned default null.
-- [ ] 2. **Plastic gaps**: `plastic_gaps`, the multiplier parameter and its use in both forward paths,
+- [x] 2. **Plastic gaps**: `plastic_gaps`, the multiplier parameter and its use in both forward paths,
   the refusal under leaky. Tests: symmetry, positivity, no created pairs, a non-zero gradient, off
   byte-identical.
 - [ ] 3. **Configs**: the thermal t35 arms through a generator, with loader tests.
