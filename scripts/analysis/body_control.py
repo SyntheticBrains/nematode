@@ -237,7 +237,11 @@ def half_step_agreement(
     base: dict[str, float | None],
     doubled: dict[str, float | None],
 ) -> dict[str, Any]:
-    """Compare pooled readings at 20 and 40 sub-steps against the registered tolerance."""
+    """Compare pooled readings at 20 and 40 sub-steps against the registered tolerance.
+
+    It agrees only when every instrument could be read at both counts and each agrees; an
+    unreadable instrument fails the check rather than dropping out of it.
+    """
     per: dict[str, Any] = {}
     for name in _INSTRUMENTS:
         a, b = base[name], doubled[name]
@@ -248,8 +252,7 @@ def half_step_agreement(
         if name == "reversal_fraction":
             allowed = max(allowed, REVERSAL_ABSOLUTE_TOLERANCE)
         per[name] = {"base": a, "doubled": b, "allowed": allowed, "agrees": abs(b - a) <= allowed}
-    readable = [v["agrees"] for v in per.values() if v["agrees"] is not None]
-    return {"instruments": per, "agrees": bool(readable) and all(readable)}
+    return {"instruments": per, "agrees": all(v["agrees"] is True for v in per.values())}
 
 
 _BANDS = {
@@ -314,10 +317,21 @@ def kinematics(log_dirs: list[Path], stage: str, *, steps: int | None = None) ->
                 doubled.append(_evaluate(config, seed, weights, HALF_STEP_SUBSTEPS))
                 entry["half_step"] = asdict(doubled[-1])
             per_seed[seed] = entry
-        summary: dict[str, Any] = {"per_seed": per_seed, "pooled": pooled(base)}
-        if doubled:
-            summary["half_step"] = half_step_agreement(pooled(base), pooled(doubled))
-            summary["bands"] = band_readings(pooled(base), pooled(doubled))
+        missing = [seed for seed, entry in per_seed.items() if entry is None]
+        summary: dict[str, Any] = {
+            "per_seed": per_seed,
+            "pooled": pooled(base),
+            "complete": not missing,
+            "missing_seeds": missing,
+        }
+        if stage != "pilot":
+            # The registered check is over every seed; a subset is reported as incomplete, not read.
+            if missing:
+                summary["half_step"] = {"agrees": None, "incomplete": True}
+                summary["bands"] = None
+            else:
+                summary["half_step"] = half_step_agreement(pooled(base), pooled(doubled))
+                summary["bands"] = band_readings(pooled(base), pooled(doubled))
         result["runs"][run_stem if gain is None else f"{gain:g}"] = summary
     return result
 

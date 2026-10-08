@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 from quantumnematode.env.body import BodyParams
 from quantumnematode.utils.config_loader import load_simulation_config
+from quantumnematode.validation import body_kinematics as bk
 
 _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
@@ -158,6 +159,38 @@ class TestKinematics:
         result = bc.half_step_agreement(base, far)
         assert not result["agrees"]
         assert result["instruments"]["speed_bl_per_s"]["agrees"] is False
+
+    def test_an_unreadable_instrument_fails_the_half_step_check(self) -> None:
+        """A reading missing at either sub-step count fails the check, not drops out of it."""
+        base = {"frequency_hz": 0.30, "wavelength_bl": 0.65, "speed_bl_per_s": 0.10}
+        base["reversal_fraction"] = 0.02
+        result = bc.half_step_agreement(base, {**base, "wavelength_bl": None})
+        assert result["agrees"] is False
+        assert result["instruments"]["wavelength_bl"]["agrees"] is None
+        assert result["instruments"]["frequency_hz"]["agrees"] is True
+
+    def test_a_seed_without_weights_leaves_the_control_check_incomplete(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Missing coverage is reported, never read from the seeds that remain."""
+        stem = gen.stem("learn")
+        for seed in bc.CONTROL_SEEDS:
+            (tmp_path / f"{stem}-seed{seed}.log").write_text("")
+        missing = bc.CONTROL_SEEDS[0]
+        monkeypatch.setattr(
+            bc,
+            "final_weights",
+            lambda log: None if log.name.endswith(f"seed{missing}.log") else log,
+        )
+        reading = bk.Kinematics(0.3, 0.65, 0.12, 0.01, 100, 0, 100)
+        monkeypatch.setattr(bc, "_evaluate", lambda *_args: reading)
+        run = next(iter(bc.kinematics([tmp_path], "control")["runs"].values()))
+        assert run["complete"] is False
+        assert run["missing_seeds"] == [missing]
+        assert run["half_step"] == {"agrees": None, "incomplete": True}
+        assert run["bands"] is None
 
     def test_a_band_reading_that_flips_is_at_the_edge(self) -> None:
         """Speed at 0.125 and 0.119 straddles the 0.12 floor: edge, neither in nor out."""
