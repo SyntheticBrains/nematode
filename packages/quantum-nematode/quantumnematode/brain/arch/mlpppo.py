@@ -52,10 +52,10 @@ from quantumnematode.brain.arch._plasticity_config import (
     PlasticityConfigMixin,
 )
 from quantumnematode.brain.arch._policy import (
-    CONTINUOUS_ACTION_DIM,
     categorical_evaluate_torch,
     categorical_sample_torch,
     continuous_action_bounds,
+    continuous_action_dim,
     continuous_deterministic_action,
     continuous_evaluate_tanh_gaussian,
     continuous_sample_tanh_gaussian,
@@ -268,9 +268,11 @@ class MLPPPOBrain(ClassicalBrain):
         self.continuous = config.action_mode == "continuous"
         self._action_low, self._action_high = continuous_action_bounds(
             signed_speed=config.signed_speed,
+            action_space=config.action_space,
             device=self.device,
         )
-        actor_output_dim = CONTINUOUS_ACTION_DIM if self.continuous else num_actions
+        action_dim = continuous_action_dim(config.action_space)
+        actor_output_dim = action_dim if self.continuous else num_actions
 
         # Store config
         self.config = config
@@ -303,7 +305,7 @@ class MLPPPOBrain(ClassicalBrain):
         self._state_dependent_std = config.continuous_std_mode == "state_dependent"
         if self.continuous and not self._state_dependent_std:
             self.log_std = nn.Parameter(
-                torch.full((CONTINUOUS_ACTION_DIM,), config.initial_log_std, device=self.device),
+                torch.full((action_dim,), config.initial_log_std, device=self.device),
             )
 
         self.critic = self._build_network(
@@ -794,10 +796,10 @@ class MLPPPOBrain(ClassicalBrain):
             self._action_low,
             self._action_high,
         )
-        continuous_action = (action_vec[0].item(), action_vec[1].item())
+        continuous_action = tuple(float(v) for v in action_vec.tolist())
         with torch.no_grad():
             mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
-        continuous_mean = (mean_vec[0].item(), mean_vec[1].item())
+        continuous_mean = tuple(float(v) for v in mean_vec.tolist())
 
         # Store current step info for the buffer (added when the reward arrives);
         # the stored action is the pre-squash sample for re-scoring in the update.

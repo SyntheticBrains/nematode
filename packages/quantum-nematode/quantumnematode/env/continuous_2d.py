@@ -13,10 +13,14 @@ grid-coupled reader, so the grid env's integer type contract is untouched.
 
 from __future__ import annotations
 
+import copy as _copy
 import math
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
+import numpy as np
+
+from quantumnematode.env.body import BodyParams, BodyState, KinematicBody, new_body
 from quantumnematode.env.env import (
     _HEADING_OFFSET,
     DEFAULT_AGENT_ID,
@@ -25,9 +29,12 @@ from quantumnematode.env.env import (
     DynamicForagingEnvironment,
     PredatorType,
 )
+from quantumnematode.env.worm_time import step_worm_seconds
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from quantumnematode.brain.actions import Action
     from quantumnematode.env.env import Predator
 
@@ -67,6 +74,12 @@ class Continuous2DParams:
     # which does not flip: the heading is the head's direction, so backing up keeps the head where
     # it was. When false a negative speed is clamped to zero, as it always was.
     allow_reversal: bool = False
+    # How the worm moves. "point" applies a (speed, turn) action to a point. "kinematic" drives a
+    # 12-segment body from a 25-number drive (dorsal and ventral drive per segment, then
+    # direction): a body-level generator sets each segment's curvature and resistive-force theory
+    # moves the body over the step's worm-seconds; the head is the position and the heading is the
+    # direction from the body's midpoint to the head.
+    body_model: str = "point"
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -92,6 +105,14 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         **kwargs: object,
     ) -> None:
         self.continuous = continuous or Continuous2DParams()
+        # Per-agent kinematic bodies, created on each agent's first step of the episode.
+        self.bodies: dict[str, BodyState] = {}
+        self._body = KinematicBody(
+            BodyParams(
+                body_length_mm=self.continuous.body_length_mm,
+                step_seconds=step_worm_seconds(self.continuous.max_step_mm),
+            ),
+        )
         # The parent's integer coordinate extent = the continuous world size; the
         # caller does not set grid_size for the continuous substrate.
         kwargs.pop("grid_size", None)
@@ -140,7 +161,38 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         if not isinstance(new_env, Continuous2DEnvironment):  # pragma: no cover - defensive
             msg = f"Expected Continuous2DEnvironment from copy(), got {type(new_env).__name__}"
             raise TypeError(msg)
+        new_env.bodies = _copy.deepcopy(self.bodies)
         return new_env
+
+    def move_agent_body(
+        self,
+        drive: Sequence[float] | np.ndarray,
+        agent_id: str = DEFAULT_AGENT_ID,
+    ) -> None:
+        """Advance an agent's kinematic body one step under a 25-number drive.
+
+        The body is created straight, at the agent's position and heading, on its first step of the
+        episode. Afterwards the agent's position is the body's head and its heading the direction
+        from the body's midpoint to the head.
+        """
+        if self.continuous.body_model != "kinematic":
+            msg = "move_agent_body needs continuous.body_model: kinematic"
+            raise RuntimeError(msg)
+        agent_state = self.agents[agent_id]
+        body = self.bodies.get(agent_id)
+        if body is None:
+            x, y = agent_state.pos_continuous or (
+                float(agent_state.position[0]),
+                float(agent_state.position[1]),
+            )
+            body = new_body(x, y, agent_state.heading_rad)
+            self.bodies[agent_id] = body
+        self._body.step(body, np.asarray(drive, dtype=float), self.continuous.world_size_mm)
+        head = (float(body.head[0]), float(body.head[1]))
+        agent_state.pos_continuous = head
+        agent_state.heading_rad = _wrap_to_pi(self._body.heading(body))
+        agent_state.position = self._discretise(head)
+        agent_state.body = [agent_state.position]
 
     def _apply_movement(self, agent_state: AgentState, action: Action) -> None:
         """Apply a discrete action, then re-sync the continuous float position.

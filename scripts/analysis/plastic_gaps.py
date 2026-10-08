@@ -104,15 +104,22 @@ _VERDICTS: dict[tuple[str, str], str] = {
 }
 
 
-def verdict(base_test: dict[str, Any], interaction: str, lead: str) -> str:
+def verdict(
+    base_test: dict[str, Any],
+    interaction: str,
+    lead: str,
+    base: str = "move_wt",
+) -> str:
     """Map the three readings' states to the registered verdict.
 
-    ``interaction`` and ``lead`` are ``mc.classify`` states. ``move_null`` on the interaction means
-    the lead shrank once strengths could be tuned; ``move_wt`` on the lead means it remains.
+    ``base``, ``interaction`` and ``lead`` are ``mc.classify`` states. ``move_null`` on the
+    interaction means the lead shrank once strengths could be tuned; ``move_wt`` on the lead means
+    it remains. Any ``unresolved`` reading, the base's included, leaves the verdict unresolved: the
+    base can be unresolved while its interval excludes zero, when the Wilcoxon is not significant.
     """
     if float(base_test["ci_lo"]) <= 0.0:
         return "no_gap_effect"
-    if "unresolved" in (interaction, lead):
+    if "unresolved" in (base, interaction, lead):
         return "unresolved"
     if interaction == "move_wt":
         return "placement_amplified"
@@ -144,7 +151,7 @@ def read_panel(
     ):
         states[name] = mc.classify(mean, test["ci_lo"], test["ci_hi"], test["bh_q"], MINIMUM)
     out["states"] = states
-    out["verdict"] = verdict(base["test"], states["interaction"], states["lead"])
+    out["verdict"] = verdict(base["test"], states["interaction"], states["lead"], states["base"])
     return out
 
 

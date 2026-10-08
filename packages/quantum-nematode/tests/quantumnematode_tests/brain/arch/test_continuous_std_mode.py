@@ -68,7 +68,7 @@ def _params(strength: float = 0.42, angle: float = 0.13) -> BrainParams:
     )
 
 
-def _act(brain: Brain) -> tuple[float, float]:
+def _act(brain: Brain) -> tuple[float, ...]:
     actions = brain.run_brain(
         _params(),
         reward=None,

@@ -75,9 +75,12 @@ Both levels are readable, about 20 points below the 90% bar.
 
 **`base` → `move_wt`.** With fixed strengths the wild type leads the gap-only null by +0.0959
 `auc_success` [+0.081, +0.112], on 58 of 64 seeds. That is close to Logbook 078's split, −0.0865 on 128
-seeds, which measured the same gap junctions from the other side: holding them in the full null rather
-than rewiring them alone in the wild type. Two constructions agree that the rewired gap junctions are
-worth about 0.09 `auc_success` on this cell.
+seeds, which came at the question from the other side. It held the full null's rewired gap junctions at
+the wild type's, against the null's rewired chemistry; this panel rewires the gap junctions alone,
+against the wild type's chemistry. The two are independent draws, not the same gap junctions: at a
+given rewiring seed the gap-only null shares 5–8% of its gap pairs with the full null, about what either
+shares with the wild type. Two independent constructions, in different chemical contexts, agree that
+rewired gap junctions cost about 0.09 `auc_success` on this cell.
 
 **`lead` → `move_wt`.** With plastic strengths the lead is +0.0859 [+0.065, +0.107], on 53 of 64 seeds.
 

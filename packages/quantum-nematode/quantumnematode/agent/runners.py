@@ -1076,13 +1076,16 @@ class StandardEpisodeRunner(EpisodeRunner):
             from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 
             if isinstance(agent.env, Continuous2DEnvironment):
-                if top_action.continuous is not None:
+                if top_action.continuous is not None and (
+                    agent.env.continuous.body_model == "kinematic"
+                ):
+                    # A kinematic body: the 25-number drive goes to the body.
+                    agent.env.move_agent_body(top_action.continuous, agent_id=agent.agent_id)
+                elif top_action.continuous is not None:
                     # Continuous-action brains emit a normalized (speed, turn); the
                     # env rescales to physical units.
-                    agent.env.move_agent_normalized(
-                        *top_action.continuous,
-                        agent_id=agent.agent_id,
-                    )
+                    speed, turn = top_action.continuous
+                    agent.env.move_agent_normalized(speed, turn, agent_id=agent.agent_id)
                 else:
                     # Continuous env, discrete brain: continuous-action heads are not
                     # active yet. Use a (coherent) discrete move and warn once.

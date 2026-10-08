@@ -101,6 +101,9 @@ class TestVerdict:
     def test_no_base_withholds_attribution(self) -> None:
         assert pg.verdict(_t(-0.01), "move_null", "no_move") == "no_gap_effect"
 
+    def test_an_unresolved_base_leaves_the_verdict_unresolved(self) -> None:
+        assert pg.verdict(_t(0.01), "no_move", "move_wt", "unresolved") == "unresolved"
+
 
 class TestChecks:
     def test_missing_identity_runs_are_not_identical(self, tmp_path: Path) -> None:

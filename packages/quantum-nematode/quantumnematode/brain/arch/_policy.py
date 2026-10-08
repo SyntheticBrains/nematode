@@ -327,17 +327,33 @@ def clamp_continuous_log_std(log_std: torch.Tensor) -> torch.Tensor:
     return torch.clamp(log_std, CONTINUOUS_LOG_STD_MIN, CONTINUOUS_LOG_STD_MAX)
 
 
+BODY_DRIVE_DIM: int = 25
+"""The body-drive action: dorsal and ventral drive for each of 12 segments, then direction."""
+
+
+def continuous_action_dim(action_space: str) -> int:
+    """Return a continuous action's width: 2 for ``(speed, turn)``, 25 for a body drive."""
+    return BODY_DRIVE_DIM if action_space == "body_drive" else CONTINUOUS_ACTION_DIM
+
+
 def continuous_action_bounds(
     *,
     signed_speed: bool,
     device: torch.device,
+    action_space: str = "speed_turn",
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return ``(low, high)`` for the normalized ``(speed, turn)`` action.
+    """Return ``(low, high)`` for the normalized continuous action.
 
-    Speed spans ``[0, 1]``, or ``[-1, 1]`` under signed speed, where a negative value backs the worm
-    up; turn spans ``[-1, 1]`` either way. Every continuous brain takes its bounds from here, so the
-    action space cannot differ between architectures on one environment.
+    For ``(speed, turn)``, speed spans ``[0, 1]``, or ``[-1, 1]`` under signed speed, where a
+    negative value backs the worm up; turn spans ``[-1, 1]`` either way. A body drive spans
+    ``[-1, 1]`` in every entry. Every continuous brain takes its bounds from here, so the action
+    space cannot differ between architectures on one environment.
     """
+    if action_space == "body_drive":
+        return (
+            torch.full((BODY_DRIVE_DIM,), -1.0, device=device),
+            torch.ones(BODY_DRIVE_DIM, device=device),
+        )
     low = torch.tensor([-1.0 if signed_speed else 0.0, -1.0], device=device)
     high = torch.tensor([1.0, 1.0], device=device)
     return low, high
