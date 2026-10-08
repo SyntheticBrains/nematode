@@ -1,0 +1,380 @@
+{
+  "seeds": [
+    1601,
+    1602,
+    1603,
+    1604
+  ],
+  "cell": "hard350 food layout, 500 steps, kinematic body",
+  "probes": {
+    "1_no_gain": {
+      "setting": "C.1 as merged: no drive gain, entropy_coef 0.05",
+      "arms": {
+        "wt_learn": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.07,
+            "foods_last_quarter": 3.26,
+            "sigma": 7.404
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.49,
+            "foods_last_quarter": 3.15,
+            "sigma": 7.406
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.85,
+            "foods_last_quarter": 3.41,
+            "sigma": 7.407
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.85,
+            "foods_last_quarter": 3.32,
+            "sigma": 7.41
+          }
+        },
+        "wt_frozen": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.34,
+            "foods_last_quarter": 2.37
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.5,
+            "foods_last_quarter": 3.57
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.13,
+            "foods_last_quarter": 2.2
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.5,
+            "foods_last_quarter": 2.66
+          }
+        },
+        "chemnull_learn": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.99,
+            "foods_last_quarter": 3.52,
+            "sigma": 7.408
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.63,
+            "foods_last_quarter": 3.13,
+            "sigma": 7.405
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 7.1,
+            "foods_last_quarter": 3.19,
+            "sigma": 7.411
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.97,
+            "foods_last_quarter": 3.63,
+            "sigma": 7.406
+          }
+        },
+        "chemnull_frozen": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 5.1,
+            "foods_last_quarter": 5.15
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 1.1,
+            "foods_last_quarter": 1.03
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 5.13,
+            "foods_last_quarter": 5.04
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.89,
+            "foods_last_quarter": 3.09
+          }
+        }
+      }
+    },
+    "2_gain": {
+      "setting": "drive gain vector, entropy_coef 0.05",
+      "arms": {
+        "wt_learn": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.37,
+            "foods_last_quarter": 4.4,
+            "sigma": 7.407,
+            "gain_mean": 2.289
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 5.31,
+            "foods_last_quarter": 4.69,
+            "sigma": 7.411,
+            "gain_mean": 2.666
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.46,
+            "foods_last_quarter": 4.15,
+            "sigma": 7.408,
+            "gain_mean": 1.989
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.69,
+            "foods_last_quarter": 6.72,
+            "sigma": 7.413,
+            "gain_mean": 3.327
+          }
+        },
+        "wt_frozen": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.34,
+            "foods_last_quarter": 2.37
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.5,
+            "foods_last_quarter": 3.57
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.13,
+            "foods_last_quarter": 2.2
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.5,
+            "foods_last_quarter": 2.66
+          }
+        },
+        "chemnull_learn": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.05,
+            "foods_last_quarter": 4.42,
+            "sigma": 7.412,
+            "gain_mean": 2.018
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 4.2,
+            "foods_last_quarter": 3.99,
+            "sigma": 7.406,
+            "gain_mean": 2.012
+          },
+          "1603": {
+            "plateau": 62.13,
+            "foods_first_quarter": 9.89,
+            "foods_last_quarter": 18.69,
+            "sigma": 7.408,
+            "gain_mean": 4.253
+          },
+          "1604": {
+            "plateau": 52.67,
+            "foods_first_quarter": 6.25,
+            "foods_last_quarter": 18.23,
+            "sigma": 7.41,
+            "gain_mean": 4.227
+          }
+        },
+        "chemnull_frozen": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 5.1,
+            "foods_last_quarter": 5.15
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 1.1,
+            "foods_last_quarter": 1.03
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 5.13,
+            "foods_last_quarter": 5.04
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.89,
+            "foods_last_quarter": 3.09
+          }
+        }
+      }
+    },
+    "3_gain_entropy": {
+      "setting": "drive gain vector, entropy_coef 0.004 (the registered point); floors from probe 2",
+      "arms": {
+        "wt_learn": {
+          "1601": {
+            "plateau": 58.4,
+            "foods_first_quarter": 14.24,
+            "foods_last_quarter": 18.46,
+            "sigma": 2.347,
+            "gain_mean": 1.676
+          },
+          "1602": {
+            "plateau": 76.13,
+            "foods_first_quarter": 11.43,
+            "foods_last_quarter": 19.17,
+            "sigma": 1.911,
+            "gain_mean": 1.464
+          },
+          "1603": {
+            "plateau": 48.67,
+            "foods_first_quarter": 5.8,
+            "foods_last_quarter": 18.1,
+            "sigma": 2.316,
+            "gain_mean": 1.624
+          },
+          "1604": {
+            "plateau": 83.47,
+            "foods_first_quarter": 12.13,
+            "foods_last_quarter": 19.45,
+            "sigma": 2.153,
+            "gain_mean": 1.77
+          }
+        },
+        "chemnull_learn": {
+          "1601": {
+            "plateau": 27.73,
+            "foods_first_quarter": 9.07,
+            "foods_last_quarter": 15.8,
+            "sigma": 2.166,
+            "gain_mean": 1.55
+          },
+          "1602": {
+            "plateau": 80.67,
+            "foods_first_quarter": 9.96,
+            "foods_last_quarter": 19.33,
+            "sigma": 2.051,
+            "gain_mean": 1.551
+          },
+          "1603": {
+            "plateau": 18.8,
+            "foods_first_quarter": 16.38,
+            "foods_last_quarter": 15.49,
+            "sigma": 2.027,
+            "gain_mean": 1.69
+          },
+          "1604": {
+            "plateau": 82.0,
+            "foods_first_quarter": 15.43,
+            "foods_last_quarter": 19.34,
+            "sigma": 1.865,
+            "gain_mean": 1.474
+          }
+        },
+        "mlp_learn": {
+          "1601": {
+            "plateau": 74.93,
+            "foods_first_quarter": 13.97,
+            "foods_last_quarter": 19.17
+          },
+          "1602": {
+            "plateau": 27.6,
+            "foods_first_quarter": 16.45,
+            "foods_last_quarter": 13.36
+          },
+          "1603": {
+            "plateau": 60.0,
+            "foods_first_quarter": 7.97,
+            "foods_last_quarter": 17.63
+          },
+          "1604": {
+            "plateau": 69.33,
+            "foods_first_quarter": 7.83,
+            "foods_last_quarter": 17.5
+          }
+        }
+      }
+    },
+    "4_frozen_wiring": {
+      "setting": "freeze_wiring, drive gain vector, entropy_coef 0.004; floors from probe 2",
+      "gate_preflight": {
+        "level": "fw",
+        "status": "fails_floor",
+        "wt_plateau": 0.0,
+        "rn_plateau": 6.33,
+        "floors": 0.0
+      },
+      "arms": {
+        "wt_learn": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.38,
+            "foods_last_quarter": 4.87,
+            "sigma": 2.011,
+            "gain_mean": 1.982
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.73,
+            "foods_last_quarter": 3.89,
+            "sigma": 2.022,
+            "gain_mean": 1.686
+          },
+          "1603": {
+            "plateau": 0.0,
+            "foods_first_quarter": 1.94,
+            "foods_last_quarter": 3.48,
+            "sigma": 1.856,
+            "gain_mean": 1.174
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.2,
+            "foods_last_quarter": 4.99,
+            "sigma": 2.057,
+            "gain_mean": 2.086
+          }
+        },
+        "chemnull_learn": {
+          "1601": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.85,
+            "foods_last_quarter": 4.91,
+            "sigma": 2.543,
+            "gain_mean": 1.436
+          },
+          "1602": {
+            "plateau": 0.0,
+            "foods_first_quarter": 2.4,
+            "foods_last_quarter": 3.25,
+            "sigma": 2.386,
+            "gain_mean": 1.176
+          },
+          "1603": {
+            "plateau": 25.33,
+            "foods_first_quarter": 10.35,
+            "foods_last_quarter": 16.74,
+            "sigma": 2.24,
+            "gain_mean": 2.086
+          },
+          "1604": {
+            "plateau": 0.0,
+            "foods_first_quarter": 3.14,
+            "foods_last_quarter": 6.96,
+            "sigma": 2.142,
+            "gain_mean": 1.729
+          }
+        }
+      }
+    }
+  }
+}

@@ -52,10 +52,19 @@ the seeds where the two wirings disagree. It is reported as description, never a
 
 ### Decision E: The pilot, which sets the minimum
 
-**Before it, a frozen-wiring probe.** No run has yet trained only the gains over a fixed wiring, so the
-pilot's frozen-wiring half has no evidence that it learns. The wild type and the chemical-only null
+**Before it, a frozen-wiring probe.** No run had yet trained only the gains over a fixed wiring, so the
+pilot's frozen-wiring half had no evidence that it learns. The wild type and the chemical-only null
 under `freeze_wiring`, seeds 1601–1604, 8 runs, read before the pilot registers. If neither learns, the
 frozen-wiring learner is dropped before the pilot, with its reason recorded.
+
+**Read 2026-10-09: the frozen-wiring learner leaves.** The wild type plateaued at 0% on all four seeds
+and the chemical-only null at 0, 0, 25.3 and 0, against 0% floors; foods per episode rose only from
+2–4 to 4–5 on most seeds. The gate preflight on the probe runs, mapped to the registered stems, reads
+the level `fails_floor` (wild type 0.0% against its floor), and PPO `readable` (66.7% and 52.3%). By the
+rule below, the learner leaves: through the body, the drive gains and sensor gains over a fixed wiring
+do not carry foraging, within 3,000 episodes at these settings. **The reading-learner half of C.1e
+closes unreachable-with-reason**, and the
+pilot runs PPO only: 2 wirings × (learning, frozen) × 16 = **64 runs**.
 
 The wild type and the chemical-only null, learning under both learners, with both frozen floors, on
 **seeds 1701–1716**: 2 learners × 2 wirings × 16 + 2 frozen × 16 = **96 runs**.
@@ -68,7 +77,11 @@ The wild type and the chemical-only null, learning under both learners, with bot
   worm's wiring effect, carried over only to keep a near-zero pilot from making a trivial difference
   count as a move.
 - **The spread** and so the panel's seed count: the smallest n at which the MDE, `2.487 × sd / √n`, is
-  at most the minimum, capped at 64.
+  at most the minimum, **never fewer than the pilot's 16**, capped at 64. A paired rank test on a
+  handful of seeds fires on the consistency of the sign rather than the size, and a bimodal pilot's
+  spread is unstable: resampling the probes moved n between 5 and 14.
+- **The floor's size on this cell**: the 0.0367 floor as a share of the wild type's mean
+  `auc_success`, reported beside the minimum, never used to re-read it.
 - **The gates**, read by the gate preflight on the pilot runs: each learning arm beats its floor, and
   no level has both learning arms at or above 90%. **A learner whose learning arms do not beat their
   floors leaves the panel**, recorded with its reason; a saturated learner likewise.

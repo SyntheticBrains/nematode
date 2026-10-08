@@ -49,10 +49,10 @@ class TestConfigs:
         assert getattr(brain, "freeze_updates", False) is (learner == "frozen")
 
     def test_the_table_fits_the_gate_preflight(self) -> None:
-        """Each learner is one gate-preflight level of four arms; the frozen floors are shared."""
+        """The pilot is one gate-preflight level of four arms: PPO alone."""
         stems = gp.panel_stems("body_wiring")
-        assert set(stems) == set(bw.LEARNERS)
-        assert stems["ppo"]["wt_frozen"] == stems["fw"]["wt_frozen"]
+        assert set(stems) == {"ppo"}
+        assert stems["ppo"]["wt_frozen"] == gen.stem("wt", "frozen")
 
 
 class TestRules:
@@ -67,11 +67,38 @@ class TestRules:
         plan = bw.panel_seeds(sd=0.1, minimum_effect=0.05)
         assert plan["n"] == 25
         assert not plan["capped"]
+        assert bw.panel_seeds(sd=0.01, minimum_effect=0.05)["n"] == bw.MIN_PANEL_SEEDS
         assert bw.panel_seeds(sd=1.0, minimum_effect=0.05) == {
             "n": 64,
             "capped": True,
             "mde": pytest.approx(bw.MDE_Z / 8),
         }
+
+    def test_the_floor_is_reported_as_a_share_of_the_wild_types_auc(self) -> None:
+        """The judged floor's size on this cell is visible beside the minimum."""
+        gates = {"gate_passes": True, "saturated": False}
+        gap = {"gap_mean": 0.01, "per_seed": {1: 0.0, 2: 0.02}, "test": {}}
+        reading = bw.read_learner(gates, gap, wt_auc=0.367)
+        assert reading["minimum_floored"] is True
+        assert reading["floor_share_of_wt_auc"] == pytest.approx(0.1)
+
+    def test_the_per_seed_csv_has_a_row_per_seed(self, tmp_path: Path) -> None:
+        """Each seed's plateaus, floors and gaps, under each learner."""
+        per = {1701: {"learn": 50.0, "floor": 0.0}}
+        result = {
+            "seeds": [1701],
+            "learners": {
+                "ppo": {
+                    "gates": {"wt": {"per_seed": per}, "rn": {"per_seed": per}},
+                    "gaps": {
+                        m: {"per_seed": {1701: 0.1}} for m in (bw.PRIMARY_METRIC, bw.BESIDE_METRIC)
+                    },
+                },
+            },
+        }
+        rows = bw.write_csv(result, tmp_path / "per-seed.csv").read_text().splitlines()
+        assert rows[0].startswith("seed,ppo_wt_plateau")
+        assert rows[1].startswith("1701,50.000000,0.000000,50.000000")
 
     def test_a_learner_failing_its_floor_leaves_the_panel(self) -> None:
         """An unreadable learner is recorded as leaving, with its reason."""

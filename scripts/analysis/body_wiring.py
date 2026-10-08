@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 r"""C.1e: the wiring contrast through the kinematic body. The pilot that sets the panel's minimum.
 
-The wild type against the chemical-only null through the body, at the 500-step cell, under two
-learners: PPO, which writes the chemical weights, and frozen-wiring PPO, which reads them without
-writing. Each wiring has one frozen floor, shared by both learners. Seeds 1701-1716.
+The wild type against the chemical-only null through the body, at the 500-step cell, under PPO, which
+writes the chemical weights, each wiring with its frozen floor. Seeds 1701-1716. The frozen-wiring
+learner (PPO reading the wiring without writing it) left before the pilot: on its probe neither
+wiring's learning arm beat its floor, so it is not a level here.
 
 **What the pilot fixes, per learner, before the panel registers:**
 
 * the reference effect: the paired wild-type-minus-null ``auc_success`` mean;
 * the minimum: 2/3 of |reference|, floored at 0.0367, a judgement carried from the point worm so a
   near-zero pilot cannot make a trivial difference count as a move;
-* the panel's seeds: the smallest n at which ``2.487 * sd / sqrt(n)`` is at most the minimum, capped
-  at 64;
+* the panel's seeds: the smallest n at which ``2.487 * sd / sqrt(n)`` is at most the minimum, never
+  fewer than the pilot's 16 and capped at 64;
 * the gates: both learning arms beat their floors, and the level is not saturated. A learner that
   fails leaves the panel.
 
@@ -30,6 +31,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import statistics
@@ -52,10 +54,11 @@ HALF = "ppo"
 # The efficiency harness's name for hard350's food cell; the body's 500-step cell is scored there.
 CELL = "hard_food"
 PILOT_SEEDS: tuple[int, ...] = tuple(range(1701, 1717))
-LEARNERS: tuple[str, ...] = ("ppo", "fw")
+LEARNERS: tuple[str, ...] = ("ppo",)
 MINIMUM_FLOOR = 0.0367
 MINIMUM_FRACTION = 2.0 / 3.0
 MDE_Z = 2.487
+MIN_PANEL_SEEDS = 16
 MAX_PANEL_SEEDS = 64
 COMPETENCE = 30.0
 PRIMARY_METRIC = ops.UNCENSORED_METRIC
@@ -99,8 +102,13 @@ def minimum(reference: float) -> float:
 
 
 def panel_seeds(sd: float, minimum_effect: float) -> dict[str, Any]:
-    """Return the smallest n whose MDE is at most the minimum, capped at ``MAX_PANEL_SEEDS``."""
-    for n in range(4, MAX_PANEL_SEEDS + 1):
+    """Return the smallest n whose MDE is at most the minimum, within the pilot's 16 and 64.
+
+    A paired rank test on a handful of seeds fires on the consistency of the sign rather than the
+    size, and a bimodal pilot's spread is unstable, so the panel never uses fewer seeds than the
+    pilot that sized it.
+    """
+    for n in range(MIN_PANEL_SEEDS, MAX_PANEL_SEEDS + 1):
         if MDE_Z * sd / math.sqrt(n) <= minimum_effect:
             return {"n": n, "capped": False, "mde": MDE_Z * sd / math.sqrt(n)}
     return {"n": MAX_PANEL_SEEDS, "capped": True, "mde": MDE_Z * sd / math.sqrt(MAX_PANEL_SEEDS)}
@@ -127,7 +135,11 @@ def competence_frequency(gates: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def read_learner(gates: dict[str, Any], gap: dict[str, Any]) -> dict[str, Any]:
+def read_learner(
+    gates: dict[str, Any],
+    gap: dict[str, Any],
+    wt_auc: float | None = None,
+) -> dict[str, Any]:
     """Fix one learner's reference, minimum and panel size, or record why it leaves the panel."""
     readable = mp.level_passes(gates)
     per_seed = list(gap["per_seed"].values())
@@ -141,6 +153,9 @@ def read_learner(gates: dict[str, Any], gap: dict[str, Any]) -> dict[str, Any]:
         "sd": sd,
         "minimum": minimum_effect,
         "minimum_floored": minimum_effect == MINIMUM_FLOOR,
+        # The judged floor as a share of the wild type's own auc_success on this cell, reported so
+        # the judgement's size is visible here; never used to re-read anything.
+        "floor_share_of_wt_auc": MINIMUM_FLOOR / wt_auc if wt_auc else None,
         "panel": panel_seeds(sd, minimum_effect),
     }
     if not readable:
@@ -168,9 +183,39 @@ def pilot(
             "gates": gates,
             "gaps": gaps,
             "competence": competence_frequency(gates),
-            **read_learner(gates, gaps[PRIMARY_METRIC]),
+            **read_learner(
+                gates,
+                gaps[PRIMARY_METRIC],
+                report["metrics"][PRIMARY_METRIC]["wild_mean"],
+            ),
         }
     return result
+
+
+def write_csv(result: dict[str, Any], path: Path) -> Path:
+    """One row per seed: each wiring's plateau and floor under each learner, and both gaps."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    metrics = (PRIMARY_METRIC, BESIDE_METRIC)
+    header = ["seed"]
+    for learner in result["learners"]:
+        header += [f"{learner}_{c}" for c in ("wt_plateau", "wt_floor", "rn_plateau", "rn_floor")]
+        header += [f"{learner}_gap_{m}" for m in metrics]
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(header)
+        for seed in result["seeds"]:
+            row: list[Any] = [seed]
+            for entry in result["learners"].values():
+                for wiring in ("wt", "rn"):
+                    per_seed = entry["gates"][wiring]["per_seed"].get(seed, {})
+                    row += [_fmt(per_seed.get("learn")), _fmt(per_seed.get("floor"))]
+                row += [_fmt(entry["gaps"][m]["per_seed"].get(seed)) for m in metrics]
+            writer.writerow(row)
+    return path
+
+
+def _fmt(value: float | None) -> str:
+    return "" if value is None else f"{value:.6f}"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -184,8 +229,11 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--logs", type=Path, action="append", required=True)
     pl.add_argument("--out-dir", type=Path, required=True)
     pl.add_argument("--out", type=Path, help="write the JSON here")
+    pl.add_argument("--csv", type=Path, help="write the per-seed CSV here")
     args = ap.parse_args(argv)
     result = pilot(args.logs, args.out_dir)
+    if args.csv:
+        write_csv(result, args.csv)
     payload = json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
