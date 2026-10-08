@@ -109,34 +109,49 @@ class TestChecks:
     def test_missing_identity_runs_are_not_identical(self, tmp_path: Path) -> None:
         assert pg.identity(tmp_path)["all_identical"] is False
 
-    def test_identical_twins_mean_inert_plasticity(self, tmp_path: Path) -> None:
-        for arms in ((pg.FIXED, "wt_learn"), (pg.PLASTIC, "wt_learn")):
-            for seed in pg.PILOT_SEEDS:
-                (tmp_path / f"{pg.STEMS[arms[0]][arms[1]]}-seed{seed}.log").write_text(
-                    "Run: 1 Status: SUCCESS\n",
-                )
-        for arms in ((pg.FIXED, "rn_learn"), (pg.PLASTIC, "rn_learn")):
-            for seed in pg.PILOT_SEEDS:
-                status = "SUCCESS" if arms[0] == pg.FIXED else "FAIL"
-                text = f"Run: 1 Status: {status}\n"
-                (tmp_path / f"{pg.STEMS[arms[0]][arms[1]]}-seed{seed}.log").write_text(text)
-        result = pg.plasticity([tmp_path])
+    @staticmethod
+    def _write_twins(fixed_dir: Path, plastic_dir: Path) -> None:
+        for seed in pg.PILOT_SEEDS:
+            for level, where in ((pg.FIXED, fixed_dir), (pg.PLASTIC, plastic_dir)):
+                for arm in ("wt_learn", "rn_learn"):
+                    path = where / f"{pg.STEMS[level][arm]}-seed{seed}.log"
+                    path.write_text("Run: 1 Status: SUCCESS\n")
+
+    @staticmethod
+    def _reader(moved_stems: set[str]) -> Any:
+        """Fake exports: a run's multipliers moved iff its stem is listed."""
+        import torch
+
+        def read(log: Path) -> dict[str, Any]:
+            stem = log.stem.rpartition("-seed")[0]
+            gap = torch.tensor([[0.0, 2.0], [2.0, 0.0]])
+            moved = torch.tensor([[0.0, 0.3], [0.1, 0.0]])
+            return {"g_gap": gap, "gap_log_multiplier": moved if stem in moved_stems else 0 * gap}
+
+        return read
+
+    def test_unmoved_multipliers_mean_inert_plasticity(self, tmp_path: Path) -> None:
+        self._write_twins(tmp_path, tmp_path)
+        reader = self._reader({pg.STEMS[pg.PLASTIC]["rn_learn"]})
+        result = pg.plasticity([tmp_path], read_topology=reader)
         assert result["complete"] is True
         assert result["plasticity_acts"] is False
         assert all(result["per_seed"]["gap_only_null"].values())
+        assert not any(result["per_seed"]["wild_type"].values())
 
     def test_twins_in_different_campaigns_are_paired(self, tmp_path: Path) -> None:
         reused, panel = tmp_path / "reused", tmp_path / "panel"
         reused.mkdir()
         panel.mkdir()
-        for seed in pg.PILOT_SEEDS:
-            for level, status, where in (
-                (pg.FIXED, "SUCCESS", reused),
-                (pg.PLASTIC, "FAIL", panel),
-            ):
-                for arm in ("wt_learn", "rn_learn"):
-                    path = where / f"{pg.STEMS[level][arm]}-seed{seed}.log"
-                    path.write_text(f"Run: 1 Status: {status}\n")
-        result = pg.plasticity([panel, reused])
+        self._write_twins(reused, panel)
+        reader = self._reader({pg.STEMS[pg.PLASTIC][a] for a in ("wt_learn", "rn_learn")})
+        result = pg.plasticity([panel, reused], read_topology=reader)
         assert result["complete"] is True
         assert result["plasticity_acts"] is True
+
+    def test_a_missing_twin_or_export_reads_none(self, tmp_path: Path) -> None:
+        self._write_twins(tmp_path, tmp_path)
+        (tmp_path / f"{pg.STEMS[pg.FIXED]['wt_learn']}-seed{pg.PILOT_SEEDS[0]}.log").unlink()
+        result = pg.plasticity([tmp_path], read_topology=lambda _log: None)
+        assert result["complete"] is False
+        assert set(result["per_seed"]["wild_type"].values()) == {None}

@@ -1,4 +1,4 @@
-# 082: The Wild Type's Gap-Junction Advantage Is in Their Placement, Not Their Strengths (Phase 8b M.8)
+# 082: The Wild Type's Gap-Junction Advantage Survives Letting Both Wirings Tune Their Gap Strengths (Phase 8b M.8)
 
 **Status**: completed — **`placement`.** On the thermal cell at target 35, under PPO at block V's point,
 a null whose gap junctions alone are rewired trails the wild type by +0.096 `auc_success`. When both
@@ -14,10 +14,13 @@ interaction, how much tuning changes the gap, is −0.010, inside the registered
 Beside them, on episodes to competence: +370 at fixed strengths, +349 with plastic ones, and an
 interaction of −21 [−91, +50].
 
-**Given its own strengths to tune, the null does not close the gap. The advantage Logbooks 075 and 078
-traced to the null's rewired gap junctions is in which neurons are coupled, not in how strongly.** The
-tuning was real: across the panel the learned multipliers moved the median gap pair by about 25%, and
-moved some pairs 20-fold or more.
+**Given its own strengths to tune, the null does not close the gap.** The advantage Logbooks 075 and
+078 traced to the null's rewired gap junctions is not in the strength of each existing junction: a
+null free to retune every one of its junctions still trails. That leaves which neurons are coupled and
+each neuron's total gap strength, which a degree-preserving swap changes together. This panel does not
+separate them; that needs a null that moves placement with per-neuron totals held. The tuning was real:
+across the panel the learned multipliers moved the median gap pair by about 25%, and moved some pairs
+20-fold or more.
 
 **Date**: 2026-10-08.
 
@@ -92,12 +95,12 @@ and `lead` is `move_wt`.
 
 ### The tuning was real
 
-The plasticity check finds every plastic run differing from its fixed-gap twin, on all 64 seeds for
-both wirings ([plasticity-panel.json](supporting/082-plastic-gaps/plasticity-panel.json)). How far the
+The plasticity check reads each plastic run's exported multipliers and finds them moved from their
+start on every one of the 64 seeds, for both wirings ([plasticity-panel.json](supporting/082-plastic-gaps/plasticity-panel.json)). How far the
 multipliers moved, medians over seeds of each run's statistics over its existing gap pairs
 ([multipliers.json](supporting/082-plastic-gaps/multipliers.json)):
 
-| wiring | median |log multiplier| | 5th–95th percentile | extremes | total strength vs start |
+| wiring | median absolute log multiplier | 5th–95th percentile | extremes | total strength vs start |
 |---|---|---|---|---|
 | wild type | 0.22 | 0.53–1.80 | 0.024–16.0 | 1.07 (0.95–1.39) |
 | gap-only null | 0.22 | 0.54–1.69 | 0.055–13.2 | 1.03 (0.91–1.41) |
@@ -131,8 +134,9 @@ The censoring rule found the episode metric comparable (crossing rates 95–98%)
 
 - **Established**: on the thermal cell at target 35 under PPO, the wild type's gap-junction advantage
   over a null that rewires its gap junctions alone survives letting both wirings tune every gap
-  strength they have. Tuning changes the gap by less than the registered minimum. **The advantage is in
-  which neurons are coupled**, and a gap-junction claim on this cell is a placement claim.
+  strength they have. Tuning changes the gap by less than the registered minimum. **The advantage is not
+  in the strength of each existing junction.** A gap-junction claim on this cell may say the advantage
+  survives strength tuning; it may not say placement alone explains it (see *Not separated*).
 - **Established, with its condition**: the null had real freedom. Its multipliers moved by about as much
   as the wild type's. They were tuned by PPO in 3,000 episodes, from starting strengths of 1, by the
   same learner that writes the chemical weights. A different optimiser, a longer run, or freedom to
@@ -144,7 +148,9 @@ The censoring rule found the episode metric comparable (crossing rates 95–98%)
 - **Not separated**: gap placement from each neuron's total gap strength. A degree-preserving swap
   keeps each neuron's number of gap partners but moves the counts with the edges, so per-neuron totals
   change. The multipliers could have restored the wild type's totals and the gap did not close. That
-  argues against totals, but no arm held totals while moving placement.
+  argues against totals, but no arm held totals while moving placement, so the registered verdict's
+  name, `placement`, means *placement together with per-neuron total strength*, not placement alone.
+  A total-strength-matched null would separate the two.
 
 ## Biological fidelity
 

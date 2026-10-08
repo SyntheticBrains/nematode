@@ -248,6 +248,11 @@ _N_ACTIONS = 4
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+# Bound on a plastic gap junction's symmetrised log-multiplier: e^20 is about 5e8, far beyond any
+# strength PPO reaches, and finite, so an absent pair's zero stays zero under the exponential.
+GAP_LOG_MULTIPLIER_BOUND = 20.0
+
+
 class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     """Configuration for the connectome-constrained PPO brain."""
 
@@ -1673,13 +1678,19 @@ class ConnectomeTopology(nn.Module):
         """Return the gap-junction coupling the forward pass uses.
 
         Under plastic gaps each existing pair's strength is scaled by ``exp`` of its symmetrised
-        log-multiplier: positive, symmetric, and zero wherever ``g_gap`` is.
+        log-multiplier: positive, symmetric, and zero wherever ``g_gap`` is. The log-multiplier is
+        clamped to a finite range first, so the exponential cannot overflow to infinity, whose
+        product with an absent pair's zero would be NaN.
         """
         if not self.enable_gap_junctions:
             return torch.zeros_like(self.g_gap)
         if self.plastic_gaps:
             log_scale = self.gap_log_multiplier
-            return self.g_gap * torch.exp((log_scale + log_scale.T) / 2.0)
+            symmetric = ((log_scale + log_scale.T) / 2.0).clamp(
+                -GAP_LOG_MULTIPLIER_BOUND,
+                GAP_LOG_MULTIPLIER_BOUND,
+            )
+            return self.g_gap * torch.exp(symmetric)
         return self.g_gap
 
     def _leaky_substeps(self, v: torch.Tensor, current: torch.Tensor) -> torch.Tensor:

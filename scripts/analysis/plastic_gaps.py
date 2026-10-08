@@ -35,7 +35,10 @@ import csv
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _HERE = Path(__file__).resolve().parent
 for _path in (_HERE, _HERE.parent / "campaigns"):
@@ -340,11 +343,22 @@ def _find(log_dirs: list[Path], name: str) -> Path | None:
     return next((d / name for d in log_dirs if (d / name).is_file()), None)
 
 
-def plasticity(log_dirs: list[Path], seeds: tuple[int, ...] = PILOT_SEEDS) -> dict[str, Any]:
-    """Check each plastic-gap learning run differs from its fixed-gap twin at the same seed.
+def multipliers_moved(topology: dict[str, Any]) -> bool:
+    """Whether any existing gap pair's symmetrised log-multiplier left its starting value of zero."""
+    log_multiplier = topology["gap_log_multiplier"]
+    symmetric = (log_multiplier + log_multiplier.T) / 2
+    return bool((symmetric[topology["g_gap"] > 0] != 0).any())
 
-    If the multipliers never received a gradient the two runs would be bit-identical, so a
-    difference shows the plasticity acts.
+
+def plasticity(
+    log_dirs: list[Path],
+    seeds: tuple[int, ...] = PILOT_SEEDS,
+    read_topology: Callable[[Path], dict[str, Any] | None] = _final_topology,
+) -> dict[str, Any]:
+    """Check each plastic-gap learning run's exported multipliers moved from their start.
+
+    A seed counts only where both the plastic run and its fixed-gap twin are on disk, and reads
+    ``None`` where either is missing or the plastic run's export cannot be found.
     """
     pairs = {
         "wild_type": (STEMS[FIXED]["wt_learn"], STEMS[PLASTIC]["wt_learn"]),
@@ -356,9 +370,10 @@ def plasticity(log_dirs: list[Path], seeds: tuple[int, ...] = PILOT_SEEDS) -> di
         for seed in seeds:
             # The twins may sit in different campaigns (reused fixed-gap runs), so each is found
             # across every directory on its own.
-            a = _find(log_dirs, f"{fixed}-seed{seed}.log")
-            b = _find(log_dirs, f"{plastic}-seed{seed}.log")
-            per_seed[seed] = None if a is None or b is None else gs.run_lines(a) != gs.run_lines(b)
+            twin = _find(log_dirs, f"{fixed}-seed{seed}.log")
+            run = _find(log_dirs, f"{plastic}-seed{seed}.log")
+            topology = read_topology(run) if twin is not None and run is not None else None
+            per_seed[seed] = None if topology is None else multipliers_moved(topology)
         out[wiring] = per_seed
     complete = all(v is not None for seeds_ in out.values() for v in seeds_.values())
     acts = complete and all(all(seeds_.values()) for seeds_ in out.values())

@@ -96,6 +96,15 @@ class TestPlasticGaps:
         assert bool((coupling[existing] > 0).all())
         assert bool((coupling[~existing] == 0).all())
 
+    def test_an_extreme_multiplier_cannot_overflow(self) -> None:
+        topo = _thermal(plastic_gaps=True).topology
+        with torch.no_grad():
+            topo.gap_log_multiplier.fill_(1000.0)
+        coupling = topo.gap_matrix().detach()
+        existing = topo.g_gap != 0
+        assert bool(torch.isfinite(coupling).all())
+        assert bool((coupling[~existing] == 0).all())
+
     def test_it_starts_at_the_wiring_s_own_strengths(self) -> None:
         topo = _thermal(plastic_gaps=True).topology
         assert torch.equal(topo.gap_matrix().detach(), topo.g_gap)
