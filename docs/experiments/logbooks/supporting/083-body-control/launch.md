@@ -57,6 +57,10 @@ recorded as a kinematic condition on every later body result, not as a foraging 
 within 10% (reversal fraction: 10% or 0.01, whichever is larger). A failure is a property of the body's
 integration, recorded as such.
 
+**Band readings at the edge.** Each band is read at both 20 and 40 sub-steps. An instrument whose band
+reading differs between them is recorded as **at the band edge**, with both values, neither in nor
+out. The preflight below shows speed may do exactly this.
+
 **The worm's reversal rate** is cited as an order of magnitude only: several a minute off food, falling
 over the first ~15 minutes (Zhao et al. 2003; Gray, Hill & Bargmann 2005), so about 0.08–0.4 per
 5-second step. It grades nothing.
@@ -90,6 +94,11 @@ At gain 2 the instruments read frequency 0.300 Hz, wavelength 0.647 body lengths
 lengths per second (seed 1503 at 0.118, just under the band), reversal fraction 0.005–0.027, with 97–99%
 of wall-clear steps undulating.
 
+**Half-step preflight**, on the pilot's four gain-2 learners, 10 episodes each: frequency 0.2999 / 0.2997
+Hz, wavelength 0.647 / 0.647, speed **0.125 / 0.119**, reversal fraction 0.0141 / 0.0138 (20 / 40
+sub-steps). Every instrument agrees within the bar; speed moves −5.4% and crosses the band's 0.12 floor,
+so speed is expected at the band edge.
+
 **Gate preflight, read from the pilot at the registered point.** The floor gate is clear: every floor is
 0% and every learning plateau at gain 2 is above 30. **Competence is near the bar**: three of four seeds
 sit within 5 points of 30% (32.8, 32.9, 34.9). Eight fresh seeds may well put one under it, which is why
@@ -122,6 +131,8 @@ the fallback's (1513–1524). Every verdict branch is named.
   revisited at C.3, where pirouettes are graded.
 - A segment's wave is damped to a quarter of the peak at most, never silenced, after Wen et al. 2012.
 - The steering gain has no direct measurement; it is this control's calibration, frozen for every arm.
+- The wave floor's value, 0.25 of the peak, has no direct measurement either. Wen et al. 2012 justify a
+  floor above zero, not its value; it is frozen for every arm.
 
 ## Launch
 

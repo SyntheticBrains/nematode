@@ -159,6 +159,14 @@ class TestKinematics:
         assert not result["agrees"]
         assert result["instruments"]["speed_bl_per_s"]["agrees"] is False
 
+    def test_a_band_reading_that_flips_is_at_the_edge(self) -> None:
+        """Speed at 0.125 and 0.119 straddles the 0.12 floor: edge, neither in nor out."""
+        base = {"frequency_hz": 0.30, "wavelength_bl": 0.65, "speed_bl_per_s": 0.125}
+        doubled = {"frequency_hz": 0.30, "wavelength_bl": 0.65, "speed_bl_per_s": 0.119}
+        bands = bc.band_readings(base, doubled)
+        assert bands == {"frequency_hz": "in", "wavelength_bl": "in", "speed_bl_per_s": "edge"}
+        assert bc.band_readings(doubled, doubled)["speed_bl_per_s"] == "out"
+
     def test_final_weights_are_found_through_the_experiment_record(self, tmp_path: Path) -> None:
         """A run's log names its experiment, whose record names the exports holding its weights."""
         exports = tmp_path / "exports" / "session"

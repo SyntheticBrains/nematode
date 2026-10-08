@@ -14,7 +14,8 @@ Four readings, each fixed before its runs:
   at which every seed reaches competence is chosen; the control re-runs there on seeds 1517-1524.
 * ``kinematics``: the instruments on each run's final weights, frozen, over 10 held-out episodes.
   For the control, the same weights are re-read at 40 sub-steps, and each instrument's mean over the
-  runs must agree within 10% (reversal fraction: 10% or 0.01 absolute, whichever is larger). For
+  runs must agree within 10% (reversal fraction: 10% or 0.01 absolute, whichever is larger), and
+  each band is read at both: ``in``, ``out``, or ``edge`` where the two readings differ. For
   the pilot, each seed's untrained and trained reversal fractions are reported beside the rule.
 
 Usage::
@@ -49,6 +50,7 @@ if str(_CAMPAIGNS) not in sys.path:
 import body_kinematics_eval as harness  # noqa: E402  # pyright: ignore[reportMissingImports]
 import generate_body_control_configs as gen  # noqa: E402  # pyright: ignore[reportMissingImports]
 import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImports]
+from quantumnematode.validation import body_kinematics as bk  # noqa: E402
 
 if TYPE_CHECKING:
     from quantumnematode.validation.body_kinematics import Kinematics
@@ -250,6 +252,29 @@ def half_step_agreement(
     return {"instruments": per, "agrees": bool(readable) and all(readable)}
 
 
+_BANDS = {
+    "frequency_hz": bk.FREQUENCY_BAND_HZ,
+    "wavelength_bl": bk.WAVELENGTH_BAND_BL,
+    "speed_bl_per_s": bk.SPEED_BAND_BL_PER_S,
+}
+
+
+def band_readings(
+    base: dict[str, float | None],
+    doubled: dict[str, float | None],
+) -> dict[str, str | None]:
+    """Read each band at 20 and 40 sub-steps: ``in``, ``out``, or ``edge`` where the two differ."""
+    out: dict[str, str | None] = {}
+    for name, (lo, hi) in _BANDS.items():
+        a, b = base[name], doubled[name]
+        if a is None or b is None:
+            out[name] = None
+            continue
+        inside = (lo <= a <= hi, lo <= b <= hi)
+        out[name] = "edge" if inside[0] != inside[1] else ("in" if inside[0] else "out")
+    return out
+
+
 def _evaluate(config: Path, seed: int, weights: Path | None, substeps: int | None) -> Kinematics:
     return harness.evaluate(config, seed, weights, episodes=EPISODES, substeps=substeps)
 
@@ -292,6 +317,7 @@ def kinematics(log_dirs: list[Path], stage: str, *, steps: int | None = None) ->
         summary: dict[str, Any] = {"per_seed": per_seed, "pooled": pooled(base)}
         if doubled:
             summary["half_step"] = half_step_agreement(pooled(base), pooled(doubled))
+            summary["bands"] = band_readings(pooled(base), pooled(doubled))
         result["runs"][run_stem if gain is None else f"{gain:g}"] = summary
     return result
 

@@ -31,9 +31,15 @@ The maintainer chose four settings before this change was written:
 - **A reversal threshold.** The wave runs backward only when the direction channel is below −0.5. It is
   the same for every arm, so noise around a forward-leaning direction does not flip the wave.
 
+- **A reversal is brief** *(added after the first pilot)*. It lasts at most one step and is followed by
+  at least one forward step, so no seed can crawl backward indefinitely.
+
+- **A segment's wave is damped, never silenced** *(added after the second pilot)*. Its amplitude spans
+  [0.25, 1] of the peak, with neutral drive still at 0.5.
+
 - **The steering gain is calibrated once.** A pilot of MLP-PPO through the body at four candidate gains
   chooses it under a rule fixed before the pilot runs. It is then frozen, with its neighbours reported
-  as the sensitivity check (D18).
+  as the sensitivity check (D18). The third pilot, on the final body, chose **2**.
 
 - **The MLP positive control.**
 
@@ -54,13 +60,22 @@ The maintainer chose four settings before this change was written:
 
 ## Capabilities
 
-**Modified**: `continuous-2d-environment`, with two added requirements: the reversal threshold, and
-sub-step posture capture.
+**Modified**:
+
+- `continuous-2d-environment`, with five added requirements: the reversal threshold, brief reversals,
+  the wave floor, sub-step posture capture, and episode posture capture with the configurable sub-step
+  count and steering gain.
+- `realworm-behavioural-validation`, with two: the kinematic instruments, and evaluating a trained
+  body-drive run.
 
 ## Impact
 
-- `env/body.py`: the sourced defaults, the reversal threshold and the posture recorder.
+- `env/body.py`: the sourced defaults, the reversal threshold, the reversal cap, the wave floor, the
+  calibrated steering gain and the posture recorder.
+- `env/continuous_2d.py` and `utils/config_loader.py`: the posture log, `body_substeps` and the
+  `body_steering_gain` override.
 - `validation/body_kinematics.py`: new; the instruments.
+- `scripts/analysis/body_kinematics_eval.py`: new; the evaluation harness.
 - `scripts/analysis/body_control.py`: new; the calibration rule, the control's gates and the kinematic
   reading.
 - `scripts/campaigns/generate_body_control_configs.py`: new.

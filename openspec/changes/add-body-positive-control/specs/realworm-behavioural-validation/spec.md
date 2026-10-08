@@ -27,7 +27,7 @@ tail-to-head. Steps whose head lies within a margin of a wall SHALL be excluded 
 
 #### Scenario: A silenced segment keeps a step out of the wave
 
-- **WHEN** every step's drive silences one segment's wave
+- **WHEN** every step's drive silences one segment's wave, on a body without a wave floor
 - **THEN** no frequency or wavelength SHALL be reported, and speed SHALL still be
 
 #### Scenario: The executed direction is counted

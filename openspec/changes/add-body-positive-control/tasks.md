@@ -11,7 +11,7 @@ Registered in `docs/experiments/logbooks/supporting/083-body-control/launch.md` 
   the gates and the fallback in `body_control.py`. Tests.
 - [x] 4. **Calibration pilot** — **done 2026-10-08: third pilot (floored) chose gain 2, frozen as the body's default; every seed ≥ 30% at gain 2, three within 5 points; cost about 41 min per run; kinematics in band but for seed 1503's speed (0.118).** *(first run 2026-10-08 uncapped: gain 1 chosen, but seeds locked into one gait and silenced segments distorted the wavelength; the reversal cap and the undulating-step gate added (design B′, E); re-run under the cap)* *(second run under the cap: gain 1 again, reversals brief, but the MLP silenced 2.7–5 segments per step, the head most; the wave amplitude floored at 0.25 (design B″); re-run a third time)*: seeds 1501–1504, four gains, learning and frozen (32 runs); the rule applied; the gain frozen; cost
   measured; the reversal-rate reference verified (done 2026-10-07: an order of magnitude, recorded in design B).
-- [ ] 5. **Registration**: the launch record, then `/nematode-review-spec`.
+- [x] 5. **Registration** — **done 2026-10-08: launch.md; spec review (no blocking; speed's band edge, the stale proposal and design passages, the floor's value as a condition, fixed); half-step preflight passes.** Original scope: the launch record, then `/nematode-review-spec`.
 - [ ] 6. **Control**: seeds 1505–1512, learning and frozen; the fallback if needed.
 - [ ] 7. **Kinematics**: the instruments on the trained controls; the half-step check.
 - [ ] 8. **Readout**: Logbook 083; tracker C.1d; roadmap C.1.

@@ -26,9 +26,10 @@ Peak curvature is 18, which spreads the drive across the full posture range:
 |---|---|---|---|
 | zero (neutral) | 0.5 | about 9 | the sourced crawl (W-shape) |
 | full | 1 | 18 | Ω-shape |
-| minimum | 0 | 0 | straight |
+| minimum | 0.25 *(the floor, Decision B″)* | about 4.5 | a shallow crawl |
 
 The brain can therefore damp, keep or exaggerate the crawl, which C.3's omega-turn geometry needs.
+*(Before B″ the minimum was 0, a straight body.)*
 
 **A defect in C.1c, fixed here.** The head switch flips when the bend crosses ±θ (θ = 0.5), so the
 relayed wave spanned ±θ, not the ±1 the amplitude mapping assumes. Every posture was therefore half as
@@ -170,8 +171,8 @@ If the floor gate fails, C.1d fails, and the diagnosis is its deliverable.
 
 **Sequencing** *(added 2026-10-08)*. In both earlier pilots one of four seeds sat under the competence
 bar at the chosen gain, so the fallback is likely. The fallback's gate-only pilot (learning arm, 500,
-700 and 1,000 steps, seeds 1513–1516, 12 runs) therefore launches together with the control, as one
-campaign. Only the order changes. The fallback pilot is read only if the control reads `fallback`;
+700 and 1,000 steps, seeds 1513–1516, 12 runs) therefore launches together with the control, as two
+campaigns side by side, since each has its own seed band. Only the order changes. The fallback pilot is read only if the control reads `fallback`;
 otherwise it is reported beside the control as description. The re-run on seeds 1517–1524 still waits
 for the control's reading.
 
@@ -226,5 +227,8 @@ vendored, and stays with C.3.
 
 - **The body is slower than the point worm**, and hard350's 350 steps may be too few. The fallback
   handles it.
-- **The reversal rate's reference is recalled, not checked.** It is verified before the registration
-  cites it.
+- **The reversal rate's reference** was recalled when this was written. It was checked on 2026-10-07
+  and is cited as an order of magnitude (Decision B).
+- **Speed sits on the band's lower edge**, and the integration decides which side. The floored pilot's
+  pooled speed at gain 2 is 0.125 at 20 sub-steps and 0.119 at 40. An instrument whose band reading
+  differs between the two sub-step counts is recorded as **at the band edge**, with both values.
