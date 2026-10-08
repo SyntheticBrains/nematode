@@ -1,0 +1,243 @@
+{
+  "runs": {
+    "0.5": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.29967605556470656,
+            "reversal_fraction": 0.0037142857142857142,
+            "speed_bl_per_s": 0.1173603354859145,
+            "steps_near_wall": 755,
+            "steps_undulating": 2735,
+            "steps_used": 2745,
+            "wavelength_bl": 0.6526353598786251
+          },
+          "untrained_reversal_fraction": 0.07314285714285715
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.3001038989446055,
+            "reversal_fraction": 0.03031194820482637,
+            "speed_bl_per_s": 0.12211379625605093,
+            "steps_near_wall": 567,
+            "steps_undulating": 2749,
+            "steps_used": 2831,
+            "wavelength_bl": 0.6486239282627762
+          },
+          "untrained_reversal_fraction": 0.464
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.2997402880441692,
+            "reversal_fraction": 0.002,
+            "speed_bl_per_s": 0.12360630919708021,
+            "steps_near_wall": 737,
+            "steps_undulating": 2756,
+            "steps_used": 2763,
+            "wavelength_bl": 0.6502420182108456
+          },
+          "untrained_reversal_fraction": 0.029142857142857144
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.2998963400047843,
+            "reversal_fraction": 0.016,
+            "speed_bl_per_s": 0.12245320603681949,
+            "steps_near_wall": 941,
+            "steps_undulating": 2513,
+            "steps_used": 2559,
+            "wavelength_bl": 0.6500976434855785
+          },
+          "untrained_reversal_fraction": 0.25857142857142856
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.29985414563956636,
+        "reversal_fraction": 0.01300655847977802,
+        "speed_bl_per_s": 0.12138341174396627,
+        "wavelength_bl": 0.6503997374594563
+      }
+    },
+    "1": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.29975116442289285,
+            "reversal_fraction": 0.007432818753573471,
+            "speed_bl_per_s": 0.11846212424939694,
+            "steps_near_wall": 1124,
+            "steps_undulating": 2354,
+            "steps_used": 2374,
+            "wavelength_bl": 0.6532355090845203
+          },
+          "untrained_reversal_fraction": 0.07114285714285715
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.29983348751156336,
+            "reversal_fraction": 0.018740399385560675,
+            "speed_bl_per_s": 0.1209760146144217,
+            "steps_near_wall": 498,
+            "steps_undulating": 2707,
+            "steps_used": 2757,
+            "wavelength_bl": 0.6515902380362054
+          },
+          "untrained_reversal_fraction": 0.45885714285714285
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.3018496317862648,
+            "reversal_fraction": 0.12657142857142858,
+            "speed_bl_per_s": 0.11796936526319854,
+            "steps_near_wall": 2131,
+            "steps_undulating": 1179,
+            "steps_used": 1369,
+            "wavelength_bl": 0.6445815767680637
+          },
+          "untrained_reversal_fraction": 0.022571428571428572
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.299933110367893,
+            "reversal_fraction": 0.012588271415412957,
+            "speed_bl_per_s": 0.11879128597160546,
+            "steps_near_wall": 601,
+            "steps_undulating": 2620,
+            "steps_used": 2656,
+            "wavelength_bl": 0.6525412408589629
+          },
+          "untrained_reversal_fraction": 0.21342857142857144
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.3003418485221535,
+        "reversal_fraction": 0.041333229531493924,
+        "speed_bl_per_s": 0.11904969752465566,
+        "wavelength_bl": 0.6504871411869381
+      }
+    },
+    "2": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.29971291204039985,
+            "reversal_fraction": 0.004531722054380665,
+            "speed_bl_per_s": 0.13663136028215736,
+            "steps_near_wall": 403,
+            "steps_undulating": 2894,
+            "steps_used": 2907,
+            "wavelength_bl": 0.6555600936424962
+          },
+          "untrained_reversal_fraction": 0.08428571428571428
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.29994335941597267,
+            "reversal_fraction": 0.016105417276720352,
+            "speed_bl_per_s": 0.1228685711529835,
+            "steps_near_wall": 981,
+            "steps_undulating": 2387,
+            "steps_used": 2434,
+            "wavelength_bl": 0.6425130760823312
+          },
+          "untrained_reversal_fraction": 0.45571428571428574
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.30011190836679613,
+            "reversal_fraction": 0.02673325499412456,
+            "speed_bl_per_s": 0.11790047222536752,
+            "steps_near_wall": 274,
+            "steps_undulating": 3044,
+            "steps_used": 3130,
+            "wavelength_bl": 0.646402984707982
+          },
+          "untrained_reversal_fraction": 0.019142857142857142
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.29976026749101004,
+            "reversal_fraction": 0.008841732979664015,
+            "speed_bl_per_s": 0.12418228838823665,
+            "steps_near_wall": 195,
+            "steps_undulating": 3173,
+            "steps_used": 3198,
+            "wavelength_bl": 0.6416625438711812
+          },
+          "untrained_reversal_fraction": 0.18314285714285714
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.2998821118285447,
+        "reversal_fraction": 0.014053031826222397,
+        "speed_bl_per_s": 0.12539567301218627,
+        "wavelength_bl": 0.6465346745759977
+      }
+    },
+    "4": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.29969206474536125,
+            "reversal_fraction": 0.0014392630972941854,
+            "speed_bl_per_s": 0.13280143545873938,
+            "steps_near_wall": 304,
+            "steps_undulating": 3168,
+            "steps_used": 3170,
+            "wavelength_bl": 0.6177198228931051
+          },
+          "untrained_reversal_fraction": 0.05657142857142857
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.2991556815284714,
+            "reversal_fraction": 0.0034344590726960505,
+            "speed_bl_per_s": 0.12284523299525592,
+            "steps_near_wall": 147,
+            "steps_undulating": 3336,
+            "steps_used": 3347,
+            "wavelength_bl": 0.5974269074452692
+          },
+          "untrained_reversal_fraction": 0.44485714285714284
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.299865292440713,
+            "reversal_fraction": 0.014825581395348838,
+            "speed_bl_per_s": 0.1265529335148665,
+            "steps_near_wall": 199,
+            "steps_undulating": 3196,
+            "steps_used": 3241,
+            "wavelength_bl": 0.6377060355223356
+          },
+          "untrained_reversal_fraction": 0.026285714285714287
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.3002452771957182,
+            "reversal_fraction": 0.03461770018061409,
+            "speed_bl_per_s": 0.13394403504068592,
+            "steps_near_wall": 123,
+            "steps_undulating": 3085,
+            "steps_used": 3199,
+            "wavelength_bl": 0.5935990905500079
+          },
+          "untrained_reversal_fraction": 0.18971428571428572
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.299739578977566,
+        "reversal_fraction": 0.01357925093648829,
+        "speed_bl_per_s": 0.12903590925238692,
+        "wavelength_bl": 0.6116129641026795
+      }
+    }
+  },
+  "seeds": [
+    1501,
+    1502,
+    1503,
+    1504
+  ],
+  "stage": "pilot"
+}

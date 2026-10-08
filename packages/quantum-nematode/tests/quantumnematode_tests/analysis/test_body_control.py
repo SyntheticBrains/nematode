@@ -42,6 +42,23 @@ class TestConfigs:
         assert getattr(brain, "action_space", None) == "body_drive"
         assert getattr(brain, "freeze_updates", False) is (arm == "frozen")
 
+    @pytest.mark.parametrize("steps", [None, *gen.FALLBACK_STEPS])
+    @pytest.mark.parametrize("arm", ["learn", "frozen"])
+    def test_the_committed_control_configs_are_the_generators(
+        self,
+        steps: int | None,
+        arm: str,
+    ) -> None:
+        """The control and fallback configs on disk are the generator's, at the body's own gain."""
+        path, text = gen.derive(arm, steps=steps)
+        assert path.read_text() == text
+        config = load_simulation_config(str(path))
+        assert config.environment is not None
+        continuous = config.environment.continuous
+        assert continuous is not None
+        assert continuous.body_steering_gain is None
+        assert config.max_steps == (steps or 350)
+
     def test_the_control_waits_for_the_frozen_gain(self) -> None:
         """The control is refused at any gain but the body's default."""
         default = BodyParams().steering_gain

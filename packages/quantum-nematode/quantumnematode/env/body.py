@@ -40,8 +40,9 @@ class BodyParams:
     measurements on agar; the drag anisotropy (about 10) is Shen et al. 2012's and Rabets et al.
     2014's. ``peak_curvature`` is reached at full drive, so the neutral drive's half of it is the
     crawl's measured amplitude, about 9 body-lengths^-1, and full drive an omega-shaped posture.
-    ``steering_gain`` has no direct measurement and is calibrated once on the MLP positive control,
-    then frozen across every arm.
+    ``steering_gain`` has no direct measurement. It was calibrated once on the MLP positive control,
+    the best of 0.5, 1, 2 and 4 by plateau success with near ties going to the smaller gain, and is
+    frozen at 2 across every arm.
 
     The wave runs tail-to-head only below ``-reversal_threshold`` on the direction channel, so noise
     around a forward-leaning direction does not flip it. A worm's reversals are brief, one to three
@@ -62,7 +63,7 @@ class BodyParams:
     wavelength_bl: float = 0.65
     switch_threshold: float = 0.5
     peak_curvature: float = 18.0
-    steering_gain: float = 1.0
+    steering_gain: float = 2.0
     drag_anisotropy: float = 10.0
     reversal_threshold: float = 0.5
     max_reversal_steps: int = 1

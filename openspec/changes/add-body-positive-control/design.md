@@ -147,7 +147,7 @@ Emmons 2024 applies to the connectome arms that follow.
 broken toward the smaller gain, the gentler steering. If no B₀ beats the frozen floor at any seed, the
 pilot is C.1d's diagnosis, and no control runs.
 
-**After it.** The chosen gain is frozen in the body's defaults. Its neighbours' plateaus are reported
+**After it.** The chosen gain is frozen in the body's defaults *(2026-10-08: the third, floored pilot chose **2**; gain 4 tied at +1.6 points)*. Its neighbours' plateaus are reported
 as the sensitivity check (D18). Only MLP-PPO runs, so no wiring result informs the choice.
 
 ### Decision D: The positive control
