@@ -28,25 +28,47 @@ N_SEGMENTS = 12
 DRIVE_WIDTH = 2 * N_SEGMENTS + 1
 """The drive action: dorsal drive per segment, ventral drive per segment, then direction."""
 
+MIN_WAVE_AMPLITUDE = 0.25
+"""The least share of the peak wave any segment carries, however strongly its drive damps it."""
+
 
 @dataclass(frozen=True)
 class BodyParams:
     """The body's geometry, its generator and its drag.
 
-    ``peak_curvature``, ``steering_gain`` and ``drag_anisotropy`` are placeholders until they are
-    checked against their sources and calibrated once on the MLP positive control, then frozen
-    across every arm.
+    The crawl's period (0.30 Hz) and wavelength (0.65 body lengths) are Fang-Yen et al. 2010's
+    measurements on agar; the drag anisotropy (about 10) is Shen et al. 2012's and Rabets et al.
+    2014's. ``peak_curvature`` is reached at full drive, so the neutral drive's half of it is the
+    crawl's measured amplitude, about 9 body-lengths^-1, and full drive an omega-shaped posture.
+    ``steering_gain`` has no direct measurement. It was calibrated once on the MLP positive control,
+    the best of 0.5, 1, 2 and 4 by plateau success with near ties going to the smaller gain, and is
+    frozen at 2 across every arm.
+
+    The wave runs tail-to-head only below ``-reversal_threshold`` on the direction channel, so noise
+    around a forward-leaning direction does not flip it. A worm's reversals are brief, one to three
+    head swings, before it resumes forward crawling, so a reversal lasts at most
+    ``max_reversal_steps`` steps and is followed by at least ``reversal_refractory_steps`` forward
+    steps before the next. One step is 1.5 head swings, a short reversal; the long reversals that
+    precede an omega turn are not reachable at one step.
+
+    Drive damps a segment's wave down to ``min_wave_amplitude`` of the peak but never silences it:
+    in forward crawling the wave propagates along the whole body through proprioceptive coupling
+    (Wen et al. 2012), so no segment stops undulating while the rest crawl.
     """
 
     body_length_mm: float = 1.0
     step_seconds: float = 5.0
     substeps: int = 20
-    period_s: float = 3.1
+    period_s: float = 1.0 / 0.30
     wavelength_bl: float = 0.65
     switch_threshold: float = 0.5
-    peak_curvature: float = 6.0
-    steering_gain: float = 1.0
-    drag_anisotropy: float = 20.0
+    peak_curvature: float = 18.0
+    steering_gain: float = 2.0
+    drag_anisotropy: float = 10.0
+    reversal_threshold: float = 0.5
+    max_reversal_steps: int = 1
+    reversal_refractory_steps: int = 1
+    min_wave_amplitude: float = MIN_WAVE_AMPLITUDE
 
     @property
     def relax_tau(self) -> float:
@@ -73,11 +95,28 @@ class BodyState:
     # switches the bend has a closed form, so the relay reads the past wave exactly at any delay.
     events: list[tuple[float, float, float]] = field(default_factory=lambda: [(0.0, 0.0, 1.0)])
     curvature: np.ndarray = field(default_factory=lambda: np.zeros(N_SEGMENTS))
+    # Consecutive steps just run tail-to-head, and head-to-tail; a new body may reverse at once.
+    reversal_run: int = 0
+    forward_run: int = 1 << 30
+    last_reversed: bool = False
 
 
 def new_body(x: float, y: float, heading: float) -> BodyState:
     """Return a straight body with its head at ``(x, y)`` facing ``heading``."""
     return BodyState(head=np.array([x, y], dtype=float), frame_angle=heading)
+
+
+def wave_amplitude(drive: np.ndarray, minimum: float = MIN_WAVE_AMPLITUDE) -> np.ndarray:
+    """Each segment's share of the peak wave under ``drive``.
+
+    The mean of a segment's dorsal and ventral drive sets it: neutral drive gives one half, full
+    drive one, and full negative drive ``minimum``. In forward crawling the wave propagates along
+    the whole body through proprioceptive coupling, so drive damps a segment's wave but cannot
+    silence it.
+    """
+    dorsal, ventral = drive[..., :N_SEGMENTS], drive[..., N_SEGMENTS : 2 * N_SEGMENTS]
+    level = (dorsal + ventral) / 2.0
+    return 0.5 + np.where(level >= 0.0, 0.5, 0.5 - minimum) * level
 
 
 def _segment_angles(curvature: np.ndarray) -> np.ndarray:
@@ -176,27 +215,39 @@ class KinematicBody:
         index = np.searchsorted(events[:, 0], times, side="right") - 1
         start, bend, target = events[np.maximum(index, 0)].T
         values = target + (bend - target) * np.exp(-(times - start) / self.params.relax_tau)
-        values = np.where(times < 0.0, 0.0, values)
+        # The switch flips at +-threshold, so the bend spans +-threshold; dividing gives a wave in
+        # [-1, 1], the scale the amplitude mapping assumes.
+        values = np.where(times < 0.0, 0.0, values) / self.params.switch_threshold
         return values if forward else values[::-1]
 
     def curvature(self, state: BodyState, drive: np.ndarray, *, forward: bool) -> np.ndarray:
         """Return each segment's curvature, in units of one over the body length."""
         p = self.params
         dorsal, ventral = drive[:N_SEGMENTS], drive[N_SEGMENTS : 2 * N_SEGMENTS]
-        amplitude = (1.0 + (dorsal + ventral) / 2.0) / 2.0
         bias = (dorsal - ventral) / 2.0
+        amplitude = wave_amplitude(drive, p.min_wave_amplitude)
         return p.peak_curvature * amplitude * self._relayed(state, forward=forward) + (
             p.steering_gain * bias
         )
 
-    def step(self, state: BodyState, drive: np.ndarray, world_size_mm: float) -> None:
-        """Advance ``state`` by one environment step under ``drive``, clamped to the arena."""
+    def step(
+        self,
+        state: BodyState,
+        drive: np.ndarray,
+        world_size_mm: float,
+        record: list[tuple[float, np.ndarray, np.ndarray]] | None = None,
+    ) -> None:
+        """Advance ``state`` by one environment step under ``drive``, clamped to the arena.
+
+        ``record``, when given, receives each sub-step's ``(time, curvature, head)``, copies that
+        leave the motion untouched.
+        """
         p = self.params
         if drive.shape != (DRIVE_WIDTH,):
             msg = f"drive must have {DRIVE_WIDTH} entries, got {drive.shape}"
             raise ValueError(msg)
         drive = np.clip(drive, -1.0, 1.0)
-        forward = drive[-1] >= 0.0
+        forward = not self._reverses(state, requested=bool(drive[-1] < -p.reversal_threshold))
         ds = p.body_length_mm / N_SEGMENTS
         dt = p.step_seconds / p.substeps
         rho1, _ = _shape(state.curvature, ds)
@@ -219,6 +270,20 @@ class KinematicBody:
             state.frame_angle = state.frame_angle + omega * dt
             state.head = np.clip(state.head, 0.0, world_size_mm)
             state.curvature = after
+            if record is not None:
+                record.append((state.time, after.copy(), state.head.copy()))
+
+    def _reverses(self, state: BodyState, *, requested: bool) -> bool:
+        """Decide whether this step runs tail-to-head, and advance the reversal bookkeeping."""
+        p = self.params
+        if state.reversal_run > 0:
+            reverse = requested and state.reversal_run < p.max_reversal_steps
+        else:
+            reverse = requested and state.forward_run >= p.reversal_refractory_steps
+        state.reversal_run = state.reversal_run + 1 if reverse else 0
+        state.forward_run = 0 if reverse else state.forward_run + 1
+        state.last_reversed = reverse
+        return reverse
 
     def heading(self, state: BodyState) -> float:
         """Return the direction from the body's midpoint to the head, in the world frame."""

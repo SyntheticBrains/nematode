@@ -1059,6 +1059,12 @@ class Continuous2DConfig(BaseModel):
     # by a 25-number drive through a body-level generator and resistive-force theory. A kinematic
     # body needs allow_reversal, 8b's frozen setting, and a brain with action_space: body_drive.
     body_model: Literal["point", "kinematic"] = "point"
+    # Sub-steps the kinematic body integrates per environment step. The default is the accuracy the
+    # body was validated at; an evaluation doubles it for the half-step check.
+    body_substeps: int = Field(default=20, ge=1)
+    # The kinematic body's steering gain: how strongly a dorsal-ventral drive difference bends each
+    # segment. Unset keeps the body's calibrated default; set only to calibrate it.
+    body_steering_gain: float | None = Field(default=None, gt=0.0)
 
     @model_validator(mode="after")
     def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
@@ -3428,6 +3434,8 @@ def create_env_from_config(
                 max_turn_rad=continuous_config.max_turn_rad,
                 allow_reversal=continuous_config.allow_reversal,
                 body_model=continuous_config.body_model,
+                body_substeps=continuous_config.body_substeps,
+                body_steering_gain=continuous_config.body_steering_gain,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,
