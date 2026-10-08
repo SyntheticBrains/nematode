@@ -132,7 +132,8 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
         for step in episode:
             heads = np.array([s[2] for s in step["substeps"]])
             total += 1
-            drive = np.asarray(step["drive"], dtype=float)
+            # Clipped as the body clips it, so the amplitude read is the one the body used.
+            drive = np.clip(np.asarray(step["drive"], dtype=float), -1.0, 1.0)
             # The executed direction where the capture has it; the requested one otherwise.
             reversed_wave = bool(step.get("reversed", drive[-1] < -reversal_threshold))
             reversals += int(reversed_wave)
