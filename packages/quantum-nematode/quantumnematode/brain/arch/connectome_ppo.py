@@ -1627,11 +1627,14 @@ class ConnectomeTopology(nn.Module):
         )
 
     def _build_body_readout(self, device: torch.device) -> None:
-        """Register the fixed neuromuscular map and the cells it reads, for the body-drive action.
+        """Register the fixed neuromuscular map, the cells it reads, and its gain vector.
 
         The map is anatomy: every cell with a neuromuscular junction, its EM counts signed by what
         body wall muscle responds to and normalised per quadrant-segment column. It is never
-        learned.
+        learned. What is learned is one gain per drive output, the same 25 for every wiring: read
+        through the normalised map, settled rates give a drive within ``[-1, 1]``, which the
+        policy's exploration noise would otherwise swamp, since nothing else can scale it. Each
+        gain is a log-gain starting at zero, a gain of 1.
         """
         drive_map = neuromuscular_drive_map(load_emmons_2024_neuromuscular(), N_BODY_SEGMENTS)
         self.register_buffer(
@@ -1642,13 +1645,14 @@ class ConnectomeTopology(nn.Module):
             "nmj_map",
             torch.from_numpy(drive_map.matrix).to(dtype=torch.float32, device=device),
         )
+        self.body_drive_log_gain = nn.Parameter(torch.zeros(BODY_DRIVE_DIM, device=device))
 
     def body_drive_mean(self, h: torch.Tensor) -> torch.Tensor:
         """Map settled rates ``(N,)`` or ``(B, N)`` to the 25-number body drive.
 
         Dorsal drive per segment is the mean of the two dorsal quadrants' drives, ventral
-        likewise; the direction channel is half the forward-minus-backward motor-class contrast,
-        so every entry lies in ``[-1, 1]``.
+        likewise; the direction channel is half the forward-minus-backward motor-class contrast.
+        Each lies in ``[-1, 1]`` before its learned gain scales it.
         """
         drives = h.index_select(-1, self.nmj_indices) @ self.nmj_map
         quadrants = drives.reshape(*drives.shape[:-1], 4, N_BODY_SEGMENTS)
@@ -1658,7 +1662,8 @@ class ConnectomeTopology(nn.Module):
         forward = classes[..., 0] + classes[..., 1]
         backward = classes[..., 2] + classes[..., 3]
         direction = (forward - backward) / 4.0
-        return torch.cat([dorsal, ventral, direction.unsqueeze(-1)], dim=-1)
+        anatomy = torch.cat([dorsal, ventral, direction.unsqueeze(-1)], dim=-1)
+        return anatomy * torch.exp(self.body_drive_log_gain)
 
     def _pool_motor_classes(self, h: torch.Tensor) -> torch.Tensor:
         """Return the four motor-class mean rates (VB, DB, VA, DA) whatever the readout width."""
@@ -2827,10 +2832,9 @@ class ConnectomeTopology(nn.Module):
         Foraging-only configs allocate neither, so the optimiser sees
         byte-identical parameter sets to pre-projection builds.
         """
-        # Under the body drive the anatomical map replaces the readout, which is then not learned.
         params = [self.w_chem, self.food_gains]
-        if not self.body_drive:
-            params.append(self.readout)
+        # Under the body drive the anatomical map replaces the readout; only its gain vector learns.
+        params.append(self.body_drive_log_gain if self.body_drive else self.readout)
         if self.enable_predator_projection:
             params.extend(
                 [
