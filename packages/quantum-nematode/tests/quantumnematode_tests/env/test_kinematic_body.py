@@ -26,6 +26,7 @@ from quantumnematode.env.body import (
     BodyParams,
     KinematicBody,
     new_body,
+    wave_amplitude,
 )
 from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
 from quantumnematode.env.env import DEFAULT_AGENT_ID
@@ -164,6 +165,13 @@ class TestBody:
         _, right = _run(_drive(bias=-0.2), steps=3)
         assert left - straight > 0.3
         assert right - straight < -0.3
+
+    def test_drive_damps_a_segment_but_never_silences_it(self) -> None:
+        """Full negative drive leaves the floor, neutral half the peak, full drive the peak."""
+        levels = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
+        amplitude = [wave_amplitude(_drive(level=lv))[0] for lv in levels]
+        assert amplitude == pytest.approx([0.25, 0.375, 0.5, 0.75, 1.0])
+        assert wave_amplitude(_drive(level=-1.0), minimum=0.0)[0] == 0.0
 
     def test_a_damped_crawl_moves_less_than_the_neutral_one(self) -> None:
         damped, _ = _run(_drive(level=-0.6))

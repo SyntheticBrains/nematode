@@ -31,6 +31,22 @@ Each step's executed direction SHALL be recorded on the body.
 - **WHEN** a reversal may last two steps and needs two forward steps after it
 - **THEN** a held request SHALL run two steps tail-to-head, then two head-to-tail, in turn
 
+### Requirement: A segment's wave is damped, never silenced
+
+A kinematic body's drive SHALL set each segment's wave amplitude between a floor, a quarter of the peak
+by default, and the peak: neutral drive SHALL give half the peak, full drive the peak, and full negative
+drive the floor.
+
+#### Scenario: Full negative drive leaves the floor
+
+- **WHEN** a segment's dorsal and ventral drive are both −1
+- **THEN** its wave amplitude SHALL be the floor, not zero
+
+#### Scenario: The neutral crawl is unchanged
+
+- **WHEN** the drive is neutral
+- **THEN** every segment's wave amplitude SHALL be half the peak
+
 ### Requirement: Sub-step posture capture
 
 A kinematic body SHALL, when asked, record each sub-step's time, segment curvatures and head position,

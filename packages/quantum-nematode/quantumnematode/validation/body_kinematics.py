@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from quantumnematode.env.body import wave_amplitude
+from quantumnematode.env.body import MIN_WAVE_AMPLITUDE, wave_amplitude
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -113,8 +113,14 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
     step_seconds: float,
     reversal_threshold: float,
     wall_margin_mm: float = 1.0,
+    min_wave_amplitude: float = MIN_WAVE_AMPLITUDE,
 ) -> Kinematics:
-    """Read the instruments over one or more captured episodes."""
+    """Read the instruments over one or more captured episodes.
+
+    ``min_wave_amplitude`` is the body's floor on a segment's wave, so the amplitude each step is
+    gated on is the one the body used. Under a floor at or above ``AMPLITUDE_FLOOR`` every forward
+    step undulates.
+    """
     freq_counts, freq_time = 0, 0.0
     speeds: list[float] = []
     wave_speeds: list[float] = []
@@ -142,7 +148,8 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
             if start is not None:
                 displacement = float(np.linalg.norm(heads[-1] - start))
                 speeds.append(displacement / body_length_mm / step_seconds)
-            if reversed_wave or wave_amplitude(drive).min() < AMPLITUDE_FLOOR:
+            amplitude = wave_amplitude(drive, min_wave_amplitude)
+            if reversed_wave or amplitude.min() < AMPLITUDE_FLOOR:
                 stretches.append(stretch)
                 stretch = []
             else:

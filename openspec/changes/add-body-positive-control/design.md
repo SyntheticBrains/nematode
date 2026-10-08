@@ -115,6 +115,28 @@ pilot no longer calibrates it. That pilot is kept as evidence ([its readings are
 registration](../../../docs/experiments/logbooks/supporting/083-body-control/)) and the pilot re-runs
 under the cap on the same seeds, same configs, same rule.
 
+### Decision B″: A segment's wave is damped, never silenced *(added 2026-10-08, after the second pilot)*
+
+**What the capped pilot showed.** Under the reversal cap no seed locked into a gait: trained reversal
+fractions were 0.004–0.047. But the trained MLP silenced 2.7–5 of the 12 segments per step. At gain 1
+the head segment's wave sat below a quarter of the peak on 94–98% of steps for seeds 1501 and 1502,
+with mean amplitude 0.01–0.03. Only 0–5% of wall-clear steps had every segment undulating, so frequency
+and wavelength could not be read on three of sixteen runs. Where they could, they read 0.315 Hz and
+0.62 body lengths.
+
+**The floor.** A segment's wave amplitude now spans **[0.25, 1]** of the peak, not [0, 1]. Neutral drive
+still gives 0.5, so the sourced neutral crawl is unchanged. Positive drive keeps its old mapping, and
+negative drive damps down to 0.25 rather than 0. In forward crawling the wave propagates along the
+whole body through proprioceptive coupling: posterior bending follows anterior bending (Wen et al.
+2012). A body in which the head can stop undulating while the rest crawls is not the worm's. The floor
+applies to every arm, the connectome's included, since the drive is the same for both.
+
+**Consequence for the calibration.** The floor changes the body every gain runs through, so the pilot
+re-runs a third time, on the same seeds, configs and rule. Both earlier pilots are kept as evidence:
+[pilot-uncapped.json](../../../docs/experiments/logbooks/supporting/083-body-control/pilot-uncapped.json)
+and [pilot-capped.json](../../../docs/experiments/logbooks/supporting/083-body-control/pilot-capped.json),
+with their kinematics. Both chose gain 1.
+
 ### Decision C: The steering calibration, a rule fixed first
 
 **The pilot.** MLP-PPO through the body at **B₀ ∈ {0.5, 1, 2, 4}**, on hard350 with reversal on, 3,000
@@ -145,6 +167,13 @@ only, on **seeds 1513–1516**. The shortest length at which every seed reaches 
 and the control re-runs there, learning and frozen, on fresh **seeds 1517–1524**. The cell's meaning moves, which C.1e already treats as a new reference frame.
 
 If the floor gate fails, C.1d fails, and the diagnosis is its deliverable.
+
+**Sequencing** *(added 2026-10-08)*. In both earlier pilots one of four seeds sat under the competence
+bar at the chosen gain, so the fallback is likely. The fallback's gate-only pilot (learning arm, 500,
+700 and 1,000 steps, seeds 1513–1516, 12 runs) therefore launches together with the control, as one
+campaign. Only the order changes. The fallback pilot is read only if the control reads `fallback`;
+otherwise it is reported beside the control as description. The re-run on seeds 1517–1524 still waits
+for the control's reading.
 
 ### Decision E: The kinematic instruments
 

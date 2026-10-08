@@ -28,6 +28,9 @@ N_SEGMENTS = 12
 DRIVE_WIDTH = 2 * N_SEGMENTS + 1
 """The drive action: dorsal drive per segment, ventral drive per segment, then direction."""
 
+MIN_WAVE_AMPLITUDE = 0.25
+"""The least share of the peak wave any segment carries, however strongly its drive damps it."""
+
 
 @dataclass(frozen=True)
 class BodyParams:
@@ -46,6 +49,10 @@ class BodyParams:
     ``max_reversal_steps`` steps and is followed by at least ``reversal_refractory_steps`` forward
     steps before the next. One step is 1.5 head swings, a short reversal; the long reversals that
     precede an omega turn are not reachable at one step.
+
+    Drive damps a segment's wave down to ``min_wave_amplitude`` of the peak but never silences it:
+    in forward crawling the wave propagates along the whole body through proprioceptive coupling
+    (Wen et al. 2012), so no segment stops undulating while the rest crawl.
     """
 
     body_length_mm: float = 1.0
@@ -60,6 +67,7 @@ class BodyParams:
     reversal_threshold: float = 0.5
     max_reversal_steps: int = 1
     reversal_refractory_steps: int = 1
+    min_wave_amplitude: float = MIN_WAVE_AMPLITUDE
 
     @property
     def relax_tau(self) -> float:
@@ -97,10 +105,17 @@ def new_body(x: float, y: float, heading: float) -> BodyState:
     return BodyState(head=np.array([x, y], dtype=float), frame_angle=heading)
 
 
-def wave_amplitude(drive: np.ndarray) -> np.ndarray:
-    """Each segment's share of the peak wave under ``drive``: 0 silences it, 1 is full drive."""
+def wave_amplitude(drive: np.ndarray, minimum: float = MIN_WAVE_AMPLITUDE) -> np.ndarray:
+    """Each segment's share of the peak wave under ``drive``.
+
+    The mean of a segment's dorsal and ventral drive sets it: neutral drive gives one half, full
+    drive one, and full negative drive ``minimum``. In forward crawling the wave propagates along
+    the whole body through proprioceptive coupling, so drive damps a segment's wave but cannot
+    silence it.
+    """
     dorsal, ventral = drive[..., :N_SEGMENTS], drive[..., N_SEGMENTS : 2 * N_SEGMENTS]
-    return (1.0 + (dorsal + ventral) / 2.0) / 2.0
+    level = (dorsal + ventral) / 2.0
+    return 0.5 + np.where(level >= 0.0, 0.5, 0.5 - minimum) * level
 
 
 def _segment_angles(curvature: np.ndarray) -> np.ndarray:
@@ -209,7 +224,8 @@ class KinematicBody:
         p = self.params
         dorsal, ventral = drive[:N_SEGMENTS], drive[N_SEGMENTS : 2 * N_SEGMENTS]
         bias = (dorsal - ventral) / 2.0
-        return p.peak_curvature * wave_amplitude(drive) * self._relayed(state, forward=forward) + (
+        amplitude = wave_amplitude(drive, p.min_wave_amplitude)
+        return p.peak_curvature * amplitude * self._relayed(state, forward=forward) + (
             p.steering_gain * bias
         )
 

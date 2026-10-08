@@ -150,6 +150,7 @@ def evaluate(  # noqa: PLR0913 - a run's identity and the evaluation's settings
         step_seconds=body.step_seconds,
         reversal_threshold=body.reversal_threshold,
         wall_margin_mm=wall_margin_mm,
+        min_wave_amplitude=body.min_wave_amplitude,
     )
 
 

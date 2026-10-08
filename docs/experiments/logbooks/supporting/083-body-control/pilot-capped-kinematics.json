@@ -1,0 +1,243 @@
+{
+  "runs": {
+    "0.5": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.31513260530421217,
+            "reversal_fraction": 0.0292179891148668,
+            "speed_bl_per_s": 0.11709716708165045,
+            "steps_near_wall": 584,
+            "steps_undulating": 101,
+            "steps_used": 2907,
+            "wavelength_bl": 0.6166504515624041
+          },
+          "untrained_reversal_fraction": 0.08028571428571428
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.3148936170212766,
+            "reversal_fraction": 0.004345307068366165,
+            "speed_bl_per_s": 0.1444116760787576,
+            "steps_near_wall": 392,
+            "steps_undulating": 37,
+            "steps_used": 3060,
+            "wavelength_bl": 0.6188594959197853
+          },
+          "untrained_reversal_fraction": 0.4645714285714286
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.31512605042016806,
+            "reversal_fraction": 0.010809141445336628,
+            "speed_bl_per_s": 0.1560533434288971,
+            "steps_near_wall": 666,
+            "steps_undulating": 25,
+            "steps_used": 2572,
+            "wavelength_bl": 0.6182985553381247
+          },
+          "untrained_reversal_fraction": 0.027428571428571427
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.3157894736842105,
+            "reversal_fraction": 0.046658639373871165,
+            "speed_bl_per_s": 0.1367312231136049,
+            "steps_near_wall": 425,
+            "steps_undulating": 5,
+            "steps_used": 2897,
+            "wavelength_bl": 0.6212258014325428
+          },
+          "untrained_reversal_fraction": 0.284
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.31523543660746683,
+        "reversal_fraction": 0.02275776925061019,
+        "speed_bl_per_s": 0.13857335242572752,
+        "wavelength_bl": 0.6187585760632142
+      }
+    },
+    "1": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": null,
+            "reversal_fraction": 0.00947268708556994,
+            "speed_bl_per_s": 0.15577561452202948,
+            "steps_near_wall": 798,
+            "steps_undulating": 0,
+            "steps_used": 2369,
+            "wavelength_bl": null
+          },
+          "untrained_reversal_fraction": 0.07085714285714285
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.3157894736842105,
+            "reversal_fraction": 0.0037735849056603774,
+            "speed_bl_per_s": 0.15435372401542943,
+            "steps_near_wall": 471,
+            "steps_undulating": 2,
+            "steps_used": 2709,
+            "wavelength_bl": 0.617618877431623
+          },
+          "untrained_reversal_fraction": 0.4677142857142857
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.3146303093864709,
+            "reversal_fraction": 0.021110468478889532,
+            "speed_bl_per_s": 0.1277796052797498,
+            "steps_near_wall": 436,
+            "steps_undulating": 100,
+            "steps_used": 3022,
+            "wavelength_bl": 0.6203196933665903
+          },
+          "untrained_reversal_fraction": 0.019142857142857142
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.3157894736842105,
+            "reversal_fraction": 0.01403609281008307,
+            "speed_bl_per_s": 0.12563156863306962,
+            "steps_near_wall": 800,
+            "steps_undulating": 34,
+            "steps_used": 2691,
+            "wavelength_bl": 0.6158507774311738
+          },
+          "untrained_reversal_fraction": 0.23457142857142857
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.31540308558496394,
+        "reversal_fraction": 0.01209820832005073,
+        "speed_bl_per_s": 0.1408851281125696,
+        "wavelength_bl": 0.617929782743129
+      }
+    },
+    "2": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.31532846715328466,
+            "reversal_fraction": 0.01344590368980613,
+            "speed_bl_per_s": 0.13284784901440402,
+            "steps_near_wall": 227,
+            "steps_undulating": 36,
+            "steps_used": 2971,
+            "wavelength_bl": 0.6190021101483636
+          },
+          "untrained_reversal_fraction": 0.07942857142857143
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": 0.3157894736842105,
+            "reversal_fraction": 0.014832393948383269,
+            "speed_bl_per_s": 0.14091687033346084,
+            "steps_near_wall": 451,
+            "steps_undulating": 6,
+            "steps_used": 2920,
+            "wavelength_bl": 0.6196227240988076
+          },
+          "untrained_reversal_fraction": 0.4642857142857143
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.3144368858654573,
+            "reversal_fraction": 0.0038045068773778167,
+            "speed_bl_per_s": 0.1154958463928432,
+            "steps_near_wall": 536,
+            "steps_undulating": 139,
+            "steps_used": 2881,
+            "wavelength_bl": 0.6205537587908438
+          },
+          "untrained_reversal_fraction": 0.016285714285714285
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": null,
+            "reversal_fraction": 0.04191797346200241,
+            "speed_bl_per_s": 0.13844595731301335,
+            "steps_near_wall": 448,
+            "steps_undulating": 0,
+            "steps_used": 2868,
+            "wavelength_bl": null
+          },
+          "untrained_reversal_fraction": 0.17942857142857144
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.31518494223431753,
+        "reversal_fraction": 0.018500194494392407,
+        "speed_bl_per_s": 0.13192663076343036,
+        "wavelength_bl": 0.6197261976793383
+      }
+    },
+    "4": {
+      "per_seed": {
+        "1501": {
+          "trained": {
+            "frequency_hz": 0.3151969981238274,
+            "reversal_fraction": 0.005993407252022775,
+            "speed_bl_per_s": 0.13897707939533338,
+            "steps_near_wall": 103,
+            "steps_undulating": 28,
+            "steps_used": 3234,
+            "wavelength_bl": 0.6093987685155776
+          },
+          "untrained_reversal_fraction": 0.054
+        },
+        "1502": {
+          "trained": {
+            "frequency_hz": null,
+            "reversal_fraction": 0.0014619883040935672,
+            "speed_bl_per_s": 0.14177860113027846,
+            "steps_near_wall": 337,
+            "steps_undulating": 0,
+            "steps_used": 3083,
+            "wavelength_bl": null
+          },
+          "untrained_reversal_fraction": 0.458
+        },
+        "1503": {
+          "trained": {
+            "frequency_hz": 0.315450643776824,
+            "reversal_fraction": 0.022688110281447443,
+            "speed_bl_per_s": 0.12073367659074567,
+            "steps_near_wall": 619,
+            "steps_undulating": 49,
+            "steps_used": 2863,
+            "wavelength_bl": 0.6177182776607936
+          },
+          "untrained_reversal_fraction": 0.040857142857142856
+        },
+        "1504": {
+          "trained": {
+            "frequency_hz": 0.3157894736842105,
+            "reversal_fraction": 0.010116036893781613,
+            "speed_bl_per_s": 0.1384654579900826,
+            "steps_near_wall": 83,
+            "steps_undulating": 3,
+            "steps_used": 3278,
+            "wavelength_bl": 0.619622724098797
+          },
+          "untrained_reversal_fraction": 0.20857142857142857
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.3154790385282873,
+        "reversal_fraction": 0.010064885682836349,
+        "speed_bl_per_s": 0.13498870377661004,
+        "wavelength_bl": 0.6155799234250561
+      }
+    }
+  },
+  "seeds": [
+    1501,
+    1502,
+    1503,
+    1504
+  ],
+  "stage": "pilot"
+}
