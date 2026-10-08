@@ -1,0 +1,219 @@
+{
+  "runs": {
+    "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body_steps500": {
+      "bands": {
+        "frequency_hz": "in",
+        "speed_bl_per_s": "edge",
+        "wavelength_bl": "in"
+      },
+      "half_step": {
+        "agrees": true,
+        "instruments": {
+          "frequency_hz": {
+            "agrees": true,
+            "allowed": 0.02998833928693917,
+            "base": 0.2998833928693917,
+            "doubled": 0.29972520828376303
+          },
+          "reversal_fraction": {
+            "agrees": true,
+            "allowed": 0.01,
+            "base": 0.009043722450434425,
+            "doubled": 0.007930902457214657
+          },
+          "speed_bl_per_s": {
+            "agrees": true,
+            "allowed": 0.012245231868731268,
+            "base": 0.12245231868731267,
+            "doubled": 0.11677169935859953
+          },
+          "wavelength_bl": {
+            "agrees": true,
+            "allowed": 0.06447161403275514,
+            "base": 0.6447161403275514,
+            "doubled": 0.6454287151207769
+          }
+        }
+      },
+      "per_seed": {
+        "1517": {
+          "half_step": {
+            "frequency_hz": 0.2996981860045428,
+            "reversal_fraction": 0.002844950213371266,
+            "speed_bl_per_s": 0.12175832270024878,
+            "steps_near_wall": 292,
+            "steps_undulating": 3215,
+            "steps_used": 3223,
+            "wavelength_bl": 0.6570301300889506
+          },
+          "trained": {
+            "frequency_hz": 0.299781704616071,
+            "reversal_fraction": 0.002063679245283019,
+            "speed_bl_per_s": 0.12681332407558232,
+            "steps_near_wall": 245,
+            "steps_undulating": 3140,
+            "steps_used": 3147,
+            "wavelength_bl": 0.6558410072408711
+          }
+        },
+        "1518": {
+          "half_step": {
+            "frequency_hz": 0.2997800857883162,
+            "reversal_fraction": 0.016370106761565837,
+            "speed_bl_per_s": 0.11552989498714634,
+            "steps_near_wall": 712,
+            "steps_undulating": 3447,
+            "steps_used": 3503,
+            "wavelength_bl": 0.6462912733573389
+          },
+          "trained": {
+            "frequency_hz": 0.30009101146127387,
+            "reversal_fraction": 0.01817251087791144,
+            "speed_bl_per_s": 0.11989580164160847,
+            "steps_near_wall": 600,
+            "steps_undulating": 3247,
+            "steps_used": 3307,
+            "wavelength_bl": 0.6441744504049063
+          }
+        },
+        "1519": {
+          "half_step": {
+            "frequency_hz": 0.29971694184248976,
+            "reversal_fraction": 0.0015174506828528073,
+            "speed_bl_per_s": 0.1200708867722768,
+            "steps_near_wall": 405,
+            "steps_undulating": 3543,
+            "steps_used": 3549,
+            "wavelength_bl": 0.6325594136801909
+          },
+          "trained": {
+            "frequency_hz": 0.29978728860862613,
+            "reversal_fraction": 0.0018612071257644244,
+            "speed_bl_per_s": 0.12271139053079536,
+            "steps_near_wall": 439,
+            "steps_undulating": 3317,
+            "steps_used": 3322,
+            "wavelength_bl": 0.633091647678524
+          }
+        },
+        "1520": {
+          "half_step": {
+            "frequency_hz": 0.29970944349787226,
+            "reversal_fraction": 0.0075970737197523916,
+            "speed_bl_per_s": 0.119975738432217,
+            "steps_near_wall": 492,
+            "steps_undulating": 3039,
+            "steps_used": 3062,
+            "wavelength_bl": 0.6418843894847707
+          },
+          "trained": {
+            "frequency_hz": 0.2998284404111017,
+            "reversal_fraction": 0.010514665190924184,
+            "speed_bl_per_s": 0.12756394419857686,
+            "steps_near_wall": 462,
+            "steps_undulating": 3122,
+            "steps_used": 3152,
+            "wavelength_bl": 0.6446242969791587
+          }
+        },
+        "1521": {
+          "half_step": {
+            "frequency_hz": 0.29971339671813974,
+            "reversal_fraction": 0.0013116474291710388,
+            "speed_bl_per_s": 0.11125849633096745,
+            "steps_near_wall": 343,
+            "steps_undulating": 3464,
+            "steps_used": 3469,
+            "wavelength_bl": 0.6517204250492714
+          },
+          "trained": {
+            "frequency_hz": 0.299833752629798,
+            "reversal_fraction": 0.0010204081632653062,
+            "speed_bl_per_s": 0.11963058536912366,
+            "steps_near_wall": 516,
+            "steps_undulating": 3401,
+            "steps_used": 3404,
+            "wavelength_bl": 0.6491510282164453
+          }
+        },
+        "1522": {
+          "half_step": {
+            "frequency_hz": 0.29967267442650114,
+            "reversal_fraction": 0.007823960880195598,
+            "speed_bl_per_s": 0.11137880442376868,
+            "steps_near_wall": 378,
+            "steps_undulating": 3683,
+            "steps_used": 3712,
+            "wavelength_bl": 0.6520832871788311
+          },
+          "trained": {
+            "frequency_hz": 0.2998244819386253,
+            "reversal_fraction": 0.007363770250368188,
+            "speed_bl_per_s": 0.11476949785832798,
+            "steps_near_wall": 511,
+            "steps_undulating": 3536,
+            "steps_used": 3563,
+            "wavelength_bl": 0.6487523206875633
+          }
+        },
+        "1523": {
+          "half_step": {
+            "frequency_hz": 0.2998607242339833,
+            "reversal_fraction": 0.025218476903870163,
+            "speed_bl_per_s": 0.12020334371958104,
+            "steps_near_wall": 326,
+            "steps_undulating": 3593,
+            "steps_used": 3679,
+            "wavelength_bl": 0.6462750525312494
+          },
+          "trained": {
+            "frequency_hz": 0.30019009316135925,
+            "reversal_fraction": 0.030338052585957814,
+            "speed_bl_per_s": 0.1248776062981622,
+            "steps_near_wall": 174,
+            "steps_undulating": 3189,
+            "steps_used": 3287,
+            "wavelength_bl": 0.6478383067556529
+          }
+        },
+        "1524": {
+          "half_step": {
+            "frequency_hz": 0.29965021375825884,
+            "reversal_fraction": 0.0007635530669381522,
+            "speed_bl_per_s": 0.11399810750259015,
+            "steps_near_wall": 582,
+            "steps_undulating": 3346,
+            "steps_used": 3347,
+            "wavelength_bl": 0.6355857495956124
+          },
+          "trained": {
+            "frequency_hz": 0.29973037012827847,
+            "reversal_fraction": 0.0010154861640010156,
+            "speed_bl_per_s": 0.12335639952632446,
+            "steps_near_wall": 875,
+            "steps_undulating": 3062,
+            "steps_used": 3064,
+            "wavelength_bl": 0.6342560646572897
+          }
+        }
+      },
+      "pooled": {
+        "frequency_hz": 0.2998833928693917,
+        "reversal_fraction": 0.009043722450434425,
+        "speed_bl_per_s": 0.12245231868731267,
+        "wavelength_bl": 0.6447161403275514
+      }
+    }
+  },
+  "seeds": [
+    1517,
+    1518,
+    1519,
+    1520,
+    1521,
+    1522,
+    1523,
+    1524
+  ],
+  "stage": "control"
+}
