@@ -1,0 +1,29 @@
+{
+  "gap_only_null": {
+    "max_multiplier": 13.217012405395508,
+    "median_abs_log_multiplier": 0.2166194503678988,
+    "min_multiplier": 0.05531721189618111,
+    "n_seeds": 64,
+    "p5_multiplier": 0.5392938405275345,
+    "p95_multiplier": 1.6865214407444,
+    "total_strength_ratio": 1.0270906606387022,
+    "total_strength_ratio_range": [
+      0.9056482204566468,
+      1.4086577056496727
+    ]
+  },
+  "summary": "medians over seeds of per-run statistics over existing gap pairs",
+  "wild_type": {
+    "max_multiplier": 16.028915405273438,
+    "median_abs_log_multiplier": 0.21929609152993051,
+    "min_multiplier": 0.02430417761206627,
+    "n_seeds": 64,
+    "p5_multiplier": 0.534328892827034,
+    "p95_multiplier": 1.8039766550064087,
+    "total_strength_ratio": 1.0703300851661666,
+    "total_strength_ratio_range": [
+      0.9498501688391473,
+      1.3868268039361888
+    ]
+  }
+}

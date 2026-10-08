@@ -1,0 +1,18 @@
+{
+  "complete": true,
+  "per_seed": {
+    "gap_only_null": {
+      "1401": true,
+      "1402": true,
+      "1403": true,
+      "1404": true
+    },
+    "wild_type": {
+      "1401": true,
+      "1402": true,
+      "1403": true,
+      "1404": true
+    }
+  },
+  "plasticity_acts": true
+}

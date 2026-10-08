@@ -1,0 +1,25 @@
+{
+  "saturation_bar": 90.0,
+  "margin_points": 5.0,
+  "levels": {
+    "fixed": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 72.8,
+      "rn_plateau": 53.099999999999994,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    },
+    "plastic": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 70.0,
+      "rn_plateau": 50.53333333333333,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    }
+  },
+  "launch": true
+}
