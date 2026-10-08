@@ -24,7 +24,10 @@ readout at all.
   zero (a gain of 1), multiplies the anatomical drive before the policy's squash. The map itself (which
   cells, their signs, the column weights) stays fixed anatomy. The gain takes the readout's place in
   the learnable parameters, so the trainable count is identical across wirings.
-- **The probe re-runs** on the same seeds and configs, to read whether the connectome now learns the
+- **A dimension-matched entropy bonus for body-drive arms** *(added after the second probe)*. The
+  entropy bonus is summed over action dimensions, so 0.05, set for the point worm's two numbers, pushes
+  12.5 times harder on the body's 25. Every body-drive arm runs at 0.004.
+- **The probe re-runs** on the same seeds after each change, to read whether the connectome learns the
   500-step cell, and how readable a wiring contrast would be there. C.1e is planned on what it shows.
 
 ## Capabilities
