@@ -395,7 +395,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   about understanding the effect's stability rather than defending it, and Phase 8's committed scope
   is the substrate and body ladder.
 
-- [ ] **M.8 Plastic gap junctions on the settling substrate** *(added 2026-10-07 after [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md); optional, a short detour)*.
+- [x] **M.8 Plastic gap junctions on the settling substrate** — **met 2026-10-08: `placement`** ([Logbook 082](../../../docs/experiments/logbooks/082-plastic-gaps.md)): on thermal t35 the gap-only null trails the wild type by +0.096 `auc_success` with fixed strengths and +0.086 with plastic ones; the interaction, −0.010 [−0.027, +0.005], is inside the minimum. The wild type's gap-junction advantage survives strength tuning, so it is not in each junction's strength; placement is not separated from per-neuron total gap strength (a total-matched null would). hard350 untested. *(**Decided 2026-10-07 at the C.0 freeze: run alongside C.1's build**, from a separate worktree; `add-plastic-gap-junctions`, registered in Logbook 082's launch record: the gap-only null against the wild type, fixed and plastic gaps, thermal t35, seeds 513–576)* *(added 2026-10-07 after [Logbook 080](../../../docs/experiments/logbooks/080-across-step-state.md); optional, a short detour)*.
   B.2b closed *unreachable-with-reason* because the leaky substrate it was registered on failed its
   positive control. The question it existed for does not need that substrate: **gap placement against
   gap strength**. Logbooks 075 and 078 found the null's rewired gap junctions carry about half of block
@@ -421,7 +421,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 
-- [ ] **M.7 The chemotaxis reference file's two misattributions** *(S8a 2026-09-26: deferred-with-destination to its own small change)* *(added 2026-09-25, from the Wormlight review)*.
+- [ ] **M.7 The chemotaxis reference file's two misattributions** *(S8a 2026-09-26: deferred-with-destination to its own small change)* *(**Decided 2026-10-07: lands during C.1, before C.3** re-derives the chemotaxis curves from the body)* *(added 2026-09-25, from the Wormlight review)*.
   `data/chemotaxis/literature_ci_values.json` credits Bargmann et al. 1993 with a **bacteria** assay —
   it tested volatile odorants — and Pierce-Shimomura et al. 1999 with a **food gradient** — they used
   ammonium chloride and biotin. `validation/datasets.py` reads the file, and its default source prefers
