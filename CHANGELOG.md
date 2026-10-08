@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Breaking changes
+
+- **The chemotaxis reference set is rebuilt, and tracked runs no longer record a literature verdict.** A source-by-source check found that none of the five chemotaxis-index values in `data/chemotaxis/literature_ci_values.json` came from its cited paper, and three citations pointed to unrelated articles. The file now lists only values verified in their papers (Bargmann, Hartwieg & Horvitz 1993; Rodriguez et al. 2025 for bacteria), each with what was assayed and whether the value was stated in the text or read from a figure, and records what was dropped and why. The simulated index is a time-in-zone fraction and a published index an endpoint count of worms, so the tracker no longer writes `biological_ci_range`, `biological_ci_typical`, `matches_biology` or `literature_source` (they stay in the schema, `None` on new records, so older records load); it keeps the index and its band (`chemotaxis_validation_level`, now described as a banding, not a biological match). `ChemotaxisValidationBenchmark`, its built-in fallback dataset and `ValidationResult` are removed, and the reference file's schema changes (`assay` and `read_from` replace `ci_range` and `conditions`).
+
 ### Added
 
 - **The kinematic body's calibrated parameters and kinematic instruments** — the body takes the crawl's measured period, wavelength, drag anisotropy and amplitude, a steering gain of 2 calibrated on the MLP positive control, reversals that last one step with a one-step refractory period, and a wave amplitude floored at a quarter of the peak; `continuous.body_substeps` and `continuous.body_steering_gain` are configurable, and an optional `posture_log` records each sub-step's posture. `quantumnematode.validation.body_kinematics` reads undulation frequency, wavelength, speed and reversal fraction from captured episodes, and `scripts/analysis/body_kinematics_eval.py` evaluates a trained run's weights with posture capture. See [Logbook 083](docs/experiments/logbooks/083-body-control.md).

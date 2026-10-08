@@ -1,4 +1,4 @@
-"""Validation module for comparing agent behavior against biological data."""
+"""Validation: chemotaxis metrics, reference values, and behavioural and kinematic instruments."""
 
 from quantumnematode.dtypes import (
     Position,
@@ -15,7 +15,6 @@ from .adaptive_sensor import (
 from .chemotaxis import (
     ChemotaxisMetrics,
     ValidationLevel,
-    ValidationResult,
     calculate_chemotaxis_index,
     calculate_chemotaxis_index_stepwise,
     calculate_chemotaxis_metrics,
@@ -23,7 +22,6 @@ from .chemotaxis import (
 )
 from .datasets import (
     ChemotaxisDataset,
-    ChemotaxisValidationBenchmark,
     LiteratureSource,
     load_chemotaxis_dataset,
 )
@@ -31,14 +29,12 @@ from .datasets import (
 __all__ = [
     "ChemotaxisDataset",
     "ChemotaxisMetrics",
-    "ChemotaxisValidationBenchmark",
     "LiteratureSource",
     "Position",
     "PositionFoodHistory",
     "PositionPath",
     "StepInputResult",
     "ValidationLevel",
-    "ValidationResult",
     "calculate_chemotaxis_index",
     "calculate_chemotaxis_index_stepwise",
     "calculate_chemotaxis_metrics",
