@@ -7,4 +7,4 @@
 - [x] 3. **Retire the comparison API**: remove `ChemotaxisValidationBenchmark` and the built-in fallback
   dataset; the summary printout drops the literature lines. Tests.
 - [x] 4. **Records**: tracker M.7, CHANGELOG.
-- [ ] 5. **Close-out**: full suite; hooks by exit code; `openspec validate --strict`; archive; PR.
+- [x] 5. **Close-out** — **done 2026-10-09: full suite 7404 passed, 34 skipped; hooks; validate; archived.** Original scope: full suite; hooks by exit code; `openspec validate --strict`; archive; PR.

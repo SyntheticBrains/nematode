@@ -421,7 +421,7 @@ SimulationResult per-step data (path, food_history, satiety_history, health_hist
 - **THEN** ChemotaxisMetrics SHALL be computed from that episode's path and food_history
 - **AND** the pre-computed metrics SHALL be passed to `aggregate_results_metadata` at session end
 - **AND** results SHALL be identical to batch computation
-- **AND** the post-convergence validation logic (biological comparison, validation level) SHALL execute regardless of whether metrics were pre-computed or computed from results
+- **AND** the post-convergence chemotaxis summary (the index and its validation level) SHALL be computed regardless of whether metrics were pre-computed or computed from results
 
 ### Requirement: Post-Loop Consumer Snapshot Fallback
 
@@ -516,3 +516,34 @@ The system SHALL compute learning-speed and stability metrics from convergence a
 - **THEN** the system SHALL compute stability from coefficient of variation
 - **AND** stability = 1.0 - (std / mean) for success rates, clamped to [0, 1]
 - **AND** higher stability indicates more consistent results
+
+### Requirement: No literature verdict on the simulated chemotaxis index
+
+The experiment tracker SHALL record the simulated chemotaxis index and its validation level, a banding
+of the index at 0.4, 0.6 and 0.75. It SHALL NOT record a literature CI range, a typical literature CI,
+a literature citation or a `matches_biology` verdict, because the simulated index is a time-in-zone
+fraction and every published chemotaxis index it could be set against is an endpoint count of worms.
+Those fields SHALL remain readable, and SHALL be `None` on new records.
+
+#### Scenario: A tracked run records no literature verdict
+
+- **WHEN** a tracked run with food history completes
+- **THEN** its record SHALL carry the post-convergence chemotaxis index and validation level
+- **AND** its literature range, typical value, citation and `matches_biology` SHALL be `None`
+
+#### Scenario: Older records still load
+
+- **WHEN** an experiment record written before this change, with those fields set, is loaded
+- **THEN** it SHALL load with its recorded values
+
+### Requirement: A verified chemotaxis reference set
+
+The chemotaxis reference file SHALL list only values verified in the cited paper, each with its correct
+citation, what the paper assayed, the index it reports, and whether the value was stated in the text
+or read from a figure.
+
+#### Scenario: Every entry is traceable
+
+- **WHEN** the reference file is loaded
+- **THEN** every entry SHALL carry a citation, an assay description and a value source of `text` or
+  `figure`
