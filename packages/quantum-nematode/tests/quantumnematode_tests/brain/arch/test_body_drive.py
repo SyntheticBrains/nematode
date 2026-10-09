@@ -120,6 +120,27 @@ class TestConnectomeReadout:
         batched = topo.body_drive_mean(h.unsqueeze(0).repeat(3, 1))
         assert torch.allclose(batched, mean.expand(3, -1))
 
+    def test_a_gain_vector_scales_the_anatomy(self) -> None:
+        """Each of the 25 outputs has a learnable gain, starting at 1, scaling the anatomy."""
+        topo = _connectome().topology
+        gain = topo.body_drive_log_gain
+        assert gain.shape == (BODY_DRIVE_DIM,)
+        assert any(p is gain for p in topo.learnable_parameters)
+        h = torch.tanh(torch.randn(topo.n_neurons, generator=torch.Generator().manual_seed(1)))
+        start = topo.body_drive_mean(h).detach()
+        with torch.no_grad():
+            gain.fill_(torch.log(torch.tensor(3.0)).item())
+        assert torch.allclose(topo.body_drive_mean(h), 3.0 * start)
+
+    def test_the_trainable_count_does_not_depend_on_the_wiring(self) -> None:
+        """The wild type and a rewired null learn the same number of parameters."""
+
+        def count(wiring: str) -> int:
+            topo = _connectome(wiring=wiring).topology
+            return sum(p.numel() for p in topo.learnable_parameters)
+
+        assert count("wild_type") == count("rewired_chemical_only")
+
     def test_the_action_is_25_bounded_numbers(self) -> None:
         brain = _connectome()
         params = BrainParams(food_gradient_strength=0.4, food_gradient_direction=0.2)
