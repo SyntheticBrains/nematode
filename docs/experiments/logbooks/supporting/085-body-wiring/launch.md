@@ -54,7 +54,19 @@ reach 90%. If either fails, the panel is **unreadable** and nothing is classifie
 
 **Only if the reading is `move_wt`**, the boundary-preserving null runs on the same seeds, PPO and frozen
 (128 runs), and wild type minus boundary null is read at the same minimum against the panel's wild-type
-runs. Its configs come from `generate_body_wiring_configs.py --stage boundary`. Under the body its
+runs, by the same statistics. It is classified alone, with no correction across the two readings: the
+second is tested only when the first has passed, a fixed sequence, so the family's error rate is the
+first reading's.
+
+| state | verdict | what it licenses |
+|---|---|---|
+| `move_wt` | **interior wiring** | the advantage lies at least partly in the interior wiring the boundary null rewires |
+| `no_move` | **not in the interior** | the boundary-preserving null keeps the advantage; weaker evidence, since it rewires 42% of the chemical wiring |
+| `below` | **an interior part below the minimum** | a significant interior share smaller than 0.0367 |
+| `move_null` | **boundary null ahead** | the boundary-preserving null learns faster, by at least the minimum |
+| `unresolved` | **unresolved at this sensitivity** | none; the achieved interval is reported as the bound |
+
+Its gates are the panel's, read on the boundary null's own learning and frozen arms. Its configs come from `generate_body_wiring_configs.py --stage boundary`. Under the body its
 boundary holds 2,134 of the 3,709 chemical edges (58%), so it rewires 1,575 interior edges, and an
 interior claim covers 42% of the chemical wiring. A `no_move` there is weaker evidence than under the
 point worm's boundary. If the primary is not `move_wt`, the boundary stage is recorded as not run, with

@@ -110,7 +110,10 @@ at 0.0367 by `mc.classify` (two-sided Wilcoxon q, 80% bootstrap interval). The v
 Gates first: if either learning arm fails its floor, or both reach 90%, the panel is unreadable.
 
 **The boundary stage, gated.** The boundary-preserving null runs only if the primary reads `move_wt`,
-on the same seeds, PPO and frozen, against the panel's wild-type runs, at the same minimum. An
+on the same seeds, PPO and frozen, against the panel's wild-type runs, at the same minimum, classified
+alone: tested only after the first reading passes, a fixed sequence keeps the family's error rate at the
+first reading's. Its verdict map is registered with the panel (Logbook 085's launch record), so its
+reading is not interpreted after the primary is known. An
 interior-wiring claim needs a wiring effect to locate; without one its 128 runs would answer a question
 that did not arise. The four-wiring panel this replaces would have cost about 29 hours, and the current
 null, read only beside, is not run.

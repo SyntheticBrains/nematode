@@ -9,7 +9,7 @@
 - [x] 3. **Pilot registration** — **done 2026-10-09: launch.md, probes.json, probe-preflight.json (PPO `readable`); spec review applied (panel n never below 16; the floor's share of the wild type's auc reported; the reading learner's closure conditioned; write_csv tested).** Original scope:: `084-body-wiring-pilot/launch.md`, with the three gain probes' and the
   frozen-wiring probe's readings committed beside it; then `/nematode-review-spec`.
 - [x] 4. **Pilot** — **done 2026-10-09: readable; reference +0.0229 [−0.025, +0.071]; minimum 0.0367 (the floor); sd 0.161, so n = 64 (capped, MDE 0.050). Logbook 084.** Original scope:: seeds 1701–1716, 96 runs; Logbook 084 fixes the minimum and the panel's size.
-- [ ] 5. **Panel registration**: `085-body-wiring/launch.md` with the verdict map (primary contrast only; the boundary null gated on `move_wt`), the panel's scoring in `body_wiring.py`; then review and gate preflight.
+- [x] 5. **Panel registration** — **done 2026-10-09: launch.md with both verdict maps (the boundary stage's registered before launch, fixed-sequence); preflight readable, launch true; spec review applied.** Original scope:: `085-body-wiring/launch.md` with the verdict map (primary contrast only; the boundary null gated on `move_wt`), the panel's scoring in `body_wiring.py`; then review and gate preflight.
 - [ ] 6. **Panel**, seeds 1801–1864; the boundary stage only on `move_wt`.
 - [ ] 7. **Readout**: Logbook 085; tracker C.1e; roadmap.
 - [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.

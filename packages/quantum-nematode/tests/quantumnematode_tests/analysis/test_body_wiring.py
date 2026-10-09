@@ -130,6 +130,16 @@ class TestRules:
         assert result["verdict"] == verdict
         assert result["boundary_stage_runs"] is (verdict == "wild_type_ahead")
 
+    def test_the_mlp_is_read_beside(self, tmp_path: Path) -> None:
+        """The MLP's plateaus come from its own logs; a missing seed is simply absent."""
+        line = "Run: {} Status: SUCCESS Reason: goal Steps: 10 Eaten: 20/20\n"
+        log = tmp_path / f"{gen.MLP_STEM}-seed1801.log"
+        log.write_text("".join(line.format(r) for r in range(1, 41)))
+        result = bw.mlp_plateaus([tmp_path], (1801, 1802))
+        assert result["n_seeds"] == 1
+        assert result["mean"] == pytest.approx(100.0)
+        assert result["competent"] == 1
+
     def test_failed_gates_make_the_panel_unreadable(self) -> None:
         """No reading is classified when a learning arm fails its floor."""
         reading = bw.read_panel({"gate_passes": False, "saturated": False}, {})
