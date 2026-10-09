@@ -64,6 +64,7 @@ class TestFrozenWiring:
         )
         agent.run_episode(RewardConfig(), max_steps=40)
         assert torch.equal(topo.w_chem, w_chem)
+        assert topo.w_chem.grad is None
         assert not torch.equal(topo.body_drive_log_gain, gains)
 
     @pytest.mark.parametrize(

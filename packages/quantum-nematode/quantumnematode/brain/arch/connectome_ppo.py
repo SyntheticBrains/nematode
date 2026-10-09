@@ -1255,6 +1255,9 @@ class ConnectomeTopology(nn.Module):
         edges = int(m_chem_np.astype(bool).sum())
         self.instructed_fraction: float = float(pathway_np.sum()) / edges if edges else 0.0
         self.w_chem = nn.Parameter(torch.from_numpy(w_chem_np).to(device=device))
+        # A frozen wiring takes no gradient: outside the optimiser nothing would clear one, and it
+        # would accumulate across every update.
+        self.w_chem.requires_grad_(not freeze_wiring)
 
         # ── Gap junctions: non-learnable, symmetric, fan-in normalised ──
         # Each entry ``G[i, j]`` is divided by ``sqrt(fan_in[i] * fan_in[j])``
