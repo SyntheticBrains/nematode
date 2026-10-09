@@ -233,7 +233,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--validate-chemotaxis",
         action="store_true",
-        help="Display chemotaxis validation against C. elegans literature data.",
+        help="Display the simulated chemotaxis index and its band after the run.",
     )
     parser.add_argument(
         "--seed",
@@ -1255,7 +1255,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             ):
                 results = experiment_metadata.results
                 print("\n" + "=" * 60)
-                print("Chemotaxis Validation (C. elegans Literature Comparison)")
+                print("Chemotaxis Index (simulated, time in zone; not compared with literature)")
                 print("=" * 60)
                 # Show post-convergence metrics (trained behavior, used for validation)
                 print("  Post-Convergence (Trained Behavior):")
@@ -1272,29 +1272,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     f"    Path Efficiency:        {results.post_convergence_path_efficiency:.3f}",
                 )
                 print(
-                    f"  Validation Level:         {results.chemotaxis_validation_level}",
+                    f"  CI band:                  {results.chemotaxis_validation_level}",
                 )
                 # Show all-run metrics for comparison (smaller font/indented)
                 if results.avg_chemotaxis_index is not None:
                     print(f"  (All-run CI:              {results.avg_chemotaxis_index:.3f})")
-                print("-" * 60)
-                # Use dynamic literature source from benchmark
-                if results.literature_source:
-                    print(f"  Literature Reference: {results.literature_source}")
-                if results.biological_ci_range:
-                    ci_min, ci_max = results.biological_ci_range
-                    print(f"  Biological CI Range:  {ci_min:.2f} - {ci_max:.2f}")
-                if results.biological_ci_typical:
-                    print(f"  Typical Wild-Type CI: {results.biological_ci_typical:.2f}")
-                # Show match status
-                if results.matches_biology is True:
-                    print("  Status: MATCHES biological range")
-                elif results.matches_biology is False:
-                    level = results.chemotaxis_validation_level
-                    if level in ("minimum", "target"):
-                        print("  Status: ~ Approaching biological range")
-                    else:
-                        print("  Status: Below biological range")
+                # No literature comparison: the simulated index is a time-in-zone fraction and a
+                # published chemotaxis index an endpoint count of worms.
             elif args.validate_chemotaxis:
                 print(
                     "\n[Chemotaxis validation not available - requires dynamic foraging environment]",

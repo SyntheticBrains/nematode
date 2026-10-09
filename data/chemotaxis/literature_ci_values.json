@@ -1,62 +1,69 @@
 {
-  "version": "1.0",
-  "description": "Published chemotaxis index (CI) values from C. elegans literature for validating simulated agent behavior",
+  "version": "2.0",
+  "description": "Published wild-type C. elegans chemotaxis indices, each as its paper reports it. Every value here is an endpoint count of a population of worms, CI = (N_attractant - N_control) / N_total at the end of the assay. The simulated chemotaxis index is a time-in-zone fraction for one animal, a different quantity, so the two are not compared.",
   "sources": [
     {
-      "citation": "Bargmann & Horvitz (1991). Cell 65(5):837-847",
-      "attractant": "diacetyl",
-      "ci_wild_type": 0.75,
-      "ci_range": [0.6, 0.9],
-      "conditions": "Standard chemotaxis assay, 1:1000 dilution, 20°C",
-      "notes": "Classic study establishing chemotaxis assay paradigm for C. elegans. Diacetyl is a volatile attractant detected by AWA neurons."
-    },
-    {
-      "citation": "Bargmann et al. (1993). Cell 74(3):515-527",
+      "citation": "Rodriguez JD, Reeves MN, Chavez SR, et al. (2025). PNAS 122(39):e2513137122",
       "attractant": "bacteria",
-      "ci_wild_type": 0.7,
-      "ci_range": [0.5, 0.85],
-      "conditions": "OP50 E. coli bacterial lawn, standard NGM plates, 20°C",
-      "notes": "Food-seeking behavior toward bacterial food source. Most relevant to our foraging simulation."
+      "ci_wild_type": 0.9,
+      "assay": "N2 adults. 60 mm NGM plate in quadrants: 5 uL of 200x concentrated overnight E. coli OP50 in two quadrants, LB vehicle in two. About 50 washed worms from the centre, 1 h at 20 C. CI = ((E1 + E2) - (C1 + C2)) / worms moved.",
+      "read_from": "text",
+      "notes": "\"Wild Type worms which have a chemotaxis index of 0.9\"; Fig. 3A, N = 1,450 worms from 36 assays. The same paper reports the wild-type index falling to 0.55, and 0.4 in another experiment, in worms reared on HT115, so rearing diet matters."
     },
     {
-      "citation": "Saeki et al. (2001). Neuron 32(2):249-259",
-      "attractant": "NaCl",
-      "ci_wild_type": 0.6,
-      "ci_range": [0.4, 0.8],
-      "conditions": "100mM NaCl gradient, standard assay conditions",
-      "notes": "Salt chemotaxis, mediated by ASE neurons. Shows experience-dependent modulation."
+      "citation": "Bargmann CI, Hartwieg E, Horvitz HR (1993). Cell 74(3):515-527",
+      "attractant": "diacetyl",
+      "ci_wild_type": 0.92,
+      "assay": "Diacetyl at 10^-3 dilution against a counterattractant spot, sodium azide at both, 100-200 washed adults on 10 cm plates, counted at 60 min. CI = (A - C) / total.",
+      "read_from": "figure",
+      "notes": "Fig. 2, wild-type (hatched) bar, read from the plot to about +-0.03; SEM bars, at least 3 assays per point. Sensed by AWA."
     },
     {
-      "citation": "Pierce-Shimomura et al. (1999). Journal of Neuroscience 19(21):9557-9569",
-      "attractant": "food_gradient",
-      "ci_wild_type": 0.65,
-      "ci_range": [0.45, 0.8],
-      "conditions": "Radial gradient assay with bacterial food",
-      "notes": "Describes biased random walk strategy for navigation up gradients."
+      "citation": "Bargmann CI, Hartwieg E, Horvitz HR (1993). Cell 74(3):515-527",
+      "attractant": "diacetyl 10^-2",
+      "ci_wild_type": 0.97,
+      "assay": "As for diacetyl at 10^-3, at 10^-2 dilution.",
+      "read_from": "figure",
+      "notes": "Fig. 2, wild-type bar, read from the plot to about +-0.03."
     },
     {
-      "citation": "Ferkey et al. (2007). Genetics 175(1):43-59",
+      "citation": "Bargmann CI, Hartwieg E, Horvitz HR (1993). Cell 74(3):515-527",
       "attractant": "benzaldehyde",
-      "ci_wild_type": 0.72,
-      "ci_range": [0.55, 0.88],
-      "conditions": "Standard chemotaxis assay, 1:200 dilution",
-      "notes": "Benzaldehyde is another AWC-sensed volatile attractant."
+      "ci_wild_type": 0.88,
+      "assay": "Benzaldehyde at 10^-2 dilution, population assay as for diacetyl.",
+      "read_from": "figure",
+      "notes": "Fig. 2, wild-type bar, read from the plot to about +-0.03. Sensed by AWC."
+    },
+    {
+      "citation": "Bargmann CI, Hartwieg E, Horvitz HR (1993). Cell 74(3):515-527",
+      "attractant": "benzaldehyde 10^-3",
+      "ci_wild_type": 0.65,
+      "assay": "Benzaldehyde at 10^-3 dilution, population assay as for diacetyl.",
+      "read_from": "figure",
+      "notes": "Fig. 2, wild-type bar, read from the plot to about +-0.03."
     }
   ],
-  "validation_thresholds": {
-    "biological_match_minimum": 0.4,
-    "biological_match_target": 0.6,
-    "biological_match_excellent": 0.75,
-    "notes": "Thresholds based on typical CI ranges in literature. Minimum (0.4) indicates weak but detectable chemotaxis. Target (0.6) represents moderate attraction comparable to some mutant strains. Excellent (0.75) matches wild-type performance."
-  },
-  "methodology": {
-    "formula": "CI = (N_attractant - N_control) / N_total",
-    "attractant_zone": "Region within specified radius of food source",
-    "control_zone": "Region outside attractant zone",
-    "interpretation": {
-      "ci_1.0": "Perfect attraction (all time at food)",
-      "ci_0.0": "No preference (equal time in both zones)",
-      "ci_-1.0": "Perfect avoidance (all time away from food)"
+  "dropped": [
+    {
+      "was": "Bargmann & Horvitz (1991). Cell 65(5):837-847; diacetyl, CI 0.75 [0.6, 0.9]",
+      "reason": "Cell 65:837 is Hall & Hedgecock's unc-104 kinesin paper. The Bargmann & Horvitz 1991 chemotaxis paper is Neuron 7(5):729-742, on water-soluble attractants sensed by ASE; diacetyl and AWA are the 1993 paper. 0.75 is in neither."
+    },
+    {
+      "was": "Bargmann et al. (1993). Cell 74(3):515-527; bacteria, CI 0.7 [0.5, 0.85]",
+      "reason": "The paper assays volatile odorants and never bacteria. Bacteria are now Rodriguez et al. 2025."
+    },
+    {
+      "was": "Saeki et al. (2001). Neuron 32(2):249-259; NaCl, CI 0.6 [0.4, 0.8]",
+      "reason": "Neuron 32:249 is a plexin paper. The paper is Saeki, Yamamoto & Iino 2001, J Exp Biol 204(10):1757-1764, on NaCl chemotaxis plasticity; its full text could not be checked, so no value is listed."
+    },
+    {
+      "was": "Pierce-Shimomura et al. (1999). J Neurosci 19(21):9557-9569; food_gradient, CI 0.65 [0.45, 0.8]",
+      "reason": "The paper tracks single worms in NH4Cl and biotin gradients, not food, and reports a different index (time-averaged normalised concentration), never stated as a value. It remains the citation for the pirouette strategy in behavioural_bias_signatures.json."
+    },
+    {
+      "was": "Ferkey et al. (2007). Genetics 175(1):43-59; benzaldehyde, CI 0.72 [0.55, 0.88]",
+      "reason": "No such article. The paper is Ferkey et al. 2007, Neuron 53(1):39-52 (RGS-3), which does not assay benzaldehyde. Benzaldehyde is now Bargmann et al. 1993."
     }
-  }
+  ],
+  "verified": "2026-10-08: each source checked in its paper's text or figure; see tracker M.7."
 }

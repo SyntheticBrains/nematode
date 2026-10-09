@@ -31,7 +31,6 @@ from quantumnematode.validation.chemotaxis import (
     calculate_chemotaxis_metrics_stepwise,
     get_validation_level,
 )
-from quantumnematode.validation.datasets import ChemotaxisValidationBenchmark
 
 
 def compute_config_hash(config_path: Path) -> str:
@@ -389,10 +388,6 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
     post_convergence_approach_frequency = None
     post_convergence_path_efficiency = None
     chemotaxis_validation_level = None
-    biological_ci_range = None
-    biological_ci_typical = None
-    matches_biology = None
-    literature_source = None
 
     # Helper function to calculate chemotaxis metrics for a result
     def _calculate_result_metrics(result: SimulationResult) -> ChemotaxisMetrics | None:
@@ -486,26 +481,12 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
             post_conv_metrics,
         )
 
-        # Validation level based on post-convergence CI (trained behavior)
+        # The band of the post-convergence index (trained behaviour). No literature verdict is
+        # recorded: the simulated index is a time-in-zone fraction, every published chemotaxis index
+        # an endpoint count of worms, so the two are not compared.
         chemotaxis_validation_level = get_validation_level(
             post_convergence_chemotaxis_index,
         ).value
-
-        # Use benchmark to compare against biological literature
-        benchmark = ChemotaxisValidationBenchmark()
-        validation_stats = benchmark.validate_multiple_runs(post_conv_metrics)
-        if validation_stats["num_runs"] > 0:
-            # Get source information from a single validation
-            sample_result = benchmark.validate_agent(post_conv_metrics[0])
-            biological_ci_range = sample_result.biological_ci_range
-            biological_ci_typical = sample_result.biological_ci_typical
-            literature_source = sample_result.literature_source
-            # Check if post-convergence CI falls within biological range
-            matches_biology = (
-                biological_ci_range[0]
-                <= post_convergence_chemotaxis_index
-                <= biological_ci_range[1]
-            )
 
     return ResultsMetadata(
         total_runs=total_runs,
@@ -553,10 +534,6 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         post_convergence_approach_frequency=post_convergence_approach_frequency,
         post_convergence_path_efficiency=post_convergence_path_efficiency,
         chemotaxis_validation_level=chemotaxis_validation_level,
-        biological_ci_range=biological_ci_range,
-        biological_ci_typical=biological_ci_typical,
-        matches_biology=matches_biology,
-        literature_source=literature_source,
     )
 
 

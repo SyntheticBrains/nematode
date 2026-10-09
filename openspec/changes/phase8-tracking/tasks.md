@@ -421,7 +421,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 
-- [ ] **M.7 The chemotaxis reference file's two misattributions** *(S8a 2026-09-26: deferred-with-destination to its own small change)* *(**Decided 2026-10-07: lands during C.1, before C.3** re-derives the chemotaxis curves from the body)* *(added 2026-09-25, from the Wormlight review)*.
+- [x] **M.7 The chemotaxis reference file's two misattributions** — **met 2026-10-08** (`fix-chemotaxis-references`): the check found more than two. None of the five CI values came from its cited paper, and three citations pointed to unrelated articles (Cell 65:837 is a kinesin paper; Saeki 2001 is J Exp Biol; "Ferkey 2007, Genetics" does not exist). The file is rebuilt from verified entries only (Bargmann, Hartwieg & Horvitz 1993 Fig. 2; Rodriguez et al. 2025 for OP50 bacteria, CI 0.9 stated in the text), with the dropped entries and reasons recorded. The tracker no longer records a literature verdict, since the simulated index is a time-in-zone fraction and a published one an endpoint count of worms; it keeps the index and its band. Original scope: *(S8a 2026-09-26: deferred-with-destination to its own small change)* *(**Decided 2026-10-07: lands during C.1, before C.3** re-derives the chemotaxis curves from the body)* *(added 2026-09-25, from the Wormlight review)*.
   `data/chemotaxis/literature_ci_values.json` credits Bargmann et al. 1993 with a **bacteria** assay —
   it tested volatile odorants — and Pierce-Shimomura et al. 1999 with a **food gradient** — they used
   ammonium chloride and biotin. `validation/datasets.py` reads the file, and its default source prefers

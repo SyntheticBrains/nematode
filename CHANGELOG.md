@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Breaking changes
+
+- **The chemotaxis reference set is rebuilt, and tracked runs no longer record a literature verdict.** A source-by-source check found that none of the five chemotaxis-index values in `data/chemotaxis/literature_ci_values.json` came from its cited paper, and three citations pointed to unrelated articles. The file now lists only values verified in their papers (Bargmann, Hartwieg & Horvitz 1993; Rodriguez et al. 2025 for bacteria), each with what was assayed and whether the value was stated in the text or read from a figure, and records what was dropped and why. The simulated index is a time-in-zone fraction and a published index an endpoint count of worms, so the tracker no longer writes `biological_ci_range`, `biological_ci_typical`, `matches_biology` or `literature_source` (they stay in the schema, `None` on new records, so older records load); it keeps the index and its band (`chemotaxis_validation_level`, now described as a banding, not a biological match). `ChemotaxisValidationBenchmark`, its built-in fallback dataset and `ValidationResult` are removed, and the reference file's schema changes (`assay` and `read_from` replace `ci_range` and `conditions`).
+
 ### Added
 
 - **A gain vector on the connectome's body drive** — under `action_space: body_drive` each of the 25 drive outputs has a learnable gain, starting at 1, that scales the anatomical neuromuscular drive; the map itself stays fixed anatomy, and the gains take the motor readout's place among the learned parameters, so the trainable count does not depend on the wiring. Without it the connectome's drive is bounded near ±1 and could not rise above the policy's exploration noise. Body-drive configs also set `entropy_coef` to 0.004, the per-dimension entropy pressure the point-worm configs use (0.05 over two action numbers), because the entropy bonus is summed over the body's 25.

@@ -387,15 +387,17 @@ class ResultsMetadata(BaseModel):
     post_convergence_path_efficiency : float | None
         Path efficiency for post-convergence runs.
     chemotaxis_validation_level : str | None
-        Biological validation level based on post-convergence CI: none/minimum/target/excellent.
+        Band of the post-convergence CI: none/minimum/target/excellent at 0.4, 0.6 and 0.75. A label
+        of strength, not a biological match.
     biological_ci_range : tuple[float, float] | None
-        Expected CI range from C. elegans literature (min, max).
+        Retired: ``None`` on new records. Older records carry a literature range that was not from
+        its cited paper, set against a simulated index of a different kind.
     biological_ci_typical : float | None
-        Typical/median CI value from C. elegans literature.
+        Retired, as ``biological_ci_range``.
     matches_biology : bool | None
-        Whether post-convergence CI falls within biological range.
+        Retired, as ``biological_ci_range``.
     literature_source : str | None
-        Citation for the biological data used for comparison.
+        Retired, as ``biological_ci_range``.
     """
 
     total_runs: int
@@ -444,7 +446,7 @@ class ResultsMetadata(BaseModel):
     post_convergence_time_in_attractant: float | None = None
     post_convergence_approach_frequency: float | None = None
     post_convergence_path_efficiency: float | None = None
-    # Validation against biological literature (uses post-convergence metrics)
+    # The post-convergence CI's band; the four fields after it are retired and None on new records.
     chemotaxis_validation_level: str | None = None
     biological_ci_range: tuple[float, float] | None = None
     biological_ci_typical: float | None = None

@@ -6,7 +6,6 @@ from quantumnematode.validation.chemotaxis import (
     CI_THRESHOLD_TARGET,
     ChemotaxisMetrics,
     ValidationLevel,
-    ValidationResult,
     calculate_chemotaxis_index,
     calculate_chemotaxis_index_stepwise,
     calculate_chemotaxis_metrics,
@@ -356,40 +355,6 @@ class TestChemotaxisMetricsDataclass:
         )
 
         assert metrics.reliable is False
-
-
-class TestValidationResultDataclass:
-    """Test ValidationResult dataclass behavior."""
-
-    def test_validation_result_creation(self):
-        """Test creating ValidationResult instance."""
-        metrics = ChemotaxisMetrics(
-            chemotaxis_index=0.65,
-            time_in_attractant=0.7,
-            approach_frequency=0.8,
-            path_efficiency=0.5,
-            total_steps=100,
-            steps_in_attractant=70,
-            steps_in_control=30,
-        )
-
-        result = ValidationResult(
-            agent_ci=0.65,
-            biological_ci_range=(0.5, 0.85),
-            biological_ci_typical=0.7,
-            matches_biology=True,
-            validation_level=ValidationLevel.TARGET,
-            literature_source="Bargmann et al. (1993)",
-            agent_metrics=metrics,
-        )
-
-        assert result.agent_ci == 0.65
-        assert result.biological_ci_range == (0.5, 0.85)
-        assert result.biological_ci_typical == 0.7
-        assert result.matches_biology is True
-        assert result.validation_level == ValidationLevel.TARGET
-        assert result.literature_source == "Bargmann et al. (1993)"
-        assert result.agent_metrics == metrics
 
 
 class TestCalculateChemotaxisIndexStepwise:
