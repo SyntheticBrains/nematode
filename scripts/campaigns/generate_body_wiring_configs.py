@@ -14,6 +14,11 @@ arm sets its wiring and its learner:
 The MLP arm is C.1d's 500-step control at the same entropy. Each config is re-checked through the
 real loader by a test. A config that already exists is left alone, never overwritten.
 
+* ``--stage pilot``: the wild type and the chemical-only null, every learner.
+* ``--stage panel``: the pilot's PPO and frozen arms (the same configs, on fresh seeds) and the MLP.
+* ``--stage boundary``: the boundary-preserving null, PPO and frozen, written only if the panel's
+  reading opens its stage.
+
 Usage::
 
     uv run python scripts/campaigns/generate_body_wiring_configs.py --stage pilot
@@ -105,7 +110,11 @@ def stage_configs(stage: str) -> list[tuple[Path, str]]:
     if stage == "pilot":
         return [derive(w, learner) for w in PILOT_WIRINGS for learner in LEARNERS]
     if stage == "panel":
-        return [derive(w, learner) for w in WIRINGS for learner in LEARNERS] + [derive_mlp()]
+        return [derive(w, learner) for w in PILOT_WIRINGS for learner in ("ppo", "frozen")] + [
+            derive_mlp(),
+        ]
+    if stage == "boundary":
+        return [derive("boundary", learner) for learner in ("ppo", "frozen")]
     msg = f"unknown stage {stage!r}"
     raise ValueError(msg)
 
@@ -116,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--stage", choices=("pilot", "panel"), required=True)
+    ap.add_argument("--stage", choices=("pilot", "panel", "boundary"), required=True)
     args = ap.parse_args(argv)
     configs = stage_configs(args.stage)
     written = 0

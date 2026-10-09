@@ -19,12 +19,21 @@ wiring's learning arm beat its floor, so it is not a level here.
 Beside them, the frequency of competent seeds (plateau >= 30%) under each wiring, compared by an
 exact McNemar test on the seeds where the wirings disagree, reported as description.
 
+**The panel** (fixed by the pilot, Logbook 084): the same two arms and floors on fresh seeds
+1801-1864, with MLP-PPO beside. One registered reading, wild type minus chemical-only null on
+``auc_success``, classified at the minimum of 0.0367 as ``move_wt``, ``move_null``, ``below``,
+``no_move`` or ``unresolved``; unreadable if the gates fail. The boundary-preserving null runs
+afterwards only if the reading is ``move_wt``. Reported beside: episodes to 30% success, the
+competent-seed frequency, the MLP's plateaus, and the panel's achieved MDE.
+
 Every statistic is A.2's (``operating_point_surface``); the gates' completeness check is B.1b's.
 
 Usage::
 
     uv run python scripts/analysis/body_wiring.py pilot --logs campaigns/c1e-pilot/logs \\
         --out-dir build/c1e --out pilot.json
+    uv run python scripts/analysis/body_wiring.py panel --logs campaigns/c1e-panel/logs \\
+        --out-dir build/c1e-panel --out panel.json --csv per-seed.csv
 """
 
 # pyright: reportPrivateUsage=false
@@ -46,14 +55,28 @@ for _path in (_HERE, _HERE.parent / "campaigns"):
 
 import gate_preflight as gp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import generate_body_wiring_configs as gen  # noqa: E402  # pyright: ignore[reportMissingImports]
+import measured_prior_contrast as mc  # noqa: E402  # pyright: ignore[reportMissingImports]
 import measured_prior_pilot as mp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import operating_point_surface as ops  # noqa: E402  # pyright: ignore[reportMissingImports]
+import t7_continuous_ranking as t7  # noqa: E402  # pyright: ignore[reportMissingImports]
 from scipy.stats import binomtest  # noqa: E402
 
 HALF = "ppo"
 # The efficiency harness's name for hard350's food cell; the body's 500-step cell is scored there.
 CELL = "hard_food"
 PILOT_SEEDS: tuple[int, ...] = tuple(range(1701, 1717))
+PANEL_SEEDS: tuple[int, ...] = tuple(range(1801, 1865))
+# Fixed by the pilot (Logbook 084): 2/3 of its +0.0229 reference falls below the floor.
+PANEL_MINIMUM = 0.0367
+
+# The registered reading's state -> what it licenses. ``move_wt`` also opens the boundary stage.
+VERDICTS: dict[str, str] = {
+    "move_wt": "wild_type_ahead",
+    "move_null": "null_ahead",
+    "below": "difference_below_minimum",
+    "no_move": "no_wiring_effect_at_minimum",
+    "unresolved": "unresolved_at_this_sensitivity",
+}
 LEARNERS: tuple[str, ...] = ("ppo",)
 MINIMUM_FLOOR = 0.0367
 MINIMUM_FRACTION = 2.0 / 3.0
@@ -192,6 +215,75 @@ def pilot(
     return result
 
 
+def read_panel(gates: dict[str, Any], gap: dict[str, Any]) -> dict[str, Any]:
+    """Gates first, then the registered reading's state at the minimum, then its verdict."""
+    out: dict[str, Any] = {"minimum": PANEL_MINIMUM, "readable": mp.level_passes(gates)}
+    if not out["readable"]:
+        out["verdict"] = "unreadable"
+        return out
+    test = gap["test"]
+    q = ops.two_sided(test["wilcoxon_p"])
+    state = mc.classify(gap["gap_mean"], test["ci_lo"], test["ci_hi"], q, PANEL_MINIMUM)
+    per_seed = list(gap["per_seed"].values())
+    sd = statistics.stdev(per_seed) if len(per_seed) > 1 else float("nan")
+    out |= {
+        "q": q,
+        "state": state,
+        "verdict": VERDICTS[state],
+        "boundary_stage_runs": state == "move_wt",
+        "achieved_sd": sd,
+        "achieved_mde": MDE_Z * sd / math.sqrt(len(per_seed)) if per_seed else None,
+    }
+    return out
+
+
+def mlp_plateaus(log_dirs: list[Path], seeds: tuple[int, ...]) -> dict[str, Any]:
+    """Return the MLP's plateau per seed, reported beside the connectome reading."""
+    plateau: dict[int, float] = {}
+    for seed in seeds:
+        log = next(
+            (
+                d / f"{gen.MLP_STEM}-seed{seed}.log"
+                for d in log_dirs
+                if (d / f"{gen.MLP_STEM}-seed{seed}.log").is_file()
+            ),
+            None,
+        )
+        tail = t7.plateau_tail(log) if log is not None else None
+        if tail is not None:
+            plateau[seed] = float(tail[0])
+    values = list(plateau.values())
+    return {
+        "per_seed": plateau,
+        "n_seeds": len(values),
+        "mean": statistics.fmean(values) if values else None,
+        "competent": sum(v >= COMPETENCE for v in values),
+    }
+
+
+def panel(
+    log_dirs: list[Path],
+    out_dir: Path,
+    seeds: tuple[int, ...] = PANEL_SEEDS,
+) -> dict[str, Any]:
+    """Score the panel: gates, the registered reading and its verdict, and what is reported beside."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest = build_manifest(log_dirs, out_dir / "manifest-body-wiring-panel.txt", seeds)
+    mp.require_complete(manifest, HALF, seeds, LEARNERS)
+    report = ops.score_level(manifest, HALF, "ppo", out_dir / "tmp-ppo", cell=CELL)
+    gates = ops.learning_gates(manifest, HALF, seeds, "ppo", floor_level="ppo")
+    gaps = {m: ops.wiring_gap(report, m) for m in (PRIMARY_METRIC, BESIDE_METRIC)}
+    return {
+        "seeds": list(seeds),
+        "cell": CELL,
+        "learners": {
+            "ppo": {"gates": gates, "gaps": gaps, "competence": competence_frequency(gates)},
+        },
+        "reading": read_panel(gates, gaps[PRIMARY_METRIC]),
+        "mlp": mlp_plateaus(log_dirs, seeds),
+    }
+
+
 def write_csv(result: dict[str, Any], path: Path) -> Path:
     """One row per seed: each wiring's plateau and floor under each learner, and both gaps."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -225,13 +317,14 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = ap.add_subparsers(dest="command", required=True)
-    pl = sub.add_parser("pilot", help="score the pilot")
-    pl.add_argument("--logs", type=Path, action="append", required=True)
-    pl.add_argument("--out-dir", type=Path, required=True)
-    pl.add_argument("--out", type=Path, help="write the JSON here")
-    pl.add_argument("--csv", type=Path, help="write the per-seed CSV here")
+    for name in ("pilot", "panel"):
+        sp = sub.add_parser(name, help=f"score the {name}")
+        sp.add_argument("--logs", type=Path, action="append", required=True)
+        sp.add_argument("--out-dir", type=Path, required=True)
+        sp.add_argument("--out", type=Path, help="write the JSON here")
+        sp.add_argument("--csv", type=Path, help="write the per-seed CSV here")
     args = ap.parse_args(argv)
-    result = pilot(args.logs, args.out_dir)
+    result = (pilot if args.command == "pilot" else panel)(args.logs, args.out_dir)
     if args.csv:
         write_csv(result, args.csv)
     payload = json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"

@@ -48,6 +48,15 @@ class TestConfigs:
         assert getattr(brain, "freeze_wiring", False) is (learner == "fw")
         assert getattr(brain, "freeze_updates", False) is (learner == "frozen")
 
+    def test_the_committed_mlp_config_is_the_generators(self) -> None:
+        """The MLP arm is C.1d's 500-step control at the body arms' entropy, and loads."""
+        path, text = gen.derive_mlp()
+        assert path.read_text() == text
+        config = load_simulation_config(str(path))
+        assert config.max_steps == 500
+        assert config.brain is not None
+        assert getattr(config.brain.config, "entropy_coef", None) == 0.004
+
     def test_the_table_fits_the_gate_preflight(self) -> None:
         """The pilot is one gate-preflight level of four arms: PPO alone."""
         stems = gp.panel_stems("body_wiring")
@@ -99,6 +108,32 @@ class TestRules:
         rows = bw.write_csv(result, tmp_path / "per-seed.csv").read_text().splitlines()
         assert rows[0].startswith("seed,ppo_wt_plateau")
         assert rows[1].startswith("1701,50.000000,0.000000,50.000000")
+
+    @pytest.mark.parametrize(
+        ("reading", "verdict"),
+        [
+            ((0.06, 0.045, 0.075, 0.005), "wild_type_ahead"),
+            ((0.02, 0.0, 0.049, 0.10), "unresolved_at_this_sensitivity"),
+            ((0.001, -0.02, 0.022, 0.4), "no_wiring_effect_at_minimum"),
+            ((-0.06, -0.075, -0.045, 0.005), "null_ahead"),
+        ],
+    )
+    def test_the_panel_reading(self, reading: tuple[float, ...], verdict: str) -> None:
+        """The registered reading's verdict at 0.0367, and only move_wt opens the boundary stage."""
+        mean, lo, hi, p = reading
+        gap = {
+            "gap_mean": mean,
+            "per_seed": {1: mean, 2: mean},
+            "test": {"ci_lo": lo, "ci_hi": hi, "wilcoxon_p": p},
+        }
+        result = bw.read_panel({"gate_passes": True, "saturated": False}, gap)
+        assert result["verdict"] == verdict
+        assert result["boundary_stage_runs"] is (verdict == "wild_type_ahead")
+
+    def test_failed_gates_make_the_panel_unreadable(self) -> None:
+        """No reading is classified when a learning arm fails its floor."""
+        reading = bw.read_panel({"gate_passes": False, "saturated": False}, {})
+        assert reading["verdict"] == "unreadable"
 
     def test_a_learner_failing_its_floor_leaves_the_panel(self) -> None:
         """An unreadable learner is recorded as leaving, with its reason."""

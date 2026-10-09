@@ -88,22 +88,32 @@ The wild type and the chemical-only null, learning under both learners, with bot
 
 The pilot is registered and committed as Logbook 084 before the panel registers.
 
-### Decision F: The panel
+### Decision F: The panel *(revised 2026-10-09, after the pilot, before the panel registered)*
 
-Four wirings × two learners, learning, with four frozen floors and the MLP beside, on fresh seeds from
-**1801**, n from Decision E. Per learner, three readings, BH-FDR corrected together within the learner:
+**What the pilot fixed** (Logbook 084): the minimum is its floor, **0.0367**, since 2/3 of the pilot's
++0.0229 falls below it; the per-seed spread is 0.161, so the panel takes the cap, **64 seeds**, where its
+MDE is 0.050. An effect between the minimum and 0.050 will read `unresolved`.
 
-- **primary**: wild type − chemical-only null;
-- **second**: wild type − boundary-preserving null;
-- **beside**: wild type − current null.
+**The panel is cut to what can be read.** It runs the **primary contrast alone**: the wild type against
+the chemical-only null under PPO, learning and frozen, with MLP-PPO beside, on **seeds 1801–1864**, 320
+runs, about 20 hours. Its one registered reading, wild type minus null on `auc_success`, is classified
+at 0.0367 by `mc.classify` (two-sided Wilcoxon q, 80% bootstrap interval). The verdict map:
 
-Each is classified by `mc.classify` at that learner's minimum: `move_wt`, `move_null`, `below`,
-`no_move` or `unresolved`. The verdict map is fixed in the panel's registration, from the pilot.
+| state | verdict |
+|---|---|
+| `move_wt` | **wild type ahead**: the boundary stage runs |
+| `move_null` | null ahead |
+| `below` | a difference below the minimum |
+| `no_move` | no wiring effect at the minimum |
+| `unresolved` | unresolved at this sensitivity, with the achieved interval as the bound |
 
-**Cost, and what goes first.** The panel is 13 arms (four wirings × two learners learning, four frozen
-floors, the MLP) × n seeds: about 416 runs and 24 hours at n = 32, about 830 runs and 48 hours at the
-cap of 64. **If the pilot puts n above 32, the current null leaves the panel first**: it is read only
-beside, and the two registered readings do not depend on it. Its absence is recorded.
+Gates first: if either learning arm fails its floor, or both reach 90%, the panel is unreadable.
+
+**The boundary stage, gated.** The boundary-preserving null runs only if the primary reads `move_wt`,
+on the same seeds, PPO and frozen, against the panel's wild-type runs, at the same minimum. An
+interior-wiring claim needs a wiring effect to locate; without one its 128 runs would answer a question
+that did not arise. The four-wiring panel this replaces would have cost about 29 hours, and the current
+null, read only beside, is not run.
 
 ## Risks
 
