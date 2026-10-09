@@ -55,6 +55,28 @@ def test_a_tracked_run_records_no_literature_verdict() -> None:
         assert getattr(meta, field) is None
 
 
+def test_metrics_derived_from_results_record_no_literature_verdict() -> None:
+    """Without precomputed metrics the index comes from each run's path and food; no verdict."""
+    results = [
+        SimulationResult(
+            run=run,
+            steps=50,
+            path=[(10, 10)] * 50,
+            food_history=[[(10, 10)]] * 50,
+            total_reward=1.0,
+            last_total_reward=1.0,
+            termination_reason=TerminationReason.GOAL_REACHED,
+            success=True,
+        )
+        for run in range(1, 41)
+    ]
+    meta = aggregate_results_metadata(results)
+    assert meta.post_convergence_chemotaxis_index == 1.0
+    assert meta.chemotaxis_validation_level == "excellent"
+    for field in _RETIRED:
+        assert getattr(meta, field) is None
+
+
 def test_older_records_still_load() -> None:
     """A record written with the literature fields set keeps its values."""
     meta = ResultsMetadata.model_validate(
